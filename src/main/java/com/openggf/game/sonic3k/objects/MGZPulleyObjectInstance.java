@@ -75,7 +75,6 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
     private final boolean flipped;
     private final int targetExtension;
     private final PulleyChainChild chainChild;
-
     private final AbstractPlayableSprite[] grabbedPlayers = new AbstractPlayableSprite[PLAYER_SLOT_COUNT];
     private final boolean[] grabbed = new boolean[PLAYER_SLOT_COUNT];
     private final int[] releaseCooldown = new int[PLAYER_SLOT_COUNT];

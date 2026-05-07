@@ -116,7 +116,20 @@ public class AizEndBossInstance extends AbstractBossInstance {
     private int yBase;          // _unkFA86
 
     private int waitTimer = -1;
-    private Runnable waitCallback;
+    private WaitCallback waitCallback = WaitCallback.NONE;
+
+    private enum WaitCallback {
+        NONE,
+        START_BOSS_MUSIC,
+        ON_EMERGE_COMPLETE,
+        BEGIN_HOVER,
+        ON_HOVER_COMPLETE,
+        ON_FIRE_TIMER_EXPIRED,
+        BEGIN_RETREAT,
+        BEGIN_RE_SUBMERGE,
+        ON_RE_SUBMERGE_COMPLETE,
+        LOOP_BACK_TO_EMERGE
+    }
 
     /** ROM: angle ($26) — selects position index (0, 4, 8, or $C). */
     private int angle;
@@ -172,7 +185,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
         state.routine = ROUTINE_INIT;
         state.hitCount = HIT_COUNT;
         waitTimer = -1;
-        waitCallback = null;
+        waitCallback = WaitCallback.NONE;
         defeatRenderComplete = false;
         defeatExplosionController = null;
         fireSignalActive = false;
@@ -337,7 +350,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
 
         // Transition to wait-then-play-music
         waitTimer = WAIT_BEFORE_MUSIC;
-        waitCallback = this::startBossMusic;
+        waitCallback = WaitCallback.START_BOSS_MUSIC;
         state.routine = ROUTINE_EMERGE; // Will be overridden after wait
         // But first we wait — handle via the emerge routine checking waitTimer
 
@@ -404,7 +417,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
         emergeAnimFrame = 0;
         emergeAnimTimer = 0;
         waitTimer = -1;
-        waitCallback = this::onEmergeComplete;
+        waitCallback = WaitCallback.ON_EMERGE_COMPLETE;
     }
 
     // Emerge animation state (ROM: byte_69D98 — flickering between frame $2B and frame 0)
@@ -422,12 +435,8 @@ public class AizEndBossInstance extends AbstractBossInstance {
         }
         if (waitTimer == 0) {
             waitTimer = -1;
-            if (waitCallback != null) {
-                Runnable cb = waitCallback;
-                waitCallback = null;
-                cb.run();
-                return;
-            }
+            runWaitCallback();
+            return;
         }
 
         // Animate emerge flicker
@@ -461,7 +470,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
 
         // Set callback to transition to hover after revealed animation
         revealedAnimTimer = 0;
-        waitCallback = this::beginHover;
+        waitCallback = WaitCallback.BEGIN_HOVER;
     }
 
     private int revealedAnimTimer;
@@ -482,11 +491,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
             mappingFrame = 0x1D;
         } else {
             mappingFrame = 0;
-            if (waitCallback != null) {
-                Runnable cb = waitCallback;
-                waitCallback = null;
-                cb.run();
-            }
+            runWaitCallback();
         }
     }
 
@@ -494,7 +499,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
     private void beginHover() {
         state.routine = ROUTINE_HOVER;
         waitTimer = HOVER_TIME;
-        waitCallback = this::onHoverComplete;
+        waitCallback = WaitCallback.ON_HOVER_COMPLETE;
 
         // ROM: Swing parameters
         swingVelocity = SWING_INITIAL_VEL;
@@ -520,11 +525,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
             waitTimer--;
         } else if (waitTimer == 0) {
             waitTimer = -1;
-            if (waitCallback != null) {
-                Runnable cb = waitCallback;
-                waitCallback = null;
-                cb.run();
-            }
+            runWaitCallback();
         }
     }
 
@@ -538,13 +539,13 @@ public class AizEndBossInstance extends AbstractBossInstance {
             // ROM: move.w #4,angle ; move.w #$2F,$2E ; callback=loc_693DC
             angle = 4;
             waitTimer = FIRE_TIME_SONIC;
-            waitCallback = this::onFireTimerExpired;
+            waitCallback = WaitCallback.ON_FIRE_TIMER_EXPIRED;
         } else {
             // Second cycle (post-defeat path): longer wait
             // ROM: Sonic=$BF, Knuckles=$FF
             PlayerCharacter character = getPlayerCharacter();
             waitTimer = (character == PlayerCharacter.KNUCKLES) ? POST_DEFEAT_KNUX : POST_DEFEAT_SONIC;
-            waitCallback = this::beginRetreat;
+            waitCallback = WaitCallback.BEGIN_RETREAT;
         }
 
         state.routine = ROUTINE_HOVER; // Continue hovering during fire window
@@ -556,14 +557,14 @@ public class AizEndBossInstance extends AbstractBossInstance {
         fireSignalActive = true;
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(true);
         waitTimer = FIRE_SIGNAL_WAIT;
-        waitCallback = this::beginRetreat;
+        waitCallback = WaitCallback.BEGIN_RETREAT;
     }
 
     /** ROM: loc_693C0 — Retreat into water. */
     private void beginRetreat() {
         state.routine = ROUTINE_ATTACK_WAIT;
         waitTimer = RETREAT_WAIT;
-        waitCallback = this::beginReSubmerge;
+        waitCallback = WaitCallback.BEGIN_RE_SUBMERGE;
         // ROM: andi.b #$F5,$38 — clear bits 1 and 3
         flags38 &= ~(FLAG_PROPELLER_FIRE | FLAG_EMERGE_STARTED);
         fireSignalActive = false;
@@ -584,7 +585,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
         // Set up emerge animation
         emergeAnimFrame = 0;
         emergeAnimTimer = 0;
-        waitCallback = this::onReSubmergeComplete;
+        waitCallback = WaitCallback.ON_RE_SUBMERGE_COMPLETE;
     }
 
     /** ROM: loc_6942A — After submerging, decide next phase. */
@@ -605,7 +606,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
         // Pick random reposition target (ROM: loc_69A66)
         selectRandomPosition();
 
-        waitCallback = this::loopBackToEmerge;
+        waitCallback = WaitCallback.LOOP_BACK_TO_EMERGE;
     }
 
     /** ROM: loc_69456 — Incrementally scroll camera right during reposition. */
@@ -634,11 +635,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
             waitTimer--;
         } else if (waitTimer == 0) {
             waitTimer = -1;
-            if (waitCallback != null) {
-                Runnable cb = waitCallback;
-                waitCallback = null;
-                cb.run();
-            }
+            runWaitCallback();
         }
     }
 
@@ -655,11 +652,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
             waitTimer--;
         } else if (waitTimer == 0) {
             waitTimer = -1;
-            if (waitCallback != null) {
-                Runnable cb = waitCallback;
-                waitCallback = null;
-                cb.run();
-            }
+            runWaitCallback();
         }
     }
 
@@ -671,7 +664,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
         state.xVel = 0;
         state.yVel = 0;
         waitTimer = -1;
-        waitCallback = null;
+        waitCallback = WaitCallback.NONE;
         flags38 |= FLAG_DEFEAT_STARTED;
         // ROM: loc_47A74 — bset #7,art_tile hides the boss machine body.
         // The Robotnik ship child (AizEndBossShipChild) keeps rendering independently.
@@ -759,7 +752,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
                 int newMaxX = targetMaxX + 0x158;
                 services().camera().setMaxX((short) newMaxX);
                 S3kBossDefeatSignpostFlow defeatFlow = new S3kBossDefeatSignpostFlow(
-                        state.x, 1, null);
+                        state.x, 1, S3kBossDefeatSignpostFlow.CleanupAction.NONE);
                 objectManager.addDynamicObject(defeatFlow);
             }
         }
@@ -1038,12 +1031,23 @@ public class AizEndBossInstance extends AbstractBossInstance {
     // ===== Helpers =====
 
     private void runWaitCallback() {
-        if (waitCallback == null) {
+        if (waitCallback == WaitCallback.NONE) {
             return;
         }
-        Runnable cb = waitCallback;
-        waitCallback = null;
-        cb.run();
+        WaitCallback callback = waitCallback;
+        waitCallback = WaitCallback.NONE;
+        switch (callback) {
+            case START_BOSS_MUSIC -> startBossMusic();
+            case ON_EMERGE_COMPLETE -> onEmergeComplete();
+            case BEGIN_HOVER -> beginHover();
+            case ON_HOVER_COMPLETE -> onHoverComplete();
+            case ON_FIRE_TIMER_EXPIRED -> onFireTimerExpired();
+            case BEGIN_RETREAT -> beginRetreat();
+            case BEGIN_RE_SUBMERGE -> beginReSubmerge();
+            case ON_RE_SUBMERGE_COMPLETE -> onReSubmergeComplete();
+            case LOOP_BACK_TO_EMERGE -> loopBackToEmerge();
+            case NONE -> {}
+        }
     }
 
     // Package-private: accessed by AizEndBossPropellerChild for the Knuckles multi-fire check.

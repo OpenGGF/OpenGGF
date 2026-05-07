@@ -24,7 +24,6 @@ public class TurtloidJetInstance extends AbstractObjectInstance {
     private static final int JET_FRAME_1 = 6;
     private static final int JET_FRAME_2 = 7;
     private static final int ANIM_SPEED = 1; // Ani_obj9A: dc.b 1, ...
-
     private final TurtloidBadnikInstance parent;
     private int currentX;
     private int currentY;

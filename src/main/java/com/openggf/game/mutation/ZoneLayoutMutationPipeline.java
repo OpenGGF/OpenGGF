@@ -1,5 +1,8 @@
 package com.openggf.game.mutation;
 
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.MutationPipelineSnapshot;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -11,7 +14,8 @@ import java.util.Objects;
  * controlled point in the frame. If a batched mutation throws, the remaining
  * queued work is preserved so the caller can recover or retry.
  */
-public final class ZoneLayoutMutationPipeline {
+public final class ZoneLayoutMutationPipeline
+        implements RewindSnapshottable<MutationPipelineSnapshot> {
 
     private final List<LayoutMutationIntent> queued = new ArrayList<>();
 
@@ -39,6 +43,23 @@ public final class ZoneLayoutMutationPipeline {
         context.publish(intent.apply(context));
     }
 
+    /**
+     * Applies a single intent immediately, stripping all redraw hints from the
+     * published {@link MutationEffects} before forwarding them to the context sink.
+     *
+     * <p>Use when the caller controls its own redraw sequencing and the pipeline's
+     * automatic redraw publication would break the desired ordering (e.g. a
+     * snapshot-then-clear effect where the cleared tiles must remain invisible
+     * until an explicit flush).  Non-rendering side effects (dirty pattern uploads,
+     * object/ring resync) are still published.
+     */
+    public void applyImmediatelyWithoutRedraw(LayoutMutationIntent intent, LayoutMutationContext context) {
+        Objects.requireNonNull(intent, "intent");
+        Objects.requireNonNull(context, "context");
+        MutationEffects effects = intent.apply(context);
+        context.publish(effects != null ? effects.withoutRedrawHints() : MutationEffects.NONE);
+    }
+
     /** Drops all queued intents without applying them. */
     public void clear() {
         queued.clear();
@@ -61,5 +82,23 @@ public final class ZoneLayoutMutationPipeline {
             }
             context.publish(effects);
         }
+    }
+
+    // ── RewindSnapshottable ───────────────────────────────────────────────
+
+    @Override
+    public String key() {
+        return "mutation-pipeline";
+    }
+
+    @Override
+    public MutationPipelineSnapshot capture() {
+        return new MutationPipelineSnapshot(queued);
+    }
+
+    @Override
+    public void restore(MutationPipelineSnapshot s) {
+        queued.clear();
+        queued.addAll(s.queued());
     }
 }

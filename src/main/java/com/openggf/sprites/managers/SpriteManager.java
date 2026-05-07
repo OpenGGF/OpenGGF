@@ -1027,6 +1027,14 @@ public class SpriteManager {
 				&& playable.isCpuControlled();
 	}
 
+	public void refreshPowerUpObjectsAfterRewindRestore() {
+		for (Sprite sprite : sprites.values()) {
+			if (sprite instanceof AbstractPlayableSprite playable) {
+				playable.refreshPowerUpObjectsAfterRewindRestore();
+			}
+		}
+	}
+
 	/**
 	 * Runs the canonical per-sprite physics tick: solid contacts, movement,
 	 * post-movement solid pass, plane switchers, animation, and status.
@@ -1106,7 +1114,7 @@ public class SpriteManager {
 	}
 
 	private static void applyScreenYWrapValueAfterControl(AbstractPlayableSprite playable) {
-		Camera camera = GameServices.camera();
+		Camera camera = GameServices.cameraOrNull();
 		if (camera != null) {
 			camera.applyScreenYWrapValue(playable);
 		}
@@ -1198,6 +1206,65 @@ public class SpriteManager {
 
 	public static SensorConfiguration getSensorConfigurationForGroundModeAndDirection(GroundMode groundMode, Direction direction) {
 		return MOVEMENT_MAPPING_ARRAY[groundMode.ordinal()][direction.ordinal()];
+	}
+
+	/**
+	 * Returns a {@link com.openggf.game.rewind.RewindSnapshottable} adapter for
+	 * all active playable sprites.
+	 *
+	 * <p><strong>Capture</strong> records the full mutable gameplay surface of
+	 * every active playable sprite (main player + sidekicks) keyed by
+	 * {@link Sprite#getCode()} via
+	 * {@link AbstractPlayableSprite#captureRewindState()}.
+	 *
+	 * <p><strong>Restore</strong> applies the captured snapshots back to the
+	 * currently registered sprites by code.  Sprites not present in the
+	 * snapshot (e.g. mid-level sidekick joins) are left untouched; sprites
+	 * in the snapshot but not present in the current manager are skipped.
+	 */
+	public com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot>
+			rewindSnapshottable() {
+		return new com.openggf.game.rewind.RewindSnapshottable<>() {
+			@Override
+			public String key() {
+				return "sprites";
+			}
+
+			@Override
+			public com.openggf.game.rewind.snapshot.SpriteManagerSnapshot capture() {
+				boolean includeFollowHistory = true;
+				java.util.List<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry> snap =
+						new java.util.ArrayList<>();
+				for (Sprite sprite : sprites.values()) {
+					if (sprite instanceof AbstractPlayableSprite aps) {
+						snap.add(new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry(
+								aps.getCode(), aps.captureRewindState(includeFollowHistory)));
+					}
+				}
+				return new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot(
+						frameCounter,
+						snap.toArray(new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry[0]));
+			}
+
+			@Override
+			public void restore(com.openggf.game.rewind.snapshot.SpriteManagerSnapshot s) {
+				frameCounter = s.frameCounter();
+				for (Sprite sprite : sprites.values()) {
+					if (sprite instanceof AbstractPlayableSprite aps) {
+						com.openggf.level.objects.PerObjectRewindSnapshot perSprite = null;
+						for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {
+							if (entry.code().equals(aps.getCode())) {
+								perSprite = entry.state();
+								break;
+							}
+						}
+						if (perSprite != null) {
+							aps.restoreRewindState(perSprite);
+						}
+					}
+				}
+			}
+		};
 	}
 
 }

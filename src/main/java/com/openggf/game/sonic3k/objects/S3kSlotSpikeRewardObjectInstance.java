@@ -22,7 +22,6 @@ import java.util.List;
 public final class S3kSlotSpikeRewardObjectInstance extends AbstractObjectInstance {
 
     private static final int EXPIRY_FRAMES = 0x1E;
-
     private final S3kSlotStageController controller;
     private int framesRemaining = EXPIRY_FRAMES;
     private boolean active;

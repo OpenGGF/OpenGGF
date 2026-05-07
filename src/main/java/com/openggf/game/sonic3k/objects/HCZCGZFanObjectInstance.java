@@ -504,7 +504,6 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
         private static final int BELOW_THRESHOLD = 0x20;
         // ROM: cmpi.w #-$30,d0 — above threshold
         private static final int ABOVE_THRESHOLD = -0x30;
-
         private final HCZCGZFanObjectInstance fanParent;
         private final int maxSlideDistance;   // $3A(a0): max slide offset
         private final boolean facingLeft;

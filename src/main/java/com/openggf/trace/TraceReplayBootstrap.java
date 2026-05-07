@@ -54,6 +54,22 @@ public final class TraceReplayBootstrap {
                     sprite.getYSubpixelRaw(),
                     "player");
         }
+
+        public static ReplayPrimaryState fromTraceFrame(TraceFrame frame, String source) {
+            return new ReplayPrimaryState(
+                    frame.x(),
+                    frame.y(),
+                    frame.xSpeed(),
+                    frame.ySpeed(),
+                    frame.gSpeed(),
+                    frame.angle(),
+                    frame.air(),
+                    frame.rolling(),
+                    frame.groundMode(),
+                    frame.xSub(),
+                    frame.ySub(),
+                    source);
+        }
     }
 
     private TraceReplayBootstrap() {
@@ -160,7 +176,7 @@ public final class TraceReplayBootstrap {
         if (trace == null || trace.frameCount() == 0) {
             return 0;
         }
-        return recordingStartFrameForTraceReplay(trace);
+        return trace.initialVblankCounter() + 1;
     }
 
     public static int preTraceOscillationFramesForTraceReplay(TraceData trace,
@@ -301,6 +317,14 @@ public final class TraceReplayBootstrap {
                                                                             AbstractPlayableSprite sprite) {
         if (sprite == null) {
             throw new IllegalArgumentException("sprite must not be null");
+        }
+        if (isLegacyS3kAizIntroTrace(trace)
+                && current != null
+                && current.frame() < findFirstLevelGameplayFrame(trace)) {
+            // Pre-level AIZ full-run rows sample title/intro Player_1 RAM,
+            // not the loaded-level Sonic object. Keep this comparison-side
+            // only; never copy these fields back into engine state.
+            return ReplayPrimaryState.fromTraceFrame(current, "trace-vblank");
         }
         return ReplayPrimaryState.fromSprite(sprite);
     }

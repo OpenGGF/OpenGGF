@@ -429,7 +429,6 @@ public class Sonic1ScrapEggmanInstance extends AbstractObjectInstance implements
 
         private static final int BUTTON_PHASE_WAITING = 0;
         private static final int BUTTON_PHASE_PRESSED = 2;
-
         private final Sonic1ScrapEggmanInstance parent;
         private int buttonPhase;
         private int buttonFrame; // 0 = unpressed, 1 = pressed

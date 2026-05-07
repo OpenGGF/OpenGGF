@@ -57,7 +57,6 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
         TOP_DROP_SIMPLE,
         TOP_DROP_ADVANCED
     }
-
     private final AbstractBossInstance parent;
     /** ROM: parent3 of the shot = the barrel that spawned it. */
     private final AizMinibossFlameBarrelChild barrel;

@@ -39,7 +39,6 @@ public class AizEndBossFlameChild extends AbstractObjectInstance implements Touc
             {0x00, 0x07},
             {-0x03, 0x05}
     };
-
     private final AizEndBossInstance boss;
     private final AizEndBossPropellerChild propeller;
     private final int angle;

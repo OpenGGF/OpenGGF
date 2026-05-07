@@ -43,7 +43,6 @@ public class AizIntroWaveChild extends AbstractObjectInstance {
         5, 1,   // offset 12: frame 5, 2 ticks
         -1       // sentinel: delete
     };
-
     private final AizPlaneIntroInstance parent;
     private int currentX;
     private int currentY;

@@ -323,7 +323,6 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
 
         // collision_flags = 0x9C: HURT type (bit 7), size index 0x1C (sonic3k.asm:60051)
         private static final int COLLISION_FLAGS_ACTIVE = 0x9C;
-
         private final AizSpikedLogObjectInstance parent;
         private int currentX;
         private int currentY;

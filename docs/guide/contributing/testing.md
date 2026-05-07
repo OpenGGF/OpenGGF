@@ -24,6 +24,65 @@ Tests are configured for parallel execution across 4 JVM forks locally (`1` fork
 This significantly speeds up the full test suite but means tests must be independent of
 each other.
 
+## Rewind Tests And Benchmark
+
+The rewind system has both ordinary regression tests and an opt-in benchmark. See
+[Rewind System](rewind-system.md) for usage, limitations, and architecture details.
+
+Run the regular rewind suite:
+
+```bash
+mvn -Dmse=off "-Dtest=*Rewind*" test
+```
+
+Run the compact schema foundation tests when changing automatic rewind capture,
+field policy classification, or value codecs:
+
+```bash
+mvn -Dmse=off "-Dtest=TestRewindStateBuffer,TestRewindSchemaRegistry,TestCompactFieldCapturer,TestCompactFieldCapturerPolicy,TestRewindRecordCodecs,TestRewindHelperCodecs,TestRewindCollectionCodecs,TestRewindPolicyRegistry,TestRewindPlayerReferenceCodecs,TestRewindObjectReferenceCodecs,TestRewindIdentityTable" test
+```
+
+Generate the runtime-owner field inventory when planning object/player rewind
+coverage work:
+
+```bash
+mvn -Dmse=off -DskipTests test-compile exec:java \
+  "-Dexec.mainClass=com.openggf.tools.rewind.RewindFieldInventoryTool"
+```
+
+Add `"-Dexec.args=--object-rollout-candidates"` to list default object subclass
+capture candidates instead of unsupported fields. Use that list before adding
+per-object rewind annotations or overrides; most scalar object state should move
+through the central default-capture path.
+
+Use `"-Dexec.args=--annotation-density"` to report `@RewindTransient` /
+`@RewindDeferred` density by class, declared type, and package, including
+redundant transient annotations that central policy already infers.
+
+Run the child/spawn graph audit when planning object family coverage:
+
+```bash
+mvn -Dmse=off -DskipTests test-compile exec:java \
+  "-Dexec.mainClass=com.openggf.tools.rewind.ChildGraphPolicyInventoryTool"
+```
+
+Run the focused encounter validation foundation:
+
+```bash
+mvn -Dmse=off "-Dtest=TestRewindEncounterValidation" test
+```
+
+Run the benchmark only when you need timing, footprint, or long-tail determinism data:
+
+```bash
+mvn -Dmse=off "-Dtest=RewindBenchmark" \
+  "-Dopenggf.rewind.benchmark.run=true" test
+```
+
+The benchmark accepts `-Dopenggf.rewind.benchmark.keyframeInterval=<frames>` to compare
+memory and seek behaviour at intervals such as `60`, `30`, and `15`. Results are printed
+to stdout and written to `target/rewind-benchmark-results.json`.
+
 ## ROM-Dependent Tests
 
 Many tests require ROM files to load level data, object art, or audio. These tests

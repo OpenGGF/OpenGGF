@@ -18,7 +18,6 @@ import java.util.List;
  * ROM priority: 0x380 → bucket 7.
  */
 public class Aiz1ZiplinePegObjectInstance extends AbstractObjectInstance {
-
     private PlaceholderObjectInstance placeholder;
 
     public Aiz1ZiplinePegObjectInstance(ObjectSpawn spawn) {

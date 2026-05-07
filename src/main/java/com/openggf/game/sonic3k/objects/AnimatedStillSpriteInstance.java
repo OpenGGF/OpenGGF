@@ -77,7 +77,6 @@ public class AnimatedStillSpriteInstance extends AbstractObjectInstance {
     private int animScriptIndex;
     private int animTimer;
     private int currentGlobalFrame;
-
     private PlaceholderObjectInstance placeholder;
 
     public AnimatedStillSpriteInstance(ObjectSpawn spawn) {

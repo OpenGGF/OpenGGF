@@ -1125,7 +1125,6 @@ public class Sonic2WFZBossInstance extends AbstractBossInstance {
     static class WFZPlatformHurt extends AbstractBossChild implements TouchResponseProvider {
         private static final int Y_OFFSET = 0x0C;
         private static final int COLLISION_FLAGS = 0x98;
-
         private final WFZFloatingPlatform platformParent;
 
         WFZPlatformHurt(Sonic2WFZBossInstance bossParent, WFZFloatingPlatform platformParent) {

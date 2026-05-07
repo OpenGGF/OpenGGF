@@ -6,6 +6,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.ScrollHandlerProvider;
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.ParallaxSnapshot;
 import com.openggf.level.scroll.ZoneScrollHandler;
 
 import java.io.IOException;
@@ -19,7 +21,7 @@ import java.util.logging.Logger;
  * {@link ScrollHandlerProvider} obtained from the active {@link GameModule}.
  * ParallaxManager itself contains no game-specific imports or constants.
  */
-public class ParallaxManager {
+public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(ParallaxManager.class.getName());
 
     public static final int VISIBLE_LINES = 224;
@@ -452,5 +454,23 @@ public class ParallaxManager {
             java.util.Arrays.fill(vScrollPerColumnFG, count, FG_VSCROLL_COLUMN_COUNT, (short) 0);
         }
         hasPerColumnVScrollFG = true;
+    }
+
+    // ── RewindSnapshottable ───────────────────────────────────────────────
+
+    @Override
+    public String key() {
+        return "parallax";
+    }
+
+    @Override
+    public ParallaxSnapshot capture() {
+        return new ParallaxSnapshot();
+    }
+
+    @Override
+    public void restore(ParallaxSnapshot s) {
+        // Parallax is derived from restored camera, frame, zone and handler
+        // state. GameplayModeContext recomputes it after the registry restore.
     }
 }

@@ -31,7 +31,6 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
 
     private static final short SNAP_X = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X;
     private static final short SNAP_Y = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y;
-
     private final S3kSlotStageController controller;
 
     private int cageState;

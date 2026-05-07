@@ -52,7 +52,6 @@ public class Sonic3kSSEntryFlashObjectInstance extends AbstractObjectInstance {
     private static final int POST_ANIM_WAIT = 0x20;
 
     private enum State { ANIMATING, WAITING, DONE }
-
     private final Sonic3kSSEntryRingObjectInstance parentRing;
 
     private State state = State.ANIMATING;

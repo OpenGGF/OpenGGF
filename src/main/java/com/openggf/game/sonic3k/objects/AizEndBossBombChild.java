@@ -52,7 +52,6 @@ public class AizEndBossBombChild extends AbstractObjectInstance implements Touch
             {0x00, 0x18},
             {-0x14, 0x14}
     };
-
     private final AizEndBossInstance boss;
     private int currentX;
     private int currentY;

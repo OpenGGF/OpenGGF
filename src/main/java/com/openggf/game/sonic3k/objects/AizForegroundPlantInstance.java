@@ -32,7 +32,6 @@ public class AizForegroundPlantInstance extends AbstractObjectInstance {
     private final int origY;
     private final int mappingFrame;
     private final int scrollRate;
-
     private PlaceholderObjectInstance placeholder;
 
     public AizForegroundPlantInstance(ObjectSpawn spawn) {

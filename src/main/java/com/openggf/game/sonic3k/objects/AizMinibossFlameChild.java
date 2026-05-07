@@ -35,7 +35,6 @@ public class AizMinibossFlameChild extends AbstractObjectInstance implements Tou
         FLAME,
         EXPLODE
     }
-
     private final AbstractBossInstance parent;
     private final int xOffset;
     private final int yOffset;

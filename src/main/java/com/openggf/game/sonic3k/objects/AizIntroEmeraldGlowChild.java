@@ -22,7 +22,6 @@ import java.util.logging.Logger;
 public class AizIntroEmeraldGlowChild extends AbstractObjectInstance {
 
     private static final Logger LOG = Logger.getLogger(AizIntroEmeraldGlowChild.class.getName());
-
     private final AizIntroPlaneChild parent;
     private final int xOffset;
     private final int yOffset;

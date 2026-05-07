@@ -36,7 +36,6 @@ public class Sonic1BombFuseInstance extends AbstractObjectInstance {
 
     // From disassembly: move.b #3,obPriority(a0)
     private static final int RENDER_PRIORITY = 3;
-
     private final Sonic1BombBadnikInstance parent;
     private int currentX;
     private int currentY;

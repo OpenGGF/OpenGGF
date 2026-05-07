@@ -36,7 +36,6 @@ public class BalkiryJetObjectInstance extends AbstractObjectInstance {
     private static final int FRAME_B = 9; // Map_obj9C_008E: 1x1 tile
     // From Obj9C_SubObjData
     private static final int PRIORITY = 5;
-
     private final BalkiryBadnikInstance parent;
     private int animTimer;
     private int animFrame;

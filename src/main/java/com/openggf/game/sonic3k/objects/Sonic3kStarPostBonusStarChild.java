@@ -57,7 +57,6 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance {
 
     // S3K ring threshold for bonus stars
     private static final int RING_THRESHOLD = 20;
-
     private final Sonic3kStarPostObjectInstance parentStarPost;
     private final BonusStarVariant variant;
     private final int centerX;  // $30

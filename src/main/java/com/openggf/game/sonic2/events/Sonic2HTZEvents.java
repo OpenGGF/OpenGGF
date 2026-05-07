@@ -2,7 +2,6 @@ package com.openggf.game.sonic2.events;
 
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
-import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
 import com.openggf.level.LevelManager;
@@ -192,7 +191,7 @@ public class Sonic2HTZEvents extends Sonic2ZoneEvents {
         earthquakeActive = active;
         gameState().setScreenShakeActive(active);
         if (wasActive != active || wasGeneralShake != active) {
-            LevelManager lm = GameServices.levelOrNull();
+            LevelManager lm = levelManager();
             if (lm != null) {
                 lm.invalidateAllTilemaps();
             }
@@ -212,6 +211,23 @@ public class Sonic2HTZEvents extends Sonic2ZoneEvents {
      * 0 = normal/risen position, positive = BG scrolled up (more lava visible).
      * This is used by SwScrlHtz to offset vscrollFactorBG without modifying bgCamera.bgYPos.
      */
+    // ---- Rewind accessors ----
+    public int getCameraBgYOffsetRaw()    { return cameraBgYOffset; }
+    public void setCameraBgYOffset(int v) { cameraBgYOffset = v; }
+    public boolean isHtzTerrainSinking()  { return htzTerrainSinking; }
+    public void setHtzTerrainSinking(boolean v) { htzTerrainSinking = v; }
+    public int getHtzTerrainDelay()       { return htzTerrainDelay; }
+    public void setHtzTerrainDelay(int v) { htzTerrainDelay = v; }
+    public boolean isEarthquakeActiveRaw(){ return earthquakeActive; }
+    public void setEarthquakeActiveRaw(boolean v) { earthquakeActive = v; }
+    public int getHtzCurrentRisenLimit()  { return htzCurrentRisenLimit; }
+    public void setHtzCurrentRisenLimit(int v) { htzCurrentRisenLimit = v; }
+    public int getHtzCurrentSunkenLimit() { return htzCurrentSunkenLimit; }
+    public void setHtzCurrentSunkenLimit(int v){ htzCurrentSunkenLimit = v; }
+    public int getHtzCurrentBgXOffset()   { return htzCurrentBgXOffset; }
+    public void setHtzCurrentBgXOffset(int v) { htzCurrentBgXOffset = v; }
+    // ---- end rewind accessors ----
+
     public int getHtzBgVerticalShift() {
         if (!earthquakeActive) {
             return 0;

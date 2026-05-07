@@ -6,7 +6,13 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.graphics.GLCommand;
+import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.PhysicsProvider;
+import com.openggf.game.rewind.GenericFieldCapturer;
+import com.openggf.game.rewind.GenericRewindEligibility;
+import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.level.LevelManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
@@ -14,6 +20,7 @@ import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 public abstract class AbstractObjectInstance implements ObjectInstance {
@@ -48,6 +55,30 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     private static CameraBounds cameraBounds = new CameraBounds(0, 0, 320, 224);
 
+    /**
+     * Y-axis half-margin used by {@link #isOnScreenForTouch()} to mirror ROM's
+     * BuildSprites {@code .assumeHeight} band. ROM (S1
+     * {@code docs/s1disasm/_inc/BuildSprites.asm:71-78}, S2/S3K equivalents)
+     * computes {@code obY - cameraY + 0x80} and checks the result against
+     * {@code [0x60, 0x180)} -- equivalently, an object's Y must fall within
+     * {@code [cameraY - 32, cameraY + 224 + 32)} for {@code obRender} bit 7 to
+     * be set. The 32-pixel padding above and below the visible 224-line
+     * viewport is what this constant captures.
+     * <p>
+     * This margin is deliberately coarser than ROM's {@code btst #4}
+     * explicit-height path (which uses each object's per-object half-height
+     * read from {@code height_pixels}). The trade-off is intentional: the
+     * touch gate accepts touch tests for slightly more objects than ROM
+     * would, but never rejects an object ROM would accept (i.e. it never
+     * wrongly skips a touch). False positives are filtered by the
+     * subsequent collision-flags / box test inside {@code TouchResponses};
+     * false negatives would silently break game-state parity and have no
+     * downstream filter. For per-object override semantics see
+     * {@link #getOnScreenHalfHeight()}, which the solid-contact gate
+     * ({@link #isOnScreen()}) consults instead -- the touch gate
+     * intentionally uses this constant rather than the per-object height.
+     */
+    private static final int TOUCH_RESPONSE_Y_MARGIN = 32;
     protected final ObjectSpawn spawn;
     protected final String name;
     private boolean destroyed;
@@ -570,14 +601,75 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     /**
      * ROM parity for ReactToItem: returns true if the object was on-screen
      * as of the pre-update snapshot (equivalent to obRender bit 7 from
-     * the previous frame's DisplaySprite). Uses pre-update X position since
-     * the ROM's MarkObjGone / DisplaySprite only checks X distance from
-     * camera, not Y. Objects below the visible area (like lava surfaces)
-     * are still considered "on screen" if their X is within range.
+     * the previous frame's BuildSprites).
+     * <p>
+     * The render-flag-driven Y gate is S1-specific. ROM S1's
+     * {@code ReactToItem} ({@code docs/s1disasm/_incObj/sub
+     * ReactToItem.asm:26-27}) reads {@code obRender(a1) / bpl.s .next}
+     * and skips objects whose bit 7 has been cleared by
+     * {@code BuildSprites} ({@code docs/s1disasm/_inc/BuildSprites.asm:71-78},
+     * {@code .assumeHeight} branch when {@code obRender} bit 4 is clear).
+     * That bit clears for any object whose Y falls outside
+     * {@code [cameraY - 32, cameraY + 256)} (the visible 224-line viewport
+     * plus a 32-px margin above and below). ROM S2 {@code Touch_Loop}
+     * ({@code docs/s2disasm/s2.asm} ~84502-84551) has no equivalent
+     * render-flag gate; S3K {@code TouchResponse}
+     * ({@code docs/skdisasm/sonic3k.asm:20655}) consumes a pre-built
+     * {@code Collision_response_list} where the gate happens upstream
+     * during list build, not at touch time.
+     * <p>
+     * The engine therefore branches on
+     * {@link PhysicsFeatureSet#touchResponseUsesRenderFlagYGate()}: S1
+     * gets the X+Y check; S2/S3K fall back to the X-only check the
+     * engine used pre-Task-3 (commits b4ff4ea01/86871035c). Without this
+     * gating the universal X+Y check filters S3K objects ROM allows to
+     * interact with Tails, regressing MGZ trace replay first-fail from
+     * frame 2395 to frame 1659.
+     * <p>
+     * Uses pre-update position so the gate matches the previous frame's
+     * BuildSprites pass, mirroring the ROM ordering where the render
+     * flag set this frame would not be observable until the next frame's
+     * ReactToItem. The S1 xMargin uses {@link #getOnScreenHalfWidth()}
+     * (default 16 px = ROM {@code width_pixels} for typical sprites) and
+     * the yMargin uses 32 to mirror the {@code .assumeHeight} 32-pixel
+     * band; this makes the gate slightly more inclusive than the
+     * {@code btst #4} explicit-height path (which uses the per-object
+     * half-height) but never more restrictive, so it will not introduce
+     * false-negative collision skips for objects whose ROM render flag
+     * would have been set.
      */
     public boolean isOnScreenForTouch() {
         if (!preUpdateValid) return false; // No snapshot → first frame, skip
+        if (resolveTouchResponseUsesRenderFlagYGate()) {
+            // S1: include the BuildSprites .assumeHeight Y band.
+            return cameraBounds.contains(preUpdateX, preUpdateY,
+                    getOnScreenHalfWidth(), TOUCH_RESPONSE_Y_MARGIN);
+        }
+        // S2/S3K: pre-Task-3 X-only behaviour. Matches ROM S2 Touch_Loop
+        // (no render-flag gate) and S3K Collision_response_list (gate
+        // happens upstream during list build, not at touch time).
         return cameraBounds.containsX(preUpdateX);
+    }
+
+    /**
+     * Resolves whether the active game gates {@link #isOnScreenForTouch()}
+     * on the BuildSprites Y-band. Defaults to {@code true} when no game
+     * module / feature set is available so test fixtures (which often run
+     * without a fully-bootstrapped runtime) keep the stricter S1 gate the
+     * regression suite was calibrated against.
+     */
+    private boolean resolveTouchResponseUsesRenderFlagYGate() {
+        ObjectServices ctx = tryServices();
+        GameModule module = ctx != null ? ctx.gameModule() : null;
+        if (module == null) {
+            return true;
+        }
+        PhysicsProvider physProvider = module.getPhysicsProvider();
+        PhysicsFeatureSet featureSet = physProvider != null ? physProvider.getFeatureSet() : null;
+        if (featureSet == null) {
+            return true;
+        }
+        return featureSet.touchResponseUsesRenderFlagYGate();
     }
 
     /**
@@ -761,6 +853,107 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
             }
         }
         return false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Rewind snapshot support
+    // -------------------------------------------------------------------------
+
+    /**
+     * Captures this object's standard mutable gameplay state for a rewind snapshot.
+     *
+     * <p>The default implementation covers every field declared on
+     * {@code AbstractObjectInstance}: destruction flags, dynamic spawn position,
+     * pre-update position cache, touch/solid-contact gating flags, slot index,
+     * and respawn state index.
+     *
+     * <p><strong>Subclass contract:</strong> Subclasses that hold private
+     * gameplay-relevant state (boss phase counters, badnik AI timers, sub-state
+     * machine indices, etc.) <em>must</em> override this method (and the matching
+     * {@link #restoreRewindState}) to include their own fields — otherwise that
+     * state will silently fail to round-trip across a rewind.
+     *
+     * <p>Known subclasses likely to require overrides (non-exhaustive):
+     * <ul>
+     *   <li>Any boss instance — phase counters, arena/boundary flags, hit counters</li>
+     *   <li>{@code AbstractBadnikInstance} subclasses with multi-phase AI — per-frame
+     *       timers beyond {@code animTimer}, direction change state</li>
+     *   <li>CNZ bumper — reload timer</li>
+     *   <li>HTZ earthquake object — oscillation accumulator</li>
+     *   <li>Any object that uses {@code objoff_*} scratch fields for state machines</li>
+     * </ul>
+     *
+     * <p>The current default path is centrally gated by
+     * {@link GenericRewindEligibility#usesDefaultObjectSubclassCapture(Class)}:
+     * subclasses without a concrete rewind override automatically capture fields
+     * accepted by {@link GenericFieldCapturer#captureObjectSubclassScalars(AbstractObjectInstance)}.
+     *
+     * @return immutable snapshot of this object's standard mutable field surface
+     */
+    public PerObjectRewindSnapshot captureRewindState() {
+        PerObjectRewindSnapshot snapshot = new PerObjectRewindSnapshot(
+                destroyed,
+                destroyedRespawnable,
+                dynamicSpawn != null,
+                dynamicSpawn != null ? dynamicSpawn.x() : 0,
+                dynamicSpawn != null ? dynamicSpawn.y() : 0,
+                preUpdateX,
+                preUpdateY,
+                preUpdateValid,
+                preUpdateCollisionFlags,
+                skipTouchThisFrame,
+                solidContactFirstFrame,
+                slotIndex,
+                respawnStateIndex,
+                null,  // Base class does not capture badnik extra; subclass overrides if needed
+                null,  // Base class does not capture badnik subclass extra
+                null   // Base class does not capture player extra; subclass overrides if needed
+        );
+        if (GenericRewindEligibility.usesDefaultObjectSubclassCapture(getClass())) {
+            var compactState = this instanceof AbstractBadnikInstance
+                    ? Optional.<RewindObjectStateBlob>empty()
+                    : GenericFieldCapturer.captureObjectSubclassScalarsCompact(this);
+            if (compactState.isPresent()) {
+                snapshot = snapshot.withCompactGenericState(compactState.get());
+            } else {
+                var genericState = GenericFieldCapturer.captureObjectSubclassScalars(this);
+                if (!genericState.keys().isEmpty()) {
+                    snapshot = snapshot.withGenericState(genericState);
+                }
+            }
+        }
+        return snapshot;
+    }
+
+    /**
+     * Restores this object's standard mutable gameplay state from a rewind snapshot.
+     *
+     * <p>See {@link #captureRewindState()} for the subclass contract.
+     *
+     * @param s the snapshot to restore from
+     */
+    public void restoreRewindState(PerObjectRewindSnapshot s) {
+        this.destroyed = s.destroyed();
+        this.destroyedRespawnable = s.destroyedRespawnable();
+        if (s.hasDynamicSpawn()) {
+            updateDynamicSpawn(s.dynamicSpawnX(), s.dynamicSpawnY());
+        } else {
+            this.dynamicSpawn = null;
+        }
+        this.preUpdateX = s.preUpdateX();
+        this.preUpdateY = s.preUpdateY();
+        this.preUpdateValid = s.preUpdateValid();
+        this.preUpdateCollisionFlags = s.preUpdateCollisionFlags();
+        this.skipTouchThisFrame = s.skipTouchThisFrame();
+        this.solidContactFirstFrame = s.solidContactFirstFrame();
+        this.slotIndex = s.slotIndex();
+        this.respawnStateIndex = s.respawnStateIndex();
+        if (s.compactGenericState() != null) {
+            GenericFieldCapturer.restoreObjectSubclassScalarsCompact(this, s.compactGenericState());
+        } else if (s.genericState() != null) {
+            GenericFieldCapturer.restore(this, s.genericState());
+        }
+        // badnikExtra is handled by subclass overrides; base class does nothing
     }
 
     /**

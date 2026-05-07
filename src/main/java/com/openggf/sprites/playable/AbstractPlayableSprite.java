@@ -20,6 +20,7 @@ import com.openggf.game.DamageCause;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
 import com.openggf.game.RuntimeManager;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.timer.TimerManager;
 
 import com.openggf.audio.GameAudioProfile;
@@ -32,6 +33,9 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectControlledSolidContactController;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
+import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
 import com.openggf.physics.Sensor;
@@ -58,6 +62,7 @@ import com.openggf.timer.timers.SpeedShoesTimer;
 public abstract class AbstractPlayableSprite extends AbstractSprite implements com.openggf.game.PlayableEntity {
         private static final Logger LOGGER = Logger.getLogger(AbstractPlayableSprite.class.getName());
 
+        @RewindTransient(reason = "playable controller is structural; mutable controller state is captured explicitly")
         protected final PlayableSpriteController controller;
 
         protected GroundMode runningMode = GroundMode.GROUND;
@@ -138,6 +143,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private boolean cpuControlled = false;
 
         /** The CPU controller for AI-driven sprites */
+        @RewindTransient(reason = "sidekick CPU controller is structural; mutable CPU state is captured explicitly")
         private SidekickCpuController cpuController;
 
         /**
@@ -523,6 +529,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * ownership but still needs SolidObject side/top feedback from its controlling
          * platform instance while the carry is active.
          */
+        @com.openggf.game.rewind.RewindDeferred(reason = "active carried solid contact needs stable object identity snapshot")
         protected ObjectInstance mgzTopPlatformCarrySolidContactObject;
         protected boolean mgzTopPlatformSpringHandoffPending;
         protected int mgzTopPlatformSpringHandoffXVel;
@@ -797,6 +804,316 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // explicitly restore standing dimensions and sensor offsets here.
                 setHeight(runHeight);
                 applyStandingRadii(false);
+        }
+
+        // -----------------------------------------------------------------------
+        // Rewind state capture / restore
+        // -----------------------------------------------------------------------
+
+        /**
+         * Captures the full mutable gameplay surface of this playable sprite into a
+         * {@link PerObjectRewindSnapshot} with an attached {@link PlayerRewindExtra}.
+         *
+         * <p>The returned snapshot has null {@code badnikExtra} (not applicable for
+         * players) and carries all sprite base fields (position, subpixel, dimensions)
+         * plus the full {@code AbstractPlayableSprite} mutable surface.
+         *
+         * <p>Render-service references and character physics constants are
+         * excluded. Animation cursor state is captured so a restored frame can
+         * render exactly even when rewind happens while paused.
+         */
+        public PerObjectRewindSnapshot captureRewindState() {
+                return captureRewindState(true);
+        }
+
+        public PerObjectRewindSnapshot captureRewindState(boolean includeFollowHistory) {
+                SidekickCpuRewindExtra sidekickCpuExtra =
+                        cpuController != null ? cpuController.captureRewindState() : null;
+                PlayerRewindExtra extra = new PlayerRewindExtra(
+                        // AbstractSprite base fields
+                        xPixel, yPixel,
+                        xSubpixel, ySubpixel,
+                        width, height,
+                        direction, layer,
+                        runningMode, xRadius, yRadius,
+                        // Movement / physics
+                        gSpeed, xSpeed, ySpeed, jump,
+                        angle, statusTertiary, loopLowPlane,
+                        topSolidBit, lrbSolidBit,
+                        prePhysicsAir, prePhysicsAngle,
+                        prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
+                        air, rolling, jumping, rollingJump,
+                        pinballMode, pinballSpeedLock, tunnelMode,
+                        onObject, onObjectAtFrameStart,
+                        latchedSolidObjectId, slopeRepelJustSlipped,
+                        stickToConvex, sliding, pushing,
+                        skidding, skidDustTimer,
+                        wallClimbX, rightWallPenetrationTimer,
+                        balanceState,
+                        springing, springingFrames,
+                        dead, drowningDeath, drownPreDeathTimer,
+                        hurt, deathCountdown,
+                        invulnerableFrames, invincibleFrames,
+                        spindash, spindashCounter,
+                        crouching, lookingUp, lookDelayCounter,
+                        doubleJumpFlag, doubleJumpProperty,
+                        shield, shieldType, instaShieldRegistered,
+                        speedShoes, superSonic,
+                        forceInputRight, forcedInputMask,
+                        forcedJumpPress, suppressNextJumpPress,
+                        deferredObjectControlRelease,
+                        controlLocked, hasQueuedControlLockedState, queuedControlLocked,
+                        hasQueuedForceInputRightState, queuedForceInputRight,
+                        moveLockTimer,
+                        objectControlled, objectControlAllowsCpu, objectControlSuppressesMovement,
+                        objectControlReleasedFrame,
+                        suppressAirCollision, suppressGroundWallCollision, forceFloorCheck,
+                        hidden,
+                        mgzTopPlatformSpringHandoffPending,
+                        mgzTopPlatformSpringHandoffXVel,
+                        mgzTopPlatformSpringHandoffYVel,
+                        jumpInputPressed, jumpInputJustPressed, jumpInputPressedPreviousFrame,
+                        upInputPressed, downInputPressed,
+                        leftInputPressed, rightInputPressed,
+                        movementInputActive,
+                        logicalInputState, logicalJumpPressState,
+                        cpuControlled, historyPos, followerHistoryRecordedThisTick,
+                        spiralActiveFrame, flipAngle, flipSpeed,
+                        flipsRemaining, flipTurned,
+                        inWater, waterPhysicsActive, wasInWater, waterSkimActive,
+                        preventTailsRespawn,
+                        badnikChainCounter,
+                        bubbleAnimId,
+                        initPhysicsActive,
+                        objectMappingFrameControl,
+                        mappingFrame,
+                        animationId,
+                        forcedAnimationId,
+                        animationFrameIndex,
+                        animationTick,
+                        controller.getMovement().captureRewindState(),
+                        controller.getSpindashDust() != null
+                                ? controller.getSpindashDust().captureRewindState()
+                                : null,
+                        controller.getAnimation() != null
+                                ? controller.getAnimation().captureRewindState()
+                                : null,
+                        sidekickCpuExtra,
+                        includeFollowHistory ? xHistory : null,
+                        includeFollowHistory ? yHistory : null,
+                        includeFollowHistory ? inputHistory : null,
+                        includeFollowHistory ? jumpPressHistory : null,
+                        includeFollowHistory ? statusHistory : null);
+                // Player snapshots use a stub PerObjectRewindSnapshot (no badnikExtra; playerExtra holds everything).
+                return new PerObjectRewindSnapshot(
+                        false, false,       // destroyed, destroyedRespawnable
+                        false, 0, 0,         // hasDynamicSpawn, dynamicSpawnX, dynamicSpawnY
+                        0, 0, false, 0,      // preUpdateX/Y, preUpdateValid, preUpdateCollisionFlags
+                        false, false,        // skipTouchThisFrame, solidContactFirstFrame
+                        0, -1,               // slotIndex, respawnStateIndex
+                        null,                // badnikExtra
+                        null,                // badnikSubclassExtra
+                        extra                // playerExtra
+                );
+        }
+
+        /**
+         * Restores the full mutable gameplay surface of this playable sprite from a
+         * {@link PerObjectRewindSnapshot}.  Throws {@link IllegalStateException} if the
+         * snapshot has no {@link PlayerRewindExtra} — every snapshot for a player object
+         * must have been produced by this class's {@link #captureRewindState()}.
+         */
+        public void restoreRewindState(PerObjectRewindSnapshot s) {
+                PlayerRewindExtra extra = s.playerExtra();
+                if (extra == null) {
+                        throw new IllegalStateException(
+                                "AbstractPlayableSprite.restoreRewindState requires PlayerRewindExtra");
+                }
+                // AbstractSprite base fields
+                this.xPixel = extra.xPixel();
+                this.yPixel = extra.yPixel();
+                this.xSubpixel = extra.xSubpixel();
+                this.ySubpixel = extra.ySubpixel();
+                this.width = extra.width();
+                this.height = extra.height();
+                this.direction = extra.direction();
+                this.layer = extra.layer();
+                this.runningMode = extra.runningMode();
+                setCollisionRadii(extra.xRadius(), extra.yRadius(), false);
+                // Movement / physics
+                this.gSpeed = extra.gSpeed();
+                this.xSpeed = extra.xSpeed();
+                this.ySpeed = extra.ySpeed();
+                this.jump = extra.jump();
+                this.angle = extra.angle();
+                this.statusTertiary = extra.statusTertiary();
+                this.loopLowPlane = extra.loopLowPlane();
+                this.topSolidBit = extra.topSolidBit();
+                this.lrbSolidBit = extra.lrbSolidBit();
+                this.prePhysicsAir = extra.prePhysicsAir();
+                this.prePhysicsAngle = extra.prePhysicsAngle();
+                this.prePhysicsGSpeed = extra.prePhysicsGSpeed();
+                this.prePhysicsXSpeed = extra.prePhysicsXSpeed();
+                this.prePhysicsYSpeed = extra.prePhysicsYSpeed();
+                this.air = extra.air();
+                this.rolling = extra.rolling();
+                this.jumping = extra.jumping();
+                this.rollingJump = extra.rollingJump();
+                this.pinballMode = extra.pinballMode();
+                this.pinballSpeedLock = extra.pinballSpeedLock();
+                this.tunnelMode = extra.tunnelMode();
+                this.onObject = extra.onObject();
+                this.onObjectAtFrameStart = extra.onObjectAtFrameStart();
+                this.latchedSolidObjectId = extra.latchedSolidObjectId();
+                this.slopeRepelJustSlipped = extra.slopeRepelJustSlipped();
+                this.stickToConvex = extra.stickToConvex();
+                this.sliding = extra.sliding();
+                this.pushing = extra.pushing();
+                this.skidding = extra.skidding();
+                this.skidDustTimer = extra.skidDustTimer();
+                this.wallClimbX = extra.wallClimbX();
+                this.rightWallPenetrationTimer = extra.rightWallPenetrationTimer();
+                this.balanceState = extra.balanceState();
+                this.springing = extra.springing();
+                this.springingFrames = extra.springingFrames();
+                this.dead = extra.dead();
+                this.drowningDeath = extra.drowningDeath();
+                this.drownPreDeathTimer = extra.drownPreDeathTimer();
+                this.hurt = extra.hurt();
+                this.deathCountdown = extra.deathCountdown();
+                this.invulnerableFrames = extra.invulnerableFrames();
+                this.invincibleFrames = extra.invincibleFrames();
+                this.spindash = extra.spindash();
+                this.spindashCounter = extra.spindashCounter();
+                this.crouching = extra.crouching();
+                this.lookingUp = extra.lookingUp();
+                this.lookDelayCounter = extra.lookDelayCounter();
+                this.doubleJumpFlag = extra.doubleJumpFlag();
+                this.doubleJumpProperty = extra.doubleJumpProperty();
+                this.shield = extra.shield();
+                this.shieldType = extra.shieldType();
+                this.instaShieldRegistered = extra.instaShieldRegistered();
+                this.speedShoes = extra.speedShoes();
+                this.superSonic = extra.superSonic();
+                this.forceInputRight = extra.forceInputRight();
+                this.forcedInputMask = extra.forcedInputMask();
+                this.forcedJumpPress = extra.forcedJumpPress();
+                this.suppressNextJumpPress = extra.suppressNextJumpPress();
+                this.deferredObjectControlRelease = extra.deferredObjectControlRelease();
+                this.controlLocked = extra.controlLocked();
+                this.hasQueuedControlLockedState = extra.hasQueuedControlLockedState();
+                this.queuedControlLocked = extra.queuedControlLocked();
+                this.hasQueuedForceInputRightState = extra.hasQueuedForceInputRightState();
+                this.queuedForceInputRight = extra.queuedForceInputRight();
+                this.moveLockTimer = extra.moveLockTimer();
+                this.objectControlled = extra.objectControlled();
+                this.objectControlAllowsCpu = extra.objectControlAllowsCpu();
+                this.objectControlSuppressesMovement = extra.objectControlSuppressesMovement();
+                this.objectControlReleasedFrame = extra.objectControlReleasedFrame();
+                this.suppressAirCollision = extra.suppressAirCollision();
+                this.suppressGroundWallCollision = extra.suppressGroundWallCollision();
+                this.forceFloorCheck = extra.forceFloorCheck();
+                this.hidden = extra.hidden();
+                this.mgzTopPlatformSpringHandoffPending = extra.mgzTopPlatformSpringHandoffPending();
+                this.mgzTopPlatformSpringHandoffXVel = extra.mgzTopPlatformSpringHandoffXVel();
+                this.mgzTopPlatformSpringHandoffYVel = extra.mgzTopPlatformSpringHandoffYVel();
+                this.jumpInputPressed = extra.jumpInputPressed();
+                this.jumpInputJustPressed = extra.jumpInputJustPressed();
+                this.jumpInputPressedPreviousFrame = extra.jumpInputPressedPreviousFrame();
+                this.upInputPressed = extra.upInputPressed();
+                this.downInputPressed = extra.downInputPressed();
+                this.leftInputPressed = extra.leftInputPressed();
+                this.rightInputPressed = extra.rightInputPressed();
+                this.movementInputActive = extra.movementInputActive();
+                this.logicalInputState = extra.logicalInputState();
+                this.logicalJumpPressState = extra.logicalJumpPressState();
+                this.cpuControlled = extra.cpuControlled();
+                this.historyPos = extra.historyPos();
+                this.followerHistoryRecordedThisTick = extra.followerHistoryRecordedThisTick();
+                this.spiralActiveFrame = extra.spiralActiveFrame();
+                this.flipAngle = extra.flipAngle();
+                this.flipSpeed = extra.flipSpeed();
+                this.flipsRemaining = extra.flipsRemaining();
+                this.flipTurned = extra.flipTurned();
+                this.inWater = extra.inWater();
+                this.waterPhysicsActive = extra.waterPhysicsActive();
+                this.wasInWater = extra.wasInWater();
+                this.waterSkimActive = extra.waterSkimActive();
+                this.preventTailsRespawn = extra.preventTailsRespawn();
+                this.badnikChainCounter = extra.badnikChainCounter();
+                this.bubbleAnimId = extra.bubbleAnimId();
+                this.initPhysicsActive = extra.initPhysicsActive();
+                this.objectMappingFrameControl = extra.objectMappingFrameControl();
+                this.mappingFrame = extra.mappingFrame();
+                this.animationId = extra.animationId();
+                this.forcedAnimationId = extra.forcedAnimationId();
+                this.animationFrameIndex = extra.animationFrameIndex();
+                this.animationTick = extra.animationTick();
+                controller.getMovement().restoreRewindState(extra.movementState());
+                if (controller.getSpindashDust() != null) {
+                        controller.getSpindashDust().restoreRewindState(extra.spindashDustState());
+                }
+                if (controller.getAnimation() != null) {
+                        controller.getAnimation().restoreRewindState(extra.animationState());
+                }
+                if (extra.sidekickCpuExtra() != null) {
+                        if (cpuController == null) {
+                                throw new IllegalStateException(
+                                        "Cannot restore SidekickCpuController state without a live controller");
+                        }
+                        cpuController.restoreRewindState(extra.sidekickCpuExtra());
+                }
+                // Sidekick follow-history circular buffers. Without restoring these,
+                // the follower reads stale leader-position history and diverges on
+                // the very first replay step.
+                if (extra.xHistory() != null) {
+                        System.arraycopy(extra.xHistory(), 0, this.xHistory, 0,
+                                Math.min(extra.xHistory().length, this.xHistory.length));
+                }
+                if (extra.yHistory() != null) {
+                        System.arraycopy(extra.yHistory(), 0, this.yHistory, 0,
+                                Math.min(extra.yHistory().length, this.yHistory.length));
+                }
+                if (extra.inputHistory() != null) {
+                        System.arraycopy(extra.inputHistory(), 0, this.inputHistory, 0,
+                                Math.min(extra.inputHistory().length, this.inputHistory.length));
+                }
+                if (extra.jumpPressHistory() != null) {
+                        System.arraycopy(extra.jumpPressHistory(), 0, this.jumpPressHistory, 0,
+                                Math.min(extra.jumpPressHistory().length, this.jumpPressHistory.length));
+                }
+                if (extra.statusHistory() != null) {
+                        System.arraycopy(extra.statusHistory(), 0, this.statusHistory, 0,
+                                Math.min(extra.statusHistory().length, this.statusHistory.length));
+                }
+        }
+
+        /**
+         * Recreates power-up visuals after all rewind adapters have restored. The
+         * object manager restores after sprites, so visual rebinding must be
+         * deferred until the registry's post-restore phase.
+         */
+        public void refreshPowerUpObjectsAfterRewindRestore() {
+                if (!shield || shieldType == null) {
+                        if (shieldObject != null) {
+                                shieldObject.destroy();
+                                shieldObject = null;
+                        }
+                        shield = false;
+                        shieldType = null;
+                        return;
+                }
+
+                if (shieldObject != null) {
+                        shieldObject.destroy();
+                        shieldObject = null;
+                }
+                if (powerUpSpawner != null) {
+                        shieldObject = powerUpSpawner.spawnShield(this, shieldType);
+                        if (shieldObject != null && invincibleFrames > 0) {
+                                shieldObject.setVisible(false);
+                        }
+                }
         }
 
         public void giveShield() {
@@ -1353,6 +1670,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * detection. The reference is cleared when the controller despawns,
          * inits, or the engine clears latched state.
          */
+        @com.openggf.game.rewind.RewindDeferred(reason = "latched solid contact needs stable object identity snapshot")
         protected com.openggf.level.objects.ObjectInstance latchedSolidObjectInstance;
 
         public com.openggf.level.objects.ObjectInstance getLatchedSolidObjectInstance() {

@@ -901,7 +901,6 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
         private static final int IDLE_FRAME = 2;
 
         private enum State { DORMANT, ANIMATING }
-
         private final GumballMachineObjectInstance parent;
         private final int offsetFromMachine; // Y offset (ROM: +$24)
         private State state = State.DORMANT;
@@ -1258,7 +1257,6 @@ public class GumballMachineObjectInstance extends AbstractObjectInstance {
         // ROM: Map_Spring frames — frame 0 idle, frame 1 compressed (played on bounce)
         private static final int IDLE_FRAME = 0;
         private static final int COMPRESSED_FRAME = 1;
-
         private final GumballMachineObjectInstance parent;
         private final DispenserChild dispenser;
         private boolean triggered;

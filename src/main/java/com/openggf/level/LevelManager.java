@@ -313,6 +313,7 @@ public class LevelManager {
             if (ctx.getLevel() != null) {
                 writeCurrentLevel(ctx.getLevel());
             }
+            resetRewindBufferAfterLevelBoundary();
         } catch (Exception e) {
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
             Throwable cause = e.getCause();
@@ -322,6 +323,14 @@ public class LevelManager {
             }
             LOGGER.log(SEVERE, "Unexpected error while loading level " + levelIndex, e);
             throw new IOException("Failed to load level due to unexpected error.", e);
+        }
+    }
+
+    private void resetRewindBufferAfterLevelBoundary() {
+        com.openggf.game.session.GameplayModeContext gameplayMode =
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null && gameplayMode.getRewindController() != null) {
+            gameplayMode.getRewindController().resetBufferAtCurrentFrame();
         }
     }
 
@@ -568,10 +577,17 @@ public class LevelManager {
 
     /**
      * Phase G: Create ObjectManager, wire CollisionSystem, and reset camera bounds.
+     * Also registers level and object-manager rewind adapters with the active
+     * {@link com.openggf.game.session.GameplayModeContext} (if one exists).
      */
     public void initObjectSystem() throws IOException {
         initObjectManager();
         initCameraBounds();
+        com.openggf.game.session.GameplayModeContext gameplayMode =
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.registerLevelAdapters(this);
+        }
     }
 
     /**
@@ -594,6 +610,11 @@ public class LevelManager {
         ringManager = new RingManager(level.getRings(), ringSpriteSheet, this, touchResponseTable, audioManager);
         ringManager.reset(camera.getX());
         ringManager.ensurePatternsCached(graphicsManager, level.getPatternCount());
+        com.openggf.game.session.GameplayModeContext gameplayMode =
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.registerRingAdapter(ringManager);
+        }
     }
 
     /**
@@ -1567,6 +1588,11 @@ public class LevelManager {
             LOGGER.log(SEVERE, "Failed to load object art.", e);
             objectRenderManager = null;
         }
+        com.openggf.game.session.GameplayModeContext gameplayMode =
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null && provider != null) {
+            gameplayMode.registerPlcArtAdapter(provider);
+        }
     }
 
     boolean isHudSuppressed() {
@@ -1585,6 +1611,11 @@ public class LevelManager {
         } catch (IOException e) {
             LOGGER.log(SEVERE, "Failed to load animated patterns.", e);
             animatedPatternManager = null;
+        }
+        com.openggf.game.session.GameplayModeContext gameplayMode =
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.registerPatternAnimatorAdapter(animatedPatternManager);
         }
     }
 
@@ -1677,6 +1708,26 @@ public class LevelManager {
      */
     public void renderEndingBackground(int bgVscroll, float[] backdropOverride) {
         levelRenderer.renderEndingBackground(bgVscroll, backdropOverride);
+    }
+
+    public void recomputeParallaxAfterRewindRestore() {
+        if (parallaxManager == null || camera == null) {
+            return;
+        }
+        int bgScrollY = (int) (camera.getY() * 0.1f);
+        if (game != null
+                && currentZone >= 0
+                && currentZone < levels.size()
+                && currentAct >= 0
+                && currentAct < levels.get(currentZone).size()) {
+            int levelIdx = levels.get(currentZone).get(currentAct).getLevelIndex();
+            int[] scroll = game.getBackgroundScroll(levelIdx, camera.getX(), camera.getY());
+            bgScrollY = scroll[1];
+        }
+        parallaxManager.update(currentZone, currentAct, camera, frameCounter, bgScrollY, level);
+        camera.setShakeOffsets(
+                parallaxManager.getShakeOffsetX(),
+                parallaxManager.getShakeOffsetY());
     }
 
     /**
@@ -3435,6 +3486,13 @@ public class LevelManager {
      * Replaces the reflection-based tearDown hacks in test classes.
      */
     public void resetState() {
+        com.openggf.game.session.GameplayModeContext gameplayMode =
+                com.openggf.game.session.SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null && gameplayMode.getRewindRegistry() != null) {
+            gameplayMode.getRewindRegistry().deregister("level");
+            gameplayMode.getRewindRegistry().deregister("object-manager");
+            gameplayMode.getRewindRegistry().deregister("level-event");
+        }
         writeCurrentLevel(null);
         game = null;
         gameModule = null;
@@ -3525,6 +3583,12 @@ public class LevelManager {
 
     /** @see LevelTransitionCoordinator#consumeRespawnRequest() */
     public boolean consumeRespawnRequest() { return transitions.consumeRespawnRequest(); }
+
+    public boolean isRespawnRequestedForRewind() { return transitions.isRespawnRequested(); }
+
+    public void restoreRespawnRequestedForRewind(boolean respawnRequested) {
+        transitions.restoreRespawnRequested(respawnRequested);
+    }
 
     /** @see LevelTransitionCoordinator#requestNextAct() */
     public void requestNextAct() { transitions.requestNextAct(); }
@@ -3780,5 +3844,69 @@ public class LevelManager {
         } catch (Exception e) {
             return -1;
         }
+    }
+
+    // ===== Rewind snapshot adapter =====
+
+    /**
+     * Returns a {@link com.openggf.game.rewind.RewindSnapshottable} adapter for level state.
+     * Captures block/chunk array references and map data; restores via copy-on-write.
+     */
+    public com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelSnapshot> levelRewindSnapshottable() {
+        return new com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.LevelSnapshot>() {
+            @Override
+            public String key() {
+                return "level";
+            }
+
+            @Override
+            public com.openggf.game.rewind.snapshot.LevelSnapshot capture() {
+                Level currentLevel = getCurrentLevel();
+                if (!(currentLevel instanceof AbstractLevel)) {
+                    throw new IllegalStateException("Current level is not an AbstractLevel: " + currentLevel.getClass().getName());
+                }
+                AbstractLevel level = (AbstractLevel) currentLevel;
+
+                return new com.openggf.game.rewind.snapshot.LevelSnapshot(
+                        level.currentEpoch(),
+                        level.blocksReference(),
+                        level.chunksReference(),
+                        level.getMap().getData(),
+                        frameCounter,
+                        levelGamestate != null,
+                        levelGamestate != null ? levelGamestate.getRings() : 0,
+                        levelGamestate != null ? levelGamestate.getTimerFrames() : 0,
+                        levelGamestate != null && levelGamestate.isTimerPaused(),
+                        isRespawnRequestedForRewind()
+                );
+            }
+
+            @Override
+            public void restore(com.openggf.game.rewind.snapshot.LevelSnapshot s) {
+                Level currentLevel = getCurrentLevel();
+                if (!(currentLevel instanceof AbstractLevel)) {
+                    throw new IllegalStateException("Current level is not an AbstractLevel: " + currentLevel.getClass().getName());
+                }
+                AbstractLevel level = (AbstractLevel) currentLevel;
+
+                level.replaceBlocks(s.blocks());
+                level.replaceChunks(s.chunks());
+                level.getMap().restoreData(s.mapData());
+                level.bumpEpoch();
+                // TODO: mark dirty regions for re-upload — see L1 LevelManager.processDirtyRegions
+                level.markAllDirty();
+                frameCounter = s.frameCounter();
+                if (s.hasLevelHudState() && levelGamestate != null) {
+                    levelGamestate.setRings(s.levelRings());
+                    levelGamestate.setTimerFrames(s.levelTimerFrames());
+                    if (s.levelTimerPaused()) {
+                        levelGamestate.pauseTimer();
+                    } else {
+                        levelGamestate.resumeTimer();
+                    }
+                }
+                restoreRespawnRequestedForRewind(s.respawnRequested());
+            }
+        };
     }
 }

@@ -49,7 +49,6 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
 
     private int angleStep;
     private int activeSpikes;
-
     private List<OrbSpikeObjectInstance> spikes;
     private boolean initialized;
 
@@ -246,7 +245,6 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
 
     private static final class OrbSpikeObjectInstance extends AbstractObjectInstance
             implements TouchResponseProvider {
-
         private final Sonic1OrbinautBadnikInstance parent;
 
         private int x;

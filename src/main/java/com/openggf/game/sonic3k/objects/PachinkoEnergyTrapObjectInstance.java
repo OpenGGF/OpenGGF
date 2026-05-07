@@ -273,7 +273,6 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance {
     }
 
     private static final class EnergyTrapColumnChild extends AbstractObjectInstance {
-
         private final PachinkoEnergyTrapObjectInstance parent;
         private int currentX;
         private int currentY;
@@ -321,7 +320,6 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance {
     private static final class EnergyTrapBeamChild extends AbstractObjectInstance {
 
         private static final int[] ANIMATION = {0, 1, 2, 3, 4, 3, 2, 1};
-
         private final PachinkoEnergyTrapObjectInstance parent;
         private int beamAngle;
         private int currentX;

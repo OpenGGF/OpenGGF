@@ -34,7 +34,6 @@ public class CheckpointStarInstance extends AbstractObjectInstance {
     private static final int SHRINK_START = 0x180; // Start shrinking
     private static final int DELETE_AT = 0x200; // Delete when lifetime reaches this
     private static final int ANGLE_INCREMENT = 0xA; // Add to angle each frame
-
     private final CheckpointObjectInstance parentCheckpoint; // Reference to parent for marking as used
     private final int centerX; // objoff_30
     private final int centerY; // objoff_32

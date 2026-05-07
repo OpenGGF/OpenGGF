@@ -119,7 +119,6 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         NORMAL,
         DEATH_DROP
     }
-
     private final RexonBadnikInstance parent;
     private final int headIndex;  // 0, 2, 4, 6, or 8
     private final int headNumber; // 0-4 for array indexing
