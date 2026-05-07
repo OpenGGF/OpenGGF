@@ -6,5 +6,6 @@ package com.openggf.game.render;
 public enum SpecialRenderEffectStage {
     AFTER_BACKGROUND,
     AFTER_FOREGROUND,
+    SPRITE_PRIORITY_MASK,
     AFTER_SPRITES
 }

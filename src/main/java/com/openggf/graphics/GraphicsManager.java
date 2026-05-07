@@ -36,6 +36,7 @@ public class GraphicsManager {
 
 	private static GraphicsManager graphicsManager;
 	List<GLCommandable> commands = new ArrayList<>();
+	private List<GLCommandable> commandCaptureTarget;
 	private final Queue<PendingRenderThreadTask<?>> pendingRenderThreadTasks = new ConcurrentLinkedQueue<>();
 
 	private final Map<String, Integer> paletteTextureMap = new HashMap<>(); // Map for palette textures
@@ -155,7 +156,32 @@ public class GraphicsManager {
 	private boolean waterEnabled = false;
 
 	public void registerCommand(GLCommandable command) {
+		if (commandCaptureTarget != null) {
+			commandCaptureTarget.add(command);
+			return;
+		}
 		commands.add(command);
+	}
+
+	public void executeCapturedCommands(Runnable producer, int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
+		List<GLCommandable> previousCaptureTarget = commandCaptureTarget;
+		List<GLCommandable> capturedCommands = new ArrayList<>();
+		commandCaptureTarget = capturedCommands;
+		try {
+			producer.run();
+			if (headlessMode || capturedCommands.isEmpty() || !glInitialized) {
+				capturedCommands.clear();
+				return;
+			}
+			PatternRenderCommand.resetFrameState();
+			for (GLCommandable command : capturedCommands) {
+				command.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+			}
+			PatternRenderCommand.cleanupFrameState(this);
+		} finally {
+			commandCaptureTarget = previousCaptureTarget;
+			capturedCommands.clear();
+		}
 	}
 
 	public <T> CompletableFuture<T> submitRenderThreadTask(Callable<T> callable) {
@@ -1680,4 +1706,3 @@ public class GraphicsManager {
 		}
 	}
 }
-
