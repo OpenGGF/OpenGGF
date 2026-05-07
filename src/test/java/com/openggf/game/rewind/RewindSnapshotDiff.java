@@ -3,6 +3,7 @@ package com.openggf.game.rewind;
 import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
+import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,6 +65,7 @@ public final class RewindSnapshotDiff {
         }
         if (!Arrays.equals(oa.usedSlotsBits(), ob.usedSlotsBits())) {
             diffs.add(path + ".usedSlotsBits differs");
+            collectUsedSlotBitDiffs(path + ".usedSlotsBits", oa.usedSlotsBits(), ob.usedSlotsBits(), diffs);
         }
         if (oa.frameCounter() != ob.frameCounter()) {
             diffs.add(path + ".frameCounter: A=" + oa.frameCounter() + " B=" + ob.frameCounter());
@@ -212,6 +214,10 @@ public final class RewindSnapshotDiff {
             collectGenericObjectSnapshotDiffs(path, ga, gb, diffs);
             return;
         }
+        if (av instanceof RewindObjectStateBlob ba && bv instanceof RewindObjectStateBlob bb) {
+            collectRewindObjectStateBlobDiffs(path, ba, bb, diffs);
+            return;
+        }
         if (cls.isRecord()) {
             for (var c : cls.getRecordComponents()) {
                 try {
@@ -301,6 +307,74 @@ public final class RewindSnapshotDiff {
                         avs[i], bvs[i], diffs);
             }
         }
+    }
+
+    private static void collectUsedSlotBitDiffs(String path, long[] av, long[] bv, List<String> diffs) {
+        java.util.BitSet aBits = java.util.BitSet.valueOf(av);
+        java.util.BitSet bBits = java.util.BitSet.valueOf(bv);
+        java.util.BitSet onlyA = (java.util.BitSet) aBits.clone();
+        onlyA.andNot(bBits);
+        java.util.BitSet onlyB = (java.util.BitSet) bBits.clone();
+        onlyB.andNot(aBits);
+        appendBitSetDiff(path + ".onlyA", onlyA, diffs);
+        appendBitSetDiff(path + ".onlyB", onlyB, diffs);
+    }
+
+    private static void appendBitSetDiff(String path, java.util.BitSet bits, List<String> diffs) {
+        if (bits.isEmpty()) {
+            return;
+        }
+        StringBuilder sb = new StringBuilder(path).append(": ");
+        int emitted = 0;
+        for (int bit = bits.nextSetBit(0); bit >= 0 && emitted < 12; bit = bits.nextSetBit(bit + 1)) {
+            if (emitted > 0) {
+                sb.append(", ");
+            }
+            sb.append(bit);
+            emitted++;
+        }
+        if (bits.cardinality() > emitted) {
+            sb.append(", ... (").append(bits.cardinality()).append(" total)");
+        }
+        diffs.add(sb.toString());
+    }
+
+    private static void collectRewindObjectStateBlobDiffs(String path,
+                                                            RewindObjectStateBlob av,
+                                                            RewindObjectStateBlob bv,
+                                                            List<String> diffs) {
+        if (av.schemaId() != bv.schemaId()) {
+            diffs.add(path + ".schemaId: A=" + av.schemaId() + " B=" + bv.schemaId());
+            return;
+        }
+        if (av.type() != bv.type()) {
+            diffs.add(path + ".type: A=" + av.type().getName() + " B=" + bv.type().getName());
+            return;
+        }
+        byte[] scalarA = av.scalarData();
+        byte[] scalarB = bv.scalarData();
+        if (!Arrays.equals(scalarA, scalarB)) {
+            diffs.add(path + ".type: " + av.type().getName());
+            if (scalarA.length != scalarB.length) {
+                diffs.add(path + ".scalarData.length: A=" + scalarA.length + " B=" + scalarB.length);
+                return;
+            }
+            for (int i = 0; i < scalarA.length && diffs.size() < 20; i++) {
+                if (scalarA[i] != scalarB[i]) {
+                    diffs.add(path + ".scalarData[" + i + "]: A="
+                            + unsignedHex(scalarA[i]) + " B=" + unsignedHex(scalarB[i]));
+                }
+            }
+        }
+        Object[] opaqueA = av.opaqueValues();
+        Object[] opaqueB = bv.opaqueValues();
+        if (!fieldContentEqual(opaqueA, opaqueB)) {
+            collectDiffs(path + ".opaqueValues", opaqueA, opaqueB, diffs);
+        }
+    }
+
+    private static String unsignedHex(byte value) {
+        return String.format("0x%02X", value & 0xFF);
     }
 
     /**

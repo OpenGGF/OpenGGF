@@ -166,6 +166,48 @@ public class ObjectManager {
             new RewindDynamicObjectCodec() {
                 @Override
                 public boolean supports(ObjectInstance instance) {
+                    return instance instanceof com.openggf.game.sonic2.objects.CheckpointDongleInstance;
+                }
+
+                @Override
+                public String className() {
+                    return com.openggf.game.sonic2.objects.CheckpointDongleInstance.class.getName();
+                }
+
+                @Override
+                public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                    com.openggf.game.sonic2.objects.CheckpointObjectInstance parent =
+                            context.objectManager().findCheckpointParentForRewind(entry.spawn());
+                    return parent == null
+                            ? null
+                            : new com.openggf.game.sonic2.objects.CheckpointDongleInstance(parent);
+                }
+            },
+            new RewindDynamicObjectCodec() {
+                @Override
+                public boolean supports(ObjectInstance instance) {
+                    return instance instanceof com.openggf.game.sonic2.objects.CheckpointStarInstance;
+                }
+
+                @Override
+                public String className() {
+                    return com.openggf.game.sonic2.objects.CheckpointStarInstance.class.getName();
+                }
+
+                @Override
+                public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                    com.openggf.game.sonic2.objects.CheckpointObjectInstance parent =
+                            context.objectManager().findCheckpointParentForRewind(entry.spawn());
+                    return parent == null
+                            ? null
+                            : new com.openggf.game.sonic2.objects.CheckpointStarInstance(parent, 0);
+                }
+            },
+            new RewindDynamicObjectCodec() {
+                @Override
+                public boolean supports(ObjectInstance instance) {
                     return instance instanceof ExplosionObjectInstance;
                 }
 
@@ -2536,6 +2578,9 @@ public class ObjectManager {
                         ));
                     }
                 }
+                slots.sort(Comparator
+                        .comparingInt(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry::slotIndex)
+                        .thenComparing(entry -> stableSpawnKey(entry.spawn())));
 
                 // Capture reservedChildSlots
                 List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry> childSpawns = new ArrayList<>();
@@ -2546,12 +2591,15 @@ public class ObjectManager {
                             Arrays.copyOf(slotArray, slotArray.length)
                     ));
                 }
+                childSpawns.sort(Comparator
+                        .comparing((com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry entry) ->
+                                stableSpawnKey(entry.parentSpawn()))
+                        .thenComparing(entry -> Arrays.toString(entry.reservedSlots())));
 
                 List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> dynamicEntries =
                         new ArrayList<>();
                 for (ObjectInstance inst : dynamicObjects) {
-                    if (inst instanceof AbstractObjectInstance aoi
-                            && isRewindRestorableDynamicObject(inst)) {
+                    if (inst instanceof AbstractObjectInstance aoi) {
                         dynamicEntries.add(
                                 new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry(
                                         inst.getClass().getName(),
@@ -2561,14 +2609,7 @@ public class ObjectManager {
                     }
                 }
 
-                // Capture the live usedSlots BitSet directly. The synthesized
-                // subset (active + restorable + reserved) drops bits for
-                // non-codec transient dynamics, which causes downstream slot
-                // drift across many rewinds when those transients had
-                // occupied slots at capture time but are silently freed on
-                // restore. Capturing live keeps the allocator's view
-                // consistent with the reference run at the rewind point.
-                long[] bits = usedSlots.toLongArray();
+                long[] bits = captureOwnedUsedSlotBits();
 
                 return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot(
                         bits,
@@ -2581,7 +2622,10 @@ public class ObjectManager {
                         List.copyOf(childSpawns),
                         List.copyOf(dynamicEntries),
                         placement.captureRewindState(),
-                        solidContacts.captureRewindState()
+                        solidContacts.captureRewindState(),
+                        touchResponses != null
+                                ? touchResponses.captureRewindState()
+                                : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState.empty()
                 );
             }
 
@@ -2665,10 +2709,58 @@ public class ObjectManager {
 
                 solidContacts.restoreRewindState(s.solidContactRiding());
 
+                // TouchResponses' double-buffer overlap state must be restored
+                // AFTER object restoration so slot lookup resolves to live
+                // post-restore instances. See iter-1631 root-cause analysis in
+                // docs/superpowers/plans/2026-05-07-rewind-encounter-validation.md.
+                if (touchResponses != null) {
+                    touchResponses.restoreRewindState(s.touchResponseOverlap());
+                }
+
                 bucketsDirty = true;
                 activeObjectsCacheDirty = true;
             }
         };
+    }
+
+    private long[] captureOwnedUsedSlotBits() {
+        BitSet owned = new BitSet(execOrder.length);
+        for (ObjectInstance inst : activeObjects.values()) {
+            markOwnedSlot(owned, inst);
+        }
+        for (ObjectInstance inst : dynamicObjects) {
+            markOwnedSlot(owned, inst);
+        }
+        for (int[] slots : reservedChildSlots.values()) {
+            if (slots == null) {
+                continue;
+            }
+            for (int slot : slots) {
+                if (isManagedDynamicSlot(slot)) {
+                    owned.set(execIndexForSlot(slot));
+                }
+            }
+        }
+        return owned.toLongArray();
+    }
+
+    private void markOwnedSlot(BitSet owned, ObjectInstance inst) {
+        if (inst instanceof AbstractObjectInstance aoi && isManagedDynamicSlot(aoi.getSlotIndex())) {
+            owned.set(execIndexForSlot(aoi.getSlotIndex()));
+        }
+    }
+
+    private static String stableSpawnKey(ObjectSpawn spawn) {
+        if (spawn == null) {
+            return "";
+        }
+        return spawn.layoutIndex()
+                + ":" + spawn.objectId()
+                + ":" + spawn.x()
+                + ":" + spawn.y()
+                + ":" + spawn.subtype()
+                + ":" + spawn.renderFlags()
+                + ":" + spawn.rawYWord();
     }
 
     static boolean isRewindRestorableDynamicObject(ObjectInstance inst) {
@@ -2754,6 +2846,21 @@ public class ObjectManager {
             if (inst instanceof com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance buzzer
                     && buzzer.getSlotIndex() == parentSlotIndex) {
                 return buzzer;
+            }
+        }
+        return null;
+    }
+
+    private com.openggf.game.sonic2.objects.CheckpointObjectInstance findCheckpointParentForRewind(
+            ObjectSpawn childSpawn) {
+        if (childSpawn == null) {
+            return null;
+        }
+        for (ObjectInstance inst : activeObjects.values()) {
+            if (inst instanceof com.openggf.game.sonic2.objects.CheckpointObjectInstance checkpoint
+                    && checkpoint.getCenterX() == childSpawn.x()
+                    && checkpoint.getCenterY() == childSpawn.y()) {
+                return checkpoint;
             }
         }
         return null;
@@ -4039,6 +4146,106 @@ public class ObjectManager {
             building = bufferB;
             sidekickOverlaps.values().forEach(OverlapBufferPair::reset);
             currentFrameCounter = 0;
+        }
+
+        /**
+         * Captures the double-buffer overlap state for rewind. Encodes set
+         * content as slot indices (object Java refs change identity on
+         * restore) and the buffer-swap parity as a boolean. See
+         * {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState}
+         * for the cross-frame-state rationale.
+         */
+        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState
+                captureRewindState() {
+            int[] mainOver = collectSlotIndices(overlapping);
+            int[] mainBuild = collectSlotIndices(building);
+            boolean mainSwapped = (overlapping == bufferB);
+            List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SidekickOverlapEntry>
+                    sidekickEntries = new ArrayList<>(sidekickOverlaps.size());
+            for (var entry : sidekickOverlaps.entrySet()) {
+                PlayableEntity sk = entry.getKey();
+                OverlapBufferPair pair = entry.getValue();
+                String code = sk instanceof com.openggf.sprites.Sprite s ? s.getCode() : null;
+                if (code == null) continue;
+                sidekickEntries.add(
+                        new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SidekickOverlapEntry(
+                                code,
+                                collectSlotIndices(pair.overlapping),
+                                collectSlotIndices(pair.building),
+                                pair.overlapping == pair.bufferB));
+            }
+            return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState(
+                    mainOver, mainBuild, mainSwapped, sidekickEntries);
+        }
+
+        /**
+         * Restores the double-buffer overlap state. Must run AFTER
+         * {@code ObjectManager}'s slot/dynamic-object restore so slot lookup
+         * resolves to the post-restore live instances.
+         */
+        void restoreRewindState(
+                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState state) {
+            bufferA.clear();
+            bufferB.clear();
+            overlapping = bufferA;
+            building = bufferB;
+            sidekickOverlaps.clear();
+            if (state == null) return;
+            populateBuffer(bufferA,
+                    state.mainParitySwapped() ? state.mainBuildingSlotIndices() : state.mainOverlappingSlotIndices());
+            populateBuffer(bufferB,
+                    state.mainParitySwapped() ? state.mainOverlappingSlotIndices() : state.mainBuildingSlotIndices());
+            if (state.mainParitySwapped()) {
+                overlapping = bufferB;
+                building = bufferA;
+            }
+            // Resolve sidekick PlayableEntity refs from the live SpriteManager.
+            com.openggf.sprites.managers.SpriteManager sm =
+                    com.openggf.game.GameServices.spritesOrNull();
+            if (sm == null) return;
+            for (var skEntry : state.sidekicks()) {
+                com.openggf.sprites.Sprite sprite = sm.getSprite(skEntry.sidekickCode());
+                if (!(sprite instanceof PlayableEntity pe)) continue;
+                OverlapBufferPair pair = new OverlapBufferPair();
+                populateBuffer(pair.bufferA,
+                        skEntry.paritySwapped() ? skEntry.buildingSlotIndices() : skEntry.overlappingSlotIndices());
+                populateBuffer(pair.bufferB,
+                        skEntry.paritySwapped() ? skEntry.overlappingSlotIndices() : skEntry.buildingSlotIndices());
+                if (skEntry.paritySwapped()) {
+                    pair.overlapping = pair.bufferB;
+                    pair.building = pair.bufferA;
+                }
+                sidekickOverlaps.put(pe, pair);
+            }
+        }
+
+        private static int[] collectSlotIndices(Set<ObjectInstance> set) {
+            int[] result = new int[set.size()];
+            int n = 0;
+            for (ObjectInstance inst : set) {
+                if (inst instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() >= 0) {
+                    result[n++] = aoi.getSlotIndex();
+                }
+            }
+            return n == result.length ? result : Arrays.copyOf(result, n);
+        }
+
+        private void populateBuffer(Set<ObjectInstance> buffer, int[] slotIndices) {
+            if (slotIndices == null || slotIndices.length == 0) return;
+            // Build a slot -> instance lookup once, since each Set may have
+            // multiple slots to resolve.
+            Map<Integer, ObjectInstance> bySlot = new java.util.HashMap<>();
+            for (ObjectInstance inst : objectManager.getActiveObjects()) {
+                if (inst instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() >= 0) {
+                    bySlot.put(aoi.getSlotIndex(), inst);
+                }
+            }
+            for (int slot : slotIndices) {
+                ObjectInstance inst = bySlot.get(slot);
+                if (inst != null) {
+                    buffer.add(inst);
+                }
+            }
         }
 
         void update(PlayableEntity player, int frameCounter) {

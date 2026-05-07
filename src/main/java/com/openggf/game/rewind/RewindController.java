@@ -105,11 +105,14 @@ public final class RewindController {
         segmentCache.invalidate();
         registry.restore(floor.snapshot());
         currentFrame = floor.frame();
+        primeStepperAtFrame(currentFrame);
         while (currentFrame < clampedTarget) {
             Bk2FrameInput in = inputs.read(currentFrame + 1);
             engineStepper.step(in);
             currentFrame++;
         }
+        keyframes.discardAfter(currentFrame);
+        primeStepperAtFrame(currentFrame);
     }
 
     /**
@@ -132,6 +135,7 @@ public final class RewindController {
                 () -> {
                     registry.restore(restoreSnapshot);
                     pos[0] = keyframeSnapshot;
+                    primeStepperAtFrame(pos[0]);
                 },
                 () -> {
                     Bk2FrameInput in = inputs.read(pos[0] + 1);
@@ -141,6 +145,14 @@ public final class RewindController {
                 });
         registry.restore(snap);
         currentFrame = target;
+        keyframes.discardAfter(currentFrame);
+        primeStepperAtFrame(currentFrame);
         return true;
+    }
+
+    private void primeStepperAtFrame(int frame) {
+        if (engineStepper instanceof RewindSeekAwareEngineStepper seekAware) {
+            seekAware.restoreToFrame(frame, inputs.read(frame));
+        }
     }
 }

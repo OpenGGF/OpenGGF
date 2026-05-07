@@ -91,7 +91,8 @@ class TestLevelManagerRewindSnapshot {
                             levelGamestate.getRings(),
                             levelGamestate.getTimerFrames(),
                             levelGamestate.isTimerPaused(),
-                            false
+                            false,
+                            null
                     );
                 }
 

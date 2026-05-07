@@ -18,16 +18,16 @@ import java.util.List;
  *
  * <p>The snapshot covers:
  * <ul>
- *   <li>The live {@code usedSlots} BitSet as a {@code long[]} (serialization-friendly).
- *       Includes bits for non-codec transient dynamics so the allocator's view at restore
- *       matches the reference run at the rewind point; subsequent slot leaks for those
- *       phantom occupants are addressed by adding rewind codecs for the transient classes.</li>
+ *   <li>The owned {@code usedSlots} BitSet as a {@code long[]} (serialization-friendly).
+ *       It is derived from active objects, dynamic objects, and reserved child slots so
+ *       rewind preserves live slot occupants without preserving ownerless allocator bits.</li>
  *   <li>Per-active-slot entries: spawn identity + captured per-instance state.</li>
  *   <li>Scalar counters: {@code frameCounter}, {@code vblaCounter},
  *       {@code currentExecSlot}, {@code peakSlotCount}.</li>
  *   <li>Render-cache dirty flag ({@code bucketsDirty}).</li>
  *   <li>Reserved child-slot mapping entries ({@code childSpawns}).</li>
- *   <li>Restorable dynamic object entries such as badnik projectiles and Buzzer flame children.</li>
+ *   <li>Dynamic object entries. Restore recreates entries with registered codecs; unsupported
+ *       entries remain diagnostic-only until a codec is added.</li>
  *   <li>Placement cursor/window state needed by the next replayed frame.</li>
  * </ul>
  */
@@ -42,7 +42,8 @@ public record ObjectManagerSnapshot(
         List<ChildSpawnEntry> childSpawns,
         List<DynamicObjectEntry> dynamicObjects,
         PlacementSnapshot placement,
-        List<SolidContactRidingEntry> solidContactRiding
+        List<SolidContactRidingEntry> solidContactRiding,
+        TouchResponseOverlapState touchResponseOverlap
 ) {
     public ObjectManagerSnapshot {
         usedSlotsBits = usedSlotsBits == null ? new long[0] : Arrays.copyOf(usedSlotsBits, usedSlotsBits.length);
@@ -50,6 +51,30 @@ public record ObjectManagerSnapshot(
         childSpawns = List.copyOf(childSpawns);
         dynamicObjects = List.copyOf(dynamicObjects);
         solidContactRiding = solidContactRiding == null ? List.of() : List.copyOf(solidContactRiding);
+        touchResponseOverlap = touchResponseOverlap == null
+                ? TouchResponseOverlapState.empty() : touchResponseOverlap;
+    }
+
+    public ObjectManagerSnapshot(
+            long[] usedSlotsBits,
+            List<PerSlotEntry> slots,
+            int frameCounter,
+            int vblaCounter,
+            int currentExecSlot,
+            int peakSlotCount,
+            boolean bucketsDirty,
+            List<ChildSpawnEntry> childSpawns,
+            List<DynamicObjectEntry> dynamicObjects,
+            PlacementSnapshot placement,
+            List<SolidContactRidingEntry> solidContactRiding
+    ) {
+        this(
+                usedSlotsBits, slots,
+                frameCounter, vblaCounter, currentExecSlot, peakSlotCount,
+                bucketsDirty, childSpawns, dynamicObjects, placement,
+                solidContactRiding,
+                TouchResponseOverlapState.empty()
+        );
     }
 
     public ObjectManagerSnapshot(
@@ -167,4 +192,73 @@ public record ObjectManagerSnapshot(
     }
 
     public record SpawnCounterEntry(int spawnIndex, int counter) {}
+
+    /**
+     * Snapshot of {@code ObjectManager.TouchResponses}' double-buffer overlap
+     * state. Edge-trigger collision detection in {@code TouchResponses.update}
+     * reads {@code overlapping} (last frame's overlap set) and writes to
+     * {@code building}, then swaps. Without capturing this state, a
+     * {@code seekTo} restore loses both the overlap set CONTENT (which
+     * objects the player was overlapping last frame) and the buffer-swap
+     * PARITY (which buffer is currently {@code overlapping} vs
+     * {@code building}). The parity offset persists frame-after-frame and
+     * causes edge-trigger logic to fire/miss at different moments in
+     * forward-only vs rewind-replay runs, surfacing as the iter-1631
+     * divergence in {@code TestRewindTorture}.
+     *
+     * <p>Buffer content is encoded as slot indices (the buffers contain
+     * live {@code ObjectInstance} refs that change identity across restore;
+     * slot index is stable). Restore looks up by slot via the
+     * post-instantiation active-objects view.
+     *
+     * @param mainOverlappingSlotIndices  slot ids in main player's
+     *                                    {@code overlapping} buffer
+     * @param mainBuildingSlotIndices     slot ids in main player's
+     *                                    {@code building} buffer
+     * @param mainParitySwapped           true when {@code overlapping=bufferB}
+     *                                    (after odd number of swaps)
+     * @param sidekicks                   per-sidekick overlap state
+     */
+    public record TouchResponseOverlapState(
+            int[] mainOverlappingSlotIndices,
+            int[] mainBuildingSlotIndices,
+            boolean mainParitySwapped,
+            List<SidekickOverlapEntry> sidekicks
+    ) {
+        public TouchResponseOverlapState {
+            mainOverlappingSlotIndices = mainOverlappingSlotIndices == null
+                    ? new int[0]
+                    : Arrays.copyOf(mainOverlappingSlotIndices, mainOverlappingSlotIndices.length);
+            mainBuildingSlotIndices = mainBuildingSlotIndices == null
+                    ? new int[0]
+                    : Arrays.copyOf(mainBuildingSlotIndices, mainBuildingSlotIndices.length);
+            sidekicks = sidekicks == null ? List.of() : List.copyOf(sidekicks);
+        }
+
+        public static TouchResponseOverlapState empty() {
+            return new TouchResponseOverlapState(new int[0], new int[0], false, List.of());
+        }
+    }
+
+    /**
+     * One per-sidekick overlap-buffer entry inside a
+     * {@link TouchResponseOverlapState}. Sidekick is identified by
+     * {@code Sprite#getCode} so the entry round-trips even though
+     * sidekick {@code PlayableEntity} refs may be re-bound after restore.
+     */
+    public record SidekickOverlapEntry(
+            String sidekickCode,
+            int[] overlappingSlotIndices,
+            int[] buildingSlotIndices,
+            boolean paritySwapped
+    ) {
+        public SidekickOverlapEntry {
+            overlappingSlotIndices = overlappingSlotIndices == null
+                    ? new int[0]
+                    : Arrays.copyOf(overlappingSlotIndices, overlappingSlotIndices.length);
+            buildingSlotIndices = buildingSlotIndices == null
+                    ? new int[0]
+                    : Arrays.copyOf(buildingSlotIndices, buildingSlotIndices.length);
+        }
+    }
 }
