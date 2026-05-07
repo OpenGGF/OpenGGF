@@ -70,6 +70,16 @@ This is per-frame instrumentation territory: the next investigation needs
 to diff state at frames 1620-1631 step by step rather than rely on cycle-end
 checkpoints.
 
+**Concrete next-step diagnostic.** Write a one-shot test that:
+
+1. Drives `RewindController` forward through frames 0..1631 in a fresh fixture, calling `registry.capture()` after every step into a `Map<Integer, CompositeSnapshot>` keyed by frame.
+2. After step 1, calls `controller.seekTo(1620)` and then steps forward one frame at a time to 1631, capturing into a parallel `Map<Integer, CompositeSnapshot>`.
+3. Diffs the two maps frame-by-frame via `RewindSnapshotDiff.diffKey` for keys `camera`, `sprites`, `object-manager`, `rings`, `level`.
+
+The first frame whose diff is non-empty pinpoints exactly where the 11-step replay from keyframe 1620 diverges from the original forward stepping. Comparing that diff against the frame-0..1620 reference identifies which specific captured-state field is missing or wrong on the live engine after restore. From there it's a per-field framework fix (extend codec coverage, wire identity context through default subclass capture for `PlayableEntity`/`ObjectInstance` references, or add a missing capture in some subsystem).
+
+A known gap that may or may not be the cause: default object-subclass capture currently excludes `PlayableEntity` and `ObjectInstance` reference fields on object instances (`isDefaultObjectFieldValueType` doesn't include them, even though `RewindCodecs.codecFor` returns `PlayerReferenceCodec`/`ObjectReferenceCodec` for those types). Fields like `FlipperObjectInstance#lockedPlayer`, `GrabberBadnikInstance#grabbedPlayer`, `SpringboardObjectInstance#launchPlayer` are therefore not captured. Fixing this requires plumbing a `RewindCaptureContext` with an identity table through default subclass capture so the reference codecs can encode/resolve player refs by `PlayerRefId`. This may not be the iter-1631 cause (EHZ1 doesn't have flippers/springboards/grabbers), but is a real coverage gap visible in the per-frame diagnostic.
+
 Incremental enabling path:
 
 1. Add focused encounter entries by game, zone, object family, and mechanic
