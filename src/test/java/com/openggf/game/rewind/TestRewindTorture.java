@@ -143,7 +143,7 @@ class TestRewindTorture {
     // lines to validate.
     // -------------------------------------------------------------------------
 
-    @Disabled("Slot drift closed; remaining single-field divergence at iter 1600 (object-manager.dynamicObjects[0].state.genericState.values[2]: A=9 B=0) is a per-object scalar not yet tracked by default capture — pending field-level investigation, not architectural")
+    @Disabled("Iter 1600 cleared by deferred-codec entry restore (Shield sequenceIndex now round-trips). Next failure at iter 1700 is player physics drift (camera + sprites[0].playerExtra positions/angles), suggesting a captured-state gap on some object whose state affects Sonic's collision path between 1600 and 1700 — pending field-level investigation, not architectural")
     @Test
     void tortureFixedAdjacent() throws Exception {
         runTorture("fixed-adjacent",

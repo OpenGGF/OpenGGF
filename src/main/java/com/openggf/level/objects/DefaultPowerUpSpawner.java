@@ -162,26 +162,32 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             objectManager.addDynamicObjectAtSlot(object, fixedSlot);
             return;
         }
-        // Rewind: if a captured slot is pending for this dynamic class (Shield/Stars),
-        // honour it so the post-restore re-spawn lands on the same slot the
-        // reference run had at the rewind point.
-        int restoredSlot = consumePendingRestoredSlot(object);
-        if (restoredSlot >= 0) {
-            objectManager.addDynamicObjectAtSlot(object, restoredSlot);
+        // Rewind: if a captured entry is pending for this dynamic class (Shield/Stars),
+        // honour both the captured slot and the captured per-object field surface
+        // so the post-restore re-spawn lands on the same slot the reference run had
+        // and reapplies state like animation cursors that the constructor zeros.
+        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry restored =
+                consumePendingRestoredEntry(object);
+        if (restored != null) {
+            objectManager.addDynamicObjectAtSlot(object, restored.slotIndex());
+            if (object instanceof AbstractObjectInstance aoi) {
+                aoi.restoreRewindState(restored.state());
+            }
             return;
         }
         objectManager.addDynamicObject(object);
     }
 
-    private int consumePendingRestoredSlot(ObjectInstance object) {
+    private com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
+            consumePendingRestoredEntry(ObjectInstance object) {
         if (object instanceof ShieldObjectInstance) {
-            return objectManager.consumePendingPlayerBoundSlot(ShieldObjectInstance.class);
+            return objectManager.consumePendingPlayerBoundEntry(ShieldObjectInstance.class);
         }
         if (object instanceof InvincibilityStarsObjectInstance) {
-            return objectManager.consumePendingPlayerBoundSlot(
+            return objectManager.consumePendingPlayerBoundEntry(
                     InvincibilityStarsObjectInstance.class);
         }
-        return -1;
+        return null;
     }
 
     private int shieldFixedSlotIndex(ObjectInstance object) {
