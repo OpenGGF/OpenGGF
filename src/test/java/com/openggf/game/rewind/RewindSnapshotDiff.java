@@ -122,10 +122,50 @@ public final class RewindSnapshotDiff {
                 diffs.add(path + ".childSpawns[" + p + "].reservedSlots differs");
             }
         }
-        // Dynamic objects + placement + solidContacts via path-based deep diff
+        // Dynamic objects: bucket by slotIndex so insertion-order divergence
+        // (e.g. Shield re-spawned by post-restore callback after codec recreates
+        // for non-deferred dynamics) doesn't masquerade as content divergence.
+        // Both runs may legitimately end up with the same {slot -> instance}
+        // set in different list positions; only true content/slot/membership
+        // divergence is reported.
         if (!fieldContentEqual(oa.dynamicObjects(), ob.dynamicObjects())) {
-            collectDiffs(path + ".dynamicObjects", oa.dynamicObjects(),
-                    ob.dynamicObjects(), diffs);
+            Map<Integer, ObjectManagerSnapshot.DynamicObjectEntry> aDyn = new HashMap<>();
+            for (var de : oa.dynamicObjects()) aDyn.put(de.slotIndex(), de);
+            Map<Integer, ObjectManagerSnapshot.DynamicObjectEntry> bDyn = new HashMap<>();
+            for (var de : ob.dynamicObjects()) bDyn.put(de.slotIndex(), de);
+            if (aDyn.size() != oa.dynamicObjects().size()
+                    || bDyn.size() != ob.dynamicObjects().size()) {
+                diffs.add(path + ".dynamicObjects: duplicate slotIndex detected");
+            }
+            java.util.Set<Integer> allDyn = new java.util.TreeSet<>();
+            allDyn.addAll(aDyn.keySet());
+            allDyn.addAll(bDyn.keySet());
+            for (int slotIdx : allDyn) {
+                if (diffs.size() >= 20) break;
+                var ea = aDyn.get(slotIdx);
+                var eb = bDyn.get(slotIdx);
+                if (ea == null) {
+                    diffs.add(path + ".dynamic[" + slotIdx + "] missing in A (B=" + eb + ")");
+                    continue;
+                }
+                if (eb == null) {
+                    diffs.add(path + ".dynamic[" + slotIdx + "] missing in B (A=" + ea + ")");
+                    continue;
+                }
+                if (!ea.className().equals(eb.className())) {
+                    diffs.add(path + ".dynamic[" + slotIdx + "].className: A="
+                            + ea.className() + " B=" + eb.className());
+                    continue;
+                }
+                if (!fieldContentEqual(ea.spawn(), eb.spawn())) {
+                    collectDiffs(path + ".dynamic[" + slotIdx + "].spawn",
+                            ea.spawn(), eb.spawn(), diffs);
+                }
+                if (!fieldContentEqual(ea.state(), eb.state())) {
+                    collectDiffs(path + ".dynamic[" + slotIdx + "].state",
+                            ea.state(), eb.state(), diffs);
+                }
+            }
         }
         if (!fieldContentEqual(oa.placement(), ob.placement())) {
             collectDiffs(path + ".placement", oa.placement(), ob.placement(), diffs);
@@ -376,8 +416,21 @@ public final class RewindSnapshotDiff {
             int[] bv = bChild.get(p);
             if (!Arrays.equals(av, bv)) return false;
         }
-        return fieldContentEqual(oa.dynamicObjects(), ob.dynamicObjects())
-                && fieldContentEqual(oa.placement(), ob.placement())
+        // DynamicObjects: bucket by slotIndex so insertion-order divergence
+        // doesn't masquerade as content divergence (mirrors collectObjectManagerDiffs).
+        Map<Integer, ObjectManagerSnapshot.DynamicObjectEntry> aDyn = new HashMap<>();
+        for (var de : oa.dynamicObjects()) aDyn.put(de.slotIndex(), de);
+        Map<Integer, ObjectManagerSnapshot.DynamicObjectEntry> bDyn = new HashMap<>();
+        for (var de : ob.dynamicObjects()) bDyn.put(de.slotIndex(), de);
+        if (!aDyn.keySet().equals(bDyn.keySet())) return false;
+        for (int slot : aDyn.keySet()) {
+            var ea = aDyn.get(slot);
+            var eb = bDyn.get(slot);
+            if (!ea.className().equals(eb.className())) return false;
+            if (!fieldContentEqual(ea.spawn(), eb.spawn())) return false;
+            if (!fieldContentEqual(ea.state(), eb.state())) return false;
+        }
+        return fieldContentEqual(oa.placement(), ob.placement())
                 && fieldContentEqual(oa.solidContactRiding(), ob.solidContactRiding());
     }
 }
