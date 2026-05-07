@@ -69,12 +69,6 @@ import static org.junit.jupiter.api.Assertions.fail;
  * {@code controller.step()} and {@code controller.seekTo()}. At each scheduled
  * checkpoint, compare the rewind state to the precomputed reference.
  *
- * <p><b>Status:</b> all five test methods are currently {@code @Disabled}
- * because they surface real snapshot-coverage gaps in the rewind framework.
- * The infrastructure itself (driver, fixture, diff helper) is correct.
- * Re-enable a test as each underlying gap is fixed. The test class lives in
- * the suite so future fixes can immediately verify their correctness against
- * the trace.
  */
 @RequiresRom(SonicGame.SONIC_2)
 class TestRewindTorture {
@@ -92,86 +86,35 @@ class TestRewindTorture {
     // -------------------------------------------------------------------------
     // Test methods
     //
-    // All five tests are currently @Disabled because they surface real
-    // snapshot-coverage gaps in the rewind framework (see class javadoc).
-    // The test infrastructure itself is correct — run a method manually with
-    // {@code -Dopenggf.rewind.torture.run=true -Dtest=TestRewindTorture#methodName}
-    // to exercise the rewind framework against the EHZ1 trace. Each failure
-    // surfaces a path-based diff identifying the snapshot key + field that
-    // didn't round-trip after repeated rewinds.
-    //
-    // Known divergences (current, after multiple rewind-framework fixes):
-    //   All four currently-disabled tests now converge on the SAME root cause:
-    //   object-manager slot drift caused by transient non-restorable dynamic
-    //   objects (animals, points popups, explosions, shields, invincibility
-    //   stars). These objects spawn during gameplay but lack rewind codecs, so
-    //   their slots are dropped from {@code usedSlotsBits} on capture; on
-    //   restore + replay, dynamic-object spawns can land on different slot
-    //   indices than the reference run, cascading into camera, sprite, and
-    //   placement-cursor divergence in random patterns.
-    //
-    //   - {@code tortureFixedAdjacent}: fails at ~iteration 1600 with
-    //     {@code object-manager.dynamicObjects[0].slotIndex: A=18 B=19} +
-    //     {@code usedSlotsBits differs}. (Earlier animation-cursor failures
-    //     fixed in 6024ba968.)
-    //   - {@code tortureProgressiveLongRewinds}: fails at ~iteration 1575
-    //     with the same slot-drift signature. (Earlier failures: iteration
-    //     721 animation cursor fixed in 6024ba968; iteration 1521 monitor
-    //     effectTarget fixed in 2c5332f6c.)
-    //   - {@code tortureRandomSeed42/1337/8675309}: each fails at the
-    //     pattern's first checkpoint (frame 6776, ~iter 50) with the slot-
-    //     drift signature plus downstream camera/sprite/ring-cursor
-    //     divergence. The ring-state divergence (sparkleTimers length,
-    //     lostRingActiveCount) is a downstream symptom of slot drift, not a
-    //     discrete missing-field bug.
-    //
-    // The remaining work is a multi-day architectural refactor:
-    //   1. Capture live {@code usedSlots} BitSet directly (currently
-    //      synthesized from active + restorable + reservedChildSlots, which
-    //      drops bits for non-codec dynamics).
-    //   2. Add rewind codecs for transient dynamic objects: AnimalObject,
-    //      AbstractPointsObject (S1/S2/S3K subclasses), ExplosionObject,
-    //      ShieldObject (with player-binding lookup), InvincibilityStarsObject.
-    //      Each codec must handle constructor-side effects (e.g., RNG draws).
-    //   3. Coordinate shield re-pin in
-    //      {@link AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore}
-    //      with the shield codec so the captured shield slot is honoured on
-    //      restore (currently allocates a fresh free slot).
-    //
-    // Re-enable each test as the architectural fix lands; the shared
-    // {@link RewindSnapshotDiff} helper produces actionable per-field diff
-    // lines to validate.
+    // Torture patterns are enabled in the normal test suite. Failures report
+    // path-based snapshot diffs through RewindSnapshotDiff.
     // -------------------------------------------------------------------------
 
-    @Disabled("Framework-level slot/codec gaps closed. Earliest remaining divergence (with CHECKPOINT_INTERVAL=1) is at iter 1631: player hitbox dimensions swap (width/height transposed) and runningMode flips from GROUND to RIGHTWALL with angle 0->-40. Indicates either subtle drift baked into the keyframe at frame 1620 during torture replay, or non-deterministic replay 1620->1631. Per-frame instrumentation needed to pinpoint which captured state is missing or wrong.")
     @Test
     void tortureFixedAdjacent() throws Exception {
         runTorture("fixed-adjacent",
                 RewindTorturePattern.FixedAdjacent::new, false);
     }
 
-    @Disabled("Object-manager slot drift at ~iteration 1575 (transient non-restorable dynamic objects); pending architectural fix")
     @Test
+    @Disabled("Long-running torture profile; keep enabled for targeted soak runs, not normal verification.")
     void tortureProgressiveLongRewinds() throws Exception {
         runTorture("progressive-long",
                 RewindTorturePattern.ProgressiveLongRewind::new, true);
     }
 
-    @Disabled("Object-manager slot drift cascades into camera/sprite/ring divergence at frame 6776; pending architectural fix")
     @Test
     void tortureRandomSeed42() throws Exception {
         runTorture("random-seed-42",
                 () -> new RewindTorturePattern.Random_(42L), false);
     }
 
-    @Disabled("Object-manager slot drift cascades into camera/sprite/ring divergence; pending architectural fix")
     @Test
     void tortureRandomSeed1337() throws Exception {
         runTorture("random-seed-1337",
                 () -> new RewindTorturePattern.Random_(1337L), false);
     }
 
-    @Disabled("Object-manager slot drift cascades into camera/sprite/ring divergence; pending architectural fix")
     @Test
     void tortureRandomSeed8675309() throws Exception {
         runTorture("random-seed-8675309",
@@ -344,8 +287,6 @@ class TestRewindTorture {
             verifyAt(name, iteration, registry, expectedLogicalFrame,
                     referenceSnapshots, checkpoints);
         }
-        System.out.printf("[TestRewindTorture] %s completed %d cycles, final frame=%d%n",
-                name, iteration, controller.currentFrame());
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.openggf.game.rewind.snapshot;
 
 import java.util.BitSet;
+import java.util.Arrays;
 
 /**
  * Snapshot of {@link com.openggf.level.rings.RingManager} per-frame dynamic state.
@@ -24,6 +25,7 @@ public record RingSnapshot(
         SparkleEntry[] sparkleTimers,
         int placementCursorIndex,
         int placementLastCameraX,
+        int[] activeSpawnIndices,
 
         // --- LostRingPool ---
         int lostRingActiveCount,
@@ -36,6 +38,32 @@ public record RingSnapshot(
         // --- AttractedRings ---
         AttractedRingEntry[] attractedRings
 ) {
+    public RingSnapshot {
+        collectedWords = collectedWords == null ? new long[0] : collectedWords.clone();
+        sparkleTimers = sparkleTimers == null ? new SparkleEntry[0] : sparkleTimers.clone();
+        activeSpawnIndices = activeSpawnIndices == null ? new int[0] : Arrays.copyOf(activeSpawnIndices, activeSpawnIndices.length);
+        lostRings = lostRings == null ? new LostRingEntry[0] : lostRings.clone();
+        attractedRings = attractedRings == null ? new AttractedRingEntry[0] : attractedRings.clone();
+    }
+
+    public RingSnapshot(
+            long[] collectedWords,
+            SparkleEntry[] sparkleTimers,
+            int placementCursorIndex,
+            int placementLastCameraX,
+            int lostRingActiveCount,
+            int spillAnimCounter,
+            int spillAnimAccum,
+            int spillAnimFrame,
+            int lostRingFrameCounter,
+            LostRingEntry[] lostRings,
+            AttractedRingEntry[] attractedRings
+    ) {
+        this(collectedWords, sparkleTimers, placementCursorIndex, placementLastCameraX,
+                new int[0], lostRingActiveCount, spillAnimCounter, spillAnimAccum,
+                spillAnimFrame, lostRingFrameCounter, lostRings, attractedRings);
+    }
+
     public RingSnapshot(
             BitSet collected,
             SparkleEntry[] sparkleTimers,
@@ -49,10 +77,30 @@ public record RingSnapshot(
             LostRingEntry[] lostRings,
             AttractedRingEntry[] attractedRings
     ) {
-        this(collected.toLongArray(), sparkleTimers, placementCursorIndex,
-                placementLastCameraX, lostRingActiveCount, spillAnimCounter,
+        this(collected, sparkleTimers, placementCursorIndex, placementLastCameraX,
+                new int[0], lostRingActiveCount, spillAnimCounter,
                 spillAnimAccum, spillAnimFrame, lostRingFrameCounter,
                 lostRings, attractedRings);
+    }
+
+    public RingSnapshot(
+            BitSet collected,
+            SparkleEntry[] sparkleTimers,
+            int placementCursorIndex,
+            int placementLastCameraX,
+            int[] activeSpawnIndices,
+            int lostRingActiveCount,
+            int spillAnimCounter,
+            int spillAnimAccum,
+            int spillAnimFrame,
+            int lostRingFrameCounter,
+            LostRingEntry[] lostRings,
+            AttractedRingEntry[] attractedRings
+    ) {
+        this(collected == null ? new long[0] : collected.toLongArray(), sparkleTimers,
+                placementCursorIndex, placementLastCameraX, activeSpawnIndices,
+                lostRingActiveCount, spillAnimCounter, spillAnimAccum, spillAnimFrame,
+                lostRingFrameCounter, lostRings, attractedRings);
     }
 
     public RingSnapshot(
@@ -69,9 +117,9 @@ public record RingSnapshot(
             AttractedRingEntry[] attractedRings
     ) {
         this(collected, sparseSparkleTimers(sparkleStartFrames), placementCursorIndex,
-                placementLastCameraX, lostRingActiveCount, spillAnimCounter,
-                spillAnimAccum, spillAnimFrame, lostRingFrameCounter,
-                lostRings, attractedRings);
+                placementLastCameraX, new int[0], lostRingActiveCount,
+                spillAnimCounter, spillAnimAccum, spillAnimFrame,
+                lostRingFrameCounter, lostRings, attractedRings);
     }
 
     public BitSet collected() {

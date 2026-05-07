@@ -5,6 +5,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.game.PlayableEntity;
+import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
@@ -49,11 +50,31 @@ public class SkidDustObjectInstance extends AbstractObjectInstance {
      * @param facingLeft Whether the player was facing left when skidding started
      */
     public SkidDustObjectInstance(int x, int y, PlayerSpriteRenderer renderer, boolean facingLeft) {
-        super(new ObjectSpawn(x, y, 0x08, 0, 0, false, 0), "SkidDust");
+        super(new ObjectSpawn(x, y, 0x08, 0, facingLeft ? 1 : 0, false, 0), "SkidDust");
         this.renderer = renderer;
         this.animTimer = FRAME_DELAY;
         this.frameIndex = 0;
         this.facingLeft = facingLeft;
+    }
+
+    static SkidDustObjectInstance forRewindRecreate(ObjectSpawn spawn, ObjectServices services) {
+        PlayerSpriteRenderer renderer = null;
+        if (services != null && services.spriteManager() != null) {
+            for (Sprite sprite : services.spriteManager().getAllSprites()) {
+                if (sprite instanceof AbstractPlayableSprite playable
+                        && playable.getSpindashDustController() != null) {
+                    renderer = playable.getSpindashDustController().getRenderer();
+                    if (renderer != null && !playable.isCpuControlled()) {
+                        break;
+                    }
+                }
+            }
+        }
+        return new SkidDustObjectInstance(
+                spawn.x(),
+                spawn.y(),
+                renderer,
+                (spawn.renderFlags() & 1) != 0);
     }
 
     @Override

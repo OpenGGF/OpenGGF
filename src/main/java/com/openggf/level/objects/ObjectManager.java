@@ -226,6 +226,24 @@ public class ObjectManager {
                     return new ExplosionObjectInstance(
                             spawn.objectId(), spawn.x(), spawn.y(), renderManager, -1);
                 }
+            },
+            new RewindDynamicObjectCodec() {
+                @Override
+                public boolean supports(ObjectInstance instance) {
+                    return instance instanceof SkidDustObjectInstance;
+                }
+
+                @Override
+                public String className() {
+                    return SkidDustObjectInstance.class.getName();
+                }
+
+                @Override
+                public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                    return SkidDustObjectInstance.forRewindRecreate(
+                            entry.spawn(), context.objectServices());
+                }
             }
     );
 
@@ -2551,10 +2569,9 @@ public class ObjectManager {
      * Camera already re-resolves its target via {@code SpriteManager} on each snapshot
      * restore (Track C). Other subsystems should do the same.
      *
-     * <p><strong>v1 limitation:</strong> Only placement-managed objects (those in
-     * {@code activeObjects}) are captured. Non-placement dynamic objects (projectiles,
-     * explosion effects) are not snapshotted; they simply disappear on restore. Full
-     * coverage is deferred to a follow-up plan.
+     * <p>Placement-managed objects are restored through their original spawn.
+     * Non-placement dynamic objects are restored when their class has a registered
+     * {@link RewindDynamicObjectCodec}; unsupported entries remain diagnostic-only.
      */
     public com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot> rewindSnapshottable() {
         return new com.openggf.game.rewind.RewindSnapshottable<>() {
@@ -2623,6 +2640,9 @@ public class ObjectManager {
                         List.copyOf(dynamicEntries),
                         placement.captureRewindState(),
                         solidContacts.captureRewindState(),
+                        planeSwitchers != null
+                                ? planeSwitchers.captureRewindState()
+                                : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherSnapshot.empty(),
                         touchResponses != null
                                 ? touchResponses.captureRewindState()
                                 : com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.TouchResponseOverlapState.empty()
@@ -2708,6 +2728,9 @@ public class ObjectManager {
                 }
 
                 solidContacts.restoreRewindState(s.solidContactRiding());
+                if (planeSwitchers != null) {
+                    planeSwitchers.restoreRewindState(s.planeSwitchers());
+                }
 
                 // TouchResponses' double-buffer overlap state must be restored
                 // AFTER object restoration so slot lookup resolves to live
@@ -3950,6 +3973,67 @@ public class ObjectManager {
 
         void reset() {
             states.clear();
+        }
+
+        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherSnapshot captureRewindState() {
+            List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherEntry> entries =
+                    new ArrayList<>();
+            for (Map.Entry<ObjectSpawn, PlaneSwitcherState> entry : states.entrySet()) {
+                PlaneSwitcherState state = entry.getValue();
+                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherPlayerSideEntry>
+                        playerSides = new ArrayList<>();
+                for (Map.Entry<PlayableEntity, Byte> sideEntry : state.sideStates.entrySet()) {
+                    playerSides.add(
+                            new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherPlayerSideEntry(
+                                    sideEntry.getKey(),
+                                    sideEntry.getValue() & 0xFF));
+                }
+                playerSides.sort(Comparator
+                        .comparing((com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherPlayerSideEntry e)
+                                -> stablePlayerKey(e.player()))
+                        .thenComparingInt(e -> e.sideState()));
+                entries.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherEntry(
+                        entry.getKey(),
+                        state.getLastSideState(),
+                        state.hasLastSideState(),
+                        List.copyOf(playerSides)));
+            }
+            entries.sort(Comparator.comparing(entry -> stableSpawnKey(entry.spawn())));
+            return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherSnapshot(
+                    List.copyOf(entries));
+        }
+
+        void restoreRewindState(
+                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherSnapshot snapshot) {
+            states.clear();
+            if (snapshot == null) {
+                return;
+            }
+            for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherEntry entry
+                    : snapshot.entries()) {
+                ObjectSpawn spawn = entry.spawn();
+                if (spawn == null) {
+                    continue;
+                }
+                PlaneSwitcherState state = new PlaneSwitcherState(decodeHalfSpan(spawn.subtype()));
+                if (entry.hasLastSideState()) {
+                    state.setLastSideState(entry.lastSideState());
+                }
+                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlaneSwitcherPlayerSideEntry side
+                        : entry.playerSides()) {
+                    if (side.player() != null) {
+                        state.setSideState(side.player(), side.sideState());
+                    }
+                }
+                states.put(spawn, state);
+            }
+        }
+
+        private static String stablePlayerKey(PlayableEntity player) {
+            if (player instanceof AbstractPlayableSprite sprite) {
+                return sprite.getCode();
+            }
+            return player == null ? "" : player.getClass().getName();
         }
 
         void update(PlayableEntity player) {

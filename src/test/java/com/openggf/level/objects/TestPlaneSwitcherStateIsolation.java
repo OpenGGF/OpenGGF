@@ -88,6 +88,61 @@ class TestPlaneSwitcherStateIsolation {
         assertEquals(0x0F, tails.getLrbSolidBit() & 0xFF);
     }
 
+    @Test
+    void rewindRestoresPlaneSwitcherPreviousSideLatch() {
+        ObjectSpawn switcher = new ObjectSpawn(0x06A8, 0x02C8, 0x03, 0x11, 0x00, false, 0);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(switcher),
+                new ObjectRegistry() {
+                    @Override
+                    public ObjectInstance create(ObjectSpawn spawn) {
+                        return null;
+                    }
+
+                    @Override
+                    public void reportCoverage(List<ObjectSpawn> spawns) {
+                    }
+
+                    @Override
+                    public String getPrimaryName(int objectId) {
+                        return "Test";
+                    }
+                },
+                0x03,
+                new PlaneSwitcherConfig((byte) 0x0C, (byte) 0x0D, (byte) 0x0E, (byte) 0x0F),
+                null,
+                null,
+                null,
+                null);
+        objectManager.reset(0x060A);
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCentreX((short) 0x06A8);
+        tails.setCentreY((short) 0x02D0);
+        tails.setAir(false);
+        tails.setTopSolidBit((byte) 0x0C);
+        tails.setLrbSolidBit((byte) 0x0D);
+
+        objectManager.applyPlaneSwitchers(tails);
+        var snapshot = objectManager.rewindSnapshottable().capture();
+
+        tails.setCentreX((short) 0x06A2);
+        objectManager.applyPlaneSwitchers(tails);
+        assertEquals(1, tails.getLayer());
+
+        tails.setLayer((byte) 0);
+        tails.setTopSolidBit((byte) 0x0C);
+        tails.setLrbSolidBit((byte) 0x0D);
+        objectManager.rewindSnapshottable().restore(snapshot);
+
+        tails.setCentreX((short) 0x06A2);
+        objectManager.applyPlaneSwitchers(tails);
+
+        assertEquals(1, tails.getLayer(), "Restored previous-side latch should make the crossing fire");
+        assertEquals(0x0E, tails.getTopSolidBit() & 0xFF);
+        assertEquals(0x0F, tails.getLrbSolidBit() & 0xFF);
+    }
+
     static class TestableSprite extends AbstractPlayableSprite {
         TestableSprite(String code) {
             super(code, (short) 0, (short) 0);
