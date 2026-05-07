@@ -67,7 +67,9 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
                                  int cameraY,
                                  int shakeY) {
         short bgScroll = negWord(cameraX - BOSS_BG_X_OFFSET);
-        composer.setVscrollFactorBG((short) (cameraY - BOSS_BG_Y_OFFSET + shakeY));
+        CnzZoneRuntimeState state = cnzRuntimeState();
+        int bossScrollOffsetY = state != null ? state.bossScrollOffsetY() : 0;
+        composer.setVscrollFactorBG((short) (cameraY - BOSS_BG_Y_OFFSET + bossScrollOffsetY + shakeY));
 
         composer.fillPackedScrollWords(0, VISIBLE_LINES, fgScroll, bgScroll);
         composer.copyPackedScrollWordsTo(horizScrollBuf);

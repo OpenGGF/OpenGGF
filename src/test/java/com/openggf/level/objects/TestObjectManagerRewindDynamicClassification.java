@@ -4,6 +4,9 @@ import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.sonic2.objects.CheckpointDongleInstance;
+import com.openggf.game.sonic2.objects.CheckpointObjectInstance;
+import com.openggf.game.sonic2.objects.CheckpointStarInstance;
 import com.openggf.graphics.GLCommand;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,6 +80,15 @@ class TestObjectManagerRewindDynamicClassification {
         assertEquals(7, restored.phase);
         assertEquals(0x120, restored.getX());
         assertEquals(0x1A0, restored.getY());
+    }
+
+    @Test
+    void checkpointDynamicChildrenAreRewindRestorable() {
+        ObjectSpawn spawn = new ObjectSpawn(0x100, 0x180, 0x79, 0, 0, false, 0);
+        CheckpointObjectInstance parent = new CheckpointObjectInstance(spawn, "Checkpoint");
+
+        assertTrue(ObjectManager.isRewindRestorableDynamicObject(new CheckpointDongleInstance(parent)));
+        assertTrue(ObjectManager.isRewindRestorableDynamicObject(new CheckpointStarInstance(parent, 0x40)));
     }
 
     private static final class TestDynamicObject extends AbstractObjectInstance {

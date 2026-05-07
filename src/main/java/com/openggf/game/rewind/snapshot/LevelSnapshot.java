@@ -2,6 +2,7 @@ package com.openggf.game.rewind.snapshot;
 
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
+import com.openggf.game.CheckpointState;
 
 /**
  * Reference-only level snapshot. Block/Chunk arrays are shared while the
@@ -31,7 +32,8 @@ public record LevelSnapshot(
         int levelRings,
         long levelTimerFrames,
         boolean levelTimerPaused,
-        boolean respawnRequested) {
+        boolean respawnRequested,
+        CheckpointState.RewindState checkpointState) {
 
     public LevelSnapshot(
             long epochAtCapture,
@@ -40,7 +42,7 @@ public record LevelSnapshot(
             byte[] mapData,
             int frameCounter) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter,
-                false, 0, 0, false, false);
+                false, 0, 0, false, false, null);
     }
 
     public LevelSnapshot(
@@ -51,6 +53,6 @@ public record LevelSnapshot(
             int frameCounter,
             boolean respawnRequested) {
         this(epochAtCapture, blocks, chunks, mapData, frameCounter,
-                false, 0, 0, false, respawnRequested);
+                false, 0, 0, false, respawnRequested, null);
     }
 }

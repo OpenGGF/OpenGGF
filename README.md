@@ -206,6 +206,9 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   layout mutation, scroll composition, special render passes, and advanced render modes.
 - **S3K bring-up and parity:** Angel Island, Carnival Night, Hydrocity, Marble Garden, data select,
   save handling, and sidekick/object interactions continue to gain ROM-cited behavior and tests.
+  Carnival Night Act 1 now includes the miniboss arena handoff: miniboss music, boss/raw child
+  animations, the spinner/top and coil children, vertical tunnel scrolling, arena wall mutations,
+  and the cylinder carry follow-down fix are covered by focused headless/object tests.
 - **Trace replay and diagnostics:** S1, S2, and S3K trace replay tooling now has stronger recorder
   schemas, comparison-only aux streams, compressed fixtures, and focused workflows for parity fixes.
   Test-mode visual trace sessions can also render grayscale ghost copies of traced characters during

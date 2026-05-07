@@ -1533,8 +1533,14 @@ public class Sonic3kConstants {
     /** Arena camera Y maximum / target max Y. ROM: loc_6D9A8 `move.w #$2B8,...`. */
     public static final int CNZ_MINIBOSS_ARENA_MAX_Y = 0x02B8;
 
-    /** Boss hit count. ROM: Obj_CNZMinibossInit `move.b #6,collision_property(a0)`. */
-    public static final int CNZ_MINIBOSS_HIT_COUNT = 0x06;
+    /** Boss collision property. ROM: Obj_CNZMinibossInit `move.b #6,collision_property(a0)`. */
+    public static final int CNZ_MINIBOSS_COLLISION_PROPERTY = 0x06;
+
+    /** Real boss damage counter. ROM: Obj_CNZMinibossInit `move.b #4,$45(a0)`. */
+    public static final int CNZ_MINIBOSS_REAL_HITS = 0x04;
+
+    /** Boss hit count used by shared boss state. */
+    public static final int CNZ_MINIBOSS_HIT_COUNT = CNZ_MINIBOSS_REAL_HITS;
 
     /** Initial descent y_vel. ROM: Obj_CNZMinibossInit `move.w #$80,y_vel(a0)`. */
     public static final short CNZ_MINIBOSS_INIT_Y_VEL = (short) 0x0080;

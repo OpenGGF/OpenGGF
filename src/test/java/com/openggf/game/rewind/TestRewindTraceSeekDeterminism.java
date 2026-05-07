@@ -221,7 +221,7 @@ class TestRewindTraceSeekDeterminism {
         }
     }
 
-    private static final class FixtureStepper implements EngineStepper {
+    private static final class FixtureStepper implements RewindSeekAwareEngineStepper {
         private final HeadlessTestFixture fixture;
 
         private FixtureStepper(HeadlessTestFixture fixture) {
@@ -239,6 +239,11 @@ class TestRewindTraceSeekDeterminism {
                     (p1 & AbstractPlayableSprite.INPUT_JUMP) != 0,
                     inputs.p2InputMask(),
                     inputs.p2StartPressed());
+        }
+
+        @Override
+        public void restoreToFrame(int frame, Bk2FrameInput inputAtFrame) {
+            fixture.runner().primeInputState(inputAtFrame);
         }
     }
 
