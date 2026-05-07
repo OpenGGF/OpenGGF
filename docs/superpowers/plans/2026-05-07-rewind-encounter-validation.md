@@ -19,25 +19,42 @@ in succession, not from any one rewind window.
 
 ## Slot-drift mitigation progress
 
-The `TestRewindTorture` checklist itemizes three architectural fixes; the
-status as of this branch is:
+The `TestRewindTorture` checklist itemized three architectural fixes; all three
+have landed:
 
 1. **Capture live `usedSlots` BitSet directly.** Done. `ObjectManagerSnapshot`
-   now stores the live `usedSlots.toLongArray()` instead of synthesizing a
-   restorable subset, so the allocator's view at restore matches the reference
-   run at the rewind point even when transient classes lack codecs.
-2. **Add rewind codecs for transient dynamic objects.** Partial.
+   stores the live `usedSlots.toLongArray()` instead of synthesizing a
+   restorable subset.
+2. **Add rewind codecs for transient dynamic objects.** Done.
    `AnimalObjectInstance`, the `AbstractPointsObjectInstance` family
-   (Sonic1/Sonic2/Sonic3k), and `ExplosionObjectInstance` are covered.
-   `InvincibilityStarsObjectInstance` and `ShieldObjectInstance` remain — both
-   are player-bound and require coordination with the existing post-restore
-   power-up re-pin in `AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore`.
-3. **Coordinate shield re-pin to honour the captured shield slot.** Pending,
-   blocked on (2) for the shield codec.
+   (Sonic1/Sonic2/Sonic3k), `ExplosionObjectInstance`, the `ShieldObjectInstance`
+   family (base + S3K Fire/Lightning/Bubble), and the
+   `InvincibilityStarsObjectInstance` family (base + S3K) are covered. The
+   non-player-bound classes use construct-and-restore codecs; the player-bound
+   classes use deferred codecs that stash the captured slot for post-restore
+   re-spawn.
+3. **Coordinate shield re-pin to honour the captured shield slot.** Done.
+   `DefaultPowerUpSpawner.addPowerUpObject` now consumes the captured slot via
+   `ObjectManager.consumePendingPlayerBoundSlot(...)` before falling back to a
+   fresh free slot.
 
 `RewindObjectStateBlob` also needed content-aware `equals`/`hashCode` so the
 diff helper doesn't report false divergence on byte-identical compact sidecar
 blobs.
+
+**Torture-test progress.** Sniffing `tortureFixedAdjacent` after each landing:
+
+| State | Failure at iter 1600 |
+| --- | --- |
+| Pre-step 4 (synthesized usedSlots) | `dynamicObjects[0].slotIndex: A=18 B=19`, `usedSlotsBits differs`, full slot cascade |
+| Post step 4 + 5a-5c (live usedSlots + Animal/Points/Explosion codecs) | Placement-managed slot realignment (Masher slot 25→27, Bridge cascade) |
+| Post step 5d-5e + 6 (Shield/Stars codecs + spawner re-pin) | Single-field diff: `dynamicObjects[0].state.genericState.values[2]: A=9 B=0` |
+
+The remaining single-field divergence is a per-object scalar that the default
+generic capture doesn't track yet (likely a counter, a phase index, or similar
+state on whichever class lands at `dynamicObjects[0]` at iter 1600). It is no
+longer an architectural issue — the slot drift cascade that motivated the
+test's @Disabled commentary is closed.
 
 Incremental enabling path:
 
