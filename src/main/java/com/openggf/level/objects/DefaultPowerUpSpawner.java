@@ -162,7 +162,26 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             objectManager.addDynamicObjectAtSlot(object, fixedSlot);
             return;
         }
+        // Rewind: if a captured slot is pending for this dynamic class (Shield/Stars),
+        // honour it so the post-restore re-spawn lands on the same slot the
+        // reference run had at the rewind point.
+        int restoredSlot = consumePendingRestoredSlot(object);
+        if (restoredSlot >= 0) {
+            objectManager.addDynamicObjectAtSlot(object, restoredSlot);
+            return;
+        }
         objectManager.addDynamicObject(object);
+    }
+
+    private int consumePendingRestoredSlot(ObjectInstance object) {
+        if (object instanceof ShieldObjectInstance) {
+            return objectManager.consumePendingPlayerBoundSlot(ShieldObjectInstance.class);
+        }
+        if (object instanceof InvincibilityStarsObjectInstance) {
+            return objectManager.consumePendingPlayerBoundSlot(
+                    InvincibilityStarsObjectInstance.class);
+        }
+        return -1;
     }
 
     private int shieldFixedSlotIndex(ObjectInstance object) {

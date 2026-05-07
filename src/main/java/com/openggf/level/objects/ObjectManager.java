@@ -147,6 +147,22 @@ public class ObjectManager {
             pointsCodec(com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance.class),
             pointsCodec(com.openggf.game.sonic2.objects.PointsObjectInstance.class),
             pointsCodec(com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance.class),
+            deferredPlayerBoundCodec(ShieldObjectInstance.class, ShieldObjectInstance.class),
+            deferredPlayerBoundCodec(
+                    com.openggf.game.sonic3k.objects.FireShieldObjectInstance.class,
+                    ShieldObjectInstance.class),
+            deferredPlayerBoundCodec(
+                    com.openggf.game.sonic3k.objects.LightningShieldObjectInstance.class,
+                    ShieldObjectInstance.class),
+            deferredPlayerBoundCodec(
+                    com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance.class,
+                    ShieldObjectInstance.class),
+            deferredPlayerBoundCodec(
+                    InvincibilityStarsObjectInstance.class,
+                    InvincibilityStarsObjectInstance.class),
+            deferredPlayerBoundCodec(
+                    com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance.class,
+                    InvincibilityStarsObjectInstance.class),
             new RewindDynamicObjectCodec() {
                 @Override
                 public boolean supports(ObjectInstance instance) {
@@ -170,6 +186,40 @@ public class ObjectManager {
                 }
             }
     );
+
+    /**
+     * Builds a deferred-construction codec for player-bound dynamics whose
+     * recreation needs the freshly-restored player reference. The codec marks
+     * the class as captureable (so {@link #isRewindRestorableDynamicObject}
+     * returns true and the entry lands in {@code dynamicObjects}) and stashes
+     * the captured slot via {@link #enqueuePendingPlayerBoundSlot} during
+     * restore. The post-restore power-up re-spawn in
+     * {@code DefaultPowerUpSpawner} consumes that slot via
+     * {@link #consumePendingPlayerBoundSlot} so the new instance lands at the
+     * captured slot index instead of a fresh free slot.
+     */
+    private static RewindDynamicObjectCodec deferredPlayerBoundCodec(
+            Class<? extends ObjectInstance> exactClass, Class<?> baseTypeKey) {
+        return new RewindDynamicObjectCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == exactClass;
+            }
+
+            @Override
+            public String className() {
+                return exactClass.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                context.objectManager().enqueuePendingPlayerBoundSlot(
+                        baseTypeKey, entry.slotIndex());
+                return null;
+            }
+        };
+    }
 
     /**
      * Builds a points-popup codec for one of the {@link AbstractPointsObjectInstance}
@@ -268,6 +318,15 @@ public class ObjectManager {
     // must be occupied to match the ROM's SST layout and give subsequent objects correct
     // slot numbers (affecting timing gates like (v_vbla_byte + d7) & 7).
     private final Map<ObjectSpawn, int[]> reservedChildSlots = new IdentityHashMap<>();
+
+    // Rewind: captured slot indices for player-bound dynamics (Shield, Stars) that
+    // are NOT recreated by the codec on restore. The post-restore callback in
+    // AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore re-spawns
+    // these via the power-up spawner; the spawner consumes the captured slot via
+    // {@link #consumePendingPlayerBoundSlot(Class)} so the new instance lands at
+    // the same slot the reference run had, instead of a fresh free slot.
+    private final Map<Class<?>, java.util.ArrayDeque<Integer>> pendingPlayerBoundSlots =
+            new java.util.HashMap<>();
 
     private final PlaneSwitchers planeSwitchers;
     private final SolidContacts solidContacts;
@@ -2528,6 +2587,7 @@ public class ObjectManager {
                 clearActiveObjects();
                 dynamicObjects.clear();
                 Arrays.fill(execOrder, null);
+                pendingPlayerBoundSlots.clear();
 
                 // 2. Restore scalar counters and usedSlots
                 usedSlots.clear();
@@ -2609,6 +2669,30 @@ public class ObjectManager {
 
     static boolean isRewindRestorableDynamicObject(ObjectInstance inst) {
         return rewindDynamicObjectCodecFor(inst).isPresent();
+    }
+
+    /**
+     * Enqueues a captured slot index for a player-bound dynamic class whose
+     * post-restore re-spawn happens after object-manager restore (currently
+     * Shield + Stars). Called by the codec's recreate path.
+     */
+    void enqueuePendingPlayerBoundSlot(Class<?> baseType, int slotIndex) {
+        if (slotIndex < 0) return;
+        pendingPlayerBoundSlots
+                .computeIfAbsent(baseType, k -> new java.util.ArrayDeque<>())
+                .add(slotIndex);
+    }
+
+    /**
+     * Pops the next captured slot index for the given base type, or returns
+     * {@code -1} if no slot is pending. Called by {@code DefaultPowerUpSpawner}
+     * during the post-restore re-spawn so the new instance is added at the
+     * captured slot rather than a fresh free slot.
+     */
+    public int consumePendingPlayerBoundSlot(Class<?> baseType) {
+        java.util.ArrayDeque<Integer> queue = pendingPlayerBoundSlots.get(baseType);
+        if (queue == null || queue.isEmpty()) return -1;
+        return queue.poll();
     }
 
     static void registerRewindDynamicObjectCodecForTest(RewindDynamicObjectCodec codec) {
