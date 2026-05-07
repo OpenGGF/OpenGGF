@@ -143,7 +143,7 @@ class TestRewindTorture {
     // lines to validate.
     // -------------------------------------------------------------------------
 
-    @Disabled("Iter 1600 cleared by deferred-codec entry restore (Shield sequenceIndex now round-trips). Next failure at iter 1700 is player physics drift (camera + sprites[0].playerExtra positions/angles), suggesting a captured-state gap on some object whose state affects Sonic's collision path between 1600 and 1700 — pending field-level investigation, not architectural")
+    @Disabled("Framework-level slot/codec gaps closed. Earliest remaining divergence (with CHECKPOINT_INTERVAL=1) is at iter 1631: player hitbox dimensions swap (width/height transposed) and runningMode flips from GROUND to RIGHTWALL with angle 0->-40. Indicates either subtle drift baked into the keyframe at frame 1620 during torture replay, or non-deterministic replay 1620->1631. Per-frame instrumentation needed to pinpoint which captured state is missing or wrong.")
     @Test
     void tortureFixedAdjacent() throws Exception {
         runTorture("fixed-adjacent",
