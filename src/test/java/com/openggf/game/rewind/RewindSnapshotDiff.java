@@ -1,5 +1,6 @@
 package com.openggf.game.rewind;
 
+import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.game.rewind.snapshot.LevelSnapshot;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 
@@ -167,6 +168,10 @@ public final class RewindSnapshotDiff {
             return;
         }
         Class<?> cls = av.getClass();
+        if (av instanceof GenericObjectSnapshot ga && bv instanceof GenericObjectSnapshot gb) {
+            collectGenericObjectSnapshotDiffs(path, ga, gb, diffs);
+            return;
+        }
         if (cls.isRecord()) {
             for (var c : cls.getRecordComponents()) {
                 try {
@@ -225,6 +230,37 @@ public final class RewindSnapshotDiff {
         }
         // Leaf scalar / other
         diffs.add(path + ": A=" + av + " B=" + bv);
+    }
+
+    /**
+     * Diffs two {@link GenericObjectSnapshot} instances by reporting each
+     * differing field via its declared {@code FieldKey} (class name + field
+     * name) instead of a bare {@code values[i]} index. Keeps the framework
+     * diff output usefully diagnostic so the next investigation step can
+     * land on the actual field rather than an opaque array slot.
+     */
+    private static void collectGenericObjectSnapshotDiffs(String path,
+                                                            GenericObjectSnapshot av,
+                                                            GenericObjectSnapshot bv,
+                                                            List<String> diffs) {
+        if (!av.type().equals(bv.type())) {
+            diffs.add(path + ".type: A=" + av.type().getName()
+                    + " B=" + bv.type().getName());
+            return;
+        }
+        if (!av.keys().equals(bv.keys())) {
+            diffs.add(path + ".keys differ: A=" + av.keys() + " B=" + bv.keys());
+            return;
+        }
+        Object[] avs = av.values();
+        Object[] bvs = bv.values();
+        for (int i = 0; i < avs.length && diffs.size() < 20; i++) {
+            if (!fieldContentEqual(avs[i], bvs[i])) {
+                String key = av.keys().get(i).toString();
+                collectDiffs(path + "{" + av.type().getSimpleName() + "}." + key,
+                        avs[i], bvs[i], diffs);
+            }
+        }
     }
 
     /**

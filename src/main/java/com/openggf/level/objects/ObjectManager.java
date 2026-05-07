@@ -214,8 +214,7 @@ public class ObjectManager {
             @Override
             public ObjectInstance recreate(DynamicObjectRecreateContext context,
                     com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                context.objectManager().enqueuePendingPlayerBoundSlot(
-                        baseTypeKey, entry.slotIndex());
+                context.objectManager().enqueuePendingPlayerBoundEntry(baseTypeKey, entry);
                 return null;
             }
         };
@@ -319,14 +318,19 @@ public class ObjectManager {
     // slot numbers (affecting timing gates like (v_vbla_byte + d7) & 7).
     private final Map<ObjectSpawn, int[]> reservedChildSlots = new IdentityHashMap<>();
 
-    // Rewind: captured slot indices for player-bound dynamics (Shield, Stars) that
-    // are NOT recreated by the codec on restore. The post-restore callback in
+    // Rewind: captured DynamicObjectEntry payloads for player-bound dynamics
+    // (Shield, Stars) that are NOT recreated by the codec on restore. The
+    // post-restore callback in
     // AbstractPlayableSprite#refreshPowerUpObjectsAfterRewindRestore re-spawns
-    // these via the power-up spawner; the spawner consumes the captured slot via
-    // {@link #consumePendingPlayerBoundSlot(Class)} so the new instance lands at
-    // the same slot the reference run had, instead of a fresh free slot.
-    private final Map<Class<?>, java.util.ArrayDeque<Integer>> pendingPlayerBoundSlots =
-            new java.util.HashMap<>();
+    // these via the power-up spawner; the spawner consumes the captured entry
+    // via {@link #consumePendingPlayerBoundEntry(Class)} so the new instance
+    // lands at the same slot the reference run had AND has the captured field
+    // surface restored on top of its fresh-construction state. Without that
+    // restore, animation cursors and similar non-construction-set scalars
+    // would reset to zero on every rewind.
+    private final Map<Class<?>, java.util.ArrayDeque<
+            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>>
+            pendingPlayerBoundEntries = new java.util.HashMap<>();
 
     private final PlaneSwitchers planeSwitchers;
     private final SolidContacts solidContacts;
@@ -2587,7 +2591,7 @@ public class ObjectManager {
                 clearActiveObjects();
                 dynamicObjects.clear();
                 Arrays.fill(execOrder, null);
-                pendingPlayerBoundSlots.clear();
+                pendingPlayerBoundEntries.clear();
 
                 // 2. Restore scalar counters and usedSlots
                 usedSlots.clear();
@@ -2672,26 +2676,32 @@ public class ObjectManager {
     }
 
     /**
-     * Enqueues a captured slot index for a player-bound dynamic class whose
-     * post-restore re-spawn happens after object-manager restore (currently
-     * Shield + Stars). Called by the codec's recreate path.
+     * Enqueues a captured {@link com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry}
+     * for a player-bound dynamic class whose post-restore re-spawn happens
+     * after object-manager restore (currently Shield + Stars). Called by the
+     * codec's recreate path.
      */
-    void enqueuePendingPlayerBoundSlot(Class<?> baseType, int slotIndex) {
-        if (slotIndex < 0) return;
-        pendingPlayerBoundSlots
+    void enqueuePendingPlayerBoundEntry(Class<?> baseType,
+            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+        if (entry == null || entry.slotIndex() < 0) return;
+        pendingPlayerBoundEntries
                 .computeIfAbsent(baseType, k -> new java.util.ArrayDeque<>())
-                .add(slotIndex);
+                .add(entry);
     }
 
     /**
-     * Pops the next captured slot index for the given base type, or returns
-     * {@code -1} if no slot is pending. Called by {@code DefaultPowerUpSpawner}
-     * during the post-restore re-spawn so the new instance is added at the
-     * captured slot rather than a fresh free slot.
+     * Pops the next captured entry for the given base type, or returns
+     * {@code null} if none is pending. Called by {@code DefaultPowerUpSpawner}
+     * during the post-restore re-spawn so the freshly-constructed instance
+     * lands at the captured slot AND has its captured field surface
+     * (animation cursor, timers, visibility flags, etc.) reapplied via
+     * {@link AbstractObjectInstance#restoreRewindState}.
      */
-    public int consumePendingPlayerBoundSlot(Class<?> baseType) {
-        java.util.ArrayDeque<Integer> queue = pendingPlayerBoundSlots.get(baseType);
-        if (queue == null || queue.isEmpty()) return -1;
+    public com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry
+            consumePendingPlayerBoundEntry(Class<?> baseType) {
+        java.util.ArrayDeque<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry>
+                queue = pendingPlayerBoundEntries.get(baseType);
+        if (queue == null || queue.isEmpty()) return null;
         return queue.poll();
     }
 
