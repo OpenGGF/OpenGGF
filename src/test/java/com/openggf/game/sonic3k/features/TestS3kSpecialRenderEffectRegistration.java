@@ -69,4 +69,17 @@ class TestS3kSpecialRenderEffectRegistration {
 
         assertTrue(registry.isEmpty());
     }
+
+    @Test
+    void iczAct1RegistersBigSnowPileOverlayAndPriorityMask() {
+        Sonic3kZoneFeatureProvider provider = new Sonic3kZoneFeatureProvider();
+        SpecialRenderEffectRegistry registry = new SpecialRenderEffectRegistry();
+
+        provider.registerSpecialRenderEffects(registry, Sonic3kZoneIds.ZONE_ICZ, 0);
+
+        assertEquals(0, registry.size(SpecialRenderEffectStage.AFTER_BACKGROUND));
+        assertEquals(1, registry.size(SpecialRenderEffectStage.AFTER_FOREGROUND));
+        assertEquals(1, registry.size(SpecialRenderEffectStage.SPRITE_PRIORITY_MASK));
+        assertEquals(0, registry.size(SpecialRenderEffectStage.AFTER_SPRITES));
+    }
 }

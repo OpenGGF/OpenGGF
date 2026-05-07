@@ -118,6 +118,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String HCZ_BLOCK = "hcz_block";
     public static final String HCZ_SNAKE_BLOCK = "hcz_snake_block";
     public static final String HCZ_SPINNING_COLUMN = "hcz_spinning_column";
+    public static final String ICZ_PLATFORMS = "icz_platforms";
+    public static final String ICZ_WALL_AND_COLUMN = "icz_wall_and_column";
     public static final String TENSION_BRIDGE_HCZ = "tension_bridge_hcz";
     public static final String TENSION_BRIDGE_ICZ = "tension_bridge_icz";
     public static final String TENSION_BRIDGE_LRZ = "tension_bridge_lrz";

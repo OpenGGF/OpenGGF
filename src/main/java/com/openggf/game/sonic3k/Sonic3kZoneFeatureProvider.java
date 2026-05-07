@@ -23,6 +23,8 @@ import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotMachinePanelAnimator;
 import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
 import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.game.sonic3k.render.IczBigSnowPileBackgroundEffect;
+import com.openggf.game.sonic3k.render.IczBigSnowPilePriorityMaskEffect;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
@@ -51,6 +53,8 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
     private final AizBattleshipRenderFeature aizBattleshipRenderFeature = new AizBattleshipRenderFeature();
     private final AizTransitionRenderFeature aizTransitionRenderFeature = new AizTransitionRenderFeature();
     private final SpecialRenderEffect hczWallChaseBgOverlayEffect = new HczWallChaseBgOverlayEffect();
+    private final SpecialRenderEffect iczBigSnowPileBackgroundEffect = new IczBigSnowPileBackgroundEffect();
+    private final SpecialRenderEffect iczBigSnowPilePriorityMaskEffect = new IczBigSnowPilePriorityMaskEffect();
     private final AdvancedRenderMode slotMachineForegroundScrollMode = new AdvancedRenderMode() {
         @Override
         public String id() {
@@ -404,6 +408,10 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
             registry.register(hczWallChaseBgOverlayEffect);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_ICZ && actIndex == 0) {
+            registry.register(iczBigSnowPileBackgroundEffect);
+            registry.register(iczBigSnowPilePriorityMaskEffect);
         }
     }
 

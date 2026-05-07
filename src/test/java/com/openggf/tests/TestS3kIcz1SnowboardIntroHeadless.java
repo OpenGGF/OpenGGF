@@ -3,6 +3,8 @@ package com.openggf.tests;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.render.SpecialRenderEffectContext;
+import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -15,7 +17,9 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -74,7 +78,7 @@ public class TestS3kIcz1SnowboardIntroHeadless {
                 "Initial object-control hold should be released after the ROM startup lock");
 
         boolean sawSlopeRegion = false;
-        boolean sawReleaseAfterCrash = false;
+        boolean sawCrashHandoff = false;
 
         for (int frame = 0; frame < 1800; frame++) {
             fixture.stepFrame(false, false, false, false, false);
@@ -83,10 +87,9 @@ public class TestS3kIcz1SnowboardIntroHeadless {
                 renderSnowboardIntroObjects();
             }
             if (sonic.getCentreX() >= 0x3880
-                    && !sonic.isControlLocked()
                     && !sonic.isObjectControlled()
                     && !hasSnowboardIntroObject()) {
-                sawReleaseAfterCrash = true;
+                sawCrashHandoff = true;
                 break;
             }
         }
@@ -94,9 +97,8 @@ public class TestS3kIcz1SnowboardIntroHeadless {
         assertTrue(sonic.getCentreX() > startX + 0x1000,
                 "Snowboard intro should carry Sonic far down ICZ1");
         assertTrue(sawSlopeRegion, "Sonic should reach the snowboard slope handoff region");
-        assertTrue(sawReleaseAfterCrash, "Sonic should crash off the snowboard and regain control");
-        assertFalse(sonic.isControlLocked(), "Sonic input should be unlocked after the intro");
-        assertFalse(sonic.isObjectControlled(), "Normal player physics should resume after the intro");
+        assertTrue(sawCrashHandoff, "Sonic should crash off the snowboard and hand control to the ICZ1 event");
+        assertFalse(sonic.isObjectControlled(), "The snowboard intro should stop object-controlling Sonic after the crash");
     }
 
     @Test
@@ -122,11 +124,142 @@ public class TestS3kIcz1SnowboardIntroHeadless {
                 "ICZ intro should keep Sonic moving into the snowboard even if he lands early");
     }
 
+    @Test
+    public void bigSnowPileFallsAfterCrashAndRequiresJumpEscape() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_ICZ, ACT_1)
+                .build();
+        AbstractPlayableSprite sonic = fixture.sprite();
+
+        boolean sawCrashRelease = false;
+        for (int frame = 0; frame < 1900; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            if (sonic.getCentreX() >= 0x3880
+                    && !sonic.isObjectControlled()
+                    && !hasSnowboardIntroObject()) {
+                sawCrashRelease = true;
+                break;
+            }
+        }
+        assertTrue(sawCrashRelease, "Sonic should reach the ICZ1 wall crash handoff");
+
+        boolean sawBigSnowPile = false;
+        boolean sawLockedOnPile = false;
+        for (int frame = 0; frame < 360; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            sawBigSnowPile |= hasObjectSimpleName("IczBigSnowPileInstance");
+            if (sawBigSnowPile && sonic.isControlLocked() && !sonic.getAir()) {
+                sawLockedOnPile = true;
+                break;
+            }
+        }
+
+        assertTrue(sawBigSnowPile, "ICZ1 background event should spawn Obj_ICZ1BigSnowPile");
+        assertTrue(sawLockedOnPile, "Sonic should remain locked while standing under the fallen pile");
+
+        fixture.stepFrame(false, false, false, false, true);
+
+        assertFalse(sonic.isControlLocked(), "Jumping out of the pile should unlock Sonic");
+        assertTrue(sonic.getAir(), "Jumping out of the pile should force Sonic airborne");
+        assertTrue(sonic.getYSpeed() < 0, "Jumping out of the pile should apply upward velocity");
+
+        for (int frame = 0; frame < 12; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertFalse(sonic.isControlLocked(), "The screen event should not relock Sonic after the pile jump release");
+
+        for (int frame = 0; frame < 180 && sonic.getAir(); frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertFalse(sonic.getAir(), "Sonic should land after jumping out of the pile");
+        assertFalse(sonic.isControlLocked(), "Sonic should stay unlocked after landing from the pile jump");
+        int landedX = sonic.getCentreX();
+        for (int frame = 0; frame < 24; frame++) {
+            fixture.stepFrame(false, false, false, true, false);
+        }
+        assertTrue(sonic.getCentreX() > landedX,
+                "Sonic should accept right input on the ground after escaping the pile");
+    }
+
+    @Test
+    public void bigSnowPileRendersLockOnBackgroundSnowTiles() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_ICZ, ACT_1)
+                .build();
+        AbstractPlayableSprite sonic = fixture.sprite();
+
+        for (int frame = 0; frame < 2260; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            if (hasObjectSimpleName("IczBigSnowPileInstance")
+                    && sonic.isControlLocked()
+                    && !sonic.getAir()) {
+                break;
+            }
+        }
+
+        ObjectInstance pile = findObjectSimpleName("IczBigSnowPileInstance");
+        assertNotNull(pile, "ICZ1 should spawn Obj_ICZ1BigSnowPile");
+        List<GLCommand> commands = new ArrayList<>();
+        pile.appendRenderCommands(commands);
+        Object objectPassTileCount = pile.getClass()
+                .getDeclaredMethod("getLastRenderedTileCountForTests")
+                .invoke(pile);
+        assertEquals(0, ((Number) objectPassTileCount).intValue(),
+                "Obj_ICZ1BigSnowPile visual snow should not render in the object/sprite pass");
+
+        GameServices.specialRenderEffectRegistry().dispatch(
+                SpecialRenderEffectStage.AFTER_BACKGROUND,
+                new SpecialRenderEffectContext(
+                        GameServices.camera(),
+                        0,
+                        GameServices.level(),
+                        GameServices.graphics()));
+        Object backgroundPassTileCount = pile.getClass()
+                .getDeclaredMethod("getLastRenderedTileCountForTests")
+                .invoke(pile);
+        assertEquals(0, ((Number) backgroundPassTileCount).intValue(),
+                "Obj_ICZ1BigSnowPile visual snow should render in front of low-priority foreground tiles");
+
+        GameServices.specialRenderEffectRegistry().dispatch(
+                SpecialRenderEffectStage.SPRITE_PRIORITY_MASK,
+                new SpecialRenderEffectContext(
+                        GameServices.camera(),
+                        0,
+                        GameServices.level(),
+                        GameServices.graphics()));
+        Object priorityMaskTileCount = pile.getClass()
+                .getDeclaredMethod("getLastRenderedTileCountForTests")
+                .invoke(pile);
+        assertTrue(((Number) priorityMaskTileCount).intValue() > 0,
+                "Obj_ICZ1BigSnowPile should contribute to the sprite priority mask so Sonic appears behind it");
+
+        GameServices.specialRenderEffectRegistry().dispatch(
+                SpecialRenderEffectStage.AFTER_FOREGROUND,
+                new SpecialRenderEffectContext(
+                        GameServices.camera(),
+                        0,
+                        GameServices.level(),
+                        GameServices.graphics()));
+        Object tileCount = pile.getClass()
+                .getDeclaredMethod("getLastRenderedTileCountForTests")
+                .invoke(pile);
+        assertTrue(((Number) tileCount).intValue() > 0,
+                "Obj_ICZ1BigSnowPile should render non-empty lock-on ICZ background snow tiles");
+    }
+
     private boolean hasSnowboardIntroObject() {
+        return hasObjectSimpleName("IczSnowboardIntroInstance");
+    }
+
+    private boolean hasObjectSimpleName(String simpleName) {
+        return findObjectSimpleName(simpleName) != null;
+    }
+
+    private ObjectInstance findObjectSimpleName(String simpleName) {
         return GameServices.level().getObjectManager().getActiveObjects().stream()
-                .map(ObjectInstance::getClass)
-                .map(Class::getSimpleName)
-                .anyMatch("IczSnowboardIntroInstance"::equals);
+                .filter(object -> simpleName.equals(object.getClass().getSimpleName()))
+                .findFirst()
+                .orElse(null);
     }
 
     private void renderSnowboardIntroObjects() {
