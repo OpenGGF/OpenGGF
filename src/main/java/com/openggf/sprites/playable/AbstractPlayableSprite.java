@@ -869,6 +869,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         objectControlReleasedFrame,
                         suppressAirCollision, suppressGroundWallCollision, forceFloorCheck,
                         hidden,
+                        renderFlagOnScreen, renderFlagOnScreenValid,
                         mgzTopPlatformSpringHandoffPending,
                         mgzTopPlatformSpringHandoffXVel,
                         mgzTopPlatformSpringHandoffYVel,
@@ -1014,6 +1015,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.suppressGroundWallCollision = extra.suppressGroundWallCollision();
                 this.forceFloorCheck = extra.forceFloorCheck();
                 this.hidden = extra.hidden();
+                this.renderFlagOnScreen = extra.renderFlagOnScreen();
+                this.renderFlagOnScreenValid = extra.renderFlagOnScreenValid();
                 this.mgzTopPlatformSpringHandoffPending = extra.mgzTopPlatformSpringHandoffPending();
                 this.mgzTopPlatformSpringHandoffXVel = extra.mgzTopPlatformSpringHandoffXVel();
                 this.mgzTopPlatformSpringHandoffYVel = extra.mgzTopPlatformSpringHandoffYVel();

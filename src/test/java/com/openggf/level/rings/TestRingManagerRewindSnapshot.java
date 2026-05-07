@@ -121,6 +121,26 @@ class TestRingManagerRewindSnapshot {
     }
 
     @Test
+    void restoreRebuildsActiveRingWindow() {
+        RingManager mgr = buildManager(80);
+
+        mgr.update(0, null, 0);
+        RingSnapshot earlyWindow = mgr.capture();
+
+        mgr.update(2048, null, 0);
+        RingSnapshot laterWindow = mgr.capture();
+        assertNotEquals(java.util.Arrays.toString(earlyWindow.activeSpawnIndices()),
+                java.util.Arrays.toString(laterWindow.activeSpawnIndices()),
+                "test setup must move the active ring window");
+
+        mgr.restore(earlyWindow);
+        RingSnapshot afterRestore = mgr.capture();
+
+        assertArrayEquals(earlyWindow.activeSpawnIndices(), afterRestore.activeSpawnIndices(),
+                "Active ring spawns must be restored with the placement cursor");
+    }
+
+    @Test
     void restoreSparseSparkleTimersClearsPreviousTimers() {
         RingManager mgr = buildManager(4);
         RingSnapshot base = mgr.capture();

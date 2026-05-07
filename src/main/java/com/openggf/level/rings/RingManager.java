@@ -627,6 +627,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
         int cursorIndex = placement.cursorIndex;
         int lastCameraX = placement.lastCameraX;
+        int[] activeSpawnIndices = placement.snapshotActiveSpawnIndices();
 
         // --- LostRingPool state ---
         List<RingSnapshot.LostRingEntry> lostEntries = new ArrayList<>(lostRings.activeRingCount);
@@ -664,6 +665,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 sparkleTimers.toArray(RingSnapshot.SparkleEntry[]::new),
                 cursorIndex,
                 lastCameraX,
+                activeSpawnIndices,
                 lostRings.activeRingCount,
                 lostRings.spillAnimCounter,
                 lostRings.spillAnimAccum,
@@ -688,6 +690,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         }
         placement.cursorIndex = snap.placementCursorIndex();
         placement.lastCameraX = snap.placementLastCameraX();
+        placement.restoreActiveSpawnIndices(snap.activeSpawnIndices());
 
         // --- LostRingPool ---
         lostRings.activeRingCount = snap.lostRingActiveCount();
@@ -861,6 +864,25 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             active.clear();
             for (int i = start; i < end; i++) {
                 active.add(spawns.get(i));
+            }
+        }
+
+        private int[] snapshotActiveSpawnIndices() {
+            return active.stream()
+                    .mapToInt(this::getSpawnIndex)
+                    .filter(index -> index >= 0)
+                    .toArray();
+        }
+
+        private void restoreActiveSpawnIndices(int[] activeSpawnIndices) {
+            active.clear();
+            if (activeSpawnIndices == null) {
+                return;
+            }
+            for (int index : activeSpawnIndices) {
+                if (index >= 0 && index < spawns.size()) {
+                    active.add(spawns.get(index));
+                }
             }
         }
 

@@ -43,6 +43,7 @@ public record ObjectManagerSnapshot(
         List<DynamicObjectEntry> dynamicObjects,
         PlacementSnapshot placement,
         List<SolidContactRidingEntry> solidContactRiding,
+        PlaneSwitcherSnapshot planeSwitchers,
         TouchResponseOverlapState touchResponseOverlap
 ) {
     public ObjectManagerSnapshot {
@@ -51,6 +52,7 @@ public record ObjectManagerSnapshot(
         childSpawns = List.copyOf(childSpawns);
         dynamicObjects = List.copyOf(dynamicObjects);
         solidContactRiding = solidContactRiding == null ? List.of() : List.copyOf(solidContactRiding);
+        planeSwitchers = planeSwitchers == null ? PlaneSwitcherSnapshot.empty() : planeSwitchers;
         touchResponseOverlap = touchResponseOverlap == null
                 ? TouchResponseOverlapState.empty() : touchResponseOverlap;
     }
@@ -73,6 +75,7 @@ public record ObjectManagerSnapshot(
                 frameCounter, vblaCounter, currentExecSlot, peakSlotCount,
                 bucketsDirty, childSpawns, dynamicObjects, placement,
                 solidContactRiding,
+                PlaneSwitcherSnapshot.empty(),
                 TouchResponseOverlapState.empty()
         );
     }
@@ -192,6 +195,40 @@ public record ObjectManagerSnapshot(
     }
 
     public record SpawnCounterEntry(int spawnIndex, int counter) {}
+
+    /**
+     * Snapshot of {@code ObjectManager.PlaneSwitchers}' per-spawn, per-player
+     * side latches. Plane switchers trigger only on side transitions, so
+     * restoring player layer/top/lrb bits is not enough; the hidden previous
+     * side controls whether the next frame crosses or only seeds the latch.
+     */
+    public record PlaneSwitcherSnapshot(
+            List<PlaneSwitcherEntry> entries
+    ) {
+        public PlaneSwitcherSnapshot {
+            entries = entries == null ? List.of() : List.copyOf(entries);
+        }
+
+        public static PlaneSwitcherSnapshot empty() {
+            return new PlaneSwitcherSnapshot(List.of());
+        }
+    }
+
+    public record PlaneSwitcherEntry(
+            ObjectSpawn spawn,
+            int lastSideState,
+            boolean hasLastSideState,
+            List<PlaneSwitcherPlayerSideEntry> playerSides
+    ) {
+        public PlaneSwitcherEntry {
+            playerSides = playerSides == null ? List.of() : List.copyOf(playerSides);
+        }
+    }
+
+    public record PlaneSwitcherPlayerSideEntry(
+            PlayableEntity player,
+            int sideState
+    ) {}
 
     /**
      * Snapshot of {@code ObjectManager.TouchResponses}' double-buffer overlap

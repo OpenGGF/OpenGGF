@@ -91,6 +91,12 @@ class TestObjectManagerRewindDynamicClassification {
         assertTrue(ObjectManager.isRewindRestorableDynamicObject(new CheckpointStarInstance(parent, 0x40)));
     }
 
+    @Test
+    void skidDustDynamicObjectIsRewindRestorable() {
+        assertTrue(ObjectManager.isRewindRestorableDynamicObject(
+                new SkidDustObjectInstance(0x120, 0x1A0, null, true)));
+    }
+
     private static final class TestDynamicObject extends AbstractObjectInstance {
         private int phase;
 
