@@ -1086,6 +1086,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         System.arraycopy(extra.statusHistory(), 0, this.statusHistory, 0,
                                 Math.min(extra.statusHistory().length, this.statusHistory.length));
                 }
+                // Sensor offsets are derived from restored radii plus air/angle/running mode.
+                // Recompute after direct field hydration so rewind does not keep offsets from
+                // the pre-restore sprite state.
+                updateSensorOffsetsFromRadii();
         }
 
         /**

@@ -3,7 +3,9 @@ package com.openggf.game.rewind;
 import com.openggf.debug.playback.Bk2FrameInput;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -66,6 +68,27 @@ class TestRewindController {
     }
 
     @Test
+    void seekToPrimesSeekAwareStepperAtRestoredKeyframeBeforeReplay() {
+        RewindRegistry reg = new RewindRegistry();
+        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
+        InputSource inputs = new FakeInputSource(10);
+        SeekAwareStepper stepper = new SeekAwareStepper();
+
+        RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 3);
+        for (int i = 0; i < 5; i++) {
+            rc.step();
+        }
+        stepper.steppedFrames.clear();
+
+        rc.seekTo(4);
+
+        assertEquals(3, stepper.firstRestoredFrame,
+                "Stepper must be primed to the restored keyframe before replaying target frames");
+        assertEquals(3, stepper.firstRestoredInputFrame);
+        assertEquals(List.of(4), stepper.steppedFrames);
+    }
+
+    @Test
     void stepBackwardWithinSegmentIsCacheHit() {
         RewindRegistry reg = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
@@ -111,6 +134,40 @@ class TestRewindController {
         // Step backward across segment boundary to frame 5
         rc.seekTo(5);
         assertEquals(5, rc.currentFrame());
+    }
+
+    @Test
+    void seekToEarlierFrameDiscardsFutureKeyframes() {
+        RewindRegistry reg = new RewindRegistry();
+        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
+        InputSource inputs = new FakeInputSource(20);
+        EngineStepper stepper = (in) -> {};
+
+        RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 3);
+        for (int i = 0; i < 6; i++) rc.step();
+        assertEquals(6, keyframes.latestAtOrBefore(99).orElseThrow().frame());
+
+        rc.seekTo(4);
+
+        assertEquals(3, keyframes.latestAtOrBefore(99).orElseThrow().frame(),
+                "rewinding abandons keyframes from the previous future branch");
+    }
+
+    @Test
+    void stepBackwardDiscardsFutureKeyframes() {
+        RewindRegistry reg = new RewindRegistry();
+        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
+        InputSource inputs = new FakeInputSource(20);
+        EngineStepper stepper = (in) -> {};
+
+        RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 3);
+        for (int i = 0; i < 6; i++) rc.step();
+        assertEquals(6, keyframes.latestAtOrBefore(99).orElseThrow().frame());
+
+        assertTrue(rc.stepBackward());
+
+        assertEquals(3, keyframes.latestAtOrBefore(99).orElseThrow().frame(),
+                "one-frame rewind abandons keyframes beyond the restored frame");
     }
 
     @Test
@@ -204,6 +261,29 @@ class TestRewindController {
         @Override
         public Bk2FrameInput read(int frame) {
             return new Bk2FrameInput(frame, 0, 0, false, "fake");
+        }
+    }
+
+    private static final class SeekAwareStepper implements RewindSeekAwareEngineStepper {
+        int restoredFrame = -1;
+        int restoredInputFrame = -1;
+        int firstRestoredFrame = -1;
+        int firstRestoredInputFrame = -1;
+        final List<Integer> steppedFrames = new ArrayList<>();
+
+        @Override
+        public void restoreToFrame(int frame, Bk2FrameInput inputAtFrame) {
+            if (firstRestoredFrame < 0) {
+                firstRestoredFrame = frame;
+                firstRestoredInputFrame = inputAtFrame.frameIndex();
+            }
+            restoredFrame = frame;
+            restoredInputFrame = inputAtFrame.frameIndex();
+        }
+
+        @Override
+        public void step(Bk2FrameInput inputs) {
+            steppedFrames.add(inputs.frameIndex());
         }
     }
 }

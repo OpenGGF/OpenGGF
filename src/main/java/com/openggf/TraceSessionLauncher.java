@@ -14,10 +14,10 @@ import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.RuntimeManager;
 import com.openggf.game.TitleCardProvider;
-import com.openggf.game.rewind.EngineStepper;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.rewind.RewindController;
+import com.openggf.game.rewind.RewindSeekAwareEngineStepper;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.sprites.ghost.GhostTraceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -460,7 +460,7 @@ public final class TraceSessionLauncher {
         }
     }
 
-    private static final class VisualTraceRewindStepper implements EngineStepper {
+    private static final class VisualTraceRewindStepper implements RewindSeekAwareEngineStepper {
         private final GameLoop loop;
         private final Bk2Movie movie;
         private final TraceData trace;
@@ -506,6 +506,15 @@ public final class TraceSessionLauncher {
             }
             sprites.setPlaybackInputSuppressed(true);
             LevelFrameStep.execute(level, camera, () -> sprites.update(loop.getInputHandler()));
+        }
+
+        @Override
+        public void restoreToFrame(int frame, Bk2FrameInput inputAtFrame) {
+            AbstractPlayableSprite player = loop.getMainPlayableSprite();
+            if (player != null && inputAtFrame != null) {
+                player.setForcedInputMask(inputAtFrame.p1InputMask());
+                player.setForcedJumpPress(false);
+            }
         }
 
         private boolean isVblankOnly(int traceIndex) {

@@ -123,6 +123,31 @@ public class HeadlessTestRunner {
         inputHandler.update();
     }
 
+    /**
+     * Primes the synthetic input handler to the state at an already-restored
+     * playback frame. This preserves just-pressed edge detection when rewind
+     * restores an exact keyframe and then replays the following frame.
+     */
+    public void primeInputState(Bk2FrameInput frameInput) {
+        if (frameInput == null) {
+            return;
+        }
+        int p1Mask = frameInput.p1InputMask();
+        setKeyState(upKey, (p1Mask & AbstractPlayableSprite.INPUT_UP) != 0);
+        setKeyState(downKey, (p1Mask & AbstractPlayableSprite.INPUT_DOWN) != 0);
+        setKeyState(leftKey, (p1Mask & AbstractPlayableSprite.INPUT_LEFT) != 0);
+        setKeyState(rightKey, (p1Mask & AbstractPlayableSprite.INPUT_RIGHT) != 0);
+        setKeyState(jumpKey, (p1Mask & AbstractPlayableSprite.INPUT_JUMP) != 0);
+        int p2Mask = frameInput.p2InputMask();
+        setKeyState(p2UpKey, (p2Mask & AbstractPlayableSprite.INPUT_UP) != 0);
+        setKeyState(p2DownKey, (p2Mask & AbstractPlayableSprite.INPUT_DOWN) != 0);
+        setKeyState(p2LeftKey, (p2Mask & AbstractPlayableSprite.INPUT_LEFT) != 0);
+        setKeyState(p2RightKey, (p2Mask & AbstractPlayableSprite.INPUT_RIGHT) != 0);
+        setKeyState(p2JumpKey, (p2Mask & AbstractPlayableSprite.INPUT_JUMP) != 0);
+        setKeyState(p2StartKey, frameInput.p2StartPressed());
+        inputHandler.update();
+    }
+
     private void setKeyState(int keyCode, boolean pressed) {
         inputHandler.handleKeyEvent(keyCode, pressed ? GLFW_PRESS : GLFW_RELEASE);
     }

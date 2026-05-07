@@ -5,12 +5,12 @@ import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.CompositeSnapshot;
-import com.openggf.game.rewind.EngineStepper;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.RewindSeekAwareEngineStepper;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -132,7 +132,7 @@ public final class RewindEncounterValidator {
         }
     }
 
-    private static final class FixtureStepper implements EngineStepper {
+    private static final class FixtureStepper implements RewindSeekAwareEngineStepper {
         private final HeadlessTestFixture fixture;
 
         private FixtureStepper(HeadlessTestFixture fixture) {
@@ -150,6 +150,11 @@ public final class RewindEncounterValidator {
                     (p1 & AbstractPlayableSprite.INPUT_JUMP) != 0,
                     inputs.p2InputMask(),
                     inputs.p2StartPressed());
+        }
+
+        @Override
+        public void restoreToFrame(int frame, Bk2FrameInput inputAtFrame) {
+            fixture.runner().primeInputState(inputAtFrame);
         }
     }
 
