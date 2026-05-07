@@ -292,6 +292,50 @@ public class TestS3kCnzDirectedTraversalHeadless {
     }
 
     @Test
+    void cnzCylinderCarriesPlayerDownAtReportedCnz1Position() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .startPosition((short) 662, (short) 1757)
+                .startPositionIsCentre()
+                .build();
+
+        AbstractPlayableSprite player = fixture.sprite();
+        player.setAir(false);
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0);
+        player.setGSpeed((short) 0);
+        player.setRolling(false);
+        player.setControlLocked(false);
+        player.setObjectControlled(false);
+        fixture.camera().updatePosition(true);
+
+        int captureFrame = -1;
+        int capturedY = 0;
+        for (int frame = 0; frame < 90; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            if (player.isObjectControlled()) {
+                captureFrame = frame;
+                capturedY = player.getCentreY();
+                break;
+            }
+        }
+
+        assertTrue(captureFrame >= 0,
+                "CNZ1 cylinder should capture Sonic from the reported X=662 Y=1757 centre position");
+
+        int lowestY = capturedY;
+        for (int frame = 0; frame < 90; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+            lowestY = Math.max(lowestY, player.getCentreY());
+            assertTrue(player.isObjectControlled(),
+                    "CNZ cylinder should keep Sonic captured while carrying him downward");
+        }
+
+        assertTrue(lowestY >= capturedY + 8,
+                "CNZ cylinder should carry Sonic downward after capture at the reported position");
+    }
+
+    @Test
     void cnzCylinderDrivesRomTwistFramesAndPlayerPriorityWhileCaptured() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)

@@ -3,13 +3,18 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.SwingMotion;
 
 import java.util.List;
@@ -38,9 +43,9 @@ import java.util.logging.Logger;
  * </ul>
  *
  * <p>Hit count is seeded from
- * {@link Sonic3kConstants#CNZ_MINIBOSS_HIT_COUNT} (ROM
+ * {@link Sonic3kConstants#CNZ_MINIBOSS_REAL_HITS} (ROM
  * {@code Obj_CNZMinibossInit} — {@code sonic3k.asm:144888},
- * {@code move.b #6,collision_property(a0)}).
+ * {@code move.b #4,$45(a0)}).
  *
  * <p>Workstream D Task 4 layers in the first three dispatch-table routines
  * from {@code CNZMiniboss_Index} (sonic3k.asm:144874):
@@ -160,6 +165,21 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
      * wait timer since the fade itself is orthogonal to workstream-D.
      */
     private static final int CNZ_MINIBOSS_DEFEAT_WAIT = 0x60;
+    private static final int FRAME_BASE_CLOSED = 0;
+    private static final int FRAME_BASE_OPEN = 6;
+    /**
+     * ROM: {@code AniRaw_CNZMinibossOpening} (sonic3k.asm:145705).
+     * Pairs are {@code mapping_frame, delay}; {@code Animate_RawMultiDelay}
+     * advances its cursor before reading on a fresh script, so index 0 is
+     * the parked frame and index 1 is the first visible animation step.
+     */
+    private static final int[] ANIM_OPENING_FRAMES = {0, 1, 2, 3, 4, 5, 6};
+    private static final int[] ANIM_OPENING_DELAYS = {3, 3, 3, 3, 3, 3, 3};
+    /**
+     * ROM: {@code AniRaw_CNZMinibossClosing} (sonic3k.asm:145707).
+     */
+    private static final int[] ANIM_CLOSING_FRAMES = {6, 5, 4, 3, 2, 1, 0};
+    private static final int[] ANIM_CLOSING_DELAYS = {3, 3, 3, 3, 3, 3, 3};
 
     // ---- Scratch state for the ROM's $2E(a0) wait + $34(a0) post-wait handler. ----
     /**
@@ -174,6 +194,12 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
     private int waitTimer = -1;
     /** ROM: {@code $34(a0)} post-wait handler pointer. Fires when {@link #waitTimer} expires. */
     private WaitCallback waitCallback = WaitCallback.NONE;
+    /** ROM: {@code mapping_frame(a0)} for the base/top shared CNZ miniboss mappings. */
+    private int mappingFrame = FRAME_BASE_CLOSED;
+    /** ROM: {@code $30(a0)} cursor into the current raw animation script, modelled as a pair index. */
+    private int rawAnimPairIndex;
+    /** ROM: {@code anim_frame_timer(a0)} for {@code Animate_RawMultiDelay}. */
+    private int rawAnimTimer;
     /**
      * ROM: bit 0 of {@code $38(a0)} — Swing_UpAndDown direction flag.
      * {@code false} = ascending (velocity decreasing toward {@code -SWING_MAX_VEL}),
@@ -242,6 +268,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
      * semantic for the engine's {@code simulateHitForTest} path.
      */
     private boolean defeatInitiated;
+    private boolean childrenSpawned;
 
     private enum WaitCallback {
         NONE,
@@ -260,7 +287,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
     @Override
     protected void initializeBossState() {
         // ROM: routine 0 = Obj_CNZMinibossInit (sonic3k.asm:144885).
-        // state.hitCount is already seeded to CNZ_MINIBOSS_HIT_COUNT by the
+        // state.hitCount is already seeded to CNZ_MINIBOSS_REAL_HITS by the
         // super constructor via getInitialHitCount(); state.x/y are seeded
         // from the spawn. The remainder of Init (y_vel / wait timer /
         // $34 post-wait handler) runs on the first update() via updateInit().
@@ -270,12 +297,19 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
     @Override
     protected int getInitialHitCount() {
         // ROM: Obj_CNZMinibossInit — sonic3k.asm:144888,
-        // move.b #6,collision_property(a0).
-        return Sonic3kConstants.CNZ_MINIBOSS_HIT_COUNT;
+        // collision_property is 6, but the real damage counter at $45 is 4.
+        return Sonic3kConstants.CNZ_MINIBOSS_REAL_HITS;
     }
 
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity player) {
+        Sonic3kCNZEvents cnz = getCnzEvents();
+        if (cnz != null && !cnz.isMinibossStartReleased()
+                && (cnz.isMinibossArenaLocked()
+                || (services().camera().getX() & 0xFFFF) >= 0x3000)) {
+            return;
+        }
+
         // After CNZMiniboss_BossDefeated (sonic3k.asm:145464), the ROM writes
         // Wait_FadeToLevelMusic into (a0) so the normal CNZMiniboss_Index
         // dispatcher stops running. The object simply ticks its $2E timer
@@ -327,12 +361,8 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         //                                 handles invulnerability timing.
         //   Play_SFX sfx_BossHit        ; routed through getBossHitSfxId().
         //
-        // ROM note: the real defeat counter is $45(a0) (= 4 at Init, line
-        // 144889). The engine currently collapses this with collision_property
-        // ($45 and the 6-entry counter at line 144888) into a single shared
-        // state.hitCount seeded from CNZ_MINIBOSS_HIT_COUNT. Exact hit-count
-        // parity is a T12 / post-D trace-replay concern; leaving this note
-        // here for follow-up.
+        // ROM note: the real defeat counter is $45(a0) (= 4 at Init), while
+        // collision_property remains a separate value of 6.
         if (remainingHits == 0 && !defeatInitiated) {
             defeatInitiated = true;
             onDefeatStarted();
@@ -358,6 +388,22 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         // Placeholder until Task 6 wires the ROM-accurate hitbox from
         // ObjDat_CNZMiniboss.
         return 0x0F;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return Sonic3kConstants.CNZ_MINIBOSS_COLLISION_PROPERTY;
+    }
+
+    @Override
+    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        if (state.defeated || state.routine == ROUTINE_OPENING
+                || state.routine == ROUTINE_WAIT_HIT || state.routine == ROUTINE_CLOSING) {
+            return;
+        }
+        state.routine = ROUTINE_OPENING;
+        startRawAnimation(ANIM_OPENING_FRAMES, ANIM_OPENING_DELAYS);
+        waitCallback = WaitCallback.OPEN_GO;
     }
 
     @Override
@@ -402,7 +448,27 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         // (SetUp_ObjAttributes).l ends with `addq.b #2,routine(a0)`, so
         // routine advances from 0 to ROUTINE_LOWER (2) on the same frame
         // that Init runs. This prevents Init from re-running next frame.
+        spawnProductionChildrenOnce();
         state.routine = ROUTINE_LOWER;
+    }
+
+    private void spawnProductionChildrenOnce() {
+        if (childrenSpawned) {
+            return;
+        }
+        childrenSpawned = true;
+
+        ObjectSpawn topSpawn = new ObjectSpawn(
+                getCentreX(), getCentreY() + 0x2C,
+                Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0);
+        CnzMinibossTopInstance top = spawnChild(() -> new CnzMinibossTopInstance(topSpawn));
+        top.attachBossForTest(this);
+
+        ObjectSpawn coilSpawn = new ObjectSpawn(
+                getCentreX(), getCentreY() + 0x1C,
+                Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0);
+        CnzMinibossCoilInstance coil = spawnChild(() -> new CnzMinibossCoilInstance(coilSpawn));
+        coil.attachBossForTest(this);
     }
 
     /**
@@ -467,8 +533,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
      */
     private void updateOpening() {
         // ROM sonic3k.asm:144942 — jmp (Animate_RawMultiDelay).l
-        //   → tail Obj_Wait equivalent: decrement $2E; on expiry, fire $34.
-        tickWait();
+        animateRawMultiDelay(ANIM_OPENING_FRAMES, ANIM_OPENING_DELAYS, WaitCallback.OPEN_GO);
     }
 
     /**
@@ -516,13 +581,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
      * instead, skipping the self-seeding branch below.
      */
     private void updateClosing() {
-        if (waitTimer < 0) {
-            waitTimer = CNZ_MINIBOSS_CLOSING_WAIT;
-            if (waitCallback == WaitCallback.NONE) {
-                waitCallback = WaitCallback.CLOSE_GO;
-            }
-        }
-        tickWait();
+        animateRawMultiDelay(ANIM_CLOSING_FRAMES, ANIM_CLOSING_DELAYS, WaitCallback.CLOSE_GO);
     }
 
     /**
@@ -625,10 +684,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         // ROM sonic3k.asm:145469 — st (Events_fg_5).w. This is the BG signal
         // that drives the post-boss arena-reveal chain in Sonic3kCNZEvents
         // (updateAct1Bg -> handleAct1Entry -> BG_FG_REFRESH).
-        Sonic3kCNZEvents cnz = getCnzEvents();
-        if (cnz != null) {
-            cnz.setEventsFg5(true);
-        }
+        S3kCnzEventWriteSupport.signalMinibossDefeatedForScrollControl(services());
 
         // ROM sonic3k.asm:145467 + 144988 — the combined BossDefeated /
         // Obj_CNZMinibossEnd chain installs Obj_CNZMinibossEndGo at $34(a0)
@@ -718,7 +774,8 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         // The ROM wait-timer for the Closing body comes from the animation
         // script (T6) — T5 arms the callback but leaves the timer -1 so
         // tickWait() stays quiescent until T6 wires the full Closing body.
-        setWait(-1, WaitCallback.CLOSE_GO);
+        startRawAnimation(ANIM_CLOSING_FRAMES, ANIM_CLOSING_DELAYS);
+        waitCallback = WaitCallback.CLOSE_GO;
     }
 
     /**
@@ -821,6 +878,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
     private void onCloseGo() {
         // ROM sonic3k.asm:144923 — move.b #6,routine(a0).
         state.routine = ROUTINE_MOVE_DUP;
+        mappingFrame = FRAME_BASE_CLOSED;
         // ROM sonic3k.asm:144924 — move.l #Obj_CNZMinibossChangeDir,$34(a0).
         // The wait timer itself is preserved from whichever caller invoked
         // CloseGo: $9F if we fell through from Go3, or a fresh timer written
@@ -885,6 +943,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
     private void onOpenGo() {
         // ROM sonic3k.asm:144946 — move.b #$A,routine(a0).
         state.routine = ROUTINE_WAIT_HIT;
+        mappingFrame = FRAME_BASE_OPEN;
         // ROM sonic3k.asm:144947 — move.l #Obj_CNZMinibossChangeDir,$34(a0).
         waitCallback = WaitCallback.CHANGE_DIR;
         waitTimer = -1; // WaitHit has no Obj_Wait tail — timer stays idle.
@@ -907,6 +966,35 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
     private void setWait(int frames, WaitCallback callback) {
         waitTimer = frames;
         waitCallback = callback;
+    }
+
+    private void startRawAnimation(int[] frames, int[] delays) {
+        mappingFrame = frames[0];
+        rawAnimPairIndex = 0;
+        rawAnimTimer = 0;
+    }
+
+    /**
+     * ROM: {@code Animate_RawMultiDelay} (sonic3k.asm:177558). CNZ miniboss
+     * opening/closing use the short S&K-side raw scripts at
+     * {@code AniRaw_CNZMinibossOpening/Closing}; their {@code $F4}
+     * terminator jumps through the callback slot.
+     */
+    private void animateRawMultiDelay(int[] frames, int[] delays, WaitCallback terminatorCallback) {
+        rawAnimTimer--;
+        if (rawAnimTimer >= 0) {
+            return;
+        }
+
+        rawAnimPairIndex++;
+        if (rawAnimPairIndex >= frames.length) {
+            waitCallback = terminatorCallback;
+            runWaitCallback();
+            return;
+        }
+
+        mappingFrame = frames[rawAnimPairIndex];
+        rawAnimTimer = delays[rawAnimPairIndex];
     }
 
     /**
@@ -956,6 +1044,21 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         state.y += LOWERING_STEP_PIXELS;
     }
 
+    public boolean isOpenForTopHit() {
+        return openState;
+    }
+
+    public boolean isDefeatedForChild() {
+        return state.defeated;
+    }
+
+    public void onTopPieceHitBase() {
+        if (!openState || statusBit6TopHit || state.defeated) {
+            return;
+        }
+        simulateHitForTest();
+    }
+
     /**
      * Returns the ROM-style centre X coordinate, backed by
      * {@code state.x} so the position stays consistent with the shared
@@ -979,7 +1082,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
      *
      * <p>Surfaces the shared boss-state hit counter for the Task 3 test,
      * which asserts it is seeded from
-     * {@link Sonic3kConstants#CNZ_MINIBOSS_HIT_COUNT} via
+     * {@link Sonic3kConstants#CNZ_MINIBOSS_REAL_HITS} via
      * {@link #getInitialHitCount()}. T6 will also rely on this counter
      * inside {@link #onHitTaken(int)}.
      */
@@ -1051,7 +1154,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
                 // Animate_RawMultiDelay body ticks $2E toward zero and fires
                 // OpenGo when the animation completes. Seed a fresh wait so
                 // updateOpening() has something to tick against.
-                waitTimer = CNZ_MINIBOSS_OPENING_WAIT;
+                startRawAnimation(ANIM_OPENING_FRAMES, ANIM_OPENING_DELAYS);
                 waitCallback = WaitCallback.OPEN_GO;
             }
             case ROUTINE_WAIT_HIT -> {
@@ -1076,7 +1179,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
                 // engine drives the timing). When forced from a test, seed
                 // a known wait length so updateClosing's first tick runs
                 // against a deterministic counter.
-                waitTimer = CNZ_MINIBOSS_CLOSING_WAIT;
+                startRawAnimation(ANIM_CLOSING_FRAMES, ANIM_CLOSING_DELAYS);
                 waitCallback = WaitCallback.CLOSE_GO;
             }
             default -> {
@@ -1095,6 +1198,14 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
     void forceXVelForTest(short value) {
         xVel = value;
         state.xVel = value;
+    }
+
+    void forceOpenForTest() {
+        state.routine = ROUTINE_WAIT_HIT;
+        openState = true;
+        mappingFrame = FRAME_BASE_OPEN;
+        waitTimer = -1;
+        waitCallback = WaitCallback.NONE;
     }
 
     /**
@@ -1158,9 +1269,10 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // Rendering parity remains out of workstream-D scope (plan section 9).
-        // The full sprite/DPLC pipeline will be wired alongside the T4-T6
-        // state machine; leaving this empty keeps the seam explicit and
-        // stops accidental placeholder rendering from masking parity gaps.
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_MINIBOSS);
+        if (renderer == null) {
+            return;
+        }
+        renderer.drawFrameIndex(mappingFrame, state.x, state.y, false, false);
     }
 }

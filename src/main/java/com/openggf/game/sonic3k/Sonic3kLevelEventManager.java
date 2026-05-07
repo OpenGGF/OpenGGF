@@ -485,6 +485,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void signalMinibossDefeatedForScrollControl() {
+        if (cnzEvents != null) {
+            cnzEvents.signalMinibossDefeatedForScrollControl();
+        }
+    }
+
+    @Override
+    public boolean consumeMinibossDefeatSignalForScrollControl() {
+        return cnzEvents != null && cnzEvents.consumeMinibossDefeatSignalForScrollControl();
+    }
+
+    @Override
     public void setWallGrabSuppressed(boolean value) {
         if (cnzEvents != null) {
             cnzEvents.setWallGrabSuppressed(value);

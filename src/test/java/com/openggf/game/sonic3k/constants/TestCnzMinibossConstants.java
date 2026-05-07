@@ -46,8 +46,8 @@ class TestCnzMinibossConstants {
 
     @Test
     void stateMachineLiterals() {
-        assertEquals(0x06,  Sonic3kConstants.CNZ_MINIBOSS_HIT_COUNT,
-                "HIT_COUNT: sonic3k.asm:144888 `move.b #6,collision_property(a0)`");
+        assertEquals(0x04,  Sonic3kConstants.CNZ_MINIBOSS_HIT_COUNT,
+                "HIT_COUNT must model the real $45 boss counter, not collision_property(a0)");
         assertEquals(0x80,  Sonic3kConstants.CNZ_MINIBOSS_INIT_Y_VEL,
                 "INIT_Y_VEL: sonic3k.asm:144891 `move.w #$80,y_vel(a0)` (descent)");
         assertEquals(0x100, Sonic3kConstants.CNZ_MINIBOSS_SWING_X_VEL,
@@ -63,6 +63,14 @@ class TestCnzMinibossConstants {
     }
 
     @Test
+    void collisionMetadataAndRealHitCounterAreSeparateRomLiterals() throws Exception {
+        assertEquals(0x06, intConstant("CNZ_MINIBOSS_COLLISION_PROPERTY"),
+                "collision_property(a0) remains ROM value 6 for collision metadata");
+        assertEquals(0x04, intConstant("CNZ_MINIBOSS_REAL_HITS"),
+                "$45(a0) is the real four-hit CNZ miniboss damage counter");
+    }
+
+    @Test
     void arenaBoundsAreWellFormed() {
         assertTrue(Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X
                         < Sonic3kConstants.CNZ_MINIBOSS_ARENA_MAX_X,
@@ -75,5 +83,9 @@ class TestCnzMinibossConstants {
                         - Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X,
                 "ARENA span must be 0x80: sonic3k.asm:144834 `addi.w #$80,d0` "
                         + "derives MAX_X from MIN_X; if either drifts, this breaks");
+    }
+
+    private static int intConstant(String name) throws Exception {
+        return Sonic3kConstants.class.getField(name).getInt(null);
     }
 }

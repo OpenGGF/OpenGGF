@@ -1,12 +1,17 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 
 import java.util.List;
 
@@ -39,7 +44,7 @@ import java.util.List;
  * {@link S3kCnzEventWriteSupport#queueArenaChunkDestruction} bridge to
  * keep the object -&gt; events dependency testable.
  */
-public final class CnzMinibossTopInstance extends AbstractObjectInstance {
+public final class CnzMinibossTopInstance extends AbstractObjectInstance implements TouchResponseProvider {
 
     // ---- Routine indices (CNZMinibossTop_Index, sonic3k.asm:145011) ----
     /** Routine 0 — Obj_CNZMinibossTopInit (sonic3k.asm:145018). */
@@ -62,9 +67,24 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
      * the skeleton state transitions explicit.
      */
     private static final int WAIT2_FRAMES = 0x20;
+    private static final int FRAME_TOP_WAIT = 7;
+    private static final int FRAME_TOP_MAIN = 9;
+    /** ROM: {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145709). */
+    private static final int TOP_SPINUP_INITIAL_DELAY = 7;
+    private static final int TOP_SPINUP_LOOP_COUNT = 8;
+    private static final int[] TOP_SPINUP_FRAMES = {7, 8, 9};
+    /** ROM: {@code AniRaw_CNZMinibossTop2} (sonic3k.asm:145711). */
+    private static final int TOP_MAIN_DELAY = 0;
+    private static final int[] TOP_MAIN_FRAMES = {7, 8, 9};
+    private static final int TOP_COLLISION_FLAGS = 0xAA;
+    private static final int TOP_Y_RADIUS = 8;
+    private static final int PLAYER_BOUNCE_Y_OFFSET = 0x0C;
+    private static final int PLAYER_BOUNCE_HALF_SIZE = 0x10;
 
     /** Mirrors the parent-boss reference used by {@code parent3(a0)} in ROM. */
     private CnzMinibossInstance boss;
+    private int parentOffsetX;
+    private int parentOffsetY;
 
     /** 16:8 motion state backing {@code x_pos}/{@code y_pos}/{@code x_vel}/{@code y_vel}. */
     private final SubpixelMotion.State motion;
@@ -74,6 +94,14 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
 
     /** Routine-4 post-wait countdown. When it underflows, {@link #onTopGo()} fires. */
     private int wait2Counter;
+    /** ROM: {@code mapping_frame(a0)}. */
+    private int mappingFrame;
+    private int spinupFrameIndex;
+    private int spinupFrameTimer;
+    private int spinupDelay;
+    private int spinupLoopCounter;
+    private int mainFrameIndex;
+    private int mainFrameTimer;
 
     // ---- Arena collision seam preserved from Task 7 scaffold ----
     private boolean arenaCollisionPending;
@@ -85,6 +113,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
         this.routine = ROUTINE_INIT;
         this.wait2Counter = -1;
+        this.mappingFrame = FRAME_TOP_WAIT;
     }
 
     /**
@@ -99,6 +128,10 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
      */
     public void attachBossForTest(CnzMinibossInstance boss) {
         this.boss = boss;
+        if (boss != null) {
+            parentOffsetX = motion.x - boss.getCentreX();
+            parentOffsetY = motion.y - boss.getCentreY();
+        }
     }
 
     /**
@@ -132,6 +165,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
         routine = ROUTINE_MAIN;
         motion.xVel = Sonic3kConstants.CNZ_MINIBOSS_TOP_INIT_X_VEL;
         motion.yVel = Sonic3kConstants.CNZ_MINIBOSS_TOP_INIT_Y_VEL;
+        startMainAnimation();
     }
 
     /**
@@ -157,7 +191,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
             case ROUTINE_INIT -> updateInit();
             case ROUTINE_WAIT -> updateWait();
             case ROUTINE_WAIT2 -> updateWait2();
-            case ROUTINE_MAIN -> updateMain();
+            case ROUTINE_MAIN -> updateMain(player);
             default -> {
                 // Out-of-range writes are a bug; silently ignore rather than
                 // crashing a frame loop. The normal 4-routine dispatch above
@@ -222,6 +256,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
      */
     private void updateWait() {
         if (boss != null && !boss.isParentSignalBit1Set()) {
+            refreshChildPosition();
             // Still waiting — ROM tail is Refresh_ChildPosition which we model
             // via publishCentrePosition() in the caller.
             return;
@@ -233,6 +268,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
         // so the Wait2 body counts down a fixed WAIT2_FRAMES and fires
         // onTopGo() directly instead of routing through a $34 slot.
         wait2Counter = WAIT2_FRAMES;
+        startSpinupAnimation();
     }
 
     /**
@@ -250,15 +286,8 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
      * {@link #wait2Counter} and fires {@link #onTopGo()} directly.
      */
     private void updateWait2() {
-        // updateWait() always seeds wait2Counter = WAIT2_FRAMES (>= 0)
-        // before transitioning, so the only way to land here with the
-        // counter already negative is a forced-state test — collapse both
-        // paths into a single decrement-and-test. The decrement-then-check
-        // order matches Animate_RawGetFaster's behaviour where the script
-        // terminator fires on the tick that drives the counter past 0.
-        if (--wait2Counter < 0) {
-            onTopGo();
-        }
+        refreshChildPosition();
+        animateRawGetFasterTop();
     }
 
     /**
@@ -280,6 +309,60 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
         routine = ROUTINE_MAIN;
         motion.xVel = Sonic3kConstants.CNZ_MINIBOSS_TOP_INIT_X_VEL;
         motion.yVel = Sonic3kConstants.CNZ_MINIBOSS_TOP_INIT_Y_VEL;
+        startMainAnimation();
+    }
+
+    private void startSpinupAnimation() {
+        mappingFrame = TOP_SPINUP_FRAMES[0];
+        spinupFrameIndex = 0;
+        spinupFrameTimer = 0;
+        spinupDelay = TOP_SPINUP_INITIAL_DELAY;
+        spinupLoopCounter = 0;
+    }
+
+    /**
+     * ROM: {@code Animate_RawGetFaster} (sonic3k.asm:177749) over
+     * {@code AniRaw_CNZMinibossTop}. Fresh scripts advance before reading,
+     * so frame 8 is the first visible Wait2 mapping frame after frame 7.
+     */
+    private void animateRawGetFasterTop() {
+        spinupFrameTimer--;
+        if (spinupFrameTimer >= 0) {
+            return;
+        }
+
+        spinupFrameIndex++;
+        if (spinupFrameIndex >= TOP_SPINUP_FRAMES.length) {
+            spinupFrameIndex = 0;
+            if (spinupDelay > 0) {
+                spinupDelay--;
+            } else if (++spinupLoopCounter >= TOP_SPINUP_LOOP_COUNT) {
+                onTopGo();
+                return;
+            }
+        }
+
+        mappingFrame = TOP_SPINUP_FRAMES[spinupFrameIndex];
+        spinupFrameTimer = spinupDelay;
+    }
+
+    private void startMainAnimation() {
+        mappingFrame = FRAME_TOP_MAIN;
+        mainFrameIndex = 2;
+        mainFrameTimer = TOP_MAIN_DELAY;
+    }
+
+    private void animateMainTop() {
+        mainFrameTimer--;
+        if (mainFrameTimer >= 0) {
+            return;
+        }
+        mainFrameIndex++;
+        if (mainFrameIndex >= TOP_MAIN_FRAMES.length) {
+            mainFrameIndex = 0;
+        }
+        mappingFrame = TOP_MAIN_FRAMES[mainFrameIndex];
+        mainFrameTimer = TOP_MAIN_DELAY;
     }
 
     /**
@@ -325,71 +408,138 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
      * bridge. This keeps the Task 7 arena-destruction seam alive
      * without inventing side effects the ROM doesn't emit.
      */
-    private void updateMain() {
-        // ROM sonic3k.asm:145057 — move.w x_pos(a0),-(sp). The ROM pushes
-        // the pre-movement X so the future real-tile side-collision branch
-        // (loc_6DD4C, sonic3k.asm:145062 — `move.w (sp)+,d4`) can recover it
-        // when ObjCheckRightWallDist / ObjCheckLeftWallDist fires. The cheap
-        // arena-edge bounce (loc_6DD8E, sonic3k.asm:145160) does NOT consume
-        // this stack value — it is just `neg.w x_vel; rts`. We keep the
-        // snapshot here to reserve the slot for the wall-tile slice; nothing
-        // in the current arena-edge path reads it.
-        @SuppressWarnings("unused")
-        int preMoveX = motion.x;
-        // ROM sonic3k.asm:145058 — jsr (MoveSprite2).l (no gravity).
+    private void updateMain(PlayableEntity player) {
+        updateMainRom(player);
+    }
+
+    private void updateMainRom(PlayableEntity player) {
         SubpixelMotion.moveSprite2(motion);
+        animateMainTop();
 
-        // ROM sonic3k.asm:145065-145092 — horizontal edge checks. The
-        // full ROM also calls ObjCheckRightWallDist / ObjCheckLeftWallDist
-        // against the real tile map before the cheap arena-edge bounce.
-        // Those probes land in a later slice; the arena-edge bounce alone
-        // is enough to keep the top piece inside the arena between task 7
-        // and the collision-system wiring task.
         if (motion.xVel >= 0) {
-            int d0 = motion.x + Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX;
-            if (d0 >= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_RIGHT) {
-                // ROM sonic3k.asm:145160-145162 — loc_6DD8E: simple neg.w x_vel; rts.
-                // The ROM intentionally lets the ball overshoot the arena edge by
-                // one frame's motion; the negated x_vel walks it back next tick.
-                // Do NOT restore motion.x — that would diverge the bounce
-                // signature on the impact frame (failing future trace replay).
+            TerrainCheckResult wall = ObjectTerrainUtils.checkRightWallDist(
+                    motion.x + Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX, motion.y);
+            if (isTerrainHit(wall)) {
+                handleWallTerrainHit();
+                finishMainUpdate();
+                return;
+            }
+            if (motion.x + Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX
+                    >= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_RIGHT
+                    || checkHitBase(motion.x, motion.y)) {
                 motion.xVel = (short) -motion.xVel;
+                finishMainUpdate();
+                return;
             }
         } else {
-            int d0 = motion.x - Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX;
-            if (d0 < Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_LEFT) {
-                // ROM sonic3k.asm:145160-145162 — loc_6DD8E (mirrored for left wall).
-                // Same overshoot semantics as the right-wall branch above.
+            TerrainCheckResult wall = ObjectTerrainUtils.checkLeftWallDist(
+                    motion.x - Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX, motion.y);
+            if (isTerrainHit(wall)) {
+                handleWallTerrainHit();
+                finishMainUpdate();
+                return;
+            }
+            if (motion.x - Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX
+                    < Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_LEFT
+                    || checkHitBase(motion.x, motion.y)) {
                 motion.xVel = (short) -motion.xVel;
+                finishMainUpdate();
+                return;
             }
         }
 
-        // ROM sonic3k.asm:145097-145129 — vertical edge checks.
+        if (checkPlayerBounce(player)) {
+            motion.yVel = (short) -motion.yVel;
+            finishMainUpdate();
+            return;
+        }
+
         if (motion.yVel >= 0) {
+            TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(motion.x, motion.y, TOP_Y_RADIUS);
+            if (isTerrainHit(floor)) {
+                handleVerticalTerrainHit();
+                finishMainUpdate();
+                return;
+            }
             int d1 = motion.y + Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY;
-            if (d1 > Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_BOTTOM) {
-                // ROM sonic3k.asm:145165-145185 — loc_6DD94: publishes the
-                // snapped impact coordinates through Events_bg then calls
-                // CNZMiniboss_BlockExplosion. The engine routes the same
-                // write through S3kCnzEventWriteSupport so the existing
-                // Task-7 arena-chunk-destruction seam consumes it.
-                publishArenaChunkImpact(motion.x, motion.y);
+            if (d1 > Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_BOTTOM
+                    || checkHitBase(motion.x, d1)) {
                 motion.yVel = (short) -motion.yVel;
+                finishMainUpdate();
+                return;
             }
         } else {
+            TerrainCheckResult ceiling = ObjectTerrainUtils.checkCeilingDist(motion.x, motion.y, TOP_Y_RADIUS);
+            if (isTerrainHit(ceiling)) {
+                handleVerticalTerrainHit();
+                finishMainUpdate();
+                return;
+            }
             int d1 = motion.y - Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY;
-            if (d1 <= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_TOP) {
-                // ROM sonic3k.asm:145188-145190 — loc_6DDCC: simple neg.w y_vel.
+            if (d1 <= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_TOP
+                    || checkHitBase(motion.x, d1)) {
                 motion.yVel = (short) -motion.yVel;
+                finishMainUpdate();
+                return;
             }
         }
 
-        // Keep the ObjectSpawn in sync so getX()/getY() expose the ball's
-        // latest position to cameras, debug overlays, and the arena-event
-        // bridge downstream. The ROM writes x_pos(a0)/y_pos(a0) directly
-        // inside MoveSprite2 — we mirror that by reflecting the motion
-        // state into the dynamic spawn every frame.
+        finishMainUpdate();
+    }
+
+    private void finishMainUpdate() {
         updateDynamicSpawn(motion.x, motion.y);
+    }
+
+    private boolean checkPlayerBounce(PlayableEntity player) {
+        if (player == null || player.getYSpeed() >= 0 || motion.yVel <= 0 || !player.getRolling()) {
+            return false;
+        }
+        int dx = (player.getCentreX() & 0xFFFF) - motion.x;
+        int dy = (player.getCentreY() & 0xFFFF) - motion.y;
+        if (Math.abs(dx) > PLAYER_BOUNCE_HALF_SIZE
+                || Math.abs(dy - PLAYER_BOUNCE_Y_OFFSET) > PLAYER_BOUNCE_HALF_SIZE) {
+            return false;
+        }
+        if ((player.getXSpeed() < 0 && motion.xVel > 0)
+                || (player.getXSpeed() > 0 && motion.xVel < 0)) {
+            motion.xVel = (short) -motion.xVel;
+        }
+        return (player.getYSpeed() < 0 && motion.yVel > 0)
+                || (player.getYSpeed() > 0 && motion.yVel < 0);
+    }
+
+    private boolean isTerrainHit(TerrainCheckResult result) {
+        return result != null && result.distance() < 0;
+    }
+
+    private void handleWallTerrainHit() {
+        motion.xVel = (short) -motion.xVel;
+        int impactX = motion.x + (motion.xVel < 0
+                ? Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX
+                : -Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX);
+        if (impactX <= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_LEFT
+                || impactX >= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_RIGHT) {
+            return;
+        }
+        publishArenaChunkImpact(snappedBlockCentre(impactX), snappedBlockCentre(motion.y));
+    }
+
+    private void handleVerticalTerrainHit() {
+        motion.yVel = (short) -motion.yVel;
+        int impactY = motion.y + (motion.yVel < 0
+                ? -Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY
+                : Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY);
+        if (motion.x <= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_LEFT
+                || motion.x >= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_RIGHT
+                || impactY >= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_BOTTOM) {
+            return;
+        }
+        publishArenaChunkImpact(snappedBlockCentre(motion.x), snappedBlockCentre(impactY));
+    }
+
+    private int snappedBlockCentre(int world) {
+        return (world & 0xFFE0) + 0x10;
     }
 
     /**
@@ -409,6 +559,48 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
         }
     }
 
+    private void refreshChildPosition() {
+        if (boss == null) {
+            return;
+        }
+        motion.x = boss.getCentreX() + parentOffsetX;
+        motion.y = boss.getCentreY() + parentOffsetY;
+        motion.xSub = 0;
+        motion.ySub = 0;
+        updateDynamicSpawn(motion.x, motion.y);
+    }
+
+    private boolean checkHitBase(int x, int y) {
+        if (boss == null) {
+            return false;
+        }
+        boolean baseHit = inRange(x, y, -0x18, 0x30, -0x10, 0x20);
+        boolean coilHit = boss.isOpenForTopHit()
+                ? inRange(x, y, -0x0C, 0x18, 0x10, 0x38)
+                : inRange(x, y, -0x0C, 0x18, 0x10, 0x18);
+        if (!baseHit && !coilHit) {
+            return false;
+        }
+        boss.onTopPieceHitBase();
+        return true;
+    }
+
+    private boolean inRange(int x, int y, int xOffset, int width, int yOffset, int height) {
+        int left = boss.getCentreX() + xOffset;
+        int top = boss.getCentreY() + yOffset;
+        return x >= left && x < left + width && y >= top && y < top + height;
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        return isDestroyed() ? 0 : TOP_COLLISION_FLAGS;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return 0;
+    }
+
     @Override
     public int getX() {
         return motion.x;
@@ -421,8 +613,10 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // Task 7 covers state publication + physics only; the VDP sprite
-        // mappings for the top piece are orthogonal and land with the
-        // broader rendering slice.
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_MINIBOSS);
+        if (renderer == null) {
+            return;
+        }
+        renderer.drawFrameIndex(mappingFrame, motion.x, motion.y, false, false);
     }
 }

@@ -6,6 +6,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K CNZ miniboss completion.** Carnival Night Zone Act 1 now drives the
+  miniboss arena through ROM-cited event flow: the tunnel approach, arena
+  camera clamps, miniboss music, PLC/palette load, vertical scroll-control
+  handoff, layout-wall mutations, and defeat release are all represented.
+  The CNZ miniboss now has raw boss animations, explicit top/spinner and
+  coil children, top-piece terrain/base collision behavior, closed-coil
+  player touch routing through `ObjectManager`, and focused headless/object
+  coverage. The CNZ cylinder carry path also preserves the held player
+  position before launch so Sonic follows the cylinder down consistently.
 - **Rewind automatic-capture tooling.** Moves `RewindScanSupport` into
   main sources so both tests and tools can share the runtime-owner source
   scanner, and replaces the disabled manual field-inventory JUnit test

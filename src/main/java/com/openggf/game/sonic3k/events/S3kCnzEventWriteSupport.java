@@ -44,6 +44,18 @@ public final class S3kCnzEventWriteSupport {
         }
     }
 
+    public static void signalMinibossDefeatedForScrollControl(ObjectServices services) {
+        CnzObjectEventBridge bridge = bridgeOrNull(services);
+        if (bridge != null) {
+            bridge.signalMinibossDefeatedForScrollControl();
+        }
+    }
+
+    public static boolean consumeMinibossDefeatSignalForScrollControl(ObjectServices services) {
+        CnzObjectEventBridge bridge = bridgeOrNull(services);
+        return bridge != null && bridge.consumeMinibossDefeatSignalForScrollControl();
+    }
+
     public static void setBossFlag(ObjectServices services, boolean value) {
         CnzObjectEventBridge bridge = bridgeOrNull(services);
         if (bridge != null) {

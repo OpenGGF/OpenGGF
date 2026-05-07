@@ -4,6 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.scroll.SwScrlCnz;
 import com.openggf.tests.rules.SonicGame;
@@ -43,5 +44,41 @@ class TestS3kCnzBossScrollHandler {
 
         assertEquals(0x0A00, state.deformPhaseBgX());
         assertEquals(0x0E00, state.publishedBgCameraX());
+    }
+
+    @Test
+    void minibossBossScrollAddsPublishedVerticalTunnelOffset() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        Sonic3kCNZEvents events = manager.getCnzEvents();
+        events.forceBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_MINIBOSS_PATH);
+        events.setBossScrollState(0x0120, 0);
+
+        SwScrlCnz handler = new SwScrlCnz();
+        int[] hscroll = new int[224];
+
+        handler.update(hscroll, 0x3200, 0x01C0, 0, 0);
+
+        assertEquals(0x01E0, handler.getVscrollFactorBG() & 0xFFFF,
+                "CNZ miniboss BG Y should include Events_bg+$08 so the tunnel scrolls vertically");
+    }
+
+    @Test
+    void minibossBossScrollUsesCameraYMinus100PlusPublishedOffsetFormula() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        Sonic3kCNZEvents events = manager.getCnzEvents();
+        events.forceBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_MINIBOSS_PATH);
+        events.setBossScrollState(0x0040, 0);
+
+        SwScrlCnz handler = new SwScrlCnz();
+        int[] hscroll = new int[224];
+
+        handler.update(hscroll, 0x3200, 0x0300, 0, 0);
+
+        assertEquals(0x0240, handler.getVscrollFactorBG() & 0xFFFF,
+                "CNZ miniboss BG Y formula is Camera_Y_pos - $100 + Events_bg+$08");
     }
 }
