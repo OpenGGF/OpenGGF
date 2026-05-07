@@ -1296,6 +1296,15 @@ public final class Sonic3kPlcArtRegistry {
                 null
         ));
 
+        // ICZ Wall/Column objects: Obj_ICZSegmentColumn uses make_art_tile($001, 2, 0).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN,
+                Sonic3kConstants.MAP_ICZ_WALL_AND_COLUMN_ADDR,
+                1,
+                2,
+                null
+        ));
+
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.ICZ_SNOWDUST,
                 Sonic3kConstants.ART_KOSM_ICZ_SNOWDUST_ADDR,

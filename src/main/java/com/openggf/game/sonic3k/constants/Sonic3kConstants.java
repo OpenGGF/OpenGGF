@@ -1055,6 +1055,9 @@ public class Sonic3kConstants {
 
     // Map_ICZCollapsingBridge - ICZ collapsing platform mappings (6 frames)
     public static final int MAP_ICZ_COLLAPSING_BRIDGE_ADDR = 0x21F2F2;
+    // Map_ICZWallAndColumn - ICZ wall/column mappings, including Obj_ICZSegmentColumn frames $0A/$03.
+    // Address derived from Frame_3639DC label minus the 14-frame offset table.
+    public static final int MAP_ICZ_WALL_AND_COLUMN_ADDR = 0x3639C0;
 
     // ===== Collapsing Bridge Mappings (Object 0x0F) =====
     // Multi-zone bridge that collapses when the player stands on it.

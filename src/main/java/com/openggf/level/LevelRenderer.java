@@ -365,6 +365,12 @@ public final class LevelRenderer {
                 pendingFboAtlasId,
                 pendingFboPaletteId,
                 0, 1, lm.verticalWrapEnabled, true, false, 0.0f);
+        lm.graphicsManager.executeCapturedCommands(
+                () -> dispatchSpecialRenderEffects(SpecialRenderEffectStage.SPRITE_PRIORITY_MASK, lm.frameCounter),
+                Math.round(pendingFboFgWorldOffsetX),
+                Math.round(pendingFboFgWorldOffsetY),
+                pendingFboScreenW,
+                pendingFboScreenH);
 
         glBlendEquation(GL_FUNC_ADD);
         glDisable(GL_BLEND);

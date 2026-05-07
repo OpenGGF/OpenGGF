@@ -49,6 +49,24 @@ public class TestSonic3kObjectProfile {
         assertTrue(profile.getImplementedIds(hcz1).contains(0x99));
         assertFalse(profile.getImplementedIds(mhz1).contains(0x99));
     }
-}
 
+    @Test
+    public void iczSegmentColumnIsMarkedImplementedForS3klLevelsOnly() {
+        Sonic3kObjectProfile profile = new Sonic3kObjectProfile();
+        List<LevelConfig> levels = profile.getLevels();
+
+        LevelConfig icz1 = levels.stream()
+                .filter(level -> level.levelData() == LevelData.S3K_ICECAP_1)
+                .findFirst()
+                .orElseThrow();
+        LevelConfig mhz1 = levels.stream()
+                .filter(level -> level.levelData() == LevelData.S3K_MUSHROOM_HILL_1)
+                .findFirst()
+                .orElseThrow();
+
+        assertTrue(profile.getImplementedIds().contains(0xB3));
+        assertTrue(profile.getImplementedIds(icz1).contains(0xB3));
+        assertFalse(profile.getImplementedIds(mhz1).contains(0xB3));
+    }
+}
 
