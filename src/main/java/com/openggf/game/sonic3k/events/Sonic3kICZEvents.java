@@ -3,10 +3,13 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.objects.IczBigSnowPileInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
  * IceCap Zone dynamic level events.
@@ -14,6 +17,8 @@ import com.openggf.level.objects.ObjectSpawn;
  * <p>ROM references:
  * <ul>
  *   <li>{@code sonic3k.asm:76984} {@code Obj_LevelIntroICZ1}</li>
+ *   <li>{@code sonic3k.asm:110150} {@code ICZ1_BackgroundEvent}</li>
+ *   <li>{@code sonic3k.asm:110433} {@code Obj_ICZ1BigSnowPile}</li>
  *   <li>{@code sonic3k.asm:39416} {@code ICZ1_Resize}</li>
  *   <li>{@code sonic3k.asm:39454} {@code ICZ2_Resize}</li>
  * </ul>
@@ -26,6 +31,12 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private static final int ICZ1_EVENTS_FG5_CAMERA_Y_1 = 0x068C;
     private static final int ICZ1_EVENTS_FG5_CAMERA_X_2 = 0x3940;
     private static final int ICZ1_INDOOR_PALETTE_X = 0x3940;
+    private static final int ICZ1_BG_INTRO = 0;
+    private static final int ICZ1_BG_SNOW_FALL = 4;
+    private static final int ICZ1_BG_REFRESH = 8;
+    private static final int ICZ1_BIG_SNOW_FINAL_OFFSET = -0x012E;
+    private static final int ICZ1_BIG_SNOW_ACCELERATION = 0x2400;
+    private static final int ICZ1_BIG_SNOW_RUMBLE_MASK = 0x000F;
     private static final int ICZ2_INDOOR_X_MIN = 0x1000;
     private static final int ICZ2_INDOOR_X_MAX = 0x3600;
     private static final int ICZ2_INDOOR_Y = 0x0720;
@@ -59,12 +70,22 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private boolean eventsFg5;
     private boolean introSpawned;
     private boolean indoorPaletteCyclingActive;
+    private int backgroundRoutine;
+    private int bigSnowOffset;
+    private int bigSnowOffsetSubpixels;
+    private int bigSnowVelocity;
+    private boolean bigSnowPileSpawned;
 
     @Override
     public void init(int act) {
         super.init(act);
         eventsFg5 = false;
         introSpawned = false;
+        backgroundRoutine = 0;
+        bigSnowOffset = 0;
+        bigSnowOffsetSubpixels = 0;
+        bigSnowVelocity = 0;
+        bigSnowPileSpawned = false;
         indoorPaletteCyclingActive = initialIndoorPaletteCycleState(act);
         applyInitialBackgroundPalette(act);
         if (act == 0 && playerCharacter() == PlayerCharacter.SONIC_ALONE) {
@@ -76,6 +97,8 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     public void update(int act, int frameCounter) {
         if (act == 0) {
             updateAct1Resize();
+            updateAct1ScreenEvent();
+            updateAct1BackgroundEvent(frameCounter);
         } else if (act == 1) {
             updateAct2Resize();
         }
@@ -100,6 +123,14 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
 
     public void setIndoorPaletteCyclingActive(boolean value) {
         indoorPaletteCyclingActive = value;
+    }
+
+    public int getIcz1BigSnowOffset() {
+        return bigSnowOffset;
+    }
+
+    public int getIcz1BackgroundRoutine() {
+        return backgroundRoutine;
     }
 
     private void spawnSonicSnowboardIntro() {
@@ -127,6 +158,14 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
                 }
             }
             case 2 -> {
+                // In the ROM, the quake lock prevents Sonic from carrying the camera
+                // into the indoor refresh trigger before Obj_ICZ1BigSnowPile has
+                // finished and released him. The snowboard intro object can otherwise
+                // cross $3940 during its object-control handoff in the engine.
+                if (backgroundRoutine == ICZ1_BG_SNOW_FALL
+                        && (bigSnowOffset > ICZ1_BIG_SNOW_FINAL_OFFSET || isFocusedPlayerControlLocked())) {
+                    return;
+                }
                 if (cameraX >= ICZ1_EVENTS_FG5_CAMERA_X_2) {
                     eventsFg5 = true;
                     eventRoutine = 4;
@@ -135,6 +174,99 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
             default -> {
                 // ICZ1 routine 4 is a ROM rts terminal state.
             }
+        }
+    }
+
+    private void updateAct1BackgroundEvent(int frameCounter) {
+        switch (backgroundRoutine) {
+            case ICZ1_BG_INTRO -> updateAct1BackgroundIntro(frameCounter);
+            case ICZ1_BG_SNOW_FALL -> updateAct1BackgroundSnowFall(frameCounter);
+            default -> {
+                // ICZ1 background routine 8 is the ROM's post-fall refresh/terminal state.
+            }
+        }
+    }
+
+    private void updateAct1BackgroundIntro(int frameCounter) {
+        if (!eventsFg5) {
+            return;
+        }
+        eventsFg5 = false;
+        if (playerCharacter() == PlayerCharacter.KNUCKLES) {
+            backgroundRoutine = ICZ1_BG_SNOW_FALL;
+            return;
+        }
+
+        spawnBigSnowPile();
+        bigSnowOffset = 0;
+        bigSnowOffsetSubpixels = 0;
+        bigSnowVelocity = 0;
+        updateBigSnowFall(frameCounter);
+        lockFocusedPlayerForIntroQuake();
+        backgroundRoutine = ICZ1_BG_SNOW_FALL;
+    }
+
+    private void updateAct1BackgroundSnowFall(int frameCounter) {
+        if (eventsFg5) {
+            eventsFg5 = false;
+            backgroundRoutine = ICZ1_BG_REFRESH;
+            gameState().setScreenShakeActive(false);
+            return;
+        }
+        if (playerCharacter() != PlayerCharacter.KNUCKLES) {
+            updateBigSnowFall(frameCounter);
+        }
+    }
+
+    private void updateAct1ScreenEvent() {
+        if (backgroundRoutine != ICZ1_BG_INTRO || !gameState().isScreenShakeActive()) {
+            return;
+        }
+        lockFocusedPlayerForIntroQuake();
+    }
+
+    private void lockFocusedPlayerForIntroQuake() {
+        AbstractPlayableSprite player = camera().getFocusedSprite();
+        if (player == null || player.isControlLocked()) {
+            return;
+        }
+        player.setControlLocked(true);
+        player.clearLogicalInputState();
+    }
+
+    private boolean isFocusedPlayerControlLocked() {
+        AbstractPlayableSprite player = camera().getFocusedSprite();
+        return player != null && player.isControlLocked();
+    }
+
+    private void spawnBigSnowPile() {
+        if (bigSnowPileSpawned) {
+            return;
+        }
+        bigSnowPileSpawned = true;
+        ObjectSpawn spawn = new ObjectSpawn(
+                IczBigSnowPileInstance.X_POSITION,
+                IczBigSnowPileInstance.BASE_Y,
+                0, 0, 0, false,
+                IczBigSnowPileInstance.BASE_Y);
+        spawnObject(() -> new IczBigSnowPileInstance(spawn, this));
+    }
+
+    private void updateBigSnowFall(int frameCounter) {
+        if (bigSnowOffset > ICZ1_BIG_SNOW_FINAL_OFFSET) {
+            gameState().setScreenShakeActive(true);
+            bigSnowVelocity += ICZ1_BIG_SNOW_ACCELERATION;
+            bigSnowOffsetSubpixels -= bigSnowVelocity;
+            bigSnowOffset = bigSnowOffsetSubpixels >> 16;
+            if (((frameCounter - 1) & ICZ1_BIG_SNOW_RUMBLE_MASK) == 0) {
+                audio().playSfx(Sonic3kSfx.RUMBLE_2.id);
+            }
+        }
+
+        if (bigSnowOffset <= ICZ1_BIG_SNOW_FINAL_OFFSET) {
+            gameState().setScreenShakeActive(true);
+            bigSnowOffset = ICZ1_BIG_SNOW_FINAL_OFFSET;
+            bigSnowOffsetSubpixels = ICZ1_BIG_SNOW_FINAL_OFFSET << 16;
         }
     }
 
