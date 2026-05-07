@@ -143,7 +143,7 @@ class TestRewindTorture {
     // lines to validate.
     // -------------------------------------------------------------------------
 
-    @Disabled("Slot drift still surfaces at iter 1600 even with live usedSlots capture + Animal/Points/Explosion codecs; remaining drift comes from other dynamics (BuzzerFlame chains, placement re-alloc cascade) and is pending the player-bound codecs (InvincibilityStars/Shield) plus shield-slot re-pin")
+    @Disabled("Slot drift closed; remaining single-field divergence at iter 1600 (object-manager.dynamicObjects[0].state.genericState.values[2]: A=9 B=0) is a per-object scalar not yet tracked by default capture — pending field-level investigation, not architectural")
     @Test
     void tortureFixedAdjacent() throws Exception {
         runTorture("fixed-adjacent",
