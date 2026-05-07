@@ -1067,7 +1067,7 @@ public class RewindBenchmark {
      * followed by step()) drive the engine with the inputs corresponding to
      * the InputSource's reported frame, not the cursor's current position.
      */
-    private static final class TraceFixtureEngineStepper implements EngineStepper {
+    private static final class TraceFixtureEngineStepper implements RewindSeekAwareEngineStepper {
         private final HeadlessTestFixture fixture;
 
         TraceFixtureEngineStepper(HeadlessTestFixture fixture) {
@@ -1084,6 +1084,11 @@ public class RewindBenchmark {
             boolean jump  = (p1 & AbstractPlayableSprite.INPUT_JUMP)  != 0;
             fixture.runner().stepFrame(up, down, left, right, jump,
                     inputs.p2InputMask(), inputs.p2StartPressed());
+        }
+
+        @Override
+        public void restoreToFrame(int frame, Bk2FrameInput inputAtFrame) {
+            fixture.runner().primeInputState(inputAtFrame);
         }
     }
 

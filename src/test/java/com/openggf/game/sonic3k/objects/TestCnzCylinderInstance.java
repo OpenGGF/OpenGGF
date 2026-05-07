@@ -59,7 +59,7 @@ class TestCnzCylinderInstance {
 
         cylinder.onSolidContact(player, new SolidContact(true, false, false, true, false), 4310);
         cylinder.update(4311, player);
-        int heldCenterY = player.getCentreY();
+        int heldStandingRadius = player.getStandYRadius();
 
         player.setJumpInputPressed(true);
         cylinder.update(4312, player);
@@ -71,7 +71,7 @@ class TestCnzCylinderInstance {
         assertTrue(player.getAir());
         assertTrue(player.getRolling());
         assertEquals(0x1BDF + expectedOffset, player.getCentreX());
-        assertEquals(heldCenterY, player.getCentreY());
+        assertEquals(cylinder.getY() - 0x21 - heldStandingRadius, player.getCentreY());
         assertEquals(7, player.getXRadius());
         assertEquals(14, player.getYRadius());
         assertTrue(player.getYSpeed() < 0);

@@ -3,8 +3,13 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance;
 import com.openggf.level.Level;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.sprites.Sprite;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.logging.Logger;
 
@@ -59,7 +64,11 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * during the approach window that drives the early refresh phase the
      * {@code SwScrlCnz} boss scroll path covers.
      */
-    private static final int MINIBOSS_CAM_X_THRESHOLD = 0x3000;
+    private static final int MINIBOSS_EARLY_TUNNEL_X_THRESHOLD = 0x3000;
+    private static final int MINIBOSS_START_RELEASE_DELAY = 2 * 60;
+    private static final int MINIBOSS_LOWER_ROUTE_Y_THRESHOLD = 0x054C;
+    private static final int MINIBOSS_LOWER_ROUTE_Y_REMAP = 0x0700;
+    private static final int MINIBOSS_BOSS_BG_SCROLL_THRESHOLD = 0x01E0;
     private static final int KNUCKLES_ROUTE_MIN_X = 0x4750;
     private static final int KNUCKLES_ROUTE_MAX_X = 0x48E0;
 
@@ -113,6 +122,12 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      */
     private int bossScrollOffsetY;
     private int bossScrollVelocityY;
+    private boolean minibossArenaLocked;
+    private int minibossStartReleaseTimer;
+    private boolean minibossStartReleased;
+    private boolean minibossScrollControlSpawned;
+    private boolean minibossLowerRouteRemapped;
+    private boolean minibossDefeatSignalForScrollControl;
 
     /** Suppresses wall-grab interactions during the miniboss path. */
     private boolean wallGrabSuppressed;
@@ -184,6 +199,12 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         publishedBgCameraX = 0;
         bossScrollOffsetY = 0;
         bossScrollVelocityY = 0;
+        minibossArenaLocked = false;
+        minibossStartReleaseTimer = 0;
+        minibossStartReleased = false;
+        minibossScrollControlSpawned = false;
+        minibossLowerRouteRemapped = false;
+        minibossDefeatSignalForScrollControl = false;
         wallGrabSuppressed = false;
         waterTargetY = 0;
         waterButtonArmed = false;
@@ -213,6 +234,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     public void update(int act, int frameCounter) {
         if (act == 0) {
             updateAct1Bg();
+            updateMinibossStartRelease();
         } else {
             updateAct2Fg();
         }
@@ -229,12 +251,22 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
     private void updateAct1Bg() {
         switch (bgRoutine) {
+            case BG_BOSS_START -> handleBossScrollStartStage();
+            case BG_BOSS -> handleAct1Entry();
             case BG_AFTER_BOSS -> handleAfterBossStage();
             case BG_FG_REFRESH -> advanceRefreshStageToSecondPass();
             case BG_FG_REFRESH_2 -> advanceRefreshStageToTransitionGate();
             case BG_DO_TRANSITION -> handleSeamlessReloadStage();
             default -> handleAct1Entry();
         }
+    }
+
+    private void handleBossScrollStartStage() {
+        int bossBgY = (camera().getY() & 0xFFFF) - 0x0100 + bossScrollOffsetY;
+        if (bossBgY >= MINIBOSS_BOSS_BG_SCROLL_THRESHOLD) {
+            bgRoutine = BG_BOSS;
+        }
+        handleAct1Entry();
     }
 
     /**
@@ -259,11 +291,17 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                     // arena lock and hand off to post-boss mode.
                     bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
                     bgRoutine = BG_AFTER_BOSS;
-                } else if (camX >= MINIBOSS_CAM_X_THRESHOLD) {
+                } else if (camX >= Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X) {
                     enterMinibossArena();
+                } else if (camX >= MINIBOSS_EARLY_TUNNEL_X_THRESHOLD) {
+                    enterMinibossTunnelApproach();
                 }
             }
             case ACT1_MINIBOSS_PATH -> {
+                int camX = camera().getX();
+                if (!minibossArenaLocked && camX >= Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X) {
+                    enterMinibossArena();
+                }
                 if (eventsFg5) {
                     eventsFg5 = false;
                     bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
@@ -276,6 +314,16 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         }
     }
 
+    private void enterMinibossTunnelApproach() {
+        remapLowerRouteIntoBossTunnel(camera());
+        camera().setMinY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
+        wallGrabSuppressed = true;
+        installMinibossPalette();
+        bossBackgroundMode = BossBackgroundMode.ACT1_MINIBOSS_PATH;
+        bgRoutine = BG_BOSS_START;
+        LOG.info("CNZ: camera reached miniboss tunnel approach threshold");
+    }
+
     /**
      * ROM: {@code loc_6D9A8} (sonic3k.asm:144830) — arena setup invoked
      * when {@code Obj_CNZMiniboss}'s outer gate succeeds.
@@ -286,7 +334,11 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * install {@code Pal_CNZMiniboss} into palette line 1.
      */
     private void enterMinibossArena() {
+        if (minibossArenaLocked) {
+            return;
+        }
         Camera camera = camera();
+        remapLowerRouteIntoBossTunnel(camera);
         cameraStoredMaxXPos = camera.getMaxX();
         cameraStoredMinXPos = camera.getMinX();
         cameraStoredMinYPos = camera.getMinY();
@@ -307,15 +359,18 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         // CNZ scripts observe the lock without a separate global flag.
         bossFlag = true;
         bossFlagPrev = true;
+        minibossArenaLocked = true;
+        minibossStartReleased = false;
+        minibossStartReleaseTimer = MINIBOSS_START_RELEASE_DELAY;
+        minibossScrollControlSpawned = false;
 
         // ROM sonic3k.asm:144841 — `moveq #cmd_FadeOut,d0; jsr Play_Music`.
-        // Mirror the music fade through the engine's helper. Sequencing the
-        // miniboss theme that follows is reserved for the audio follow-up
-        // (see TODO marker below).
+        // Mirror the music fade through the engine's helper. The miniboss
+        // theme starts from updateMinibossStartRelease after the ROM wait.
         if (audio() != null) {
             audio().fadeOutMusic();
         }
-        // TODO(audio-followup): wire miniboss audio fade-in
+        // Miniboss audio handoff is now handled by updateMinibossStartRelease.
         // (Sonic3kMusic.MINIBOSS) once the boss music handoff lands; the
         // fade-out above already mirrors sonic3k.asm:144841. Workstream D
         // shipped the boss without this fade-in by design (out of scope for
@@ -331,6 +386,60 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         installMinibossPalette();
 
         LOG.info("CNZ: camera reached miniboss threshold; arena lock + Boss_flag set");
+    }
+
+    private void updateMinibossStartRelease() {
+        if (!minibossArenaLocked || minibossStartReleased) {
+            return;
+        }
+        if (minibossStartReleaseTimer > 0) {
+            minibossStartReleaseTimer--;
+        }
+        if (minibossStartReleaseTimer > 0) {
+            return;
+        }
+
+        minibossStartReleased = true;
+        if (audio() != null) {
+            audio().playMusic(Sonic3kMusic.MINIBOSS.id);
+        }
+        spawnMinibossScrollControlOnce();
+    }
+
+    private void spawnMinibossScrollControlOnce() {
+        if (minibossScrollControlSpawned) {
+            return;
+        }
+        minibossScrollControlSpawned = true;
+        ObjectSpawn spawn = new ObjectSpawn(
+                Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X,
+                Sonic3kConstants.CNZ_MINIBOSS_ARENA_MAX_Y,
+                0, 0, 0, false, 0);
+        spawnObject(() -> new CnzMinibossScrollControlInstance(spawn));
+    }
+
+    /**
+     * ROM: {@code CNZ1BGE_Normal} subtracts {@code $700} from both players and
+     * the foreground camera when the boss gate is reached from the lower route
+     * ({@code Camera_Y_pos >= $54C}). This maps the lower-path coordinates into
+     * the vertically scrolling boss tunnel before the arena Y clamps are set.
+     */
+    private void remapLowerRouteIntoBossTunnel(Camera camera) {
+        if (minibossLowerRouteRemapped) {
+            return;
+        }
+        if ((camera.getY() & 0xFFFF) < MINIBOSS_LOWER_ROUTE_Y_THRESHOLD) {
+            return;
+        }
+
+        for (Sprite sprite : spriteManager().getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.setCentreYPreserveSubpixel(
+                        (short) (playable.getCentreY() - MINIBOSS_LOWER_ROUTE_Y_REMAP));
+            }
+        }
+        camera.setY((short) (camera.getY() - MINIBOSS_LOWER_ROUTE_Y_REMAP));
+        minibossLowerRouteRemapped = true;
     }
 
     private void installMinibossPalette() {
@@ -521,12 +630,34 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         this.bossScrollVelocityY = velocityY;
     }
 
+    public void signalMinibossDefeatedForScrollControl() {
+        this.minibossDefeatSignalForScrollControl = true;
+    }
+
+    public boolean consumeMinibossDefeatSignalForScrollControl() {
+        boolean signal = minibossDefeatSignalForScrollControl;
+        minibossDefeatSignalForScrollControl = false;
+        return signal;
+    }
+
     public int getBossScrollOffsetY() {
         return bossScrollOffsetY;
     }
 
     public int getBossScrollVelocityY() {
         return bossScrollVelocityY;
+    }
+
+    public boolean isMinibossStartReleased() {
+        return minibossStartReleased;
+    }
+
+    public boolean isMinibossArenaLocked() {
+        return minibossArenaLocked;
+    }
+
+    public int getMinibossStartReleaseTimer() {
+        return minibossStartReleaseTimer;
     }
 
     public boolean isWallGrabSuppressed() {

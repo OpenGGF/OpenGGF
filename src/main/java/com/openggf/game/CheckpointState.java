@@ -34,6 +34,24 @@ public class CheckpointState implements RespawnState {
     private byte savedLrbSolidBit = 0x0D;
     private boolean hasSolidBits;
 
+    public record RewindState(
+            int lastCheckpointIndex,
+            int savedX,
+            int savedY,
+            int savedCameraX,
+            int savedCameraY,
+            boolean cameraLock,
+            boolean usedForSpecialStage,
+            int savedWaterLevel,
+            int savedWaterRoutine,
+            boolean hasWaterState,
+            int savedCameraMaxY,
+            int savedDynamicResizeRoutine,
+            boolean hasS3kRuntimeState,
+            byte savedTopSolidBit,
+            byte savedLrbSolidBit,
+            boolean hasSolidBits) {}
+
     /**
      * Clear checkpoint state (called on level start/change).
      */
@@ -194,6 +212,10 @@ public class CheckpointState implements RespawnState {
         return usedForSpecialStage;
     }
 
+    public boolean hasCameraLock() {
+        return cameraLock;
+    }
+
     public boolean hasS3kRuntimeState() {
         return hasS3kRuntimeState;
     }
@@ -247,5 +269,48 @@ public class CheckpointState implements RespawnState {
         this.savedTopSolidBit = topSolidBit;
         this.savedLrbSolidBit = lrbSolidBit;
         this.hasSolidBits = true;
+    }
+
+    public RewindState captureRewindState() {
+        return new RewindState(
+                lastCheckpointIndex,
+                savedX,
+                savedY,
+                savedCameraX,
+                savedCameraY,
+                cameraLock,
+                usedForSpecialStage,
+                savedWaterLevel,
+                savedWaterRoutine,
+                hasWaterState,
+                savedCameraMaxY,
+                savedDynamicResizeRoutine,
+                hasS3kRuntimeState,
+                savedTopSolidBit,
+                savedLrbSolidBit,
+                hasSolidBits);
+    }
+
+    public void restoreRewindState(RewindState state) {
+        if (state == null) {
+            clear();
+            return;
+        }
+        this.lastCheckpointIndex = state.lastCheckpointIndex();
+        this.savedX = state.savedX();
+        this.savedY = state.savedY();
+        this.savedCameraX = state.savedCameraX();
+        this.savedCameraY = state.savedCameraY();
+        this.cameraLock = state.cameraLock();
+        this.usedForSpecialStage = state.usedForSpecialStage();
+        this.savedWaterLevel = state.savedWaterLevel();
+        this.savedWaterRoutine = state.savedWaterRoutine();
+        this.hasWaterState = state.hasWaterState();
+        this.savedCameraMaxY = state.savedCameraMaxY();
+        this.savedDynamicResizeRoutine = state.savedDynamicResizeRoutine();
+        this.hasS3kRuntimeState = state.hasS3kRuntimeState();
+        this.savedTopSolidBit = state.savedTopSolidBit();
+        this.savedLrbSolidBit = state.savedLrbSolidBit();
+        this.hasSolidBits = state.hasSolidBits();
     }
 }

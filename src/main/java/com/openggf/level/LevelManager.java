@@ -3877,7 +3877,8 @@ public class LevelManager {
                         levelGamestate != null ? levelGamestate.getRings() : 0,
                         levelGamestate != null ? levelGamestate.getTimerFrames() : 0,
                         levelGamestate != null && levelGamestate.isTimerPaused(),
-                        isRespawnRequestedForRewind()
+                        isRespawnRequestedForRewind(),
+                        checkpointState instanceof CheckpointState cs ? cs.captureRewindState() : null
                 );
             }
 
@@ -3906,6 +3907,14 @@ public class LevelManager {
                     }
                 }
                 restoreRespawnRequestedForRewind(s.respawnRequested());
+                if (s.checkpointState() != null) {
+                    if (checkpointState == null && gameModule != null) {
+                        checkpointState = gameModule.createRespawnState();
+                    }
+                    if (checkpointState instanceof CheckpointState cs) {
+                        cs.restoreRewindState(s.checkpointState());
+                    }
+                }
             }
         };
     }

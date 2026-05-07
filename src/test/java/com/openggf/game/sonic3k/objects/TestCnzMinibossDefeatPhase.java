@@ -3,7 +3,6 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
-import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
@@ -63,7 +62,7 @@ class TestCnzMinibossDefeatPhase {
     }
 
     @Test
-    void hitsReduceCounterAndSixthHitTriggersDefeat() {
+    void topPieceHitsReduceFourHitCounterAndFourthHitTriggersDefeat() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
@@ -75,24 +74,21 @@ class TestCnzMinibossDefeatPhase {
 
         // Capture intermediate counter values to prove monotonic decrement.
         // A buggy impl that slammed hitCount to 0 on the first hit would pass
-        // the endpoint-only assertion, so sample at hits 1/3/5 explicitly.
+        // the endpoint-only assertion, so sample at hits 1 and 3 explicitly.
         int counterAfter1 = -1;
         int counterAfter3 = -1;
-        int counterAfter5 = -1;
-        for (int i = 0; i < Sonic3kConstants.CNZ_MINIBOSS_HIT_COUNT; i++) {
+        for (int i = 0; i < 4; i++) {
             boss.simulateHitForTest();
             int remaining = boss.getRemainingHits();
             if (i == 0) counterAfter1 = remaining;
             if (i == 2) counterAfter3 = remaining;
-            if (i == 4) counterAfter5 = remaining;
         }
-        assertEquals(5, counterAfter1, "After 1 hit, hitCount should be 5");
-        assertEquals(3, counterAfter3, "After 3 hits, hitCount should be 3");
-        assertEquals(1, counterAfter5, "After 5 hits, hitCount should be 1");
+        assertEquals(3, counterAfter1, "After 1 top-to-coil hit, hitCount should be 3");
+        assertEquals(1, counterAfter3, "After 3 top-to-coil hits, hitCount should be 1");
         assertEquals(0, boss.getRemainingHits(),
-                "After 6 hits, hitCount must be 0");
+                "After 4 top-to-coil hits, hitCount must be 0");
         assertTrue(boss.isDefeated(),
-                "After the 6th hit the boss must be in defeat state");
+                "After the 4th top-to-coil hit the boss must be in defeat state");
     }
 
     @Test
@@ -111,7 +107,7 @@ class TestCnzMinibossDefeatPhase {
                 new ObjectSpawn(0x3240, 0x0200, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         boss.setServices(services);
 
-        for (int i = 0; i < Sonic3kConstants.CNZ_MINIBOSS_HIT_COUNT; i++) {
+        for (int i = 0; i < 4; i++) {
             boss.simulateHitForTest();
         }
         // Let the defeat sequencer advance Obj_CNZMinibossEnd -> Obj_CNZMinibossEndGo.
