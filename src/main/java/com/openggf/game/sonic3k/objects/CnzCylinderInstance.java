@@ -558,6 +558,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         int distanceWord = ((slot.horizontalDistance & 0xFF) << 8) | thresholdByte;
         int xOffset = (cosine * distanceWord) >> 16;
         player.setCentreXPreserveSubpixel((short) (centerX + xOffset));
+        if (!player.getAir()) {
+            player.setCentreYPreserveSubpixel((short) (centerY + SOLID_PARAMS.offsetY()
+                    - SOLID_PARAMS.groundHalfHeight() - player.getYRadius()));
+        }
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) cylinderLaunchGroundSpeed(player));
@@ -734,6 +738,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         ObjectServices svc = tryServices();
         if (svc != null && svc.objectManager() != null && sprite.isObjectControlled()) {
             svc.objectManager().clearRidingObject(sprite);
+        }
+        if (sprite.isObjectControlled() && !sprite.getAir()
+                && Math.abs((short) currentYVelocity) >= 0x480) {
+            sprite.setGSpeed((short) 0x0800);
         }
     }
 

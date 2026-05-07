@@ -26,9 +26,11 @@ class TestCnzMinibossInstanceBase {
     @Test
     void reportsRomHitCount() {
         CnzMinibossInstance boss = new CnzMinibossInstance(spawn());
-        assertEquals(Sonic3kConstants.CNZ_MINIBOSS_HIT_COUNT,
+        assertEquals(0x04,
                 boss.getRemainingHits(),
-                "state.hitCount initialised from getInitialHitCount() (ROM sonic3k.asm:144888)");
+                "state.hitCount must initialise from the real $45 four-hit counter, not collision_property(a0)");
+        assertEquals(0x04, Sonic3kConstants.CNZ_MINIBOSS_HIT_COUNT,
+                "CNZ_MINIBOSS_HIT_COUNT should be an alias for the real damage counter");
     }
 
     @Test

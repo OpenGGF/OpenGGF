@@ -53,12 +53,12 @@ class TestS3kCnzMinibossHeadless {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
         GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
-        for (int i = 0; i < 60; i++) fixture.stepFrame(false, false, false, false, false);
+        for (int i = 0; i < 121; i++) fixture.stepFrame(false, false, false, false, false);
 
         Optional<CnzMinibossInstance> boss = findBoss();
-        assertTrue(boss.isPresent(), "CNZ miniboss instance must exist within 60 frames of arena entry");
+        assertTrue(boss.isPresent(), "CNZ miniboss instance must exist after the ROM two-second release wait");
         assertTrue(boss.get().getCurrentRoutine() >= 2,
-                "Boss must leave routine 0 (Init) within 60 frames");
+                "Boss must leave routine 0 (Init) after Obj_CNZMinibossGo releases the start routine");
     }
 
     @Test
@@ -68,14 +68,18 @@ class TestS3kCnzMinibossHeadless {
                 .build();
         GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
 
-        // Stub six hits across the fight window by nudging the boss's simulateHitForTest
+        // Stub four top-to-coil hits across the fight window by nudging the boss's simulateHitForTest
         // at roughly the ROM's expected hit cadence. This is a headless smoke test, not a
         // bit-perfect replay: the goal is to confirm the defeat path completes.
         Optional<CnzMinibossInstance> boss = Optional.empty();
+        int simulatedHits = 0;
         for (int i = 0; i < 400 && getCnzEvents().isBossFlag(); i++) {
             fixture.stepFrame(false, false, false, false, false);
             if (boss.isEmpty()) boss = findBoss();
-            if (boss.isPresent() && i % 60 == 0) boss.get().simulateHitForTest();
+            if (boss.isPresent() && simulatedHits < 4 && i % 60 == 0) {
+                boss.get().simulateHitForTest();
+                simulatedHits++;
+            }
         }
         assertFalse(getCnzEvents().isBossFlag(),
                 "Boss_flag must be cleared (defeat path) within 400 frames of arena entry");

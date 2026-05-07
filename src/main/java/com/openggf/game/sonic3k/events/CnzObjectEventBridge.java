@@ -17,6 +17,8 @@ package com.openggf.game.sonic3k.events;
 public interface CnzObjectEventBridge {
     void setPendingArenaChunkDestruction(int chunkWorldX, int chunkWorldY);
     void setBossScrollState(int offsetY, int velocityY);
+    void signalMinibossDefeatedForScrollControl();
+    boolean consumeMinibossDefeatSignalForScrollControl();
     void setBossFlag(boolean value);
     void setEventsFg5(boolean value);
     void setWallGrabSuppressed(boolean value);
