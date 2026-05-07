@@ -5,17 +5,29 @@ import com.openggf.game.sonic3k.Sonic3kPlcArtRegistry;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.StubObjectServices;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class TestIczSegmentColumnObjectInstance {
+
+    @BeforeEach
+    public void resetCameraBounds() {
+        com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
+    }
 
     @Test
     public void registryCreatesIczSegmentColumnForId0xB3InS3klZoneSet() {
@@ -87,5 +99,62 @@ public class TestIczSegmentColumnObjectInstance {
         assertEquals(Sonic3kConstants.MAP_ICZ_WALL_AND_COLUMN_ADDR, entry.mappingAddr());
         assertEquals(1, entry.artTileBase());
         assertEquals(2, entry.palette());
+    }
+
+    @Test
+    public void iczPlanIncludesLevelArtEntryForSegmentColumnDebrisMappings() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x05, 0);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry entry = plan.levelArt().stream()
+                .filter(e -> Sonic3kObjectArtKeys.ICZ_PLATFORMS.equals(e.key()))
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull(entry);
+        assertEquals(Sonic3kConstants.MAP_ICZ_PLATFORMS_ADDR, entry.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_ICZ_MISC1, entry.artTileBase());
+        assertEquals(2, entry.palette());
+    }
+
+    @Test
+    public void breakDebrisSpecsMatchChildObjDat8AAEAAndIndexedVelocities() {
+        List<IczSegmentColumnObjectInstance.BreakDebrisSpec> specs =
+                IczSegmentColumnObjectInstance.breakDebrisSpecsForTesting(0x1200, 0x0580);
+
+        assertEquals(12, specs.size());
+        assertEquals(new IczSegmentColumnObjectInstance.BreakDebrisSpec(
+                0, 0x11F4, 0x0578, 0x200, -0x200, 0x0C), specs.get(0));
+        assertEquals(new IczSegmentColumnObjectInstance.BreakDebrisSpec(
+                2, 0x11FC, 0x0578, -0x300, -0x200, 0x0C), specs.get(1));
+        assertEquals(new IczSegmentColumnObjectInstance.BreakDebrisSpec(
+                8, 0x11F4, 0x0580, 0, -0x200, 0x0C), specs.get(4));
+        assertEquals(new IczSegmentColumnObjectInstance.BreakDebrisSpec(
+                22, 0x120C, 0x0588, 0x200, -0x200, 0x0C), specs.get(11));
+    }
+
+    @Test
+    public void breakDebrisSpawnCreatesTwelveVisualChildrenAfterCurrent() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        IczSegmentColumnObjectInstance.Segment segment =
+                IczSegmentColumnObjectInstance.Segment.forTesting(0x1200, 0x0580, 0, null);
+        segment.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+
+        segment.spawnBreakDebrisForTesting();
+
+        ArgumentCaptor<ObjectInstance> captor = ArgumentCaptor.forClass(ObjectInstance.class);
+        verify(objectManager, times(12)).addDynamicObjectAfterCurrent(captor.capture());
+        List<ObjectInstance> debris = captor.getAllValues();
+        assertTrue(debris.stream().allMatch(IczSegmentColumnObjectInstance.BreakDebris.class::isInstance));
+
+        IczSegmentColumnObjectInstance.BreakDebris first =
+                (IczSegmentColumnObjectInstance.BreakDebris) debris.get(0);
+        assertEquals(0x11F4, first.getX());
+        assertEquals(0x0578, first.getY());
+        assertEquals(0x0C, first.getMappingFrameForTesting());
     }
 }

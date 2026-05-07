@@ -8,7 +8,9 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -36,6 +38,18 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
     private static final int SEGMENT_Y_SHIFT = 4;
     private static final int NORMAL_MAPPING_FRAME = 0x0A;
     private static final int TOP_CAP_MAPPING_FRAME = 0x03;
+    private static final int DEBRIS_INITIAL_MAPPING_FRAME = 0x0C;
+    private static final int[][] BREAK_DEBRIS_OFFSETS = {
+            {-0x0C, -0x08}, {-0x04, -0x08}, {0x04, -0x08}, {0x0C, -0x08},
+            {-0x0C, 0x00}, {-0x04, 0x00}, {0x04, 0x00}, {0x0C, 0x00},
+            {-0x0C, 0x08}, {-0x04, 0x08}, {0x04, 0x08}, {0x0C, 0x08}
+    };
+    private static final int[][] VELOCITY_INDEX = {
+            {-0x100, -0x100}, {0x100, -0x100}, {-0x200, -0x200}, {0x200, -0x200},
+            {-0x300, -0x200}, {0x300, -0x200}, {-0x200, -0x200}, {0, -0x200},
+            {-0x400, -0x300}, {0x400, -0x300}, {0x300, -0x300}, {-0x400, -0x300},
+            {0x400, -0x300}, {-0x200, -0x200}, {0x200, -0x200}, {0, -0x100}
+    };
 
     private final int x;
     private final int y;
@@ -94,6 +108,26 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
     }
 
     public record SegmentSpec(int subtype, int x, int y, int mappingFrame) {
+    }
+
+    public record BreakDebrisSpec(int subtype, int x, int y, int xVel, int yVel, int initialMappingFrame) {
+    }
+
+    static List<BreakDebrisSpec> breakDebrisSpecsForTesting(int parentX, int parentY) {
+        return buildBreakDebrisSpecs(parentX, parentY);
+    }
+
+    private static List<BreakDebrisSpec> buildBreakDebrisSpecs(int parentX, int parentY) {
+        List<BreakDebrisSpec> specs = new ArrayList<>(BREAK_DEBRIS_OFFSETS.length);
+        for (int i = 0; i < BREAK_DEBRIS_OFFSETS.length; i++) {
+            int subtype = i * SEGMENT_SUBTYPE_STEP;
+            int velocityIndex = 3 + (subtype / SEGMENT_SUBTYPE_STEP);
+            int[] offset = BREAK_DEBRIS_OFFSETS[i];
+            int[] velocity = VELOCITY_INDEX[velocityIndex];
+            specs.add(new BreakDebrisSpec(subtype, parentX + offset[0], parentY + offset[1],
+                    velocity[0], velocity[1], DEBRIS_INITIAL_MAPPING_FRAME));
+        }
+        return List.copyOf(specs);
     }
 
     public static final class Segment extends AbstractObjectInstance
@@ -205,8 +239,19 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
             player.setPushing(false);
             player.setOnObject(false);
             cascadeActive = true;
+            spawnBreakDebris();
             setDestroyed(true);
             playSfx(Sonic3kSfx.COLLAPSE.id);
+        }
+
+        void spawnBreakDebrisForTesting() {
+            spawnBreakDebris();
+        }
+
+        private void spawnBreakDebris() {
+            for (BreakDebrisSpec spec : buildBreakDebrisSpecs(x, y)) {
+                spawnChild(() -> new BreakDebris(spec));
+            }
         }
 
         private void startCascadeWait() {
@@ -290,6 +335,80 @@ public class IczSegmentColumnObjectInstance extends AbstractObjectInstance {
         @Override
         public int getPriorityBucket() {
             return RenderPriority.clamp(PRIORITY);
+        }
+    }
+
+    public static final class BreakDebris extends GravityDebrisChild {
+        private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
+        private static final int GRAVITY = 0x38;
+        private static final int[] RAW_ANIMATION_LOWER = {
+                0, 0x27, 0x23, 0x27, 0x13, 0x27, 0x24, 0x27, 0x14, 0xFC
+        };
+        private static final int[] RAW_ANIMATION_UPPER = {
+                0, 0x27, 0x0C, 0x27, 0x0D, 0x27, 0x0E, 0xFC
+        };
+
+        private final int[] rawAnimation;
+        private int mappingFrame;
+        private int animFrame;
+        private int animFrameTimer;
+
+        private BreakDebris(BreakDebrisSpec spec) {
+            super(new ObjectSpawn(spec.x(), spec.y(), OBJECT_ID, spec.subtype(), 0, false, spec.y()),
+                    "ICZSegmentColumnDebris", spec.xVel(), spec.yVel(), GRAVITY);
+            this.rawAnimation = spec.subtype() >= 8 ? RAW_ANIMATION_UPPER : RAW_ANIMATION_LOWER;
+            this.mappingFrame = spec.initialMappingFrame();
+            this.animFrame = initialAnimFrame();
+        }
+
+        private int initialAnimFrame() {
+            ObjectServices services = constructionContext();
+            if (services == null || services.rng() == null) {
+                return 0;
+            }
+            return services.rng().nextBits(3);
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            animateRaw();
+            super.update(frameCounter, player);
+        }
+
+        private void animateRaw() {
+            animFrameTimer--;
+            if (animFrameTimer >= 0) {
+                return;
+            }
+
+            animFrame = (animFrame + 1) & 0xFF;
+            int scriptIndex = animFrame + 1;
+            int value = scriptIndex < rawAnimation.length ? rawAnimation[scriptIndex] : 0xFC;
+            if ((value & 0x80) != 0) {
+                mappingFrame = rawAnimation[1];
+                animFrameTimer = rawAnimation[0];
+                animFrame = 0;
+                return;
+            }
+            animFrameTimer = rawAnimation[0];
+            mappingFrame = value;
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return RenderPriority.clamp(1); // ROM ObjDat3_8AAB6: priority $80
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            PatternSpriteRenderer renderer = getRenderer(ART_KEY);
+            if (renderer != null) {
+                renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
+            }
+        }
+
+        int getMappingFrameForTesting() {
+            return mappingFrame;
         }
     }
 
