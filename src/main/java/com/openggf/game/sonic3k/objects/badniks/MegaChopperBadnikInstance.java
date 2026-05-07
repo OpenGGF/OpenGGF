@@ -62,7 +62,6 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     private int pendingCollisionProperty;
     private AbstractPlayableSprite pendingMainPlayer;
     private AbstractPlayableSprite pendingSidekickPlayer;
-
     private AbstractPlayableSprite capturedPlayer;
     private int childDx;
     private int childDy;

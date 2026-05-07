@@ -21,7 +21,6 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
     protected int animTimer;
     protected int animFrame;
     protected boolean facingLeft;
-
     private final DestructionConfig destructionConfig;
 
     /**
@@ -209,5 +208,76 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
     protected int oscillateVertical(int baseY, int amplitude, int period, int frameCounter) {
         double angle = (frameCounter % period) * (2.0 * Math.PI / period);
         return baseY + (int) (amplitude * Math.sin(angle));
+    }
+
+    /**
+     * Captures badnik movement state (position, velocity, animation cursor, facing)
+     * into a {@link PerObjectRewindSnapshot.BadnikRewindExtra} record for rewind snapshots.
+     * <p>
+     * Subclasses with additional per-frame timers or state machine fields (multi-phase AI)
+     * should override this method, call {@code super.captureRewindState()}, and wrap
+     * the result with their own extra fields using custom record nesting.
+     *
+     * @return snapshot with badnik extra populated
+     */
+    @Override
+    public PerObjectRewindSnapshot captureRewindState() {
+        PerObjectRewindSnapshot base = super.captureRewindState();
+        PerObjectRewindSnapshot.BadnikRewindExtra badnikExtra =
+                new PerObjectRewindSnapshot.BadnikRewindExtra(
+                        currentX, currentY, xVelocity, yVelocity,
+                        animTimer, animFrame, facingLeft);
+        // The record constructor with badnikExtra parameter; playerExtra is null for badniks
+        return new PerObjectRewindSnapshot(
+                base.destroyed(),
+                base.destroyedRespawnable(),
+                base.hasDynamicSpawn(),
+                base.dynamicSpawnX(),
+                base.dynamicSpawnY(),
+                base.preUpdateX(),
+                base.preUpdateY(),
+                base.preUpdateValid(),
+                base.preUpdateCollisionFlags(),
+                base.skipTouchThisFrame(),
+                base.solidContactFirstFrame(),
+                base.slotIndex(),
+                base.respawnStateIndex(),
+                badnikExtra,
+                base.badnikSubclassExtra(),
+                base.objectSubclassExtra(),
+                base.playerExtra(),
+                base.genericState()
+        );
+    }
+
+    /**
+     * Restores badnik movement state from a rewind snapshot.
+     * <p>
+     * Subclasses with additional state should override, call {@code super.restoreRewindState()},
+     * and restore their own extra fields from the snapshot.
+     *
+     * @param s the snapshot to restore from
+     */
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot s) {
+        super.restoreRewindState(s);
+        if (s.badnikExtra() != null) {
+            PerObjectRewindSnapshot.BadnikRewindExtra extra = s.badnikExtra();
+            this.currentX = extra.currentX();
+            this.currentY = extra.currentY();
+            this.xVelocity = extra.xVelocity();
+            this.yVelocity = extra.yVelocity();
+            this.animTimer = extra.animTimer();
+            this.animFrame = extra.animFrame();
+            this.facingLeft = extra.facingLeft();
+            // Resync the dynamic spawn to the restored current position ONLY if
+            // the snapshot itself had a non-null dynamicSpawn (i.e. update() has
+            // run at least once). At frame 0, before any update, currentX/Y is
+            // set but dynamicSpawn is null — overwriting it here would make
+            // capture-after-restore differ from the original frame-0 capture.
+            if (s.hasDynamicSpawn()) {
+                updateDynamicSpawn(currentX, currentY);
+            }
+        }
     }
 }

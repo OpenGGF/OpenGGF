@@ -41,7 +41,6 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance {
 
     // Flash_Collect: cmpi.b #3,obFrame(a0) - trigger frame for parent deletion
     private static final int TRIGGER_FRAME = 3;
-
     private final Sonic1GiantRingObjectInstance parent;
     private final int posX;
     private final int posY;

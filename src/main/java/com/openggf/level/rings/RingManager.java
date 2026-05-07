@@ -21,6 +21,9 @@ import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.physics.TrigLookupTable;
 
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.RingSnapshot;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -31,7 +34,7 @@ import java.util.List;
 /**
  * Handles ring collection state, sparkle animation, rendering, and lost-ring behavior.
  */
-public class RingManager {
+public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private static final int MAX_ATTRACTED_RINGS = 32;
     // ROM: AttractedRing_Move — base acceleration is $30 subpixels/frame²
     private static final int ATTRACT_ACCEL = 0x30;
@@ -604,6 +607,137 @@ public class RingManager {
         }
     }
 
+    // --- RewindSnapshottable<RingSnapshot> ---
+
+    @Override
+    public String key() {
+        return "rings";
+    }
+
+    @Override
+    public RingSnapshot capture() {
+        // --- RingPlacement state ---
+        long[] collectedWords = placement.collected.toLongArray();
+        List<RingSnapshot.SparkleEntry> sparkleTimers = new ArrayList<>();
+        for (int i = 0; i < placement.sparkleStartFrames.length; i++) {
+            int startFrame = placement.sparkleStartFrames[i];
+            if (startFrame != RingPlacement.NO_SPARKLE) {
+                sparkleTimers.add(new RingSnapshot.SparkleEntry(i, startFrame));
+            }
+        }
+        int cursorIndex = placement.cursorIndex;
+        int lastCameraX = placement.lastCameraX;
+
+        // --- LostRingPool state ---
+        List<RingSnapshot.LostRingEntry> lostEntries = new ArrayList<>(lostRings.activeRingCount);
+        for (int i = 0; i < LostRingPool.MAX_LOST_RINGS; i++) {
+            LostRing lr = lostRings.ringPool[i];
+            if (!lr.isActive()) {
+                continue;
+            }
+            lostEntries.add(new RingSnapshot.LostRingEntry(
+                    true,
+                    lr.getXSubpixel(), lr.getYSubpixel(),
+                    lr.getXVel(), lr.getYVel(),
+                    lr.getLifetime(),
+                    lr.isCollected(),
+                    lr.getSparkleStartFrame(),
+                    lr.getPhaseOffset(),
+                    lr.getSlotIndex(),
+                    i));
+        }
+
+        // --- AttractedRing state ---
+        List<RingSnapshot.AttractedRingEntry> atEntries = new ArrayList<>();
+        for (int i = 0; i < MAX_ATTRACTED_RINGS; i++) {
+            AttractedRing ar = attractedRings[i];
+            if (!ar.active) {
+                continue;
+            }
+            atEntries.add(new RingSnapshot.AttractedRingEntry(
+                    true, ar.sourceIndex, ar.x, ar.y,
+                    ar.xSub, ar.ySub, ar.xVel, ar.yVel, i));
+        }
+
+        return new RingSnapshot(
+                collectedWords,
+                sparkleTimers.toArray(RingSnapshot.SparkleEntry[]::new),
+                cursorIndex,
+                lastCameraX,
+                lostRings.activeRingCount,
+                lostRings.spillAnimCounter,
+                lostRings.spillAnimAccum,
+                lostRings.spillAnimFrame,
+                lostRings.frameCounter,
+                lostEntries.toArray(RingSnapshot.LostRingEntry[]::new),
+                atEntries.toArray(RingSnapshot.AttractedRingEntry[]::new));
+    }
+
+    @Override
+    public void restore(RingSnapshot snap) {
+        // --- RingPlacement ---
+        placement.collected.clear();
+        placement.collected.or(snap.collected());
+        Arrays.fill(placement.sparkleStartFrames, RingPlacement.NO_SPARKLE);
+        RingSnapshot.SparkleEntry[] snapSparkles = snap.sparkleTimers();
+        for (RingSnapshot.SparkleEntry entry : snapSparkles) {
+            int ringIndex = entry.ringIndex();
+            if (ringIndex >= 0 && ringIndex < placement.sparkleStartFrames.length) {
+                placement.sparkleStartFrames[ringIndex] = entry.startFrame();
+            }
+        }
+        placement.cursorIndex = snap.placementCursorIndex();
+        placement.lastCameraX = snap.placementLastCameraX();
+
+        // --- LostRingPool ---
+        lostRings.activeRingCount = snap.lostRingActiveCount();
+        lostRings.spillAnimCounter = snap.spillAnimCounter();
+        lostRings.spillAnimAccum = snap.spillAnimAccum();
+        lostRings.spillAnimFrame = snap.spillAnimFrame();
+        lostRings.frameCounter = snap.lostRingFrameCounter();
+        lostRings.releaseReservedSlots();
+        RingSnapshot.LostRingEntry[] snapLost = snap.lostRings();
+        for (int i = 0; i < snapLost.length; i++) {
+            RingSnapshot.LostRingEntry entry = snapLost[i];
+            int poolIndex = entry.poolIndex();
+            if (poolIndex < 0 || poolIndex >= LostRingPool.MAX_LOST_RINGS) {
+                continue;
+            }
+            LostRing lr = lostRings.ringPool[poolIndex];
+            lr.restoreFromSnapshot(entry);
+        }
+
+        // --- AttractedRings ---
+        for (int i = 0; i < MAX_ATTRACTED_RINGS; i++) {
+            AttractedRing ar = attractedRings[i];
+            ar.active = false;
+            ar.sourceIndex = 0;
+            ar.x = 0;
+            ar.y = 0;
+            ar.xSub = 0;
+            ar.ySub = 0;
+            ar.xVel = 0;
+            ar.yVel = 0;
+        }
+        RingSnapshot.AttractedRingEntry[] snapAt = snap.attractedRings();
+        for (int i = 0; i < snapAt.length; i++) {
+            RingSnapshot.AttractedRingEntry entry = snapAt[i];
+            int slotIndex = entry.slotIndex();
+            if (slotIndex < 0 || slotIndex >= MAX_ATTRACTED_RINGS) {
+                continue;
+            }
+            AttractedRing ar = attractedRings[slotIndex];
+            ar.active = entry.active();
+            ar.sourceIndex = entry.sourceIndex();
+            ar.x = entry.x();
+            ar.y = entry.y();
+            ar.xSub = entry.xSub();
+            ar.ySub = entry.ySub();
+            ar.xVel = entry.xVel();
+            ar.yVel = entry.yVel();
+        }
+    }
+
     private static final class AttractedRing {
         int sourceIndex;
         int x, y;
@@ -842,7 +976,6 @@ public class RingManager {
         private final RingRenderer renderer;
         private final TouchResponseTable touchResponseTable;
         private final AudioManager audioManager;
-        private final Camera camera = GameServices.camera();
         private final LostRing[] ringPool = new LostRing[MAX_LOST_RINGS];
         private int activeRingCount = 0;
         // ROM-accurate shared animation state (Ring_spill_anim_counter/accum/frame).
@@ -954,7 +1087,7 @@ public class RingManager {
             boolean reverseGravity = GameServices.gameState().isReverseGravityActive();
             int gravity = reverseGravity ? -GRAVITY : GRAVITY;
 
-            int cameraBottom = camera.getMaxY() + 224;
+            int cameraBottom = GameServices.camera().getMaxY() + 224;
             ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
             // ROM: RLoss_Bounce uses v_vbla_byte, not the gameplay frame counter.
             // Trace replay keeps ObjectManager's VBla counter aligned across lag frames,

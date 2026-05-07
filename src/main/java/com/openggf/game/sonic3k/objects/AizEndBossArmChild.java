@@ -38,7 +38,6 @@ public class AizEndBossArmChild extends AbstractBossChild {
     private static final int ROUTINE_ANIMATE_OPEN = 6;
     private static final int ROUTINE_WAIT_FIRE = 8;
     private static final int ROUTINE_WAIT_RETRACT = 10;
-
     private final AizEndBossInstance boss;
     private final int offsetX;
     private final int offsetY;

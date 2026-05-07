@@ -9,10 +9,12 @@ import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
 
@@ -96,8 +98,11 @@ public class SidekickCpuController {
 
     private static final int SETTLED_FRAME_THRESHOLD = 15;
 
+    @RewindTransient(reason = "owning sidekick reference is structural and restored from the live playable graph")
     private final AbstractPlayableSprite sidekick;
+    @RewindTransient(reason = "sidekick leader link is structural and persists in the live daisy-chain graph")
     private AbstractPlayableSprite leader;
+    @RewindTransient(reason = "respawn strategy is structural runtime behavior selected by the live controller setup")
     private SidekickRespawnStrategy respawnStrategy;
 
     private State state = State.INIT;
@@ -133,6 +138,7 @@ public class SidekickCpuController {
     // =====================================================================
     // Tails-carry-Sonic support (S3K-only; null trigger = feature disabled)
     // =====================================================================
+    @RewindTransient(reason = "carry trigger is level/runtime-owned behavior installed by the live game module")
     private SidekickCarryTrigger carryTrigger;
     private short carryLatchX;
     private short carryLatchY;
@@ -243,7 +249,7 @@ public class SidekickCpuController {
     }
 
     private int resolvePanicPhaseCounter() {
-        return cpuFrameCounterFromStoredLevelFrame ? frameCounter : frameCounter + 1;
+        return frameCounter;
     }
 
     public void setController2Input(int held, int logical) {
@@ -1432,10 +1438,11 @@ public class SidekickCpuController {
             return;
         }
 
-        // Synthetic input injection. SpriteManager passes the already-incremented
-        // gameplay frame counter, which corresponds to the trace-visible
-        // (Level_frame_counter+1) value used by loc_13FFA. CNZ pulses Right
-        // every 32 frames; other carry triggers may pulse A/B/C instead.
+        // Synthetic input injection. For S3K carry states, resolveCpuFrameCounter()
+        // reads the stored level counter after replay/bootstrap alignment, which
+        // already corresponds to the ROM-visible (Level_frame_counter+1) cadence
+        // used by loc_13FFA. CNZ pulses Right every 32 frames; other carry
+        // triggers may pulse A/B/C instead.
         if ((frameCounter & carryTrigger.carryInputInjectMask()) == 0) {
             if (carryTrigger.carryInjectsJump()) {
                 inputJump = true;
@@ -1662,6 +1669,7 @@ public class SidekickCpuController {
             // screen-boundary/movement writes recorded at CNZ1 F4790.
             sidekick.setAir(true);
             sidekick.setControlLocked(true);
+            sidekick.setObjectControlled(true);
             sidekick.setForcedAnimationId(flyAnimId);
             return;
         }
@@ -2570,6 +2578,97 @@ public class SidekickCpuController {
                 || (state == State.CARRYING
                 && carryTrigger != null
                 && carryTrigger.usesMgzBossTransitionControl());
+    }
+
+    public SidekickCpuRewindExtra captureRewindState() {
+        return new SidekickCpuRewindExtra(
+                state,
+                despawnCounter,
+                frameCounter,
+                controlCounter,
+                controller2Held,
+                controller2Logical,
+                inputUp,
+                inputDown,
+                inputLeft,
+                inputRight,
+                inputJump,
+                inputJumpPress,
+                jumpingFlag,
+                minXBound,
+                maxXBound,
+                maxYBound,
+                lastInteractObjectId,
+                normalFrameCount,
+                sidekickCount,
+                normalPushingGraceFrames,
+                suppressNextAirbornePushFollowSteering,
+                aizObjectOrderGracePushBypassThisFrame,
+                pendingGroundedFollowNudge,
+                pendingGroundedFollowNudgeFrame,
+                aizIntroDormantMarkerPrimed,
+                suppressNextAizIntroNormalMovement,
+                skipPhysicsThisFrame,
+                cpuFrameCounterFromStoredLevelFrame,
+                latestNormalStepDiagnostics,
+                carryLatchX,
+                carryLatchY,
+                flyingCarryingFlag,
+                carryParentagePending,
+                releaseCooldown,
+                mgzCarryIntroAscend,
+                mgzCarryFlapTimer,
+                mgzReleasedChaseLatched,
+                mgzReleasedChaseXAccel,
+                mgzReleasedChaseYAccel,
+                flightTimer,
+                catchUpTargetX,
+                catchUpTargetY);
+    }
+
+    public void restoreRewindState(SidekickCpuRewindExtra snapshot) {
+        state = snapshot.state();
+        despawnCounter = snapshot.despawnCounter();
+        frameCounter = snapshot.frameCounter();
+        controlCounter = snapshot.controlCounter();
+        controller2Held = snapshot.controller2Held();
+        controller2Logical = snapshot.controller2Logical();
+        inputUp = snapshot.inputUp();
+        inputDown = snapshot.inputDown();
+        inputLeft = snapshot.inputLeft();
+        inputRight = snapshot.inputRight();
+        inputJump = snapshot.inputJump();
+        inputJumpPress = snapshot.inputJumpPress();
+        jumpingFlag = snapshot.jumpingFlag();
+        minXBound = snapshot.minXBound();
+        maxXBound = snapshot.maxXBound();
+        maxYBound = snapshot.maxYBound();
+        lastInteractObjectId = snapshot.lastInteractObjectId();
+        normalFrameCount = snapshot.normalFrameCount();
+        sidekickCount = snapshot.sidekickCount();
+        normalPushingGraceFrames = snapshot.normalPushingGraceFrames();
+        suppressNextAirbornePushFollowSteering = snapshot.suppressNextAirbornePushFollowSteering();
+        aizObjectOrderGracePushBypassThisFrame = snapshot.aizObjectOrderGracePushBypassThisFrame();
+        pendingGroundedFollowNudge = snapshot.pendingGroundedFollowNudge();
+        pendingGroundedFollowNudgeFrame = snapshot.pendingGroundedFollowNudgeFrame();
+        aizIntroDormantMarkerPrimed = snapshot.aizIntroDormantMarkerPrimed();
+        suppressNextAizIntroNormalMovement = snapshot.suppressNextAizIntroNormalMovement();
+        skipPhysicsThisFrame = snapshot.skipPhysicsThisFrame();
+        cpuFrameCounterFromStoredLevelFrame = snapshot.cpuFrameCounterFromStoredLevelFrame();
+        latestNormalStepDiagnostics = snapshot.latestNormalStepDiagnostics();
+        carryLatchX = snapshot.carryLatchX();
+        carryLatchY = snapshot.carryLatchY();
+        flyingCarryingFlag = snapshot.flyingCarryingFlag();
+        carryParentagePending = snapshot.carryParentagePending();
+        releaseCooldown = snapshot.releaseCooldown();
+        mgzCarryIntroAscend = snapshot.mgzCarryIntroAscend();
+        mgzCarryFlapTimer = snapshot.mgzCarryFlapTimer();
+        mgzReleasedChaseLatched = snapshot.mgzReleasedChaseLatched();
+        mgzReleasedChaseXAccel = snapshot.mgzReleasedChaseXAccel();
+        mgzReleasedChaseYAccel = snapshot.mgzReleasedChaseYAccel();
+        flightTimer = snapshot.flightTimer();
+        catchUpTargetX = snapshot.catchUpTargetX();
+        catchUpTargetY = snapshot.catchUpTargetY();
     }
 
     public void applyFlyingCarryVerticalVelocity() {

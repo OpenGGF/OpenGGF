@@ -82,7 +82,6 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     private int currentY;
     private int mappingFrame = FRAME_ARM_EXTENDED;
     private int priority = PRIORITY_NORMAL;
-
     private HandLauncherArmChild armChild;
     private boolean childSpawned;
     private boolean solidActive = true;
@@ -446,7 +445,6 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     }
 
     public static class HandLauncherArmChild extends AbstractObjectInstance {
-
         private final HCZHandLauncherObjectInstance parent;
         private int currentFrame;
 

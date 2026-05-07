@@ -47,7 +47,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
@@ -55,6 +57,169 @@ public class ObjectManager {
     private static final int BUCKET_COUNT = RenderPriority.MAX - RenderPriority.MIN + 1;
     private static final int ANIM_ROLL = 0x02;
     private static final int ANIM_SPINDASH = 0x09;
+    private static final String S2_BUZZER_FLAME_CHILD_CLASS =
+            "com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance$BuzzerFlameChild";
+    private static final List<RewindDynamicObjectCodec> TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS =
+            new CopyOnWriteArrayList<>();
+    private static final List<RewindDynamicObjectCodec> BUILT_IN_REWIND_DYNAMIC_OBJECT_CODECS = List.of(
+            new RewindDynamicObjectCodec() {
+                @Override
+                public boolean supports(ObjectInstance instance) {
+                    return instance instanceof com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance;
+                }
+
+                @Override
+                public String className() {
+                    return com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance.class.getName();
+                }
+
+                @Override
+                public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                    var extra = (PerObjectRewindSnapshot.BadnikProjectileRewindExtra)
+                            entry.state().objectSubclassExtra();
+                    return new com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance(
+                            entry.spawn(),
+                            com.openggf.game.sonic2.objects.badniks.BadnikProjectileInstance.ProjectileType.valueOf(
+                                    extra.projectileType()),
+                            extra.currentX(),
+                            extra.currentY(),
+                            extra.xVelocity(),
+                            extra.yVelocity(),
+                            extra.applyGravity(),
+                            extra.hFlip(),
+                            extra.initialDelay(),
+                            extra.fixedFrame());
+                }
+            },
+            new RewindDynamicObjectCodec() {
+                @Override
+                public boolean supports(ObjectInstance instance) {
+                    return instance.getClass().getName().equals(S2_BUZZER_FLAME_CHILD_CLASS);
+                }
+
+                @Override
+                public String className() {
+                    return S2_BUZZER_FLAME_CHILD_CLASS;
+                }
+
+                @Override
+                public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                    try {
+                        var extra = (PerObjectRewindSnapshot.BuzzerFlameRewindExtra)
+                                entry.state().objectSubclassExtra();
+                        com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance parent =
+                                context.objectManager().findBuzzerParentForRewind(extra.parentSlotIndex());
+                        if (parent == null) {
+                            return null;
+                        }
+                        Class<?> cls = Class.forName(entry.className());
+                        var ctor = cls.getDeclaredConstructor(
+                                ObjectSpawn.class,
+                                com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance.class);
+                        ctor.setAccessible(true);
+                        return (ObjectInstance) ctor.newInstance(entry.spawn(), parent);
+                    } catch (ReflectiveOperationException e) {
+                        throw new IllegalStateException(
+                                "Failed to recreate dynamic rewind object " + entry.className(), e);
+                    }
+                }
+            },
+            new RewindDynamicObjectCodec() {
+                @Override
+                public boolean supports(ObjectInstance instance) {
+                    return instance instanceof AnimalObjectInstance;
+                }
+
+                @Override
+                public String className() {
+                    return AnimalObjectInstance.class.getName();
+                }
+
+                @Override
+                public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                    return AnimalObjectInstance.forRewindRecreate(
+                            entry.spawn(), context.objectServices());
+                }
+            },
+            pointsCodec(com.openggf.game.sonic1.objects.Sonic1PointsObjectInstance.class),
+            pointsCodec(com.openggf.game.sonic2.objects.PointsObjectInstance.class),
+            pointsCodec(com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance.class),
+            new RewindDynamicObjectCodec() {
+                @Override
+                public boolean supports(ObjectInstance instance) {
+                    return instance instanceof ExplosionObjectInstance;
+                }
+
+                @Override
+                public String className() {
+                    return ExplosionObjectInstance.class.getName();
+                }
+
+                @Override
+                public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                    ObjectSpawn spawn = entry.spawn();
+                    ObjectRenderManager renderManager = context.objectServices().renderManager();
+                    // sfxId=-1 suppresses the constructor's SFX replay. The captured
+                    // animTimer/animFrame are reapplied via restoreRewindState.
+                    return new ExplosionObjectInstance(
+                            spawn.objectId(), spawn.x(), spawn.y(), renderManager, -1);
+                }
+            }
+    );
+
+    /**
+     * Builds a points-popup codec for one of the {@link AbstractPointsObjectInstance}
+     * subclasses. The recreate path calls the subclass's
+     * {@code (ObjectSpawn, ObjectServices, int points)} constructor with a
+     * placeholder {@code points} value; the captured {@code scoreFrame} (and
+     * other scalars) are reapplied via {@link AbstractObjectInstance#restoreRewindState}.
+     */
+    private static RewindDynamicObjectCodec pointsCodec(Class<? extends AbstractPointsObjectInstance> type) {
+        return new RewindDynamicObjectCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == type;
+            }
+
+            @Override
+            public String className() {
+                return type.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                try {
+                    var ctor = type.getDeclaredConstructor(
+                            ObjectSpawn.class, ObjectServices.class, int.class);
+                    return ctor.newInstance(entry.spawn(), context.objectServices(), 0);
+                } catch (ReflectiveOperationException e) {
+                    throw new IllegalStateException(
+                            "Failed to recreate dynamic rewind object " + type.getName(), e);
+                }
+            }
+        };
+    }
+
+    interface RewindDynamicObjectCodec {
+        boolean supports(ObjectInstance instance);
+
+        String className();
+
+        ObjectInstance recreate(
+                DynamicObjectRecreateContext context,
+                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry);
+    }
+
+    record DynamicObjectRecreateContext(ObjectManager objectManager) {
+        ObjectServices objectServices() {
+            return objectManager.objectServices;
+        }
+    }
 
     private final Placement placement;
     private final ObjectRegistry registry;
@@ -288,8 +453,19 @@ public class ObjectManager {
      * Refreshes the object-state snapshot used by inline-order touch checks.
      * Called at frame start before player physics so ReactToItem sees the
      * current frame's pre-object-update positions.
+     * <p>
+     * Also refreshes the cached camera bounds. ROM parity: BuildSprites runs
+     * at the end of frame N-1 (after DeformLayers), so the obRender bit 7
+     * gate read by ReactToItem at frame N reflects the camera position at
+     * START of frame N. Without this refresh, AbstractObjectInstance's
+     * static cameraBounds would still hold the camera-y from BEFORE frame
+     * N-1's camera step, producing a one-frame-stale gate that drops touch
+     * responses for objects sitting at the new viewport edge (e.g. SYZ3
+     * credits demo ring s74 at frame 233 lands one pixel inside the ROM
+     * viewport but one pixel outside the stale-bounds viewport).
      */
     public void snapshotTouchResponseState() {
+        updateCameraBounds();
         for (ObjectInstance inst : activeObjects.values()) {
             inst.snapshotTouchResponseState();
         }
@@ -309,6 +485,13 @@ public class ObjectManager {
         List<? extends PlayableEntity> activeSidekicks = sidekicks != null ? sidekicks : List.of();
         frameCounter++;
         vblaCounter++;
+        // Inline-physics path: snapshotTouchResponseState() ran earlier this
+        // frame and already refreshed the cached camera bounds. The second
+        // call here is harmless redundancy (the post-camera-step bounds
+        // haven't shifted between snapshot and update) -- it's kept so the
+        // non-inline path (which doesn't snapshot) still gets fresh bounds
+        // before the exec loop. Do not consolidate without verifying both
+        // call paths first.
         updateCameraBounds();
         SolidExecutionRegistry solidExecutionRegistry = objectServices.solidExecutionRegistry();
         solidExecutionRegistry.beginFrame(frameCounter, collectActivePlayers(player, activeSidekicks));
@@ -503,6 +686,7 @@ public class ObjectManager {
             populateDynamicFallbackScratch();
             for (ObjectInstance inst : dynamicFallbackScratch) {
                 if (inst.isDestroyed()) {
+                    releaseSlotIfManaged(inst);
                     inst.onUnload();
                     dynamicObjects.remove(inst);
                     objectsRemoved = true;
@@ -515,6 +699,7 @@ public class ObjectManager {
                     continue;
                 }
                 if (inst.isDestroyed()) {
+                    releaseSlotIfManaged(inst);
                     inst.onUnload();
                     dynamicObjects.remove(inst);
                     objectsRemoved = true;
@@ -655,6 +840,7 @@ public class ObjectManager {
             populateDynamicFallbackScratch();
             for (ObjectInstance inst : dynamicFallbackScratch) {
                 if (inst.isDestroyed()) {
+                    releaseSlotIfManaged(inst);
                     inst.onUnload();
                     dynamicObjects.remove(inst);
                     objectsRemoved = true;
@@ -668,6 +854,7 @@ public class ObjectManager {
                     continue;
                 }
                 if (inst.isDestroyed()) {
+                    releaseSlotIfManaged(inst);
                     inst.onUnload();
                     dynamicObjects.remove(inst);
                     objectsRemoved = true;
@@ -1099,6 +1286,10 @@ public class ObjectManager {
         return placement.getAllSpawns();
     }
 
+    public ObjectInstance getActiveObjectForRewind(ObjectSpawn spawn) {
+        return activeObjects.get(spawn);
+    }
+
     public void addDynamicObject(ObjectInstance object) {
         addDynamicObjectInternal(object, false, true);
     }
@@ -1255,6 +1446,15 @@ public class ObjectManager {
     private void releaseSlot(int slotIndex) {
         if (isManagedDynamicSlot(slotIndex)) {
             usedSlots.clear(execIndexForSlot(slotIndex));
+        }
+    }
+
+    private void releaseSlotIfManaged(ObjectInstance instance) {
+        if (instance instanceof AbstractObjectInstance aoi) {
+            int slot = aoi.getSlotIndex();
+            if (isManagedDynamicSlot(slot)) {
+                releaseSlot(slot);
+            }
         }
     }
 
@@ -2212,6 +2412,280 @@ public class ObjectManager {
         return PlaneSwitchers.formatPriority(highPriority);
     }
 
+    // -------------------------------------------------------------------------
+    // Rewind snapshot adapter
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns a {@link com.openggf.game.rewind.RewindSnapshottable} adapter for
+     * this ObjectManager.
+     *
+     * <p><strong>Capture</strong> records the current slot inventory ({@code usedSlots}
+     * BitSet as {@code long[]}), per-instance state for every active placement-managed
+     * object (via {@link AbstractObjectInstance#captureRewindState()}), scalar counters
+     * ({@code frameCounter}, {@code vblaCounter}, {@code currentExecSlot},
+     * {@code peakSlotCount}), the render-cache dirty flag, and reserved child-slot entries.
+     *
+     * <p><strong>Restore</strong>:
+     * <ol>
+     *   <li>Clears the current active object table (without triggering placement state
+     *       side-effects).</li>
+     *   <li>Restores scalar counters and {@code usedSlots}.</li>
+     *   <li>Re-instantiates each captured object from its {@link ObjectSpawn} using the
+     *       same {@link ObjectRegistry#create} pipeline used by {@code syncActiveSpawnsLoad},
+     *       with the slot pre-assigned from the snapshot.</li>
+     *   <li>Calls {@link AbstractObjectInstance#restoreRewindState} on each new instance
+     *       to hydrate the captured field surface.</li>
+     *   <li>Restores {@code reservedChildSlots} entries.</li>
+     * </ol>
+     *
+     * <p><strong>Holder re-resolution contract:</strong> Holders of direct
+     * {@link ObjectInstance} references (Camera target, {@code LevelEventManager} boss
+     * reference, etc.) <em>must</em> re-resolve their references after restore — the
+     * instances are fresh Java objects even though they represent the same logical slot.
+     * Camera already re-resolves its target via {@code SpriteManager} on each snapshot
+     * restore (Track C). Other subsystems should do the same.
+     *
+     * <p><strong>v1 limitation:</strong> Only placement-managed objects (those in
+     * {@code activeObjects}) are captured. Non-placement dynamic objects (projectiles,
+     * explosion effects) are not snapshotted; they simply disappear on restore. Full
+     * coverage is deferred to a follow-up plan.
+     */
+    public com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot> rewindSnapshottable() {
+        return new com.openggf.game.rewind.RewindSnapshottable<>() {
+            @Override
+            public String key() {
+                return "object-manager";
+            }
+
+            @Override
+            public com.openggf.game.rewind.snapshot.ObjectManagerSnapshot capture() {
+                // Capture per-active-slot state
+                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry> slots = new ArrayList<>();
+                for (Map.Entry<ObjectSpawn, ObjectInstance> entry : activeObjects.entrySet()) {
+                    ObjectSpawn spawn = entry.getKey();
+                    ObjectInstance inst = entry.getValue();
+                    if (inst instanceof AbstractObjectInstance aoi) {
+                        slots.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry(
+                                aoi.getSlotIndex(),
+                                spawn,
+                                aoi.captureRewindState()
+                        ));
+                    }
+                }
+
+                // Capture reservedChildSlots
+                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry> childSpawns = new ArrayList<>();
+                for (Map.Entry<ObjectSpawn, int[]> entry : reservedChildSlots.entrySet()) {
+                    int[] slotArray = entry.getValue();
+                    childSpawns.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry(
+                            entry.getKey(),
+                            Arrays.copyOf(slotArray, slotArray.length)
+                    ));
+                }
+
+                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> dynamicEntries =
+                        new ArrayList<>();
+                for (ObjectInstance inst : dynamicObjects) {
+                    if (inst instanceof AbstractObjectInstance aoi
+                            && isRewindRestorableDynamicObject(inst)) {
+                        dynamicEntries.add(
+                                new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry(
+                                        inst.getClass().getName(),
+                                        inst.getSpawn(),
+                                        aoi.getSlotIndex(),
+                                        aoi.captureRewindState()));
+                    }
+                }
+
+                // Capture the live usedSlots BitSet directly. The synthesized
+                // subset (active + restorable + reserved) drops bits for
+                // non-codec transient dynamics, which causes downstream slot
+                // drift across many rewinds when those transients had
+                // occupied slots at capture time but are silently freed on
+                // restore. Capturing live keeps the allocator's view
+                // consistent with the reference run at the rewind point.
+                long[] bits = usedSlots.toLongArray();
+
+                return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot(
+                        bits,
+                        List.copyOf(slots),
+                        frameCounter,
+                        vblaCounter,
+                        currentExecSlot,
+                        peakSlotCount,
+                        bucketsDirty,
+                        List.copyOf(childSpawns),
+                        List.copyOf(dynamicEntries),
+                        placement.captureRewindState(),
+                        solidContacts.captureRewindState()
+                );
+            }
+
+            @Override
+            public void restore(com.openggf.game.rewind.snapshot.ObjectManagerSnapshot s) {
+                // 1. Clear current active objects (without mutating placement state)
+                clearActiveObjects();
+                dynamicObjects.clear();
+                Arrays.fill(execOrder, null);
+
+                // 2. Restore scalar counters and usedSlots
+                usedSlots.clear();
+                long[] bits = s.usedSlotsBits();
+                BitSet restoredBits = BitSet.valueOf(bits);
+                for (int i = restoredBits.nextSetBit(0); i >= 0; i = restoredBits.nextSetBit(i + 1)) {
+                    usedSlots.set(i);
+                }
+                frameCounter = s.frameCounter();
+                vblaCounter = s.vblaCounter();
+                currentExecSlot = s.currentExecSlot();
+                peakSlotCount = s.peakSlotCount();
+                bucketsDirty = s.bucketsDirty();
+                activeObjectsCacheDirty = true;
+
+                // 3. Re-instantiate each captured object from its spawn
+                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry entry : s.slots()) {
+                    ObjectSpawn spawn = entry.spawn();
+                    int targetSlot = entry.slotIndex();
+                    // Use PRE_ALLOCATED_SLOT so the constructor picks up the correct slot
+                    AbstractObjectInstance.PRE_ALLOCATED_SLOT.set(targetSlot >= 0 ? targetSlot : null);
+                    AbstractObjectInstance.CONSTRUCTION_CONTEXT.set(objectServices);
+                    try {
+                        ObjectInstance inst = registry != null ? registry.create(spawn) : null;
+                        if (inst instanceof AbstractObjectInstance aoi) {
+                            aoi.setServices(objectServices);
+                            if (aoi.getSlotIndex() < 0 && targetSlot >= 0) {
+                                aoi.setSlotIndex(targetSlot);
+                            }
+                            // 4. Restore per-instance state
+                            aoi.restoreRewindState(entry.state());
+                            registerActiveObject(spawn, inst);
+                            // Wire into execOrder if within the managed slot window
+                            int execIdx = execIndexForSlot(aoi.getSlotIndex());
+                            if (execIdx >= 0 && execIdx < execOrder.length) {
+                                execOrder[execIdx] = aoi;
+                            }
+                        } else if (inst != null) {
+                            registerActiveObject(spawn, inst);
+                        }
+                    } finally {
+                        AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
+                        AbstractObjectInstance.PRE_ALLOCATED_SLOT.remove();
+                    }
+                }
+
+                // 5. Restore reservedChildSlots
+                reservedChildSlots.clear();
+                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.ChildSpawnEntry ce : s.childSpawns()) {
+                    reservedChildSlots.put(ce.parentSpawn(),
+                            Arrays.copyOf(ce.reservedSlots(), ce.reservedSlots().length));
+                }
+
+                for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry
+                        : s.dynamicObjects()) {
+                    ObjectInstance inst = recreateDynamicObject(entry);
+                    if (inst instanceof AbstractObjectInstance aoi) {
+                        aoi.setServices(objectServices);
+                        aoi.restoreRewindState(entry.state());
+                        dynamicObjects.add(aoi);
+                        int execIdx = execIndexForSlot(aoi.getSlotIndex());
+                        if (execIdx >= 0 && execIdx < execOrder.length) {
+                            execOrder[execIdx] = aoi;
+                        }
+                    }
+                }
+
+                if (s.placement() != null) {
+                    placement.restoreRewindState(s.placement());
+                }
+
+                solidContacts.restoreRewindState(s.solidContactRiding());
+
+                bucketsDirty = true;
+                activeObjectsCacheDirty = true;
+            }
+        };
+    }
+
+    static boolean isRewindRestorableDynamicObject(ObjectInstance inst) {
+        return rewindDynamicObjectCodecFor(inst).isPresent();
+    }
+
+    static void registerRewindDynamicObjectCodecForTest(RewindDynamicObjectCodec codec) {
+        TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS.add(codec);
+    }
+
+    static void clearRewindDynamicObjectCodecsForTest() {
+        TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS.clear();
+    }
+
+    private static Optional<RewindDynamicObjectCodec> rewindDynamicObjectCodecFor(ObjectInstance inst) {
+        for (RewindDynamicObjectCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
+            if (codec.supports(inst)) {
+                return Optional.of(codec);
+            }
+        }
+        for (RewindDynamicObjectCodec codec : BUILT_IN_REWIND_DYNAMIC_OBJECT_CODECS) {
+            if (codec.supports(inst)) {
+                return Optional.of(codec);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<RewindDynamicObjectCodec> rewindDynamicObjectCodecForClassName(String className) {
+        for (RewindDynamicObjectCodec codec : TEST_OR_MIGRATION_REWIND_DYNAMIC_OBJECT_CODECS) {
+            if (codec.className().equals(className)) {
+                return Optional.of(codec);
+            }
+        }
+        for (RewindDynamicObjectCodec codec : BUILT_IN_REWIND_DYNAMIC_OBJECT_CODECS) {
+            if (codec.className().equals(className)) {
+                return Optional.of(codec);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private ObjectInstance recreateDynamicObject(
+            com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+        return rewindDynamicObjectCodecForClassName(entry.className())
+                .map(codec -> codec.recreate(new DynamicObjectRecreateContext(this), entry))
+                .orElse(null);
+    }
+
+    private com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance findBuzzerParentForRewind(
+            int parentSlotIndex) {
+        for (ObjectInstance inst : activeObjects.values()) {
+            if (inst instanceof com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance buzzer
+                    && buzzer.getSlotIndex() == parentSlotIndex) {
+                return buzzer;
+            }
+        }
+        return null;
+    }
+
+    private ObjectInstance findRestoredRidingObject(ObjectSpawn spawn, int slotIndex) {
+        if (spawn != null) {
+            ObjectInstance active = activeObjects.get(spawn);
+            if (active != null) {
+                return active;
+            }
+            for (ObjectInstance dynamic : dynamicObjects) {
+                if (dynamic != null && dynamic.getSpawn() == spawn) {
+                    return dynamic;
+                }
+            }
+        }
+        if (isManagedDynamicSlot(slotIndex)) {
+            int execIdx = execIndexForSlot(slotIndex);
+            if (execIdx >= 0 && execIdx < execOrder.length) {
+                return execOrder[execIdx];
+            }
+        }
+        return null;
+    }
+
     static final class Placement extends AbstractPlacementManager<ObjectSpawn> {
         private static final Logger LOGGER = Logger.getLogger(Placement.class.getName());
         // ROM: ObjectsManager_GoingForward (s2.asm) uses addi.w #$280,d6 for forward load range.
@@ -2346,6 +2820,97 @@ public class ObjectManager {
 
         void enforceSlotLimit(java.util.function.IntSupplier counter) {
             this.usedSlotCounter = counter;
+        }
+
+        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlacementSnapshot captureRewindState() {
+            int[] activeIndices = active.stream()
+                    .mapToInt(this::getSpawnIndex)
+                    .filter(index -> index >= 0)
+                    .toArray();
+
+            List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SpawnCounterEntry> counters =
+                    new ArrayList<>();
+            for (Map.Entry<ObjectSpawn, Integer> entry : spawnToCounter.entrySet()) {
+                int index = getSpawnIndex(entry.getKey());
+                if (index >= 0) {
+                    counters.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SpawnCounterEntry(
+                            index, entry.getValue()));
+                }
+            }
+            counters.sort(Comparator.comparingInt(
+                    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SpawnCounterEntry::spawnIndex));
+
+            return new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlacementSnapshot(
+                    activeIndices,
+                    remembered.toLongArray(),
+                    stayActive.toLongArray(),
+                    destroyedInWindow.toLongArray(),
+                    dormant.toLongArray(),
+                    cursorIndex,
+                    lastCameraX,
+                    lastCameraChunk,
+                    counterBasedRespawn,
+                    execThenLoadPlacement,
+                    permanentDestroyLatch,
+                    maxDynamicSlots,
+                    lastScrollBackward,
+                    leftCursorIndex,
+                    fwdCounter,
+                    bwdCounter,
+                    compactObjState(),
+                    counters);
+        }
+
+        void restoreRewindState(
+                com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PlacementSnapshot snapshot) {
+            active.clear();
+            for (int index : snapshot.activeSpawnIndices()) {
+                if (index >= 0 && index < spawns.size()) {
+                    active.add(spawns.get(index));
+                }
+            }
+
+            remembered.clear();
+            remembered.or(BitSet.valueOf(snapshot.rememberedBits()));
+            stayActive.clear();
+            stayActive.or(BitSet.valueOf(snapshot.stayActiveBits()));
+            destroyedInWindow.clear();
+            destroyedInWindow.or(BitSet.valueOf(snapshot.destroyedInWindowBits()));
+            dormant.clear();
+            dormant.or(BitSet.valueOf(snapshot.dormantBits()));
+
+            cursorIndex = snapshot.cursorIndex();
+            lastCameraX = snapshot.lastCameraX();
+            lastCameraChunk = snapshot.lastCameraChunk();
+            counterBasedRespawn = snapshot.counterBasedRespawn();
+            execThenLoadPlacement = snapshot.execThenLoadPlacement();
+            permanentDestroyLatch = snapshot.permanentDestroyLatch();
+            maxDynamicSlots = snapshot.maxDynamicSlots();
+            lastScrollBackward = snapshot.lastScrollBackward();
+            leftCursorIndex = snapshot.leftCursorIndex();
+            fwdCounter = snapshot.fwdCounter();
+            bwdCounter = snapshot.bwdCounter();
+            Arrays.fill(objState, 0);
+            for (int i = 0; i < snapshot.objState().length && i < objState.length; i++) {
+                objState[i] = snapshot.objState()[i] & 0xFF;
+            }
+
+            spawnToCounter.clear();
+            for (com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SpawnCounterEntry entry
+                    : snapshot.spawnCounters()) {
+                int index = entry.spawnIndex();
+                if (index >= 0 && index < spawns.size()) {
+                    spawnToCounter.put(spawns.get(index), entry.counter() & 0xFF);
+                }
+            }
+        }
+
+        private byte[] compactObjState() {
+            byte[] compact = new byte[objState.length];
+            for (int i = 0; i < objState.length; i++) {
+                compact[i] = (byte) objState[i];
+            }
+            return compact;
         }
 
         /** Replaces spawns and clears all tracking state. */
@@ -3557,13 +4122,30 @@ public class ObjectManager {
                     continue;
                 }
 
-                // ROM parity: ReactToItem checks "tst.b obRender(a1) / bpl.s .next"
-                // for each object. If obRender bit 7 is clear (object not yet displayed
-                // by DisplaySprite), the entire object is skipped. This covers:
-                // (a) First-frame objects whose DisplaySprite hasn't run yet
-                // (b) Objects that were offscreen on the previous frame
-                // (c) Objects created by higher-slot makers that haven't run yet
-                // Use isOnScreen() as the engine's equivalent of obRender bit 7.
+                // ROM parity (S1-specific provenance):
+                // S1's ReactToItem (docs/s1disasm/_incObj/sub ReactToItem.asm:26-27)
+                // gates each iteration on `tst.b obRender(a1) / bpl.s .next`. If
+                // obRender bit 7 is clear (object not yet displayed by
+                // DisplaySprite), the entire object is skipped. This covers:
+                //   (a) First-frame objects whose DisplaySprite hasn't run yet
+                //   (b) Objects that were offscreen on the previous frame
+                //   (c) Objects created by higher-slot makers that haven't run yet
+                //
+                // Note: this gate is NOT universal across games. S2's TouchResponse
+                // (docs/s2disasm/s2.asm Touch_Loop ~line 84537) iterates objects
+                // and only checks `collision_flags(a1)` -- there is no render-flag
+                // gate, so an off-screen object with a non-zero collision_flags is
+                // still considered for touch. S3K does not iterate at all: it
+                // pre-builds Collision_response_list during ExecuteObjects and
+                // walks only objects that opted in, so the equivalent of the bit-7
+                // check happens at list-add time, not at touch time.
+                //
+                // The engine's TouchResponseProvider.requiresRenderFlagForTouch()
+                // defaults to true for portability with the S1 behaviour (the most
+                // restrictive of the three). Per-object opt-out is available if a
+                // future S2/S3K-specific object needs to skip the render-flag gate.
+                // Use isOnScreenForTouch() as the engine's equivalent of obRender
+                // bit 7.
                 if (instance.isSkipSolidContactThisFrame()) {
                     continue;
                 }
@@ -4306,6 +4888,48 @@ public class ObjectManager {
             objectStandingBitSet.clear();
             objectPushingBitSet.clear();
             objectStandingBitSnapshot.clear();
+        }
+
+        List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactRidingEntry> captureRewindState() {
+            List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactRidingEntry> entries =
+                    new ArrayList<>();
+            for (var entry : ridingStates.entrySet()) {
+                PlayableEntity player = entry.getKey();
+                RidingState state = entry.getValue();
+                if (player == null || state == null || state.object == null) {
+                    continue;
+                }
+                entries.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactRidingEntry(
+                        player,
+                        state.object.getSpawn(),
+                        state.object instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : -1,
+                        state.x,
+                        state.y,
+                        state.pieceIndex));
+            }
+            return List.copyOf(entries);
+        }
+
+        void restoreRewindState(
+                List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.SolidContactRidingEntry> entries) {
+            ridingStates.clear();
+            latestStandingSnapshots.clear();
+            forceAirOnStaleSupportLoss.clear();
+            if (entries == null || entries.isEmpty()) {
+                return;
+            }
+            for (var entry : entries) {
+                PlayableEntity player = entry.player();
+                ObjectInstance object = objectManager.findRestoredRidingObject(
+                        entry.objectSpawn(), entry.objectSlotIndex());
+                if (player != null && object != null) {
+                    ridingStates.put(player, new RidingState(
+                            object,
+                            entry.x(),
+                            entry.y(),
+                            entry.pieceIndex()));
+                }
+            }
         }
 
         private void cacheStandingSnapshot(PlayableEntity player, PlayerStandingState snapshot) {

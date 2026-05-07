@@ -11,12 +11,23 @@ import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.game.rewind.EngineStepper;
+import com.openggf.game.rewind.InMemoryKeyframeStore;
+import com.openggf.game.rewind.InputSource;
+import com.openggf.game.rewind.PlaybackController;
+import com.openggf.game.rewind.RewindController;
+import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.LevelEventProvider;
+import com.openggf.game.rewind.snapshot.OscillationStaticAdapter;
+import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.rings.RingManager;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
@@ -53,6 +64,10 @@ public final class GameplayModeContext implements ModeContext {
     private ZoneLayoutMutationPipeline zoneLayoutMutationPipeline;
 
     private BonusStageProvider activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
+
+    private RewindRegistry rewindRegistry;
+    private RewindController rewindController;
+    private PlaybackController playbackController;
 
     public GameplayModeContext(WorldSession worldSession) {
         this(worldSession, 0, 0, null);
@@ -112,6 +127,18 @@ public final class GameplayModeContext implements ModeContext {
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
         this.rng = Objects.requireNonNull(rng, "rng");
         this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
+
+        this.rewindRegistry = new RewindRegistry();
+        this.rewindRegistry.register(camera);
+        this.rewindRegistry.register(gameStateManager);
+        this.rewindRegistry.register(rng);
+        this.rewindRegistry.register(timerManager);
+        this.rewindRegistry.register(fadeManager);
+        this.rewindRegistry.register(new OscillationStaticAdapter());
+        // Register solid-execution adapter (no-op if not DefaultSolidExecutionRegistry)
+        if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
+            this.rewindRegistry.register(dser);
+        }
     }
 
     /**
@@ -133,6 +160,23 @@ public final class GameplayModeContext implements ModeContext {
         this.collisionSystem = Objects.requireNonNull(collisionSystem, "collisionSystem");
         this.spriteManager = Objects.requireNonNull(spriteManager, "spriteManager");
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
+
+        if (rewindRegistry != null) {
+            rewindRegistry.deregister("parallax");
+            rewindRegistry.deregister("water");
+            rewindRegistry.deregister("sprites");
+            rewindRegistry.deregisterPostRestoreCallback("parallax-derived-state");
+            rewindRegistry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
+            rewindRegistry.register(parallaxManager);
+            rewindRegistry.register(waterSystem);
+            rewindRegistry.register(spriteManager.rewindSnapshottable());
+            rewindRegistry.registerPostRestoreCallback(
+                    "parallax-derived-state",
+                    levelManager::recomputeParallaxAfterRewindRestore);
+            rewindRegistry.registerPostRestoreCallback(
+                    "sprite-powerup-derived-state",
+                    spriteManager::refreshPowerUpObjectsAfterRewindRestore);
+        }
     }
 
     /**
@@ -155,6 +199,21 @@ public final class GameplayModeContext implements ModeContext {
         this.specialRenderEffectRegistry = Objects.requireNonNull(specialRenderEffectRegistry, "specialRenderEffectRegistry");
         this.advancedRenderModeController = Objects.requireNonNull(advancedRenderModeController, "advancedRenderModeController");
         this.zoneLayoutMutationPipeline = Objects.requireNonNull(zoneLayoutMutationPipeline, "zoneLayoutMutationPipeline");
+
+        if (rewindRegistry != null) {
+            rewindRegistry.deregister("zone-runtime");
+            rewindRegistry.deregister("palette-ownership");
+            rewindRegistry.deregister("animated-tile-channels");
+            rewindRegistry.deregister("special-render");
+            rewindRegistry.deregister("advanced-render-mode");
+            rewindRegistry.deregister("mutation-pipeline");
+            rewindRegistry.register(zoneRuntimeRegistry);
+            rewindRegistry.register(paletteOwnershipRegistry);
+            rewindRegistry.register(animatedTileChannelGraph);
+            rewindRegistry.register(specialRenderEffectRegistry);
+            rewindRegistry.register(advancedRenderModeController);
+            rewindRegistry.register(zoneLayoutMutationPipeline);
+        }
     }
 
     public Camera getCamera() {
@@ -228,6 +287,138 @@ public final class GameplayModeContext implements ModeContext {
     public ZoneLayoutMutationPipeline getZoneLayoutMutationPipeline() {
         return zoneLayoutMutationPipeline;
     }
+
+    // ── Rewind framework ─────────────────────────────────────────────────
+
+    /**
+     * Returns the {@link RewindRegistry} for this gameplay session. The six
+     * always-available atomic adapters (camera, game-state, rng, timers,
+     * fade, oscillation) are registered automatically by
+     * {@link #attachGameplayManagers}. Level and object-manager adapters are
+     * added post-load via {@link #registerLevelAdapters}.
+     */
+    public RewindRegistry getRewindRegistry() {
+        return rewindRegistry;
+    }
+
+    /**
+     * Registers (or re-registers) the level and object-manager adapters with
+     * the rewind registry. Safe to call multiple times — existing entries are
+     * deregistered first to avoid duplicate-key errors.
+     * <p>
+     * Must be called by {@link LevelManager} after both the level data and
+     * the {@link com.openggf.level.objects.ObjectManager} are ready (i.e.
+     * after {@code initObjectSystem()} completes). If
+     * {@code levelManager.getObjectManager()} is null the object-manager
+     * adapter is skipped.
+     */
+    public void registerLevelAdapters(LevelManager levelManager) {
+        if (rewindRegistry == null) {
+            return;
+        }
+        rewindRegistry.deregister("level");
+        rewindRegistry.deregister("object-manager");
+        rewindRegistry.deregister("level-event");
+        rewindRegistry.deregister("solid-execution");
+        rewindRegistry.register(levelManager.levelRewindSnapshottable());
+        if (levelManager.getObjectManager() != null) {
+            rewindRegistry.register(levelManager.getObjectManager().rewindSnapshottable());
+        }
+        if (solidExecutionRegistry instanceof DefaultSolidExecutionRegistry dser) {
+            rewindRegistry.register(dser);
+        }
+        // Register level-event manager adapter (available after gameModule is set).
+        if (levelManager.getGameModule() != null) {
+            LevelEventProvider lep = levelManager.getGameModule().getLevelEventProvider();
+            if (lep instanceof AbstractLevelEventManager alem) {
+                rewindRegistry.register(alem);
+            }
+        }
+    }
+
+    /**
+     * Registers the {@link RingManager} rewind adapter after ring data is
+     * available (Phase H of level load, after {@link #registerLevelAdapters}).
+     * Safe to call with a null argument — it is silently ignored.
+     */
+    public void registerRingAdapter(RingManager ringManager) {
+        if (rewindRegistry == null || ringManager == null) {
+            return;
+        }
+        rewindRegistry.deregister("rings");
+        rewindRegistry.register(ringManager);
+    }
+
+    /**
+     * Registers an {@link com.openggf.game.ObjectArtProvider} that also implements
+     * {@link com.openggf.game.rewind.RewindSnapshottable} with the rewind registry.
+     * Called from {@link com.openggf.level.LevelManager} after object art is loaded.
+     * Safe to call with a null argument — it is silently ignored.
+     */
+    public void registerPlcArtAdapter(com.openggf.game.ObjectArtProvider provider) {
+        if (rewindRegistry == null || provider == null) {
+            return;
+        }
+        if (provider instanceof com.openggf.game.rewind.RewindSnapshottable<?> snap) {
+            rewindRegistry.deregister(snap.key());
+            rewindRegistry.register(snap);
+        }
+    }
+
+    /**
+     * Registers a {@link com.openggf.level.animation.AnimatedPatternManager} that also
+     * implements {@link com.openggf.game.rewind.RewindSnapshottable} with the rewind
+     * registry. Called from {@link com.openggf.level.LevelManager#initAnimatedContent()}.
+     * Safe to call with a null argument — it is silently ignored.
+     */
+    public void registerPatternAnimatorAdapter(
+            com.openggf.level.animation.AnimatedPatternManager mgr) {
+        if (rewindRegistry == null || mgr == null) {
+            return;
+        }
+        if (mgr instanceof com.openggf.game.rewind.RewindSnapshottable<?> snap) {
+            rewindRegistry.deregister("pattern-animator");
+            rewindRegistry.register(snap);
+        }
+    }
+
+    /**
+     * Constructs and installs a {@link RewindController} and
+     * {@link PlaybackController} backed by this context's registry. Replaces
+     * any previously installed controllers.
+     *
+     * @throws IllegalStateException if {@link #attachGameplayManagers} has
+     *         not been called yet (registry is null)
+     */
+    public PlaybackController installPlaybackController(
+            InputSource inputs,
+            EngineStepper stepper,
+            int keyframeInterval) {
+        if (rewindRegistry == null) {
+            throw new IllegalStateException(
+                    "rewindRegistry not initialised — call attachGameplayManagers first");
+        }
+        this.rewindController = new RewindController(
+                rewindRegistry,
+                new InMemoryKeyframeStore(),
+                inputs,
+                stepper,
+                keyframeInterval);
+        this.playbackController = new PlaybackController(rewindController);
+        return playbackController;
+    }
+
+    /** Returns the installed {@link RewindController}, or {@code null} if not yet installed. */
+    public RewindController getRewindController() {
+        return rewindController;
+    }
+
+    /** Returns the installed {@link PlaybackController}, or {@code null} if not yet installed. */
+    public PlaybackController getPlaybackController() {
+        return playbackController;
+    }
+
+    // ── Bonus stage provider ─────────────────────────────────────────────
 
     /**
      * Returns the active bonus stage provider, or
@@ -322,6 +513,9 @@ public final class GameplayModeContext implements ModeContext {
         if (camera != null) {
             camera.resetState();
         }
+        rewindController = null;
+        playbackController = null;
+        rewindRegistry = null;
     }
 
     /**

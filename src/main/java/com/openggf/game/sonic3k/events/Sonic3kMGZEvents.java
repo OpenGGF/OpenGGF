@@ -1470,11 +1470,11 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         return anyVisible && anyScrolled ? override : null;
     }
 
-    boolean isCollapseFinished() {
+    public boolean isCollapseFinished() {
         return collapseFinished;
     }
 
-    int getCollapseMutationCount() {
+    public int getCollapseMutationCount() {
         return collapseMutationCount;
     }
 
@@ -1496,7 +1496,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         return bossBgScrollOffset;
     }
 
-    int getScreenEventRoutine() {
+    public int getScreenEventRoutine() {
         return screenEventRoutine;
     }
 
@@ -1667,6 +1667,27 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         levelManager.applyMutationEffects(intent.apply(context));
     }
 
+    /**
+     * Like {@link #applyImmediateMgzMutation} but strips all redraw hints from the
+     * published {@link MutationEffects}.  Use for snapshot-then-clear effects where
+     * the cleared tiles must remain invisible until an explicit redraw is triggered.
+     */
+    private void applyImmediateMgzMutationWithoutRedraw(LayoutMutationIntent intent) {
+        LevelManager levelManager = levelManager();
+        Level level = levelManager != null ? levelManager.getCurrentLevel() : null;
+        if (level == null) {
+            return;
+        }
+        LayoutMutationContext context = new LayoutMutationContext(
+                LevelMutationSurface.forLevel(level),
+                levelManager::applyMutationEffects);
+        if (hasRuntime()) {
+            zoneLayoutMutationPipeline().applyImmediatelyWithoutRedraw(intent, context);
+            return;
+        }
+        levelManager.applyMutationEffects(intent.apply(context).withoutRedrawHints());
+    }
+
     private static MutationEffects mergeEffects(MutationEffects... effects) {
         BitSet dirtyPatterns = new BitSet();
         boolean dirtyRegions = false;
@@ -1809,16 +1830,16 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     private void clearForegroundRegionWithoutRedraw(int startX, int startY, int width, int height) {
-        LevelManager levelManager = levelManager();
-        Level level = levelManager != null ? levelManager.getCurrentLevel() : null;
-        if (level == null || level.getMap() == null) {
-            return;
-        }
-        for (int y = startY; y < startY + height; y++) {
-            for (int x = startX; x < startX + width; x++) {
-                level.getMap().setValue(0, x, y, (byte) 0);
+        applyImmediateMgzMutationWithoutRedraw(context -> {
+            MutationEffects combined = MutationEffects.NONE;
+            for (int y = startY; y < startY + height; y++) {
+                for (int x = startX; x < startX + width; x++) {
+                    combined = mergeEffects(combined,
+                            context.surface().setBlockInMapWithoutRedraw(0, x, y, 0));
+                }
             }
-        }
+            return combined;
+        });
     }
 
     private void clearForegroundRegion(int startX, int startY, int width, int height) {
@@ -1902,4 +1923,81 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     public boolean isTransitionRequested() {
         return transitionRequested;
     }
+
+    // =========================================================================
+    // Rewind accessors (C.4)
+    // =========================================================================
+
+    public int     getBgRoutine()                        { return bgRoutine; }
+    public void    setBgRoutine(int v)                   { bgRoutine = v; }
+    public boolean isEventsFg5Raw()                      { return eventsFg5; }
+    public void    setEventsFg5Raw(boolean v)            { eventsFg5 = v; }
+    public void    setTransitionRequestedRaw(boolean v)  { transitionRequested = v; }
+    public void    setQuakeEventRoutine(int v)           { quakeEventRoutine = v; }
+    public int     getChunkReplaceIndex()                { return chunkReplaceIndex; }
+    public void    setChunkReplaceIndex(int v)           { chunkReplaceIndex = v; }
+    public void    setChunkEventRoutine(int v)           { chunkEventRoutine = v; }
+    public int     getChunkEventDelay()                  { return chunkEventDelay; }
+    public void    setChunkEventDelay(int v)             { chunkEventDelay = v; }
+    public void    setScreenEventRoutine(int v)          { screenEventRoutine = v; }
+    public boolean isCollapseRequested()                 { return collapseRequested; }
+    public void    setCollapseRequested(boolean v)       { collapseRequested = v; }
+    public boolean isCollapseInitialized()               { return collapseInitialized; }
+    public void    setCollapseInitialized(boolean v)     { collapseInitialized = v; }
+    public void    setCollapseFinished(boolean v)        { collapseFinished = v; }
+    public void    setCollapseMutationCount(int v)       { collapseMutationCount = v; }
+    public int     getCollapseFrameCounter()             { return collapseFrameCounter; }
+    public void    setCollapseFrameCounter(int v)        { collapseFrameCounter = v; }
+    public int     getCollapseStartupShakeTimer()        { return collapseStartupShakeTimer; }
+    public void    setCollapseStartupShakeTimer(int v)   { collapseStartupShakeTimer = v; }
+    public int     getCollapseRenderHoldFrames()         { return collapseRenderHoldFrames; }
+    public void    setCollapseRenderHoldFrames(int v)    { collapseRenderHoldFrames = v; }
+    public int[]   getCollapseScrollVelocityCopy()       { return java.util.Arrays.copyOf(collapseScrollVelocity, COLLAPSE_COLUMN_COUNT); }
+    public void    setCollapseScrollVelocity(int[] src)  { System.arraycopy(src, 0, collapseScrollVelocity, 0, COLLAPSE_COLUMN_COUNT); }
+    public int[]   getCollapseScrollFixedPositionCopy()  { return java.util.Arrays.copyOf(collapseScrollFixedPosition, COLLAPSE_COLUMN_COUNT); }
+    public void    setCollapseScrollFixedPosition(int[] src){ System.arraycopy(src, 0, collapseScrollFixedPosition, 0, COLLAPSE_COLUMN_COUNT); }
+    public int[]   getCollapseScrollPositionCopy()       { return java.util.Arrays.copyOf(collapseScrollPosition, COLLAPSE_COLUMN_COUNT); }
+    public void    setCollapseScrollPosition(int[] src)  { System.arraycopy(src, 0, collapseScrollPosition, 0, COLLAPSE_COLUMN_COUNT); }
+    public int     getBossBgScrollVelocity()             { return bossBgScrollVelocity; }
+    public void    setBossBgScrollVelocity(int v)        { bossBgScrollVelocity = v; }
+    public int     getBossBgScrollOffset()               { return bossBgScrollOffset; }
+    public void    setBossBgScrollOffset(int v)          { bossBgScrollOffset = v; }
+    public boolean isBossTransitionActiveRaw()           { return bossTransitionActive; }
+    public void    setBossTransitionActiveRaw(boolean v) { bossTransitionActive = v; }
+    public void    setBossTransitionDeathPlaneDisabled(boolean v){ bossTransitionDeathPlaneDisabled = v; }
+    public int     getBossTransitionTimer()              { return bossTransitionTimer; }
+    public void    setBossTransitionTimer(int v)         { bossTransitionTimer = v; }
+    public int     getBossTransitionX()                  { return bossTransitionX; }
+    public void    setBossTransitionX(int v)             { bossTransitionX = v; }
+    public int     getBossTransitionY()                  { return bossTransitionY; }
+    public void    setBossTransitionY(int v)             { bossTransitionY = v; }
+    public int     getBossTransitionCameraX()            { return bossTransitionCameraX; }
+    public void    setBossTransitionCameraX(int v)       { bossTransitionCameraX = v; }
+    public int     getBossTransitionCameraY()            { return bossTransitionCameraY; }
+    public void    setBossTransitionCameraY(int v)       { bossTransitionCameraY = v; }
+    public void    setBgRiseRoutine(int v)               { bgRiseRoutine = v; }
+    public void    setBgRiseOffset(int v)                { bgRiseOffset = v; }
+    public int     getBgRiseSubpixelAccum()              { return bgRiseSubpixelAccum; }
+    public void    setBgRiseSubpixelAccum(int v)         { bgRiseSubpixelAccum = v; }
+    public boolean isBgRiseMotionStarted()               { return bgRiseMotionStarted; }
+    public void    setBgRiseMotionStarted(boolean v)     { bgRiseMotionStarted = v; }
+    public boolean isBgRiseAccelLatched()                { return bgRiseAccelLatched; }
+    public void    setBgRiseAccelLatched(boolean v)      { bgRiseAccelLatched = v; }
+    public int     getBgRiseFinalShakeTimerRaw()         { return bgRiseFinalShakeTimer; }
+    public void    setBgRiseFinalShakeTimer(int v)       { bgRiseFinalShakeTimer = v; }
+    public boolean isBgRiseLoadStateInitialised()        { return bgRiseLoadStateInitialised; }
+    public void    setBgRiseLoadStateInitialised(boolean v){ bgRiseLoadStateInitialised = v; }
+    public int     getBossArenaRoutine()                 { return bossArenaRoutine; }
+    public void    setBossArenaRoutine(int v)            { bossArenaRoutine = v; }
+    public boolean isBossSpawned()                       { return bossSpawned; }
+    public void    setBossSpawned(boolean v)             { bossSpawned = v; }
+    public void    setAppearance1Complete(boolean v)     { appearance1Complete = v; }
+    public void    setAppearance2Complete(boolean v)     { appearance2Complete = v; }
+    public void    setAppearance3Complete(boolean v)     { appearance3Complete = v; }
+    public boolean isScreenShakeActiveRaw()              { return screenShakeActive; }
+    public void    setScreenShakeActiveRaw(boolean v)    { screenShakeActive = v; }
+    public boolean isPostFleeUnlockDone()                { return postFleeUnlockDone; }
+    public void    setPostFleeUnlockDone(boolean v)      { postFleeUnlockDone = v; }
+    public int     getGradualUnlockDirection()           { return gradualUnlockDirection; }
+    public void    setGradualUnlockDirection(int v)      { gradualUnlockDirection = v; }
 }

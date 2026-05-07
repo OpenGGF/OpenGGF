@@ -31,7 +31,6 @@ public class TurtloidRiderInstance extends AbstractObjectInstance
 
     // Collision: Obj9B_SubObjData collision=$1A -> enemy (0x00) + size 0x1A
     private static final int COLLISION_SIZE_INDEX = 0x1A;
-
     private final TurtloidBadnikInstance parent;
     private int currentX;
     private int currentY;

@@ -40,7 +40,6 @@ public class Sonic3kStarPostStarChild extends AbstractObjectInstance {
 
     // ROM: move.b #2,mapping_frame(a1) (line 61632)
     private static final int STAR_FRAME = 2;
-
     private final Sonic3kStarPostObjectInstance parent;
     private final int centerX;
     private final int centerY;

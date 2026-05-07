@@ -68,7 +68,6 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance {
         RETRACTING,      // Sub 6: move back
         FALLING          // Routine 4: parent dead, falling
     }
-
     private final ShellcrackerBadnikInstance parent;
     private final int pieceIndex; // 0, 2, 4, 6, 8, 10, 12, 14
     private final boolean facingRight;

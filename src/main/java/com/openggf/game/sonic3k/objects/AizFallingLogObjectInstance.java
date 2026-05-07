@@ -356,7 +356,6 @@ public class AizFallingLogObjectInstance extends AbstractObjectInstance {
         private static final int FRAME_DELAY = 3;
         // ROM: andi.b #3,mapping_frame(a0) → 4 frames total
         private static final int FRAME_COUNT = 4;
-
         private final FallingLogChild linkedLog;
         private final String artKey;
         private int mappingFrame;

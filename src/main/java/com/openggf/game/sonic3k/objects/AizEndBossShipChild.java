@@ -44,7 +44,6 @@ public class AizEndBossShipChild extends AbstractBossChild {
     private static final int STATE_NORMAL = 0;
     private static final int STATE_DEFEAT_WAIT = 1;       // ROM: routine 4 (loc_460F8)
     private static final int STATE_DEFEAT_FLYING = 2;     // ROM: routine 6 (loc_4612A)
-
     private final AizEndBossInstance boss;
     private int headAnimTimer;
     private int headFrame;

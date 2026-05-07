@@ -618,7 +618,8 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         // inheriting the control object's x_pos — the miniboss's X at the moment of
         // defeat, not the camera lock point.
         int signpostX = state.x;
-        spawnChild(() -> new S3kBossDefeatSignpostFlow(signpostX, services().currentAct(), null));
+        spawnChild(() -> new S3kBossDefeatSignpostFlow(
+                signpostX, services().currentAct(), S3kBossDefeatSignpostFlow.CleanupAction.NONE));
     }
 
     private static Palette.Color colorFromGenesisWord(int word) {
@@ -732,7 +733,6 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
 
     private static final class DrillArmChild extends AbstractObjectInstance implements TouchResponseProvider {
         private static final int PRIORITY_BUCKET = 5;
-
         private final MgzMinibossInstance parent;
         private final int xOffset;
         private final int yOffset;
@@ -943,7 +943,6 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         private static final int ROUTINE_SWING = 4;
         private static final int ROUTINE_WAIT_END = 6;
         private static final int ROUTINE_DESCEND = 8;
-
         private final MgzMinibossInstance parent;
         private final boolean mirrored;
         private final int baseY;

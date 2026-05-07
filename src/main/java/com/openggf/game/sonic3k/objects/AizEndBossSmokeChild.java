@@ -21,7 +21,6 @@ import java.util.List;
 public class AizEndBossSmokeChild extends AbstractObjectInstance {
 
     private static final int SMOKE_DURATION = 14; // Approximate duration from animation
-
     private final AizEndBossInstance boss;
     private final int posX;
     private final int posY;

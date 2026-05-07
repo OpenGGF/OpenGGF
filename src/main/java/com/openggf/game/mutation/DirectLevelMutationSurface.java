@@ -1,5 +1,6 @@
 package com.openggf.game.mutation;
 
+import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
@@ -36,22 +37,56 @@ public final class DirectLevelMutationSurface implements LevelMutationSurface {
 
     @Override
     public MutationEffects restoreChunkState(int chunkIndex, int[] state) {
+        int[] stateCopy = Arrays.copyOf(Objects.requireNonNull(state, "state"), state.length);
+        if (level instanceof AbstractLevel abstractLevel) {
+            Chunk replacement = new Chunk();
+            replacement.restoreState(stateCopy);
+            Chunk[] chunks = abstractLevel.chunksReference().clone();
+            chunks[chunkIndex] = replacement;
+            abstractLevel.replaceChunks(chunks);
+            return MutationEffects.redrawAllTilemaps();
+        }
         Chunk chunk = level.getChunk(chunkIndex);
-        chunk.restoreState(Arrays.copyOf(Objects.requireNonNull(state, "state"), state.length));
+        chunk.restoreState(stateCopy);
         return MutationEffects.redrawAllTilemaps();
     }
 
     @Override
     public MutationEffects restoreBlockState(int blockIndex, int[] state) {
+        int[] stateCopy = Arrays.copyOf(Objects.requireNonNull(state, "state"), state.length);
+        if (level instanceof AbstractLevel abstractLevel) {
+            Block source = level.getBlock(blockIndex);
+            Block replacement = new Block(source.getGridSide());
+            replacement.restoreState(stateCopy);
+            Block[] blocks = abstractLevel.blocksReference().clone();
+            blocks[blockIndex] = replacement;
+            abstractLevel.replaceBlocks(blocks);
+            return MutationEffects.redrawAllTilemaps();
+        }
         Block block = level.getBlock(blockIndex);
-        block.restoreState(Arrays.copyOf(Objects.requireNonNull(state, "state"), state.length));
+        block.restoreState(stateCopy);
         return MutationEffects.redrawAllTilemaps();
     }
 
     @Override
     public MutationEffects setBlockInMap(int layer, int blockX, int blockY, int blockIndex) {
         Map map = Objects.requireNonNull(level.getMap(), "level.map");
+        // Ensure the map's data array is writable for CoW snapshot protection.
+        if (level instanceof AbstractLevel) {
+            map.cowEnsureWritable(((AbstractLevel) level).currentEpoch());
+        }
         map.setValue(layer, blockX, blockY, (byte) blockIndex);
         return layer == 0 ? MutationEffects.foregroundRedraw() : MutationEffects.redrawAllTilemaps();
+    }
+
+    @Override
+    public MutationEffects setBlockInMapWithoutRedraw(int layer, int blockX, int blockY, int blockIndex) {
+        Map map = Objects.requireNonNull(level.getMap(), "level.map");
+        // Ensure the map's data array is writable for CoW snapshot protection.
+        if (level instanceof AbstractLevel) {
+            map.cowEnsureWritable(((AbstractLevel) level).currentEpoch());
+        }
+        map.setValue(layer, blockX, blockY, (byte) blockIndex);
+        return MutationEffects.NONE;
     }
 }

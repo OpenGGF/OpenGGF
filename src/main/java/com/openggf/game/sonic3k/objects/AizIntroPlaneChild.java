@@ -37,7 +37,6 @@ public class AizIntroPlaneChild extends AbstractObjectInstance {
 
     /** X threshold below which walk-left self-deletes. */
     private static final int DELETE_X = 0x20;
-
     private final AizPlaneIntroInstance parent;
     private int currentX;
     private int currentY;

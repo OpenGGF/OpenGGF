@@ -63,7 +63,6 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
     private boolean collisionEnabled = true;
     private boolean spikesExtended;
     private AbstractPlayableSprite pendingLaunchPlayer;
-
     private SpikerSideLauncherChild leftLauncher;
     private SpikerSideLauncherChild rightLauncher;
     private SpikerTopSpikeChild topSpike;
@@ -260,7 +259,6 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
             ARMED,
             ATTACK
         }
-
         private final SpikerBadnikInstance parent;
         private final boolean leftSide;
 
@@ -408,7 +406,6 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
             implements TouchResponseProvider, TouchResponseListener {
 
         private static final int COLLISION_FLAGS = 0x40 | COLLISION_SIZE_INDEX;
-
         private final SpikerBadnikInstance parent;
         private int cooldown;
 
