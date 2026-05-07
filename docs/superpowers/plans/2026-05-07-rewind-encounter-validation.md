@@ -42,19 +42,33 @@ have landed:
 diff helper doesn't report false divergence on byte-identical compact sidecar
 blobs.
 
-**Torture-test progress.** Sniffing `tortureFixedAdjacent` after each landing:
+**Torture-test progress.** Sniffing `tortureFixedAdjacent` after each landing
+(checkpoint interval shown alongside):
 
-| State | Failure at iter 1600 |
+| State | Earliest failure |
 | --- | --- |
-| Pre-step 4 (synthesized usedSlots) | `dynamicObjects[0].slotIndex: A=18 B=19`, `usedSlotsBits differs`, full slot cascade |
-| Post step 4 + 5a-5c (live usedSlots + Animal/Points/Explosion codecs) | Placement-managed slot realignment (Masher slot 25→27, Bridge cascade) |
-| Post step 5d-5e + 6 (Shield/Stars codecs + spawner re-pin) | Single-field diff: `dynamicObjects[0].state.genericState.values[2]: A=9 B=0` |
+| Pre-step 4 (synthesized usedSlots), CHECKPOINT_INTERVAL=100 | iter 1600: `dynamicObjects[0].slotIndex: A=18 B=19`, full slot cascade |
+| Post step 4 + 5a-5c, CHECKPOINT_INTERVAL=100 | iter 1600: placement-managed slot realignment (Masher 25→27, Bridge cascade) |
+| Post step 5d-5e + 6, CHECKPOINT_INTERVAL=100 | iter 1600: single-field `ShieldObjectInstance#sequenceIndex: A=9 B=0` |
+| Post deferred-codec entry restore, CHECKPOINT_INTERVAL=100 | iter 1700: player physics drift (downstream symptom) |
+| Post bucketed-dynamics diff, CHECKPOINT_INTERVAL=10 | iter 1640: player physics drift |
+| Same fixes, CHECKPOINT_INTERVAL=5 | iter 1635: player physics drift |
+| Same fixes, CHECKPOINT_INTERVAL=1 (exhaustive) | iter 1631: hitbox dimensions transposed (20×38 → 38×20), runningMode GROUND→RIGHTWALL, angle 0→-40 |
 
-The remaining single-field divergence is a per-object scalar that the default
-generic capture doesn't track yet (likely a counter, a phase index, or similar
-state on whichever class lands at `dynamicObjects[0]` at iter 1600). It is no
-longer an architectural issue — the slot drift cascade that motivated the
-test's @Disabled commentary is closed.
+The iter-1631 signature is real engine-state drift during torture replay, not a
+slot/codec framework gap. Likely sources:
+
+- Subtle drift baked into the keyframe at frame 1620 during torture replay
+  (the keyframe captures cycle 1620's intermediate state mid-cycle, while
+  Phase A's reference snapshot at frame 1620 is from the post-cycle state of
+  the forward-only run — the controller's keyframe and Phase A's reference
+  may not be at exactly the same logical step within the frame).
+- Some captured state on the player or a level object that affects
+  ground/wall transition logic but isn't fully covered by current capture.
+
+This is per-frame instrumentation territory: the next investigation needs
+to diff state at frames 1620-1631 step by step rather than rely on cycle-end
+checkpoints.
 
 Incremental enabling path:
 
