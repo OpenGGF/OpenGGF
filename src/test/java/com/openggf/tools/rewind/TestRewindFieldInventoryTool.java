@@ -4,10 +4,12 @@ import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SubpixelMotion;
 
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +27,18 @@ class TestRewindFieldInventoryTool {
 
     private static class CentralPolicyFixture {
         private ObjectRenderManager renderer;
+    }
+
+    private static class ConstructorMetadataFixture {
+        private final String name = "fixture";
+        private final int baseX = 0x120;
+        private final SubpixelMotion.State motionState =
+                new SubpixelMotion.State(0, 0, 0, 0, 0x100, 0);
+    }
+
+    private static class StructuralArtFixture {
+        private final Pattern blank = new Pattern();
+        private final Pattern[] tiles = {new Pattern(), new Pattern()};
     }
 
     private static class AnnotationDensityFixture {
@@ -65,6 +79,20 @@ class TestRewindFieldInventoryTool {
     @Test
     void unsupportedInventorySkipsCentralPolicyFields() {
         List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(CentralPolicyFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
+    }
+
+    @Test
+    void unsupportedInventorySkipsSchemaClassifiedFinalMetadata() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(ConstructorMetadataFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
+    }
+
+    @Test
+    void unsupportedInventorySkipsStructuralArtFields() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(StructuralArtFixture.class);
 
         assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
     }

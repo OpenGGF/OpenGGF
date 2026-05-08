@@ -169,6 +169,9 @@ public final class RewindFieldInventoryTool {
                     && GenericFieldCapturer.hasDefaultObjectCaptureDecision(field)) {
                 continue;
             }
+            if (inferredPolicyWithoutTransientAnnotation(field) != RewindFieldPolicy.UNSUPPORTED) {
+                continue;
+            }
             if (!GenericFieldCapturer.isSupportedDeclaredTypeForAudit(field)) {
                 unsupported.add(cls.getName() + "#" + field.getName()
                         + " : " + field.getType().getName());
