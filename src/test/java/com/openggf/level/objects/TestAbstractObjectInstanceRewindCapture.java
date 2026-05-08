@@ -7,7 +7,11 @@ import com.openggf.util.AnimationTimer;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -330,6 +334,23 @@ class TestAbstractObjectInstanceRewindCapture {
         }
     }
 
+    private static final class TestObjectWithValueCollections extends AbstractObjectInstance {
+        private final List<Integer> counters = new ArrayList<>(List.of(1, 2, 3));
+        private final Set<Mode> modes = new LinkedHashSet<>(List.of(Mode.IDLE, Mode.ACTIVE));
+        private final Map<String, Integer> values = new LinkedHashMap<>();
+
+        TestObjectWithValueCollections(ObjectSpawn spawn) {
+            super(spawn, "TestObjectWithValueCollections");
+            values.put("left", 7);
+            values.put("right", 9);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no-op
+        }
+    }
+
     private enum Mode {
         IDLE,
         ACTIVE
@@ -499,6 +520,34 @@ class TestAbstractObjectInstanceRewindCapture {
         assertEquals(0, obj.timer.getFrame());
         obj.timer.tick();
         assertEquals(1, obj.timer.getFrame());
+    }
+
+    @Test
+    void defaultClassCapturesAndRestoresFinalValueCollectionsCompactSidecar() {
+        TestObjectWithValueCollections obj = new TestObjectWithValueCollections(spawn(0, 0));
+        List<Integer> originalCounters = obj.counters;
+        Set<Mode> originalModes = obj.modes;
+        Map<String, Integer> originalValues = obj.values;
+
+        PerObjectRewindSnapshot snap = obj.captureRewindState();
+        assertNotNull(snap.compactGenericState());
+        assertNull(snap.genericState());
+
+        obj.counters.clear();
+        obj.counters.add(99);
+        obj.modes.clear();
+        obj.values.clear();
+        obj.values.put("mutated", -1);
+        obj.restoreRewindState(snap);
+
+        assertSame(originalCounters, obj.counters);
+        assertSame(originalModes, obj.modes);
+        assertSame(originalValues, obj.values);
+        assertEquals(List.of(1, 2, 3), obj.counters);
+        assertEquals(List.of(Mode.IDLE, Mode.ACTIVE), new ArrayList<>(obj.modes));
+        assertEquals(List.of("left", "right"), new ArrayList<>(obj.values.keySet()));
+        assertEquals(7, obj.values.get("left"));
+        assertEquals(9, obj.values.get("right"));
     }
 
     @Test
