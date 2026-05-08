@@ -23,16 +23,29 @@ class TestLiveRewindHudOverlay {
     }
 
     @Test
-    void renderDrawsTitleAndStatusWhenStatusIsAvailable() {
+    void renderDrawsTitleAndStatusWhenRewindingStatusIsAvailable() {
         RecordingTextRenderer text = new RecordingTextRenderer();
-        LiveRewindHudOverlay overlay = new LiveRewindHudOverlay(() -> "Hold R Rewind");
+        LiveRewindHudOverlay overlay = new LiveRewindHudOverlay(() -> "REWIND 12");
 
         overlay.render(text);
 
         assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("LIVE REWIND")));
-        assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("Hold R Rewind")
+        assertTrue(text.draws.stream().anyMatch(draw -> draw.text.equals("REWIND 12")
                 && draw.color == DebugColor.CYAN));
         assertFalse(text.batchOpen, "overlay should close its text batch");
+    }
+
+    @Test
+    void liveRewindManagerDrawsNothingWhenEnabledButIdle() {
+        RecordingTextRenderer text = new RecordingTextRenderer();
+        var config = com.openggf.configuration.SonicConfigurationService.getInstance();
+        config.resetToDefaults();
+        config.setConfigValue(com.openggf.configuration.SonicConfiguration.LIVE_REWIND_ENABLED, true);
+        LiveRewindManager manager = new LiveRewindManager(config);
+
+        manager.renderHud(com.openggf.game.GameMode.LEVEL, text);
+
+        assertTrue(text.draws.isEmpty(), "idle live rewind must not render HUD text");
     }
 
     private static final class RecordingTextRenderer extends PixelFontTextRenderer {

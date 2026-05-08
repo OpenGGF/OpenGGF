@@ -1,6 +1,5 @@
 package com.openggf.game.rewind;
 
-import com.openggf.configuration.GlfwKeyNameResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -82,14 +81,10 @@ public final class LiveRewindManager {
     }
 
     private String statusLabel() {
-        if (!enabled()) {
+        if (!enabled() || !rewinding || rewindController == null) {
             return null;
         }
-        if (rewinding && rewindController != null) {
-            return "REWIND " + rewindController.currentFrame();
-        }
-        return "Hold " + GlfwKeyNameResolver.nameOf(config.getInt(SonicConfiguration.LIVE_REWIND_KEY))
-                + " Rewind";
+        return "REWIND " + rewindController.currentFrame();
     }
 
     private boolean ensureInstalled() {
