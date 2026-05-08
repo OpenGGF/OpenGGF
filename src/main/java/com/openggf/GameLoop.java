@@ -135,6 +135,8 @@ public class GameLoop {
     private Supplier<MasterTitleScreen> masterTitleScreenSupplier;
     private Consumer<String> masterTitleExitHandler;
     private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
+    private long gameplayAudioFrame;
+    private boolean audioUpdatedThisStep;
 
     // Special stage results screen
     private ResultsScreen resultsScreen;
@@ -428,6 +430,7 @@ public class GameLoop {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
         }
+        audioUpdatedThisStep = false;
         refreshRuntimeBindings();
         PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
         if (paletteRegistry != null) {
@@ -534,13 +537,13 @@ public class GameLoop {
             return;
         }
 
-        profiler.beginSection("audio");
-        if (doFrameStep) {
-            audioManager.advancePausedFrameStepAudio();
-        } else {
-            audioManager.update();
+        boolean deferAudioUntilGameplayTick =
+                currentGameMode == GameMode.LEVEL
+                        || currentGameMode == GameMode.BONUS_STAGE
+                        || currentGameMode == GameMode.TITLE_CARD;
+        if (!deferAudioUntilGameplayTick) {
+            updateNonGameplayAudio(doFrameStep);
         }
-        profiler.endSection("audio");
 
         profiler.beginSection("timers");
         timerManager.update();
@@ -668,6 +671,7 @@ public class GameLoop {
                 // Force camera to snap to player position during title card (no smooth
                 // scrolling)
                 camera.updatePosition(true);
+                updateNonGameplayAudio(doFrameStep);
                 profiler.endSection("input");
                 return; // Don't process LEVEL mode logic yet
             }
@@ -739,6 +743,7 @@ public class GameLoop {
                 if (levelManager.consumeInLevelTitleCardRequest()) {
                     enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
                 }
+                updateNonGameplayAudio(doFrameStep);
                 // Trace playback still consumes one BK2/VBlank row on a
                 // transition-only frame. Headless replay advances its movie
                 // cursor after applySeamlessTransition(); keep the live
@@ -761,6 +766,7 @@ public class GameLoop {
             // Check if a title card was requested (new level loaded)
             if (levelManager.consumeTitleCardRequest()) {
                 enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+                updateNonGameplayAudio(doFrameStep);
                 return; // Skip normal level update this frame
             }
 
@@ -769,22 +775,27 @@ public class GameLoop {
             if (!fadeManager.isActive()) {
                 if (levelManager.consumeRespawnRequest()) {
                     startRespawnFade();
+                    updateNonGameplayAudio(doFrameStep);
                     return;
                 }
                 if (levelManager.consumeNextActRequest()) {
                     startNextActFade();
+                    updateNonGameplayAudio(doFrameStep);
                     return;
                 }
                 if (levelManager.consumeNextZoneRequest()) {
                     startNextZoneFade();
+                    updateNonGameplayAudio(doFrameStep);
                     return;
                 }
                 if (levelManager.consumeZoneActRequest()) {
                     startZoneActFade(levelManager.getRequestedZone(), levelManager.getRequestedAct());
+                    updateNonGameplayAudio(doFrameStep);
                     return;
                 }
                 if (levelManager.consumeCreditsRequest()) {
                     startEndingFade();
+                    updateNonGameplayAudio(doFrameStep);
                     return;
                 }
             }
@@ -796,6 +807,7 @@ public class GameLoop {
             // ObjB2 transition parity: freeze gameplay during pending zone-act fade.
             boolean freezeForZoneActTransition = levelManager.isLevelInactiveForTransition();
             if (!freezeForArtViewer && !freezeForSpecialStage && !freezeForBonusStage && !freezeForZoneActTransition) {
+                beginGameplayAudioFrameForTick();
                 // LiveTraceComparator (or any PlaybackFrameObserver) may ask
                 // us to skip the gameplay tick on ROM lag frames so the
                 // engine and trace stay aligned. Cursor advance still runs
@@ -817,6 +829,7 @@ public class GameLoop {
                     // gates enter gameplay hundreds of VBlanks behind.
                     levelManager.getObjectManager().advanceVblaCounter();
                 }
+                advanceGameplayAudioFrameForTick(doFrameStep);
                 // Fire the BK2-advance callback either way — on both real
                 // gameplay ticks and lag-gated skips — so the observer's
                 // cursor always matches the BK2 cursor. onLevelFrameAdvanced
@@ -845,6 +858,8 @@ public class GameLoop {
                 if (traceSession != null) {
                     traceSession.tick();
                 }
+            } else {
+                updateNonGameplayAudio(doFrameStep);
             }
 
             // Debug keys for level transitions (use request system for fade)
@@ -890,6 +905,7 @@ public class GameLoop {
             // Bonus stage runs the same level frame steps as LEVEL mode
             boolean freezeForBonusExit = bonusStageTransitionPending;
             if (!freezeForBonusExit) {
+                beginGameplayAudioFrameForTick();
                 LevelFrameStep.execute(levelManager, camera, () -> {
                     spriteManager.update(inputHandler);
                 }, (name, step) -> {
@@ -912,6 +928,9 @@ public class GameLoop {
                 if (activeBonusStageProvider != null && activeBonusStageProvider.isStageComplete()) {
                     exitBonusStage();
                 }
+                advanceGameplayAudioFrameForTick(doFrameStep);
+            } else {
+                updateNonGameplayAudio(doFrameStep);
             }
 
             // Debug: F11 cycles through bucket/priority isolation for the gumball machine
@@ -934,6 +953,51 @@ public class GameLoop {
         }
 
         inputHandler.update();
+    }
+
+    private void updateNonGameplayAudio(boolean doFrameStep) {
+        if (audioUpdatedThisStep) {
+            return;
+        }
+        if (shouldAdvanceGameplayAudioForCurrentMode()) {
+            beginGameplayAudioFrameForTick();
+            advanceGameplayAudioFrameForTick(doFrameStep);
+            return;
+        }
+        profiler.beginSection("audio");
+        if (doFrameStep) {
+            audioManager.advancePausedFrameStepAudio();
+        } else {
+            audioManager.update();
+        }
+        audioUpdatedThisStep = true;
+        profiler.endSection("audio");
+    }
+
+    private boolean shouldAdvanceGameplayAudioForCurrentMode() {
+        return currentGameMode == GameMode.LEVEL
+                || currentGameMode == GameMode.BONUS_STAGE
+                || currentGameMode == GameMode.TITLE_CARD;
+    }
+
+    private void beginGameplayAudioFrameForTick() {
+        gameplayAudioFrame++;
+        audioManager.beginGameplayAudioFrame(gameplayAudioFrame);
+    }
+
+    private void advanceGameplayAudioFrameForTick(boolean doFrameStep) {
+        if (audioUpdatedThisStep) {
+            return;
+        }
+        profiler.beginSection("audio");
+        if (doFrameStep) {
+            audioManager.advancePausedFrameStepAudio();
+        } else {
+            audioManager.advanceGameplayFrameAudio();
+            audioManager.update();
+        }
+        audioUpdatedThisStep = true;
+        profiler.endSection("audio");
     }
 
     private void syncPlaybackInputBridge() {

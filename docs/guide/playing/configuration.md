@@ -164,6 +164,11 @@ gameplay buffer. The on-screen live rewind HUD is hidden during ordinary play an
 appears only while the key is held, showing the current rewind frame. Rewind history
 resets at committed level and act transition boundaries.
 
+Held rewind defaults to one rewind step per visual frame and stops immediately when
+released. Experimental release coast is available only when
+`LIVE_REWIND_TAPE_COAST_ENABLED` is set to `true`; its acceleration, deceleration,
+and maximum per-frame steps use the matching `LIVE_REWIND_TAPE_COAST_*` keys.
+
 ## How do I mute audio?
 
 ```json

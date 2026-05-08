@@ -2,6 +2,7 @@ package com.openggf.audio.smps;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsTrackSnapshot;
 import com.openggf.audio.synth.VirtualSynthesizer;
@@ -22,6 +23,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private final AbstractSmpsData smpsData;
     private final AudioManager audioManager;
     private AbstractSmpsData fallbackVoiceData;
+    private SmpsSourceDescriptor sourceDescriptor;
     private final byte[] data;
     private final Synthesizer synth;
     private final SmpsSequencerConfig config;
@@ -119,6 +121,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      */
     public void setOnFadeComplete(Runnable callback) {
         this.onFadeComplete = callback;
+    }
+
+    public boolean hasFadeCompleteCallback() {
+        return onFadeComplete != null;
     }
 
     private static class FadeState {
@@ -311,6 +317,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, Synthesizer synth,
             AudioManager audioManager, SmpsSequencerConfig config) {
         this.smpsData = smpsData;
+        this.sourceDescriptor = SmpsSourceDescriptor.from(smpsData);
         this.audioManager = Objects.requireNonNull(audioManager, "audioManager");
         this.data = smpsData.getData();
         this.synth = synth;
@@ -429,6 +436,14 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return smpsData;
     }
 
+    public SmpsSourceDescriptor getSourceDescriptor() {
+        return sourceDescriptor;
+    }
+
+    public void setSourceDescriptor(SmpsSourceDescriptor sourceDescriptor) {
+        this.sourceDescriptor = Objects.requireNonNull(sourceDescriptor, "sourceDescriptor");
+    }
+
     public DacData getDacData() {
         return dacData;
     }
@@ -443,6 +458,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      */
     public void setFallbackVoiceData(AbstractSmpsData fallbackVoiceData) {
         this.fallbackVoiceData = fallbackVoiceData;
+    }
+
+    public AbstractSmpsData getFallbackVoiceData() {
+        return fallbackVoiceData;
     }
 
     /**

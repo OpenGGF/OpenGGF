@@ -43,6 +43,13 @@ class TestGenericRewindEligibility {
     }
 
     @Test
+    void objectSubclassesWithInheritedConcreteOverridesDoNotUseDefaultObjectCapture() {
+        assertFalse(GenericRewindEligibility.usesDefaultObjectSubclassCapture(InheritedOverrideCapturedObject.class));
+        assertTrue(GenericRewindEligibility.declaresConcreteObjectRewindOverride(
+                InheritedOverrideCapturedObject.class));
+    }
+
+    @Test
     void registeredClassesAreEligibleAndAuditable() {
         GenericRewindEligibility.registerForTestOrMigration(MasherBadnikInstance.class);
 
@@ -74,7 +81,7 @@ class TestGenericRewindEligibility {
         }
     }
 
-    private static final class OverrideCapturedObject extends DefaultCapturedObject {
+    private static class OverrideCapturedObject extends DefaultCapturedObject {
         @Override
         public PerObjectRewindSnapshot captureRewindState() {
             return super.captureRewindState();
@@ -84,5 +91,8 @@ class TestGenericRewindEligibility {
         public void restoreRewindState(PerObjectRewindSnapshot s) {
             super.restoreRewindState(s);
         }
+    }
+
+    private static final class InheritedOverrideCapturedObject extends OverrideCapturedObject {
     }
 }

@@ -47,15 +47,21 @@ public final class GenericRewindEligibility {
     }
 
     private static boolean declaresConcreteMethod(Class<?> type, String name, Class<?>... parameterTypes) {
-        try {
-            var method = type.getDeclaredMethod(name, parameterTypes);
-            return method.getDeclaringClass() == type
-                    && !Modifier.isAbstract(method.getModifiers())
-                    && !method.isSynthetic()
-                    && !method.isBridge();
-        } catch (NoSuchMethodException e) {
-            return false;
+        for (Class<?> current = type;
+                current != null && current != AbstractObjectInstance.class;
+                current = current.getSuperclass()) {
+            try {
+                var method = current.getDeclaredMethod(name, parameterTypes);
+                if (!Modifier.isAbstract(method.getModifiers())
+                        && !method.isSynthetic()
+                        && !method.isBridge()) {
+                    return true;
+                }
+            } catch (NoSuchMethodException e) {
+                // Continue walking toward AbstractObjectInstance.
+            }
         }
+        return false;
     }
 
     private GenericRewindEligibility() {

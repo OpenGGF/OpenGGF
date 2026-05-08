@@ -87,6 +87,19 @@ class TestSmpsSequencerSnapshot {
         assertEquals(0x66, restoredTrack.modEnvStepDelta);
     }
 
+    @Test
+    void restoreSnapshotDoesNotPersistFadeCompleteCallback() {
+        SmpsSequencer sequencer = newSequencer();
+        sequencer.setOnFadeComplete(() -> {});
+        assertTrue(sequencer.hasFadeCompleteCallback());
+
+        SmpsSequencerSnapshot snapshot = sequencer.captureSnapshot();
+        SmpsSequencer restored = newSequencer();
+        restored.restoreSnapshot(snapshot);
+
+        assertFalse(restored.hasFadeCompleteCallback());
+    }
+
     private static SmpsSequencer newSequencer() {
         return new SmpsSequencer(
                 new AudioTestFixtures.StubSmpsData("snapshot"),

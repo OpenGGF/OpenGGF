@@ -25,6 +25,7 @@ public final class LiveRewindManager {
     private GameRuntime installedRuntime;
     private LiveRewindInputSource inputSource;
     private RewindController rewindController;
+    private RewindSpeedController speedController = RewindSpeedController.disabled();
     private boolean rewinding;
 
     public LiveRewindManager(SonicConfigurationService config) {
@@ -42,9 +43,21 @@ public final class LiveRewindManager {
         }
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
         if (input.isKeyDown(rewindKey)) {
+            if (!rewinding) {
+                GameServices.audio().beginReverseAudioPresentation();
+            }
             rewinding = true;
-            rewindController.stepBackward();
+            stepBackward(speedController.stepsWhileHeld());
+            GameServices.audio().update();
             return true;
+        }
+        int coastSteps = speedController.stepsAfterRelease();
+        if (rewinding && coastSteps > 0) {
+            if (stepBackward(coastSteps) > 0) {
+                GameServices.audio().update();
+                return true;
+            }
+            speedController.reset();
         }
         if (rewinding) {
             cleanupAudioAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
@@ -106,8 +119,20 @@ public final class LiveRewindManager {
                 KEYFRAME_INTERVAL);
         rewindController = runtime.getGameplayModeContext().getRewindController();
         installedRuntime = runtime;
+        speedController = RewindSpeedController.fromConfig(config);
         rewinding = false;
         return rewindController != null;
+    }
+
+    private int stepBackward(int steps) {
+        int completed = 0;
+        for (int i = 0; i < steps; i++) {
+            if (!rewindController.stepBackward()) {
+                break;
+            }
+            completed++;
+        }
+        return completed;
     }
 
     private boolean enabled() {
@@ -128,6 +153,8 @@ public final class LiveRewindManager {
         installedRuntime = null;
         inputSource = null;
         rewindController = null;
+        speedController.reset();
+        speedController = RewindSpeedController.disabled();
         rewinding = false;
     }
 }

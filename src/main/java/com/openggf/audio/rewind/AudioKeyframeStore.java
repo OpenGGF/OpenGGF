@@ -31,6 +31,7 @@ public final class AudioKeyframeStore {
 
         AudioLogicalSnapshot snapshot = keyframe.getValue();
         int replayed = 0;
+        audio.restoreLogicalSnapshot(snapshot);
         try (AudioReplayScope ignored = audio.beginRewindReplay(
                 Math.toIntExact(keyframe.getKey()),
                 Math.toIntExact(targetFrame),
@@ -45,6 +46,31 @@ public final class AudioKeyframeStore {
             }
         }
         return replayed;
+    }
+
+    public int replayToLogicalState(AudioManager audio, long targetFrame) {
+        Objects.requireNonNull(audio, "audio");
+        Map.Entry<Long, AudioLogicalSnapshot> keyframe = keyframes.floorEntry(targetFrame);
+        if (keyframe == null) {
+            return 0;
+        }
+
+        AudioLogicalSnapshot snapshot = keyframe.getValue();
+        audio.restoreLogicalSnapshot(snapshot);
+        int replayed = 0;
+        List<AudioTimelineEntry> entries = audio.commandTimeline().entries();
+        for (int i = snapshot.commandEntryCount(); i < entries.size(); i++) {
+            AudioTimelineEntry entry = entries.get(i);
+            if (entry.frame() <= targetFrame) {
+                audio.replayTimelineCommandLogically(entry.command());
+                replayed++;
+            }
+        }
+        return replayed;
+    }
+
+    public void discardAfter(long frame) {
+        keyframes.tailMap(frame, false).clear();
     }
 
     public void clear() {

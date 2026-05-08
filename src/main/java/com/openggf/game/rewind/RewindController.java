@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.audio.AudioManager;
+import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
@@ -17,6 +18,7 @@ public final class RewindController {
     private final SegmentCache segmentCache;
     private final int keyframeInterval;
     private final AudioManager audioManager;
+    private final AudioKeyframeStore audioKeyframes;
 
     private int currentFrame;
 
@@ -46,10 +48,12 @@ public final class RewindController {
         }
         this.keyframeInterval = keyframeInterval;
         this.audioManager = audioManager;
+        this.audioKeyframes = audioManager != null ? new AudioKeyframeStore() : null;
         this.segmentCache = new SegmentCache(keyframeInterval);
         this.currentFrame = 0;
         // Capture frame 0 so seekTo(0) always has a base.
         keyframes.put(0, registry.capture());
+        captureAudioKeyframe(0);
     }
 
     public int currentFrame() { return currentFrame; }
@@ -70,6 +74,10 @@ public final class RewindController {
         segmentCache.invalidate();
         keyframes.clear();
         keyframes.put(currentFrame, registry.capture());
+        if (audioKeyframes != null) {
+            audioKeyframes.clear();
+            captureAudioKeyframe(currentFrame);
+        }
     }
 
     /** Steps forward one frame, capturing a keyframe at the boundary. */
@@ -83,6 +91,7 @@ public final class RewindController {
         currentFrame++;
         if (currentFrame % keyframeInterval == 0) {
             keyframes.put(currentFrame, registry.capture());
+            captureAudioKeyframe(currentFrame);
         }
     }
 
@@ -102,6 +111,7 @@ public final class RewindController {
         segmentCache.invalidate();
         if (currentFrame % keyframeInterval == 0) {
             keyframes.put(currentFrame, registry.capture());
+            captureAudioKeyframe(currentFrame);
         }
         return true;
     }
@@ -134,6 +144,7 @@ public final class RewindController {
             }
             keyframes.discardAfter(currentFrame);
             discardAudioAfter(currentFrame);
+            restoreAudioLogicalState(currentFrame);
             beginAudioFrame(currentFrame);
             primeStepperAtFrame(currentFrame);
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
@@ -175,6 +186,7 @@ public final class RewindController {
             currentFrame = target;
             keyframes.discardAfter(currentFrame);
             discardAudioAfter(currentFrame);
+            restoreAudioLogicalState(currentFrame);
             beginAudioFrame(currentFrame);
             primeStepperAtFrame(currentFrame);
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
@@ -204,6 +216,19 @@ public final class RewindController {
     private void discardAudioAfter(int frame) {
         if (audioManager != null) {
             audioManager.discardAudioCommandsAfter(frame);
+            audioKeyframes.discardAfter(frame);
+        }
+    }
+
+    private void captureAudioKeyframe(int frame) {
+        if (audioKeyframes != null) {
+            audioKeyframes.capture(frame, audioManager);
+        }
+    }
+
+    private void restoreAudioLogicalState(int frame) {
+        if (audioKeyframes != null) {
+            audioKeyframes.replayToLogicalState(audioManager, frame);
         }
     }
 

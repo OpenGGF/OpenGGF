@@ -3,6 +3,13 @@ package com.openggf.audio;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsLoader;
+import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfigurationService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -107,13 +114,16 @@ class TestAudioLogicalSnapshot {
 
     @Test
     void capturesBackendLogicalRuntimeStateWhenBackendProvidesIt() {
+        SmpsDriverSnapshot driverSnapshot = newEmptyDriverSnapshot();
         SnapshotAudioBackend backend = new SnapshotAudioBackend(new AudioBackendLogicalSnapshot(
                 AudioSourceDescriptor.baseMusic(0x81),
                 true,
                 true,
                 true,
                 2,
-                List.of(AudioSourceDescriptor.baseMusic(0x88), AudioSourceDescriptor.donorMusic("s3k", 0x2A))));
+                List.of(AudioSourceDescriptor.baseMusic(0x88), AudioSourceDescriptor.donorMusic("s3k", 0x2A)),
+                driverSnapshot,
+                null));
         audio.setBackend(backend);
 
         AudioLogicalSnapshot snapshot = audio.captureLogicalSnapshot();
@@ -126,6 +136,8 @@ class TestAudioLogicalSnapshot {
         assertEquals(
                 List.of(AudioSourceDescriptor.baseMusic(0x88), AudioSourceDescriptor.donorMusic("s3k", 0x2A)),
                 snapshot.backend().overrideStack());
+        assertSame(driverSnapshot, snapshot.backend().musicDriver());
+        assertNull(snapshot.backend().standaloneSfxDriver());
     }
 
     @Test
@@ -176,6 +188,87 @@ class TestAudioLogicalSnapshot {
                 audio.captureLogicalSnapshot().backend().currentMusic());
     }
 
+    @Test
+    void restoreLogicalSnapshotRestoresManagerCursorAndBackendState() {
+        RestorableSnapshotBackend backend = new RestorableSnapshotBackend();
+        audio.setBackend(backend);
+        audio.beginCommandTimelineFrame(12);
+        audio.playSfx(GameSound.RING);
+        backend.snapshot = new AudioBackendLogicalSnapshot(
+                AudioSourceDescriptor.baseMusic(0x81),
+                true,
+                true,
+                true,
+                3,
+                List.of(AudioSourceDescriptor.donorMusic("s3k", 0x2A)));
+        AudioLogicalSnapshot snapshot = audio.captureLogicalSnapshot();
+
+        audio.beginCommandTimelineFrame(20);
+        audio.resetRingSound();
+        backend.snapshot = AudioBackendLogicalSnapshot.empty();
+
+        audio.restoreLogicalSnapshot(snapshot);
+
+        AudioLogicalSnapshot restored = audio.captureLogicalSnapshot();
+        assertFalse(restored.ringLeft());
+        assertEquals(12, restored.commandTimelineFrame());
+        assertEquals(1, restored.commandTimelineNextOrder());
+        assertEquals(snapshot.backend(), backend.restored);
+        assertEquals(snapshot.backend(), restored.backend());
+    }
+
+    @Test
+    void restoreLogicalSnapshotPassesSmpsDependencyResolverToBackend() {
+        ResolverRecordingBackend backend = new ResolverRecordingBackend();
+        audio.setBackend(backend);
+        AudioTestFixtures.StubSmpsLoader donor = new AudioTestFixtures.StubSmpsLoader();
+        AbstractSmpsData donorSfx = new AudioTestFixtures.StubSmpsData("donor-sfx");
+        donorSfx.setId(0xA4);
+        donor.sfxResults.put(0xA4, donorSfx);
+        SmpsSequencerConfig donorConfig = new SmpsSequencerConfig.Builder().tempoModBase(0x222).build();
+        audio.registerDonorLoader("s3k", donor, AudioTestFixtures.EMPTY_DAC, donorConfig);
+
+        audio.restoreLogicalSnapshot(new AudioLogicalSnapshot(
+                true,
+                0,
+                0,
+                0,
+                AudioBackendLogicalSnapshot.empty(),
+                Set.of("s3k"),
+                Set.of()));
+
+        assertSame(donorSfx, backend.resolvedData);
+        assertSame(AudioTestFixtures.EMPTY_DAC, backend.resolvedDac);
+        assertSame(donorConfig, backend.resolvedConfig);
+    }
+
+    @Test
+    void repeatedLogicalSnapshotRestoresReuseResolvedBaseSmpsData() {
+        CountingSmpsLoader loader = new CountingSmpsLoader();
+        AbstractSmpsData music = new AudioTestFixtures.StubSmpsData("music");
+        music.setId(0x81);
+        loader.musicResults.put(0x81, music);
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader));
+        audio.setRom(null);
+
+        SmpsResolvingBackend backend = new SmpsResolvingBackend(SmpsSourceDescriptor.baseMusic(music), music);
+        audio.setBackend(backend);
+        AudioLogicalSnapshot snapshot = new AudioLogicalSnapshot(
+                true,
+                0,
+                0,
+                0,
+                AudioBackendLogicalSnapshot.empty(),
+                Set.of(),
+                Set.of());
+
+        audio.restoreLogicalSnapshot(snapshot);
+        audio.restoreLogicalSnapshot(snapshot);
+
+        assertEquals(2, backend.resolveCalls);
+        assertEquals(1, loader.musicLoadCalls);
+    }
+
     private static final class SnapshotAudioBackend extends NullAudioBackend {
         private final AudioBackendLogicalSnapshot snapshot;
 
@@ -187,6 +280,125 @@ class TestAudioLogicalSnapshot {
         public AudioBackendLogicalSnapshot captureLogicalSnapshot() {
             return snapshot;
         }
+    }
+
+    private static final class RestorableSnapshotBackend extends NullAudioBackend {
+        private AudioBackendLogicalSnapshot snapshot = AudioBackendLogicalSnapshot.empty();
+        private AudioBackendLogicalSnapshot restored;
+
+        @Override
+        public AudioBackendLogicalSnapshot captureLogicalSnapshot() {
+            return snapshot;
+        }
+
+        @Override
+        public void restoreLogicalSnapshot(AudioBackendLogicalSnapshot snapshot) {
+            restored = snapshot;
+            this.snapshot = snapshot;
+        }
+    }
+
+    private static final class ResolverRecordingBackend extends NullAudioBackend {
+        private AbstractSmpsData resolvedData;
+        private com.openggf.audio.smps.DacData resolvedDac;
+        private SmpsSequencerConfig resolvedConfig;
+
+        @Override
+        public void restoreLogicalSnapshot(
+                AudioBackendLogicalSnapshot snapshot,
+                SmpsDriverSnapshot.DependencyResolver resolver) {
+            AbstractSmpsData placeholder = new AudioTestFixtures.StubSmpsData("placeholder");
+            placeholder.setId(0xA4);
+            SmpsSequencer sequencer = new SmpsSequencer(
+                    placeholder,
+                    AudioTestFixtures.EMPTY_DAC,
+                    AudioManager.getInstance(),
+                    new SmpsSequencerConfig.Builder().build());
+            SmpsDriverSnapshot.SequencerEntry entry = new SmpsDriverSnapshot.SequencerEntry(
+                    true,
+                    SmpsSourceDescriptor.donorSfx("s3k", sequencer.getSmpsData()),
+                    null,
+                    sequencer.getSmpsData(),
+                    AudioTestFixtures.EMPTY_DAC,
+                    AudioManager.getInstance(),
+                    new SmpsSequencerConfig.Builder().build(),
+                    sequencer.captureSnapshot());
+            resolvedData = resolver.resolveSmpsData(entry);
+            resolvedDac = resolver.resolveDacData(entry);
+            resolvedConfig = resolver.resolveConfig(entry);
+        }
+    }
+
+    private static final class SmpsResolvingBackend extends NullAudioBackend {
+        private final SmpsSourceDescriptor source;
+        private final AbstractSmpsData placeholder;
+        private int resolveCalls;
+
+        private SmpsResolvingBackend(SmpsSourceDescriptor source, AbstractSmpsData placeholder) {
+            this.source = source;
+            this.placeholder = placeholder;
+        }
+
+        @Override
+        public void restoreLogicalSnapshot(
+                AudioBackendLogicalSnapshot snapshot,
+                SmpsDriverSnapshot.DependencyResolver resolver,
+                boolean preservePresentationQueue) {
+            SmpsSequencer sequencer = new SmpsSequencer(
+                    placeholder,
+                    AudioTestFixtures.EMPTY_DAC,
+                    AudioManager.getInstance(),
+                    new SmpsSequencerConfig.Builder().build());
+            SmpsDriverSnapshot.SequencerEntry entry = new SmpsDriverSnapshot.SequencerEntry(
+                    true,
+                    source,
+                    null,
+                    sequencer.getSmpsData(),
+                    AudioTestFixtures.EMPTY_DAC,
+                    AudioManager.getInstance(),
+                    new SmpsSequencerConfig.Builder().build(),
+                    sequencer.captureSnapshot());
+            resolver.resolveSmpsData(entry);
+            resolveCalls++;
+        }
+    }
+
+    private static final class CountingSmpsLoader implements SmpsLoader {
+        private final java.util.Map<Integer, AbstractSmpsData> musicResults = new java.util.HashMap<>();
+        private int musicLoadCalls;
+
+        @Override
+        public AbstractSmpsData loadMusic(int musicId) {
+            musicLoadCalls++;
+            return musicResults.get(musicId);
+        }
+
+        @Override
+        public AbstractSmpsData loadSfx(int sfxId) {
+            return null;
+        }
+
+        @Override
+        public AbstractSmpsData loadSfx(String sfxName) {
+            return null;
+        }
+
+        @Override
+        public DacData loadDacData() {
+            return AudioTestFixtures.EMPTY_DAC;
+        }
+    }
+
+    private static SmpsDriverSnapshot newEmptyDriverSnapshot() {
+        return new SmpsDriverSnapshot(
+                SmpsSequencer.Region.NTSC,
+                com.openggf.audio.driver.SmpsDriver.ReadMode.HYBRID,
+                -1,
+                false,
+                0,
+                List.of(),
+                new int[0],
+                new int[0]);
     }
 
     private static final class DescriptorRecordingBackend extends NullAudioBackend {

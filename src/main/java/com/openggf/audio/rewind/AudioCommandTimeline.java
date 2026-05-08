@@ -43,6 +43,14 @@ public final class AudioCommandTimeline {
         return nextOrder;
     }
 
+    public void restoreCursor(long frame, int nextOrder) {
+        if (nextOrder < 0) {
+            throw new IllegalArgumentException("nextOrder must be non-negative");
+        }
+        this.currentFrame = frame;
+        this.nextOrder = nextOrder;
+    }
+
     public void clear() {
         entries.clear();
         currentFrame = 0;

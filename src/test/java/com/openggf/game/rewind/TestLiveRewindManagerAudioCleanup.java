@@ -15,7 +15,11 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 
+import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
+import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestLiveRewindManagerAudioCleanup {
     private SonicConfigurationService config;
@@ -36,8 +40,53 @@ class TestLiveRewindManagerAudioCleanup {
     @AfterEach
     void tearDown() {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);
         audio.resetState();
         RuntimeManager.destroyCurrent();
+    }
+
+    @Test
+    void defaultLiveRewindStepsOneFramePerHeldVisualFrame() throws Exception {
+        RuntimeManager.createGameplay();
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = new TestControllerBuilder().atFrame(5);
+        installTestController(manager, controller);
+        InputHandler input = new InputHandler();
+        assertEquals(5, controller.currentFrame());
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+
+        assertEquals(4, controller.currentFrame());
+    }
+
+    @Test
+    void tapeCoastDelaysTransientAudioCleanupUntilCoastEnds() throws Exception {
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ACCELERATION, 1.0);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_DECELERATION, 0.5);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS, 3.0);
+        RuntimeManager.createGameplay();
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = new TestControllerBuilder().atFrame(8);
+        installTestController(manager, controller);
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+
+        backend.clear();
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_RELEASE);
+
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+        assertFalse(backend.calls.contains("stopAllSfx"),
+                "release should keep reverse presentation active while coast still has rewind steps");
+
+        while (manager.handleRealtimeRewindInput(GameMode.LEVEL, input)) {
+            // drain coast
+        }
+        assertTrue(backend.calls.contains("stopAllSfx"),
+                "transient cleanup should run after the coast has fully ended");
     }
 
     @Test
@@ -62,6 +111,30 @@ class TestLiveRewindManagerAudioCleanup {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private static void installTestController(LiveRewindManager manager, RewindController controller) throws Exception {
+        setField(manager, "installedRuntime", RuntimeManager.getCurrent());
+        setField(manager, "inputSource", new LiveRewindInputSource());
+        setField(manager, "rewindController", controller);
+        setField(manager, "speedController",
+                RewindSpeedController.fromConfig(SonicConfigurationService.getInstance()));
+    }
+
+    private static final class TestControllerBuilder {
+        RewindController atFrame(int frame) {
+            RewindController controller = new RewindController(
+                    new RewindRegistry(),
+                    new InMemoryKeyframeStore(),
+                    new FakeInputSource(frame + 10),
+                    in -> {},
+                    2,
+                    AudioManager.getInstance());
+            for (int i = 0; i < frame; i++) {
+                controller.recordExternalStep();
+            }
+            return controller;
+        }
     }
 
     private static final class FakeInputSource implements InputSource {
