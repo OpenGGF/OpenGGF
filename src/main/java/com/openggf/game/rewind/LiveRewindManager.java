@@ -8,6 +8,7 @@ import com.openggf.game.GameMode;
 import com.openggf.game.GameRuntime;
 import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeManager;
+import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
 import java.util.Objects;
@@ -45,6 +46,7 @@ public final class LiveRewindManager {
         if (input.isKeyDown(rewindKey)) {
             if (!rewinding) {
                 GameServices.audio().beginReverseAudioPresentation();
+                beginReverseFadePresentation();
             }
             rewinding = true;
             stepBackward(speedController.stepsWhileHeld());
@@ -60,7 +62,7 @@ public final class LiveRewindManager {
             speedController.reset();
         }
         if (rewinding) {
-            cleanupAudioAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
         rewinding = false;
         return false;
@@ -146,9 +148,24 @@ public final class LiveRewindManager {
         GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
     }
 
+    private void beginReverseFadePresentation() {
+        FadeManager fadeManager = GameServices.fadeOrNull();
+        if (fadeManager != null) {
+            fadeManager.beginReversePresentation();
+        }
+    }
+
+    private void cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy policy) {
+        cleanupAudioAfterRealtimeRewind(policy);
+        FadeManager fadeManager = GameServices.fadeOrNull();
+        if (fadeManager != null) {
+            fadeManager.endReversePresentation();
+        }
+    }
+
     private void clear() {
         if (rewinding && rewindController != null) {
-            cleanupAudioAfterRealtimeRewind(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
         }
         installedRuntime = null;
         inputSource = null;

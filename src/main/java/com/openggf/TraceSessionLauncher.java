@@ -301,14 +301,20 @@ public final class TraceSessionLauncher {
     public boolean handleRealtimeRewindInput(InputHandler input) {
         if (input == null || rewindPlaybackController == null
                 || rewindController == null || comparator == null || fadeStarted) {
+            cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
             return false;
         }
         int rewindKey = GameServices.configuration().getInt(SonicConfiguration.TRACE_REWIND_KEY);
         boolean held = input.isKeyDown(rewindKey);
         if (held) {
+            if (!realtimeRewinding) {
+                GameServices.audio().beginReverseAudioPresentation();
+                beginReverseFadePresentation();
+            }
             realtimeRewinding = true;
             rewindPlaybackController.rewind();
             rewindPlaybackController.tick();
+            GameServices.audio().update();
             syncVisualRewindCursors(false);
             if (cameraFocusController != null) {
                 cameraFocusController.syncDefaultCameraToCurrentPosition();
@@ -317,12 +323,9 @@ public final class TraceSessionLauncher {
             return true;
         }
         if (realtimeRewinding) {
-            realtimeRewinding = false;
             rewindPlaybackController.play();
             syncVisualRewindCursors(true);
-            GameServices.audio().afterRewindRestore(
-                    rewindController.currentFrame(),
-                    AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+            cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
         return false;
     }
@@ -408,6 +411,33 @@ public final class TraceSessionLauncher {
                 rewindMovieBaseFrame + relativeFrame,
                 playing);
         comparator.seekForRewind(rewindTraceBaseFrame + relativeFrame);
+    }
+
+    private void beginReverseFadePresentation() {
+        var fadeManager = GameServices.fadeOrNull();
+        if (fadeManager != null) {
+            fadeManager.beginReversePresentation();
+        }
+    }
+
+    private void endReverseFadePresentationIfNeeded() {
+        var fadeManager = GameServices.fadeOrNull();
+        if (fadeManager != null && fadeManager.isReversePresentationActive()) {
+            fadeManager.endReversePresentation();
+        }
+    }
+
+    private void cleanupRealtimeRewindPresentation(AudioPresentationPolicy policy) {
+        endReverseFadePresentationIfNeeded();
+        if (!realtimeRewinding) {
+            return;
+        }
+        realtimeRewinding = false;
+        if (rewindController != null) {
+            GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
+        } else {
+            GameServices.audio().endReverseAudioPresentation();
+        }
     }
 
     private String rewindStatusLabel() {

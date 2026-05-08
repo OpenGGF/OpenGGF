@@ -671,6 +671,66 @@ Reverse restore performance and cursor-position follow-up:
   `mvn "-Dtest=TestAudioLogicalSnapshot,TestAudioManagerRewindSuppression,TestLWJGLAudioBackendSnapshot,TestPcmHistoryRing,TestStreamBackedDeterministicAudioRuntime,TestDeterministicAudioRuntimeBoundary,TestLiveRewindManagerAudioCleanup" test`
   passed with 154 passed, 0 failed.
 
+Graphical fade rewind follow-up:
+- User clarification: audio rewind is now correct; the remaining fade issue is
+  the graphical screen fade while reversing.
+- Root cause: rewind restores `FadeManager` snapshots, but the display/UI
+  pipeline owns normal `FadeManager.update()` calls. A one-frame hold after
+  restore fixed the immediate restore/render race, but held live rewind could
+  still let display-driven `FADING_FROM_BLACK` updates keep progressing in the
+  normal direction instead of showing only rewind-restored fade snapshots.
+- Fix: `FadeManager` now has an explicit reverse-presentation mode that
+  suppresses display-driven fade advancement while rewind is active. Live
+  rewind enters that mode when held rewind presentation starts and exits it
+  during the same release/clear cleanup path as reverse audio presentation.
+  `FadeManager.restore(...)` still marks a single restored frame hold for
+  non-live restore/update ordering.
+- Red check:
+  `mvn "-Dtest=TestFadeManagerRewindSnapshot#restoredFadeSnapshotDoesNotAdvanceOnFirstUpdateAfterRestore" test`
+  failed because a restored fade at frame 5 advanced to frame 6 on the first
+  update.
+  `mvn -Dmse=off "-Dtest=com.openggf.graphics.TestFadeManagerRewindSnapshot#reversePresentationFreezesDisplayDrivenFadeUpdatesUntilReleased" test`
+  failed before the reverse-presentation API existed.
+  `mvn -Dmse=off "-Dtest=com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup#heldLiveRewindFreezesFadePresentationUntilReleaseCleanup" test`
+  failed before live rewind owned the fade presentation lifecycle.
+- Green check:
+  `mvn "-Dtest=TestFadeManagerRewindSnapshot#restoredFadeSnapshotDoesNotAdvanceOnFirstUpdateAfterRestore" test`
+  passed with 158 passed, 0 failed.
+  `mvn -Dmse=off "-Dtest=com.openggf.graphics.TestFadeManagerRewindSnapshot#reversePresentationFreezesDisplayDrivenFadeUpdatesUntilReleased" test`
+  passed.
+  `mvn -Dmse=off "-Dtest=com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup#heldLiveRewindFreezesFadePresentationUntilReleaseCleanup" test`
+  passed.
+  `mvn -Dmse=off "-Dtest=com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.game.rewind.TestRewindController" test`
+  passed with 23 passed, 0 failed.
+
+Trace test graphical fade and audio follow-up:
+- User reports: the graphical fade reversal worked in live playback but not in
+  visual trace test mode; after the fade lifecycle fix, reverse audio was still
+  not audible in trace test mode.
+- Root cause: visual trace test mode has its own realtime rewind path in
+  `TraceSessionLauncher.handleRealtimeRewindInput(...)`. That path drives the
+  installed `PlaybackController` directly and bypassed `LiveRewindManager`, so
+  it initially entered neither `FadeManager` reverse-presentation nor
+  `AudioManager` reverse-audio presentation. After adding fade presentation, it
+  still did not call `beginReverseAudioPresentation()` or pump `audio.update()`
+  while the trace rewind key was held.
+- Fix: `TraceSessionLauncher` now begins reverse fade and reverse audio
+  presentation when trace realtime rewind starts, calls `GameServices.audio().update()`
+  for each consumed held-rewind visual frame, and ends both presentations
+  through a shared cleanup path on release or inactive trace rewind cleanup.
+- Red check:
+  `mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation#traceRealtimeRewindFreezesFadePresentationUntilReleaseCleanup" test`
+  first failed because the trace launcher consumed rewind input without
+  activating reverse fade presentation, then failed again after adding audio
+  assertions because it did not begin or update reverse audio presentation.
+- Green checks:
+  `mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation#traceRealtimeRewindFreezesFadePresentationUntilReleaseCleanup" test`
+  passed.
+  `mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com.openggf.TestGameLoop#traceRealtimeRewindRunsBeforePlaybackInputBridge,com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.game.rewind.TestRewindController" test`
+  passed with 25 passed, 0 failed.
+  `mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com.openggf.TestGameLoop#traceRealtimeRewindRunsBeforePlaybackInputBridge,com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerRewindSuppression,com.openggf.game.rewind.TestRewindController" test`
+  passed with 36 passed, 0 failed.
+
 Remaining implementation:
 - Keep the optional cycle-aware scheduler documented-only until parity evidence
   requires it.
