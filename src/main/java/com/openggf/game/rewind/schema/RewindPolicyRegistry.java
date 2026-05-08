@@ -14,6 +14,9 @@ import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -105,6 +108,9 @@ public final class RewindPolicyRegistry {
         if (declaredType.isInterface() && declaredType.getSimpleName().endsWith("RendererRef")) {
             return Optional.of(RewindFieldPolicy.TRANSIENT);
         }
+        if (isFinalStructuralList(field)) {
+            return Optional.of(RewindFieldPolicy.TRANSIENT);
+        }
 
         RewindFieldPolicy defaultObjectPolicy = DefaultObjectRewindPolicies.policyFor(field);
         if (defaultObjectPolicy != null) {
@@ -112,6 +118,22 @@ public final class RewindPolicyRegistry {
         }
 
         return Optional.empty();
+    }
+
+    private static boolean isFinalStructuralList(Field field) {
+        if (!Modifier.isFinal(field.getModifiers()) || !List.class.isAssignableFrom(field.getType())) {
+            return false;
+        }
+        Type genericType = field.getGenericType();
+        if (!(genericType instanceof ParameterizedType parameterizedType)) {
+            return false;
+        }
+        Type[] args = parameterizedType.getActualTypeArguments();
+        if (args.length != 1 || !(args[0] instanceof Class<?> elementType)) {
+            return false;
+        }
+        return DEFAULT_DECLARED_TYPE_POLICIES.containsKey(elementType)
+                || (elementType.isRecord() && RewindCodecs.supports(elementType));
     }
 
     public static synchronized Optional<RewindFieldPolicy> policyForAudit(Field field) {

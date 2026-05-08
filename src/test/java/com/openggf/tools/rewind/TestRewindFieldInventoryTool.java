@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.level.rings.RingSpawn;
 
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +46,11 @@ class TestRewindFieldInventoryTool {
 
     private static class StructuralCallbackFixture {
         private Sonic1TryAgainEggmanObjectInstance.Sonic1CreditsTextRendererRef textRenderer;
+    }
+
+    private static class StructuralListFixture {
+        private final List<SpriteMappingPiece> pieces = List.of();
+        private final List<RingSpawn> ringSpawns = List.of(new RingSpawn(1, 2));
     }
 
     private static class AnnotationDensityFixture {
@@ -105,6 +112,13 @@ class TestRewindFieldInventoryTool {
     @Test
     void unsupportedInventorySkipsStructuralRendererCallbacks() {
         List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(StructuralCallbackFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
+    }
+
+    @Test
+    void unsupportedInventorySkipsFinalStructuralLists() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(StructuralListFixture.class);
 
         assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
     }
