@@ -30,12 +30,14 @@ committed on the current branch:
 
   docs/superpowers/plans/2026-05-08-audio-rewind-tier1-command-timeline.md
 
-Tier 1 focused verification is clean for the command timeline, rewind
-discard/suppression behavior, backend bypass guard, and adjacent audio/rewind
-regression tests. A full-suite clean claim is intentionally not made: broader
-`mvn -Dmse=off test` still reports unrelated local `develop` failures in S3K
-bootstrap, trace replay, object-service, and singleton-guard tests. The branch
-must not be merged to local `develop` until that repository-wide gate is green.
+Tier 1 and Tier 2a focused verification is clean for the command timeline,
+logical snapshot seam, rewind discard/suppression behavior, backend bypass
+guard, and adjacent audio/rewind regression tests. A full-suite clean claim is
+intentionally not made: broader `mvn -Dmse=off test` still reports unrelated
+local `develop` failures in S3K bootstrap, trace replay, object-service, and
+singleton-guard tests. The latest full run reported 4,775 tests, 21 failures, 0
+errors, and 6 skipped. The branch must not be merged to local `develop` until
+that repository-wide gate is green.
 
 Tier 2a has started implementation with a backend-agnostic logical snapshot
 seam:
