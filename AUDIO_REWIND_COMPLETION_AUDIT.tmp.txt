@@ -21,7 +21,8 @@ Deliverables And Evidence
      deterministic core, frame-step semantics, snapshot boundaries, memory
      model, presentation model, orchestration, priority, risks, and success
      criteria.
-   - Current Planning State now says Tier 0 is implemented and focused-verified.
+   - Current Planning State now says Tier 0 and Tier 1 are implemented and
+     focused-verified, and Tier 2 is the active design loop.
 
    Status:
    - Complete for the requested blueprint loop.
@@ -130,14 +131,60 @@ Deliverables And Evidence
    - AUDIO_REWIND_ORCHESTRATION_PHASE1.tmp.txt includes Tier 1 command
      timeline design, Tier 2 deterministic core design, snapshot boundary, test
      and benchmark plan, implementation coordination, and continuation loop.
-   - AUDIO_REWIND_TIER1_COMMAND_TIMELINE_REVIEW.tmp.txt defines the next
-     design-review artifact for Tier 1.
+   - AUDIO_REWIND_TIER1_COMMAND_TIMELINE_REVIEW.tmp.txt records Tier 1 as
+     resolved and implemented.
+   - AUDIO_REWIND_TIER2_LOGICAL_SMPS_REVIEW.tmp.txt now defines the next
+     design-review artifact for Tier 2.
 
    Status:
    - Complete for the requested continuation loop.
 
 
-10. Placeholder and red-flag scan was performed.
+10. Tier 1 implementation was executed.
+
+   Evidence:
+   - Commit `d774c38c7 feat: add tier 1 audio command timeline`.
+   - Added `AudioCommand`, `AudioTimelineEntry`, and `AudioCommandTimeline`.
+   - `AudioManager` records resolved gameplay audio commands by frame/order.
+   - `RewindController` begins audio timeline frames and discards future audio
+     commands after seek/step-back branches.
+   - Tier 1 self-review patched the resolved ring-route fallback to use
+     `RING_RESOLVED`.
+
+   Status:
+   - Complete for Tier 1 scope.
+
+
+11. Focused Tier 1 verification passed.
+
+   Evidence:
+   - Red run for `TestAudioCommandTimeline` failed to compile before the Tier 1
+     command/timeline APIs existed.
+   - `mvn -Dmse=off "-Dtest=com.openggf.audio.TestAudioCommandTimeline" test`
+     passed: 7 tests, 0 failures, 0 errors.
+   - `mvn -Dmse=off "-Dtest=com.openggf.audio.TestAudioCommandTimeline,com.openggf.audio.TestAudioManagerRewindSuppression,com.openggf.audio.TestAudioBackendBypassGuard,com.openggf.game.rewind.TestRewindControllerAudioSuppression,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerResetState,com.openggf.audio.TestDonorAudioRouting,com.openggf.game.rewind.TestRewindController,com.openggf.game.rewind.TestSegmentCache" test`
+     passed: 47 tests, 0 failures, 0 errors.
+   - `git diff --check` exited 0 with only existing CRLF warnings.
+   - Backend bypass scanner returned no matches.
+
+   Status:
+   - Complete.
+
+
+12. Tier 2 design loop has started.
+
+   Evidence:
+   - AUDIO_REWIND_TIER2_LOGICAL_SMPS_REVIEW.tmp.txt defines the Tier 2
+     snapshot boundary, subtier sequence, state inventory, test shape, and
+     risks.
+   - docs/superpowers/plans/2026-05-08-audio-rewind-tier2-logical-smps-snapshot.md
+     defines the proposed Tier 2 implementation sequence.
+
+   Status:
+   - Design/planning in progress; implementation not started.
+
+
+13. Placeholder and red-flag scan was performed.
 
    Evidence:
    - Red-flag scan over the blueprint, orchestration note, audit, Tier 1 review
@@ -171,21 +218,23 @@ Known Residuals
      `develop` work. Local merge should not be represented as full-suite green.
 
 
-2. Tier 1 and Tier 2 implementation plans are intentionally not written yet.
+2. Tier 2 implementation has not started yet.
 
    Evidence:
-   - The blueprint now gates Tier 1 implementation planning on the Tier 1
-     command timeline review, not on immediate implementation.
+   - The Tier 2 plan splits the work into snapshot seam, logical graph
+     extraction, driver/sequencer snapshots, and sparse keyframe replay.
+   - No Tier 2 production code has been edited yet.
 
    Impact:
-   - This is deliberate sequencing, not missing scope for this goal.
+   - This is deliberate sequencing. Tier 2 is much larger than Tier 1 and needs
+     red/green subtiers rather than one monolithic patch.
 
 
 Completion Judgment
 -------------------
 
-The requested blueprint loop is complete: the high-level blueprint is current,
-Tier 0 has a formal implementation plan, Tier 0 was implemented and
-focused-verified, and the next Tier 1 design-review artifact is ready. The
-remaining work is the next orchestration loop, beginning with Tier 1 command
-timeline review and then a separate Tier 1 implementation plan.
+The requested blueprint loop has advanced through Tier 1: the high-level
+blueprint is current, Tier 0 and Tier 1 have formal implementation plans, both
+tiers were implemented and focused-verified, and Tier 2 now has a design-review
+artifact plus an implementation plan. Local merge to `develop` remains blocked
+until the repository-wide full-suite failures are resolved.
