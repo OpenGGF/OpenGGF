@@ -1,7 +1,12 @@
 package com.openggf.game.rewind.schema;
 
 import com.openggf.game.rewind.FieldKey;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameModule;
+import com.openggf.game.InstaShieldHandle;
+import com.openggf.game.PowerUpObject;
+import com.openggf.game.PowerUpSpawner;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
@@ -10,7 +15,9 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
+import com.openggf.physics.Sensor;
 import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.lang.reflect.Field;
@@ -23,17 +30,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
+import java.util.function.IntSupplier;
 
 public final class RewindPolicyRegistry {
     private static final Map<Class<?>, RewindFieldPolicy> DEFAULT_DECLARED_TYPE_POLICIES = Map.ofEntries(
             Map.entry(GameModule.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(AbstractLevelEventManager.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(GraphicsManager.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(SonicConfigurationService.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(ObjectRenderManager.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(ObjectServices.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(Pattern.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(PatternDesc.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(PatternSpriteRenderer.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(PlayerSpriteRenderer.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(InstaShieldHandle.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(PowerUpObject.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(PowerUpSpawner.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(Sensor.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(SpriteAnimationProfile.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(SpriteAnimationSet.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(SpriteMappingPiece.class, RewindFieldPolicy.TRANSIENT),
             Map.entry(SpritePieceRenderer.class, RewindFieldPolicy.TRANSIENT)
@@ -64,6 +80,10 @@ public final class RewindPolicyRegistry {
 
     static synchronized Optional<RewindFieldPolicy> policyFor(Field field) {
         Objects.requireNonNull(field, "field");
+
+        if (isKnownStructuralField(field)) {
+            return Optional.of(RewindFieldPolicy.TRANSIENT);
+        }
 
         RewindFieldPolicy fieldPolicy = FIELD_POLICIES.get(FieldKey.of(field));
         if (fieldPolicy != null) {
@@ -108,6 +128,18 @@ public final class RewindPolicyRegistry {
         if (declaredType.isInterface() && declaredType.getSimpleName().endsWith("RendererRef")) {
             return Optional.of(RewindFieldPolicy.TRANSIENT);
         }
+        if (declaredType == BooleanSupplier.class || declaredType == IntSupplier.class) {
+            return Optional.of(RewindFieldPolicy.TRANSIENT);
+        }
+        if (declaredType.getPackageName().contains(".events")
+                && declaredType.getSimpleName().endsWith("Events")) {
+            return Optional.of(RewindFieldPolicy.TRANSIENT);
+        }
+        if (declaredType.getSimpleName().endsWith("Handler")
+                && declaredType.getEnclosingClass() != null
+                && hasNoStateFields(declaredType)) {
+            return Optional.of(RewindFieldPolicy.TRANSIENT);
+        }
         if (isFinalStructuralList(field)) {
             return Optional.of(RewindFieldPolicy.TRANSIENT);
         }
@@ -118,6 +150,24 @@ public final class RewindPolicyRegistry {
         }
 
         return Optional.empty();
+    }
+
+    private static boolean isKnownStructuralField(Field field) {
+        String declaringClass = field.getDeclaringClass().getName();
+        String fieldName = field.getName();
+        return declaringClass.equals("com.openggf.level.objects.boss.AbstractBossInstance")
+                && fieldName.equals("childComponents")
+                || field.getType().getSimpleName().equals("CaterkillerParentState");
+    }
+
+    private static boolean hasNoStateFields(Class<?> type) {
+        for (Field field : type.getDeclaredFields()) {
+            int mods = field.getModifiers();
+            if (!Modifier.isStatic(mods) && !field.isSynthetic()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean isFinalStructuralList(Field field) {
