@@ -1,5 +1,8 @@
 package com.openggf.game.rewind;
 
+import com.openggf.audio.AudioBenchmarkMemoryProbe;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
@@ -50,6 +53,10 @@ public class RewindBenchmark {
     private static final long MAX_SEEK_MEAN_NS = 10_000_000L;
     private static final long MAX_BYTES_PER_KEYFRAME = 128L * 1024L;
     private static final long MIN_LONGTAIL_CLEAN_FRAMES = 1200L;
+    private static final long DEFAULT_MAX_AUDIO_CAPTURE_MEAN_NS = 250_000L;
+    private static final long DEFAULT_MAX_AUDIO_RESTORE_MEAN_NS = 250_000L;
+    private static final long DEFAULT_MAX_AUDIO_REPLAY_MEAN_NS = 2_000_000L;
+    private static final long DEFAULT_MAX_AUDIO_ALLOCATED_BYTES = 512L * 1024L;
 
     /** Aggregate phase results, dumped to JSON at end of test. */
     private final Map<String, BenchmarkResults> results = new LinkedHashMap<>();
@@ -90,6 +97,9 @@ public class RewindBenchmark {
 
         // Long-tail determinism gate
         runLongTailDeterminismGate();
+
+        // Audio logical rewind phases and counters
+        runPhase7AudioRewind();
 
         // Conservative guardrails. These are intentionally loose enough for
         // noisy developer machines, but tight enough to catch order-of-magnitude
@@ -407,6 +417,101 @@ public class RewindBenchmark {
         return keyframeBytes;
     }
 
+    // -------------------------------------------------------------------------
+    // Phase 7: audio logical rewind
+    // -------------------------------------------------------------------------
+
+    private void runPhase7AudioRewind() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        AudioPhaseFixture fixture = buildAudioPhaseFixture(audio);
+
+        BenchmarkTiming captureTiming = new BenchmarkTiming(500);
+        long captureWallStart = System.nanoTime();
+        for (int i = 0; i < 500; i++) {
+            long t0 = System.nanoTime();
+            audio.captureLogicalSnapshot();
+            captureTiming.record(System.nanoTime() - t0);
+        }
+        long captureWall = System.nanoTime() - captureWallStart;
+        results.put("phase7.audio.capture-logical",
+                new BenchmarkResults("phase7.audio.capture-logical",
+                        captureTiming.summarize(), captureWall, Map.of(),
+                        Map.of("timelineEntries", fixture.timelineEntries(),
+                                "targetFrame", fixture.targetFrame())));
+
+        BenchmarkTiming restoreTiming = new BenchmarkTiming(500);
+        long restoreWallStart = System.nanoTime();
+        for (int i = 0; i < 500; i++) {
+            long t0 = System.nanoTime();
+            audio.restoreLogicalSnapshot(fixture.snapshot());
+            restoreTiming.record(System.nanoTime() - t0);
+        }
+        long restoreWall = System.nanoTime() - restoreWallStart;
+        results.put("phase7.audio.restore-logical",
+                new BenchmarkResults("phase7.audio.restore-logical",
+                        restoreTiming.summarize(), restoreWall, Map.of(),
+                        Map.of("timelineEntries", fixture.timelineEntries(),
+                                "targetFrame", fixture.targetFrame())));
+
+        BenchmarkTiming replayTiming = new BenchmarkTiming(500);
+        int[] replayedCommands = {0};
+        AudioBenchmarkMemoryProbe.RunResult memory = AudioBenchmarkMemoryProbe.create().measureTimedRun(() -> {
+            for (int i = 0; i < 500; i++) {
+                long t0 = System.nanoTime();
+                replayedCommands[0] = fixture.keyframes().replayToLogicalState(audio, fixture.targetFrame());
+                replayTiming.record(System.nanoTime() - t0);
+            }
+        });
+        Map<String, Long> counters = new LinkedHashMap<>();
+        counters.put("targetFrame", fixture.targetFrame());
+        counters.put("timelineEntries", fixture.timelineEntries());
+        counters.put("replayedCommands", (long) replayedCommands[0]);
+        counters.put("allocatedBytes", memory.allocatedBytes());
+        counters.put("allocatedBytesSupported", memory.allocatedBytesSupported() ? 1L : 0L);
+        counters.put("heapUsedDeltaBytes", memory.heapUsedDeltaBytes());
+        counters.put("gcCountDelta", memory.gcCountDelta());
+        counters.put("gcTimeDeltaMs", memory.gcTimeDeltaMs());
+        results.put("phase7.audio.replay-logical",
+                new BenchmarkResults("phase7.audio.replay-logical",
+                        replayTiming.summarize(), memory.elapsedNanos(), Map.of(), counters));
+
+        audio.resetState();
+    }
+
+    private static AudioPhaseFixture buildAudioPhaseFixture(AudioManager audio) {
+        audio.beginCommandTimelineFrame(0);
+        audio.playMusic(1);
+        audio.playSfx("benchmark-start");
+
+        AudioKeyframeStore keyframes = new AudioKeyframeStore();
+        keyframes.capture(0, audio);
+        for (int frame = 1; frame <= 120; frame++) {
+            audio.beginCommandTimelineFrame(frame);
+            if (frame % 2 == 0) {
+                audio.playSfx("benchmark-sfx");
+            }
+            if (frame % 30 == 0) {
+                audio.setSpeedShoes(frame % 60 == 0);
+            }
+            if (frame % 45 == 0) {
+                audio.setSpeedMultiplier(frame % 90 == 0 ? 2 : 1);
+            }
+        }
+        return new AudioPhaseFixture(
+                audio.captureLogicalSnapshot(),
+                keyframes,
+                120,
+                audio.commandTimeline().entries().size());
+    }
+
+    private record AudioPhaseFixture(
+            com.openggf.audio.rewind.AudioLogicalSnapshot snapshot,
+            AudioKeyframeStore keyframes,
+            long targetFrame,
+            long timelineEntries) {
+    }
+
     static long estimateStructuralSize(Object obj) {
         return align8(estimateStructuralSize(obj, new IdentityHashMap<>()));
     }
@@ -597,9 +702,47 @@ public class RewindBenchmark {
                         && longtail.overall().meanNs() >= MIN_LONGTAIL_CLEAN_FRAMES,
                 "longtail.determinism must remain clean for at least "
                         + MIN_LONGTAIL_CLEAN_FRAMES + " frames");
+        assertAudioBenchmarkBounds(results);
     }
 
     private void assertMeanAtMost(String phase, long max) {
+        BenchmarkResults result = results.get(phase);
+        assertTrue(result != null, "missing benchmark phase " + phase);
+        assertTrue(result.overall().meanNs() <= max,
+                phase + " mean " + result.overall().meanNs() + " exceeds " + max);
+    }
+
+    static void assertAudioBenchmarkBoundsForTests(Map<String, BenchmarkResults> results) {
+        assertAudioBenchmarkBounds(results);
+    }
+
+    private static void assertAudioBenchmarkBounds(Map<String, BenchmarkResults> results) {
+        if (!Boolean.getBoolean("openggf.rewind.benchmark.audioBudgets")) {
+            return;
+        }
+        assertMeanAtMost(results, "phase7.audio.capture-logical",
+                Long.getLong("openggf.rewind.benchmark.audio.maxCaptureMeanNs",
+                        DEFAULT_MAX_AUDIO_CAPTURE_MEAN_NS));
+        assertMeanAtMost(results, "phase7.audio.restore-logical",
+                Long.getLong("openggf.rewind.benchmark.audio.maxRestoreMeanNs",
+                        DEFAULT_MAX_AUDIO_RESTORE_MEAN_NS));
+        assertMeanAtMost(results, "phase7.audio.replay-logical",
+                Long.getLong("openggf.rewind.benchmark.audio.maxReplayMeanNs",
+                        DEFAULT_MAX_AUDIO_REPLAY_MEAN_NS));
+        BenchmarkResults replay = results.get("phase7.audio.replay-logical");
+        assertTrue(replay != null, "missing benchmark phase phase7.audio.replay-logical");
+        if (replay.counters().getOrDefault("allocatedBytesSupported", 0L) == 1L) {
+            long maxAllocatedBytes = Long.getLong(
+                    "openggf.rewind.benchmark.audio.maxAllocatedBytes",
+                    DEFAULT_MAX_AUDIO_ALLOCATED_BYTES);
+            long allocatedBytes = replay.counters().getOrDefault("allocatedBytes", 0L);
+            assertTrue(allocatedBytes <= maxAllocatedBytes,
+                    "phase7.audio.replay-logical allocatedBytes " + allocatedBytes
+                            + " exceeds " + maxAllocatedBytes);
+        }
+    }
+
+    private static void assertMeanAtMost(Map<String, BenchmarkResults> results, String phase, long max) {
         BenchmarkResults result = results.get(phase);
         assertTrue(result != null, "missing benchmark phase " + phase);
         assertTrue(result.overall().meanNs() <= max,
@@ -974,10 +1117,20 @@ public class RewindBenchmark {
         Files.createDirectories(outputDir);
         Path output = outputDir.resolve("rewind-benchmark-results.json");
 
+        String json = toJson(TRACE_DIR.toString(), keyframeInterval(), results);
+        Files.writeString(output, json);
+        System.out.printf("Benchmark results written to %s%n", output);
+    }
+
+    static String toJsonForTests(String trace, int keyframeInterval, Map<String, BenchmarkResults> results) {
+        return toJson(trace, keyframeInterval, results);
+    }
+
+    private static String toJson(String trace, int keyframeInterval, Map<String, BenchmarkResults> results) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
-        sb.append("  \"trace\": \"").append(escapeJson(TRACE_DIR.toString())).append("\",\n");
-        sb.append("  \"keyframeInterval\": ").append(keyframeInterval()).append(",\n");
+        sb.append("  \"trace\": \"").append(escapeJson(trace)).append("\",\n");
+        sb.append("  \"keyframeInterval\": ").append(keyframeInterval).append(",\n");
         sb.append("  \"phases\": {\n");
         int i = 0;
         for (var e : results.entrySet()) {
@@ -1004,12 +1157,20 @@ public class RewindBenchmark {
                 }
                 sb.append("\n      }");
             }
+            if (!r.counters().isEmpty()) {
+                sb.append(",\n      \"counters\": {\n");
+                int j = 0;
+                for (var counter : r.counters().entrySet()) {
+                    if (j++ > 0) sb.append(",\n");
+                    sb.append("        \"").append(escapeJson(counter.getKey())).append("\": ")
+                            .append(counter.getValue());
+                }
+                sb.append("\n      }");
+            }
             sb.append("\n    }");
         }
         sb.append("\n  }\n}\n");
-
-        Files.writeString(output, sb.toString());
-        System.out.printf("Benchmark results written to %s%n", output);
+        return sb.toString();
     }
 
     private static void appendPhaseStats(StringBuilder sb, BenchmarkResults.PhaseStats s) {

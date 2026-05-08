@@ -42,6 +42,16 @@ public class VirtualSynthesizer implements Synthesizer {
         return outputSampleRate;
     }
 
+    public Snapshot captureSynthSnapshot() {
+        return new Snapshot(outputSampleRate, ym.captureSnapshot(), psg.captureSnapshot());
+    }
+
+    public void restoreSynthSnapshot(Snapshot snapshot) {
+        outputSampleRate = snapshot.outputSampleRate();
+        ym.restoreSnapshot(snapshot.ym());
+        psg.restoreSnapshot(snapshot.psg());
+    }
+
     public void setDacData(DacData data) {
         ym.setDacData(data);
     }
@@ -149,5 +159,11 @@ public class VirtualSynthesizer implements Synthesizer {
      */
     public void forceSilenceChannel(int channelId) {
         ym.forceSilenceChannel(channelId);
+    }
+
+    public record Snapshot(
+            double outputSampleRate,
+            Ym2612Chip.Snapshot ym,
+            PsgChipGPGX.Snapshot psg) {
     }
 }

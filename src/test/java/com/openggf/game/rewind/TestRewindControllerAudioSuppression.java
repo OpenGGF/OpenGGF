@@ -92,6 +92,35 @@ class TestRewindControllerAudioSuppression {
         assertEquals(0, steps.get(), "recordExternalStep must not invoke the stepper");
     }
 
+    @Test
+    void seekToRestoresAudioLogicalStateWithoutPresentationReplay() {
+        RewindRegistry registry = new RewindRegistry();
+        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
+        InputSource inputs = new FakeInputSource(20);
+        EngineStepper stepper = in -> {
+            if (in.frameIndex() == 1 || in.frameIndex() == 3) {
+                audio.playSfx(com.openggf.audio.GameSound.RING);
+            }
+            if (in.frameIndex() == 2 || in.frameIndex() == 4) {
+                audio.resetRingSound();
+            }
+        };
+        RewindController controller = new RewindController(registry, keyframes, inputs, stepper, 2, audio);
+
+        for (int i = 0; i < 5; i++) {
+            controller.step();
+        }
+        assertTrue(audio.captureLogicalSnapshot().ringLeft(), "frame 4 reset leaves live state at true");
+        backend.clear();
+
+        controller.seekTo(3);
+
+        assertEquals(0, backend.totalCalls(), "logical rewind replay must not emit presentation calls");
+        assertEquals(3, controller.currentFrame());
+        assertEquals(false, audio.captureLogicalSnapshot().ringLeft(),
+                "frame 3 ring command must be reflected in restored logical state");
+    }
+
     private static final class FakeInputSource implements InputSource {
         private final int frames;
 

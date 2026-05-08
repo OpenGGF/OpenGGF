@@ -3,6 +3,11 @@ package com.openggf.audio;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
+import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.runtime.DeterministicAudioRuntime;
+import com.openggf.audio.runtime.FrameAudioMode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -138,9 +143,130 @@ class TestAudioManagerRewindSuppression {
     }
 
     @Test
-    void pausedFrameStepHookDelegatesToLegacyUpdateForTier0() {
+    void pausedFrameStepHookDoesNotPollPresentationBackend() {
         audio.advancePausedFrameStepAudio();
 
+        assertEquals(java.util.List.of(), backend.calls);
+    }
+
+    @Test
+    void afterRestoreEndsReversePresentationBeforeCleanupPolicy() {
+        ReverseTrackingRuntime runtime = new ReverseTrackingRuntime();
+        audio.setDeterministicAudioRuntime(runtime);
+
+        audio.beginReverseAudioPresentation();
+        audio.afterRewindRestore(7, AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
+
+        assertEquals(1, runtime.beginReverseCalls);
+        assertEquals(0, runtime.endReverseCalls,
+                "internal step-back restores must not cancel held reverse presentation");
+        assertEquals(0, runtime.flushCalls);
+
+        audio.afterRewindRestore(7, AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+
+        assertEquals(1, runtime.beginReverseCalls);
+        assertEquals(1, runtime.endReverseCalls);
+        assertEquals(1, runtime.flushCalls);
+    }
+
+    @Test
+    void updateDuringReversePresentationDoesNotRenderNormalFrame() {
+        ReverseTrackingRuntime runtime = new ReverseTrackingRuntime();
+        audio.setDeterministicAudioRuntime(runtime);
+
+        audio.beginReverseAudioPresentation();
+        audio.update();
+
+        assertEquals(0, runtime.advanceCalls,
+                "reverse presentation must drain history only, not append forward PCM into history");
         assertEquals(java.util.List.of("update"), backend.calls);
+    }
+
+    @Test
+    void logicalRestorePreservesPresentationQueueDuringReversePresentation() {
+        PreserveFlagBackend preserveBackend = new PreserveFlagBackend();
+        audio.setBackend(preserveBackend);
+
+        AudioLogicalSnapshot snapshot = new AudioLogicalSnapshot(
+                true,
+                0,
+                0,
+                0,
+                AudioBackendLogicalSnapshot.empty(),
+                java.util.Set.of(),
+                java.util.Set.of());
+
+        audio.beginReverseAudioPresentation();
+        audio.restoreLogicalSnapshot(snapshot);
+
+        assertTrue(preserveBackend.lastPreservePresentationQueue);
+    }
+
+    @Test
+    void reversePresentationLifecycleIsForwardedToBackend() {
+        PreserveFlagBackend preserveBackend = new PreserveFlagBackend();
+        audio.setBackend(preserveBackend);
+
+        audio.beginReverseAudioPresentation();
+        audio.endReverseAudioPresentation();
+
+        assertEquals(1, preserveBackend.beginReverseCalls);
+        assertEquals(1, preserveBackend.endReverseCalls);
+    }
+
+    private static final class ReverseTrackingRuntime implements DeterministicAudioRuntime {
+        private int beginReverseCalls;
+        private int endReverseCalls;
+        private int flushCalls;
+        private int advanceCalls;
+
+        @Override
+        public void advanceFrame(long frame, FrameAudioMode mode) {
+            advanceCalls++;
+        }
+
+        @Override
+        public boolean consumesSubmittedCommands() {
+            return true;
+        }
+
+        @Override
+        public void beginReversePresentation() {
+            beginReverseCalls++;
+        }
+
+        @Override
+        public void endReversePresentation() {
+            endReverseCalls++;
+        }
+
+        @Override
+        public void flushPresentationFifo() {
+            flushCalls++;
+        }
+    }
+
+    private static final class PreserveFlagBackend extends NullAudioBackend {
+        private boolean lastPreservePresentationQueue;
+        private int beginReverseCalls;
+        private int endReverseCalls;
+
+        @Override
+        public void restoreLogicalSnapshot(
+                AudioBackendLogicalSnapshot snapshot,
+                SmpsDriverSnapshot.DependencyResolver resolver,
+                boolean preservePresentationQueue) {
+            lastPreservePresentationQueue = preservePresentationQueue;
+        }
+
+        @Override
+        public void beginReversePresentation() {
+            beginReverseCalls++;
+        }
+
+        @Override
+        public void endReversePresentation() {
+            endReverseCalls++;
+        }
     }
 }

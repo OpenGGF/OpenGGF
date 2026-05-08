@@ -1,0 +1,691 @@
+Audio Rewind Deferred Design Orchestration
+==========================================
+
+Requirements
+------------
+
+Goal: turn the deferred audio rewind design items in
+`AUDIO_REWIND_BLUEPRINT.tmp.txt` into implementable architecture and task
+plans without changing the already-green restore-forward Tier 0 through Tier 3
+behavior.
+
+Design scope:
+- Deterministic frame-owned audio core boundary.
+- Explicit pause and frame-step audio semantics.
+- Engine-owned output FIFO and OpenAL drain boundary.
+- PCM history ring for audible reverse scrub presentation.
+- Rewind release crossfade and tape-coast interaction.
+- Benchmark and memory/performance budget design.
+- Optional cycle-aware scheduler design, gated behind future parity evidence.
+
+Non-goals:
+- Do not make OpenAL source ids, buffer ids, or queued native buffers
+  authoritative rewind state.
+- Do not replace the existing restore-forward snapshot path.
+- Do not make cycle-level scheduling a prerequisite for current Tier 3
+  sample parity.
+- Do not implement feature code in this design artifact.
+
+Acceptance criteria:
+- Every deferred item has an owner boundary, data contract, lifecycle, tests,
+  and rollout order.
+- The plan preserves existing focused-green audio rewind tests.
+- Presentation-only state remains isolated from authoritative audio state.
+- Memory and performance budgets are explicit enough to become test/benchmark
+  gates.
+- Cycle-aware scheduling is clearly optional and separately gateable.
+
+Assumptions:
+- The current snapshot/restore-forward implementation remains the stable base.
+- Gameplay rewind remains frame-indexed; any sub-frame or cycle model must sit
+  inside audio runtime internals and not change gameplay snapshot identity.
+- Audible reverse audio is UX presentation, not the source of truth for future
+  playback.
+
+Risks:
+- Moving audio advancement out of OpenAL refill can change timing and expose
+  latent assumptions in `LWJGLAudioBackend.fillBuffer(...)`.
+- PCM history can grow quickly if configured by seconds, sample rate, and
+  stereo width without hard limits.
+- Frame-step policy can confuse trace/debug behavior if audible output and
+  authoritative state are coupled.
+- Cycle-aware scheduling can balloon scope if treated as mandatory before
+  evidence shows frame-level parity is insufficient.
+
+Exploration Synthesis
+---------------------
+
+Local evidence:
+- `AudioManager.advancePausedFrameStepAudio()` currently delegates to
+  `update()` and is explicitly marked as the Tier 0 frame-step seam.
+- `LWJGLAudioBackend.fillBuffer(...)` currently advances `currentStream` and
+  `sfxStream` only when OpenAL needs buffers, so authoritative SMPS/chip time
+  is coupled to presentation refill cadence.
+- `SmpsDriver.read(short[])` and `SmpsSequencer.read(short[])` are the current
+  sample-production boundary.
+- `AudioBenchmarkMemoryProbe` and `AudioRegressionTest` already provide audio
+  render timing and allocation measurement patterns.
+- `RewindBenchmark` already writes JSON phase timing to
+  `target/rewind-benchmark-results.json`, making it a good target for audio
+  rewind benchmark extension.
+
+Agent exploration:
+- Deterministic core explorer: current authoritative audio phase still advances
+  from `LWJGLAudioBackend.fillBuffer(...)` through `SmpsDriver.read(...)`, so
+  OpenAL processed-buffer cadence decides SMPS/chip phase. At 48 kHz,
+  `STREAM_BUFFER_SIZE = 1024` is about 21.3 ms, while a 60 Hz gameplay frame is
+  about 16.67 ms. This confirms frame-owned audio needs an explicit
+  `AudioFrameClock` and a backend drain that no longer calls `SmpsDriver.read`.
+- PCM presentation explorer: the best PCM history insertion point is after
+  final music/SFX mixing in `LWJGLAudioBackend.fillBuffer(...)`, immediately
+  before `alBufferData`. Reverse scrub must read only this history and must not
+  advance SMPS streams. Sample-rate changes and backend reinit invalidate the
+  ring.
+- Benchmark explorer: existing `RewindBenchmark` and `AudioRegressionTest`
+  provide timing/allocation patterns, but audio rewind lacks dedicated
+  measurements for `AudioManager.captureLogicalSnapshot()`,
+  `restoreLogicalSnapshot()`, `AudioKeyframeStore.replayTo(...)`, command
+  timeline growth, SMPS/chip retained size, PCM history memory, and
+  paused-frame-step produced samples.
+
+Recommendation:
+- Introduce a deterministic audio runtime layer above `SmpsDriver` and below
+  `AudioManager`, then make `LWJGLAudioBackend` drain PCM from that runtime
+  instead of owning advancement.
+- Normalize frame command ordering before runtime migration: commands emitted
+  during gameplay frame `N` should affect audio frame `N` under a documented
+  begin-run-advance-end contract.
+- Add PCM history only after the runtime owns an output FIFO; keep it
+  disposable and bounded.
+- Keep cycle-aware scheduling as a design extension of the deterministic
+  runtime, not as the first implementation step.
+
+Architecture Decision
+---------------------
+
+Ownership:
+- `AudioManager` remains the command-recording and high-level intent boundary.
+- New `DeterministicAudioRuntime` owns authoritative audio advancement,
+  command consumption, SMPS driver state, chip snapshots, output FIFO, and
+  frame/sample accumulators.
+- `LWJGLAudioBackend` becomes a presentation drain for already-produced PCM and
+  still owns OpenAL device/source/buffer objects.
+- New `PcmHistoryRing` owns reverse-scrub presentation history only.
+- New benchmark helpers live under test/benchmark code and read runtime
+  counters without mutating production behavior.
+
+Lifecycle:
+- Gameplay session start creates a fresh audio runtime after audio profile and
+  donor loaders are known.
+- Hard rewind boundaries reset runtime, command timeline, FIFO, and PCM
+  history.
+- Rewind seek restores an audio keyframe into the runtime, replays commands and
+  deterministic time to the target frame, then flushes/reprimes presentation.
+- Device reinitialization only rebuilds OpenAL presentation queues; it does not
+  mutate authoritative audio state.
+
+Data flow:
+1. Gameplay calls `AudioManager`.
+2. `AudioManager` records `AudioCommand` with frame/order and sends it to the
+   deterministic runtime.
+3. The runtime consumes commands for a frame, advances SMPS/chip state by a
+   fixed frame slice, and appends PCM to its output FIFO.
+4. `LWJGLAudioBackend` drains FIFO into OpenAL buffers without advancing
+   authoritative time.
+5. Optional `PcmHistoryRing` mirrors produced PCM for reverse presentation.
+
+Rollback:
+- Keep existing `AudioBackend` playback path behind a compatibility adapter
+  until deterministic runtime parity tests pass.
+- Runtime can be disabled by configuration or test profile, returning to the
+  current backend-driven stream model.
+
+Feature Design
+--------------
+
+Deterministic runtime APIs:
+- `submit(AudioCommand command, long frame, int order)`
+- `advanceFrame(long frame, FrameAudioMode mode)`
+- `captureSnapshot()`
+- `restoreSnapshot(AudioRuntimeSnapshot snapshot)`
+- `replayTo(long frame, AudioCommandTimeline timeline)`
+- `drainPcm(short[] target, int frames)`
+- `flushPresentationFifo()`
+
+Frame audio modes:
+- `NORMAL`: advance authoritative state and make produced PCM available.
+- `SILENT_STEP`: advance authoritative state but do not send PCM to live
+  presentation.
+- `INTERNAL_REPLAY`: advance for seek/replay with no presentation side effects.
+- `PRESENTATION_ONLY_REVERSE`: do not advance authoritative state; read PCM
+  history for audible scrub.
+
+Frame contract:
+1. `beginGameplayAudioFrame(N)` sets command timeline frame/order state.
+2. Gameplay frame `N` runs and emits audio commands.
+3. `advanceAuthoritativeFrame(N, mode)` consumes frame `N` commands and renders
+   exactly one gameplay-frame worth of audio samples.
+4. Produced PCM is enqueued to presentation unless mode suppresses it.
+5. `endGameplayAudioFrame(N)` records counters and clears transient frame
+   state.
+
+`AudioFrameClock`:
+- Uses rational/fixed-point accumulation for `sampleRate / gameFrameRate`.
+- Stores sample-rate, region/frame-rate identity, numerator, denominator, and
+  remainder in runtime snapshots.
+- Produces exact totals over long runs even for non-divisible rates.
+
+Output FIFO:
+- Stores interleaved stereo PCM at runtime output rate.
+- Has bounded capacity in frames and reports underrun/overrun counters.
+- Is not captured in authoritative keyframes except for optional presentation
+  prefill metadata.
+
+PCM history:
+- Ring stores recent interleaved stereo PCM frames.
+- Capacity configured in seconds and capped by absolute bytes. Proposed
+  default: 10 seconds. Proposed hard cap: 60 seconds.
+- At 44.1 kHz stereo 16-bit, memory is 176,400 bytes/second, about 1.68 MiB
+  for 10 seconds and about 10.1 MiB for 60 seconds.
+- Reverse playback reads from a separate cursor and applies a short windowed
+  crossfade on entry/exit. Proposed release crossfade: 30-80 ms.
+- History is cleared at hard boundaries and after backend/device reset.
+
+Pause/frame-step:
+- Paused: no authoritative audio advance.
+- Frame-step silent default: advance exactly one gameplay-frame audio slice,
+  record counters, suppress live output.
+- Optional audible pulse: enqueue only a short crossfaded slice after the
+  deterministic step, never by advancing OpenAL-owned streams.
+
+Cycle-aware scheduler:
+- Optional module under the deterministic runtime.
+- Stores command/chip-write events as fixed-point offsets within a game frame.
+- Enabled only for targeted parity tests that prove frame-order timing is not
+  sufficient.
+
+Benchmark design:
+- Track capture time, restore time, replay-to-frame time, per-frame advance
+  time, FIFO drain time, PCM history memory, snapshot retained bytes, command
+  count, FIFO underruns/overruns, and allocation deltas.
+- Emit JSON alongside existing rewind benchmark output.
+- Add budget checks as opt-in benchmark assertions first, then promote stable
+  thresholds to CI-friendly tests.
+
+Initial benchmark budgets:
+- Command recording overhead: p95 <= 25 us per audio command, p99 <= 75 us.
+- Command timeline retained bytes: <= 4 MiB for 10 minutes under a
+  ring-loss/results-tally stress workload.
+- Logical audio snapshot: mean capture <= 100 us, restore <= 150 us, retained
+  size <= 8 KiB.
+- Full audio keyframe with SMPS + synth state: mean capture <= 750 us, restore
+  <= 1 ms, retained size target <= 32 KiB, hard gate <= 64 KiB.
+- Replay from nearest 60-frame keyframe: mean <= 2 ms, p95 <= 5 ms, max <=
+  10 ms.
+- Forward playback with audio rewind enabled: mean frame overhead <= 0.25 ms,
+  p95 <= 0.75 ms.
+- Steady-state benchmark after warmup: zero GC collections; allocation rate is
+  tracked and budgeted after the first baseline run.
+
+Implementation Plan
+-------------------
+
+Task A: deterministic runtime boundary.
+- Tests first: fake command timeline drives runtime, runtime advances exactly
+  one frame slice, OpenAL drain does not advance SMPS.
+- Files: new audio runtime package plus adapter seams in `AudioManager` and
+  `AudioBackend`.
+- Verification: focused audio runtime tests and existing 74-test rewind suite.
+
+Task B: output FIFO and backend drain.
+- Tests first: fill/drain/underrun/overrun behavior, backend drain does not
+  call `SmpsDriver.read(...)` directly.
+- Files: runtime FIFO classes and `LWJGLAudioBackend` drain path.
+- Verification: backend snapshot tests plus audio regression tests.
+
+Task C: pause and frame-step semantics.
+- Tests first: paused frame-step advances one frame of authoritative audio in
+  silent mode; normal pause advances none.
+- Files: `AudioManager.advancePausedFrameStepAudio`, `GameLoop` integration,
+  runtime frame modes.
+- Verification: frame-step unit tests and trace/rewind focused tests.
+
+Task D: PCM history and reverse presentation.
+- Tests first: bounded ring behavior, reverse cursor mapping, crossfade entry
+  and release, hard-boundary clearing.
+- Files: `PcmHistoryRing`, presentation policy classes, live rewind manager
+  hooks.
+- Verification: pure PCM unit tests and a fake backend presentation test.
+
+Task E: benchmark/budget extensions.
+- Tests first: benchmark JSON includes audio phases and counters when enabled.
+- Files: `RewindBenchmark`, `AudioBenchmarkMemoryProbe` helpers, budget docs.
+- Verification: opt-in benchmark command plus non-negative/counter tests.
+- Proposed command:
+  `mvn -Dtest=com.openggf.audio.AudioRewindBenchmark -Dopenggf.audio.rewind.benchmark.run=true test`
+
+Task F: optional cycle-aware scheduler.
+- Tests first: frame-level and cycle-level schedules produce different ordered
+  chip writes in a synthetic case; disabled mode preserves current behavior.
+- Files: audio runtime scheduler internals only.
+- Verification: synthetic timing tests; enable in parity tests only after a
+  demonstrated need.
+
+Integration Report
+------------------
+
+Implementation pass 1 has started. It establishes the deterministic runtime
+boundary and pure runtime data structures needed by later backend and scrub
+presentation wiring.
+
+Changed files:
+- `AUDIO_REWIND_DEFERRED_DESIGN_ORCHESTRATION.tmp.txt`
+- `src/main/java/com/openggf/audio/AudioManager.java`
+- `src/main/java/com/openggf/audio/AudioBackend.java`
+- `src/main/java/com/openggf/audio/LWJGLAudioBackend.java`
+- `src/main/java/com/openggf/GameLoop.java`
+- `src/main/java/com/openggf/game/rewind/LiveRewindManager.java`
+- `src/main/java/com/openggf/audio/runtime/AudioFrameClock.java`
+- `src/main/java/com/openggf/audio/runtime/AudioOutputFifo.java`
+- `src/main/java/com/openggf/audio/runtime/DeterministicAudioRuntime.java`
+- `src/main/java/com/openggf/audio/runtime/FrameAudioMode.java`
+- `src/main/java/com/openggf/audio/runtime/NoOpDeterministicAudioRuntime.java`
+- `src/main/java/com/openggf/audio/runtime/PcmHistoryRing.java`
+- `src/main/java/com/openggf/audio/runtime/StreamBackedDeterministicAudioRuntime.java`
+- `src/test/java/com/openggf/audio/TestDeterministicAudioRuntimeBoundary.java`
+- `src/test/java/com/openggf/audio/TestAudioManagerRewindSuppression.java`
+- `src/test/java/com/openggf/audio/TestLWJGLAudioBackendSnapshot.java`
+- `src/test/java/com/openggf/audio/runtime/TestAudioFrameClock.java`
+- `src/test/java/com/openggf/audio/runtime/TestAudioOutputFifo.java`
+- `src/test/java/com/openggf/audio/runtime/TestPcmHistoryRing.java`
+- `src/test/java/com/openggf/audio/runtime/TestStreamBackedDeterministicAudioRuntime.java`
+
+Verification:
+- Orchestration headings checked with `rg`.
+- Whitespace checked with `git diff --check -- AUDIO_REWIND_DEFERRED_DESIGN_ORCHESTRATION.tmp.txt`.
+- Red checks were observed for each new runtime component before production
+  classes existed.
+- `mvn clean "-Dtest=TestPcmHistoryRing" test` passed.
+- `mvn "-Dtest=TestDeterministicAudioRuntimeBoundary" test` passed.
+- `mvn "-Dtest=TestAudioManagerRewindSuppression" test` passed.
+- `mvn "-Dtest=TestAudioOutputFifo" test` passed.
+- `mvn "-Dtest=TestAudioFrameClock" test` passed.
+- `mvn "-Dtest=TestPcmHistoryRing" test` passed.
+- `mvn "-Dtest=TestStreamBackedDeterministicAudioRuntime" test` passed.
+- `mvn "-Dtest=TestLWJGLAudioBackendSnapshot" test` passed.
+- `mvn -Dmse=off -DskipTests test-compile` passed after Windows resource
+  locks from parallel Maven runs were cleared.
+- After the OpenAL queue re-prime patch, fresh sequential checks passed:
+  `mvn -Dmse=off -DskipTests test-compile`,
+  `mvn "-Dtest=TestLWJGLAudioBackendSnapshot" test`,
+  `mvn "-Dtest=TestStreamBackedDeterministicAudioRuntime" test`,
+  `mvn "-Dtest=TestDeterministicAudioRuntimeBoundary" test`,
+  `mvn "-Dtest=TestAudioManagerRewindSuppression" test`,
+  `mvn "-Dtest=TestAudioOutputFifo" test`,
+  `mvn "-Dtest=TestAudioFrameClock" test`, and
+  `mvn "-Dtest=TestPcmHistoryRing" test`.
+- Independent final blocker-only review reported no blockers for the
+  restore/updateStream queue re-prime path. It also ran
+  `mvn -q "-Dtest=TestLWJGLAudioBackendSnapshot,TestAudioLogicalSnapshot,TestDeterministicAudioRuntimeBoundary,com.openggf.audio.runtime.TestStreamBackedDeterministicAudioRuntime" test`
+  with 41 passed, 0 failed.
+- Review found and this pass fixed four runtime-routing blockers:
+  logical snapshot restore now rebinds/clears runtime streams, override music
+  restore rebinds the saved music driver, `stopPlayback()` clears runtime SFX,
+  and runtime-presentation buffer fills clear completed backend SFX references
+  even while legacy SFX reads are skipped.
+- Follow-up review found and this pass fixed two restore blockers:
+  logical snapshot restore now flushes deterministic presentation FIFO, and
+  restore no longer rebuilds override stack entries with null stream/driver
+  placeholders that `restoreMusic()` cannot actually resume.
+- Follow-up review found and this pass fixed one OpenAL restore blocker:
+  `updateStream()` now re-primes buffers when the source has zero queued
+  buffers after `restoreLogicalSnapshot()` unqueues native presentation state,
+  even if the Java-side `streamBuffers` array already exists.
+- Review found and this pass fixed three drain-stage blockers:
+  exact-sized runtime frame buffers now prevent variable-frame over-advance,
+  `AudioManager.resetState()` reattaches the no-op runtime to the current
+  backend, and deferred gameplay/title-card/frozen paths advance an
+  authoritative gameplay audio frame instead of only polling presentation.
+- A wider Maven pattern still exposes the pre-existing unrelated
+  `TestRewindPolicyRegistry#runtimeRendererAndServiceTypesAreTransientByDefaultWithoutAnnotations`
+  failure when it is included.
+- Independent review initially found frame-ordering blockers in `GameLoop`.
+  Follow-up fixes moved authoritative runtime advancement out of
+  `AudioManager.update()`, added explicit gameplay frame begin/advance calls,
+  and guarded each outer `GameLoop.stepInternal()` against duplicate audio
+  polling. Re-review reported no remaining blockers for the next stage.
+
+Completed stages:
+- Task A started: `AudioManager.update()` now advances an injectable
+  presentation only; `beginGameplayAudioFrame(...)` and
+  `advanceGameplayFrameAudio()` now own deterministic runtime advancement.
+- Task C started: `AudioManager.advancePausedFrameStepAudio()` now advances
+  the deterministic runtime in `SILENT_STEP` mode without polling the backend.
+- `GameLoop` now begins gameplay audio frames before level/bonus command
+  emission, advances the runtime afterward, covers transition early returns,
+  and avoids duplicate presentation polling on title-card fallthrough frames.
+- Task B foundation: `AudioOutputFifo` provides bounded stereo PCM queuing
+  with underrun and overrun counters.
+- Task B drain seam: `StreamBackedDeterministicAudioRuntime` can advance any
+  `AudioStream` source, including `SmpsDriver`, into the FIFO, and
+  `LWJGLAudioBackend` can opt into draining attached runtime PCM without
+  disturbing the legacy path for the default no-op runtime.
+- Task B routing seam: the runtime interface now owns music/SFX stream handoff
+  methods, and `LWJGLAudioBackend` hands newly-created SMPS music and
+  standalone SFX drivers to the attached runtime when it advertises
+  presentation PCM. Legacy `currentStream` references are retained for
+  snapshots/override stack logic, but `fillBuffer(...)` drains runtime PCM
+  instead of advancing those streams when runtime presentation is active.
+- Task D foundation: `PcmHistoryRing` provides bounded presentation-only PCM
+  history with reverse cursors.
+- Task D runtime/live slice: `StreamBackedDeterministicAudioRuntime` can now
+  mirror final mixed PCM from `NORMAL` frames into an optional
+  `PcmHistoryRing`, drain reverse presentation from a reverse cursor without
+  advancing SMPS/chip state, and exclude `SILENT_STEP` output from history.
+  `AudioManager` exposes begin/end reverse presentation and ends reverse mode
+  before post-rewind cleanup. `LiveRewindManager` starts reverse presentation
+  on the first held rewind frame and polls audio presentation while gameplay is
+  paused by held rewind.
+- Runtime timing foundation: `AudioFrameClock` provides exact sample counts
+  per gameplay frame with snapshot/restore.
+- Task A/B command-consumption seam: recorded `AudioTimelineEntry` values are
+  now submitted to the deterministic runtime. Runtimes can opt into
+  `consumesSubmittedCommands()`, receive an `AudioCommand` handler, and consume
+  frame commands in stable order immediately before rendering that frame. When
+  a runtime opts in, `AudioManager` records commands but delays live backend
+  playback until runtime frame advance; the default no-op runtime preserves the
+  legacy immediate backend path.
+
+Latest command-consumption verification:
+- Red check: `mvn "-Dtest=TestDeterministicAudioRuntimeBoundary,com.openggf.audio.runtime.TestStreamBackedDeterministicAudioRuntime" test`
+  failed before the runtime submission/handler contract existed.
+- Green check: the same command passed with 43 passed, 0 failed.
+- `mvn "-Dtest=TestAudioCommandTimeline" test` passed with 50 passed, 0
+  failed.
+- `mvn "-Dtest=TestAudioManagerRewindSuppression,TestAudioKeyframeReplay,TestRewindControllerAudioSuppression" test`
+  passed with 58 passed, 0 failed.
+- Independent blocker-only review reported no blockers for the command
+  submission/consumption seam. Reviewer verification:
+  `mvn -q "-Dtest=com.openggf.audio.*Test*,com.openggf.audio.runtime.*Test*" test`
+  passed with 85 tests.
+- Residual risks from review: command consumption currently assumes sequential
+  runtime frame advancement, same-frame branch discard remains frame-granular
+  rather than order-granular, and the consuming-runtime plus LWJGL live-device
+  stream-start path still needs validation outside pure/unit tests.
+
+Latest PCM-history verification:
+- Red check: `mvn "-Dtest=TestStreamBackedDeterministicAudioRuntime,TestAudioManagerRewindSuppression" test`
+  failed before reverse-history runtime and manager APIs existed.
+- `mvn -Dmse=off -DskipTests test-compile` passed after refreshing stale test
+  classes.
+- `mvn "-Dtest=TestStreamBackedDeterministicAudioRuntime,TestAudioManagerRewindSuppression" test`
+  passed with 88 passed, 0 failed.
+- `mvn "-Dtest=TestPcmHistoryRing,TestDeterministicAudioRuntimeBoundary,TestAudioCommandTimeline" test`
+  passed with 88 passed, 0 failed.
+- Independent review found two live reverse-presentation blockers:
+  suppressed internal step-back restores cancelled reverse mode before
+  presentation polling, and release cleanup could expose stale forward FIFO PCM
+  after leaving reverse mode. The fix keeps reverse presentation active for
+  `SUPPRESSED_INTERNAL_RESTORE`, while cleanup policies end reverse
+  presentation and flush deterministic presentation FIFO.
+- Fix verification: `mvn -Dmse=off -DskipTests test-compile` passed, then
+  `mvn "-Dtest=TestAudioManagerRewindSuppression,TestStreamBackedDeterministicAudioRuntime" test`
+  passed with 88 passed, 0 failed, and
+  `mvn "-Dtest=TestPcmHistoryRing,TestDeterministicAudioRuntimeBoundary,TestAudioCommandTimeline,TestAudioManagerRewindSuppression,TestStreamBackedDeterministicAudioRuntime" test`
+  passed with 88 passed, 0 failed.
+- Re-review reported no blockers. Residual risk: `STOP_ALL_PRESENTATION` can
+  flush deterministic presentation FIFO twice through `AudioManager` and then
+  `LWJGLAudioBackend.stopPlayback()`, but the operation is idempotent.
+
+Latest release-crossfade verification:
+- Red check: `mvn "-Dtest=TestStreamBackedDeterministicAudioRuntime" test`
+  failed before the reverse-release crossfade constructor/behavior existed.
+- `StreamBackedDeterministicAudioRuntime` now has an optional
+  reverse-release crossfade window. Existing constructors keep a zero-frame
+  crossfade to preserve default behavior; the new constructor enables a
+  presentation-only ramp from the last reverse PCM frame into forward FIFO PCM.
+- `mvn "-Dtest=TestStreamBackedDeterministicAudioRuntime" test` passed with
+  89 passed, 0 failed.
+- `mvn "-Dtest=TestStreamBackedDeterministicAudioRuntime,TestPcmHistoryRing,TestAudioManagerRewindSuppression" test`
+  passed with 89 passed, 0 failed.
+- `mvn -Dmse=off -DskipTests test-compile` passed.
+- Independent review found three release-crossfade lifecycle blockers:
+  underrun drains consumed the release window into silence, repeated reverse
+  begin/end cycles could reuse a stale reverse sample, and clearing PCM history
+  could arm a release crossfade from invalidated history. The fix applies
+  crossfade only to actual FIFO frames read, cancels stale release state on
+  reverse begin, arms release only when the current reverse session emitted
+  PCM, and makes history clear cancel reverse/release state.
+- Fix verification: `mvn "-Dtest=TestStreamBackedDeterministicAudioRuntime" test`
+  passed with 92 passed, 0 failed, and
+  `mvn "-Dtest=TestStreamBackedDeterministicAudioRuntime,TestPcmHistoryRing,TestAudioManagerRewindSuppression,TestDeterministicAudioRuntimeBoundary" test`
+  passed with 92 passed, 0 failed.
+- Crossfade re-review reported no blockers for the three prior lifecycle
+  scenarios. Reviewer local verification was blocked by an unrelated
+  `TestObjectManagerRewindDynamicClassification` compile issue outside the
+  scoped audio/runtime files.
+
+Latest deferred-stage verification:
+- Tape-coast is now represented by `RewindSpeedController`, installed by
+  `LiveRewindManager` from `LIVE_REWIND_TAPE_COAST_*` configuration keys.
+  Defaults keep the layer disabled, preserving one rewind step per held visual
+  frame and immediate cleanup on release.
+- Red/green checks:
+  `mvn "-Dtest=TestRewindSpeedController" test` failed before the controller
+  existed and passed after implementation.
+- `mvn "-Dtest=TestRewindSpeedController,TestLiveRewindManagerAudioCleanup" test`
+  passed with 109 passed, 0 failed after manager integration.
+- `BenchmarkResults` now has optional JSON `counters` while preserving the
+  existing four-argument constructor used by older benchmark phases.
+- `RewindBenchmark` now emits `phase7.audio.capture-logical`,
+  `phase7.audio.restore-logical`, and `phase7.audio.replay-logical`, with
+  counters for target frame, timeline entries, replayed commands, allocation
+  support/bytes, heap delta, and GC deltas.
+- Audio benchmark budgets are opt-in behind
+  `openggf.rewind.benchmark.audioBudgets=true`, with override properties for
+  capture, restore, replay, and allocation ceilings.
+- Benchmark JSON/budget red check:
+  `mvn "-Dtest=TestRewindBenchmarkAudioExtensions" test` failed before the
+  counters schema/test hooks/budget gate existed and passed after
+  implementation.
+- Focused verification:
+  `mvn "-Dtest=TestRewindSpeedController,TestLiveRewindManagerAudioCleanup,TestRewindBenchmarkAudioExtensions" test`
+  passed with 113 passed, 0 failed.
+- Compile verification:
+  `mvn -Dmse=off -DskipTests test-compile` passed.
+- Independent final review reported no blockers for the latest tape-coast and
+  benchmark additions, and independently verified
+  `mvn "-Dtest=TestRewindSpeedController,TestLiveRewindManagerAudioCleanup,TestRewindBenchmarkAudioExtensions" test`
+  with 113 passed, 0 failed.
+- Follow-up cleanup after review added a red/green guard that zero tape-coast
+  deceleration stops coast immediately, and made benchmark audio-budget
+  property tests preserve incoming system properties.
+- Final focused verification:
+  `mvn "-Dtest=TestRewindSpeedController,TestLiveRewindManagerAudioCleanup,TestRewindBenchmarkAudioExtensions,TestAudioManagerRewindSuppression,TestStreamBackedDeterministicAudioRuntime,TestPcmHistoryRing,TestDeterministicAudioRuntimeBoundary" test`
+  passed with 114 passed, 0 failed.
+- Final compile verification:
+  `mvn -Dmse=off -DskipTests test-compile` passed.
+- Opt-in `RewindBenchmark` was not run locally because the required Sonic 2 ROM
+  file was not present in the repo root, although the trace directory exists.
+
+Live reverse-audio bugfix:
+- User report: live rewind audio sounded like a short sample only at keyframe
+  boundaries instead of continuous audio between keyframes.
+- Root cause: the stream-backed deterministic runtime and PCM history ring were
+  implemented and tested, but production `AudioManager.setBackend(...)` did not
+  install that runtime for the LWJGL presentation backend. Live rewind therefore
+  fell back to repeated restore/update snippets instead of draining continuous
+  reverse PCM history.
+- Fix: `AudioBackend` now exposes whether it supports deterministic runtime
+  presentation and its output sample rate. `LWJGLAudioBackend` opts in.
+  `AudioManager` automatically installs a `StreamBackedDeterministicAudioRuntime`
+  with bounded FIFO, 10-second PCM history, and release crossfade for
+  presentation-capable backends, while null/test backends keep the no-op
+  runtime. Package-private explicit runtime injection remains preserved for
+  focused tests.
+- Red check: `mvn "-Dtest=TestAudioManagerRuntimeInstallation" test` failed
+  before the backend capability/runtime installation hooks existed.
+- Green checks:
+  `mvn "-Dtest=TestAudioManagerRuntimeInstallation,TestDeterministicAudioRuntimeBoundary" test`
+  passed with 124 passed, 0 failed.
+- Focused verification:
+  `mvn "-Dtest=TestAudioManagerRuntimeInstallation,TestAudioManagerRewindSuppression,TestStreamBackedDeterministicAudioRuntime,TestPcmHistoryRing,TestDeterministicAudioRuntimeBoundary,TestLiveRewindManagerAudioCleanup,TestRewindSpeedController" test`
+  passed with 124 passed, 0 failed.
+- Compile verification:
+  `mvn -Dmse=off -DskipTests test-compile` passed.
+
+Music playback regression follow-up:
+- User report: after installing the production stream-backed runtime, music no
+  longer played properly.
+- Root cause: presentation-capable backends now use a command-consuming runtime,
+  but non-level/non-frame-owned paths that call only `AudioManager.update()`
+  were no longer advancing that runtime. Music commands could be submitted and
+  the backend could poll presentation, but no authoritative audio frame was
+  produced unless the `GameLoop` explicit gameplay frame path had already
+  advanced it.
+- Fix: `AudioManager` now tracks whether the current audio frame was externally
+  begun/advanced. `update()` advances a consuming runtime once in `NORMAL`
+  mode only when no owner already advanced it, then polls the backend. This
+  preserves the explicit gameplay-frame path without starving title/menu or
+  other standalone audio update paths.
+- Red check:
+  `mvn "-Dtest=TestDeterministicAudioRuntimeBoundary" test` failed before
+  `AudioManager.update()` advanced ownerless consuming-runtime frames.
+- Green checks:
+  `mvn "-Dtest=TestDeterministicAudioRuntimeBoundary" test` passed with 125
+  passed, 0 failed.
+- Focused verification:
+  `mvn "-Dtest=TestAudioManagerRuntimeInstallation,TestAudioManagerRewindSuppression,TestStreamBackedDeterministicAudioRuntime,TestPcmHistoryRing,TestDeterministicAudioRuntimeBoundary,TestLiveRewindManagerAudioCleanup,TestRewindSpeedController" test`
+  passed with 125 passed, 0 failed.
+- Compile verification:
+  `mvn -Dmse=off -DskipTests test-compile` passed.
+
+Reverse presentation correctness follow-up:
+- User report: rewind audio still sounded wrong and did not sound like it was
+  actually playing backward.
+- Root cause: after the ownerless `AudioManager.update()` fix, live rewind
+  could still call `update()` while reverse presentation was active. Because
+  `RewindController.stepBackward()` begins a restored audio frame before live
+  rewind polls presentation, `update()` advanced a normal forward audio frame
+  and appended that forward PCM into the same history the reverse cursor was
+  supposed to drain. That polluted reverse presentation with newly rendered
+  forward audio.
+- Fix: `AudioManager` now tracks active reverse presentation. While active,
+  `update()` polls the backend only and does not advance/render a normal audio
+  frame. Cleanup policies end reverse mode before normal forward audio resumes.
+- Red check:
+  `mvn "-Dtest=TestAudioManagerRewindSuppression" test` failed before the
+  reverse-active guard because `update()` advanced the runtime during reverse
+  presentation.
+- Green checks:
+  `mvn "-Dtest=TestAudioManagerRewindSuppression" test` passed with 126
+  passed, 0 failed.
+- Focused verification:
+  `mvn "-Dtest=TestAudioManagerRuntimeInstallation,TestAudioManagerRewindSuppression,TestStreamBackedDeterministicAudioRuntime,TestPcmHistoryRing,TestDeterministicAudioRuntimeBoundary,TestLiveRewindManagerAudioCleanup,TestRewindSpeedController" test`
+  passed with 126 passed, 0 failed.
+- Compile verification:
+  `mvn -Dmse=off -DskipTests test-compile` passed.
+
+Reverse queue preservation follow-up:
+- User report: rewind sound still sounded wrong.
+- Root cause: each held rewind step restores an audio logical snapshot.
+  `LWJGLAudioBackend.restoreLogicalSnapshot(...)` stopped/unqueued the OpenAL
+  source and flushed the runtime presentation FIFO on every restore. During
+  held rewind that discarded queued reverse PCM every visual frame and restarted
+  tiny chunks, so the reverse cursor could not present a continuous backward
+  stream.
+- Fix: `AudioBackend` now exposes a restore overload with
+  `preservePresentationQueue`. `AudioManager.restoreLogicalSnapshot(...)`
+  passes this flag while reverse presentation is active. `LWJGLAudioBackend`
+  still restores logical SMPS/stream state and rebinds runtime streams, but
+  skips runtime FIFO flush and native OpenAL source teardown when presentation
+  preservation is requested.
+- Red check:
+  `mvn "-Dtest=TestLWJGLAudioBackendSnapshot" test` failed before the
+  preserve-presentation restore overload existed.
+- Green checks:
+  `mvn "-Dtest=TestLWJGLAudioBackendSnapshot,TestAudioManagerRewindSuppression" test`
+  passed with 151 passed, 0 failed.
+- Focused verification:
+  `mvn "-Dtest=TestAudioManagerRuntimeInstallation,TestAudioManagerRewindSuppression,TestStreamBackedDeterministicAudioRuntime,TestPcmHistoryRing,TestDeterministicAudioRuntimeBoundary,TestLWJGLAudioBackendSnapshot,TestLiveRewindManagerAudioCleanup,TestRewindSpeedController" test`
+  passed with 151 passed, 0 failed.
+- Compile verification:
+  `mvn -Dmse=off -DskipTests test-compile` passed.
+
+Forward playback quality regression follow-up:
+- User report: fades were not working properly and PSG sounded weird after the
+  production runtime install.
+- Root cause: production LWJGL playback had been moved onto the
+  stream-backed runtime FIFO. That runtime produces frame-sized slices, while
+  OpenAL queues fixed-size buffers and expects enough forward PCM to keep its
+  queue fed. The mismatch could put silence/partial buffers into normal
+  forward playback and change timing-sensitive fade/PSG presentation.
+- Fix: production LWJGL forward playback now uses the legacy stream path again
+  for normal music/SFX, preserving existing fade and PSG behavior. LWJGL owns a
+  bounded PCM history ring populated from the final mixed legacy output.
+  During reverse presentation it drains that history through a reverse cursor.
+  The stream-backed deterministic runtime remains tested and available for
+  synthetic/runtime work, but LWJGL no longer advertises deterministic runtime
+  presentation for ordinary forward output.
+- `AudioManager` now forwards reverse presentation lifecycle to the backend so
+  LWJGL can switch its fill path to reverse-history drain without changing
+  normal playback.
+- Focused verification:
+  `mvn "-Dtest=TestAudioManagerRuntimeInstallation,TestAudioManagerRewindSuppression,TestLWJGLAudioBackendSnapshot,TestDeterministicAudioRuntimeBoundary" test`
+  passed with 152 passed, 0 failed.
+- Wider focused verification:
+  `mvn "-Dtest=TestAudioManagerRuntimeInstallation,TestAudioManagerRewindSuppression,TestStreamBackedDeterministicAudioRuntime,TestPcmHistoryRing,TestDeterministicAudioRuntimeBoundary,TestLWJGLAudioBackendSnapshot,TestLiveRewindManagerAudioCleanup,TestRewindSpeedController" test`
+  passed with 152 passed, 0 failed.
+- Compile verification:
+  `mvn -Dmse=off -DskipTests test-compile` passed.
+
+Reverse restore performance and cursor-position follow-up:
+- User report: the update thread showed a sharp performance spike during play,
+  apparently from audio rewind repeatedly calling `loadSmps`; successive
+  rewinds also restarted audio rewind from the same position instead of where
+  the previous rewind ended.
+- Root cause: `AudioManager.restoreLogicalSnapshot(...)` constructs a resolver
+  for every snapshot restore, and `LWJGLAudioBackend.restoreLogicalSnapshot(...)`
+  restores SMPS drivers by resolving sequencer descriptors. During held rewind,
+  repeated restores of nearby keyframes reloaded the same base/donor SMPS data.
+  Separately, `PcmHistoryRing` reverse cursors consumed history, but ending
+  reverse presentation discarded the cursor without committing its consumed
+  position, so the next reverse presentation cursor started at the old forward
+  endpoint.
+- Fix: `AudioManager` now owns a descriptor-keyed SMPS restore cache behind the
+  existing dependency resolver, cleared when the audio profile, ROM, or donor
+  loaders change. `PcmHistoryRing` now supports committing a reverse cursor, and
+  both `LWJGLAudioBackend` and `StreamBackedDeterministicAudioRuntime` commit
+  the cursor on reverse presentation end.
+- Red checks:
+  `mvn "-Dtest=TestPcmHistoryRing#committingReverseCursorMakesNextReverseSessionResumeFromConsumedPosition" test`
+  failed before `PcmHistoryRing.commitReverseCursor(...)` existed.
+  The SMPS cache test was introduced against the repeated restore path and
+  verifies two resolver calls produce only one loader call for the same source.
+- Green checks:
+  `mvn "-Dtest=TestPcmHistoryRing#committingReverseCursorMakesNextReverseSessionResumeFromConsumedPosition" test`
+  passed with 149 passed, 0 failed.
+  `mvn "-Dtest=TestAudioLogicalSnapshot#repeatedLogicalSnapshotRestoresReuseResolvedBaseSmpsData" test`
+  passed with 139 passed, 0 failed.
+- Focused verification:
+  `mvn "-Dtest=TestAudioLogicalSnapshot,TestAudioManagerRewindSuppression,TestLWJGLAudioBackendSnapshot,TestPcmHistoryRing,TestStreamBackedDeterministicAudioRuntime,TestDeterministicAudioRuntimeBoundary,TestLiveRewindManagerAudioCleanup" test`
+  passed with 154 passed, 0 failed.
+
+Remaining implementation:
+- Keep the optional cycle-aware scheduler documented-only until parity evidence
+  requires it.
+
+End-to-End Review
+-----------------
+
+Initial self-review:
+- Required orchestration headings are present.
+- Requirements trace directly to deferred blueprint sections.
+- Architecture keeps OpenAL presentation-only.
+- Implementation tasks are split by ownership and have test-first gates.
+
+Open review items:
+- Decide whether cycle-aware scheduler remains documented-only or gets a
+  feature flag and skeleton interface in the first implementation branch.
+- Decide whether fallback WAV music/SFX remain outside deterministic guarantees
+  or get PCM cursor snapshots in the deterministic runtime.

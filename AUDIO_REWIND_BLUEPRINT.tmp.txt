@@ -45,9 +45,74 @@ seam:
   src/main/java/com/openggf/audio/rewind/AudioLogicalSnapshot.java
   src/main/java/com/openggf/audio/rewind/AudioSourceDescriptor.java
 
-This first Tier 2 slice captures AudioManager intent descriptors only. It does
-not yet snapshot `LWJGLAudioBackend`, `SmpsDriver`, `SmpsSequencer`, chip, DAC,
-or resampler state.
+That first Tier 2 slice captured AudioManager intent descriptors only. Later
+loops now snapshot and restore `LWJGLAudioBackend` logical state,
+`SmpsDriver`, `SmpsSequencer`, PSG, YM2612, DAC, and resampler state.
+
+Update: the first Tier 2 restore slice is now implemented. `AudioManager` can
+restore `AudioLogicalSnapshot`, `AudioBackend` has a logical restore contract,
+`LWJGLAudioBackend` restores descriptor/flag-level backend state without
+restoring OpenAL objects, and `AudioKeyframeStore` restores the nearest logical
+keyframe before replaying timeline commands. `RewindController` now owns an
+audio keyframe store when constructed with `AudioManager`, captures audio
+keyframes at gameplay keyframe boundaries, prunes future audio keyframes on
+rewind branches, and rebuilds audio logical state during `seekTo` and
+`stepBackward` without emitting presentation backend calls. Focused
+verification is green.
+
+This remains Tier 2 logical rewind support only until a driver snapshot includes
+the lower-level synth snapshot. SMPS driver/sequencer phase restore is now
+implemented; chip/sample parity is implemented for representative PSG,
+YM2612, DAC, resampler, mixed synth, and SMPS driver restore paths.
+
+Update: the first Tier 2b SMPS descriptor slice is now implemented. Driver
+snapshots now include compact `SmpsSourceDescriptor` metadata for each
+sequencer and its fallback voice source, and driver restore rebinds fallback
+voice data between restored sequencers when the fallback source is present in
+the same driver snapshot. This preserves the music-voice fallback used by SFX
+sequencers without treating chip or OpenAL state as authoritative.
+
+Update: the resolver-backed Tier 2b SMPS restore boundary is now implemented.
+`SmpsDriver.restoreSnapshot(snapshot, resolver)` pre-resolves and validates all
+sequencer dependencies before mutating driver state, then rebuilds sequencers
+from resolver-provided SMPS data, DAC data, audio manager, and config. The
+legacy `restoreSnapshot(snapshot)` path remains as a live-reference
+compatibility fallback. Missing or mismatched sources fail atomically and leave
+the target driver unchanged.
+
+Update: `SmpsSourceDescriptor` now carries route identity (`BASE_MUSIC`,
+`BASE_SFX_ID`, `BASE_SFX_NAME`, `DONOR_MUSIC`, `DONOR_SFX_ID`, or `UNKNOWN`)
+alongside validation metadata. `SmpsSequencer` owns a source descriptor,
+`SmpsDriver` captures route-aware sequencer and fallback-voice descriptors, and
+`LWJGLAudioBackend` assigns descriptors when creating music and SFX sequencers.
+This makes later loader-backed restore able to choose the correct lookup route.
+
+Update: backend logical snapshots now carry optional SMPS music-driver and
+standalone-SFX-driver snapshots. `AudioManager` passes a route-aware
+`SmpsDriverSnapshot.DependencyResolver` into backend restore, and
+`LWJGLAudioBackend` can rebuild captured SMPS drivers from those snapshots
+using the resolver while keeping OpenAL state presentation-only.
+
+Update: restored LWJGL music-driver snapshots now rebind the fade-complete
+callback when `sfxBlocked` is true and the restored primary music sequencer is
+in active fade-in state. This keeps SFX blocking tied to restored logical SMPS
+state instead of to a lost runtime callback reference.
+
+Update: the first Tier 3 chip/sample parity slice is now implemented. PSG
+snapshots capture `PsgChipGPGX` plus its `BlipDeltaBuffer`; YM2612 snapshots
+capture FM operator/channel state, timers/LFO/EG state, DAC playback position,
+latched DAC state, high-pass state, and `BlipResampler` history. A
+`VirtualSynthesizer` snapshot combines YM and PSG state, and
+`SmpsDriverSnapshot` now carries that synth snapshot so driver restore can
+rebuild logical sequencers and then restore chip-authoritative state instead
+of silencing it. Focused verification includes bit-exact future-sample tests
+for PSG, YM/DAC/resampler, mixed synth output, and SMPS driver restore.
+
+Update: backend-level Tier 3 integration coverage is now implemented for
+`LWJGLAudioBackend.restoreLogicalSnapshot(...)`. The test restores a captured
+backend snapshot carrying an SMPS driver snapshot through the normal backend
+restore path and verifies the restored driver produces bit-exact future mixed
+samples. OpenAL buffers and sources remain presentation-only and excluded.
 
 The next later-tier review artifact is:
 
@@ -70,15 +135,34 @@ Completed loop:
 8. Self-reviewed Tier 1 and patched the resolved ring-route recording gap.
 9. Wrote Tier 2 logical SMPS review and implementation-plan artifacts.
 10. Implemented and focused-verified the Tier 2a logical snapshot seam.
+11. Wired audio logical keyframes into live `RewindController` seek/backstep
+    replay with presentation-suppressed logical command replay.
+12. Added descriptor metadata to SMPS driver snapshots and restored fallback
+    voice links between sequencers.
+13. Added resolver-backed SMPS driver restore with source validation and
+    atomic failure behavior.
+14. Added route identity to SMPS source descriptors and wired route-aware
+    descriptor capture through driver and LWJGL sequencer creation.
+15. Added SMPS driver snapshots to backend logical snapshots and wired
+    resolver-backed LWJGL driver restore.
+16. Rebound fade-complete callbacks after restored LWJGL fade-in snapshots.
+17. Added PSG chip snapshots with bit-exact future-sample restore coverage.
+18. Added YM2612, DAC, and resampler snapshots with bit-exact future-sample
+    restore coverage.
+19. Added mixed `VirtualSynthesizer` snapshots and SMPS driver synth snapshot
+    restore after logical sequencer rebuild.
+20. Added backend-level restore coverage for `LWJGLAudioBackend` restoring a
+    captured SMPS driver snapshot with bit-exact future samples.
 
-Next loop:
+Current audit conclusion:
 
-1. Continue Tier 2b by extracting or isolating backend logical playback state
-   from `LWJGLAudioBackend` so OpenAL remains presentation-only.
-2. Add red/green tests around current music id, SFX block state, pending
-   restore, speed state, and override stack descriptors.
-3. Keep Tier 3 chip-state and sample-parity work out of Tier 2 unless the
-   review explicitly promotes a small diagnostic-only chip hook.
+1. No remaining blocker was found for deterministic restore-forward audio
+   state in the implemented Tier 0 through Tier 3 scope.
+2. OpenAL buffers/sources remain presentation-only and are not stored in
+   authoritative snapshots.
+3. Cycle-level command/chip-write timing and audible reverse PCM presentation
+   remain explicit later-tier deferrals, not blockers for the current
+   restore-forward implementation.
 
 Definition Of Audio Rewind Support
 ----------------------------------
@@ -216,7 +300,8 @@ Tier 0: Suppression, Bypass Guardrails, And Frame-Step Seam
   release.
 - Add an explicit paused frame-step audio hook that delegates to legacy polling
   until the deterministic audio core exists.
-- No command replay, SMPS snapshot, chip snapshot, or sample parity guarantee.
+- Historical Tier 0 did not include command replay, SMPS snapshots, chip
+  snapshots, or sample parity; later tiers now add those capabilities.
 
 Use this as the safety foundation. It prevents duplicate SFX and avoids
 polluting OpenAL during segment-cache expansion. It does not restore exact
@@ -232,8 +317,8 @@ Tier 1: Command Timeline
   replay begins from a chip keyframe.
 
 This tier makes audio intent observable and branchable at the command level
-without large memory cost. It is implemented, focused-verified, and committed
-on the current branch. It does not yet rebuild backend state from a keyframe.
+without large memory cost. It is implemented and focused-verified; later
+tiers now rebuild backend state from audio keyframes.
 
 Tier 2: Logical SMPS Snapshot
 
@@ -248,8 +333,8 @@ Tier 2: Logical SMPS Snapshot
   also snapshotted.
 
 This tier gives strong music/SFX continuity and is the first tier where
-rewind+replay should match uninterrupted SMPS sequencing. It still does not
-claim YM2612/PSG/DAC phase or bit-exact PCM parity.
+rewind+replay should match uninterrupted SMPS sequencing. Later Tier 3 work
+now adds representative YM2612/PSG/DAC/resampler bit-exact parity tests.
 
 Tier 3: Full Chip-State Snapshot
 

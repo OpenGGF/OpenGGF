@@ -35,6 +35,7 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.GroundMode;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -2592,7 +2593,7 @@ public class ObjectManager {
                         slots.add(new com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry(
                                 aoi.getSlotIndex(),
                                 spawn,
-                                aoi.captureRewindState(rewindContext)
+                                captureObjectRewindState(aoi, rewindContext)
                         ));
                     }
                 }
@@ -2623,7 +2624,7 @@ public class ObjectManager {
                                         inst.getClass().getName(),
                                         inst.getSpawn(),
                                         aoi.getSlotIndex(),
-                                        aoi.captureRewindState(rewindContext)));
+                                        captureObjectRewindState(aoi, rewindContext)));
                     }
                 }
 
@@ -2688,7 +2689,7 @@ public class ObjectManager {
                                 aoi.setSlotIndex(targetSlot);
                             }
                             // 4. Restore per-instance state
-                            aoi.restoreRewindState(entry.state(), rewindContext);
+                            restoreObjectRewindState(aoi, entry.state(), rewindContext);
                             registerActiveObject(spawn, inst);
                             // Wire into execOrder if within the managed slot window
                             int execIdx = execIndexForSlot(aoi.getSlotIndex());
@@ -2716,7 +2717,7 @@ public class ObjectManager {
                     ObjectInstance inst = recreateDynamicObject(entry);
                     if (inst instanceof AbstractObjectInstance aoi) {
                         aoi.setServices(objectServices);
-                        aoi.restoreRewindState(entry.state(), rewindContext);
+                        restoreObjectRewindState(aoi, entry.state(), rewindContext);
                         dynamicObjects.add(aoi);
                         int execIdx = execIndexForSlot(aoi.getSlotIndex());
                         if (execIdx >= 0 && execIdx < execOrder.length) {
@@ -2746,6 +2747,43 @@ public class ObjectManager {
                 activeObjectsCacheDirty = true;
             }
         };
+    }
+
+    private static PerObjectRewindSnapshot captureObjectRewindState(AbstractObjectInstance object,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        if (hasLegacyRewindOverride(object.getClass(), "captureRewindState")) {
+            return object.captureRewindState();
+        }
+        return object.captureRewindState(context);
+    }
+
+    private static void restoreObjectRewindState(AbstractObjectInstance object,
+            PerObjectRewindSnapshot snapshot,
+            com.openggf.game.rewind.schema.RewindCaptureContext context) {
+        if (hasLegacyRewindOverride(object.getClass(), "restoreRewindState",
+                PerObjectRewindSnapshot.class)) {
+            object.restoreRewindState(snapshot);
+            return;
+        }
+        object.restoreRewindState(snapshot, context);
+    }
+
+    private static boolean hasLegacyRewindOverride(Class<?> type, String name, Class<?>... parameterTypes) {
+        for (Class<?> current = type;
+                current != null && current != AbstractObjectInstance.class;
+                current = current.getSuperclass()) {
+            try {
+                var method = current.getDeclaredMethod(name, parameterTypes);
+                if (!Modifier.isAbstract(method.getModifiers())
+                        && !method.isSynthetic()
+                        && !method.isBridge()) {
+                    return true;
+                }
+            } catch (NoSuchMethodException e) {
+                // Keep walking toward AbstractObjectInstance.
+            }
+        }
+        return false;
     }
 
     private long[] captureOwnedUsedSlotBits() {

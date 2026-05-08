@@ -122,6 +122,19 @@ public class BlipResampler {
         reset();
     }
 
+    Snapshot captureSnapshot() {
+        return new Snapshot(ratio, historyL, historyR, head, inputIndex, outputPos);
+    }
+
+    void restoreSnapshot(Snapshot snapshot) {
+        ratio = snapshot.ratio();
+        System.arraycopy(snapshot.historyL(), 0, historyL, 0, historyL.length);
+        System.arraycopy(snapshot.historyR(), 0, historyR, 0, historyR.length);
+        head = snapshot.head();
+        inputIndex = snapshot.inputIndex();
+        outputPos = snapshot.outputPos();
+    }
+
     /**
      * Add one input sample to the history buffer.
      */
@@ -196,5 +209,24 @@ public class BlipResampler {
         }
         int pos = (head - (int) (inputIndex - idx)) & BUFFER_MASK;
         return history[pos];
+    }
+
+    public record Snapshot(
+            double ratio,
+            int[] historyL,
+            int[] historyR,
+            int head,
+            long inputIndex,
+            double outputPos) {
+        public Snapshot {
+            historyL = Arrays.copyOf(historyL, historyL.length);
+            historyR = Arrays.copyOf(historyR, historyR.length);
+        }
+
+        @Override
+        public int[] historyL() { return Arrays.copyOf(historyL, historyL.length); }
+
+        @Override
+        public int[] historyR() { return Arrays.copyOf(historyR, historyR.length); }
     }
 }

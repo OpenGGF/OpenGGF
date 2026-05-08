@@ -71,6 +71,12 @@ gameplay buffer. Releasing the key resumes normal gameplay from the restored fra
 The small live HUD is hidden during ordinary play and appears only while the key is
 held, showing `LIVE REWIND` plus `REWIND <frame>`.
 
+By default live rewind steps backward one frame per visual frame while the key is
+held, with no movement after release. The experimental tape-coast layer remains
+opt-in through `LIVE_REWIND_TAPE_COAST_ENABLED`; when enabled, the acceleration,
+deceleration, and maximum per-frame steps come from the matching
+`LIVE_REWIND_TAPE_COAST_*` configuration keys.
+
 Live rewind records input rows after normal level ticks and replays them through the
 same `LevelFrameStep` path when rebuilding a rewound segment. Seamless level
 transition frames reset the buffer, matching the trace-rewind rule that seeks do not
@@ -236,7 +242,23 @@ The benchmark writes `target/rewind-benchmark-results.json` and prints:
 - Cold seek cost.
 - Hot held-rewind cost within and across segments.
 - Retained resident-size estimate by subsystem.
+- Audio logical snapshot, restore, and replay phases, with JSON `counters` for
+  timeline entries, replayed commands, allocation support, heap delta, and GC deltas.
 - Long-tail determinism result, currently expected to stay clean for 1200 frames.
+
+Audio budget gates are disabled unless explicitly opted in:
+
+```bash
+mvn -Dmse=off "-Dtest=RewindBenchmark" \
+  "-Dopenggf.rewind.benchmark.run=true" \
+  "-Dopenggf.rewind.benchmark.audioBudgets=true" test
+```
+
+The audio gate properties can be overridden with
+`openggf.rewind.benchmark.audio.maxCaptureMeanNs`,
+`openggf.rewind.benchmark.audio.maxRestoreMeanNs`,
+`openggf.rewind.benchmark.audio.maxReplayMeanNs`, and
+`openggf.rewind.benchmark.audio.maxAllocatedBytes`.
 
 ## Technical Architecture
 

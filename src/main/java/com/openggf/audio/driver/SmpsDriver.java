@@ -1,8 +1,13 @@
 package com.openggf.audio.driver;
 
 import com.openggf.audio.AudioStream;
+import com.openggf.audio.AudioManager;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.synth.VirtualSynthesizer;
 
 import java.util.ArrayList;
@@ -144,6 +149,28 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         this.readMode = readMode;
     }
 
+    public SmpsSequencer firstMusicSequencer() {
+        synchronized (sequencersLock) {
+            for (SmpsSequencer sequencer : sequencers) {
+                if (!isSfx(sequencer)) {
+                    return sequencer;
+                }
+            }
+            return null;
+        }
+    }
+
+    public void bindMusicFadeCompleteCallback(Runnable callback) {
+        Objects.requireNonNull(callback, "callback");
+        synchronized (sequencersLock) {
+            for (SmpsSequencer sequencer : sequencers) {
+                if (!isSfx(sequencer)) {
+                    sequencer.setOnFadeComplete(callback);
+                }
+            }
+        }
+    }
+
     public int getHybridChunkCountForTesting() {
         return hybridChunkCountForTesting;
     }
@@ -151,12 +178,23 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     public SmpsDriverSnapshot captureSnapshot() {
         synchronized (sequencersLock) {
             IdentityHashMap<SmpsSequencer, Integer> sequencerIds = new IdentityHashMap<>();
+            IdentityHashMap<AbstractSmpsData, SmpsSourceDescriptor> sourceDescriptors = new IdentityHashMap<>();
+            for (SmpsSequencer sequencer : sequencers) {
+                sourceDescriptors.put(sequencer.getSmpsData(), sequencer.getSourceDescriptor());
+            }
             List<SmpsDriverSnapshot.SequencerEntry> entries = new ArrayList<>(sequencers.size());
             for (int i = 0; i < sequencers.size(); i++) {
                 SmpsSequencer sequencer = sequencers.get(i);
                 sequencerIds.put(sequencer, i);
+                SmpsSourceDescriptor fallbackVoiceSource = sequencer.getFallbackVoiceData() != null
+                        ? sourceDescriptors.getOrDefault(
+                                sequencer.getFallbackVoiceData(),
+                                SmpsSourceDescriptor.from(sequencer.getFallbackVoiceData()))
+                        : null;
                 entries.add(new SmpsDriverSnapshot.SequencerEntry(
                         isSfx(sequencer),
+                        sequencer.getSourceDescriptor(),
+                        fallbackVoiceSource,
                         sequencer.getSmpsData(),
                         sequencer.getDacData(),
                         sequencer.getAudioManager(),
@@ -172,7 +210,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     contSfxLoopCnt,
                     entries,
                     captureLockIds(fmLocks, sequencerIds),
-                    captureLockIds(psgLocks, sequencerIds));
+                    captureLockIds(psgLocks, sequencerIds),
+                    captureSynthSnapshot());
         }
     }
 
@@ -181,7 +220,21 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
      * cleared and must be refreshed by subsequent sequencer advancement.
      */
     public void restoreSnapshot(SmpsDriverSnapshot snapshot) {
+        restoreSnapshot(snapshot, SmpsDriverSnapshot.liveReferences());
+    }
+
+    /**
+     * Restores logical SMPS driver state using a caller-provided dependency resolver.
+     * This is the descriptor-backed boundary used by rewind restore paths that should
+     * not depend on object identity captured inside the snapshot.
+     */
+    public void restoreSnapshot(
+            SmpsDriverSnapshot snapshot,
+            SmpsDriverSnapshot.DependencyResolver resolver) {
         Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(resolver, "resolver");
+        List<SmpsDriverSnapshot.SequencerEntry> entries = snapshot.sequencers();
+        List<ResolvedSequencerDependencies> resolved = resolveSequencerDependencies(entries, resolver);
         synchronized (sequencersLock) {
             sequencers.clear();
             sfxSequencers.clear();
@@ -196,14 +249,16 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             continuousSfxFlag = snapshot.continuousSfxFlag();
             contSfxLoopCnt = snapshot.contSfxLoopCnt();
 
-            List<SmpsDriverSnapshot.SequencerEntry> entries = snapshot.sequencers();
-            for (SmpsDriverSnapshot.SequencerEntry entry : entries) {
+            for (int i = 0; i < entries.size(); i++) {
+                SmpsDriverSnapshot.SequencerEntry entry = entries.get(i);
+                ResolvedSequencerDependencies dependency = resolved.get(i);
                 SmpsSequencer sequencer = new SmpsSequencer(
-                        entry.smpsData(),
-                        entry.dacData(),
+                        dependency.smpsData(),
+                        dependency.dacData(),
                         this,
-                        entry.audioManager(),
-                        entry.config());
+                        dependency.audioManager(),
+                        dependency.config());
+                sequencer.setSourceDescriptor(entry.source());
                 sequencer.setRegion(region);
                 sequencer.restoreSnapshot(entry.snapshot());
                 sequencer.setIsSfx(entry.sfx());
@@ -213,10 +268,69 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 }
             }
 
+            for (int i = 0; i < entries.size(); i++) {
+                SmpsSourceDescriptor fallbackVoiceSource = entries.get(i).fallbackVoiceSource();
+                if (fallbackVoiceSource != null) {
+                    AbstractSmpsData fallbackData = findRestoredDataBySource(
+                            entries,
+                            resolved,
+                            fallbackVoiceSource);
+                    if (fallbackData != null) {
+                        sequencers.get(i).setFallbackVoiceData(fallbackData);
+                    }
+                }
+            }
+
             restoreLocks(snapshot.fmLockSequencerIds(), fmLocks);
             restoreLocks(snapshot.psgLockSequencerIds(), psgLocks);
         }
-        silenceAll();
+        if (snapshot.synthSnapshot() != null) {
+            restoreSynthSnapshot(snapshot.synthSnapshot());
+        } else {
+            silenceAll();
+        }
+    }
+
+    private static List<ResolvedSequencerDependencies> resolveSequencerDependencies(
+            List<SmpsDriverSnapshot.SequencerEntry> entries,
+            SmpsDriverSnapshot.DependencyResolver resolver) {
+        List<ResolvedSequencerDependencies> resolved = new ArrayList<>(entries.size());
+        for (SmpsDriverSnapshot.SequencerEntry entry : entries) {
+            AbstractSmpsData smpsData = Objects.requireNonNull(
+                    resolver.resolveSmpsData(entry), "resolved SMPS data");
+            SmpsSourceDescriptor resolvedSource = SmpsSourceDescriptor.from(smpsData);
+            if (!entry.source().matches(resolvedSource)) {
+                throw new IllegalStateException(
+                        "resolved SMPS source does not match snapshot source: expected "
+                                + entry.source() + ", got " + resolvedSource);
+            }
+            resolved.add(new ResolvedSequencerDependencies(
+                    smpsData,
+                    Objects.requireNonNull(resolver.resolveDacData(entry), "resolved DAC data"),
+                    Objects.requireNonNull(resolver.resolveAudioManager(entry), "resolved audio manager"),
+                    Objects.requireNonNull(resolver.resolveConfig(entry), "resolved config")));
+        }
+        return resolved;
+    }
+
+    private static AbstractSmpsData findRestoredDataBySource(
+            List<SmpsDriverSnapshot.SequencerEntry> entries,
+            List<ResolvedSequencerDependencies> restoredData,
+            SmpsSourceDescriptor source) {
+        for (int i = 0; i < entries.size(); i++) {
+            SmpsDriverSnapshot.SequencerEntry entry = entries.get(i);
+            if (entry.source().equals(source)) {
+                return restoredData.get(i).smpsData();
+            }
+        }
+        return null;
+    }
+
+    private record ResolvedSequencerDependencies(
+            AbstractSmpsData smpsData,
+            DacData dacData,
+            AudioManager audioManager,
+            SmpsSequencerConfig config) {
     }
 
     private static int[] captureLockIds(

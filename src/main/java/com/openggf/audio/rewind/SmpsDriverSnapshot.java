@@ -6,6 +6,7 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.synth.VirtualSynthesizer;
 
 import java.util.Arrays;
 import java.util.List;
@@ -19,7 +20,8 @@ public record SmpsDriverSnapshot(
         int contSfxLoopCnt,
         List<SequencerEntry> sequencers,
         int[] fmLockSequencerIds,
-        int[] psgLockSequencerIds) {
+        int[] psgLockSequencerIds,
+        VirtualSynthesizer.Snapshot synthSnapshot) {
 
     public SmpsDriverSnapshot {
         Objects.requireNonNull(region, "region");
@@ -27,6 +29,27 @@ public record SmpsDriverSnapshot(
         sequencers = List.copyOf(sequencers);
         fmLockSequencerIds = Arrays.copyOf(fmLockSequencerIds, fmLockSequencerIds.length);
         psgLockSequencerIds = Arrays.copyOf(psgLockSequencerIds, psgLockSequencerIds.length);
+    }
+
+    public SmpsDriverSnapshot(
+            SmpsSequencer.Region region,
+            SmpsDriver.ReadMode readMode,
+            int continuousSfxId,
+            boolean continuousSfxFlag,
+            int contSfxLoopCnt,
+            List<SequencerEntry> sequencers,
+            int[] fmLockSequencerIds,
+            int[] psgLockSequencerIds) {
+        this(
+                region,
+                readMode,
+                continuousSfxId,
+                continuousSfxFlag,
+                contSfxLoopCnt,
+                sequencers,
+                fmLockSequencerIds,
+                psgLockSequencerIds,
+                null);
     }
 
     @Override
@@ -39,8 +62,44 @@ public record SmpsDriverSnapshot(
         return Arrays.copyOf(psgLockSequencerIds, psgLockSequencerIds.length);
     }
 
+    public interface DependencyResolver {
+        AbstractSmpsData resolveSmpsData(SequencerEntry entry);
+
+        DacData resolveDacData(SequencerEntry entry);
+
+        AudioManager resolveAudioManager(SequencerEntry entry);
+
+        SmpsSequencerConfig resolveConfig(SequencerEntry entry);
+    }
+
+    public static DependencyResolver liveReferences() {
+        return new DependencyResolver() {
+            @Override
+            public AbstractSmpsData resolveSmpsData(SequencerEntry entry) {
+                return entry.smpsData();
+            }
+
+            @Override
+            public DacData resolveDacData(SequencerEntry entry) {
+                return entry.dacData();
+            }
+
+            @Override
+            public AudioManager resolveAudioManager(SequencerEntry entry) {
+                return entry.audioManager();
+            }
+
+            @Override
+            public SmpsSequencerConfig resolveConfig(SequencerEntry entry) {
+                return entry.config();
+            }
+        };
+    }
+
     public record SequencerEntry(
             boolean sfx,
+            SmpsSourceDescriptor source,
+            SmpsSourceDescriptor fallbackVoiceSource,
             AbstractSmpsData smpsData,
             DacData dacData,
             AudioManager audioManager,
@@ -48,6 +107,7 @@ public record SmpsDriverSnapshot(
             SmpsSequencerSnapshot snapshot) {
 
         public SequencerEntry {
+            Objects.requireNonNull(source, "source");
             Objects.requireNonNull(smpsData, "smpsData");
             Objects.requireNonNull(audioManager, "audioManager");
             Objects.requireNonNull(config, "config");

@@ -260,7 +260,6 @@ public final class GenericFieldCapturer {
                 || isDefaultObjectArrayFieldValueType(field.getType())
                 || isDefaultObjectCompactCollectionField(field)
                 || isDefaultObjectInPlaceHelperType(field.getType())
-                || RewindCodecs.codecFor(field).isPresent()
                 || RewindStateful.class.isAssignableFrom(field.getType()))
                 && !field.isSynthetic()
                 && !field.isAnnotationPresent(RewindTransient.class)
@@ -393,8 +392,7 @@ public final class GenericFieldCapturer {
                 || RewindStateful.class.isAssignableFrom(type)
                 || isDefaultObjectArrayFieldValueType(type)
                 || isDefaultObjectRecordFieldValueType(type)
-                || isDefaultObjectCompactCollectionField(field)
-                || RewindCodecs.codecFor(field).isPresent();
+                || isDefaultObjectCompactCollectionField(field);
     }
 
     private static boolean isDefaultObjectCompactCollectionField(Field field) {
