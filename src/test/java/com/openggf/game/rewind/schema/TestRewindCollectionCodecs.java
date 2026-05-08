@@ -81,6 +81,11 @@ class TestRewindCollectionCodecs {
     }
 
     @Test
+    void stateHoldersWithPlayerReferencesAreNotImplicitlySupported() {
+        assertFalse(RewindCodecs.supportsInPlaceStateHolder(ReferenceState.class));
+    }
+
+    @Test
     void rejectsCollectionWithUnsupportedElementType() {
         RewindClassSchema schema = RewindSchemaRegistry.schemaFor(UnsupportedCollectionFixture.class);
 
@@ -128,6 +133,11 @@ class TestRewindCollectionCodecs {
 
     private static final class ReferenceCollectionFixture {
         Set<AbstractPlayableSprite> riders = new LinkedHashSet<>();
+    }
+
+    private static final class ReferenceState {
+        AbstractPlayableSprite rider;
+        int timer;
     }
 
     @SafeVarargs

@@ -351,6 +351,30 @@ class TestAbstractObjectInstanceRewindCapture {
         }
     }
 
+    private static final class TestObjectWithStateHolder extends AbstractObjectInstance {
+        private final TraversalState traversal = new TraversalState();
+
+        TestObjectWithStateHolder(ObjectSpawn spawn) {
+            super(spawn, "TestObjectWithStateHolder");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class TraversalState {
+        private int phase = 2;
+        private boolean active = true;
+        private int[] path = {3, 5, 8};
+        private TraversalPath route = new TraversalPath("main", new RoutePoint(11, 13));
+    }
+
+    private record TraversalPath(String label, RoutePoint exit) {}
+
+    private record RoutePoint(int x, int y) {}
+
     private enum Mode {
         IDLE,
         ACTIVE
@@ -548,6 +572,30 @@ class TestAbstractObjectInstanceRewindCapture {
         assertEquals(List.of("left", "right"), new ArrayList<>(obj.values.keySet()));
         assertEquals(7, obj.values.get("left"));
         assertEquals(9, obj.values.get("right"));
+    }
+
+    @Test
+    void defaultClassCapturesAndRestoresFinalStateHolderCompactSidecar() {
+        TestObjectWithStateHolder obj = new TestObjectWithStateHolder(spawn(0, 0));
+        TraversalState originalState = obj.traversal;
+        int[] originalPath = obj.traversal.path;
+
+        PerObjectRewindSnapshot snap = obj.captureRewindState();
+        assertNotNull(snap.compactGenericState());
+        assertNull(snap.genericState());
+
+        obj.traversal.phase = 7;
+        obj.traversal.active = false;
+        obj.traversal.path = new int[] {99};
+        obj.traversal.route = new TraversalPath("mutated", new RoutePoint(1, 1));
+        obj.restoreRewindState(snap);
+
+        assertSame(originalState, obj.traversal);
+        assertArrayEquals(new int[] {3, 5, 8}, obj.traversal.path);
+        assertNotSame(originalPath, obj.traversal.path);
+        assertEquals(2, obj.traversal.phase);
+        assertTrue(obj.traversal.active);
+        assertEquals(new TraversalPath("main", new RoutePoint(11, 13)), obj.traversal.route);
     }
 
     @Test

@@ -89,6 +89,9 @@ public final class RewindCodecs {
         if (type == AnimationTimer.class) {
             return Optional.of(new AnimationTimerCodec());
         }
+        if (isSupportedPlainStateHolder(type)) {
+            return Optional.of(new PlainStateHolderCodec(type));
+        }
         if (type.isRecord() && supportedRecord(type)) {
             return Optional.of(new RecordCodec(type));
         }
@@ -102,7 +105,7 @@ public final class RewindCodecs {
     public static boolean requiresIdentityTable(Field field) {
         Objects.requireNonNull(field, "field");
         Class<?> type = field.getType();
-        if (isPlayerReferenceType(type) || isObjectReferenceType(type)) {
+        if (requiresIdentityTable(type)) {
             return true;
         }
         Type genericType = field.getGenericType();
@@ -125,7 +128,18 @@ public final class RewindCodecs {
     }
 
     private static boolean requiresIdentityTable(Class<?> type) {
-        return isPlayerReferenceType(type) || isObjectReferenceType(type);
+        if (isPlayerReferenceType(type) || isObjectReferenceType(type)) {
+            return true;
+        }
+        if (isSupportedPlainStateHolder(type)) {
+            return plainStateFields(type).stream()
+                    .anyMatch(field -> requiresIdentityTable(field.getType()));
+        }
+        return false;
+    }
+
+    public static boolean supportsInPlaceStateHolder(Class<?> type) {
+        return isSupportedPlainStateHolder(type);
     }
 
     private static boolean supportedArrayComponent(Class<?> componentType) {
@@ -145,7 +159,55 @@ public final class RewindCodecs {
         return type.isPrimitive()
                 || WRAPPER_TYPES.contains(type)
                 || type == String.class
-                || type.isEnum();
+                || type.isEnum()
+                || (type.isRecord() && supportedRecord(type));
+    }
+
+    private static boolean isSupportedPlainStateHolder(Class<?> type) {
+        if (type.isPrimitive()
+                || type.isArray()
+                || type.isEnum()
+                || type.isRecord()
+                || type.isInterface()
+                || Modifier.isAbstract(type.getModifiers())
+                || type.getSuperclass() != Object.class
+                || type.getName().startsWith("java.")) {
+            return false;
+        }
+        String simpleName = type.getSimpleName();
+        if (!simpleName.endsWith("State") && !simpleName.endsWith("CharState")) {
+            return false;
+        }
+        List<Field> fields = plainStateFields(type);
+        if (fields.isEmpty()) {
+            return false;
+        }
+        for (Field field : fields) {
+            if (requiresIdentityTable(field.getType())) {
+                return false;
+            }
+            RewindCodec codec = codecFor(field).orElse(null);
+            if (codec == null || Modifier.isFinal(field.getModifiers()) && !codec.capturesFinalFields()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static List<Field> plainStateFields(Class<?> type) {
+        List<Field> fields = new ArrayList<>(List.of(type.getDeclaredFields()));
+        fields.removeIf(field -> {
+            int mods = field.getModifiers();
+            return Modifier.isStatic(mods) || Modifier.isTransient(mods) || field.isSynthetic();
+        });
+        fields.sort((left, right) -> {
+            int byName = left.getName().compareTo(right.getName());
+            return byName != 0 ? byName : left.getType().getName().compareTo(right.getType().getName());
+        });
+        for (Field field : fields) {
+            field.setAccessible(true);
+        }
+        return List.copyOf(fields);
     }
 
     private static Optional<RewindCodec> collectionCodecFor(Field field) {
@@ -820,9 +882,7 @@ public final class RewindCodecs {
             if (record == null) {
                 return;
             }
-            for (int i = 0; i < components.length; i++) {
-                writeRecordComponent(components[i].getType(), readComponent(i, record), scalarData);
-            }
+            captureRecordValue(record, scalarData);
         }
 
         @Override
@@ -831,15 +891,24 @@ public final class RewindCodecs {
                 set(field, target, null);
                 return;
             }
+            set(field, target, readRecordValue(scalarData));
+        }
+
+        private void captureRecordValue(Object record, RewindStateBuffer scalarData) {
+            for (int i = 0; i < components.length; i++) {
+                writeRecordComponent(components[i].getType(), readComponent(i, record), scalarData);
+            }
+        }
+
+        private Object readRecordValue(RewindStateBuffer.Reader scalarData) {
             Object[] values = new Object[components.length];
             for (int i = 0; i < components.length; i++) {
                 values[i] = readRecordComponent(components[i].getType(), scalarData);
             }
             try {
-                set(field, target, constructor.newInstance(values));
+                return constructor.newInstance(values);
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                throw new IllegalStateException("Cannot restore rewind record value for field " + field
-                        + " using " + type.getName(), e);
+                throw new IllegalStateException("Cannot restore rewind record value using " + type.getName(), e);
             }
         }
 
@@ -872,6 +941,73 @@ public final class RewindCodecs {
         @Override
         public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
             set(field, target, opaqueIndex.next(opaqueValues));
+        }
+    }
+
+    private static final class PlainStateHolderCodec implements RewindCodec {
+        private final List<Field> fields;
+
+        private PlainStateHolderCodec(Class<?> type) {
+            this.fields = plainStateFields(type);
+        }
+
+        @Override
+        public void capture(
+                Field field,
+                Object target,
+                RewindStateBuffer scalarData,
+                List<Object> opaqueValues,
+                RewindCaptureContext context) {
+
+            Object state = get(field, target);
+            scalarData.writeBoolean(state != null);
+            if (state == null) {
+                return;
+            }
+            for (Field stateField : fields) {
+                RewindCodec codec = codecFor(stateField).orElseThrow();
+                codec.capture(stateField, state, scalarData, opaqueValues, context);
+            }
+        }
+
+        @Override
+        public void capture(Field field, Object target, RewindStateBuffer scalarData, List<Object> opaqueValues) {
+            capture(field, target, scalarData, opaqueValues, RewindCaptureContext.none());
+        }
+
+        @Override
+        public void restore(
+                Field field,
+                Object target,
+                RewindStateBuffer.Reader scalarData,
+                Object[] opaqueValues,
+                OpaqueIndex opaqueIndex,
+                RewindCaptureContext context) {
+
+            if (!scalarData.readBoolean()) {
+                set(field, target, null);
+                return;
+            }
+            Object state = requireExistingValue(field, target);
+            for (Field stateField : fields) {
+                RewindCodec codec = codecFor(stateField).orElseThrow();
+                codec.restore(stateField, state, scalarData, opaqueValues, opaqueIndex, context);
+            }
+        }
+
+        @Override
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+            restore(field, target, scalarData, opaqueValues, opaqueIndex, RewindCaptureContext.none());
+        }
+
+        @Override
+        public boolean capturesFinalFields() {
+            return true;
+        }
+
+        @Override
+        public boolean requiresExistingTargetValue() {
+            return true;
         }
     }
 
@@ -935,6 +1071,8 @@ public final class RewindCodecs {
             writeString(value, scalarData);
         } else if (type.isEnum()) {
             scalarData.writeInt(((Enum<?>) value).ordinal());
+        } else if (type.isRecord()) {
+            new RecordCodec(type).captureRecordValue(value, scalarData);
         } else {
             writeScalar(type, value, scalarData);
         }
@@ -949,6 +1087,9 @@ public final class RewindCodecs {
         }
         if (type.isEnum()) {
             return type.getEnumConstants()[scalarData.readInt()];
+        }
+        if (type.isRecord()) {
+            return new RecordCodec(type).readRecordValue(scalarData);
         }
         return readScalar(type, scalarData);
     }
