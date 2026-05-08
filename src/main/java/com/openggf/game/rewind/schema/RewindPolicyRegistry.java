@@ -102,6 +102,9 @@ public final class RewindPolicyRegistry {
         if (defaultDeclaredTypePolicy != null) {
             return Optional.of(defaultDeclaredTypePolicy);
         }
+        if (declaredType.isInterface() && declaredType.getSimpleName().endsWith("RendererRef")) {
+            return Optional.of(RewindFieldPolicy.TRANSIENT);
+        }
 
         RewindFieldPolicy defaultObjectPolicy = DefaultObjectRewindPolicies.policyFor(field);
         if (defaultObjectPolicy != null) {
