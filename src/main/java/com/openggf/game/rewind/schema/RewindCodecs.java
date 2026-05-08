@@ -102,6 +102,28 @@ public final class RewindCodecs {
         return Optional.empty();
     }
 
+    public static boolean collectionCodecUsesIdentityReferences(Field field) {
+        Objects.requireNonNull(field, "field");
+        Class<?> type = field.getType();
+        if (!Collection.class.isAssignableFrom(type) && !Map.class.isAssignableFrom(type)) {
+            return false;
+        }
+        Type genericType = field.getGenericType();
+        if (!(genericType instanceof ParameterizedType parameterizedType)) {
+            return false;
+        }
+        Type[] args = parameterizedType.getActualTypeArguments();
+        if (Collection.class.isAssignableFrom(type)) {
+            return args.length == 1
+                    && args[0] instanceof Class<?> elementType
+                    && isIdentityReferenceType(elementType);
+        }
+        return args.length == 2
+                && args[0] instanceof Class<?> keyType
+                && args[1] instanceof Class<?> valueType
+                && (isIdentityReferenceType(keyType) || isIdentityReferenceType(valueType));
+    }
+
     public static boolean supports(Class<?> type) {
         return codecFor(type).isPresent();
     }
@@ -274,6 +296,10 @@ public final class RewindCodecs {
 
     private static boolean isSupportedCollectionElementType(Class<?> type) {
         return isCollectionValueType(type) || isPlayerReferenceType(type) || isObjectReferenceType(type);
+    }
+
+    private static boolean isIdentityReferenceType(Class<?> type) {
+        return isPlayerReferenceType(type) || isObjectReferenceType(type);
     }
 
     private static boolean isSupportedConstructiblePlainStateHolder(Class<?> type) {

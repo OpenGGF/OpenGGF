@@ -13,6 +13,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -200,6 +201,18 @@ class TestObjectManagerRewindDynamicClassification {
     }
 
     @Test
+    void defaultObjectSnapshotTreatsFinalObjectReferenceCollectionsAsStructural() {
+        ObjectManager manager = new ObjectManager(List.of(), null, 0, null, null);
+        ObjectSpawn parentSpawn = new ObjectSpawn(0x100, 0x180, 0x01, 0, 0, false, 0);
+        ObjectSpawn childSpawn = new ObjectSpawn(0x120, 0x180, 0x02, 0, 0, false, 0);
+        ObjectReferenceCollectionOwner parent = new ObjectReferenceCollectionOwner(parentSpawn);
+        parent.children.add(new TestDynamicObject(childSpawn));
+        manager.addDynamicObject(parent);
+
+        assertDoesNotThrow(() -> manager.rewindSnapshottable().capture());
+    }
+
+    @Test
     void skidDustDynamicObjectIsRewindRestorable() {
         assertTrue(ObjectManager.isRewindRestorableDynamicObject(
                 new SkidDustObjectInstance(0x120, 0x1A0, null, true)));
@@ -281,6 +294,19 @@ class TestObjectManagerRewindDynamicClassification {
         @Override
         protected void applyPowerup(PlayableEntity player) {
             // no-op
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class ObjectReferenceCollectionOwner extends AbstractObjectInstance {
+        private final ArrayList<TestDynamicObject> children = new ArrayList<>();
+
+        ObjectReferenceCollectionOwner(ObjectSpawn spawn) {
+            super(spawn, "ObjectReferenceCollectionOwner");
         }
 
         @Override
