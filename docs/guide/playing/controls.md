@@ -13,6 +13,14 @@ human-readable key names such as `"SPACE"` and `"F9"`.
 | Enter | Pause / unpause |
 | Q | Advance one frame (while paused) |
 
+## Live Rewind
+
+Live rewind is only active when `LIVE_REWIND_ENABLED` is `true` in `config.json`.
+
+| Key | Action |
+|-----|--------|
+| R | Hold to rewind live gameplay (`LIVE_REWIND_KEY`) |
+
 ## Zone Navigation
 
 These shortcuts let you move through the game quickly during development or exploration.

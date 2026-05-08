@@ -148,6 +148,22 @@ See [Controls](controls.md) for the full list of bindable actions.
 With that enabled, press `Shift+Tab` during gameplay to enter the experimental editor overlay,
 and press `Shift+Tab` again to resume playtesting.
 
+## How do I enable live rewind?
+
+Live rewind is an experimental gameplay debugging feature. Enable it explicitly:
+
+```json
+{
+  "LIVE_REWIND_ENABLED": true,
+  "LIVE_REWIND_KEY": "R"
+}
+```
+
+With that enabled, hold `LIVE_REWIND_KEY` during normal level play to rewind the live
+gameplay buffer. The on-screen live rewind HUD shows the configured key and the
+current rewind frame. Rewind history resets at committed level and act transition
+boundaries.
+
 ## How do I mute audio?
 
 ```json

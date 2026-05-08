@@ -2,24 +2,23 @@
 
 The rewind system lets a gameplay session return to an earlier frame by restoring a
 stored keyframe and replaying deterministic inputs forward to the requested frame.
-It is built as a debugger and trace-validation tool first, with the same primitives
-intended to support live in-game rewind later.
+It was built as a debugger and trace-validation tool first, and the same
+gameplay-scoped primitives now also support optional live in-game rewind.
 
 ## Where It Can Be Used
 
 Today rewind is safe to use in gameplay-scoped sessions that install a
 `PlaybackController` through `GameplayModeContext.installPlaybackController(...)`.
-The current production use case is trace playback and headless validation, where
-the complete input stream is already known.
+Production use cases are visual Trace Test Mode, headless validation, and
+config-gated live gameplay rewind.
 
 Good uses:
 
 - Trace visualisation and trace replay tooling.
 - Headless tests that need to seek backward and replay a deterministic segment.
+- Live gameplay rewind when `LIVE_REWIND_ENABLED` is true.
 - Rewind determinism debugging for player, sidekick, object, ring, level, palette,
   parallax, and zone-runtime state.
-- Future live gameplay rewind, once a live input recorder and bounded history store
-  are wired in.
 
 Avoid using it for:
 
@@ -32,6 +31,8 @@ Avoid using it for:
   history semantics.
 
 ## User-Facing Behaviour
+
+### Trace Test Mode
 
 Visual Trace Test Mode installs the rewind controller automatically after a trace
 launches. To use it:
@@ -53,6 +54,28 @@ The HUD shows `Hold R Rewind` while rewind is available and changes to `REWIND <
 while the key is held. Releasing the key resumes the BK2-driven replay from the
 restored frame. `Enter` still pauses/resumes the trace, `Q` still frame-steps while
 paused, and `Esc` exits the trace back to the picker.
+
+### Live Play
+
+Live gameplay rewind is disabled by default. To enable it:
+
+```json
+{
+  "LIVE_REWIND_ENABLED": true,
+  "LIVE_REWIND_KEY": "R"
+}
+```
+
+While playing a level, hold `LIVE_REWIND_KEY` to step backward through the live
+gameplay buffer. Releasing the key resumes normal gameplay from the restored frame.
+The small live HUD appears only while live rewind is enabled: it shows `LIVE REWIND`
+plus `Hold R Rewind` while available, and switches to `REWIND <frame>` while the key
+is held.
+
+Live rewind records input rows after normal level ticks and replays them through the
+same `LevelFrameStep` path when rebuilding a rewound segment. Seamless level
+transition frames reset the buffer, matching the trace-rewind rule that seeks do not
+cross committed level or act boundaries.
 
 The playback wrapper has three states:
 
