@@ -2,6 +2,9 @@ package com.openggf.audio.smps;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.rewind.SmpsSequencerSnapshot;
+import com.openggf.audio.rewind.SmpsTrackSnapshot;
 import com.openggf.audio.synth.VirtualSynthesizer;
 import com.openggf.audio.AudioStream;
 import com.openggf.audio.synth.Synthesizer;
@@ -20,6 +23,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     private final AbstractSmpsData smpsData;
     private final AudioManager audioManager;
     private AbstractSmpsData fallbackVoiceData;
+    private SmpsSourceDescriptor sourceDescriptor;
     private final byte[] data;
     private final Synthesizer synth;
     private final SmpsSequencerConfig config;
@@ -117,6 +121,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      */
     public void setOnFadeComplete(Runnable callback) {
         this.onFadeComplete = callback;
+    }
+
+    public boolean hasFadeCompleteCallback() {
+        return onFadeComplete != null;
     }
 
     private static class FadeState {
@@ -309,6 +317,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     public SmpsSequencer(AbstractSmpsData smpsData, DacData dacData, Synthesizer synth,
             AudioManager audioManager, SmpsSequencerConfig config) {
         this.smpsData = smpsData;
+        this.sourceDescriptor = SmpsSourceDescriptor.from(smpsData);
         this.audioManager = Objects.requireNonNull(audioManager, "audioManager");
         this.data = smpsData.getData();
         this.synth = synth;
@@ -427,8 +436,20 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         return smpsData;
     }
 
+    public SmpsSourceDescriptor getSourceDescriptor() {
+        return sourceDescriptor;
+    }
+
+    public void setSourceDescriptor(SmpsSourceDescriptor sourceDescriptor) {
+        this.sourceDescriptor = Objects.requireNonNull(sourceDescriptor, "sourceDescriptor");
+    }
+
     public DacData getDacData() {
         return dacData;
+    }
+
+    public AudioManager getAudioManager() {
+        return audioManager;
     }
 
     /**
@@ -437,6 +458,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      */
     public void setFallbackVoiceData(AbstractSmpsData fallbackVoiceData) {
         this.fallbackVoiceData = fallbackVoiceData;
+    }
+
+    public AbstractSmpsData getFallbackVoiceData() {
+        return fallbackVoiceData;
     }
 
     /**
@@ -2489,7 +2514,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             track.active = false;
             stopNote(track);
         }
-        audioManager.getBackend().restoreMusic();
+        audioManager.restoreMusic();
     }
 
     public void triggerFadeIn(int steps, int delay) {
@@ -2694,6 +2719,255 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             state.tracks.add(dt);
         }
         return state;
+    }
+
+    public SmpsSequencerSnapshot captureSnapshot() {
+        List<SmpsTrackSnapshot> trackSnapshots = new ArrayList<>(tracks.size());
+        for (Track track : tracks) {
+            trackSnapshots.add(captureTrack(track));
+        }
+        return new SmpsSequencerSnapshot(
+                region,
+                speedShoes,
+                sfxMode,
+                normalTempo,
+                commData,
+                fm6DacOff,
+                maxTicks,
+                pitch,
+                sfxPriority,
+                specialSfx,
+                isSfx,
+                psgLatchChannel,
+                speedMultiplier,
+                speedupTimeout,
+                new SmpsSequencerSnapshot.FadeSnapshot(
+                        fadeState.steps,
+                        fadeState.delayInit,
+                        fadeState.delayCounter,
+                        fadeState.addFm,
+                        fadeState.addPsg,
+                        fadeState.active,
+                        fadeState.fadeOut),
+                sampleRate,
+                samplesPerFrame,
+                sampleCounter,
+                tempoWeight,
+                tempoAccumulator,
+                dividingTiming,
+                primed,
+                trackSnapshots);
+    }
+
+    /**
+     * Restores backend-agnostic SMPS sequencing state only. This does not replay chip writes
+     * or rebuild presentation state for an already-started audio backend.
+     */
+    public void restoreSnapshot(SmpsSequencerSnapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        region = snapshot.region();
+        speedShoes = snapshot.speedShoes();
+        sfxMode = snapshot.sfxMode();
+        normalTempo = snapshot.normalTempo();
+        commData = snapshot.commData();
+        fm6DacOff = snapshot.fm6DacOff();
+        maxTicks = snapshot.maxTicks();
+        pitch = snapshot.pitch();
+        sfxPriority = snapshot.sfxPriority();
+        specialSfx = snapshot.specialSfx();
+        isSfx = snapshot.sfx();
+        psgLatchChannel = snapshot.psgLatchChannel();
+        speedMultiplier = snapshot.speedMultiplier();
+        speedupTimeout = snapshot.speedupTimeout();
+        fadeState.steps = snapshot.fade().steps();
+        fadeState.delayInit = snapshot.fade().delayInit();
+        fadeState.delayCounter = snapshot.fade().delayCounter();
+        fadeState.addFm = snapshot.fade().addFm();
+        fadeState.addPsg = snapshot.fade().addPsg();
+        fadeState.active = snapshot.fade().active();
+        fadeState.fadeOut = snapshot.fade().fadeOut();
+        sampleRate = snapshot.sampleRate();
+        samplesPerFrame = snapshot.samplesPerFrame();
+        sampleCounter = snapshot.sampleCounter();
+        tempoWeight = snapshot.tempoWeight();
+        tempoAccumulator = snapshot.tempoAccumulator();
+        dividingTiming = snapshot.dividingTiming();
+        primed = snapshot.primed();
+
+        tracks.clear();
+        for (SmpsTrackSnapshot trackSnapshot : snapshot.tracks()) {
+            tracks.add(restoreTrack(trackSnapshot));
+        }
+    }
+
+    private static SmpsTrackSnapshot captureTrack(Track track) {
+        return new SmpsTrackSnapshot(
+                track.pos,
+                track.type,
+                track.channelId,
+                track.duration,
+                track.note,
+                track.active,
+                track.overridden,
+                track.rawDuration,
+                track.scaledDuration,
+                track.fill,
+                track.keyOffset,
+                track.volumeOffset,
+                track.tieNext,
+                track.pan,
+                track.ams,
+                track.fms,
+                track.voiceData,
+                track.voiceScratch,
+                track.voiceId,
+                track.baseFnum,
+                track.baseBlock,
+                track.loopCounters,
+                track.loopTarget,
+                track.returnStack,
+                track.returnSp,
+                track.dividingTiming,
+                track.modDelay,
+                track.modDelayInit,
+                track.modRate,
+                track.modDelta,
+                track.modSteps,
+                track.modStepsFull,
+                track.modRateCounter,
+                track.modStepCounter,
+                track.modAccumulator,
+                track.modCurrentDelta,
+                track.modEnabled,
+                track.customModEnabled,
+                track.detune,
+                track.modEnvId,
+                track.modEnvData,
+                track.modEnvPos,
+                track.modEnvMult,
+                track.modEnvCache,
+                track.modEnvHold,
+                track.rawFreqMode,
+                track.rawFrequency,
+                track.instrumentId,
+                track.noiseMode,
+                track.psgNoiseParam,
+                track.decayOffset,
+                track.decayTimer,
+                track.envData,
+                track.envPos,
+                track.envValue,
+                track.envHold,
+                track.envAtRest,
+                track.fmVolEnvData,
+                track.fmVolEnvPos,
+                track.fmVolEnvValue,
+                track.fmVolEnvHold,
+                track.fmVolEnvOpMask,
+                track.forceRefresh,
+                track.ssgEg,
+                track.dacMuted,
+                track.modStepInEffect,
+                track.modStepChanged,
+                track.modStepDelta,
+                track.modEnvStepInEffect,
+                track.modEnvStepChanged,
+                track.modEnvStepDelta);
+    }
+
+    private static Track restoreTrack(SmpsTrackSnapshot snapshot) {
+        Track track = new Track(snapshot.pos(), snapshot.type(), snapshot.channelId());
+        track.duration = snapshot.duration();
+        track.note = snapshot.note();
+        track.active = snapshot.active();
+        track.overridden = snapshot.overridden();
+        track.rawDuration = snapshot.rawDuration();
+        track.scaledDuration = snapshot.scaledDuration();
+        track.fill = snapshot.fill();
+        track.keyOffset = snapshot.keyOffset();
+        track.volumeOffset = snapshot.volumeOffset();
+        track.tieNext = snapshot.tieNext();
+        track.pan = snapshot.pan();
+        track.ams = snapshot.ams();
+        track.fms = snapshot.fms();
+        track.voiceData = copy(snapshot.voiceData());
+        copyInto(snapshot.voiceScratch(), track.voiceScratch);
+        track.voiceId = snapshot.voiceId();
+        track.baseFnum = snapshot.baseFnum();
+        track.baseBlock = snapshot.baseBlock();
+        track.loopCounters = copy(snapshot.loopCounters());
+        track.loopTarget = snapshot.loopTarget();
+        copyInto(snapshot.returnStack(), track.returnStack);
+        track.returnSp = snapshot.returnSp();
+        track.dividingTiming = snapshot.dividingTiming();
+        track.modDelay = snapshot.modDelay();
+        track.modDelayInit = snapshot.modDelayInit();
+        track.modRate = snapshot.modRate();
+        track.modDelta = snapshot.modDelta();
+        track.modSteps = snapshot.modSteps();
+        track.modStepsFull = snapshot.modStepsFull();
+        track.modRateCounter = snapshot.modRateCounter();
+        track.modStepCounter = snapshot.modStepCounter();
+        track.modAccumulator = snapshot.modAccumulator();
+        track.modCurrentDelta = snapshot.modCurrentDelta();
+        track.modEnabled = snapshot.modEnabled();
+        track.customModEnabled = snapshot.customModEnabled();
+        track.detune = snapshot.detune();
+        track.modEnvId = snapshot.modEnvId();
+        track.modEnvData = copy(snapshot.modEnvData());
+        track.modEnvPos = snapshot.modEnvPos();
+        track.modEnvMult = snapshot.modEnvMult();
+        track.modEnvCache = snapshot.modEnvCache();
+        track.modEnvHold = snapshot.modEnvHold();
+        track.rawFreqMode = snapshot.rawFreqMode();
+        track.rawFrequency = snapshot.rawFrequency();
+        track.instrumentId = snapshot.instrumentId();
+        track.noiseMode = snapshot.noiseMode();
+        track.psgNoiseParam = snapshot.psgNoiseParam();
+        track.decayOffset = snapshot.decayOffset();
+        track.decayTimer = snapshot.decayTimer();
+        track.envData = copy(snapshot.envData());
+        track.envPos = snapshot.envPos();
+        track.envValue = snapshot.envValue();
+        track.envHold = snapshot.envHold();
+        track.envAtRest = snapshot.envAtRest();
+        track.fmVolEnvData = copy(snapshot.fmVolEnvData());
+        track.fmVolEnvPos = snapshot.fmVolEnvPos();
+        track.fmVolEnvValue = snapshot.fmVolEnvValue();
+        track.fmVolEnvHold = snapshot.fmVolEnvHold();
+        track.fmVolEnvOpMask = snapshot.fmVolEnvOpMask();
+        track.forceRefresh = snapshot.forceRefresh();
+        copyInto(snapshot.ssgEg(), track.ssgEg);
+        track.dacMuted = snapshot.dacMuted();
+        track.modStepInEffect = snapshot.modStepInEffect();
+        track.modStepChanged = snapshot.modStepChanged();
+        track.modStepDelta = snapshot.modStepDelta();
+        track.modEnvStepInEffect = snapshot.modEnvStepInEffect();
+        track.modEnvStepChanged = snapshot.modEnvStepChanged();
+        track.modEnvStepDelta = snapshot.modEnvStepDelta();
+        return track;
+    }
+
+    private static byte[] copy(byte[] values) {
+        return values == null ? null : Arrays.copyOf(values, values.length);
+    }
+
+    private static int[] copy(int[] values) {
+        return values == null ? null : Arrays.copyOf(values, values.length);
+    }
+
+    private static void copyInto(byte[] source, byte[] target) {
+        Arrays.fill(target, (byte) 0);
+        if (source != null) {
+            System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+        }
+    }
+
+    private static void copyInto(int[] source, int[] target) {
+        Arrays.fill(target, 0);
+        if (source != null) {
+            System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+        }
     }
 
     public static class DebugState {

@@ -150,10 +150,11 @@ public final class RewindSchemaRegistry {
         if (codec == null) {
             return RewindFieldPolicy.UNSUPPORTED;
         }
-        if (Modifier.isFinal(field.getModifiers()) && !codec.capturesFinalFields()) {
+        boolean finalField = Modifier.isFinal(field.getModifiers());
+        if (finalField && !codec.capturesFinalFields()) {
             return RewindFieldPolicy.UNSUPPORTED;
         }
-        if (codec.requiresExistingTargetValue()) {
+        if (!finalField && codec.requiresExistingTargetValue()) {
             return RewindFieldPolicy.UNSUPPORTED;
         }
         return RewindFieldPolicy.CAPTURED;

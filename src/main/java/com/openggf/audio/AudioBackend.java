@@ -1,5 +1,9 @@
 package com.openggf.audio;
 
+import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -129,4 +133,44 @@ public interface AudioBackend {
      * Called when the game window is restored or regains focus.
      */
     void resume();
+
+    default AudioBackendLogicalSnapshot captureLogicalSnapshot() {
+        return AudioBackendLogicalSnapshot.empty();
+    }
+
+    default void restoreLogicalSnapshot(AudioBackendLogicalSnapshot snapshot) {
+    }
+
+    default void restoreLogicalSnapshot(
+            AudioBackendLogicalSnapshot snapshot,
+            SmpsDriverSnapshot.DependencyResolver resolver) {
+        restoreLogicalSnapshot(snapshot);
+    }
+
+    default void restoreLogicalSnapshot(
+            AudioBackendLogicalSnapshot snapshot,
+            SmpsDriverSnapshot.DependencyResolver resolver,
+            boolean preservePresentationQueue) {
+        restoreLogicalSnapshot(snapshot, resolver);
+    }
+
+    default void prepareLogicalMusicSource(AudioSourceDescriptor descriptor) {
+    }
+
+    default void attachDeterministicAudioRuntime(DeterministicAudioRuntime runtime) {
+    }
+
+    default void beginReversePresentation() {
+    }
+
+    default void endReversePresentation() {
+    }
+
+    default boolean supportsDeterministicRuntimePresentation() {
+        return false;
+    }
+
+    default int outputSampleRate() {
+        return 48_000;
+    }
 }

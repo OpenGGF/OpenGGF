@@ -1,5 +1,7 @@
 package com.openggf.audio.synth;
 
+import java.util.Arrays;
+
 /**
  * High-fidelity SN76489 PSG emulator using band-limited synthesis.
  *
@@ -134,6 +136,53 @@ public class PsgChipGPGX {
 
     public boolean isNoiseShiftOnEveryToggle() {
         return noiseShiftOnEveryToggle;
+    }
+
+    public Snapshot captureSnapshot() {
+        return new Snapshot(
+                regs,
+                freqInc,
+                freqCounter,
+                polarity,
+                chanOut,
+                chanAmp,
+                mutes,
+                chanDelta,
+                latch,
+                zeroFreqInc,
+                noiseShiftValue,
+                noiseShiftWidth,
+                noiseBitMask,
+                outputRate,
+                clocks,
+                clockFrac,
+                clocksPerSampleFixed,
+                hqPsg,
+                noiseShiftOnEveryToggle,
+                blip.captureSnapshot());
+    }
+
+    public void restoreSnapshot(Snapshot snapshot) {
+        copyInto(snapshot.regs(), regs);
+        copyInto(snapshot.freqInc(), freqInc);
+        copyInto(snapshot.freqCounter(), freqCounter);
+        copyInto(snapshot.polarity(), polarity);
+        copyInto(snapshot.chanOut(), chanOut);
+        copyInto(snapshot.chanAmp(), chanAmp);
+        copyInto(snapshot.mutes(), mutes);
+        copyInto(snapshot.chanDelta(), chanDelta);
+        latch = snapshot.latch();
+        zeroFreqInc = snapshot.zeroFreqInc();
+        noiseShiftValue = snapshot.noiseShiftValue();
+        noiseShiftWidth = snapshot.noiseShiftWidth();
+        noiseBitMask = snapshot.noiseBitMask();
+        outputRate = snapshot.outputRate();
+        clocks = snapshot.clocks();
+        clockFrac = snapshot.clockFrac();
+        clocksPerSampleFixed = snapshot.clocksPerSampleFixed();
+        hqPsg = snapshot.hqPsg();
+        noiseShiftOnEveryToggle = snapshot.noiseShiftOnEveryToggle();
+        blip.restoreSnapshot(snapshot.blip());
     }
 
     public void setMute(int ch, boolean mute) {
@@ -402,5 +451,92 @@ public class PsgChipGPGX {
         }
         chanOut[3][0] = newL;
         chanOut[3][1] = newR;
+    }
+
+    private static void copyInto(int[] source, int[] target) {
+        System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+    }
+
+    private static void copyInto(int[][] source, int[][] target) {
+        for (int i = 0; i < Math.min(source.length, target.length); i++) {
+            copyInto(source[i], target[i]);
+        }
+    }
+
+    private static void copyInto(boolean[] source, boolean[] target) {
+        System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+    }
+
+    public record Snapshot(
+            int[] regs,
+            int[] freqInc,
+            int[] freqCounter,
+            int[] polarity,
+            int[][] chanOut,
+            int[][] chanAmp,
+            boolean[] mutes,
+            int[][] chanDelta,
+            int latch,
+            int zeroFreqInc,
+            int noiseShiftValue,
+            int noiseShiftWidth,
+            int noiseBitMask,
+            double outputRate,
+            int clocks,
+            long clockFrac,
+            long clocksPerSampleFixed,
+            boolean hqPsg,
+            boolean noiseShiftOnEveryToggle,
+            BlipDeltaBuffer.Snapshot blip) {
+        public Snapshot {
+            regs = copy(regs);
+            freqInc = copy(freqInc);
+            freqCounter = copy(freqCounter);
+            polarity = copy(polarity);
+            chanOut = copy(chanOut);
+            chanAmp = copy(chanAmp);
+            mutes = copy(mutes);
+            chanDelta = copy(chanDelta);
+        }
+
+        @Override
+        public int[] regs() { return copy(regs); }
+
+        @Override
+        public int[] freqInc() { return copy(freqInc); }
+
+        @Override
+        public int[] freqCounter() { return copy(freqCounter); }
+
+        @Override
+        public int[] polarity() { return copy(polarity); }
+
+        @Override
+        public int[][] chanOut() { return copy(chanOut); }
+
+        @Override
+        public int[][] chanAmp() { return copy(chanAmp); }
+
+        @Override
+        public boolean[] mutes() { return copy(mutes); }
+
+        @Override
+        public int[][] chanDelta() { return copy(chanDelta); }
+    }
+
+    private static int[] copy(int[] values) {
+        return Arrays.copyOf(values, values.length);
+    }
+
+    private static int[][] copy(int[][] values) {
+        int[][] copy = new int[values.length][];
+        for (int i = 0; i < values.length; i++) {
+            copy[i] = Arrays.copyOf(values[i], values[i].length);
+        }
+        return copy;
+    }
+
+    private static boolean[] copy(boolean[] values) {
+        return Arrays.copyOf(values, values.length);
     }
 }

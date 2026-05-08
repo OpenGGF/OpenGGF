@@ -65,7 +65,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                     int param = data[t.pos++] & 0xFF;
                     if (param == 0xFF) {
                         // Restore previous music with fade-in (same as S2 E4 handler)
-                        GameServices.audio().getBackend().restoreMusic();
+                        GameServices.audio().restoreMusic();
                     }
                     // Other values: no-op
                 }

@@ -2,15 +2,20 @@ package com.openggf.game.rewind;
 
 import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCodecs;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ObjectAnimationState;
+import com.openggf.level.objects.PlatformBobHelper;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.util.AnimationTimer;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -65,20 +70,37 @@ public final class GenericFieldCapturer {
     public static Optional<RewindObjectStateBlob> captureObjectSubclassScalarsCompact(
             AbstractObjectInstance target) {
 
+        return captureObjectSubclassScalarsCompact(target, RewindCaptureContext.none());
+    }
+
+    public static Optional<RewindObjectStateBlob> captureObjectSubclassScalarsCompact(
+            AbstractObjectInstance target,
+            RewindCaptureContext context) {
+
         Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(context, "context");
         if (!CompactFieldCapturer.supportsDefaultObjectSubclassScalars(target.getClass())) {
             return Optional.empty();
         }
-        return Optional.of(CompactFieldCapturer.captureDefaultObjectSubclassScalars(target));
+        return Optional.of(CompactFieldCapturer.captureDefaultObjectSubclassScalars(target, context));
     }
 
     public static void restoreObjectSubclassScalarsCompact(
             AbstractObjectInstance target,
             RewindObjectStateBlob snapshot) {
 
+        restoreObjectSubclassScalarsCompact(target, snapshot, RewindCaptureContext.none());
+    }
+
+    public static void restoreObjectSubclassScalarsCompact(
+            AbstractObjectInstance target,
+            RewindObjectStateBlob snapshot,
+            RewindCaptureContext context) {
+
         Objects.requireNonNull(target, "target");
         Objects.requireNonNull(snapshot, "snapshot");
-        CompactFieldCapturer.restoreDefaultObjectSubclassScalars(target, snapshot);
+        Objects.requireNonNull(context, "context");
+        CompactFieldCapturer.restoreDefaultObjectSubclassScalars(target, snapshot, context);
     }
 
     private static GenericObjectSnapshot captureFields(Object target, List<Field> fields) {
@@ -148,7 +170,9 @@ public final class GenericFieldCapturer {
 
     public static boolean hasDefaultObjectCaptureDecision(Field field) {
         Objects.requireNonNull(field, "field");
-        return isDefaultObjectValueField(field) || isKnownStructuralObjectField(field);
+        return isDefaultObjectValueField(field)
+                || isDefaultObjectStructuralValueField(field)
+                || isKnownStructuralObjectField(field);
     }
 
     public static List<Field> defaultObjectSubclassCapturedFieldsForAudit(Class<?> type) {
@@ -234,11 +258,14 @@ public final class GenericFieldCapturer {
                 && !Modifier.isTransient(mods)
                 && (!Modifier.isFinal(mods)
                 || isDefaultObjectArrayFieldValueType(field.getType())
+                || isDefaultObjectCompactCollectionField(field)
+                || isDefaultObjectInPlaceHelperType(field.getType())
                 || RewindStateful.class.isAssignableFrom(field.getType()))
                 && !field.isSynthetic()
                 && !field.isAnnotationPresent(RewindTransient.class)
                 && !field.isAnnotationPresent(RewindDeferred.class)
-                && (isDefaultObjectFieldValueType(field.getType()) || isStatefulListField(field));
+                && (isDefaultObjectFieldValueType(field)
+                || isStatefulListField(field));
     }
 
     private static boolean isKnownStructuralObjectField(Field field) {
@@ -265,6 +292,18 @@ public final class GenericFieldCapturer {
             return true;
         }
         return isListOf(field, SpriteMappingFrame.class);
+    }
+
+    private static boolean isDefaultObjectStructuralValueField(Field field) {
+        int mods = field.getModifiers();
+        return Modifier.isFinal(mods)
+                && !Modifier.isStatic(mods)
+                && !Modifier.isTransient(mods)
+                && !field.isSynthetic()
+                && !field.isAnnotationPresent(RewindTransient.class)
+                && !field.isAnnotationPresent(RewindDeferred.class)
+                && (isSmallImmutableValueType(field.getType())
+                || isDefaultObjectRecordFieldValueType(field.getType()));
     }
 
     private static boolean isListOf(Field field, Class<?> elementType) {
@@ -345,12 +384,35 @@ public final class GenericFieldCapturer {
         return type.isPrimitive() || WRAPPER_TYPES.contains(type) || type == String.class || type.isEnum();
     }
 
-    private static boolean isDefaultObjectFieldValueType(Class<?> type) {
+    private static boolean isDefaultObjectFieldValueType(Field field) {
+        Class<?> type = field.getType();
         return isSmallImmutableValueType(type)
                 || type == ObjectAnimationState.class
+                || isDefaultObjectInPlaceHelperField(field)
                 || RewindStateful.class.isAssignableFrom(type)
                 || isDefaultObjectArrayFieldValueType(type)
-                || isDefaultObjectRecordFieldValueType(type);
+                || isDefaultObjectRecordFieldValueType(type)
+                || isDefaultObjectCompactCollectionField(field);
+    }
+
+    private static boolean isDefaultObjectCompactCollectionField(Field field) {
+        return Modifier.isFinal(field.getModifiers())
+                && RewindCodecs.codecFor(field).isPresent()
+                && !RewindCodecs.collectionCodecUsesIdentityReferences(field)
+                && (Collection.class.isAssignableFrom(field.getType())
+                || Map.class.isAssignableFrom(field.getType()));
+    }
+
+    private static boolean isDefaultObjectInPlaceHelperField(Field field) {
+        return Modifier.isFinal(field.getModifiers()) && isDefaultObjectInPlaceHelperType(field.getType());
+    }
+
+    private static boolean isDefaultObjectInPlaceHelperType(Class<?> type) {
+        return type == SubpixelMotion.State.class
+                || type == ObjectAnimationState.class
+                || type == PlatformBobHelper.class
+                || type == AnimationTimer.class
+                || RewindCodecs.supportsInPlaceStateHolder(type);
     }
 
     private static boolean isDefaultObjectArrayFieldValueType(Class<?> type) {

@@ -3,16 +3,28 @@ package com.openggf.game.rewind.schema;
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.GameModule;
+import com.openggf.game.InstaShieldHandle;
+import com.openggf.game.PowerUpObject;
+import com.openggf.game.PowerUpSpawner;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
+import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.BitSet;
+import java.util.function.BooleanSupplier;
+import java.util.function.IntSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -117,9 +129,36 @@ class TestRewindPolicyRegistry {
         assertPolicy(schema, "gameModule", RewindFieldPolicy.TRANSIENT);
         assertPolicy(schema, "objectRenderManager", RewindFieldPolicy.TRANSIENT);
         assertPolicy(schema, "objectServices", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "patternDesc", RewindFieldPolicy.TRANSIENT);
         assertPolicy(schema, "patternRenderer", RewindFieldPolicy.TRANSIENT);
         assertPolicy(schema, "playerRenderer", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "configService", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "events", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "deleteSupplier", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "scrollSupplier", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "spriteAnimationSet", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "spriteMappingPiece", RewindFieldPolicy.TRANSIENT);
         assertPolicy(schema, "spritePieceRenderer", RewindFieldPolicy.TRANSIENT);
+        assertTrue(schema.unsupportedFields().isEmpty());
+    }
+
+    @Test
+    void structuralSolidObjectParamsAreStructuralByDefaultWithoutAnnotations() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(DefaultStructuralPolicyFixture.class);
+
+        assertPolicy(schema, "solidObjectParams", RewindFieldPolicy.STRUCTURAL);
+        assertTrue(schema.unsupportedFields().isEmpty());
+    }
+
+    @Test
+    void playerPowerUpHandlesAreTransientByDefaultWithoutAnnotations() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(DefaultPlayerHandlePolicyFixture.class);
+
+        assertPolicy(schema, "animationProfile", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "powerUpSpawner", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "shieldObject", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "instaShieldObject", RewindFieldPolicy.TRANSIENT);
+        assertPolicy(schema, "invincibilityObject", RewindFieldPolicy.TRANSIENT);
         assertTrue(schema.unsupportedFields().isEmpty());
     }
 
@@ -160,8 +199,27 @@ class TestRewindPolicyRegistry {
         GameModule gameModule;
         ObjectRenderManager objectRenderManager;
         ObjectServices objectServices;
+        PatternDesc patternDesc;
         PatternSpriteRenderer patternRenderer;
         PlayerSpriteRenderer playerRenderer;
+        SonicConfigurationService configService;
+        AbstractLevelEventManager events;
+        BooleanSupplier deleteSupplier;
+        IntSupplier scrollSupplier;
+        SpriteAnimationSet spriteAnimationSet;
+        SpriteMappingPiece spriteMappingPiece;
         SpritePieceRenderer spritePieceRenderer;
+    }
+
+    private static final class DefaultStructuralPolicyFixture {
+        final SolidObjectParams solidObjectParams = new SolidObjectParams(16, 8, 9);
+    }
+
+    private static final class DefaultPlayerHandlePolicyFixture {
+        SpriteAnimationProfile animationProfile;
+        PowerUpSpawner powerUpSpawner;
+        PowerUpObject shieldObject;
+        InstaShieldHandle instaShieldObject;
+        PowerUpObject invincibilityObject;
     }
 }

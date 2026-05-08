@@ -892,6 +892,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         forcedAnimationId,
                         animationFrameIndex,
                         animationTick,
+                        debugMode,
                         controller.getMovement().captureRewindState(),
                         controller.getSpindashDust() != null
                                 ? controller.getSpindashDust().captureRewindState()
@@ -1052,6 +1053,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.forcedAnimationId = extra.forcedAnimationId();
                 this.animationFrameIndex = extra.animationFrameIndex();
                 this.animationTick = extra.animationTick();
+                this.debugMode = extra.debugMode();
                 controller.getMovement().restoreRewindState(extra.movementState());
                 if (controller.getSpindashDust() != null) {
                         controller.getSpindashDust().restoreRewindState(extra.spindashDustState());

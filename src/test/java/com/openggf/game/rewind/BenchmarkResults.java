@@ -9,10 +9,17 @@ public record BenchmarkResults(
         String phaseName,
         PhaseStats overall,
         long totalWallTimeNs,
-        Map<String, PhaseStats> perSubsystem
+        Map<String, PhaseStats> perSubsystem,
+        Map<String, Long> counters
 ) {
+    public BenchmarkResults(String phaseName, PhaseStats overall, long totalWallTimeNs,
+                            Map<String, PhaseStats> perSubsystem) {
+        this(phaseName, overall, totalWallTimeNs, perSubsystem, Map.of());
+    }
+
     public BenchmarkResults {
         perSubsystem = perSubsystem == null ? Map.of() : Map.copyOf(perSubsystem);
+        counters = counters == null ? Map.of() : Map.copyOf(counters);
     }
 
     public record PhaseStats(

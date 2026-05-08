@@ -9,6 +9,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
@@ -78,6 +82,44 @@ class TestLiveRewindInputSource {
         source.appendFrame(input, config);
 
         assertEquals(false, source.read(2).p2StartPressed());
+    }
+
+    @Test
+    void appendFrameRecordsDebugToggleEdgeAndDebugMovementModifiers() {
+        InputHandler input = new InputHandler();
+        LiveRewindInputSource source = new LiveRewindInputSource();
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.DEBUG_MODE_KEY), GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_LEFT_SHIFT, GLFW_PRESS);
+        input.handleKeyEvent(GLFW_KEY_LEFT_CONTROL, GLFW_PRESS);
+        source.appendFrame(input, config);
+
+        Bk2FrameInput first = source.read(1);
+        assertTrue(first.debugModeTogglePressed());
+        assertTrue(first.debugShiftDown());
+        assertTrue(first.debugControlDown());
+
+        input.update();
+        source.appendFrame(input, config);
+
+        Bk2FrameInput held = source.read(2);
+        assertFalse(held.debugModeTogglePressed());
+        assertTrue(held.debugShiftDown());
+        assertTrue(held.debugControlDown());
+    }
+
+    @Test
+    void rewindFrameInputHandlerReconstructsDebugToggleAndMovementModifiers() {
+        Bk2FrameInput previous = new Bk2FrameInput(0, 0, 0, false, 0, 0, false, "previous");
+        Bk2FrameInput current = new Bk2FrameInput(
+                1, 0, 0, false, 0, 0, false,
+                true, true, true, "current");
+
+        RewindFrameInputHandler replay = new RewindFrameInputHandler(config, current, previous);
+
+        assertTrue(replay.isKeyPressed(config.getInt(SonicConfiguration.DEBUG_MODE_KEY)));
+        assertTrue(replay.isShiftDown());
+        assertTrue(replay.isControlDown());
     }
 
     @Test

@@ -1,11 +1,14 @@
 package com.openggf.game.rewind;
 
+import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRuntime;
+import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeManager;
+import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
 import java.util.Objects;
@@ -23,6 +26,7 @@ public final class LiveRewindManager {
     private GameRuntime installedRuntime;
     private LiveRewindInputSource inputSource;
     private RewindController rewindController;
+    private RewindSpeedController speedController = RewindSpeedController.disabled();
     private boolean rewinding;
 
     public LiveRewindManager(SonicConfigurationService config) {
@@ -32,9 +36,7 @@ public final class LiveRewindManager {
 
     public boolean handleRealtimeRewindInput(GameMode mode, InputHandler input) {
         if (mode != GameMode.LEVEL || input == null || !enabled()) {
-            if (!enabled()) {
-                clear();
-            }
+            clear();
             return false;
         }
         if (!ensureInstalled()) {
@@ -42,9 +44,25 @@ public final class LiveRewindManager {
         }
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
         if (input.isKeyDown(rewindKey)) {
+            if (!rewinding) {
+                GameServices.audio().beginReverseAudioPresentation();
+                beginReverseFadePresentation();
+            }
             rewinding = true;
-            rewindController.stepBackward();
+            stepBackward(speedController.stepsWhileHeld());
+            GameServices.audio().update();
             return true;
+        }
+        int coastSteps = speedController.stepsAfterRelease();
+        if (rewinding && coastSteps > 0) {
+            if (stepBackward(coastSteps) > 0) {
+                GameServices.audio().update();
+                return true;
+            }
+            speedController.reset();
+        }
+        if (rewinding) {
+            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
         rewinding = false;
         return false;
@@ -52,7 +70,7 @@ public final class LiveRewindManager {
 
     public void recordExternalFrame(GameMode mode, InputHandler input) {
         if (mode != GameMode.LEVEL || input == null || rewinding || !enabled()) {
-            if (!enabled()) {
+            if (mode != GameMode.LEVEL || input == null || !enabled()) {
                 clear();
             }
             return;
@@ -103,18 +121,57 @@ public final class LiveRewindManager {
                 KEYFRAME_INTERVAL);
         rewindController = runtime.getGameplayModeContext().getRewindController();
         installedRuntime = runtime;
+        speedController = RewindSpeedController.fromConfig(config);
         rewinding = false;
         return rewindController != null;
+    }
+
+    private int stepBackward(int steps) {
+        int completed = 0;
+        for (int i = 0; i < steps; i++) {
+            if (!rewindController.stepBackward()) {
+                break;
+            }
+            completed++;
+        }
+        return completed;
     }
 
     private boolean enabled() {
         return config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED);
     }
 
+    private void cleanupAudioAfterRealtimeRewind(AudioPresentationPolicy policy) {
+        if (rewindController == null) {
+            return;
+        }
+        GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
+    }
+
+    private void beginReverseFadePresentation() {
+        FadeManager fadeManager = GameServices.fadeOrNull();
+        if (fadeManager != null) {
+            fadeManager.beginReversePresentation();
+        }
+    }
+
+    private void cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy policy) {
+        cleanupAudioAfterRealtimeRewind(policy);
+        FadeManager fadeManager = GameServices.fadeOrNull();
+        if (fadeManager != null) {
+            fadeManager.endReversePresentation();
+        }
+    }
+
     private void clear() {
+        if (rewinding && rewindController != null) {
+            cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+        }
         installedRuntime = null;
         inputSource = null;
         rewindController = null;
+        speedController.reset();
+        speedController = RewindSpeedController.disabled();
         rewinding = false;
     }
 }

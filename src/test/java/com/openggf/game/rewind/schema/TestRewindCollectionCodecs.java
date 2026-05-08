@@ -1,10 +1,13 @@
 package com.openggf.game.rewind.schema;
 
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -12,8 +15,11 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestRewindCollectionCodecs {
     @AfterEach
@@ -52,6 +58,52 @@ class TestRewindCollectionCodecs {
     }
 
     @Test
+    void restoresNonFinalIdentityHashMapsWithIdentitySemantics() {
+        IdentityMapFixture fixture = new IdentityMapFixture();
+        Object key = fixture.key;
+
+        RewindObjectStateBlob blob = CompactFieldCapturer.capture(fixture);
+        fixture.values = new IdentityHashMap<>();
+        CompactFieldCapturer.restore(fixture, blob);
+
+        assertInstanceOf(IdentityHashMap.class, fixture.values);
+        assertEquals(11, fixture.values.get(key));
+        assertEquals(null, fixture.values.get(new String("key")));
+    }
+
+    @Test
+    void distinguishesValueCollectionsFromReferenceCollectionsForIdentityContext() throws Exception {
+        Field valueField = CollectionFixture.class.getDeclaredField("counts");
+        Field referenceField = ReferenceCollectionFixture.class.getDeclaredField("riders");
+
+        assertFalse(RewindCodecs.requiresIdentityTable(valueField));
+        assertTrue(RewindCodecs.requiresIdentityTable(referenceField));
+    }
+
+    @Test
+    void stateHoldersWithPlayerReferencesAreIdentityAware() {
+        assertTrue(RewindCodecs.supportsInPlaceStateHolder(ReferenceState.class));
+    }
+
+    @Test
+    void capturesMapWithPlayerKeysAndPlainStateValues() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(PlayerStateMapFixture.class);
+
+        assertEquals(1, schema.capturedFields().size());
+        assertTrue(RewindCodecs.requiresIdentityTable(
+                schema.capturedFields().getFirst().field()));
+        assertTrue(schema.unsupportedFields().isEmpty());
+    }
+
+    @Test
+    void capturesListOfPrimitiveArrays() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(PrimitiveArrayListFixture.class);
+
+        assertEquals(1, schema.capturedFields().size());
+        assertTrue(schema.unsupportedFields().isEmpty());
+    }
+
+    @Test
     void rejectsCollectionWithUnsupportedElementType() {
         RewindClassSchema schema = RewindSchemaRegistry.schemaFor(UnsupportedCollectionFixture.class);
 
@@ -84,8 +136,34 @@ class TestRewindCollectionCodecs {
         final List<Integer> values = new ArrayList<>(List.of(1, 2, 3));
     }
 
+    private static final class IdentityMapFixture {
+        String key = new String("key");
+        IdentityHashMap<String, Integer> values = new IdentityHashMap<>();
+
+        IdentityMapFixture() {
+            values.put(key, 11);
+        }
+    }
+
     private static final class UnsupportedCollectionFixture {
         List<Object> objects = new ArrayList<>(List.of(new Object()));
+    }
+
+    private static final class ReferenceCollectionFixture {
+        Set<AbstractPlayableSprite> riders = new LinkedHashSet<>();
+    }
+
+    private static final class ReferenceState {
+        AbstractPlayableSprite rider;
+        int timer;
+    }
+
+    private static final class PlayerStateMapFixture {
+        Map<AbstractPlayableSprite, ReferenceState> riders = new IdentityHashMap<>();
+    }
+
+    private static final class PrimitiveArrayListFixture {
+        List<int[]> positions = new ArrayList<>(List.of(new int[] {1, 2}));
     }
 
     @SafeVarargs

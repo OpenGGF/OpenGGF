@@ -1,0 +1,916 @@
+Temporary Audio Rewind Blueprint
+================================
+
+Purpose
+-------
+
+This temporary blueprint defines the high-level route to deterministic,
+memory-conscious audio rewind for OpenGGF. It is not a final design doc or an
+implementation plan. Use it as the shared reference for smaller design docs
+covering audio command timelines, deterministic audio scheduling, compact SMPS
+snapshots, chip-state snapshots, presentation buffering, and audio rewind
+validation.
+
+The target is not to execute audio backward. The target is that restoring an
+earlier audio state and running the normal forward audio path produces the same
+audio state and samples as uninterrupted forward playback, within the chosen
+accuracy tier.
+
+Current Planning State
+----------------------
+
+Tier 0 has completed the exploration/design/self-review loop, has a formal
+implementation plan, and has been implemented and committed on the current
+branch:
+
+  docs/superpowers/plans/2026-05-08-audio-rewind-tier0.md
+
+Tier 1 has completed its design/self-review/implementation loop and has been
+committed on the current branch:
+
+  docs/superpowers/plans/2026-05-08-audio-rewind-tier1-command-timeline.md
+
+Tier 1 and Tier 2a focused verification is clean for the command timeline,
+logical snapshot seam, rewind discard/suppression behavior, backend bypass
+guard, and adjacent audio/rewind regression tests. A full-suite clean claim is
+intentionally not made: broader `mvn -Dmse=off test` still reports unrelated
+local `develop` failures in S3K bootstrap, trace replay, object-service, and
+singleton-guard tests. The latest full run reported 4,775 tests, 21 failures, 0
+errors, and 6 skipped. The branch must not be merged to local `develop` until
+that repository-wide gate is green.
+
+Tier 2a has started implementation with a backend-agnostic logical snapshot
+seam:
+
+  src/main/java/com/openggf/audio/rewind/AudioLogicalSnapshot.java
+  src/main/java/com/openggf/audio/rewind/AudioSourceDescriptor.java
+
+That first Tier 2 slice captured AudioManager intent descriptors only. Later
+loops now snapshot and restore `LWJGLAudioBackend` logical state,
+`SmpsDriver`, `SmpsSequencer`, PSG, YM2612, DAC, and resampler state.
+
+Update: the first Tier 2 restore slice is now implemented. `AudioManager` can
+restore `AudioLogicalSnapshot`, `AudioBackend` has a logical restore contract,
+`LWJGLAudioBackend` restores descriptor/flag-level backend state without
+restoring OpenAL objects, and `AudioKeyframeStore` restores the nearest logical
+keyframe before replaying timeline commands. `RewindController` now owns an
+audio keyframe store when constructed with `AudioManager`, captures audio
+keyframes at gameplay keyframe boundaries, prunes future audio keyframes on
+rewind branches, and rebuilds audio logical state during `seekTo` and
+`stepBackward` without emitting presentation backend calls. Focused
+verification is green.
+
+This remains Tier 2 logical rewind support only until a driver snapshot includes
+the lower-level synth snapshot. SMPS driver/sequencer phase restore is now
+implemented; chip/sample parity is implemented for representative PSG,
+YM2612, DAC, resampler, mixed synth, and SMPS driver restore paths.
+
+Update: the first Tier 2b SMPS descriptor slice is now implemented. Driver
+snapshots now include compact `SmpsSourceDescriptor` metadata for each
+sequencer and its fallback voice source, and driver restore rebinds fallback
+voice data between restored sequencers when the fallback source is present in
+the same driver snapshot. This preserves the music-voice fallback used by SFX
+sequencers without treating chip or OpenAL state as authoritative.
+
+Update: the resolver-backed Tier 2b SMPS restore boundary is now implemented.
+`SmpsDriver.restoreSnapshot(snapshot, resolver)` pre-resolves and validates all
+sequencer dependencies before mutating driver state, then rebuilds sequencers
+from resolver-provided SMPS data, DAC data, audio manager, and config. The
+legacy `restoreSnapshot(snapshot)` path remains as a live-reference
+compatibility fallback. Missing or mismatched sources fail atomically and leave
+the target driver unchanged.
+
+Update: `SmpsSourceDescriptor` now carries route identity (`BASE_MUSIC`,
+`BASE_SFX_ID`, `BASE_SFX_NAME`, `DONOR_MUSIC`, `DONOR_SFX_ID`, or `UNKNOWN`)
+alongside validation metadata. `SmpsSequencer` owns a source descriptor,
+`SmpsDriver` captures route-aware sequencer and fallback-voice descriptors, and
+`LWJGLAudioBackend` assigns descriptors when creating music and SFX sequencers.
+This makes later loader-backed restore able to choose the correct lookup route.
+
+Update: backend logical snapshots now carry optional SMPS music-driver and
+standalone-SFX-driver snapshots. `AudioManager` passes a route-aware
+`SmpsDriverSnapshot.DependencyResolver` into backend restore, and
+`LWJGLAudioBackend` can rebuild captured SMPS drivers from those snapshots
+using the resolver while keeping OpenAL state presentation-only.
+
+Update: restored LWJGL music-driver snapshots now rebind the fade-complete
+callback when `sfxBlocked` is true and the restored primary music sequencer is
+in active fade-in state. This keeps SFX blocking tied to restored logical SMPS
+state instead of to a lost runtime callback reference.
+
+Update: the first Tier 3 chip/sample parity slice is now implemented. PSG
+snapshots capture `PsgChipGPGX` plus its `BlipDeltaBuffer`; YM2612 snapshots
+capture FM operator/channel state, timers/LFO/EG state, DAC playback position,
+latched DAC state, high-pass state, and `BlipResampler` history. A
+`VirtualSynthesizer` snapshot combines YM and PSG state, and
+`SmpsDriverSnapshot` now carries that synth snapshot so driver restore can
+rebuild logical sequencers and then restore chip-authoritative state instead
+of silencing it. Focused verification includes bit-exact future-sample tests
+for PSG, YM/DAC/resampler, mixed synth output, and SMPS driver restore.
+
+Update: backend-level Tier 3 integration coverage is now implemented for
+`LWJGLAudioBackend.restoreLogicalSnapshot(...)`. The test restores a captured
+backend snapshot carrying an SMPS driver snapshot through the normal backend
+restore path and verifies the restored driver produces bit-exact future mixed
+samples. OpenAL buffers and sources remain presentation-only and excluded.
+
+The next later-tier review artifact is:
+
+  AUDIO_REWIND_TIER2_LOGICAL_SMPS_REVIEW.tmp.txt
+
+The current completion audit is:
+
+  AUDIO_REWIND_COMPLETION_AUDIT.tmp.txt
+
+Completed loop:
+
+1. Completed Tier 0 implementation plan.
+2. Self-reviewed Tier 0 plan against backend bypasses, durable audio-intent
+   mutation, lifecycle hooks, and test gaps.
+3. Implemented Tier 0 with tests.
+4. Captured focused verification output and updated this blueprint's status.
+5. Completed Tier 1 command timeline review.
+6. Wrote the Tier 1 implementation plan.
+7. Implemented and focused-verified Tier 1 command timeline support.
+8. Self-reviewed Tier 1 and patched the resolved ring-route recording gap.
+9. Wrote Tier 2 logical SMPS review and implementation-plan artifacts.
+10. Implemented and focused-verified the Tier 2a logical snapshot seam.
+11. Wired audio logical keyframes into live `RewindController` seek/backstep
+    replay with presentation-suppressed logical command replay.
+12. Added descriptor metadata to SMPS driver snapshots and restored fallback
+    voice links between sequencers.
+13. Added resolver-backed SMPS driver restore with source validation and
+    atomic failure behavior.
+14. Added route identity to SMPS source descriptors and wired route-aware
+    descriptor capture through driver and LWJGL sequencer creation.
+15. Added SMPS driver snapshots to backend logical snapshots and wired
+    resolver-backed LWJGL driver restore.
+16. Rebound fade-complete callbacks after restored LWJGL fade-in snapshots.
+17. Added PSG chip snapshots with bit-exact future-sample restore coverage.
+18. Added YM2612, DAC, and resampler snapshots with bit-exact future-sample
+    restore coverage.
+19. Added mixed `VirtualSynthesizer` snapshots and SMPS driver synth snapshot
+    restore after logical sequencer rebuild.
+20. Added backend-level restore coverage for `LWJGLAudioBackend` restoring a
+    captured SMPS driver snapshot with bit-exact future samples.
+
+Current audit conclusion:
+
+1. No remaining blocker was found for deterministic restore-forward audio
+   state in the implemented Tier 0 through Tier 3 scope.
+2. OpenAL buffers/sources remain presentation-only and are not stored in
+   authoritative snapshots.
+3. Cycle-level command/chip-write timing and audible reverse PCM presentation
+   remain explicit later-tier deferrals, not blockers for the current
+   restore-forward implementation.
+
+Definition Of Audio Rewind Support
+----------------------------------
+
+For a gameplay segment between explicit rewind boundaries, every audio state
+field that can affect future audible output must be one of:
+
+1. Captured exactly and restored exactly.
+2. Rebuilt deterministically from a restored audio keyframe plus recorded
+   command timeline.
+3. Recreated from immutable ROM/config/audio data.
+4. Treated as presentation-only and explicitly discarded/requeued after
+   restore.
+5. Explicitly deferred with a reason and a tracked follow-up.
+
+The end state is not just "no duplicate SFX during rewind." The end state is
+that a forward run and a rewind+replay run can produce identical audio command
+state, SMPS state, chip state, and eventually sample output when started from
+the same authoritative audio keyframe.
+
+Scope And Boundaries
+--------------------
+
+In scope:
+- Level gameplay audio for Sonic 1, Sonic 2, and Sonic 3&K.
+- SMPS music, SFX, donor music/SFX, speed-shoes music, invincibility/extra-life
+  overrides, fades, tempo changes, continuous SFX, and ring alternation.
+- Deterministic scheduling of gameplay audio commands into an audio timeline.
+- Explicit paused, frame-step, rewind-replay, and resume semantics for audio
+  state and presentation output.
+- Compact snapshots of AudioManager intent state, SMPS driver state, sequencer
+  state, YM2612 state, PSG state, DAC playback state, and resampler state where
+  required by the selected accuracy tier.
+- PCM history only as an audible rewind presentation effect.
+
+Out of scope unless a future design expands it:
+- Menus, title screens, data select, sound test, and non-gameplay UI audio.
+- Rewinding across hard level/mode transitions.
+- Treating OpenAL source ids, buffer ids, or queued native buffers as durable
+  rewind state.
+- Running the SMPS interpreter, YM2612, PSG, or DAC backward.
+
+Hard rewind boundaries should clear or re-anchor audio history:
+- level load
+- act transition
+- special stage entry/exit
+- death/respawn once the level reset commits
+- title/menu/data-select transitions
+- editor entry/exit
+- backend/device reinitialization
+
+Core Invariants
+---------------
+
+1. OpenAL is presentation-only. OpenAL source ids, buffer ids, queued buffers,
+   processed-buffer counts, and native device state are never authoritative
+   rewind state.
+2. Rewind restore means "restore an earlier state, then run forward." Audio
+   systems must not attempt to reverse-step SMPS or chip internals.
+3. Gameplay emits audio commands. The deterministic audio core consumes a
+   frame-ordered command timeline.
+4. Rewind replay and segment-cache expansion must not emit live audio side
+   effects into the presentation backend.
+5. Audio keyframes must be compact and sparse enough that they do not dominate
+   existing gameplay rewind memory.
+6. Full chip snapshots must be manual compact records, not generic reflection
+   captures of large Java object graphs.
+7. PCM history can be used for audible backward scrubbing, but it is never the
+   source of truth for future audio state.
+8. Each accuracy tier must have tests that match its stated guarantee. Do not
+   claim sample-accurate rewind until chip/resampler state round-trips
+   bit-exactly.
+9. Paused frame-step must be deterministic. A single visual/gameplay frame-step
+   advances authoritative audio state by exactly one gameplay-frame audio slice
+   or by an explicitly documented silent-state policy.
+
+Hardware Model
+--------------
+
+The original hardware has separate but coupled timing domains:
+
+- 68000/gameplay domain: gameplay code issues sound commands during normal
+  frame/VBlank cadence.
+- Z80/SMPS driver domain: sound command handling, music/SFX sequencing,
+  priority/channel arbitration, fades, tempo changes, and DAC commands.
+- Chip domain: YM2612, PSG, and DAC output evolve continuously from their
+  internal clocks and register state.
+
+OpenGGF should not make the host audio device the owner of this timeline. The
+host device should drain already-produced PCM. The engine-owned audio runtime
+should own deterministic command consumption, SMPS/chip advancement, and
+authoritative snapshots.
+
+Recommended Architecture
+------------------------
+
+The preferred architecture is a deterministic audio timeline with sparse audio
+keyframes:
+
+```
+Gameplay frame
+  -> gameplay emits audio commands
+  -> AudioTimeline records commands with frame/order
+  -> DeterministicAudioCore consumes commands
+  -> SMPS drivers/sequencers advance by deterministic emulated time
+  -> YM2612/PSG/DAC render PCM into an engine-owned output queue
+  -> OpenAL drains the output queue only
+```
+
+Authoritative state:
+- compact audio command timeline
+- sparse audio keyframes
+- compact SMPS/chip snapshots
+
+Presentation state:
+- OpenAL buffers and sources
+- output FIFO contents
+- optional PCM history ring for audible reverse playback
+- temporary stream scratch buffers
+
+The normal gameplay rewind `CompositeSnapshot` should not carry every byte of
+audio chip state on every segment-cache frame. Instead, the gameplay snapshot
+should carry small audio cursor/intent state, while an audio-specific sparse
+keyframe store carries heavier SMPS/chip state at controlled intervals.
+
+Accuracy Tiers
+--------------
+
+Tier 0: Suppression, Bypass Guardrails, And Frame-Step Seam
+
+- During rewind restore/replay and segment-cache expansion, suppress live audio
+  presentation side effects before durable audio intent is mutated.
+- Migrate or classify gameplay-relevant direct backend bypasses.
+- Add conservative post-restore presentation cleanup for live and trace rewind
+  release.
+- Add an explicit paused frame-step audio hook that delegates to legacy polling
+  until the deterministic audio core exists.
+- Historical Tier 0 did not include command replay, SMPS snapshots, chip
+  snapshots, or sample parity; later tiers now add those capabilities.
+
+Use this as the safety foundation. It prevents duplicate SFX and avoids
+polluting OpenAL during segment-cache expansion. It does not restore exact
+music phase or exact historical music intent.
+
+Tier 1: Command Timeline
+
+- Record all gameplay audio commands by frame and intra-frame order.
+- Discard abandoned future commands when a rewind branch restores an earlier
+  frame.
+- Expose command history to tests and later keyframe/replay work.
+- Music/SFX intent is deterministic; chip/sample phase is not guaranteed unless
+  replay begins from a chip keyframe.
+
+This tier makes audio intent observable and branchable at the command level
+without large memory cost. It is implemented and focused-verified; later
+tiers now rebuild backend state from audio keyframes.
+
+Tier 2: Logical SMPS Snapshot
+
+- Snapshot AudioManager intent, music override stack, SMPS driver state,
+  active sequencers, per-track state, channel locks, PSG latches, fade state,
+  speed state, and continuous SFX state.
+- Add a backend-agnostic logical audio state boundary so this state can be
+  captured without recording OpenAL source ids, buffer ids, or queued native
+  buffers.
+- OpenAL buffers are discarded and requeued from restored logical state.
+- Chip output may still require a short settling/crossfade unless chip state is
+  also snapshotted.
+
+This tier gives strong music/SFX continuity and is the first tier where
+rewind+replay should match uninterrupted SMPS sequencing. Later Tier 3 work
+now adds representative YM2612/PSG/DAC/resampler bit-exact parity tests.
+
+Tier 3: Full Chip-State Snapshot
+
+- Snapshot YM2612 operator/channel state, envelopes, phases, feedback memory,
+  LFO, timers, DAC state, high-pass/resampler state, PSG registers, latch,
+  counters, polarity, LFSR, delta/blip state, and clock fractions.
+- Restore and run forward to produce bit-exact output from the same frame.
+
+This tier is required before claiming sample-identical audio rewind.
+
+Tier 4: Cycle-Aware Scheduler
+
+- Model sound-command writes, Z80 driver execution, chip writes, and chip
+  advancement with cycle-level timestamps.
+- Use only if future audio parity goals require chip-write/cycle-level
+  validation beyond frame-ordered command parity.
+
+This is a long-term emulator-accuracy path, not the recommended first target.
+
+Audio Command Timeline
+----------------------
+
+Every gameplay-originated audio command should be represented as a small value
+record with a frame number and intra-frame sequence number.
+
+Representative command types:
+- play music by id
+- play donor music
+- end music override
+- play SFX by id
+- play donor SFX
+- play GameSound
+- play named fallback SFX
+- stop music
+- stop all SFX
+- fade out music
+- restore music
+- speed shoes on/off
+- speed multiplier change
+- music tempo change
+- ring alternation update where not derivable from command order
+
+Command recording must happen at the `AudioManager` boundary so object, player,
+level-event, timer, bonus-stage, and gameplay manager callers use one path.
+
+During normal forward play:
+1. Append command to `AudioTimeline`.
+2. Dispatch command to the deterministic audio core.
+
+During rewind replay/segment expansion:
+1. Either suppress presentation dispatch entirely, or dispatch only into an
+   offscreen deterministic audio core used for state reconstruction.
+2. Never enqueue new live OpenAL buffers or restart audible SFX as a side
+   effect of internal rewind replay.
+
+Audio Keyframe Store
+--------------------
+
+Audio should have its own keyframe store rather than relying exclusively on the
+gameplay `CompositeSnapshot`.
+
+Audio keyframes should be sparse:
+- default interval: same as gameplay keyframes or lower frequency after
+  measurement
+- optional denser keyframes around music override transitions, fades, continuous
+  SFX, and debugger scrub hotspots
+- independent memory budget and eviction policy
+
+An audio seek to frame `F` should:
+1. Find latest audio keyframe `K <= F`.
+2. Restore the audio keyframe.
+3. Replay audio commands and deterministic audio time from `K` to `F`.
+4. Flush/requeue presentation buffers from restored output state.
+
+This mirrors gameplay rewind while keeping heavy audio state out of every
+segment-cache frame.
+
+Deterministic Audio Core
+------------------------
+
+The audio core should advance by deterministic emulated time, not by host
+OpenAL refill timing.
+
+Each game frame:
+1. Consume commands emitted for that frame in stable order.
+2. Advance SMPS/chip state by the frame's emulated audio duration.
+3. Render produced samples into an engine-owned PCM output FIFO.
+4. Append samples to a bounded PCM history ring if audible rewind scrubbing is
+   enabled.
+
+Use fixed-point accumulators for fractional samples per frame:
+- NTSC and PAL frame rates differ.
+- Device sample rate may differ from internal chip output rate.
+- Internal chip rate and host output rate should be separate concepts.
+
+Preferred model:
+- deterministic core renders at an internal canonical rate or exact chip-driven
+  rate
+- presentation layer resamples/drains to device rate
+- restore saves all accumulators needed to resume without drift
+
+Pause And Frame-Step Semantics
+------------------------------
+
+Current audio frame-step behavior is incidental: the game loop calls
+`AudioManager.update()` on a paused frame-step, but SMPS/chip state only
+advances when the OpenAL backend refills stream buffers. The deterministic
+audio architecture should replace that with explicit semantics.
+
+Required states:
+
+- Normal play: gameplay advances one frame and the audio core advances exactly
+  one gameplay-frame worth of emulated audio time.
+- Paused: gameplay state and authoritative audio state do not advance.
+- Paused frame-step: gameplay advances one frame and authoritative audio state
+  advances by exactly the corresponding one-frame audio slice.
+- Rewind replay/seek: gameplay and audio may advance internally to reconstruct
+  state, but presentation output receives no live side effects.
+- Resume after pause or rewind: presentation buffers are flushed/requeued from
+  authoritative audio state.
+
+Frame-step presentation policy should be configurable:
+
+- silent: advance authoritative audio state without playing the produced slice.
+- audible pulse: play the produced one-frame slice or a short crossfaded chunk.
+- buffered: advance authoritative audio state and hold output until unpause.
+
+The safe default for debugger and rewind determinism is `silent`. Audible pulse
+can be added later for tool ergonomics once presentation buffering is isolated
+from authoritative state.
+
+Snapshot Boundaries
+-------------------
+
+Immutable/world state:
+- ROM bytes
+- SMPS data blobs
+- voice tables
+- DAC sample data
+- loader mappings
+- sequencer config
+- audio profile command metadata
+- donor loader/config bindings after gameplay setup
+
+Small AudioManager intent state:
+- ring-left alternation
+- current music id or no-music marker
+- speed-shoes mode/multiplier
+- current tempo override if active
+- pending fade/restore intent
+- SFX blocked state
+- music override stack descriptors
+- current command timeline cursor
+
+SMPS driver state:
+- active sequencer identities/descriptors
+- music/SFX classification
+- FM and PSG channel locks by sequencer id
+- PSG latch channels
+- continuous SFX id/flag/loop count
+- pending removals if relevant at snapshot boundary
+- region/read-mode/deterministic timing state
+
+SMPS sequencer state:
+- source descriptor: base/donor, music/SFX, id, config key
+- sample counter and tempo counters
+- dividing timing, tempo weight, normal tempo
+- primed state
+- fade state
+- speed-up timeout/multiplier state
+- per-track position, active flag, duration, note, raw/scaled duration, fill,
+  tie flag, key/volume offsets, pan/AMS/FMS, voice id/data reference, loop
+  counters, return stack, modulation, detune, raw frequency, envelopes, noise
+  mode, DAC mute, force-refresh flags, SSG-EG values
+
+Chip state:
+- YM2612 registers and derived operator/channel state
+- operator phase/envelope/key state
+- feedback/memory values
+- LFO and timer state
+- busy/status/address latch
+- DAC current sample id, byte position, step, latched value, high-pass state
+- FM resampler accumulators/history
+- PSG registers, latch, freq counters, polarity, amplitudes, noise LFSR,
+  pending deltas, blip buffer state, clock fraction
+
+Presentation-only state:
+- OpenAL device/context
+- source ids
+- native buffer ids
+- queued/processed buffer counts
+- scratch arrays and direct buffers
+- host pause/resume source state
+
+Memory And Performance Model
+----------------------------
+
+Audio rewind is only acceptable if it does not swamp the existing rewind memory
+budget.
+
+Memory rules:
+- Do not store queued PCM as authoritative rewind state.
+- Do not store OpenAL objects.
+- Store command records as dense value records.
+- Store sequencer/chip snapshots in compact manual records.
+- Store references to immutable SMPS/DAC data by stable ids, not by copying
+  blobs.
+- Keep full chip snapshots sparse.
+- Keep PCM history bounded by seconds and treat it as disposable.
+- Measure audio snapshot bytes separately from gameplay snapshot bytes.
+
+Performance rules:
+- Avoid generic reflection capture for audio internals.
+- Snapshot only at controlled keyframe intervals.
+- Rebuild OpenAL queues after restore from deterministic audio state.
+- Suppress presentation dispatch during segment-cache expansion.
+- Benchmark capture, restore, audio seek, replay-to-target, and steady forward
+  playback overhead.
+- Add budget gates before enabling chip snapshots in live rewind by default.
+
+A rough target should be that command-timeline state is negligible and full
+audio keyframes remain small enough that a 10-minute gameplay history does not
+grow by more than an explicitly accepted budget.
+
+Audible Rewind Presentation
+---------------------------
+
+Audible backward scrubbing should use a PCM history ring, not reverse execution
+of audio systems.
+
+Normal play:
+1. Deterministic audio core renders forward PCM.
+2. PCM enters the output FIFO.
+3. PCM is copied into a bounded history ring.
+
+Held rewind:
+1. Gameplay rewind steps backward through restored/replayed snapshots.
+2. Presentation either mutes/crossfades or reads recent PCM history in reverse
+   chunks.
+3. Authoritative audio state is restored/replayed separately to the target
+   frame.
+
+Release:
+1. Restore/replay authoritative audio state to the target frame.
+2. Clear stale presentation FIFO/OpenAL buffers.
+3. Prefill output FIFO from restored forward audio.
+4. Crossfade briefly from mute/reverse PCM to live forward audio to hide device
+   buffer discontinuities.
+
+Variable-Speed Rewind Presentation
+-----------------------------------
+
+Rewind can run at variable speed with a hold-duration curve: starting slightly
+below realtime, passing through realtime, then accelerating beyond realtime to
+produce a tape-rewind effect at sustained hold. A thin RewindSpeedController
+maps hold duration to a speed scalar and drives both the visual frame-step rate
+and the PCM history read cursor simultaneously. Visual and audio presentation
+must use the same scalar or they diverge immediately.
+
+Pitch shift is an inherent consequence of speed, not a separate effect. Reading
+the history ring at speed S compresses S game-frames of PCM into one real-time
+output buffer of fixed size:
+
+  pitch_ratio = S x (samples_per_game_frame / samples_per_output_buffer)
+
+At 1x the ratio is 1:1 (reversed but at original pitch). Above 1x pitch rises;
+below 1x pitch falls. The tape-whine at high speed and the slow-motion pitch
+drop at low speed both emerge naturally from the read rate without additional
+processing.
+
+Rate analysis: the PCM history ring depth constraint is in game-frames, not
+real-time. During forward play the ring accumulates one game-frame of PCM per
+game-frame of play. During rewind at speed S, the presentation consumes S
+game-frames of PCM per real-time frame, but the visual cursor also covers S
+game-frames per real-time frame. The ratio of history consumed to game-history
+covered is always 1:1 regardless of S. The ring cannot run dry before the
+rewindable game history runs out. The only sizing constraint is that the ring
+must be deep enough in game-frames to cover the maximum intended rewind window,
+which is the same requirement at any speed.
+
+Linear interpolation is sufficient for the fractional-position read cursor.
+Aliasing artefacts at high speed are acceptable and consistent with the tape
+aesthetic; sinc-quality resampling is not required here.
+
+The crossfade on release should scale with how far the speed scalar is from 1.0
+at the moment of release. A transition from high speed produces a large pitch
+discontinuity and needs a longer crossfade than a transition from near-realtime.
+
+Integration With Existing Rewind
+--------------------------------
+
+The existing gameplay rewind system should remain the owner of the visual/game
+cursor. Audio integrates through narrow hooks:
+
+- A replay-suppression guard around `RewindController.seekTo` and
+  `stepBackward` segment expansion.
+- A small registered audio adapter for current command cursor and lightweight
+  intent state.
+- An audio-specific keyframe store for heavier SMPS/chip state.
+- A post-restore callback that flushes/requeues presentation buffers after
+  authoritative audio state is restored.
+- A pause/frame-step hook that advances authoritative audio state by one exact
+  frame slice when gameplay frame-step is requested.
+
+`GameplayModeContext` should register only the gameplay-scoped audio adapter.
+Global menu/title/data-select audio should remain outside gameplay rewind until
+a separate mode-level design covers it.
+
+Validation Strategy
+-------------------
+
+Use tiered validation so each stage has honest guarantees.
+
+Tier 0 tests:
+- Rewind replay does not emit duplicate music/SFX commands to live backend.
+- Held rewind over rings, monitors, hazards, and boss triggers does not spam
+  audible SFX.
+- Release resumes or restarts expected music without stale SFX continuing.
+
+Tier 1 tests:
+- Command timeline records frame/order correctly.
+- Rewind+replay command sequence equals uninterrupted command sequence.
+- Ring alternation, donor routing, speed shoes, fades, and overrides
+  round-trip.
+- Rewind branch restore discards abandoned future audio commands.
+
+Tier 2 tests:
+- `SmpsDriver` and `SmpsSequencer` capture -> render/replay -> restore ->
+  replay produce matching debug state.
+- Channel locks and override stack restore correctly after SFX steals channels.
+- Continuous SFX extension state survives restore.
+- Snapshot records exclude OpenAL source ids, buffer ids, queued-buffer counts,
+  and native device/context handles.
+
+Tier 3 tests:
+- Render N samples, capture, render M samples, restore, render M samples, and
+  assert bit-exact PCM for YM/PSG/DAC combinations.
+- Include fade, modulation, DAC playback, PSG noise, SSG-EG, speed shoes, and
+  music override cases.
+
+Benchmark tests:
+- forward playback overhead with audio rewind off/on
+- command-recording overhead
+- audio keyframe capture/restore time
+- audio seek replay cost
+- retained bytes per audio keyframe
+- PCM history memory
+- impact on held rewind segment-cache expansion
+- paused frame-step cost and produced-sample counts
+
+Multi-Agent Orchestration
+-------------------------
+
+Audio rewind should be planned and implemented as coordinated work across
+small, independent tracks. The coordinator owns the integrated design and final
+merge decisions; agents own bounded research, design, or implementation slices.
+
+The active orchestration loop for this blueprint is:
+
+1. Explore independent risk areas with read-only agents or local inspection.
+2. Synthesize the findings into the blueprint and orchestration artifact.
+3. Run adversarial self-review before narrowing implementation scope.
+4. Write one tier-specific implementation plan.
+5. Implement and verify that tier.
+6. Update blueprint status and repeat for the next tier.
+
+General rules:
+
+- Research agents do not edit files unless explicitly assigned a write scope.
+- Design agents return concrete options, risks, and recommended boundaries.
+- Implementation workers receive disjoint file/module ownership.
+- Review agents inspect the integrated proposal or patch, not isolated pieces
+  only.
+- The coordinator reconciles contradictions before work moves to the next
+  phase.
+
+Phase 1: Exploration
+
+Parallel explorer tracks:
+
+- Hardware timing explorer: document 68000 command timing, Z80/SMPS cadence,
+  YM2612/PSG/DAC continuous state, and accuracy tiers.
+- Current audio backend explorer: map `AudioManager`, `LWJGLAudioBackend`,
+  `SmpsDriver`, `SmpsSequencer`, `VirtualSynthesizer`, YM2612, PSG, DAC, and
+  OpenAL presentation responsibilities.
+- Rewind integration explorer: map `RewindController`, `SegmentCache`,
+  `GameplayModeContext`, live rewind, trace rewind, pause, and frame-step
+  hooks.
+- Test and benchmark explorer: identify existing audio tests, rewind
+  benchmarks, fake backend opportunities, and sample-level regression paths.
+
+Coordinator output:
+- integrated current-state map
+- list of authoritative vs presentation state
+- first-pass risk register
+- recommended accuracy tier for the first implementation milestone
+
+Phase 2: Focused Research
+
+Parallel research tracks:
+
+- Command timeline design: command record types, frame/order source, replay
+  rules, suppression behavior, and command-log memory estimate.
+- Deterministic audio core design: per-frame advancement API, fixed-point
+  timing, output FIFO, pause/frame-step semantics, and OpenAL drain boundary.
+- Snapshot design: compact state records for AudioManager intent, SMPS driver,
+  sequencer tracks, YM2612, PSG, DAC, and resamplers by tier.
+- Presentation design: PCM history ring, reverse playback, mute/crossfade,
+  buffer flushing, and host device pause/resume behavior.
+- Validation design: command parity tests, SMPS state round trips, bit-exact
+  chip tests, benchmark counters, and failure diagnostics.
+
+Coordinator output:
+- tradeoff matrix
+- chosen milestone scope
+- deferred decisions with reasons
+- list of files/modules each future worker may own
+
+Phase 3: Design Synthesis
+
+The coordinator combines research into a formal design with:
+
+- architecture diagram and ownership boundaries
+- accuracy tier selected for the first implementation
+- APIs and lifecycle hooks
+- state records and keyframe strategy
+- pause/frame-step policy
+- replay suppression contract
+- benchmark budget proposal
+- migration sequence and rollback strategy
+
+Self-review before implementation planning:
+- no OpenAL state listed as authoritative
+- no full chip snapshots added to every gameplay `CompositeSnapshot`
+- command ordering is defined within a frame
+- pause/frame-step behavior is explicit
+- segment-cache memory amplification is addressed
+- tests match the claimed accuracy tier
+- global `AudioManager` ownership does not leak menu/title audio into gameplay
+  rewind
+
+Phase 4: Implementation Coordination
+
+Implementation should be split only after the design is approved.
+
+Suggested worker ownership:
+
+- Worker A: audio replay suppression and fake-backend tests.
+- Worker B: command timeline value records and `AudioManager` recording hooks.
+- Worker C: deterministic audio core boundary and OpenAL FIFO-drain adapter.
+- Worker D: lightweight audio rewind adapter and gameplay-context registration.
+- Worker E: SMPS driver/sequencer compact snapshots and state round-trip tests.
+- Worker F: chip snapshot records and bit-exact sample tests.
+- Worker G: PCM history presentation and crossfade behavior.
+- Worker H: benchmark extensions and documentation updates.
+
+Write scopes must be disjoint where possible. Workers are not alone in the
+codebase; they must not revert unrelated edits and must adapt to changes made
+by other workers. The coordinator integrates patches in dependency order and
+runs the tier-appropriate verification suite after each merge group.
+
+Phase 5: Review And Acceptance
+
+Independent review should happen at two points:
+
+- Design review: challenge timing assumptions, memory model, authority
+  boundaries, and whether the selected tier is honestly described.
+- Patch review: prioritize regressions, race conditions, replay side effects,
+  OpenAL coupling, missing state, and insufficient tests.
+
+Acceptance requires:
+- tests for the enabled tier
+- benchmark output for capture/restore/replay overhead
+- documentation stating the enabled tier and deferred fidelity gaps
+- no implementation path that depends on host buffer refill timing for
+  authoritative audio advancement
+
+Implementation Priority
+-----------------------
+
+Recommended order:
+
+1. Rewind replay suppression.
+   Add replay scopes, backend-bypass guardrails, durable-intent suppression,
+   conservative release cleanup, and the paused frame-step seam. Formal plan:
+   `docs/superpowers/plans/2026-05-08-audio-rewind-tier0.md`. Implemented and
+   committed.
+
+2. Command timeline foundation.
+   Record `AudioManager` commands as frame-ordered value records. Keep command
+   logging independent of OpenAL. Formal plan:
+   `docs/superpowers/plans/2026-05-08-audio-rewind-tier1-command-timeline.md`.
+   Implemented and committed.
+
+3. Lightweight audio rewind adapter.
+   Register compact gameplay-scoped state such as command cursor, ring
+   alternation, music intent, speed state, fade intent, and override
+   descriptors. This is folded into the Tier 2 planning boundary because the
+   useful state descriptors live beside the logical backend snapshot seam.
+
+4. Deterministic audio core boundary.
+   Move authoritative SMPS/chip advancement away from OpenAL `fillBuffer()` and
+   into an engine-owned per-frame audio runtime. Leave OpenAL as a FIFO drain.
+   Tier 2 should create the logical boundary and tests first; full per-frame
+   sample production can follow after the snapshot seam is stable.
+
+5. Sparse audio keyframe store.
+   Add an audio-specific keyframe store and seek path that restores audio state
+   then replays commands/time forward to the target frame.
+
+6. Compact SMPS driver/sequencer snapshots.
+   Add manual records for driver and sequencer state before chip snapshots.
+
+7. PCM history presentation.
+   Add bounded reverse-audio presentation for held rewind and crossfade on
+   release. Keep this separate from authoritative state.
+
+8. Compact chip snapshots.
+   Add YM2612, PSG, DAC, and resampler state records behind tests and benchmark
+   gates.
+
+9. Optional cycle-aware scheduler.
+   Only pursue this after the deterministic frame-owned audio core is stable
+   and a future parity goal requires cycle-level command/chip-write timing.
+
+Post-Audio-Rewind Follow-Up
+---------------------------
+
+After the core audio rewind effort is complete, add a configurable tape-coast
+mode for live gameplay rewind speed.
+
+Follow-up scope:
+- Add a rewind rate controller above `RewindController`; keep snapshot/restore
+  logic integer-frame and deterministic.
+- Ramp held rewind speed up with an easing/inertia curve instead of stepping
+  exactly one gameplay frame per visual frame.
+- On rewind-key release, support both instant stop and tape-coast deceleration.
+- Add a configuration option for the release policy. The application default
+  should preserve current behavior by leaving coast disabled.
+- Set the workspace `config.json` value to enable coast for local development.
+- Drive visual rewind rate and reverse-audio presentation from the same speed
+  scalar so reel motion and audio scrub stay synchronized.
+
+Design Risks
+------------
+
+Important risks to manage:
+
+- SegmentCache amplification: full audio snapshots on every expanded frame can
+  blow the memory budget.
+- OpenAL coupling: restoring native source/buffer state will be brittle across
+  devices and pause/resume.
+- Intra-frame ordering: command replay must preserve the real order of audio
+  calls within gameplay update.
+- Fractional timing drift: frame-to-sample conversion must be fixed-point and
+  restored.
+- Chip-state incompleteness: sequencer snapshots alone cannot guarantee
+  identical envelope phase, PSG noise, DAC position, or resampler output.
+- Replay side effects: internal rewind replay must not trigger audible output or
+  mutate presentation-only queues.
+- Global ownership: `AudioManager` is currently global, while gameplay rewind
+  is session-scoped. The adapter must avoid dragging menu/title audio into
+  gameplay rewind.
+
+Success Criteria
+----------------
+
+The overall audio rewind effort is complete when:
+
+1. Rewind replay never emits unintended live audio side effects.
+2. Command timelines match between uninterrupted and rewind+replay runs.
+3. Audio keyframes restore music/SFX intent and SMPS state deterministically.
+4. OpenAL buffers can be discarded/requeued after restore without affecting
+   authoritative state.
+5. Full chip snapshots produce bit-exact PCM after restore for representative
+   YM2612, PSG, DAC, fade, modulation, and SFX-arbitration cases.
+6. Audio rewind memory and performance remain inside measured budgets.
+7. Documentation clearly labels the enabled accuracy tier and any deferred
+   fidelity gaps.

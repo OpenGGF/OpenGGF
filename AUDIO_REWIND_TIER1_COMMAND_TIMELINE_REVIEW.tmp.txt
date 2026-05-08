@@ -1,0 +1,201 @@
+Audio Rewind Tier 1 Command Timeline Review Brief
+=================================================
+
+Purpose
+-------
+
+This brief started the orchestration loop after Tier 0 implementation. It is a
+historical design-review artifact, not an implementation plan. Tier 1
+implementation planning waited until this review resolved command shape,
+frame/order authority, discard semantics, and memory budget.
+
+Status
+------
+
+Resolved and implemented on the current branch. The implementation plan is:
+
+    docs/superpowers/plans/2026-05-08-audio-rewind-tier1-command-timeline.md
+
+Focused Tier 1 verification passed, and the self-review patch records resolved
+ring-left/ring-right fallback routes as `RING_RESOLVED`. Tier 1 remains honest
+about its limit: it records and branches command intent, but does not rebuild
+SMPS, chip, or PCM state from keyframes.
+
+
+Tier 1 Goal
+-----------
+
+Record gameplay-originated audio commands in a deterministic frame-ordered
+timeline so a rewind branch can discard abandoned future commands and later
+replay audio intent from a sparse audio keyframe.
+
+Tier 1 does not claim SMPS logical-state parity, chip phase parity, or
+bit-exact PCM output.
+
+
+Prerequisites From Tier 0
+-------------------------
+
+Tier 1 design review assumes the following Tier 0 outcomes are true in the
+focused Tier 0 verification suite:
+
+1. Internal rewind replay scopes suppress live audio side effects.
+2. Suppression guards run before durable audio-intent mutation.
+3. Gameplay restore/speed backend bypasses are routed through AudioManager or
+   classified out of gameplay rewind scope.
+4. Live and trace rewind release paths have conservative presentation cleanup.
+5. Paused frame-step has an explicit audio hook.
+6. A backend-bypass scanner exists.
+
+If any prerequisite regresses during Tier 1 planning, the review must start by
+updating this brief and the Tier 0 guard tests.
+
+
+Command Model Under Review
+--------------------------
+
+Proposed timeline entry:
+
+    record AudioTimelineEntry(long frame, int order, AudioCommand command) {}
+
+Proposed command family:
+
+    sealed interface AudioCommand {
+        record PlayMusic(int musicId, MusicRoute route, boolean override,
+                         String donorGameId) implements AudioCommand {}
+        record PlaySfx(int sfxId, String sfxName, SfxRoute route, float pitch,
+                       String donorGameId) implements AudioCommand {}
+        record FadeOutMusic(int steps, int delay) implements AudioCommand {}
+        record StopMusic() implements AudioCommand {}
+        record StopAllSfx() implements AudioCommand {}
+        record EndMusicOverride(int musicId) implements AudioCommand {}
+        record RestoreMusic(RestoreCause cause) implements AudioCommand {}
+        record SetSpeedShoes(boolean enabled) implements AudioCommand {}
+        record SetSpeedMultiplier(int multiplier) implements AudioCommand {}
+        record ChangeMusicTempo(int dividingTiming) implements AudioCommand {}
+        record ResetRingAlternation(boolean ringLeft) implements AudioCommand {}
+    }
+
+Proposed route enums:
+
+    enum MusicRoute {
+        BASE_SMPS,
+        DONOR_SMPS,
+        FALLBACK_WAV,
+        SYSTEM_COMMAND
+    }
+
+    enum SfxRoute {
+        BASE_SMPS_ID,
+        BASE_SMPS_NAME,
+        DONOR_SMPS,
+        FALLBACK_NAME,
+        RING_RESOLVED
+    }
+
+    enum RestoreCause {
+        EXPLICIT,
+        SMPS_FADE_IN_COMMAND
+    }
+
+
+Design Questions To Resolve
+---------------------------
+
+1. Should timeline recording happen before or after AudioManager resolves donor,
+   ring, system-command, SMPS, and fallback routes?
+
+   Current recommendation:
+   - Record after resolution.
+   - Keep raw request metadata only for diagnostics.
+
+
+2. What is the frame/order authority?
+
+   Current recommendation:
+   - Frame comes from the gameplay/audio coordinator.
+   - Order is a per-frame monotonic sequence assigned by the timeline before
+     dispatch.
+   - OpenAL update timing never defines order.
+
+
+3. How should ring alternation be represented?
+
+   Current recommendation:
+   - Record the resolved RING_LEFT or RING_RIGHT command.
+   - Snapshot or reset `ringLeft` as lightweight intent state.
+   - Do not recompute ring side during replay from current mutable state.
+
+
+4. How should speed shoes be represented?
+
+   Current recommendation:
+   - Use semantic commands: SetSpeedShoes and SetSpeedMultiplier.
+   - Do not encode speed shoes only as opaque music ids.
+
+
+5. How should rewind branching discard timeline data?
+
+   Current recommendation:
+   - discardAfter(frame) removes entries with frame greater than the restored
+     frame.
+   - If the system later tracks intra-frame cursor position, discard current
+     frame entries after that cursor.
+   - Until then, discard the uncommitted tail of the restored frame.
+
+
+6. What state is required in the first Tier 1 audio keyframe?
+
+   Current recommendation:
+   - ringLeft.
+   - current timeline frame/order cursor.
+   - donor binding identities.
+   - profile/loader identity.
+   - lightweight current music/speed/fade/override intent only if it can be
+     captured without pulling in backend/OpenAL state.
+
+
+Acceptance Criteria For Tier 1 Design
+-------------------------------------
+
+Before writing a Tier 1 implementation plan, the design must answer:
+
+1. Every AudioManager command entry point that records a command.
+2. Every command type and payload field.
+3. The exact record-before or record-after-resolution rule.
+4. The source of frame and intra-frame order.
+5. discardAfter semantics after live rewind.
+6. Which lightweight intent state is snapshotted.
+7. Which backend logical state is deferred to Tier 2.
+8. How tests prove command parity without claiming SMPS or sample parity.
+9. How memory use is estimated for command history.
+10. How the backend-bypass scanner protects the timeline boundary.
+
+
+Tier 1 Test Shape
+-----------------
+
+Recommended tests after Tier 0 is verified:
+
+1. TestAudioCommandTimeline.recordsCommandsWithFrameAndStableIntraFrameOrder.
+2. TestAudioCommandTimeline.recordsResolvedDonorCommandsWithDonorGameAndId.
+3. TestAudioCommandTimeline.recordsRingAlternationAsResolvedLeftRightCommand.
+4. TestAudioCommandTimeline.recordsSpeedShoesAsSemanticCommands.
+5. TestAudioCommandTimeline.discardAfterDropsFutureBranchCommands.
+6. TestAudioTimelineRewindParity.rewindReplayRebuildsSameCommandTimelineAsForwardRun.
+7. TestAudioTimelineRewindParity.branchAfterRewindDiscardsOldFutureAudioCommands.
+
+
+Review Risks
+------------
+
+1. Recording after resolution may hide bugs in route resolution unless raw
+   diagnostic metadata is retained.
+2. Recording before resolution may make replay depend on mutable donor maps,
+   sound maps, and ring state.
+3. Frame/order assignment can drift if normal external stepping and internal
+   replay use different cursor sources.
+4. Capturing backend logical music state in Tier 1 can accidentally drag Tier 2
+   work into the command-timeline milestone.
+5. Command history memory is probably small, but stress cases such as ring-loss
+   showers and continuous SFX must still be measured.
