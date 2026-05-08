@@ -4,6 +4,7 @@ import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
+import com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -39,6 +40,10 @@ class TestRewindFieldInventoryTool {
     private static class StructuralArtFixture {
         private final Pattern blank = new Pattern();
         private final Pattern[] tiles = {new Pattern(), new Pattern()};
+    }
+
+    private static class StructuralCallbackFixture {
+        private Sonic1TryAgainEggmanObjectInstance.Sonic1CreditsTextRendererRef textRenderer;
     }
 
     private static class AnnotationDensityFixture {
@@ -93,6 +98,13 @@ class TestRewindFieldInventoryTool {
     @Test
     void unsupportedInventorySkipsStructuralArtFields() {
         List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(StructuralArtFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
+    }
+
+    @Test
+    void unsupportedInventorySkipsStructuralRendererCallbacks() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(StructuralCallbackFixture.class);
 
         assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
     }
