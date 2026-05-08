@@ -3,9 +3,11 @@ package com.openggf.audio;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioCommandTimeline;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
+import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -131,6 +133,7 @@ public class AudioManager {
                 commandTimeline.currentFrame(),
                 commandTimeline.nextOrder(),
                 commandTimeline.entries().size(),
+                backend != null ? backend.captureLogicalSnapshot() : AudioBackendLogicalSnapshot.empty(),
                 donorGameIds,
                 donorBindings);
     }
@@ -155,6 +158,94 @@ public class AudioManager {
 
     public boolean isRewindReplaySuppressed() {
         return rewindReplaySuppressionDepth > 0;
+    }
+
+    public void replayTimelineCommand(AudioCommand command) {
+        if (backend == null || command == null) {
+            return;
+        }
+        switch (command) {
+            case AudioCommand.PlayMusic playMusic -> replayMusic(playMusic);
+            case AudioCommand.PlaySfx playSfx -> replaySfx(playSfx);
+            case AudioCommand.FadeOutMusic fade -> backend.fadeOutMusic(fade.steps(), fade.delay());
+            case AudioCommand.StopMusic ignored -> backend.stopPlayback();
+            case AudioCommand.StopAllSfx ignored -> backend.stopAllSfx();
+            case AudioCommand.EndMusicOverride end -> backend.endMusicOverride(end.musicId());
+            case AudioCommand.RestoreMusic ignored -> backend.restoreMusic();
+            case AudioCommand.SetSpeedShoes speed -> backend.setSpeedShoes(speed.enabled());
+            case AudioCommand.SetSpeedMultiplier speed -> backend.setSpeedMultiplier(speed.multiplier());
+            case AudioCommand.ChangeMusicTempo tempo -> backend.changeMusicTempo(tempo.dividingTiming());
+            case AudioCommand.ResetRingAlternation reset -> ringLeft = reset.ringLeft();
+        }
+    }
+
+    private void replayMusic(AudioCommand.PlayMusic command) {
+        switch (command.route()) {
+            case BASE_SMPS -> {
+                if (smpsLoader != null) {
+                    AbstractSmpsData data = smpsLoader.loadMusic(command.musicId());
+                    if (data != null) {
+                        backend.prepareLogicalMusicSource(AudioSourceDescriptor.baseMusic(command.musicId()));
+                        backend.playSmps(data, dacData);
+                    }
+                }
+            }
+            case DONOR_SMPS -> {
+                SmpsLoader loader = donorLoaders.get(command.donorGameId());
+                DacData dData = donorDacData.get(command.donorGameId());
+                if (loader != null && dData != null) {
+                    AbstractSmpsData data = loader.loadMusic(command.musicId());
+                    if (data != null) {
+                        backend.prepareLogicalMusicSource(AudioSourceDescriptor.donorMusic(
+                                command.donorGameId(), command.musicId()));
+                        backend.playSmps(data, dData, donorConfigs.get(command.donorGameId()), true);
+                    }
+                }
+            }
+            case FALLBACK_WAV -> {
+                backend.prepareLogicalMusicSource(AudioSourceDescriptor.fallbackMusic(command.musicId()));
+                backend.playMusic(command.musicId());
+            }
+            case SYSTEM_COMMAND -> {
+            }
+        }
+    }
+
+    private void replaySfx(AudioCommand.PlaySfx command) {
+        switch (command.route()) {
+            case BASE_SMPS_ID -> {
+                if (smpsLoader != null) {
+                    AbstractSmpsData sfx = smpsLoader.loadSfx(command.sfxId());
+                    if (sfx != null) {
+                        backend.playSfxSmps(sfx, dacData, command.pitch());
+                    }
+                }
+            }
+            case BASE_SMPS_NAME -> {
+                if (smpsLoader != null) {
+                    AbstractSmpsData sfx = smpsLoader.loadSfx(command.sfxName());
+                    if (sfx != null) {
+                        backend.playSfxSmps(sfx, dacData, command.pitch());
+                    }
+                }
+            }
+            case DONOR_SMPS -> {
+                SmpsLoader loader = donorLoaders.get(command.donorGameId());
+                DacData dData = donorDacData.get(command.donorGameId());
+                if (loader != null && dData != null) {
+                    AbstractSmpsData sfx = loader.loadSfx(command.sfxId());
+                    if (sfx != null) {
+                        SmpsSequencerConfig config = donorConfigs.get(command.donorGameId());
+                        if (config != null) {
+                            backend.playSfxSmps(sfx, dData, command.pitch(), config);
+                        } else {
+                            backend.playSfxSmps(sfx, dData, command.pitch());
+                        }
+                    }
+                }
+            }
+            case FALLBACK_NAME, RING_RESOLVED -> backend.playSfx(command.sfxName(), command.pitch());
+        }
     }
 
     private boolean suppressingRewindReplay() {
@@ -247,12 +338,14 @@ public class AudioManager {
             if (data != null) {
                 recordTimelineCommand(new AudioCommand.PlayMusic(
                         musicId, AudioCommand.MusicRoute.BASE_SMPS, false, null));
+                backend.prepareLogicalMusicSource(AudioSourceDescriptor.baseMusic(musicId));
                 backend.playSmps(data, dacData);
                 return;
             }
         }
         recordTimelineCommand(new AudioCommand.PlayMusic(
                 musicId, AudioCommand.MusicRoute.FALLBACK_WAV, false, null));
+        backend.prepareLogicalMusicSource(AudioSourceDescriptor.fallbackMusic(musicId));
         backend.playMusic(musicId);
     }
 
@@ -406,6 +499,7 @@ public class AudioManager {
                 // forceOverride=true: the base game's audioProfile won't recognize
                 // donor music IDs, so force the override path to push zone music
                 // onto the stack for restoration when Super Sonic ends.
+                backend.prepareLogicalMusicSource(AudioSourceDescriptor.donorMusic(donorGameId, musicId));
                 backend.playSmps(data, dData, config, true);
             }
         }

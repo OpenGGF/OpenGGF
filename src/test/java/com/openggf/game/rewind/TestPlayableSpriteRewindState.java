@@ -43,6 +43,23 @@ class TestPlayableSpriteRewindState {
                 "restored airborne players must not keep the grounded push-sensor Y offset");
     }
 
+    @Test
+    void restoreRewindStateRestoresDebugModeFlag() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+
+        Sonic source = new Sonic("source", (short) 100, (short) 100);
+        source.setDebugMode(true);
+
+        Sonic target = new Sonic("target", (short) 100, (short) 100);
+        target.setDebugMode(false);
+
+        target.restoreRewindState(source.captureRewindState());
+
+        assertTrue(target.isDebugMode());
+    }
+
     private static int pushSensorY(Sonic sonic) {
         Sensor[] pushSensors = sonic.getPushSensors();
         return pushSensors[0].getY();

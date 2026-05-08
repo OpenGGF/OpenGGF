@@ -23,7 +23,8 @@ public final class LiveRewindInputSource implements InputSource {
     private final List<Bk2FrameInput> frames = new ArrayList<>();
 
     public LiveRewindInputSource() {
-        frames.add(new Bk2FrameInput(0, 0, 0, false, 0, 0, false, "live:0"));
+        frames.add(new Bk2FrameInput(0, 0, 0, false, 0, 0, false,
+                false, false, false, "live:0"));
     }
 
     public void appendFrame(InputHandler input, SonicConfigurationService config) {
@@ -48,6 +49,9 @@ public final class LiveRewindInputSource implements InputSource {
                         SonicConfiguration.P2_JUMP),
                 input.isKeyPressed(config.getInt(SonicConfiguration.P2_JUMP)) ? 1 : 0,
                 input.isKeyPressed(config.getInt(SonicConfiguration.P2_START)),
+                input.isKeyPressed(config.getInt(SonicConfiguration.DEBUG_MODE_KEY)),
+                input.isShiftDown(),
+                input.isControlDown(),
                 "live:" + frameIndex));
     }
 

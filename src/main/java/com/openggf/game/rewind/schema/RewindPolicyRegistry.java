@@ -3,10 +3,13 @@ package com.openggf.game.rewind.schema;
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.GameModule;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
+import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.lang.reflect.Field;
@@ -23,8 +26,11 @@ public final class RewindPolicyRegistry {
             GraphicsManager.class, RewindFieldPolicy.TRANSIENT,
             ObjectRenderManager.class, RewindFieldPolicy.TRANSIENT,
             ObjectServices.class, RewindFieldPolicy.TRANSIENT,
+            PatternDesc.class, RewindFieldPolicy.TRANSIENT,
             PatternSpriteRenderer.class, RewindFieldPolicy.TRANSIENT,
             PlayerSpriteRenderer.class, RewindFieldPolicy.TRANSIENT,
+            SpriteAnimationSet.class, RewindFieldPolicy.TRANSIENT,
+            SpriteMappingPiece.class, RewindFieldPolicy.TRANSIENT,
             SpritePieceRenderer.class, RewindFieldPolicy.TRANSIENT
     );
 

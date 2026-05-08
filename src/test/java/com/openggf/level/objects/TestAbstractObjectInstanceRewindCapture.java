@@ -3,6 +3,7 @@ package com.openggf.level.objects;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
+import com.openggf.util.AnimationTimer;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -315,6 +316,20 @@ class TestAbstractObjectInstanceRewindCapture {
         }
     }
 
+    private static final class TestObjectWithSharedHelpers extends AbstractObjectInstance {
+        private final PlatformBobHelper bob = new PlatformBobHelper();
+        private final AnimationTimer timer = new AnimationTimer(3, 2);
+
+        TestObjectWithSharedHelpers(ObjectSpawn spawn) {
+            super(spawn, "TestObjectWithSharedHelpers");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no-op
+        }
+    }
+
     private enum Mode {
         IDLE,
         ACTIVE
@@ -459,6 +474,31 @@ class TestAbstractObjectInstanceRewindCapture {
         assertEquals(5, obj.children[1].timer);
         assertEquals(5, obj.childList.get(0).timer);
         assertEquals(3, obj.childList.get(1).x);
+    }
+
+    @Test
+    void defaultClassCapturesAndRestoresSharedHelperCompactSidecar() {
+        TestObjectWithSharedHelpers obj = new TestObjectWithSharedHelpers(spawn(0, 0));
+        obj.bob.update(true);
+        obj.bob.update(true);
+        obj.timer.tick();
+        obj.timer.tick();
+
+        PerObjectRewindSnapshot snap = obj.captureRewindState();
+        assertNotNull(snap.compactGenericState());
+        assertNull(snap.genericState());
+
+        for (int i = 0; i < 20; i++) {
+            obj.bob.update(true);
+        }
+        obj.timer.tick();
+        obj.timer.tick();
+        obj.restoreRewindState(snap);
+
+        assertEquals(8, obj.bob.getAngle());
+        assertEquals(0, obj.timer.getFrame());
+        obj.timer.tick();
+        assertEquals(1, obj.timer.getFrame());
     }
 
     @Test

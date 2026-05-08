@@ -10,10 +10,12 @@ public record AudioLogicalSnapshot(
         long commandTimelineFrame,
         int commandTimelineNextOrder,
         int commandEntryCount,
+        AudioBackendLogicalSnapshot backend,
         Set<String> donorGameIds,
         Set<DonorSfxBindingSnapshot> donorBindings) {
 
     public AudioLogicalSnapshot {
+        backend = Objects.requireNonNull(backend, "backend");
         donorGameIds = Set.copyOf(Objects.requireNonNull(donorGameIds, "donorGameIds"));
         donorBindings = Set.copyOf(Objects.requireNonNull(donorBindings, "donorBindings"));
     }
