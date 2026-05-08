@@ -11,7 +11,6 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Collections;
 import java.util.Set;
 import java.util.HashMap;
@@ -36,6 +35,10 @@ public class TraceData {
     private final TraceMetadata metadata;
     private final List<TraceFrame> frames;
     private final Map<Integer, List<TraceEvent>> eventsByFrame;
+    private final List<Integer> checkpointFramesAscending;
+    private final Map<Integer, TraceEvent.Checkpoint> checkpointsByFrame;
+    private final List<Integer> zoneActStateFramesAscending;
+    private final Map<Integer, TraceEvent.ZoneActState> zoneActStatesByFrame;
 
     // Package-private so same-package test fixtures in src/test can
     // construct in-memory instances without going through disk I/O.
@@ -44,6 +47,11 @@ public class TraceData {
         this.metadata = metadata;
         this.frames = frames;
         this.eventsByFrame = eventsByFrame;
+        this.checkpointsByFrame = new HashMap<>();
+        this.checkpointFramesAscending = new ArrayList<>();
+        this.zoneActStatesByFrame = new HashMap<>();
+        this.zoneActStateFramesAscending = new ArrayList<>();
+        buildLatestEventIndexes();
     }
 
     public static TraceData load(Path traceDirectory) throws IOException {
@@ -218,35 +226,38 @@ public class TraceData {
     }
 
     public TraceEvent.Checkpoint latestCheckpointAtOrBefore(int frame) {
-        List<Integer> frames = new ArrayList<>(eventsByFrame.keySet());
-        frames.sort(Comparator.reverseOrder());
-        for (int candidateFrame : frames) {
-            if (candidateFrame > frame) {
-                continue;
-            }
-            for (TraceEvent event : eventsByFrame.getOrDefault(candidateFrame, Collections.emptyList())) {
-                if (event instanceof TraceEvent.Checkpoint checkpoint) {
-                    return checkpoint;
-                }
-            }
-        }
-        return null;
+        int index = latestIndexedFrameAtOrBefore(checkpointFramesAscending, frame);
+        return index >= 0 ? checkpointsByFrame.get(checkpointFramesAscending.get(index)) : null;
     }
 
     public TraceEvent.ZoneActState latestZoneActStateAtOrBefore(int frame) {
-        List<Integer> frames = new ArrayList<>(eventsByFrame.keySet());
-        frames.sort(Comparator.reverseOrder());
-        for (int candidateFrame : frames) {
-            if (candidateFrame > frame) {
-                continue;
-            }
-            for (TraceEvent event : eventsByFrame.getOrDefault(candidateFrame, Collections.emptyList())) {
-                if (event instanceof TraceEvent.ZoneActState state) {
-                    return state;
+        int index = latestIndexedFrameAtOrBefore(zoneActStateFramesAscending, frame);
+        return index >= 0 ? zoneActStatesByFrame.get(zoneActStateFramesAscending.get(index)) : null;
+    }
+
+    private void buildLatestEventIndexes() {
+        for (Map.Entry<Integer, List<TraceEvent>> entry : eventsByFrame.entrySet()) {
+            int frame = entry.getKey();
+            for (TraceEvent event : entry.getValue()) {
+                if (event instanceof TraceEvent.Checkpoint checkpoint && !checkpointsByFrame.containsKey(frame)) {
+                    checkpointsByFrame.put(frame, checkpoint);
+                    checkpointFramesAscending.add(frame);
+                } else if (event instanceof TraceEvent.ZoneActState state && !zoneActStatesByFrame.containsKey(frame)) {
+                    zoneActStatesByFrame.put(frame, state);
+                    zoneActStateFramesAscending.add(frame);
                 }
             }
         }
-        return null;
+        Collections.sort(checkpointFramesAscending);
+        Collections.sort(zoneActStateFramesAscending);
+    }
+
+    private static int latestIndexedFrameAtOrBefore(List<Integer> sortedFrames, int frame) {
+        int index = Collections.binarySearch(sortedFrames, frame);
+        if (index >= 0) {
+            return index;
+        }
+        return -index - 2;
     }
 
     private boolean hasEventOfType(Class<? extends TraceEvent> eventType) {
