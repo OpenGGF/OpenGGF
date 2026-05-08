@@ -1237,6 +1237,9 @@ public class Engine {
 		if (traceSession != null) {
 			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
 			traceSession.render(traceHudTextRenderer);
+		} else if (gameLoop != null) {
+			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+			gameLoop.renderLiveRewindHud(traceHudTextRenderer);
 		}
 		if (getCurrentGameMode() == GameMode.CREDITS_DEMO) {
 			EndingProvider provider = gameLoop.getEndingProvider();
