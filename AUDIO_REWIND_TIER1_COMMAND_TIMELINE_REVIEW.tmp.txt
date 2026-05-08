@@ -4,10 +4,22 @@ Audio Rewind Tier 1 Command Timeline Review Brief
 Purpose
 -------
 
-This brief starts the next orchestration loop after Tier 0 implementation. It
-is a design-review artifact, not an implementation plan. Tier 1 implementation
-planning should wait until this review resolves command shape, frame/order
-authority, discard semantics, and memory budget.
+This brief started the orchestration loop after Tier 0 implementation. It is a
+historical design-review artifact, not an implementation plan. Tier 1
+implementation planning waited until this review resolved command shape,
+frame/order authority, discard semantics, and memory budget.
+
+Status
+------
+
+Resolved and implemented on the current branch. The implementation plan is:
+
+    docs/superpowers/plans/2026-05-08-audio-rewind-tier1-command-timeline.md
+
+Focused Tier 1 verification passed, and the self-review patch records resolved
+ring-left/ring-right fallback routes as `RING_RESOLVED`. Tier 1 remains honest
+about its limit: it records and branches command intent, but does not rebuild
+SMPS, chip, or PCM state from keyframes.
 
 
 Tier 1 Goal

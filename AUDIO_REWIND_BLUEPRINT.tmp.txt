@@ -20,19 +20,26 @@ Current Planning State
 ----------------------
 
 Tier 0 has completed the exploration/design/self-review loop, has a formal
-implementation plan, and has been implemented in the current workspace:
+implementation plan, and has been implemented and committed on the current
+branch:
 
   docs/superpowers/plans/2026-05-08-audio-rewind-tier0.md
 
-Tier 0 focused verification is clean for the new suppression, bypass guard, and
-adjacent audio/rewind regression tests. `mvn -DskipTests package` also
-completed successfully. A full-suite clean claim is intentionally not made:
-broader `mvn test` output still reports unrelated pre-existing failures in S3K
-bootstrap/object-service/singleton-guard tests.
+Tier 1 has completed its design/self-review/implementation loop and has been
+committed on the current branch:
+
+  docs/superpowers/plans/2026-05-08-audio-rewind-tier1-command-timeline.md
+
+Tier 1 focused verification is clean for the command timeline, rewind
+discard/suppression behavior, backend bypass guard, and adjacent audio/rewind
+regression tests. A full-suite clean claim is intentionally not made: broader
+`mvn -Dmse=off test` still reports unrelated local `develop` failures in S3K
+bootstrap, trace replay, object-service, and singleton-guard tests. The branch
+must not be merged to local `develop` until that repository-wide gate is green.
 
 The next later-tier review artifact is:
 
-  AUDIO_REWIND_TIER1_COMMAND_TIMELINE_REVIEW.tmp.txt
+  AUDIO_REWIND_TIER2_LOGICAL_SMPS_REVIEW.tmp.txt
 
 The current completion audit is:
 
@@ -45,15 +52,20 @@ Completed loop:
    mutation, lifecycle hooks, and test gaps.
 3. Implemented Tier 0 with tests.
 4. Captured focused verification output and updated this blueprint's status.
+5. Completed Tier 1 command timeline review.
+6. Wrote the Tier 1 implementation plan.
+7. Implemented and focused-verified Tier 1 command timeline support.
+8. Self-reviewed Tier 1 and patched the resolved ring-route recording gap.
 
 Next loop:
 
-1. Continue to Tier 1 command timeline design review using
-   AUDIO_REWIND_TIER1_COMMAND_TIMELINE_REVIEW.tmp.txt.
-2. Write the Tier 1 implementation plan only after the Tier 1 review resolves
-   command shape, frame/order authority, discard semantics, and memory budget.
-3. Keep later deterministic-core and snapshot work out of Tier 1 unless the
-   review explicitly promotes it.
+1. Continue to Tier 2 logical SMPS snapshot design review using
+   AUDIO_REWIND_TIER2_LOGICAL_SMPS_REVIEW.tmp.txt.
+2. Write and execute Tier 2 in subtiers so the first patch can introduce
+   snapshot seams and state inventory tests before attempting full driver and
+   sequencer restore.
+3. Keep Tier 3 chip-state and sample-parity work out of Tier 2 unless the
+   review explicitly promotes a small diagnostic-only chip hook.
 
 Definition Of Audio Rewind Support
 ----------------------------------
@@ -200,25 +212,31 @@ music phase or exact historical music intent.
 Tier 1: Command Timeline
 
 - Record all gameplay audio commands by frame and intra-frame order.
-- Restore small AudioManager intent state and replay commands from an audio
-  keyframe.
+- Discard abandoned future commands when a rewind branch restores an earlier
+  frame.
+- Expose command history to tests and later keyframe/replay work.
 - Music/SFX intent is deterministic; chip/sample phase is not guaranteed unless
   replay begins from a chip keyframe.
 
-This tier should make audio behavior deterministic at the command level without
-large memory cost.
+This tier makes audio intent observable and branchable at the command level
+without large memory cost. It is implemented, focused-verified, and committed
+on the current branch. It does not yet rebuild backend state from a keyframe.
 
 Tier 2: Logical SMPS Snapshot
 
 - Snapshot AudioManager intent, music override stack, SMPS driver state,
   active sequencers, per-track state, channel locks, PSG latches, fade state,
   speed state, and continuous SFX state.
+- Add a backend-agnostic logical audio state boundary so this state can be
+  captured without recording OpenAL source ids, buffer ids, or queued native
+  buffers.
 - OpenAL buffers are discarded and requeued from restored logical state.
 - Chip output may still require a short settling/crossfade unless chip state is
   also snapshotted.
 
 This tier gives strong music/SFX continuity and is the first tier where
-rewind+replay should match uninterrupted SMPS sequencing.
+rewind+replay should match uninterrupted SMPS sequencing. It still does not
+claim YM2612/PSG/DAC phase or bit-exact PCM parity.
 
 Tier 3: Full Chip-State Snapshot
 
@@ -543,14 +561,15 @@ Tier 1 tests:
 - Rewind+replay command sequence equals uninterrupted command sequence.
 - Ring alternation, donor routing, speed shoes, fades, and overrides
   round-trip.
-- Paused frame-step records and consumes exactly one frame's command/audio
-  slice, without host-buffer-dependent advancement.
+- Rewind branch restore discards abandoned future audio commands.
 
 Tier 2 tests:
 - `SmpsDriver` and `SmpsSequencer` capture -> render/replay -> restore ->
   replay produce matching debug state.
 - Channel locks and override stack restore correctly after SFX steals channels.
 - Continuous SFX extension state survives restore.
+- Snapshot records exclude OpenAL source ids, buffer ids, queued-buffer counts,
+  and native device/context handles.
 
 Tier 3 tests:
 - Render N samples, capture, render M samples, restore, render M samples, and
@@ -703,19 +722,26 @@ Recommended order:
 1. Rewind replay suppression.
    Add replay scopes, backend-bypass guardrails, durable-intent suppression,
    conservative release cleanup, and the paused frame-step seam. Formal plan:
-   `docs/superpowers/plans/2026-05-08-audio-rewind-tier0.md`.
+   `docs/superpowers/plans/2026-05-08-audio-rewind-tier0.md`. Implemented and
+   committed.
 
 2. Command timeline foundation.
    Record `AudioManager` commands as frame-ordered value records. Keep command
-   logging independent of OpenAL.
+   logging independent of OpenAL. Formal plan:
+   `docs/superpowers/plans/2026-05-08-audio-rewind-tier1-command-timeline.md`.
+   Implemented and committed.
 
 3. Lightweight audio rewind adapter.
    Register compact gameplay-scoped state such as command cursor, ring
-   alternation, music intent, speed state, fade intent, and override descriptors.
+   alternation, music intent, speed state, fade intent, and override
+   descriptors. This is folded into the Tier 2 planning boundary because the
+   useful state descriptors live beside the logical backend snapshot seam.
 
 4. Deterministic audio core boundary.
    Move authoritative SMPS/chip advancement away from OpenAL `fillBuffer()` and
    into an engine-owned per-frame audio runtime. Leave OpenAL as a FIFO drain.
+   Tier 2 should create the logical boundary and tests first; full per-frame
+   sample production can follow after the snapshot seam is stable.
 
 5. Sparse audio keyframe store.
    Add an audio-specific keyframe store and seek path that restores audio state

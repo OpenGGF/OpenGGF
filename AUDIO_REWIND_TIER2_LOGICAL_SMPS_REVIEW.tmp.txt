@@ -1,0 +1,212 @@
+Audio Rewind Tier 2 Logical SMPS Snapshot Review Brief
+======================================================
+
+Purpose
+-------
+
+This brief starts the next orchestration loop after Tier 1 command timeline
+implementation. It is a design-review artifact for logical audio snapshots, not
+a chip/sample parity plan. Tier 2 should make SMPS music/SFX state restorable
+from compact logical records while keeping OpenAL and native buffers
+presentation-only.
+
+
+Tier 2 Goal
+-----------
+
+Capture and restore enough AudioManager, backend logical, SmpsDriver, and
+SmpsSequencer state that restoring an audio keyframe and running forward
+through the Tier 1 command timeline reproduces the same SMPS sequencing state
+as uninterrupted forward playback.
+
+Tier 2 does not claim YM2612 operator phase parity, PSG noise phase parity, DAC
+sample phase parity, resampler parity, or bit-exact PCM output. Those belong to
+Tier 3.
+
+
+Prerequisites From Earlier Tiers
+--------------------------------
+
+Tier 2 assumes:
+
+1. Rewind replay scopes suppress live audio presentation side effects.
+2. Gameplay restore/speed backend bypasses route through AudioManager.
+3. AudioManager records resolved command intent in a frame-ordered timeline.
+4. Rewind branch restore discards command entries after the restored frame.
+5. OpenAL update timing is not the source of command order.
+
+If any prerequisite regresses, Tier 2 should repair that boundary before adding
+snapshot state.
+
+
+Current State Inventory
+-----------------------
+
+Authoritative state is currently split across `AudioManager`,
+`LWJGLAudioBackend`, `SmpsDriver`, and `SmpsSequencer`.
+
+`AudioManager` owns:
+- base SMPS loader, DAC data, audio profile, and sound map
+- donor loaders/configs/DAC data and donor sound bindings
+- ring alternation
+- rewind replay suppression depth
+- Tier 1 command timeline
+
+`LWJGLAudioBackend` owns a mixed presentation/logical graph:
+- presentation-only OpenAL device, context, sources, buffers, stream buffers,
+  and direct buffers
+- logical current music stream, SFX stream, current SMPS sequencer, SMPS driver,
+  current music id, pending restore, SFX block flag, speed-shoes state, mute and
+  solo state, fallback maps, and music override stack
+
+`SmpsDriver` owns logical sequencing state:
+- active music and SFX sequencers
+- FM/PSG channel locks, PSG latches, pending removals, read mode, region, and
+  continuous SFX counters
+
+`SmpsSequencer` owns logical per-song/per-SFX state:
+- region, speed/tempo fields, fade state, sample/frame counters, primed state,
+  PSG latch channel, SFX priority/classification, and per-track state
+- per-track cursor, note/duration/fill, tie, key/volume offsets, voice state,
+  loops, return stack, modulation, envelopes, raw frequency/noise/DAC fields,
+  force-refresh flags, and SSG-EG values
+
+
+Design Recommendation
+---------------------
+
+Tier 2 should be implemented in subtiers:
+
+1. Tier 2a: snapshot seam and state inventory tests.
+   Add explicit logical snapshot interfaces/records and tests proving OpenAL
+   presentation fields are not captured. This can be done without changing live
+   playback timing.
+
+2. Tier 2b: extract backend logical graph.
+   Move music/SFX stream descriptors, override stack descriptors, current music
+   id, SFX block flag, speed state, mute/solo state, and pending restore out of
+   the OpenAL-specific part of `LWJGLAudioBackend` into a backend-agnostic
+   logical graph such as `SmpsPlaybackGraph` or `LogicalAudioRuntime`.
+
+3. Tier 2c: SmpsDriver and SmpsSequencer logical snapshots.
+   Add compact manual records for driver and sequencer state, including deep
+   copies of mutable primitive arrays. Immutable ROM/SMPS/DAC/config data
+   should be referenced by stable descriptors, not copied.
+
+4. Tier 2d: sparse audio keyframe integration.
+   Store logical audio snapshots at controlled keyframe intervals and replay
+   Tier 1 commands plus deterministic SMPS time from keyframe to target frame.
+   Presentation queues are flushed/rebuilt after restore.
+
+This sequence keeps the first Tier 2 patches reviewable and avoids mixing
+snapshot correctness with a full OpenAL scheduling refactor.
+
+
+Snapshot Boundary
+-----------------
+
+Capture:
+- AudioManager intent: ring alternation, timeline cursor, donor binding
+  descriptors, current profile identity, speed state, and current music intent
+  where available without touching OpenAL
+- backend logical state: current music descriptor, SFX descriptors, override
+  stack descriptors, SFX blocked/pending restore flags, mute/solo state, speed
+  shoes flag, current music id
+- SmpsDriver: sequencer descriptors, channel locks by sequencer id, PSG
+  latches, continuous SFX state, read mode, region
+- SmpsSequencer: source descriptor, timing counters, tempo/fade/speed fields,
+  SFX priority/classification, PSG latch channel, and per-track state
+
+Do not capture:
+- OpenAL source ids, buffer ids, device/context handles, queued-buffer counts,
+  processed-buffer counts, direct buffers, scratch arrays, or host pause state
+- YM2612/PSG/DAC internal phase or resampler history in Tier 2 authoritative
+  records
+- full ROM/SMPS/DAC data blobs where a stable descriptor can identify the data
+
+
+Design Questions To Resolve
+---------------------------
+
+1. What stable descriptor identifies a sequencer source?
+
+   Recommendation:
+   Use route plus music/SFX id/name, donor game id if present, SMPS config id,
+   DAC data source id, and an explicit fallback marker. Avoid object identity.
+
+
+2. How are active sequencers identified inside a driver snapshot?
+
+   Recommendation:
+   Assign snapshot-local integer ids while capturing the driver. Channel locks,
+   pending removals, and override descriptors refer to these ids.
+
+
+3. Should chip state be sampled in Tier 2?
+
+   Recommendation:
+   No, except optional diagnostics that prove the omission. Tier 2 tests compare
+   logical SMPS/debug state, not PCM.
+
+
+4. How should restore rebuild presentation?
+
+   Recommendation:
+   Restore logical state into an offscreen/logical runtime first, clear OpenAL
+   queues, pre-render a small forward chunk if available, then let OpenAL drain
+   from the rebuilt output FIFO. The native source/buffer ids are never restored.
+
+
+5. What should the first Tier 2 test assert?
+
+   Recommendation:
+   The first test should fail because no logical snapshot contract exists. It
+   should assert that a snapshot record can represent AudioManager/backend
+   logical state while explicitly excluding known OpenAL presentation fields.
+
+
+Acceptance Criteria For Tier 2 Design
+-------------------------------------
+
+Before implementing Tier 2 beyond the seam, the design must answer:
+
+1. The logical snapshot interface and package location.
+2. The descriptor format for music, SFX, donor, config, and DAC sources.
+3. Which AudioManager fields are gameplay intent vs world immutable data.
+4. How backend logical state is separated from OpenAL presentation state.
+5. How SmpsDriver sequencer ids, channel locks, and pending removals restore.
+6. Which SmpsSequencer and Track fields are captured, copied, or immutable.
+7. Which tests compare logical state without claiming PCM parity.
+8. Where sparse audio keyframes are stored and how they are evicted.
+9. How paused frame-step eventually advances logical audio by exactly one frame.
+10. Which Tier 3 state remains explicitly deferred.
+
+
+Tier 2 Test Shape
+-----------------
+
+Recommended tests:
+
+1. `TestAudioLogicalSnapshot.excludesOpenAlPresentationState`.
+2. `TestAudioLogicalSnapshot.capturesAudioManagerIntentWithoutBackendObjects`.
+3. `TestSmpsSequencerSnapshot.restoreRoundTripsTrackAndTempoState`.
+4. `TestSmpsDriverSnapshot.restoreRoundTripsLocksAndContinuousSfx`.
+5. `TestAudioKeyframeReplay.restoreThenReplayCommandsMatchesForwardLogicalState`.
+6. `TestPausedFrameStepAudio.advanceUsesFrameOwnedLogicalRuntime`.
+
+
+Review Risks
+------------
+
+1. Snapshotting `LWJGLAudioBackend` directly would capture OpenAL details and
+   make rewind dependent on host device state.
+2. Shallow-copying per-track arrays can make restored snapshots mutate with the
+   live sequencer.
+3. Source descriptors based on object identity will fail across restore,
+   donor reload, or test backends.
+4. Comparing PCM in Tier 2 tests would create false failures until chip state
+   is included.
+5. Leaving frame-step tied to backend refill timing would preserve the original
+   architectural flaw even if snapshots work.
+6. Capturing large data blobs instead of descriptors could dominate rewind
+   memory.
