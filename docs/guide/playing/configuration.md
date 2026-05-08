@@ -160,9 +160,9 @@ Live rewind is an experimental gameplay debugging feature. Enable it explicitly:
 ```
 
 With that enabled, hold `LIVE_REWIND_KEY` during normal level play to rewind the live
-gameplay buffer. The on-screen live rewind HUD shows the configured key and the
-current rewind frame. Rewind history resets at committed level and act transition
-boundaries.
+gameplay buffer. The on-screen live rewind HUD is hidden during ordinary play and
+appears only while the key is held, showing the current rewind frame. Rewind history
+resets at committed level and act transition boundaries.
 
 ## How do I mute audio?
 

@@ -68,9 +68,8 @@ Live gameplay rewind is disabled by default. To enable it:
 
 While playing a level, hold `LIVE_REWIND_KEY` to step backward through the live
 gameplay buffer. Releasing the key resumes normal gameplay from the restored frame.
-The small live HUD appears only while live rewind is enabled: it shows `LIVE REWIND`
-plus `Hold R Rewind` while available, and switches to `REWIND <frame>` while the key
-is held.
+The small live HUD is hidden during ordinary play and appears only while the key is
+held, showing `LIVE REWIND` plus `REWIND <frame>`.
 
 Live rewind records input rows after normal level ticks and replays them through the
 same `LevelFrameStep` path when rebuilding a rewound segment. Seamless level
