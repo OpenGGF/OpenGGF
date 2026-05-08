@@ -3,6 +3,7 @@ package com.openggf.game.rewind;
 import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.game.rewind.schema.CompactFieldCapturer;
 import com.openggf.game.rewind.schema.RewindCodecs;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractBadnikInstance;
@@ -69,20 +70,37 @@ public final class GenericFieldCapturer {
     public static Optional<RewindObjectStateBlob> captureObjectSubclassScalarsCompact(
             AbstractObjectInstance target) {
 
+        return captureObjectSubclassScalarsCompact(target, RewindCaptureContext.none());
+    }
+
+    public static Optional<RewindObjectStateBlob> captureObjectSubclassScalarsCompact(
+            AbstractObjectInstance target,
+            RewindCaptureContext context) {
+
         Objects.requireNonNull(target, "target");
+        Objects.requireNonNull(context, "context");
         if (!CompactFieldCapturer.supportsDefaultObjectSubclassScalars(target.getClass())) {
             return Optional.empty();
         }
-        return Optional.of(CompactFieldCapturer.captureDefaultObjectSubclassScalars(target));
+        return Optional.of(CompactFieldCapturer.captureDefaultObjectSubclassScalars(target, context));
     }
 
     public static void restoreObjectSubclassScalarsCompact(
             AbstractObjectInstance target,
             RewindObjectStateBlob snapshot) {
 
+        restoreObjectSubclassScalarsCompact(target, snapshot, RewindCaptureContext.none());
+    }
+
+    public static void restoreObjectSubclassScalarsCompact(
+            AbstractObjectInstance target,
+            RewindObjectStateBlob snapshot,
+            RewindCaptureContext context) {
+
         Objects.requireNonNull(target, "target");
         Objects.requireNonNull(snapshot, "snapshot");
-        CompactFieldCapturer.restoreDefaultObjectSubclassScalars(target, snapshot);
+        Objects.requireNonNull(context, "context");
+        CompactFieldCapturer.restoreDefaultObjectSubclassScalars(target, snapshot, context);
     }
 
     private static GenericObjectSnapshot captureFields(Object target, List<Field> fields) {
@@ -242,6 +260,7 @@ public final class GenericFieldCapturer {
                 || isDefaultObjectArrayFieldValueType(field.getType())
                 || isDefaultObjectCompactCollectionField(field)
                 || isDefaultObjectInPlaceHelperType(field.getType())
+                || RewindCodecs.codecFor(field).isPresent()
                 || RewindStateful.class.isAssignableFrom(field.getType()))
                 && !field.isSynthetic()
                 && !field.isAnnotationPresent(RewindTransient.class)
@@ -374,13 +393,13 @@ public final class GenericFieldCapturer {
                 || RewindStateful.class.isAssignableFrom(type)
                 || isDefaultObjectArrayFieldValueType(type)
                 || isDefaultObjectRecordFieldValueType(type)
-                || isDefaultObjectCompactCollectionField(field);
+                || isDefaultObjectCompactCollectionField(field)
+                || RewindCodecs.codecFor(field).isPresent();
     }
 
     private static boolean isDefaultObjectCompactCollectionField(Field field) {
         return Modifier.isFinal(field.getModifiers())
                 && RewindCodecs.codecFor(field).isPresent()
-                && !RewindCodecs.requiresIdentityTable(field)
                 && (Collection.class.isAssignableFrom(field.getType())
                 || Map.class.isAssignableFrom(field.getType()));
     }

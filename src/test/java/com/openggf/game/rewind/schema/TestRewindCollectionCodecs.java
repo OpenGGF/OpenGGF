@@ -81,8 +81,26 @@ class TestRewindCollectionCodecs {
     }
 
     @Test
-    void stateHoldersWithPlayerReferencesAreNotImplicitlySupported() {
-        assertFalse(RewindCodecs.supportsInPlaceStateHolder(ReferenceState.class));
+    void stateHoldersWithPlayerReferencesAreIdentityAware() {
+        assertTrue(RewindCodecs.supportsInPlaceStateHolder(ReferenceState.class));
+    }
+
+    @Test
+    void capturesMapWithPlayerKeysAndPlainStateValues() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(PlayerStateMapFixture.class);
+
+        assertEquals(1, schema.capturedFields().size());
+        assertTrue(RewindCodecs.requiresIdentityTable(
+                schema.capturedFields().getFirst().field()));
+        assertTrue(schema.unsupportedFields().isEmpty());
+    }
+
+    @Test
+    void capturesListOfPrimitiveArrays() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(PrimitiveArrayListFixture.class);
+
+        assertEquals(1, schema.capturedFields().size());
+        assertTrue(schema.unsupportedFields().isEmpty());
     }
 
     @Test
@@ -138,6 +156,14 @@ class TestRewindCollectionCodecs {
     private static final class ReferenceState {
         AbstractPlayableSprite rider;
         int timer;
+    }
+
+    private static final class PlayerStateMapFixture {
+        Map<AbstractPlayableSprite, ReferenceState> riders = new IdentityHashMap<>();
+    }
+
+    private static final class PrimitiveArrayListFixture {
+        List<int[]> positions = new ArrayList<>(List.of(new int[] {1, 2}));
     }
 
     @SafeVarargs

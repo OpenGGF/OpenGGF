@@ -3,6 +3,7 @@ package com.openggf.game.rewind.schema;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.PlatformBobHelper;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.Palette;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -94,6 +95,38 @@ class TestRewindHelperCodecs {
         assertEquals(expected, fixture.animation);
     }
 
+    @Test
+    void capturesFinalPaletteColorArrayInPlace() {
+        ArrayFixture fixture = new ArrayFixture();
+
+        RewindObjectStateBlob blob = CompactFieldCapturer.capture(fixture);
+        fixture.colors[0].r = 9;
+        fixture.colors[0].g = 9;
+        fixture.colors[0].b = 9;
+        fixture.colors[1] = null;
+        CompactFieldCapturer.restore(fixture, blob);
+
+        assertEquals(1, fixture.colors[0].r);
+        assertEquals(2, fixture.colors[0].g);
+        assertEquals(3, fixture.colors[0].b);
+        assertEquals(4, fixture.colors[1].r);
+        assertEquals(5, fixture.colors[1].g);
+        assertEquals(6, fixture.colors[1].b);
+    }
+
+    @Test
+    void capturesFinalPlainStateHolderArrayInPlace() {
+        ArrayFixture fixture = new ArrayFixture();
+
+        RewindObjectStateBlob blob = CompactFieldCapturer.capture(fixture);
+        fixture.segments[0].x = -1;
+        fixture.segments[1] = null;
+        CompactFieldCapturer.restore(fixture, blob);
+
+        assertEquals(10, fixture.segments[0].x);
+        assertEquals(20, fixture.segments[1].x);
+    }
+
     private static SpriteAnimationSet animationSet() {
         SpriteAnimationSet set = new SpriteAnimationSet();
         set.addScript(0, new SpriteAnimationScript(2, List.of(7, 8), SpriteAnimationEndAction.LOOP, 0));
@@ -106,5 +139,27 @@ class TestRewindHelperCodecs {
         final PlatformBobHelper bob = new PlatformBobHelper();
         final AnimationTimer timer = new AnimationTimer(3, 2);
         final ObjectAnimationState animation = new ObjectAnimationState(animationSet(), 0, 7);
+    }
+
+    private static final class ArrayFixture {
+        final Palette.Color[] colors = {
+                new Palette.Color((byte) 1, (byte) 2, (byte) 3),
+                new Palette.Color((byte) 4, (byte) 5, (byte) 6)
+        };
+        final Segment[] segments = {
+                new Segment(10),
+                new Segment(20)
+        };
+    }
+
+    private static final class Segment {
+        int x;
+
+        private Segment() {
+        }
+
+        private Segment(int x) {
+            this.x = x;
+        }
     }
 }

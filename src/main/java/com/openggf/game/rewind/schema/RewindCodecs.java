@@ -5,6 +5,7 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.ObjectRefKind;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.PlatformBobHelper;
@@ -74,6 +75,9 @@ public final class RewindCodecs {
         if (type.isArray() && supportedArrayComponent(type.getComponentType())) {
             return Optional.of(new ArrayCodec(type.getComponentType()));
         }
+        if (type == Palette.Color.class) {
+            return Optional.of(new PaletteColorCodec());
+        }
         if (type == BitSet.class) {
             return Optional.of(new BitSetCodec());
         }
@@ -131,9 +135,12 @@ public final class RewindCodecs {
         if (isPlayerReferenceType(type) || isObjectReferenceType(type)) {
             return true;
         }
+        if (type.isArray()) {
+            return requiresIdentityTable(type.getComponentType());
+        }
         if (isSupportedPlainStateHolder(type)) {
             return plainStateFields(type).stream()
-                    .anyMatch(field -> requiresIdentityTable(field.getType()));
+                    .anyMatch(RewindCodecs::requiresIdentityTable);
         }
         return false;
     }
@@ -143,7 +150,10 @@ public final class RewindCodecs {
     }
 
     private static boolean supportedArrayComponent(Class<?> componentType) {
-        return componentType.isPrimitive() || componentType.isEnum();
+        return componentType.isPrimitive()
+                || componentType.isEnum()
+                || componentType == Palette.Color.class
+                || isSupportedPlainStateHolder(componentType);
     }
 
     private static boolean supportedRecord(Class<?> type) {
@@ -174,8 +184,7 @@ public final class RewindCodecs {
                 || type.getName().startsWith("java.")) {
             return false;
         }
-        String simpleName = type.getSimpleName();
-        if (!simpleName.endsWith("State") && !simpleName.endsWith("CharState")) {
+        if (!isPlainStateHolderName(type)) {
             return false;
         }
         List<Field> fields = plainStateFields(type);
@@ -183,15 +192,25 @@ public final class RewindCodecs {
             return false;
         }
         for (Field field : fields) {
-            if (requiresIdentityTable(field.getType())) {
-                return false;
-            }
             RewindCodec codec = codecFor(field).orElse(null);
-            if (codec == null || Modifier.isFinal(field.getModifiers()) && !codec.capturesFinalFields()) {
+            if (codec == null) {
                 return false;
             }
         }
         return true;
+    }
+
+    private static boolean isPlainStateHolderName(Class<?> type) {
+        String simpleName = type.getSimpleName();
+        return simpleName.endsWith("State")
+                || simpleName.endsWith("CharState")
+                || simpleName.endsWith("Context")
+                || simpleName.endsWith("Motion")
+                || simpleName.endsWith("Sequencer")
+                || simpleName.endsWith("Flasher")
+                || simpleName.endsWith("Element")
+                || "Segment".equals(simpleName)
+                || "RiderSlot".equals(simpleName);
     }
 
     private static List<Field> plainStateFields(Class<?> type) {
@@ -245,11 +264,30 @@ public final class RewindCodecs {
     }
 
     private static boolean isCollectionValueType(Class<?> type) {
-        return WRAPPER_TYPES.contains(type) || type == String.class || type.isEnum();
+        return WRAPPER_TYPES.contains(type)
+                || type == String.class
+                || type.isEnum()
+                || type.isArray() && supportedArrayComponent(type.getComponentType())
+                || type == Palette.Color.class
+                || isSupportedConstructiblePlainStateHolder(type);
     }
 
     private static boolean isSupportedCollectionElementType(Class<?> type) {
         return isCollectionValueType(type) || isPlayerReferenceType(type) || isObjectReferenceType(type);
+    }
+
+    private static boolean isSupportedConstructiblePlainStateHolder(Class<?> type) {
+        if (!isSupportedPlainStateHolder(type)
+                || type.isMemberClass() && !Modifier.isStatic(type.getModifiers())) {
+            return false;
+        }
+        try {
+            Constructor<?> constructor = type.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return true;
+        } catch (NoSuchMethodException e) {
+            return false;
+        }
     }
 
     private static boolean isPlayerReferenceType(Class<?> type) {
@@ -371,6 +409,17 @@ public final class RewindCodecs {
 
         @Override
         public void capture(Field field, Object target, RewindStateBuffer scalarData, List<Object> opaqueValues) {
+            capture(field, target, scalarData, opaqueValues, RewindCaptureContext.none());
+        }
+
+        @Override
+        public void capture(
+                Field field,
+                Object target,
+                RewindStateBuffer scalarData,
+                List<Object> opaqueValues,
+                RewindCaptureContext context) {
+
             Object array = get(field, target);
             scalarData.writeInt(array == null ? -1 : Array.getLength(array));
             if (array == null) {
@@ -378,35 +427,84 @@ public final class RewindCodecs {
             }
             int length = Array.getLength(array);
             for (int i = 0; i < length; i++) {
-                if (componentType.isEnum()) {
-                    Enum<?> value = (Enum<?>) Array.get(array, i);
-                    scalarData.writeInt(value == null ? -1 : value.ordinal());
-                } else {
-                    writeScalar(componentType, Array.get(array, i), scalarData);
-                }
+                writeArrayValue(componentType, Array.get(array, i), scalarData, opaqueValues, context);
             }
         }
 
         @Override
         public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+            restore(field, target, scalarData, opaqueValues, opaqueIndex, RewindCaptureContext.none());
+        }
+
+        @Override
+        public void restore(
+                Field field,
+                Object target,
+                RewindStateBuffer.Reader scalarData,
+                Object[] opaqueValues,
+                OpaqueIndex opaqueIndex,
+                RewindCaptureContext context) {
+
             int length = scalarData.readInt();
             if (length < 0) {
                 set(field, target, null);
                 return;
             }
-            Object array = Array.newInstance(componentType, length);
-            Object[] enumConstants = componentType.isEnum() ? componentType.getEnumConstants() : null;
-            for (int i = 0; i < length; i++) {
-                Object value;
-                if (componentType.isEnum()) {
-                    int ordinal = scalarData.readInt();
-                    value = ordinal < 0 ? null : enumConstants[ordinal];
-                } else {
-                    value = readScalar(componentType, scalarData);
+            Object array;
+            if (isFinal(field)) {
+                array = requireExistingValue(field, target);
+                if (Array.getLength(array) != length) {
+                    throw new IllegalStateException("Cannot restore final rewind array field " + field
+                            + " with changed length " + Array.getLength(array) + " -> " + length);
                 }
+            } else {
+                array = Array.newInstance(componentType, length);
+                set(field, target, array);
+            }
+            for (int i = 0; i < length; i++) {
+                Object existing = Array.get(array, i);
+                Object value = readArrayValue(componentType, existing, scalarData, opaqueValues, opaqueIndex, context);
                 Array.set(array, i, value);
             }
-            set(field, target, array);
+        }
+
+        @Override
+        public boolean capturesFinalFields() {
+            return true;
+        }
+
+        @Override
+        public boolean requiresExistingTargetValue() {
+            return true;
+        }
+    }
+
+    private static final class PaletteColorCodec implements RewindCodec {
+        @Override
+        public void capture(Field field, Object target, RewindStateBuffer scalarData, List<Object> opaqueValues) {
+            Palette.Color color = (Palette.Color) get(field, target);
+            scalarData.writeBoolean(color != null);
+            if (color != null) {
+                writePaletteColor(color, scalarData);
+            }
+        }
+
+        @Override
+        public void restore(
+                Field field,
+                Object target,
+                RewindStateBuffer.Reader scalarData,
+                Object[] opaqueValues,
+                OpaqueIndex opaqueIndex) {
+
+            set(field, target, scalarData.readBoolean()
+                    ? readPaletteColor((Palette.Color) get(field, target), scalarData)
+                    : null);
+        }
+
+        @Override
+        public boolean capturesFinalFields() {
+            return true;
         }
     }
 
@@ -964,10 +1062,7 @@ public final class RewindCodecs {
             if (state == null) {
                 return;
             }
-            for (Field stateField : fields) {
-                RewindCodec codec = codecFor(stateField).orElseThrow();
-                codec.capture(stateField, state, scalarData, opaqueValues, context);
-            }
+            capturePlainState(fields, state, scalarData, opaqueValues, context);
         }
 
         @Override
@@ -989,10 +1084,7 @@ public final class RewindCodecs {
                 return;
             }
             Object state = requireExistingValue(field, target);
-            for (Field stateField : fields) {
-                RewindCodec codec = codecFor(stateField).orElseThrow();
-                codec.restore(stateField, state, scalarData, opaqueValues, opaqueIndex, context);
-            }
+            restorePlainState(fields, state, scalarData, opaqueValues, opaqueIndex, context);
         }
 
         @Override
@@ -1008,6 +1100,33 @@ public final class RewindCodecs {
         @Override
         public boolean requiresExistingTargetValue() {
             return true;
+        }
+    }
+
+    private static void capturePlainState(
+            List<Field> fields,
+            Object state,
+            RewindStateBuffer scalarData,
+            List<Object> opaqueValues,
+            RewindCaptureContext context) {
+
+        for (Field stateField : fields) {
+            RewindCodec codec = codecFor(stateField).orElseThrow();
+            codec.capture(stateField, state, scalarData, opaqueValues, context);
+        }
+    }
+
+    private static void restorePlainState(
+            List<Field> fields,
+            Object state,
+            RewindStateBuffer.Reader scalarData,
+            Object[] opaqueValues,
+            RewindCodec.OpaqueIndex opaqueIndex,
+            RewindCaptureContext context) {
+
+        for (Field stateField : fields) {
+            RewindCodec codec = codecFor(stateField).orElseThrow();
+            codec.restore(stateField, state, scalarData, opaqueValues, opaqueIndex, context);
         }
     }
 
@@ -1030,6 +1149,12 @@ public final class RewindCodecs {
             scalarData.writeInt(encodePlayerRef((PlayableEntity) value, context).encoded());
         } else if (isObjectReferenceType(type)) {
             writeObjectRefBody(encodeObjectRef((ObjectInstance) value, context), scalarData);
+        } else if (type.isArray() && supportedArrayComponent(type.getComponentType())) {
+            writeArrayBody(type.getComponentType(), value, scalarData, opaqueValues);
+        } else if (type == Palette.Color.class) {
+            writePaletteColor((Palette.Color) value, scalarData);
+        } else if (isSupportedConstructiblePlainStateHolder(type)) {
+            capturePlainState(plainStateFields(type), value, scalarData, opaqueValues, context);
         } else {
             writeScalar(type, value, scalarData);
         }
@@ -1057,7 +1182,138 @@ public final class RewindCodecs {
         if (isObjectReferenceType(type)) {
             return resolveObjectRef(readObjectRefBody(scalarData), context, type);
         }
+        if (type.isArray() && supportedArrayComponent(type.getComponentType())) {
+            return readArrayBody(type.getComponentType(), null, scalarData, opaqueValues, opaqueIndex);
+        }
+        if (type == Palette.Color.class) {
+            return readPaletteColor(null, scalarData);
+        }
+        if (isSupportedConstructiblePlainStateHolder(type)) {
+            Object state = newPlainStateHolder(type);
+            restorePlainState(plainStateFields(type), state, scalarData, opaqueValues, opaqueIndex, context);
+            return state;
+        }
         return readScalar(type, scalarData);
+    }
+
+    private static void writeArrayValue(
+            Class<?> componentType,
+            Object value,
+            RewindStateBuffer scalarData,
+            List<Object> opaqueValues,
+            RewindCaptureContext context) {
+
+        if (!componentType.isPrimitive()) {
+            scalarData.writeBoolean(value != null);
+            if (value == null) {
+                return;
+            }
+        }
+        if (componentType.isEnum()) {
+            scalarData.writeInt(((Enum<?>) value).ordinal());
+        } else if (componentType == Palette.Color.class) {
+            writePaletteColor((Palette.Color) value, scalarData);
+        } else if (isSupportedPlainStateHolder(componentType)) {
+            capturePlainState(plainStateFields(componentType), value, scalarData, opaqueValues, context);
+        } else {
+            writeScalar(componentType, value, scalarData);
+        }
+    }
+
+    private static Object readArrayValue(
+            Class<?> componentType,
+            Object existing,
+            RewindStateBuffer.Reader scalarData,
+            Object[] opaqueValues,
+            RewindCodec.OpaqueIndex opaqueIndex,
+            RewindCaptureContext context) {
+
+        if (!componentType.isPrimitive() && !scalarData.readBoolean()) {
+            return null;
+        }
+        if (componentType.isEnum()) {
+            return componentType.getEnumConstants()[scalarData.readInt()];
+        }
+        if (componentType == Palette.Color.class) {
+            return readPaletteColor((Palette.Color) existing, scalarData);
+        }
+        if (isSupportedPlainStateHolder(componentType)) {
+            Object state = existing != null ? existing : newPlainStateHolder(componentType);
+            restorePlainState(
+                    plainStateFields(componentType),
+                    state,
+                    scalarData,
+                    opaqueValues,
+                    opaqueIndex,
+                    context);
+            return state;
+        }
+        return readScalar(componentType, scalarData);
+    }
+
+    private static void writeArrayBody(
+            Class<?> componentType,
+            Object array,
+            RewindStateBuffer scalarData,
+            List<Object> opaqueValues) {
+
+        scalarData.writeInt(array == null ? -1 : Array.getLength(array));
+        if (array == null) {
+            return;
+        }
+        for (int i = 0; i < Array.getLength(array); i++) {
+            writeArrayValue(componentType, Array.get(array, i), scalarData, opaqueValues, RewindCaptureContext.none());
+        }
+    }
+
+    private static Object readArrayBody(
+            Class<?> componentType,
+            Object existingArray,
+            RewindStateBuffer.Reader scalarData,
+            Object[] opaqueValues,
+            RewindCodec.OpaqueIndex opaqueIndex) {
+
+        int length = scalarData.readInt();
+        if (length < 0) {
+            return null;
+        }
+        Object array = existingArray != null && Array.getLength(existingArray) == length
+                ? existingArray
+                : Array.newInstance(componentType, length);
+        for (int i = 0; i < length; i++) {
+            Array.set(array, i, readArrayValue(
+                    componentType,
+                    Array.get(array, i),
+                    scalarData,
+                    opaqueValues,
+                    opaqueIndex,
+                    RewindCaptureContext.none()));
+        }
+        return array;
+    }
+
+    private static void writePaletteColor(Palette.Color color, RewindStateBuffer scalarData) {
+        scalarData.writeByte(color.r);
+        scalarData.writeByte(color.g);
+        scalarData.writeByte(color.b);
+    }
+
+    private static Palette.Color readPaletteColor(Palette.Color existing, RewindStateBuffer.Reader scalarData) {
+        Palette.Color color = existing != null ? existing : new Palette.Color();
+        color.r = scalarData.readByte();
+        color.g = scalarData.readByte();
+        color.b = scalarData.readByte();
+        return color;
+    }
+
+    private static Object newPlainStateHolder(Class<?> type) {
+        try {
+            Constructor<?> constructor = type.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            return constructor.newInstance();
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Cannot construct rewind state holder " + type.getName(), e);
+        }
     }
 
     private static void writeRecordComponent(Class<?> type, Object value, RewindStateBuffer scalarData) {

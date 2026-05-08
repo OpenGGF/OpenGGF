@@ -12,6 +12,7 @@ import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PhysicsProvider;
 import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.game.rewind.GenericRewindEligibility;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.level.LevelManager;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -891,6 +892,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return immutable snapshot of this object's standard mutable field surface
      */
     public PerObjectRewindSnapshot captureRewindState() {
+        return captureRewindState(RewindCaptureContext.none());
+    }
+
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
         PerObjectRewindSnapshot snapshot = new PerObjectRewindSnapshot(
                 destroyed,
                 destroyedRespawnable,
@@ -912,7 +917,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         if (GenericRewindEligibility.usesDefaultObjectSubclassCapture(getClass())) {
             var compactState = this instanceof AbstractBadnikInstance
                     ? Optional.<RewindObjectStateBlob>empty()
-                    : GenericFieldCapturer.captureObjectSubclassScalarsCompact(this);
+                    : GenericFieldCapturer.captureObjectSubclassScalarsCompact(this, context);
             if (compactState.isPresent()) {
                 snapshot = snapshot.withCompactGenericState(compactState.get());
             } else {
@@ -933,6 +938,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @param s the snapshot to restore from
      */
     public void restoreRewindState(PerObjectRewindSnapshot s) {
+        restoreRewindState(s, RewindCaptureContext.none());
+    }
+
+    public void restoreRewindState(PerObjectRewindSnapshot s, RewindCaptureContext context) {
         this.destroyed = s.destroyed();
         this.destroyedRespawnable = s.destroyedRespawnable();
         if (s.hasDynamicSpawn()) {
@@ -949,7 +958,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         this.slotIndex = s.slotIndex();
         this.respawnStateIndex = s.respawnStateIndex();
         if (s.compactGenericState() != null) {
-            GenericFieldCapturer.restoreObjectSubclassScalarsCompact(this, s.compactGenericState());
+            GenericFieldCapturer.restoreObjectSubclassScalarsCompact(this, s.compactGenericState(), context);
         } else if (s.genericState() != null) {
             GenericFieldCapturer.restore(this, s.genericState());
         }
