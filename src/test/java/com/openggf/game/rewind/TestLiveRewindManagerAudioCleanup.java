@@ -9,6 +9,7 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameMode;
 import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.EngineContext;
+import com.openggf.graphics.FadeManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,6 +60,26 @@ class TestLiveRewindManagerAudioCleanup {
         assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
 
         assertEquals(4, controller.currentFrame());
+    }
+
+    @Test
+    void heldLiveRewindFreezesFadePresentationUntilReleaseCleanup() throws Exception {
+        RuntimeManager.createGameplay();
+        FadeManager fadeManager = RuntimeManager.getCurrent().getFadeManager();
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = new TestControllerBuilder().atFrame(5);
+        installTestController(manager, controller);
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+
+        assertTrue(fadeManager.isReversePresentationActive());
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_RELEASE);
+        assertFalse(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+
+        assertFalse(fadeManager.isReversePresentationActive());
     }
 
     @Test

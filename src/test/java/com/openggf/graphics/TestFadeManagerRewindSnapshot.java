@@ -106,4 +106,52 @@ class TestFadeManagerRewindSnapshot {
 
         assertEquals(10, fadeManager.capture().holdDuration());
     }
+
+    @Test
+    void restoredFadeSnapshotDoesNotAdvanceOnFirstUpdateAfterRestore() {
+        fadeManager.startFadeToBlack(null, 0, 0);
+        for (int i = 0; i < 5; i++) {
+            fadeManager.update();
+        }
+        FadeManagerSnapshot snapshot = fadeManager.capture();
+
+        fadeManager.update();
+        fadeManager.restore(snapshot);
+        fadeManager.update();
+
+        assertEquals(snapshot.frameCount(), fadeManager.getFrameCount());
+        assertArrayEquals(
+                new float[] {snapshot.fadeR(), snapshot.fadeG(), snapshot.fadeB()},
+                fadeManager.getFadeColor(),
+                0.001f);
+
+        fadeManager.update();
+
+        assertEquals(snapshot.frameCount() + 1, fadeManager.getFrameCount());
+    }
+
+    @Test
+    void reversePresentationFreezesDisplayDrivenFadeUpdatesUntilReleased() {
+        fadeManager.startFadeFromBlack(null);
+        for (int i = 0; i < 5; i++) {
+            fadeManager.update();
+        }
+        FadeManagerSnapshot rewindFrame = fadeManager.capture();
+
+        fadeManager.beginReversePresentation();
+        for (int i = 0; i < 3; i++) {
+            fadeManager.restore(rewindFrame);
+            fadeManager.update();
+            assertEquals(rewindFrame.frameCount(), fadeManager.getFrameCount());
+            assertArrayEquals(
+                    new float[] {rewindFrame.fadeR(), rewindFrame.fadeG(), rewindFrame.fadeB()},
+                    fadeManager.getFadeColor(),
+                    0.001f);
+        }
+
+        fadeManager.endReversePresentation();
+        fadeManager.update();
+
+        assertEquals(rewindFrame.frameCount() + 1, fadeManager.getFrameCount());
+    }
 }
