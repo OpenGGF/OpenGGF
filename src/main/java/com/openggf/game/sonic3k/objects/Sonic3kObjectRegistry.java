@@ -455,6 +455,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczSegmentColumnObjectInstance(spawn);
                 });
+        factories.put(Sonic3kObjectIds.ICZ_SWINGING_PLATFORM,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new IczSwingingPlatformObjectInstance(spawn);
+                });
         factories.put(0x3C,
                 (spawn, registry) -> new DoorObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.STILL_SPRITE,
