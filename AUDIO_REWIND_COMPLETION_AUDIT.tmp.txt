@@ -227,6 +227,22 @@ Deliverables And Evidence
    - Complete.
 
 
+16. Full-suite merge gate was rerun after Tier 2a.
+
+   Evidence:
+   - `mvn -Dmse=off test`
+   - Maven result: BUILD FAILURE, 4,775 tests, 21 failures, 0 errors, 6 skipped.
+   - The failing families remained:
+     - singleton/module/object-service guards in existing S3K code
+     - `TestS3kAizReplayBootstrap`
+     - `TestS3kAizTraceReplay`
+     - `TestS3kCnzTraceReplay`
+     - `TestS3kMgzTraceReplay`
+
+   Status:
+   - Merge blocked. No local merge to `develop` was performed.
+
+
 Known Residuals
 ---------------
 
@@ -236,6 +252,8 @@ Known Residuals
    - `mvn -Dmse=off test` on `feature/ai-audio-rewind-tier0` failed with
      existing singleton/object-service guard failures plus S3K
      bootstrap/headless/trace failures.
+   - The post-Tier-2a full-suite run also failed with 4,775 tests, 21 failures,
+     0 errors, and 6 skipped.
    - A clean baseline worktree at local `develop` (`84820cca3`) reproduced the
      same guard family and S3K headless/bootstrap failures with:
      - `mvn -Dmse=off "-Dtest=com.openggf.game.TestGameModuleRegistryUsageGuard,com.openggf.game.TestProductionSingletonClosureGuard,com.openggf.level.objects.TestObjectServicesMigrationGuard" test`
