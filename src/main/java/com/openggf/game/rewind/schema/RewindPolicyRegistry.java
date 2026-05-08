@@ -3,6 +3,7 @@ package com.openggf.game.rewind.schema;
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.GameModule;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
@@ -21,17 +22,18 @@ import java.util.Objects;
 import java.util.Optional;
 
 public final class RewindPolicyRegistry {
-    private static final Map<Class<?>, RewindFieldPolicy> DEFAULT_DECLARED_TYPE_POLICIES = Map.of(
-            GameModule.class, RewindFieldPolicy.TRANSIENT,
-            GraphicsManager.class, RewindFieldPolicy.TRANSIENT,
-            ObjectRenderManager.class, RewindFieldPolicy.TRANSIENT,
-            ObjectServices.class, RewindFieldPolicy.TRANSIENT,
-            PatternDesc.class, RewindFieldPolicy.TRANSIENT,
-            PatternSpriteRenderer.class, RewindFieldPolicy.TRANSIENT,
-            PlayerSpriteRenderer.class, RewindFieldPolicy.TRANSIENT,
-            SpriteAnimationSet.class, RewindFieldPolicy.TRANSIENT,
-            SpriteMappingPiece.class, RewindFieldPolicy.TRANSIENT,
-            SpritePieceRenderer.class, RewindFieldPolicy.TRANSIENT
+    private static final Map<Class<?>, RewindFieldPolicy> DEFAULT_DECLARED_TYPE_POLICIES = Map.ofEntries(
+            Map.entry(GameModule.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(GraphicsManager.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(ObjectRenderManager.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(ObjectServices.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(Pattern.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(PatternDesc.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(PatternSpriteRenderer.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(PlayerSpriteRenderer.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(SpriteAnimationSet.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(SpriteMappingPiece.class, RewindFieldPolicy.TRANSIENT),
+            Map.entry(SpritePieceRenderer.class, RewindFieldPolicy.TRANSIENT)
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> FIELD_POLICIES = new LinkedHashMap<>();
@@ -69,6 +71,17 @@ public final class RewindPolicyRegistry {
         RewindFieldPolicy declaredTypePolicy = DECLARED_TYPE_POLICIES.get(declaredType);
         if (declaredTypePolicy != null) {
             return Optional.of(declaredTypePolicy);
+        }
+        if (declaredType.isArray()) {
+            RewindFieldPolicy componentTypePolicy = DECLARED_TYPE_POLICIES.get(declaredType.getComponentType());
+            if (componentTypePolicy != null) {
+                return Optional.of(componentTypePolicy);
+            }
+            RewindFieldPolicy defaultComponentTypePolicy =
+                    DEFAULT_DECLARED_TYPE_POLICIES.get(declaredType.getComponentType());
+            if (defaultComponentTypePolicy != null) {
+                return Optional.of(defaultComponentTypePolicy);
+            }
         }
 
         for (Map.Entry<Class<?>, RewindFieldPolicy> entry : ASSIGNABLE_TYPE_POLICIES.entrySet()) {
