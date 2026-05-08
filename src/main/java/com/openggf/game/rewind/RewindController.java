@@ -77,6 +77,7 @@ public final class RewindController {
         if (currentFrame + 1 >= inputs.frameCount()) {
             return;   // end of trace
         }
+        beginAudioFrame(currentFrame + 1);
         Bk2FrameInput in = inputs.read(currentFrame + 1);
         engineStepper.step(in);
         currentFrame++;
@@ -97,6 +98,7 @@ public final class RewindController {
             return false;
         }
         currentFrame++;
+        beginAudioFrame(currentFrame);
         segmentCache.invalidate();
         if (currentFrame % keyframeInterval == 0) {
             keyframes.put(currentFrame, registry.capture());
@@ -131,6 +133,8 @@ public final class RewindController {
                 currentFrame++;
             }
             keyframes.discardAfter(currentFrame);
+            discardAudioAfter(currentFrame);
+            beginAudioFrame(currentFrame);
             primeStepperAtFrame(currentFrame);
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
         }
@@ -170,6 +174,8 @@ public final class RewindController {
             registry.restore(snap);
             currentFrame = target;
             keyframes.discardAfter(currentFrame);
+            discardAudioAfter(currentFrame);
+            beginAudioFrame(currentFrame);
             primeStepperAtFrame(currentFrame);
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
         }
@@ -186,6 +192,18 @@ public final class RewindController {
     private void afterAudioRestore(AudioPresentationPolicy policy) {
         if (audioManager != null) {
             audioManager.afterRewindRestore(currentFrame, policy);
+        }
+    }
+
+    private void beginAudioFrame(int frame) {
+        if (audioManager != null) {
+            audioManager.beginCommandTimelineFrame(frame);
+        }
+    }
+
+    private void discardAudioAfter(int frame) {
+        if (audioManager != null) {
+            audioManager.discardAudioCommandsAfter(frame);
         }
     }
 

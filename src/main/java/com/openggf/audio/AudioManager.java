@@ -1,5 +1,7 @@
 package com.openggf.audio;
 
+import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.rewind.AudioCommandTimeline;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
@@ -25,6 +27,7 @@ public class AudioManager {
     private GameAudioProfile audioProfile;
     private boolean ringLeft = true;
     private int rewindReplaySuppressionDepth;
+    private final AudioCommandTimeline commandTimeline = new AudioCommandTimeline();
 
     // Donor audio overlay: secondary SFX path for cross-game feature donation
     private final Map<String, SmpsLoader> donorLoaders = new HashMap<>();
@@ -92,6 +95,19 @@ public class AudioManager {
 
     public void resetRingSound() {
         ringLeft = true;
+        recordTimelineCommand(new AudioCommand.ResetRingAlternation(true));
+    }
+
+    public AudioCommandTimeline commandTimeline() {
+        return commandTimeline;
+    }
+
+    public void beginCommandTimelineFrame(long frame) {
+        commandTimeline.beginFrame(frame);
+    }
+
+    public void discardAudioCommandsAfter(long frame) {
+        commandTimeline.discardAfter(frame);
     }
 
     public AudioReplayScope beginRewindReplay(int fromFrame, int targetFrame, AudioReplayReason reason) {
@@ -150,6 +166,7 @@ public class AudioManager {
         if (suppressingRewindReplay()) {
             return;
         }
+        recordTimelineCommand(new AudioCommand.RestoreMusic(AudioCommand.RestoreCause.EXPLICIT));
         if (backend != null) {
             backend.restoreMusic();
         }
@@ -159,6 +176,7 @@ public class AudioManager {
         if (suppressingRewindReplay()) {
             return;
         }
+        recordTimelineCommand(new AudioCommand.SetSpeedShoes(enabled));
         if (backend != null) {
             backend.setSpeedShoes(enabled);
         }
@@ -168,6 +186,7 @@ public class AudioManager {
         if (suppressingRewindReplay()) {
             return;
         }
+        recordTimelineCommand(new AudioCommand.SetSpeedMultiplier(multiplier));
         if (backend != null) {
             backend.setSpeedMultiplier(multiplier);
         }
@@ -201,10 +220,14 @@ public class AudioManager {
         if (smpsLoader != null) {
             AbstractSmpsData data = smpsLoader.loadMusic(musicId);
             if (data != null) {
+                recordTimelineCommand(new AudioCommand.PlayMusic(
+                        musicId, AudioCommand.MusicRoute.BASE_SMPS, false, null));
                 backend.playSmps(data, dacData);
                 return;
             }
         }
+        recordTimelineCommand(new AudioCommand.PlayMusic(
+                musicId, AudioCommand.MusicRoute.FALLBACK_WAV, false, null));
         backend.playMusic(musicId);
     }
 
@@ -219,10 +242,14 @@ public class AudioManager {
         if (smpsLoader != null) {
             AbstractSmpsData sfx = smpsLoader.loadSfx(sfxName);
             if (sfx != null) {
+                recordTimelineCommand(new AudioCommand.PlaySfx(
+                        -1, sfxName, AudioCommand.SfxRoute.BASE_SMPS_NAME, pitch, null));
                 backend.playSfxSmps(sfx, dacData, pitch);
                 return;
             }
         }
+        recordTimelineCommand(new AudioCommand.PlaySfx(
+                -1, sfxName, AudioCommand.SfxRoute.FALLBACK_NAME, pitch, null));
         backend.playSfx(sfxName, pitch);
     }
 
@@ -252,6 +279,12 @@ public class AudioManager {
                 if (loader != null && dData != null) {
                     AbstractSmpsData sfx = loader.loadSfx(binding.sfxId());
                     if (sfx != null) {
+                        recordTimelineCommand(new AudioCommand.PlaySfx(
+                                binding.sfxId(),
+                                sound.name(),
+                                AudioCommand.SfxRoute.DONOR_SMPS,
+                                pitch,
+                                binding.gameId()));
                         SmpsSequencerConfig donorConfig = donorConfigs.get(binding.gameId());
                         if (donorConfig != null) {
                             backend.playSfxSmps(sfx, dData, pitch, donorConfig);
@@ -264,6 +297,11 @@ public class AudioManager {
             }
         }
         if (!played) {
+            AudioCommand.SfxRoute route = sound == GameSound.RING_LEFT || sound == GameSound.RING_RIGHT
+                    ? AudioCommand.SfxRoute.RING_RESOLVED
+                    : AudioCommand.SfxRoute.FALLBACK_NAME;
+            recordTimelineCommand(new AudioCommand.PlaySfx(
+                    -1, sound.name(), route, pitch, null));
             backend.playSfx(sound.name(), pitch);
         }
     }
@@ -279,6 +317,8 @@ public class AudioManager {
         if (smpsLoader != null) {
             AbstractSmpsData sfx = smpsLoader.loadSfx(sfxId);
             if (sfx != null) {
+                recordTimelineCommand(new AudioCommand.PlaySfx(
+                        sfxId, null, AudioCommand.SfxRoute.BASE_SMPS_ID, pitch, null));
                 backend.playSfxSmps(sfx, dacData, pitch);
                 return true;
             }
@@ -303,6 +343,8 @@ public class AudioManager {
         if (loader != null && dData != null) {
             AbstractSmpsData sfx = loader.loadSfx(sfxId);
             if (sfx != null) {
+                recordTimelineCommand(new AudioCommand.PlaySfx(
+                        sfxId, null, AudioCommand.SfxRoute.DONOR_SMPS, 1.0f, donorGameId));
                 SmpsSequencerConfig config = donorConfigs.get(donorGameId);
                 if (config != null) {
                     backend.playSfxSmps(sfx, dData, 1.0f, config);
@@ -333,6 +375,8 @@ public class AudioManager {
         if (loader != null && dData != null) {
             AbstractSmpsData data = loader.loadMusic(musicId);
             if (data != null) {
+                recordTimelineCommand(new AudioCommand.PlayMusic(
+                        musicId, AudioCommand.MusicRoute.DONOR_SMPS, true, donorGameId));
                 SmpsSequencerConfig config = donorConfigs.get(donorGameId);
                 // forceOverride=true: the base game's audioProfile won't recognize
                 // donor music IDs, so force the override path to push zone music
@@ -346,6 +390,7 @@ public class AudioManager {
         if (suppressingRewindReplay()) {
             return;
         }
+        recordTimelineCommand(new AudioCommand.EndMusicOverride(musicId));
         backend.endMusicOverride(musicId);
     }
 
@@ -359,6 +404,7 @@ public class AudioManager {
         if (suppressingRewindReplay()) {
             return;
         }
+        recordTimelineCommand(new AudioCommand.ChangeMusicTempo(newDividingTiming));
         if (backend != null) {
             backend.changeMusicTempo(newDividingTiming);
         }
@@ -372,6 +418,7 @@ public class AudioManager {
         if (suppressingRewindReplay()) {
             return;
         }
+        recordTimelineCommand(new AudioCommand.StopAllSfx());
         if (backend != null) {
             backend.stopAllSfx();
         }
@@ -385,6 +432,7 @@ public class AudioManager {
         if (suppressingRewindReplay()) {
             return;
         }
+        recordTimelineCommand(new AudioCommand.StopMusic());
         if (backend != null) {
             backend.stopPlayback();
         }
@@ -425,6 +473,7 @@ public class AudioManager {
         if (suppressingRewindReplay()) {
             return;
         }
+        recordTimelineCommand(new AudioCommand.FadeOutMusic(steps, delay));
         if (backend != null) {
             backend.fadeOutMusic(steps, delay);
         }
@@ -484,7 +533,14 @@ public class AudioManager {
         this.audioProfile = null;
         this.ringLeft = true;
         this.rewindReplaySuppressionDepth = 0;
+        this.commandTimeline.clear();
         clearDonorAudio();
+    }
+
+    private void recordTimelineCommand(AudioCommand command) {
+        if (!suppressingRewindReplay()) {
+            commandTimeline.record(command);
+        }
     }
 
     public void destroy() {
