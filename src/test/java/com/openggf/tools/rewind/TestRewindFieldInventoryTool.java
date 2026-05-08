@@ -3,7 +3,10 @@ package com.openggf.tools.rewind;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectSpawn;
 
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +22,10 @@ class TestRewindFieldInventoryTool {
         private final Object structural = new Object();
     }
 
+    private static class CentralPolicyFixture {
+        private ObjectRenderManager renderer;
+    }
+
     private static class AnnotationDensityFixture {
         @RewindTransient(reason = "covered by default declared-type policy")
         private ObjectRenderManager renderer;
@@ -30,11 +37,41 @@ class TestRewindFieldInventoryTool {
         private Object deferredStructural;
     }
 
+    private static final class DefaultObjectCaptureFixture extends AbstractObjectInstance {
+        private final int subtype = 3;
+        private final boolean flipped = true;
+        private int phase;
+        private boolean armed;
+
+        private DefaultObjectCaptureFixture() {
+            super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "DefaultObjectCaptureFixture");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no-op fixture
+        }
+    }
+
     @Test
     void unsupportedInventorySkipsDeferredFields() {
         List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(DeferredStructuralFixture.class);
 
         assertTrue(unsupported.isEmpty());
+    }
+
+    @Test
+    void unsupportedInventorySkipsCentralPolicyFields() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(CentralPolicyFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
+    }
+
+    @Test
+    void unsupportedInventorySkipsDefaultObjectCapturedFields() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(DefaultObjectCaptureFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
     }
 
     @Test

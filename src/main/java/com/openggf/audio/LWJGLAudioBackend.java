@@ -1,6 +1,8 @@
 package com.openggf.audio;
 
 import com.openggf.audio.smps.AbstractSmpsData;
+import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -60,17 +62,22 @@ public class LWJGLAudioBackend implements AudioBackend {
         final SmpsSequencer smps;
         final SmpsDriver driver;
         final int musicId;
+        final AudioSourceDescriptor descriptor;
 
-        MusicState(AudioStream stream, SmpsSequencer smps, SmpsDriver driver, int musicId) {
+        MusicState(AudioStream stream, SmpsSequencer smps, SmpsDriver driver, int musicId,
+                   AudioSourceDescriptor descriptor) {
             this.stream = stream;
             this.smps = smps;
             this.driver = driver;
             this.musicId = musicId;
+            this.descriptor = descriptor;
         }
     }
 
     private final Deque<MusicState> musicStack = new ArrayDeque<>();
     private int currentMusicId = -1;
+    private AudioSourceDescriptor currentMusicDescriptor;
+    private AudioSourceDescriptor pendingMusicDescriptor;
     private volatile boolean pendingRestore = false;
     private volatile boolean sfxBlocked = false;  // Block SFX during override jingle/fade-in (ROM: 1upPlaying, FadeInFlag)
 
@@ -85,6 +92,7 @@ public class LWJGLAudioBackend implements AudioBackend {
     private final boolean[] psgUserSolos = new boolean[4];
 
     private boolean speedShoesEnabled = false;
+    private int speedMultiplier = 1;
     private GameAudioProfile audioProfile;
     private SmpsSequencerConfig smpsConfig;
 
@@ -207,6 +215,8 @@ public class LWJGLAudioBackend implements AudioBackend {
         }
 
         playWav(filename, musicSource, true);
+        currentMusicId = musicId;
+        currentMusicDescriptor = consumePendingMusicDescriptor(musicId);
     }
 
     @Override
@@ -279,12 +289,14 @@ public class LWJGLAudioBackend implements AudioBackend {
         SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, requireSmpsConfig());
         seq.setSampleRate(smpsDriver.getOutputSampleRate());
         seq.setSpeedShoes(speedShoesEnabled);
+        seq.setSpeedMultiplier(speedMultiplier);
         seq.setFm6DacOff(fm6DacOff);
         // Music is the primary voice source for SFX fallback
         seq.setFallbackVoiceData(data);
         smpsDriver.addSequencer(seq, false);
         currentSmps = seq;
         currentMusicId = musicId;
+        currentMusicDescriptor = consumePendingMusicDescriptor(musicId);
 
         updateSynthesizerConfig();
         synchronized (streamLock) {
@@ -358,11 +370,13 @@ public class LWJGLAudioBackend implements AudioBackend {
         SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, effectiveConfig);
         seq.setSampleRate(smpsDriver.getOutputSampleRate());
         seq.setSpeedShoes(speedShoesEnabled);
+        seq.setSpeedMultiplier(speedMultiplier);
         seq.setFm6DacOff(fm6DacOff);
         seq.setFallbackVoiceData(data);
         smpsDriver.addSequencer(seq, false);
         currentSmps = seq;
         currentMusicId = musicId;
+        currentMusicDescriptor = consumePendingMusicDescriptor(musicId);
 
         updateSynthesizerConfig();
         synchronized (streamLock) {
@@ -514,6 +528,7 @@ public class LWJGLAudioBackend implements AudioBackend {
             smpsDriver = null;
         }
         currentMusicId = -1;
+        currentMusicDescriptor = null;
     }
 
     private void updateStream() {
@@ -583,6 +598,7 @@ public class LWJGLAudioBackend implements AudioBackend {
             currentSmps = savedState.smps;
             smpsDriver = savedState.driver;
             currentMusicId = savedState.musicId;
+            currentMusicDescriptor = savedState.descriptor;
         }
 
         if (currentSmps != null) {
@@ -678,6 +694,28 @@ public class LWJGLAudioBackend implements AudioBackend {
     }
 
     @Override
+    public AudioBackendLogicalSnapshot captureLogicalSnapshot() {
+        synchronized (streamLock) {
+            List<AudioSourceDescriptor> overrides = new ArrayList<>(musicStack.size());
+            for (MusicState state : musicStack) {
+                overrides.add(state.descriptor);
+            }
+            return new AudioBackendLogicalSnapshot(
+                    currentMusicDescriptor,
+                    sfxBlocked,
+                    pendingRestore,
+                    speedShoesEnabled,
+                    speedMultiplier,
+                    overrides);
+        }
+    }
+
+    @Override
+    public void prepareLogicalMusicSource(AudioSourceDescriptor descriptor) {
+        pendingMusicDescriptor = descriptor;
+    }
+
+    @Override
     public void playSfx(String sfxName) {
         playSfx(sfxName, 1.0f);
     }
@@ -703,6 +741,7 @@ public class LWJGLAudioBackend implements AudioBackend {
             currentStream = null;
             currentSmps = null;
             currentMusicId = -1;
+            currentMusicDescriptor = null;
             clearMusicStack();
             // Also stop any playing SFX to prevent them persisting across level transitions
             if (sfxStream instanceof SmpsDriver sfxDriver) {
@@ -799,6 +838,7 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     @Override
     public void setSpeedMultiplier(int multiplier) {
+        this.speedMultiplier = multiplier;
         synchronized (streamLock) {
             if (currentSmps != null) {
                 currentSmps.setSpeedMultiplier(multiplier);
@@ -864,7 +904,8 @@ public class LWJGLAudioBackend implements AudioBackend {
         if (currentStream == null || currentSmps == null || smpsDriver == null) {
             return;
         }
-        musicStack.push(new MusicState(currentStream, currentSmps, smpsDriver, currentMusicId));
+        musicStack.push(new MusicState(currentStream, currentSmps, smpsDriver, currentMusicId,
+                currentMusicDescriptor));
     }
 
     private void clearMusicStack() {
@@ -885,6 +926,18 @@ public class LWJGLAudioBackend implements AudioBackend {
             }
         }
         return false;
+    }
+
+    private static AudioSourceDescriptor describeMusic(int musicId) {
+        return musicId >= 0 ? AudioSourceDescriptor.baseMusic(musicId) : null;
+    }
+
+    private AudioSourceDescriptor consumePendingMusicDescriptor(int musicId) {
+        AudioSourceDescriptor descriptor = pendingMusicDescriptor != null
+                ? pendingMusicDescriptor
+                : describeMusic(musicId);
+        pendingMusicDescriptor = null;
+        return descriptor;
     }
 
     private void playWav(String resourcePath, int source, boolean loop) {

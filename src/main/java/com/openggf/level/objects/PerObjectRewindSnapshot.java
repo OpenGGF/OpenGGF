@@ -392,6 +392,7 @@ public record PerObjectRewindSnapshot(
             int forcedAnimationId,
             int animationFrameIndex,
             int animationTick,
+            boolean debugMode,
             com.openggf.sprites.managers.PlayableSpriteMovement.RewindState movementState,
             com.openggf.sprites.managers.SpindashDustController.RewindState spindashDustState,
             com.openggf.sprites.managers.PlayableSpriteAnimation.RewindState animationState,

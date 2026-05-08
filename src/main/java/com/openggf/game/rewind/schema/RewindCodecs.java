@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.BitSet;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,6 +33,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public final class RewindCodecs {
     private static final Set<Class<?>> WRAPPER_TYPES = Set.of(
@@ -508,10 +511,12 @@ public final class RewindCodecs {
     }
 
     private static final class MapCodec implements RewindCodec {
+        private final Class<?> declaredType;
         private final Class<?> keyType;
         private final Class<?> valueType;
 
         private MapCodec(Class<?> declaredType, Class<?> keyType, Class<?> valueType) {
+            this.declaredType = declaredType;
             this.keyType = keyType;
             this.valueType = valueType;
         }
@@ -560,7 +565,7 @@ public final class RewindCodecs {
                 restored = (Map<Object, Object>) requireExistingValue(field, target);
                 restored.clear();
             } else {
-                restored = new LinkedHashMap<>();
+                restored = mutableMapFor(declaredType);
                 set(field, target, restored);
             }
             for (int i = 0; i < size; i++) {
@@ -584,6 +589,28 @@ public final class RewindCodecs {
         public boolean requiresExistingTargetValue() {
             return true;
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<Object, Object> mutableMapFor(Class<?> declaredType) {
+        if (IdentityHashMap.class.isAssignableFrom(declaredType)) {
+            return new IdentityHashMap<>();
+        }
+        if (SortedMap.class.isAssignableFrom(declaredType)) {
+            return new TreeMap<>();
+        }
+        if (declaredType.isAssignableFrom(LinkedHashMap.class)) {
+            return new LinkedHashMap<>();
+        }
+        try {
+            Object value = declaredType.getDeclaredConstructor().newInstance();
+            if (value instanceof Map<?, ?> map) {
+                return (Map<Object, Object>) map;
+            }
+        } catch (ReflectiveOperationException ignored) {
+            // Fall back to insertion-ordered map when the field type can accept it.
+        }
+        throw new IllegalStateException("Cannot create rewind map for declared type " + declaredType.getName());
     }
 
     private static final class SubpixelMotionStateCodec implements RewindCodec {

@@ -1,15 +1,19 @@
 package com.openggf.audio.driver;
 
 import com.openggf.audio.AudioStream;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.synth.VirtualSynthesizer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
@@ -142,6 +146,100 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     public int getHybridChunkCountForTesting() {
         return hybridChunkCountForTesting;
+    }
+
+    public SmpsDriverSnapshot captureSnapshot() {
+        synchronized (sequencersLock) {
+            IdentityHashMap<SmpsSequencer, Integer> sequencerIds = new IdentityHashMap<>();
+            List<SmpsDriverSnapshot.SequencerEntry> entries = new ArrayList<>(sequencers.size());
+            for (int i = 0; i < sequencers.size(); i++) {
+                SmpsSequencer sequencer = sequencers.get(i);
+                sequencerIds.put(sequencer, i);
+                entries.add(new SmpsDriverSnapshot.SequencerEntry(
+                        isSfx(sequencer),
+                        sequencer.getSmpsData(),
+                        sequencer.getDacData(),
+                        sequencer.getAudioManager(),
+                        sequencer.getConfig(),
+                        sequencer.captureSnapshot()));
+            }
+
+            return new SmpsDriverSnapshot(
+                    region,
+                    readMode,
+                    continuousSfxId,
+                    continuousSfxFlag,
+                    contSfxLoopCnt,
+                    entries,
+                    captureLockIds(fmLocks, sequencerIds),
+                    captureLockIds(psgLocks, sequencerIds));
+        }
+    }
+
+    /**
+     * Restores logical SMPS driver state only. Native/audio-chip presentation state is
+     * cleared and must be refreshed by subsequent sequencer advancement.
+     */
+    public void restoreSnapshot(SmpsDriverSnapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        synchronized (sequencersLock) {
+            sequencers.clear();
+            sfxSequencers.clear();
+            psgLatches.clear();
+            pendingRemovals.clear();
+            Arrays.fill(fmLocks, null);
+            Arrays.fill(psgLocks, null);
+
+            region = snapshot.region();
+            readMode = snapshot.readMode();
+            continuousSfxId = snapshot.continuousSfxId();
+            continuousSfxFlag = snapshot.continuousSfxFlag();
+            contSfxLoopCnt = snapshot.contSfxLoopCnt();
+
+            List<SmpsDriverSnapshot.SequencerEntry> entries = snapshot.sequencers();
+            for (SmpsDriverSnapshot.SequencerEntry entry : entries) {
+                SmpsSequencer sequencer = new SmpsSequencer(
+                        entry.smpsData(),
+                        entry.dacData(),
+                        this,
+                        entry.audioManager(),
+                        entry.config());
+                sequencer.setRegion(region);
+                sequencer.restoreSnapshot(entry.snapshot());
+                sequencer.setIsSfx(entry.sfx());
+                sequencers.add(sequencer);
+                if (entry.sfx()) {
+                    sfxSequencers.add(sequencer);
+                }
+            }
+
+            restoreLocks(snapshot.fmLockSequencerIds(), fmLocks);
+            restoreLocks(snapshot.psgLockSequencerIds(), psgLocks);
+        }
+        silenceAll();
+    }
+
+    private static int[] captureLockIds(
+            SmpsSequencer[] locks,
+            IdentityHashMap<SmpsSequencer, Integer> sequencerIds) {
+        int[] ids = new int[locks.length];
+        Arrays.fill(ids, -1);
+        for (int i = 0; i < locks.length; i++) {
+            Integer id = sequencerIds.get(locks[i]);
+            if (id != null) {
+                ids[i] = id;
+            }
+        }
+        return ids;
+    }
+
+    private void restoreLocks(int[] ids, SmpsSequencer[] target) {
+        for (int i = 0; i < target.length && i < ids.length; i++) {
+            int id = ids[i];
+            if (id >= 0 && id < sequencers.size()) {
+                target[i] = sequencers.get(id);
+            }
+        }
     }
 
     public void addSequencer(SmpsSequencer seq, boolean isSfx) {

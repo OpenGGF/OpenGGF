@@ -1,5 +1,7 @@
 package com.openggf.audio;
 
+import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -129,4 +131,11 @@ public interface AudioBackend {
      * Called when the game window is restored or regains focus.
      */
     void resume();
+
+    default AudioBackendLogicalSnapshot captureLogicalSnapshot() {
+        return AudioBackendLogicalSnapshot.empty();
+    }
+
+    default void prepareLogicalMusicSource(AudioSourceDescriptor descriptor) {
+    }
 }

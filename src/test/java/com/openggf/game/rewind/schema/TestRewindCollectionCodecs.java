@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -52,6 +54,20 @@ class TestRewindCollectionCodecs {
     }
 
     @Test
+    void restoresNonFinalIdentityHashMapsWithIdentitySemantics() {
+        IdentityMapFixture fixture = new IdentityMapFixture();
+        Object key = fixture.key;
+
+        RewindObjectStateBlob blob = CompactFieldCapturer.capture(fixture);
+        fixture.values = new IdentityHashMap<>();
+        CompactFieldCapturer.restore(fixture, blob);
+
+        assertInstanceOf(IdentityHashMap.class, fixture.values);
+        assertEquals(11, fixture.values.get(key));
+        assertEquals(null, fixture.values.get(new String("key")));
+    }
+
+    @Test
     void rejectsCollectionWithUnsupportedElementType() {
         RewindClassSchema schema = RewindSchemaRegistry.schemaFor(UnsupportedCollectionFixture.class);
 
@@ -82,6 +98,15 @@ class TestRewindCollectionCodecs {
 
     private static final class FinalCollectionFixture {
         final List<Integer> values = new ArrayList<>(List.of(1, 2, 3));
+    }
+
+    private static final class IdentityMapFixture {
+        String key = new String("key");
+        IdentityHashMap<String, Integer> values = new IdentityHashMap<>();
+
+        IdentityMapFixture() {
+            values.put(key, 11);
+        }
     }
 
     private static final class UnsupportedCollectionFixture {

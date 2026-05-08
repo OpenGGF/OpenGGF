@@ -8,6 +8,11 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Objects;
 
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
+
 /**
  * Read-only {@link InputHandler} view over one recorded rewind input row.
  */
@@ -36,7 +41,9 @@ final class RewindFrameInputHandler extends InputHandler {
                 || matchesHeld(keyCode, SonicConfiguration.P2_DOWN, current.p2InputMask(), AbstractPlayableSprite.INPUT_DOWN)
                 || matchesHeld(keyCode, SonicConfiguration.P2_LEFT, current.p2InputMask(), AbstractPlayableSprite.INPUT_LEFT)
                 || matchesHeld(keyCode, SonicConfiguration.P2_RIGHT, current.p2InputMask(), AbstractPlayableSprite.INPUT_RIGHT)
-                || matchesHeld(keyCode, SonicConfiguration.P2_JUMP, current.p2InputMask(), AbstractPlayableSprite.INPUT_JUMP);
+                || matchesHeld(keyCode, SonicConfiguration.P2_JUMP, current.p2InputMask(), AbstractPlayableSprite.INPUT_JUMP)
+                || (current.debugShiftDown() && (keyCode == GLFW_KEY_LEFT_SHIFT || keyCode == GLFW_KEY_RIGHT_SHIFT))
+                || (current.debugControlDown() && (keyCode == GLFW_KEY_LEFT_CONTROL || keyCode == GLFW_KEY_RIGHT_CONTROL));
     }
 
     @Override
@@ -61,7 +68,9 @@ final class RewindFrameInputHandler extends InputHandler {
                         AbstractPlayableSprite.INPUT_RIGHT)
                 || matchesPressed(keyCode, SonicConfiguration.P2_JUMP, current.p2InputMask(), previous.p2InputMask(),
                         AbstractPlayableSprite.INPUT_JUMP)
-                || (keyCode == config.getInt(SonicConfiguration.P2_START) && current.p2StartPressed());
+                || (keyCode == config.getInt(SonicConfiguration.P2_START) && current.p2StartPressed())
+                || (keyCode == config.getInt(SonicConfiguration.DEBUG_MODE_KEY)
+                        && current.debugModeTogglePressed());
     }
 
     private boolean matchesHeld(int keyCode, SonicConfiguration key, int mask, int bit) {

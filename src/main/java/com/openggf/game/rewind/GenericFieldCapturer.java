@@ -8,9 +8,12 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ObjectAnimationState;
+import com.openggf.level.objects.PlatformBobHelper;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.util.AnimationTimer;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -148,7 +151,9 @@ public final class GenericFieldCapturer {
 
     public static boolean hasDefaultObjectCaptureDecision(Field field) {
         Objects.requireNonNull(field, "field");
-        return isDefaultObjectValueField(field) || isKnownStructuralObjectField(field);
+        return isDefaultObjectValueField(field)
+                || isDefaultObjectStructuralValueField(field)
+                || isKnownStructuralObjectField(field);
     }
 
     public static List<Field> defaultObjectSubclassCapturedFieldsForAudit(Class<?> type) {
@@ -234,11 +239,13 @@ public final class GenericFieldCapturer {
                 && !Modifier.isTransient(mods)
                 && (!Modifier.isFinal(mods)
                 || isDefaultObjectArrayFieldValueType(field.getType())
+                || isDefaultObjectInPlaceHelperType(field.getType())
                 || RewindStateful.class.isAssignableFrom(field.getType()))
                 && !field.isSynthetic()
                 && !field.isAnnotationPresent(RewindTransient.class)
                 && !field.isAnnotationPresent(RewindDeferred.class)
-                && (isDefaultObjectFieldValueType(field.getType()) || isStatefulListField(field));
+                && (isDefaultObjectFieldValueType(field)
+                || isStatefulListField(field));
     }
 
     private static boolean isKnownStructuralObjectField(Field field) {
@@ -265,6 +272,17 @@ public final class GenericFieldCapturer {
             return true;
         }
         return isListOf(field, SpriteMappingFrame.class);
+    }
+
+    private static boolean isDefaultObjectStructuralValueField(Field field) {
+        int mods = field.getModifiers();
+        return Modifier.isFinal(mods)
+                && !Modifier.isStatic(mods)
+                && !Modifier.isTransient(mods)
+                && !field.isSynthetic()
+                && !field.isAnnotationPresent(RewindTransient.class)
+                && !field.isAnnotationPresent(RewindDeferred.class)
+                && isSmallImmutableValueType(field.getType());
     }
 
     private static boolean isListOf(Field field, Class<?> elementType) {
@@ -345,12 +363,25 @@ public final class GenericFieldCapturer {
         return type.isPrimitive() || WRAPPER_TYPES.contains(type) || type == String.class || type.isEnum();
     }
 
-    private static boolean isDefaultObjectFieldValueType(Class<?> type) {
+    private static boolean isDefaultObjectFieldValueType(Field field) {
+        Class<?> type = field.getType();
         return isSmallImmutableValueType(type)
                 || type == ObjectAnimationState.class
+                || isDefaultObjectInPlaceHelperField(field)
                 || RewindStateful.class.isAssignableFrom(type)
                 || isDefaultObjectArrayFieldValueType(type)
                 || isDefaultObjectRecordFieldValueType(type);
+    }
+
+    private static boolean isDefaultObjectInPlaceHelperField(Field field) {
+        return Modifier.isFinal(field.getModifiers()) && isDefaultObjectInPlaceHelperType(field.getType());
+    }
+
+    private static boolean isDefaultObjectInPlaceHelperType(Class<?> type) {
+        return type == SubpixelMotion.State.class
+                || type == ObjectAnimationState.class
+                || type == PlatformBobHelper.class
+                || type == AnimationTimer.class;
     }
 
     private static boolean isDefaultObjectArrayFieldValueType(Class<?> type) {

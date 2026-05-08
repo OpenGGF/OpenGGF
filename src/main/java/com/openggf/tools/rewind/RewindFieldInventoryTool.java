@@ -159,6 +159,16 @@ public final class RewindFieldInventoryTool {
                     || field.isAnnotationPresent(RewindDeferred.class)) {
                 continue;
             }
+            RewindFieldPolicy registeredPolicy = RewindPolicyRegistry.policyForAudit(field).orElse(null);
+            if (registeredPolicy != null
+                    && (registeredPolicy != RewindFieldPolicy.CAPTURED
+                    || RewindCodecs.codecFor(field).isPresent())) {
+                continue;
+            }
+            if (GenericRewindEligibility.usesDefaultObjectSubclassCapture(cls)
+                    && GenericFieldCapturer.hasDefaultObjectCaptureDecision(field)) {
+                continue;
+            }
             if (!GenericFieldCapturer.isSupportedDeclaredTypeForAudit(field)) {
                 unsupported.add(cls.getName() + "#" + field.getName()
                         + " : " + field.getType().getName());
