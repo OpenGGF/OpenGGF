@@ -398,6 +398,7 @@ public final class GenericFieldCapturer {
     private static boolean isDefaultObjectCompactCollectionField(Field field) {
         return Modifier.isFinal(field.getModifiers())
                 && RewindCodecs.codecFor(field).isPresent()
+                && !RewindCodecs.collectionCodecUsesIdentityReferences(field)
                 && (Collection.class.isAssignableFrom(field.getType())
                 || Map.class.isAssignableFrom(field.getType()));
     }
