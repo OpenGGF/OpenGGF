@@ -42,6 +42,7 @@ public class ConfigMigrationService {
         SonicConfiguration.PAUSE_KEY,
         SonicConfiguration.FRAME_STEP_KEY,
         SonicConfiguration.TRACE_REWIND_KEY,
+        SonicConfiguration.LIVE_REWIND_KEY,
         SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY,
         SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY
     );

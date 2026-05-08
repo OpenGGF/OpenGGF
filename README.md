@@ -211,6 +211,8 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   and the cylinder carry follow-down fix are covered by focused headless/object tests.
 - **Trace replay and diagnostics:** S1, S2, and S3K trace replay tooling now has stronger recorder
   schemas, comparison-only aux streams, compressed fixtures, and focused workflows for parity fixes.
+  The gameplay rewind stack can also be enabled during ordinary live play with `LIVE_REWIND_ENABLED`,
+  recording live inputs into the same rewind buffer and drawing a compact live rewind HUD.
   Test-mode visual trace sessions can also render grayscale ghost copies of traced characters during
   desyncs, using isolated sidekick-style DPLC banks and the same sprite layering priorities as the
   live characters while drawing behind them. The live trace visualizer now pauses on first desync,

@@ -95,6 +95,7 @@ Paths are relative to the working directory (where the JAR is launched).
 | `DEBUG_VIEW_ENABLED` | bool | `true` | Eagerly initialise the debug overlay subsystem. Required for any runtime debug keys to function. Does not show anything on-screen until debug mode is activated. |
 | `EDITOR_ENABLED` | bool | `false` | Allow the experimental in-engine editor overlay to be entered from gameplay with `Shift+Tab`. |
 | `DEBUG_COLLISION_VIEW_ENABLED` | bool | `false` | Draw collision sensor rays and solid object outlines over the scene at all times. |
+| `LIVE_REWIND_ENABLED` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots and records live input while enabled. |
 | `TEST_MODE_ENABLED` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `TRACE_CATALOG_DIR` and plays the chosen trace back in the live engine. Dev-only. |
 | `TRACE_CATALOG_DIR` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
 
@@ -129,6 +130,7 @@ The tables below list each key's name, default code, and the human-readable key 
 | `PAUSE_KEY` | `257` | Enter | Pause / unpause the game. |
 | `FRAME_STEP_KEY` | `81` | Q | Advance one frame while paused. |
 | `TRACE_REWIND_KEY` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time. |
+| `LIVE_REWIND_KEY` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true. |
 
 ### Debug Navigation
 
@@ -189,12 +191,14 @@ These keys are only active while a Special Stage is running.
   "DEBUG_VIEW_ENABLED": true,
   "EDITOR_ENABLED": false,
   "DEBUG_COLLISION_VIEW_ENABLED": false,
+  "LIVE_REWIND_ENABLED": false,
   "UP": "UP",
   "DOWN": "DOWN",
   "LEFT": "LEFT",
   "RIGHT": "RIGHT",
   "JUMP": "SPACE",
   "PAUSE_KEY": "ENTER",
-  "FRAME_STEP_KEY": "Q"
+  "FRAME_STEP_KEY": "Q",
+  "LIVE_REWIND_KEY": "R"
 }
 ```
