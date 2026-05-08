@@ -11,6 +11,20 @@ from compact logical records while keeping OpenAL and native buffers
 presentation-only.
 
 
+Status
+------
+
+Tier 2a is implemented on the current branch. The first slice adds
+`AudioLogicalSnapshot`, `AudioSourceDescriptor`, and
+`AudioManager.captureLogicalSnapshot()` for AudioManager intent and donor
+descriptors. Focused verification passed for the new snapshot tests plus the
+Tier 0/Tier 1 audio rewind regression set.
+
+Remaining Tier 2 work starts at Tier 2b: separate backend logical playback
+state from `LWJGLAudioBackend`, then add SmpsDriver/SmpsSequencer snapshots and
+sparse keyframe replay.
+
+
 Tier 2 Goal
 -----------
 

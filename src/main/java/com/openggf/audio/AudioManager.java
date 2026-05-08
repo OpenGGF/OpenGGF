@@ -2,6 +2,7 @@ package com.openggf.audio;
 
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioCommandTimeline;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
@@ -13,7 +14,9 @@ import com.openggf.data.Rom;
 
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -108,6 +111,28 @@ public class AudioManager {
 
     public void discardAudioCommandsAfter(long frame) {
         commandTimeline.discardAfter(frame);
+    }
+
+    public AudioLogicalSnapshot captureLogicalSnapshot() {
+        Set<String> donorGameIds = new LinkedHashSet<>();
+        donorGameIds.addAll(donorLoaders.keySet());
+        donorGameIds.addAll(donorDacData.keySet());
+        donorGameIds.addAll(donorConfigs.keySet());
+
+        Set<AudioLogicalSnapshot.DonorSfxBindingSnapshot> donorBindings = new LinkedHashSet<>();
+        for (Map.Entry<GameSound, DonorSfxBinding> entry : donorSoundBindings.entrySet()) {
+            DonorSfxBinding binding = entry.getValue();
+            donorBindings.add(new AudioLogicalSnapshot.DonorSfxBindingSnapshot(
+                    entry.getKey(), binding.gameId(), binding.sfxId()));
+        }
+
+        return new AudioLogicalSnapshot(
+                ringLeft,
+                commandTimeline.currentFrame(),
+                commandTimeline.nextOrder(),
+                commandTimeline.entries().size(),
+                donorGameIds,
+                donorBindings);
     }
 
     public AudioReplayScope beginRewindReplay(int fromFrame, int targetFrame, AudioReplayReason reason) {

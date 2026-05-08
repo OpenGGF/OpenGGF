@@ -10,6 +10,18 @@ backend music/SFX descriptors, override stack descriptors, SmpsDriver state,
 and SmpsSequencer per-track state. OpenAL remains presentation-only. YM2612,
 PSG, DAC, and resampler phase snapshots are deferred to Tier 3.
 
+## Current Status
+
+Tier 2a is implemented and focused-verified:
+
+- Added `AudioLogicalSnapshot`.
+- Added `AudioSourceDescriptor`.
+- Added `AudioManager.captureLogicalSnapshot()`.
+- Added `TestAudioLogicalSnapshot`.
+
+The implemented seam captures AudioManager intent descriptors only. Tier 2b,
+2c, and 2d remain to be implemented.
+
 ## Design Decisions
 
 1. Implement Tier 2 in subtiers:
@@ -50,13 +62,13 @@ Expected tests:
 
 ## Steps
 
-1. Add failing Tier 2a tests:
+1. Add failing Tier 2a tests: **done**
    - snapshot records exclude OpenAL presentation identifiers
    - AudioManager intent snapshot captures ring alternation and timeline cursor
    - descriptor records identify base/donor music and SFX without object ids
 2. Add `AudioSourceDescriptor`, `AudioLogicalSnapshot`, and minimal capture
-   methods that satisfy Tier 2a without changing playback behavior.
-3. Self-review Tier 2a for accidental OpenAL/native buffer capture.
+   methods that satisfy Tier 2a without changing playback behavior. **done**
+3. Self-review Tier 2a for accidental OpenAL/native buffer capture. **done**
 4. Add failing Tier 2b tests around current music id, SFX blocked state,
    pending restore, speed state, and override stack descriptors.
 5. Extract a backend-agnostic `SmpsPlaybackGraph` or `LogicalAudioRuntime` from
