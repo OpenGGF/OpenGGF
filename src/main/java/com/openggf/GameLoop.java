@@ -535,7 +535,11 @@ public class GameLoop {
         }
 
         profiler.beginSection("audio");
-        audioManager.update();
+        if (doFrameStep) {
+            audioManager.advancePausedFrameStepAudio();
+        } else {
+            audioManager.update();
+        }
         profiler.endSection("audio");
 
         profiler.beginSection("timers");

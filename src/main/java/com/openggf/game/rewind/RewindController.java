@@ -1,5 +1,9 @@
 package com.openggf.game.rewind;
 
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.rewind.AudioPresentationPolicy;
+import com.openggf.audio.rewind.AudioReplayReason;
+import com.openggf.audio.rewind.AudioReplayScope;
 import com.openggf.debug.playback.Bk2FrameInput;
 
 import java.util.Objects;
@@ -12,6 +16,7 @@ public final class RewindController {
     private final EngineStepper engineStepper;
     private final SegmentCache segmentCache;
     private final int keyframeInterval;
+    private final AudioManager audioManager;
 
     private int currentFrame;
 
@@ -21,6 +26,16 @@ public final class RewindController {
             InputSource inputs,
             EngineStepper engineStepper,
             int keyframeInterval) {
+        this(registry, keyframes, inputs, engineStepper, keyframeInterval, null);
+    }
+
+    public RewindController(
+            RewindRegistry registry,
+            KeyframeStore keyframes,
+            InputSource inputs,
+            EngineStepper engineStepper,
+            int keyframeInterval,
+            AudioManager audioManager) {
         this.registry = Objects.requireNonNull(registry);
         this.keyframes = Objects.requireNonNull(keyframes);
         this.inputs = Objects.requireNonNull(inputs);
@@ -30,6 +45,7 @@ public final class RewindController {
                     "keyframeInterval must be > 0, got " + keyframeInterval);
         }
         this.keyframeInterval = keyframeInterval;
+        this.audioManager = audioManager;
         this.segmentCache = new SegmentCache(keyframeInterval);
         this.currentFrame = 0;
         // Capture frame 0 so seekTo(0) always has a base.
@@ -102,17 +118,22 @@ public final class RewindController {
         var floor = keyframes.latestAtOrBefore(clampedTarget).orElseThrow(
                 () -> new IllegalStateException(
                         "no keyframe at or before " + clampedTarget));
-        segmentCache.invalidate();
-        registry.restore(floor.snapshot());
-        currentFrame = floor.frame();
-        primeStepperAtFrame(currentFrame);
-        while (currentFrame < clampedTarget) {
-            Bk2FrameInput in = inputs.read(currentFrame + 1);
-            engineStepper.step(in);
-            currentFrame++;
+        int originalFrame = currentFrame;
+        try (AudioReplayScope ignored = beginAudioReplay(
+                originalFrame, clampedTarget, AudioReplayReason.SEEK)) {
+            segmentCache.invalidate();
+            registry.restore(floor.snapshot());
+            currentFrame = floor.frame();
+            primeStepperAtFrame(currentFrame);
+            while (currentFrame < clampedTarget) {
+                Bk2FrameInput in = inputs.read(currentFrame + 1);
+                engineStepper.step(in);
+                currentFrame++;
+            }
+            keyframes.discardAfter(currentFrame);
+            primeStepperAtFrame(currentFrame);
+            afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
         }
-        keyframes.discardAfter(currentFrame);
-        primeStepperAtFrame(currentFrame);
     }
 
     /**
@@ -121,6 +142,7 @@ public final class RewindController {
      */
     public boolean stepBackward() {
         if (currentFrame <= earliestAvailableFrame()) return false;
+        int originalFrame = currentFrame;
         int target = currentFrame - 1;
         int keyframeFrame = (target / keyframeInterval) * keyframeInterval;
         final var floor = keyframes.latestAtOrBefore(keyframeFrame).orElseThrow();
@@ -128,26 +150,43 @@ public final class RewindController {
         final var restoreSnapshot = floor.snapshot();
         // Use int[] wrapper to allow mutation within lambdas
         final int[] pos = { currentFrame };
-        CompositeSnapshot snap = segmentCache.snapshotAt(
-                target,
-                restoreSnapshot,
-                keyframeSnapshot,
-                () -> {
-                    registry.restore(restoreSnapshot);
-                    pos[0] = keyframeSnapshot;
-                    primeStepperAtFrame(pos[0]);
-                },
-                () -> {
-                    Bk2FrameInput in = inputs.read(pos[0] + 1);
-                    engineStepper.step(in);
-                    pos[0]++;
-                    return registry.capture();
-                });
-        registry.restore(snap);
-        currentFrame = target;
-        keyframes.discardAfter(currentFrame);
-        primeStepperAtFrame(currentFrame);
+        try (AudioReplayScope ignored = beginAudioReplay(
+                originalFrame, target, AudioReplayReason.STEP_BACKWARD)) {
+            CompositeSnapshot snap = segmentCache.snapshotAt(
+                    target,
+                    restoreSnapshot,
+                    keyframeSnapshot,
+                    () -> {
+                        registry.restore(restoreSnapshot);
+                        pos[0] = keyframeSnapshot;
+                        primeStepperAtFrame(pos[0]);
+                    },
+                    () -> {
+                        Bk2FrameInput in = inputs.read(pos[0] + 1);
+                        engineStepper.step(in);
+                        pos[0]++;
+                        return registry.capture();
+                    });
+            registry.restore(snap);
+            currentFrame = target;
+            keyframes.discardAfter(currentFrame);
+            primeStepperAtFrame(currentFrame);
+            afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
+        }
         return true;
+    }
+
+    private AudioReplayScope beginAudioReplay(int fromFrame, int targetFrame, AudioReplayReason reason) {
+        if (audioManager == null) {
+            return () -> {};
+        }
+        return audioManager.beginRewindReplay(fromFrame, targetFrame, reason);
+    }
+
+    private void afterAudioRestore(AudioPresentationPolicy policy) {
+        if (audioManager != null) {
+            audioManager.afterRewindRestore(currentFrame, policy);
+        }
     }
 
     private void primeStepperAtFrame(int frame) {

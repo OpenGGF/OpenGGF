@@ -1,5 +1,8 @@
 package com.openggf.audio;
 
+import com.openggf.audio.rewind.AudioPresentationPolicy;
+import com.openggf.audio.rewind.AudioReplayReason;
+import com.openggf.audio.rewind.AudioReplayScope;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -21,6 +24,7 @@ public class AudioManager {
     private Map<GameSound, Integer> soundMap;
     private GameAudioProfile audioProfile;
     private boolean ringLeft = true;
+    private int rewindReplaySuppressionDepth;
 
     // Donor audio overlay: secondary SFX path for cross-game feature donation
     private final Map<String, SmpsLoader> donorLoaders = new HashMap<>();
@@ -90,23 +94,105 @@ public class AudioManager {
         ringLeft = true;
     }
 
+    public AudioReplayScope beginRewindReplay(int fromFrame, int targetFrame, AudioReplayReason reason) {
+        rewindReplaySuppressionDepth++;
+        return new AudioReplayScope() {
+            private boolean closed;
+
+            @Override
+            public void close() {
+                if (closed) {
+                    return;
+                }
+                closed = true;
+                if (rewindReplaySuppressionDepth > 0) {
+                    rewindReplaySuppressionDepth--;
+                }
+            }
+        };
+    }
+
+    public boolean isRewindReplaySuppressed() {
+        return rewindReplaySuppressionDepth > 0;
+    }
+
+    private boolean suppressingRewindReplay() {
+        return rewindReplaySuppressionDepth > 0;
+    }
+
+    public void afterRewindRestore(int frame, AudioPresentationPolicy policy) {
+        if (backend == null || policy == null) {
+            return;
+        }
+        switch (policy) {
+            case SUPPRESSED_INTERNAL_RESTORE -> {
+            }
+            case STOP_TRANSIENT_SFX_RESYNC_MUSIC -> {
+                backend.stopAllSfx();
+                backend.restoreMusic();
+            }
+            case STOP_ALL_PRESENTATION -> {
+                backend.stopAllSfx();
+                backend.stopPlayback();
+            }
+        }
+    }
+
+    /**
+     * Tier 0 frame-step seam. This delegates to legacy backend polling for now.
+     * Later tiers replace this with exactly one authoritative audio-frame advance.
+     */
+    public void advancePausedFrameStepAudio() {
+        update();
+    }
+
+    public void restoreMusic() {
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        if (backend != null) {
+            backend.restoreMusic();
+        }
+    }
+
+    public void setSpeedShoes(boolean enabled) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        if (backend != null) {
+            backend.setSpeedShoes(enabled);
+        }
+    }
+
+    public void setSpeedMultiplier(int multiplier) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        if (backend != null) {
+            backend.setSpeedMultiplier(multiplier);
+        }
+    }
+
     public void playMusic(int musicId) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
         if (audioProfile != null) {
             if (audioProfile.handleSystemCommand(musicId, this)) {
                 return;
             }
             if (musicId == audioProfile.getSpeedShoesOnCommandId()) {
                 if (audioProfile.getSpeedMode() == GameAudioProfile.SpeedMode.FRAME_MULTIPLY) {
-                    backend.setSpeedMultiplier(audioProfile.getSpeedMultiplierValue());
+                    setSpeedMultiplier(audioProfile.getSpeedMultiplierValue());
                 } else {
-                    backend.setSpeedShoes(true);
+                    setSpeedShoes(true);
                 }
                 return;
             } else if (musicId == audioProfile.getSpeedShoesOffCommandId()) {
                 if (audioProfile.getSpeedMode() == GameAudioProfile.SpeedMode.FRAME_MULTIPLY) {
-                    backend.setSpeedMultiplier(1);
+                    setSpeedMultiplier(1);
                 } else {
-                    backend.setSpeedShoes(false);
+                    setSpeedShoes(false);
                 }
                 return;
             }
@@ -127,6 +213,9 @@ public class AudioManager {
     }
 
     public void playSfx(String sfxName, float pitch) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
         if (smpsLoader != null) {
             AbstractSmpsData sfx = smpsLoader.loadSfx(sfxName);
             if (sfx != null) {
@@ -142,6 +231,9 @@ public class AudioManager {
     }
 
     public void playSfx(GameSound sound, float pitch) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
         if (sound == GameSound.RING) {
             playSfx(ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
             ringLeft = !ringLeft;
@@ -181,6 +273,9 @@ public class AudioManager {
     }
 
     public boolean playSfx(int sfxId, float pitch) {
+        if (suppressingRewindReplay()) {
+            return false;
+        }
         if (smpsLoader != null) {
             AbstractSmpsData sfx = smpsLoader.loadSfx(sfxId);
             if (sfx != null) {
@@ -200,6 +295,9 @@ public class AudioManager {
      * @param sfxId the SFX ID in the donor game's format
      */
     public void playDonorSfx(String donorGameId, int sfxId) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
         SmpsLoader loader = donorLoaders.get(donorGameId);
         DacData dData = donorDacData.get(donorGameId);
         if (loader != null && dData != null) {
@@ -227,6 +325,9 @@ public class AudioManager {
      * @param musicId the music ID in the donor game's format
      */
     public void playDonorMusic(String donorGameId, int musicId) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
         SmpsLoader loader = donorLoaders.get(donorGameId);
         DacData dData = donorDacData.get(donorGameId);
         if (loader != null && dData != null) {
@@ -242,6 +343,9 @@ public class AudioManager {
     }
 
     public void endMusicOverride(int musicId) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
         backend.endMusicOverride(musicId);
     }
 
@@ -252,6 +356,9 @@ public class AudioManager {
      * @param newDividingTiming the new dividing timing value
      */
     public void changeMusicTempo(int newDividingTiming) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
         if (backend != null) {
             backend.changeMusicTempo(newDividingTiming);
         }
@@ -262,6 +369,9 @@ public class AudioManager {
      * Clears both SFX sequencers in the active music driver and the standalone SFX stream.
      */
     public void stopAllSfx() {
+        if (suppressingRewindReplay()) {
+            return;
+        }
         if (backend != null) {
             backend.stopAllSfx();
         }
@@ -272,6 +382,9 @@ public class AudioManager {
      * Used when exiting special stages or changing game modes.
      */
     public void stopMusic() {
+        if (suppressingRewindReplay()) {
+            return;
+        }
         if (backend != null) {
             backend.stopPlayback();
         }
@@ -309,6 +422,9 @@ public class AudioManager {
      * @param delay frames between each volume step (ROM default: 3)
      */
     public void fadeOutMusic(int steps, int delay) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
         if (backend != null) {
             backend.fadeOutMusic(steps, delay);
         }
@@ -367,6 +483,7 @@ public class AudioManager {
         this.soundMap = null;
         this.audioProfile = null;
         this.ringLeft = true;
+        this.rewindReplaySuppressionDepth = 0;
         clearDonorAudio();
     }
 
