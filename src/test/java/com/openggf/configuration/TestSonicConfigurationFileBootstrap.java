@@ -45,6 +45,8 @@ class TestSonicConfigurationFileBootstrap {
                     savedConfig.get(SonicConfiguration.DEFAULT_ROM.name()));
             assertEquals("Q", savedConfig.get(SonicConfiguration.FRAME_STEP_KEY.name()));
             assertEquals("", savedConfig.get(SonicConfiguration.PLAYBACK_MOVIE_PATH.name()));
+            assertEquals(Boolean.FALSE, savedConfig.get(SonicConfiguration.LIVE_REWIND_ENABLED.name()));
+            assertEquals("R", savedConfig.get(SonicConfiguration.LIVE_REWIND_KEY.name()));
             assertEquals(Boolean.TRUE, savedConfig.get(SonicConfiguration.TITLE_SCREEN_ON_STARTUP.name()));
             assertEquals(Boolean.FALSE, savedConfig.get(SonicConfiguration.LEVEL_SELECT_ON_STARTUP.name()));
             assertEquals(Boolean.TRUE, savedConfig.get(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP.name()));

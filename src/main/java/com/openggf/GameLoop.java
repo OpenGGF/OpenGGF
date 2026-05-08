@@ -38,9 +38,11 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.rewind.LiveRewindManager;
 import com.openggf.game.startup.DataSelectPresentationResolution;
 import com.openggf.game.startup.StartupRouteResolver;
 import com.openggf.game.startup.TitleActionRoute;
+import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.level.BigRingReturnState;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
@@ -113,6 +115,7 @@ public class GameLoop {
     private WaterSystem waterSystem;
     private final PerformanceProfiler profiler;
     private final PlaybackDebugManager playbackDebugManager;
+    private final LiveRewindManager liveRewindManager;
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
 
     // The gameplay runtime facade — set by Engine after RuntimeManager.createGameplay(...).
@@ -217,6 +220,7 @@ public class GameLoop {
         this.debugOverlayManager = this.engineServices.debugOverlay();
         this.profiler = this.engineServices.profiler();
         this.playbackDebugManager = this.engineServices.playbackDebug();
+        this.liveRewindManager = new LiveRewindManager(configService);
         refreshRuntimeBindings();
     }
 
@@ -272,6 +276,10 @@ public class GameLoop {
 
     public void setEditorInputHandler(EditorInputHandler editorInputHandler) {
         this.editorInputHandler = editorInputHandler;
+    }
+
+    public void renderLiveRewindHud(PixelFontTextRenderer textRenderer) {
+        liveRewindManager.renderHud(currentGameMode, textRenderer);
     }
 
     public void setEditorPlaytestToggleHandler(Runnable editorPlaytestToggleHandler) {
@@ -435,6 +443,12 @@ public class GameLoop {
         if (currentGameMode == GameMode.LEVEL
                 && TraceSessionLauncher.active() != null
                 && TraceSessionLauncher.active().handleRealtimeRewindInput(inputHandler)) {
+            inputHandler.update();
+            return;
+        }
+        if (currentGameMode == GameMode.LEVEL
+                && TraceSessionLauncher.active() == null
+                && liveRewindManager.handleRealtimeRewindInput(currentGameMode, inputHandler)) {
             inputHandler.update();
             return;
         }
@@ -729,6 +743,8 @@ public class GameLoop {
                 TraceSessionLauncher traceSession = TraceSessionLauncher.active();
                 if (traceSession != null) {
                     traceSession.recordExternalRewindFrame();
+                } else {
+                    liveRewindManager.resetBufferAtCurrentFrame(currentGameMode);
                 }
                 return;
             }
@@ -805,6 +821,8 @@ public class GameLoop {
                 TraceSessionLauncher traceSession = TraceSessionLauncher.active();
                 if (traceSession != null) {
                     traceSession.recordExternalRewindFrame();
+                } else {
+                    liveRewindManager.recordExternalFrame(currentGameMode, inputHandler);
                 }
 
                 // Check if a checkpoint star requested a special stage

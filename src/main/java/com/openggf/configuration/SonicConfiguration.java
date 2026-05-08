@@ -239,6 +239,16 @@ public enum SonicConfiguration {
 	TRACE_REWIND_KEY,
 
 	/**
+	 * Whether held-key rewind is enabled during ordinary live level play.
+	 */
+	LIVE_REWIND_ENABLED,
+
+	/**
+	 * Key held during ordinary live level play to rewind deterministic gameplay state.
+	 */
+	LIVE_REWIND_KEY,
+
+	/**
 	 * Key to teleport player to the last checkpoint (debug).
 	 */
 	DEBUG_LAST_CHECKPOINT_KEY,
