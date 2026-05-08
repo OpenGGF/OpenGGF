@@ -284,7 +284,8 @@ public final class GenericFieldCapturer {
                 && !field.isSynthetic()
                 && !field.isAnnotationPresent(RewindTransient.class)
                 && !field.isAnnotationPresent(RewindDeferred.class)
-                && isSmallImmutableValueType(field.getType());
+                && (isSmallImmutableValueType(field.getType())
+                || isDefaultObjectRecordFieldValueType(field.getType()));
     }
 
     private static boolean isListOf(Field field, Class<?> elementType) {

@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidObjectParams;
 
 import org.junit.jupiter.api.Test;
 
@@ -40,6 +41,7 @@ class TestRewindFieldInventoryTool {
     private static final class DefaultObjectCaptureFixture extends AbstractObjectInstance {
         private final int subtype = 3;
         private final boolean flipped = true;
+        private final SolidObjectParams solidObjectParams = new SolidObjectParams(16, 8, 9);
         private int phase;
         private boolean armed;
 
