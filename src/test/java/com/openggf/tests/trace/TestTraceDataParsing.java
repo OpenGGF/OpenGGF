@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
@@ -559,6 +560,52 @@ public class TestTraceDataParsing {
 
         assertEquals(List.of("cage_state_per_frame", "cage_execution_per_frame"),
                 data.missingAdvertisedAuxSchemas());
+    }
+
+    @Test
+    void latestAuxStateLookupsDoNotRebuildFrameIndexPerCall() throws IOException {
+        Path dir = Files.createTempDirectory("trace-latest-aux-index");
+        int frameCount = 10_000;
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s3k",
+              "zone": "aiz",
+              "zone_id": 0,
+              "act": 1,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": %d,
+              "start_x": "0x0080",
+              "start_y": "0x03A0",
+              "recording_date": "2026-05-07",
+              "lua_script_version": "test",
+              "trace_schema": 3,
+              "csv_version": 4,
+              "rom_checksum": "test"
+            }
+            """.formatted(frameCount));
+
+        StringBuilder physics = new StringBuilder(
+                "frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter\n");
+        StringBuilder aux = new StringBuilder();
+        for (int frame = 0; frame < frameCount; frame++) {
+            physics.append("%04X,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,%04X,00,%04X,0000%n"
+                    .formatted(frame, frame + 1, frame + 1));
+            aux.append("""
+                    {"frame":%d,"event":"checkpoint","name":"cp_%d","actual_zone_id":0,"actual_act":0,"apparent_act":0,"game_mode":12}
+                    {"frame":%d,"event":"zone_act_state","actual_zone_id":0,"actual_act":0,"apparent_act":0,"game_mode":12}
+                    """.formatted(frame, frame, frame));
+        }
+        Files.writeString(dir.resolve("physics.csv"), physics.toString());
+        Files.writeString(dir.resolve("aux_state.jsonl"), aux.toString());
+
+        TraceData data = TraceData.load(dir);
+
+        assertTimeoutPreemptively(Duration.ofMillis(250), () -> {
+            for (int frame = 0; frame < frameCount; frame++) {
+                assertEquals("cp_" + frame, data.latestCheckpointAtOrBefore(frame).name());
+                assertEquals(0, data.latestZoneActStateAtOrBefore(frame).actualZoneId());
+            }
+        });
     }
 
     @Test
