@@ -393,7 +393,8 @@ public final class GenericFieldCapturer {
         return type == SubpixelMotion.State.class
                 || type == ObjectAnimationState.class
                 || type == PlatformBobHelper.class
-                || type == AnimationTimer.class;
+                || type == AnimationTimer.class
+                || RewindCodecs.supportsInPlaceStateHolder(type);
     }
 
     private static boolean isDefaultObjectArrayFieldValueType(Class<?> type) {
