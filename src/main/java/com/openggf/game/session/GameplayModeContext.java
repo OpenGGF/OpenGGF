@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
+import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
@@ -403,7 +404,8 @@ public final class GameplayModeContext implements ModeContext {
                 new InMemoryKeyframeStore(),
                 inputs,
                 stepper,
-                keyframeInterval);
+                keyframeInterval,
+                GameServices.audio());
         this.playbackController = new PlaybackController(rewindController);
         return playbackController;
     }

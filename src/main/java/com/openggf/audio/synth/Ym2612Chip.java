@@ -2,6 +2,7 @@ package com.openggf.audio.synth;
 
 import com.openggf.audio.smps.DacData;
 
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 /**
@@ -772,6 +773,126 @@ public class Ym2612Chip {
 
     public void setDacData(DacData data) {
         this.dacData = data;
+    }
+
+    public Snapshot captureSnapshot() {
+        ChannelSnapshot[] channelSnapshots = new ChannelSnapshot[channels.length];
+        for (int i = 0; i < channels.length; i++) {
+            channelSnapshots[i] = captureChannel(channels[i]);
+        }
+        return new Snapshot(
+                currentDacSampleId,
+                dacLatchedValue,
+                dacPos,
+                dacStep,
+                dacEnabled,
+                dacHasLatched,
+                dacInterpolate,
+                dacHighpassEnabled,
+                dac_highpass,
+                resampleAccum,
+                lastLeft,
+                lastRight,
+                prevLeft,
+                prevRight,
+                blipResampler.captureSnapshot(),
+                useBlipResampler,
+                outputRate,
+                resampleRatio,
+                inverseResampleRatio,
+                ssgEgActiveCount,
+                status,
+                mode,
+                csmKeyFlag,
+                addressLatch,
+                chipType,
+                busyCycles,
+                timerACount,
+                timerBCount,
+                timerALoad,
+                timerBLoad,
+                timerAPeriod,
+                timerBPeriod,
+                lfoCnt,
+                lfoTimer,
+                lfoTimerOverflow,
+                lfoAm,
+                lfoPm,
+                egCnt,
+                egTimer,
+                channel3SpecialMode,
+                channelSnapshots,
+                mutes);
+    }
+
+    public void restoreSnapshot(Snapshot snapshot) {
+        currentDacSampleId = snapshot.currentDacSampleId();
+        currentDacSampleData = currentDacSampleId != -1 && dacData != null
+                ? dacData.samples.get(currentDacSampleId)
+                : null;
+        dacLatchedValue = snapshot.dacLatchedValue();
+        dacPos = snapshot.dacPos();
+        dacStep = snapshot.dacStep();
+        dacEnabled = snapshot.dacEnabled();
+        dacHasLatched = snapshot.dacHasLatched();
+        dacInterpolate = snapshot.dacInterpolate();
+        dacHighpassEnabled = snapshot.dacHighpassEnabled();
+        dac_highpass = snapshot.dacHighpass();
+        resampleAccum = snapshot.resampleAccum();
+        lastLeft = snapshot.lastLeft();
+        lastRight = snapshot.lastRight();
+        prevLeft = snapshot.prevLeft();
+        prevRight = snapshot.prevRight();
+        blipResampler.restoreSnapshot(snapshot.blipResampler());
+        useBlipResampler = snapshot.useBlipResampler();
+        outputRate = snapshot.outputRate();
+        resampleRatio = snapshot.resampleRatio();
+        inverseResampleRatio = snapshot.inverseResampleRatio();
+        ssgEgActiveCount = snapshot.ssgEgActiveCount();
+        status = snapshot.status();
+        mode = snapshot.mode();
+        csmKeyFlag = snapshot.csmKeyFlag();
+        addressLatch = snapshot.addressLatch();
+        chipType = snapshot.chipType();
+        resetOpMask();
+        if (chipType < YM2612_ENHANCED) {
+            setOpMaskSlot(0, 3);
+            setOpMaskSlot(1, 3);
+            setOpMaskSlot(2, 3);
+            setOpMaskSlot(3, 3);
+            setOpMaskSlot(4, 1);
+            setOpMaskSlot(4, 3);
+            setOpMaskSlot(5, 1);
+            setOpMaskSlot(5, 2);
+            setOpMaskSlot(5, 3);
+            setOpMaskSlot(6, 1);
+            setOpMaskSlot(6, 2);
+            setOpMaskSlot(6, 3);
+            setOpMaskSlot(7, 0);
+            setOpMaskSlot(7, 1);
+            setOpMaskSlot(7, 2);
+            setOpMaskSlot(7, 3);
+        }
+        busyCycles = snapshot.busyCycles();
+        timerACount = snapshot.timerACount();
+        timerBCount = snapshot.timerBCount();
+        timerALoad = snapshot.timerALoad();
+        timerBLoad = snapshot.timerBLoad();
+        timerAPeriod = snapshot.timerAPeriod();
+        timerBPeriod = snapshot.timerBPeriod();
+        lfoCnt = snapshot.lfoCnt();
+        lfoTimer = snapshot.lfoTimer();
+        lfoTimerOverflow = snapshot.lfoTimerOverflow();
+        lfoAm = snapshot.lfoAm();
+        lfoPm = snapshot.lfoPm();
+        egCnt = snapshot.egCnt();
+        egTimer = snapshot.egTimer();
+        channel3SpecialMode = snapshot.channel3SpecialMode();
+        ChannelSnapshot[] channelSnapshots = snapshot.channels();
+        for (int i = 0; i < Math.min(channels.length, channelSnapshots.length); i++) {
+            restoreChannel(channels[i], channelSnapshots[i]);
+        }
+        System.arraycopy(snapshot.mutes(), 0, mutes, 0, Math.min(mutes.length, snapshot.mutes().length));
     }
 
     public int readStatus() {
@@ -2091,6 +2212,303 @@ public class Ym2612Chip {
             }
         }
         return -1;
+    }
+
+    private static ChannelSnapshot captureChannel(Channel ch) {
+        OperatorSnapshot[] operators = new OperatorSnapshot[ch.ops.length];
+        for (int i = 0; i < ch.ops.length; i++) {
+            operators[i] = captureOperator(ch.ops[i]);
+        }
+        return new ChannelSnapshot(
+                ch.fNum,
+                ch.block,
+                ch.kCode,
+                ch.slotFnum,
+                ch.slotBlock,
+                ch.slotKCode,
+                ch.fc,
+                ch.slotFc,
+                ch.blockFnum,
+                ch.slotBlockFnum,
+                ch.feedback,
+                ch.algo,
+                ch.ams,
+                ch.pms,
+                ch.pan,
+                ch.leftMask,
+                ch.rightMask,
+                ch.opOut,
+                ch.memValue,
+                operators);
+    }
+
+    private static void restoreChannel(Channel ch, ChannelSnapshot snapshot) {
+        ch.fNum = snapshot.fNum();
+        ch.block = snapshot.block();
+        ch.kCode = snapshot.kCode();
+        copyInto(snapshot.slotFnum(), ch.slotFnum);
+        copyInto(snapshot.slotBlock(), ch.slotBlock);
+        copyInto(snapshot.slotKCode(), ch.slotKCode);
+        ch.fc = snapshot.fc();
+        copyInto(snapshot.slotFc(), ch.slotFc);
+        ch.blockFnum = snapshot.blockFnum();
+        copyInto(snapshot.slotBlockFnum(), ch.slotBlockFnum);
+        ch.feedback = snapshot.feedback();
+        ch.algo = snapshot.algo();
+        ch.ams = snapshot.ams();
+        ch.pms = snapshot.pms();
+        ch.pan = snapshot.pan();
+        ch.leftMask = snapshot.leftMask();
+        ch.rightMask = snapshot.rightMask();
+        copyInto(snapshot.opOut(), ch.opOut);
+        ch.memValue = snapshot.memValue();
+        OperatorSnapshot[] operators = snapshot.ops();
+        for (int i = 0; i < Math.min(ch.ops.length, operators.length); i++) {
+            restoreOperator(ch.ops[i], operators[i]);
+        }
+    }
+
+    private static OperatorSnapshot captureOperator(Operator op) {
+        return new OperatorSnapshot(
+                op.dt1,
+                op.mul,
+                op.tl,
+                op.tll,
+                op.rs,
+                op.ar,
+                op.am,
+                op.d1r,
+                op.d2r,
+                op.d1l,
+                op.rr,
+                op.ssgEg,
+                op.ssgn,
+                op.ksr,
+                op.fCnt,
+                op.fInc,
+                op.eCnt,
+                op.eInc,
+                op.eCmp,
+                op.egShAr,
+                op.egSelAr,
+                op.egShD1r,
+                op.egSelD1r,
+                op.egShD2r,
+                op.egSelD2r,
+                op.egShRr,
+                op.egSelRr,
+                op.volume,
+                op.volOut,
+                op.slReg,
+                op.curEnv,
+                op.eIncA,
+                op.eIncD,
+                op.eIncS,
+                op.eIncR,
+                op.ssgEnabled,
+                op.chgEnM,
+                op.amMask,
+                op.key);
+    }
+
+    private static void restoreOperator(Operator op, OperatorSnapshot snapshot) {
+        op.dt1 = snapshot.dt1();
+        op.mul = snapshot.mul();
+        op.tl = snapshot.tl();
+        op.tll = snapshot.tll();
+        op.rs = snapshot.rs();
+        op.ar = snapshot.ar();
+        op.am = snapshot.am();
+        op.d1r = snapshot.d1r();
+        op.d2r = snapshot.d2r();
+        op.d1l = snapshot.d1l();
+        op.rr = snapshot.rr();
+        op.ssgEg = snapshot.ssgEg();
+        op.ssgn = snapshot.ssgn();
+        op.ksr = snapshot.ksr();
+        op.fCnt = snapshot.fCnt();
+        op.fInc = snapshot.fInc();
+        op.eCnt = snapshot.eCnt();
+        op.eInc = snapshot.eInc();
+        op.eCmp = snapshot.eCmp();
+        op.egShAr = snapshot.egShAr();
+        op.egSelAr = snapshot.egSelAr();
+        op.egShD1r = snapshot.egShD1r();
+        op.egSelD1r = snapshot.egSelD1r();
+        op.egShD2r = snapshot.egShD2r();
+        op.egSelD2r = snapshot.egSelD2r();
+        op.egShRr = snapshot.egShRr();
+        op.egSelRr = snapshot.egSelRr();
+        op.volume = snapshot.volume();
+        op.volOut = snapshot.volOut();
+        op.slReg = snapshot.slReg();
+        op.curEnv = snapshot.curEnv();
+        op.eIncA = snapshot.eIncA();
+        op.eIncD = snapshot.eIncD();
+        op.eIncS = snapshot.eIncS();
+        op.eIncR = snapshot.eIncR();
+        op.ssgEnabled = snapshot.ssgEnabled();
+        op.chgEnM = snapshot.chgEnM();
+        op.amMask = snapshot.amMask();
+        op.key = snapshot.key();
+    }
+
+    private static void copyInto(int[] source, int[] target) {
+        System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+    }
+
+    private static void copyInto(boolean[] source, boolean[] target) {
+        System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+    }
+
+    public record Snapshot(
+            int currentDacSampleId,
+            int dacLatchedValue,
+            double dacPos,
+            double dacStep,
+            boolean dacEnabled,
+            boolean dacHasLatched,
+            boolean dacInterpolate,
+            boolean dacHighpassEnabled,
+            int dacHighpass,
+            double resampleAccum,
+            int lastLeft,
+            int lastRight,
+            int prevLeft,
+            int prevRight,
+            BlipResampler.Snapshot blipResampler,
+            boolean useBlipResampler,
+            double outputRate,
+            double resampleRatio,
+            double inverseResampleRatio,
+            int ssgEgActiveCount,
+            int status,
+            int mode,
+            int csmKeyFlag,
+            int addressLatch,
+            int chipType,
+            double busyCycles,
+            int timerACount,
+            int timerBCount,
+            int timerALoad,
+            int timerBLoad,
+            int timerAPeriod,
+            int timerBPeriod,
+            int lfoCnt,
+            int lfoTimer,
+            int lfoTimerOverflow,
+            int lfoAm,
+            int lfoPm,
+            int egCnt,
+            int egTimer,
+            boolean channel3SpecialMode,
+            ChannelSnapshot[] channels,
+            boolean[] mutes) {
+        public Snapshot {
+            channels = Arrays.copyOf(channels, channels.length);
+            mutes = Arrays.copyOf(mutes, mutes.length);
+        }
+
+        @Override
+        public ChannelSnapshot[] channels() { return Arrays.copyOf(channels, channels.length); }
+
+        @Override
+        public boolean[] mutes() { return Arrays.copyOf(mutes, mutes.length); }
+    }
+
+    public record ChannelSnapshot(
+            int fNum,
+            int block,
+            int kCode,
+            int[] slotFnum,
+            int[] slotBlock,
+            int[] slotKCode,
+            int fc,
+            int[] slotFc,
+            int blockFnum,
+            int[] slotBlockFnum,
+            int feedback,
+            int algo,
+            int ams,
+            int pms,
+            int pan,
+            int leftMask,
+            int rightMask,
+            int[] opOut,
+            int memValue,
+            OperatorSnapshot[] ops) {
+        public ChannelSnapshot {
+            slotFnum = Arrays.copyOf(slotFnum, slotFnum.length);
+            slotBlock = Arrays.copyOf(slotBlock, slotBlock.length);
+            slotKCode = Arrays.copyOf(slotKCode, slotKCode.length);
+            slotFc = Arrays.copyOf(slotFc, slotFc.length);
+            slotBlockFnum = Arrays.copyOf(slotBlockFnum, slotBlockFnum.length);
+            opOut = Arrays.copyOf(opOut, opOut.length);
+            ops = Arrays.copyOf(ops, ops.length);
+        }
+
+        @Override
+        public int[] slotFnum() { return Arrays.copyOf(slotFnum, slotFnum.length); }
+
+        @Override
+        public int[] slotBlock() { return Arrays.copyOf(slotBlock, slotBlock.length); }
+
+        @Override
+        public int[] slotKCode() { return Arrays.copyOf(slotKCode, slotKCode.length); }
+
+        @Override
+        public int[] slotFc() { return Arrays.copyOf(slotFc, slotFc.length); }
+
+        @Override
+        public int[] slotBlockFnum() { return Arrays.copyOf(slotBlockFnum, slotBlockFnum.length); }
+
+        @Override
+        public int[] opOut() { return Arrays.copyOf(opOut, opOut.length); }
+
+        @Override
+        public OperatorSnapshot[] ops() { return Arrays.copyOf(ops, ops.length); }
+    }
+
+    public record OperatorSnapshot(
+            int dt1,
+            int mul,
+            int tl,
+            int tll,
+            int rs,
+            int ar,
+            int am,
+            int d1r,
+            int d2r,
+            int d1l,
+            int rr,
+            int ssgEg,
+            int ssgn,
+            int ksr,
+            int fCnt,
+            int fInc,
+            int eCnt,
+            int eInc,
+            int eCmp,
+            int egShAr,
+            int egSelAr,
+            int egShD1r,
+            int egSelD1r,
+            int egShD2r,
+            int egSelD2r,
+            int egShRr,
+            int egSelRr,
+            int volume,
+            int volOut,
+            int slReg,
+            EnvState curEnv,
+            int eIncA,
+            int eIncD,
+            int eIncS,
+            int eIncR,
+            boolean ssgEnabled,
+            int chgEnM,
+            int amMask,
+            boolean key) {
     }
 
     private void tickTimers() {

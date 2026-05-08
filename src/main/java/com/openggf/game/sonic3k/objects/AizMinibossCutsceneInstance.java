@@ -305,7 +305,7 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance {
         // During the unwinnable AIZ1 cutscene transition, BG events own camera/music flow.
         // Only restore defaults when no transition handoff is active.
         if (!transitionInProgress) {
-            services().audioManager().getBackend().restoreMusic();
+            services().audioManager().restoreMusic();
             var camera = services().camera();
             camera.setMinX((short) 0);
             camera.setMaxX((short) savedCameraMaxX);

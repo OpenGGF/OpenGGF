@@ -3,10 +3,15 @@ package com.openggf.level.objects;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
+import com.openggf.util.AnimationTimer;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -315,6 +320,61 @@ class TestAbstractObjectInstanceRewindCapture {
         }
     }
 
+    private static final class TestObjectWithSharedHelpers extends AbstractObjectInstance {
+        private final PlatformBobHelper bob = new PlatformBobHelper();
+        private final AnimationTimer timer = new AnimationTimer(3, 2);
+
+        TestObjectWithSharedHelpers(ObjectSpawn spawn) {
+            super(spawn, "TestObjectWithSharedHelpers");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class TestObjectWithValueCollections extends AbstractObjectInstance {
+        private final List<Integer> counters = new ArrayList<>(List.of(1, 2, 3));
+        private final Set<Mode> modes = new LinkedHashSet<>(List.of(Mode.IDLE, Mode.ACTIVE));
+        private final Map<String, Integer> values = new LinkedHashMap<>();
+
+        TestObjectWithValueCollections(ObjectSpawn spawn) {
+            super(spawn, "TestObjectWithValueCollections");
+            values.put("left", 7);
+            values.put("right", 9);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class TestObjectWithStateHolder extends AbstractObjectInstance {
+        private final TraversalState traversal = new TraversalState();
+
+        TestObjectWithStateHolder(ObjectSpawn spawn) {
+            super(spawn, "TestObjectWithStateHolder");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no-op
+        }
+    }
+
+    private static final class TraversalState {
+        private int phase = 2;
+        private boolean active = true;
+        private int[] path = {3, 5, 8};
+        private TraversalPath route = new TraversalPath("main", new RoutePoint(11, 13));
+    }
+
+    private record TraversalPath(String label, RoutePoint exit) {}
+
+    private record RoutePoint(int x, int y) {}
+
     private enum Mode {
         IDLE,
         ACTIVE
@@ -459,6 +519,83 @@ class TestAbstractObjectInstanceRewindCapture {
         assertEquals(5, obj.children[1].timer);
         assertEquals(5, obj.childList.get(0).timer);
         assertEquals(3, obj.childList.get(1).x);
+    }
+
+    @Test
+    void defaultClassCapturesAndRestoresSharedHelperCompactSidecar() {
+        TestObjectWithSharedHelpers obj = new TestObjectWithSharedHelpers(spawn(0, 0));
+        obj.bob.update(true);
+        obj.bob.update(true);
+        obj.timer.tick();
+        obj.timer.tick();
+
+        PerObjectRewindSnapshot snap = obj.captureRewindState();
+        assertNotNull(snap.compactGenericState());
+        assertNull(snap.genericState());
+
+        for (int i = 0; i < 20; i++) {
+            obj.bob.update(true);
+        }
+        obj.timer.tick();
+        obj.timer.tick();
+        obj.restoreRewindState(snap);
+
+        assertEquals(8, obj.bob.getAngle());
+        assertEquals(0, obj.timer.getFrame());
+        obj.timer.tick();
+        assertEquals(1, obj.timer.getFrame());
+    }
+
+    @Test
+    void defaultClassCapturesAndRestoresFinalValueCollectionsCompactSidecar() {
+        TestObjectWithValueCollections obj = new TestObjectWithValueCollections(spawn(0, 0));
+        List<Integer> originalCounters = obj.counters;
+        Set<Mode> originalModes = obj.modes;
+        Map<String, Integer> originalValues = obj.values;
+
+        PerObjectRewindSnapshot snap = obj.captureRewindState();
+        assertNotNull(snap.compactGenericState());
+        assertNull(snap.genericState());
+
+        obj.counters.clear();
+        obj.counters.add(99);
+        obj.modes.clear();
+        obj.values.clear();
+        obj.values.put("mutated", -1);
+        obj.restoreRewindState(snap);
+
+        assertSame(originalCounters, obj.counters);
+        assertSame(originalModes, obj.modes);
+        assertSame(originalValues, obj.values);
+        assertEquals(List.of(1, 2, 3), obj.counters);
+        assertEquals(List.of(Mode.IDLE, Mode.ACTIVE), new ArrayList<>(obj.modes));
+        assertEquals(List.of("left", "right"), new ArrayList<>(obj.values.keySet()));
+        assertEquals(7, obj.values.get("left"));
+        assertEquals(9, obj.values.get("right"));
+    }
+
+    @Test
+    void defaultClassCapturesAndRestoresFinalStateHolderCompactSidecar() {
+        TestObjectWithStateHolder obj = new TestObjectWithStateHolder(spawn(0, 0));
+        TraversalState originalState = obj.traversal;
+        int[] originalPath = obj.traversal.path;
+
+        PerObjectRewindSnapshot snap = obj.captureRewindState();
+        assertNotNull(snap.compactGenericState());
+        assertNull(snap.genericState());
+
+        obj.traversal.phase = 7;
+        obj.traversal.active = false;
+        obj.traversal.path = new int[] {99};
+        obj.traversal.route = new TraversalPath("mutated", new RoutePoint(1, 1));
+        obj.restoreRewindState(snap);
+
+        assertSame(originalState, obj.traversal);
+        assertArrayEquals(new int[] {3, 5, 8}, obj.traversal.path);
+        assertNotSame(originalPath, obj.traversal.path);
+        assertEquals(2, obj.traversal.phase);
+        assertTrue(obj.traversal.active);
+        assertEquals(new TraversalPath("main", new RoutePoint(11, 13)), obj.traversal.route);
     }
 
     @Test

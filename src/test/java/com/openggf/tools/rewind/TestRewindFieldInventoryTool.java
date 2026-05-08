@@ -3,7 +3,16 @@ package com.openggf.tools.rewind;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.graphics.GLCommand;
+import com.openggf.game.sonic1.objects.Sonic1TryAgainEggmanObjectInstance;
+import com.openggf.level.Pattern;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.level.rings.RingSpawn;
 
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +28,31 @@ class TestRewindFieldInventoryTool {
         private final Object structural = new Object();
     }
 
+    private static class CentralPolicyFixture {
+        private ObjectRenderManager renderer;
+    }
+
+    private static class ConstructorMetadataFixture {
+        private final String name = "fixture";
+        private final int baseX = 0x120;
+        private final SubpixelMotion.State motionState =
+                new SubpixelMotion.State(0, 0, 0, 0, 0x100, 0);
+    }
+
+    private static class StructuralArtFixture {
+        private final Pattern blank = new Pattern();
+        private final Pattern[] tiles = {new Pattern(), new Pattern()};
+    }
+
+    private static class StructuralCallbackFixture {
+        private Sonic1TryAgainEggmanObjectInstance.Sonic1CreditsTextRendererRef textRenderer;
+    }
+
+    private static class StructuralListFixture {
+        private final List<SpriteMappingPiece> pieces = List.of();
+        private final List<RingSpawn> ringSpawns = List.of(new RingSpawn(1, 2));
+    }
+
     private static class AnnotationDensityFixture {
         @RewindTransient(reason = "covered by default declared-type policy")
         private ObjectRenderManager renderer;
@@ -30,11 +64,70 @@ class TestRewindFieldInventoryTool {
         private Object deferredStructural;
     }
 
+    private static final class DefaultObjectCaptureFixture extends AbstractObjectInstance {
+        private final int subtype = 3;
+        private final boolean flipped = true;
+        private final SolidObjectParams solidObjectParams = new SolidObjectParams(16, 8, 9);
+        private int phase;
+        private boolean armed;
+
+        private DefaultObjectCaptureFixture() {
+            super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "DefaultObjectCaptureFixture");
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no-op fixture
+        }
+    }
+
     @Test
     void unsupportedInventorySkipsDeferredFields() {
         List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(DeferredStructuralFixture.class);
 
         assertTrue(unsupported.isEmpty());
+    }
+
+    @Test
+    void unsupportedInventorySkipsCentralPolicyFields() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(CentralPolicyFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
+    }
+
+    @Test
+    void unsupportedInventorySkipsSchemaClassifiedFinalMetadata() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(ConstructorMetadataFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
+    }
+
+    @Test
+    void unsupportedInventorySkipsStructuralArtFields() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(StructuralArtFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
+    }
+
+    @Test
+    void unsupportedInventorySkipsStructuralRendererCallbacks() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(StructuralCallbackFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
+    }
+
+    @Test
+    void unsupportedInventorySkipsFinalStructuralLists() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(StructuralListFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
+    }
+
+    @Test
+    void unsupportedInventorySkipsDefaultObjectCapturedFields() {
+        List<String> unsupported = RewindFieldInventoryTool.unsupportedFieldsForClass(DefaultObjectCaptureFixture.class);
+
+        assertTrue(unsupported.isEmpty(), String.join(System.lineSeparator(), unsupported));
     }
 
     @Test

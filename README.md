@@ -233,7 +233,9 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   coverage does not require repeated leaf-object rewrites. Compact schema-backed sidecars now cover
   default non-badnik object subclass scalar state when codecs are available, with inventory modes for
   annotation density, object rollout candidates, child/spawn graph hotspots, and encounter replay
-  validation.
+  validation. Live and visual-trace rewind presentation now also carries reverse audio from the
+  PCM history ring, keeps graphical fades aligned with restored rewind snapshots, and treats final
+  object-reference collections as structural state instead of compact scalar sidecar payload.
 - **Trace recorder:** S3K v6.6 AIZ diagnostics expose tree/boundary pre/post state at the F4679
   sidekick boundary frame, transition-floor SolidObjectTop decisions at the F5415 frame, and
   fire-handoff terrain/SolidObjectTop state around F5435 while keeping trace data comparison-only;

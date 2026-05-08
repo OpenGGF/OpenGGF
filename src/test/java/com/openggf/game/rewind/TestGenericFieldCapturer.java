@@ -2,10 +2,14 @@ package com.openggf.game.rewind;
 
 import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.PlatformBobHelper;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.animation.SpriteAnimationSet;
+import com.openggf.util.AnimationTimer;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -107,6 +111,16 @@ class TestGenericFieldCapturer {
         List<SpriteMappingFrame> mappingFrames;
         Object expectedExitPointForTest;
         List<Object> gameplayObjects;
+    }
+
+    static class WithSharedHelperFields {
+        final SubpixelMotion.State finalMotion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
+        final ObjectAnimationState finalAnimation = new ObjectAnimationState(null, 0, 0);
+        final PlatformBobHelper finalBob = new PlatformBobHelper();
+        final AnimationTimer finalTimer = new AnimationTimer(3, 2);
+        SubpixelMotion.State mutableMotion = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
+        ObjectAnimationState mutableAnimation = new ObjectAnimationState(null, 0, 0);
+        PlatformBobHelper mutableBob = new PlatformBobHelper();
     }
 
     @Test
@@ -313,6 +327,22 @@ class TestGenericFieldCapturer {
                 WithStructuralObjectFields.class.getDeclaredField("animSet")));
         assertFalse(GenericFieldCapturer.hasDefaultObjectCaptureDecision(
                 WithStructuralObjectFields.class.getDeclaredField("gameplayObjects")));
+    }
+
+    @Test
+    void defaultObjectPolicyCapturesStableInPlaceHelperFieldsOnly() throws Exception {
+        assertTrue(GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(
+                WithSharedHelperFields.class.getDeclaredField("finalMotion")));
+        assertTrue(GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(
+                WithSharedHelperFields.class.getDeclaredField("finalAnimation")));
+        assertTrue(GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(
+                WithSharedHelperFields.class.getDeclaredField("finalBob")));
+        assertTrue(GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(
+                WithSharedHelperFields.class.getDeclaredField("finalTimer")));
+        assertFalse(GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(
+                WithSharedHelperFields.class.getDeclaredField("mutableMotion")));
+        assertFalse(GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(
+                WithSharedHelperFields.class.getDeclaredField("mutableBob")));
     }
 
     private static BitSet bitSet(int... bits) {

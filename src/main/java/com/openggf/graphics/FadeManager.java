@@ -85,6 +85,8 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
 
     // Callback to execute when fade completes
     private Runnable onFadeComplete;
+    private boolean holdRestoredFrameForNextUpdate;
+    private int reversePresentationDepth;
 
     // Hold duration in frames (for optional pause at full white)
     private int holdDuration = 0;
@@ -144,6 +146,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      * @param holdFrames   Number of frames to hold at full white before completing
      */
     public void startFadeToWhite(Runnable onComplete, int holdFrames) {
+        this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_TO_WHITE;
         this.fadeType = FadeType.WHITE;
         this.frameCount = 0;
@@ -161,6 +164,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      * @param onComplete Callback to execute when fade completes (can be null)
      */
     public void startFadeFromWhite(Runnable onComplete) {
+        this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_FROM_WHITE;
         this.fadeType = FadeType.WHITE;
         this.frameCount = 0;
@@ -210,6 +214,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      *                       Must be divisible by 3 for even channel distribution.
      */
     public void startFadeToBlack(Runnable onComplete, int holdFrames, int totalDuration) {
+        this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_TO_BLACK;
         this.fadeType = FadeType.BLACK;
         this.frameCount = 0;
@@ -238,6 +243,7 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      * @param onComplete Callback to execute when fade completes (can be null)
      */
     public void startFadeFromBlack(Runnable onComplete) {
+        this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_FROM_BLACK;
         this.fadeType = FadeType.BLACK;
         this.frameCount = 0;
@@ -254,6 +260,13 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      * Update the fade state. Call once per frame.
      */
     public void update() {
+        if (reversePresentationDepth > 0) {
+            return;
+        }
+        if (holdRestoredFrameForNextUpdate) {
+            holdRestoredFrameForNextUpdate = false;
+            return;
+        }
         switch (state) {
             case FADING_TO_WHITE:
                 updateFadeToWhite();
@@ -277,6 +290,28 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
             default:
                 break;
         }
+    }
+
+    /**
+     * Suppresses display-driven fade advancement while rewind restores historical
+     * fade snapshots for rendering.
+     */
+    public void beginReversePresentation() {
+        reversePresentationDepth++;
+        holdRestoredFrameForNextUpdate = false;
+    }
+
+    public void endReversePresentation() {
+        if (reversePresentationDepth > 0) {
+            reversePresentationDepth--;
+        }
+        if (reversePresentationDepth == 0) {
+            holdRestoredFrameForNextUpdate = false;
+        }
+    }
+
+    public boolean isReversePresentationActive() {
+        return reversePresentationDepth > 0;
     }
 
     private void updateFadeToWhite() {
@@ -631,6 +666,8 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
      * Cancel any active fade and reset to normal.
      */
     public void cancel() {
+        holdRestoredFrameForNextUpdate = false;
+        reversePresentationDepth = 0;
         state = FadeState.NONE;
         fadeType = FadeType.WHITE;
         frameCount = 0;
@@ -690,5 +727,6 @@ public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
         this.effectiveDuration = snapshot.effectiveDuration();
         // Note: onFadeComplete callback is NOT restored (transient)
         this.onFadeComplete = null;
+        this.holdRestoredFrameForNextUpdate = true;
     }
 }
