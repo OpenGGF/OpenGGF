@@ -37,6 +37,16 @@ regression tests. A full-suite clean claim is intentionally not made: broader
 bootstrap, trace replay, object-service, and singleton-guard tests. The branch
 must not be merged to local `develop` until that repository-wide gate is green.
 
+Tier 2a has started implementation with a backend-agnostic logical snapshot
+seam:
+
+  src/main/java/com/openggf/audio/rewind/AudioLogicalSnapshot.java
+  src/main/java/com/openggf/audio/rewind/AudioSourceDescriptor.java
+
+This first Tier 2 slice captures AudioManager intent descriptors only. It does
+not yet snapshot `LWJGLAudioBackend`, `SmpsDriver`, `SmpsSequencer`, chip, DAC,
+or resampler state.
+
 The next later-tier review artifact is:
 
   AUDIO_REWIND_TIER2_LOGICAL_SMPS_REVIEW.tmp.txt
@@ -56,14 +66,15 @@ Completed loop:
 6. Wrote the Tier 1 implementation plan.
 7. Implemented and focused-verified Tier 1 command timeline support.
 8. Self-reviewed Tier 1 and patched the resolved ring-route recording gap.
+9. Wrote Tier 2 logical SMPS review and implementation-plan artifacts.
+10. Implemented and focused-verified the Tier 2a logical snapshot seam.
 
 Next loop:
 
-1. Continue to Tier 2 logical SMPS snapshot design review using
-   AUDIO_REWIND_TIER2_LOGICAL_SMPS_REVIEW.tmp.txt.
-2. Write and execute Tier 2 in subtiers so the first patch can introduce
-   snapshot seams and state inventory tests before attempting full driver and
-   sequencer restore.
+1. Continue Tier 2b by extracting or isolating backend logical playback state
+   from `LWJGLAudioBackend` so OpenAL remains presentation-only.
+2. Add red/green tests around current music id, SFX block state, pending
+   restore, speed state, and override stack descriptors.
 3. Keep Tier 3 chip-state and sample-parity work out of Tier 2 unless the
    review explicitly promotes a small diagnostic-only chip hook.
 

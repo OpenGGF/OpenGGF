@@ -181,7 +181,7 @@ Deliverables And Evidence
      defines the proposed Tier 2 implementation sequence.
 
    Status:
-   - Design/planning in progress; implementation not started.
+   - Complete for Tier 2 design/planning.
 
 
 13. Placeholder and red-flag scan was performed.
@@ -189,6 +189,39 @@ Deliverables And Evidence
    Evidence:
    - Red-flag scan over the blueprint, orchestration note, audit, Tier 1 review
      brief, and Tier 0 plan returned no matches.
+
+   Status:
+   - Complete.
+
+
+14. Tier 2a logical snapshot seam was implemented.
+
+   Evidence:
+   - Added `AudioLogicalSnapshot` and `AudioSourceDescriptor`.
+   - Added `AudioManager.captureLogicalSnapshot()`.
+   - Added `TestAudioLogicalSnapshot`.
+   - The seam captures AudioManager intent descriptors, command timeline
+     cursor/count, ring alternation, donor game ids, and donor SFX bindings.
+   - The seam explicitly does not snapshot `LWJGLAudioBackend`, OpenAL
+     device/context/source/buffer ids, `SmpsDriver`, `SmpsSequencer`, chip,
+     DAC, or resampler state.
+
+   Status:
+   - Complete for Tier 2a scope.
+
+
+15. Focused Tier 2a verification passed.
+
+   Evidence:
+   - Red run for `TestAudioLogicalSnapshot` failed to compile before
+     `AudioLogicalSnapshot`, `AudioSourceDescriptor`, and
+     `AudioManager.captureLogicalSnapshot()` existed.
+   - `mvn -Dmse=off "-Dtest=com.openggf.audio.TestAudioLogicalSnapshot" test`
+     passed: 4 tests, 0 failures, 0 errors.
+   - `mvn -Dmse=off "-Dtest=com.openggf.audio.TestAudioLogicalSnapshot,com.openggf.audio.TestAudioCommandTimeline,com.openggf.audio.TestAudioManagerRewindSuppression,com.openggf.audio.TestAudioBackendBypassGuard,com.openggf.game.rewind.TestRewindControllerAudioSuppression,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerResetState,com.openggf.audio.TestDonorAudioRouting,com.openggf.game.rewind.TestRewindController,com.openggf.game.rewind.TestSegmentCache" test`
+     passed: 51 tests, 0 failures, 0 errors.
+   - `git diff --check` exited 0 with only existing CRLF warnings.
+   - Backend bypass scanner returned no matches.
 
    Status:
    - Complete.
@@ -218,23 +251,23 @@ Known Residuals
      `develop` work. Local merge should not be represented as full-suite green.
 
 
-2. Tier 2 implementation has not started yet.
+2. Tier 2 implementation is partial.
 
    Evidence:
-   - The Tier 2 plan splits the work into snapshot seam, logical graph
-     extraction, driver/sequencer snapshots, and sparse keyframe replay.
-   - No Tier 2 production code has been edited yet.
+   - Tier 2a is implemented.
+   - Tier 2b backend logical graph extraction, Tier 2c driver/sequencer
+     snapshots, and Tier 2d sparse keyframe replay are still pending.
 
    Impact:
-   - This is deliberate sequencing. Tier 2 is much larger than Tier 1 and needs
-     red/green subtiers rather than one monolithic patch.
+   - This is deliberate sequencing. Tier 2 remains much larger than Tier 1 and
+     needs red/green subtiers rather than one monolithic patch.
 
 
 Completion Judgment
 -------------------
 
-The requested blueprint loop has advanced through Tier 1: the high-level
-blueprint is current, Tier 0 and Tier 1 have formal implementation plans, both
-tiers were implemented and focused-verified, and Tier 2 now has a design-review
-artifact plus an implementation plan. Local merge to `develop` remains blocked
-until the repository-wide full-suite failures are resolved.
+The requested blueprint loop has advanced through Tier 2a: the high-level
+blueprint is current, Tier 0 and Tier 1 have formal implementation plans and
+committed implementations, and Tier 2 now has a plan plus an implemented
+snapshot seam. Local merge to `develop` remains blocked until the
+repository-wide full-suite failures are resolved.
