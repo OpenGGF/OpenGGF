@@ -2489,7 +2489,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             track.active = false;
             stopNote(track);
         }
-        audioManager.getBackend().restoreMusic();
+        audioManager.restoreMusic();
     }
 
     public void triggerFadeIn(int steps, int delay) {

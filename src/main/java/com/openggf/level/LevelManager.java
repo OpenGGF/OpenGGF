@@ -2781,7 +2781,7 @@ public class LevelManager {
             playable.setTopSolidBit(ctx.getCheckpointTopSolidBit());
             playable.setLrbSolidBit(ctx.getCheckpointLrbSolidBit());
         }
-        audioManager.getBackend().setSpeedShoes(false);
+        audioManager.setSpeedShoes(false);
     }
 
     /**

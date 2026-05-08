@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
@@ -319,6 +320,9 @@ public final class TraceSessionLauncher {
             realtimeRewinding = false;
             rewindPlaybackController.play();
             syncVisualRewindCursors(true);
+            GameServices.audio().afterRewindRestore(
+                    rewindController.currentFrame(),
+                    AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
         }
         return false;
     }
@@ -426,6 +430,11 @@ public final class TraceSessionLauncher {
         // half-torn-down launcher.
         activeSession = null;
         GameServices.playbackDebug().endSession();
+        if (rewindController != null) {
+            GameServices.audio().afterRewindRestore(
+                    rewindController.currentFrame(),
+                    AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+        }
         // Restore the user's gameplay-altering config before we
         // rebuild the master title. If the user re-launches the
         // picker immediately, they see their own preferences rather

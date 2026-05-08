@@ -1,0 +1,191 @@
+Audio Rewind Blueprint Completion Audit
+=======================================
+
+Objective
+---------
+
+Complete the audio rewind blueprint, starting with a formal Tier 0
+implementation plan, and continue the orchestration/design/review loop toward
+later tiers.
+
+
+Deliverables And Evidence
+-------------------------
+
+1. High-level audio rewind blueprint exists and is current.
+
+   Evidence:
+   - AUDIO_REWIND_BLUEPRINT.tmp.txt
+   - Defines purpose, scope, invariants, hardware model, recommended
+     architecture, accuracy tiers, command timeline, keyframe store,
+     deterministic core, frame-step semantics, snapshot boundaries, memory
+     model, presentation model, orchestration, priority, risks, and success
+     criteria.
+   - Current Planning State now says Tier 0 is implemented and focused-verified.
+
+   Status:
+   - Complete for the requested blueprint loop.
+
+
+2. Tier 0 has a formal implementation plan.
+
+   Evidence:
+   - docs/superpowers/plans/2026-05-08-audio-rewind-tier0.md
+   - Starts with the required implementation-plan header.
+   - Lists file structure, task-by-task steps, code snippets, test classes,
+     verification commands, and self-review checklist.
+
+   Status:
+   - Complete.
+
+
+3. Tier 0 implementation was executed.
+
+   Evidence:
+   - Added `com.openggf.audio.rewind` replay/presentation types.
+   - Added `AudioManager` replay scope, suppression guard, release cleanup
+     policy, manager-level restore/speed methods, and paused frame-step seam.
+   - Routed gameplay restore/speed backend bypasses through `AudioManager`.
+   - Injected `AudioManager` into `RewindController` from
+     `GameplayModeContext`.
+   - Wrapped `RewindController.seekTo(...)` and `stepBackward(...)` internal
+     replay paths.
+   - Added live and trace rewind release/teardown cleanup hooks.
+   - Added focused tests and reusable audio test fixtures.
+
+   Status:
+   - Complete for Tier 0 scope.
+
+
+4. Tier 0 claims are narrowed to what the implementation verifies.
+
+   Evidence:
+   - AUDIO_REWIND_BLUEPRINT.tmp.txt, Accuracy Tiers.
+   - AUDIO_REWIND_ORCHESTRATION_PHASE1.tmp.txt, Revised First Milestone.
+   - Tier 0 excludes command replay, SMPS snapshots, chip snapshots, sample
+     parity, exact music phase, and exact historical music intent.
+
+   Status:
+   - Complete.
+
+
+5. Focused Tier 0 verification passed.
+
+   Evidence:
+   - Red/green TDD for `TestLiveRewindManagerAudioCleanup`:
+     - Red run failed because leaving LEVEL while rewind was active did not
+       call audio cleanup.
+     - Green run passed after `LiveRewindManager` clears audio presentation
+       state when realtime rewind leaves LEVEL, loses input, or is disabled.
+   - `mvn -Dmse=off "-Dtest=com.openggf.audio.TestAudioManagerRewindSuppression,com.openggf.audio.TestAudioBackendBypassGuard,com.openggf.game.rewind.TestRewindControllerAudioSuppression,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerResetState,com.openggf.audio.TestDonorAudioRouting,com.openggf.game.rewind.TestRewindController,com.openggf.game.rewind.TestSegmentCache" test`
+   - Maven result: BUILD SUCCESS, 40 tests, 0 failures, 0 errors.
+   - Surefire XML includes:
+     - TestAudioManagerRewindSuppression: 7 tests, 0 failures, 0 errors.
+     - TestAudioBackendBypassGuard: 1 test, 0 failures, 0 errors.
+     - TestRewindControllerAudioSuppression: 3 tests, 0 failures, 0 errors.
+     - TestLiveRewindManagerAudioCleanup: 1 test, 0 failures, 0 errors.
+
+   Status:
+   - Complete.
+
+
+6. Adjacent audio and rewind regressions passed.
+
+   Evidence:
+   - `mvn "-Dtest=com.openggf.audio.TestAudioManagerResetState,com.openggf.audio.TestDonorAudioRouting,com.openggf.game.rewind.TestRewindController,com.openggf.game.rewind.TestSegmentCache" test`
+   - Surefire XML:
+     - TestAudioManagerResetState: 5 tests, 0 failures, 0 errors.
+     - TestDonorAudioRouting: 7 tests, 0 failures, 0 errors.
+     - TestRewindController: 12 tests, 0 failures, 0 errors.
+     - TestSegmentCache: 4 tests, 0 failures, 0 errors.
+
+   Status:
+   - Complete.
+
+
+7. Backend bypass guardrails were checked.
+
+   Evidence:
+   - `rg -n "getBackend\\(\\)\\.(restoreMusic|setSpeedShoes|setSpeedMultiplier)|GameServices\\.audio\\(\\)\\.getBackend\\(\\)|services\\(\\)\\.audioManager\\(\\)\\.getBackend\\(\\)|audioManager\\.getBackend\\(\\)" src/main/java`
+   - Command returned no matches.
+   - `TestAudioBackendBypassGuard` passed.
+
+   Status:
+   - Complete for Tier 0 restore/speed bypass scope.
+
+
+8. Compile/package verification passed.
+
+   Evidence:
+   - `mvn -DskipTests package`
+   - Command exited 0.
+
+   Status:
+   - Complete.
+
+
+9. Orchestration loop continued toward later tiers.
+
+   Evidence:
+   - AUDIO_REWIND_ORCHESTRATION_PHASE1.tmp.txt includes Tier 1 command
+     timeline design, Tier 2 deterministic core design, snapshot boundary, test
+     and benchmark plan, implementation coordination, and continuation loop.
+   - AUDIO_REWIND_TIER1_COMMAND_TIMELINE_REVIEW.tmp.txt defines the next
+     design-review artifact for Tier 1.
+
+   Status:
+   - Complete for the requested continuation loop.
+
+
+10. Placeholder and red-flag scan was performed.
+
+   Evidence:
+   - Red-flag scan over the blueprint, orchestration note, audit, Tier 1 review
+     brief, and Tier 0 plan returned no matches.
+
+   Status:
+   - Complete.
+
+
+Known Residuals
+---------------
+
+1. Full-suite clean status is not claimed.
+
+   Evidence:
+   - `mvn -Dmse=off test` on `feature/ai-audio-rewind-tier0` failed with
+     existing singleton/object-service guard failures plus S3K
+     bootstrap/headless/trace failures.
+   - A clean baseline worktree at local `develop` (`84820cca3`) reproduced the
+     same guard family and S3K headless/bootstrap failures with:
+     - `mvn -Dmse=off "-Dtest=com.openggf.game.TestGameModuleRegistryUsageGuard,com.openggf.game.TestProductionSingletonClosureGuard,com.openggf.level.objects.TestObjectServicesMigrationGuard" test`
+     - `mvn -Dmse=off "-Dtest=com.openggf.tests.TestS3kAiz1SkipHeadless,com.openggf.tests.TestS3kCnzCarryHeadless,com.openggf.tests.trace.s3k.TestS3kAizReplayBootstrap,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay,com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay,com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay" test`
+   - The baseline worktree also hit LWJGL native loading errors in three trace
+     classes, so it was not a cleaner environment than the feature branch.
+   - None of the reproduced full-suite failures are in the Tier 0
+     audio/rewind files touched here.
+
+   Impact:
+   - The Tier 0 focused suite and adjacent regressions are clean.
+   - A repository-wide green `mvn test` remains blocked by pre-existing local
+     `develop` work. Local merge should not be represented as full-suite green.
+
+
+2. Tier 1 and Tier 2 implementation plans are intentionally not written yet.
+
+   Evidence:
+   - The blueprint now gates Tier 1 implementation planning on the Tier 1
+     command timeline review, not on immediate implementation.
+
+   Impact:
+   - This is deliberate sequencing, not missing scope for this goal.
+
+
+Completion Judgment
+-------------------
+
+The requested blueprint loop is complete: the high-level blueprint is current,
+Tier 0 has a formal implementation plan, Tier 0 was implemented and
+focused-verified, and the next Tier 1 design-review artifact is ready. The
+remaining work is the next orchestration loop, beginning with Tier 1 command
+timeline review and then a separate Tier 1 implementation plan.

@@ -1,10 +1,12 @@
 package com.openggf.game.rewind;
 
+import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRuntime;
+import com.openggf.game.GameServices;
 import com.openggf.game.RuntimeManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
@@ -32,9 +34,7 @@ public final class LiveRewindManager {
 
     public boolean handleRealtimeRewindInput(GameMode mode, InputHandler input) {
         if (mode != GameMode.LEVEL || input == null || !enabled()) {
-            if (!enabled()) {
-                clear();
-            }
+            clear();
             return false;
         }
         if (!ensureInstalled()) {
@@ -46,13 +46,16 @@ public final class LiveRewindManager {
             rewindController.stepBackward();
             return true;
         }
+        if (rewinding) {
+            cleanupAudioAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+        }
         rewinding = false;
         return false;
     }
 
     public void recordExternalFrame(GameMode mode, InputHandler input) {
         if (mode != GameMode.LEVEL || input == null || rewinding || !enabled()) {
-            if (!enabled()) {
+            if (mode != GameMode.LEVEL || input == null || !enabled()) {
                 clear();
             }
             return;
@@ -111,7 +114,17 @@ public final class LiveRewindManager {
         return config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED);
     }
 
+    private void cleanupAudioAfterRealtimeRewind(AudioPresentationPolicy policy) {
+        if (rewindController == null) {
+            return;
+        }
+        GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
+    }
+
     private void clear() {
+        if (rewinding && rewindController != null) {
+            cleanupAudioAfterRealtimeRewind(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+        }
         installedRuntime = null;
         inputSource = null;
         rewindController = null;

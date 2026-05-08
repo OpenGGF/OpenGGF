@@ -554,7 +554,7 @@ public class Sonic3kSpecialStageManager {
         // Rate 0x1000→40, 0x1400→32, 0x1800→24, 0x2000→8.
         if (player.didRateJustIncrease()) {
             int tempo = player.calculateMusicTempo();
-            GameServices.audio().getBackend().setSpeedMultiplier(tempo);
+            GameServices.audio().setSpeedMultiplier(tempo);
             musicSpedUp = true;
         }
 
@@ -621,7 +621,7 @@ public class Sonic3kSpecialStageManager {
             finished = true;
             // Reset music speed on exit
             if (musicSpedUp) {
-                GameServices.audio().getBackend().setSpeedMultiplier(1);
+                GameServices.audio().setSpeedMultiplier(1);
             }
         }
 
