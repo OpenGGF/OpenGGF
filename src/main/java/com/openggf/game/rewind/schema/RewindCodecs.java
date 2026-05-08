@@ -99,6 +99,35 @@ public final class RewindCodecs {
         return codecFor(type).isPresent();
     }
 
+    public static boolean requiresIdentityTable(Field field) {
+        Objects.requireNonNull(field, "field");
+        Class<?> type = field.getType();
+        if (isPlayerReferenceType(type) || isObjectReferenceType(type)) {
+            return true;
+        }
+        Type genericType = field.getGenericType();
+        if (!(genericType instanceof ParameterizedType parameterizedType)) {
+            return false;
+        }
+        Type[] args = parameterizedType.getActualTypeArguments();
+        if (Collection.class.isAssignableFrom(type)) {
+            return args.length == 1
+                    && args[0] instanceof Class<?> elementType
+                    && requiresIdentityTable(elementType);
+        }
+        if (Map.class.isAssignableFrom(type)) {
+            return args.length == 2
+                    && args[0] instanceof Class<?> keyType
+                    && args[1] instanceof Class<?> valueType
+                    && (requiresIdentityTable(keyType) || requiresIdentityTable(valueType));
+        }
+        return false;
+    }
+
+    private static boolean requiresIdentityTable(Class<?> type) {
+        return isPlayerReferenceType(type) || isObjectReferenceType(type);
+    }
+
     private static boolean supportedArrayComponent(Class<?> componentType) {
         return componentType.isPrimitive() || componentType.isEnum();
     }

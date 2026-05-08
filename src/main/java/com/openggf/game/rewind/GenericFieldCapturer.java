@@ -2,6 +2,7 @@ package com.openggf.game.rewind;
 
 import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.game.rewind.schema.CompactFieldCapturer;
+import com.openggf.game.rewind.schema.RewindCodecs;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractBadnikInstance;
@@ -239,6 +240,7 @@ public final class GenericFieldCapturer {
                 && !Modifier.isTransient(mods)
                 && (!Modifier.isFinal(mods)
                 || isDefaultObjectArrayFieldValueType(field.getType())
+                || isDefaultObjectCompactCollectionField(field)
                 || isDefaultObjectInPlaceHelperType(field.getType())
                 || RewindStateful.class.isAssignableFrom(field.getType()))
                 && !field.isSynthetic()
@@ -370,7 +372,16 @@ public final class GenericFieldCapturer {
                 || isDefaultObjectInPlaceHelperField(field)
                 || RewindStateful.class.isAssignableFrom(type)
                 || isDefaultObjectArrayFieldValueType(type)
-                || isDefaultObjectRecordFieldValueType(type);
+                || isDefaultObjectRecordFieldValueType(type)
+                || isDefaultObjectCompactCollectionField(field);
+    }
+
+    private static boolean isDefaultObjectCompactCollectionField(Field field) {
+        return Modifier.isFinal(field.getModifiers())
+                && RewindCodecs.codecFor(field).isPresent()
+                && !RewindCodecs.requiresIdentityTable(field)
+                && (Collection.class.isAssignableFrom(field.getType())
+                || Map.class.isAssignableFrom(field.getType()));
     }
 
     private static boolean isDefaultObjectInPlaceHelperField(Field field) {
