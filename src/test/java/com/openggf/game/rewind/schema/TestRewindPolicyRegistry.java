@@ -7,6 +7,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
@@ -129,6 +130,14 @@ class TestRewindPolicyRegistry {
         assertTrue(schema.unsupportedFields().isEmpty());
     }
 
+    @Test
+    void structuralSolidObjectParamsAreStructuralByDefaultWithoutAnnotations() {
+        RewindClassSchema schema = RewindSchemaRegistry.schemaFor(DefaultStructuralPolicyFixture.class);
+
+        assertPolicy(schema, "solidObjectParams", RewindFieldPolicy.STRUCTURAL);
+        assertTrue(schema.unsupportedFields().isEmpty());
+    }
+
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {
         RewindFieldPlan plan = schema.fields().stream()
                 .filter(field -> field.key().fieldName().equals(fieldName))
@@ -172,5 +181,9 @@ class TestRewindPolicyRegistry {
         SpriteAnimationSet spriteAnimationSet;
         SpriteMappingPiece spriteMappingPiece;
         SpritePieceRenderer spritePieceRenderer;
+    }
+
+    private static final class DefaultStructuralPolicyFixture {
+        final SolidObjectParams solidObjectParams = new SolidObjectParams(16, 8, 9);
     }
 }
