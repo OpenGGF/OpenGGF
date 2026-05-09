@@ -5,6 +5,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -192,6 +193,49 @@ public class Sonic1BuzzBomberMissileInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState() {
+        int parentSlotIndex = parent != null ? parent.getSlotIndex() : -1;
+        return super.captureRewindState().withObjectSubclassExtra(
+                new PerObjectRewindSnapshot.BuzzBomberMissileRewindExtra(
+                        parentSlotIndex,
+                        currentX,
+                        currentY,
+                        motionState.xSub,
+                        motionState.ySub,
+                        xVelocity,
+                        yVelocity,
+                        facingLeft,
+                        phase.name(),
+                        flareTimer,
+                        animTimer,
+                        animFrame,
+                        renderedFrame,
+                        collisionEnabled));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
+        super.restoreRewindState(snapshot);
+        if (snapshot.objectSubclassExtra()
+                instanceof PerObjectRewindSnapshot.BuzzBomberMissileRewindExtra extra) {
+            currentX = extra.currentX();
+            currentY = extra.currentY();
+            motionState.x = extra.currentX();
+            motionState.y = extra.currentY();
+            motionState.xSub = extra.xSub();
+            motionState.ySub = extra.ySub();
+            motionState.xVel = extra.xVelocity();
+            motionState.yVel = extra.yVelocity();
+            phase = Phase.valueOf(extra.phase());
+            flareTimer = extra.flareTimer();
+            animTimer = extra.animTimer();
+            animFrame = extra.animFrame();
+            renderedFrame = extra.renderedFrame();
+            collisionEnabled = extra.collisionEnabled();
+        }
     }
 
     @Override

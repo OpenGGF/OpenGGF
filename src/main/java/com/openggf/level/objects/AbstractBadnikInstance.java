@@ -5,6 +5,7 @@ import com.openggf.debug.DebugColor;
 
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.GenericFieldCapturer;
 
 /**
  * Abstract base class for all Badnik enemies.
@@ -228,7 +229,7 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
                         currentX, currentY, xVelocity, yVelocity,
                         animTimer, animFrame, facingLeft);
         // The record constructor with badnikExtra parameter; playerExtra is null for badniks
-        return new PerObjectRewindSnapshot(
+        PerObjectRewindSnapshot snapshot = new PerObjectRewindSnapshot(
                 base.destroyed(),
                 base.destroyedRespawnable(),
                 base.hasDynamicSpawn(),
@@ -248,6 +249,14 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
                 base.playerExtra(),
                 base.genericState()
         );
+        var compactSubclassState = GenericFieldCapturer.captureObjectSubclassScalarsCompact(this);
+        if (compactSubclassState.isPresent()) {
+            return snapshot.withCompactGenericState(compactSubclassState.get());
+        }
+        var genericSubclassState = GenericFieldCapturer.captureObjectSubclassScalars(this);
+        return genericSubclassState.keys().isEmpty()
+                ? snapshot
+                : snapshot.withGenericState(genericSubclassState);
     }
 
     /**
@@ -278,6 +287,11 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
             if (s.hasDynamicSpawn()) {
                 updateDynamicSpawn(currentX, currentY);
             }
+        }
+        if (s.compactGenericState() != null) {
+            GenericFieldCapturer.restoreObjectSubclassScalarsCompact(this, s.compactGenericState());
+        } else if (s.genericState() != null) {
+            GenericFieldCapturer.restore(this, s.genericState());
         }
     }
 }

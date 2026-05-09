@@ -13,6 +13,7 @@ import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.game.rewind.RewindSpeedController;
 import com.openggf.game.session.EngineContext;
 import com.openggf.graphics.FadeManager;
 import com.openggf.trace.TraceData;
@@ -28,6 +29,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
@@ -91,6 +93,74 @@ class TestTraceSessionLauncherRewindPresentation {
         assertTrue(backend.calls.contains("endReversePresentation"));
     }
 
+    @Test
+    void traceRealtimeRewindUsesConfiguredTapeCoastCurve() throws Exception {
+        config.setConfigValue(SonicConfiguration.REWIND_TAPE_COAST_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.REWIND_TAPE_COAST_ACCELERATION, 1.0);
+        config.setConfigValue(SonicConfiguration.REWIND_TAPE_COAST_DECELERATION, 0.5);
+        config.setConfigValue(SonicConfiguration.REWIND_TAPE_COAST_MAX_STEPS, 1.99);
+        TraceSessionLauncher launcher = newLauncher();
+        RewindController rewindController = new RewindController(
+                new RewindRegistry(),
+                new InMemoryKeyframeStore(),
+                new FakeInputSource(20),
+                in -> {},
+                2,
+                AudioManager.getInstance());
+        for (int i = 0; i < 10; i++) {
+            rewindController.recordExternalStep();
+        }
+        setField(launcher, "rewindController", rewindController);
+        setField(launcher, "rewindPlaybackController", new PlaybackController(rewindController));
+        setField(launcher, "rewindSpeedController", RewindSpeedController.fromConfig(config));
+        setField(launcher, "comparator", mock(LiveTraceComparator.class));
+        InputHandler input = new InputHandler();
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.TRACE_REWIND_KEY), GLFW_PRESS);
+        assertTrue(launcher.handleRealtimeRewindInput(input));
+        assertEquals(9, rewindController.currentFrame(),
+                "trace rewind must not exceed one reverse step per visual frame");
+
+        assertTrue(launcher.handleRealtimeRewindInput(input));
+        assertEquals(8, rewindController.currentFrame(),
+                "continued held trace-rewind frames must remain capped at one reverse step");
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.TRACE_REWIND_KEY), GLFW_RELEASE);
+        assertTrue(launcher.handleRealtimeRewindInput(input),
+                "release should continue consuming frames while tape coast has remaining charge");
+        assertEquals(7, rewindController.currentFrame());
+        assertTrue(backend.reverseRates.stream().anyMatch(rate -> rate > 0.0 && rate < 1.0),
+                "release coast should lower reverse presentation pitch below the held 1x rate");
+
+        assertFalse(launcher.handleRealtimeRewindInput(input));
+        assertEquals(7, rewindController.currentFrame());
+    }
+
+    @Test
+    void traceRealtimeRewindAtBufferStartConsumesInputWithoutStartingReverseAudio() throws Exception {
+        TraceSessionLauncher launcher = newLauncher();
+        RewindController rewindController = new RewindController(
+                new RewindRegistry(),
+                new InMemoryKeyframeStore(),
+                new FakeInputSource(10),
+                in -> {},
+                2,
+                AudioManager.getInstance());
+        setField(launcher, "rewindController", rewindController);
+        setField(launcher, "rewindPlaybackController", new PlaybackController(rewindController));
+        setField(launcher, "comparator", mock(LiveTraceComparator.class));
+        InputHandler input = new InputHandler();
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.TRACE_REWIND_KEY), GLFW_PRESS);
+
+        assertTrue(launcher.handleRealtimeRewindInput(input),
+                "held rewind at the start should still consume the frame so trace playback stays paused");
+        assertFalse(backend.calls.contains("beginReversePresentation"),
+                "reverse audio must not start when no rewind frame can be consumed");
+        assertFalse(backend.calls.contains("update"),
+                "audio update would keep draining/recycling reverse presentation at the rewind boundary");
+    }
+
     private static TraceSessionLauncher newLauncher() throws Exception {
         Constructor<TraceSessionLauncher> constructor = TraceSessionLauncher.class.getDeclaredConstructor(
                 TraceEntry.class,
@@ -127,10 +197,17 @@ class TestTraceSessionLauncherRewindPresentation {
 
     private static final class RecordingReverseAudioBackend extends NullAudioBackend {
         private final List<String> calls = new ArrayList<>();
+        private final List<Double> reverseRates = new ArrayList<>();
 
         @Override
         public void beginReversePresentation() {
             calls.add("beginReversePresentation");
+        }
+
+        @Override
+        public void setReversePresentationRate(double rate) {
+            calls.add("setReversePresentationRate:" + rate);
+            reverseRates.add(rate);
         }
 
         @Override

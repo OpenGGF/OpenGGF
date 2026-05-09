@@ -41,7 +41,7 @@ class TestLiveRewindManagerAudioCleanup {
     @AfterEach
     void tearDown() {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
-        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.REWIND_TAPE_COAST_ENABLED, false);
         audio.resetState();
         RuntimeManager.destroyCurrent();
     }
@@ -84,10 +84,10 @@ class TestLiveRewindManagerAudioCleanup {
 
     @Test
     void tapeCoastDelaysTransientAudioCleanupUntilCoastEnds() throws Exception {
-        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, true);
-        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ACCELERATION, 1.0);
-        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_DECELERATION, 0.5);
-        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS, 3.0);
+        config.setConfigValue(SonicConfiguration.REWIND_TAPE_COAST_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.REWIND_TAPE_COAST_ACCELERATION, 1.0);
+        config.setConfigValue(SonicConfiguration.REWIND_TAPE_COAST_DECELERATION, 0.5);
+        config.setConfigValue(SonicConfiguration.REWIND_TAPE_COAST_MAX_STEPS, 3.0);
         RuntimeManager.createGameplay();
         LiveRewindManager manager = new LiveRewindManager(config);
         RewindController controller = new TestControllerBuilder().atFrame(8);
@@ -108,6 +108,25 @@ class TestLiveRewindManagerAudioCleanup {
         }
         assertTrue(backend.calls.contains("stopAllSfx"),
                 "transient cleanup should run after the coast has fully ended");
+    }
+
+    @Test
+    void liveRewindAtBufferStartConsumesInputWithoutUpdatingReverseAudio() throws Exception {
+        RuntimeManager.createGameplay();
+        FadeManager fadeManager = RuntimeManager.getCurrent().getFadeManager();
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = new TestControllerBuilder().atFrame(0);
+        installTestController(manager, controller);
+        InputHandler input = new InputHandler();
+
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input),
+                "held rewind at the start should consume the frame so live gameplay stays paused");
+        assertFalse(fadeManager.isReversePresentationActive(),
+                "reverse fade/audio presentation should not start when no rewind frame can be consumed");
+        assertFalse(backend.calls.contains("update"),
+                "audio update would keep draining/recycling reverse presentation at the rewind boundary");
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.openggf.audio.rewind;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public final class AudioCommandTimeline {
     private final List<AudioTimelineEntry> entries = new ArrayList<>();
@@ -33,6 +34,36 @@ public final class AudioCommandTimeline {
 
     public List<AudioTimelineEntry> entries() {
         return List.copyOf(entries);
+    }
+
+    public int entryCount() {
+        return entries.size();
+    }
+
+    public int forEachEntryFrom(
+            int startIndex,
+            long targetFrameInclusive,
+            Consumer<? super AudioTimelineEntry> consumer) {
+        Objects.requireNonNull(consumer, "consumer");
+        if (startIndex < 0) {
+            throw new IndexOutOfBoundsException("startIndex out of range: " + startIndex);
+        }
+        if (startIndex >= entries.size()) {
+            return 0;
+        }
+        int endExclusive = entries.size();
+        int visited = 0;
+        for (int i = startIndex; i < endExclusive; i++) {
+            AudioTimelineEntry entry = entries.get(i);
+            if (entry.frame() > targetFrameInclusive) {
+                break;
+            }
+            if (entry.frame() <= targetFrameInclusive) {
+                consumer.accept(entry);
+                visited++;
+            }
+        }
+        return visited;
     }
 
     public long currentFrame() {
