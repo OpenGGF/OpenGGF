@@ -599,6 +599,12 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
         bodySegments.clear();
     }
 
+    void registerBodySegmentForRewind(Sonic1CaterkillerBodyInstance body) {
+        if (body != null && !bodySegments.contains(body)) {
+            bodySegments.add(body);
+        }
+    }
+
     @Override
     public void onUnload() {
         deleting = true;

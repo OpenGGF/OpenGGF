@@ -20,6 +20,7 @@ import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -202,12 +203,84 @@ public class TestSonic1CaterkillerBodyChaining {
                 "Once the linger window ends, the body should stop participating in touch");
     }
 
+    @Test
+    public void rewindRestoreRespawnsBodySegmentChain() throws Exception {
+        ObjectSpawn headSpawn = new ObjectSpawn(0x180, 0x100, 0x78, 0, 0, false, 7);
+        ObjectRegistry registry = new ObjectRegistry() {
+            @Override
+            public ObjectInstance create(ObjectSpawn spawn) {
+                return new TestableCaterkillerHead(spawn);
+            }
+
+            @Override
+            public void reportCoverage(List<ObjectSpawn> spawns) {
+            }
+
+            @Override
+            public String getPrimaryName(int objectId) {
+                return "Caterkiller";
+            }
+        };
+        objectManager = new ObjectManager(List.of(headSpawn), registry, 0, null, null,
+                null, GameServices.camera(), objectServices);
+
+        TestableCaterkillerHead head = new TestableCaterkillerHead(headSpawn);
+        head.setServices(objectServices);
+        head.setSlotIndex(32);
+        registerActiveObject(objectManager, headSpawn, head);
+
+        Sonic1CaterkillerBodyInstance body1 = new Sonic1CaterkillerBodyInstance(
+                head, head, 0x174, 0x100, true, false, 0, 4);
+        Sonic1CaterkillerBodyInstance body2 = new Sonic1CaterkillerBodyInstance(
+                head, body1, 0x168, 0x100, true, true, 1, 8);
+        Sonic1CaterkillerBodyInstance body3 = new Sonic1CaterkillerBodyInstance(
+                head, body2, 0x15C, 0x100, true, false, 2, 12);
+        objectManager.addDynamicObjectAtSlot(body1, 33);
+        objectManager.addDynamicObjectAtSlot(body2, 34);
+        objectManager.addDynamicObjectAtSlot(body3, 35);
+        addBodySegment(head, body1);
+        addBodySegment(head, body2);
+        addBodySegment(head, body3);
+
+        var snapshot = objectManager.rewindSnapshottable().capture();
+
+        objectManager.rewindSnapshottable().restore(snapshot);
+
+        long restoredBodyCount = objectManager.getActiveObjects().stream()
+                .filter(Sonic1CaterkillerBodyInstance.class::isInstance)
+                .count();
+        assertEquals(3, restoredBodyCount,
+                "Rewind restore should recreate all Caterkiller dynamic body segments");
+
+        Sonic1CaterkillerBadnikInstance restoredHead = objectManager.getActiveObjects().stream()
+                .filter(Sonic1CaterkillerBadnikInstance.class::isInstance)
+                .map(Sonic1CaterkillerBadnikInstance.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(3, bodySegmentCount(restoredHead),
+                "Restored body segments should be relinked to the restored head lifecycle list");
+    }
+
     @SuppressWarnings("unchecked")
     private static void addBodySegment(Sonic1CaterkillerBadnikInstance head, Sonic1CaterkillerBodyInstance body)
             throws Exception {
         Field field = Sonic1CaterkillerBadnikInstance.class.getDeclaredField("bodySegments");
         field.setAccessible(true);
         ((List<Sonic1CaterkillerBodyInstance>) field.get(head)).add(body);
+    }
+
+    private static int bodySegmentCount(Sonic1CaterkillerBadnikInstance head) throws Exception {
+        Field field = Sonic1CaterkillerBadnikInstance.class.getDeclaredField("bodySegments");
+        field.setAccessible(true);
+        return ((List<?>) field.get(head)).size();
+    }
+
+    private static void registerActiveObject(ObjectManager manager, ObjectSpawn spawn, ObjectInstance instance)
+            throws Exception {
+        Method method = ObjectManager.class.getDeclaredMethod("registerActiveObject",
+                ObjectSpawn.class, ObjectInstance.class);
+        method.setAccessible(true);
+        method.invoke(manager, spawn, instance);
     }
 
     private static final class FakeParentState implements CaterkillerParentState {
@@ -274,5 +347,4 @@ public class TestSonic1CaterkillerBodyChaining {
         }
     }
 }
-
 
