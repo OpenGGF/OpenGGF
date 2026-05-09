@@ -43,4 +43,8 @@ public final class EditorHistory {
         undoStack.clear();
         redoStack.clear();
     }
+
+    public boolean hasUndoEntries() {
+        return !undoStack.isEmpty();
+    }
 }

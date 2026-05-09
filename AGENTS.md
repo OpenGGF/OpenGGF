@@ -9,7 +9,7 @@ OpenGGF is an open-source, Java-based game engine for research and preservation 
 ## Current Status
 The project is in an **alpha** state. Core systems are functional with extensive passing tests. A major architectural modernization has replaced pervasive singleton coupling with a two-tier service architecture (`GameServices` + `ObjectServices`), decomposed the monolithic `LevelManager` into focused subsystems, and extracted 50+ shared base classes and utility helpers to eliminate cross-game duplication. All three games (Sonic 1, Sonic 2, Sonic 3&K) are supported with game-specific modules, level loading, objects, audio, and scroll handlers. A `MutableLevel` abstraction provides the foundation for a planned level editor. A data select and save system is now implemented: S3K has a ROM-accurate data select screen with 8 save slots and team selection, and S1/S2 can use this screen via cross-game donation while retaining their own save profiles.
 
-Recent architecture work also moved a growing share of zone-specific behavior onto runtime-owned shared frameworks hosted by `GameRuntime`: `ZoneRuntimeRegistry` (typed zone state), `PaletteOwnershipRegistry` (multi-writer palette composition), `AnimatedTileChannelGraph` (shared animated tile orchestration), `ZoneLayoutMutationPipeline` (deterministic live layout edits), `ScrollEffectComposer` (shared deform/parallax composition), `SpecialRenderEffectRegistry` (staged extra draw passes), and `AdvancedRenderModeController` (frame-level render-mode overrides such as per-line/per-cell scroll state). These systems are now the preferred reuse path when uplifting existing S1/S2 content or bringing up new S3K zones.
+Recent architecture work also moved a growing share of zone-specific behavior onto runtime-owned shared frameworks hosted by `GameplayModeContext` (and reachable from `GameRuntime` getters or `GameServices`): `ZoneRuntimeRegistry` (typed zone state), `PaletteOwnershipRegistry` (multi-writer palette composition), `AnimatedTileChannelGraph` (shared animated tile orchestration), `ZoneLayoutMutationPipeline` (deterministic live layout edits), `ScrollEffectComposer` (shared deform/parallax composition), `SpecialRenderEffectRegistry` (staged extra draw passes), and `AdvancedRenderModeController` (frame-level render-mode overrides such as per-line/per-cell scroll state). These systems are now the preferred reuse path when uplifting existing S1/S2 content or bringing up new S3K zones.
 
 The branch also has a gameplay-scoped rewind framework for trace debugging: `RewindController`, `PlaybackController`, keyframe storage, segment caching, and a `RewindRegistry` hosted by `GameplayModeContext`. Coverage now spans core runtime managers plus player, sidekick, object, ring, level, palette, parallax, mutation, render-mode, and PLC progress state. Automatic object/player capture is being migrated through `GenericFieldCapturer`, `GenericRewindEligibility`, `@RewindTransient` / `@RewindDeferred` field policy annotations, `RewindFieldInventoryTool`, stable identity ids in `com.openggf.game.rewind.identity`, and compact schema codecs/policies in `com.openggf.game.rewind.schema`. Default non-badnik object subclasses now use compact schema-backed sidecar state when all default scalar fields have codecs, with legacy generic fallback for unsupported shapes. For object rewind coverage, prefer central eligibility, codecs, and policy-registry rules; avoid per-object annotations or rewind overrides unless the object has genuinely bespoke state, identity links, or child lifecycle that generic capture cannot represent.
 
@@ -102,7 +102,7 @@ Git hooks in `.githooks/` and CI enforce the branch policy below. Configure the 
     *   `data` – ROM loading (`Rom`, `RomManager`, `RomByteReader`), game interface, art providers
     *   `debug` – debug overlay (`DebugRenderer`), enabled via the `DEBUG_VIEW_ENABLED` configuration flag
     *   `game` – core game-agnostic interfaces, providers, `GameServices` façade, `GameRuntime`, `RuntimeManager`, `PlayableEntity`, `DamageCause`, `AbstractZoneRegistry`
-    *   `game.dataselect` – shared data select framework: `DataSelectProvider`, `DataSelectSessionController`, `DataSelectHostProfile`, `DataSelectAction`
+    *   `game.dataselect` – shared data select framework: `AbstractDataSelectProvider`, `DataSelectSessionController`, `DataSelectHostProfile`, `DataSelectAction`. The `DataSelectProvider` interface itself lives in `com.openggf.game`.
     *   `game.rewind` – gameplay-scoped rewind framework: keyframes, deterministic seek/replay, playback state, generic field capture, rewind field annotations, identity ids, policy registry, and compact schema capture foundation
     *   `game.save` – save system: `SaveManager` (JSON + SHA256), `SaveSessionContext`, `SaveSlotSummary`, `SelectedTeam`
     *   `game.sonic1` – Sonic 1 game module, zone registry, level events, objects, badniks, bosses, scroll handlers, audio, title screen, special stage
@@ -499,7 +499,7 @@ om.addDynamicObject(childInstance);
 | `Sonic2Constants.java` | Sonic 2 primary ROM offsets |
 | `Sonic2ObjectIds.java` | Sonic 2 object type IDs (0x41=Spring, 0x26=Monitor) |
 | `Sonic2ObjectConstants.java` | Sonic 2 touch collision data |
-| `Sonic2AudioConstants.java` | Sonic 2 music and SFX IDs |
+| `Sonic2AudioConstants.java` | Sonic 2 SFX IDs (music IDs are in `game.sonic2.audio.Sonic2Music`) |
 | `Sonic1Constants.java` | Sonic 1 ROM offsets (zone IDs, level data, collision, palettes, art) |
 
 ## Adding New Game Support
@@ -689,7 +689,7 @@ exporter.exportAsJavaConstants(batch, "", new PrintWriter(System.out), s1);
 	*   `docs/YM2612.java.example` – Contains a port of the Gens emulator's YM2612 implementation. Missing PCM functionality. May not be correct!
 	*   `docs/SMPS-rips` – Contains ripped audio for various games, including `Sonic the Hedgehog 2`. Contains configurations for SMPSPlay.
 	*   `docs/SMPS-rips/SMPSPlay` – This contains the source for SMPSPlay, which is an open-source implementation of playback of rips for game sfx/music, for games that use the SMPS driver for the Sega Genesis.
-	*   `docs/SMPS-rips/SMPSPlay/libs/download/libvgm/emu/cores` – Contains source code for several consoles, but most importantly the ym2612(.c) for the sound chip, and sn76489(.c) which we are implementing on our own. These are extremely useful sources of truth for our project, as they are high-accuracy implementations.
+	*   The libvgm chip cores (`emu/cores/ym2612.c`, `emu/cores/sn76489*.c`) are an excellent reference — fetch a copy of `libvgm` separately if needed. They are high-accuracy implementations that we cross-reference for YM2612 / SN76489 behavior.
 *   **Important guidelines:** We strive for accuracy in the audio engine. Wherever possible, we should be implementing features identically to hardware. We should reference the existing libvgm cores, the SMPSPlay source, and the documentation to achieve this. We should not "twiddle knobs" or implement simplified versions of logic, instead preferring to diagnose issues and compare to reference/sources of truth.
 ## Useful tips
 
