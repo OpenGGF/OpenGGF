@@ -403,6 +403,26 @@ public class LevelManager {
     }
 
     /**
+     * Restores the read/render level view needed while editor mode is active
+     * after gameplay runtime teardown has reset gameplay-owned managers. This
+     * intentionally rebuilds only level-derived rendering state; gameplay
+     * object, ring, collision, and event systems are recreated on playtest
+     * resume.
+     */
+    public void restoreEditorLevelView(Level editorLevel) {
+        Level restoredLevel = editorLevel != null ? editorLevel : worldSession.getCurrentLevel();
+        if (restoredLevel == null) {
+            return;
+        }
+        writeCurrentLevel(restoredLevel);
+        currentZone = worldSession.getCurrentZone();
+        currentAct = worldSession.getCurrentAct();
+        apparentAct = worldSession.getApparentAct();
+        gameModule = worldSession.getGameModule();
+        rebuildLevelDerivedState();
+    }
+
+    /**
      * Restores a loaded level inherited from {@code WorldSession} into a
      * freshly-constructed LevelManager — the path used after editor mode exit
      * when the gameplay-mode runtime is rebuilt around the surviving world
