@@ -9,8 +9,14 @@ import static org.lwjgl.glfw.GLFW.*;
 public class InputHandler {
 	// GLFW key codes can range from 0 to GLFW_KEY_LAST (348)
 	private static final int MAX_KEYS = 512;
+	private static final int MAX_MOUSE_BUTTONS = 16;
 	boolean[] keys = new boolean[MAX_KEYS];
 	boolean[] previousKeys = new boolean[MAX_KEYS];
+	boolean[] mouseButtons = new boolean[MAX_MOUSE_BUTTONS];
+	boolean[] previousMouseButtons = new boolean[MAX_MOUSE_BUTTONS];
+	private double mouseX;
+	private double mouseY;
+	private boolean mouseInputSeen;
 
 	/**
 	 * Creates a new InputHandler.
@@ -31,6 +37,23 @@ public class InputHandler {
 				keys[key] = true;
 			} else if (action == GLFW_RELEASE) {
 				keys[key] = false;
+			}
+		}
+	}
+
+	public void handleMouseMove(double x, double y) {
+		mouseX = x;
+		mouseY = y;
+		mouseInputSeen = true;
+	}
+
+	public void handleMouseButton(int button, int action) {
+		mouseInputSeen = true;
+		if (button >= 0 && button < MAX_MOUSE_BUTTONS) {
+			if (action == GLFW_PRESS || action == GLFW_REPEAT) {
+				mouseButtons[button] = true;
+			} else if (action == GLFW_RELEASE) {
+				mouseButtons[button] = false;
 			}
 		}
 	}
@@ -81,10 +104,37 @@ public class InputHandler {
 		return isKeyPressed(keyCode) && !isAnyModifierDown();
 	}
 
+	public double getMouseX() {
+		return mouseX;
+	}
+
+	public double getMouseY() {
+		return mouseY;
+	}
+
+	public boolean isMouseButtonDown(int button) {
+		if (button >= 0 && button < MAX_MOUSE_BUTTONS) {
+			return mouseButtons[button];
+		}
+		return false;
+	}
+
+	public boolean isMouseButtonPressed(int button) {
+		if (button >= 0 && button < MAX_MOUSE_BUTTONS) {
+			return mouseButtons[button] && !previousMouseButtons[button];
+		}
+		return false;
+	}
+
+	public boolean hasMouseInputSeen() {
+		return mouseInputSeen;
+	}
+
 	/**
 	 * Updates the input handler state. Should be called at the end of the game loop.
 	 */
 	public void update() {
 		System.arraycopy(keys, 0, previousKeys, 0, MAX_KEYS);
+		System.arraycopy(mouseButtons, 0, previousMouseButtons, 0, MAX_MOUSE_BUTTONS);
 	}
 }

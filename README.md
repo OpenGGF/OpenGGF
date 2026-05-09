@@ -200,7 +200,9 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
 
 - **Editor groundwork:** a config-gated editor/playtest loop, focused block and chunk previews,
   derive edits, world-grid navigation, and safer mode switching are being built toward usable
-  in-engine editing.
+  in-engine editing. The editor review pass now preserves controller-owned mutable levels across
+  runtime teardown, restores an editor-safe level view while editing, flushes dirty regions before
+  editor rendering, and omits reverted baseline edits from saved deltas.
 - **Runtime modernization:** gameplay state continues moving behind `GameRuntime`, `GameServices`,
   `ObjectServices`, and runtime-owned frameworks for palette ownership, zone state, animated tiles,
   layout mutation, scroll composition, special render passes, and advanced render modes.
