@@ -573,13 +573,22 @@ public class AudioManager {
         deterministicAudioRuntime.beginReversePresentation();
         if (backend != null) {
             backend.beginReversePresentation();
+            backend.setReversePresentationRate(1.0);
         }
+    }
+
+    public void setReverseAudioPresentationRate(double rate) {
+        if (!reverseAudioPresentationActive || backend == null) {
+            return;
+        }
+        backend.setReversePresentationRate(rate);
     }
 
     public void endReverseAudioPresentation() {
         reverseAudioPresentationActive = false;
         deterministicAudioRuntime.endReversePresentation();
         if (backend != null) {
+            backend.setReversePresentationRate(1.0);
             backend.endReversePresentation();
         }
     }

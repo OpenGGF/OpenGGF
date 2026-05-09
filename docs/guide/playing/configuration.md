@@ -170,8 +170,11 @@ game resumes normal forward audio/fade presentation when the key is released.
 
 Held rewind defaults to one rewind step per visual frame and stops immediately when
 released. Experimental release coast is available only when
-`LIVE_REWIND_TAPE_COAST_ENABLED` is set to `true`; its acceleration, deceleration,
-and maximum per-frame steps use the matching `LIVE_REWIND_TAPE_COAST_*` keys.
+`REWIND_TAPE_COAST_ENABLED` is set to `true`; its acceleration, deceleration,
+and maximum per-frame steps use the matching `REWIND_TAPE_COAST_*` keys. These
+settings are shared by live rewind and visual Trace Test Mode rewind.
+Keep `REWIND_TAPE_COAST_MAX_STEPS` below `2.0` to cap reverse playback to one
+rewind step per visual frame while still allowing a short release coast.
 
 ## How do I mute audio?
 
