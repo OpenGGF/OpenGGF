@@ -50,7 +50,13 @@ public final class CompactFieldCapturer {
         for (RewindFieldPlan field : schema.capturedFields()) {
             field.codec().capture(field.field(), target, scalarData, opaqueValues, context);
         }
-        return new RewindObjectStateBlob(schema.schemaId(), schema.type(), scalarData.toByteArray(), opaqueValues.toArray());
+        RewindStateBuffer.OwnedBytes scalarBytes = scalarData.takeBytes();
+        return RewindObjectStateBlob.fromOwnedArrays(
+                schema.schemaId(),
+                schema.type(),
+                scalarBytes.bytes(),
+                scalarBytes.length(),
+                opaqueValues.toArray());
     }
 
     public static void restore(Object target, RewindObjectStateBlob blob) {
@@ -110,8 +116,8 @@ public final class CompactFieldCapturer {
             RewindCaptureContext context,
             RewindClassSchema schema) {
 
-        RewindStateBuffer.Reader scalarData = RewindStateBuffer.reader(blob.scalarData());
-        Object[] opaqueValues = blob.opaqueValues();
+        RewindStateBuffer.Reader scalarData = blob.scalarDataReader();
+        RewindCodec.OpaqueValues opaqueValues = blob.opaqueValuesReader();
         RewindCodec.OpaqueIndex opaqueIndex = new RewindCodec.OpaqueIndex();
         for (RewindFieldPlan field : schema.capturedFields()) {
             field.codec().restore(field.field(), target, scalarData, opaqueValues, opaqueIndex, context);

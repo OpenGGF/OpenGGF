@@ -31,6 +31,36 @@ class TestPcmHistoryRing {
     }
 
     @Test
+    void expandableHistoryRetainsFramesBeyondInitialCapacity() {
+        PcmHistoryRing history = PcmHistoryRing.expandable(2, 4);
+        history.write(new short[] {1, 10, 2, 20, 3, 30, 4, 40}, 4);
+
+        short[] target = new short[8];
+        int read = history.createReverseCursor().readPrevious(target, 4);
+
+        assertEquals(4, read);
+        assertArrayEquals(new short[] {4, 40, 3, 30, 2, 20, 1, 10}, target);
+    }
+
+    @Test
+    void expandableHistoryDropsOldestFramesAfterMaxCapacity() {
+        PcmHistoryRing history = PcmHistoryRing.expandable(2, 4);
+        history.write(new short[] {
+                1, 10,
+                2, 20,
+                3, 30,
+                4, 40,
+                5, 50
+        }, 5);
+
+        short[] target = new short[10];
+        int read = history.createReverseCursor().readPrevious(target, 5);
+
+        assertEquals(4, read);
+        assertArrayEquals(new short[] {5, 50, 4, 40, 3, 30, 2, 20, 0, 0}, target);
+    }
+
+    @Test
     void cursorContinuesFromPreviousReverseRead() {
         PcmHistoryRing history = new PcmHistoryRing(4);
         history.write(new short[] {1, 10, 2, 20, 3, 30}, 3);

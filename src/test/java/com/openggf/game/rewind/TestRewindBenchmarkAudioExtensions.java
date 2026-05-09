@@ -13,19 +13,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestRewindBenchmarkAudioExtensions {
     private String originalAudioBudgets;
     private String originalMaxCaptureMeanNs;
+    private String originalMaxPresentationReverseMeanNs;
 
     @org.junit.jupiter.api.BeforeEach
     void rememberProperties() {
         originalAudioBudgets = System.getProperty("openggf.rewind.benchmark.audioBudgets");
         originalMaxCaptureMeanNs = System.getProperty("openggf.rewind.benchmark.audio.maxCaptureMeanNs");
+        originalMaxPresentationReverseMeanNs =
+                System.getProperty("openggf.rewind.benchmark.audio.maxPresentationReverseMeanNs");
         System.clearProperty("openggf.rewind.benchmark.audioBudgets");
         System.clearProperty("openggf.rewind.benchmark.audio.maxCaptureMeanNs");
+        System.clearProperty("openggf.rewind.benchmark.audio.maxPresentationReverseMeanNs");
     }
 
     @AfterEach
     void restoreProperties() {
         restoreProperty("openggf.rewind.benchmark.audioBudgets", originalAudioBudgets);
         restoreProperty("openggf.rewind.benchmark.audio.maxCaptureMeanNs", originalMaxCaptureMeanNs);
+        restoreProperty("openggf.rewind.benchmark.audio.maxPresentationReverseMeanNs",
+                originalMaxPresentationReverseMeanNs);
     }
 
     private static void restoreProperty(String key, String value) {
@@ -105,7 +111,53 @@ class TestRewindBenchmarkAudioExtensions {
                         new BenchmarkResults.PhaseStats(1, 1, 0, 0, 0, 0),
                         0,
                         Map.of(),
-                        Map.of("allocatedBytesSupported", 0L, "allocatedBytes", -1L)));
+                        Map.of("allocatedBytesSupported", 0L, "allocatedBytes", -1L)),
+                "phase8.audio.presentation-forward-pcm", new BenchmarkResults(
+                        "phase8.audio.presentation-forward-pcm",
+                        new BenchmarkResults.PhaseStats(1, 1, 0, 0, 0, 0),
+                        0,
+                        Map.of()),
+                "phase8.audio.presentation-reverse-pcm", new BenchmarkResults(
+                        "phase8.audio.presentation-reverse-pcm",
+                        new BenchmarkResults.PhaseStats(1, 1, 0, 0, 0, 0),
+                        0,
+                        Map.of()));
+
+        assertThrows(AssertionError.class,
+                () -> RewindBenchmark.assertAudioBenchmarkBoundsForTests(results));
+    }
+
+    @Test
+    void audioPresentationBudgetOverrideIsEnforcedWhenOptedIn() {
+        System.setProperty("openggf.rewind.benchmark.audioBudgets", "true");
+        System.setProperty("openggf.rewind.benchmark.audio.maxPresentationReverseMeanNs", "5");
+        Map<String, BenchmarkResults> results = Map.of(
+                "phase7.audio.capture-logical", new BenchmarkResults(
+                        "phase7.audio.capture-logical",
+                        new BenchmarkResults.PhaseStats(1, 1, 0, 0, 0, 0),
+                        0,
+                        Map.of()),
+                "phase7.audio.restore-logical", new BenchmarkResults(
+                        "phase7.audio.restore-logical",
+                        new BenchmarkResults.PhaseStats(1, 1, 0, 0, 0, 0),
+                        0,
+                        Map.of()),
+                "phase7.audio.replay-logical", new BenchmarkResults(
+                        "phase7.audio.replay-logical",
+                        new BenchmarkResults.PhaseStats(1, 1, 0, 0, 0, 0),
+                        0,
+                        Map.of(),
+                        Map.of("allocatedBytesSupported", 0L, "allocatedBytes", -1L)),
+                "phase8.audio.presentation-forward-pcm", new BenchmarkResults(
+                        "phase8.audio.presentation-forward-pcm",
+                        new BenchmarkResults.PhaseStats(1, 1, 0, 0, 0, 0),
+                        0,
+                        Map.of()),
+                "phase8.audio.presentation-reverse-pcm", new BenchmarkResults(
+                        "phase8.audio.presentation-reverse-pcm",
+                        new BenchmarkResults.PhaseStats(1, 6, 0, 0, 0, 0),
+                        0,
+                        Map.of()));
 
         assertThrows(AssertionError.class,
                 () -> RewindBenchmark.assertAudioBenchmarkBoundsForTests(results));
