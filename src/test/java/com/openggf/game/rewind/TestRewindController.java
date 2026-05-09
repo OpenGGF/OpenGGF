@@ -171,33 +171,6 @@ class TestRewindController {
     }
 
     @Test
-    void seekToClearsExpandedSegmentCacheBeforeLaterScrub() {
-        RewindRegistry reg = new RewindRegistry();
-        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
-        InputSource inputs = new FakeInputSource(40);
-        AtomicInteger stepInvocations = new AtomicInteger();
-        EngineStepper stepper = (in) -> stepInvocations.incrementAndGet();
-
-        RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 10);
-        for (int i = 0; i < 25; i++) rc.step();
-
-        while (rc.currentFrame() > 19) {
-            assertTrue(rc.stepBackward());
-        }
-
-        rc.seekTo(15);
-        for (int i = 0; i < 10; i++) rc.step();
-        int stepsBeforeSecondScrub = stepInvocations.get();
-
-        while (rc.currentFrame() > 19) {
-            assertTrue(rc.stepBackward());
-        }
-
-        assertEquals(stepsBeforeSecondScrub + 13, stepInvocations.get(),
-                "seekTo must invalidate old expanded strips so later scrubs rebuild from current keyframes");
-    }
-
-    @Test
     void earliestAvailableFrameClampsSeekTo() {
         RewindRegistry reg = new RewindRegistry();
         InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();

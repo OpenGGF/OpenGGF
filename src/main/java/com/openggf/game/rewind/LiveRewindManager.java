@@ -44,37 +44,18 @@ public final class LiveRewindManager {
         }
         int rewindKey = config.getInt(SonicConfiguration.LIVE_REWIND_KEY);
         if (input.isKeyDown(rewindKey)) {
-            if (!rewindController.canStepBackward()) {
-                if (rewinding) {
-                    cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
-                    rewinding = false;
-                }
-                speedController.reset();
-                return true;
-            }
             if (!rewinding) {
                 GameServices.audio().beginReverseAudioPresentation();
                 beginReverseFadePresentation();
             }
             rewinding = true;
-            GameServices.audio().setReverseAudioPresentationRate(1.0);
-            int completed = stepBackward(speedController.stepsWhileHeld());
-            if (completed == 0) {
-                cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
-                rewinding = false;
-                return true;
-            }
+            stepBackward(speedController.stepsWhileHeld());
             GameServices.audio().update();
-            if (!rewindController.canStepBackward()) {
-                cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
-                rewinding = false;
-            }
             return true;
         }
         int coastSteps = speedController.stepsAfterRelease();
         if (rewinding && coastSteps > 0) {
             if (stepBackward(coastSteps) > 0) {
-                GameServices.audio().setReverseAudioPresentationRate(speedController.presentationRate());
                 GameServices.audio().update();
                 return true;
             }

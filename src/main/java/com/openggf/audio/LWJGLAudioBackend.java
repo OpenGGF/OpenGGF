@@ -64,7 +64,6 @@ public class LWJGLAudioBackend implements AudioBackend {
     private DeterministicAudioRuntime deterministicAudioRuntime;
     private PcmHistoryRing pcmHistory;
     private PcmHistoryRing.ReverseCursor reverseCursor;
-    private double reversePresentationRate = 1.0;
 
     private static class MusicState {
         final AudioStream stream;
@@ -186,9 +185,7 @@ public class LWJGLAudioBackend implements AudioBackend {
             LOGGER.info("Mono sources: " + monoSources + ", Stereo sources: " + stereoSources);
 
             LOGGER.info("LWJGL OpenAL Initialized. Device sample rate: " + deviceSampleRate + " Hz, Buffer Size: " + STREAM_BUFFER_SIZE);
-            pcmHistory = PcmHistoryRing.expandable(
-                    Math.max(STREAM_BUFFER_SIZE, deviceSampleRate * 10),
-                    Math.max(STREAM_BUFFER_SIZE, deviceSampleRate * 120));
+            pcmHistory = new PcmHistoryRing(Math.max(STREAM_BUFFER_SIZE, deviceSampleRate * 10));
 
             // Preload SFX
             for (String sfxPath : sfxFallback.values()) {
@@ -704,8 +701,7 @@ public class LWJGLAudioBackend implements AudioBackend {
                 pcmHistory.write(streamData, STREAM_BUFFER_SIZE);
             }
 
-            double rate = reverseCursor != null ? reversePresentationRate : 1.0;
-            sampleRate = (int) Math.round(getStreamSampleRate() * rate);
+            sampleRate = (int) Math.round(getStreamSampleRate());
         }
 
         // Keep DirectBuffer/OpenAL operations outside lock to minimize contention
@@ -920,45 +916,17 @@ public class LWJGLAudioBackend implements AudioBackend {
     public void beginReversePresentation() {
         synchronized (streamLock) {
             reverseCursor = pcmHistory != null ? pcmHistory.createReverseCursor() : null;
-            reversePresentationRate = 1.0;
-        }
-    }
-
-    @Override
-    public void setReversePresentationRate(double rate) {
-        synchronized (streamLock) {
-            reversePresentationRate = Math.max(0.05, Math.min(1.0, rate));
         }
     }
 
     @Override
     public void endReversePresentation() {
-        boolean restartStream;
         synchronized (streamLock) {
             if (pcmHistory != null) {
                 pcmHistory.commitReverseCursor(reverseCursor);
             }
             reverseCursor = null;
-            reversePresentationRate = 1.0;
-            restartStream = currentStream != null || sfxStream != null || runtimeProvidesPresentationPcm();
         }
-        if (restartStream) {
-            restartStreamFromCurrentState();
-        }
-    }
-
-    private void restartStreamFromCurrentState() {
-        if (musicSource < 0) {
-            return;
-        }
-        alSourceStop(musicSource);
-        int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
-        while (queued > 0) {
-            alSourceUnqueueBuffers(musicSource);
-            queued--;
-        }
-        alSourcei(musicSource, AL_BUFFER, 0);
-        startStream();
     }
 
     @Override

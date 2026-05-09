@@ -4,22 +4,19 @@ import com.openggf.audio.AudioStream;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioTimelineEntry;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
-import java.util.PriorityQueue;
 import java.util.function.Consumer;
 
 public final class StreamBackedDeterministicAudioRuntime implements DeterministicAudioRuntime {
     private final AudioFrameClock frameClock;
     private final AudioOutputFifo outputFifo;
-    private final PriorityQueue<PendingAudioCommand> pendingCommands = new PriorityQueue<>(
-            Comparator.comparingLong((PendingAudioCommand pending) -> pending.entry().frame())
-                    .thenComparingInt(pending -> pending.entry().order())
-                    .thenComparingLong(PendingAudioCommand::sequence));
+    private final List<AudioTimelineEntry> pendingCommands = new ArrayList<>();
     private final PcmHistoryRing pcmHistory;
     private final int reverseReleaseCrossfadeFrames;
-    private long nextSubmissionSequence;
     private AudioStream musicStream;
     private AudioStream sfxStream;
     private Consumer<AudioCommand> commandHandler = command -> {};
@@ -69,14 +66,12 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
 
     @Override
     public void submit(AudioTimelineEntry entry) {
-        pendingCommands.add(new PendingAudioCommand(
-                Objects.requireNonNull(entry, "entry"),
-                nextSubmissionSequence++));
+        pendingCommands.add(Objects.requireNonNull(entry, "entry"));
     }
 
     @Override
     public void discardSubmittedCommandsAfter(long frame) {
-        pendingCommands.removeIf(pending -> pending.entry().frame() > frame);
+        pendingCommands.removeIf(entry -> entry.frame() > frame);
     }
 
     @Override
@@ -183,22 +178,15 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     }
 
     private void consumeCommands(long frame) {
-        while (!pendingCommands.isEmpty() && pendingCommands.peek().entry().frame() < frame) {
-            pendingCommands.poll();
-        }
-        long consumeThroughSequence = nextSubmissionSequence - 1;
-        while (!pendingCommands.isEmpty()) {
-            PendingAudioCommand pending = pendingCommands.peek();
-            AudioTimelineEntry entry = pending.entry();
-            if (entry.frame() != frame || pending.sequence() > consumeThroughSequence) {
-                break;
-            }
-            pendingCommands.poll();
+        List<AudioTimelineEntry> entries = pendingCommands.stream()
+                .filter(entry -> entry.frame() == frame)
+                .sorted(Comparator.comparingLong(AudioTimelineEntry::frame)
+                        .thenComparingInt(AudioTimelineEntry::order))
+                .toList();
+        for (AudioTimelineEntry entry : entries) {
             commandHandler.accept(entry.command());
         }
-    }
-
-    private record PendingAudioCommand(AudioTimelineEntry entry, long sequence) {
+        pendingCommands.removeIf(entry -> entry.frame() <= frame);
     }
 
     private void rememberLastReverseFrame(short[] target, int readFrames) {

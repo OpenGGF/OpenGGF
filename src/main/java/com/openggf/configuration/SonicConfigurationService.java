@@ -279,11 +279,10 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.TRACE_REWIND_KEY, GLFW_KEY_R);
 		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, false);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_R);
-		migrateRewindTapeCoastConfigNames();
-		putDefault(SonicConfiguration.REWIND_TAPE_COAST_ENABLED, false);
-		putDefault(SonicConfiguration.REWIND_TAPE_COAST_ACCELERATION, 0.25);
-		putDefault(SonicConfiguration.REWIND_TAPE_COAST_DECELERATION, 0.5);
-		putDefault(SonicConfiguration.REWIND_TAPE_COAST_MAX_STEPS, 1.99);
+		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);
+		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ACCELERATION, 0.25);
+		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_DECELERATION, 0.5);
+		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS, 4.0);
 		putDefaultKey(SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY, GLFW_KEY_C);
 		putDefaultKey(SonicConfiguration.LEVEL_SELECT_KEY, GLFW_KEY_F9);
 		putDefault(SonicConfiguration.TITLE_SCREEN_ON_STARTUP, true);
@@ -326,20 +325,6 @@ public class SonicConfigurationService {
 
 	private void putDefaultKey(SonicConfiguration key, int glfwKeyCode) {
 		putDefault(key, GlfwKeyNameResolver.nameOf(glfwKeyCode));
-	}
-
-	private void migrateRewindTapeCoastConfigNames() {
-		migrateConfigName("LIVE_REWIND_TAPE_COAST_ENABLED", SonicConfiguration.REWIND_TAPE_COAST_ENABLED);
-		migrateConfigName("LIVE_REWIND_TAPE_COAST_ACCELERATION", SonicConfiguration.REWIND_TAPE_COAST_ACCELERATION);
-		migrateConfigName("LIVE_REWIND_TAPE_COAST_DECELERATION", SonicConfiguration.REWIND_TAPE_COAST_DECELERATION);
-		migrateConfigName("LIVE_REWIND_TAPE_COAST_MAX_STEPS", SonicConfiguration.REWIND_TAPE_COAST_MAX_STEPS);
-	}
-
-	private void migrateConfigName(String oldName, SonicConfiguration newKey) {
-		if (config.containsKey(oldName) && !config.containsKey(newKey.name())) {
-			config.put(newKey.name(), config.get(oldName));
-		}
-		config.remove(oldName);
 	}
 
 	/**

@@ -163,9 +163,6 @@ public interface AudioBackend {
     default void beginReversePresentation() {
     }
 
-    default void setReversePresentationRate(double rate) {
-    }
-
     default void endReversePresentation() {
     }
 

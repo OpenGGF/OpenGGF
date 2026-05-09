@@ -135,63 +135,6 @@ class TestAudioCommandTimeline {
     }
 
     @Test
-    void entryCountReportsTimelineSizeWithoutRequestingEntriesCopy() {
-        AudioCommandTimeline timeline = audio.commandTimeline();
-        audio.beginCommandTimelineFrame(2);
-        audio.playSfx("A");
-        audio.playSfx("B");
-
-        assertEquals(2, timeline.entryCount());
-
-        var copy = timeline.entries();
-        assertEquals(2, copy.size());
-        assertThrows(UnsupportedOperationException.class, copy::clear);
-        assertEquals(2, timeline.entryCount());
-    }
-
-    @Test
-    void visitsEntriesFromCapturedIndexThroughTargetFrameInTimelineOrder() {
-        AudioCommandTimeline timeline = audio.commandTimeline();
-        audio.beginCommandTimelineFrame(1);
-        audio.playSfx("before");
-        int startIndex = timeline.entryCount();
-        audio.beginCommandTimelineFrame(2);
-        audio.playSfx("A");
-        audio.playSfx("B");
-        audio.beginCommandTimelineFrame(3);
-        audio.playSfx("C");
-        audio.beginCommandTimelineFrame(4);
-        audio.playSfx("future");
-
-        java.util.List<String> names = new java.util.ArrayList<>();
-        int visited = timeline.forEachEntryFrom(startIndex, 3, entry ->
-                names.add(((AudioCommand.PlaySfx) entry.command()).sfxName()));
-
-        assertEquals(3, visited);
-        assertEquals(java.util.List.of("A", "B", "C"), names);
-    }
-
-    @Test
-    void rangeVisitorStopsAtFutureEntriesAndIgnoresConsumerMutations() {
-        AudioCommandTimeline timeline = audio.commandTimeline();
-        audio.beginCommandTimelineFrame(1);
-        audio.playSfx("A");
-        audio.beginCommandTimelineFrame(3);
-        audio.playSfx("future");
-
-        java.util.List<String> names = new java.util.ArrayList<>();
-        int visited = timeline.forEachEntryFrom(0, 1, entry -> {
-            names.add(((AudioCommand.PlaySfx) entry.command()).sfxName());
-            audio.beginCommandTimelineFrame(1);
-            audio.playSfx("mutated");
-        });
-
-        assertEquals(1, visited);
-        assertEquals(java.util.List.of("A"), names);
-        assertEquals(3, timeline.entryCount());
-    }
-
-    @Test
     void suppressedReplayDoesNotRecordTimelineCommands() {
         audio.beginCommandTimelineFrame(6);
 

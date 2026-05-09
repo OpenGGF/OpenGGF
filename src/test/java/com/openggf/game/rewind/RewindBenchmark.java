@@ -2,13 +2,7 @@ package com.openggf.game.rewind;
 
 import com.openggf.audio.AudioBenchmarkMemoryProbe;
 import com.openggf.audio.AudioManager;
-import com.openggf.audio.AudioStream;
 import com.openggf.audio.rewind.AudioKeyframeStore;
-import com.openggf.audio.runtime.AudioFrameClock;
-import com.openggf.audio.runtime.AudioOutputFifo;
-import com.openggf.audio.runtime.FrameAudioMode;
-import com.openggf.audio.runtime.PcmHistoryRing;
-import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
@@ -28,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -36,11 +29,6 @@ import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
-
-import jdk.jfr.Event;
-import jdk.jfr.Label;
-import jdk.jfr.Name;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -63,44 +51,12 @@ public class RewindBenchmark {
     private static final long MAX_CAPTURE_MEAN_NS = 1_000_000L;
     private static final long MAX_RESTORE_MEAN_NS = 1_500_000L;
     private static final long MAX_SEEK_MEAN_NS = 10_000_000L;
-    private static final long MAX_FIRST_SEGMENT_EXPANSION_MEAN_NS = 100_000_000L;
-    private static final long DEFAULT_MAX_CAPTURE_P95_NS = 2_000_000L;
-    private static final long DEFAULT_MAX_CAPTURE_P99_NS = 5_000_000L;
-    private static final long DEFAULT_MAX_CAPTURE_MAX_NS = 25_000_000L;
-    private static final long DEFAULT_MAX_RESTORE_P95_NS = 3_000_000L;
-    private static final long DEFAULT_MAX_RESTORE_P99_NS = 8_000_000L;
-    private static final long DEFAULT_MAX_RESTORE_MAX_NS = 40_000_000L;
-    private static final long DEFAULT_MAX_SEEK_P95_NS = 25_000_000L;
-    private static final long DEFAULT_MAX_SEEK_P99_NS = 75_000_000L;
-    private static final long DEFAULT_MAX_SEEK_MAX_NS = 250_000_000L;
     private static final long MAX_BYTES_PER_KEYFRAME = 128L * 1024L;
     private static final long MIN_LONGTAIL_CLEAN_FRAMES = 1200L;
     private static final long DEFAULT_MAX_AUDIO_CAPTURE_MEAN_NS = 250_000L;
     private static final long DEFAULT_MAX_AUDIO_RESTORE_MEAN_NS = 250_000L;
     private static final long DEFAULT_MAX_AUDIO_REPLAY_MEAN_NS = 2_000_000L;
     private static final long DEFAULT_MAX_AUDIO_ALLOCATED_BYTES = 512L * 1024L;
-    private static final long DEFAULT_MAX_AUDIO_PRESENTATION_FORWARD_MEAN_NS = 1_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_PRESENTATION_REVERSE_MEAN_NS = 500_000L;
-    private static final long DEFAULT_MAX_AUDIO_CAPTURE_P95_NS = 500_000L;
-    private static final long DEFAULT_MAX_AUDIO_CAPTURE_P99_NS = 1_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_CAPTURE_MAX_NS = 5_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_RESTORE_P95_NS = 500_000L;
-    private static final long DEFAULT_MAX_AUDIO_RESTORE_P99_NS = 1_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_RESTORE_MAX_NS = 5_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_REPLAY_P95_NS = 4_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_REPLAY_P99_NS = 8_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_REPLAY_MAX_NS = 25_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_PRESENTATION_FORWARD_P95_NS = 2_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_PRESENTATION_FORWARD_P99_NS = 4_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_PRESENTATION_FORWARD_MAX_NS = 20_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_PRESENTATION_REVERSE_P95_NS = 1_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_PRESENTATION_REVERSE_P99_NS = 2_000_000L;
-    private static final long DEFAULT_MAX_AUDIO_PRESENTATION_REVERSE_MAX_NS = 10_000_000L;
-    private static final int AUDIO_PRESENTATION_SAMPLE_RATE = 48_000;
-    private static final int AUDIO_PRESENTATION_FRAME_RATE = 60;
-    private static final int AUDIO_PRESENTATION_GAME_FRAMES = 1_200;
-    private static final int AUDIO_PRESENTATION_DRAIN_FRAMES = 1_024;
-    private static final int AUDIO_PRESENTATION_DRAIN_ITERATIONS = 500;
 
     /** Aggregate phase results, dumped to JSON at end of test. */
     private final Map<String, BenchmarkResults> results = new LinkedHashMap<>();
@@ -122,49 +78,28 @@ public class RewindBenchmark {
         movie = loadMovie();
 
         // Phase 1: forward overhead (framework off + framework on)
-        try (BenchmarkPhaseMarker ignored = beginPhaseMarker("phase1.forward-overhead", "trace")) {
-            runPhase1ForwardOverhead();
-        }
+        runPhase1ForwardOverhead();
 
         // Phase 2: capture cost
-        try (BenchmarkPhaseMarker ignored = beginPhaseMarker("phase2.capture", "attributed")) {
-            runPhase2CaptureCost();
-        }
+        runPhase2CaptureCost();
 
         // Phase 3: restore cost
-        try (BenchmarkPhaseMarker ignored = beginPhaseMarker("phase3.restore", "attributed")) {
-            runPhase3RestoreCost();
-        }
+        runPhase3RestoreCost();
 
         // Phase 4: cold seek
-        try (BenchmarkPhaseMarker ignored = beginPhaseMarker("phase4.cold-seek", "seekTo")) {
-            runPhase4ColdSeek();
-        }
+        runPhase4ColdSeek();
 
         // Phase 5: hot seek
-        try (BenchmarkPhaseMarker ignored = beginPhaseMarker("phase5.hot-seek", "stepBackward")) {
-            runPhase5HotSeek();
-        }
+        runPhase5HotSeek();
 
         // Phase 6: memory
-        try (BenchmarkPhaseMarker ignored = beginPhaseMarker("phase6.memory", "retained")) {
-            runPhase6Memory();
-        }
+        runPhase6Memory();
 
         // Long-tail determinism gate
-        try (BenchmarkPhaseMarker ignored = beginPhaseMarker("longtail.determinism", "scrub")) {
-            runLongTailDeterminismGate();
-        }
+        runLongTailDeterminismGate();
 
         // Audio logical rewind phases and counters
-        try (BenchmarkPhaseMarker ignored = beginPhaseMarker("phase7.audio", "logical")) {
-            runPhase7AudioRewind();
-        }
-
-        // Audio PCM presentation history and reverse readback
-        try (BenchmarkPhaseMarker ignored = beginPhaseMarker("phase8.audio", "presentation-pcm")) {
-            runPhase8AudioPresentationPcm();
-        }
+        runPhase7AudioRewind();
 
         // Conservative guardrails. These are intentionally loose enough for
         // noisy developer machines, but tight enough to catch order-of-magnitude
@@ -195,48 +130,6 @@ public class RewindBenchmark {
                         r.totalWallTimeNs());
             }
         }
-    }
-
-    static BenchmarkPhaseMarker beginPhaseMarkerForTests(String phaseName, String detail) {
-        return beginPhaseMarker(phaseName, detail);
-    }
-
-    private static BenchmarkPhaseMarker beginPhaseMarker(String phaseName, String detail) {
-        return new BenchmarkPhaseMarker(phaseName, detail);
-    }
-
-    static final class BenchmarkPhaseMarker implements AutoCloseable {
-        private final BenchmarkPhaseEvent event;
-
-        private BenchmarkPhaseMarker(String phaseName, String detail) {
-            this.event = new BenchmarkPhaseEvent();
-            this.event.phaseName = phaseName;
-            this.event.detail = detail;
-            this.event.begin();
-        }
-
-        String phaseNameForTests() {
-            return event.phaseName;
-        }
-
-        String detailForTests() {
-            return event.detail;
-        }
-
-        @Override
-        public void close() {
-            event.commit();
-        }
-    }
-
-    @Name("com.openggf.rewind.BenchmarkPhase")
-    @Label("Rewind Benchmark Phase")
-    static final class BenchmarkPhaseEvent extends Event {
-        @Label("Phase")
-        String phaseName;
-
-        @Label("Detail")
-        String detail;
     }
 
     // -------------------------------------------------------------------------
@@ -302,26 +195,20 @@ public class RewindBenchmark {
             for (int i = 0; i < warmup; i++) fixture.stepFrameFromRecording();
             GameplayModeContext gm = SessionManager.getCurrentGameplayMode();
             var registry = gm.getRewindRegistry();
-            var captureEntries = registeredSubsystems(registry);
-            Map<String, BenchmarkTiming> perSubsystemTimings = new LinkedHashMap<>();
 
             // For 1000 iterations, capture + discard
             for (int i = 0; i < 1000; i++) {
                 long t0 = System.nanoTime();
-                captureWithAttribution(captureEntries, perSubsystemTimings);
+                registry.capture();
                 overallTiming.record(System.nanoTime() - t0);
             }
-            results.put("phase2.capture",
-                    new BenchmarkResults("phase2.capture",
-                            overallTiming.summarize(), 0, summarizeSubsystemTimings(perSubsystemTimings)));
         } finally {
             TestEnvironment.resetAll();
         }
         long wall = System.nanoTime() - wallStart;
-        BenchmarkResults measured = results.get("phase2.capture");
         results.put("phase2.capture",
                 new BenchmarkResults("phase2.capture",
-                        measured.overall(), wall, measured.perSubsystem()));
+                        overallTiming.summarize(), wall, Map.of()));
     }
 
     // -------------------------------------------------------------------------
@@ -337,128 +224,21 @@ public class RewindBenchmark {
             for (int i = 0; i < warmup; i++) fixture.stepFrameFromRecording();
             GameplayModeContext gm = SessionManager.getCurrentGameplayMode();
             var registry = gm.getRewindRegistry();
-            var restoreEntries = registeredSubsystems(registry);
-            var postRestoreCallbacks = registeredPostRestoreCallbacks(registry);
-            Map<String, BenchmarkTiming> perSubsystemTimings = new LinkedHashMap<>();
 
             // Capture once, then time repeated restores from that snapshot.
             CompositeSnapshot baseline = registry.capture();
             for (int i = 0; i < 500; i++) {
                 long t0 = System.nanoTime();
-                restoreWithAttribution(restoreEntries, postRestoreCallbacks, baseline, perSubsystemTimings);
+                registry.restore(baseline);
                 overallTiming.record(System.nanoTime() - t0);
             }
-            results.put("phase3.restore",
-                    new BenchmarkResults("phase3.restore",
-                            overallTiming.summarize(), 0, summarizeSubsystemTimings(perSubsystemTimings)));
         } finally {
             TestEnvironment.resetAll();
         }
         long wall = System.nanoTime() - wallStart;
-        BenchmarkResults measured = results.get("phase3.restore");
         results.put("phase3.restore",
                 new BenchmarkResults("phase3.restore",
-                        measured.overall(), wall, measured.perSubsystem()));
-    }
-
-    static TimedCompositeSnapshot captureWithAttributionForTests(
-            RewindRegistry registry,
-            Map<String, BenchmarkTiming> timings) {
-        return captureWithAttribution(registeredSubsystems(registry), timings);
-    }
-
-    static void restoreWithAttributionForTests(
-            RewindRegistry registry,
-            CompositeSnapshot snapshot,
-            Map<String, BenchmarkTiming> timings) {
-        restoreWithAttribution(
-                registeredSubsystems(registry),
-                registeredPostRestoreCallbacks(registry),
-                snapshot,
-                timings);
-    }
-
-    static Map<String, BenchmarkResults.PhaseStats> summarizeSubsystemTimingsForTests(
-            Map<String, BenchmarkTiming> timings) {
-        return summarizeSubsystemTimings(timings);
-    }
-
-    record TimedCompositeSnapshot(
-            CompositeSnapshot snapshot,
-            Map<String, BenchmarkResults.PhaseStats> perSubsystem) {
-    }
-
-    private static TimedCompositeSnapshot captureWithAttribution(
-            Map<String, RewindSnapshottable<?>> entries,
-            Map<String, BenchmarkTiming> timings) {
-        var bundle = new LinkedHashMap<String, Object>(entries.size());
-        for (var e : entries.entrySet()) {
-            long t0 = System.nanoTime();
-            Object snapshot = e.getValue().capture();
-            timingFor(timings, e.getKey()).record(System.nanoTime() - t0);
-            bundle.put(e.getKey(), snapshot);
-        }
-        return new TimedCompositeSnapshot(new CompositeSnapshot(bundle), Map.of());
-    }
-
-    private static void restoreWithAttribution(
-            Map<String, RewindSnapshottable<?>> entries,
-            Map<String, Runnable> postRestoreCallbacks,
-            CompositeSnapshot snapshot,
-            Map<String, BenchmarkTiming> timings) {
-        Objects.requireNonNull(snapshot, "snapshot");
-        for (var e : entries.entrySet()) {
-            Object subsystemSnapshot = snapshot.get(e.getKey());
-            if (subsystemSnapshot == null) {
-                continue;
-            }
-            long t0 = System.nanoTime();
-            @SuppressWarnings({"rawtypes", "unchecked"})
-            RewindSnapshottable raw = e.getValue();
-            raw.restore(subsystemSnapshot);
-            timingFor(timings, e.getKey()).record(System.nanoTime() - t0);
-        }
-        if (!postRestoreCallbacks.isEmpty()) {
-            long t0 = System.nanoTime();
-            for (Runnable callback : postRestoreCallbacks.values()) {
-                callback.run();
-            }
-            timingFor(timings, "post-restore-callbacks").record(System.nanoTime() - t0);
-        }
-    }
-
-    private static BenchmarkTiming timingFor(Map<String, BenchmarkTiming> timings, String key) {
-        return timings.computeIfAbsent(key, ignored -> new BenchmarkTiming(10_000));
-    }
-
-    private static Map<String, BenchmarkResults.PhaseStats> summarizeSubsystemTimings(
-            Map<String, BenchmarkTiming> timings) {
-        Map<String, BenchmarkResults.PhaseStats> summary = new LinkedHashMap<>();
-        for (var e : timings.entrySet()) {
-            summary.put(e.getKey(), e.getValue().summarize());
-        }
-        return summary;
-    }
-
-    private static Map<String, RewindSnapshottable<?>> registeredSubsystems(RewindRegistry registry) {
-        return registryField(registry, "entries");
-    }
-
-    private static Map<String, Runnable> registeredPostRestoreCallbacks(RewindRegistry registry) {
-        return registryField(registry, "postRestoreCallbacks");
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> Map<String, T> registryField(RewindRegistry registry, String fieldName) {
-        try {
-            Field field = RewindRegistry.class.getDeclaredField(fieldName);
-            field.setAccessible(true);
-            return (Map<String, T>) field.get(registry);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(
-                    "Unable to access RewindRegistry." + fieldName
-                            + " for benchmark-local attribution", e);
-        }
+                        overallTiming.summarize(), wall, Map.of()));
     }
 
     // -------------------------------------------------------------------------
@@ -504,13 +284,10 @@ public class RewindBenchmark {
     // -------------------------------------------------------------------------
 
     private void runPhase5HotSeek() throws IOException {
-        BenchmarkTiming firstSegmentExpansion = new BenchmarkTiming(1);
-        BenchmarkTiming cachedSameSegment = new BenchmarkTiming(500);
-        BenchmarkTiming segmentCrossingScrub = new BenchmarkTiming(50);
+        BenchmarkTiming withinSegment = new BenchmarkTiming(500);
+        BenchmarkTiming acrossSegment = new BenchmarkTiming(50);
         long wallStart = System.nanoTime();
         HeadlessTestFixture fixture = buildFixture();
-        int cachedSamples = 0;
-        int crossingSamples = 0;
         try {
             GameplayModeContext gm = SessionManager.getCurrentGameplayMode();
             var inputs = new TraceFixtureInputSource(movie);
@@ -522,55 +299,36 @@ public class RewindBenchmark {
             int stepCount = Math.min(1200, fixture.runner().getRecordingFramesRemaining());
             for (int i = 0; i < stepCount; i++) rc.step();
 
-            // First backward step has to expand the current segment.
-            if (rc.canStepBackward()) {
+            // Hot scrub: stepBackward 30 times within the same segment
+            for (int i = 0; i < 30; i++) {
                 long t0 = System.nanoTime();
                 rc.stepBackward();
-                firstSegmentExpansion.record(System.nanoTime() - t0);
+                withinSegment.record(System.nanoTime() - t0);
             }
-
-            int interval = keyframeInterval();
-            while (rc.canStepBackward() && crossingSamples < 12) {
-                boolean crossingSegment = rc.currentFrame() % interval == 0;
+            // Crossing a segment boundary
+            long t0 = System.nanoTime();
+            rc.stepBackward();
+            acrossSegment.record(System.nanoTime() - t0);
+            // Continue within previous segment
+            for (int i = 0; i < 29; i++) {
                 long t1 = System.nanoTime();
                 rc.stepBackward();
-                long elapsed = System.nanoTime() - t1;
-                if (crossingSegment) {
-                    segmentCrossingScrub.record(elapsed);
-                    crossingSamples++;
-                } else {
-                    cachedSameSegment.record(elapsed);
-                    cachedSamples++;
-                }
+                withinSegment.record(System.nanoTime() - t1);
             }
+            // Cross another boundary
+            long t2 = System.nanoTime();
+            rc.stepBackward();
+            acrossSegment.record(System.nanoTime() - t2);
         } finally {
             TestEnvironment.resetAll();
         }
         long wall = System.nanoTime() - wallStart;
-        Map<String, Long> firstCounters = Map.of("keyframeInterval", (long) keyframeInterval());
-        Map<String, Long> cachedCounters = Map.of(
-                "keyframeInterval", (long) keyframeInterval(),
-                "cachedSamples", (long) cachedSamples);
-        Map<String, Long> crossingCounters = Map.of(
-                "keyframeInterval", (long) keyframeInterval(),
-                "crossingSamples", (long) crossingSamples);
-        results.put("phase5.hot-seek.first-segment-expansion",
-                new BenchmarkResults("phase5.hot-seek.first-segment-expansion",
-                        firstSegmentExpansion.summarize(), wall, Map.of(), firstCounters));
-        results.put("phase5.hot-seek.cached-same-segment",
-                new BenchmarkResults("phase5.hot-seek.cached-same-segment",
-                        cachedSameSegment.summarize(), wall, Map.of(), cachedCounters));
-        results.put("phase5.hot-seek.segment-crossing-scrub",
-                new BenchmarkResults("phase5.hot-seek.segment-crossing-scrub",
-                        segmentCrossingScrub.summarize(), wall, Map.of(), crossingCounters));
-
-        // Compatibility aliases for existing dashboards/baselines.
         results.put("phase5.hot-seek.within-segment",
                 new BenchmarkResults("phase5.hot-seek.within-segment",
-                        cachedSameSegment.summarize(), wall, Map.of(), cachedCounters));
+                        withinSegment.summarize(), wall, Map.of()));
         results.put("phase5.hot-seek.across-segment",
                 new BenchmarkResults("phase5.hot-seek.across-segment",
-                        segmentCrossingScrub.summarize(), wall, Map.of(), crossingCounters));
+                        acrossSegment.summarize(), wall, Map.of()));
     }
 
     // -------------------------------------------------------------------------
@@ -744,7 +502,7 @@ public class RewindBenchmark {
                 audio.captureLogicalSnapshot(),
                 keyframes,
                 120,
-                audio.commandTimeline().entryCount());
+                audio.commandTimeline().entries().size());
     }
 
     private record AudioPhaseFixture(
@@ -752,85 +510,6 @@ public class RewindBenchmark {
             AudioKeyframeStore keyframes,
             long targetFrame,
             long timelineEntries) {
-    }
-
-    // -------------------------------------------------------------------------
-    // Phase 8: audio presentation PCM rewind
-    // -------------------------------------------------------------------------
-
-    private void runPhase8AudioPresentationPcm() {
-        AudioOutputFifo fifo = new AudioOutputFifo(AUDIO_PRESENTATION_SAMPLE_RATE * 2);
-        StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
-                new AudioFrameClock(AUDIO_PRESENTATION_SAMPLE_RATE, AUDIO_PRESENTATION_FRAME_RATE),
-                fifo,
-                PcmHistoryRing.expandable(
-                        AUDIO_PRESENTATION_SAMPLE_RATE * 10,
-                        AUDIO_PRESENTATION_SAMPLE_RATE * AUDIO_PRESENTATION_GAME_FRAMES / AUDIO_PRESENTATION_FRAME_RATE),
-                0);
-        runtime.setMusicStream(new BenchmarkPcmStream());
-
-        BenchmarkTiming forwardTiming = new BenchmarkTiming(AUDIO_PRESENTATION_GAME_FRAMES);
-        long forwardWallStart = System.nanoTime();
-        for (int frame = 1; frame <= AUDIO_PRESENTATION_GAME_FRAMES; frame++) {
-            long t0 = System.nanoTime();
-            runtime.advanceFrame(frame, FrameAudioMode.NORMAL);
-            forwardTiming.record(System.nanoTime() - t0);
-        }
-        long forwardWall = System.nanoTime() - forwardWallStart;
-        long historyPcmFrames = (long) AUDIO_PRESENTATION_SAMPLE_RATE
-                * AUDIO_PRESENTATION_GAME_FRAMES / AUDIO_PRESENTATION_FRAME_RATE;
-        results.put("phase8.audio.presentation-forward-pcm",
-                new BenchmarkResults("phase8.audio.presentation-forward-pcm",
-                        forwardTiming.summarize(), forwardWall, Map.of(),
-                        Map.of("sampleRate", (long) AUDIO_PRESENTATION_SAMPLE_RATE,
-                                "gameFrames", (long) AUDIO_PRESENTATION_GAME_FRAMES,
-                                "historyPcmFrames", historyPcmFrames)));
-
-        runtime.flushPresentationFifo();
-        runtime.beginReversePresentation();
-        short[] target = new short[AUDIO_PRESENTATION_DRAIN_FRAMES * 2];
-        BenchmarkTiming reverseTiming = new BenchmarkTiming(AUDIO_PRESENTATION_DRAIN_ITERATIONS);
-        long[] readFrames = {0};
-        AudioBenchmarkMemoryProbe.RunResult memory = AudioBenchmarkMemoryProbe.create().measureTimedRun(() -> {
-            for (int i = 0; i < AUDIO_PRESENTATION_DRAIN_ITERATIONS; i++) {
-                long t0 = System.nanoTime();
-                readFrames[0] += runtime.drainPcm(target, AUDIO_PRESENTATION_DRAIN_FRAMES);
-                reverseTiming.record(System.nanoTime() - t0);
-            }
-        });
-        runtime.endReversePresentation();
-        Map<String, Long> counters = new LinkedHashMap<>();
-        counters.put("sampleRate", (long) AUDIO_PRESENTATION_SAMPLE_RATE);
-        counters.put("drainFramesPerIteration", (long) AUDIO_PRESENTATION_DRAIN_FRAMES);
-        counters.put("drainIterations", (long) AUDIO_PRESENTATION_DRAIN_ITERATIONS);
-        counters.put("readPcmFrames", readFrames[0]);
-        counters.put("allocatedBytes", memory.allocatedBytes());
-        counters.put("allocatedBytesSupported", memory.allocatedBytesSupported() ? 1L : 0L);
-        counters.put("heapUsedDeltaBytes", memory.heapUsedDeltaBytes());
-        counters.put("gcCountDelta", memory.gcCountDelta());
-        counters.put("gcTimeDeltaMs", memory.gcTimeDeltaMs());
-        results.put("phase8.audio.presentation-reverse-pcm",
-                new BenchmarkResults("phase8.audio.presentation-reverse-pcm",
-                        reverseTiming.summarize(), memory.elapsedNanos(), Map.of(), counters));
-    }
-
-    private static final class BenchmarkPcmStream implements AudioStream {
-        private int cursor;
-
-        @Override
-        public int read(short[] buffer) {
-            for (int i = 0; i < buffer.length; i += 2) {
-                short sample = (short) ((cursor++ * 31) & 0x3FFF);
-                buffer[i] = sample;
-                buffer[i + 1] = (short) -sample;
-            }
-            return buffer.length;
-        }
-
-        @Override
-        public boolean isComplete() {
-            return false;
-        }
     }
 
     static long estimateStructuralSize(Object obj) {
@@ -1016,12 +695,8 @@ public class RewindBenchmark {
         assertMeanAtMost("phase2.capture", MAX_CAPTURE_MEAN_NS);
         assertMeanAtMost("phase3.restore", MAX_RESTORE_MEAN_NS);
         assertMeanAtMost("phase4.cold-seek", MAX_SEEK_MEAN_NS);
-        assertMeanAtMost("phase5.hot-seek.first-segment-expansion", MAX_FIRST_SEGMENT_EXPANSION_MEAN_NS);
-        assertMeanAtMost("phase5.hot-seek.cached-same-segment", MAX_SEEK_MEAN_NS);
-        assertMeanAtMost("phase5.hot-seek.segment-crossing-scrub", MAX_SEEK_MEAN_NS);
         assertMeanAtMost("phase5.hot-seek.within-segment", MAX_SEEK_MEAN_NS);
         assertMeanAtMost("phase6.memory", MAX_BYTES_PER_KEYFRAME);
-        assertOptionalBenchmarkTailBounds(results);
         BenchmarkResults longtail = results.get("longtail.determinism");
         assertTrue(longtail != null
                         && longtail.overall().meanNs() >= MIN_LONGTAIL_CLEAN_FRAMES,
@@ -1035,67 +710,6 @@ public class RewindBenchmark {
         assertTrue(result != null, "missing benchmark phase " + phase);
         assertTrue(result.overall().meanNs() <= max,
                 phase + " mean " + result.overall().meanNs() + " exceeds " + max);
-    }
-
-    static void assertBenchmarkTailBoundsForTests(Map<String, BenchmarkResults> results) {
-        assertOptionalBenchmarkTailBounds(results);
-    }
-
-    private static void assertOptionalBenchmarkTailBounds(Map<String, BenchmarkResults> results) {
-        if (!Boolean.getBoolean("openggf.rewind.benchmark.tailBudgets")) {
-            return;
-        }
-        assertTailStatsAtMost(results, "phase2.capture",
-                "openggf.rewind.benchmark.phase2.capture",
-                DEFAULT_MAX_CAPTURE_P95_NS,
-                DEFAULT_MAX_CAPTURE_P99_NS,
-                DEFAULT_MAX_CAPTURE_MAX_NS);
-        assertTailStatsAtMost(results, "phase3.restore",
-                "openggf.rewind.benchmark.phase3.restore",
-                DEFAULT_MAX_RESTORE_P95_NS,
-                DEFAULT_MAX_RESTORE_P99_NS,
-                DEFAULT_MAX_RESTORE_MAX_NS);
-        assertTailStatsAtMost(results, "phase4.cold-seek",
-                "openggf.rewind.benchmark.phase4.cold-seek",
-                DEFAULT_MAX_SEEK_P95_NS,
-                DEFAULT_MAX_SEEK_P99_NS,
-                DEFAULT_MAX_SEEK_MAX_NS);
-        assertTailStatsAtMost(results, "phase5.hot-seek.first-segment-expansion",
-                "openggf.rewind.benchmark.phase5.hot-seek.first-segment-expansion",
-                DEFAULT_MAX_SEEK_P95_NS,
-                DEFAULT_MAX_SEEK_P99_NS,
-                DEFAULT_MAX_SEEK_MAX_NS);
-        assertTailStatsAtMost(results, "phase5.hot-seek.cached-same-segment",
-                "openggf.rewind.benchmark.phase5.hot-seek.cached-same-segment",
-                DEFAULT_MAX_SEEK_P95_NS,
-                DEFAULT_MAX_SEEK_P99_NS,
-                DEFAULT_MAX_SEEK_MAX_NS);
-        assertTailStatsAtMost(results, "phase5.hot-seek.segment-crossing-scrub",
-                "openggf.rewind.benchmark.phase5.hot-seek.segment-crossing-scrub",
-                DEFAULT_MAX_SEEK_P95_NS,
-                DEFAULT_MAX_SEEK_P99_NS,
-                DEFAULT_MAX_SEEK_MAX_NS);
-    }
-
-    private static void assertTailStatsAtMost(
-            Map<String, BenchmarkResults> results,
-            String phase,
-            String propertyPrefix,
-            long defaultP95Ns,
-            long defaultP99Ns,
-            long defaultMaxNs) {
-        BenchmarkResults result = results.get(phase);
-        assertTrue(result != null, "missing benchmark phase " + phase);
-        BenchmarkResults.PhaseStats stats = result.overall();
-        assertTrue(stats.p95Ns() <= Long.getLong(propertyPrefix + ".maxP95Ns", defaultP95Ns),
-                phase + " p95 " + stats.p95Ns() + " exceeds "
-                        + Long.getLong(propertyPrefix + ".maxP95Ns", defaultP95Ns));
-        assertTrue(stats.p99Ns() <= Long.getLong(propertyPrefix + ".maxP99Ns", defaultP99Ns),
-                phase + " p99 " + stats.p99Ns() + " exceeds "
-                        + Long.getLong(propertyPrefix + ".maxP99Ns", defaultP99Ns));
-        assertTrue(stats.maxNs() <= Long.getLong(propertyPrefix + ".maxMaxNs", defaultMaxNs),
-                phase + " max " + stats.maxNs() + " exceeds "
-                        + Long.getLong(propertyPrefix + ".maxMaxNs", defaultMaxNs));
     }
 
     static void assertAudioBenchmarkBoundsForTests(Map<String, BenchmarkResults> results) {
@@ -1115,37 +729,6 @@ public class RewindBenchmark {
         assertMeanAtMost(results, "phase7.audio.replay-logical",
                 Long.getLong("openggf.rewind.benchmark.audio.maxReplayMeanNs",
                         DEFAULT_MAX_AUDIO_REPLAY_MEAN_NS));
-        assertMeanAtMost(results, "phase8.audio.presentation-forward-pcm",
-                Long.getLong("openggf.rewind.benchmark.audio.maxPresentationForwardMeanNs",
-                        DEFAULT_MAX_AUDIO_PRESENTATION_FORWARD_MEAN_NS));
-        assertMeanAtMost(results, "phase8.audio.presentation-reverse-pcm",
-                Long.getLong("openggf.rewind.benchmark.audio.maxPresentationReverseMeanNs",
-                        DEFAULT_MAX_AUDIO_PRESENTATION_REVERSE_MEAN_NS));
-        assertTailStatsAtMost(results, "phase7.audio.capture-logical",
-                "openggf.rewind.benchmark.audio.capture",
-                DEFAULT_MAX_AUDIO_CAPTURE_P95_NS,
-                DEFAULT_MAX_AUDIO_CAPTURE_P99_NS,
-                DEFAULT_MAX_AUDIO_CAPTURE_MAX_NS);
-        assertTailStatsAtMost(results, "phase7.audio.restore-logical",
-                "openggf.rewind.benchmark.audio.restore",
-                DEFAULT_MAX_AUDIO_RESTORE_P95_NS,
-                DEFAULT_MAX_AUDIO_RESTORE_P99_NS,
-                DEFAULT_MAX_AUDIO_RESTORE_MAX_NS);
-        assertTailStatsAtMost(results, "phase7.audio.replay-logical",
-                "openggf.rewind.benchmark.audio.replay",
-                DEFAULT_MAX_AUDIO_REPLAY_P95_NS,
-                DEFAULT_MAX_AUDIO_REPLAY_P99_NS,
-                DEFAULT_MAX_AUDIO_REPLAY_MAX_NS);
-        assertTailStatsAtMost(results, "phase8.audio.presentation-forward-pcm",
-                "openggf.rewind.benchmark.audio.presentationForward",
-                DEFAULT_MAX_AUDIO_PRESENTATION_FORWARD_P95_NS,
-                DEFAULT_MAX_AUDIO_PRESENTATION_FORWARD_P99_NS,
-                DEFAULT_MAX_AUDIO_PRESENTATION_FORWARD_MAX_NS);
-        assertTailStatsAtMost(results, "phase8.audio.presentation-reverse-pcm",
-                "openggf.rewind.benchmark.audio.presentationReverse",
-                DEFAULT_MAX_AUDIO_PRESENTATION_REVERSE_P95_NS,
-                DEFAULT_MAX_AUDIO_PRESENTATION_REVERSE_P99_NS,
-                DEFAULT_MAX_AUDIO_PRESENTATION_REVERSE_MAX_NS);
         BenchmarkResults replay = results.get("phase7.audio.replay-logical");
         assertTrue(replay != null, "missing benchmark phase phase7.audio.replay-logical");
         if (replay.counters().getOrDefault("allocatedBytesSupported", 0L) == 1L) {

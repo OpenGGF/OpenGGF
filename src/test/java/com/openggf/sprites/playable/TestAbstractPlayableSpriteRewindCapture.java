@@ -594,24 +594,6 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertFalse(spawner.lastShield.isDestroyed());
     }
 
-    @Test
-    void roundTripRestoresInvincibilityAndRebindsStarsObject() {
-        Sonic sonic = new Sonic("sonic", (short) 100, (short) 200);
-        RecordingPowerUpSpawner spawner = new RecordingPowerUpSpawner();
-        sonic.setPowerUpSpawner(spawner);
-        sonic.giveInvincibility();
-
-        PerObjectRewindSnapshot snapshot = sonic.captureRewindState();
-        sonic.clearPowerUps();
-
-        sonic.restoreRewindState(snapshot);
-        sonic.refreshPowerUpObjectsAfterRewindRestore();
-
-        assertTrue(sonic.getInvincibleFrames() > 0);
-        assertSame(spawner.lastStars, sonic.getInvincibilityObject());
-        assertFalse(spawner.lastStars.isDestroyed());
-    }
-
     private static void setBooleanField(Object target, String name, boolean value) throws Exception {
         Field field = target.getClass().getDeclaredField(name);
         field.setAccessible(true);
@@ -638,7 +620,6 @@ class TestAbstractPlayableSpriteRewindCapture {
 
     private static final class RecordingPowerUpSpawner implements PowerUpSpawner {
         private RecordingPowerUpObject lastShield;
-        private RecordingPowerUpObject lastStars;
         private ShieldType lastShieldType;
 
         @Override
@@ -650,8 +631,7 @@ class TestAbstractPlayableSpriteRewindCapture {
 
         @Override
         public PowerUpObject spawnInvincibilityStars(PlayableEntity player) {
-            lastStars = new RecordingPowerUpObject();
-            return lastStars;
+            return new RecordingPowerUpObject();
         }
 
         @Override

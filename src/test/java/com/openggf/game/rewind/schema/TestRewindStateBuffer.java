@@ -49,22 +49,6 @@ class TestRewindStateBuffer {
     }
 
     @Test
-    void takeBytesTransfersBackingStorageAndResetsWriter() {
-        RewindStateBuffer buffer = new RewindStateBuffer();
-        for (int i = 0; i < 64; i++) {
-            buffer.writeByte(i);
-        }
-
-        RewindStateBuffer.OwnedBytes owned = buffer.takeBytes();
-        buffer.writeByte(99);
-
-        assertEquals(64, owned.length());
-        assertEquals(0, owned.bytes()[0]);
-        assertEquals(63, owned.bytes()[63]);
-        assertArrayEquals(new byte[] {99}, buffer.toByteArray());
-    }
-
-    @Test
     void staticReaderDefensivelyCopiesInput() {
         byte[] source = new byte[]{10, 20};
         RewindStateBuffer.Reader reader = RewindStateBuffer.reader(source);
@@ -73,16 +57,6 @@ class TestRewindStateBuffer {
 
         assertEquals(10, reader.readByte());
         assertEquals(20, reader.readByte());
-    }
-
-    @Test
-    void ownedReaderUsesTransferredStorageWithoutCopying() {
-        byte[] source = new byte[] {10, 20};
-
-        RewindStateBuffer.Reader reader = RewindStateBuffer.readerForOwnedBytes(source, source.length);
-        source[0] = 99;
-
-        assertEquals(99, reader.readByte());
     }
 
     @Test

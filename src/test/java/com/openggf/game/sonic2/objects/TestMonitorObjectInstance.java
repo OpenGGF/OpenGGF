@@ -8,7 +8,6 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
@@ -98,40 +97,6 @@ class TestMonitorObjectInstance {
         assertEquals(0xFEE0, player.getYSpeed() & 0xFFFF,
                 "Breaking the monitor should negate the player's downward Y speed");
         verify(objectManager).markRemembered(monitor.getSpawn());
-    }
-
-    @Test
-    void rewindSnapshotRestoresBrokenRenderStateBeforeNextUpdate() {
-        ObjectSpawn spawn = new ObjectSpawn(0x0100, 0x0100, 0x26, 0x00, 0, false, 0);
-        ObjectManager objectManager = mock(ObjectManager.class);
-        MonitorObjectInstance monitor = new MonitorObjectInstance(spawn, "Monitor");
-        monitor.setServices(new StubObjectServices() {
-            @Override
-            public ObjectManager objectManager() {
-                return objectManager;
-            }
-        });
-
-        DummyPlayer player = new DummyPlayer();
-        player.setRolling(true);
-        player.setAnimationId(Sonic2AnimationIds.ROLL);
-        player.setYSpeed((short) 0x0120);
-        monitor.onTouchResponse(player, TOUCH_RESULT, 1);
-
-        PerObjectRewindSnapshot snapshot = monitor.captureRewindState();
-        MonitorObjectInstance restored = new MonitorObjectInstance(spawn, "Monitor");
-        restored.setServices(new StubObjectServices() {
-            @Override
-            public ObjectManager objectManager() {
-                return objectManager;
-            }
-        });
-
-        restored.restoreRewindState(snapshot);
-
-        assertTrue(isBroken(restored),
-                "Reverse presentation renders immediately after restore, before monitor lazy init can re-read remembered state");
-        assertEquals(0, restored.getCollisionFlags());
     }
 
     private static boolean isBroken(MonitorObjectInstance monitor) {
