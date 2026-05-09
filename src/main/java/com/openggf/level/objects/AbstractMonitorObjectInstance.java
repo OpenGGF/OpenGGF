@@ -1,7 +1,6 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.GenericFieldCapturer;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
 
@@ -126,8 +125,7 @@ public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstan
         PerObjectRewindSnapshot snapshot = super.captureRewindState();
         String code = (effectTarget instanceof Sprite sprite) ? sprite.getCode() : null;
         return snapshot.withObjectSubclassExtra(
-                        new PerObjectRewindSnapshot.MonitorRewindExtra(code))
-                .withGenericState(GenericFieldCapturer.captureObjectSubclassScalars(this));
+                new PerObjectRewindSnapshot.MonitorRewindExtra(code));
     }
 
     @Override

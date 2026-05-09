@@ -249,24 +249,24 @@ public enum SonicConfiguration {
 	LIVE_REWIND_KEY,
 
 	/**
-	 * Whether rewind continues with a short decelerating tape-coast after key release.
+	 * Whether live rewind continues with a short decelerating tape-coast after key release.
 	 */
-	REWIND_TAPE_COAST_ENABLED,
+	LIVE_REWIND_TAPE_COAST_ENABLED,
 
 	/**
-	 * Per-tick rewind speed increase when tape-coast policy is enabled.
+	 * Per-tick live rewind speed increase when tape-coast policy is enabled.
 	 */
-	REWIND_TAPE_COAST_ACCELERATION,
+	LIVE_REWIND_TAPE_COAST_ACCELERATION,
 
 	/**
-	 * Per-tick rewind speed decrease after release when tape-coast policy is enabled.
+	 * Per-tick live rewind speed decrease after release when tape-coast policy is enabled.
 	 */
-	REWIND_TAPE_COAST_DECELERATION,
+	LIVE_REWIND_TAPE_COAST_DECELERATION,
 
 	/**
-	 * Maximum rewind steps per tick when tape-coast policy is enabled.
+	 * Maximum live rewind steps per tick when tape-coast policy is enabled.
 	 */
-	REWIND_TAPE_COAST_MAX_STEPS,
+	LIVE_REWIND_TAPE_COAST_MAX_STEPS,
 
 	/**
 	 * Key to teleport player to the last checkpoint (debug).

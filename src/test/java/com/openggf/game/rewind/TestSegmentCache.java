@@ -62,30 +62,6 @@ class TestSegmentCache {
     }
 
     @Test
-    void cachedPriorSegmentsAreReusedWhenScrubAlternatesAcrossBoundaries() {
-        SegmentCache cache = new SegmentCache(10);
-        AtomicInteger steps = new AtomicInteger();
-        AtomicInteger restores = new AtomicInteger();
-        SegmentCache.Stepper stepper = () -> snap(steps.incrementAndGet());
-
-        cache.snapshotAt(9, snap(0), 0, restores::incrementAndGet, stepper);
-        cache.snapshotAt(19, snap(10), 10, restores::incrementAndGet, stepper);
-        cache.snapshotAt(29, snap(20), 20, restores::incrementAndGet, stepper);
-        int restoresAfterWarmup = restores.get();
-        int stepsAfterWarmup = steps.get();
-
-        var middle = cache.snapshotAt(18, snap(10), 10, restores::incrementAndGet, stepper);
-        var earliest = cache.snapshotAt(8, snap(0), 0, restores::incrementAndGet, stepper);
-
-        assertEquals(restoresAfterWarmup, restores.get(),
-                "previously expanded segments in the small ring must not re-restore keyframes");
-        assertEquals(stepsAfterWarmup, steps.get(),
-                "alternating across cached segment boundaries must not replay frames again");
-        assertEquals(17, middle.get("marker"));
-        assertEquals(8, earliest.get("marker"));
-    }
-
-    @Test
     void invalidateForcesNextAccessToRebuild() {
         SegmentCache cache = new SegmentCache(60);
         AtomicInteger steps = new AtomicInteger();
@@ -96,50 +72,5 @@ class TestSegmentCache {
         cache.invalidate();
         cache.snapshotAt(5, snap(0), 0, restores::incrementAndGet, stepper);
         assertEquals(2, restores.get());
-    }
-
-    @Test
-    void fourthSegmentEvictsLeastRecentlyUsedStrip() {
-        SegmentCache cache = new SegmentCache(10);
-        AtomicInteger steps = new AtomicInteger();
-        AtomicInteger restores = new AtomicInteger();
-        SegmentCache.Stepper stepper = () -> snap(steps.incrementAndGet());
-
-        cache.snapshotAt(9, snap(0), 0, restores::incrementAndGet, stepper);
-        cache.snapshotAt(19, snap(10), 10, restores::incrementAndGet, stepper);
-        cache.snapshotAt(29, snap(20), 20, restores::incrementAndGet, stepper);
-        cache.snapshotAt(8, snap(0), 0, restores::incrementAndGet, stepper);
-        int restoresAfterRefreshingFirstSegment = restores.get();
-
-        cache.snapshotAt(39, snap(30), 30, restores::incrementAndGet, stepper);
-        assertEquals(restoresAfterRefreshingFirstSegment + 1, restores.get(),
-                "fourth segment should evict exactly one least-recently-used strip");
-
-        cache.snapshotAt(28, snap(20), 20, restores::incrementAndGet, stepper);
-        assertEquals(restoresAfterRefreshingFirstSegment + 1, restores.get(),
-                "recently-used segment should remain cached after fourth segment insert");
-
-        cache.snapshotAt(18, snap(10), 10, restores::incrementAndGet, stepper);
-        assertEquals(restoresAfterRefreshingFirstSegment + 2, restores.get(),
-                "least-recently-used segment should rebuild after eviction");
-    }
-
-    @Test
-    void invalidateClearsEveryExpandedSegmentInRing() {
-        SegmentCache cache = new SegmentCache(10);
-        AtomicInteger marker = new AtomicInteger();
-        AtomicInteger restores = new AtomicInteger();
-        SegmentCache.Stepper stepper = () -> snap(marker.incrementAndGet());
-
-        cache.snapshotAt(3, snap(0), 0, restores::incrementAndGet, stepper);
-        cache.snapshotAt(13, snap(10), 10, restores::incrementAndGet, stepper);
-
-        marker.set(1000);
-        cache.invalidate();
-        var rebuilt = cache.snapshotAt(2, snap(900), 0, restores::incrementAndGet, stepper);
-
-        assertEquals(3, restores.get(), "invalidate must drop all cached segments, not only the active one");
-        assertEquals(1002, rebuilt.get("marker"),
-                "post-invalidate lookup must rebuild from the supplied keyframe instead of stale cache");
     }
 }

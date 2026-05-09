@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.TreeMap;
+import java.util.List;
 
 public final class AudioKeyframeStore {
     private final NavigableMap<Long, AudioLogicalSnapshot> keyframes = new TreeMap<>();
@@ -35,10 +36,14 @@ public final class AudioKeyframeStore {
                 Math.toIntExact(keyframe.getKey()),
                 Math.toIntExact(targetFrame),
                 reason)) {
-            replayed = audio.commandTimeline().forEachEntryFrom(
-                    snapshot.commandEntryCount(),
-                    targetFrame,
-                    entry -> audio.replayTimelineCommand(entry.command()));
+            List<AudioTimelineEntry> entries = audio.commandTimeline().entries();
+            for (int i = snapshot.commandEntryCount(); i < entries.size(); i++) {
+                AudioTimelineEntry entry = entries.get(i);
+                if (entry.frame() <= targetFrame) {
+                    audio.replayTimelineCommand(entry.command());
+                    replayed++;
+                }
+            }
         }
         return replayed;
     }
@@ -52,10 +57,16 @@ public final class AudioKeyframeStore {
 
         AudioLogicalSnapshot snapshot = keyframe.getValue();
         audio.restoreLogicalSnapshot(snapshot);
-        return audio.commandTimeline().forEachEntryFrom(
-                snapshot.commandEntryCount(),
-                targetFrame,
-                entry -> audio.replayTimelineCommandLogically(entry.command()));
+        int replayed = 0;
+        List<AudioTimelineEntry> entries = audio.commandTimeline().entries();
+        for (int i = snapshot.commandEntryCount(); i < entries.size(); i++) {
+            AudioTimelineEntry entry = entries.get(i);
+            if (entry.frame() <= targetFrame) {
+                audio.replayTimelineCommandLogically(entry.command());
+                replayed++;
+            }
+        }
+        return replayed;
     }
 
     public void discardAfter(long frame) {

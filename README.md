@@ -237,10 +237,7 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   PCM history ring, keeps graphical fades aligned with restored rewind snapshots, and treats final
   object-reference collections as structural state instead of compact scalar sidecar payload. The
   contributor and player docs now describe those rewind audio/fade presentation paths, trace-mode
-  controls, and focused validation commands. Rewind performance work now separates benchmark phases
-  for first segment expansion, cached scrub, and segment-boundary scrub, adds audio PCM benchmark
-  coverage and tail-budget gates, caps expandable audio history, and reduces timeline, segment-cache,
-  and compact schema churn.
+  controls, and focused validation commands.
 - **Trace recorder:** S3K v6.6 AIZ diagnostics expose tree/boundary pre/post state at the F4679
   sidekick boundary frame, transition-floor SolidObjectTop decisions at the F5415 frame, and
   fire-handoff terrain/SolidObjectTop state around F5435 while keeping trace data comparison-only;

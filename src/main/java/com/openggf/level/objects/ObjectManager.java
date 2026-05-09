@@ -96,59 +96,6 @@ public class ObjectManager {
             new RewindDynamicObjectCodec() {
                 @Override
                 public boolean supports(ObjectInstance instance) {
-                    return instance instanceof com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileInstance;
-                }
-
-                @Override
-                public String className() {
-                    return com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileInstance.class.getName();
-                }
-
-                @Override
-                public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                    var extra = (PerObjectRewindSnapshot.BuzzBomberMissileRewindExtra)
-                            entry.state().objectSubclassExtra();
-                    com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberBadnikInstance parent =
-                            context.objectManager().findSonic1BuzzBomberParentForRewind(extra.parentSlotIndex());
-                    return new com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberMissileInstance(
-                            extra.currentX(),
-                            extra.currentY(),
-                            extra.xVelocity(),
-                            extra.yVelocity(),
-                            extra.facingLeft(),
-                            parent);
-                }
-            },
-            new RewindDynamicObjectCodec() {
-                @Override
-                public boolean supports(ObjectInstance instance) {
-                    return instance instanceof com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance;
-                }
-
-                @Override
-                public String className() {
-                    return com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance.class.getName();
-                }
-
-                @Override
-                public ObjectInstance recreate(DynamicObjectRecreateContext context,
-                        com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
-                    var extra = (PerObjectRewindSnapshot.CaterkillerBodyRewindExtra)
-                            entry.state().objectSubclassExtra();
-                    com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance head =
-                            context.objectManager().findSonic1CaterkillerHeadForRewind(extra.headSlotIndex());
-                    ObjectInstance parentCandidate =
-                            context.objectManager().findObjectForRewindSlot(extra.parentSlotIndex());
-                    return com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBodyInstance.forRewindRecreate(
-                            head,
-                            parentCandidate,
-                            extra);
-                }
-            },
-            new RewindDynamicObjectCodec() {
-                @Override
-                public boolean supports(ObjectInstance instance) {
                     return instance.getClass().getName().equals(S2_BUZZER_FLAME_CHILD_CLASS);
                 }
 
@@ -2981,51 +2928,6 @@ public class ObjectManager {
             if (inst instanceof com.openggf.game.sonic2.objects.badniks.BuzzerBadnikInstance buzzer
                     && buzzer.getSlotIndex() == parentSlotIndex) {
                 return buzzer;
-            }
-        }
-        return null;
-    }
-
-    private com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberBadnikInstance
-            findSonic1BuzzBomberParentForRewind(int parentSlotIndex) {
-        if (parentSlotIndex < 0) {
-            return null;
-        }
-        for (ObjectInstance inst : activeObjects.values()) {
-            if (inst instanceof com.openggf.game.sonic1.objects.badniks.Sonic1BuzzBomberBadnikInstance buzzBomber
-                    && buzzBomber.getSlotIndex() == parentSlotIndex) {
-                return buzzBomber;
-            }
-        }
-        return null;
-    }
-
-    private com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance
-            findSonic1CaterkillerHeadForRewind(int headSlotIndex) {
-        ObjectInstance inst = findObjectForRewindSlot(headSlotIndex);
-        return inst instanceof com.openggf.game.sonic1.objects.badniks.Sonic1CaterkillerBadnikInstance head
-                ? head
-                : null;
-    }
-
-    private ObjectInstance findObjectForRewindSlot(int slotIndex) {
-        if (slotIndex < 0) {
-            return null;
-        }
-        for (ObjectInstance inst : activeObjects.values()) {
-            if (inst instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() == slotIndex) {
-                return inst;
-            }
-        }
-        for (ObjectInstance inst : dynamicObjects) {
-            if (inst instanceof AbstractObjectInstance aoi && aoi.getSlotIndex() == slotIndex) {
-                return inst;
-            }
-        }
-        if (isManagedDynamicSlot(slotIndex)) {
-            int execIdx = execIndexForSlot(slotIndex);
-            if (execIdx >= 0 && execIdx < execOrder.length) {
-                return execOrder[execIdx];
             }
         }
         return null;

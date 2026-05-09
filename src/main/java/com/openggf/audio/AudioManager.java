@@ -39,7 +39,6 @@ import java.util.logging.Logger;
 public class AudioManager {
     private static final Logger LOGGER = Logger.getLogger(AudioManager.class.getName());
     private static final int PCM_HISTORY_SECONDS = 10;
-    private static final int MAX_PCM_HISTORY_SECONDS = 120;
     private static final int OUTPUT_FIFO_SECONDS = 2;
     private static final int REVERSE_RELEASE_CROSSFADE_MS = 45;
     private static AudioManager instance;
@@ -108,12 +107,11 @@ public class AudioManager {
             int minFrameCapacity = Math.max(1, sampleRate / frameRate);
             int fifoFrames = Math.max(minFrameCapacity, sampleRate * OUTPUT_FIFO_SECONDS);
             int historyFrames = Math.max(minFrameCapacity, sampleRate * PCM_HISTORY_SECONDS);
-            int maxHistoryFrames = Math.max(historyFrames, sampleRate * MAX_PCM_HISTORY_SECONDS);
             int crossfadeFrames = Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000);
             applyDeterministicAudioRuntime(new StreamBackedDeterministicAudioRuntime(
                     new AudioFrameClock(sampleRate, frameRate),
                     new AudioOutputFifo(fifoFrames),
-                    PcmHistoryRing.expandable(historyFrames, maxHistoryFrames),
+                    new PcmHistoryRing(historyFrames),
                     crossfadeFrames));
         } else {
             applyDeterministicAudioRuntime(NoOpDeterministicAudioRuntime.INSTANCE);
@@ -213,7 +211,7 @@ public class AudioManager {
                 ringLeft,
                 commandTimeline.currentFrame(),
                 commandTimeline.nextOrder(),
-                commandTimeline.entryCount(),
+                commandTimeline.entries().size(),
                 backend != null ? backend.captureLogicalSnapshot() : AudioBackendLogicalSnapshot.empty(),
                 donorGameIds,
                 donorBindings);
@@ -575,22 +573,13 @@ public class AudioManager {
         deterministicAudioRuntime.beginReversePresentation();
         if (backend != null) {
             backend.beginReversePresentation();
-            backend.setReversePresentationRate(1.0);
         }
-    }
-
-    public void setReverseAudioPresentationRate(double rate) {
-        if (!reverseAudioPresentationActive || backend == null) {
-            return;
-        }
-        backend.setReversePresentationRate(rate);
     }
 
     public void endReverseAudioPresentation() {
         reverseAudioPresentationActive = false;
         deterministicAudioRuntime.endReversePresentation();
         if (backend != null) {
-            backend.setReversePresentationRate(1.0);
             backend.endReversePresentation();
         }
     }

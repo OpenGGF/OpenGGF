@@ -58,40 +58,4 @@ class TestSonicConfigurationFileBootstrap {
             SonicConfigurationService.resetStaticInstance();
         }
     }
-
-    @Test
-    void legacyLiveRewindTapeCoastKeysMigrateToSharedRewindKeys() throws IOException {
-        String originalUserDir = System.getProperty("user.dir");
-        Path configPath = tempDir.resolve("config.json");
-        Files.writeString(configPath, """
-                {
-                  "LIVE_REWIND_TAPE_COAST_ENABLED": true,
-                  "LIVE_REWIND_TAPE_COAST_ACCELERATION": 0.5,
-                  "LIVE_REWIND_TAPE_COAST_DECELERATION": 0.75,
-                  "LIVE_REWIND_TAPE_COAST_MAX_STEPS": 6.0
-                }
-                """);
-
-        try {
-            System.setProperty("user.dir", tempDir.toString());
-            SonicConfigurationService.resetStaticInstance();
-
-            SonicConfigurationService service = SonicConfigurationService.getInstance();
-
-            assertTrue(service.getBoolean(SonicConfiguration.REWIND_TAPE_COAST_ENABLED));
-            assertEquals(0.5, service.getDouble(SonicConfiguration.REWIND_TAPE_COAST_ACCELERATION));
-            assertEquals(0.75, service.getDouble(SonicConfiguration.REWIND_TAPE_COAST_DECELERATION));
-            assertEquals(6.0, service.getDouble(SonicConfiguration.REWIND_TAPE_COAST_MAX_STEPS));
-
-            service.saveConfig();
-            Map<String, Object> savedConfig = OBJECT_MAPPER.readValue(configPath.toFile(), MAP_TYPE);
-            assertFalse(savedConfig.containsKey("LIVE_REWIND_TAPE_COAST_ENABLED"));
-            assertTrue(savedConfig.containsKey(SonicConfiguration.REWIND_TAPE_COAST_ENABLED.name()));
-        } finally {
-            if (originalUserDir != null) {
-                System.setProperty("user.dir", originalUserDir);
-            }
-            SonicConfigurationService.resetStaticInstance();
-        }
-    }
 }

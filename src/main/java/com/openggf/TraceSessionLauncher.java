@@ -19,7 +19,6 @@ import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindSeekAwareEngineStepper;
-import com.openggf.game.rewind.RewindSpeedController;
 import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.sprites.ghost.GhostTraceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -80,7 +79,6 @@ public final class TraceSessionLauncher {
     private TraceReplayFixture fixture;
     private PlaybackController rewindPlaybackController;
     private RewindController rewindController;
-    private RewindSpeedController rewindSpeedController = RewindSpeedController.disabled();
     private int rewindMovieBaseFrame;
     private int rewindTraceBaseFrame;
     private boolean realtimeRewinding;
@@ -309,57 +307,20 @@ public final class TraceSessionLauncher {
         int rewindKey = GameServices.configuration().getInt(SonicConfiguration.TRACE_REWIND_KEY);
         boolean held = input.isKeyDown(rewindKey);
         if (held) {
-            if (!rewindController.canStepBackward()) {
-                if (realtimeRewinding) {
-                    rewindPlaybackController.play();
-                    syncVisualRewindCursors(true);
-                    cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
-                } else {
-                    rewindPlaybackController.pause();
-                }
-                rewindSpeedController.reset();
-                return true;
-            }
             if (!realtimeRewinding) {
                 GameServices.audio().beginReverseAudioPresentation();
                 beginReverseFadePresentation();
             }
             realtimeRewinding = true;
-            GameServices.audio().setReverseAudioPresentationRate(1.0);
-            int completed = stepTraceRewind(rewindSpeedController.stepsWhileHeld());
-            if (completed == 0) {
-                rewindPlaybackController.play();
-                syncVisualRewindCursors(true);
-                cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
-                return true;
-            }
+            rewindPlaybackController.rewind();
+            rewindPlaybackController.tick();
             GameServices.audio().update();
             syncVisualRewindCursors(false);
             if (cameraFocusController != null) {
                 cameraFocusController.syncDefaultCameraToCurrentPosition();
             }
-            if (!rewindController.canStepBackward()) {
-                rewindPlaybackController.play();
-                syncVisualRewindCursors(true);
-                cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
-            }
             completionArmed = false;
             return true;
-        }
-        int coastSteps = rewindSpeedController.stepsAfterRelease();
-        if (realtimeRewinding && coastSteps > 0) {
-            int completed = stepTraceRewind(coastSteps);
-            if (completed > 0) {
-                GameServices.audio().setReverseAudioPresentationRate(rewindSpeedController.presentationRate());
-                GameServices.audio().update();
-                syncVisualRewindCursors(false);
-                if (cameraFocusController != null) {
-                    cameraFocusController.syncDefaultCameraToCurrentPosition();
-                }
-                completionArmed = false;
-                return true;
-            }
-            rewindSpeedController.reset();
         }
         if (realtimeRewinding) {
             rewindPlaybackController.play();
@@ -442,21 +403,6 @@ public final class TraceSessionLauncher {
                 new VisualTraceRewindStepper(loop, movie, trace, movieBaseFrame, traceBaseFrame),
                 60);
         this.rewindController = runtime.getGameplayModeContext().getRewindController();
-        this.rewindSpeedController = RewindSpeedController.fromConfig(GameServices.configuration());
-    }
-
-    private int stepTraceRewind(int steps) {
-        rewindPlaybackController.rewind();
-        int completed = 0;
-        for (int i = 0; i < steps; i++) {
-            int before = rewindController.currentFrame();
-            rewindPlaybackController.tick();
-            if (rewindController.currentFrame() == before) {
-                break;
-            }
-            completed++;
-        }
-        return completed;
     }
 
     private void syncVisualRewindCursors(boolean playing) {
@@ -487,7 +433,6 @@ public final class TraceSessionLauncher {
             return;
         }
         realtimeRewinding = false;
-        rewindSpeedController.reset();
         if (rewindController != null) {
             GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
         } else {

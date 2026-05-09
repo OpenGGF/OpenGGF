@@ -229,60 +229,6 @@ public record PerObjectRewindSnapshot(
             int cluckerAnimIndex
     ) implements ObjectSubclassRewindExtra {}
 
-    public record BuzzBomberMissileRewindExtra(
-            int parentSlotIndex,
-            int currentX,
-            int currentY,
-            int xSub,
-            int ySub,
-            int xVelocity,
-            int yVelocity,
-            boolean facingLeft,
-            String phase,
-            int flareTimer,
-            int animTimer,
-            int animFrame,
-            int renderedFrame,
-            boolean collisionEnabled
-    ) implements ObjectSubclassRewindExtra {}
-
-    public record CaterkillerBodyRewindExtra(
-            int headSlotIndex,
-            int parentSlotIndex,
-            int currentX,
-            int currentY,
-            int motionX,
-            int motionY,
-            int motionXSub,
-            int motionYSub,
-            int motionXVel,
-            int motionYVel,
-            boolean facingLeft,
-            boolean deleting,
-            boolean destroyed,
-            boolean fragmenting,
-            int deleteFrame,
-            boolean animatedSegment,
-            int segmentIndex,
-            int ringBufferIndex,
-            int xVelocity,
-            int yVelocity,
-            int inertia,
-            int animAngle,
-            int secondaryState,
-            int animControl,
-            byte[] ringBuffer
-    ) implements ObjectSubclassRewindExtra {
-        public CaterkillerBodyRewindExtra {
-            ringBuffer = ringBuffer == null ? null : ringBuffer.clone();
-        }
-
-        @Override
-        public byte[] ringBuffer() {
-            return ringBuffer == null ? null : ringBuffer.clone();
-        }
-    }
-
     public record BuzzerFlameRewindExtra(
             int parentSlotIndex,
             int currentX,

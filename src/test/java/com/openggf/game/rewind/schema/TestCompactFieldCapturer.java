@@ -68,52 +68,6 @@ class TestCompactFieldCapturer {
         assertEquals("first", blob.opaqueValues()[0]);
     }
 
-    @Test
-    void ownedBlobFactoryKeepsPublicSnapshotAccessDefensive() {
-        Object[] opaque = {"first"};
-        byte[] scalar = {1, 2, 3, 0, 0};
-        RewindObjectStateBlob blob = RewindObjectStateBlob.fromOwnedArrays(
-                4,
-                ScalarFixture.class,
-                scalar,
-                3,
-                opaque);
-
-        byte[] returnedScalar = blob.scalarData();
-        Object[] returnedOpaque = blob.opaqueValues();
-        returnedScalar[0] = 9;
-        returnedOpaque[0] = "changed";
-
-        assertArrayEquals(new byte[] {1, 2, 3}, blob.scalarData());
-        assertEquals("first", blob.opaqueValues()[0]);
-    }
-
-    @Test
-    void restoreReadsOwnedBlobStorageWithoutPublicDefensiveCopies() {
-        Object[] opaque = {"captured"};
-        byte[] scalar = new byte[8];
-        RewindObjectStateBlob blob = RewindObjectStateBlob.fromOwnedArrays(
-                4,
-                ScalarFixture.class,
-                scalar,
-                3,
-                opaque);
-
-        scalar[0] = 1;
-        scalar[1] = 2;
-        scalar[2] = 3;
-        opaque[0] = "mutated before restore read";
-
-        RewindStateBuffer.Reader reader = blob.scalarDataReader();
-
-        assertEquals(1, reader.readByte());
-        assertEquals(2, reader.readByte());
-        assertEquals(3, reader.readByte());
-        assertEquals(
-                "mutated before restore read",
-                new RewindCodec.OpaqueIndex().next(blob.opaqueValuesReader()));
-    }
-
     private static BitSet bitSet(int... indexes) {
         BitSet bits = new BitSet();
         for (int index : indexes) {

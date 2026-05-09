@@ -81,10 +81,9 @@ held, showing `LIVE REWIND` plus `REWIND <frame>`.
 
 By default live rewind steps backward one frame per visual frame while the key is
 held, with no movement after release. The experimental tape-coast layer remains
-opt-in through `REWIND_TAPE_COAST_ENABLED`; when enabled, the acceleration,
+opt-in through `LIVE_REWIND_TAPE_COAST_ENABLED`; when enabled, the acceleration,
 deceleration, and maximum per-frame steps come from the matching
-`REWIND_TAPE_COAST_*` configuration keys. Values below `2.0` for
-`REWIND_TAPE_COAST_MAX_STEPS` cap playback to one rewind step per visual frame.
+`LIVE_REWIND_TAPE_COAST_*` configuration keys.
 
 Live rewind records input rows after normal level ticks and replays them through the
 same `LevelFrameStep` path when rebuilding a rewound segment. Seamless level

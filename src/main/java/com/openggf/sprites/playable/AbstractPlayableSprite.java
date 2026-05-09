@@ -1110,36 +1110,18 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         }
                         shield = false;
                         shieldType = null;
-                } else {
-                        if (shieldObject != null) {
-                                shieldObject.destroy();
-                                shieldObject = null;
-                        }
-                        if (powerUpSpawner != null) {
-                                shieldObject = powerUpSpawner.spawnShield(this, shieldType);
-                                if (shieldObject != null && invincibleFrames > 0) {
-                                        shieldObject.setVisible(false);
-                                }
-                        }
-                }
-
-                if (invincibleFrames <= 0) {
-                        if (invincibilityObject != null) {
-                                invincibilityObject.destroy();
-                                invincibilityObject = null;
-                        }
                         return;
                 }
 
                 if (shieldObject != null) {
-                        shieldObject.setVisible(false);
-                }
-                if (invincibilityObject != null) {
-                        invincibilityObject.destroy();
-                        invincibilityObject = null;
+                        shieldObject.destroy();
+                        shieldObject = null;
                 }
                 if (powerUpSpawner != null) {
-                        invincibilityObject = powerUpSpawner.spawnInvincibilityStars(this);
+                        shieldObject = powerUpSpawner.spawnShield(this, shieldType);
+                        if (shieldObject != null && invincibleFrames > 0) {
+                                shieldObject.setVisible(false);
+                        }
                 }
         }
 
