@@ -7,6 +7,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -17,6 +18,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.debug.DebugColor;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -146,6 +148,26 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
         // Fragment speed index: segments alternate routine 4/6/4 → frag indices 0/1/2
         // (routine 4 → index 0, routine 6 → index 1, routine 8 → index 2)
         this.fragSpeedIndex = segmentIndex;
+    }
+
+    public static Sonic1CaterkillerBodyInstance forRewindRecreate(
+            Sonic1CaterkillerBadnikInstance head,
+            Object parentCandidate,
+            PerObjectRewindSnapshot.CaterkillerBodyRewindExtra extra) {
+        if (head == null || !(parentCandidate instanceof CaterkillerParentState parentState) || extra == null) {
+            return null;
+        }
+        Sonic1CaterkillerBodyInstance body = new Sonic1CaterkillerBodyInstance(
+                head,
+                parentState,
+                extra.currentX(),
+                extra.currentY(),
+                extra.facingLeft(),
+                extra.animatedSegment(),
+                extra.segmentIndex(),
+                extra.ringBufferIndex());
+        head.registerBodySegmentForRewind(body);
+        return body;
     }
 
     @Override
@@ -390,6 +412,73 @@ public class Sonic1CaterkillerBodyInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState() {
+        int headSlotIndex = head != null ? head.getSlotIndex() : -1;
+        int parentSlotIndex = parentState instanceof AbstractObjectInstance aoi ? aoi.getSlotIndex() : -1;
+        return super.captureRewindState().withObjectSubclassExtra(
+                new PerObjectRewindSnapshot.CaterkillerBodyRewindExtra(
+                        headSlotIndex,
+                        parentSlotIndex,
+                        currentX,
+                        currentY,
+                        motion.x,
+                        motion.y,
+                        motion.xSub,
+                        motion.ySub,
+                        motion.xVel,
+                        motion.yVel,
+                        facingLeft,
+                        deleting,
+                        destroyed,
+                        fragmenting,
+                        deleteFrame,
+                        isAnimatedSegment,
+                        fragSpeedIndex,
+                        ringBufferIndex,
+                        xVelocity,
+                        yVelocity,
+                        inertia,
+                        animAngle,
+                        secondaryState,
+                        animControl,
+                        Arrays.copyOf(ringBuffer, ringBuffer.length)));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
+        super.restoreRewindState(snapshot);
+        if (snapshot.objectSubclassExtra()
+                instanceof PerObjectRewindSnapshot.CaterkillerBodyRewindExtra extra) {
+            currentX = extra.currentX();
+            currentY = extra.currentY();
+            motion.x = extra.motionX();
+            motion.y = extra.motionY();
+            motion.xSub = extra.motionXSub();
+            motion.ySub = extra.motionYSub();
+            motion.xVel = extra.motionXVel();
+            motion.yVel = extra.motionYVel();
+            facingLeft = extra.facingLeft();
+            deleting = extra.deleting();
+            destroyed = extra.destroyed();
+            fragmenting = extra.fragmenting();
+            deleteFrame = extra.deleteFrame();
+            ringBufferIndex = extra.ringBufferIndex();
+            xVelocity = extra.xVelocity();
+            yVelocity = extra.yVelocity();
+            inertia = extra.inertia();
+            animAngle = extra.animAngle();
+            secondaryState = extra.secondaryState();
+            animControl = extra.animControl();
+            byte[] capturedRingBuffer = extra.ringBuffer();
+            Arrays.fill(ringBuffer, (byte) 0);
+            if (capturedRingBuffer != null) {
+                System.arraycopy(capturedRingBuffer, 0, ringBuffer, 0,
+                        Math.min(capturedRingBuffer.length, ringBuffer.length));
+            }
+        }
     }
 
     @Override
