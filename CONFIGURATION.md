@@ -30,10 +30,10 @@ Paths are relative to the working directory (where the JAR is launched).
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `DEFAULT_ROM` | string | `"s1"` | Which game to boot: `"s1"`, `"s2"`, or `"s3k"`. Selects the corresponding ROM key below. |
+| `DEFAULT_ROM` | string | `"s2"` | Which game to boot: `"s1"`, `"s2"`, or `"s3k"`. Selects the corresponding ROM key below. |
 | `SONIC_1_ROM` | string | `"Sonic The Hedgehog (W) (REV01) [!].gen"` | Filename of the Sonic 1 ROM. |
 | `SONIC_2_ROM` | string | `"Sonic The Hedgehog 2 (W) (REV01) [!].gen"` | Filename of the Sonic 2 ROM. |
-| `SONIC_3K_ROM` | string | `"Sonic 3 & Knuckles (W) [!].gen"` | Filename of the Sonic 3&K ROM. |
+| `SONIC_3K_ROM` | string | `"Sonic and Knuckles & Sonic 3 (W) [!].gen"` | Filename of the Sonic 3&K (locked-on) ROM. |
 
 ---
 
@@ -175,7 +175,7 @@ These keys are only active while a Special Stage is running.
   "DEFAULT_ROM": "s2",
   "SONIC_1_ROM": "Sonic The Hedgehog (W) (REV01) [!].gen",
   "SONIC_2_ROM": "Sonic The Hedgehog 2 (W) (REV01) [!].gen",
-  "SONIC_3K_ROM": "Sonic 3 & Knuckles (W) [!].gen",
+  "SONIC_3K_ROM": "Sonic and Knuckles & Sonic 3 (W) [!].gen",
   "SCREEN_WIDTH_PIXELS": 320,
   "SCREEN_HEIGHT_PIXELS": 224,
   "SCREEN_WIDTH": 640,

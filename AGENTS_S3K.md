@@ -11,9 +11,13 @@ The ROM's `AnimatePalettes` routine runs **every frame** and dispatches to per-z
 that cycle palette colors through ROM data tables. This is the `AnPal_*` system in the
 disassembly (`sonic3k.asm:3105-3282`, `s3.asm:3245-3414`).
 
-**Implementation:** `Sonic3kPaletteCycler` (called via `Sonic3kLevelAnimationManager` ->
-`LevelManager.update()` each frame), with writes composed through the runtime-owned
+**Implementation:** `Sonic3kPaletteCycler` (called via `Sonic3kLevelAnimationManager` from
+the level draw path — `LevelRenderer.drawWithRenderOptions` ticks
+`animatedPaletteManager.update()` each frame), with writes composed through the runtime-owned
 `PaletteOwnershipRegistry` via `S3kPaletteWriteSupport` before the frame is committed.
+
+> Headless tests that bypass the renderer must explicitly tick the cycler — e.g.
+> `LevelManager.getAnimatedPaletteManager().update()` — to advance palette state.
 
 ### Palette Animation vs. Palette Mutation
 
@@ -22,7 +26,7 @@ These are two distinct systems that both modify palette colors at runtime:
 | System | Trigger | Example | Implementation |
 |--------|---------|---------|----------------|
 | **Palette Animation** (AnPal) | Timer-based, every N frames | AIZ waterfall shimmer, torch glow cycling | `Sonic3kPaletteCycler` |
-| **Palette Mutation** (_Resize) | Camera-position threshold | AIZ1 hollow tree color 15 darkening at X≥$2B00 | `Sonic3kAIZEvents.updateStage2PaletteColor()` |
+| **Palette Mutation** (_Resize) | Camera-position threshold | AIZ1 hollow tree color 15 darkening at X≥$2B00 | `Sonic3kAIZEvents.applyResizePaletteMutation()` |
 
 Palette mutations are one-shot writes in `_Resize` routines (event handlers), not cycling.
 They should stay in `Sonic3kAIZEvents` (or the zone's event handler), typically routed through
