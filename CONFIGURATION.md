@@ -96,10 +96,10 @@ Paths are relative to the working directory (where the JAR is launched).
 | `EDITOR_ENABLED` | bool | `false` | Allow the experimental in-engine editor overlay to be entered from gameplay with `Shift+Tab`. |
 | `DEBUG_COLLISION_VIEW_ENABLED` | bool | `false` | Draw collision sensor rays and solid object outlines over the scene at all times. |
 | `LIVE_REWIND_ENABLED` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
-| `LIVE_REWIND_TAPE_COAST_ENABLED` | bool | `false` | Enable experimental live-rewind coast after releasing the rewind key. Disabled by default, so held rewind remains one step per visual frame. |
-| `LIVE_REWIND_TAPE_COAST_ACCELERATION` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
-| `LIVE_REWIND_TAPE_COAST_DECELERATION` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
-| `LIVE_REWIND_TAPE_COAST_MAX_STEPS` | number | `4.0` | Maximum rewind steps per visual frame for optional tape-coast rewind. Used only when tape coast is enabled. |
+| `REWIND_TAPE_COAST_ENABLED` | bool | `false` | Enable experimental rewind coast after releasing the rewind key in live gameplay or visual Trace Test Mode. Disabled by default, so held rewind remains one step per visual frame. |
+| `REWIND_TAPE_COAST_ACCELERATION` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
+| `REWIND_TAPE_COAST_DECELERATION` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
+| `REWIND_TAPE_COAST_MAX_STEPS` | number | `1.99` | Maximum rewind steps per visual frame for optional tape-coast rewind. Values below `2.0` keep rewind capped to one step per visual frame while still allowing release coast. Used only when tape coast is enabled. |
 | `TEST_MODE_ENABLED` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `TRACE_CATALOG_DIR` and plays the chosen trace back in the live engine. Dev-only. |
 | `TRACE_CATALOG_DIR` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
 
@@ -196,10 +196,10 @@ These keys are only active while a Special Stage is running.
   "EDITOR_ENABLED": false,
   "DEBUG_COLLISION_VIEW_ENABLED": false,
   "LIVE_REWIND_ENABLED": false,
-  "LIVE_REWIND_TAPE_COAST_ENABLED": false,
-  "LIVE_REWIND_TAPE_COAST_ACCELERATION": 0.25,
-  "LIVE_REWIND_TAPE_COAST_DECELERATION": 0.5,
-  "LIVE_REWIND_TAPE_COAST_MAX_STEPS": 4.0,
+  "REWIND_TAPE_COAST_ENABLED": false,
+  "REWIND_TAPE_COAST_ACCELERATION": 0.25,
+  "REWIND_TAPE_COAST_DECELERATION": 0.5,
+  "REWIND_TAPE_COAST_MAX_STEPS": 1.99,
   "UP": "UP",
   "DOWN": "DOWN",
   "LEFT": "LEFT",

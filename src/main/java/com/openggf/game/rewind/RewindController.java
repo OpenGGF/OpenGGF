@@ -155,8 +155,12 @@ public final class RewindController {
      * Rewinds one frame using the segment cache for amortised O(1) cost.
      * Returns false if already at {@code earliestAvailableFrame}.
      */
+    public boolean canStepBackward() {
+        return currentFrame > earliestAvailableFrame();
+    }
+
     public boolean stepBackward() {
-        if (currentFrame <= earliestAvailableFrame()) return false;
+        if (!canStepBackward()) return false;
         int originalFrame = currentFrame;
         int target = currentFrame - 1;
         int keyframeFrame = (target / keyframeInterval) * keyframeInterval;
