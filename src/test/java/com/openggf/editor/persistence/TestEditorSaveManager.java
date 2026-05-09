@@ -10,6 +10,7 @@ import com.openggf.level.Map;
 import com.openggf.level.MutableLevel;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
+import com.openggf.level.PatternDesc;
 import com.openggf.level.SolidTile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -49,6 +50,27 @@ class TestEditorSaveManager {
         assertTrue(fresh.modifiedBlocksSinceBaseline().get(1));
         assertTrue(fresh.modifiedMapCellsSinceBaseline().get(1 * 12 + 1 * 4 + 2));
         assertFalse(fresh.isModifiedSinceLastSave());
+    }
+
+    @Test
+    void saveOmitsBlockChunkAndMapCellEditsRevertedToBaseline() throws Exception {
+        MutableLevel edited = createMutableLevel();
+        edited.setChunkInBlock(1, 0, 0, new ChunkDesc(2));
+        edited.setChunkInBlock(1, 0, 0, new ChunkDesc(0));
+        edited.setBlockInMap(1, 2, 1, 2);
+        edited.setBlockInMap(1, 2, 1, 0);
+        edited.setPatternDescInChunk(2, 0, 0, new PatternDesc(7));
+        edited.setPatternDescInChunk(2, 0, 0, new PatternDesc(0));
+        EditorSaveManager manager = new EditorSaveManager(tempDir);
+
+        EditorSaveManager.SaveResult save = manager.save(GameId.S2, 4, 0, edited);
+        EditorSaveEnvelope envelope = MAPPER.readValue(save.file().toFile(), EditorSaveEnvelope.class);
+
+        assertTrue(save.ok());
+        assertTrue(envelope.payload().blocks().isEmpty());
+        assertTrue(envelope.payload().chunks().isEmpty());
+        assertTrue(envelope.payload().mapCells().isEmpty());
+        assertFalse(edited.isModifiedSinceLastSave());
     }
 
     @Test

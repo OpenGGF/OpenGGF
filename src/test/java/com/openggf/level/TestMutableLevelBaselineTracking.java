@@ -54,6 +54,34 @@ class TestMutableLevelBaselineTracking {
         assertTrue(level.modifiedMapCellsSinceBaseline().get(1 * 4 + 1));
     }
 
+    @Test
+    void revertingMapCellToBaselineClearsPersistentDeltaBitButKeepsSessionDirty() {
+        MutableLevel level = MutableLevel.snapshot(new SyntheticLevel());
+
+        level.setBlockInMap(0, 1, 1, 2);
+        level.setBlockInMap(0, 1, 1, 0);
+
+        assertFalse(level.modifiedMapCellsSinceBaseline().get(1 * 4 + 1));
+        assertTrue(level.modifiedMapCellsSinceBaseline().isEmpty());
+        assertTrue(level.isModifiedSinceLastSave());
+    }
+
+    @Test
+    void revertingBlockAndChunkToBaselineClearsPersistentDeltaBits() {
+        MutableLevel level = MutableLevel.snapshot(new SyntheticLevel());
+
+        level.setChunkInBlock(1, 0, 0, new ChunkDesc(2));
+        level.setChunkInBlock(1, 0, 0, new ChunkDesc(0));
+        level.setPatternDescInChunk(2, 0, 0, new PatternDesc(7));
+        level.setPatternDescInChunk(2, 0, 0, new PatternDesc(0));
+
+        assertFalse(level.modifiedBlocksSinceBaseline().get(1));
+        assertFalse(level.modifiedChunksSinceBaseline().get(2));
+        assertTrue(level.modifiedBlocksSinceBaseline().isEmpty());
+        assertTrue(level.modifiedChunksSinceBaseline().isEmpty());
+        assertTrue(level.isModifiedSinceLastSave());
+    }
+
     private static final class SyntheticLevel extends AbstractLevel {
         private SyntheticLevel() {
             super(0);

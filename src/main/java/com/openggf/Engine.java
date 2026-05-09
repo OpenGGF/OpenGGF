@@ -540,6 +540,7 @@ public class Engine {
 			runtime = null;
 			gameLoop.setRuntime(null);
 		});
+		levelManager.restoreEditorLevelView(levelEditorController.currentLevel());
 		SessionManager.enterEditorMode(new EditorCursorState(playerX, playerY), stash);
 		if (camera != null) {
 			camera.setMinX(savedMinX);
@@ -1378,6 +1379,7 @@ public class Engine {
 			return;
 		}
 		if (getCurrentGameMode() == GameMode.EDITOR) {
+			flushEditorDirtyRegionsForRendering();
 			levelManager.drawWithSpritePriority(spriteManager);
 			editorOverlayRenderer.renderWorldSpaceOverlay();
 			graphicsManager.flush();
@@ -1524,6 +1526,10 @@ public class Engine {
 				graphicsManager.flushScreenSpace();
 			}
 		}
+	}
+
+	void flushEditorDirtyRegionsForRendering() {
+		levelManager.processDirtyRegions();
 	}
 
 	private void prepareOverlayState() {
