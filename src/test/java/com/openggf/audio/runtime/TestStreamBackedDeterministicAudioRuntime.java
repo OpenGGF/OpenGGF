@@ -111,6 +111,27 @@ class TestStreamBackedDeterministicAudioRuntime {
     }
 
     @Test
+    void consumesSubmittedCommandsAcrossFramesInTimelineOrder() {
+        AudioOutputFifo fifo = new AudioOutputFifo(8);
+        StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
+                new AudioFrameClock(2, 1), fifo);
+        List<String> calls = new ArrayList<>();
+        runtime.setCommandHandler(command -> calls.add(((AudioCommand.PlaySfx) command).sfxName()));
+
+        runtime.submit(new AudioTimelineEntry(5, 0,
+                new AudioCommand.PlaySfx(-1, "C", AudioCommand.SfxRoute.FALLBACK_NAME, 1.0f, null)));
+        runtime.submit(new AudioTimelineEntry(4, 1,
+                new AudioCommand.PlaySfx(-1, "B", AudioCommand.SfxRoute.FALLBACK_NAME, 1.0f, null)));
+        runtime.submit(new AudioTimelineEntry(4, 0,
+                new AudioCommand.PlaySfx(-1, "A", AudioCommand.SfxRoute.FALLBACK_NAME, 1.0f, null)));
+
+        runtime.advanceFrame(4, FrameAudioMode.SILENT_STEP);
+        runtime.advanceFrame(5, FrameAudioMode.SILENT_STEP);
+
+        assertEquals(List.of("A", "B", "C"), calls);
+    }
+
+    @Test
     void normalFramesMirrorFinalMixedPcmIntoReverseHistory() {
         AudioOutputFifo fifo = new AudioOutputFifo(8);
         StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(

@@ -397,7 +397,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             if (!type.isPrimitive() && !scalarData.readBoolean()) {
                 set(field, target, null);
                 return;
@@ -420,7 +420,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             int ordinal = scalarData.readInt();
             set(field, target, ordinal < 0 ? null : constants[ordinal]);
         }
@@ -458,7 +458,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             restore(field, target, scalarData, opaqueValues, opaqueIndex, RewindCaptureContext.none());
         }
 
@@ -467,7 +467,7 @@ public final class RewindCodecs {
                 Field field,
                 Object target,
                 RewindStateBuffer.Reader scalarData,
-                Object[] opaqueValues,
+                RewindCodec.OpaqueValues opaqueValues,
                 OpaqueIndex opaqueIndex,
                 RewindCaptureContext context) {
 
@@ -520,7 +520,7 @@ public final class RewindCodecs {
                 Field field,
                 Object target,
                 RewindStateBuffer.Reader scalarData,
-                Object[] opaqueValues,
+                RewindCodec.OpaqueValues opaqueValues,
                 OpaqueIndex opaqueIndex) {
 
             set(field, target, scalarData.readBoolean()
@@ -548,7 +548,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             int length = scalarData.readInt();
             set(field, target, length < 0 ? null : BitSet.valueOf(scalarData.readBytes(length)));
         }
@@ -583,7 +583,7 @@ public final class RewindCodecs {
                 Field field,
                 Object target,
                 RewindStateBuffer.Reader scalarData,
-                Object[] opaqueValues,
+                RewindCodec.OpaqueValues opaqueValues,
                 OpaqueIndex opaqueIndex) {
 
             restore(field, target, scalarData, opaqueValues, opaqueIndex, RewindCaptureContext.none());
@@ -594,7 +594,7 @@ public final class RewindCodecs {
                 Field field,
                 Object target,
                 RewindStateBuffer.Reader scalarData,
-                Object[] opaqueValues,
+                RewindCodec.OpaqueValues opaqueValues,
                 OpaqueIndex opaqueIndex,
                 RewindCaptureContext context) {
 
@@ -630,7 +630,7 @@ public final class RewindCodecs {
                 Field field,
                 Object target,
                 RewindStateBuffer.Reader scalarData,
-                Object[] opaqueValues,
+                RewindCodec.OpaqueValues opaqueValues,
                 OpaqueIndex opaqueIndex) {
 
             restore(field, target, scalarData, opaqueValues, opaqueIndex, RewindCaptureContext.none());
@@ -641,7 +641,7 @@ public final class RewindCodecs {
                 Field field,
                 Object target,
                 RewindStateBuffer.Reader scalarData,
-                Object[] opaqueValues,
+                RewindCodec.OpaqueValues opaqueValues,
                 OpaqueIndex opaqueIndex,
                 RewindCaptureContext context) {
 
@@ -687,7 +687,7 @@ public final class RewindCodecs {
                 Field field,
                 Object target,
                 RewindStateBuffer.Reader scalarData,
-                Object[] opaqueValues,
+                RewindCodec.OpaqueValues opaqueValues,
                 OpaqueIndex opaqueIndex,
                 RewindCaptureContext context) {
 
@@ -710,7 +710,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             restore(field, target, scalarData, opaqueValues, opaqueIndex, RewindCaptureContext.none());
         }
 
@@ -766,7 +766,7 @@ public final class RewindCodecs {
                 Field field,
                 Object target,
                 RewindStateBuffer.Reader scalarData,
-                Object[] opaqueValues,
+                RewindCodec.OpaqueValues opaqueValues,
                 OpaqueIndex opaqueIndex,
                 RewindCaptureContext context) {
 
@@ -791,7 +791,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             restore(field, target, scalarData, opaqueValues, opaqueIndex, RewindCaptureContext.none());
         }
 
@@ -845,7 +845,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             if (!scalarData.readBoolean()) {
                 set(field, target, null);
                 return;
@@ -892,7 +892,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             if (!scalarData.readBoolean()) {
                 set(field, target, null);
                 return;
@@ -927,7 +927,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             if (!scalarData.readBoolean()) {
                 set(field, target, null);
                 return;
@@ -958,7 +958,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             if (!scalarData.readBoolean()) {
                 set(field, target, null);
                 return;
@@ -1010,7 +1010,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             if (!scalarData.readBoolean()) {
                 set(field, target, null);
                 return;
@@ -1063,7 +1063,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             set(field, target, opaqueIndex.next(opaqueValues));
         }
     }
@@ -1101,7 +1101,7 @@ public final class RewindCodecs {
                 Field field,
                 Object target,
                 RewindStateBuffer.Reader scalarData,
-                Object[] opaqueValues,
+                RewindCodec.OpaqueValues opaqueValues,
                 OpaqueIndex opaqueIndex,
                 RewindCaptureContext context) {
 
@@ -1114,7 +1114,7 @@ public final class RewindCodecs {
         }
 
         @Override
-        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, Object[] opaqueValues, OpaqueIndex opaqueIndex) {
+        public void restore(Field field, Object target, RewindStateBuffer.Reader scalarData, RewindCodec.OpaqueValues opaqueValues, OpaqueIndex opaqueIndex) {
             restore(field, target, scalarData, opaqueValues, opaqueIndex, RewindCaptureContext.none());
         }
 
@@ -1146,7 +1146,7 @@ public final class RewindCodecs {
             List<Field> fields,
             Object state,
             RewindStateBuffer.Reader scalarData,
-            Object[] opaqueValues,
+            RewindCodec.OpaqueValues opaqueValues,
             RewindCodec.OpaqueIndex opaqueIndex,
             RewindCaptureContext context) {
 
@@ -1189,7 +1189,7 @@ public final class RewindCodecs {
     private static Object readCollectionValue(
             Class<?> type,
             RewindStateBuffer.Reader scalarData,
-            Object[] opaqueValues,
+            RewindCodec.OpaqueValues opaqueValues,
             RewindCodec.OpaqueIndex opaqueIndex,
             RewindCaptureContext context) {
 
@@ -1250,7 +1250,7 @@ public final class RewindCodecs {
             Class<?> componentType,
             Object existing,
             RewindStateBuffer.Reader scalarData,
-            Object[] opaqueValues,
+            RewindCodec.OpaqueValues opaqueValues,
             RewindCodec.OpaqueIndex opaqueIndex,
             RewindCaptureContext context) {
 
@@ -1296,7 +1296,7 @@ public final class RewindCodecs {
             Class<?> componentType,
             Object existingArray,
             RewindStateBuffer.Reader scalarData,
-            Object[] opaqueValues,
+            RewindCodec.OpaqueValues opaqueValues,
             RewindCodec.OpaqueIndex opaqueIndex) {
 
         int length = scalarData.readInt();

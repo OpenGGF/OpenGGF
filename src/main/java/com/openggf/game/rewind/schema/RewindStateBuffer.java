@@ -63,12 +63,23 @@ public final class RewindStateBuffer {
         return Arrays.copyOf(data, size);
     }
 
+    OwnedBytes takeBytes() {
+        OwnedBytes owned = new OwnedBytes(data, size);
+        data = new byte[DEFAULT_CAPACITY];
+        size = 0;
+        return owned;
+    }
+
     public Reader reader() {
-        return new Reader(toByteArray());
+        return new Reader(data, size, true);
     }
 
     public static Reader reader(byte[] data) {
         return new Reader(data);
+    }
+
+    static Reader readerForOwnedBytes(byte[] data, int length) {
+        return new Reader(data, length, false);
     }
 
     private void ensureCapacity(int bytesToWrite) {
@@ -84,12 +95,43 @@ public final class RewindStateBuffer {
         data = Arrays.copyOf(data, newCapacity);
     }
 
+    static final class OwnedBytes {
+        private final byte[] bytes;
+        private final int length;
+
+        private OwnedBytes(byte[] bytes, int length) {
+            this.bytes = Objects.requireNonNull(bytes, "bytes");
+            if (length < 0 || length > bytes.length) {
+                throw new IllegalArgumentException("length must be between 0 and bytes.length: " + length);
+            }
+            this.length = length;
+        }
+
+        byte[] bytes() {
+            return bytes;
+        }
+
+        int length() {
+            return length;
+        }
+    }
+
     public static final class Reader {
         private final byte[] data;
+        private final int length;
         private int position;
 
         private Reader(byte[] data) {
-            this.data = Arrays.copyOf(Objects.requireNonNull(data, "data"), data.length);
+            this(data, Objects.requireNonNull(data, "data").length, true);
+        }
+
+        private Reader(byte[] data, int length, boolean copy) {
+            Objects.requireNonNull(data, "data");
+            if (length < 0 || length > data.length) {
+                throw new IllegalArgumentException("length must be between 0 and data.length: " + length);
+            }
+            this.data = copy ? Arrays.copyOf(data, length) : data;
+            this.length = length;
         }
 
         public byte readByte() {
@@ -152,11 +194,11 @@ public final class RewindStateBuffer {
         }
 
         private void requireAvailable(int bytes) {
-            if (position + bytes <= data.length) {
+            if (position + bytes <= length) {
                 return;
             }
             throw new IllegalStateException("Attempted to read past end of rewind state buffer: requested "
-                    + bytes + " bytes at offset " + position + ", available " + (data.length - position) + ".");
+                    + bytes + " bytes at offset " + position + ", available " + (length - position) + ".");
         }
     }
 }
