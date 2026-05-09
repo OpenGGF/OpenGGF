@@ -13,13 +13,15 @@ human-readable key names such as `"SPACE"` and `"F9"`.
 | Enter | Pause / unpause |
 | Q | Advance one frame (while paused) |
 
-## Live Rewind
+## Rewind
 
 Live rewind is only active when `LIVE_REWIND_ENABLED` is `true` in `config.json`.
+Visual Trace Test Mode uses the same default key through `TRACE_REWIND_KEY`.
 
 | Key | Action |
 |-----|--------|
 | R | Hold to rewind live gameplay (`LIVE_REWIND_KEY`) |
+| R | Hold to rewind visual trace playback (`TRACE_REWIND_KEY`) |
 
 ## Zone Navigation
 
