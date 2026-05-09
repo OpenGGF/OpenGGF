@@ -66,6 +66,9 @@ public class EditorToolbarRenderer {
 
         return List.of(controller.breadcrumb()
                 + " | Focus " + controller.focusRegion()
+                + " | Layer " + (controller.activeLayer() == 0 ? "FG" : "BG")
+                + " | " + (controller.currentLevel() != null && controller.currentLevel().isModifiedSinceLastSave()
+                ? "unsaved*" : "saved")
                 + " | Block " + valueOrNone(controller.selection().selectedBlock())
                 + " Chunk " + valueOrNone(controller.selection().selectedChunk())
                 + " | B " + controller.selectedBlockCellX() + "," + controller.selectedBlockCellY()

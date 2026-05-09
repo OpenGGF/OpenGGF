@@ -21,8 +21,12 @@ public class MutableLevel extends AbstractLevel {
     private final BitSet dirtyBlocks;
     private final BitSet dirtyMapCells;
     private final BitSet dirtySolidTiles;
+    private final BitSet modifiedBlocksSinceBaseline;
+    private final BitSet modifiedChunksSinceBaseline;
+    private final BitSet modifiedMapCellsSinceBaseline;
     private boolean objectsDirty;
     private boolean ringsDirty;
+    private boolean modifiedSinceLastSave;
 
     // Reverse lookup tables for transitive dirtying
     private final java.util.Map<Integer, Set<Integer>> chunkToBlocks;
@@ -82,6 +86,10 @@ public class MutableLevel extends AbstractLevel {
         this.dirtyMapCells = new BitSet(
                 map.getLayerCount() * map.getWidth() * map.getHeight());
         this.dirtySolidTiles = new BitSet(solidTileCount);
+        this.modifiedBlocksSinceBaseline = new BitSet(blockCount);
+        this.modifiedChunksSinceBaseline = new BitSet(chunkCount);
+        this.modifiedMapCellsSinceBaseline = new BitSet(
+                map.getLayerCount() * map.getWidth() * map.getHeight());
     }
 
     /**
@@ -187,6 +195,8 @@ public class MutableLevel extends AbstractLevel {
         replaceChunkForWrite(chunkIndex, chunks[chunkIndex].saveState());
         chunks[chunkIndex].setPatternDesc(px, py, desc);
         dirtyChunks.set(chunkIndex);
+        modifiedChunksSinceBaseline.set(chunkIndex);
+        modifiedSinceLastSave = true;
         // Transitive: dirty all blocks referencing this chunk
         Set<Integer> affectedBlocks = chunkToBlocks.getOrDefault(chunkIndex, Set.of());
         for (int blockIdx : affectedBlocks) {
@@ -201,6 +211,8 @@ public class MutableLevel extends AbstractLevel {
         blocks[blockIndex].setChunkDesc(cx, cy, desc);
         updateChunkToBlocksLookup(blockIndex, oldChunkIndex, desc.getChunkIndex());
         dirtyBlocks.set(blockIndex);
+        modifiedBlocksSinceBaseline.set(blockIndex);
+        modifiedSinceLastSave = true;
         dirtyTransitiveMapCells(blockIndex);
     }
 
@@ -227,12 +239,16 @@ public class MutableLevel extends AbstractLevel {
         int cellIdx = linearizeMapCell(layer, bx, by);
         updateBlockToMapCellsLookup(cellIdx, oldBlockIndex, blockIndex);
         dirtyMapCells.set(cellIdx);
+        modifiedMapCellsSinceBaseline.set(cellIdx);
+        modifiedSinceLastSave = true;
     }
 
     public void restoreChunkState(int chunkIndex, int[] state) {
         if (!Arrays.equals(chunks[chunkIndex].saveState(), state)) {
             replaceChunkForWrite(chunkIndex, state);
             dirtyChunks.set(chunkIndex);
+            modifiedChunksSinceBaseline.set(chunkIndex);
+            modifiedSinceLastSave = true;
             Set<Integer> affectedBlocks = chunkToBlocks.getOrDefault(chunkIndex, Set.of());
             for (int blockIdx : affectedBlocks) {
                 dirtyBlocks.set(blockIdx);
@@ -321,6 +337,30 @@ public class MutableLevel extends AbstractLevel {
         boolean was = ringsDirty;
         ringsDirty = false;
         return was;
+    }
+
+    public BitSet modifiedBlocksSinceBaseline() {
+        return (BitSet) modifiedBlocksSinceBaseline.clone();
+    }
+
+    public BitSet modifiedChunksSinceBaseline() {
+        return (BitSet) modifiedChunksSinceBaseline.clone();
+    }
+
+    public BitSet modifiedMapCellsSinceBaseline() {
+        return (BitSet) modifiedMapCellsSinceBaseline.clone();
+    }
+
+    public boolean isModifiedSinceLastSave() {
+        return modifiedSinceLastSave;
+    }
+
+    public void markSaved() {
+        modifiedSinceLastSave = false;
+    }
+
+    public void markModifiedSinceLastSave() {
+        modifiedSinceLastSave = true;
     }
 
     // ===== Helpers =====

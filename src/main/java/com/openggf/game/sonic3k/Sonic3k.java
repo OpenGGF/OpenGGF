@@ -360,7 +360,7 @@ public class Sonic3k extends Game implements PlayerSpriteArtProvider, SpindashDu
             // Pal_ICZ1 loads; without it the opening mountain BG uses the cave colors.
             applyPaletteWords(level.getPalette(3), 1,
                     ICZ1_LOCK_ON_INTRO_PALETTE_LINE4_COLORS_1_TO_15);
-            GraphicsManager graphics = GraphicsManager.getInstance();
+            GraphicsManager graphics = GameServices.graphics();
             if (graphics.isGlInitialized()) {
                 graphics.cachePaletteTexture(level.getPalette(3), 3);
             }
