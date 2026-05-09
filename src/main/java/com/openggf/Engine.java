@@ -12,6 +12,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.editor.EditorInputHandler;
 import com.openggf.editor.EditorHierarchyDepth;
 import com.openggf.editor.LevelEditorController;
+import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.editor.render.EditorOverlayRenderer;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.LWJGLAudioBackend;
@@ -95,7 +96,7 @@ public class Engine {
 
 	private final GameLoop gameLoop;
 	private final LevelEditorController levelEditorController = new LevelEditorController();
-	private final EditorInputHandler editorInputHandler = new EditorInputHandler(levelEditorController);
+	private final EditorInputHandler editorInputHandler;
 	private final EditorOverlayRenderer editorOverlayRenderer;
 	// Match the rest of the debug overlay — no drop shadow.
 	private final PixelFontTextRenderer traceHudTextRenderer =
@@ -202,6 +203,8 @@ public class Engine {
 		this.windowWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH);
 		this.windowHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT);
 		this.targetFps = configService.getInt(SonicConfiguration.FPS);
+		this.editorInputHandler = new EditorInputHandler(
+				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel);
 
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
@@ -267,6 +270,16 @@ public class Engine {
 		glfwSetKeyCallback(window, (windowHandle, key, scancode, action, mods) -> {
 			if (inputHandler != null) {
 				inputHandler.handleKeyEvent(key, action);
+			}
+		});
+		glfwSetCursorPosCallback(window, (windowHandle, x, y) -> {
+			if (inputHandler != null) {
+				inputHandler.handleMouseMove(x, y);
+			}
+		});
+		glfwSetMouseButtonCallback(window, (windowHandle, button, action, mods) -> {
+			if (inputHandler != null) {
+				inputHandler.handleMouseButton(button, action);
 			}
 		});
 
@@ -539,6 +552,10 @@ public class Engine {
 	}
 
 	public void resumePlaytestFromEditor() {
+		editorInputHandler.finishActiveStroke();
+		if (!saveCurrentEditorLevel()) {
+			return;
+		}
 		repairEditorCursorForResume();
 		syncEditorState();
 		GameplayModeContext gameplay = SessionManager.resumeGameplayFromEditor();
@@ -558,6 +575,26 @@ public class Engine {
 		gameplay.initializeFreshGameplayState();
 		applyResumedPlaytestState(gameplay);
 		gameLoop.setGameMode(GameMode.LEVEL);
+	}
+
+	private boolean saveCurrentEditorLevel() {
+		MutableLevel mutableLevel = levelEditorController.currentLevel();
+		if (mutableLevel == null) {
+			return true;
+		}
+		com.openggf.game.session.WorldSession worldSession = SessionManager.getCurrentWorldSession();
+		if (worldSession == null) {
+			return true;
+		}
+		GameModule module = worldSession.getGameModule();
+		try {
+			new EditorSaveManager(Path.of("saves"))
+					.save(module.getGameId(), worldSession.getCurrentZone(), worldSession.getCurrentAct(), mutableLevel);
+			return true;
+		} catch (IOException e) {
+			LOGGER.warning("Failed to save editor edits: " + e.getMessage());
+			return false;
+		}
 	}
 
 	public void startGameplayFromBeginning() {

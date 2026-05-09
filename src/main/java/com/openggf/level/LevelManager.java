@@ -6,6 +6,7 @@ import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.data.Game;
 import com.openggf.data.AnimatedPaletteProvider;
 import com.openggf.data.AnimatedPatternProvider;
@@ -63,6 +64,7 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -2957,12 +2959,29 @@ public class LevelManager {
             ctx.snapshotCheckpoint(checkpointState);
 
             loadLevel(levelData.getLevelIndex(), loadMode, ctx);
+            if (loadMode != LevelLoadMode.PREVIEW_CAPTURE) {
+                applyPersistedEditorEdits();
+            }
             restoreCheckpointRuntimeState(ctx);
 
             frameCounter = 0;
 
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private void applyPersistedEditorEdits() {
+        if (level == null || gameModule == null) {
+            return;
+        }
+        MutableLevel mutableLevel = level instanceof MutableLevel existing
+                ? existing
+                : MutableLevel.snapshot(level);
+        EditorSaveManager.ApplyResult result = new EditorSaveManager(Path.of("saves"))
+                .tryApplyEdits(gameModule.getGameId(), currentZone, currentAct, mutableLevel);
+        if (result == EditorSaveManager.ApplyResult.APPLIED && mutableLevel != level) {
+            setLevel(mutableLevel);
         }
     }
 

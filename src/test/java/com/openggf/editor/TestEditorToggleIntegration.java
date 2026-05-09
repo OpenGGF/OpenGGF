@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
+import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModuleRegistry;
@@ -239,6 +240,40 @@ class TestEditorToggleIntegration {
         assertEquals(newBlockIndex,
                 ((MutableLevel) worldSession.getCurrentLevel()).getMap().getValue(0, 0, 0) & 0xFF,
                 "mutation made before editor entry must persist through the round trip");
+    }
+
+    @Test
+    void resumePlaytestFromEditor_savesEditorControllerMutableLevelAfterRuntimeTeardown() throws Exception {
+        enableEditor();
+        Engine engine = new Engine();
+        GameRuntime runtime = createGameplayRuntime(engine);
+        MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
+        runtime.getLevelManager().setLevel(mutable);
+        int zone = 1;
+        int act = 1;
+        runtime.getWorldSession().setCurrentZone(zone);
+        runtime.getWorldSession().setCurrentAct(act);
+        EditorSaveManager saveManager = new EditorSaveManager(Path.of("saves"));
+        Path saveFile = saveManager.editPath(runtime.getWorldSession().getGameModule().getGameId(), zone, act);
+        Files.deleteIfExists(saveFile);
+
+        try {
+            engine.enterEditorFromCurrentPlayer(
+                    new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
+                    100, 200);
+            engine.getLevelEditorController().placeBlock(0, 1, 1, 1);
+
+            engine.resumePlaytestFromEditor();
+
+            assertTrue(Files.exists(saveFile),
+                    "editor resume should save the MutableLevel attached to LevelEditorController");
+            MutableLevel fresh = MutableLevel.snapshot(new SyntheticLevel());
+            assertEquals(EditorSaveManager.ApplyResult.APPLIED,
+                    saveManager.tryApplyEdits(runtime.getWorldSession().getGameModule().getGameId(), zone, act, fresh));
+            assertEquals(1, Byte.toUnsignedInt(fresh.getMap().getValue(0, 1, 1)));
+        } finally {
+            Files.deleteIfExists(saveFile);
+        }
     }
 
     @Test
@@ -985,13 +1020,15 @@ class TestEditorToggleIntegration {
             chunks[0] = new Chunk();
             chunks[0].restoreState(new int[] { 0, 0, 0, 0, 0, 0 });
 
-            blockCount = 1;
+            blockCount = 2;
             blocks = new Block[blockCount];
-            blocks[0] = new Block(2);
-            blocks[0].setChunkDesc(0, 0, new ChunkDesc(0));
-            blocks[0].setChunkDesc(1, 0, new ChunkDesc(0));
-            blocks[0].setChunkDesc(0, 1, new ChunkDesc(0));
-            blocks[0].setChunkDesc(1, 1, new ChunkDesc(0));
+            for (int i = 0; i < blockCount; i++) {
+                blocks[i] = new Block(2);
+                blocks[i].setChunkDesc(0, 0, new ChunkDesc(0));
+                blocks[i].setChunkDesc(1, 0, new ChunkDesc(0));
+                blocks[i].setChunkDesc(0, 1, new ChunkDesc(0));
+                blocks[i].setChunkDesc(1, 1, new ChunkDesc(0));
+            }
 
             solidTileCount = 1;
             solidTiles = new SolidTile[] {
@@ -1032,4 +1069,3 @@ class TestEditorToggleIntegration {
     }
 
 }
-

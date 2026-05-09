@@ -636,6 +636,8 @@ class TestLevelEditorController {
                         EditorInputHandler.Action.CYCLE_FOCUS_REGION,
                         EditorInputHandler.Action.APPLY_PRIMARY_ACTION,
                         EditorInputHandler.Action.PERFORM_EYEDROP,
+                        EditorInputHandler.Action.TOGGLE_LAYER,
+                        EditorInputHandler.Action.SAVE,
                         EditorInputHandler.Action.UNDO,
                         EditorInputHandler.Action.REDO
                 },
@@ -1394,5 +1396,3 @@ class TestLevelEditorController {
         }
     }
 }
-
-
