@@ -2810,12 +2810,19 @@ public class ObjectManager {
     private com.openggf.game.rewind.schema.RewindCaptureContext rewindCaptureContext() {
         com.openggf.game.rewind.identity.RewindIdentityTable table =
                 new com.openggf.game.rewind.identity.RewindIdentityTable();
-        com.openggf.sprites.playable.AbstractPlayableSprite main =
-                objectServices.camera() != null ? objectServices.camera().getFocusedSprite() : null;
+        com.openggf.sprites.playable.AbstractPlayableSprite main = null;
+        List<PlayableEntity> sidekicks = List.of();
+        if (objectServices != null) {
+            var camera = objectServices.camera();
+            main = camera != null ? camera.getFocusedSprite() : null;
+            List<PlayableEntity> serviceSidekicks = objectServices.sidekicks();
+            if (serviceSidekicks != null) {
+                sidekicks = serviceSidekicks;
+            }
+        }
         if (main != null) {
             table.registerPlayer(main, com.openggf.game.rewind.identity.PlayerRefId.mainPlayer());
         }
-        List<PlayableEntity> sidekicks = objectServices.sidekicks();
         for (int i = 0; i < sidekicks.size(); i++) {
             PlayableEntity sidekick = sidekicks.get(i);
             if (sidekick == null || sidekick == main) {

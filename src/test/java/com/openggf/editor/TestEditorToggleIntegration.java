@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
+import com.openggf.editor.persistence.EditorSaveManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModuleRegistry;
@@ -54,6 +55,10 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F5;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_DOWN;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_E;
@@ -239,6 +244,89 @@ class TestEditorToggleIntegration {
         assertEquals(newBlockIndex,
                 ((MutableLevel) worldSession.getCurrentLevel()).getMap().getValue(0, 0, 0) & 0xFF,
                 "mutation made before editor entry must persist through the round trip");
+    }
+
+    @Test
+    void resumePlaytestFromEditor_savesEditorControllerMutableLevelAfterRuntimeTeardown() throws Exception {
+        enableEditor();
+        Engine engine = new Engine();
+        GameRuntime runtime = createGameplayRuntime(engine);
+        MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
+        runtime.getLevelManager().setLevel(mutable);
+        int zone = 1;
+        int act = 1;
+        runtime.getWorldSession().setCurrentZone(zone);
+        runtime.getWorldSession().setCurrentAct(act);
+        EditorSaveManager saveManager = new EditorSaveManager(Path.of("saves"));
+        Path saveFile = saveManager.editPath(runtime.getWorldSession().getGameModule().getGameId(), zone, act);
+        Files.deleteIfExists(saveFile);
+
+        try {
+            engine.enterEditorFromCurrentPlayer(
+                    new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
+                    100, 200);
+            engine.getLevelEditorController().placeBlock(0, 1, 1, 1);
+
+            engine.resumePlaytestFromEditor();
+
+            assertTrue(Files.exists(saveFile),
+                    "editor resume should save the MutableLevel attached to LevelEditorController");
+            MutableLevel fresh = MutableLevel.snapshot(new SyntheticLevel());
+            assertEquals(EditorSaveManager.ApplyResult.APPLIED,
+                    saveManager.tryApplyEdits(runtime.getWorldSession().getGameModule().getGameId(), zone, act, fresh));
+            assertEquals(1, Byte.toUnsignedInt(fresh.getMap().getValue(0, 1, 1)));
+        } finally {
+            Files.deleteIfExists(saveFile);
+        }
+    }
+
+    @Test
+    void enterEditor_restoresLevelManagerViewForEditorRenderingAfterRuntimeTeardown() throws Exception {
+        enableEditor();
+        Engine engine = new Engine();
+        GameRuntime runtime = createGameplayRuntime(engine);
+        MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
+        runtime.getLevelManager().setLevel(mutable);
+
+        engine.enterEditorFromCurrentPlayer(
+                new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
+                100, 128);
+
+        LevelManager editorLevelManager = engineLevelManager(engine);
+        assertNull(RuntimeManager.getCurrent(),
+                "entering editor must still tear down the gameplay runtime");
+        assertSame(mutable, engine.getLevelEditorController().currentLevel(),
+                "pre-runtime editor controller level should survive runtime teardown");
+        assertSame(mutable, editorLevelManager.getCurrentLevel(),
+                "Engine's level manager must keep a renderable editor view after teardown");
+        assertNotNull(editorLevelManager.getTilemapManager(),
+                "editor view restore must rebuild tilemap rendering state");
+        assertEquals(0, editorLevelManager.getCurrentZone());
+        assertEquals(0, editorLevelManager.getCurrentAct());
+        assertNull(editorLevelManager.getObjectManager(),
+                "editor view restore must not initialize gameplay object systems");
+        assertNull(editorLevelManager.getRingManager(),
+                "editor view restore must not initialize gameplay ring systems");
+        assertSame(mutable.getBlock(0), lookupBlock(editorLevelManager, (byte) 0, 0, 0));
+    }
+
+    @Test
+    void editorDrawPathFlushesMutableLevelDirtyRegionsBeforeRendering() throws Exception {
+        enableEditor();
+        Engine engine = new Engine();
+        LevelManager levelManager = mock(LevelManager.class);
+        SpriteManager spriteManager = mock(SpriteManager.class);
+        RuntimeException sentinel = new RuntimeException("dirty-region flush reached");
+        doThrow(sentinel).when(levelManager).processDirtyRegions();
+        setPrivateField(engine, "levelManager", levelManager);
+        setPrivateField(engine, "spriteManager", spriteManager);
+        engine.getGameLoop().setGameMode(GameMode.EDITOR);
+
+        RuntimeException thrown = assertThrows(RuntimeException.class, engine::draw);
+
+        assertSame(sentinel, thrown);
+        verify(levelManager).processDirtyRegions();
+        verify(levelManager, never()).drawWithSpritePriority(spriteManager);
     }
 
     @Test
@@ -841,6 +929,16 @@ class TestEditorToggleIntegration {
         }
     }
 
+    private static LevelManager engineLevelManager(Engine engine) {
+        try {
+            Field field = Engine.class.getDeclaredField("levelManager");
+            field.setAccessible(true);
+            return (LevelManager) field.get(engine);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to read Engine level manager", e);
+        }
+    }
+
     private static void initializeTilemapManager(LevelManager levelManager) {
         try {
             Method buildGeometry = LevelManager.class.getDeclaredMethod("buildGeometry");
@@ -862,6 +960,12 @@ class TestEditorToggleIntegration {
         Field field = LevelEditorController.class.getDeclaredField("worldCursor");
         field.setAccessible(true);
         field.set(controller, cursor);
+    }
+
+    private static void setPrivateField(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 
     private static void enableEditor() {
@@ -985,13 +1089,15 @@ class TestEditorToggleIntegration {
             chunks[0] = new Chunk();
             chunks[0].restoreState(new int[] { 0, 0, 0, 0, 0, 0 });
 
-            blockCount = 1;
+            blockCount = 2;
             blocks = new Block[blockCount];
-            blocks[0] = new Block(2);
-            blocks[0].setChunkDesc(0, 0, new ChunkDesc(0));
-            blocks[0].setChunkDesc(1, 0, new ChunkDesc(0));
-            blocks[0].setChunkDesc(0, 1, new ChunkDesc(0));
-            blocks[0].setChunkDesc(1, 1, new ChunkDesc(0));
+            for (int i = 0; i < blockCount; i++) {
+                blocks[i] = new Block(2);
+                blocks[i].setChunkDesc(0, 0, new ChunkDesc(0));
+                blocks[i].setChunkDesc(1, 0, new ChunkDesc(0));
+                blocks[i].setChunkDesc(0, 1, new ChunkDesc(0));
+                blocks[i].setChunkDesc(1, 1, new ChunkDesc(0));
+            }
 
             solidTileCount = 1;
             solidTiles = new SolidTile[] {
@@ -1032,4 +1138,3 @@ class TestEditorToggleIntegration {
     }
 
 }
-

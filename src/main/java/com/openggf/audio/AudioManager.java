@@ -23,8 +23,8 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.configuration.SonicConfiguration;
-import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
+import com.openggf.game.GameServices;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -119,12 +119,23 @@ public class AudioManager {
     }
 
     private static int configuredFrameRate() {
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
+        var config = configuredServicesOrNull();
+        if (config == null) {
+            return 60;
+        }
         String region = config.getString(SonicConfiguration.REGION);
         if ("PAL".equalsIgnoreCase(region)) {
             return 50;
         }
         return Math.max(1, config.getInt(SonicConfiguration.FPS));
+    }
+
+    private static com.openggf.configuration.SonicConfigurationService configuredServicesOrNull() {
+        try {
+            return GameServices.configuration();
+        } catch (IllegalStateException e) {
+            return null;
+        }
     }
 
     public void setBackend(AudioBackend backend) {

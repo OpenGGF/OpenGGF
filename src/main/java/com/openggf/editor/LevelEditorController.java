@@ -27,6 +27,7 @@ public final class LevelEditorController {
     private int selectedChunkCellY;
     private Integer selectedChunkDescriptorRaw;
     private Integer selectedPatternRaw;
+    private int activeLayer;
     private MutableLevel level;
 
     public void attachLevel(MutableLevel level) {
@@ -43,12 +44,22 @@ public final class LevelEditorController {
         selectedChunkCellY = 0;
         selectedChunkDescriptorRaw = null;
         selectedPatternRaw = null;
+        activeLayer = 0;
     }
 
     public void placeBlock(int layer, int x, int y, int blockIndex) {
         MutableLevel attachedLevel = requireLevel();
         int before = Byte.toUnsignedInt(attachedLevel.getMap().getValue(layer, x, y));
         history.execute(new PlaceBlockCommand(attachedLevel, layer, x, y, before, blockIndex));
+    }
+
+    public void executeCommand(EditorCommand command) {
+        history.execute(command);
+        refreshSelectionFromActiveTarget();
+    }
+
+    public MutableLevel currentLevel() {
+        return level;
     }
 
     public void undo() {
@@ -61,6 +72,24 @@ public final class LevelEditorController {
         if (history.redo()) {
             refreshSelectionFromActiveTarget();
         }
+    }
+
+    public int activeLayer() {
+        return activeLayer;
+    }
+
+    public void toggleActiveLayer() {
+        MutableLevel attachedLevel = requireLevel();
+        int layerCount = attachedLevel.getMap().getLayerCount();
+        if (layerCount < 2) {
+            activeLayer = 0;
+            return;
+        }
+        activeLayer = activeLayer == 0 ? 1 : 0;
+    }
+
+    public boolean hasUndoHistory() {
+        return history.hasUndoEntries();
     }
 
     public void selectBlock(int blockIndex) {
@@ -208,7 +237,7 @@ public final class LevelEditorController {
         if (mapPosition == null) {
             return;
         }
-        placeBlock(0, mapPosition.mapX(), mapPosition.mapY(), selectedBlock);
+        placeBlock(activeLayer, mapPosition.mapX(), mapPosition.mapY(), selectedBlock);
     }
 
     private void applyBlockPrimaryAction() {
@@ -227,7 +256,7 @@ public final class LevelEditorController {
         if (mapPosition == null) {
             return;
         }
-        int sourceBlockIndex = Byte.toUnsignedInt(attachedLevel.getMap().getValue(0, mapPosition.mapX(), mapPosition.mapY()));
+        int sourceBlockIndex = Byte.toUnsignedInt(attachedLevel.getMap().getValue(activeLayer, mapPosition.mapX(), mapPosition.mapY()));
         if (!Objects.equals(selection.selectedBlock(), sourceBlockIndex)
                 || !isValidBlockIndex(attachedLevel, sourceBlockIndex)
                 || !isBlockCellInBounds(attachedLevel.getBlock(sourceBlockIndex), selectedBlockCellX, selectedBlockCellY)) {
@@ -243,7 +272,7 @@ public final class LevelEditorController {
                 : unflaggedChunkDescriptorRaw(selectedChunk);
         history.execute(new DeriveBlockFromChunksCommand(
                 attachedLevel,
-                0,
+                activeLayer,
                 mapPosition.mapX(),
                 mapPosition.mapY(),
                 sourceBlockIndex,
@@ -272,7 +301,7 @@ public final class LevelEditorController {
         if (mapPosition == null) {
             return;
         }
-        int sourceBlockIndex = Byte.toUnsignedInt(attachedLevel.getMap().getValue(0, mapPosition.mapX(), mapPosition.mapY()));
+        int sourceBlockIndex = Byte.toUnsignedInt(attachedLevel.getMap().getValue(activeLayer, mapPosition.mapX(), mapPosition.mapY()));
         if (sourceBlockIndex != selectedBlock || !isValidBlockIndex(attachedLevel, sourceBlockIndex)) {
             return;
         }
@@ -310,7 +339,7 @@ public final class LevelEditorController {
         );
         EditorCommand blockCommand = new DeriveBlockFromChunksCommand(
                 attachedLevel,
-                0,
+                activeLayer,
                 mapPosition.mapX(),
                 mapPosition.mapY(),
                 sourceBlockIndex,
@@ -344,7 +373,7 @@ public final class LevelEditorController {
         if (mapPosition == null) {
             return;
         }
-        int blockIndex = Byte.toUnsignedInt(attachedLevel.getMap().getValue(0, mapPosition.mapX(), mapPosition.mapY()));
+        int blockIndex = Byte.toUnsignedInt(attachedLevel.getMap().getValue(activeLayer, mapPosition.mapX(), mapPosition.mapY()));
         selectBlock(blockIndex);
     }
 
@@ -436,6 +465,10 @@ public final class LevelEditorController {
 
     public EditorSelectionState selection() {
         return selection;
+    }
+
+    public Integer selectedBlockIndex() {
+        return selection.selectedBlock();
     }
 
     public String breadcrumb() {
@@ -565,7 +598,7 @@ public final class LevelEditorController {
         if (mapPosition == null) {
             return;
         }
-        int blockIndex = Byte.toUnsignedInt(level.getMap().getValue(0, mapPosition.mapX(), mapPosition.mapY()));
+        int blockIndex = Byte.toUnsignedInt(level.getMap().getValue(activeLayer, mapPosition.mapX(), mapPosition.mapY()));
         if (!isValidBlockIndex(level, blockIndex)) {
             return;
         }

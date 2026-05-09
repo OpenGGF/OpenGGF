@@ -21,8 +21,15 @@ public class MutableLevel extends AbstractLevel {
     private final BitSet dirtyBlocks;
     private final BitSet dirtyMapCells;
     private final BitSet dirtySolidTiles;
+    private final BitSet modifiedBlocksSinceBaseline;
+    private final BitSet modifiedChunksSinceBaseline;
+    private final BitSet modifiedMapCellsSinceBaseline;
+    private final int[][] baselineBlockStates;
+    private final int[][] baselineChunkStates;
+    private final byte[] baselineMapCellValues;
     private boolean objectsDirty;
     private boolean ringsDirty;
+    private boolean modifiedSinceLastSave;
 
     // Reverse lookup tables for transitive dirtying
     private final java.util.Map<Integer, Set<Integer>> chunkToBlocks;
@@ -82,6 +89,13 @@ public class MutableLevel extends AbstractLevel {
         this.dirtyMapCells = new BitSet(
                 map.getLayerCount() * map.getWidth() * map.getHeight());
         this.dirtySolidTiles = new BitSet(solidTileCount);
+        this.modifiedBlocksSinceBaseline = new BitSet(blockCount);
+        this.modifiedChunksSinceBaseline = new BitSet(chunkCount);
+        this.modifiedMapCellsSinceBaseline = new BitSet(
+                map.getLayerCount() * map.getWidth() * map.getHeight());
+        this.baselineBlockStates = snapshotBlockStates(blocks);
+        this.baselineChunkStates = snapshotChunkStates(chunks);
+        this.baselineMapCellValues = snapshotMapCellValues(map);
     }
 
     /**
@@ -187,6 +201,8 @@ public class MutableLevel extends AbstractLevel {
         replaceChunkForWrite(chunkIndex, chunks[chunkIndex].saveState());
         chunks[chunkIndex].setPatternDesc(px, py, desc);
         dirtyChunks.set(chunkIndex);
+        updateChunkModifiedSinceBaseline(chunkIndex);
+        modifiedSinceLastSave = true;
         // Transitive: dirty all blocks referencing this chunk
         Set<Integer> affectedBlocks = chunkToBlocks.getOrDefault(chunkIndex, Set.of());
         for (int blockIdx : affectedBlocks) {
@@ -201,6 +217,8 @@ public class MutableLevel extends AbstractLevel {
         blocks[blockIndex].setChunkDesc(cx, cy, desc);
         updateChunkToBlocksLookup(blockIndex, oldChunkIndex, desc.getChunkIndex());
         dirtyBlocks.set(blockIndex);
+        updateBlockModifiedSinceBaseline(blockIndex);
+        modifiedSinceLastSave = true;
         dirtyTransitiveMapCells(blockIndex);
     }
 
@@ -227,12 +245,16 @@ public class MutableLevel extends AbstractLevel {
         int cellIdx = linearizeMapCell(layer, bx, by);
         updateBlockToMapCellsLookup(cellIdx, oldBlockIndex, blockIndex);
         dirtyMapCells.set(cellIdx);
+        updateMapCellModifiedSinceBaseline(cellIdx, (byte) blockIndex);
+        modifiedSinceLastSave = true;
     }
 
     public void restoreChunkState(int chunkIndex, int[] state) {
         if (!Arrays.equals(chunks[chunkIndex].saveState(), state)) {
             replaceChunkForWrite(chunkIndex, state);
             dirtyChunks.set(chunkIndex);
+            updateChunkModifiedSinceBaseline(chunkIndex);
+            modifiedSinceLastSave = true;
             Set<Integer> affectedBlocks = chunkToBlocks.getOrDefault(chunkIndex, Set.of());
             for (int blockIdx : affectedBlocks) {
                 dirtyBlocks.set(blockIdx);
@@ -323,6 +345,30 @@ public class MutableLevel extends AbstractLevel {
         return was;
     }
 
+    public BitSet modifiedBlocksSinceBaseline() {
+        return (BitSet) modifiedBlocksSinceBaseline.clone();
+    }
+
+    public BitSet modifiedChunksSinceBaseline() {
+        return (BitSet) modifiedChunksSinceBaseline.clone();
+    }
+
+    public BitSet modifiedMapCellsSinceBaseline() {
+        return (BitSet) modifiedMapCellsSinceBaseline.clone();
+    }
+
+    public boolean isModifiedSinceLastSave() {
+        return modifiedSinceLastSave;
+    }
+
+    public void markSaved() {
+        modifiedSinceLastSave = false;
+    }
+
+    public void markModifiedSinceLastSave() {
+        modifiedSinceLastSave = true;
+    }
+
     // ===== Helpers =====
 
     /**
@@ -359,6 +405,20 @@ public class MutableLevel extends AbstractLevel {
 
     private int linearizeMapCell(int layer, int x, int y) {
         return layer * map.getWidth() * map.getHeight() + y * map.getWidth() + x;
+    }
+
+    private void updateBlockModifiedSinceBaseline(int blockIndex) {
+        modifiedBlocksSinceBaseline.set(blockIndex,
+                !Arrays.equals(blocks[blockIndex].saveState(), baselineBlockStates[blockIndex]));
+    }
+
+    private void updateChunkModifiedSinceBaseline(int chunkIndex) {
+        modifiedChunksSinceBaseline.set(chunkIndex,
+                !Arrays.equals(chunks[chunkIndex].saveState(), baselineChunkStates[chunkIndex]));
+    }
+
+    private void updateMapCellModifiedSinceBaseline(int cellIdx, byte value) {
+        modifiedMapCellsSinceBaseline.set(cellIdx, value != baselineMapCellValues[cellIdx]);
     }
 
     private void replaceBlockForWrite(int blockIndex, int[] state) {
@@ -457,5 +517,36 @@ public class MutableLevel extends AbstractLevel {
             }
         }
         return result;
+    }
+
+    private static int[][] snapshotBlockStates(Block[] blocks) {
+        int[][] states = new int[blocks.length][];
+        for (int i = 0; i < blocks.length; i++) {
+            states[i] = blocks[i].saveState();
+        }
+        return states;
+    }
+
+    private static int[][] snapshotChunkStates(Chunk[] chunks) {
+        int[][] states = new int[chunks.length][];
+        for (int i = 0; i < chunks.length; i++) {
+            states[i] = chunks[i].saveState();
+        }
+        return states;
+    }
+
+    private byte[] snapshotMapCellValues(Map levelMap) {
+        int layers = levelMap.getLayerCount();
+        int w = levelMap.getWidth();
+        int h = levelMap.getHeight();
+        byte[] values = new byte[layers * w * h];
+        for (int layer = 0; layer < layers; layer++) {
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    values[linearizeMapCell(layer, x, y)] = levelMap.getValue(layer, x, y);
+                }
+            }
+        }
+        return values;
     }
 }
