@@ -164,6 +164,10 @@ gameplay buffer. The on-screen live rewind HUD is hidden during ordinary play an
 appears only while the key is held, showing the current rewind frame. Rewind history
 resets at committed level and act transition boundaries.
 
+Live rewind also reverses audio presentation from the recent mixed PCM history
+and freezes graphical fade progression to the restored rewind snapshots. The
+game resumes normal forward audio/fade presentation when the key is released.
+
 Held rewind defaults to one rewind step per visual frame and stops immediately when
 released. Experimental release coast is available only when
 `LIVE_REWIND_TAPE_COAST_ENABLED` is set to `true`; its acceleration, deceleration,

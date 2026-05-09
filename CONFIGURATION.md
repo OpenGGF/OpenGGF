@@ -95,7 +95,7 @@ Paths are relative to the working directory (where the JAR is launched).
 | `DEBUG_VIEW_ENABLED` | bool | `true` | Eagerly initialise the debug overlay subsystem. Required for any runtime debug keys to function. Does not show anything on-screen until debug mode is activated. |
 | `EDITOR_ENABLED` | bool | `false` | Allow the experimental in-engine editor overlay to be entered from gameplay with `Shift+Tab`. |
 | `DEBUG_COLLISION_VIEW_ENABLED` | bool | `false` | Draw collision sensor rays and solid object outlines over the scene at all times. |
-| `LIVE_REWIND_ENABLED` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots and records live input while enabled. |
+| `LIVE_REWIND_ENABLED` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
 | `LIVE_REWIND_TAPE_COAST_ENABLED` | bool | `false` | Enable experimental live-rewind coast after releasing the rewind key. Disabled by default, so held rewind remains one step per visual frame. |
 | `LIVE_REWIND_TAPE_COAST_ACCELERATION` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_DECELERATION` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
@@ -133,8 +133,8 @@ The tables below list each key's name, default code, and the human-readable key 
 | `JUMP` | `32` | Space | Jump / action button. |
 | `PAUSE_KEY` | `257` | Enter | Pause / unpause the game. |
 | `FRAME_STEP_KEY` | `81` | Q | Advance one frame while paused. |
-| `TRACE_REWIND_KEY` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time. |
-| `LIVE_REWIND_KEY` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true. |
+| `TRACE_REWIND_KEY` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |
+| `LIVE_REWIND_KEY` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true, including reverse audio presentation and restored fade snapshots. |
 
 ### Debug Navigation
 
