@@ -72,6 +72,13 @@ Run the focused encounter validation foundation:
 mvn -Dmse=off "-Dtest=TestRewindEncounterValidation" test
 ```
 
+Run the focused presentation checks after changing reverse audio, trace rewind,
+or fade behaviour:
+
+```bash
+mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerRewindSuppression" test
+```
+
 Run the benchmark only when you need timing, footprint, or long-tail determinism data:
 
 ```bash

@@ -235,7 +235,9 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   annotation density, object rollout candidates, child/spawn graph hotspots, and encounter replay
   validation. Live and visual-trace rewind presentation now also carries reverse audio from the
   PCM history ring, keeps graphical fades aligned with restored rewind snapshots, and treats final
-  object-reference collections as structural state instead of compact scalar sidecar payload.
+  object-reference collections as structural state instead of compact scalar sidecar payload. The
+  contributor and player docs now describe those rewind audio/fade presentation paths, trace-mode
+  controls, and focused validation commands.
 - **Trace recorder:** S3K v6.6 AIZ diagnostics expose tree/boundary pre/post state at the F4679
   sidekick boundary frame, transition-floor SolidObjectTop decisions at the F5415 frame, and
   fire-handoff terrain/SolidObjectTop state around F5435 while keeping trace data comparison-only;

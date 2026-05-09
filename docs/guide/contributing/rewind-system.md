@@ -19,12 +19,13 @@ Good uses:
 - Live gameplay rewind when `LIVE_REWIND_ENABLED` is true.
 - Rewind determinism debugging for player, sidekick, object, ring, level, palette,
   parallax, and zone-runtime state.
+- Presentation debugging for reverse audio and graphical fades during live and
+  visual trace rewind.
 
 Avoid using it for:
 
 - Menu/title/data-select state. Rewind is owned by `GameplayModeContext`, not the
   global application shell.
-- Audio scrubbing. Audio is not snapshotted and may pop or restart around a seek.
 - Rewinding across level, act, or mode boundaries. Those events reset the rewind
   buffer by design.
 - Editor undo/redo. The level editor uses its own `MutableLevel` snapshot and command
@@ -54,6 +55,13 @@ The HUD shows `Hold R Rewind` while rewind is available and changes to `REWIND <
 while the key is held. Releasing the key resumes the BK2-driven replay from the
 restored frame. `Enter` still pauses/resumes the trace, `Q` still frame-steps while
 paused, and `Esc` exits the trace back to the picker.
+
+While the key is held, trace rewind also enters reverse presentation for both
+audio and fades. Audio drains the PCM history ring backward and keeps updating
+while the trace frame is consumed by rewind. The graphical fade pass suppresses
+normal display-driven fade advancement and renders the restored fade snapshot,
+so fade-from-black/fade-to-black transitions move with the rewound frame instead
+of continuing forward.
 
 ### Live Play
 
@@ -114,6 +122,39 @@ playback.stepForwardOnce();
 playback.play();
 ```
 
+### Audio And Visual Presentation
+
+Rewind has two state layers:
+
+- **Deterministic gameplay state** is captured/restored by registered
+  `RewindSnapshottable` adapters and replayed through the normal forward frame
+  path.
+- **Presentation state** is allowed to be presentation-only. It must not mutate
+  future gameplay intent while internal rewind replay expands a segment.
+
+Audio uses that presentation-only path. `AudioManager` records durable audio
+intent through `AudioCommandTimeline`, captures logical SMPS/backend state for
+keyframes, suppresses live backend commands during internal replay, and exposes
+`beginReverseAudioPresentation()` / `afterRewindRestore(...)` for realtime
+rewind. LWJGL forward playback still uses the normal production stream path; a
+bounded PCM history ring is populated from the mixed output and drained backward
+only while reverse presentation is active. On release, the consumed reverse
+cursor is committed so successive rewinds continue from the audio position where
+the previous rewind ended.
+
+`LiveRewindManager` owns this lifecycle for ordinary live play. Visual Trace Test
+Mode has its own path in `TraceSessionLauncher`, so it must explicitly enter
+reverse audio presentation, call `GameServices.audio().update()` for each
+consumed held-rewind frame, and clean up with `afterRewindRestore(...)` on
+release.
+
+Graphical fades are gameplay-scoped and are snapshotted through `FadeManager`.
+The engine display pipeline also calls `FadeManager.update()` once per visual
+frame, so rewind presentation must suppress that normal forward advancement while
+live or trace rewind is active. `FadeManager.beginReversePresentation()` freezes
+display-driven fade updates until the rewind presentation is released; restored
+snapshots still carry the actual fade frame/color to render.
+
 ## Limits And Guarantees
 
 Rewind is deterministic only for state captured by registered
@@ -132,7 +173,10 @@ frame. The current covered state includes:
 
 Known limitations:
 
-- Audio state is cosmetic and not captured.
+- Audio rewind is presentation-level, not a promise of exact YM/PSG/DAC
+  sample-accurate reverse synthesis. Logical SMPS/backend snapshots keep restore
+  and replay deterministic, while audible reverse playback comes from the PCM
+  history ring.
 - OpenGL/VRAM state is not captured. Rendering is re-derived after restore.
 - Level/act changes reset the rewind buffer, so seeks cannot cross act boundaries.
 - Death can be rewound until the level reset commits at the end of the death flow.
@@ -275,6 +319,16 @@ The main classes live under `com.openggf.game.rewind`:
 | `RewindRegistry` | Ordered registry of subsystem `RewindSnapshottable` adapters. |
 | `CompositeSnapshot` | Per-frame map from stable subsystem key to immutable snapshot record. |
 
+Audio rewind lives outside `com.openggf.game.rewind`:
+
+| Type | Purpose |
+| --- | --- |
+| `com.openggf.audio.rewind.AudioCommandTimeline` | Durable audio-intent log used when restoring/replaying keyframes. |
+| `com.openggf.audio.rewind.AudioLogicalSnapshot` | Logical audio manager snapshot covering frame/counter/timeline/backend state. |
+| `com.openggf.audio.rewind.Smps*Snapshot` | SMPS driver, sequencer, and track state records used by logical restore. |
+| `com.openggf.audio.runtime.DeterministicAudioRuntime` | Frame-clocked audio runtime seam used by tests and deterministic replay plumbing. |
+| `com.openggf.audio.runtime.PcmHistoryRing` | Bounded mixed-PCM history used for audible reverse presentation. |
+
 Automatic field capture currently has two side-by-side implementations:
 
 | Type | Purpose |
@@ -293,9 +347,12 @@ fields, selected helper state (`SubpixelMotion.State`, `ObjectAnimationState`,
 `PlatformBobHelper`, `AnimationTimer`), and player/object references when a
 `RewindCaptureContext` with a populated `RewindIdentityTable` is supplied.
 Final fields are structural by default unless their codec explicitly restores
-in place. `RewindPolicyRegistry` centralizes repeated decisions for runtime and
-rendering service types so shared base classes do not need redundant
-`@RewindTransient` annotations.
+in place. Final collections/maps whose element, key, or value type is a
+player/object identity reference are also treated as structural for default
+object subclass capture; the owning object manager restores those links by
+stable identity rather than by compact scalar sidecar state. `RewindPolicyRegistry`
+centralizes repeated decisions for runtime and rendering service types so shared
+base classes do not need redundant `@RewindTransient` annotations.
 
 For concrete `AbstractObjectInstance` subclasses, default subclass scalar capture
 is enabled centrally by
@@ -355,6 +412,13 @@ mvn -Dmse=off "-Dtest=TestRewindStateBuffer,TestRewindSchemaRegistry,TestCompact
 mvn -Dmse=off "-Dtest=TestRewindEncounterValidation" test
 mvn -Dmse=off "-Dtest=RewindBenchmark" \
   "-Dopenggf.rewind.benchmark.run=true" test
+```
+
+When touching audio/fade presentation specifically, also run the focused
+presentation suite:
+
+```bash
+mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com.openggf.graphics.TestFadeManagerRewindSnapshot,com.openggf.game.rewind.TestLiveRewindManagerAudioCleanup,com.openggf.audio.TestAudioManagerRewindSuppression" test
 ```
 
 If the benchmark reports a divergent key, treat it as a real coverage gap unless the
