@@ -213,7 +213,8 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   save handling, and sidekick/object interactions continue to gain ROM-cited behavior and tests.
   Carnival Night Act 1 now includes the miniboss arena handoff: miniboss music, boss/raw child
   animations, the spinner/top and coil children, vertical tunnel scrolling, arena wall mutations,
-  and the cylinder carry follow-down fix are covered by focused headless/object tests.
+  and the cylinder carry follow-down fix are covered by focused headless/object tests. IceCap now
+  includes the harmful ice object registration and object coverage.
 - **Trace replay and diagnostics:** S1, S2, and S3K trace replay tooling now has stronger recorder
   schemas, comparison-only aux streams, compressed fixtures, and focused workflows for parity fixes.
   The gameplay rewind stack can also be enabled during ordinary live play with `LIVE_REWIND_ENABLED`,

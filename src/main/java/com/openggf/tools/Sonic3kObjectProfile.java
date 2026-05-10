@@ -141,7 +141,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xA6, // CNZMiniboss (S3KL only — same id maps to DEZMiniboss in SKL)
                 0xAE, // StarPointer
                 0xB3, // ICZSegmentColumn
-                0xB4  // ICZSwingingPlatform
+                0xB4, // ICZSwingingPlatform
+                0xB8  // ICZHarmfulIce
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
 
