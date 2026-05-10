@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 
 import java.lang.reflect.Modifier;
@@ -23,6 +24,14 @@ public final class GenericRewindEligibility {
                 && type != AbstractObjectInstance.class
                 && !Modifier.isAbstract(type.getModifiers())
                 && !declaresConcreteObjectRewindOverride(type);
+    }
+
+    public static boolean usesDefaultBadnikSubclassCapture(Class<?> type) {
+        Objects.requireNonNull(type, "type");
+        return AbstractBadnikInstance.class.isAssignableFrom(type)
+                && type != AbstractBadnikInstance.class
+                && !Modifier.isAbstract(type.getModifiers())
+                && !declaresConcreteObjectRewindOverrideBefore(type, AbstractBadnikInstance.class);
     }
 
     public static Set<Class<?>> eligibleClassesForAudit() {
@@ -59,6 +68,31 @@ public final class GenericRewindEligibility {
                 }
             } catch (NoSuchMethodException e) {
                 // Continue walking toward AbstractObjectInstance.
+            }
+        }
+        return false;
+    }
+
+    private static boolean declaresConcreteObjectRewindOverrideBefore(Class<?> type, Class<?> stopExclusive) {
+        return declaresConcreteMethodBefore(type, stopExclusive, "captureRewindState")
+                || declaresConcreteMethodBefore(type, stopExclusive,
+                "restoreRewindState", PerObjectRewindSnapshot.class);
+    }
+
+    private static boolean declaresConcreteMethodBefore(Class<?> type, Class<?> stopExclusive,
+            String name, Class<?>... parameterTypes) {
+        for (Class<?> current = type;
+                current != null && current != stopExclusive;
+                current = current.getSuperclass()) {
+            try {
+                var method = current.getDeclaredMethod(name, parameterTypes);
+                if (!Modifier.isAbstract(method.getModifiers())
+                        && !method.isSynthetic()
+                        && !method.isBridge()) {
+                    return true;
+                }
+            } catch (NoSuchMethodException e) {
+                // Continue walking toward the stop class.
             }
         }
         return false;
