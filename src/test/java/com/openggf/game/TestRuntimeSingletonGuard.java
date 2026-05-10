@@ -19,8 +19,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * <p>
  * Allowed call sites:
  * <ul>
- *   <li>{@link RuntimeManager} â€” explicit runtime composition root</li>
- *   <li>{@link GameServices} â€” runtime facade / engine-global access</li>
+ *   <li>{@link GameServices} - session-owned gameplay access</li>
  * </ul>
  */
 public class TestRuntimeSingletonGuard {
@@ -41,7 +40,6 @@ public class TestRuntimeSingletonGuard {
 
     /** Files allowed to call getInstance() on runtime-owned managers. */
     private static final Set<String> ALLOWED_FILES = Set.of(
-            "RuntimeManager.java",
             "GameServices.java"
     );
 

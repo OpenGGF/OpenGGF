@@ -197,7 +197,7 @@ public class GameLoop {
 
     /**
      * Callback registered by {@link #launchGameByEntry} to run once
-     * Engine.exitMasterTitleScreen has rebuilt the gameplay runtime.
+     * Engine.exitMasterTitleScreen has rebuilt the gameplay mode.
      * Staged into {@link #afterStepMasterTitleLaunchCallback} when
      * {@link #doExitMasterTitleScreen} runs (inside the fade callback)
      * and fired at the end of the next {@link #step()} so trace
@@ -244,10 +244,10 @@ public class GameLoop {
                 ? gameplayMode
                 : SessionManager.getCurrentGameplayMode();
         if (currentGameplayMode == null || currentGameplayMode.getCamera() == null) {
-            // Runtime has been torn down (e.g. trace teardown returning to
+            // Gameplay mode has been torn down (e.g. trace teardown returning to
             // master title). Clear cached references so resolveFadeManager()
             // falls back to the graphics-owned bootstrap manager rather than
-            // a destroyed runtime FadeManager that the UI pipeline no longer
+            // a destroyed gameplay FadeManager that the UI pipeline no longer
             // ticks — which would otherwise leave fade callbacks orphaned.
             this.gameplayMode = null;
             this.spriteManager = null;

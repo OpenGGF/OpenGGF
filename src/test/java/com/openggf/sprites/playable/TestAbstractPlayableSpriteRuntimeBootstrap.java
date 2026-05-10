@@ -52,8 +52,8 @@ class TestAbstractPlayableSpriteRuntimeBootstrap {
         Sonic sonic = sonicRef.get();
         assertNotNull(sonic);
 
-        // BUBBLE animation resolution is a narrow runtime-bound lookup that should
-        // succeed once the gameplay runtime and world session are active.
+        // BUBBLE animation resolution is a narrow gameplay-mode lookup that should
+        // succeed once the gameplay mode and world session are active.
         assertDoesNotThrow(() -> assertNotEquals(-1, sonic.resolveAnimationId(CanonicalAnimation.BUBBLE)));
     }
 }

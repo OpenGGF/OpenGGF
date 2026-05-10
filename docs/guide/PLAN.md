@@ -522,10 +522,10 @@ Sections:
    `services()`. This separation exists to support the planned level editor, where
    multiple level contexts may coexist.
 
-3. **GameRuntime direction** — The target is an explicit `GameRuntime` object that
-   owns all mutable gameplay state. ObjectServices will be backed by a runtime
-   instance rather than singletons. This is in progress; contributors should be
-   aware of the direction.
+3. **Session-owned gameplay state** — The target is explicit ownership through
+   `SessionManager`, `WorldSession`, and `GameplayModeContext`. ObjectServices
+   are backed by the active gameplay mode rather than singletons or the retired
+   `GameRuntime` facade.
 
 4. **Level initialization** — The `LevelInitProfile` system: a declarative sequence
    of 13 steps that each game defines. Steps include loading layouts, decompressing
@@ -804,8 +804,8 @@ Suggested order for writing the pages, prioritizing the most impactful content f
 The guide should be updated alongside significant engine changes:
 
 - **game-status.md** — Updated with each release.
-- **architecture.md** — Updated when major architectural changes land (e.g., GameRuntime
-  migration).
+- **architecture.md** — Updated when major architectural changes land (e.g.,
+  session-ownership migration).
 - **tutorial-implement-object.md** — Stable unless the object system fundamentally changes.
 - **mapping-exercises.md** — Stable by design (teaches methods, not specific addresses).
 - **68000-primer.md** — Effectively permanent.

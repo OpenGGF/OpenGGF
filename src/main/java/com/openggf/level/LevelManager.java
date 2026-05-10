@@ -213,12 +213,12 @@ public class LevelManager {
 
     @Deprecated(forRemoval = true)
     protected LevelManager() {
-        throw new IllegalStateException("LevelManager requires explicit runtime dependencies");
+        throw new IllegalStateException("LevelManager requires explicit gameplay-mode dependencies");
     }
 
     /**
      * Constructs a LevelManager with explicit manager dependencies.
-     * Used by session-owned runtime construction to inject peers instead of
+     * Used by session-owned gameplay-mode construction to inject peers instead of
      * reading from singletons.
      */
     public LevelManager(Camera camera, SpriteManager spriteManager,
@@ -407,7 +407,7 @@ public class LevelManager {
 
     /**
      * Restores the read/render level view needed while editor mode is active
-     * after gameplay runtime teardown has reset gameplay-owned managers. This
+     * after gameplay mode teardown has reset gameplay-owned managers. This
      * intentionally rebuilds only level-derived rendering state; gameplay
      * object, ring, collision, and event systems are recreated on playtest
      * resume.
@@ -428,7 +428,7 @@ public class LevelManager {
     /**
      * Restores a loaded level inherited from {@code WorldSession} into a
      * freshly-constructed LevelManager — the path used after editor mode exit
-     * when the gameplay-mode runtime is rebuilt around the surviving world
+     * when the gameplay mode is rebuilt around the surviving world
      * data. Re-runs the standard {@link #loadZoneAndAct(int, int)} flow to
      * orchestrate every gameplay subsystem (game module, audio, animated
      * content, objects, rings, zone features, art, water, etc.), then if the
@@ -436,7 +436,7 @@ public class LevelManager {
      * {@link #setLevel(Level)} so any mutations made before editor entry
      * survive the round trip.
      * <p>
-     * Used by the editor exit flow after the old gameplay runtime has been
+     * Used by the editor exit flow after the old gameplay mode has been
      * torn down and a fresh gameplay mode has been built over the surviving
      * {@code WorldSession}.
      */

@@ -201,7 +201,7 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
 - **Editor groundwork:** a config-gated editor/playtest loop, focused block and chunk previews,
   derive edits, world-grid navigation, and safer mode switching are being built toward usable
   in-engine editing. The editor review pass now preserves controller-owned mutable levels across
-  runtime teardown, restores an editor-safe level view while editing, flushes dirty regions before
+  gameplay-mode teardown, restores an editor-safe level view while editing, flushes dirty regions before
   editor rendering, and omits reverted baseline edits from saved deltas.
 - **Runtime/session modernization:** the legacy `GameRuntime` / `RuntimeManager` facade has been
   retired. Process-wide services now sit behind `EngineServices`, while `SessionManager`,
@@ -375,8 +375,8 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   feature-flag/provider gated); removed runtime `.asm` reads from `Sonic3kObjectArtProvider`;
   hardened the trace-replay invariant guard against frame-zero snapshot hydration in S1 credits
   demos and converted hidden divergences into documented known issues; unified
-  `GameServices.hasRuntime()` with the gameplay-mode predicate and migrated `bonusStage()` off
-  `RuntimeManager.getCurrent()`; migrated HTZ earthquake and HCZ wall-chase render overlays into
+  `GameServices.hasRuntime()` with the gameplay-mode predicate and migrated `bonusStage()` to
+  session-owned access; migrated HTZ earthquake and HCZ wall-chase render overlays into
   `SpecialRenderEffectRegistry`; brought `ScrollEffectComposer` adoption to 100% across all 26
   scroll handlers; ported S1 badnik subpixel arithmetic to `SubpixelMotion` and routed S1/S2 child
   spawns through `spawnChild`/`spawnFreeChild` for `CONSTRUCTION_CONTEXT` safety; extracted the
@@ -392,7 +392,7 @@ See `CHANGELOG.md` for the detailed 0.6 prerelease change history.
 ### v0.5.20260411 (Released 2026-04-11)
 
 A primarily architectural release. The engine internals have been restructured to prepare for level
-editor support, safe runtime teardown, and multi-instance play-testing, while Sonic 3 & Knuckles
+editor support, safe gameplay-mode teardown, and multi-instance play-testing, while Sonic 3 & Knuckles
 gameplay coverage has expanded across Angel Island and Hydrocity. AIZ2 now has the Flying Battery
 bombing sequence, end boss, post-boss capsule/cutscene flow, and AIZ-to-HCZ transition represented,
 while HCZ now has a larger object/event pass and HCZ1-to-HCZ2 progression.
@@ -400,8 +400,9 @@ while HCZ now has a larger object/event pass and HCZ1-to-HCZ2 progression.
 - **Two-tier service architecture:** all 180+ game object classes migrated from direct singleton
   access to a two-tier dependency injection pattern (`GameServices` global facade + `ObjectServices`
   context-scoped injection). NoOp sentinels replace null checks throughout.
-- **GameRuntime:** explicit runtime object owns all mutable gameplay state, with `resetState()`
-  lifecycle on all singletons. Enables safe editor mode enter/exit and level rebuilds.
+- **Gameplay session ownership:** this release introduced the first explicit gameplay-state
+  ownership layer, later superseded by `SessionManager`, `WorldSession`, and
+  `GameplayModeContext`. Enables safe editor mode enter/exit and level rebuilds.
 - **LevelManager decomposition:** the engine's largest class broken into `LevelTilemapManager`,
   `LevelTransitionCoordinator`, and `LevelDebugRenderer` with ~73 methods extracted.
 - **MutableLevel:** snapshot, mutation, and dirty-region tracking for level tile data — the

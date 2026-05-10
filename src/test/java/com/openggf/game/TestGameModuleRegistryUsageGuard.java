@@ -16,8 +16,7 @@ class TestGameModuleRegistryUsageGuard {
     void gameplayCodeShouldNotReadGameModuleRegistryDirectly() throws IOException {
         Path srcMain = Path.of("src/main/java");
         List<String> allowed = List.of(
-                "src/main/java/com/openggf/game/GameModuleRegistry.java",
-                "src/main/java/com/openggf/game/RuntimeManager.java"
+                "src/main/java/com/openggf/game/GameModuleRegistry.java"
         );
         List<String> violations = new ArrayList<>();
 

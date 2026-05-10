@@ -143,10 +143,10 @@ class TestZoneLayoutMutationPipeline {
     }
 
     // Removed: parkAndResumeClearsQueuedMutationState. Tested
-    // RuntimeManager.parkCurrent / resumeParked, which have been deleted
-    // in favor of proper teardown+rebuild (RuntimeManager.destroyCurrent +
-    // initializeGameplayRuntime + level restoration). Queued mutation
-    // discard at runtime teardown is exercised by
+    // the old gameplay-mode parking path, which has been deleted
+    // in favor of proper teardown+rebuild (SessionManager mode teardown,
+    // gameplay-mode initialization, and level restoration). Queued mutation
+    // discard at gameplay-mode teardown is exercised by
     // runtimeDestroyClearsPendingMutationState below.
 
     @Test

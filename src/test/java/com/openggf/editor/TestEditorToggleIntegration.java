@@ -134,7 +134,7 @@ class TestEditorToggleIntegration {
     @Test
     void enterEditorFromCurrentPlayer_whenEditorDisabled_rejectsActivation() {
         Engine engine = new Engine();
-        createGameplayRuntime(engine);
+        createGameplayMode(engine);
         EditorPlaytestStash stash = new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1);
 
         IllegalStateException error = assertThrows(IllegalStateException.class,
@@ -149,7 +149,7 @@ class TestEditorToggleIntegration {
     @Test
     void shiftTabInGameplay_whenEditorDisabled_doesNotEnterEditor() {
         Engine engine = new Engine();
-        createGameplayRuntime(engine);
+        createGameplayMode(engine);
         InputHandler inputHandler = new InputHandler();
         engine.setInputHandler(inputHandler);
 
@@ -164,17 +164,17 @@ class TestEditorToggleIntegration {
     }
 
     @Test
-    void createGameplayRuntime_createsRuntimeBeforeConstructingPlayer() {
+    void createGameplayMode_createsRuntimeBeforeConstructingPlayer() {
         Engine engine = new Engine();
 
-        GameplayModeContext runtime = assertDoesNotThrow(() -> createGameplayRuntime(engine));
+        GameplayModeContext gameplayMode = assertDoesNotThrow(() -> createGameplayMode(engine));
 
-        assertNotNull(runtime);
-        assertSame(runtime, SessionManager.getCurrentGameplayMode());
-        assertNotNull(runtime.getSpriteManager().getSprite("sonic"));
+        assertNotNull(gameplayMode);
+        assertSame(gameplayMode, SessionManager.getCurrentGameplayMode());
+        assertNotNull(gameplayMode.getSpriteManager().getSprite("sonic"));
     }
 
-    // Removed: 3 tests that exercised the old runtime parking path.
+    // Removed: 3 tests that exercised the old gameplay-mode parking path.
     // Editor entry/exit now uses proper teardown+rebuild with level
     // restoration; the parking mechanism has been removed entirely. The
     // editor round-trip behavior is covered by
@@ -185,7 +185,7 @@ class TestEditorToggleIntegration {
     void enterEditorFromCurrentPlayer_thenResumePlaytestFromEditor_roundTripsStashAndSpawn() throws Exception {
         enableEditor();
         Engine engine = new Engine();
-        createGameplayRuntime(engine);
+        createGameplayMode(engine);
         EditorPlaytestStash stash = new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1);
 
         engine.enterEditorFromCurrentPlayer(stash, 100, 200);
@@ -199,7 +199,7 @@ class TestEditorToggleIntegration {
 
         engine.resumePlaytestFromEditor();
 
-        // Post-migration: editor exit rebuilds a fresh runtime over the
+        // Post-migration: editor exit rebuilds a fresh gameplay mode over the
         // surviving WorldSession (no longer the same instance).
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
         assertNotNull(SessionManager.getCurrentGameplayMode());
@@ -212,14 +212,14 @@ class TestEditorToggleIntegration {
     void editorRoundTrip_preservesMutableLevelMutations() throws Exception {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
 
         // Install a synthetic MutableLevel via setLevel(), which writes
-        // through to WorldSession (per the runtime ownership migration).
+        // through to WorldSession (per the session ownership migration).
         MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
-        runtime.getLevelManager().setLevel(mutable);
+        gameplayMode.getLevelManager().setLevel(mutable);
 
-        com.openggf.game.session.WorldSession worldSession = runtime.getWorldSession();
+        com.openggf.game.session.WorldSession worldSession = gameplayMode.getWorldSession();
         assertSame(mutable, worldSession.getCurrentLevel(),
                 "precondition: setLevel must write through to WorldSession");
 
@@ -234,7 +234,7 @@ class TestEditorToggleIntegration {
 
         // After the editor round trip, WorldSession's Level reference should
         // still be the same MutableLevel and the mutation should still be
-        // present — proving editor enter/exit does not throw away world data.
+        // present â€” proving editor enter/exit does not throw away world data.
         assertSame(mutable, worldSession.getCurrentLevel(),
                 "MutableLevel must survive editor round trip on WorldSession");
         assertEquals(newBlockIndex,
@@ -246,15 +246,15 @@ class TestEditorToggleIntegration {
     void resumePlaytestFromEditor_savesEditorControllerMutableLevelAfterRuntimeTeardown() throws Exception {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
         MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
-        runtime.getLevelManager().setLevel(mutable);
+        gameplayMode.getLevelManager().setLevel(mutable);
         int zone = 1;
         int act = 1;
-        runtime.getWorldSession().setCurrentZone(zone);
-        runtime.getWorldSession().setCurrentAct(act);
+        gameplayMode.getWorldSession().setCurrentZone(zone);
+        gameplayMode.getWorldSession().setCurrentAct(act);
         EditorSaveManager saveManager = new EditorSaveManager(Path.of("saves"));
-        Path saveFile = saveManager.editPath(runtime.getWorldSession().getGameModule().getGameId(), zone, act);
+        Path saveFile = saveManager.editPath(gameplayMode.getWorldSession().getGameModule().getGameId(), zone, act);
         Files.deleteIfExists(saveFile);
 
         try {
@@ -269,7 +269,7 @@ class TestEditorToggleIntegration {
                     "editor resume should save the MutableLevel attached to LevelEditorController");
             MutableLevel fresh = MutableLevel.snapshot(new SyntheticLevel());
             assertEquals(EditorSaveManager.ApplyResult.APPLIED,
-                    saveManager.tryApplyEdits(runtime.getWorldSession().getGameModule().getGameId(), zone, act, fresh));
+                    saveManager.tryApplyEdits(gameplayMode.getWorldSession().getGameModule().getGameId(), zone, act, fresh));
             assertEquals(1, Byte.toUnsignedInt(fresh.getMap().getValue(0, 1, 1)));
         } finally {
             Files.deleteIfExists(saveFile);
@@ -280,9 +280,9 @@ class TestEditorToggleIntegration {
     void enterEditor_restoresLevelManagerViewForEditorRenderingAfterRuntimeTeardown() throws Exception {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
         MutableLevel mutable = MutableLevel.snapshot(new SyntheticLevel());
-        runtime.getLevelManager().setLevel(mutable);
+        gameplayMode.getLevelManager().setLevel(mutable);
 
         engine.enterEditorFromCurrentPlayer(
                 new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1),
@@ -290,9 +290,9 @@ class TestEditorToggleIntegration {
 
         LevelManager editorLevelManager = engineLevelManager(engine);
         assertNull(SessionManager.getCurrentGameplayMode(),
-                "entering editor must still tear down the gameplay runtime");
+                "entering editor must still tear down the gameplay mode");
         assertSame(mutable, engine.getLevelEditorController().currentLevel(),
-                "pre-runtime editor controller level should survive runtime teardown");
+                "pre-mode editor controller level should survive gameplay mode teardown");
         assertSame(mutable, editorLevelManager.getCurrentLevel(),
                 "Engine's level manager must keep a renderable editor view after teardown");
         assertNotNull(editorLevelManager.getTilemapManager(),
@@ -329,18 +329,18 @@ class TestEditorToggleIntegration {
     void editorRoundTrip_preservesWorldSessionAndResetsGameplayCounters() throws Exception {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
 
         // Capture the durable world state on WorldSession before editor entry.
-        com.openggf.game.session.WorldSession worldSession = runtime.getWorldSession();
+        com.openggf.game.session.WorldSession worldSession = gameplayMode.getWorldSession();
         com.openggf.level.Level loadedLevelBefore = worldSession.getCurrentLevel();
         int zoneBefore = worldSession.getCurrentZone();
         int actBefore = worldSession.getCurrentAct();
 
         // Set a session counter to a non-default value; the design requires
         // it to reset on editor exit.
-        runtime.getGameStateManager().addScore(7777);
-        int scoreBefore = runtime.getGameStateManager().getScore();
+        gameplayMode.getGameStateManager().addScore(7777);
+        int scoreBefore = gameplayMode.getGameStateManager().getScore();
         assertTrue(scoreBefore > 0, "score precondition: must be non-zero before editor entry");
 
         engine.enterEditorFromCurrentPlayer(
@@ -370,13 +370,13 @@ class TestEditorToggleIntegration {
     void editorRoundTrip_rebuildsCameraBoundsAndFocusedSpriteAtCursor() throws Exception {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
         // Set non-trivial bounds on the gameplay-mode camera so we can check
         // they survive (or are correctly re-derived) across the round trip.
-        runtime.getCamera().setMinX((short) 0);
-        runtime.getCamera().setMaxX((short) 1024);
-        runtime.getCamera().setMinY((short) 0);
-        runtime.getCamera().setMaxY((short) 768);
+        gameplayMode.getCamera().setMinX((short) 0);
+        gameplayMode.getCamera().setMaxX((short) 1024);
+        gameplayMode.getCamera().setMinY((short) 0);
+        gameplayMode.getCamera().setMaxY((short) 768);
 
         engine.enterEditorFromCurrentPlayer(
                 new EditorPlaytestStash(50, 50, 0, 0, true, 0, 1), 100, 200);
@@ -403,7 +403,7 @@ class TestEditorToggleIntegration {
     void syncEditorState_keepsSessionCursorAlignedWithControllerCursor() {
         enableEditor();
         Engine engine = new Engine();
-        createGameplayRuntime(engine);
+        createGameplayMode(engine);
 
         engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 0, 0, true, 0, 0), 100, 200);
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(160, 224));
@@ -417,7 +417,7 @@ class TestEditorToggleIntegration {
     void gameLoop_editorModeStepSyncsSessionCursorWithoutRender() {
         enableEditor();
         Engine engine = new Engine();
-        createGameplayRuntime(engine);
+        createGameplayMode(engine);
         InputHandler inputHandler = new InputHandler();
         engine.setInputHandler(inputHandler);
 
@@ -435,24 +435,24 @@ class TestEditorToggleIntegration {
     void parkedRuntimeSpriteRendering_doesNotRequireActiveGameServicesRuntime() {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
 
         engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 0, 0, true, 0, 0), 100, 200);
 
         assertNull(SessionManager.getCurrentGameplayMode());
-        assertDoesNotThrow(() -> runtime.getSpriteManager().drawLowPriority());
+        assertDoesNotThrow(() -> gameplayMode.getSpriteManager().drawLowPriority());
     }
 
     // Removed: parkedRuntimeBackgroundTilemapBuild_doesNotRequireActiveGameServicesRuntime
     // Tested the parking mechanism, which is no longer
-    // used by the editor flow — editor entry now does a proper teardown+rebuild
-    // per the runtime ownership migration design.
+    // used by the editor flow â€” editor entry now does a proper teardown+rebuild
+    // per the session ownership migration design.
 
     @Test
     void gameLoop_f5InEditorModeInvokesFreshStartHandler() {
         enableEditor();
         Engine engine = new Engine();
-        createGameplayRuntime(engine);
+        createGameplayMode(engine);
         InputHandler inputHandler = new InputHandler();
         engine.setInputHandler(inputHandler);
         int[] freshStartCount = {0};
@@ -472,7 +472,7 @@ class TestEditorToggleIntegration {
     void gameLoop_f5InEditorModeUsesEngineFreshStartHandlerByDefault() {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
         InputHandler inputHandler = new InputHandler();
         engine.setInputHandler(inputHandler);
 
@@ -482,7 +482,7 @@ class TestEditorToggleIntegration {
         engine.getGameLoop().step();
 
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertNotSame(runtime, SessionManager.getCurrentGameplayMode());
+        assertNotSame(gameplayMode, SessionManager.getCurrentGameplayMode());
         assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnX());
         assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnY());
         assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isEmpty());
@@ -493,7 +493,7 @@ class TestEditorToggleIntegration {
         enableEditor();
         Engine engine = new Engine();
         injectLeakedGarbageRom();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
         InputHandler inputHandler = new InputHandler();
         engine.setInputHandler(inputHandler);
 
@@ -503,7 +503,7 @@ class TestEditorToggleIntegration {
         assertDoesNotThrow(() -> engine.getGameLoop().step());
 
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertNotSame(runtime, SessionManager.getCurrentGameplayMode());
+        assertNotSame(gameplayMode, SessionManager.getCurrentGameplayMode());
         assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnX());
         assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnY());
         assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isEmpty());
@@ -513,7 +513,7 @@ class TestEditorToggleIntegration {
     void gameLoop_f5OutsideEditorModeDoesNotInvokeFreshStartHandler() {
         enableEditor();
         Engine engine = new Engine();
-        createGameplayRuntime(engine);
+        createGameplayMode(engine);
         InputHandler inputHandler = new InputHandler();
         engine.setInputHandler(inputHandler);
         int[] freshStartCount = {0};
@@ -531,43 +531,43 @@ class TestEditorToggleIntegration {
     void syncEditorState_inWorldDepthCentersCameraOnEditorCursorWhenInsideBounds() {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
-        runtime.getCamera().setMinX((short) 0);
-        runtime.getCamera().setMaxX((short) 1024);
-        runtime.getCamera().setMinY((short) 0);
-        runtime.getCamera().setMaxY((short) 1024);
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
+        gameplayMode.getCamera().setMinX((short) 0);
+        gameplayMode.getCamera().setMaxX((short) 1024);
+        gameplayMode.getCamera().setMinY((short) 0);
+        gameplayMode.getCamera().setMaxY((short) 1024);
 
         engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 0, 0, true, 0, 0), 100, 200);
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(512, 384));
         engine.syncEditorState();
 
-        assertEquals(360, runtime.getCamera().getX());
-        assertEquals(288, runtime.getCamera().getY());
+        assertEquals(360, gameplayMode.getCamera().getX());
+        assertEquals(288, gameplayMode.getCamera().getY());
     }
 
     @Test
     void syncEditorState_inWorldDepthClampsCameraToEditorCursorWhenCenterWouldExceedBounds() {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
-        runtime.getCamera().setMinX((short) 64);
-        runtime.getCamera().setMaxX((short) 80);
-        runtime.getCamera().setMinY((short) 0);
-        runtime.getCamera().setMaxY((short) 160);
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
+        gameplayMode.getCamera().setMinX((short) 64);
+        gameplayMode.getCamera().setMaxX((short) 80);
+        gameplayMode.getCamera().setMinY((short) 0);
+        gameplayMode.getCamera().setMaxY((short) 160);
 
         engine.enterEditorFromCurrentPlayer(new EditorPlaytestStash(100, 200, 0, 0, true, 0, 0), 100, 200);
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(192, 288));
         engine.syncEditorState();
 
-        assertEquals(64, runtime.getCamera().getX());
-        assertEquals(160, runtime.getCamera().getY());
+        assertEquals(64, gameplayMode.getCamera().getX());
+        assertEquals(160, gameplayMode.getCamera().getY());
     }
 
     @Test
     void resumePlaytestFromEditor_usesMovedControllerCursorForGameplaySpawn() {
         enableEditor();
         Engine engine = new Engine();
-        createGameplayRuntime(engine);
+        createGameplayMode(engine);
         EditorPlaytestStash stash = new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1);
 
         engine.enterEditorFromCurrentPlayer(stash, 100, 200);
@@ -575,7 +575,7 @@ class TestEditorToggleIntegration {
 
         engine.resumePlaytestFromEditor();
 
-        // Post-migration: editor exit rebuilds a fresh runtime; assert non-null
+        // Post-migration: editor exit rebuilds a fresh gameplay mode; assert non-null
         // rather than instance identity.
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
         assertNotNull(SessionManager.getCurrentGameplayMode());
@@ -588,7 +588,7 @@ class TestEditorToggleIntegration {
     void resumePlaytestFromEditor_repairsProgrammaticOutOfBoundsCursorBeforeApplyingSpawn() throws Exception {
         enableEditor();
         Engine engine = new Engine();
-        createGameplayRuntime(engine, (short) 100, (short) 180);
+        createGameplayMode(engine, (short) 100, (short) 180);
         com.openggf.game.GameServices.level().setLevel(MutableLevel.snapshot(new SyntheticLevel()));
         com.openggf.game.GameServices.camera().setMinX((short) 0);
         com.openggf.game.GameServices.camera().setMaxX((short) 255);
@@ -600,7 +600,7 @@ class TestEditorToggleIntegration {
 
         engine.resumePlaytestFromEditor();
 
-        // Post-migration: editor exit rebuilds a fresh runtime; resolve the
+        // Post-migration: editor exit rebuilds a fresh gameplay mode; resolve the
         // active sprite to read its position rather than using the stale ref.
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
         GameplayModeContext resumedRuntime = SessionManager.getCurrentGameplayMode();
@@ -618,8 +618,8 @@ class TestEditorToggleIntegration {
     void movedEditorCursor_becomesResumePositionWhenReturningToGameplay() {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
-        Sonic player = (Sonic) runtime.getSpriteManager().getSprite("sonic");
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
+        Sonic player = (Sonic) gameplayMode.getSpriteManager().getSprite("sonic");
         InputHandler inputHandler = new InputHandler();
         engine.setInputHandler(inputHandler);
 
@@ -643,7 +643,7 @@ class TestEditorToggleIntegration {
         inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
         engine.getGameLoop().step();
 
-        // Post-migration: editor exit rebuilds a fresh runtime; re-resolve
+        // Post-migration: editor exit rebuilds a fresh gameplay mode; re-resolve
         // the active sprite to read its position.
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
         GameplayModeContext resumedRuntime = SessionManager.getCurrentGameplayMode();
@@ -660,7 +660,7 @@ class TestEditorToggleIntegration {
     void outOfBoundsEditorMovement_resumesFromClampedCursorPosition() {
         enableEditor();
         Engine engine = new Engine();
-        createGameplayRuntime(engine, (short) 100, (short) 180);
+        createGameplayMode(engine, (short) 100, (short) 180);
         com.openggf.game.GameServices.level().setLevel(MutableLevel.snapshot(new SyntheticLevel()));
         com.openggf.game.GameServices.camera().setMinX((short) 0);
         com.openggf.game.GameServices.camera().setMaxX((short) 255);
@@ -694,7 +694,7 @@ class TestEditorToggleIntegration {
         inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
         engine.getGameLoop().step();
 
-        // Post-migration: editor exit rebuilds a fresh runtime; resolve the
+        // Post-migration: editor exit rebuilds a fresh gameplay mode; resolve the
         // active sprite to read its position rather than using the stale ref.
         Sonic resumedPlayer = (Sonic) SessionManager.getCurrentGameplayMode().getSpriteManager().getSprite("sonic");
         assertNotNull(resumedPlayer);
@@ -708,7 +708,7 @@ class TestEditorToggleIntegration {
     void startGameplayFromBeginning_discardsResumeStashAndReturnsToCanonicalSpawn() throws Exception {
         enableEditor();
         Engine engine = new Engine();
-        createGameplayRuntime(engine);
+        createGameplayMode(engine);
         EditorPlaytestStash stash = new EditorPlaytestStash(100, 200, 9, -3, true, 47, 1);
 
         engine.enterEditorFromCurrentPlayer(stash, 100, 200);
@@ -733,8 +733,8 @@ class TestEditorToggleIntegration {
     void shiftTabInGameplayTogglesEditorAndBackThroughEngineHelpers() {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine);
-        Sonic player = (Sonic) runtime.getSpriteManager().getSprite("sonic");
+        GameplayModeContext gameplayMode = createGameplayMode(engine);
+        Sonic player = (Sonic) gameplayMode.getSpriteManager().getSprite("sonic");
         InputHandler inputHandler = new InputHandler();
         engine.setInputHandler(inputHandler);
 
@@ -766,7 +766,7 @@ class TestEditorToggleIntegration {
     void preRuntimePlayer_roundTripsThroughEditorModeAndResumesAtEditorCursor() {
         enableEditor();
         Engine engine = new Engine();
-        createGameplayRuntime(engine, (short) 144, (short) 288);
+        createGameplayMode(engine, (short) 144, (short) 288);
         EditorPlaytestStash stash = new EditorPlaytestStash(144, 288, 9, -3, true, 47, 1);
 
         engine.enterEditorFromCurrentPlayer(stash, 320, 448);
@@ -778,8 +778,8 @@ class TestEditorToggleIntegration {
 
         engine.resumePlaytestFromEditor();
 
-        // Post-migration: editor exit rebuilds a fresh runtime over the
-        // surviving WorldSession, so runtime/player references from before
+        // Post-migration: editor exit rebuilds a fresh gameplay mode over the
+        // surviving WorldSession, so mode/player references from before
         // the editor detour are stale. Re-resolve the active sprite.
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
         GameplayModeContext resumedRuntime = SessionManager.getCurrentGameplayMode();
@@ -798,16 +798,16 @@ class TestEditorToggleIntegration {
     void editorMvpFlow_shiftTabMoveEyedropApplyResumeAndFreshStartRemainConnected() {
         enableEditor();
         Engine engine = new Engine();
-        GameplayModeContext runtime = createGameplayRuntime(engine, (short) 0, (short) 0);
-        Sonic player = (Sonic) runtime.getSpriteManager().getSprite("sonic");
+        GameplayModeContext gameplayMode = createGameplayMode(engine, (short) 0, (short) 0);
+        Sonic player = (Sonic) gameplayMode.getSpriteManager().getSprite("sonic");
         player.setCentreX((short) 1);
         player.setCentreY((short) 1);
         MutableLevel level = MutableLevel.snapshot(new EditorMvpFlowLevel());
-        runtime.getLevelManager().setLevel(level);
-        runtime.getCamera().setMinX((short) 0);
-        runtime.getCamera().setMaxX((short) 7);
-        runtime.getCamera().setMinY((short) 0);
-        runtime.getCamera().setMaxY((short) 7);
+        gameplayMode.getLevelManager().setLevel(level);
+        gameplayMode.getCamera().setMinX((short) 0);
+        gameplayMode.getCamera().setMaxX((short) 7);
+        gameplayMode.getCamera().setMinY((short) 0);
+        gameplayMode.getCamera().setMaxY((short) 7);
         InputHandler inputHandler = new InputHandler();
         engine.setInputHandler(inputHandler);
 
@@ -851,7 +851,7 @@ class TestEditorToggleIntegration {
         inputHandler.handleKeyEvent(GLFW_KEY_TAB, GLFW_PRESS);
         engine.getGameLoop().step();
 
-        // Post-migration: editor exit rebuilds a fresh runtime; resolve the
+        // Post-migration: editor exit rebuilds a fresh gameplay mode; resolve the
         // active sprite to read its position rather than using the stale ref.
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
         GameplayModeContext resumedRuntime = SessionManager.getCurrentGameplayMode();
@@ -875,17 +875,17 @@ class TestEditorToggleIntegration {
         engine.getGameLoop().step();
 
         assertEquals(GameMode.LEVEL, engine.getCurrentGameMode());
-        assertNotSame(runtime, SessionManager.getCurrentGameplayMode());
+        assertNotSame(gameplayMode, SessionManager.getCurrentGameplayMode());
         assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnX());
         assertEquals(0, SessionManager.getCurrentGameplayMode().getSpawnY());
         assertTrue(SessionManager.getCurrentGameplayMode().getResumeStash().isEmpty());
     }
 
-    private static GameplayModeContext createGameplayRuntime(Engine engine) {
-        return createGameplayRuntime(engine, (short) 100, (short) 200);
+    private static GameplayModeContext createGameplayMode(Engine engine) {
+        return createGameplayMode(engine, (short) 100, (short) 200);
     }
 
-    private static GameplayModeContext createGameplayRuntime(Engine engine, short playerX, short playerY) {
+    private static GameplayModeContext createGameplayMode(Engine engine, short playerX, short playerY) {
         RomManager.getInstance().setRom(null);
         GameplayModeContext gameplayMode = SessionManager.openGameplaySession(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();

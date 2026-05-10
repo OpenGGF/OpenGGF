@@ -13,7 +13,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
  * <p>
  * Reads the {@link RequiresRom} annotation on the test class, checks ROM
  * availability, and disables the test when the ROM is absent. When the ROM
- * is present it rebuilds the gameplay runtime around the selected ROM before
+ * is present it rebuilds the gameplay mode around the selected ROM before
  * each test method.
  * <p>
  * Usage:

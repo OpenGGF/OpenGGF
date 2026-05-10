@@ -7,7 +7,7 @@ import com.openggf.game.GameServices;
  * {@link ObjectManager} without passing explicit services.
  *
  * <p>Runtime-owned dependencies are resolved through strict {@link GameServices}
- * accessors, so callers must create a gameplay runtime first.</p>
+ * accessors, so callers must create a gameplay mode first.</p>
  */
 public final class BootstrapObjectServices extends DefaultObjectServices {
 

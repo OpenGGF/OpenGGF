@@ -22,7 +22,7 @@ public class TestGameModuleProviderLifetimes {
     }
 
     @AfterEach
-    void resetRuntime() {
+    void clearSession() {
         SessionManager.clear();
     }
 

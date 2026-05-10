@@ -433,7 +433,7 @@ public final class GameplayModeContext implements ModeContext {
      * {@link NoOpBonusStageProvider#INSTANCE} when no bonus stage is active.
      * Owned here (gameplay-scoped) so callers can resolve it via
      * {@link com.openggf.game.session.SessionManager#getCurrentGameplayMode()}
-     * without consulting the temporary runtime facade.
+     * without consulting a process-wide gameplay locator.
      */
     public BonusStageProvider getActiveBonusStageProvider() {
         return activeBonusStageProvider;
@@ -522,7 +522,7 @@ public final class GameplayModeContext implements ModeContext {
     /**
      * Resets session-progress counters to "fresh gameplay" defaults — score,
      * rings, lives, emeralds, timer, and (via LevelManager) checkpoint state.
-     * Per the runtime ownership migration design
+     * Per the session ownership migration design
      * (docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md),
      * editor exit must reinitialize gameplay session state as fresh gameplay,
      * not resumed state. Call this from the exit-editor flow after a new

@@ -27,7 +27,7 @@ class TestS3kDataSelectProfile {
     }
 
     @AfterEach
-    void resetRuntime() {
+    void clearSession() {
         SessionManager.clear();
     }
 

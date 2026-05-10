@@ -408,7 +408,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void shutdownRestoresOriginalPlayerOnBootstrapRuntimeAfterCurrentRuntimeRecreation() {
-        GameplayModeContext bootstrapRuntime = TestEnvironment.activeGameplayMode();
+        GameplayModeContext bootstrapMode = TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         Tails originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -418,25 +418,25 @@ class TestS3kSlotBonusStageRuntime {
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
         runtime.bootstrap();
 
-        assertTrue(bootstrapRuntime.getSpriteManager().getSprite("tails") instanceof S3kSlotBonusPlayer);
-        assertNotSame(originalPlayer, bootstrapRuntime.getSpriteManager().getSprite("tails"));
-        assertSame(bootstrapRuntime.getSpriteManager().getSprite("tails"), bootstrapRuntime.getCamera().getFocusedSprite());
+        assertTrue(bootstrapMode.getSpriteManager().getSprite("tails") instanceof S3kSlotBonusPlayer);
+        assertNotSame(originalPlayer, bootstrapMode.getSpriteManager().getSprite("tails"));
+        assertSame(bootstrapMode.getSpriteManager().getSprite("tails"), bootstrapMode.getCamera().getFocusedSprite());
 
-        GameplayModeContext recreatedRuntime = TestEnvironment.activeGameplayMode();
+        GameplayModeContext recreatedMode = TestEnvironment.activeGameplayMode();
 
         runtime.shutdown();
 
-        // After the runtime ownership migration, GameplayModeContext owns the
-        // disposable managers (SpriteManager, Camera, etc.). Multiple
-        // Gameplay mode owns those managers, so both references resolve to the same
+        // After the session ownership migration, GameplayModeContext owns the
+        // disposable managers (SpriteManager, Camera, etc.). The active
+        // gameplay mode owns those managers, so both references resolve to the same
         // SpriteManager. The shutdown invariant — original player restored to
         // the active SpriteManager — is preserved through that shared view.
-        assertSame(originalPlayer, bootstrapRuntime.getSpriteManager().getSprite("tails"));
-        assertSame(originalPlayer, bootstrapRuntime.getCamera().getFocusedSprite());
+        assertSame(originalPlayer, bootstrapMode.getSpriteManager().getSprite("tails"));
+        assertSame(originalPlayer, bootstrapMode.getCamera().getFocusedSprite());
         assertFalse(runtime.isInitialized());
-        assertSame(originalPlayer, recreatedRuntime.getSpriteManager().getSprite("tails"));
+        assertSame(originalPlayer, recreatedMode.getSpriteManager().getSprite("tails"));
 
-        bootstrapRuntime.destroy();
+        bootstrapMode.destroy();
     }
 
     @Test
