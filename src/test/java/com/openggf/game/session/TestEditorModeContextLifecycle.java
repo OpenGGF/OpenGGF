@@ -1,7 +1,6 @@
 package com.openggf.game.session;
 
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +17,7 @@ class TestEditorModeContextLifecycle {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }

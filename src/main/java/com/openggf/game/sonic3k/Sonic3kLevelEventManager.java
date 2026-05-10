@@ -115,10 +115,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
         // ROM: Level_FromSavedGame skips intro when Last_star_post_hit != 0.
         // This covers both special stage return (big ring) and bonus stage return.
-        // Guard with runtimeOrNull() so initLevel can be called from unit tests
+        // Guard with hasRuntime() so initLevel can be called from unit tests
         // or snapshot-restore paths that have no active gameplay mode.
         if (bootstrap.mode() == Sonic3kLoadBootstrap.Mode.INTRO
-                && GameServices.runtimeOrNull() != null
+                && GameServices.hasRuntime()
                 && (GameServices.level().hasBigRingReturn()
                     || GameServices.level().isBonusStageReturn())) {
             bootstrap = new Sonic3kLoadBootstrap(Sonic3kLoadBootstrap.Mode.SKIP_INTRO, null);
@@ -168,7 +168,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     private void installZoneRuntimeState(int zone, int act) {
-        if (GameServices.runtimeOrNull() == null) {
+        if (!GameServices.hasRuntime()) {
             LOG.fine("Skipping S3K zone runtime registration because no active runtime is installed");
             return;
         }

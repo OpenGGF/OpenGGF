@@ -1,6 +1,8 @@
 package com.openggf.level.objects;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import org.junit.jupiter.api.AfterEach;
@@ -10,13 +12,11 @@ import com.openggf.camera.Camera;
 import com.openggf.graphics.GLCommand;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
-
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -24,13 +24,13 @@ public class TestObjectManagerLifecycle {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.Engine;
 import com.openggf.GameLoop;
@@ -11,7 +12,6 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.graphics.GraphicsManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,16 +21,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class TestEngineContext {
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @Test
@@ -49,78 +48,56 @@ class TestEngineContext {
     }
 
     @Test
-    void engineConfiguresRuntimeRootBeforeGameLoopCanAutoCreateRuntime() {
+    void engineConstructorConfiguresEngineServicesRoot() {
         EngineContext staleRoot = EngineContext.fromLegacySingletonsForBootstrap();
         EngineContext injectedRoot = EngineContext.fromLegacySingletonsForBootstrap();
-        RuntimeManager.configureEngineServices(staleRoot);
-        SessionManager.openGameplaySession(new Sonic2GameModule());
+        EngineServices.configure(staleRoot);
 
         new Engine(injectedRoot);
-        // After removing lazy-create-on-getCurrent, the runtime is built
-        // explicitly. Engine constructor reconfigures the root before any
-        // gameplay runtime exists; verify that downstream creation picks up
-        // the injected root.
-        com.openggf.game.GameRuntime runtime = RuntimeManager.createGameplay();
-        assertSame(injectedRoot, runtime.getEngineServices());
+        assertSame(injectedRoot, EngineServices.current());
     }
 
     @Test
-    void gameLoopInjectedRootIsUsedWhenConstructorAutoCreatesRuntime() {
+    void gameLoopInjectedRootConfiguresEngineServicesRoot() {
         EngineContext staleRoot = EngineContext.fromLegacySingletonsForBootstrap();
         EngineContext injectedRoot = EngineContext.fromLegacySingletonsForBootstrap();
-        RuntimeManager.configureEngineServices(staleRoot);
-        SessionManager.openGameplaySession(new Sonic2GameModule());
+        EngineServices.configure(staleRoot);
 
         new GameLoop(injectedRoot);
-        // After removing lazy-create-on-getCurrent, runtime build is explicit;
-        // the GameLoop constructor reconfigures the root, and the next
-        // explicit createGameplay() picks it up.
-        com.openggf.game.GameRuntime runtime = RuntimeManager.createGameplay();
-        assertSame(injectedRoot, runtime.getEngineServices());
+        assertSame(injectedRoot, EngineServices.current());
     }
 
     @Test
-    void runtimeRebindsWhenEngineServicesRootChangesWhileActive() {
+    void engineServicesRootCanBeReconfiguredExplicitly() {
         EngineContext staleRoot = EngineContext.fromLegacySingletonsForBootstrap();
         EngineContext injectedRoot = EngineContext.fromLegacySingletonsForBootstrap();
-        RuntimeManager.configureEngineServices(staleRoot);
-        SessionManager.openGameplaySession(new Sonic2GameModule());
+        EngineServices.configure(staleRoot);
+        assertSame(staleRoot, EngineServices.current());
 
-        com.openggf.game.GameRuntime runtime = RuntimeManager.createGameplay();
-        assertSame(staleRoot, runtime.getEngineServices());
-
-        RuntimeManager.configureEngineServices(injectedRoot);
-        // getCurrent with a different EngineContext root drops the stale
-        // runtime; an explicit createGameplay() builds a fresh one bound to
-        // the new root.
-        assertNull(RuntimeManager.getCurrent(injectedRoot),
-                "getCurrent should drop the runtime whose EngineContext no longer matches");
-        com.openggf.game.GameRuntime rebound = RuntimeManager.createGameplay();
-
-        assertSame(injectedRoot, rebound.getEngineServices());
-        assertNotSame(runtime, rebound);
+        EngineServices.configure(injectedRoot);
+        assertSame(injectedRoot, EngineServices.current());
     }
 
     @Test
     void defaultEngineConstructorUsesCurrentlyConfiguredEngineServicesRoot() {
         EngineContext configuredRoot = EngineContext.fromLegacySingletonsForBootstrap();
-        RuntimeManager.configureEngineServices(configuredRoot);
+        EngineServices.configure(configuredRoot);
 
         new Engine();
 
-        assertSame(configuredRoot, RuntimeManager.currentEngineServices());
+        assertSame(configuredRoot, EngineServices.current());
     }
 
     @Test
     void defaultGameLoopConstructorsUseCurrentlyConfiguredEngineServicesRoot() {
         EngineContext configuredRoot = EngineContext.fromLegacySingletonsForBootstrap();
-        RuntimeManager.configureEngineServices(configuredRoot);
+        EngineServices.configure(configuredRoot);
 
         new GameLoop();
-        assertSame(configuredRoot, RuntimeManager.currentEngineServices());
+        assertSame(configuredRoot, EngineServices.current());
 
         new GameLoop(new InputHandler());
-        assertSame(configuredRoot, RuntimeManager.currentEngineServices());
+        assertSame(configuredRoot, EngineServices.current());
     }
 
     @Test

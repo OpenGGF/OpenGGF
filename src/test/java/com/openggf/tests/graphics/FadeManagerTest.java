@@ -1,10 +1,10 @@
 package com.openggf.tests.graphics;
 
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.FadeManager.FadeState;
 import com.openggf.graphics.FadeManager.FadeType;
@@ -35,7 +35,7 @@ public class FadeManagerTest {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     // === Initial State Tests ===

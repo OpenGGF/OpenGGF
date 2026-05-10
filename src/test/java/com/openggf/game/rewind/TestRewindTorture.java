@@ -3,7 +3,6 @@ package com.openggf.game.rewind;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
@@ -159,7 +158,7 @@ class TestRewindTorture {
                 .withRecording(bk2Path)
                 .withZoneAndAct(0, 0)
                 .build();
-        GameplayModeContext gm = RuntimeManager.getCurrent().getGameplayModeContext();
+        GameplayModeContext gm = TestEnvironment.activeGameplayMode();
         assertNotNull(gm, "GameplayModeContext must be available after fixture build");
         RewindRegistry registry = gm.getRewindRegistry();
         assertNotNull(registry, "RewindRegistry must be non-null after fixture build");

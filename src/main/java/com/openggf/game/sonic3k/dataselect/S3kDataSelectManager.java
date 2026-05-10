@@ -1,8 +1,9 @@
 package com.openggf.game.sonic3k.dataselect;
 
+
+import com.openggf.game.session.EngineServices;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.dataselect.DataSelectSessionController;
 import com.openggf.game.save.SaveManager;
 
@@ -13,7 +14,7 @@ public final class S3kDataSelectManager extends S3kDataSelectPresentation {
     public S3kDataSelectManager() {
         this(new DataSelectSessionController(new S3kDataSelectProfile()),
                 Path.of("saves"),
-                RuntimeManager.currentEngineServices().configuration());
+                EngineServices.current().configuration());
     }
 
     public S3kDataSelectManager(Path saveRoot, SonicConfigurationService config) {
@@ -21,7 +22,7 @@ public final class S3kDataSelectManager extends S3kDataSelectPresentation {
     }
 
     public S3kDataSelectManager(DataSelectSessionController controller) {
-        this(controller, Path.of("saves"), RuntimeManager.currentEngineServices().configuration());
+        this(controller, Path.of("saves"), EngineServices.current().configuration());
     }
 
     /**

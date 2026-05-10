@@ -1,9 +1,11 @@
 package com.openggf.graphics;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,14 +19,14 @@ public class TestGraphicsManagerFadeRebinding {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.destroyCurrent();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
     }
 
     @AfterEach
     public void tearDown() throws Exception {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.destroyCurrent();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
         GraphicsManager graphicsManager = EngineContext.fromLegacySingletonsForBootstrap().graphics();
         graphicsManager.resetState();
         setPrivateField(graphicsManager, "uiRenderPipeline", null);
@@ -32,7 +34,7 @@ public class TestGraphicsManagerFadeRebinding {
 
     @Test
     public void testGetFadeManagerRebindsRuntimeManagedReferences() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         GraphicsManager graphicsManager = EngineContext.fromLegacySingletonsForBootstrap().graphics();
         graphicsManager.resetState();
 
@@ -43,7 +45,7 @@ public class TestGraphicsManagerFadeRebinding {
         pipeline.setFadeManager(bootstrapFade);
         setPrivateField(graphicsManager, "uiRenderPipeline", pipeline);
 
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         FadeManager runtimeFade = GameServices.fade();
         Camera runtimeCamera = GameServices.camera();
 
@@ -56,7 +58,7 @@ public class TestGraphicsManagerFadeRebinding {
 
     @Test
     public void testGetFadeManagerProvidesBootstrapDependenciesBeforeRuntime() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         GraphicsManager graphicsManager = EngineContext.fromLegacySingletonsForBootstrap().graphics();
         graphicsManager.resetState();
 
@@ -79,5 +81,3 @@ public class TestGraphicsManagerFadeRebinding {
         return field.get(target);
     }
 }
-
-

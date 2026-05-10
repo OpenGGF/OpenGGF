@@ -2008,7 +2008,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
 
     private void setTransitionControlLock(boolean locked) {
         // Guard: skip when called outside an active gameplay session (e.g. snapshot-restore
-        // or unit tests that call initLevel() without a live RuntimeManager).
+        // or unit tests that call initLevel() without live gameplay managers).
         if (!hasRuntime()) {
             return;
         }

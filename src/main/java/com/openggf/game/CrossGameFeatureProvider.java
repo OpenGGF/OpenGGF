@@ -418,7 +418,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         if (GameServices.hasRuntime()) {
             return GameServices.module().getGameId();
         }
-        return RuntimeManager.resolveCurrentOrBootstrapGameModule().getGameId();
+        return GameServices.currentOrBootstrapGameModule().getGameId();
     }
 
     /**

@@ -1,12 +1,13 @@
 package com.openggf.game.sonic3k.dataselect;
 
+
+import com.openggf.game.session.EngineServices;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.dataselect.AbstractDataSelectProvider;
 import com.openggf.game.dataselect.DataSelectAction;
 import com.openggf.game.dataselect.DataSelectActionType;
@@ -81,7 +82,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     }
 
     public S3kDataSelectPresentation(DataSelectSessionController controller) {
-        this(controller, Path.of("saves"), RuntimeManager.currentEngineServices().configuration());
+        this(controller, Path.of("saves"), EngineServices.current().configuration());
     }
 
     public S3kDataSelectPresentation(Path saveRoot, SonicConfigurationService config) {

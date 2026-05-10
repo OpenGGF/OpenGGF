@@ -5,9 +5,10 @@ import com.openggf.control.InputHandler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameMode;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.EditorCursorState;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
 import com.openggf.level.Chunk;
@@ -21,6 +22,7 @@ import com.openggf.level.SolidTile;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +52,7 @@ class TestLevelEditorController {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @Test
@@ -646,7 +648,7 @@ class TestLevelEditorController {
 
     @Test
     void gameLoop_editorModeUpdatesEditorInputHandlerBeforeAdvancingInputState() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             InputHandler inputHandler = new InputHandler();
             GameLoop gameLoop = new GameLoop(inputHandler);
@@ -664,13 +666,13 @@ class TestLevelEditorController {
             assertEquals(EditorHierarchyDepth.BLOCK, controller.depth());
             assertFalse(inputHandler.isKeyPressed(GLFW_KEY_ENTER));
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     void gameLoop_editorModeUpdatesCursorMovementBeforeAdvancingInputState() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             InputHandler inputHandler = new InputHandler();
             GameLoop gameLoop = new GameLoop(inputHandler);
@@ -687,13 +689,13 @@ class TestLevelEditorController {
             assertEquals(103, controller.worldCursor().x());
             assertFalse(inputHandler.isKeyPressed(GLFW_KEY_RIGHT));
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     void gameLoop_shiftTabDoesNotInvokePlaytestToggleHandlerOutsideEditorMode() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             InputHandler inputHandler = new InputHandler();
             GameLoop gameLoop = new GameLoop(inputHandler);
@@ -710,13 +712,13 @@ class TestLevelEditorController {
             assertEquals(0, toggleCount[0]);
             assertFalse(inputHandler.isKeyPressed(GLFW_KEY_TAB));
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     void gameLoop_shiftTabInEditorModeInvokesPlaytestToggleHandler() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             InputHandler inputHandler = new InputHandler();
             GameLoop gameLoop = new GameLoop(inputHandler);
@@ -733,13 +735,13 @@ class TestLevelEditorController {
             assertEquals(1, toggleCount[0]);
             assertFalse(inputHandler.isKeyPressed(GLFW_KEY_TAB));
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     void gameLoop_plainTabInEditorModeDoesNotInvokePlaytestToggleHandler() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             InputHandler inputHandler = new InputHandler();
             GameLoop gameLoop = new GameLoop(inputHandler);
@@ -755,13 +757,13 @@ class TestLevelEditorController {
             assertEquals(0, toggleCount[0]);
             assertFalse(inputHandler.isKeyPressed(GLFW_KEY_TAB));
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     void gameLoop_rightShiftTabInEditorModeInvokesPlaytestToggleHandler() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             InputHandler inputHandler = new InputHandler();
             GameLoop gameLoop = new GameLoop(inputHandler);
@@ -778,13 +780,13 @@ class TestLevelEditorController {
             assertEquals(1, toggleCount[0]);
             assertFalse(inputHandler.isKeyPressed(GLFW_KEY_TAB));
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     void gameLoop_f5InEditorModeInvokesFreshStartHandler() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             InputHandler inputHandler = new InputHandler();
             GameLoop gameLoop = new GameLoop(inputHandler);
@@ -800,13 +802,13 @@ class TestLevelEditorController {
             assertEquals(1, freshStartCount[0]);
             assertFalse(inputHandler.isKeyPressed(GLFW_KEY_F5));
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     void gameLoop_f5OutsideEditorModeDoesNotInvokeFreshStartHandler() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             InputHandler inputHandler = new InputHandler();
             GameLoop gameLoop = new GameLoop(inputHandler);
@@ -820,13 +822,13 @@ class TestLevelEditorController {
 
             assertEquals(0, freshStartCount[0]);
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     void gameLoop_editorModeBypassesPauseToggleHandling() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             InputHandler inputHandler = new InputHandler();
             GameLoop gameLoop = new GameLoop(inputHandler);
@@ -840,7 +842,7 @@ class TestLevelEditorController {
             assertFalse(gameLoop.isUserPaused());
             assertFalse(inputHandler.isKeyPressed(pauseKey));
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 

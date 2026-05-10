@@ -32,8 +32,6 @@ public final class EngineRefTypes {
             "com.openggf.level.rings.RingManager",
             "com.openggf.timer.TimerManager",
             "com.openggf.game.GameModule",
-            "com.openggf.game.GameRuntime",
-            "com.openggf.game.RuntimeManager",
             "com.openggf.game.GameStateManager",
             "com.openggf.game.AbstractLevelEventManager",
             "com.openggf.game.session.WorldSession",

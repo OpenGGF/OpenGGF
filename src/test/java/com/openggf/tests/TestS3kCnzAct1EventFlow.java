@@ -1,8 +1,8 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.audio.NullAudioBackend;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -30,7 +30,7 @@ class TestS3kCnzAct1EventFlow {
     @AfterEach
     void tearDown() {
         GameServices.audio().setBackend(new NullAudioBackend());
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         com.openggf.game.session.SessionManager.clear();
     }
 

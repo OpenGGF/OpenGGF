@@ -1,17 +1,17 @@
 package com.openggf.level.objects;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1DestructionConfig;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -23,8 +23,8 @@ class TestDestructionEffects {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
 
         services = new StubObjectServices() {
             @Override
@@ -44,7 +44,7 @@ class TestDestructionEffects {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

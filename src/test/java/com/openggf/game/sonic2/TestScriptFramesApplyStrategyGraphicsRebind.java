@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.session.EngineServices;
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.RomManager;
@@ -9,7 +10,6 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.RomDetectionService;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.animation.ChannelContext;
 import com.openggf.game.animation.strategies.ScriptFramesApplyStrategy;
 import com.openggf.graphics.GraphicsManager;
@@ -35,7 +35,7 @@ class TestScriptFramesApplyStrategyGraphicsRebind {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @Test
@@ -43,7 +43,7 @@ class TestScriptFramesApplyStrategyGraphicsRebind {
         RecordingGraphicsManager installGraphics = new RecordingGraphicsManager();
         RecordingGraphicsManager currentGraphics = new RecordingGraphicsManager();
 
-        RuntimeManager.configureEngineServices(new EngineContext(
+        EngineServices.configure(new EngineContext(
                 SonicConfigurationService.getInstance(),
                 currentGraphics,
                 AudioManager.getInstance(),

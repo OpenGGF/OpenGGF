@@ -1,7 +1,8 @@
 package com.openggf.graphics;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.RuntimeManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.render.SpritePieceRenderer;
 import org.junit.jupiter.api.AfterEach;
@@ -20,14 +21,14 @@ public class TestGraphicsManagerSpriteSatReplay {
     @BeforeEach
     public void setUp() {
         GraphicsManager.destroyForReinit();
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         graphicsManager = GraphicsManager.getInstance();
         graphicsManager.initHeadless();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         GraphicsManager.destroyForReinit();
     }
 

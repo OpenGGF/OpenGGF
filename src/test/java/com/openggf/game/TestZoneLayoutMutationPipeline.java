@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.LevelFrameStep;
 import com.openggf.game.mutation.DirectLevelMutationSurface;
@@ -48,16 +50,16 @@ class TestZoneLayoutMutationPipeline {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.destroyCurrent();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.destroyCurrent();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
@@ -213,7 +215,7 @@ class TestZoneLayoutMutationPipeline {
         when(module.getChaosEmeraldCount()).thenReturn(7);
         GameModuleRegistry.setCurrent(module);
         GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        RuntimeManager.createGameplay(gameplayMode);
+        TestEnvironment.activeGameplayMode();
         when(module.getLevelEventProvider()).thenReturn(levelEvents);
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
@@ -267,9 +269,9 @@ class TestZoneLayoutMutationPipeline {
 
     @Test
     void runtimeDestroyClearsPendingMutationState() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
 
-        GameRuntime runtime = RuntimeManager.createGameplay();
+        GameplayModeContext runtime = TestEnvironment.activeGameplayMode();
         ZoneLayoutMutationPipeline pipeline = GameServices.zoneLayoutMutationPipeline();
         assertSame(runtime.getZoneLayoutMutationPipeline(), pipeline);
         assertSame(runtime.getZoneLayoutMutationPipeline(), GameServices.zoneLayoutMutationPipelineOrNull());
@@ -277,7 +279,7 @@ class TestZoneLayoutMutationPipeline {
         StringBuilder log = new StringBuilder();
         pipeline.queue(intent(log, "A"));
 
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         // Post-migration: GameServices accessors throw only when the gameplay
         // mode is gone — destroyCurrent leaves cleared managers attached.
         SessionManager.clear();
@@ -288,10 +290,9 @@ class TestZoneLayoutMutationPipeline {
         pipeline.flush(context());
         assertEquals("", log.toString(), "destroy should clear queued mutations on the old pipeline instance");
 
-        GameRuntime recreated = RuntimeManager.createGameplay();
-        // After the runtime ownership migration, both GameRuntime references
-        // resolve to the live shared registry on the gameplay mode context,
-        // so compare against the originally captured pipeline instance.
+        GameplayModeContext recreated = TestEnvironment.activeGameplayMode();
+        // The recreated gameplay mode owns a fresh shared registry, so compare
+        // against the originally captured pipeline instance.
         assertNotSame(pipeline, recreated.getZoneLayoutMutationPipeline());
     }
 

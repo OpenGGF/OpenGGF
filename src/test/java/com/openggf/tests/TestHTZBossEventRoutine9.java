@@ -1,11 +1,11 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,7 +20,7 @@ public class TestHTZBossEventRoutine9 {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
         GameServices.gameState().resetSession();
 
@@ -32,7 +32,7 @@ public class TestHTZBossEventRoutine9 {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

@@ -19,7 +19,6 @@ import com.openggf.game.ShieldType;
 import com.openggf.game.DamageCause;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.timer.TimerManager;
 
@@ -1272,7 +1271,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public final GameModule currentGameModule() {
-                return RuntimeManager.resolveCurrentOrBootstrapGameModule();
+                return GameServices.currentOrBootstrapGameModule();
         }
 
         public final CrossGameFeatureProvider currentCrossGameFeatures() {
@@ -3184,7 +3183,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         private GameModule bootstrapSafeGameModule() {
-                return RuntimeManager.resolveBootstrapGameModule();
+                return GameServices.bootstrapGameModule();
         }
 
         /**

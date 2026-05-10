@@ -4,8 +4,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.SessionManager;
@@ -13,6 +13,7 @@ import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.HudStaticArt;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,15 +36,14 @@ class TestSonic1LivesHudDonation {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SonicConfigurationService.getInstance().resetToDefaults();
     }
 
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        RuntimeManager.destroyCurrent();
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @Test
@@ -145,7 +145,7 @@ class TestSonic1LivesHudDonation {
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
         SessionManager.openGameplaySession(new Sonic1GameModule(),
                 SaveSessionContext.noSave("s1", new SelectedTeam("knuckles", List.of()), 0, 0));
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
 
         Palette base = new Palette();
         setColour(base, 6, 255, 255, 255);

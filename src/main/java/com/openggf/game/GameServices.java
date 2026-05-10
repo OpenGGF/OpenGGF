@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+
+import com.openggf.game.session.EngineServices;
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
@@ -34,8 +36,8 @@ import com.openggf.timer.TimerManager;
  * Gameplay-scoped managers resolve through
  * {@link SessionManager#getCurrentGameplayMode()}; engine globals (audio, ROM,
  * config, debug overlay, graphics, ROM detection, cross-game features) stay
- * behind the engine-services root. The bonus stage provider remains attached
- * to the {@link GameRuntime} façade for now (lifecycle handle).
+ * behind the engine-services root. The bonus stage provider is gameplay-mode
+ * state and is exposed through {@link GameplayModeContext}.
  * <p>
  * Object instances should use {@code services()} instead of this class.
  */
@@ -49,50 +51,39 @@ public final class GameServices {
         if (mode == null || mode.getCamera() == null) {
             throw new IllegalStateException(
                     "GameServices." + accessor + "() requires an active gameplay mode. "
-                    + "Create one via RuntimeManager.createGameplay() before accessing gameplay-scoped managers.");
+                    + "Open a gameplay session and attach managers before accessing gameplay-scoped managers.");
         }
         return mode;
     }
 
-    /**
-     * @deprecated No production callers remain; gameplay-scoped state has moved
-     * to {@link GameplayModeContext}. Prefer {@link #requireGameplayMode(String)}
-     * which avoids the {@link RuntimeManager#getCurrent()} mode-transition side
-     * effect (silent runtime destroy on mode mismatch). Kept for source
-     * compatibility; do not introduce new callers.
-     */
-    // Still used by: (none — all GameServices callers migrated). Kept private
-    // and deprecated until ready to delete.
-    @Deprecated
-    private static GameRuntime requireRuntime(String accessor) {
-        GameRuntime rt = RuntimeManager.getCurrent();
-        if (rt == null) {
-            throw new IllegalStateException(
-                    "GameServices." + accessor + "() requires an active GameRuntime. "
-                    + "Create one via RuntimeManager.createGameplay() before accessing runtime-owned managers.");
-        }
-        return rt;
-    }
 
     /**
      * Returns {@code true} when a gameplay mode is active and core managers are
      * attached. Unified with {@link #gameplayModeOrNull()} so callers that guard
      * on {@code hasRuntime()} and read via {@code gameplayModeOrNull()} (or any
      * of the {@code *OrNull()} accessors) see consistent results across
-     * {@link RuntimeManager#parkCurrent()} (which clears the runtime but leaves
-     * the gameplay mode live in {@link com.openggf.game.session.SessionManager}).
+     * editor transitions that can clear the runtime facade while session-owned
+     * mode state is being rebuilt.
      */
     public static boolean hasRuntime() {
         return gameplayModeOrNull() != null;
     }
 
-    public static GameRuntime runtimeOrNull() {
-        return RuntimeManager.getActiveRuntime();
-    }
-
     private static GameplayModeContext gameplayModeOrNull() {
         GameplayModeContext mode = SessionManager.getCurrentGameplayMode();
         return mode != null && mode.getCamera() != null ? mode : null;
+    }
+
+    public static GameModule bootstrapGameModule() {
+        return GameModuleRegistry.getBootstrapDefault();
+    }
+
+    public static GameModule currentOrBootstrapGameModule() {
+        WorldSession world = SessionManager.getCurrentWorldSession();
+        if (world != null && world.getGameModule() != null) {
+            return world.getGameModule();
+        }
+        return bootstrapGameModule();
     }
 
     public static Camera cameraOrNull() {
@@ -301,38 +292,38 @@ public final class GameServices {
     //â”€â”€ Engine globals (stay as direct singleton calls) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public static RomManager rom() {
-        return RuntimeManager.currentEngineServices().roms();
+        return EngineServices.current().roms();
     }
 
     public static DebugOverlayManager debugOverlay() {
-        return RuntimeManager.currentEngineServices().debugOverlay();
+        return EngineServices.current().debugOverlay();
     }
 
     public static AudioManager audio() {
-        return RuntimeManager.currentEngineServices().audio();
+        return EngineServices.current().audio();
     }
 
     public static SonicConfigurationService configuration() {
-        return RuntimeManager.currentEngineServices().configuration();
+        return EngineServices.current().configuration();
     }
 
     public static GraphicsManager graphics() {
-        return RuntimeManager.currentEngineServices().graphics();
+        return EngineServices.current().graphics();
     }
 
     public static PerformanceProfiler profiler() {
-        return RuntimeManager.currentEngineServices().profiler();
+        return EngineServices.current().profiler();
     }
 
     public static PlaybackDebugManager playbackDebug() {
-        return RuntimeManager.currentEngineServices().playbackDebug();
+        return EngineServices.current().playbackDebug();
     }
 
     public static RomDetectionService romDetection() {
-        return RuntimeManager.currentEngineServices().romDetection();
+        return EngineServices.current().romDetection();
     }
 
     public static CrossGameFeatureProvider crossGameFeatures() {
-        return RuntimeManager.currentEngineServices().crossGameFeatures();
+        return EngineServices.current().crossGameFeatures();
     }
 }

@@ -1,8 +1,8 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.rewind.snapshot.PlcProgressSnapshot;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +21,7 @@ class TestSonic3kPlcArtRewindSnapshot {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @AfterEach

@@ -1,10 +1,10 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -39,7 +39,7 @@ public class TestS3kMgzSidekickAirCollisionOrdering {
         if (sharedLevel != null) {
             sharedLevel.dispose();
         }
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

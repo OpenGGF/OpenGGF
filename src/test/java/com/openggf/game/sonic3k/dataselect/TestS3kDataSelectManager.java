@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.dataselect;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -14,7 +16,6 @@ import com.openggf.game.dataselect.DataSelectSessionController;
 import com.openggf.game.save.SaveManager;
 import com.openggf.game.save.SaveSlotState;
 import com.openggf.game.save.SelectedTeam;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic2.dataselect.S2DataSelectProfile;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.PerformanceProfiler;
@@ -49,7 +50,7 @@ class TestS3kDataSelectManager {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         config.setConfigValue(SonicConfiguration.DATA_SELECT_EXTRA_PLAYER_COMBOS, "");
@@ -57,7 +58,7 @@ class TestS3kDataSelectManager {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -250,7 +251,7 @@ class TestS3kDataSelectManager {
     @Test
     void donatedHostRoutesMenuMusicThroughS3kDonorAudio() {
         AudioManager audio = mock(AudioManager.class);
-        RuntimeManager.configureEngineServices(new EngineContext(
+        EngineServices.configure(new EngineContext(
                 config,
                 GraphicsManager.getInstance(),
                 audio,
@@ -272,7 +273,7 @@ class TestS3kDataSelectManager {
     @Test
     void donatedHostRoutesMenuSfxThroughS3kDonorAudio() {
         AudioManager audio = mock(AudioManager.class);
-        RuntimeManager.configureEngineServices(new EngineContext(
+        EngineServices.configure(new EngineContext(
                 config,
                 GraphicsManager.getInstance(),
                 audio,
@@ -434,8 +435,8 @@ class TestS3kDataSelectManager {
         input.update();
         input.handleKeyEvent(key, GLFW_RELEASE);
         input.update();
-        int leftKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.LEFT);
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int leftKey = EngineServices.current().configuration().getInt(SonicConfiguration.LEFT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         if (key == leftKey || key == rightKey) {
             for (int i = 0; i < 12; i++) {
                 manager.update(new InputHandler());

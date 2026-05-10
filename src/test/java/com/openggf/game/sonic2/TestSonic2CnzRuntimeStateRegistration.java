@@ -1,7 +1,7 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.tests.TestEnvironment;
@@ -27,7 +27,7 @@ class TestSonic2CnzRuntimeStateRegistration {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -148,7 +148,7 @@ class TestSonic2CnzRuntimeStateRegistration {
     }
 
     private static void requireRuntime() {
-        assertNotNull(GameServices.runtimeOrNull(), "Expected gameplay runtime");
+        assertTrue(GameServices.hasRuntime(), "Expected gameplay mode");
     }
 
     private static ZoneRuntimeRegistry currentRegistry() {

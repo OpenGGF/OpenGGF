@@ -3,7 +3,6 @@ package com.openggf.tests;
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
@@ -160,7 +159,7 @@ public class TestAizFireCurtainGpuDiag {
         }
         glfwTerminate();
         GraphicsManager.getInstance().resetState();
-        if (RuntimeManager.getCurrent() != null) {
+        if (TestEnvironment.activeGameplayMode() != null) {
             GameServices.camera().resetState();
         }
     }

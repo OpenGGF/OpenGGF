@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.bonusstage.slots;
 
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.TestEnvironment;
@@ -25,7 +24,7 @@ class TestS3kSlotPlayerRuntime {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
     }
 

@@ -4,6 +4,7 @@ import com.openggf.game.save.RuntimeSaveContext;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.session.GameplayModeContext;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -21,7 +22,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.NEW_SLOT_START,
-                new RuntimeSaveContext(null, ctx));
+                RuntimeSaveContext.forGameplayMode(null, ctx));
         assertEquals("sonic", payload.get("mainCharacter"));
         assertEquals(0, payload.get("zone"));
         assertEquals(0, payload.get("act"));
@@ -34,7 +35,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.NEW_SLOT_START,
-                new RuntimeSaveContext(null, ctx));
+                RuntimeSaveContext.forGameplayMode(null, ctx));
         assertEquals(List.of("tails"), payload.get("sidekicks"));
     }
 
@@ -46,7 +47,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.NEW_SLOT_START,
-                new RuntimeSaveContext(null, ctx));
+                RuntimeSaveContext.forGameplayMode(null, ctx));
         assertEquals("knuckles", payload.get("mainCharacter"));
         assertEquals(3, payload.get("zone"));
         assertEquals(1, payload.get("act"));
@@ -60,11 +61,11 @@ class TestS3kSaveSnapshotProvider {
     void capture_runtimeUsesLiveZoneActAndGameState() {
         SaveSessionContext ctx = SaveSessionContext.forSlot("s3k", 1,
                 new SelectedTeam("sonic", List.of("tails")), 0, 0);
-        com.openggf.game.GameRuntime runtime = mock(com.openggf.game.GameRuntime.class);
+        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         com.openggf.game.GameStateManager gameState = mock(com.openggf.game.GameStateManager.class);
-        when(runtime.getLevelManager()).thenReturn(levelManager);
-        when(runtime.getGameState()).thenReturn(gameState);
+        when(gameplayMode.getLevelManager()).thenReturn(levelManager);
+        when(gameplayMode.getGameStateManager()).thenReturn(gameState);
         when(levelManager.getCurrentZone()).thenReturn(4);
         when(levelManager.getCurrentAct()).thenReturn(1);
         when(gameState.getLives()).thenReturn(7);
@@ -75,7 +76,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.PROGRESSION_SAVE,
-                new RuntimeSaveContext(runtime, ctx));
+                RuntimeSaveContext.forGameplayMode(gameplayMode, ctx));
 
         assertEquals(4, payload.get("zone"));
         assertEquals(1, payload.get("act"));
@@ -90,11 +91,11 @@ class TestS3kSaveSnapshotProvider {
         SaveSessionContext ctx = SaveSessionContext.forSlot("s3k", 1,
                 new SelectedTeam("sonic", List.of("tails")), 0, 0);
         ctx.markClear();
-        com.openggf.game.GameRuntime runtime = mock(com.openggf.game.GameRuntime.class);
+        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         com.openggf.game.GameStateManager gameState = mock(com.openggf.game.GameStateManager.class);
-        when(runtime.getLevelManager()).thenReturn(levelManager);
-        when(runtime.getGameState()).thenReturn(gameState);
+        when(gameplayMode.getLevelManager()).thenReturn(levelManager);
+        when(gameplayMode.getGameStateManager()).thenReturn(gameState);
         when(levelManager.getCurrentZone()).thenReturn(0x0C);
         when(levelManager.getCurrentAct()).thenReturn(0);
         when(gameState.getLives()).thenReturn(7);
@@ -104,7 +105,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.PROGRESSION_SAVE,
-                new RuntimeSaveContext(runtime, ctx));
+                RuntimeSaveContext.forGameplayMode(gameplayMode, ctx));
 
         assertEquals(true, payload.get("clear"));
         assertEquals(14, payload.get("progressCode"));
@@ -118,7 +119,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> provider.capture(SaveReason.EXISTING_SLOT_LOAD, new RuntimeSaveContext(null, ctx)));
+                () -> provider.capture(SaveReason.EXISTING_SLOT_LOAD, RuntimeSaveContext.forGameplayMode(null, ctx)));
 
         assertTrue(ex.getMessage().contains("runtime"));
     }
@@ -127,11 +128,11 @@ class TestS3kSaveSnapshotProvider {
     void capture_specialStageSave_requiresRuntimeEmeraldState() {
         SaveSessionContext ctx = SaveSessionContext.forSlot("s3k", 1,
                 new SelectedTeam("sonic", List.of("tails")), 0, 0);
-        com.openggf.game.GameRuntime runtime = mock(com.openggf.game.GameRuntime.class);
+        GameplayModeContext gameplayMode = mock(GameplayModeContext.class);
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         com.openggf.game.GameStateManager gameState = mock(com.openggf.game.GameStateManager.class);
-        when(runtime.getLevelManager()).thenReturn(levelManager);
-        when(runtime.getGameState()).thenReturn(gameState);
+        when(gameplayMode.getLevelManager()).thenReturn(levelManager);
+        when(gameplayMode.getGameStateManager()).thenReturn(gameState);
         when(levelManager.getCurrentZone()).thenReturn(7);
         when(levelManager.getCurrentAct()).thenReturn(0);
         when(gameState.getLives()).thenReturn(5);
@@ -142,7 +143,7 @@ class TestS3kSaveSnapshotProvider {
         S3kSaveSnapshotProvider provider = new S3kSaveSnapshotProvider();
         Map<String, Object> payload = provider.capture(
                 SaveReason.SPECIAL_STAGE_SAVE,
-                new RuntimeSaveContext(runtime, ctx));
+                RuntimeSaveContext.forGameplayMode(gameplayMode, ctx));
 
         assertEquals(7, payload.get("zone"));
         assertEquals(0, payload.get("act"));

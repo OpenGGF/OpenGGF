@@ -1,7 +1,8 @@
 package com.openggf.sprites.managers;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.RuntimeManager;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
@@ -13,9 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,12 +25,12 @@ public class TestPlayableSpriteAnimation {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

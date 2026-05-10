@@ -1,10 +1,13 @@
 package com.openggf.game.sonic3k.bonusstage.slots;
 
+
+import com.openggf.game.session.EngineServices;
 import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
-import com.openggf.game.GameRuntime;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.S3kSlotBonusCageObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance;
@@ -27,7 +30,7 @@ public final class S3kSlotBonusStageRuntime {
     private static final int PRIORITY_BIT = 0x8000;
 
     private boolean initialized;
-    private GameRuntime bootstrapRuntime;
+    private GameplayModeContext bootstrapGameplayMode;
     private AbstractPlayableSprite originalPlayer;
     private S3kSlotStageState slotStageState;
     private S3kSlotRenderBuffers slotRenderBuffers;
@@ -71,15 +74,15 @@ public final class S3kSlotBonusStageRuntime {
         slotStageController = new S3kSlotStageController(slotStageState);
         slotStageController.bootstrap();
         slotStageController.setActiveLayout(slotRenderBuffers.layout());
-        bootstrapRuntime = GameServices.runtimeOrNull();
-        if (bootstrapRuntime == null) {
+        bootstrapGameplayMode = SessionManager.getCurrentGameplayMode();
+        if (bootstrapGameplayMode == null) {
             return;
         }
 
         suppressCpuSidekicks();
 
         String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
-        if (bootstrapRuntime.getSpriteManager().getSprite(mainCode) instanceof AbstractPlayableSprite mainPlayer) {
+        if (bootstrapGameplayMode.getSpriteManager().getSprite(mainCode) instanceof AbstractPlayableSprite mainPlayer) {
             originalPlayer = mainPlayer;
             short slotStartX = S3kSlotRomData.SLOT_BONUS_PLAYER_START_X;
             short slotStartY = S3kSlotRomData.SLOT_BONUS_PLAYER_START_Y;
@@ -91,14 +94,15 @@ public final class S3kSlotBonusStageRuntime {
             slotPlayer.setCentreY(slotStartY);
             slotPlayerRuntime.initialize(slotPlayer);
             slotPlayerRuntime.resetSlotOrigin(slotPlayer);
-            bootstrapRuntime.getSpriteManager().addSprite(slotPlayer);
-            bootstrapRuntime.getCamera().setFocusedSprite(slotPlayer);
-            bootstrapRuntime.getCamera().setX((short) (slotPlayer.getCentreX() - 0xA0));
-            bootstrapRuntime.getCamera().setY((short) (slotPlayer.getCentreY() - 0x70));
+            bootstrapGameplayMode.getSpriteManager().addSprite(slotPlayer);
+            bootstrapGameplayMode.getCamera().setFocusedSprite(slotPlayer);
+            bootstrapGameplayMode.getCamera().setX((short) (slotPlayer.getCentreX() - 0xA0));
+            bootstrapGameplayMode.getCamera().setY((short) (slotPlayer.getCentreY() - 0x70));
             slotCage = new S3kSlotBonusCageObjectInstance(
                     new ObjectSpawn(centerX, centerY, 0, 0, 0, false, 0),
                     slotStageController);
-            slotCage.setServices(new DefaultObjectServices(bootstrapRuntime));
+            slotCage.setServices(new DefaultObjectServices(
+                    bootstrapGameplayMode, EngineServices.current()));
             slotCage.suppressObjectManagerUpdate();
             registerDynamicSlotObject(slotCage);
             slotCage.suppressInitialCaptureOnce();
@@ -191,11 +195,11 @@ public final class S3kSlotBonusStageRuntime {
             unregisterDynamicSlotObject(reward);
         }
         unregisterDynamicSlotObject(slotCage);
-        if (slotPlayer != null && bootstrapRuntime != null) {
-            bootstrapRuntime.getSpriteManager().removeSprite(slotPlayer.getCode());
+        if (slotPlayer != null && bootstrapGameplayMode != null) {
+            bootstrapGameplayMode.getSpriteManager().removeSprite(slotPlayer.getCode());
             if (originalPlayer != null) {
-                bootstrapRuntime.getSpriteManager().addSprite(originalPlayer);
-                bootstrapRuntime.getCamera().setFocusedSprite(originalPlayer);
+                bootstrapGameplayMode.getSpriteManager().addSprite(originalPlayer);
+                bootstrapGameplayMode.getCamera().setFocusedSprite(originalPlayer);
             }
         }
         restoreSuppressedSidekicks();
@@ -215,7 +219,7 @@ public final class S3kSlotBonusStageRuntime {
         slotStageController = null;
         exitTriggered = false;
         originalPlayer = null;
-        bootstrapRuntime = null;
+        bootstrapGameplayMode = null;
         initialized = false;
     }
 
@@ -375,9 +379,9 @@ public final class S3kSlotBonusStageRuntime {
     private S3kSlotLayoutRenderer.TransformedStagePoint currentMachineAnchor() {
         int panelX = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X + S3kSlotRomData.SLOT_MACHINE_PANEL_CENTER_OFFSET_X;
         int panelY = S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y + S3kSlotRomData.SLOT_MACHINE_PANEL_CENTER_OFFSET_Y;
-        if (bootstrapRuntime != null) {
-            int cameraX = bootstrapRuntime.getCamera().getX();
-            int cameraY = bootstrapRuntime.getCamera().getY();
+        if (bootstrapGameplayMode != null) {
+            int cameraX = bootstrapGameplayMode.getCamera().getX();
+            int cameraY = bootstrapGameplayMode.getCamera().getY();
             return new S3kSlotLayoutRenderer.TransformedStagePoint(
                     panelX,
                     panelY,
@@ -480,13 +484,13 @@ public final class S3kSlotBonusStageRuntime {
      * player moves beyond those offsets.
      */
     private void updateCamera() {
-        if (slotPlayer == null || bootstrapRuntime == null) {
+        if (slotPlayer == null || bootstrapGameplayMode == null) {
             return;
         }
         int playerX = currentPlayerOriginX();
         int playerY = currentPlayerOriginY();
-        int camX = bootstrapRuntime.getCamera().getX();
-        int camY = bootstrapRuntime.getCamera().getY();
+        int camX = bootstrapGameplayMode.getCamera().getX();
+        int camY = bootstrapGameplayMode.getCamera().getY();
         int targetX = playerX - 0xA0;
         if (targetX >= 0) {
             camX = targetX;
@@ -495,8 +499,8 @@ public final class S3kSlotBonusStageRuntime {
         if (targetY >= 0) {
             camY = targetY;
         }
-        bootstrapRuntime.getCamera().setX((short) camX);
-        bootstrapRuntime.getCamera().setY((short) camY);
+        bootstrapGameplayMode.getCamera().setX((short) camX);
+        bootstrapGameplayMode.getCamera().setY((short) camY);
     }
 
     private int currentPlayerOriginX() {
@@ -514,9 +518,9 @@ public final class S3kSlotBonusStageRuntime {
     }
 
     private void updateVisuals() {
-        if (bootstrapRuntime != null) {
-            int stageCameraX = bootstrapRuntime.getCamera().getX();
-            int stageCameraY = bootstrapRuntime.getCamera().getY();
+        if (bootstrapGameplayMode != null) {
+            int stageCameraX = bootstrapGameplayMode.getCamera().getX();
+            int stageCameraY = bootstrapGameplayMode.getCamera().getY();
             if (slotRenderBuffers != null) {
                 if (pointGrid == null || pointGrid.length < 16 * 16 * 2) {
                     pointGrid = new short[16 * 16 * 2];
@@ -535,7 +539,7 @@ public final class S3kSlotBonusStageRuntime {
     }
 
     private void updateRewards(int frameCounter) {
-        if (bootstrapRuntime == null || slotPlayer == null) {
+        if (bootstrapGameplayMode == null || slotPlayer == null) {
             return;
         }
         drainPendingRingRewards();
@@ -551,7 +555,7 @@ public final class S3kSlotBonusStageRuntime {
                     new ObjectSpawn(S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X, S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y,
                             0, 0, 0, false, 0),
                     slotStageController);
-            reward.setServices(new DefaultObjectServices(bootstrapRuntime));
+            reward.setServices(slotObjectServices());
             reward.suppressObjectManagerUpdate();
             if (ringPos.length == 4) {
                 reward.activate(ringPos[0], ringPos[1], ringPos[2], ringPos[3]);
@@ -571,7 +575,7 @@ public final class S3kSlotBonusStageRuntime {
                     new ObjectSpawn(S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_X, S3kSlotRomData.SLOT_BONUS_CAGE_CENTER_Y,
                             0, 0, 0, false, 0),
                     slotStageController);
-            reward.setServices(new DefaultObjectServices(bootstrapRuntime));
+            reward.setServices(slotObjectServices());
             reward.suppressObjectManagerUpdate();
             if (spikePos.length == 4) {
                 reward.activate(spikePos[0], spikePos[1], spikePos[2], spikePos[3]);
@@ -604,21 +608,25 @@ public final class S3kSlotBonusStageRuntime {
         }
     }
 
+    private DefaultObjectServices slotObjectServices() {
+        return new DefaultObjectServices(bootstrapGameplayMode, EngineServices.current());
+    }
+
     private void registerDynamicSlotObject(com.openggf.level.objects.ObjectInstance object) {
-        if (bootstrapRuntime == null || object == null) {
+        if (bootstrapGameplayMode == null || object == null) {
             return;
         }
-        ObjectManager objectManager = bootstrapRuntime.getObjectManager();
+        ObjectManager objectManager = bootstrapGameplayMode.getLevelManager().getObjectManager();
         if (objectManager != null) {
             objectManager.addDynamicObject(object);
         }
     }
 
     private void unregisterDynamicSlotObject(com.openggf.level.objects.ObjectInstance object) {
-        if (bootstrapRuntime == null || object == null) {
+        if (bootstrapGameplayMode == null || object == null) {
             return;
         }
-        ObjectManager objectManager = bootstrapRuntime.getObjectManager();
+        ObjectManager objectManager = bootstrapGameplayMode.getLevelManager().getObjectManager();
         if (objectManager != null) {
             objectManager.removeDynamicObject(object);
         }
@@ -651,10 +659,10 @@ public final class S3kSlotBonusStageRuntime {
     }
 
     private void suppressCpuSidekicks() {
-        if (bootstrapRuntime == null) {
+        if (bootstrapGameplayMode == null) {
             return;
         }
-        SpriteManager spriteManager = bootstrapRuntime.getSpriteManager();
+        SpriteManager spriteManager = bootstrapGameplayMode.getSpriteManager();
         List<AbstractPlayableSprite> liveSidekicks = List.copyOf(spriteManager.getSidekicks());
         for (AbstractPlayableSprite sidekick : liveSidekicks) {
             String characterName = spriteManager.getSidekickCharacterName(sidekick);
@@ -664,11 +672,11 @@ public final class S3kSlotBonusStageRuntime {
     }
 
     private void restoreSuppressedSidekicks() {
-        if (bootstrapRuntime == null || suppressedSidekicks.isEmpty()) {
+        if (bootstrapGameplayMode == null || suppressedSidekicks.isEmpty()) {
             suppressedSidekicks.clear();
             return;
         }
-        SpriteManager spriteManager = bootstrapRuntime.getSpriteManager();
+        SpriteManager spriteManager = bootstrapGameplayMode.getSpriteManager();
         for (SuppressedSidekick entry : suppressedSidekicks) {
             if (entry.characterName() != null) {
                 spriteManager.addSprite(entry.sidekick(), entry.characterName());

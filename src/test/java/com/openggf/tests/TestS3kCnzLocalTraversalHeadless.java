@@ -1,8 +1,8 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CnzBalloonInstance;
@@ -35,7 +35,7 @@ class TestS3kCnzLocalTraversalHeadless {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         com.openggf.game.session.SessionManager.clear();
     }
 
@@ -501,28 +501,28 @@ class TestS3kCnzLocalTraversalHeadless {
     private static CnzBalloonInstance spawnBalloon(int x, int y, int subtype) {
         CnzBalloonInstance object = new CnzBalloonInstance(
                 new ObjectSpawn(x, y, Sonic3kObjectIds.CNZ_BALLOON, subtype, 0, false, 0));
-        object.setServices(new DefaultObjectServices(RuntimeManager.getCurrent()));
+        object.setServices(TestEnvironment.objectServices());
         return object;
     }
 
     private static CnzTrapDoorInstance spawnTrapDoor(int x, int y, int subtype) {
         CnzTrapDoorInstance object = new CnzTrapDoorInstance(
                 new ObjectSpawn(x, y, Sonic3kObjectIds.CNZ_TRAP_DOOR, subtype, 0, false, 0));
-        object.setServices(new DefaultObjectServices(RuntimeManager.getCurrent()));
+        object.setServices(TestEnvironment.objectServices());
         return object;
     }
 
     private static CnzHoverFanInstance spawnHoverFan(int x, int y, int subtype) {
         CnzHoverFanInstance object = new CnzHoverFanInstance(
                 new ObjectSpawn(x, y, Sonic3kObjectIds.CNZ_HOVER_FAN, subtype, 0, false, 0));
-        object.setServices(new DefaultObjectServices(RuntimeManager.getCurrent()));
+        object.setServices(TestEnvironment.objectServices());
         return object;
     }
 
     private static CnzRisingPlatformInstance spawnRisingPlatform(int x, int y, int subtype) {
         CnzRisingPlatformInstance object = new CnzRisingPlatformInstance(
                 new ObjectSpawn(x, y, Sonic3kObjectIds.CNZ_RISING_PLATFORM, subtype, 0, false, 0));
-        object.setServices(new DefaultObjectServices(RuntimeManager.getCurrent()));
+        object.setServices(TestEnvironment.objectServices());
         return object;
     }
 

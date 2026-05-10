@@ -1,7 +1,7 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic2.events.Sonic2CNZEvents;
 import com.openggf.game.sonic2.runtime.CnzRuntimeState;
 import com.openggf.game.sonic2.runtime.CnzRuntimeStateView;
@@ -37,7 +37,7 @@ class TestSonic2CnzRuntimeStateConsumers {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

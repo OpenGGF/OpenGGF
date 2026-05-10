@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.SessionManager;
@@ -20,7 +20,7 @@ public class TestSonic3kBootstrapResolver {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @AfterEach

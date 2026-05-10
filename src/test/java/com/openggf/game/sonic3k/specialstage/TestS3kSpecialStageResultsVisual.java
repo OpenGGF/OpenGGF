@@ -1,5 +1,9 @@
 package com.openggf.game.sonic3k.specialstage;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -9,7 +13,6 @@ import com.openggf.data.RomManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.graphics.GLCommand;
@@ -58,8 +61,8 @@ public class TestS3kSpecialStageResultsVisual {
     @BeforeAll
     public static void setUpClass() {
         try {
-            RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-            RuntimeManager.destroyCurrent();
+            EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+            SessionManager.clear();
 
             // Check for S3K ROM
             String romPath = System.getProperty("s3k.rom.path",
@@ -73,7 +76,7 @@ public class TestS3kSpecialStageResultsVisual {
 
             // Bootstrap EngineContext once so GraphicsManager.init can reach
             // GameServices.configuration() during the fresh-singleton init below.
-            RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+            EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
             GLFWErrorCallback.createPrint(System.err).set();
             if (!glfwInit()) {
@@ -122,7 +125,7 @@ public class TestS3kSpecialStageResultsVisual {
             assertTrue(rom.open(romFile.getAbsolutePath()), "Failed to open S3K ROM");
             GameModuleRegistry.detectAndSetModule(rom);
             RomManager.getInstance().setRom(rom);
-            RuntimeManager.createGameplay();
+            TestEnvironment.activeGameplayMode();
 
             // Re-capture EngineContext now that GraphicsManager has been re-created by
             // destroyForReinit() + getInstance() above. The earlier bootstrap captured
@@ -130,10 +133,10 @@ public class TestS3kSpecialStageResultsVisual {
             // (called from S3kSpecialStageResultsScreen.ensureArtCached) would write
             // pattern/palette cache entries into the dead instance and the rendered
             // frame would stay all-white.
-            RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+            EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
             // Create the gameplay runtime so GameServices.* accessors resolve.
-            RuntimeManager.createGameplay();
+            TestEnvironment.activeGameplayMode();
 
             // Configure emerald state for tests
             GameStateManager gs = GameServices.gameState();
@@ -161,7 +164,7 @@ public class TestS3kSpecialStageResultsVisual {
         }
         glfwTerminate();
         GraphicsManager.getInstance().resetState();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     /**

@@ -1,17 +1,17 @@
 package com.openggf.level.objects;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.RuntimeManager;
 import com.openggf.graphics.GLCommand;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -24,8 +24,8 @@ public class TestObjectManagerCounterBasedDynamicUnload {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
         GameServices.camera().setX((short) 0);
         GameServices.camera().setY((short) 0);
@@ -58,7 +58,7 @@ public class TestObjectManagerCounterBasedDynamicUnload {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

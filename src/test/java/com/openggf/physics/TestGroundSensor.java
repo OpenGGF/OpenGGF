@@ -1,8 +1,10 @@
 package com.openggf.physics;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import org.junit.jupiter.api.AfterEach;
@@ -15,9 +17,7 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.SolidTile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.GroundMode;
-
 import java.lang.reflect.Field;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,9 +41,9 @@ public class TestGroundSensor {
         fgChunkMap = new ChunkDesc[20][20];
         bgChunkMap = new ChunkDesc[20][20];
 
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.destroyCurrent();
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
 
         mockLevelManager = mock(LevelManager.class);
         when(mockLevelManager.getChunkDescAt(anyByte(), anyInt(), anyInt()))
@@ -133,7 +133,7 @@ public class TestGroundSensor {
     @AfterEach
     void tearDown() {
         GroundSensor.setLevelManager(null);
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     private void setTileAt(int x, int y, int tileIndex) {

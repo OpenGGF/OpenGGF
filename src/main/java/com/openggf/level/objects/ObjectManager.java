@@ -1,13 +1,14 @@
 package com.openggf.level.objects;
+
+import com.openggf.game.session.EngineServices;
 import static org.lwjgl.opengl.GL11.GL_LINES;
 import com.openggf.camera.Camera;
 import com.openggf.debug.DebugOverlayManager;
-import com.openggf.game.GameServices;
-import com.openggf.game.GameRuntime;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameServices;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -16,6 +17,7 @@ import com.openggf.game.solid.PostContactState;
 import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandGroup;
 import com.openggf.graphics.FadeManager;
@@ -446,9 +448,9 @@ public class ObjectManager {
     }
 
     private static ObjectServices defaultServices() {
-        GameRuntime runtime = GameServices.runtimeOrNull();
-        if (runtime != null) {
-            return new DefaultObjectServices(runtime);
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            return new DefaultObjectServices(gameplayMode, EngineServices.current());
         }
         return new BootstrapObjectServices();
     }

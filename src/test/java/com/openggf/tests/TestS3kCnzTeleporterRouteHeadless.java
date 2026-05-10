@@ -1,9 +1,9 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -48,7 +48,7 @@ class TestS3kCnzTeleporterRouteHeadless {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         com.openggf.game.session.SessionManager.clear();
     }
 
@@ -75,7 +75,7 @@ class TestS3kCnzTeleporterRouteHeadless {
 
         CnzTeleporterInstance teleporter = new CnzTeleporterInstance(
                 new ObjectSpawn(0x4A40, 0x0A38, 0, 0, 0, false, 0));
-        teleporter.setServices(new DefaultObjectServices(RuntimeManager.getCurrent()));
+        teleporter.setServices(TestEnvironment.objectServices());
         GameServices.level().getObjectManager().addDynamicObject(teleporter);
 
         fixture.sprite().setCentreX((short) 0x4A50);
@@ -225,7 +225,7 @@ class TestS3kCnzTeleporterRouteHeadless {
     private CnzEndBossInstance spawnCnzEndBossForTest() {
         CnzEndBossInstance boss = new CnzEndBossInstance(
                 new ObjectSpawn(0x4A40, 0x0A38, Sonic3kObjectIds.CNZ_END_BOSS, 0, 0, false, 0));
-        boss.setServices(new DefaultObjectServices(RuntimeManager.getCurrent()));
+        boss.setServices(TestEnvironment.objectServices());
         GameServices.level().getObjectManager().addDynamicObject(boss);
         return boss;
     }

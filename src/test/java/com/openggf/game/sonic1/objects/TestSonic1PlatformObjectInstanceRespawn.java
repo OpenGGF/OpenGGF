@@ -5,15 +5,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.TestEnvironment;
 
 import java.util.List;
 
@@ -26,10 +28,10 @@ public class TestSonic1PlatformObjectInstanceRespawn {
     private static final class StubLevelManager extends LevelManager {
         private ObjectManager objectManager;
 
-        private StubLevelManager(GameRuntime runtime) {
-            super(runtime.getCamera(), runtime.getSpriteManager(), runtime.getParallaxManager(),
-                    runtime.getCollisionSystem(), runtime.getWaterSystem(), runtime.getGameState(),
-                    runtime.getEngineServices(), runtime.getWorldSession());
+        private StubLevelManager(GameplayModeContext gameplayMode) {
+            super(gameplayMode.getCamera(), gameplayMode.getSpriteManager(), gameplayMode.getParallaxManager(),
+                    gameplayMode.getCollisionSystem(), gameplayMode.getWaterSystem(),
+                    gameplayMode.getGameStateManager(), EngineServices.current(), gameplayMode.getWorldSession());
         }
 
         @Override
@@ -49,14 +51,14 @@ public class TestSonic1PlatformObjectInstanceRespawn {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -66,7 +68,7 @@ public class TestSonic1PlatformObjectInstanceRespawn {
         camera.setMaxY((short) 0);
 
         ObjectSpawn spawn = new ObjectSpawn(100, 300, 0x18, 0x04, 0, false, 0);
-        StubLevelManager levelManager = new StubLevelManager(RuntimeManager.getCurrent());
+        StubLevelManager levelManager = new StubLevelManager(TestEnvironment.activeGameplayMode());
 
         ObjectRegistry registry = new ObjectRegistry() {
             @Override

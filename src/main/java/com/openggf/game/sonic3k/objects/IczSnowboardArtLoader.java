@@ -2,11 +2,11 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
-import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.S3kSpriteDataLoader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.Pattern;
 import com.openggf.level.Level;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.SpriteDplcFrame;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -32,18 +32,18 @@ public final class IczSnowboardArtLoader {
     private IczSnowboardArtLoader() {
     }
 
-    static synchronized PatternSpriteRenderer sonicSnowboardRenderer() {
-        loadIfNeeded();
+    static synchronized PatternSpriteRenderer sonicSnowboardRenderer(ObjectServices services) {
+        loadIfNeeded(services);
         return sonicRenderer;
     }
 
-    static synchronized PatternSpriteRenderer snowboardRenderer() {
-        loadIfNeeded();
+    static synchronized PatternSpriteRenderer snowboardRenderer(ObjectServices services) {
+        loadIfNeeded(services);
         return snowboardRenderer;
     }
 
-    static synchronized PatternSpriteRenderer dustRenderer() {
-        loadIfNeeded();
+    static synchronized PatternSpriteRenderer dustRenderer(ObjectServices services) {
+        loadIfNeeded(services);
         return dustRenderer;
     }
 
@@ -54,14 +54,15 @@ public final class IczSnowboardArtLoader {
         loaded = false;
     }
 
-    private static void loadIfNeeded() {
+    private static void loadIfNeeded(ObjectServices services) {
         if (loaded) {
             return;
         }
         try {
-            Rom rom = GameServices.rom().getRom();
+            Rom rom = services.rom();
             RomByteReader reader = RomByteReader.fromRom(rom);
             sonicRenderer = buildDplcRenderer(
+                    services,
                     rom,
                     reader,
                     Sonic3kConstants.ART_UNC_SONIC_SNOWBOARD_ADDR,
@@ -72,6 +73,7 @@ public final class IczSnowboardArtLoader {
                     SONIC_SNOWBOARD_PATTERN_BASE,
                     0);
             snowboardRenderer = buildDplcRenderer(
+                    services,
                     rom,
                     reader,
                     Sonic3kConstants.ART_UNC_SNOWBOARD_ADDR,
@@ -82,6 +84,7 @@ public final class IczSnowboardArtLoader {
                     SNOWBOARD_PATTERN_BASE,
                     0);
             dustRenderer = buildLevelRenderer(
+                    services,
                     reader,
                     Sonic3kConstants.ARTTILE_SNOWBOARD_DUST,
                     4,
@@ -99,6 +102,7 @@ public final class IczSnowboardArtLoader {
     }
 
     private static PatternSpriteRenderer buildDplcRenderer(
+            ObjectServices services,
             Rom rom,
             RomByteReader reader,
             int artAddr,
@@ -118,21 +122,23 @@ public final class IczSnowboardArtLoader {
             bankPatterns[i] = new Pattern();
         }
         PatternSpriteRenderer renderer = new DplcPatternSpriteRenderer(
+                services,
                 new ObjectSpriteSheet(bankPatterns, mappings, palette, 1),
                 sourcePatterns,
                 dplcs);
-        renderer.ensurePatternsCached(GameServices.graphics(), patternBase);
+        renderer.ensurePatternsCached(services.graphicsManager(), patternBase);
         return renderer;
     }
 
     private static PatternSpriteRenderer buildLevelRenderer(
+            ObjectServices services,
             RomByteReader reader,
             int artTileBase,
             int patternCount,
             int mapAddr,
             int frameCount,
             int palette) {
-        Level level = GameServices.level().getCurrentLevel();
+        Level level = services.currentLevel();
         Pattern[] patterns = new Pattern[patternCount];
         for (int i = 0; i < patternCount; i++) {
             int levelIndex = artTileBase + i;
@@ -143,21 +149,24 @@ public final class IczSnowboardArtLoader {
         List<SpriteMappingFrame> mappings = S3kSpriteDataLoader.loadMappingFrames(reader, mapAddr, frameCount);
         PatternSpriteRenderer renderer = new PatternSpriteRenderer(
                 new ObjectSpriteSheet(patterns, mappings, palette, 1));
-        renderer.ensurePatternsCached(GameServices.graphics(), 0x4C100);
+        renderer.ensurePatternsCached(services.graphicsManager(), 0x4C100);
         return renderer;
     }
 
     private static final class DplcPatternSpriteRenderer extends PatternSpriteRenderer {
+        private final ObjectServices services;
         private final Pattern[] bankPatterns;
         private final Pattern[] sourcePatterns;
         private final List<SpriteDplcFrame> dplcFrames;
         private int lastDplcFrame = -1;
 
         private DplcPatternSpriteRenderer(
+                ObjectServices services,
                 ObjectSpriteSheet sheet,
                 Pattern[] sourcePatterns,
                 List<SpriteDplcFrame> dplcFrames) {
             super(sheet);
+            this.services = services;
             this.bankPatterns = sheet.getPatterns();
             this.sourcePatterns = sourcePatterns;
             this.dplcFrames = dplcFrames;
@@ -190,7 +199,7 @@ public final class IczSnowboardArtLoader {
                     destination++;
                 }
             }
-            updatePatternRange(GameServices.graphics(), 0, Math.min(destination, bankPatterns.length));
+            updatePatternRange(services.graphicsManager(), 0, Math.min(destination, bankPatterns.length));
             lastDplcFrame = frameIndex;
         }
     }

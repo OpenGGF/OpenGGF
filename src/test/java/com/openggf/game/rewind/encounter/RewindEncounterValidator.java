@@ -3,7 +3,6 @@ package com.openggf.game.rewind.encounter;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
@@ -49,8 +48,7 @@ public final class RewindEncounterValidator {
                     .withRecording(bk2Path)
                     .withZoneAndAct(scenario.zoneIndex(), scenario.actIndex())
                     .build();
-            GameplayModeContext gameplayMode =
-                    RuntimeManager.getCurrent().getGameplayModeContext();
+            GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
             assertNotNull(gameplayMode, "GameplayModeContext must be available after fixture build");
             RewindRegistry registry = gameplayMode.getRewindRegistry();
             assertNotNull(registry, "RewindRegistry must be available after fixture build");

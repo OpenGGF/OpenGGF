@@ -1,7 +1,8 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -9,12 +10,10 @@ import com.openggf.level.objects.PerObjectRewindSnapshot;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.RecordComponent;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -25,14 +24,13 @@ class TestSidekickCpuControllerRewindCapture {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }

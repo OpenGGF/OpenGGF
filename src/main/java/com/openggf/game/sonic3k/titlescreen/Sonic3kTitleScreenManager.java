@@ -84,9 +84,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         WHITE_FLASH,
         /** Banner bounce + menu selection. */
         INTERACTIVE,
-        /** Fade to black before exiting (handles fade ourselves since
-         *  FadeManager instance may differ between GameLoop and UiRenderPipeline
-         *  after the RuntimeManager singleton migration). */
+        /** Fade to black before exiting. */
         FADE_OUT,
         /** Fade complete, ready to exit. */
         EXITING
@@ -635,9 +633,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      *
      * <p>We handle the full exit transition ourselves rather than relying on
      * the GameLoop's {@code exitTitleScreen()} → FadeManager → callback chain,
-     * because the upstream RuntimeManager singleton migration can cause the
-     * FadeManager instance in GameLoop to differ from the one that the
-     * UiRenderPipeline updates, preventing the fade callback from ever firing.
+     * because title transitions may run across differently scoped fade managers.
      *
      * <p>When our visual fade completes, we directly reset, set the game mode
      * to LEVEL, and load the first zone.

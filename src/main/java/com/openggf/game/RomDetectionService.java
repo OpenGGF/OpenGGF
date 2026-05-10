@@ -17,9 +17,9 @@ import java.util.logging.Logger;
  *
  * <p>Usage:
  * <pre>
- * RomDetectionService service = RuntimeManager.getEngineServices().romDetection();
+ * RomDetectionService service = EngineServices.current().romDetection();
  * boolean detected = service.detectAndSetModule(rom);
- * GameModule module = GameModuleRegistry.getCurrent();
+ * GameModule module = SessionManager.requireCurrentGameModule();
  * </pre>
  */
 public class RomDetectionService {

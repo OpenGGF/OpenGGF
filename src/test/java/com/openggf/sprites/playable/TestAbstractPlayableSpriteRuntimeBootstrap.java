@@ -1,17 +1,14 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.CanonicalAnimation;
-import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import java.util.concurrent.atomic.AtomicReference;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -29,7 +26,6 @@ class TestAbstractPlayableSpriteRuntimeBootstrap {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
@@ -37,7 +33,7 @@ class TestAbstractPlayableSpriteRuntimeBootstrap {
     @Test
     void playableConstructorsShouldNotRequireAnActiveRuntime() {
         assertAll(
-                "Playable constructors should not require an active GameRuntime",
+                "Playable constructors should not require an active gameplay session",
                 () -> assertDoesNotThrow(() -> new Sonic("sonic", (short) 0, (short) 0)),
                 () -> assertDoesNotThrow(() -> new Tails("tails", (short) 0, (short) 0)),
                 () -> assertDoesNotThrow(() -> new Knuckles("knuckles", (short) 0, (short) 0))
@@ -50,8 +46,8 @@ class TestAbstractPlayableSpriteRuntimeBootstrap {
 
         assertDoesNotThrow(() -> sonicRef.set(new Sonic("sonic", (short) 0, (short) 0)));
 
-        GameplayModeContext gameplay = SessionManager.openGameplaySession(module);
-        RuntimeManager.createGameplay(gameplay);
+        SessionManager.openGameplaySession(module);
+        TestEnvironment.activeGameplayMode();
 
         Sonic sonic = sonicRef.get();
         assertNotNull(sonic);

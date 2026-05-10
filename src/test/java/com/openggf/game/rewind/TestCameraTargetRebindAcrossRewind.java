@@ -2,7 +2,6 @@ package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
@@ -91,8 +90,7 @@ class TestCameraTargetRebindAcrossRewind {
                 "Camera must still have a focused sprite after advancing frames");
 
         // 5. Capture snapshot via RewindRegistry
-        GameplayModeContext gameplayMode =
-                RuntimeManager.getCurrent().getGameplayModeContext();
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         assertNotNull(gameplayMode, "GameplayModeContext must be available");
         RewindRegistry registry = gameplayMode.getRewindRegistry();
         assertNotNull(registry, "RewindRegistry must be non-null");

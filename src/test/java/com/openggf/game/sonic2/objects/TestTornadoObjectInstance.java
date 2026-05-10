@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
@@ -22,7 +25,6 @@ import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.api.parallel.Isolated;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.session.SessionManager;
@@ -52,9 +54,9 @@ public class TestTornadoObjectInstance {
     public void setUp() {
         previousModule = GameModuleRegistry.getCurrent();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SessionManager.openGameplaySession(GameModuleRegistry.getCurrent());
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
         GameServices.sprites().resetState();
         GameServices.level().resetState();
@@ -66,7 +68,7 @@ public class TestTornadoObjectInstance {
         GameServices.sprites().resetState();
         GameServices.level().resetState();
         GameModuleRegistry.setCurrent(previousModule);
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

@@ -112,7 +112,7 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         if (handler != null) {
             handler.init(act);
         }
-        if (GameServices.runtimeOrNull() == null) {
+        if (!GameServices.hasRuntime()) {
             return;
         }
         ZoneRuntimeRegistry registry = GameServices.zoneRuntimeRegistry();

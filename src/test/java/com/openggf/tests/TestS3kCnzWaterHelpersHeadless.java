@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CnzWaterLevelButtonInstance;
@@ -31,7 +31,7 @@ class TestS3kCnzWaterHelpersHeadless {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         com.openggf.game.session.SessionManager.clear();
     }
 
@@ -48,7 +48,7 @@ class TestS3kCnzWaterHelpersHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzWaterLevelCorkFloorInstance corkFloor = new CnzWaterLevelCorkFloorInstance(
                 new ObjectSpawn(0x4880, 0x0A20, Sonic3kObjectIds.CNZ_WATER_LEVEL_CORK_FLOOR, 0, 0, false, 0));
