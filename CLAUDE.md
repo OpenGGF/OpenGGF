@@ -117,7 +117,7 @@ GameServices.water()        // WaterSystem
 GameServices.debugOverlay() // DebugOverlayManager
 ```
 
-**Tier 2: `ObjectServices` (injected per-object)** — Context-specific services for game objects. The interface lives at `com.openggf.level.objects.ObjectServices`; `DefaultObjectServices` is the production implementation, backed by `GameRuntime`. Common accessors:
+**Tier 2: `ObjectServices` (injected per-object)** — Context-specific services for game objects. The interface lives at `com.openggf.level.objects.ObjectServices`; `DefaultObjectServices` is the production implementation, backed by `GameplayModeContext` and `EngineContext`. Common accessors:
 ```java
 // Inside any AbstractObjectInstance subclass:
 services().objectManager()        // ObjectManager
@@ -132,7 +132,7 @@ The list above is illustrative. `ObjectServices` exposes many more accessors —
 
 Objects receive `ObjectServices` via injection at construction time (ThreadLocal context set by `ObjectManager`). **Never call `getInstance()` from object code** — use `services()` instead.
 
-`GameServices` is for non-object code (managers, event handlers, controllers). It exposes more than the Tier-1 list above — gameplay-scoped accessors (camera, level, parallax, water, etc.) plus engine globals (`rom()`, `audio()`, `graphics()`, `configuration()`, `debugOverlay()`, `crossGameFeatures()`, `module()`, etc.) and `*OrNull()` variants. Gameplay-scoped accessors require an active `GameplayModeContext`; engine globals resolve via `RuntimeManager.currentEngineServices()`.
+`GameServices` is for non-object code (managers, event handlers, controllers). It exposes more than the Tier-1 list above — gameplay-scoped accessors (camera, level, parallax, water, etc.) plus engine globals (`rom()`, `audio()`, `graphics()`, `configuration()`, `debugOverlay()`, `crossGameFeatures()`, `module()`, etc.) and `*OrNull()` variants. Gameplay-scoped accessors require an active `GameplayModeContext`; engine globals resolve via `EngineServices`.
 
 ### Session Ownership (post runtime-ownership migration)
 
@@ -142,17 +142,17 @@ Per `docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md`, g
 - **`GameplayModeContext`** (`com.openggf.game.session`) — disposable, rebuilt on each gameplay session entry. Owns all gameplay-scoped managers: `Camera`, `TimerManager`, `GameStateManager`, `FadeManager`, `GameRng`, `SolidExecutionRegistry`, `WaterSystem`, `ParallaxManager`, `TerrainCollisionManager`, `CollisionSystem`, `SpriteManager`, `LevelManager`, plus the runtime-shared registries listed below. Provides `initializeFreshGameplayState()` for editor-exit counter reset.
 - **`SessionManager`** (`com.openggf.game.session`) — manages `WorldSession` and `ModeContext` lifecycle (`openGameplaySession`, `enterEditorMode`, `resumeGameplayFromEditor`).
 
-`GameRuntime` (`com.openggf.game`) is now a thin coordinator façade — it holds engine services + a reference to the active `WorldSession` and `GameplayModeContext`, and exposes manager getters that delegate to the gameplay mode context. New code should prefer resolving managers from `GameplayModeContext` directly. `RuntimeManager` still manages the `GameRuntime` lifecycle (`createGameplay`/`destroyCurrent`/`getCurrent`); `getCurrent` no longer lazy-creates — explicit `createGameplay(...)` is required to build a runtime.
+The old `GameRuntime` / `RuntimeManager` façade has been retired from production code. New code should prefer explicit dependencies, resolving managers from `GameplayModeContext` where a mode context is already available, `GameServices` for non-object runtime code, and `ObjectServices` for object code.
 
 **Editor mode entry/exit** uses proper teardown+rebuild (no parking):
-- Entry: `Engine.enterEditorFromCurrentPlayer` captures camera bounds, then runs `RuntimeManager.destroyCurrent()` inside `SessionManager.runRuntimeTeardownPreservingWorld(...)` (which preserves the loaded `Level` and zone/act metadata on `WorldSession` across the teardown), then calls `SessionManager.enterEditorMode` and restores camera bounds onto the new mode's camera. The world data lives on `WorldSession` and survives.
+- Entry: `Engine.enterEditorFromCurrentPlayer` captures camera bounds and world-scoped state, tears down the active gameplay mode while preserving loaded `Level` and zone/act metadata on `WorldSession`, then calls `SessionManager.enterEditorMode`. The world data lives on `WorldSession` and survives.
 - Exit: `Engine.resumePlaytestFromEditor` calls `SessionManager.resumeGameplayFromEditor()`, builds a fresh runtime via `initializeGameplayRuntime`, then calls `LevelManager.restoreInheritedLevel()` (re-runs the standard load over the surviving `Level`, then setLevel-restores any `MutableLevel` mutations made in editor). `GameplayModeContext.initializeFreshGameplayState()` resets the design's "non-preserved" counters (score, timer, checkpoint).
 
-The future direction is to fold `RuntimeManager`'s remaining responsibilities into `SessionManager` and eliminate the `GameRuntime` façade.
+Future cleanup should continue shrinking bootstrap singleton compatibility boundaries around `EngineServices`.
 
 ### Runtime-Shared Framework Stack
 
-`GameplayModeContext` hosts the shared registries/controllers used to normalize zone-specific behavior across games (accessed via `GameRuntime.getX()` delegation or directly via `gameplayMode.getX()`):
+`GameplayModeContext` hosts the shared registries/controllers used to normalize zone-specific behavior across games (accessed through `GameServices` or directly via `gameplayMode.getX()`):
 
 - `RewindRegistry` / `RewindController` / `PlaybackController` - Gameplay-scoped keyframe capture, deterministic seek/replay, held-rewind trace debugging, and field-capture coverage audits. Automatic capture currently uses `GenericFieldCapturer`, `GenericRewindEligibility`, `@RewindTransient` / `@RewindDeferred`, stable identity ids in `com.openggf.game.rewind.identity`, and compact schema codecs/policies in `com.openggf.game.rewind.schema` (`CompactFieldCapturer`, `RewindCodecs`, `RewindPolicyRegistry`, `RewindSchemaRegistry`). The standalone `RewindFieldInventoryTool` lives at `com.openggf.tools.rewind`. Default non-badnik object subclasses use compact schema-backed sidecar state when all default scalar fields have codecs. Object coverage should prefer central eligibility, codecs, and policy-registry rules over repeated per-object annotations or rewind overrides unless bespoke state requires it.
 - `ZoneRuntimeRegistry` - Typed per-zone runtime state adapters over raw event/state bytes
@@ -203,7 +203,7 @@ Current migration status is still partial on this branch. Sonic 2 already uses t
 | `level.scroll.compose` | Shared deform/parallax composition helpers built around `ScrollEffectComposer` |
 | `audio` (and `audio.synth`, `audio.smps`, `audio.driver`, `audio.runtime`, `audio.rewind`, `audio.debug`) | SMPS sequencer/loader, YM2612/PSG chip emulation, audio backend, `AbstractAudioProfile`, `AbstractSmpsLoader` |
 | `data` | ROM loading/reading (`Rom`, `RomManager`, `RomByteReader`), `Game`/`GameFactory`, art provider interfaces |
-| `game` | Core game-agnostic interfaces, providers, `GameServices`, `GameRuntime`, `PlayableEntity`, `DamageCause` |
+| `game` | Core game-agnostic interfaces, providers, `GameServices`, `PlayableEntity`, `DamageCause` |
 | `game.dataselect` | Shared data select framework: `AbstractDataSelectProvider`, `DataSelectSessionController`, `DataSelectHostProfile`, `DataSelectAction` (the `DataSelectProvider` interface itself lives in `com.openggf.game`) |
 | `game.save` | Save system: `SaveManager` (JSON + SHA256), `SaveSessionContext`, `SaveSlotSummary`, `SelectedTeam` |
 | `game.zone` / `game.palette` / `game.animation` / `game.mutation` / `game.render` | Runtime-owned shared frameworks for typed zone state, palette ownership, animated tiles, layout mutation, staged special render effects, and advanced render modes |

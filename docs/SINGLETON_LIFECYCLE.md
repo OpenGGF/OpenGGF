@@ -1,19 +1,20 @@
 # Service Lifecycle
 
-This branch no longer treats gameplay state as a web of global singletons. The engine is now split into a small process-level service root plus an explicit gameplay runtime. This document describes the current model and the few compatibility boundaries that still exist while the migration closes.
+This branch no longer treats gameplay state as a web of global singletons. The engine is now split into a process-level service root, durable world session state, and disposable mode contexts. This document describes the current model and the few compatibility boundaries that still exist while the migration closes.
 
 ## 1. Architecture Overview
 
-OpenGGF now uses three access patterns, each with a different scope.
+OpenGGF now uses scoped access patterns, each with a different lifetime.
 
 | Layer | Entry point | Scope | Intended users |
 |---|---|---|---|
 | Process services | `EngineServices` | One per process/bootstrap | engine bootstrap, process-global managers |
-| Gameplay runtime | `GameRuntime` | One per gameplay session | runtime-owned mutable state |
-| Static/runtime facade | `GameServices` | façade over current runtime + engine services | non-object gameplay code |
+| World session | `WorldSession` | One per launched game/session | durable world state that survives editor swaps |
+| Gameplay mode | `GameplayModeContext` | One per gameplay entry/resume | gameplay-owned mutable state |
+| Static service facade | `GameServices` | facade over current gameplay mode + engine services | non-object gameplay code |
 | Per-object injection | `ObjectServices` | object-scoped handle | `AbstractObjectInstance` subclasses |
 
-### Process-level services
+### Process-Level Services
 
 These services are not recreated on every level load. Typical examples:
 
@@ -27,11 +28,20 @@ These services are not recreated on every level load. Typical examples:
 - `RomDetectionService`
 - `CrossGameFeatureProvider`
 
-They are assembled into `EngineServices` and installed through `RuntimeManager` during bootstrap.
+They are assembled into `EngineServices` during bootstrap.
 
-### Runtime-owned gameplay state
+### World Session State
 
-These services live inside `GameRuntime` and are recreated when gameplay is torn down and rebuilt:
+`WorldSession` owns durable state that should survive editor mode entry/exit:
+
+- active `GameModule`
+- save-session context
+- current zone/act/apparent-act metadata
+- loaded `Level`, including `MutableLevel` editor mutations
+
+### Gameplay-Mode State
+
+These services live inside `GameplayModeContext` and are recreated when gameplay is torn down and rebuilt:
 
 - `Camera`
 - `LevelManager`
@@ -43,12 +53,16 @@ These services live inside `GameRuntime` and are recreated when gameplay is torn
 - `TerrainCollisionManager`
 - `WaterSystem`
 - `ParallaxManager`
+- `GameRng`
+- `SolidExecutionRegistry`
+- runtime-shared registries such as `ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`, `ZoneLayoutMutationPipeline`, `SpecialRenderEffectRegistry`, and `AdvancedRenderModeController`
+- `RewindRegistry`, `RewindController`, and `PlaybackController`
 
-This is the state that used to be singleton-heavy. Production code should now reach it through `GameServices` or `ObjectServices`, not through `getInstance()` or direct `RuntimeManager.getCurrent()` lookups.
+This is the state that used to be singleton-heavy. Production code should now reach it through `GameServices`, `ObjectServices`, `GameplayModeContext`, or explicit injection, not through `getInstance()` or retired runtime-facade lookups.
 
 ## 2. Access Rules
 
-### Non-object code
+### Non-Object Code
 
 Managers, controllers, level/event code, HUD code, and other non-object runtime logic should use `GameServices`:
 
@@ -59,13 +73,13 @@ GameStateManager gameState = GameServices.gameState();
 AudioManager audio = GameServices.audio();
 ```
 
-Use the `*OrNull()` variants only when code genuinely supports the absence of an active runtime:
+Use the `*OrNull()` variants only when code genuinely supports the absence of an active gameplay mode:
 
 ```java
 LevelManager level = GameServices.levelOrNull();
 ```
 
-### Object code
+### Object Code
 
 Anything extending `AbstractObjectInstance` should use injected `ObjectServices`:
 
@@ -80,31 +94,40 @@ services().gameModule()
 Object code should not call:
 
 - `Foo.getInstance()`
-- `RuntimeManager.getCurrent()`
-- `RuntimeManager.getEngineServices()`
+- retired runtime-facade lookups
 - `GameServices.*` when the injected object handle is available
 
 The main exception is framework code inside `AbstractObjectInstance` / `DefaultObjectServices`, where the object-layer bridge itself is implemented.
 
 ## 3. Lifecycle
 
-### Engine bootstrap
+### Engine Bootstrap
 
 1. The engine assembles process-global services.
 2. Those services are wrapped in `EngineServices`.
-3. `RuntimeManager` installs the engine-services root.
-4. `RuntimeManager.createGameplay()` creates a fresh `GameRuntime` and `WorldSession`.
+3. `SessionManager.openGameplaySession(...)` creates a `WorldSession` and `GameplayModeContext`.
+4. `GameplaySessionFactory.attachManagers(...)` wires the gameplay-owned managers and shared registries into the mode context.
 
-### Gameplay reset
+### Gameplay Reset
 
-Destroying gameplay should rebuild runtime-owned state, not null out process services. The normal flow is:
+Destroying gameplay should rebuild gameplay-owned state, not null out process services or durable world data. The normal flow is:
 
 1. reset module/session state as needed
-2. destroy the current `GameRuntime`
-3. create a fresh `GameRuntime`
-4. load the requested ROM/zone/module state into the new runtime
+2. destroy the current `GameplayModeContext`
+3. create a fresh `GameplayModeContext`
+4. load the requested ROM/zone/module state into the new context
 
-### Level/object construction
+### Editor Round Trip
+
+Editor mode preserves `WorldSession` data and rebuilds gameplay mode state:
+
+1. capture loaded level, zone/act metadata, and editor cursor/playtest state
+2. destroy the active `GameplayModeContext`
+3. enter `EditorModeContext` over the same `WorldSession`
+4. on playtest resume, create a fresh `GameplayModeContext`
+5. call `LevelManager.restoreInheritedLevel()` so the new runtime is rebuilt over the surviving `Level`
+
+### Level/Object Construction
 
 `ObjectManager` is the construction boundary for object DI:
 
@@ -120,22 +143,23 @@ The migration is not yet fully at the ideal end state. A small amount of compati
 
 - `EngineServices.fromLegacySingletonsForBootstrap()` remains the temporary bootstrap bridge for process services.
 - Some process-global classes still expose `getInstance()` for compatibility, but new production code should not depend on those accessors.
+- Test guard names may still mention `RuntimeManager`/`GameRuntime`; those guards enforce that retired facade usage stays out of production code.
 
 Treat those APIs as migration boundaries, not endorsed architecture.
 
 ## 5. Testing Guidance
 
-### Preferred runtime reset
+### Preferred Runtime Reset
 
 Tests should use the shared reset/runtime helpers instead of manually reassembling engine state in arbitrary order.
 
 Use:
 
 - `TestEnvironment.resetAll()` for full environment reset
-- `RuntimeManager.createGameplay()` only when a test is explicitly validating runtime creation
+- `SessionManager.openGameplaySession(...)` plus `GameplaySessionFactory.attachManagers(...)` when a focused test needs to assemble a gameplay mode directly
 - `@RequiresRom(...)` for ROM-backed tests once the Jupiter migration is complete
 
-### Headless gameplay tests
+### Headless Gameplay Tests
 
 Headless tests still follow the same runtime model:
 

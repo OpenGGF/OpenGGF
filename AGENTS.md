@@ -9,7 +9,7 @@ OpenGGF is an open-source, Java-based game engine for research and preservation 
 ## Current Status
 The project is in an **alpha** state. Core systems are functional with extensive passing tests. A major architectural modernization has replaced pervasive singleton coupling with a two-tier service architecture (`GameServices` + `ObjectServices`), decomposed the monolithic `LevelManager` into focused subsystems, and extracted 50+ shared base classes and utility helpers to eliminate cross-game duplication. All three games (Sonic 1, Sonic 2, Sonic 3&K) are supported with game-specific modules, level loading, objects, audio, and scroll handlers. A `MutableLevel` abstraction provides the foundation for a planned level editor. A data select and save system is now implemented: S3K has a ROM-accurate data select screen with 8 save slots and team selection, and S1/S2 can use this screen via cross-game donation while retaining their own save profiles.
 
-Recent architecture work also moved a growing share of zone-specific behavior onto runtime-owned shared frameworks hosted by `GameplayModeContext` (and reachable from `GameRuntime` getters or `GameServices`): `ZoneRuntimeRegistry` (typed zone state), `PaletteOwnershipRegistry` (multi-writer palette composition), `AnimatedTileChannelGraph` (shared animated tile orchestration), `ZoneLayoutMutationPipeline` (deterministic live layout edits), `ScrollEffectComposer` (shared deform/parallax composition), `SpecialRenderEffectRegistry` (staged extra draw passes), and `AdvancedRenderModeController` (frame-level render-mode overrides such as per-line/per-cell scroll state). These systems are now the preferred reuse path when uplifting existing S1/S2 content or bringing up new S3K zones.
+Recent architecture work also moved a growing share of zone-specific behavior onto runtime-owned shared frameworks hosted by `GameplayModeContext` and reached through `GameServices` or direct mode-context dependencies: `ZoneRuntimeRegistry` (typed zone state), `PaletteOwnershipRegistry` (multi-writer palette composition), `AnimatedTileChannelGraph` (shared animated tile orchestration), `ZoneLayoutMutationPipeline` (deterministic live layout edits), `ScrollEffectComposer` (shared deform/parallax composition), `SpecialRenderEffectRegistry` (staged extra draw passes), and `AdvancedRenderModeController` (frame-level render-mode overrides such as per-line/per-cell scroll state). These systems are now the preferred reuse path when uplifting existing S1/S2 content or bringing up new S3K zones.
 
 The branch also has a gameplay-scoped rewind framework for trace debugging: `RewindController`, `PlaybackController`, keyframe storage, segment caching, and a `RewindRegistry` hosted by `GameplayModeContext`. Coverage now spans core runtime managers plus player, sidekick, object, ring, level, palette, parallax, mutation, render-mode, and PLC progress state. Automatic object/player capture is being migrated through `GenericFieldCapturer`, `GenericRewindEligibility`, `@RewindTransient` / `@RewindDeferred` field policy annotations, `RewindFieldInventoryTool`, stable identity ids in `com.openggf.game.rewind.identity`, and compact schema codecs/policies in `com.openggf.game.rewind.schema`. Default non-badnik object subclasses now use compact schema-backed sidecar state when all default scalar fields have codecs, with legacy generic fallback for unsupported shapes. For object rewind coverage, prefer central eligibility, codecs, and policy-registry rules; avoid per-object annotations or rewind overrides unless the object has genuinely bespoke state, identity links, or child lifecycle that generic capture cannot represent.
 
@@ -101,7 +101,7 @@ Git hooks in `.githooks/` and CI enforce the branch policy below. Configure the 
     *   `audio` – SMPS driver, YM2612 FM synthesis, SN76489 PSG, sequencer, DAC playback, `AbstractAudioProfile`, `AbstractSmpsLoader`
     *   `data` – ROM loading (`Rom`, `RomManager`, `RomByteReader`), game interface, art providers
     *   `debug` – debug overlay (`DebugRenderer`), enabled via the `DEBUG_VIEW_ENABLED` configuration flag
-    *   `game` – core game-agnostic interfaces, providers, `GameServices` façade, `GameRuntime`, `RuntimeManager`, `PlayableEntity`, `DamageCause`, `AbstractZoneRegistry`
+    *   `game` – core game-agnostic interfaces, providers, `GameServices` façade, `PlayableEntity`, `DamageCause`, `AbstractZoneRegistry`
     *   `game.dataselect` – shared data select framework: `AbstractDataSelectProvider`, `DataSelectSessionController`, `DataSelectHostProfile`, `DataSelectAction`. The `DataSelectProvider` interface itself lives in `com.openggf.game`.
     *   `game.rewind` – gameplay-scoped rewind framework: keyframes, deterministic seek/replay, playback state, generic field capture, rewind field annotations, identity ids, policy registry, and compact schema capture foundation
     *   `game.save` – save system: `SaveManager` (JSON + SHA256), `SaveSessionContext`, `SaveSlotSummary`, `SelectedTeam`
@@ -159,12 +159,12 @@ class MyTest {
 ```
 
 ### Manual Setup (Legacy)
-1. **Reset singletons:** `GraphicsManager.getInstance().resetState()`, `Camera.getInstance().resetState()` (use `resetState()`, NOT the deprecated `resetInstance()`)
-2. **Initialize headless graphics:** `GraphicsManager.getInstance().initHeadless()`
-3. **Create and register playable sprite first:** add the main sprite to `SpriteManager` and set camera focus before `loadZoneAndAct(...)` (required by current `LevelManager` load path)
-4. **Load level:** `LevelManager.getInstance().loadZoneAndAct(zone, act)`
-5. **Fix GroundSensor:** `GroundSensor.setLevelManager(LevelManager.getInstance())` (static field becomes stale between tests)
-6. **Update camera:** `Camera.getInstance().updatePosition(true)` AFTER level load (bounds set during load)
+1. **Reset test state:** `TestEnvironment.resetAll()`
+2. **Initialize headless graphics:** `GameServices.graphics().initHeadless()`
+3. **Create and register playable sprite first:** add the main sprite to `GameServices.sprites()` and set camera focus before `loadZoneAndAct(...)` (required by current `LevelManager` load path)
+4. **Load level:** `GameServices.level().loadZoneAndAct(zone, act)`
+5. **Fix GroundSensor:** `GroundSensor.setLevelManager(GameServices.level())` (static field becomes stale between tests)
+6. **Update camera:** `GameServices.camera().updatePosition(true)` AFTER level load (bounds set during load)
 
 See `TestHeadlessWallCollision.java` for a complete example.
 
@@ -218,13 +218,13 @@ Per `docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md`, g
 - **`GameplayModeContext`** (`com.openggf.game.session`) — disposable, rebuilt per gameplay session. Owns all gameplay-scoped managers (Camera, Timer, GameState, Fade, Rng, SolidExecution, Water, Parallax, TerrainCollision, Collision, Sprite, LevelManager) and the runtime-shared registries listed below. Provides `initializeFreshGameplayState()` for editor-exit counter reset.
 - **`SessionManager`** (`com.openggf.game.session`) — manages lifecycle (`openGameplaySession`, `enterEditorMode`, `resumeGameplayFromEditor`).
 
-`GameRuntime` (`com.openggf.game`) is now a thin coordinator façade over these — it delegates manager getters to the gameplay mode context. New code should prefer `gameplayMode.getX()` directly. `RuntimeManager.getCurrent` no longer lazy-creates; explicit `createGameplay(...)` is required.
+The old `GameRuntime` / `RuntimeManager` façade has been retired from production code. New code should prefer explicit dependencies, `gameplayMode.getX()` where a mode context is already available, `GameServices` for non-object runtime code, and `ObjectServices` for object code.
 
 **Editor mode entry/exit** uses proper teardown+rebuild (no parking):
-- Entry: `Engine.enterEditorFromCurrentPlayer` captures world-scoped state (loaded `Level`, zone/act, camera bounds), calls `RuntimeManager.destroyCurrent()`, then re-publishes the captured state on `WorldSession` before `SessionManager.enterEditorMode`.
+- Entry: `Engine.enterEditorFromCurrentPlayer` captures world-scoped state (loaded `Level`, zone/act, camera bounds), tears down the active gameplay mode, then re-publishes the captured state on `WorldSession` before `SessionManager.enterEditorMode`.
 - Exit: `Engine.resumePlaytestFromEditor` calls `initializeGameplayRuntime` plus `LevelManager.restoreInheritedLevel()` to rebuild a fresh runtime over the surviving `Level`. `MutableLevel` mutations made in editor survive the round trip; gameplay counters are reset via `GameplayModeContext.initializeFreshGameplayState()`.
 
-Eliminating the `GameRuntime` façade and folding `RuntimeManager` into `SessionManager` are deferred follow-up work.
+Further cleanup should continue shrinking bootstrap singleton compatibility boundaries around `EngineServices`.
 
 ### Runtime-Shared Framework Stack
 
@@ -408,7 +408,7 @@ Game objects use a factory pattern with game-specific registries. All objects re
 |-------|---------|
 | `ObjectManager` | Unified manager with Placement, SolidContacts, TouchResponses, PlaneSwitchers; injects `ObjectServices` into all objects |
 | `ObjectServices` | Per-object service interface (camera, audio, level, game state) |
-| `DefaultObjectServices` | Concrete `ObjectServices` implementation backed by `GameRuntime` |
+| `DefaultObjectServices` | Concrete `ObjectServices` implementation backed by `GameplayModeContext` and `EngineContext` |
 | `AbstractObjectRegistry` | Shared base for `Sonic1ObjectRegistry`, `Sonic2ObjectRegistry`, `Sonic3kObjectRegistry` |
 | `AbstractBadnikInstance` | Base class for enemy AI (`com.openggf.level.objects` — game-agnostic) |
 | `ObjectFactory` | Functional interface for object creation |
