@@ -135,7 +135,7 @@ public class TestS3kSpecialStageResultsVisual {
             // frame would stay all-white.
             EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
-            // Create the gameplay runtime so GameServices.* accessors resolve.
+            // Create the gameplay mode so GameServices.* accessors resolve.
             TestEnvironment.activeGameplayMode();
 
             // Configure emerald state for tests

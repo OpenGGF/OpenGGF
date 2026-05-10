@@ -432,7 +432,7 @@ public class Engine {
 			// GraphicsManager, corrupting the pattern atlas, palette textures,
 			// DPLC banks, sprite art, and other GPU/manager state.
 			// Reset GPU state (pattern atlas + palette textures) and rebuild
-			// the gameplay runtime so everything starts from a clean slate.
+			// the gameplay mode so everything starts from a clean slate.
 			graphicsManager.resetPatternAndPaletteState();
 			gameplayMode = SessionManager.openGameplaySession(module);
 			initializeGameplayRuntime(gameplayMode, false);
@@ -463,9 +463,9 @@ public class Engine {
 			masterTitleScreen = null;
 		}
 
-		// Bootstrap title-screen mode runs before gameplay runtime/module/ROM state is
+		// Bootstrap title-screen mode runs before gameplay mode/module/ROM state is
 		// fully established. Tear down that bootstrap-era state so the selected game
-		// starts from a clean runtime/render/ROM baseline instead of inheriting caches.
+		// starts from a clean gameplay/render/ROM baseline instead of inheriting caches.
 		resetForGameplayFromMasterTitle();
 
 		// Phase 2: load ROM, sprites, audio, level
@@ -485,15 +485,15 @@ public class Engine {
 
 	/**
 	 * Teardown path used by {@link TraceSessionLauncher} after a trace
-	 * playback session completes. Resets gameplay runtime state (same
+	 * playback session completes. Resets gameplay mode state (same
 	 * cleanup as when gameplay first exits the master title) and
 	 * rebuilds the master title screen so the picker can re-enter on
 	 * the next frame.
 	 */
 	void returnToMasterTitleScreen() {
 		resetForGameplayFromMasterTitle();
-		// resetForGameplayFromMasterTitle destroyed the runtime, but GameLoop
-		// still caches the old runtime + its FadeManager. Drop the reference
+		// resetForGameplayFromMasterTitle destroyed the gameplay mode, but GameLoop
+		// still caches the old mode + its FadeManager. Drop the reference
 		// so the next launch's fade-to-black runs on the bootstrap manager
 		// (which the UI pipeline actually ticks) rather than the dead one.
 		gameLoop.setGameplayMode(null);
@@ -506,7 +506,7 @@ public class Engine {
 		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 		// Counter the teardown's fade-to-black. Without this the screen
 		// stays fully black and the new master title never becomes
-		// visible. Use the graphics-owned fade manager — the runtime
+		// visible. Use the graphics-owned fade manager - the gameplay mode
 		// (and its fade manager) was just destroyed above.
 		FadeManager fadeManager = graphicsManager.getFadeManager();
 		if (fadeManager != null) {
@@ -550,7 +550,7 @@ public class Engine {
 		repairEditorCursorForResume();
 		syncEditorState();
 		GameplayModeContext gameplay = SessionManager.resumeGameplayFromEditor();
-		// Build a fresh gameplay runtime over the surviving WorldSession, then
+		// Build a fresh gameplay mode over the surviving WorldSession, then
 		// rehydrate the loaded level (preserving any MutableLevel mutations
 		// made in editor) via restoreInheritedLevel.
 		initializeGameplayRuntime(gameplay, false);

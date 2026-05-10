@@ -15,9 +15,9 @@ class TestGameServicesNullableAccessors {
     @AfterEach void tearDown() { SessionManager.clear(); SessionManager.clear(); }
 
     @Test
-    void nullableAccessorsReturnNullWithoutRuntime() {
+    void nullableAccessorsReturnNullWithoutGameplayMode() {
         // Post-migration: GameServices accessors resolve through the gameplay
-        // mode context, so clearing the session is required (not just the runtime).
+        // mode context, so clearing the session is required.
         SessionManager.clear();
         SessionManager.clear();
         assertFalse(GameServices.hasRuntime());
@@ -39,10 +39,11 @@ class TestGameServicesNullableAccessors {
     }
 
     @Test
-    void nullableAccessorsReturnManagersWhenRuntimeExists() {
-        GameplayModeContext runtime = TestEnvironment.activeGameplayMode();
+    void nullableAccessorsReturnManagersWhenGameplayModeExists() {
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         GameplayModeContext mode = SessionManager.getCurrentGameplayMode();
         assertNotNull(mode);
+        assertSame(gameplayMode, mode);
         assertTrue(GameServices.hasRuntime());
         assertSame(mode.getCamera(), GameServices.cameraOrNull());
         assertSame(mode.getLevelManager(), GameServices.levelOrNull());
@@ -62,7 +63,7 @@ class TestGameServicesNullableAccessors {
     }
 
     @Test
-    void strictAccessorsStillThrowWithoutRuntime() {
+    void strictAccessorsStillThrowWithoutGameplayMode() {
         SessionManager.clear();
         SessionManager.clear();
         assertThrows(IllegalStateException.class, GameServices::camera);
@@ -86,22 +87,21 @@ class TestGameServicesNullableAccessors {
      * Predicate-equivalence invariant: {@link GameServices#hasRuntime()} must
      * agree with the underlying {@code gameplayModeOrNull() != null} check
      * across state transitions. Editor mode entry now does a proper teardown
-     * (RuntimeManager.destroyCurrent) rather than parking, so the parked-
-     * runtime case is no longer applicable; the invariant still holds across
-     * the remaining lifecycle states.
+     * rather than parking, so the old parked-mode case is no longer applicable;
+     * the invariant still holds across the remaining lifecycle states.
      */
     @Test
     void hasRuntimeAgreesWithGameplayModeAcrossLifecycle() {
-        // 1. No runtime, no session.
+        // 1. No gameplay mode, no session.
         SessionManager.clear();
         SessionManager.clear();
         assertEquals(GameServices.cameraOrNull() != null, GameServices.hasRuntime(),
-                "no-runtime: hasRuntime() must match gameplay mode availability");
+                "no-gameplay-mode: hasRuntime() must match gameplay mode availability");
         assertFalse(GameServices.hasRuntime());
 
-        // 2. Active gameplay runtime.
-        GameplayModeContext runtime = TestEnvironment.activeGameplayMode();
-        assertNotNull(runtime);
+        // 2. Active gameplay mode.
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
+        assertNotNull(gameplayMode);
         assertEquals(GameServices.cameraOrNull() != null, GameServices.hasRuntime(),
                 "active: hasRuntime() must match gameplay mode availability");
         assertTrue(GameServices.hasRuntime());
@@ -112,7 +112,7 @@ class TestGameServicesNullableAccessors {
                 "editor: hasRuntime() must match gameplay mode availability");
         assertFalse(GameServices.hasRuntime(), "editor: no gameplay mode is active");
 
-        // 4. Resumed from editor — fresh runtime + gameplay mode.
+        // 4. Resumed from editor: fresh gameplay mode.
         GameplayModeContext resumedMode = SessionManager.resumeGameplayFromEditor();
         TestEnvironment.activeGameplayMode();
         assertEquals(GameServices.cameraOrNull() != null, GameServices.hasRuntime(),
@@ -133,7 +133,7 @@ class TestGameServicesNullableAccessors {
      */
     @Test
     void bonusStageDoesNotChangeLiveGameplayModeOnRepeatedCalls() {
-        GameplayModeContext runtime = TestEnvironment.activeGameplayMode();
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         GameplayModeContext mode = SessionManager.getCurrentGameplayMode();
         assertNotNull(mode);
 
@@ -148,7 +148,7 @@ class TestGameServicesNullableAccessors {
         for (int i = 0; i < 5; i++) {
             BonusStageProvider repeated = GameServices.bonusStage();
             assertSame(firstCall, repeated, "bonusStage() must return the same provider when unchanged");
-            assertSame(runtime, SessionManager.getCurrentGameplayMode(),
+            assertSame(gameplayMode, SessionManager.getCurrentGameplayMode(),
                     "bonusStage() must not change the active gameplay mode on repeated calls");
         }
     }

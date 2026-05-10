@@ -28,7 +28,7 @@ class TestS2DataSelectProfile {
     }
 
     @AfterEach
-    void resetRuntime() {
+    void clearSession() {
         SessionManager.clear();
     }
 

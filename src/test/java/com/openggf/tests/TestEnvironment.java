@@ -54,7 +54,7 @@ public final class TestEnvironment {
     }
 
     /**
-     * Rebuilds the gameplay runtime around the module selected from the target ROM
+     * Rebuilds the gameplay mode around the module selected from the target ROM
      * and installs that ROM into the shared {@link RomManager}.
      */
     public static void configureRomFixture(Rom rom) {
@@ -62,12 +62,12 @@ public final class TestEnvironment {
 
         resetAll();
         GameModuleRegistry.detectAndSetModule(rom);
-        recreateGameplayRuntime();
+        recreateGameplayMode();
         RomManager.getInstance().setRom(rom);
     }
 
     /**
-     * Rebuilds the gameplay runtime around an explicitly selected module without
+     * Rebuilds the gameplay mode around an explicitly selected module without
      * requiring a real ROM.
      */
     public static void configureGameModuleFixture(GameModule module) {
@@ -75,11 +75,11 @@ public final class TestEnvironment {
 
         resetAll();
         GameModuleRegistry.setCurrent(module);
-        recreateGameplayRuntime();
+        recreateGameplayMode();
     }
 
     /**
-     * Rebuilds the gameplay runtime around a requested game module selected by
+     * Rebuilds the gameplay mode around a requested game module selected by
      * test enum, constructing the module only after engine services are ready.
      */
     public static void configureGameModuleFixture(SonicGame game) {
@@ -87,7 +87,7 @@ public final class TestEnvironment {
 
         resetAll();
         GameModuleRegistry.setCurrent(moduleFor(game));
-        recreateGameplayRuntime();
+        recreateGameplayMode();
     }
 
     private static void resetToBootstrapBaseline() {
@@ -116,7 +116,7 @@ public final class TestEnvironment {
         }
     }
 
-    private static void recreateGameplayRuntime() {
+    private static void recreateGameplayMode() {
         SessionManager.clear();
         SessionManager.clear();
         activeGameplayMode();

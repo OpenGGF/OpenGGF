@@ -77,12 +77,17 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         return sprite;
     }
 
-    /** Returns the camera from the runtime. */
+    /** Returns the camera from the active gameplay mode. */
     public Camera camera() {
         return GameServices.camera();
     }
 
-    /** Returns the active gameplay mode. */
+    /**
+     * Returns the active gameplay mode.
+     *
+     * @deprecated use {@link #gameplayMode()} in new tests.
+     */
+    @Deprecated(forRemoval = false)
     public GameplayModeContext runtime() {
         return gameplayMode;
     }

@@ -62,8 +62,8 @@ public final class GameServices {
      * attached. Unified with {@link #gameplayModeOrNull()} so callers that guard
      * on {@code hasRuntime()} and read via {@code gameplayModeOrNull()} (or any
      * of the {@code *OrNull()} accessors) see consistent results across
-     * editor transitions that can clear the runtime facade while session-owned
-     * mode state is being rebuilt.
+     * editor transitions that can clear gameplay mode state while
+     * session-owned state is being rebuilt.
      */
     public static boolean hasRuntime() {
         return gameplayModeOrNull() != null;

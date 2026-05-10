@@ -58,7 +58,7 @@ class TestRuntimeOwnedRegistryLifecycle {
         // re-publish gameplay-scoped registry state.
         SessionManager.enterEditorMode(new com.openggf.game.session.EditorCursorState(0, 0));
 
-        // Old pipeline + registries belong to the destroyed runtime; their
+        // Old pipeline + registries belong to the destroyed gameplay mode; their
         // state was cleared by tearDownManagers. Re-flushing must not fire
         // queued intents.
         StringBuilder log = new StringBuilder();
