@@ -3,6 +3,8 @@ package com.openggf.level.objects;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.debug.DebugColor;
 
+import com.openggf.game.rewind.GenericFieldCapturer;
+import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.game.PlayableEntity;
 
@@ -227,6 +229,14 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
                 new PerObjectRewindSnapshot.BadnikRewindExtra(
                         currentX, currentY, xVelocity, yVelocity,
                         animTimer, animFrame, facingLeft);
+        if (GenericRewindEligibility.usesDefaultBadnikSubclassCapture(getClass())
+                && base.genericState() == null
+                && base.compactGenericState() == null) {
+            var genericState = GenericFieldCapturer.captureObjectSubclassScalars(this);
+            if (!genericState.keys().isEmpty()) {
+                base = base.withGenericState(genericState);
+            }
+        }
         // The record constructor with badnikExtra parameter; playerExtra is null for badniks
         return new PerObjectRewindSnapshot(
                 base.destroyed(),
@@ -246,7 +256,8 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
                 base.badnikSubclassExtra(),
                 base.objectSubclassExtra(),
                 base.playerExtra(),
-                base.genericState()
+                base.genericState(),
+                base.compactGenericState()
         );
     }
 
