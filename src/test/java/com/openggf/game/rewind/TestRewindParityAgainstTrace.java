@@ -1,7 +1,6 @@
 package com.openggf.game.rewind;
 
 import com.openggf.game.OscillationSnapshot;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.snapshot.AdvancedRenderModeSnapshot;
 import com.openggf.game.rewind.snapshot.AnimatedTileChannelSnapshot;
 import com.openggf.game.rewind.snapshot.CameraSnapshot;
@@ -127,8 +126,7 @@ class TestRewindParityAgainstTrace {
                 .build();
 
         // 2. Get GameplayModeContext and its RewindRegistry
-        GameplayModeContext gameplayMode =
-                RuntimeManager.getCurrent().getGameplayModeContext();
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         assertNotNull(gameplayMode, "GameplayModeContext must be available after fixture build");
         RewindRegistry registry = gameplayMode.getRewindRegistry();
         assertNotNull(registry, "RewindRegistry must be non-null after attachGameplayManagers");

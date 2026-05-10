@@ -1,8 +1,8 @@
 package com.openggf.tests.physics;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.GameRuntime;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.LevelManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.physics.*;
@@ -507,19 +507,19 @@ public class CollisionSystemTest {
     public void testGroundSensorDefaultLevelManagerTracksRuntimeRecreation() {
         GroundSensor.setLevelManager(null);
 
-        GameRuntime firstRuntime = RuntimeManager.getCurrent();
+        GameplayModeContext firstGameplayMode = TestEnvironment.activeGameplayMode();
         LevelManager firstLevelManager = invokeGroundSensorLevelManager();
-        assertSame(firstRuntime.getLevelManager(), firstLevelManager, "GroundSensor should resolve the current runtime LevelManager");
+        assertSame(firstGameplayMode.getLevelManager(), firstLevelManager, "GroundSensor should resolve the current gameplay LevelManager");
 
-        RuntimeManager.destroyCurrent();
-        RuntimeManager.createGameplay();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
 
         try {
-            GameRuntime secondRuntime = RuntimeManager.getCurrent();
+            GameplayModeContext secondGameplayMode = TestEnvironment.activeGameplayMode();
             LevelManager secondLevelManager = invokeGroundSensorLevelManager();
 
-            assertSame(secondRuntime.getLevelManager(), secondLevelManager, "GroundSensor should resolve the recreated runtime LevelManager");
-            assertNotSame(firstLevelManager, secondLevelManager, "GroundSensor should not retain the destroyed runtime LevelManager");
+            assertSame(secondGameplayMode.getLevelManager(), secondLevelManager, "GroundSensor should resolve the recreated gameplay LevelManager");
+            assertNotSame(firstLevelManager, secondLevelManager, "GroundSensor should not retain the destroyed gameplay LevelManager");
         } finally {
             GroundSensor.setLevelManager(null);
         }

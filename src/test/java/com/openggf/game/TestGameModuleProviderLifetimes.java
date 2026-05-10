@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -16,12 +18,12 @@ public class TestGameModuleProviderLifetimes {
 
     @BeforeAll
     static void configureEngineServices() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @AfterEach
     void resetRuntime() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

@@ -1,7 +1,7 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic2.objects.RisingLavaObjectInstance;
 import com.openggf.game.sonic2.runtime.HtzRuntimeState;
 import com.openggf.game.sonic2.scroll.BackgroundCamera;
@@ -32,7 +32,7 @@ class TestSonic2HtzRuntimeStateConsumers {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

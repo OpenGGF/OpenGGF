@@ -17,7 +17,6 @@ class TestGameModuleRegistryUsageGuard {
         Path srcMain = Path.of("src/main/java");
         List<String> allowed = List.of(
                 "src/main/java/com/openggf/game/GameModuleRegistry.java",
-                "src/main/java/com/openggf/game/RomDetectionService.java",
                 "src/main/java/com/openggf/game/RuntimeManager.java"
         );
         List<String> violations = new ArrayList<>();

@@ -3,7 +3,6 @@ package com.openggf.game.session;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
@@ -29,7 +28,7 @@ class TestGameplayModeContextRewindRegistry {
 
     @BeforeEach
     void configureServices() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     private static GameplayModeContext buildAttachedContext() {

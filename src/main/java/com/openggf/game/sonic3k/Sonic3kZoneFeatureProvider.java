@@ -6,7 +6,6 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.render.AdvancedRenderFrameState;
@@ -391,7 +390,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         var levelManager = GameServices.levelOrNull();
         if (levelManager != null
                 && levelManager.getCurrentZone() == Sonic3kZoneIds.ZONE_SLOT_MACHINE
-                && RuntimeManager.resolveCurrentOrBootstrapGameModule().getBonusStageProvider()
+                && GameServices.currentOrBootstrapGameModule().getBonusStageProvider()
                 instanceof Sonic3kBonusStageCoordinator coordinator
                 && coordinator.activeSlotRuntime() != null) {
             coordinator.activeSlotRuntime().ensureForegroundGlassPriority();

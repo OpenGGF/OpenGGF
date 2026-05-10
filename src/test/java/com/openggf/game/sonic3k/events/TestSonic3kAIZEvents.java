@@ -1,12 +1,14 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.GameplayModeContext;
@@ -55,9 +57,9 @@ public class TestSonic3kAIZEvents {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         AizIntroArtLoader.reset();
         fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(0, 0)
@@ -67,7 +69,7 @@ public class TestSonic3kAIZEvents {
     @AfterEach
     public void tearDown() {
         AizIntroArtLoader.reset();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
     }
@@ -290,7 +292,7 @@ public class TestSonic3kAIZEvents {
 
     @Test
     public void eventsFg5TransitionWritesProgressionSaveForActiveSlot() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         String gameCode = "test_aiz_transition_save";
@@ -304,7 +306,7 @@ public class TestSonic3kAIZEvents {
         SaveSessionContext saveContext = SaveSessionContext.forSlot(
                 gameCode, 1, new SelectedTeam("sonic", List.of("tails")), 0, 0);
         GameplayModeContext gameplayMode = SessionManager.openGameplaySession(sessionModule, saveContext);
-        RuntimeManager.createGameplay(gameplayMode);
+        TestEnvironment.activeGameplayMode();
 
         GameServices.level().resetState();
         Camera camera = GameServices.camera();

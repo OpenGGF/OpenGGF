@@ -319,7 +319,7 @@ public final class SwScrlSlots extends AbstractZoneScrollHandler {
                 levelManager.uploadBackgroundTilemap();
             }
         } catch (IllegalStateException ignored) {
-            // Unit tests and headless scroll probes can run without a GameRuntime.
+            // Unit tests and headless scroll probes can run without a gameplay session.
         }
     }
 

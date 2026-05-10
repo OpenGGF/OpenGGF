@@ -1,9 +1,10 @@
 package com.openggf.game.sonic3k.dataselect;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.DataSelectProvider;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.dataselect.AbstractDataSelectProvider;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
@@ -66,12 +67,12 @@ class TestS3kDataSelectPresentation {
 
     @BeforeAll
     static void configureEngineServices() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -99,7 +100,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 playedMusic::add);
@@ -121,7 +122,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -184,7 +185,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -251,7 +252,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -260,7 +261,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         settleHorizontalMove(presentation);
@@ -286,7 +287,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -327,7 +328,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -336,7 +337,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         input.update();
@@ -376,7 +377,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -385,7 +386,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
 
@@ -424,7 +425,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -433,7 +434,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         settleHorizontalMove(presentation);
@@ -465,7 +466,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -498,7 +499,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -507,7 +508,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         settleHorizontalMove(presentation);
@@ -846,7 +847,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -868,7 +869,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -877,7 +878,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         input.update();
@@ -912,7 +913,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -949,7 +950,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -958,8 +959,8 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
-        int upKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.UP);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
+        int upKey = EngineServices.current().configuration().getInt(SonicConfiguration.UP);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         input.update();
@@ -999,7 +1000,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1008,7 +1009,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         presentation.draw();
@@ -1028,7 +1029,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1052,7 +1053,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1077,7 +1078,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1086,8 +1087,8 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
-        int jumpKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.JUMP);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
+        int jumpKey = EngineServices.current().configuration().getInt(SonicConfiguration.JUMP);
         for (int i = 0; i < 9; i++) {
             pressAndRelease(input, rightKey, presentation);
         }
@@ -1098,7 +1099,7 @@ class TestS3kDataSelectPresentation {
         int homeDeleteX = renderer.lastObjectState == null
                 ? assets.getSaveScreenLayoutObjects().deleteIcon().worldX()
                 : renderer.lastObjectState.layoutObjects().deleteIcon().worldX();
-        int leftKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.LEFT);
+        int leftKey = EngineServices.current().configuration().getInt(SonicConfiguration.LEFT);
         pressAndRelease(input, leftKey, presentation);
         presentation.draw();
 
@@ -1139,7 +1140,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1148,9 +1149,9 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
-        int leftKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.LEFT);
-        int jumpKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.JUMP);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
+        int leftKey = EngineServices.current().configuration().getInt(SonicConfiguration.LEFT);
+        int jumpKey = EngineServices.current().configuration().getInt(SonicConfiguration.JUMP);
 
         for (int i = 0; i < 9; i++) {
             pressAndRelease(input, rightKey, presentation);
@@ -1203,7 +1204,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1212,9 +1213,9 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
-        int leftKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.LEFT);
-        int jumpKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.JUMP);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
+        int leftKey = EngineServices.current().configuration().getInt(SonicConfiguration.LEFT);
+        int jumpKey = EngineServices.current().configuration().getInt(SonicConfiguration.JUMP);
 
         for (int i = 0; i < 9; i++) {
             pressAndRelease(input, rightKey, presentation);
@@ -1251,7 +1252,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1260,9 +1261,9 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
-        int leftKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.LEFT);
-        int jumpKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.JUMP);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
+        int leftKey = EngineServices.current().configuration().getInt(SonicConfiguration.LEFT);
+        int jumpKey = EngineServices.current().configuration().getInt(SonicConfiguration.JUMP);
 
         for (int i = 0; i < 9; i++) {
             pressAndRelease(input, rightKey, presentation);
@@ -1314,7 +1315,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1323,7 +1324,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         settleHorizontalMove(presentation);
@@ -1360,7 +1361,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1369,7 +1370,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         input.update();
@@ -1390,7 +1391,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 new DataSelectSessionController(new S3kDataSelectProfile()),
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 new RecordingAssets(0x2A),
                 renderer,
                 ignored -> {
@@ -1399,7 +1400,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         input.update();
@@ -1420,7 +1421,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 new DataSelectSessionController(new S3kDataSelectProfile()),
                 saveManager,
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 new RecordingAssets(0x2A),
                 renderer,
                 ignored -> {
@@ -1429,7 +1430,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
 
@@ -1790,7 +1791,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1800,7 +1801,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
 
         presentation.update(input);
@@ -1819,7 +1820,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1829,9 +1830,9 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int jumpKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.JUMP);
-        int leftKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.LEFT);
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int jumpKey = EngineServices.current().configuration().getInt(SonicConfiguration.JUMP);
+        int leftKey = EngineServices.current().configuration().getInt(SonicConfiguration.LEFT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
 
         for (int i = 0; i < 9; i++) {
             pressAndRelease(input, rightKey, presentation);
@@ -1861,7 +1862,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1872,7 +1873,7 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int upKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.UP);
+        int upKey = EngineServices.current().configuration().getInt(SonicConfiguration.UP);
         input.handleKeyEvent(upKey, GLFW_PRESS);
 
         presentation.update(input);
@@ -1891,7 +1892,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 ignored -> {
@@ -1902,8 +1903,8 @@ class TestS3kDataSelectPresentation {
         presentation.initialize();
 
         InputHandler input = new InputHandler();
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
-        int upKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.UP);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
+        int upKey = EngineServices.current().configuration().getInt(SonicConfiguration.UP);
         input.handleKeyEvent(rightKey, GLFW_PRESS);
         presentation.update(input);
         input.update();
@@ -2398,7 +2399,7 @@ class TestS3kDataSelectPresentation {
         S3kDataSelectPresentation presentation = new S3kDataSelectPresentation(
                 controller,
                 new SaveManager(root),
-                RuntimeManager.currentEngineServices().configuration(),
+                EngineServices.current().configuration(),
                 assets,
                 renderer,
                 playedMusic::add);
@@ -3846,8 +3847,8 @@ class TestS3kDataSelectPresentation {
         input.update();
         input.handleKeyEvent(key, GLFW_RELEASE);
         input.update();
-        int leftKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.LEFT);
-        int rightKey = RuntimeManager.currentEngineServices().configuration().getInt(SonicConfiguration.RIGHT);
+        int leftKey = EngineServices.current().configuration().getInt(SonicConfiguration.LEFT);
+        int rightKey = EngineServices.current().configuration().getInt(SonicConfiguration.RIGHT);
         if (key == leftKey || key == rightKey) {
             settleHorizontalMove(presentation);
         }

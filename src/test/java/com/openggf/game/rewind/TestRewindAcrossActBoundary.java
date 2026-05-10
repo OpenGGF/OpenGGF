@@ -2,7 +2,6 @@ package com.openggf.game.rewind;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.tests.HeadlessTestFixture;
@@ -113,8 +112,7 @@ class TestRewindAcrossActBoundary {
         }
 
         // 2. Get registry and capture snapshot A
-        GameplayModeContext gameplayMode =
-                RuntimeManager.getCurrent().getGameplayModeContext();
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         assertNotNull(gameplayMode, "GameplayModeContext must be available after S3K load");
 
         RewindRegistry registry = gameplayMode.getRewindRegistry();

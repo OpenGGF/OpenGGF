@@ -1,9 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
-import com.openggf.game.RuntimeManager;
 import com.openggf.graphics.GLCommand;
 
 import com.openggf.level.objects.TestObjectServices;
@@ -28,8 +28,8 @@ public class TestAizMinibossBarrelShotChild {
     @BeforeEach
     public void setUp() {
         TestEnvironment.resetAll();
-        RuntimeManager.destroyCurrent();
-        camera = RuntimeManager.createGameplay().getCamera();
+        SessionManager.clear();
+        camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
         camera.setX((short) 0);
         camera.setY((short) 0);

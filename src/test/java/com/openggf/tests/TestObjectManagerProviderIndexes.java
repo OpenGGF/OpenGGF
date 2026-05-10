@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -28,7 +29,7 @@ class TestObjectManagerProviderIndexes {
 
     @AfterEach
     void tearDown() {
-        com.openggf.game.RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

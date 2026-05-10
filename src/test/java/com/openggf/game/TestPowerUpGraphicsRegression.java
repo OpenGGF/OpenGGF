@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -27,7 +29,7 @@ class TestPowerUpGraphicsRegression {
         CrossGameFeatureProvider.getInstance().resetState();
         GraphicsManager.getInstance().resetState();
         RomManager.getInstance().close();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
         SonicConfigurationService.getInstance().resetToDefaults();
@@ -62,11 +64,11 @@ class TestPowerUpGraphicsRegression {
         config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, crossGame);
         config.setConfigValue(SonicConfiguration.CROSS_GAME_SOURCE, "s3k");
 
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.destroyCurrent();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
 
         Rom primaryRom = openRom("Sonic The Hedgehog 2 (W) (REV01) [!].gen",
                 "Sonic The Hedgehog 2 (W) (REV00) [!].gen");

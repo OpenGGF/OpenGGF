@@ -25,7 +25,7 @@ class TestRuntimeOwnedRegistryLifecycle {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
     }
 
@@ -41,7 +41,7 @@ class TestRuntimeOwnedRegistryLifecycle {
      */
     @Test
     void editorRoundTripDestroyAndRebuildClearsAllRegistryState() {
-        GameRuntime first = RuntimeManager.createGameplay();
+        GameplayModeContext first = TestEnvironment.activeGameplayMode();
         first.getZoneLayoutMutationPipeline().queue(context -> MutationEffects.redrawAllTilemaps());
         first.getSpecialRenderEffectRegistry().register(noOpEffect());
         first.getAdvancedRenderModeController().register(noOpMode());
@@ -54,10 +54,8 @@ class TestRuntimeOwnedRegistryLifecycle {
                 "precondition: registered render mode should be live before editor entry");
 
         // Mirror Engine.enterEditorFromCurrentPlayer's teardown contract:
-        // destroyCurrent + SessionManager.enterEditorMode (the world-data
-        // capture/restore around it preserves WorldSession but does NOT
-        // re-publish gameplay-scoped registry state).
-        RuntimeManager.destroyCurrent();
+        // SessionManager.enterEditorMode preserves WorldSession but does NOT
+        // re-publish gameplay-scoped registry state.
         SessionManager.enterEditorMode(new com.openggf.game.session.EditorCursorState(0, 0));
 
         // Old pipeline + registries belong to the destroyed runtime; their
@@ -79,7 +77,7 @@ class TestRuntimeOwnedRegistryLifecycle {
         // Mirror Engine.resumePlaytestFromEditor: build a fresh runtime over
         // the surviving WorldSession.
         GameplayModeContext resumed = SessionManager.resumeGameplayFromEditor();
-        GameRuntime second = RuntimeManager.createGameplay(resumed);
+        GameplayModeContext second = TestEnvironment.activeGameplayMode();
 
         assertNotSame(first.getZoneLayoutMutationPipeline(), second.getZoneLayoutMutationPipeline(),
                 "rebuild must produce a fresh ZoneLayoutMutationPipeline");

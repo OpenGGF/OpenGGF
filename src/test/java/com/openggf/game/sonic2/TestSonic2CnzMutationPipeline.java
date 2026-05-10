@@ -1,9 +1,11 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.events.Sonic2CNZEvents;
 import com.openggf.game.sonic2.runtime.CnzRuntimeState;
@@ -39,18 +41,18 @@ class TestSonic2CnzMutationPipeline {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.destroyCurrent();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.destroyCurrent();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }

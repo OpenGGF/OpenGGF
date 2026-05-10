@@ -1,10 +1,10 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.Sonic;
@@ -21,8 +21,8 @@ public class TestAizPlaneIntroInstance {
     @BeforeEach
     public void setUp() {
         TestEnvironment.resetAll();
-        RuntimeManager.destroyCurrent();
-        camera = RuntimeManager.createGameplay().getCamera();
+        SessionManager.clear();
+        camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
         intro = new AizPlaneIntroInstance(
                 new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0));

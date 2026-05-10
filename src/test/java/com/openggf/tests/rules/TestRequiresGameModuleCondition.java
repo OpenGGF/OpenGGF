@@ -1,8 +1,10 @@
 package com.openggf.tests.rules;
 
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -17,8 +19,8 @@ class TestRequiresGameModuleCondition {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.destroyCurrent();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
@@ -30,7 +32,7 @@ class TestRequiresGameModuleCondition {
 
         assertEquals("Sonic2", GameModuleRegistry.getCurrent().getIdentifier());
         assertEquals("Sonic2", SessionManager.requireCurrentGameModule().getIdentifier());
-        assertEquals("Sonic2", RuntimeManager.getCurrent().getWorldSession().getGameModule().getIdentifier());
+        assertEquals("Sonic2", TestEnvironment.activeGameplayMode().getWorldSession().getGameModule().getIdentifier());
     }
 
     @RequiresGameModule(SonicGame.SONIC_2)

@@ -1,10 +1,11 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Block;
@@ -50,7 +51,7 @@ public class TestS3kSlotsPaletteCycling {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.setCurrent(previousModule);
     }
@@ -130,10 +131,10 @@ public class TestS3kSlotsPaletteCycling {
         slotRuntimeField.setAccessible(true);
         slotRuntimeField.set(coordinator, runtime);
 
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         SessionManager.openGameplaySession(new TestSonic3kModule(coordinator));
-        RuntimeManager.createGameplay(SessionManager.getCurrentGameplayMode());
+        TestEnvironment.activeGameplayMode();
 
         assertEquals(1, Sonic3kPaletteCycler.resolveSlotsModeFromSessionForTest());
     }

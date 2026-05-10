@@ -1,6 +1,7 @@
 package com.openggf;
 
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.editor.EditorInputHandler;
@@ -17,7 +18,6 @@ import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStageState;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelSelectProvider;
@@ -25,7 +25,6 @@ import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.RespawnState;
 import com.openggf.game.GameId;
 import com.openggf.game.ResultsScreen;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.NoOpSpecialStageProvider;
 import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.sonic1.Sonic1GameModule;
@@ -61,6 +60,7 @@ import com.openggf.data.RomManager;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.testmode.TraceCameraFocusController;
 
@@ -118,9 +118,8 @@ public class GameLoop {
     private final LiveRewindManager liveRewindManager;
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
 
-    // The gameplay runtime facade — set by Engine after RuntimeManager.createGameplay(...).
-    // When non-null, cached fields above are sourced from the runtime's gameplay context.
-    private com.openggf.game.GameRuntime runtime;
+    // The active session-owned gameplay mode. Cached fields above are sourced from this context.
+    private GameplayModeContext gameplayMode;
     private SpecialStageProvider activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
 
     // Title card provider - lazily initialized when GameModule is available
@@ -210,12 +209,12 @@ public class GameLoop {
     private Runnable returnToMasterTitleHandler;
 
     public GameLoop() {
-        this(RuntimeManager.currentEngineServices());
+        this(EngineServices.current());
     }
 
     public GameLoop(EngineContext engineServices) {
         this.engineServices = Objects.requireNonNull(engineServices, "engineServices");
-        RuntimeManager.configureEngineServices(this.engineServices);
+        EngineServices.configure(this.engineServices);
         this.configService = this.engineServices.configuration();
         this.audioManager = this.engineServices.audio();
         this.romManager = this.engineServices.roms();
@@ -227,7 +226,7 @@ public class GameLoop {
     }
 
     public GameLoop(InputHandler inputHandler) {
-        this(RuntimeManager.currentEngineServices(), inputHandler);
+        this(EngineServices.current(), inputHandler);
     }
 
     public GameLoop(EngineContext engineServices, InputHandler inputHandler) {
@@ -235,24 +234,22 @@ public class GameLoop {
         this.inputHandler = inputHandler;
     }
 
-    /**
-     * Sets the gameplay runtime facade. Cached manager fields are re-assigned
-     * from the runtime so all existing field-based code continues to work.
-     */
-    public void setRuntime(com.openggf.game.GameRuntime runtime) {
-        this.runtime = runtime;
+    public void setGameplayMode(GameplayModeContext gameplayMode) {
+        this.gameplayMode = gameplayMode;
         refreshRuntimeBindings();
     }
 
     private void refreshRuntimeBindings() {
-        GameRuntime currentRuntime = runtime != null ? runtime : RuntimeManager.getCurrent(engineServices);
-        if (currentRuntime == null) {
+        GameplayModeContext currentGameplayMode = gameplayMode != null
+                ? gameplayMode
+                : SessionManager.getCurrentGameplayMode();
+        if (currentGameplayMode == null || currentGameplayMode.getCamera() == null) {
             // Runtime has been torn down (e.g. trace teardown returning to
             // master title). Clear cached references so resolveFadeManager()
             // falls back to the graphics-owned bootstrap manager rather than
             // a destroyed runtime FadeManager that the UI pipeline no longer
             // ticks — which would otherwise leave fade callbacks orphaned.
-            this.runtime = null;
+            this.gameplayMode = null;
             this.spriteManager = null;
             this.camera = null;
             this.timerManager = null;
@@ -262,14 +259,14 @@ public class GameLoop {
             this.waterSystem = null;
             return;
         }
-        this.runtime = currentRuntime;
-        this.spriteManager = currentRuntime.getSpriteManager();
-        this.camera = currentRuntime.getCamera();
-        this.timerManager = currentRuntime.getTimers();
-        this.levelManager = currentRuntime.getLevelManager();
-        this.gameState = currentRuntime.getGameState();
-        this.fadeManager = currentRuntime.getFadeManager();
-        this.waterSystem = currentRuntime.getWaterSystem();
+        this.gameplayMode = currentGameplayMode;
+        this.spriteManager = currentGameplayMode.getSpriteManager();
+        this.camera = currentGameplayMode.getCamera();
+        this.timerManager = currentGameplayMode.getTimerManager();
+        this.levelManager = currentGameplayMode.getLevelManager();
+        this.gameState = currentGameplayMode.getGameStateManager();
+        this.fadeManager = currentGameplayMode.getFadeManager();
+        this.waterSystem = currentGameplayMode.getWaterSystem();
     }
 
     public void setInputHandler(InputHandler inputHandler) {
@@ -1504,11 +1501,11 @@ public class GameLoop {
         bonusStageTransitionPending = false;
         pendingBonusStageShieldRestore = null;
 
-        // Register provider on GameRuntime so objects can access via GameServices.bonusStage()
+        // Register provider on the active gameplay mode so objects can access it via GameServices.bonusStage().
         activeBonusStageProvider = provider;
-        GameRuntime rt = GameServices.runtimeOrNull();
-        if (rt != null) {
-            rt.setActiveBonusStageProvider(provider);
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.setActiveBonusStageProvider(provider);
         }
 
         provider.onEnter(type, savedState);
@@ -1528,8 +1525,8 @@ public class GameLoop {
             LOGGER.severe("Failed to load bonus stage zone: " + e.getMessage());
             provider.onExit();
             activeBonusStageProvider = null;
-            if (rt != null) {
-                rt.setActiveBonusStageProvider(null);
+            if (gameplayMode != null) {
+                gameplayMode.setActiveBonusStageProvider(null);
             }
             currentGameMode = GameMode.LEVEL;
             return;
@@ -1682,10 +1679,9 @@ public class GameLoop {
         activeBonusStageProvider = null;
         levelManager.setBonusStageHudLayout(false);
 
-        // Clear from GameRuntime
-        GameRuntime rt = GameServices.runtimeOrNull();
-        if (rt != null) {
-            rt.setActiveBonusStageProvider(null);
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.setActiveBonusStageProvider(null);
         }
 
         if (savedState == null) {

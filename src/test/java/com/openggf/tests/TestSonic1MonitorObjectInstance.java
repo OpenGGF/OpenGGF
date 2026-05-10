@@ -1,8 +1,9 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic1.objects.Sonic1MonitorObjectInstance;
 import com.openggf.game.sonic1.objects.Sonic1MonitorPowerUpObjectInstance;
 import com.openggf.graphics.GLCommand;
@@ -40,13 +41,13 @@ class TestSonic1MonitorObjectInstance {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

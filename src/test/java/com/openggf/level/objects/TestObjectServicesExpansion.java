@@ -7,10 +7,12 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.CrossGameFeatureProvider;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
@@ -19,7 +21,6 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -34,43 +35,43 @@ class TestObjectServicesExpansion {
 
     @Test
     void defaultObjectServices_camera_returnsSingleton() {
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = sessionServices();
         assertSame(GameServices.camera(), services.camera(),
                 "camera() should delegate to GameServices.camera()");
     }
 
     @Test
     void defaultObjectServices_levelManager_returnsRuntimeLevelManager() {
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = sessionServices();
         assertSame(GameServices.level(), services.levelManager(),
                 "levelManager() should delegate to the runtime-owned level manager");
     }
 
     @Test
     void defaultObjectServices_gameState_returnsSingleton() {
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = sessionServices();
         assertSame(GameServices.gameState(), services.gameState(),
                 "gameState() should delegate to GameServices.gameState()");
     }
 
     @Test
     void defaultObjectServices_worldSession_returnsRuntimeWorldSession() {
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = sessionServices();
         assertSame(GameServices.worldSession(), services.worldSession(),
                 "worldSession() should delegate to the runtime-owned world session");
     }
 
     @Test
     void defaultObjectServices_gameModule_returnsRuntimeModule() {
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = sessionServices();
         assertSame(GameServices.module(), services.gameModule(),
                 "gameModule() should delegate to the runtime-owned module");
     }
 
     @Test
     void defaultObjectServices_processServices_returnRuntimeEngineServicesMembers() {
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
-        EngineContext engineServices = RuntimeManager.currentEngineServices();
+        DefaultObjectServices services = sessionServices();
+        EngineContext engineServices = EngineServices.current();
 
         assertSame(engineServices, services.engineServices());
         assertSame(engineServices.configuration(), services.configuration());
@@ -81,15 +82,16 @@ class TestObjectServicesExpansion {
 
     @Test
     void defaultObjectServices_sidekicks_returnsUnmodifiableList() {
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = sessionServices();
         var sidekicks = services.sidekicks();
         assertNotNull(sidekicks);
         assertThrows(UnsupportedOperationException.class, () -> sidekicks.add(null));
     }
 
     @Test
-    void defaultObjectServices_requiresRuntime() {
-        assertThrows(NullPointerException.class, () -> new DefaultObjectServices(null));
+    void defaultObjectServices_requiresGameplayMode() {
+        assertThrows(NullPointerException.class,
+                () -> new DefaultObjectServices(null, EngineServices.current()));
     }
 
     @Test
@@ -128,44 +130,39 @@ class TestObjectServicesExpansion {
     }
 
     @Test
-    void defaultObjectServices_bonusStageActionsUseInjectedRuntimeProviderNotActiveRuntime() {
+    void defaultObjectServices_bonusStageActionsUseInjectedGameplayProviderNotActiveSession() {
         // After the activeBonusStageProvider migration to GameplayModeContext,
-        // the provider is gameplay-scoped (not per-runtime). DefaultObjectServices
+        // the provider is gameplay-scoped. DefaultObjectServices
         // captures the provider snapshot at construction time. This test verifies
         // that the captured snapshot is used by bonus-stage forwarding methods,
-        // even after the active runtime's provider is changed afterwards.
-        com.openggf.game.GameRuntime runtimeA = RuntimeManager.getCurrent();
+        // even after the active session's provider is changed afterwards.
+        GameplayModeContext gameplayA = TestEnvironment.activeGameplayMode();
         CountingBonusStageProvider providerA = new CountingBonusStageProvider();
-        runtimeA.setActiveBonusStageProvider(providerA);
+        gameplayA.setActiveBonusStageProvider(providerA);
 
-        // Capture providerA into the services BEFORE switching the active runtime.
-        DefaultObjectServices servicesFromRuntimeA = new DefaultObjectServices(runtimeA);
+        // Capture providerA into the services BEFORE switching the active session.
+        DefaultObjectServices servicesFromGameplayA = sessionServices(gameplayA);
 
-        com.openggf.game.GameRuntime runtimeB = RuntimeManager.createGameplay();
+        GameplayModeContext gameplayB = SessionManager.openGameplaySession(GameServices.module());
         CountingBonusStageProvider providerB = new CountingBonusStageProvider();
-        runtimeB.setActiveBonusStageProvider(providerB);
+        gameplayB.setActiveBonusStageProvider(providerB);
 
-        try {
-            servicesFromRuntimeA.requestBonusStageExit();
-            servicesFromRuntimeA.addBonusStageRings(7);
-            servicesFromRuntimeA.setBonusStageShield(com.openggf.game.ShieldType.LIGHTNING);
+        servicesFromGameplayA.requestBonusStageExit();
+        servicesFromGameplayA.addBonusStageRings(7);
+        servicesFromGameplayA.setBonusStageShield(com.openggf.game.ShieldType.LIGHTNING);
 
-            assertEquals(1, providerA.requestExitCount,
-                    "requestBonusStageExit should call provider captured at construction");
-            assertEquals(7, providerA.ringsAdded,
-                    "addBonusStageRings should add rings on the captured provider");
-            assertEquals(1, providerA.shieldsSet,
-                    "setBonusStageShield should forward to the captured provider");
-            assertEquals(0, providerB.requestExitCount,
-                    "later-swapped runtime provider must not receive captured-services calls");
-            assertEquals(0, providerB.ringsAdded,
-                    "later-swapped runtime provider must not receive captured-services calls");
-            assertEquals(0, providerB.shieldsSet,
-                    "later-swapped runtime provider must not receive captured-services calls");
-        } finally {
-            RuntimeManager.destroyCurrent();
-            RuntimeManager.setCurrent(runtimeA);
-        }
+        assertEquals(1, providerA.requestExitCount,
+                "requestBonusStageExit should call provider captured at construction");
+        assertEquals(7, providerA.ringsAdded,
+                "addBonusStageRings should add rings on the captured provider");
+        assertEquals(1, providerA.shieldsSet,
+                "setBonusStageShield should forward to the captured provider");
+        assertEquals(0, providerB.requestExitCount,
+                "later-swapped session provider must not receive captured-services calls");
+        assertEquals(0, providerB.ringsAdded,
+                "later-swapped session provider must not receive captured-services calls");
+        assertEquals(0, providerB.shieldsSet,
+                "later-swapped session provider must not receive captured-services calls");
     }
 
     private static final class CountingBonusStageProvider implements BonusStageProvider {
@@ -249,7 +246,7 @@ class TestObjectServicesExpansion {
         WaterSystem waterSystem = GameServices.water();
         ParallaxManager parallaxManager = GameServices.parallax();
 
-        RuntimeManager.setCurrent(null);
+        SessionManager.clear();
 
         DefaultObjectServices services = new DefaultObjectServices(
                 levelManager,
@@ -259,8 +256,16 @@ class TestObjectServicesExpansion {
                 fadeManager,
                 waterSystem,
                 parallaxManager);
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         return services;
+    }
+
+    private DefaultObjectServices sessionServices() {
+        return sessionServices(TestEnvironment.activeGameplayMode());
+    }
+
+    private DefaultObjectServices sessionServices(GameplayModeContext gameplayMode) {
+        return new DefaultObjectServices(gameplayMode, EngineServices.current());
     }
 }
 

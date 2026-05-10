@@ -1,6 +1,7 @@
 package com.openggf;
 
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.*;
 import com.openggf.graphics.*;
 import com.openggf.version.AppVersion;
@@ -32,6 +33,7 @@ import com.openggf.level.MutableLevel;
 import com.openggf.game.session.EditorCursorState;
 import com.openggf.game.session.EditorModeContext;
 import com.openggf.game.session.EditorPlaytestStash;
+import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -121,8 +123,8 @@ public class Engine {
 
 	private LevelManager levelManager;
 
-	// The gameplay runtime — set during initializeGame()
-	private com.openggf.game.GameRuntime runtime;
+	// The active session-owned gameplay mode set during initializeGame().
+	private GameplayModeContext gameplayMode;
 
 	// Pre-allocated list for results screen rendering
 	private final java.util.List<GLCommand> resultsCommands = new java.util.ArrayList<>(64);
@@ -174,12 +176,12 @@ public class Engine {
 	}
 
 	public Engine() {
-		this(RuntimeManager.currentEngineServices());
+		this(EngineServices.current());
 	}
 
 	public Engine(EngineContext engineServices) {
 		engineServices = Objects.requireNonNull(engineServices, "engineServices");
-		RuntimeManager.configureEngineServices(engineServices);
+		EngineServices.configure(engineServices);
 		this.configService = engineServices.configuration();
 		this.graphicsManager = engineServices.graphics();
 		this.audioManager = engineServices.audio();
@@ -432,7 +434,6 @@ public class Engine {
 			// Reset GPU state (pattern atlas + palette textures) and rebuild
 			// the gameplay runtime so everything starts from a clean slate.
 			graphicsManager.resetPatternAndPaletteState();
-			RuntimeManager.destroyCurrent();
 			gameplayMode = SessionManager.openGameplaySession(module);
 			initializeGameplayRuntime(gameplayMode, false);
 		} else {
@@ -472,7 +473,6 @@ public class Engine {
 	}
 
 	private void resetForGameplayFromMasterTitle() {
-		com.openggf.game.RuntimeManager.destroyCurrent();
 		SessionManager.clear();
 		romManager.close();
 		GameModuleRegistry.reset();
@@ -496,8 +496,8 @@ public class Engine {
 		// still caches the old runtime + its FadeManager. Drop the reference
 		// so the next launch's fade-to-black runs on the bootstrap manager
 		// (which the UI pipeline actually ticks) rather than the dead one.
-		gameLoop.setRuntime(null);
-		this.runtime = null;
+		gameLoop.setGameplayMode(null);
+		this.gameplayMode = null;
 		if (masterTitleScreen != null) {
 			masterTitleScreen.cleanup();
 		}
@@ -522,26 +522,16 @@ public class Engine {
 		prepareMutableEditorLevel();
 		primeEditorSelection(playerX, playerY);
 		levelEditorController.setWorldCursor(new EditorCursorState(playerX, playerY));
-		// World data on WorldSession (loaded Level + zone/act metadata) is
-		// meant to survive runtime teardown per the runtime ownership
-		// migration design. SessionManager.runRuntimeTeardownPreservingWorld
-		// owns the capture/restore around the destroyCurrent so this flow
-		// doesn't reach into LevelManager.resetState() implementation
-		// details. Camera bounds (world-derived but stored on the
-		// gameplay-mode camera, which gets reset by destroyCurrent) need a
-		// similar capture+restore — they're not on WorldSession so they
-		// ride alongside this call rather than through it.
+		// Camera bounds are world-derived but stored on the gameplay-mode
+		// camera, which gets reset when the gameplay mode is destroyed.
 		short savedMinX = camera != null ? camera.getMinX() : 0;
 		short savedMaxX = camera != null ? camera.getMaxX() : 0;
 		short savedMinY = camera != null ? camera.getMinY() : 0;
 		short savedMaxY = camera != null ? camera.getMaxY() : 0;
-		SessionManager.runRuntimeTeardownPreservingWorld(() -> {
-			RuntimeManager.destroyCurrent();
-			runtime = null;
-			gameLoop.setRuntime(null);
-		});
-		levelManager.restoreEditorLevelView(levelEditorController.currentLevel());
 		SessionManager.enterEditorMode(new EditorCursorState(playerX, playerY), stash);
+		gameplayMode = null;
+		gameLoop.setGameplayMode(null);
+		levelManager.restoreEditorLevelView(levelEditorController.currentLevel());
 		if (camera != null) {
 			camera.setMinX(savedMinX);
 			camera.setMaxX(savedMaxX);
@@ -565,7 +555,7 @@ public class Engine {
 		// made in editor) via restoreInheritedLevel.
 		initializeGameplayRuntime(gameplay, false);
 		try {
-			runtime.getLevelManager().restoreInheritedLevel();
+			gameplay.getLevelManager().restoreInheritedLevel();
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to restore inherited level on editor exit", e);
 		}
@@ -600,7 +590,6 @@ public class Engine {
 
 	public void startGameplayFromBeginning() {
 		GameplayModeContext gameplay = SessionManager.restartGameplayFromBeginning();
-		RuntimeManager.destroyCurrent();
 		initializeGameplayRuntime(gameplay, false);
 		loadDefaultStartingLevel(false);
 		gameLoop.setGameMode(GameMode.LEVEL);
@@ -609,9 +598,9 @@ public class Engine {
 	private void initializeGameplayRuntime(GameplayModeContext gameplayMode, boolean initializeGlobalGameplayServices) {
 		GameModule module = gameplayMode.getWorldSession().getGameModule();
 		GameModuleRegistry.setCurrent(module);
-		runtime = com.openggf.game.RuntimeManager.createGameplay(gameplayMode);
-		bindRuntime(runtime);
-		runtime.getGameState().configureSpecialStageProgress(
+		GameplaySessionFactory.attachManagers(gameplayMode, EngineServices.current());
+		bindGameplayMode(gameplayMode);
+		gameplayMode.getGameStateManager().configureSpecialStageProgress(
 				module.getSpecialStageCycleCount(),
 				module.getChaosEmeraldCount());
 
@@ -710,10 +699,9 @@ public class Engine {
 		com.openggf.game.save.SaveSessionContext saveContext = createDataSelectSaveContext(module, action, saveManager);
 
 		GameplayModeContext gameplay = SessionManager.openGameplaySession(module, saveContext);
-		RuntimeManager.destroyCurrent();
 		initializeGameplayRuntime(gameplay, false);
 		loadLevelFromDataSelect(action.zone(), action.act());
-		restoreRuntimeFromDataSelectPayload(runtime, loadedPayload);
+		restoreGameplayModeFromDataSelectPayload(gameplayMode, loadedPayload);
 		gameLoop.setGameMode(GameMode.LEVEL);
 
 		dataSelectLaunchSaveReason(action.type())
@@ -786,13 +774,13 @@ public class Engine {
 		};
 	}
 
-	static void restoreRuntimeFromDataSelectPayload(com.openggf.game.GameRuntime runtime, Map<String, Object> payload) {
-		if (runtime == null || payload == null) {
+	static void restoreGameplayModeFromDataSelectPayload(GameplayModeContext gameplayMode, Map<String, Object> payload) {
+		if (gameplayMode == null || payload == null) {
 			return;
 		}
-		int lives = readInt(payload, "lives", runtime.getGameState().getLives());
-		int continues = readInt(payload, "continues", runtime.getGameState().getContinues());
-		runtime.getGameState().restoreSaveProgress(
+		int lives = readInt(payload, "lives", gameplayMode.getGameStateManager().getLives());
+		int continues = readInt(payload, "continues", gameplayMode.getGameStateManager().getContinues());
+		gameplayMode.getGameStateManager().restoreSaveProgress(
 				lives,
 				continues,
 				readIntList(payload.get("chaosEmeralds")),
@@ -852,23 +840,23 @@ public class Engine {
 		return configService.getBoolean(SonicConfiguration.EDITOR_ENABLED);
 	}
 
-	private void bindRuntime(com.openggf.game.GameRuntime runtime) {
-		this.runtime = runtime;
-		this.camera = runtime.getCamera();
-		this.spriteManager = runtime.getSpriteManager();
-		this.levelManager = runtime.getLevelManager();
-		gameLoop.setRuntime(runtime);
+	private void bindGameplayMode(GameplayModeContext gameplayMode) {
+		this.gameplayMode = gameplayMode;
+		this.camera = gameplayMode.getCamera();
+		this.spriteManager = gameplayMode.getSpriteManager();
+		this.levelManager = gameplayMode.getLevelManager();
+		gameLoop.setGameplayMode(gameplayMode);
 	}
 
 	private void ensureRuntimeBound() {
-		if (runtime != null) {
+		if (gameplayMode != null) {
 			return;
 		}
-		com.openggf.game.GameRuntime currentRuntime = GameServices.runtimeOrNull();
-		if (currentRuntime == null) {
-			throw new IllegalStateException("No active gameplay runtime");
+		GameplayModeContext currentGameplayMode = SessionManager.getCurrentGameplayMode();
+		if (currentGameplayMode == null) {
+			throw new IllegalStateException("No active gameplay mode");
 		}
-		bindRuntime(currentRuntime);
+		bindGameplayMode(currentGameplayMode);
 	}
 
 	private AbstractPlayableSprite resolveMainPlayableSprite() {
@@ -1557,7 +1545,6 @@ public class Engine {
 	}
 
 	private void cleanup() {
-		com.openggf.game.RuntimeManager.destroyCurrent();
 		SessionManager.clear();
 		audioManager.clearDonorAudio();
 		crossGameFeatureProvider.resetState();

@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2;
 
-import com.openggf.game.GameServices;
+
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
 import com.openggf.game.SpecialStageDebugProvider;
@@ -9,6 +10,7 @@ import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.DefaultObjectServices;
 
@@ -186,11 +188,12 @@ public class Sonic2SpecialStageProvider implements SpecialStageProvider {
     @Override
     public ResultsScreen createResultsScreen(int ringsCollected, boolean gotEmerald,
                                              int stageIndex, int totalEmeraldCount) {
-        var runtime = GameServices.runtimeOrNull();
-        if (runtime == null) {
-            throw new IllegalStateException("Special-stage results screen requires an active GameRuntime");
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode == null) {
+            throw new IllegalStateException("Special-stage results screen requires an active GameplayModeContext");
         }
-        DefaultObjectServices services = new DefaultObjectServices(runtime);
+        DefaultObjectServices services = new DefaultObjectServices(
+                gameplayMode, EngineServices.current());
         ObjectConstructionContext.setConstructionContext(services);
         try {
             return new SpecialStageResultsScreenObjectInstance(

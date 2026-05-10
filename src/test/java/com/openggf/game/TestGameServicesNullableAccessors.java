@@ -12,16 +12,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestGameServicesNullableAccessors {
     @BeforeEach void setUp() { TestEnvironment.resetAll(); }
-    @AfterEach void tearDown() { RuntimeManager.destroyCurrent(); SessionManager.clear(); }
+    @AfterEach void tearDown() { SessionManager.clear(); SessionManager.clear(); }
 
     @Test
     void nullableAccessorsReturnNullWithoutRuntime() {
         // Post-migration: GameServices accessors resolve through the gameplay
         // mode context, so clearing the session is required (not just the runtime).
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         assertFalse(GameServices.hasRuntime());
-        assertNull(GameServices.runtimeOrNull());
         assertNull(GameServices.cameraOrNull());
         assertNull(GameServices.levelOrNull());
         assertNull(GameServices.gameStateOrNull());
@@ -41,29 +40,30 @@ class TestGameServicesNullableAccessors {
 
     @Test
     void nullableAccessorsReturnManagersWhenRuntimeExists() {
-        GameRuntime runtime = RuntimeManager.createGameplay();
+        GameplayModeContext runtime = TestEnvironment.activeGameplayMode();
+        GameplayModeContext mode = SessionManager.getCurrentGameplayMode();
+        assertNotNull(mode);
         assertTrue(GameServices.hasRuntime());
-        assertSame(runtime, GameServices.runtimeOrNull());
-        assertSame(runtime.getCamera(), GameServices.cameraOrNull());
-        assertSame(runtime.getLevelManager(), GameServices.levelOrNull());
-        assertSame(runtime.getGameState(), GameServices.gameStateOrNull());
-        assertSame(runtime.getTimers(), GameServices.timersOrNull());
-        assertSame(runtime.getRng(), GameServices.rngOrNull());
-        assertSame(runtime.getParallaxManager(), GameServices.parallaxOrNull());
-        assertSame(runtime.getFadeManager(), GameServices.fadeOrNull());
-        assertSame(runtime.getSpriteManager(), GameServices.spritesOrNull());
-        assertSame(runtime.getCollisionSystem(), GameServices.collisionOrNull());
-        assertSame(runtime.getTerrainCollisionManager(), GameServices.terrainCollisionOrNull());
-        assertSame(runtime.getWaterSystem(), GameServices.waterOrNull());
-        assertSame(runtime.getActiveBonusStageProvider(), GameServices.bonusStageOrNull());
-        assertSame(runtime.getAnimatedTileChannelGraph(), GameServices.animatedTileChannelGraphOrNull());
-        assertSame(runtime.getSpecialRenderEffectRegistry(), GameServices.specialRenderEffectRegistryOrNull());
-        assertSame(runtime.getAdvancedRenderModeController(), GameServices.advancedRenderModeControllerOrNull());
+        assertSame(mode.getCamera(), GameServices.cameraOrNull());
+        assertSame(mode.getLevelManager(), GameServices.levelOrNull());
+        assertSame(mode.getGameStateManager(), GameServices.gameStateOrNull());
+        assertSame(mode.getTimerManager(), GameServices.timersOrNull());
+        assertSame(mode.getRng(), GameServices.rngOrNull());
+        assertSame(mode.getParallaxManager(), GameServices.parallaxOrNull());
+        assertSame(mode.getFadeManager(), GameServices.fadeOrNull());
+        assertSame(mode.getSpriteManager(), GameServices.spritesOrNull());
+        assertSame(mode.getCollisionSystem(), GameServices.collisionOrNull());
+        assertSame(mode.getTerrainCollisionManager(), GameServices.terrainCollisionOrNull());
+        assertSame(mode.getWaterSystem(), GameServices.waterOrNull());
+        assertSame(mode.getActiveBonusStageProvider(), GameServices.bonusStageOrNull());
+        assertSame(mode.getAnimatedTileChannelGraph(), GameServices.animatedTileChannelGraphOrNull());
+        assertSame(mode.getSpecialRenderEffectRegistry(), GameServices.specialRenderEffectRegistryOrNull());
+        assertSame(mode.getAdvancedRenderModeController(), GameServices.advancedRenderModeControllerOrNull());
     }
 
     @Test
     void strictAccessorsStillThrowWithoutRuntime() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         assertThrows(IllegalStateException.class, GameServices::camera);
         assertThrows(IllegalStateException.class, GameServices::level);
@@ -93,24 +93,20 @@ class TestGameServicesNullableAccessors {
     @Test
     void hasRuntimeAgreesWithGameplayModeAcrossLifecycle() {
         // 1. No runtime, no session.
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         assertEquals(GameServices.cameraOrNull() != null, GameServices.hasRuntime(),
                 "no-runtime: hasRuntime() must match gameplay mode availability");
         assertFalse(GameServices.hasRuntime());
 
         // 2. Active gameplay runtime.
-        GameRuntime runtime = RuntimeManager.createGameplay();
+        GameplayModeContext runtime = TestEnvironment.activeGameplayMode();
         assertNotNull(runtime);
         assertEquals(GameServices.cameraOrNull() != null, GameServices.hasRuntime(),
                 "active: hasRuntime() must match gameplay mode availability");
         assertTrue(GameServices.hasRuntime());
 
-        // 3. Editor mode active — the runtime is destroyed but the gameplay
-        //    mode context remains in SessionManager until enterEditorMode
-        //    swaps it out. After enterEditorMode, both runtime and gameplay
-        //    mode are gone (only the editor mode is current).
-        RuntimeManager.destroyCurrent();
+        // 3. Editor mode active: entering editor mode destroys the gameplay mode while preserving the world session.
         SessionManager.enterEditorMode(new EditorCursorState(0, 0));
         assertEquals(GameServices.cameraOrNull() != null, GameServices.hasRuntime(),
                 "editor: hasRuntime() must match gameplay mode availability");
@@ -118,13 +114,13 @@ class TestGameServicesNullableAccessors {
 
         // 4. Resumed from editor — fresh runtime + gameplay mode.
         GameplayModeContext resumedMode = SessionManager.resumeGameplayFromEditor();
-        RuntimeManager.createGameplay(resumedMode);
+        TestEnvironment.activeGameplayMode();
         assertEquals(GameServices.cameraOrNull() != null, GameServices.hasRuntime(),
                 "post-resume: hasRuntime() must agree with gameplay mode availability");
         assertTrue(GameServices.hasRuntime(), "post-resume: gameplay should be active");
 
         // 5. Fully torn down.
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         assertEquals(GameServices.cameraOrNull() != null, GameServices.hasRuntime(),
                 "post-destroy: hasRuntime() must match gameplay mode availability");
@@ -132,33 +128,28 @@ class TestGameServicesNullableAccessors {
     }
 
     /**
-     * {@link GameServices#bonusStage()} must NOT call {@code RuntimeManager.getCurrent()}.
-     * That method has a side effect: if the current runtime's gameplay mode
-     * doesn't match the SessionManager's current mode, it destroys the runtime.
-     * Repeated bonusStage() calls should be safe and stable.
+     * Repeated bonusStage() calls should be safe and stable without changing
+     * the active gameplay mode.
      */
     @Test
-    void bonusStageDoesNotDestroyLiveRuntimeOnRepeatedCalls() {
-        GameRuntime runtime = RuntimeManager.createGameplay();
+    void bonusStageDoesNotChangeLiveGameplayModeOnRepeatedCalls() {
+        GameplayModeContext runtime = TestEnvironment.activeGameplayMode();
         GameplayModeContext mode = SessionManager.getCurrentGameplayMode();
         assertNotNull(mode);
-        assertSame(runtime, RuntimeManager.getActiveRuntime());
 
         // First call returns NoOp default.
         BonusStageProvider firstCall = GameServices.bonusStage();
         assertNotNull(firstCall);
 
-        // Runtime must still be live and unchanged.
-        assertSame(runtime, RuntimeManager.getActiveRuntime(),
-                "bonusStage() must not swap or destroy the active runtime");
+        // Gameplay mode must still be live and unchanged.
         assertSame(mode, SessionManager.getCurrentGameplayMode());
 
         // Many repeated calls remain stable.
         for (int i = 0; i < 5; i++) {
             BonusStageProvider repeated = GameServices.bonusStage();
             assertSame(firstCall, repeated, "bonusStage() must return the same provider when unchanged");
-            assertSame(runtime, RuntimeManager.getActiveRuntime(),
-                    "bonusStage() must not destroy the active runtime on repeated calls");
+            assertSame(runtime, SessionManager.getCurrentGameplayMode(),
+                    "bonusStage() must not change the active gameplay mode on repeated calls");
         }
     }
 }

@@ -1,8 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
@@ -54,7 +53,7 @@ public class TestSonic1JunctionSubpixelPreservation {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

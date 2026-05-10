@@ -1,5 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -9,7 +12,6 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -78,8 +80,8 @@ class TestMgzDrillingRobotnikInstance {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.destroyCurrent();
-        camera = RuntimeManager.createGameplay().getCamera();
+        SessionManager.clear();
+        camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
         camera.setX((short) 0);
         camera.setY((short) 0);
@@ -87,7 +89,7 @@ class TestMgzDrillingRobotnikInstance {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

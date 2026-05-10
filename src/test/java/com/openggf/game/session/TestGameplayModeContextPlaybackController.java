@@ -4,7 +4,6 @@ import com.openggf.camera.Camera;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.EngineStepper;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
@@ -27,7 +26,7 @@ class TestGameplayModeContextPlaybackController {
 
     @BeforeEach
     void configureServices() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     private static GameplayModeContext buildAttachedContext() {

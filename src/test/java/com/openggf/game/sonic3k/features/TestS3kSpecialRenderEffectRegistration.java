@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.features;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider;
@@ -21,7 +22,7 @@ class TestS3kSpecialRenderEffectRegistration {
 
     @AfterEach
     void tearDown() {
-        com.openggf.game.RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

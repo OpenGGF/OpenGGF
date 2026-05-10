@@ -1,10 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -30,14 +32,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestAiz2BossEndSequenceObjects {
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
     }
 
     @AfterEach
     void tearDown() {
         Aiz2BossEndSequenceState.reset();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
     }
 
@@ -116,7 +118,7 @@ class TestAiz2BossEndSequenceObjects {
 
     @Test
     void eggCapsuleReleasesControllerAfterResultsFinish() throws Exception {
-        Camera camera = RuntimeManager.createGameplay().getCamera();
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
         camera.setX((short) 0x4880);
         camera.setY((short) 0x0100);
@@ -142,7 +144,7 @@ class TestAiz2BossEndSequenceObjects {
 
     @Test
     void controllerWaitsForEggCapsuleBeforeStartingWalkAndHydrocityTransition() {
-        Camera camera = RuntimeManager.createGameplay().getCamera();
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
         camera.setMaxX((short) 0x4880);
         camera.setMaxY((short) 0x0200);

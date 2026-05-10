@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.game.session.EngineServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,20 +11,19 @@ import com.openggf.game.dataselect.DataSelectActionType;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameModule;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.BonusStageState;
 import com.openggf.game.EndingPhase;
 import com.openggf.game.EndingProvider;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.TitleScreenProvider.TitleScreenAction;
-import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameRng;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
@@ -37,6 +37,7 @@ import com.openggf.graphics.FadeManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.TestEnvironment;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -62,9 +63,9 @@ public class TestGameLoop {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         mockInputHandler = mock(InputHandler.class);
         gameLoop = new GameLoop(mockInputHandler);
     }
@@ -72,7 +73,7 @@ public class TestGameLoop {
     @AfterEach
     public void tearDown() {
         gameLoop = null;
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
     }
@@ -139,7 +140,7 @@ public class TestGameLoop {
 
     @Test
     public void testMasterTitleScreenStepDoesNotRequireGameplayRuntime() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         InputHandler inputHandler = mock(InputHandler.class);
@@ -155,7 +156,7 @@ public class TestGameLoop {
 
     @Test
     public void testMasterTitleScreenSelectionStartsBootstrapFadeWithoutGameplayRuntime() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         InputHandler inputHandler = mock(InputHandler.class);
@@ -163,7 +164,7 @@ public class TestGameLoop {
         when(masterTitleScreen.isGameSelected()).thenReturn(true);
         when(masterTitleScreen.getSelectedGameId()).thenReturn("s1");
 
-        FadeManager fadeManager = RuntimeManager.currentEngineServices().graphics().getFadeManager();
+        FadeManager fadeManager = EngineServices.current().graphics().getFadeManager();
         fadeManager.cancel();
 
         GameLoop loop = new GameLoop(inputHandler);
@@ -184,16 +185,16 @@ public class TestGameLoop {
         FadeManager runtimeFade = (FadeManager) getPrivateField(gameLoop, "fadeManager");
         assertNotNull(runtimeFade, "Test setup binds a runtime, so fadeManager should be cached");
 
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        gameLoop.setRuntime(null);
+        SessionManager.clear();
+        gameLoop.setGameplayMode(null);
 
         assertNull(getPrivateField(gameLoop, "fadeManager"),
                 "After runtime teardown the cached FadeManager must be cleared");
-        assertNull(getPrivateField(gameLoop, "runtime"),
-                "After runtime teardown the cached runtime must be cleared");
+        assertNull(getPrivateField(gameLoop, "gameplayMode"),
+                "After runtime teardown the cached gameplay mode must be cleared");
 
-        FadeManager bootstrapFade = RuntimeManager.currentEngineServices().graphics().getFadeManager();
+        FadeManager bootstrapFade = EngineServices.current().graphics().getFadeManager();
         Method resolve = GameLoop.class.getDeclaredMethod("resolveFadeManager");
         resolve.setAccessible(true);
         assertSame(bootstrapFade, resolve.invoke(gameLoop),
@@ -322,7 +323,7 @@ public class TestGameLoop {
 
     @Test
     void testExitDataSelectDispatchesPendingAction() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
@@ -333,8 +334,8 @@ public class TestGameLoop {
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        RuntimeManager.createGameplay(gameplayMode);
+        SessionManager.openGameplaySession(module);
+        TestEnvironment.activeGameplayMode();
 
         AtomicReference<DataSelectAction> handled = new AtomicReference<>();
         gameLoop.setDataSelectActionHandler(handled::set);
@@ -358,7 +359,7 @@ public class TestGameLoop {
 
     @Test
     void testExitDataSelectDispatchesPendingActionFromNativeS3kPresentationProvider() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         Sonic3kGameModule module = new Sonic3kGameModule();
@@ -371,8 +372,8 @@ public class TestGameLoop {
                 new SelectedTeam("sonic", List.of("tails"))));
 
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         AtomicReference<DataSelectAction> handled = new AtomicReference<>();
         gameLoop.setDataSelectActionHandler(handled::set);
@@ -395,7 +396,7 @@ public class TestGameLoop {
 
     @Test
     void testExitDataSelectStartsFadeBeforeDispatchingGameplayAction() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
@@ -406,8 +407,8 @@ public class TestGameLoop {
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        RuntimeManager.createGameplay(gameplayMode);
+        SessionManager.openGameplaySession(module);
+        TestEnvironment.activeGameplayMode();
 
         AtomicReference<DataSelectAction> handled = new AtomicReference<>();
         gameLoop.setDataSelectActionHandler(handled::set);
@@ -441,7 +442,7 @@ public class TestGameLoop {
 
     @Test
     void testExitDataSelectDoesNotResetWhileFadeAlreadyActive() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
@@ -451,8 +452,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(provider);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        RuntimeManager.createGameplay(gameplayMode);
+        SessionManager.openGameplaySession(module);
+        TestEnvironment.activeGameplayMode();
 
         gameLoop.setDataSelectActionHandler(action -> fail("No dispatch should occur while fade is already active"));
 
@@ -469,7 +470,7 @@ public class TestGameLoop {
 
     @Test
     void testDoExitBonusStageDoesNotWriteSaveForActiveSlot() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         String gameCode = "test_bonus_stage_return";
@@ -484,8 +485,8 @@ public class TestGameLoop {
         SaveSessionContext saveContext = SaveSessionContext.forSlot(
                 gameCode, 1, new SelectedTeam("sonic", List.of()), 0, 0);
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module, saveContext);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module, saveContext);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         when(levelManager.getCurrentLevelMusicId()).thenReturn(-1);
@@ -519,7 +520,7 @@ public class TestGameLoop {
 
     @Test
     void testDoExitResultsScreenWritesSaveForActiveSlot() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         String gameCode = "test_special_stage_return";
@@ -533,8 +534,8 @@ public class TestGameLoop {
         SaveSessionContext saveContext = SaveSessionContext.forSlot(
                 gameCode, 1, new SelectedTeam("sonic", List.of()), 0, 0);
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module, saveContext);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module, saveContext);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         when(levelManager.getCurrentLevel()).thenReturn(mock(com.openggf.level.AbstractLevel.class));
@@ -563,9 +564,9 @@ public class TestGameLoop {
 
     @Test
     void testStepDoesNotWriteSaveForActiveSlotOnSeamlessTransition() throws Exception {
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        gameLoop.setRuntime(null);
+        SessionManager.clear();
+        gameLoop.setGameplayMode(null);
 
         String gameCode = "test_seamless_transition";
         Path saveDir = Path.of("saves").resolve(gameCode);
@@ -589,15 +590,7 @@ public class TestGameLoop {
         when(levelManager.consumeSeamlessTransitionRequest()).thenReturn(request);
         when(levelManager.consumeInLevelTitleCardRequest()).thenReturn(false);
 
-        GameRuntime runtime = mock(GameRuntime.class);
-        when(runtime.getLevelManager()).thenReturn(levelManager);
-        when(runtime.getSpriteManager()).thenReturn(spriteManager);
-        when(runtime.getCamera()).thenReturn(mock(com.openggf.camera.Camera.class));
-        when(runtime.getTimers()).thenReturn(mock(com.openggf.timer.TimerManager.class));
-        when(runtime.getGameState()).thenReturn(mock(com.openggf.game.GameStateManager.class));
-        when(runtime.getFadeManager()).thenReturn(mock(FadeManager.class));
-        when(runtime.getWaterSystem()).thenReturn(mock(com.openggf.level.WaterSystem.class));
-        gameLoop.setRuntime(runtime);
+        bindMockGameplay(levelManager, spriteManager, mock(FadeManager.class));
 
         setPrivateField(gameLoop, "currentGameMode", GameMode.LEVEL);
 
@@ -610,9 +603,9 @@ public class TestGameLoop {
 
     @Test
     void testStepWritesSaveForS2CreditsTransition() throws Exception {
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        gameLoop.setRuntime(null);
+        SessionManager.clear();
+        gameLoop.setGameplayMode(null);
 
         String gameCode = "test_s2_credits_transition";
         Path saveDir = Path.of("saves").resolve(gameCode);
@@ -640,15 +633,7 @@ public class TestGameLoop {
         when(levelManager.consumeCreditsRequest()).thenReturn(true);
         when(fadeManager.isActive()).thenReturn(false);
 
-        GameRuntime runtime = mock(GameRuntime.class);
-        when(runtime.getLevelManager()).thenReturn(levelManager);
-        when(runtime.getSpriteManager()).thenReturn(spriteManager);
-        when(runtime.getCamera()).thenReturn(mock(com.openggf.camera.Camera.class));
-        when(runtime.getTimers()).thenReturn(mock(com.openggf.timer.TimerManager.class));
-        when(runtime.getGameState()).thenReturn(mock(com.openggf.game.GameStateManager.class));
-        when(runtime.getFadeManager()).thenReturn(fadeManager);
-        when(runtime.getWaterSystem()).thenReturn(mock(com.openggf.level.WaterSystem.class));
-        gameLoop.setRuntime(runtime);
+        bindMockGameplay(levelManager, spriteManager, fadeManager);
 
         setPrivateField(gameLoop, "currentGameMode", GameMode.LEVEL);
         setPrivateField(gameLoop, "audioManager", mock(com.openggf.audio.AudioManager.class));
@@ -661,7 +646,7 @@ public class TestGameLoop {
 
     @Test
     void testDoEnterEndingDoesNotWriteSaveForActiveSlot() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         String gameCode = "test_ending_clear";
@@ -679,8 +664,8 @@ public class TestGameLoop {
 
         SaveSessionContext saveContext = SaveSessionContext.forSlot(
                 gameCode, 1, new SelectedTeam("sonic", List.of()), 0, 0);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module, saveContext);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module, saveContext);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         invokePrivateMethod(gameLoop, "doEnterEnding");
 
@@ -693,7 +678,7 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenRoutesOnePlayerToNativeDataSelect() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -708,8 +693,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         setPrivateField(gameLoop, "levelManager", levelManager);
@@ -724,7 +709,7 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenRoutesS1OnePlayerToDonatedDataSelectWhenPresentationResolvesToS3k() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -742,8 +727,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S1);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         assertInstanceOf(S3kDataSelectManager.class, dataSelect.delegate(),
                 "Donated S1 data select should resolve to the native S3K manager");
@@ -760,7 +745,7 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenRoutesS2OnePlayerToDonatedDataSelectWhenPresentationResolvesToS3k() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -774,8 +759,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         assertInstanceOf(S3kDataSelectManager.class, dataSelect.delegate(),
                 "Donated S2 data select should resolve to the native S3K manager");
@@ -792,7 +777,7 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenRoutesTwoPlayerAwayFromDataSelect() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -807,8 +792,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         setPrivateField(gameLoop, "levelManager", levelManager);
@@ -823,7 +808,7 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenRoutesToLevelWhenPresentationIsNotS3k() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -835,8 +820,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         setPrivateField(gameLoop, "levelManager", levelManager);
@@ -852,7 +837,7 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenDoesNotUseGenericFadeToBlackWhenRoutingToLevel() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -864,8 +849,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         FadeManager fadeManager = mock(FadeManager.class);
@@ -883,7 +868,7 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenStartsFadeFromBlackWhenRoutingToLevel() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -895,8 +880,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         FadeManager fadeManager = mock(FadeManager.class);
@@ -930,7 +915,7 @@ public class TestGameLoop {
 
     @Test
     void testTitleScreenExitHandlerUsesExplicitRouteResolutionWithoutStartingSecondFade() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -942,8 +927,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         FadeManager fadeManager = mock(FadeManager.class);
@@ -963,7 +948,7 @@ public class TestGameLoop {
 
     @Test
     void testTitleScreenExitHandlerEntersDataSelectThroughBlackFade() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -982,8 +967,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         FadeManager fadeManager = mock(FadeManager.class);
@@ -1014,7 +999,7 @@ public class TestGameLoop {
 
     @Test
     void testTitleScreenExitHandlerRoutesLevelThroughBlackFadeWhenDonationDisabled() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1028,8 +1013,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S1);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         FadeManager fadeManager = mock(FadeManager.class);
@@ -1059,7 +1044,7 @@ public class TestGameLoop {
 
     @Test
     void testExitTitleScreenRoutesLevelWithoutGenericFade() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1075,8 +1060,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         FadeManager fadeManager = mock(FadeManager.class);
@@ -1094,7 +1079,7 @@ public class TestGameLoop {
 
     @Test
     void testExitTitleScreenRoutesLevelThroughBlackFadeWhenDonationDisabled() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1108,8 +1093,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         FadeManager fadeManager = mock(FadeManager.class);
@@ -1138,7 +1123,7 @@ public class TestGameLoop {
 
     @Test
     void testExitTitleScreenDoesNotRouteToDonatedDataSelectWhenCrossGameFeaturesDisabled() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1159,8 +1144,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S1);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         FadeManager fadeManager = mock(FadeManager.class);
@@ -1190,7 +1175,7 @@ public class TestGameLoop {
 
     @Test
     void testExitTitleScreenRoutesDataSelectThroughBlackFade() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1205,8 +1190,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         FadeManager fadeManager = mock(FadeManager.class);
@@ -1237,7 +1222,7 @@ public class TestGameLoop {
 
     @Test
     void testExitTitleScreenDoesNotStartS2PreviewWarmupWhenRoutingToDonatedDataSelect() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1256,8 +1241,8 @@ public class TestGameLoop {
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
         when(module.getGameService(com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager.class))
                 .thenReturn(warmupManager);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         FadeManager fadeManager = mock(FadeManager.class);
         when(fadeManager.isActive()).thenReturn(false);
@@ -1292,7 +1277,7 @@ public class TestGameLoop {
 
     @Test
     void testExitTitleScreenDoesNotRestartDataSelectFadeWhileActive() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1307,8 +1292,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         FadeManager fadeManager = mock(FadeManager.class);
         when(fadeManager.isActive()).thenReturn(false, true);
@@ -1325,7 +1310,7 @@ public class TestGameLoop {
 
     @Test
     void testTitleScreenExitHandlerRoutesDataSelectThroughBlackFade() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1340,8 +1325,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         FadeManager fadeManager = mock(FadeManager.class);
@@ -1373,7 +1358,7 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenDefaultsUnknownActionToOtherInsteadOfDataSelect() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1385,8 +1370,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(dataSelect);
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S3K);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S3K);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         setPrivateField(gameLoop, "levelManager", levelManager);
@@ -1401,7 +1386,7 @@ public class TestGameLoop {
 
     @Test
     void testTitleScreenExitHandlerUsesOverlayPathWhenLevelSelectOverlayApplies() throws Exception {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, true);
@@ -1415,8 +1400,8 @@ public class TestGameLoop {
         when(module.getDataSelectProvider()).thenReturn(new StubDataSelectProvider(DataSelectAction.none()));
         when(module.getGameId()).thenReturn(com.openggf.game.GameId.S1);
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
-        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
-        gameLoop.setRuntime(RuntimeManager.createGameplay(gameplayMode));
+        SessionManager.openGameplaySession(module);
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
 
         com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
         setPrivateField(gameLoop, "levelManager", levelManager);
@@ -1450,6 +1435,44 @@ public class TestGameLoop {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(target);
+    }
+
+    private void bindMockGameplay(com.openggf.level.LevelManager levelManager,
+                                  com.openggf.sprites.managers.SpriteManager spriteManager,
+                                  FadeManager fadeManager) {
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        gameplayMode.tearDownManagers();
+        when(spriteManager.rewindSnapshottable()).thenReturn(
+                new com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot>() {
+            @Override
+            public String key() {
+                return "sprites";
+            }
+
+            @Override
+            public com.openggf.game.rewind.snapshot.SpriteManagerSnapshot capture() {
+                return null;
+            }
+
+            @Override
+            public void restore(com.openggf.game.rewind.snapshot.SpriteManagerSnapshot snapshot) {
+            }
+        });
+        gameplayMode.attachGameplayManagers(
+                new com.openggf.camera.Camera(),
+                new com.openggf.timer.TimerManager(),
+                new com.openggf.game.GameStateManager(),
+                fadeManager,
+                new GameRng(GameRng.Flavour.S1_S2),
+                new DefaultSolidExecutionRegistry());
+        gameplayMode.attachLevelManagers(
+                new com.openggf.level.WaterSystem(),
+                new com.openggf.level.ParallaxManager(),
+                mock(com.openggf.physics.TerrainCollisionManager.class),
+                mock(com.openggf.physics.CollisionSystem.class),
+                spriteManager,
+                levelManager);
+        gameLoop.setGameplayMode(gameplayMode);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})

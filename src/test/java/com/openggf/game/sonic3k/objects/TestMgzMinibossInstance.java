@@ -1,8 +1,10 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -55,8 +57,8 @@ class TestMgzMinibossInstance {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.destroyCurrent();
-        camera = RuntimeManager.createGameplay().getCamera();
+        SessionManager.clear();
+        camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
         camera.setX((short) 0);
         camera.setY((short) 0);
@@ -65,7 +67,7 @@ class TestMgzMinibossInstance {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

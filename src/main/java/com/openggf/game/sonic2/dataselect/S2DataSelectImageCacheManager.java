@@ -1,12 +1,13 @@
 package com.openggf.game.sonic2.dataselect;
 
+
+import com.openggf.game.session.EngineServices;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RgbaImage;
 import com.openggf.graphics.ScreenshotCapture;
@@ -182,7 +183,7 @@ public class S2DataSelectImageCacheManager {
         int[] spawnPoint = new com.openggf.game.sonic2.Sonic2ZoneRegistry().getStartPosition(zoneId, 0);
         int cameraLeftX = captureTarget != null ? captureTarget.cameraLeftX() : spawnPoint[0];
         int centreY = captureTarget != null ? captureTarget.centreY() : spawnPoint[1];
-        GraphicsManager graphics = RuntimeManager.currentEngineServices().graphics();
+        GraphicsManager graphics = EngineServices.current().graphics();
         return graphics
                 .submitRenderThreadTask(() -> {
                     LevelManager levelManager = GameServices.level();

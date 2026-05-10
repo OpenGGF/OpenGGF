@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelGamestate;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -11,6 +10,7 @@ import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,8 +29,9 @@ public class TestMegaChopperBadnikInstance {
     @BeforeEach
     public void setUp() throws Exception {
         SessionManager.clear();
-        RuntimeManager.destroyCurrent();
-        RuntimeManager.createGameplay(SessionManager.openGameplaySession(new Sonic3kGameModule()));
+        SessionManager.clear();
+        SessionManager.openGameplaySession(new Sonic3kGameModule());
+        TestEnvironment.activeGameplayMode();
 
         Field levelStateField = GameServices.level().getClass().getDeclaredField("levelGamestate");
         levelStateField.setAccessible(true);
@@ -39,7 +40,7 @@ public class TestMegaChopperBadnikInstance {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
     }
 

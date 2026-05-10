@@ -1,8 +1,10 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic2.events.Sonic2SCZEvents;
 import com.openggf.game.sonic2.scroll.SwScrlScz;
 import org.junit.jupiter.api.AfterEach;
@@ -42,7 +44,7 @@ public class TestTodo11_SCZEventSpecs {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
         cam = GameServices.camera();
         scrollHandler = new SwScrlScz();
@@ -52,7 +54,7 @@ public class TestTodo11_SCZEventSpecs {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     /**

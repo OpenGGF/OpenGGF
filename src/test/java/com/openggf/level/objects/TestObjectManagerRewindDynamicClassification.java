@@ -1,6 +1,8 @@
 package com.openggf.level.objects;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.GenericRewindEligibility;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
@@ -12,10 +14,8 @@ import com.openggf.graphics.GLCommand;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -26,15 +26,15 @@ class TestObjectManagerRewindDynamicClassification {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDown() {
         ObjectManager.clearRewindDynamicObjectCodecsForTest();
         GenericRewindEligibility.clearForTest();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

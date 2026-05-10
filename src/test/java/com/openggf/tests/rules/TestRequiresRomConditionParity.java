@@ -1,10 +1,12 @@
 package com.openggf.tests.rules;
 
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -24,16 +26,16 @@ class TestRequiresRomConditionParity {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         RomManager.getInstance().setRom(null);
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
     @Test
     void requiresRomExtensionMatchesSharedFixtureForNonDefaultRomRuntimeState() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
         TestTarget target = selectAvailableNonDefaultTarget();
         Assumptions.assumeTrue(target != null, "No Sonic 1 or Sonic 3K ROM available");
@@ -63,7 +65,7 @@ class TestRequiresRomConditionParity {
         return new FixtureState(
                 GameModuleRegistry.getCurrent().getGameId().code(),
                 SessionManager.requireCurrentGameModule().getGameId().code(),
-                RuntimeManager.getCurrent().getWorldSession().getGameModule().getGameId().code());
+                TestEnvironment.activeGameplayMode().getWorldSession().getGameModule().getGameId().code());
     }
 
     private ExtensionContext extensionContextFor(Class<?> testClass) {

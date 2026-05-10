@@ -800,8 +800,7 @@ public class TestS1Ghz1Headless {
             this.y = y;
             this.params = params;
             this.topSolidOnly = topSolidOnly;
-            setServices(new com.openggf.level.objects.DefaultObjectServices(
-                    com.openggf.game.RuntimeManager.getCurrent()));
+            setServices(com.openggf.tests.TestEnvironment.objectServices());
         }
 
         @Override
@@ -1092,8 +1091,7 @@ public class TestS1Ghz1Headless {
             this.y = y;
             this.params = params;
             this.topSolidOnly = topSolidOnly;
-            setServices(new com.openggf.level.objects.DefaultObjectServices(
-                    com.openggf.game.RuntimeManager.getCurrent()));
+            setServices(com.openggf.tests.TestEnvironment.objectServices());
         }
 
         @Override public int getX() { return x; }
@@ -1401,8 +1399,7 @@ public class TestS1Ghz1Headless {
             this.params = params;
             this.topSolidOnly = topSolidOnly;
             this.landingHalfWidth = landingHalfWidth;
-            setServices(new com.openggf.level.objects.DefaultObjectServices(
-                    com.openggf.game.RuntimeManager.getCurrent()));
+            setServices(com.openggf.tests.TestEnvironment.objectServices());
         }
 
         @Override

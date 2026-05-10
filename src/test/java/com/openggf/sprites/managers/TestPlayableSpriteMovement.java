@@ -3,12 +3,12 @@ package com.openggf.sprites.managers;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.physics.TerrainCollisionManager;
@@ -16,6 +16,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,12 +26,10 @@ import com.openggf.physics.SensorResult;
 import com.openggf.game.GroundMode;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.playable.SecondaryAbility;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,8 +46,8 @@ public class TestPlayableSpriteMovement {
         public void setUp() {
                 previousModule = GameModuleRegistry.getCurrent();
                 GameModuleRegistry.setCurrent(new Sonic2GameModule());
-                RuntimeManager.destroyCurrent();
-                RuntimeManager.createGameplay();
+                SessionManager.clear();
+                TestEnvironment.activeGameplayMode();
                 mockSprite = new AbstractPlayableSprite("sonic", (short) 0, (short) 0) {
                         @Override
                         protected void defineSpeeds() {
@@ -80,7 +79,7 @@ public class TestPlayableSpriteMovement {
 
         @AfterEach
         public void tearDown() {
-                RuntimeManager.destroyCurrent();
+                SessionManager.clear();
                 if (previousModule != null) {
                         GameModuleRegistry.setCurrent(previousModule);
                 } else {
@@ -1747,10 +1746,10 @@ public class TestPlayableSpriteMovement {
         }
 
         private static void installRuntimeCollisionSystem(CollisionSystem collisionSystem) throws Exception {
-                GameRuntime runtime = RuntimeManager.getCurrent();
+                GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
                 Field field = com.openggf.game.session.GameplayModeContext.class.getDeclaredField("collisionSystem");
                 field.setAccessible(true);
-                field.set(runtime.getGameplayModeContext(), collisionSystem);
+                field.set(gameplayMode, collisionSystem);
         }
 
         /**

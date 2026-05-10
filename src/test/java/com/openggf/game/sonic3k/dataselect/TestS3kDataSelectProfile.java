@@ -1,11 +1,12 @@
 package com.openggf.game.sonic3k.dataselect;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.DataSelectProvider;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.NoOpDataSelectProvider;
 import com.openggf.game.dataselect.DataSelectDestination;
 import com.openggf.game.dataselect.DataSelectHostProfile;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -22,12 +23,12 @@ class TestS3kDataSelectProfile {
 
     @BeforeAll
     static void configureEngineServices() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @AfterEach
     void resetRuntime() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

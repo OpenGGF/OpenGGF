@@ -10,11 +10,11 @@ import com.openggf.configuration.GlfwKeyNameResolver;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.GameMode;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleScreen;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.rewind.RewindController;
@@ -116,7 +116,7 @@ public final class TraceSessionLauncher {
         // Pre-flight the fade check via GameLoop so we don't mutate
         // config and then fail at launchGameByEntry with a
         // fade-active throw. GameServices.fade() isn't usable here —
-        // no GameRuntime exists at master-title time — so go through
+        // no gameplay mode exists at master-title time — so go through
         // GameLoop which resolves the graphics-backed fade manager.
         if (!loop.canLaunchGameNow()) {
             LOGGER.severe("Cannot launch trace " + entry.dir()
@@ -392,17 +392,17 @@ public final class TraceSessionLauncher {
     }
 
     private void installTraceRewindController(GameLoop loop, int movieBaseFrame, int traceBaseFrame) {
-        GameRuntime runtime = RuntimeManager.getCurrent();
-        if (runtime == null || runtime.getGameplayModeContext() == null) {
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode == null) {
             return;
         }
         this.rewindMovieBaseFrame = movieBaseFrame;
         this.rewindTraceBaseFrame = traceBaseFrame;
-        this.rewindPlaybackController = runtime.getGameplayModeContext().installPlaybackController(
+        this.rewindPlaybackController = gameplayMode.installPlaybackController(
                 new OffsetMovieInputSource(movie, movieBaseFrame),
                 new VisualTraceRewindStepper(loop, movie, trace, movieBaseFrame, traceBaseFrame),
                 60);
-        this.rewindController = runtime.getGameplayModeContext().getRewindController();
+        this.rewindController = gameplayMode.getRewindController();
     }
 
     private void syncVisualRewindCursors(boolean playing) {
@@ -593,8 +593,8 @@ public final class TraceSessionLauncher {
         }
 
         @Override
-        public GameRuntime runtime() {
-            return RuntimeManager.getCurrent();
+        public GameplayModeContext gameplayMode() {
+            return SessionManager.getCurrentGameplayMode();
         }
 
         @Override
