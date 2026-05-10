@@ -29,8 +29,8 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
  *
  * <p>Important setup requirements for tests using this class:
  * <ul>
- *   <li>Reset singletons: GraphicsManager.getInstance().resetState(), GameServices.camera().resetState()</li>
- *   <li>Initialize headless graphics: GraphicsManager.getInstance().initHeadless()</li>
+ *   <li>Reset test state: TestEnvironment.resetAll()</li>
+ *   <li>Initialize headless graphics: GameServices.graphics().initHeadless()</li>
  *   <li>Load level: GameServices.level().loadZoneAndAct(zone, act)</li>
  *   <li>Fix GroundSensor: GroundSensor.setLevelManager(GameServices.level())</li>
  *   <li>Update camera position: GameServices.camera().updatePosition(true)</li>

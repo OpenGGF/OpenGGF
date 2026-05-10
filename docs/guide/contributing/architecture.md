@@ -15,7 +15,7 @@ com.openggf/
     GameModule.java          -- Interface each game implements
     GameModuleRegistry.java  -- Maps game identifiers ("s1","s2","s3k") to modules
     GameServices.java        -- Global facade over engine and runtime-owned services
-    GameRuntime.java         -- Mutable gameplay state container and runtime-owned framework host
+    session/                 -- EngineServices, SessionManager, WorldSession, mode contexts
     rewind/                  -- Frame rewind primitives, keyframes, registry, playback controller
       identity/              -- Stable player/object/spawn ids for reference rebinding
       schema/                -- Compact field-capture schemas, codecs, and state blobs
@@ -107,21 +107,38 @@ returns water heights for ARZ and CPZ; Sonic 1's returns heights for LZ and SBZ3
 Sonic 3&K's returns heights for HCZ and LBZ. The engine does not know or care which
 zones have water -- it just asks the provider.
 
-## GameServices and ObjectServices
+## Services and Session Ownership
 
-The engine uses a two-tier service architecture:
+The engine uses a scoped service architecture:
 
-**GameServices** is the global tier. It provides access to things that exist once for the
-entire application, plus accessors into runtime-owned shared frameworks:
+**EngineServices** (`com.openggf.game.session.EngineServices`) is the process-level root.
+It owns services that are not recreated with gameplay sessions:
 - ROM data access
 - Graphics pipeline
 - Audio system
 - Configuration
-- Runtime-owned systems such as zone runtime state, palette ownership, animated tile channels,
-  layout mutation, and special render controllers
+- Debug/profiling services
+- ROM detection and cross-game feature donation
 
-**ObjectServices** is the contextual tier. It provides access to things that are specific
-to the current gameplay context:
+**SessionManager** owns the current `WorldSession` plus the active mode context.
+`WorldSession` is durable world state: active `GameModule`, save session context,
+current zone/act metadata, and the loaded `Level`/`MutableLevel`. It survives editor
+mode swaps.
+
+**GameplayModeContext** is disposable gameplay state. It is rebuilt when gameplay is
+entered or resumed, and owns `Camera`, `TimerManager`, `GameStateManager`, `FadeManager`,
+`GameRng`, `SolidExecutionRegistry`, `WaterSystem`, `ParallaxManager`,
+`TerrainCollisionManager`, `CollisionSystem`, `SpriteManager`, `LevelManager`, rewind
+controllers, and the shared runtime framework stack.
+
+**GameServices** is the static facade for non-object code. Gameplay-scoped accessors
+resolve through the active `GameplayModeContext`; engine-global accessors resolve
+through `EngineServices`. Code that can receive explicit dependencies should still do so,
+but managers, event handlers, HUD code, and render orchestration commonly use
+`GameServices`.
+
+**ObjectServices** is the contextual tier for object instances. It provides access to
+things that are specific to the current gameplay context:
 - Current level and camera
 - Object manager (for spawning dynamic objects)
 - Sound effect playback
@@ -132,15 +149,16 @@ how objects interact with the world: `services().playSfx(id)`,
 `services().objectManager().addDynamicObject(obj)`, etc.
 
 The separation exists because the planned level editor will have multiple simultaneous
-level contexts. GameServices stays shared; ObjectServices will be backed by a specific
-runtime context.
+level contexts. Process services stay shared; object services are backed by the active
+gameplay context.
 
-## GameRuntime and Runtime-Owned Systems
+## Runtime-Owned Systems
 
-`GameRuntime` is the explicit owner for mutable gameplay state and the shared registries/controllers
-that normalize zone behavior across games. Some legacy singleton-backed paths still exist, but the
-preferred direction is to route new behavior through the runtime-owned systems rather than adding
-fresh manager-local state.
+The old `GameRuntime`/`RuntimeManager` facade has been retired from production code.
+Mutable gameplay state now lives on `GameplayModeContext`; durable world state lives
+on `WorldSession`; process-level services live behind `EngineServices`. New behavior
+should route through these owners, `GameServices`, `ObjectServices`, or explicit
+injection rather than direct singleton or retired-runtime lookups.
 
 The current framework stack includes:
 
@@ -175,7 +193,7 @@ As a contributor, be aware that:
   `ObjectServices` rather than calling static `getInstance()` methods.
 - New zone behavior should prefer the runtime-owned framework stack over bespoke zone-local
   registries, buffers, or render-mode booleans.
-- Existing `getInstance()` patterns still work but represent the old style.
+- Some process-global `getInstance()` compatibility paths still exist for bootstrap and legacy tests, but they are not the current production style.
 
 ## Level Initialization: LevelInitProfile
 
