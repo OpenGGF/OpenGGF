@@ -1,7 +1,8 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -20,14 +21,14 @@ class TestS3kMgzTwistingLoopObject {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.destroyCurrent();
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         AbstractObjectInstance.updateCameraBounds(0, 0, 1024, 1024, 0);
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

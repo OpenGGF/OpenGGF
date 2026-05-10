@@ -1,11 +1,14 @@
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
@@ -35,14 +38,14 @@ class TestSonic3kMgz2QuakeEvents {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     private static AbstractPlayableSprite placePlayer(int x, int y) {

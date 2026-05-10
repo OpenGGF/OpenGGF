@@ -1,7 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -47,7 +49,7 @@ class TestCnzMinibossTopPhysics {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         com.openggf.game.session.SessionManager.clear();
     }
 
@@ -56,7 +58,7 @@ class TestCnzMinibossTopPhysics {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(
                 new ObjectSpawn(0x3240, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -72,7 +74,7 @@ class TestCnzMinibossTopPhysics {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -110,7 +112,7 @@ class TestCnzMinibossTopPhysics {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(
                 new ObjectSpawn(0x3240, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -150,7 +152,7 @@ class TestCnzMinibossTopPhysics {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(
                 new ObjectSpawn(0x3240, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         top.setServices(services);
@@ -181,7 +183,7 @@ class TestCnzMinibossTopPhysics {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
         CnzMinibossTopInstance top = new CnzMinibossTopInstance(
                 new ObjectSpawn(0x31F0, 0x0379, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
         top.setServices(services);
@@ -209,7 +211,7 @@ class TestCnzMinibossTopPhysics {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -231,7 +233,7 @@ class TestCnzMinibossTopPhysics {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -256,7 +258,7 @@ class TestCnzMinibossTopPhysics {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -281,7 +283,7 @@ class TestCnzMinibossTopPhysics {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
         AbstractPlayableSprite player = fixture.sprite();
 
         CnzMinibossInstance boss = new CnzMinibossInstance(

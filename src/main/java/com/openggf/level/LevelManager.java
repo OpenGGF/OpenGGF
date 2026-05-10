@@ -28,6 +28,7 @@ import com.openggf.game.render.AdvancedRenderModeController;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.WorldSession;
 import com.openggf.level.objects.HudRenderManager;
 import com.openggf.level.objects.HudStaticArt;
@@ -112,11 +113,11 @@ public class LevelManager {
         if (gameModule != null) {
             return gameModule;
         }
-        GameRuntime runtime = GameServices.runtimeOrNull();
-        if (runtime != null && runtime.getWorldSession() != null) {
-            return runtime.getWorldSession().getGameModule();
+        WorldSession world = SessionManager.getCurrentWorldSession();
+        if (world != null && world.getGameModule() != null) {
+            return world.getGameModule();
         }
-        return RuntimeManager.resolveCurrentOrBootstrapGameModule();
+        return GameServices.currentOrBootstrapGameModule();
     }
 
     /** Collision model metadata only; frame scheduling may still use inline checkpoints. */
@@ -207,6 +208,7 @@ public class LevelManager {
 
     // Rendering pipeline (extracted from LevelManager — see LevelRenderer).
     private final LevelRenderer levelRenderer = new LevelRenderer(this);
+    private EngineContext engineServices;
 
 
     @Deprecated(forRemoval = true)
@@ -216,8 +218,8 @@ public class LevelManager {
 
     /**
      * Constructs a LevelManager with explicit manager dependencies.
-     * Used by {@link com.openggf.game.GameRuntime} to inject peers
-     * instead of reading from singletons.
+     * Used by session-owned runtime construction to inject peers instead of
+     * reading from singletons.
      */
     public LevelManager(Camera camera, SpriteManager spriteManager,
                         ParallaxManager parallaxManager, CollisionSystem collisionSystem,
@@ -236,6 +238,7 @@ public class LevelManager {
         this.overlayManager = engineServices.debugOverlay();
         this.profiler = engineServices.profiler();
         this.crossGameFeatures = engineServices.crossGameFeatures();
+        this.engineServices = engineServices;
         this.cachedScreenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         this.cachedScreenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
         // Inherit any zone/act metadata and loaded Level already on the
@@ -433,10 +436,9 @@ public class LevelManager {
      * {@link #setLevel(Level)} so any mutations made before editor entry
      * survive the round trip.
      * <p>
-     * Building block for the future "drop {@code RuntimeManager.parkCurrent}"
-     * cleanup; not yet wired into the editor exit flow because the existing
-     * parking mechanism already preserves the runtime end-to-end. When that
-     * cleanup proceeds, this method becomes the replacement.
+     * Used by the editor exit flow after the old gameplay runtime has been
+     * torn down and a fresh gameplay mode has been built over the surviving
+     * {@code WorldSession}.
      */
     public void restoreInheritedLevel() throws IOException {
         Level inherited = level;
@@ -3380,11 +3382,11 @@ public class LevelManager {
     }
 
     private ObjectServices buildObjectServices() {
-        GameRuntime runtime = GameServices.runtimeOrNull();
-        if (runtime == null) {
-            throw new IllegalStateException("LevelManager.buildObjectServices() requires an active GameRuntime");
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null && gameplayMode.getLevelManager() == this && engineServices != null) {
+            return new DefaultObjectServices(gameplayMode, engineServices);
         }
-        return new DefaultObjectServices(runtime);
+        throw new IllegalStateException("LevelManager.buildObjectServices() requires the active GameplayModeContext");
     }
 
     private void reregisterPlayerDynamicObjects(Sprite sprite) {
@@ -3521,10 +3523,10 @@ public class LevelManager {
     public int getInLevelTitleCardAct() { return transitions.getInLevelTitleCardAct(); }
 
     /**
-     * Resets mutable state without destroying the singleton instance.
-     * Replaces the reflection-based tearDown hacks in test classes.
+     * Resets gameplay-owned mutable state without clearing the durable
+     * {@link com.openggf.game.session.WorldSession} level and zone metadata.
      */
-    public void resetState() {
+    public void resetGameplayState() {
         com.openggf.game.session.GameplayModeContext gameplayMode =
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindRegistry() != null) {
@@ -3532,7 +3534,7 @@ public class LevelManager {
             gameplayMode.getRewindRegistry().deregister("object-manager");
             gameplayMode.getRewindRegistry().deregister("level-event");
         }
-        writeCurrentLevel(null);
+        level = null;
         game = null;
         gameModule = null;
         objectManager = null;
@@ -3549,9 +3551,9 @@ public class LevelManager {
             tilemapManager.resetState();
         }
         tilemapManager = null;
-        writeCurrentZone(0);
-        writeCurrentAct(0);
-        writeApparentAct(0);
+        currentZone = 0;
+        currentAct = 0;
+        apparentAct = 0;
         frameCounter = 0;
         transitions.resetState();
         verticalWrapEnabled = false;
@@ -3559,6 +3561,18 @@ public class LevelManager {
         useShaderBackground = true;
         cacheLevelDimensions();
         levels.clear();
+    }
+
+    /**
+     * Resets mutable state without destroying the singleton instance.
+     * Replaces the reflection-based tearDown hacks in test classes.
+     */
+    public void resetState() {
+        resetGameplayState();
+        writeCurrentLevel(null);
+        writeCurrentZone(0);
+        writeCurrentAct(0);
+        writeApparentAct(0);
     }
 
     /**

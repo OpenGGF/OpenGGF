@@ -203,9 +203,12 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   in-engine editing. The editor review pass now preserves controller-owned mutable levels across
   runtime teardown, restores an editor-safe level view while editing, flushes dirty regions before
   editor rendering, and omits reverted baseline edits from saved deltas.
-- **Runtime modernization:** gameplay state continues moving behind `GameRuntime`, `GameServices`,
-  `ObjectServices`, and runtime-owned frameworks for palette ownership, zone state, animated tiles,
-  layout mutation, scroll composition, special render passes, and advanced render modes.
+- **Runtime/session modernization:** the legacy `GameRuntime` / `RuntimeManager` facade has been
+  retired. Process-wide services now sit behind `EngineServices`, while `SessionManager`,
+  `WorldSession`, and `GameplayModeContext` own gameplay lifecycle, durable world state, and
+  gameplay-scoped managers. `GameServices`, `ObjectServices`, and runtime-owned frameworks remain
+  the active access path for palette ownership, zone state, animated tiles, layout mutation, scroll
+  composition, special render passes, and advanced render modes.
 - **S3K bring-up and parity:** Angel Island, Carnival Night, Hydrocity, Marble Garden, data select,
   save handling, and sidekick/object interactions continue to gain ROM-cited behavior and tests.
   Carnival Night Act 1 now includes the miniboss arena handoff: miniboss music, boss/raw child

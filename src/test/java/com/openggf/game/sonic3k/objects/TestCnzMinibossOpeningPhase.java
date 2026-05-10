@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.DefaultObjectServices;
@@ -40,7 +42,7 @@ class TestCnzMinibossOpeningPhase {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         com.openggf.game.session.SessionManager.clear();
     }
 
@@ -49,7 +51,7 @@ class TestCnzMinibossOpeningPhase {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -67,7 +69,7 @@ class TestCnzMinibossOpeningPhase {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -85,7 +87,7 @@ class TestCnzMinibossOpeningPhase {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x0100, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));

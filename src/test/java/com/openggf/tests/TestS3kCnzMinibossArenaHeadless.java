@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -47,7 +47,7 @@ class TestS3kCnzMinibossArenaHeadless {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         com.openggf.game.session.SessionManager.clear();
     }
 
@@ -65,7 +65,7 @@ class TestS3kCnzMinibossArenaHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
 
         CnzMinibossInstance boss = new CnzMinibossInstance(
                 new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
@@ -131,7 +131,7 @@ class TestS3kCnzMinibossArenaHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
         Sonic3kCNZEvents events = getCnzEvents();
         events.forceBackgroundRoutine(Sonic3kCNZEvents.BG_AFTER_BOSS);
         events.forceBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_POST_BOSS);
@@ -155,7 +155,7 @@ class TestS3kCnzMinibossArenaHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
         Sonic3kCNZEvents events = getCnzEvents();
 
         CnzMinibossScrollControlInstance control = new CnzMinibossScrollControlInstance(
@@ -179,7 +179,7 @@ class TestS3kCnzMinibossArenaHeadless {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
-        DefaultObjectServices services = new DefaultObjectServices(RuntimeManager.getCurrent());
+        DefaultObjectServices services = TestEnvironment.objectServices();
         Sonic3kCNZEvents events = getCnzEvents();
         GameServices.camera().setMaxYTarget((short) 0x02B8);
         GameServices.gameState().setBackgroundCollisionFlag(false);
@@ -216,7 +216,7 @@ class TestS3kCnzMinibossArenaHeadless {
 
         CnzMinibossScrollControlInstance control = new CnzMinibossScrollControlInstance(
                 new ObjectSpawn(0x3200, 0x0280, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
-        control.setServices(new DefaultObjectServices(RuntimeManager.getCurrent()));
+        control.setServices(TestEnvironment.objectServices());
 
         control.update(0, fixture.sprite());
 

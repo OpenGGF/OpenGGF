@@ -75,7 +75,7 @@ public final class TraceReplaySessionBootstrap {
         // badnik behaviour (e.g. animal selection on kill, Batbrain
         // eyelid flicker) and causes subpixel drift that surfaces at
         // the first enemy destruction.
-        if (GameServices.runtimeOrNull() != null) {
+        if (GameServices.hasRuntime()) {
             GameRng rng = GameServices.rngOrNull();
             if (rng != null) {
                 rng.setSeed(0L);
@@ -205,11 +205,12 @@ public final class TraceReplaySessionBootstrap {
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace);
         int objectPreludeFrames =
                 TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace);
+        var gameplayMode = fixture.gameplayMode();
         if (objectPreludeFrames > 0
-                && fixture.runtime() != null
-                && fixture.runtime().getLevelManager() != null
-                && fixture.runtime().getLevelManager().getObjectManager() != null) {
-            var levelManager = fixture.runtime().getLevelManager();
+                && gameplayMode != null
+                && gameplayMode.getLevelManager() != null
+                && gameplayMode.getLevelManager().getObjectManager() != null) {
+            var levelManager = gameplayMode.getLevelManager();
             var objectManager = levelManager.getObjectManager();
             var camera = GameServices.cameraOrNull();
             int cameraX = camera != null ? camera.getX() : 0;
@@ -218,12 +219,12 @@ public final class TraceReplaySessionBootstrap {
             }
         }
         if (sidekickPreludeFrames > 0
-                && fixture.runtime() != null
-                && fixture.runtime().getSpriteManager() != null
-                && fixture.runtime().getLevelManager() != null) {
-            fixture.runtime().getSpriteManager().warmUpCpuSidekicksOnly(
+                && gameplayMode != null
+                && gameplayMode.getSpriteManager() != null
+                && gameplayMode.getLevelManager() != null) {
+            gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(
                     sidekickPreludeFrames,
-                    fixture.runtime().getLevelManager());
+                    gameplayMode.getLevelManager());
         }
         TraceObjectSnapshotBinder.Result hydration =
                 TraceReplayBootstrap.applyPreTraceState(trace, fixture);

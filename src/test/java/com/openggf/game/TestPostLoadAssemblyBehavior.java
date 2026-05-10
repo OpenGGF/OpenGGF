@@ -1,9 +1,11 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic1.Sonic1ConveyorState;
 import com.openggf.game.sonic1.Sonic1LevelInitProfile;
 import com.openggf.game.sonic1.Sonic1SwitchManager;
@@ -31,14 +33,14 @@ public class TestPostLoadAssemblyBehavior {
 
     @BeforeEach
     public void resetCamera() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     // ========== Checkpoint Resume: Context Snapshot Round-Trip ==========

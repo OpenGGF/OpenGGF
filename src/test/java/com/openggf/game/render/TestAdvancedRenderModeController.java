@@ -1,7 +1,7 @@
 package com.openggf.game.render;
 
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,12 +18,12 @@ class TestAdvancedRenderModeController {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
     void emptyControllerResolvesDisabledFrameState() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         AdvancedRenderModeController controller = new AdvancedRenderModeController();
 
         AdvancedRenderFrameState state = controller.resolve(new AdvancedRenderModeContext(
@@ -41,7 +41,7 @@ class TestAdvancedRenderModeController {
 
     @Test
     void registeredModesMergeFrameStateContributions() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         AdvancedRenderModeController controller = new AdvancedRenderModeController();
 
         controller.register(new AdvancedRenderMode() {

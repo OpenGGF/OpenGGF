@@ -5,13 +5,16 @@ import com.openggf.data.RomManager;
 import com.openggf.game.GameModule;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelInitProfile;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.StaticFixup;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
+import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -45,9 +48,9 @@ public final class TestEnvironment {
         // baseline rather than whatever the previous test left behind.
         AbstractObjectInstance.resetCameraBoundsForTests();
 
-        // Ensure a runtime exists after reset so GameServices and
-        // DefaultObjectServices can delegate through RuntimeManager.
-        RuntimeManager.createGameplay();
+        // Ensure a gameplay mode exists after reset so GameServices can
+        // resolve session-owned managers.
+        activeGameplayMode();
     }
 
     /**
@@ -89,14 +92,14 @@ public final class TestEnvironment {
 
     private static void resetToBootstrapBaseline() {
         SonicConfigurationService.getInstance().resetToDefaults();
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
         // CRITICAL: Capture the current game's profile BEFORE resetting the module.
         // After reset(), the module reverts to Sonic2GameModule (the default).
         // We need the PREVIOUS game's teardown to clean up its own state.
         LevelInitProfile profile = GameModuleRegistry.getCurrent().getLevelInitProfile();
 
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         // Phase 0: Reset game module (shared across all games)
@@ -114,25 +117,42 @@ public final class TestEnvironment {
     }
 
     private static void recreateGameplayRuntime() {
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        RuntimeManager.createGameplay();
+        SessionManager.clear();
+        activeGameplayMode();
     }
 
     /**
      * Resets per-test state without touching the loaded level data or game module.
      */
     public static void resetPerTest() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        // Ensure a runtime exists so GameServices can delegate through RuntimeManager.
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        // Ensure a gameplay mode exists so GameServices can resolve managers.
         // The first test in a JVM fork may not have run resetAll() yet.
-        if (RuntimeManager.getCurrent() == null) {
-            RuntimeManager.createGameplay();
-        }
+        activeGameplayMode();
         LevelInitProfile profile = GameModuleRegistry.getCurrent().getLevelInitProfile();
         for (InitStep step : profile.perTestResetSteps()) {
             step.execute();
         }
+    }
+
+    /**
+     * Returns the active session-owned gameplay context, opening a gameplay
+     * session and attaching managers when a legacy test path has not done so yet.
+     */
+    public static GameplayModeContext activeGameplayMode() {
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode == null) {
+            gameplayMode = SessionManager.openGameplaySession(GameModuleRegistry.getCurrent());
+        }
+        if (gameplayMode.getCamera() == null) {
+            GameplaySessionFactory.attachManagers(gameplayMode, EngineServices.current());
+        }
+        return gameplayMode;
+    }
+
+    public static DefaultObjectServices objectServices() {
+        return new DefaultObjectServices(activeGameplayMode(), EngineServices.current());
     }
 
     public static Rom currentRom() {

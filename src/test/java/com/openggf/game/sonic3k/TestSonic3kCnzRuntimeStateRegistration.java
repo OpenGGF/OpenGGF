@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.tests.TestEnvironment;
@@ -22,7 +22,7 @@ class TestSonic3kCnzRuntimeStateRegistration {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         com.openggf.game.session.SessionManager.clear();
     }
 

@@ -11,18 +11,19 @@ import java.util.Map;
 public final class S1SaveSnapshotProvider implements SaveSnapshotProvider {
     @Override
     public Map<String, Object> capture(SaveReason reason, RuntimeSaveContext context) {
-        if (reason != SaveReason.NEW_SLOT_START && context.runtime() == null) {
-            throw new IllegalStateException("Save reason " + reason + " requires a live runtime");
+        boolean hasLiveState = context.hasLiveGameplayState();
+        if (reason != SaveReason.NEW_SLOT_START && !hasLiveState) {
+            throw new IllegalStateException("Save reason " + reason + " requires a live runtime/gameplay mode");
         }
         Map<String, Object> payload = new LinkedHashMap<>();
         var save = context.saveSessionContext();
-        int zone = context.runtime() == null ? save.startZone()
-                : context.runtime().getLevelManager().getCurrentZone();
-        int act = context.runtime() == null ? save.startAct()
-                : context.runtime().getLevelManager().getCurrentAct();
-        int lives = context.runtime() == null ? 3 : context.runtime().getGameState().getLives();
-        List<Integer> chaosEmeralds = context.runtime() == null ? List.of()
-                : context.runtime().getGameState().getCollectedChaosEmeraldIndices();
+        int zone = !hasLiveState ? save.startZone()
+                : context.levelManager().getCurrentZone();
+        int act = !hasLiveState ? save.startAct()
+                : context.levelManager().getCurrentAct();
+        int lives = !hasLiveState ? 3 : context.gameState().getLives();
+        List<Integer> chaosEmeralds = !hasLiveState ? List.of()
+                : context.gameState().getCollectedChaosEmeraldIndices();
         boolean clear = save.isClear();
         payload.put("zone", zone);
         payload.put("act", act);

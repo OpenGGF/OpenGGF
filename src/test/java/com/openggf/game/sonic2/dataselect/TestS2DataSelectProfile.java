@@ -1,11 +1,12 @@
 package com.openggf.game.sonic2.dataselect;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectDestination;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.dataselect.HostSlotPreview;
 import com.openggf.game.session.EngineContext;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
@@ -23,12 +24,12 @@ class TestS2DataSelectProfile {
 
     @BeforeAll
     static void configureEngineServices() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @AfterEach
     void resetRuntime() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

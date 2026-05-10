@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k.features;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.render.AdvancedRenderFrameState;
 import com.openggf.game.render.AdvancedRenderModeContext;
 import com.openggf.game.render.AdvancedRenderModeController;
@@ -24,7 +24,7 @@ class TestS3kAdvancedRenderModeRegistration {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

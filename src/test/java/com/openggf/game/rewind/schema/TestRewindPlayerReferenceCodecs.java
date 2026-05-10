@@ -1,11 +1,13 @@
 package com.openggf.game.rewind.schema;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.identity.PlayerRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,14 +28,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestRewindPlayerReferenceCodecs {
     @BeforeEach
     void setUpRuntime() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void clearRegistry() {
         RewindSchemaRegistry.clearForTest();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

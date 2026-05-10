@@ -1,7 +1,8 @@
 package com.openggf.physics;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,12 +11,12 @@ class TestTerrainCollisionManagerReset {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

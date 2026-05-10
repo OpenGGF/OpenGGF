@@ -1,5 +1,9 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -9,7 +13,6 @@ import com.openggf.data.RomManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.objects.CnzCannonInstance;
@@ -107,7 +110,7 @@ public class TestS3kCnzVisualCapture {
     @BeforeAll
     static void setUpClass() {
         try {
-            RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+            EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
             File romFile = RomTestUtils.ensureSonic3kRomAvailable();
             if (romFile == null) {
@@ -165,7 +168,7 @@ public class TestS3kCnzVisualCapture {
             config.setConfigValue(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
 
-            RuntimeManager.createGameplay();
+            TestEnvironment.activeGameplayMode();
             initialized = true;
         } catch (Exception e) {
             System.err.println("CNZ visual capture init failed: " + e.getMessage());
@@ -184,7 +187,7 @@ public class TestS3kCnzVisualCapture {
         }
         glfwTerminate();
         GraphicsManager.getInstance().resetState();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         if (rom != null) {
             rom.close();
         }
@@ -260,7 +263,7 @@ public class TestS3kCnzVisualCapture {
 
         CnzTeleporterInstance teleporter = new CnzTeleporterInstance(
                 new com.openggf.level.objects.ObjectSpawn(0x4A40, 0x0A38, 0, 0, 0, false, 0));
-        teleporter.setServices(new com.openggf.level.objects.DefaultObjectServices(RuntimeManager.getCurrent()));
+        teleporter.setServices(TestEnvironment.objectServices());
         GameServices.level().getObjectManager().addDynamicObject(teleporter);
 
         player.setCentreX((short) 0x4A50);
@@ -360,8 +363,8 @@ public class TestS3kCnzVisualCapture {
      * isolated frames rather than accumulated state from earlier scenarios.
      */
     private AbstractPlayableSprite prepareScenario(String mainCharacterCode, int act) throws Exception {
-        RuntimeManager.destroyCurrent();
-        RuntimeManager.createGameplay();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
 
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, true);
@@ -390,7 +393,7 @@ public class TestS3kCnzVisualCapture {
     }
 
     private <T extends AbstractObjectInstance> T registerObject(T object) {
-        object.setServices(new DefaultObjectServices(RuntimeManager.getCurrent()));
+        object.setServices(TestEnvironment.objectServices());
         GameServices.level().getObjectManager().addDynamicObject(object);
         GameServices.camera().updatePosition(true);
         return object;

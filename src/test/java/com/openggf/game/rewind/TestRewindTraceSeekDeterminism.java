@@ -3,7 +3,6 @@ package com.openggf.game.rewind;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -71,7 +70,7 @@ class TestRewindTraceSeekDeterminism {
                 .withRecording(bk2)
                 .withZoneAndAct(0, 0)
                 .build();
-        GameplayModeContext gm = RuntimeManager.getCurrent().getGameplayModeContext();
+        GameplayModeContext gm = TestEnvironment.activeGameplayMode();
         RewindController rc = new RewindController(
                 gm.getRewindRegistry(),
                 new InMemoryKeyframeStore(),
@@ -107,7 +106,7 @@ class TestRewindTraceSeekDeterminism {
                 .withRecording(bk2)
                 .withZoneAndAct(0, 0)
                 .build();
-        GameplayModeContext gm = RuntimeManager.getCurrent().getGameplayModeContext();
+        GameplayModeContext gm = TestEnvironment.activeGameplayMode();
         RewindController rc = new RewindController(
                 gm.getRewindRegistry(),
                 new InMemoryKeyframeStore(),
@@ -148,7 +147,7 @@ class TestRewindTraceSeekDeterminism {
                 .withRecording(bk2)
                 .withZoneAndAct(0, 0)
                 .build();
-        GameplayModeContext gm = RuntimeManager.getCurrent().getGameplayModeContext();
+        GameplayModeContext gm = TestEnvironment.activeGameplayMode();
         gm.installPlaybackController(
                 new MovieInputSource(movie),
                 new FixtureStepper(fixture),

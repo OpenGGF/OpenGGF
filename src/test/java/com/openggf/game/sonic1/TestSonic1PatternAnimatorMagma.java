@@ -1,7 +1,7 @@
 package com.openggf.game.sonic1;
 
 import com.openggf.game.OscillationManager;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.Test;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
@@ -17,6 +17,7 @@ import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.tests.TestEnvironment;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -29,7 +30,7 @@ public class TestSonic1PatternAnimatorMagma {
     @Test
     public void marbleMagmaBodyTilesAreGeneratedAndAnimated() throws IOException {
         OscillationManager.reset();
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
 
         try {
             int required = Sonic1Constants.ARTTILE_MZ_ANIMATED_MAGMA + 16;
@@ -51,7 +52,7 @@ public class TestSonic1PatternAnimatorMagma {
             byte[] animated = dumpMagmaBlock(level, magmaTile);
             assertFalse(Arrays.equals(initial, animated), "MZ magma block should animate over time");
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 

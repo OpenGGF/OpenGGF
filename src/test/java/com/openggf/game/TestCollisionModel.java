@@ -1,5 +1,8 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -32,7 +35,7 @@ class TestCollisionModel {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
@@ -135,9 +138,9 @@ class TestCollisionModel {
     }
 
     private static void ensureBootstrapRuntime() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        if (RuntimeManager.getCurrent() == null) {
-            RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        if (SessionManager.getCurrentGameplayMode() == null) {
+            TestEnvironment.activeGameplayMode();
         }
     }
 }

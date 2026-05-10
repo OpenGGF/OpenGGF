@@ -1,36 +1,36 @@
 package com.openggf.level;
 
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
-import org.junit.jupiter.api.Test;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-
+import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class TestLevelManagerSlotBackgroundCopy {
-    private GameRuntime runtime;
+    private GameplayModeContext gameplayMode;
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        runtime = RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        gameplayMode = TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
     public void slotBackgroundRowCopyUpdatesBothEightPixelRowsOfSixteenPixelBlockRow() throws Exception {
-        TestLevelManager levelManager = new TestLevelManager(runtime);
+        TestLevelManager levelManager = new TestLevelManager(gameplayMode);
         RecordingTilemapManager tilemapManager = new RecordingTilemapManager();
         setTilemapManager(levelManager, tilemapManager);
 
@@ -44,7 +44,7 @@ public class TestLevelManagerSlotBackgroundCopy {
 
     @Test
     public void slotBackgroundRowCopySnapsSourceXToSixteenPixelBlockBoundary() throws Exception {
-        TestLevelManager levelManager = new TestLevelManager(runtime);
+        TestLevelManager levelManager = new TestLevelManager(gameplayMode);
         RecordingTilemapManager tilemapManager = new RecordingTilemapManager();
         setTilemapManager(levelManager, tilemapManager);
 
@@ -64,10 +64,10 @@ public class TestLevelManagerSlotBackgroundCopy {
     }
 
     private static final class TestLevelManager extends LevelManager {
-        private TestLevelManager(GameRuntime runtime) {
+        private TestLevelManager(GameplayModeContext gameplayMode) {
             super(GameServices.camera(), GameServices.sprites(), GameServices.parallax(),
                     GameServices.collision(), GameServices.water(), GameServices.gameState(),
-                    runtime.getEngineServices(), GameServices.worldSession());
+                    EngineServices.current(), gameplayMode.getWorldSession());
         }
 
         @Override

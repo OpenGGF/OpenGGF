@@ -1,8 +1,10 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic2.events.Sonic2WFZEvents;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +45,7 @@ public class TestTodo12_WFZEventSpecs {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
         cam = GameServices.camera();
         events = new Sonic2WFZEvents();
@@ -52,7 +54,7 @@ public class TestTodo12_WFZEventSpecs {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     /**

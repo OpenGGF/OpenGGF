@@ -1,8 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectInstance;
@@ -28,8 +31,8 @@ class TestMGZSwingingPlatformObjectInstance {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         camera = GameServices.camera();
         camera.resetState();
         camera.setX((short) 0x0100);
@@ -38,7 +41,7 @@ class TestMGZSwingingPlatformObjectInstance {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

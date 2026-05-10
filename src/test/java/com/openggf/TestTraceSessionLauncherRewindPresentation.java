@@ -7,14 +7,17 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.Bk2Movie;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.InMemoryKeyframeStore;
 import com.openggf.game.rewind.InputSource;
 import com.openggf.game.rewind.PlaybackController;
 import com.openggf.game.rewind.RewindController;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.FadeManager;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.live.LiveTraceComparator;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
@@ -41,8 +44,8 @@ class TestTraceSessionLauncherRewindPresentation {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         config = SonicConfigurationService.getInstance();
         audio = AudioManager.getInstance();
         audio.resetState();
@@ -53,7 +56,7 @@ class TestTraceSessionLauncherRewindPresentation {
     @AfterEach
     void tearDown() {
         audio.resetState();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -74,7 +77,8 @@ class TestTraceSessionLauncherRewindPresentation {
         setField(launcher, "comparator", mock(LiveTraceComparator.class));
         setField(launcher, "rewindMovieBaseFrame", 0);
         setField(launcher, "rewindTraceBaseFrame", 0);
-        FadeManager fadeManager = RuntimeManager.getCurrent().getFadeManager();
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
+        FadeManager fadeManager = gameplayMode.getFadeManager();
         InputHandler input = new InputHandler();
         input.handleKeyEvent(config.getInt(SonicConfiguration.TRACE_REWIND_KEY), GLFW_PRESS);
 

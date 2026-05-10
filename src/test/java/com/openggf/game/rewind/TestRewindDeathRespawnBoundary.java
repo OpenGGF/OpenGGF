@@ -1,6 +1,5 @@
 package com.openggf.game.rewind;
 
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.LevelManager;
 import com.openggf.tests.HeadlessTestFixture;
@@ -25,7 +24,7 @@ class TestRewindDeathRespawnBoundary {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(0, 0)
                 .build();
-        GameplayModeContext gm = RuntimeManager.getCurrent().getGameplayModeContext();
+        GameplayModeContext gm = TestEnvironment.activeGameplayMode();
         RewindRegistry registry = gm.getRewindRegistry();
         LevelManager levelManager = gm.getLevelManager();
 
@@ -43,7 +42,7 @@ class TestRewindDeathRespawnBoundary {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(0, 0)
                 .build();
-        GameplayModeContext gm = RuntimeManager.getCurrent().getGameplayModeContext();
+        GameplayModeContext gm = TestEnvironment.activeGameplayMode();
         RewindRegistry registry = gm.getRewindRegistry();
         LevelManager levelManager = gm.getLevelManager();
 

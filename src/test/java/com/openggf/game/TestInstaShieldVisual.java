@@ -1,5 +1,8 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.Engine;
 import com.openggf.LevelFrameStep;
@@ -92,8 +95,8 @@ public class TestInstaShieldVisual {
     @BeforeAll
     static void setUpClass() {
         try {
-            RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-            RuntimeManager.destroyCurrent();
+            EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+            SessionManager.clear();
 
             GLFWErrorCallback.createPrint(System.err).set();
             if (!glfwInit()) {
@@ -143,9 +146,9 @@ public class TestInstaShieldVisual {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         gm.setViewport(0, 0, W, H);
 
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.destroyCurrent();
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
         assertSame(gm, GameServices.graphics(),
                 "Visual test runtime must use the reinitialized GraphicsManager");
 
@@ -187,7 +190,7 @@ public class TestInstaShieldVisual {
             }
         }
         glfwTerminate();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         GraphicsManager.getInstance().resetState();
     }
 

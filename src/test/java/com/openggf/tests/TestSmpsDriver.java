@@ -10,7 +10,7 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.DacData;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,7 +28,7 @@ public class TestSmpsDriver {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     // A spy driver that records writes

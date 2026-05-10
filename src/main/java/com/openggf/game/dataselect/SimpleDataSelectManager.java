@@ -1,12 +1,13 @@
 package com.openggf.game.dataselect;
 
+
+import com.openggf.game.session.EngineServices;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.DebugColor;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.save.SaveManager;
 import com.openggf.game.save.SaveSlotState;
 import com.openggf.game.save.SaveSlotSummary;
@@ -40,7 +41,7 @@ public class SimpleDataSelectManager extends AbstractDataSelectProvider {
     private final PixelFontTextRenderer textRenderer = new PixelFontTextRenderer();
 
     public SimpleDataSelectManager(DataSelectHostProfile hostProfile, DataSelectSessionController controller) {
-        this(hostProfile, Path.of("saves"), RuntimeManager.currentEngineServices().configuration(), controller);
+        this(hostProfile, Path.of("saves"), EngineServices.current().configuration(), controller);
     }
 
     public SimpleDataSelectManager(DataSelectHostProfile hostProfile, Path saveRoot,

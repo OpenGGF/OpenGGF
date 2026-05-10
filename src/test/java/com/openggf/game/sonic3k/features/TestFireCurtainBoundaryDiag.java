@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.features;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.game.sonic3k.events.FireCurtainRenderState;
 import com.openggf.game.sonic3k.events.FireCurtainStage;
 import org.junit.jupiter.api.AfterEach;
@@ -19,12 +21,12 @@ public class TestFireCurtainBoundaryDiag {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     private static final int SCREEN_W = 320;

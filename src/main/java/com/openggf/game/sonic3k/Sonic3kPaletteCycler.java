@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k;
 
 import com.openggf.camera.Camera;
 import com.openggf.data.RomByteReader;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteWrite;
@@ -929,7 +928,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
 
         private boolean isIndoorPaletteCyclingActive() {
             try {
-                if (GameModuleRegistry.getCurrent().getLevelEventProvider()
+                if (GameServices.module().getLevelEventProvider()
                         instanceof Sonic3kLevelEventManager manager) {
                     var events = manager.getIczEvents();
                     return events != null && events.isIndoorPaletteCyclingActive();

@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -128,10 +127,6 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
     public IczSnowboardIntroInstance(ObjectSpawn spawn) {
         super(spawn, "ICZSnowboardIntro");
         updateDynamicSpawn(currentX, currentY);
-        AbstractPlayableSprite player = focusedPlayer();
-        if (player != null) {
-            initializePlayer(player);
-        }
     }
 
     @Override
@@ -159,13 +154,13 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (sonicSnowboardOverlayActive) {
-            PatternSpriteRenderer sonicRenderer = IczSnowboardArtLoader.sonicSnowboardRenderer();
+            PatternSpriteRenderer sonicRenderer = IczSnowboardArtLoader.sonicSnowboardRenderer(services());
             if (sonicRenderer != null && sonicRenderer.isReady()) {
                 sonicRenderer.drawFrameIndex(clampFrame(currentMappingFrame,
                         Sonic3kConstants.MAP_SONIC_SNOWBOARD_FRAMES), currentX, currentY);
             }
         } else {
-            PatternSpriteRenderer boardRenderer = IczSnowboardArtLoader.snowboardRenderer();
+            PatternSpriteRenderer boardRenderer = IczSnowboardArtLoader.snowboardRenderer(services());
             if (boardRenderer != null && boardRenderer.isReady()) {
                 boardRenderer.drawFrameIndex(clampFrame(currentMappingFrame,
                         Sonic3kConstants.MAP_SNOWBOARD_FRAMES), currentX, currentY);
@@ -293,7 +288,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         currentMappingFrame = resolveSonicSnowboardMappingFrame(player);
 
         if ((frameCounter & (QUIET_SKID_INTERVAL - 1)) == 0 && !player.getAir()) {
-            GameServices.audio().playSfx(Sonic3kSfx.SLIDE_SKID_QUIET.id);
+            services().playSfx(Sonic3kSfx.SLIDE_SKID_QUIET.id);
         }
         spawnDustIfNeeded(player);
 
@@ -352,8 +347,8 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         // ROM: Obj_LevelIntroICZ1 writes anim(a2) = #$19 on the crash release.
         player.setAnimationId(0x19);
         releasePlayerLocks(player);
-        GameServices.gameState().setScreenShakeActive(true);
-        GameServices.audio().playSfx(Sonic3kSfx.CRASH.id);
+        services().gameState().setScreenShakeActive(true);
+        services().playSfx(Sonic3kSfx.CRASH.id);
         setDestroyed(true);
     }
 
@@ -367,12 +362,12 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         dustTimer = 0;
         int count = (currentMappingFrame == 7 || currentMappingFrame == 8) ? 4 : 1;
         for (int i = 0; i < count; i++) {
-            int random = GameServices.rng().nextRaw();
+            int random = services().rng().nextRaw();
             int x = player.getCentreX() - (random & 0x0F);
             int y = player.getCentreY() + 0x14 - ((random >>> 16) & 0x0F);
             int yVel = -(random & 0x01FF);
             ObjectSpawn spawn = new ObjectSpawn(x, y, 0, 0, 0, false, y);
-            GameServices.level().getObjectManager().addDynamicObject(
+            services().objectManager().addDynamicObject(
                     new SnowboardDustInstance(spawn, x, y, -0x0100, yVel));
         }
     }
@@ -387,7 +382,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         player.setRolling(true);
         overlayAnimationId = 0;
         lastOverlayAnimationId = -1;
-        GameServices.audio().playSfx(com.openggf.audio.GameSound.JUMP);
+        services().playSfx(com.openggf.audio.GameSound.JUMP);
     }
 
     private void beginSnowboardingOverlay(AbstractPlayableSprite player) {
@@ -494,7 +489,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
     }
 
     private AbstractPlayableSprite focusedPlayer() {
-        return GameServices.camera().getFocusedSprite();
+        return services().camera().getFocusedSprite();
     }
 
     private void releasePlayerLocks() {
@@ -557,7 +552,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            PatternSpriteRenderer renderer = IczSnowboardArtLoader.dustRenderer();
+            PatternSpriteRenderer renderer = IczSnowboardArtLoader.dustRenderer(services());
             if (renderer != null && renderer.isReady()) {
                 renderer.drawFrameIndex(frame, x, y);
             }

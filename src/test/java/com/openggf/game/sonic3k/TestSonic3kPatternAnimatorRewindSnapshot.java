@@ -1,8 +1,8 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.game.session.EngineServices;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
@@ -42,7 +42,7 @@ class TestSonic3kPatternAnimatorRewindSnapshot {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GraphicsManager.getInstance().initHeadless();
     }
 

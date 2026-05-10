@@ -1,9 +1,9 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.level.Pattern;
 import com.openggf.level.WaterSystem;
-import com.openggf.game.RuntimeManager;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,12 +25,12 @@ class TestSonic2WaterSurfaceManager {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
     void shouldRenderWaterSurfaceOnlyForCpzAct2AndArzActs() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         WaterSystem waterSystem = GameServices.water();
         setWaterConfig(waterSystem, 0x0D, 0, true);
         setWaterConfig(waterSystem, 0x0D, 1, true);

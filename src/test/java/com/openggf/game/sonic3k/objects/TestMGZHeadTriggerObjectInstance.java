@@ -1,6 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -45,7 +45,7 @@ class TestMGZHeadTriggerObjectInstance {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         Sonic3kLevelTriggerManager.reset();
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
     }
@@ -53,7 +53,7 @@ class TestMGZHeadTriggerObjectInstance {
     @AfterEach
     void tearDown() {
         Sonic3kLevelTriggerManager.reset();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

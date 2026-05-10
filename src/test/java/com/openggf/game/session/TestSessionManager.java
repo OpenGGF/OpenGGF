@@ -3,12 +3,12 @@ package com.openggf.game.session;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.save.SaveSessionContext;
 import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -19,12 +19,12 @@ class TestSessionManager {
 
     @BeforeEach
     void configureServices() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
@@ -111,64 +111,55 @@ class TestSessionManager {
     }
 
     @Test
-    void runtimeManager_returnsCurrentGameplayContextFacade() {
+    void activeGameplayModeReturnsCurrentGameplayContext() {
         SessionManager.openGameplaySession(new Sonic2GameModule());
-        // After removing lazy-create-on-getCurrent, an explicit
-        // createGameplay() call is required to build the runtime.
-        com.openggf.game.RuntimeManager.createGameplay();
+        GameplayModeContext gameplay = TestEnvironment.activeGameplayMode();
 
-        assertNotNull(com.openggf.game.RuntimeManager.getCurrent());
-        assertNotNull(com.openggf.game.RuntimeManager.getCurrent().getWorldSession());
+        assertNotNull(gameplay);
+        assertNotNull(gameplay.getWorldSession());
         assertSame(SessionManager.getCurrentWorldSession(),
-                com.openggf.game.RuntimeManager.getCurrent().getWorldSession());
+                gameplay.getWorldSession());
     }
 
     @Test
-    void runtimeManager_returnsNullAfterSessionClear() {
+    void gameplayModeReturnsNullAfterSessionClear() {
         SessionManager.openGameplaySession(new Sonic2GameModule());
-        com.openggf.game.RuntimeManager.createGameplay();
-        assertNotNull(RuntimeManager.getCurrent());
+        assertNotNull(TestEnvironment.activeGameplayMode());
 
         SessionManager.clear();
 
-        assertNull(RuntimeManager.getCurrent());
+        assertNull(SessionManager.getCurrentGameplayMode());
     }
 
     @Test
-    void runtimeManager_returnsNullAfterEnteringEditorMode() {
+    void gameplayModeReturnsNullAfterEnteringEditorMode() {
         SessionManager.openGameplaySession(new Sonic2GameModule());
-        com.openggf.game.RuntimeManager.createGameplay();
-        assertNotNull(RuntimeManager.getCurrent());
+        assertNotNull(TestEnvironment.activeGameplayMode());
 
-        // Editor entry no longer leaves a runtime alive; production callers
-        // (Engine.enterEditorFromCurrentPlayer) explicitly call destroyCurrent
-        // before swapping into editor mode.
-        RuntimeManager.destroyCurrent();
         SessionManager.enterEditorMode(new EditorCursorState(128, 256));
 
-        assertNull(RuntimeManager.getCurrent());
+        assertNull(SessionManager.getCurrentGameplayMode());
     }
 
     @Test
-    void runtimeManager_createGameplayWithoutArgs_preservesBootstrapModule() {
+    void activeGameplayModePreservesBootstrapModule() {
         Sonic1GameModule module = new Sonic1GameModule();
         GameModuleRegistry.setCurrent(module);
 
-        com.openggf.game.GameRuntime runtime = RuntimeManager.createGameplay();
+        GameplayModeContext gameplay = TestEnvironment.activeGameplayMode();
 
-        assertNotNull(runtime);
-        assertSame(module, runtime.getWorldSession().getGameModule());
+        assertNotNull(gameplay);
+        assertSame(module, gameplay.getWorldSession().getGameModule());
         assertSame(module, SessionManager.requireCurrentGameModule());
     }
 
     @Test
-    void gameModuleRegistry_setCurrentDoesNotMaterializeRuntimeForActiveSession() {
+    void gameModuleRegistry_setCurrentDoesNotReplaceActiveSessionModule() {
         GameModule sessionModule = new Sonic2GameModule();
         SessionManager.openGameplaySession(sessionModule);
 
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
 
-        assertNull(RuntimeManager.getActiveRuntime());
         assertSame(sessionModule, GameModuleRegistry.getCurrent());
     }
 

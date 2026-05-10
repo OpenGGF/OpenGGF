@@ -3,7 +3,8 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.OscillationManager;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
@@ -14,6 +15,7 @@ import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import com.openggf.tests.TestEnvironment;
 
 import java.lang.reflect.Field;
 import java.util.List;
@@ -27,15 +29,15 @@ class TestSonic1MovingBlockObjectInstance {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.destroyCurrent();
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        SessionManager.clear();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         OscillationManager.resetForSonic1();
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

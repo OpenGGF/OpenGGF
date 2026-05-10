@@ -28,6 +28,7 @@ import com.openggf.graphics.FadeManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.rings.RingManager;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TerrainCollisionManager;
@@ -65,6 +66,7 @@ public final class GameplayModeContext implements ModeContext {
     private ZoneLayoutMutationPipeline zoneLayoutMutationPipeline;
 
     private BonusStageProvider activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
+    private boolean managersTornDown;
 
     private RewindRegistry rewindRegistry;
     private RewindController rewindController;
@@ -111,9 +113,8 @@ public final class GameplayModeContext implements ModeContext {
     /**
      * Attaches the core disposable gameplay-scoped managers — those without
      * inter-manager construction-order dependencies. Called by
-     * {@code RuntimeManager.createGameplay}, and again by
-     * {@code RuntimeManager.resumeParked} or test paths that recycle a mode
-     * context after destroying its runtime. Re-attachment replaces existing
+     * the session gameplay factory or test paths that recycle a mode context
+     * after destroying its managers. Re-attachment replaces existing
      * references.
      */
     public void attachGameplayManagers(Camera camera,
@@ -128,6 +129,7 @@ public final class GameplayModeContext implements ModeContext {
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
         this.rng = Objects.requireNonNull(rng, "rng");
         this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
+        this.managersTornDown = false;
 
         this.rewindRegistry = new RewindRegistry();
         this.rewindRegistry.register(camera);
@@ -263,6 +265,10 @@ public final class GameplayModeContext implements ModeContext {
 
     public LevelManager getLevelManager() {
         return levelManager;
+    }
+
+    public ObjectManager getObjectManager() {
+        return levelManager != null ? levelManager.getObjectManager() : null;
     }
 
     public ZoneRuntimeRegistry getZoneRuntimeRegistry() {
@@ -427,8 +433,7 @@ public final class GameplayModeContext implements ModeContext {
      * {@link NoOpBonusStageProvider#INSTANCE} when no bonus stage is active.
      * Owned here (gameplay-scoped) so callers can resolve it via
      * {@link com.openggf.game.session.SessionManager#getCurrentGameplayMode()}
-     * without consulting {@code RuntimeManager.getCurrent()}, which has
-     * mode-transition side effects.
+     * without consulting the temporary runtime facade.
      */
     public BonusStageProvider getActiveBonusStageProvider() {
         return activeBonusStageProvider;
@@ -445,25 +450,19 @@ public final class GameplayModeContext implements ModeContext {
 
     @Override
     public void destroy() {
-        // Manager teardown is driven by GameRuntime.destroy() via
-        // tearDownManagers() rather than this method, because the editor flow
-        // calls SessionManager.destroyCurrentMode() (which routes here) when
-        // entering editor mode while the runtime is parked — at that point
-        // the parked runtime still expects its managers to be alive on resume.
-        // Once parking is replaced by a proper world-preserving teardown, the
-        // distinction collapses and tearDownManagers() can become this method
-        // body directly.
+        tearDownManagers();
     }
 
     /**
      * Tears down all attached managers in reverse construction order.
      * Idempotent: each manager's reset is a no-op when its field is null
-     * (e.g., when destroy is invoked during a partial setup). Called by
-     * {@link com.openggf.game.GameRuntime#destroy()} only — see {@link #destroy()}
-     * for why {@code SessionManager.destroyCurrentMode} does not trigger
-     * this teardown.
+     * (e.g., when destroy is invoked during a partial setup).
      */
     public void tearDownManagers() {
+        if (managersTornDown) {
+            return;
+        }
+        managersTornDown = true;
         if (zoneLayoutMutationPipeline != null) {
             zoneLayoutMutationPipeline.clear();
         }
@@ -486,7 +485,7 @@ public final class GameplayModeContext implements ModeContext {
             zoneRuntimeRegistry.clear();
         }
         if (levelManager != null) {
-            levelManager.resetState();
+            levelManager.resetGameplayState();
         }
         if (spriteManager != null) {
             spriteManager.resetState();

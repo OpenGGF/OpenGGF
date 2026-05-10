@@ -7,8 +7,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic1.Sonic1ZoneRegistry;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.graphics.GraphicsManager;
@@ -230,13 +230,13 @@ public class TestS1DataSelectImageCacheManager {
         RgbaImage captured = new RgbaImage(1, 1, new int[] {0xFF112233});
 
         try (var cameraService = org.mockito.Mockito.mockStatic(GameServices.class);
-             var runtimeManager = org.mockito.Mockito.mockStatic(RuntimeManager.class);
+             var engineServicesStatic = org.mockito.Mockito.mockStatic(EngineServices.class);
              var screenshot = org.mockito.Mockito.mockStatic(ScreenshotCapture.class)) {
             cameraService.when(GameServices::camera).thenReturn(camera);
             cameraService.when(GameServices::level).thenReturn(levelManager);
             GraphicsManager graphicsManager = org.mockito.Mockito.mock(GraphicsManager.class);
             EngineContext engineServices = org.mockito.Mockito.mock(EngineContext.class);
-            runtimeManager.when(RuntimeManager::currentEngineServices).thenReturn(engineServices);
+            engineServicesStatic.when(EngineServices::current).thenReturn(engineServices);
             org.mockito.Mockito.when(engineServices.graphics()).thenReturn(graphicsManager);
             org.mockito.Mockito.when(graphicsManager.submitRenderThreadTask(org.mockito.ArgumentMatchers.any()))
                     .thenAnswer(invocation -> {

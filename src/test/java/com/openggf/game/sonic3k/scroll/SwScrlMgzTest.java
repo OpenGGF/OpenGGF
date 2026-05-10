@@ -1,11 +1,13 @@
 package com.openggf.game.sonic3k.scroll;
 
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.data.Rom;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.level.scroll.ZoneScrollHandler;
@@ -28,16 +30,16 @@ public class SwScrlMgzTest {
     @BeforeEach
     void setUpRuntime() {
         previousModule = GameModuleRegistry.getCurrent();
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDownRuntime() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         if (previousModule != null) {
             GameModuleRegistry.setCurrent(previousModule);

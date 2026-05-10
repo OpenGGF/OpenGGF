@@ -5,10 +5,9 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2Movie;
 import com.openggf.debug.playback.Bk2MovieLoader;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.GameplayTeamBootstrap;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.GroundSensor;
@@ -26,13 +25,13 @@ import java.nio.file.Path;
  */
 public final class HeadlessTestFixture implements TraceReplayFixture {
 
-    private final GameRuntime runtime;
+    private final GameplayModeContext gameplayMode;
     private final HeadlessTestRunner runner;
     private final AbstractPlayableSprite sprite;
 
-    private HeadlessTestFixture(GameRuntime runtime, HeadlessTestRunner runner,
+    private HeadlessTestFixture(GameplayModeContext gameplayMode, HeadlessTestRunner runner,
                                 AbstractPlayableSprite sprite) {
-        this.runtime = runtime;
+        this.gameplayMode = gameplayMode;
         this.runner = runner;
         this.sprite = sprite;
     }
@@ -83,9 +82,14 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         return GameServices.camera();
     }
 
-    /** Returns the game runtime. */
-    public GameRuntime runtime() {
-        return runtime;
+    /** Returns the active gameplay mode. */
+    public GameplayModeContext runtime() {
+        return gameplayMode;
+    }
+
+    @Override
+    public GameplayModeContext gameplayMode() {
+        return gameplayMode;
     }
 
     /** Returns the underlying headless test runner. */
@@ -260,8 +264,8 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             GameServices.collision().resolveGroundAttachment(
                     sprite, 14, () -> false);
 
-            // 12. Get runtime and create runner
-            GameRuntime runtime = RuntimeManager.getCurrent();
+            // 12. Resolve the active session context and create runner
+            GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
             HeadlessTestRunner runner = new HeadlessTestRunner(sprite);
 
             // 13. Wire BK2 recording if provided
@@ -269,7 +273,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                 runner.setBk2Movie(bk2Movie, bk2FrameOffset);
             }
 
-            return new HeadlessTestFixture(runtime, runner, sprite);
+            return new HeadlessTestFixture(gameplayMode, runner, sprite);
         }
     }
 }

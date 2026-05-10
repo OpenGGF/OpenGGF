@@ -1,6 +1,6 @@
 package com.openggf.tests;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CnzSpiralTubeInstance;
@@ -25,7 +25,7 @@ class TestS3kCnzTubeTraversalHeadless {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         com.openggf.game.session.SessionManager.clear();
     }
 
@@ -301,14 +301,14 @@ class TestS3kCnzTubeTraversalHeadless {
     private static CnzVacuumTubeInstance spawnVacuumTube(int x, int y, int subtype, int renderFlags) {
         CnzVacuumTubeInstance object = new CnzVacuumTubeInstance(
                 new ObjectSpawn(x, y, Sonic3kObjectIds.CNZ_VACUUM_TUBE, subtype, renderFlags, false, 0));
-        object.setServices(new DefaultObjectServices(RuntimeManager.getCurrent()));
+        object.setServices(TestEnvironment.objectServices());
         return object;
     }
 
     private static CnzSpiralTubeInstance spawnSpiralTube(int x, int y, int subtype) {
         CnzSpiralTubeInstance object = new CnzSpiralTubeInstance(
                 new ObjectSpawn(x, y, Sonic3kObjectIds.CNZ_SPIRAL_TUBE, subtype, 0, false, 0));
-        object.setServices(new DefaultObjectServices(RuntimeManager.getCurrent()));
+        object.setServices(TestEnvironment.objectServices());
         return object;
     }
 

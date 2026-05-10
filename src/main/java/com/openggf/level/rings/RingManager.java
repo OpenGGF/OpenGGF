@@ -4,7 +4,6 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SolidTile;
@@ -71,7 +70,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         // Feature-flag: ROM parity sources this from the current game's physics feature set.
         // S1 routes stage rings through Obj25's touch-response pipeline (Touch_Rings);
         // S2/S3K collect them via the bounding-box sweep (Touch_Rings_Test).
-        GameModule module = RuntimeManager.resolveCurrentOrBootstrapGameModule();
+        GameModule module = GameServices.currentOrBootstrapGameModule();
         PhysicsProvider physProvider = module != null ? module.getPhysicsProvider() : null;
         PhysicsFeatureSet featureSet = physProvider != null ? physProvider.getFeatureSet() : null;
         this.stageRingsUseObjectTouchCollection =
@@ -120,7 +119,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         // Lightning shield ring attraction — S3K only
         PhysicsFeatureSet featureSet = player.getPhysicsFeatureSet();
         if (featureSet == null) {
-            GameModule module = RuntimeManager.resolveCurrentOrBootstrapGameModule();
+            GameModule module = GameServices.currentOrBootstrapGameModule();
             PhysicsProvider physProvider = module != null ? module.getPhysicsProvider() : null;
             if (physProvider != null) {
                 featureSet = physProvider.getFeatureSet();

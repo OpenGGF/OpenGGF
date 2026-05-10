@@ -1,8 +1,8 @@
 package com.openggf.game.sonic2;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.render.SpecialRenderEffectContext;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
@@ -30,7 +30,7 @@ class TestSonic2SpecialRenderEffectRegistration {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -111,7 +111,7 @@ class TestSonic2SpecialRenderEffectRegistration {
 
     @Test
     void dispatchClearsDeferredSlotRequestsEvenWhenRendererIsUnavailable() throws Exception {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         Sonic2ZoneFeatureProvider provider = new Sonic2ZoneFeatureProvider();
         SpecialRenderEffectRegistry registry = new SpecialRenderEffectRegistry();
 
@@ -131,7 +131,7 @@ class TestSonic2SpecialRenderEffectRegistration {
 
     @Test
     void stagedWaterSurfaceDispatchIsSafeWhenManagerIsAbsent() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         Sonic2ZoneFeatureProvider provider = new Sonic2ZoneFeatureProvider();
         SpecialRenderEffectRegistry registry = new SpecialRenderEffectRegistry();
 

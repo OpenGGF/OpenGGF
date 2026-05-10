@@ -1,5 +1,9 @@
 package com.openggf.game.sonic3k.dataselect;
 
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -10,7 +14,6 @@ import com.openggf.data.RomManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.dataselect.DataSelectSessionController;
 import com.openggf.game.save.SaveManager;
 import com.openggf.graphics.GraphicsManager;
@@ -72,7 +75,7 @@ public final class S3kDataSelectVisualCapture {
     }
 
     public static void main(String[] args) throws Exception {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
         long window = NULL;
         try {
@@ -104,7 +107,7 @@ public final class S3kDataSelectVisualCapture {
             GL.createCapabilities();
 
             GraphicsManager.destroyForReinit();
-            RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+            EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
             GraphicsManager graphics = GraphicsManager.getInstance();
             graphics.init(Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
@@ -130,7 +133,7 @@ public final class S3kDataSelectVisualCapture {
                 }
                 GameModuleRegistry.detectAndSetModule(rom);
                 RomManager.getInstance().setRom(rom);
-                RuntimeManager.createGameplay();
+                TestEnvironment.activeGameplayMode();
                 GameServices.camera().resetState();
 
                 S3kDataSelectDataLoader loader = new S3kDataSelectDataLoader(com.openggf.data.RomByteReader.fromRom(rom));
@@ -142,7 +145,7 @@ public final class S3kDataSelectVisualCapture {
                         + " mappings=" + loader.getSaveScreenMappings().size());
 
                 SaveManager saveManager = new SaveManager(SAVE_ROOT);
-                SonicConfigurationService config = RuntimeManager.currentEngineServices().configuration();
+                SonicConfigurationService config = EngineServices.current().configuration();
                 S3kDataSelectAssetSource assets = S3kDataSelectPresentation.createDefaultAssets();
                 captureScenario(saveManager, config, graphics, assets,
                         EMPTY_OUTPUT_FILE, 0, Integer.getInteger("s3k.capture.idleFramesBeforeCapture", 20),
@@ -169,7 +172,7 @@ public final class S3kDataSelectVisualCapture {
             }
             glfwTerminate();
             GraphicsManager.getInstance().resetState();
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 

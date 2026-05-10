@@ -1,6 +1,8 @@
 package com.openggf.game;
 
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.graphics.RenderContext;
 import com.openggf.level.Palette;
@@ -23,18 +25,16 @@ class TestCrossGameFeatureProviderRefactor {
         // Clear lingering session/runtime state from prior tests in the same fork
         // so resolveHostGameId() falls back to the GameModuleRegistry bootstrap
         // default that this fixture configures via setCurrent().
-        RuntimeManager.destroyCurrent();
-        com.openggf.game.session.SessionManager.clear();
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.clear();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @AfterEach
     void cleanup() {
-        RuntimeManager.destroyCurrent();
-        com.openggf.game.session.SessionManager.clear();
+        SessionManager.clear();
         CrossGameFeatureProvider.getInstance().resetState();
         GameModuleRegistry.reset();
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @Test
