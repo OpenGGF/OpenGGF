@@ -4,10 +4,8 @@ import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameMode;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.MasterTitleScreen;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.audio.AudioManager;
 import com.openggf.data.Rom;
@@ -27,6 +25,8 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.WorldSession;
@@ -74,14 +74,13 @@ class TestEngine {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 
     @Test
     void drawMasterTitleScreenDoesNotRequireGameplayCamera() throws Exception {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         Engine engine = new Engine();
         MasterTitleScreen masterTitleScreen = mock(MasterTitleScreen.class);
 
@@ -135,7 +134,7 @@ class TestEngine {
 
     @Test
     void sonic1GameModule_exposesWarmupCapableImageCacheManager() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         Sonic1GameModule module = new Sonic1GameModule();
 
         S1DataSelectImageCacheManager manager = module.getGameService(S1DataSelectImageCacheManager.class);
@@ -148,7 +147,7 @@ class TestEngine {
 
     @Test
     void sonic2GameModule_exposesWarmupCapableImageCacheManager() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         Sonic2GameModule module = new Sonic2GameModule();
 
         S2DataSelectImageCacheManager manager = module.getGameService(S2DataSelectImageCacheManager.class);
@@ -237,30 +236,25 @@ class TestEngine {
 
     @Test
     void resolveMainPlayableSprite_prefersSelectedTeamOverConfigDuringGameplay() throws Exception {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.resetToDefaults();
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
 
         Engine engine = new Engine();
-        GameRuntime runtime = mock(GameRuntime.class);
         SpriteManager spriteManager = mock(SpriteManager.class);
         Camera camera = mock(Camera.class);
         LevelManager levelManager = mock(LevelManager.class);
 
         Knuckles knuckles = new Knuckles("knuckles", (short) 100, (short) 624);
         when(spriteManager.getSprite("knuckles")).thenReturn(knuckles);
-        when(runtime.getSpriteManager()).thenReturn(spriteManager);
-        when(runtime.getCamera()).thenReturn(camera);
-        when(runtime.getLevelManager()).thenReturn(levelManager);
 
-        setPrivateField(engine, "runtime", runtime);
+        GameplayModeContext gameplayMode = SessionManager.openGameplaySession(mock(GameModule.class),
+                SaveSessionContext.noSave("s1", new SelectedTeam("knuckles", List.of()), 0, 0));
+        setPrivateField(engine, "gameplayMode", gameplayMode);
         setPrivateField(engine, "spriteManager", spriteManager);
         setPrivateField(engine, "camera", camera);
         setPrivateField(engine, "levelManager", levelManager);
-
-        SessionManager.openGameplaySession(mock(GameModule.class),
-                SaveSessionContext.noSave("s1", new SelectedTeam("knuckles", List.of()), 0, 0));
 
         var method = Engine.class.getDeclaredMethod("resolveMainPlayableSprite");
         method.setAccessible(true);
@@ -331,17 +325,10 @@ class TestEngine {
             }
         };
 
-        GameRuntime runtime = mock(GameRuntime.class);
-        Camera camera = mock(Camera.class);
+        Camera camera = new Camera();
         SpriteManager spriteManager = mock(SpriteManager.class);
         LevelManager levelManager = mock(LevelManager.class);
-        GameStateManager gameState = mock(GameStateManager.class);
-        when(runtime.getCamera()).thenReturn(camera);
-        when(runtime.getSpriteManager()).thenReturn(spriteManager);
-        when(runtime.getLevelManager()).thenReturn(levelManager);
-        when(runtime.getGameState()).thenReturn(gameState);
-        doNothing().when(camera).setFocusedSprite(any());
-        doNothing().when(camera).updatePosition(true);
+        GameStateManager gameState = new GameStateManager();
         doReturn(false).when(spriteManager).addSprite(any());
         doAnswer(invocation -> {
             assertEquals(donorActive ? 1 : 0, cacheManager.renderTaskRuns.get());
@@ -349,13 +336,52 @@ class TestEngine {
         }).when(levelManager).loadZoneAndAct(0, 0);
         when(romDetectionService.detectAndCreateModule(rom)).thenReturn(java.util.Optional.of(module));
 
-        MockedStatic<RuntimeManager> runtimeManager = mockStatic(RuntimeManager.class, CALLS_REAL_METHODS);
-        runtimeManager.when(() -> RuntimeManager.createGameplay(any(GameplayModeContext.class)))
+        MockedStatic<GameplaySessionFactory> gameplayFactory =
+                mockStatic(GameplaySessionFactory.class, CALLS_REAL_METHODS);
+        gameplayFactory.when(() -> GameplaySessionFactory.attachManagers(
+                        any(GameplayModeContext.class), any(EngineContext.class)))
                 .thenAnswer(invocation -> {
-                    return runtime;
+                    GameplayModeContext gameplayMode = invocation.getArgument(0);
+                    gameplayMode.tearDownManagers();
+                    when(spriteManager.rewindSnapshottable()).thenReturn(
+                            new com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot>() {
+                        @Override
+                        public String key() {
+                            return "sprites";
+                        }
+
+                        @Override
+                        public com.openggf.game.rewind.snapshot.SpriteManagerSnapshot capture() {
+                            return null;
+                        }
+
+                        @Override
+                        public void restore(com.openggf.game.rewind.snapshot.SpriteManagerSnapshot snapshot) {
+                        }
+                    });
+                    gameplayMode.attachGameplayManagers(
+                            camera,
+                            new com.openggf.timer.TimerManager(),
+                            gameState,
+                            new com.openggf.graphics.FadeManager(),
+                            new com.openggf.game.GameRng(com.openggf.game.GameRng.Flavour.S1_S2),
+                            new com.openggf.game.solid.DefaultSolidExecutionRegistry());
+                    gameplayMode.attachLevelManagers(
+                            new com.openggf.level.WaterSystem(),
+                            new com.openggf.level.ParallaxManager(),
+                            mock(com.openggf.physics.TerrainCollisionManager.class),
+                            mock(com.openggf.physics.CollisionSystem.class),
+                            spriteManager,
+                            levelManager);
+                    gameplayMode.attachSharedRegistries(
+                            new com.openggf.game.zone.ZoneRuntimeRegistry(),
+                            new com.openggf.game.palette.PaletteOwnershipRegistry(),
+                            new com.openggf.game.animation.AnimatedTileChannelGraph(),
+                            new com.openggf.game.render.SpecialRenderEffectRegistry(),
+                            new com.openggf.game.render.AdvancedRenderModeController(),
+                            new com.openggf.game.mutation.ZoneLayoutMutationPipeline());
+                    return null;
                 });
-        runtimeManager.when(RuntimeManager::getCurrent).thenReturn(runtime);
-        runtimeManager.when(RuntimeManager::getActiveRuntime).thenReturn(runtime);
 
         MockedStatic<CrossGameFeatureProvider> donor = mockStatic(CrossGameFeatureProvider.class);
         donor.when(CrossGameFeatureProvider::isS3kDonorActive).thenReturn(donorActive);
@@ -367,7 +393,7 @@ class TestEngine {
                 levelManager,
                 cacheManager,
                 donor,
-                runtimeManager);
+                gameplayFactory);
     }
 
     private static final class BootstrapHarness implements AutoCloseable {
@@ -376,26 +402,26 @@ class TestEngine {
         final LevelManager levelManager;
         final TrackingS1ImageCacheManager cacheManager;
         final MockedStatic<CrossGameFeatureProvider> donor;
-        final MockedStatic<RuntimeManager> runtimeManager;
+        final MockedStatic<GameplaySessionFactory> gameplayFactory;
 
         BootstrapHarness(Engine engine,
                          GraphicsManager graphics,
                          LevelManager levelManager,
                          TrackingS1ImageCacheManager cacheManager,
                          MockedStatic<CrossGameFeatureProvider> donor,
-                         MockedStatic<RuntimeManager> runtimeManager) {
+                         MockedStatic<GameplaySessionFactory> gameplayFactory) {
             this.engine = engine;
             this.graphics = graphics;
             this.levelManager = levelManager;
             this.cacheManager = cacheManager;
             this.donor = donor;
-            this.runtimeManager = runtimeManager;
+            this.gameplayFactory = gameplayFactory;
         }
 
         @Override
         public void close() {
             donor.close();
-            runtimeManager.close();
+            gameplayFactory.close();
         }
     }
 

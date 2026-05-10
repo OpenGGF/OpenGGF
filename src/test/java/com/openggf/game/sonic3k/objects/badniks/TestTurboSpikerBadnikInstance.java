@@ -1,6 +1,6 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -42,13 +42,13 @@ public class TestTurboSpikerBadnikInstance {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

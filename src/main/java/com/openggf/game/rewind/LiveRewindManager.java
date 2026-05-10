@@ -5,9 +5,9 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameMode;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFontTextRenderer;
 
@@ -23,7 +23,7 @@ public final class LiveRewindManager {
     private final SonicConfigurationService config;
     private final LiveRewindHudOverlay hudOverlay;
 
-    private GameRuntime installedRuntime;
+    private GameplayModeContext installedGameplayMode;
     private LiveRewindInputSource inputSource;
     private RewindController rewindController;
     private RewindSpeedController speedController = RewindSpeedController.disabled();
@@ -106,21 +106,21 @@ public final class LiveRewindManager {
     }
 
     private boolean ensureInstalled() {
-        GameRuntime runtime = RuntimeManager.getCurrent();
-        if (runtime == null || runtime.getGameplayModeContext() == null) {
+        GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode == null) {
             clear();
             return false;
         }
-        if (runtime == installedRuntime && rewindController != null && inputSource != null) {
+        if (gameplayMode == installedGameplayMode && rewindController != null && inputSource != null) {
             return true;
         }
         inputSource = new LiveRewindInputSource();
-        runtime.getGameplayModeContext().installPlaybackController(
+        gameplayMode.installPlaybackController(
                 inputSource,
                 new LiveRewindStepper(inputSource, config),
                 KEYFRAME_INTERVAL);
-        rewindController = runtime.getGameplayModeContext().getRewindController();
-        installedRuntime = runtime;
+        rewindController = gameplayMode.getRewindController();
+        installedGameplayMode = gameplayMode;
         speedController = RewindSpeedController.fromConfig(config);
         rewinding = false;
         return rewindController != null;
@@ -167,7 +167,7 @@ public final class LiveRewindManager {
         if (rewinding && rewindController != null) {
             cleanupPresentationAfterRealtimeRewind(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
         }
-        installedRuntime = null;
+        installedGameplayMode = null;
         inputSource = null;
         rewindController = null;
         speedController.reset();

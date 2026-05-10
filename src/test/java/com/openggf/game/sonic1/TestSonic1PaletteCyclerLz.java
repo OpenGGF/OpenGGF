@@ -9,8 +9,9 @@ import com.openggf.level.Pattern;
 import com.openggf.level.SolidTile;
 import com.openggf.level.rings.RingSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,7 +52,7 @@ public class TestSonic1PaletteCyclerLz {
 
     @Test
     public void firstUpdateAppliesLzWaterfallAndConveyorToNormalPalettes() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             TestLevel level = new TestLevel();
             Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState);
@@ -67,13 +68,13 @@ public class TestSonic1PaletteCyclerLz {
             assertColorMatches(PAL_LZ_CYC2, 8, level.getPalette(3), 12);
             assertColorMatches(PAL_LZ_CYC2, 10, level.getPalette(3), 13);
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     public void firstUpdateAppliesUnderwaterWaterfallAndConveyorPalettes() throws Exception {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             TestLevel level = new TestLevel();
             Sonic1PaletteCycler cycler = new Sonic1PaletteCycler(level, 0x01, conveyorState);
@@ -91,13 +92,13 @@ public class TestSonic1PaletteCyclerLz {
             assertColorMatches(PAL_LZ_CYC3, 8, underwater[3], 12);
             assertColorMatches(PAL_LZ_CYC3, 10, underwater[3], 13);
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 
     @Test
     public void reversedConveyorUsesOppositeFrameOrder() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         try {
             TestLevel level = new TestLevel();
             conveyorState.setReversed(true);
@@ -109,7 +110,7 @@ public class TestSonic1PaletteCyclerLz {
             assertColorMatches(PAL_LZ_CYC2, 14, level.getPalette(3), 12);
             assertColorMatches(PAL_LZ_CYC2, 16, level.getPalette(3), 13);
         } finally {
-            RuntimeManager.destroyCurrent();
+            SessionManager.clear();
         }
     }
 

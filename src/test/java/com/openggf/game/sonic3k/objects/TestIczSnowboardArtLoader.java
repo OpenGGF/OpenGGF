@@ -8,6 +8,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.util.PatternDecompressor;
@@ -60,7 +61,7 @@ class TestIczSnowboardArtLoader {
                 .withZoneAndAct(ZONE_ICZ, ACT_1)
                 .build();
 
-        PatternSpriteRenderer renderer = IczSnowboardArtLoader.snowboardRenderer();
+        PatternSpriteRenderer renderer = IczSnowboardArtLoader.snowboardRenderer(TestEnvironment.objectServices());
         renderer.drawFrameIndex(8, 0, 0);
 
         Pattern[] renderedBank = rendererPatterns(renderer);

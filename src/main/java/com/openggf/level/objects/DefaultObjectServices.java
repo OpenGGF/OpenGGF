@@ -15,7 +15,6 @@ import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameRng;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
@@ -26,6 +25,7 @@ import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.WorldSession;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
@@ -41,11 +41,8 @@ import java.util.Objects;
 import java.util.List;
 
 /**
- * Production implementation of {@link ObjectServices} backed by {@link GameRuntime}.
+ * Production implementation of {@link ObjectServices} backed by gameplay session managers.
  * A single instance is held by {@link ObjectManager} and shared across all objects.
- *
- * <p>The constructor accepts a {@link GameRuntime} reference so that
- * every runtime-owned method reads from the runtime container.</p>
  */
 public class DefaultObjectServices implements ObjectServices {
 
@@ -65,20 +62,21 @@ public class DefaultObjectServices implements ObjectServices {
     private final BonusStageProvider bonusStageProvider;
 
     /**
-     * Primary constructor backed by a GameRuntime.
+     * Primary constructor backed by the session-owned gameplay context.
      */
-    public DefaultObjectServices(GameRuntime runtime) {
-        this(Objects.requireNonNull(runtime, "runtime").getLevelManager(),
-                runtime.getCamera(),
-                runtime.getGameState(),
-                runtime.getSpriteManager(),
-                runtime.getFadeManager(),
-                runtime.getWaterSystem(),
-                runtime.getParallaxManager(),
-                runtime.getWorldSession(),
-                runtime.getRng(),
-                runtime.getEngineServices(),
-                runtime.getActiveBonusStageProvider());
+    public DefaultObjectServices(GameplayModeContext gameplayMode,
+                                 EngineContext engineServices) {
+        this(Objects.requireNonNull(gameplayMode, "gameplayMode").getLevelManager(),
+                gameplayMode.getCamera(),
+                gameplayMode.getGameStateManager(),
+                gameplayMode.getSpriteManager(),
+                gameplayMode.getFadeManager(),
+                gameplayMode.getWaterSystem(),
+                gameplayMode.getParallaxManager(),
+                gameplayMode.getWorldSession(),
+                gameplayMode.getRng(),
+                engineServices,
+                gameplayMode.getActiveBonusStageProvider());
     }
 
     public DefaultObjectServices(LevelManager levelManager,

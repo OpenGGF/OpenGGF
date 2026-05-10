@@ -1,5 +1,7 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.session.EngineContext;
@@ -25,15 +27,15 @@ class TestSpindashGating {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         SessionManager.clear();
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
@@ -49,9 +51,9 @@ class TestSpindashGating {
     @MethodSource("spindashGatingProvider")
     void spindashEnabledMatchesModule(GameModule module, boolean expectedEnabled, String label) {
         GameModuleRegistry.setCurrent(module);
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        RuntimeManager.createGameplay();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
 
         PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
@@ -69,9 +71,9 @@ class TestSpindashGating {
     @Test
     void sonic1Module_spindashFlagNeverSet() {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        RuntimeManager.createGameplay();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
 
         assertFalse(sprite.getSpindash(), "Spindash should not be active");
@@ -80,16 +82,16 @@ class TestSpindashGating {
     @Test
     void moduleSwitch_updatesFeatureSet() {
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        RuntimeManager.createGameplay();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
         assertTrue(sprite.getPhysicsFeatureSet().spindashEnabled(), "Initially S2 spindash");
 
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
-        RuntimeManager.destroyCurrent();
         SessionManager.clear();
-        RuntimeManager.createGameplay();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
         sprite.resetState();
         assertFalse(sprite.getPhysicsFeatureSet().spindashEnabled(),
                 "After switch to S1, spindash disabled");

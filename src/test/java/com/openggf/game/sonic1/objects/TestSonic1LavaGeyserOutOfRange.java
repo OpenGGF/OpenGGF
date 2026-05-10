@@ -6,13 +6,15 @@ import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.TestEnvironment;
 
 import java.util.List;
 
@@ -43,8 +45,8 @@ public class TestSonic1LavaGeyserOutOfRange {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
         Camera camera = GameServices.camera();
         camera.setX((short) 0);
@@ -54,7 +56,7 @@ public class TestSonic1LavaGeyserOutOfRange {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

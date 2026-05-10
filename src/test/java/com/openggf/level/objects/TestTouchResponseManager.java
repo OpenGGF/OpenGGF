@@ -1,9 +1,9 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.openggf.game.RuntimeManager;
 import com.openggf.graphics.GLCommand;
 import org.mockito.Mockito;
 import com.openggf.game.DamageCause;
@@ -13,9 +13,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.camera.Camera;
-
 import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -77,7 +75,7 @@ public class TestTouchResponseManager {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     // ==================== Overlap Detection Tests ====================

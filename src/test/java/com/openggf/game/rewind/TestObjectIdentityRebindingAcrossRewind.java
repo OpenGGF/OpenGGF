@@ -1,7 +1,6 @@
 package com.openggf.game.rewind;
 
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.level.objects.ObjectManager;
@@ -111,8 +110,7 @@ class TestObjectIdentityRebindingAcrossRewind {
                 "allocateChildSlots must return exactly 2 slots");
 
         // 4. Capture snapshot A — must include our synthetic parent entry
-        GameplayModeContext gameplayMode =
-                RuntimeManager.getCurrent().getGameplayModeContext();
+        GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
         assertNotNull(gameplayMode, "GameplayModeContext must be available");
         RewindRegistry registry = gameplayMode.getRewindRegistry();
         assertNotNull(registry, "RewindRegistry must be non-null");

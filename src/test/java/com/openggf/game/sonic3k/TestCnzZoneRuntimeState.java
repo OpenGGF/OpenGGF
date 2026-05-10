@@ -4,7 +4,6 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.RuntimeManager;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -23,7 +22,7 @@ class TestCnzZoneRuntimeState {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
     }
 

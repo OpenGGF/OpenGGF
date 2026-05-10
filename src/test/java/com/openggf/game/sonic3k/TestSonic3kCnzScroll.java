@@ -4,7 +4,6 @@ import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents.BossBackgroundMode;
@@ -40,13 +39,13 @@ public class TestSonic3kCnzScroll {
     @BeforeEach
     public void setUp() {
         TestEnvironment.resetAll();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
 
         Sonic3kGameModule module = new Sonic3kGameModule();
         GameModuleRegistry.setCurrent(module);
         SessionManager.openGameplaySession(module);
-        camera = RuntimeManager.createGameplay(SessionManager.getCurrentGameplayMode()).getCamera();
+        camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.setLevelStarted(true);
 
         levelEvents = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
@@ -62,7 +61,7 @@ public class TestSonic3kCnzScroll {
         if (camera != null) {
             camera.setShakeOffsets(0, 0);
         }
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
     }
 

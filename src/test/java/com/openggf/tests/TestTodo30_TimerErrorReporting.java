@@ -1,10 +1,10 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.timer.AbstractTimer;
 import com.openggf.timer.TimerManager;
 
@@ -27,7 +27,7 @@ public class TestTodo30_TimerErrorReporting {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         manager = GameServices.timers();
         manager.resetState();
     }
@@ -35,7 +35,7 @@ public class TestTodo30_TimerErrorReporting {
     @AfterEach
     public void tearDown() {
         manager.resetState();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     /** A timer that always fails (returns false from perform()). */

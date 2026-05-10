@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -47,7 +49,7 @@ class TestMgzMinibossSpikeArt {
 
         MgzMinibossInstance boss = new MgzMinibossInstance(
                 new com.openggf.level.objects.ObjectSpawn(0x2D80, 0x0100, Sonic3kObjectIds.MGZ_MINIBOSS, 0, 0, false, 0));
-        boss.setServices(new com.openggf.level.objects.DefaultObjectServices(com.openggf.game.RuntimeManager.getCurrent()));
+        boss.setServices(com.openggf.tests.TestEnvironment.objectServices());
         boss.update(0, (com.openggf.game.PlayableEntity) GameServices.camera().getFocusedSprite());
 
         ObjectRenderManager renderManager = GameServices.level().getObjectRenderManager();

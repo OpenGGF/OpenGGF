@@ -1,21 +1,19 @@
 package com.openggf.level.scroll;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import com.openggf.game.sonic2.scroll.ParallaxTables;
 import com.openggf.game.sonic2.scroll.SwScrlMcz;
 import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import com.openggf.game.sonic2.scroll.ParallaxTables;
 import com.openggf.game.sonic2.scroll.SwScrlMcz;
-
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.scroll.SwScrlMcz;
 import com.openggf.game.sonic2.scroll.ParallaxTables;
 import com.openggf.game.sonic2.scroll.SwScrlMcz;
-
 import static org.junit.jupiter.api.Assertions.*;
 import com.openggf.game.sonic2.scroll.ParallaxTables;
 import com.openggf.game.sonic2.scroll.SwScrlMcz;
@@ -43,7 +41,7 @@ public class SwScrlMczTest {
 
     @BeforeEach
     public void setUp() throws IOException {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         mockRom = new MockMczRom();
         ParallaxTables tables = new ParallaxTables(mockRom);
         handler = new SwScrlMcz(tables);
@@ -51,7 +49,7 @@ public class SwScrlMczTest {
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     // ==================== Row Heights Table Tests ====================

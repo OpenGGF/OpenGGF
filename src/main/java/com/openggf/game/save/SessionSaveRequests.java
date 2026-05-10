@@ -1,6 +1,5 @@
 package com.openggf.game.save;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 
 import java.io.IOException;
@@ -26,8 +25,8 @@ public final class SessionSaveRequests {
         try {
             worldSession.getSaveSessionContext().requestSave(
                     reason,
-                    new RuntimeSaveContext(
-                            GameServices.runtimeOrNull(),
+                    RuntimeSaveContext.forGameplayMode(
+                            SessionManager.getCurrentGameplayMode(),
                             worldSession.getSaveSessionContext()),
                     worldSession.getGameModule().getSaveSnapshotProvider(),
                     SAVE_MANAGER);

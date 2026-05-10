@@ -1,21 +1,21 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.physics.Direction;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import java.lang.reflect.Field;
 import java.util.Arrays;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -25,13 +25,13 @@ class TestSidekickCpuFollowParity {
 
     @BeforeEach
     void configureRuntime() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDownRuntime() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     static class TestableSprite extends AbstractPlayableSprite {

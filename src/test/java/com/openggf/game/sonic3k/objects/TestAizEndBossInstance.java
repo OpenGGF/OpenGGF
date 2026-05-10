@@ -1,11 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.palette.PaletteSurface;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -50,7 +50,7 @@ class TestAizEndBossInstance {
     void tearDown() throws Exception {
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
         constructionContext().remove();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

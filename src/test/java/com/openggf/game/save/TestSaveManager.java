@@ -110,7 +110,7 @@ class TestSaveManager {
         SaveSessionContext ctx = SaveSessionContext.noSave("s3k",
                 new SelectedTeam("sonic", java.util.List.of()), 0, 0);
         ctx.requestSave(SaveReason.PROGRESSION_SAVE,
-                new RuntimeSaveContext(null, ctx),
+                RuntimeSaveContext.forGameplayMode(null, ctx),
                 (reason, runtime) -> java.util.Map.of("zone", 0, "act", 1),
                 manager);
         assertTrue(Files.notExists(root.resolve("s3k").resolve("slot1.json")));

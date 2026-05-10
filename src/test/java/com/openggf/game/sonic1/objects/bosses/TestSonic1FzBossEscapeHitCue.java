@@ -1,7 +1,7 @@
 package com.openggf.game.sonic1.objects.bosses;
 
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.BossStateContext;
+import com.openggf.tests.TestEnvironment;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -24,12 +25,12 @@ public class TestSonic1FzBossEscapeHitCue {
 
     @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test

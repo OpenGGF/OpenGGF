@@ -1,6 +1,6 @@
 package com.openggf.trace.replay;
 
-import com.openggf.game.GameRuntime;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
@@ -11,7 +11,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 public interface TraceReplayFixture {
     AbstractPlayableSprite sprite();
 
-    GameRuntime runtime();
+    GameplayModeContext gameplayMode();
 
     /** Run one gameplay tick using the next BK2 input. Returns the mask. */
     int stepFrameFromRecording();

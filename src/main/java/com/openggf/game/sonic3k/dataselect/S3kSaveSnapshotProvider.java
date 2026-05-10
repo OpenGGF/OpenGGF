@@ -10,13 +10,14 @@ import java.util.Map;
 
 /**
  * Captures S3K game state into a map suitable for save file serialization.
- * When the runtime is available, reads live game state (lives, emeralds);
+ * When the gameplay mode is available, reads live game state (lives, emeralds);
  * when null (e.g., fresh slot start), uses defaults (3 lives, 0 emeralds).
  */
 public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
 
     @Override
     public Map<String, Object> capture(SaveReason reason, RuntimeSaveContext context) {
+        boolean hasLiveState = context.hasLiveGameplayState();
         Map<String, Object> payload = new LinkedHashMap<>();
         var save = context.saveSessionContext();
         boolean requiresRuntime = switch (reason) {
@@ -24,25 +25,25 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
                  PROGRESSION_SAVE, LIVES_CONTINUES_SAVE -> true;
             case NEW_SLOT_START -> false;
         };
-        if (requiresRuntime && context.runtime() == null) {
-            throw new IllegalStateException("Save reason " + reason + " requires a live runtime");
+        if (requiresRuntime && !hasLiveState) {
+            throw new IllegalStateException("Save reason " + reason + " requires a live runtime/gameplay mode");
         }
-        int zone = context.runtime() == null ? save.startZone()
-                : context.runtime().getLevelManager().getCurrentZone();
-        int act = context.runtime() == null ? save.startAct()
-                : context.runtime().getLevelManager().getCurrentAct();
+        int zone = !hasLiveState ? save.startZone()
+                : context.levelManager().getCurrentZone();
+        int act = !hasLiveState ? save.startAct()
+                : context.levelManager().getCurrentAct();
         payload.put("zone", zone);
         payload.put("act", act);
         payload.put("mainCharacter", save.selectedTeam().mainCharacter());
         payload.put("sidekicks", save.selectedTeam().sidekicks());
-        int lives = context.runtime() == null ? 3
-                : context.runtime().getGameState().getLives();
-        int continues = context.runtime() == null ? 0
-                : context.runtime().getGameState().getContinues();
-        List<Integer> chaosEmeralds = context.runtime() == null ? List.of()
-                : context.runtime().getGameState().getCollectedChaosEmeraldIndices();
-        List<Integer> superEmeralds = context.runtime() == null ? List.of()
-                : context.runtime().getGameState().getCollectedSuperEmeraldIndices();
+        int lives = !hasLiveState ? 3
+                : context.gameState().getLives();
+        int continues = !hasLiveState ? 0
+                : context.gameState().getContinues();
+        List<Integer> chaosEmeralds = !hasLiveState ? List.of()
+                : context.gameState().getCollectedChaosEmeraldIndices();
+        List<Integer> superEmeralds = !hasLiveState ? List.of()
+                : context.gameState().getCollectedSuperEmeraldIndices();
         boolean clear = save.isClear();
         payload.put("lives", lives);
         payload.put("continues", continues);

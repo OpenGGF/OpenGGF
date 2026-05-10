@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +26,7 @@ public class TestHybridPhysicsFeatureSet {
     @AfterEach
     public void tearDown() {
         CrossGameFeatureProvider.getInstance().resetState();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 

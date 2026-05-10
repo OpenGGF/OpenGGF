@@ -7,9 +7,11 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
 import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.game.GameMode;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.graphics.FadeManager;
+import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +31,7 @@ class TestLiveRewindManagerAudioCleanup {
 
     @BeforeEach
     void setUp() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, true);
         audio = AudioManager.getInstance();
@@ -43,12 +45,12 @@ class TestLiveRewindManagerAudioCleanup {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);
         audio.resetState();
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
     void defaultLiveRewindStepsOneFramePerHeldVisualFrame() throws Exception {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         LiveRewindManager manager = new LiveRewindManager(config);
         RewindController controller = new TestControllerBuilder().atFrame(5);
         installTestController(manager, controller);
@@ -64,8 +66,7 @@ class TestLiveRewindManagerAudioCleanup {
 
     @Test
     void heldLiveRewindFreezesFadePresentationUntilReleaseCleanup() throws Exception {
-        RuntimeManager.createGameplay();
-        FadeManager fadeManager = RuntimeManager.getCurrent().getFadeManager();
+        FadeManager fadeManager = TestEnvironment.activeGameplayMode().getFadeManager();
         LiveRewindManager manager = new LiveRewindManager(config);
         RewindController controller = new TestControllerBuilder().atFrame(5);
         installTestController(manager, controller);
@@ -88,7 +89,7 @@ class TestLiveRewindManagerAudioCleanup {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ACCELERATION, 1.0);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_DECELERATION, 0.5);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS, 3.0);
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         LiveRewindManager manager = new LiveRewindManager(config);
         RewindController controller = new TestControllerBuilder().atFrame(8);
         installTestController(manager, controller);
@@ -135,7 +136,7 @@ class TestLiveRewindManagerAudioCleanup {
     }
 
     private static void installTestController(LiveRewindManager manager, RewindController controller) throws Exception {
-        setField(manager, "installedRuntime", RuntimeManager.getCurrent());
+        setField(manager, "installedGameplayMode", TestEnvironment.activeGameplayMode());
         setField(manager, "inputSource", new LiveRewindInputSource());
         setField(manager, "rewindController", controller);
         setField(manager, "speedController",

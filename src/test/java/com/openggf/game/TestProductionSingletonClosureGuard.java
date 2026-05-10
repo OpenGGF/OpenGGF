@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import org.junit.jupiter.api.Test;
 
@@ -65,6 +66,16 @@ public class TestProductionSingletonClosureGuard {
     private static final String ENGINE_SERVICES_LOCATOR = "RuntimeManager.getEngineServices(";
     private static final String ENGINE_SERVICES_LOCATOR_ALIAS = "RuntimeManager.currentEngineServices(";
     private static final String RUNTIME_CURRENT_LOCATOR = "RuntimeManager.getCurrent(";
+    private static final String RUNTIME_ACTIVE_LOCATOR = "RuntimeManager.getActiveRuntime(";
+    private static final String RUNTIME_CREATE_GAMEPLAY = "RuntimeManager.createGameplay(";
+    private static final String GAME_SERVICES_RUNTIME_OR_NULL = "GameServices.runtimeOrNull(";
+    private static final List<String> RUNTIME_CURRENT_LOCATOR_ALLOWLIST = List.of();
+    private static final List<String> RUNTIME_ACTIVE_LOCATOR_ALLOWLIST = List.of();
+    private static final List<String> RUNTIME_CREATE_GAMEPLAY_ALLOWLIST = List.of();
+    private static final List<String> GAME_SERVICES_RUNTIME_OR_NULL_ALLOWLIST = List.of();
+    private static final String GAME_RUNTIME_REFERENCE = "GameRuntime";
+    private static final String NEW_GAME_RUNTIME = "new GameRuntime(";
+    private static final List<String> GAME_RUNTIME_COMPATIBILITY_SURFACE = List.of();
     private static final String EDITOR_RENDERER_PACKAGE = "com/openggf/editor/render/";
     private static final String ABSTRACT_LEVEL_INIT_PROFILE =
             "com/openggf/game/AbstractLevelInitProfile.java";
@@ -189,8 +200,9 @@ public class TestProductionSingletonClosureGuard {
             "com/openggf/data/RomManager.java"
     );
     private static final List<String> LEGACY_BOOTSTRAP_BRIDGE_ALLOWLIST = List.of(
-            "com/openggf/game/EngineContext.java",
-            "com/openggf/Engine.java"
+            "com/openggf/Engine.java",
+            "com/openggf/game/session/EngineContext.java",
+            "com/openggf/game/session/EngineServices.java"
     );
 
     @Test
@@ -268,6 +280,118 @@ public class TestProductionSingletonClosureGuard {
 
         if (!violations.isEmpty()) {
             fail("Found legacy bootstrap bridge usage outside the allowlist:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    public void runtimeFacadeLocatorsDoNotSpreadBeyondCurrentMigrationSurface() throws IOException {
+        Path srcMain = findSourceRoot();
+        if (srcMain == null) {
+            return;
+        }
+
+        List<String> violations = new ArrayList<>();
+        Files.walk(srcMain)
+                .filter(path -> path.toString().endsWith(".java"))
+                .filter(path -> !RUNTIME_CURRENT_LOCATOR_ALLOWLIST.contains(
+                        srcMain.relativize(path).toString().replace('\\', '/')))
+                .forEach(path -> scanFile(srcMain, path, violations,
+                        List.of(RUNTIME_CURRENT_LOCATOR)));
+
+        Files.walk(srcMain)
+                .filter(path -> path.toString().endsWith(".java"))
+                .filter(path -> !RUNTIME_ACTIVE_LOCATOR_ALLOWLIST.contains(
+                        srcMain.relativize(path).toString().replace('\\', '/')))
+                .forEach(path -> scanFile(srcMain, path, violations,
+                        List.of(RUNTIME_ACTIVE_LOCATOR)));
+
+        if (!violations.isEmpty()) {
+            fail("Found RuntimeManager runtime-facade locator usage outside the migration allowlist:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    public void runtimeFacadeCreationDoesNotSpreadBeyondCurrentEngineAdapter() throws IOException {
+        Path srcMain = findSourceRoot();
+        if (srcMain == null) {
+            return;
+        }
+
+        List<String> violations = new ArrayList<>();
+        Files.walk(srcMain)
+                .filter(path -> path.toString().endsWith(".java"))
+                .filter(path -> !RUNTIME_CREATE_GAMEPLAY_ALLOWLIST.contains(
+                        srcMain.relativize(path).toString().replace('\\', '/')))
+                .forEach(path -> scanFile(srcMain, path, violations,
+                        List.of(RUNTIME_CREATE_GAMEPLAY)));
+
+        if (!violations.isEmpty()) {
+            fail("Found RuntimeManager.createGameplay() usage after facade removal:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    public void gameRuntimeReferencesDoNotReturnToProductionCode() throws IOException {
+        Path srcMain = findSourceRoot();
+        if (srcMain == null) {
+            return;
+        }
+
+        List<String> violations = new ArrayList<>();
+        Files.walk(srcMain)
+                .filter(path -> path.toString().endsWith(".java"))
+                .filter(path -> !GAME_RUNTIME_COMPATIBILITY_SURFACE.contains(
+                        srcMain.relativize(path).toString().replace('\\', '/')))
+                .forEach(path -> scanFile(srcMain, path, violations,
+                        List.of(GAME_RUNTIME_REFERENCE, NEW_GAME_RUNTIME)));
+
+        if (!violations.isEmpty()) {
+            fail("Found GameRuntime reference after facade removal:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    public void gameServicesRuntimeOrNullDoesNotSpreadBeyondCurrentMigrationSurface() throws IOException {
+        Path srcMain = findSourceRoot();
+        if (srcMain == null) {
+            return;
+        }
+
+        List<String> violations = new ArrayList<>();
+        Files.walk(srcMain)
+                .filter(path -> path.toString().endsWith(".java"))
+                .filter(path -> !GAME_SERVICES_RUNTIME_OR_NULL_ALLOWLIST.contains(
+                        srcMain.relativize(path).toString().replace('\\', '/')))
+                .forEach(path -> scanFile(srcMain, path, violations,
+                        List.of(GAME_SERVICES_RUNTIME_OR_NULL)));
+
+        if (!violations.isEmpty()) {
+            fail("Found GameServices.runtimeOrNull() usage outside the migration allowlist:\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    public void runtimeManagerEngineServicesAccessDoesNotSpreadBeyondAdapter() throws IOException {
+        Path srcMain = findSourceRoot();
+        if (srcMain == null) {
+            return;
+        }
+
+        List<String> violations = new ArrayList<>();
+        Files.walk(srcMain)
+                .filter(path -> path.toString().endsWith(".java"))
+                .filter(path -> !"com/openggf/game/RuntimeManager.java".equals(
+                        srcMain.relativize(path).toString().replace('\\', '/')))
+                .forEach(path -> scanFile(srcMain, path, violations,
+                        List.of(ENGINE_SERVICES_LOCATOR, ENGINE_SERVICES_LOCATOR_ALIAS)));
+
+        if (!violations.isEmpty()) {
+            fail("Found RuntimeManager engine-services access outside the compatibility adapter:\n  "
                     + String.join("\n  ", violations));
         }
     }

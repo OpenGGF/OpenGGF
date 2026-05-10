@@ -17,7 +17,6 @@ import java.util.List;
 public class ShieldObjectInstance extends AbstractObjectInstance implements PowerUpObject {
     @RewindTransient(reason = "player binding is structural and restored by the power-up spawner")
     private final PlayableEntity player;
-    @RewindTransient(reason = "renderer is structural GL/art state selected by live object services")
     private final PatternSpriteRenderer renderer;
 
     // S2 animation from disassembly (Ani_obj38): 5, 0, 5, 1, 5, 2, 5, 3, 5, 4

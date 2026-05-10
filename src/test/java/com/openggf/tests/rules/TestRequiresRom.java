@@ -1,10 +1,12 @@
 package com.openggf.tests.rules;
 
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
@@ -26,9 +28,9 @@ class TestRequiresRom {
 
     @AfterEach
     void tearDown() {
-        RuntimeManager.configureEngineServices(EngineContext.fromLegacySingletonsForBootstrap());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         RomManager.getInstance().setRom(null);
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }
@@ -53,7 +55,7 @@ class TestRequiresRom {
         assertEquals(target.expectedModuleId(), GameModuleRegistry.getCurrent().getGameId().code());
         assertEquals(target.expectedModuleId(), SessionManager.requireCurrentGameModule().getGameId().code());
         assertEquals(target.expectedModuleId(),
-                RuntimeManager.getCurrent().getWorldSession().getGameModule().getGameId().code());
+                TestEnvironment.activeGameplayMode().getWorldSession().getGameModule().getGameId().code());
         assertSame(target.rom(), com.openggf.tests.TestEnvironment.currentRom());
     }
 
