@@ -34,12 +34,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class TestNoServicesInObjectConstructors {
 
     /** Packages containing object instance classes to scan. */
-    private static final String[] OBJECT_PACKAGES = {
-            "com/openggf/game/sonic1/objects",
-            "com/openggf/game/sonic2/objects",
-            "com/openggf/game/sonic3k/objects",
-            "com/openggf/level/objects",
-    };
+    private static final String[] OBJECT_PACKAGES = ObjectGuardSourceScanner.OBJECT_PACKAGE_PATHS;
 
     /**
      * Objects whose constructors do NOT call services(), so

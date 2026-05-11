@@ -4351,10 +4351,8 @@ public class ObjectManager {
                 overlapping = bufferB;
                 building = bufferA;
             }
-            // Resolve sidekick PlayableEntity refs from the live SpriteManager.
-            com.openggf.sprites.managers.SpriteManager sm =
-                    com.openggf.game.GameServices.spritesOrNull();
-            if (sm == null) return;
+            // Resolve sidekick PlayableEntity refs from the injected live SpriteManager.
+            com.openggf.sprites.managers.SpriteManager sm = objectManager.services().spriteManager();
             for (var skEntry : state.sidekicks()) {
                 com.openggf.sprites.Sprite sprite = sm.getSprite(skEntry.sidekickCode());
                 if (!(sprite instanceof PlayableEntity pe)) continue;

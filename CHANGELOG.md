@@ -21,7 +21,11 @@ All notable changes to the OpenGGF project are documented in this file.
   baseline. Strengthens the object-service migration guard with one
   consolidated scanner that covers game object packages and shared object
   infrastructure for direct global runtime access, leaving only documented
-  bridge exceptions.
+  line-level bridge exceptions. Shared object guard helpers now live in one
+  test utility, `ObjectManager` resolves rewind overlap sidekicks through
+  injected `ObjectServices`, and the contributor guide documents the object
+  service access contract. The shared-layer frozen ArchUnit baseline is also
+  refreshed for the current `DefaultPowerUpSpawner` lambda bytecode form.
 - **ArchUnit architecture guard adoption.** Adds the ArchUnit JUnit 5 test
   dependency and bytecode-level architecture rules for the existing dependency
   invariants around rewind snapshot interfaces, shared/service boundaries,

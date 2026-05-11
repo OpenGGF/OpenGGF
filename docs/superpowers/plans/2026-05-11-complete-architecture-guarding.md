@@ -180,6 +180,15 @@ Primary gaps:
   `level.objects` sources. The scanner fails direct `GameServices`,
   `EngineServices`, runtime fallback, `GameModuleRegistry`, and monitored
   singleton access outside documented object-service bridge exceptions.
+- Completed object-service guard follow-ups: shared guard scanner utilities now
+  live in `ObjectGuardSourceScanner`; global runtime bridge exceptions are
+  source-line-level entries with reasons instead of whole-class trust; the
+  `ObjectManager` rewind overlap restore path now resolves sidekicks through
+  injected `ObjectServices.spriteManager()`; and
+  `docs/guide/contributing/architecture.md` documents the object service access
+  contract for contributors. The shared-layer frozen ArchUnit baseline now also
+  records the current `DefaultPowerUpSpawner` lambda-form S3K shield bridge
+  violations.
 
 ## End-to-End Review
 
@@ -205,3 +214,11 @@ Primary gaps:
 - Post-hardening full-suite verification passed:
   `mvn test` reported
   `MSE:OK modules=1 passed=4909 failed=0 errors=0 skipped=6`.
+- Object-service follow-up verification passed:
+  `mvn test "-Dtest=TestObjectServicesMigrationGuard,TestNoServicesInObjectConstructors,TestConstructionContextGuard,TestObjectManagerRewindSnapshot"`
+  reported `MSE:OK modules=1 passed=4911 failed=0 errors=0 skipped=6`.
+- Final object-service follow-up verification passed:
+  `mvn test "-Dtest=TestObjectServicesMigrationGuard,TestNoServicesInObjectConstructors,TestConstructionContextGuard,TestObjectManagerRewindSnapshot,TestArchUnitRules"`
+  reported `MSE:OK modules=1 passed=4908 failed=0 errors=0 skipped=5`, and
+  `mvn test` reported
+  `MSE:OK modules=1 passed=4911 failed=0 errors=0 skipped=6`.
