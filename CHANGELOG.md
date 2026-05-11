@@ -6,6 +6,10 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Palette-cycle rewind coverage.** Adds a compact schema codec for palette
+  cycle state and extends Sonic 2/S3K palette and level-animation managers with
+  snapshot coverage so animated palette progress survives rewind round-trips.
+  New tests cover the palette-cycle codec and S3K ICZ rewind restoration.
 - **S3K CNZ miniboss completion.** Carnival Night Zone Act 1 now drives the
   miniboss arena through ROM-cited event flow: the tunnel approach, arena
   camera clamps, miniboss music, PLC/palette load, vertical scroll-control

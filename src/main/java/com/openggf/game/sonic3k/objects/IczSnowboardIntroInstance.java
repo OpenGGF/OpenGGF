@@ -374,8 +374,10 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
             int y = player.getCentreY() + 0x14 - ((random >>> 16) & 0x0F);
             int yVel = -(random & 0x01FF);
             ObjectSpawn spawn = new ObjectSpawn(x, y, 0, 0, 0, false, y);
-            services().objectManager().addDynamicObject(
-                    new SnowboardDustInstance(spawn, x, y, -0x0100, yVel));
+            final int dustX = x;
+            final int dustY = y;
+            final int dustYVel = yVel;
+            spawnChild(() -> new SnowboardDustInstance(spawn, dustX, dustY, -0x0100, dustYVel));
         }
     }
 
