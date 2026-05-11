@@ -28,7 +28,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/TestS3kCharacterSpeeds.java#setUp
             src/test/java/com/openggf/game/TestSpindashGating.java#setUp
             src/test/java/com/openggf/game/rewind/schema/TestRewindPlayerReferenceCodecs.java#setUpRuntime
-            src/test/java/com/openggf/game/sonic1/TestSonic1LevelInitProfile.java#setUp
             src/test/java/com/openggf/game/sonic1/events/TestSonic1SBZEvents.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/TestSonic1GargoyleObjectInstanceRender.java#setUp
             src/test/java/com/openggf/game/sonic1/objects/TestSonic1LavaGeyserOutOfRange.java#setUp
@@ -40,7 +39,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic1/specialstage/Sonic1SpecialStageResultsScreenTest.java#setUp
             src/test/java/com/openggf/game/sonic2/TestSonic2CnzMutationPipeline.java#setUp
             src/test/java/com/openggf/game/sonic2/TestSonic2LevelEventRewindSnapshot.java#setUp
-            src/test/java/com/openggf/game/sonic2/TestSonic2LevelInitProfile.java#setUp
             src/test/java/com/openggf/game/sonic2/TestTodo10_MTZEventSpecs.java#setUp
             src/test/java/com/openggf/game/sonic2/TestTodo11_SCZEventSpecs.java#setUp
             src/test/java/com/openggf/game/sonic2/TestTodo12_WFZEventSpecs.java#setUp
@@ -73,9 +71,7 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/graphics/TestFadeManager.java#setUp
             src/test/java/com/openggf/graphics/TestSpriteManagerRender.java#setUp
             src/test/java/com/openggf/level/TestLevelManagerSlotBackgroundCopy.java#setUp
-            src/test/java/com/openggf/level/objects/TestDestructionEffects.java#setUp
             src/test/java/com/openggf/level/objects/TestObjectManagerCounterBasedDynamicUnload.java#setUp
-            src/test/java/com/openggf/level/objects/TestObjectManagerLifecycle.java#setUp
             src/test/java/com/openggf/level/objects/TestObjectManagerRewindDynamicClassification.java#setUp
             src/test/java/com/openggf/level/objects/TestObjectManagerRewindSnapshot.java#setUp
             src/test/java/com/openggf/level/objects/TestPlaneSwitcherStateIsolation.java#setUp

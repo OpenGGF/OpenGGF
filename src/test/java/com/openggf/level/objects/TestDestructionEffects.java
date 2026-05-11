@@ -2,8 +2,6 @@ package com.openggf.level.objects;
 
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.objects.Sonic1AnimalsObjectInstance;
 import com.openggf.game.sonic1.objects.badniks.Sonic1DestructionConfig;
@@ -23,8 +21,7 @@ class TestDestructionEffects {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
 
         services = new StubObjectServices() {
             @Override
