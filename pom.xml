@@ -316,6 +316,12 @@
                          Default: 4 forks locally, 1 in CI (see ci profile). -->
                     <forkCount>${surefire.forkCount}</forkCount>
                     <reuseForks>true</reuseForks>
+                    <systemPropertyVariables>
+                        <!-- Architectural guard tests resolve source paths from the project root,
+                             which surefire-launched forks inherit; pass it explicitly so IDE
+                             runs from arbitrary working dirs also find the source tree. -->
+                        <project.basedir>${project.basedir}</project.basedir>
+                    </systemPropertyVariables>
                     <!-- Exclude tests that require a GL context/display -->
                     <excludes>
                         <exclude>**/TestGraphicsManagerHeadless.java</exclude>
@@ -416,6 +422,12 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>5.10.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>1.4.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>

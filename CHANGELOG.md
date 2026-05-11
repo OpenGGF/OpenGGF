@@ -6,6 +6,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **ArchUnit architecture guard adoption.** Adds the ArchUnit JUnit 5 test
+  dependency and bytecode-level architecture rules for the existing dependency
+  invariants around rewind snapshot interfaces, shared/service boundaries,
+  level-layer S3K coupling, and cross-game data-select delegates. The
+  source-text guard remains for comment/string/XML surfaces that bytecode
+  analysis cannot inspect.
 - **Palette-cycle rewind coverage.** Adds a compact schema codec for palette
   cycle state and extends Sonic 2/S3K palette and level-animation managers with
   snapshot coverage so animated palette progress survives rewind round-trips.
