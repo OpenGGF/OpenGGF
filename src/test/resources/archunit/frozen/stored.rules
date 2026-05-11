@@ -1,0 +1,5 @@
+#
+#Mon May 11 11:15:28 BST 2026
+object\ packages\ should\ not\ access\ global\ GameServices\ except\ approved\ bridges,\ because\ object\ instances\ should\ use\ injected\ ObjectServices;\ frozen\ violations\ are\ migration\ debt=1353dd98-79de-4c8d-bca9-918759c432a7
+per-game\ packages\ should\ not\ cross-depend,\ because\ cross-game\ donation\ and\ asset\ reuse\ must\ be\ explicit\ and\ must\ not\ grow\ accidentally=0b4bf510-7bb2-4aad-bc97-17ba54d08727
+shared\ level\ and\ game\ layers\ should\ not\ depend\ on\ game-specific\ packages,\ because\ shared\ layers\ should\ depend\ on\ provider\ contracts\ or\ shared\ abstractions,\ not\ concrete\ game\ packages=0d7f15c8-e8df-4d83-bee5-b07cdbc7bfe2

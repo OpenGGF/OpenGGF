@@ -11,7 +11,10 @@ All notable changes to the OpenGGF project are documented in this file.
   invariants around rewind snapshot interfaces, shared/service boundaries,
   level-layer S3K coupling, and cross-game data-select delegates. The
   source-text guard remains for comment/string/XML surfaces that bytecode
-  analysis cannot inspect.
+  analysis cannot inspect. Broader object-service, shared-layer, per-game slice,
+  and JUnit 5 API rules now guard against new architectural drift, with current
+  debt frozen under `src/test/resources/archunit/frozen` and documented in
+  `docs/architecture/archunit-exceptions.md`.
 - **Palette-cycle rewind coverage.** Adds a compact schema codec for palette
   cycle state and extends Sonic 2/S3K palette and level-animation managers with
   snapshot coverage so animated palette progress survives rewind round-trips.
