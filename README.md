@@ -115,6 +115,9 @@ frozen baselines for current boundary debt. The latest architecture-guarding
 merge expands those guards across runtime ownership, trace/rewind invariants,
 object-service access, source-level architecture hazards, and singleton
 lifecycle setup drift, with documented baselines for existing migration debt.
+This merge also hardens generic rewind capture for final in-place helper fields
+such as `SubpixelMotion.State`, covering S3K monitor and AIZ cutscene object
+rewind capture paths.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?

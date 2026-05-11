@@ -4,7 +4,9 @@ import com.openggf.game.rewind.snapshot.GenericObjectSnapshot;
 import com.openggf.game.rewind.schema.CompactFieldCapturer;
 import com.openggf.game.rewind.schema.RewindCodecs;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.game.rewind.schema.RewindCodec;
 import com.openggf.game.rewind.schema.RewindObjectStateBlob;
+import com.openggf.game.rewind.schema.RewindStateBuffer;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -115,6 +117,9 @@ public final class GenericFieldCapturer {
     }
 
     private static Object captureFieldValue(Field field, Object target) {
+        if (usesCodecFieldSnapshot(field)) {
+            return captureCodecField(field, target);
+        }
         Object value = readField(field, target);
         if (isStatefulListField(field)) {
             return captureStatefulList((List<?>) value);
@@ -138,7 +143,9 @@ public final class GenericFieldCapturer {
                 continue;
             }
             validateFieldAccepted(field);
-            Object value = requiresStatefulRestore(field)
+            Object value = values[i] instanceof CodecFieldSnapshot
+                    ? values[i]
+                    : requiresStatefulRestore(field)
                     ? values[i]
                     : deepCloneValue(field.getType(), values[i]);
             writeField(field, target, value);
@@ -159,6 +166,9 @@ public final class GenericFieldCapturer {
         }
         if (isRejectedFinal(field)) {
             return false;
+        }
+        if (usesCodecFieldSnapshot(field)) {
+            return true;
         }
         return isSupportedValueType(field.getType(), new HashSet<>());
     }
@@ -341,6 +351,9 @@ public final class GenericFieldCapturer {
                     + FieldKey.of(field)
                     + "; annotate with @RewindTransient or add an exact final-field policy entry");
         }
+        if (usesCodecFieldSnapshot(field)) {
+            return;
+        }
         if (!isSupportedValueType(field.getType(), new HashSet<>()) && !isStatefulListField(field)) {
             throw new IllegalStateException("unsupported rewind field "
                     + FieldKey.of(field)
@@ -352,6 +365,7 @@ public final class GenericFieldCapturer {
     private static boolean isRejectedFinal(Field field) {
         return Modifier.isFinal(field.getModifiers())
                 && !FINAL_FIELD_CAPTURE_POLICY.contains(FieldKey.of(field))
+                && !usesFinalCodecFieldSnapshot(field)
                 && !isDefaultObjectArrayFieldValueType(field.getType())
                 && !RewindStateful.class.isAssignableFrom(field.getType());
     }
@@ -569,6 +583,10 @@ public final class GenericFieldCapturer {
                 restoreStatefulList(field.get(target), value, FieldKey.of(field));
                 return;
             }
+            if (value instanceof CodecFieldSnapshot codecSnapshot) {
+                restoreCodecField(field, target, codecSnapshot);
+                return;
+            }
             if (Modifier.isFinal(field.getModifiers()) && field.getType().isArray()) {
                 copyArrayIntoExistingFinalField(field, target, value);
                 return;
@@ -576,6 +594,57 @@ public final class GenericFieldCapturer {
             field.set(target, value);
         } catch (IllegalAccessException e) {
             throw new IllegalStateException("Could not restore rewind field " + FieldKey.of(field), e);
+        }
+    }
+
+    private static boolean usesCodecFieldSnapshot(Field field) {
+        return isDefaultObjectInPlaceHelperType(field.getType())
+                && RewindCodecs.codecFor(field).isPresent();
+    }
+
+    private static boolean usesFinalCodecFieldSnapshot(Field field) {
+        return Modifier.isFinal(field.getModifiers())
+                && RewindCodecs.codecFor(field)
+                .filter(RewindCodec::capturesFinalFields)
+                .isPresent();
+    }
+
+    private static CodecFieldSnapshot captureCodecField(Field field, Object target) {
+        field.setAccessible(true);
+        RewindCodec codec = RewindCodecs.codecFor(field)
+                .orElseThrow(() -> new IllegalStateException("Missing rewind codec for " + FieldKey.of(field)));
+        RewindStateBuffer scalarData = new RewindStateBuffer();
+        List<Object> opaqueValues = new ArrayList<>();
+        codec.capture(field, target, scalarData, opaqueValues);
+        return new CodecFieldSnapshot(scalarData.toByteArray(), opaqueValues.toArray());
+    }
+
+    private static void restoreCodecField(Field field, Object target, CodecFieldSnapshot snapshot) {
+        field.setAccessible(true);
+        RewindCodec codec = RewindCodecs.codecFor(field)
+                .orElseThrow(() -> new IllegalStateException("Missing rewind codec for " + FieldKey.of(field)));
+        codec.restore(
+                field,
+                target,
+                RewindStateBuffer.reader(snapshot.scalarData()),
+                snapshot.opaqueValues(),
+                new RewindCodec.OpaqueIndex());
+    }
+
+    private record CodecFieldSnapshot(byte[] scalarData, Object[] opaqueValues) {
+        private CodecFieldSnapshot {
+            scalarData = scalarData.clone();
+            opaqueValues = opaqueValues.clone();
+        }
+
+        @Override
+        public byte[] scalarData() {
+            return scalarData.clone();
+        }
+
+        @Override
+        public Object[] opaqueValues() {
+            return opaqueValues.clone();
         }
     }
 
