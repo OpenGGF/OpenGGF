@@ -1,8 +1,6 @@
 package com.openggf.game.sonic1;
 
 import com.openggf.game.InitStep;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
 import com.openggf.game.LevelLoadContext;
 import com.openggf.game.LevelLoadMode;
 import com.openggf.game.session.SessionManager;
@@ -24,8 +22,7 @@ public class TestSonic1LevelInitProfile {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

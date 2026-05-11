@@ -111,8 +111,11 @@ Current migration status is intentionally partial rather than universal. Sonic 2
 
 Work is ongoing across all three games. Recent branch work added compact
 palette-cycle rewind coverage and adopted ArchUnit architecture guard tests with
-frozen baselines for current boundary debt. See CHANGELOG.md for detailed
-progress.
+frozen baselines for current boundary debt. The latest architecture-guarding
+merge expands those guards across runtime ownership, trace/rewind invariants,
+object-service access, source-level architecture hazards, and singleton
+lifecycle setup drift, with documented baselines for existing migration debt.
+See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?
 
