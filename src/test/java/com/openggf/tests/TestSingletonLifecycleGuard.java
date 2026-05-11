@@ -90,10 +90,7 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/sprites/playable/TestAbstractPlayableSpriteRewindCapture.java#setUp
             src/test/java/com/openggf/sprites/playable/TestLogicalInputControlLockLatch.java#setUp
             src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java#setUp
-            src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerCatchUpFlight.java#setUp
-            src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerFlightAutoRecovery.java#setUp
             src/test/java/com/openggf/sprites/playable/TestSidekickCpuControllerRewindCapture.java#setUp
-            src/test/java/com/openggf/sprites/playable/TestSidekickCpuDespawnParity.java#configureRuntime
             src/test/java/com/openggf/tests/TestHTZBossEventRoutine9.java#setUp
             src/test/java/com/openggf/tests/TestHTZRisingLavaDisassemblyParity.java#setUp
             src/test/java/com/openggf/tests/TestMonitorIconTiming.java#setUp
@@ -104,7 +101,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/tests/TestSonic3kLightningShieldObjectInstance.java#setUp
             src/test/java/com/openggf/tests/TestSonic3kMonitorObjectInstance.java#setUp
             src/test/java/com/openggf/tests/TestSonic3kZoneFeatureProvider.java#setUp
-            src/test/java/com/openggf/tests/TestTimerManager.java#setUp
             src/test/java/com/openggf/tests/TestTodo30_TimerErrorReporting.java#setUp
             """);
     private static final Set<String> SCANNER_UTILITY_FILES = Set.of(

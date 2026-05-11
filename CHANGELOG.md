@@ -16,7 +16,8 @@ All notable changes to the OpenGGF project are documented in this file.
   setup drift in tests. New frozen ArchUnit baselines document existing
   migration debt while preventing new violations. Stabilizes the sidekick
   follow parity fixture so it resets the active game module before each test in
-  reused Maven forks.
+  reused Maven forks, and migrates several sidekick/timer tests onto
+  `TestEnvironment.resetAll()` to shrink the lifecycle baseline.
 - **ArchUnit architecture guard adoption.** Adds the ArchUnit JUnit 5 test
   dependency and bytecode-level architecture rules for the existing dependency
   invariants around rewind snapshot interfaces, shared/service boundaries,
