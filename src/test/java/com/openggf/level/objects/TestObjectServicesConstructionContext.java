@@ -33,6 +33,12 @@ class TestObjectServicesConstructionContext {
         @Override public void playMusic(int musicId) {}
         @Override public void fadeOutMusic() {}
         @Override public com.openggf.audio.AudioManager audioManager() { return null; }
+        @Override public com.openggf.game.GameRng rng() { return new com.openggf.game.GameRng(com.openggf.game.GameRng.Flavour.S3K); }
+        @Override public com.openggf.game.zone.ZoneRuntimeRegistry zoneRuntimeRegistry() { return new com.openggf.game.zone.ZoneRuntimeRegistry(); }
+        @Override public com.openggf.game.zone.ZoneRuntimeState zoneRuntimeState() { return zoneRuntimeRegistry().current(); }
+        @Override public com.openggf.game.palette.PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() { return null; }
+        @Override public com.openggf.game.mutation.ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() { return new com.openggf.game.mutation.ZoneLayoutMutationPipeline(); }
+        @Override public com.openggf.game.solid.SolidExecutionRegistry solidExecutionRegistry() { return com.openggf.game.solid.SolidExecutionRegistry.inert(); }
         @Override public void spawnLostRings(com.openggf.game.PlayableEntity player, int fc) {}
         @Override public com.openggf.camera.Camera camera() { return null; }
         @Override public com.openggf.game.GameStateManager gameState() { return null; }
@@ -205,5 +211,4 @@ class TestObjectServicesConstructionContext {
                 "created object should be registered as a dynamic object");
     }
 }
-
 

@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.game.AbstractLevelEventManager;
+import com.openggf.game.CheckpointRuntimeStateProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
@@ -26,6 +27,7 @@ import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesHcz2Instance;
 import com.openggf.game.sonic3k.objects.HCZConveyorBeltObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
+import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.camera.Camera;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -51,7 +53,8 @@ import java.util.logging.Logger;
  * Zone event handlers will be added incrementally per zone.
  */
 public class Sonic3kLevelEventManager extends AbstractLevelEventManager
-        implements AizObjectEventBridge, CnzObjectEventBridge, HczObjectEventBridge, MgzObjectEventBridge,
+        implements CheckpointRuntimeStateProvider,
+        AizObjectEventBridge, CnzObjectEventBridge, HczObjectEventBridge, MgzObjectEventBridge,
         S3kTransitionEventBridge {
     private static final Logger LOG = Logger.getLogger(Sonic3kLevelEventManager.class.getName());
     private static final int PACHINKO_TOP_EXIT_Y = -0x20;
@@ -311,6 +314,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Applied to MGZ1, SSZ, and LRZ1 (non-Knuckles only).
         if (currentZone == Sonic3kZoneIds.ZONE_MGZ && currentAct == 0) {
             applySimpleFallingIntro("MGZ1");
+        }
+        if (currentZone == Sonic3kZoneIds.ZONE_ICZ && currentAct == 0
+                && getPlayerCharacter() == PlayerCharacter.SONIC_ALONE) {
+            IczSnowboardIntroInstance.applyInitialPlayerLock(GameServices.camera().getFocusedSprite());
         }
         // TODO: LRZ1 non-Knuckles, SSZ falling intros (same loc_68A6 path)
     }
@@ -654,6 +661,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             return mgzEvents.getDynamicResizeRoutine();
         }
         return 0;
+    }
+
+    @Override
+    public int checkpointDynamicResizeRoutine() {
+        return getDynamicResizeRoutine();
     }
 
     /**

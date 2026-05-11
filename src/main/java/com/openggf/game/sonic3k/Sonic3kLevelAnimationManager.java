@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.data.RomByteReader;
+import com.openggf.game.GameServices;
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot;
 import com.openggf.level.Level;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
@@ -9,7 +12,8 @@ import com.openggf.level.animation.AnimatedPatternManager;
  * Combined level animation manager for Sonic 3 &amp; Knuckles.
  * Delegates to the pattern animator and palette cycler.
  */
-public final class Sonic3kLevelAnimationManager implements AnimatedPatternManager, AnimatedPaletteManager {
+public final class Sonic3kLevelAnimationManager implements AnimatedPatternManager, AnimatedPaletteManager,
+        RewindSnapshottable<PatternAnimatorSnapshot> {
     private final Sonic3kPatternAnimator patternAnimator;
     private final Sonic3kPaletteCycler paletteCycler;
 
@@ -17,7 +21,8 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
                                         int zoneIndex, int actIndex, boolean isSkipIntro) {
         this.patternAnimator = new Sonic3kPatternAnimator(reader, level,
                 zoneIndex, actIndex, isSkipIntro);
-        this.paletteCycler = new Sonic3kPaletteCycler(reader, level, zoneIndex, actIndex);
+        this.paletteCycler = new Sonic3kPaletteCycler(reader, level, zoneIndex, actIndex,
+                GameServices.paletteOwnershipRegistryOrNull(), null);
     }
 
     @Override
@@ -28,5 +33,20 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         if (paletteCycler != null) {
             paletteCycler.update();
         }
+    }
+
+    @Override
+    public String key() {
+        return patternAnimator.key();
+    }
+
+    @Override
+    public PatternAnimatorSnapshot capture() {
+        return patternAnimator.capture();
+    }
+
+    @Override
+    public void restore(PatternAnimatorSnapshot snapshot) {
+        patternAnimator.restore(snapshot);
     }
 }

@@ -61,7 +61,8 @@ class TestSonic2HtzRuntimeStateConsumers {
 
         ObjectServices services = new TestObjectServices()
                 .withCamera(GameServices.camera())
-                .withGameState(GameServices.gameState());
+                .withGameState(GameServices.gameState())
+                .withZoneRuntimeRegistry(GameServices.zoneRuntimeRegistry());
 
         setConstructionContext(services);
         RisingLavaObjectInstance object;

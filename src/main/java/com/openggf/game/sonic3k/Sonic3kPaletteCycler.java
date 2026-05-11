@@ -33,6 +33,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     private final int zoneIndex;
     private final int actIndex;
     private final PaletteOwnershipRegistry paletteRegistry;
+    private final boolean localPaletteRegistry;
     private final Palette[] explicitUnderwaterPalettes;
     private final List<PaletteCycle> cycles;
     private Palette[] cachedLevelPalettes;
@@ -46,11 +47,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     Sonic3kPaletteCycler(RomByteReader reader, Level level, int zoneIndex, int actIndex) {
-        this(reader, level, zoneIndex, actIndex,
-                GameServices.paletteOwnershipRegistryOrNull() != null
-                        ? GameServices.paletteOwnershipRegistryOrNull()
-                        : new PaletteOwnershipRegistry(),
-                null);
+        this(reader, level, zoneIndex, actIndex, null, null);
     }
 
     Sonic3kPaletteCycler(RomByteReader reader, Level level, int zoneIndex, int actIndex,
@@ -59,13 +56,17 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         this.level = level;
         this.zoneIndex = zoneIndex;
         this.actIndex = actIndex;
-        this.paletteRegistry = paletteRegistry;
+        this.paletteRegistry = paletteRegistry != null ? paletteRegistry : new PaletteOwnershipRegistry();
+        this.localPaletteRegistry = paletteRegistry == null;
         this.explicitUnderwaterPalettes = explicitUnderwaterPalettes;
         this.cycles = loadCycles(reader, zoneIndex, actIndex);
     }
 
     @Override
     public void update() {
+        if (localPaletteRegistry) {
+            paletteRegistry.beginFrame();
+        }
         if (cycles != null && !cycles.isEmpty()) {
             // ROM: AnimatePalettes dispatches to AnPal_* every frame unconditionally,
             // regardless of fire transition state. Never suspend palette cycling.

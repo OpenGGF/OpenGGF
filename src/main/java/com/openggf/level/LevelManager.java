@@ -14,7 +14,6 @@ import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.data.SpindashDustArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
-import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.DynamicStartPositionProvider;
@@ -677,6 +676,7 @@ public class LevelManager {
         SpecialRenderEffectRegistry specialRenderEffectRegistry = GameServices.specialRenderEffectRegistryOrNull();
         AdvancedRenderModeController advancedRenderModeController = GameServices.advancedRenderModeControllerOrNull();
         if (zoneFeatureProvider != null) {
+            zoneFeatureProvider.reset();
             zoneFeatureProvider.initZoneFeatures(rom, getFeatureZoneId(), getFeatureActId(), camera.getX());
             // Cache zone feature patterns (water surface, etc.)
             int waterPatternBase = 0x30000; // High offset to avoid collision
@@ -1785,14 +1785,13 @@ public class LevelManager {
         if (tilemapManager == null) {
             return false;
         }
-        boolean mgzStateEightPerLineTilemap = currentZone == Sonic3kZoneIds.ZONE_MGZ
-                && currentAct == 1
-                && bgCameraX != Integer.MIN_VALUE
-                && cachedBgContiguousWidthPx > LevelTilemapManager.VDP_BG_PLANE_WIDTH_PX;
+        boolean fullWidthPerLineTilemap = zoneFeatureProvider != null
+                && zoneFeatureProvider.useFullWidthBackgroundTilemapWindow(
+                currentZone, currentAct, bgCameraX, cachedBgContiguousWidthPx);
         int newBgPeriodWidth = parallaxManager != null
                 ? parallaxManager.getBgPeriodWidth()
                 : LevelTilemapManager.VDP_BG_PLANE_WIDTH_PX;
-        if (mgzStateEightPerLineTilemap) {
+        if (fullWidthPerLineTilemap) {
             if (tilemapManager.getBgTilemapBaseX() != 0) {
                 tilemapManager.setBgTilemapBaseX(0);
                 tilemapManager.setBackgroundTilemapDirty(true);
@@ -1814,7 +1813,7 @@ public class LevelManager {
             tilemapManager.setCurrentBgPeriodWidth(newBgPeriodWidth);
             tilemapManager.setBackgroundTilemapDirty(true);
         }
-        return mgzStateEightPerLineTilemap;
+        return fullWidthPerLineTilemap;
     }
 
     void ensureForegroundTilemapData() {
