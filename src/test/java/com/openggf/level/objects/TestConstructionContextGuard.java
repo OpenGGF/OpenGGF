@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.tests.ObjectGuardSourceScanner;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -188,11 +189,7 @@ class TestConstructionContextGuard {
     private void findUnsafeNewCallSites(Path srcRoot, Set<String> servicesInConstructor,
                                          List<String> violations) throws IOException {
         // Object packages: scan object-extending files for child creation
-        String[] objectPackages = {
-                "com/openggf/game/sonic1/objects",
-                "com/openggf/game/sonic2/objects",
-                "com/openggf/game/sonic3k/objects"
-        };
+        String[] objectPackages = ObjectGuardSourceScanner.GAME_OBJECT_PACKAGE_PATHS;
 
         for (String pkg : objectPackages) {
             Path pkgDir = srcRoot.resolve(pkg);
@@ -395,12 +392,7 @@ class TestConstructionContextGuard {
     }
 
     private Path findSourceRoot() {
-        Path cwd = Path.of(System.getProperty("user.dir"));
-        Path srcMain = cwd.resolve("src/main/java");
-        if (Files.isDirectory(srcMain)) return srcMain;
-        srcMain = cwd.getParent().resolve("src/main/java");
-        if (Files.isDirectory(srcMain)) return srcMain;
-        return null;
+        return ObjectGuardSourceScanner.findSourceRoot();
     }
 }
 
