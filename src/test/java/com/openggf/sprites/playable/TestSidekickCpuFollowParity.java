@@ -2,8 +2,6 @@ package com.openggf.sprites.playable;
 
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
@@ -25,8 +23,7 @@ class TestSidekickCpuFollowParity {
 
     @BeforeEach
     void configureRuntime() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach

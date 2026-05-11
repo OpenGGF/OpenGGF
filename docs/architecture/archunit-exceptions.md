@@ -92,6 +92,61 @@ Target direction:
 - Keep cross-game donation explicit when reuse is intentional and ROM-accurate
   host presentation depends on older-game assets.
 
+### Runtime-Owned Frameworks Must Not Access Global Service Roots
+
+Rule: `runtime-owned framework packages should not access GameServices, SessionManager, or EngineServices directly`
+
+Frozen violations fall into these categories:
+
+- `ScriptFramesApplyStrategy` resolves `GameServices.graphics()` at apply time
+  as a bridge for existing animated tile script paths.
+- `LiveRewindManager` reaches `GameServices.audio()`,
+  `GameServices.fadeOrNull()`, and `SessionManager.getCurrentGameplayMode()`
+  while the live rewind presentation path is still process-service driven.
+- `LiveRewindStepper` reaches `GameServices` optional accessors for the
+  current sprites, level, and camera during replay stepping.
+
+Target direction:
+
+- Pass graphics/audio/fade/runtime dependencies through explicit channel,
+  rewind, or gameplay-mode collaborators.
+- Keep the runtime-owned framework packages independent of static service roots
+  so they remain owned by `GameplayModeContext`.
+
+### Runtime Registries Must Be Constructed By Runtime Composition Roots
+
+Rule: `runtime-owned registries and controllers should only be constructed by runtime composition roots`
+
+Frozen violations:
+
+- `Sonic2PaletteCycler` and `Sonic3kPaletteCycler` create fallback
+  `PaletteOwnershipRegistry` instances for standalone/test paths when no
+  runtime registry is supplied.
+- `DefaultObjectServices` creates fallback `ZoneRuntimeRegistry` and
+  `ZoneLayoutMutationPipeline` instances in its legacy constructor.
+
+Target direction:
+
+- Require runtime-owned registries/controllers to be supplied by
+  `GameplaySessionFactory` or `GameplayModeContext`.
+- Keep test and legacy bootstrap paths on explicit stub/runtime collaborators
+  instead of constructing ad hoc registries.
+
+### Shared Code Must Not Construct Concrete Sonic Provider Classes
+
+Rule: `shared code should not construct concrete Sonic provider/art/object classes`
+
+Frozen violations:
+
+- `DefaultPowerUpSpawner` directly constructs the Sonic 1 splash object from
+  shared object code.
+
+Target direction:
+
+- Move game-specific visual object creation behind `GameModule` provider
+  contracts or a dedicated composition root.
+  Keep shared object helpers independent of concrete Sonic object classes.
+
 ## Maintenance
 
 When a frozen violation is removed:
