@@ -166,6 +166,11 @@ Primary gaps:
   `TestEnvironment.resetAll()` fixture setup. The full-suite failure was caused
   by reused Maven forks inheriting an S3K bootstrap module from earlier tests,
   which made S2-default sidekick nudge cases resolve S3K follow-lead behavior.
+- Cleanup follow-through migrated `TestSidekickCpuDespawnParity`,
+  `TestSidekickCpuControllerCatchUpFlight`,
+  `TestSidekickCpuControllerFlightAutoRecovery`, and `TestTimerManager` onto
+  `TestEnvironment.resetAll()`, removing those methods from the lifecycle
+  baseline.
 
 ## End-to-End Review
 
@@ -177,4 +182,8 @@ Primary gaps:
   `MSE:OK modules=1 passed=4902 failed=0 errors=0 skipped=6`.
 - Full-suite verification passed:
   `mvn test` reported
+  `MSE:OK modules=1 passed=4906 failed=0 errors=0 skipped=6`.
+- Cleanup verification passed:
+  `mvn test "-Dtest=TestSingletonLifecycleGuard,TestSidekickCpuDespawnParity,TestSidekickCpuControllerCatchUpFlight,TestSidekickCpuControllerFlightAutoRecovery,TestTimerManager"`
+  and a final `mvn test` both reported
   `MSE:OK modules=1 passed=4906 failed=0 errors=0 skipped=6`.
