@@ -285,6 +285,51 @@ class Sonic2PaletteCycler implements AnimatedPaletteManager {
         return cachedLevelPalettes;
     }
 
+    /**
+     * Captures per-cycle mutable state (timers, frame indices, dirty flags) across
+     * all loaded cycles for the current zone. Intended for inclusion in the
+     * level-animation manager's combined snapshot.
+     */
+    byte[] captureCyclerState() {
+        if (cycles == null || cycles.isEmpty()) {
+            return new byte[0];
+        }
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        try (java.io.DataOutputStream dout = new java.io.DataOutputStream(out)) {
+            dout.writeInt(cycles.size());
+            for (PaletteCycle cycle : cycles) {
+                byte[] state = com.openggf.game.rewind.schema.PaletteCycleStateCodec.capture(cycle);
+                dout.writeInt(state.length);
+                dout.write(state);
+            }
+        } catch (java.io.IOException e) {
+            return new byte[0];
+        }
+        return out.toByteArray();
+    }
+
+    /** Inverse of {@link #captureCyclerState()}. Tolerant of null/empty/mismatched input. */
+    void restoreCyclerState(byte[] data) {
+        if (data == null || data.length < 4 || cycles == null || cycles.isEmpty()) {
+            return;
+        }
+        try (java.io.DataInputStream din = new java.io.DataInputStream(new java.io.ByteArrayInputStream(data))) {
+            int count = din.readInt();
+            if (count != cycles.size()) {
+                return;
+            }
+            for (PaletteCycle cycle : cycles) {
+                int size = din.readInt();
+                if (size < 0 || size > data.length) {
+                    return;
+                }
+                byte[] state = din.readNBytes(size);
+                com.openggf.game.rewind.schema.PaletteCycleStateCodec.restore(cycle, state);
+            }
+        } catch (java.io.IOException ignored) {
+        }
+    }
+
     // ========== Base PaletteCycle class ==========
     private static class PaletteCycle {
         protected final String ownerId;
