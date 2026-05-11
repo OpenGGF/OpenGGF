@@ -3,6 +3,8 @@ package com.openggf.game.rewind.schema;
 import com.openggf.game.rewind.FieldKey;
 import com.openggf.game.rewind.RewindDeferred;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.sonic3k.objects.CnzCannonInstance;
+import com.openggf.game.sonic3k.objects.MGZPulleyObjectInstance;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -82,6 +84,15 @@ class TestRewindSchemaRegistry {
         PrivateFieldFixture fixture = new PrivateFieldFixture();
 
         assertTrue(schema.capturedFields().getFirst().field().canAccess(fixture));
+    }
+
+    @Test
+    void defaultObjectSubclassSchemaCapturesDeferredPlayerReferences() {
+        RewindClassSchema cannonSchema = RewindSchemaRegistry.defaultObjectSubclassSchemaFor(CnzCannonInstance.class);
+        RewindClassSchema pulleySchema = RewindSchemaRegistry.defaultObjectSubclassSchemaFor(MGZPulleyObjectInstance.class);
+
+        assertPolicy(cannonSchema, "capturedPlayer", RewindFieldPolicy.CAPTURED);
+        assertPolicy(pulleySchema, "grabbedPlayers", RewindFieldPolicy.CAPTURED);
     }
 
     private static void assertPolicy(RewindClassSchema schema, String fieldName, RewindFieldPolicy policy) {

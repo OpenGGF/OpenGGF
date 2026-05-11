@@ -48,6 +48,7 @@ import java.util.logging.Logger;
  */
 public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kZoneFeatureProvider.class.getName());
+    private static final int VDP_BG_PLANE_WIDTH_PX = 512;
 
     private final AizBattleshipRenderFeature aizBattleshipRenderFeature = new AizBattleshipRenderFeature();
     private final AizTransitionRenderFeature aizTransitionRenderFeature = new AizTransitionRenderFeature();
@@ -115,6 +116,17 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         int zoneId = levelManager.getFeatureZoneId();
         return zoneId == Sonic3kZoneIds.ZONE_MGZ
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ;
+    }
+
+    @Override
+    public boolean useFullWidthBackgroundTilemapWindow(int zoneIndex,
+                                                       int actIndex,
+                                                       int bgCameraX,
+                                                       int cachedBgContiguousWidthPx) {
+        return zoneIndex == Sonic3kZoneIds.ZONE_MGZ
+                && actIndex == 1
+                && bgCameraX != Integer.MIN_VALUE
+                && cachedBgContiguousWidthPx > VDP_BG_PLANE_WIDTH_PX;
     }
 
     @Override

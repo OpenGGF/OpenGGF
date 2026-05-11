@@ -17,6 +17,9 @@ import com.openggf.camera.Camera;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.CustomPlayablePhysics;
@@ -1035,6 +1038,57 @@ public class SpriteManager {
 		}
 	}
 
+	public void refreshLatchedSolidObjectsAfterRewindRestore(ObjectManager objectManager) {
+		if (objectManager == null) {
+			return;
+		}
+		Collection<ObjectInstance> activeObjects = objectManager.getActiveObjects();
+		for (Sprite sprite : sprites.values()) {
+			if (sprite instanceof AbstractPlayableSprite playable) {
+				int objectId = playable.getLatchedSolidObjectId() & 0xFF;
+				if (objectId == 0) {
+					playable.setLatchedSolidObjectInstance(null);
+					continue;
+				}
+				ObjectInstance current = playable.getLatchedSolidObjectInstance();
+				if (isActiveObjectWithId(current, activeObjects, objectId)) {
+					continue;
+				}
+				playable.setLatchedSolidObject(objectId, nearestActiveObjectWithId(playable, activeObjects, objectId));
+			}
+		}
+	}
+
+	private boolean isActiveObjectWithId(ObjectInstance object,
+			Collection<ObjectInstance> activeObjects,
+			int objectId) {
+		return object != null
+				&& object.getSpawn() != null
+				&& (object.getSpawn().objectId() & 0xFF) == objectId
+				&& activeObjects.contains(object);
+	}
+
+	private ObjectInstance nearestActiveObjectWithId(AbstractPlayableSprite playable,
+			Collection<ObjectInstance> activeObjects,
+			int objectId) {
+		ObjectInstance best = null;
+		long bestDistance = Long.MAX_VALUE;
+		for (ObjectInstance object : activeObjects) {
+			ObjectSpawn spawn = object.getSpawn();
+			if (spawn == null || (spawn.objectId() & 0xFF) != objectId) {
+				continue;
+			}
+			long dx = (long) spawn.x() - playable.getCentreX();
+			long dy = (long) spawn.y() - playable.getCentreY();
+			long distance = dx * dx + dy * dy;
+			if (distance < bestDistance) {
+				best = object;
+				bestDistance = distance;
+			}
+		}
+		return best;
+	}
+
 	/**
 	 * Runs the canonical per-sprite physics tick: solid contacts, movement,
 	 * post-movement solid pass, plane switchers, animation, and status.
@@ -1249,6 +1303,15 @@ public class SpriteManager {
 			@Override
 			public void restore(com.openggf.game.rewind.snapshot.SpriteManagerSnapshot s) {
 				frameCounter = s.frameCounter();
+				java.util.Set<String> snapshotCodes = new java.util.HashSet<>();
+				for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {
+					snapshotCodes.add(entry.code());
+				}
+				for (AbstractPlayableSprite sidekick : new ArrayList<>(temporarySidekicks)) {
+					if (!snapshotCodes.contains(sidekick.getCode())) {
+						removeSprite(sidekick);
+					}
+				}
 				for (Sprite sprite : sprites.values()) {
 					if (sprite instanceof AbstractPlayableSprite aps) {
 						com.openggf.level.objects.PerObjectRewindSnapshot perSprite = null;

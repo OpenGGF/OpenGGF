@@ -17,8 +17,13 @@ import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.RespawnState;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.session.WorldSession;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
+import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
@@ -46,6 +51,10 @@ public class TestObjectServices implements ObjectServices {
     private GraphicsManager graphicsManager;
     private AudioManager audioManager;
     private GameRng rng = new GameRng(GameRng.Flavour.S3K);
+    private ZoneRuntimeRegistry zoneRuntimeRegistry = new ZoneRuntimeRegistry();
+    private PaletteOwnershipRegistry paletteOwnershipRegistry;
+    private ZoneLayoutMutationPipeline zoneLayoutMutationPipeline = new ZoneLayoutMutationPipeline();
+    private SolidExecutionRegistry solidExecutionRegistry = SolidExecutionRegistry.inert();
     private Rom rom;
     private RomByteReader romReader;
     private List<PlayableEntity> sidekicks = List.of();
@@ -104,6 +113,26 @@ public class TestObjectServices implements ObjectServices {
 
     public TestObjectServices withRng(GameRng rng) {
         this.rng = rng;
+        return this;
+    }
+
+    public TestObjectServices withZoneRuntimeRegistry(ZoneRuntimeRegistry zoneRuntimeRegistry) {
+        this.zoneRuntimeRegistry = zoneRuntimeRegistry;
+        return this;
+    }
+
+    public TestObjectServices withPaletteOwnershipRegistry(PaletteOwnershipRegistry paletteOwnershipRegistry) {
+        this.paletteOwnershipRegistry = paletteOwnershipRegistry;
+        return this;
+    }
+
+    public TestObjectServices withZoneLayoutMutationPipeline(ZoneLayoutMutationPipeline zoneLayoutMutationPipeline) {
+        this.zoneLayoutMutationPipeline = zoneLayoutMutationPipeline;
+        return this;
+    }
+
+    public TestObjectServices withSolidExecutionRegistry(SolidExecutionRegistry solidExecutionRegistry) {
+        this.solidExecutionRegistry = solidExecutionRegistry;
         return this;
     }
 
@@ -312,6 +341,31 @@ public class TestObjectServices implements ObjectServices {
     }
 
     @Override
+    public ZoneRuntimeRegistry zoneRuntimeRegistry() {
+        return zoneRuntimeRegistry;
+    }
+
+    @Override
+    public ZoneRuntimeState zoneRuntimeState() {
+        return zoneRuntimeRegistry.current();
+    }
+
+    @Override
+    public PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() {
+        return paletteOwnershipRegistry;
+    }
+
+    @Override
+    public ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() {
+        return zoneLayoutMutationPipeline;
+    }
+
+    @Override
+    public SolidExecutionRegistry solidExecutionRegistry() {
+        return solidExecutionRegistry;
+    }
+
+    @Override
     public void playSfx(int soundId) {
     }
 
@@ -431,5 +485,3 @@ public class TestObjectServices implements ObjectServices {
     public void requestSessionSave(SaveReason reason) {
     }
 }
-
-

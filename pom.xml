@@ -84,6 +84,45 @@
             </properties>
         </profile>
 
+        <!-- Trace replay parity tests are intentionally separated from the
+             default unit/integration suite. They depend on local ROM assets and
+             currently include known parity gaps, so hiding one game-specific
+             class in the default exclusions would make the gap misleading.
+
+             Run explicitly with:
+               mvn -Ptrace-replay test
+        -->
+        <profile>
+            <id>trace-replay</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration combine.self="override">
+                            <argLine>${surefire.argLine}</argLine>
+                            <forkCount>${surefire.forkCount}</forkCount>
+                            <reuseForks>true</reuseForks>
+                            <includes>
+                                <include>**/tests/trace/**/*TraceReplay.java</include>
+                                <include>**/tests/trace/**/*ReplayBootstrap.java</include>
+                                <include>**/tests/trace/s2/*Regression.java</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/TestGraphicsManagerHeadless.java</exclude>
+                                <exclude>**/VisualRegressionTest.java</exclude>
+                                <exclude>**/VisualReferenceGenerator.java</exclude>
+                                <exclude>**/TestAizFireCurtainGpuDiag.java</exclude>
+                                <exclude>**/TestS3kSpecialStageResultsVisual.java</exclude>
+                                <exclude>**/TestInstaShieldVisual.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- GraalVM native-image build: mvn package -Pnative -DskipTests -->
         <profile>
             <id>native</id>
@@ -285,10 +324,9 @@
                         <exclude>**/TestAizFireCurtainGpuDiag.java</exclude>
                         <exclude>**/TestS3kSpecialStageResultsVisual.java</exclude>
                         <exclude>**/TestInstaShieldVisual.java</exclude>
-                        <!-- Trace replay tests: excluded until traces are re-recorded
-                             against current S1 physics. Run manually with:
-                             mvn test -Dtest="com.openggf.tests.trace.s1.*" -->
-                        <exclude>**/trace/s1/TestS1*TraceReplay.java</exclude>
+                        <exclude>**/tests/trace/**/*TraceReplay.java</exclude>
+                        <exclude>**/tests/trace/**/*ReplayBootstrap.java</exclude>
+                        <exclude>**/tests/trace/s2/*Regression.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>
@@ -375,20 +413,8 @@
         </dependency>
 
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.13.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.10.3</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
             <version>5.10.3</version>
             <scope>test</scope>
         </dependency>

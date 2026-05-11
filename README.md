@@ -209,6 +209,10 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   gameplay-scoped managers. `GameServices`, `ObjectServices`, and runtime-owned frameworks remain
   the active access path for palette ownership, zone state, animated tiles, layout mutation, scroll
   composition, special render passes, and advanced render modes.
+- **Architectural review hardening:** the service boundary now keeps object code on injected
+  `ObjectServices`, shared checkpoint and level-loading paths avoid concrete S3K dependencies,
+  animation managers participate in rewind snapshots, and trace replay parity tests are exposed
+  through an explicit Maven profile instead of hidden default-suite exclusions.
 - **S3K bring-up and parity:** Angel Island, Carnival Night, Hydrocity, Marble Garden, data select,
   save handling, and sidekick/object interactions continue to gain ROM-cited behavior and tests.
   Carnival Night Act 1 now includes the miniboss arena handoff: miniboss music, boss/raw child
