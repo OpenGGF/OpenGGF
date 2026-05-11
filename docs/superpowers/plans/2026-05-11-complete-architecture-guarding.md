@@ -175,6 +175,11 @@ Primary gaps:
   `TestSonic2LevelInitProfile`, `TestObjectManagerLifecycle`, and
   `TestDestructionEffects` onto `TestEnvironment.resetAll()`, further reducing
   the lifecycle baseline.
+- Hardened `TestObjectServicesMigrationGuard` with a consolidated global
+  runtime-access scanner for both game object packages and shared
+  `level.objects` sources. The scanner fails direct `GameServices`,
+  `EngineServices`, runtime fallback, `GameModuleRegistry`, and monitored
+  singleton access outside documented object-service bridge exceptions.
 
 ## End-to-End Review
 
@@ -194,3 +199,9 @@ Primary gaps:
 - Additional cleanup verification passed:
   `mvn test "-Dtest=TestSingletonLifecycleGuard,TestSonic1LevelInitProfile,TestSonic2LevelInitProfile,TestObjectManagerLifecycle,TestDestructionEffects"`
   reported `MSE:OK modules=1 passed=4906 failed=0 errors=0 skipped=6`.
+- Object-service guard hardening verification passed:
+  `mvn test "-Dtest=TestObjectServicesMigrationGuard"` reported
+  `MSE:OK modules=1 passed=4909 failed=0 errors=0 skipped=6`.
+- Post-hardening full-suite verification passed:
+  `mvn test` reported
+  `MSE:OK modules=1 passed=4909 failed=0 errors=0 skipped=6`.
