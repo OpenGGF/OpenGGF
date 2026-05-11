@@ -323,6 +323,52 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         return reader.slice(addr, len);
     }
 
+    /**
+     * Captures per-cycle mutable state (timers, counters, dirty flags, gate flags)
+     * across all currently-loaded cycles. The returned bytes are intended to be
+     * embedded in the level-animation manager's snapshot.
+     */
+    byte[] captureCyclerState() {
+        if (cycles == null || cycles.isEmpty()) {
+            return new byte[0];
+        }
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        try (java.io.DataOutputStream dout = new java.io.DataOutputStream(out)) {
+            dout.writeInt(cycles.size());
+            for (PaletteCycle cycle : cycles) {
+                byte[] state = com.openggf.game.rewind.schema.PaletteCycleStateCodec.capture(cycle);
+                dout.writeInt(state.length);
+                dout.write(state);
+            }
+        } catch (java.io.IOException e) {
+            return new byte[0];
+        }
+        return out.toByteArray();
+    }
+
+    /** Inverse of {@link #captureCyclerState()}. Tolerant of null/empty/mismatched input. */
+    void restoreCyclerState(byte[] data) {
+        if (data == null || data.length < 4 || cycles == null || cycles.isEmpty()) {
+            return;
+        }
+        try (java.io.DataInputStream din = new java.io.DataInputStream(new java.io.ByteArrayInputStream(data))) {
+            int count = din.readInt();
+            if (count != cycles.size()) {
+                return; // shape mismatch — refuse to corrupt state
+            }
+            for (PaletteCycle cycle : cycles) {
+                int size = din.readInt();
+                if (size < 0 || size > data.length) {
+                    return;
+                }
+                byte[] state = din.readNBytes(size);
+                com.openggf.game.rewind.schema.PaletteCycleStateCodec.restore(cycle, state);
+            }
+        } catch (java.io.IOException ignored) {
+            // tolerate truncation / corruption
+        }
+    }
+
     private byte[] loadKosinskiBytes(RomByteReader reader, int addr, int compressedSize,
                                      int minimumDecompressedSize) {
         if (addr < 0 || addr + compressedSize > reader.size()) {

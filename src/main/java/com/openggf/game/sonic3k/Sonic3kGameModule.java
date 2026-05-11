@@ -69,6 +69,15 @@ import java.util.logging.Logger;
  */
 public class Sonic3kGameModule implements GameModule {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kGameModule.class.getName());
+
+    static {
+        // Register the S3K data-select renderer as a cross-game donor so S1/S2 modules
+        // can request a donated presentation without naming the S3K-specific delegate.
+        com.openggf.game.dataselect.CrossGameDataSelectPresentations.registerDonor(
+                com.openggf.game.dataselect.CrossGameDataSelectPresentations.DONOR_S3K,
+                S3kDataSelectManager::new);
+    }
+
     private final GameAudioProfile audioProfile = new Sonic3kAudioProfile();
     private final Sonic3kLevelEventManager levelEventManager = new Sonic3kLevelEventManager();
     private final Sonic3kTitleCardManager titleCardManager = new Sonic3kTitleCardManager();

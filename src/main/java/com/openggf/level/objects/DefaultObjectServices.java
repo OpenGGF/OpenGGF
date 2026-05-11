@@ -92,6 +92,16 @@ public class DefaultObjectServices implements ObjectServices {
                 gameplayMode.getActiveBonusStageProvider());
     }
 
+    /**
+     * Legacy fallback constructor that reconstitutes the engine context from
+     * {@link GameServices} static accessors. Retained only for test/bootstrap
+     * paths that predate session ownership; production code must use the
+     * {@link #DefaultObjectServices(GameplayModeContext, EngineContext)} form.
+     *
+     * @deprecated Migrate callers to the session-backed constructor; this
+     * constructor will be removed once all legacy paths have been updated.
+     */
+    @Deprecated
     public DefaultObjectServices(LevelManager levelManager,
                                  Camera camera,
                                  GameStateManager gameState,

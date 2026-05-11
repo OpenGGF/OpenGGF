@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.session.EngineContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -78,6 +79,14 @@ class TestObjectServicesConstructionContext {
         @Override public int[] findPatternOffset(int refX, int refY, int minTileIdx, int maxTileIdx, int searchRadius) { return null; }
         @Override public void saveBigRingReturn(com.openggf.level.BigRingReturnState state) {}
     };
+
+    @AfterEach
+    void clearConstructionContext() {
+        // Defense in depth: if any test path forgets to clear the ThreadLocal
+        // (e.g. an assertion fires mid-try), the leak does not corrupt other
+        // tests in the same fork.
+        AbstractObjectInstance.CONSTRUCTION_CONTEXT.remove();
+    }
 
     /** Test object that calls services() in its constructor. */
     private static class ConstructorAccessObject extends AbstractObjectInstance {

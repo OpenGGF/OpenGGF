@@ -42,6 +42,7 @@ import java.util.List;
 public class StubObjectServices implements ObjectServices {
     private final GameRng rng = new GameRng(GameRng.Flavour.S3K);
     private final ZoneRuntimeRegistry zoneRuntimeRegistry = new ZoneRuntimeRegistry();
+    private final ZoneLayoutMutationPipeline zoneLayoutMutationPipeline = new ZoneLayoutMutationPipeline();
 
     @Override public ObjectManager objectManager() { return null; }
     @Override public ObjectRenderManager renderManager() { return null; }
@@ -102,6 +103,6 @@ public class StubObjectServices implements ObjectServices {
     @Override public int getCurrentLevelMusicId() { return 0; }
     @Override public int[] findPatternOffset(int refX, int refY, int minTileIdx, int maxTileIdx, int searchRadius) { return null; }
     @Override public void saveBigRingReturn(com.openggf.level.BigRingReturnState state) {}
-    @Override public ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() { return new ZoneLayoutMutationPipeline(); }
+    @Override public ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() { return zoneLayoutMutationPipeline; }
 }
 

@@ -796,27 +796,26 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Layout:
         //   5 bytes   manager-level (bootstrap mode ordinal + 4 booleans)
         //   1 byte    aiz handler present flag
-        //   87 bytes  aiz state (19 booleans + 15 ints + 1 ordinal = 19+64 = 83; adjust to actual 87)
+        //   83 bytes  aiz state (19 booleans + 15 ints + 1 ordinal int = 19+60+4 = 83)
         //   1 byte    hcz handler present flag
-        //   43 bytes  hcz state (7 booleans + 9 ints = 7+36)
+        //   43 bytes  hcz state (7 booleans + 9 ints = 7+36 = 43)
         //   1 byte    cnz handler present flag
-        //   86 bytes  cnz state (4 shorts + 10 booleans + 15 ints + 1 ordinal = 8+10+60+4+4)
+        //   82 bytes  cnz state (4 shorts + 10 booleans + 15 ints + 1 ordinal int = 8+10+60+4 = 82)
         //   1 byte    mgz handler present flag
-        //   228 bytes mgz state (16 booleans + 23 ints + 30 ints = 16+92+120)
-        // AIZ: 19 booleans + 15 ints + 1 ordinal = 19 + 60 + 4 = 83 bytes
-        // (original comment said 87 but actual is 83: 19 bools + 15*4 ints + 1*4 ordinal)
+        //   228 bytes mgz state (16 booleans + 23 ints + 30 ints = 16+92+120 = 228)
+        //   1 byte    icz handler present flag
+        //   24 bytes  icz state (4 booleans + 5 ints; see Sonic3kICZEvents.rewindStateBytes())
         int aizSize = 19 + 15 * 4 + 4; // 83
-        // HCZ: 7 booleans + 9 ints = 43
         int hczSize = 7 + 9 * 4; // 43
-        // CNZ: 4 shorts + 10 booleans + 15 ints + 1 ordinal = 8+10+60+4 = 82
         int cnzSize = 4 * 2 + 10 + 15 * 4 + 4; // 82
-        // MGZ: 16 booleans + 23 ints + 3*10 ints = 16 + 92 + 120 = 228
         int mgzSize = 16 + 23 * 4 + 3 * 10 * 4; // 228
+        int iczSize = Sonic3kICZEvents.rewindStateBytes(); // 24
         int size = 5;
         size += 1 + (aizEvents != null ? aizSize : 0);
         size += 1 + (hczEvents != null ? hczSize : 0);
         size += 1 + (cnzEvents != null ? cnzSize : 0);
         size += 1 + (mgzEvents != null ? mgzSize : 0);
+        size += 1 + (iczEvents != null ? iczSize : 0);
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(size);
         // Manager-level
         buf.put((byte) bootstrap.mode().ordinal());
@@ -852,6 +851,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else {
             buf.put((byte) 0);
         }
+        // ICZ
+        if (iczEvents != null) {
+            buf.put((byte) 1);
+            writeIczState(buf, iczEvents);
+        } else {
+            buf.put((byte) 0);
+        }
         return buf.array();
     }
 
@@ -875,6 +881,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         final int hczBytes = 7 + 9 * 4;        // 43
         final int cnzBytes = 4 * 2 + 10 + 15 * 4 + 4; // 82
         final int mgzBytes = 16 + 23 * 4 + 3 * 10 * 4; // 228
+        final int iczBytes = Sonic3kICZEvents.rewindStateBytes(); // 24
         // AIZ
         if (buf.remaining() >= 1) {
             boolean aizPresent = buf.get() != 0;
@@ -909,6 +916,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 readMgzState(buf, mgzEvents);
             } else if (mgzPresent && buf.remaining() >= mgzBytes) {
                 buf.position(buf.position() + mgzBytes);
+            }
+        }
+        // ICZ
+        if (buf.remaining() >= 1) {
+            boolean iczPresent = buf.get() != 0;
+            if (iczPresent && iczEvents != null && buf.remaining() >= iczBytes) {
+                readIczState(buf, iczEvents);
+            } else if (iczPresent && buf.remaining() >= iczBytes) {
+                buf.position(buf.position() + iczBytes);
             }
         }
     }
@@ -1071,7 +1087,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         buf.putInt(c.getArenaChunkWorldX());
         buf.putInt(c.getArenaChunkWorldY());
         buf.putInt(c.getDestroyedArenaRows());
-        // 1 enum ordinal = 4 bytes (total = 8+10+64+4 = 86 bytes; not 82)
+        // 1 enum ordinal = 4 bytes (running total: 8 + 10 + 16*4 = 82 bytes)
         buf.putInt(c.getBossBackgroundMode().ordinal());
     }
 
@@ -1211,5 +1227,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         m.setCollapseScrollVelocity(sv);
         m.setCollapseScrollFixedPosition(sf);
         m.setCollapseScrollPosition(sp);
+    }
+
+    // --- ICZ write/read (24 bytes) ---
+
+    private static void writeIczState(java.nio.ByteBuffer buf, Sonic3kICZEvents icz) {
+        icz.writeRewindState(buf);
+    }
+
+    private static void readIczState(java.nio.ByteBuffer buf, Sonic3kICZEvents icz) {
+        icz.readRewindState(buf);
     }
 }
