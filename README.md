@@ -109,7 +109,10 @@ Recent engine work has also moved shared zone behavior onto runtime-owned framew
 
 Current migration status is intentionally partial rather than universal. Sonic 2 already uses the runtime-owned stack for HTZ/CNZ runtime state, palette ownership, animated tile orchestration, CNZ staged overlay rendering, and CNZ layout mutations via `ZoneLayoutMutationPipeline`. Sonic 3&K uses the same stack for AIZ/HCZ/CNZ runtime-state adapters, AIZ staged render effects and advanced render modes, HCZ/SOZ animated tile channels, CNZ runtime-state-backed scroll behavior, and seamless terrain-swap/mutation paths routed through the mutation pipeline. The shared scroll-composition helpers are live in AIZ, HCZ, and MGZ. Other S1/S2/S3K zones still mix these frameworks with older zone-local paths and should be treated as follow-up migration work rather than implied complete adoption.
 
-Work is ongoing across all three games. See CHANGELOG.md for detailed progress.
+Work is ongoing across all three games. Recent branch work added compact
+palette-cycle rewind coverage and adopted ArchUnit architecture guard tests with
+frozen baselines for current boundary debt. See CHANGELOG.md for detailed
+progress.
 
 ### Where do I get ROMs?
 

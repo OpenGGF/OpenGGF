@@ -6,6 +6,19 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **ArchUnit architecture guard adoption.** Adds the ArchUnit JUnit 5 test
+  dependency and bytecode-level architecture rules for the existing dependency
+  invariants around rewind snapshot interfaces, shared/service boundaries,
+  level-layer S3K coupling, and cross-game data-select delegates. The
+  source-text guard remains for comment/string/XML surfaces that bytecode
+  analysis cannot inspect. Broader object-service, shared-layer, per-game slice,
+  and JUnit 5 API rules now guard against new architectural drift, with current
+  debt frozen under `src/test/resources/archunit/frozen` and documented in
+  `docs/architecture/archunit-exceptions.md`.
+- **Palette-cycle rewind coverage.** Adds a compact schema codec for palette
+  cycle state and extends Sonic 2/S3K palette and level-animation managers with
+  snapshot coverage so animated palette progress survives rewind round-trips.
+  New tests cover the palette-cycle codec and S3K ICZ rewind restoration.
 - **S3K CNZ miniboss completion.** Carnival Night Zone Act 1 now drives the
   miniboss arena through ROM-cited event flow: the tunnel approach, arena
   camera clamps, miniboss music, PLC/palette load, vertical scroll-control
