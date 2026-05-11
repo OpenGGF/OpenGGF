@@ -284,7 +284,8 @@ public class Sonic2GameModule implements GameModule {
     @Override
     public DataSelectPresentationProvider getDataSelectPresentationProvider() {
         if (dataSelectPresentationProvider == null) {
-            dataSelectPresentationProvider = CrossGameDataSelectPresentations.s3kDonor(dataSelectHostProfile);
+            dataSelectPresentationProvider = CrossGameDataSelectPresentations.donated(
+                    CrossGameDataSelectPresentations.DONOR_S3K, dataSelectHostProfile);
         }
         return dataSelectPresentationProvider;
     }
