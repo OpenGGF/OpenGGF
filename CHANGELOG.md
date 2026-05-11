@@ -6,6 +6,26 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Complete architecture guard coverage.** Expands the ArchUnit and source
+  guard suite across runtime/session ownership, runtime-owned registry
+  construction, concrete Sonic provider construction, trace replay hydration
+  invariants, trace parser dependencies, rewind override/annotation growth,
+  `GameId` behavior branching, runtime disassembly asset access,
+  `Engine.java` responsibility budgets, `ObjectArtData` game-specific surface
+  growth, object coordinate hazard scanning, and singleton/gameplay lifecycle
+  setup drift in tests. New frozen ArchUnit baselines document existing
+  migration debt while preventing new violations. Stabilizes the sidekick
+  follow parity fixture so it resets the active game module before each test in
+  reused Maven forks, and migrates sidekick, timer, level-init, and object
+  lifecycle tests onto `TestEnvironment.resetAll()` to shrink the lifecycle
+  baseline. Strengthens the object-service migration guard with one
+  consolidated scanner that covers game object packages and shared object
+  infrastructure for direct global runtime access, leaving only documented
+  line-level bridge exceptions. Shared object guard helpers now live in one
+  test utility, `ObjectManager` resolves rewind overlap sidekicks through
+  injected `ObjectServices`, and the contributor guide documents the object
+  service access contract. The shared-layer frozen ArchUnit baseline is also
+  refreshed for the current `DefaultPowerUpSpawner` lambda bytecode form.
 - **ArchUnit architecture guard adoption.** Adds the ArchUnit JUnit 5 test
   dependency and bytecode-level architecture rules for the existing dependency
   invariants around rewind snapshot interfaces, shared/service boundaries,

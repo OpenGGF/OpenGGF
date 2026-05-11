@@ -1,13 +1,17 @@
 package com.openggf.level.objects;
 
 import com.openggf.game.session.EngineContext;
+import com.openggf.tests.ObjectGuardSourceScanner;
+import com.openggf.tests.ObjectGuardSourceScanner.SourceText;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -70,26 +74,191 @@ class TestObjectServicesMigrationGuard {
     );
 
     /** Packages containing object instance classes to scan. */
-    private static final String[] OBJECT_PACKAGES = {
-            "com/openggf/game/sonic1/objects",
-            "com/openggf/game/sonic2/objects",
-            "com/openggf/game/sonic3k/objects",
-    };
+    private static final String[] OBJECT_PACKAGES = ObjectGuardSourceScanner.GAME_OBJECT_PACKAGE_PATHS;
 
     private static final String SHARED_OBJECT_PACKAGE = "com/openggf/level/objects";
+    private static final String[] OBJECT_GLOBAL_ACCESS_PACKAGES = ObjectGuardSourceScanner.OBJECT_PACKAGE_PATHS;
+
+    /**
+     * Approved object-service bridge lines. Normal object implementations must
+     * use ObjectServices via services(); these entries document the remaining
+     * compatibility seams at the source-line level.
+     */
+    private static final List<ApprovedGlobalRuntimeAccess> APPROVED_GLOBAL_RUNTIME_ACCESSES = List.of(
+            approved("com.openggf.level.objects.AbstractObjectInstance", "GameServices.",
+                    "GameServices.configuration()",
+                    "lazy configuration bridge for legacy direct-construction tests"),
+            approved("com.openggf.level.objects.AbstractObjectInstance", "GameServices.",
+                    "GameServices.debugOverlay()",
+                    "optional debug-overlay fallback"),
+            approved("com.openggf.level.objects.AbstractObjectInstance", "GameServices.",
+                    "GameServices.rom()",
+                    "optional ROM-service fallback"),
+            approved("com.openggf.level.objects.AbstractObjectInstance", "GameServices.",
+                    "GameServices.levelOrNull()",
+                    "optional level-manager fallback while direct object construction remains supported"),
+            approved("com.openggf.level.objects.AbstractObjectRegistry", "GameServices.",
+                    "GameServices.levelOrNull()",
+                    "registry placement bootstrap fallback"),
+            approved("com.openggf.level.objects.BootstrapObjectServices", "GameServices.",
+                    "GameServices.",
+                    "explicit GameServices-to-ObjectServices adapter"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.configuration()",
+                    "builds the root EngineContext from current runtime services"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.graphics()",
+                    "builds the root EngineContext from current runtime services"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.audio()",
+                    "builds the root EngineContext from current runtime services"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.rom()",
+                    "builds the root EngineContext from current runtime services"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.profiler()",
+                    "builds the root EngineContext from current runtime services"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.debugOverlay()",
+                    "builds the root EngineContext from current runtime services"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.playbackDebug()",
+                    "builds the root EngineContext from current runtime services"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.romDetection()",
+                    "builds the root EngineContext from current runtime services"),
+            approved("com.openggf.level.objects.DefaultObjectServices", "GameServices.",
+                    "GameServices.crossGameFeatures()",
+                    "builds the root EngineContext from current runtime services"),
+            approved("com.openggf.level.objects.ObjectManager", "EngineServices.",
+                    "EngineServices.current()",
+                    "ObjectServices composition boundary"),
+            approved("com.openggf.level.objects.ObjectManager", "GameServices.",
+                    "GameServices.collision().getTrace()",
+                    "solid-contact trace emission through the active collision trace"),
+            approved("com.openggf.game.sonic2.objects.Sonic2ObjectRegistry", "GameServices.",
+                    "GameServices.level().getObjectRenderManager()",
+                    "legacy Sonic 2 object render context wiring"),
+            approved("com.openggf.game.sonic3k.objects.AizIntroTerrainSwap", "GameServices.",
+                    "GameServices.hasRuntime()",
+                    "static AIZ intro terrain-swap bootstrap helper"),
+            approved("com.openggf.game.sonic3k.objects.AizIntroTerrainSwap", "GameServices.",
+                    "GameServices.zoneLayoutMutationPipeline()",
+                    "static AIZ intro terrain-swap bootstrap helper")
+    );
+
     private static final Set<String> SHARED_OBJECT_SOURCE_EXCEPTIONS = Set.of(
             "com.openggf.level.objects.AbstractObjectInstance"
     );
 
-    private static final String[] OBJECT_SERVICE_NULL_CHECK_PACKAGES = {
-            "com/openggf/game/sonic1/objects",
-            "com/openggf/game/sonic2/objects",
-            "com/openggf/game/sonic3k/objects",
-            "com/openggf/level/objects",
-    };
+    private static final String[] OBJECT_SERVICE_NULL_CHECK_PACKAGES = ObjectGuardSourceScanner.OBJECT_PACKAGE_PATHS;
 
     private static final java.util.regex.Pattern STRICT_SERVICES_NULL_CHECK =
             java.util.regex.Pattern.compile("services\\(\\)\\s*(==|!=)\\s*null");
+
+    @Test
+    void objectImplementationClasses_shouldNotAccessGlobalRuntimeRootsExceptApprovedBridges() throws IOException {
+        Path srcMain = Path.of("src/main/java");
+        if (!Files.isDirectory(srcMain)) {
+            return;
+        }
+
+        List<String> violations = collectForbiddenGlobalAccessViolations(srcMain);
+
+        if (!violations.isEmpty()) {
+            fail("Object implementation classes must access runtime dependencies through ObjectServices.\n"
+                    + "Move the dependency behind services(), tryServices(), ObjectServices, or an approved bridge.\n\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_coversSharedObjectInstances(@TempDir Path tempDir) throws IOException {
+        Path srcMain = tempDir.resolve("src/main/java");
+        Path source = srcMain.resolve("com/openggf/level/objects/SharedFixtureObjectInstance.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package com.openggf.level.objects;
+
+                final class SharedFixtureObjectInstance {
+                    void update() {
+                        LevelManager.getInstance();
+                    }
+                }
+                """);
+
+        List<String> violations = collectForbiddenGlobalAccessViolations(srcMain);
+
+        assertTrue(violations.stream().anyMatch(v -> v.contains("SharedFixtureObjectInstance")
+                        && v.contains("LevelManager.getInstance(")),
+                () -> "Expected shared object singleton access to be reported, got: " + violations);
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_coversGameObjectRuntimeFallbacks(@TempDir Path tempDir) throws IOException {
+        Path srcMain = tempDir.resolve("src/main/java");
+        Path source = srcMain.resolve("com/openggf/game/sonic1/objects/GameFixtureObjectInstance.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package com.openggf.game.sonic1.objects;
+
+                final class GameFixtureObjectInstance {
+                    void update() {
+                        EngineServices.current();
+                    }
+                }
+                """);
+
+        List<String> violations = collectForbiddenGlobalAccessViolations(srcMain);
+
+        assertTrue(violations.stream().anyMatch(v -> v.contains("GameFixtureObjectInstance")
+                        && v.contains("EngineServices.")),
+                () -> "Expected game object EngineServices access to be reported, got: " + violations);
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_doesNotTrustWholeBridgeClasses(@TempDir Path tempDir) throws IOException {
+        Path srcMain = tempDir.resolve("src/main/java");
+        Path source = srcMain.resolve("com/openggf/level/objects/DefaultObjectServices.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package com.openggf.level.objects;
+
+                final class DefaultObjectServices {
+                    void unexpectedBridgeGrowth() {
+                        GameServices.camera();
+                    }
+                }
+                """);
+
+        List<String> violations = collectForbiddenGlobalAccessViolations(srcMain);
+
+        assertTrue(violations.stream().anyMatch(v -> v.contains("DefaultObjectServices")
+                        && v.contains("GameServices.")),
+                () -> "Expected unapproved bridge-class GameServices access to be reported, got: " + violations);
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_allowsDocumentedLineLevelBridgeAccess(@TempDir Path tempDir)
+            throws IOException {
+        Path srcMain = tempDir.resolve("src/main/java");
+        Path source = srcMain.resolve("com/openggf/level/objects/DefaultObjectServices.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package com.openggf.level.objects;
+
+                final class DefaultObjectServices {
+                    void createEngineContext() {
+                        GameServices.configuration();
+                    }
+                }
+                """);
+
+        List<String> violations = collectForbiddenGlobalAccessViolations(srcMain);
+
+        assertTrue(violations.isEmpty(),
+                () -> "Expected documented bridge access to be allowed, got: " + violations);
+    }
 
     /**
      * Monitored singleton class names. Source-level scan looks for
@@ -330,8 +499,9 @@ class TestObjectServicesMigrationGuard {
                 files.filter(path -> path.toString().endsWith(".java"))
                         .forEach(path -> {
                             try {
-                                SourceScanText source = sourceWithoutCommentOnlyLines(Files.readAllLines(path));
-                                java.util.regex.Matcher matcher = STRICT_SERVICES_NULL_CHECK.matcher(source.text);
+                                SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(
+                                        Files.readAllLines(path));
+                                java.util.regex.Matcher matcher = STRICT_SERVICES_NULL_CHECK.matcher(source.text());
                                 while (matcher.find()) {
                                     violations.add(String.format("%s:%d",
                                             srcMain.relativize(path).toString(), source.lineAt(matcher.start())));
@@ -357,7 +527,8 @@ class TestObjectServicesMigrationGuard {
      */
     private List<String> scanForGetInstance(Path sourceFile) {
         try {
-            String content = sourceWithoutCommentOnlyLines(Files.readAllLines(sourceFile)).text;
+            String content = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(
+                    Files.readAllLines(sourceFile)).text();
 
             List<String> found = new ArrayList<>();
             for (var entry : MONITORED_SINGLETONS.entrySet()) {
@@ -375,41 +546,89 @@ class TestObjectServicesMigrationGuard {
         }
     }
 
-    private static SourceScanText sourceWithoutCommentOnlyLines(List<String> lines) {
-        StringBuilder source = new StringBuilder();
-        List<Integer> lineByOffset = new ArrayList<>();
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            String trimmed = line.trim();
-            String scannedLine = (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*"))
-                    ? ""
-                    : line;
-            source.append(scannedLine);
-            for (int j = 0; j < scannedLine.length(); j++) {
-                lineByOffset.add(i + 1);
+    private List<String> collectForbiddenGlobalAccessViolations(Path srcMain) throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (String pkg : OBJECT_GLOBAL_ACCESS_PACKAGES) {
+            Path pkgDir = srcMain.resolve(pkg);
+            if (!Files.isDirectory(pkgDir)) {
+                continue;
             }
-            source.append('\n');
-            lineByOffset.add(i + 1);
+
+            try (Stream<Path> files = Files.walk(pkgDir)) {
+                files.filter(path -> path.toString().endsWith(".java"))
+                        .forEach(path -> collectForbiddenGlobalAccessViolations(srcMain, path, violations));
+            }
         }
-        return new SourceScanText(source.toString(), lineByOffset);
+        Collections.sort(violations);
+        return violations;
     }
 
-    private static final class SourceScanText {
-        private final String text;
-        private final List<Integer> lineByOffset;
+    private void collectForbiddenGlobalAccessViolations(Path srcMain, Path sourceFile, List<String> violations) {
+        try {
+            String className = ObjectGuardSourceScanner.className(srcMain, sourceFile);
 
-        private SourceScanText(String text, List<Integer> lineByOffset) {
-            this.text = text;
-            this.lineByOffset = lineByOffset;
-        }
-
-        private int lineAt(int offset) {
-            if (lineByOffset.isEmpty()) {
-                return 1;
+            SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(Files.readAllLines(sourceFile));
+            for (String pattern : forbiddenGlobalAccessPatterns()) {
+                int searchFrom = 0;
+                while (true) {
+                    int match = source.text().indexOf(pattern, searchFrom);
+                    if (match < 0) {
+                        break;
+                    }
+                    GlobalRuntimeAccess access = new GlobalRuntimeAccess(
+                            className,
+                            source.lineAt(match),
+                            pattern,
+                            source.lineTextAt(match).trim());
+                    if (!isApprovedGlobalAccess(access)) {
+                        violations.add(String.format("%s:%d uses %s in `%s`",
+                                access.className(), access.lineNumber(), access.pattern(), access.lineText()));
+                    }
+                    searchFrom = match + pattern.length();
+                }
             }
-            return lineByOffset.get(Math.min(offset, lineByOffset.size() - 1));
+        } catch (IOException ignored) {
         }
     }
+
+    private static List<String> forbiddenGlobalAccessPatterns() {
+        List<String> patterns = new ArrayList<>();
+        patterns.add("GameServices.");
+        patterns.add("EngineServices.");
+        patterns.add("RuntimeManager.getCurrent(");
+        patterns.add("EngineContext.fromLegacySingletonsForBootstrap(");
+        patterns.add("GameModuleRegistry.getCurrent(");
+        for (String singleton : MONITORED_SINGLETONS.keySet()) {
+            patterns.add(singleton + ".getInstance(");
+        }
+        return patterns;
+    }
+
+    private static boolean isApprovedGlobalAccess(GlobalRuntimeAccess access) {
+        return APPROVED_GLOBAL_RUNTIME_ACCESSES.stream().anyMatch(approved -> approved.matches(access));
+    }
+
+    private static ApprovedGlobalRuntimeAccess approved(
+            String className, String pattern, String sourceFragment, String reason) {
+        return new ApprovedGlobalRuntimeAccess(className, pattern, sourceFragment, reason);
+    }
+
+    private record GlobalRuntimeAccess(String className, int lineNumber, String pattern, String lineText) {
+    }
+
+    private record ApprovedGlobalRuntimeAccess(
+            String className, String pattern, String sourceFragment, String reason) {
+        private ApprovedGlobalRuntimeAccess {
+            if (reason == null || reason.isBlank()) {
+                throw new IllegalArgumentException("Approved global access must document a reason");
+            }
+        }
+
+        private boolean matches(GlobalRuntimeAccess access) {
+            return className.equals(access.className())
+                    && pattern.equals(access.pattern())
+                    && access.lineText().contains(sourceFragment);
+        }
+    }
+
 }
-
-

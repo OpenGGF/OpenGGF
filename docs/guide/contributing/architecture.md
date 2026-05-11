@@ -152,6 +152,31 @@ The separation exists because the planned level editor will have multiple simult
 level contexts. Process services stay shared; object services are backed by the active
 gameplay context.
 
+### Object Service Access Contract
+
+Object instances must treat `ObjectServices` as their runtime boundary:
+
+- Use `services()` for required gameplay dependencies such as camera, object manager,
+  audio, game state, render manager, level manager, zone features, and RNG.
+- Use `tryServices()` only for optional fallback paths where the object can safely run
+  before injection, such as legacy direct-construction tests or debug-only probes.
+- Do not call `GameServices`, `EngineServices`, `RuntimeManager`, `GameModuleRegistry`,
+  or manager `getInstance()` methods from normal object code. Those process-global
+  roots are reserved for documented bridge classes such as `DefaultObjectServices`,
+  `BootstrapObjectServices`, `ObjectManager`, and registry/composition code.
+- Do not call `services()` from object constructors. Object services are injected by the
+  object manager after construction unless the object is created through a managed
+  construction-context helper. Initialize service-dependent state lazily in `update()`
+  or through an explicit post-construction path.
+- When an object creates a child object that needs services during construction, use
+  `spawnChild(...)`, `spawnFreeChild(...)`, or an explicit construction-context wrapper
+  instead of `new ChildInstance(...)` followed by `addDynamicObject(...)`.
+
+The test guard suite enforces this contract with `TestObjectServicesMigrationGuard`,
+`TestNoServicesInObjectConstructors`, and `TestConstructionContextGuard`. If a new
+exception is truly needed, document the exact bridge line and reason in the guard rather
+than exempting a whole class.
+
 ## Runtime-Owned Systems
 
 The old `GameRuntime`/`RuntimeManager` facade has been retired from production code.
