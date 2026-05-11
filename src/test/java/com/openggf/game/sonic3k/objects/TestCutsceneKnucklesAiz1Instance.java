@@ -21,6 +21,14 @@ public class TestCutsceneKnucklesAiz1Instance {
         assertEquals(0, knux.getRoutine());
     }
 
+    @Test
+    public void rewindCaptureSkipsScratchMotionState() {
+        var spawn = new ObjectSpawn(0x1400, 0x440, 0, 0, 0, false, 0);
+        var knux = new CutsceneKnucklesAiz1Instance(spawn);
+
+        assertDoesNotThrow(() -> knux.captureRewindState());
+    }
+
 }
 
 

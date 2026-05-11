@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
@@ -134,7 +135,8 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance {
     /** Previous-frame render_flags bit 7 state used by the exit handoff. */
     private boolean exitRenderFlagOnScreen;
 
-    /** Shared state object for SubpixelMotion calls. */
+    /** Shared scratch object for SubpixelMotion calls; scalar fields hold rewind state. */
+    @RewindTransient(reason = "scratch SubpixelMotion holder rebuilt from captured scalar position/velocity fields")
     private final SubpixelMotion.State motionState = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
 
     // -----------------------------------------------------------------------

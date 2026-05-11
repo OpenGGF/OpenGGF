@@ -123,6 +123,11 @@ class TestGenericFieldCapturer {
         PlatformBobHelper mutableBob = new PlatformBobHelper();
     }
 
+    static class WithFinalMotionState {
+        final SubpixelMotion.State motion = new SubpixelMotion.State(10, 20, 1, 2, 0x300, -0x200);
+        int marker = 7;
+    }
+
     @Test
     void roundTripsSupportedScalarFields() {
         Plain p = new Plain();
@@ -343,6 +348,31 @@ class TestGenericFieldCapturer {
                 WithSharedHelperFields.class.getDeclaredField("mutableMotion")));
         assertFalse(GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(
                 WithSharedHelperFields.class.getDeclaredField("mutableBob")));
+    }
+
+    @Test
+    void roundTripsFinalSubpixelMotionStateInPlace() {
+        WithFinalMotionState source = new WithFinalMotionState();
+        GenericObjectSnapshot snap = GenericFieldCapturer.capture(source);
+
+        WithFinalMotionState restored = new WithFinalMotionState();
+        restored.motion.x = -1;
+        restored.motion.y = -2;
+        restored.motion.xSub = -3;
+        restored.motion.ySub = -4;
+        restored.motion.xVel = -5;
+        restored.motion.yVel = -6;
+        restored.marker = 0;
+
+        GenericFieldCapturer.restore(restored, snap);
+
+        assertEquals(10, restored.motion.x);
+        assertEquals(20, restored.motion.y);
+        assertEquals(1, restored.motion.xSub);
+        assertEquals(2, restored.motion.ySub);
+        assertEquals(0x300, restored.motion.xVel);
+        assertEquals(-0x200, restored.motion.yVel);
+        assertEquals(7, restored.marker);
     }
 
     private static BitSet bitSet(int... bits) {
