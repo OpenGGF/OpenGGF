@@ -90,6 +90,27 @@ public final class GameplayModeContext implements ModeContext {
         this.resumeStash = resumeStash;
     }
 
+    public boolean isGameplayRuntimeReady() {
+        return camera != null
+                && timerManager != null
+                && gameStateManager != null
+                && fadeManager != null
+                && rng != null
+                && solidExecutionRegistry != null
+                && waterSystem != null
+                && parallaxManager != null
+                && terrainCollisionManager != null
+                && collisionSystem != null
+                && spriteManager != null
+                && levelManager != null
+                && zoneRuntimeRegistry != null
+                && paletteOwnershipRegistry != null
+                && animatedTileChannelGraph != null
+                && specialRenderEffectRegistry != null
+                && advancedRenderModeController != null
+                && zoneLayoutMutationPipeline != null;
+    }
+
     public WorldSession getWorldSession() {
         return worldSession;
     }
@@ -170,6 +191,7 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.deregister("sprites");
             rewindRegistry.deregisterPostRestoreCallback("parallax-derived-state");
             rewindRegistry.deregisterPostRestoreCallback("sprite-powerup-derived-state");
+            rewindRegistry.deregisterPostRestoreCallback("sprite-latched-solid-derived-state");
             rewindRegistry.register(parallaxManager);
             rewindRegistry.register(waterSystem);
             rewindRegistry.register(spriteManager.rewindSnapshottable());
@@ -179,6 +201,10 @@ public final class GameplayModeContext implements ModeContext {
             rewindRegistry.registerPostRestoreCallback(
                     "sprite-powerup-derived-state",
                     spriteManager::refreshPowerUpObjectsAfterRewindRestore);
+            rewindRegistry.registerPostRestoreCallback(
+                    "sprite-latched-solid-derived-state",
+                    () -> spriteManager.refreshLatchedSolidObjectsAfterRewindRestore(
+                            levelManager.getObjectManager()));
         }
     }
 

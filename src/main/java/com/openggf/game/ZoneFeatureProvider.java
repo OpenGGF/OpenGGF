@@ -173,6 +173,17 @@ public interface ZoneFeatureProvider {
     }
 
     /**
+     * Whether this zone should select a full-width background tilemap window
+     * while still using a per-line scrolled background path.
+     */
+    default boolean useFullWidthBackgroundTilemapWindow(int zoneIndex,
+                                                        int actIndex,
+                                                        int bgCameraX,
+                                                        int cachedBgContiguousWidthPx) {
+        return false;
+    }
+
+    /**
      * Whether the intro ocean phase is currently active (e.g. AIZ intro in S3K).
      * When active, the BG plane wraps at VDP width instead of full layout width.
      *

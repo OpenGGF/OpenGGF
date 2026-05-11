@@ -28,14 +28,13 @@ import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.WaterDataProvider;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.ZoneRegistry;
+import com.openggf.game.dataselect.CrossGameDataSelectPresentations;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
-import com.openggf.game.dataselect.DataSelectSessionController;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.credits.Sonic1EndingProvider;
 import com.openggf.game.sonic1.dataselect.S1DataSelectProfile;
-import com.openggf.game.sonic3k.dataselect.S3kDataSelectManager;
 import com.openggf.game.sonic1.dataselect.S1SaveSnapshotProvider;
 import com.openggf.game.sonic1.levelselect.Sonic1LevelSelectManager;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
@@ -215,8 +214,7 @@ public class Sonic1GameModule implements GameModule {
     @Override
     public DataSelectPresentationProvider getDataSelectPresentationProvider() {
         if (dataSelectPresentationProvider == null) {
-            dataSelectPresentationProvider = new DataSelectPresentationProvider(S3kDataSelectManager::new,
-                    new DataSelectSessionController(dataSelectHostProfile));
+            dataSelectPresentationProvider = CrossGameDataSelectPresentations.s3kDonor(dataSelectHostProfile);
         }
         return dataSelectPresentationProvider;
     }

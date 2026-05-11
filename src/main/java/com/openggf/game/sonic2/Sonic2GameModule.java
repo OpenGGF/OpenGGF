@@ -8,7 +8,6 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectConstants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.credits.Sonic2EndingProvider;
-import com.openggf.game.sonic3k.dataselect.S3kDataSelectManager;
 import com.openggf.game.sonic2.dataselect.S2SaveSnapshotProvider;
 import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
 import com.openggf.game.sonic2.debug.Sonic2DebugModeProvider;
@@ -54,9 +53,9 @@ import com.openggf.game.GameId;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.ZoneArtProvider;
 import com.openggf.game.TitleScreenProvider;
+import com.openggf.game.dataselect.CrossGameDataSelectPresentations;
 import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
-import com.openggf.game.dataselect.DataSelectSessionController;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic2.dataselect.S2DataSelectProfile;
 import com.openggf.level.objects.ObjectRegistry;
@@ -285,8 +284,7 @@ public class Sonic2GameModule implements GameModule {
     @Override
     public DataSelectPresentationProvider getDataSelectPresentationProvider() {
         if (dataSelectPresentationProvider == null) {
-            dataSelectPresentationProvider = new DataSelectPresentationProvider(S3kDataSelectManager::new,
-                    new DataSelectSessionController(dataSelectHostProfile));
+            dataSelectPresentationProvider = CrossGameDataSelectPresentations.s3kDonor(dataSelectHostProfile);
         }
         return dataSelectPresentationProvider;
     }

@@ -94,14 +94,16 @@ public final class RewindSchemaRegistry {
                 continue;
             }
             for (Field field : sortedDeclaredFields(cls)) {
-                if (!GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(field)) {
+                RewindFieldPolicy configuredPolicy = DefaultObjectRewindPolicies.policyFor(field);
+                if (!GenericFieldCapturer.isCapturedByDefaultObjectScalarPolicy(field)
+                        && configuredPolicy != RewindFieldPolicy.CAPTURED) {
                     continue;
                 }
                 RewindCodec codec = RewindCodecs.codecFor(field).orElse(null);
                 fields.add(new RewindFieldPlan(
                         FieldKey.of(field),
                         field,
-                        defaultObjectSubclassPolicyFor(field, codec),
+                        defaultObjectSubclassPolicyFor(field, codec, configuredPolicy),
                         codec));
             }
         }
@@ -146,9 +148,14 @@ public final class RewindSchemaRegistry {
         return RewindFieldPolicy.UNSUPPORTED;
     }
 
-    private static RewindFieldPolicy defaultObjectSubclassPolicyFor(Field field, RewindCodec codec) {
+    private static RewindFieldPolicy defaultObjectSubclassPolicyFor(Field field,
+                                                                    RewindCodec codec,
+                                                                    RewindFieldPolicy configuredPolicy) {
         if (codec == null) {
             return RewindFieldPolicy.UNSUPPORTED;
+        }
+        if (configuredPolicy == RewindFieldPolicy.CAPTURED) {
+            return RewindFieldPolicy.CAPTURED;
         }
         boolean finalField = Modifier.isFinal(field.getModifiers());
         if (finalField && !codec.capturesFinalFields()) {
