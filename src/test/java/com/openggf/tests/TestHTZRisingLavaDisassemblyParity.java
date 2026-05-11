@@ -105,7 +105,9 @@ public class TestHTZRisingLavaDisassemblyParity {
             public com.openggf.game.LevelEventProvider levelEventProvider() {
                 return levelEvents;
             }
-        }.withCamera(camera).withGameState(GameServices.gameState());
+        }.withCamera(camera)
+                .withGameState(GameServices.gameState())
+                .withZoneRuntimeRegistry(GameServices.zoneRuntimeRegistry());
 
         camera.setY((short) 0x200); // top route
         setConstructionContext(services);

@@ -207,8 +207,10 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         return firstSonicSnowboardMappingFrame(animationId);
     }
 
-    private void initializePlayer(AbstractPlayableSprite player) {
-        initialized = true;
+    public static void applyInitialPlayerLock(AbstractPlayableSprite player) {
+        if (player == null) {
+            return;
+        }
         player.setXSpeed((short) PLAYER_INITIAL_X_SPEED);
         player.setYSpeed((short) PLAYER_INITIAL_Y_SPEED);
         player.setGSpeed((short) PLAYER_INITIAL_G_SPEED);
@@ -224,6 +226,11 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         player.setObjectControlSuppressesMovement(true);
         player.setObjectMappingFrameControl(true);
         player.clearForcedInputMask();
+    }
+
+    private void initializePlayer(AbstractPlayableSprite player) {
+        initialized = true;
+        applyInitialPlayerLock(player);
     }
 
     private void updateStartupLock(AbstractPlayableSprite player) {

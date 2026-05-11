@@ -23,10 +23,15 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.RespawnState;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.WorldSession;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
+import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
@@ -58,6 +63,10 @@ public class DefaultObjectServices implements ObjectServices {
     private final ParallaxManager parallaxManager;
     private final WorldSession worldSession;
     private final GameRng rng;
+    private final ZoneRuntimeRegistry zoneRuntimeRegistry;
+    private final PaletteOwnershipRegistry paletteOwnershipRegistry;
+    private final ZoneLayoutMutationPipeline zoneLayoutMutationPipeline;
+    private final SolidExecutionRegistry solidExecutionRegistry;
     private final EngineContext engineServices;
     private final BonusStageProvider bonusStageProvider;
 
@@ -75,6 +84,10 @@ public class DefaultObjectServices implements ObjectServices {
                 gameplayMode.getParallaxManager(),
                 gameplayMode.getWorldSession(),
                 gameplayMode.getRng(),
+                gameplayMode.getZoneRuntimeRegistry(),
+                gameplayMode.getPaletteOwnershipRegistry(),
+                gameplayMode.getZoneLayoutMutationPipeline(),
+                gameplayMode.getSolidExecutionRegistry(),
                 engineServices,
                 gameplayMode.getActiveBonusStageProvider());
     }
@@ -88,6 +101,7 @@ public class DefaultObjectServices implements ObjectServices {
                                  ParallaxManager parallaxManager) {
         this(levelManager, camera, gameState, spriteManager, fadeManager, waterSystem,
                 parallaxManager, null, new GameRng(GameRng.Flavour.S1_S2),
+                new ZoneRuntimeRegistry(), null, new ZoneLayoutMutationPipeline(), SolidExecutionRegistry.inert(),
                 engineServicesFromGameServices(), NoOpBonusStageProvider.INSTANCE);
     }
 
@@ -100,6 +114,10 @@ public class DefaultObjectServices implements ObjectServices {
                                  ParallaxManager parallaxManager,
                                  WorldSession worldSession,
                                  GameRng rng,
+                                 ZoneRuntimeRegistry zoneRuntimeRegistry,
+                                 PaletteOwnershipRegistry paletteOwnershipRegistry,
+                                 ZoneLayoutMutationPipeline zoneLayoutMutationPipeline,
+                                 SolidExecutionRegistry solidExecutionRegistry,
                                  EngineContext engineServices,
                                  BonusStageProvider bonusStageProvider) {
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
@@ -111,6 +129,10 @@ public class DefaultObjectServices implements ObjectServices {
         this.parallaxManager = Objects.requireNonNull(parallaxManager, "parallaxManager");
         this.worldSession = worldSession;
         this.rng = Objects.requireNonNull(rng, "rng");
+        this.zoneRuntimeRegistry = Objects.requireNonNull(zoneRuntimeRegistry, "zoneRuntimeRegistry");
+        this.paletteOwnershipRegistry = paletteOwnershipRegistry;
+        this.zoneLayoutMutationPipeline = Objects.requireNonNull(zoneLayoutMutationPipeline, "zoneLayoutMutationPipeline");
+        this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
         this.engineServices = Objects.requireNonNull(engineServices, "engineServices");
         this.bonusStageProvider = Objects.requireNonNull(bonusStageProvider, "bonusStageProvider");
     }
@@ -247,6 +269,31 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public GameRng rng() {
         return rng;
+    }
+
+    @Override
+    public ZoneRuntimeRegistry zoneRuntimeRegistry() {
+        return zoneRuntimeRegistry;
+    }
+
+    @Override
+    public ZoneRuntimeState zoneRuntimeState() {
+        return zoneRuntimeRegistry.current();
+    }
+
+    @Override
+    public PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() {
+        return paletteOwnershipRegistry;
+    }
+
+    @Override
+    public ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() {
+        return zoneLayoutMutationPipeline;
+    }
+
+    @Override
+    public SolidExecutionRegistry solidExecutionRegistry() {
+        return solidExecutionRegistry;
     }
 
     // ── Engine globals (not runtime-owned) ──────────────────────────────

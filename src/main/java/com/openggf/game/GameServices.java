@@ -48,7 +48,7 @@ public final class GameServices {
 
     private static GameplayModeContext requireGameplayMode(String accessor) {
         GameplayModeContext mode = SessionManager.getCurrentGameplayMode();
-        if (mode == null || mode.getCamera() == null) {
+        if (mode == null || !mode.isGameplayRuntimeReady()) {
             throw new IllegalStateException(
                     "GameServices." + accessor + "() requires an active gameplay mode. "
                     + "Open a gameplay session and attach managers before accessing gameplay-scoped managers.");
@@ -71,7 +71,7 @@ public final class GameServices {
 
     private static GameplayModeContext gameplayModeOrNull() {
         GameplayModeContext mode = SessionManager.getCurrentGameplayMode();
-        return mode != null && mode.getCamera() != null ? mode : null;
+        return mode != null && mode.isGameplayRuntimeReady() ? mode : null;
     }
 
     public static GameModule bootstrapGameModule() {

@@ -1,7 +1,6 @@
 package com.openggf.game;
 
 import com.openggf.camera.Camera;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.logging.Logger;
@@ -87,7 +86,7 @@ public class CheckpointState implements RespawnState {
         Camera camera = GameServices.camera();
         this.savedCameraX = camera.getX();
         this.savedCameraY = camera.getY();
-        saveS3kRuntimeStateIfPresent(camera);
+        saveProviderRuntimeStateIfPresent(camera);
         savePlayerSolidBitsIfPresent();
 
         LOGGER.fine("Saved checkpoint " + lastCheckpointIndex + " at (" + savedX + ", " + savedY + ")");
@@ -106,16 +105,16 @@ public class CheckpointState implements RespawnState {
         hasSolidBits = true;
     }
 
-    private void saveS3kRuntimeStateIfPresent(Camera camera) {
+    private void saveProviderRuntimeStateIfPresent(Camera camera) {
         LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
-        if (camera == null || !(eventProvider instanceof Sonic3kLevelEventManager s3kEvents)) {
+        if (camera == null || !(eventProvider instanceof CheckpointRuntimeStateProvider provider)) {
             savedCameraMaxY = 0;
             savedDynamicResizeRoutine = 0;
             hasS3kRuntimeState = false;
             return;
         }
         savedCameraMaxY = camera.getMaxY();
-        savedDynamicResizeRoutine = s3kEvents.getDynamicResizeRoutine();
+        savedDynamicResizeRoutine = provider.checkpointDynamicResizeRoutine();
         hasS3kRuntimeState = true;
     }
 

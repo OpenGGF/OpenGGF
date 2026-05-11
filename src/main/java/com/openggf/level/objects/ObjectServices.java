@@ -12,7 +12,6 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameRng;
-import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
@@ -76,31 +75,17 @@ public interface ObjectServices {
     void spawnLostRings(PlayableEntity player, int frameCounter);
 
     /** Returns the runtime-owned ROM-accurate pseudo-random number generator. */
-    default GameRng rng() {
-        return GameServices.rng();
-    }
+    GameRng rng();
 
-    default ZoneRuntimeRegistry zoneRuntimeRegistry() {
-        return GameServices.hasRuntime() ? GameServices.zoneRuntimeRegistry() : new ZoneRuntimeRegistry();
-    }
+    ZoneRuntimeRegistry zoneRuntimeRegistry();
 
-    default ZoneRuntimeState zoneRuntimeState() {
-        return GameServices.hasRuntime() ? GameServices.zoneRuntimeState() : zoneRuntimeRegistry().current();
-    }
+    ZoneRuntimeState zoneRuntimeState();
 
-    default PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() {
-        return GameServices.paletteOwnershipRegistryOrNull();
-    }
+    PaletteOwnershipRegistry paletteOwnershipRegistryOrNull();
 
-    default ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() {
-        return GameServices.zoneLayoutMutationPipeline();
-    }
+    ZoneLayoutMutationPipeline zoneLayoutMutationPipeline();
 
-    default SolidExecutionRegistry solidExecutionRegistry() {
-        return GameServices.hasRuntime()
-                ? GameServices.solidExecutionRegistry()
-                : SolidExecutionRegistry.inert();
-    }
+    SolidExecutionRegistry solidExecutionRegistry();
 
     default ObjectSolidExecutionContext solidExecution() {
         return solidExecutionRegistry().currentObject();
@@ -111,16 +96,15 @@ public interface ObjectServices {
      * Returns the camera for position queries and bounds checks.
      * <p>
      * <b>Governance:</b> Object instance code (subclasses of {@link AbstractObjectInstance})
-     * should use this method, not {@link com.openggf.game.GameServices#camera()}.
-     * {@code GameServices.camera()} is for non-object code (HUD, level loading, etc.).
+     * should use this injected method. The static game-service facade is for
+     * non-object code (HUD, level loading, etc.).
      */
     Camera camera();
 
     /**
      * Returns the game state manager for score, lives, and emerald tracking.
      * <p>
-     * <b>Governance:</b> Object instance code should use this method, not
-     * {@link com.openggf.game.GameServices#gameState()}.
+     * <b>Governance:</b> Object instance code should use this injected method.
      */
     GameStateManager gameState();
 
