@@ -2,12 +2,14 @@ package com.openggf.level.objects;
 
 import com.openggf.game.session.EngineContext;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -77,6 +79,35 @@ class TestObjectServicesMigrationGuard {
     };
 
     private static final String SHARED_OBJECT_PACKAGE = "com/openggf/level/objects";
+    private static final String[] OBJECT_GLOBAL_ACCESS_PACKAGES = {
+            "com/openggf/game/sonic1/objects",
+            "com/openggf/game/sonic2/objects",
+            "com/openggf/game/sonic3k/objects",
+            "com/openggf/level/objects",
+    };
+
+    /**
+     * Approved object-service bridges and registries. These are the only object
+     * package classes allowed to touch process-global runtime roots directly.
+     * Normal object implementations should use ObjectServices via services().
+     */
+    private static final Set<String> GLOBAL_RUNTIME_ACCESS_EXCEPTIONS = Set.of(
+            "com.openggf.level.objects.AbstractObjectInstance",
+            "com.openggf.level.objects.AbstractObjectRegistry",
+            "com.openggf.level.objects.BootstrapObjectServices",
+            "com.openggf.level.objects.DefaultObjectServices",
+            "com.openggf.level.objects.ObjectManager",
+            "com.openggf.game.sonic1.objects.Sonic1ObjectRegistry",
+            "com.openggf.game.sonic2.objects.Sonic2ObjectRegistry",
+            "com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry",
+
+            // Helper/standalone classes that do not participate in ObjectServices injection.
+            "com.openggf.game.sonic2.objects.SpecialStageResultsScreenObjectInstance",
+            "com.openggf.game.sonic3k.objects.AizIntroArtLoader",
+            "com.openggf.game.sonic3k.objects.AizIntroPaletteCycler",
+            "com.openggf.game.sonic3k.objects.AizIntroTerrainSwap"
+    );
+
     private static final Set<String> SHARED_OBJECT_SOURCE_EXCEPTIONS = Set.of(
             "com.openggf.level.objects.AbstractObjectInstance"
     );
@@ -90,6 +121,66 @@ class TestObjectServicesMigrationGuard {
 
     private static final java.util.regex.Pattern STRICT_SERVICES_NULL_CHECK =
             java.util.regex.Pattern.compile("services\\(\\)\\s*(==|!=)\\s*null");
+
+    @Test
+    void objectImplementationClasses_shouldNotAccessGlobalRuntimeRootsExceptApprovedBridges() throws IOException {
+        Path srcMain = Path.of("src/main/java");
+        if (!Files.isDirectory(srcMain)) {
+            return;
+        }
+
+        List<String> violations = collectForbiddenGlobalAccessViolations(srcMain);
+
+        if (!violations.isEmpty()) {
+            fail("Object implementation classes must access runtime dependencies through ObjectServices.\n"
+                    + "Move the dependency behind services(), tryServices(), ObjectServices, or an approved bridge.\n\n  "
+                    + String.join("\n  ", violations));
+        }
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_coversSharedObjectInstances(@TempDir Path tempDir) throws IOException {
+        Path srcMain = tempDir.resolve("src/main/java");
+        Path source = srcMain.resolve("com/openggf/level/objects/SharedFixtureObjectInstance.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package com.openggf.level.objects;
+
+                final class SharedFixtureObjectInstance {
+                    void update() {
+                        LevelManager.getInstance();
+                    }
+                }
+                """);
+
+        List<String> violations = collectForbiddenGlobalAccessViolations(srcMain);
+
+        assertTrue(violations.stream().anyMatch(v -> v.contains("SharedFixtureObjectInstance")
+                        && v.contains("LevelManager.getInstance(")),
+                () -> "Expected shared object singleton access to be reported, got: " + violations);
+    }
+
+    @Test
+    void consolidatedGlobalAccessScan_coversGameObjectRuntimeFallbacks(@TempDir Path tempDir) throws IOException {
+        Path srcMain = tempDir.resolve("src/main/java");
+        Path source = srcMain.resolve("com/openggf/game/sonic1/objects/GameFixtureObjectInstance.java");
+        Files.createDirectories(source.getParent());
+        Files.writeString(source, """
+                package com.openggf.game.sonic1.objects;
+
+                final class GameFixtureObjectInstance {
+                    void update() {
+                        EngineServices.current();
+                    }
+                }
+                """);
+
+        List<String> violations = collectForbiddenGlobalAccessViolations(srcMain);
+
+        assertTrue(violations.stream().anyMatch(v -> v.contains("GameFixtureObjectInstance")
+                        && v.contains("EngineServices.")),
+                () -> "Expected game object EngineServices access to be reported, got: " + violations);
+    }
 
     /**
      * Monitored singleton class names. Source-level scan looks for
@@ -375,6 +466,61 @@ class TestObjectServicesMigrationGuard {
         }
     }
 
+    private List<String> collectForbiddenGlobalAccessViolations(Path srcMain) throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (String pkg : OBJECT_GLOBAL_ACCESS_PACKAGES) {
+            Path pkgDir = srcMain.resolve(pkg);
+            if (!Files.isDirectory(pkgDir)) {
+                continue;
+            }
+
+            try (Stream<Path> files = Files.walk(pkgDir)) {
+                files.filter(path -> path.toString().endsWith(".java"))
+                        .forEach(path -> collectForbiddenGlobalAccessViolations(srcMain, path, violations));
+            }
+        }
+        Collections.sort(violations);
+        return violations;
+    }
+
+    private void collectForbiddenGlobalAccessViolations(Path srcMain, Path sourceFile, List<String> violations) {
+        try {
+            String className = srcMain.relativize(sourceFile).toString()
+                    .replace('\\', '/').replace(".java", "").replace('/', '.');
+            if (GLOBAL_RUNTIME_ACCESS_EXCEPTIONS.contains(className)) {
+                return;
+            }
+
+            SourceScanText source = sourceWithoutCommentOnlyLines(Files.readAllLines(sourceFile));
+            for (String pattern : forbiddenGlobalAccessPatterns()) {
+                int searchFrom = 0;
+                while (true) {
+                    int match = source.text.indexOf(pattern, searchFrom);
+                    if (match < 0) {
+                        break;
+                    }
+                    violations.add(String.format("%s:%d uses %s",
+                            className, source.lineAt(match), pattern));
+                    searchFrom = match + pattern.length();
+                }
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static List<String> forbiddenGlobalAccessPatterns() {
+        List<String> patterns = new ArrayList<>();
+        patterns.add("GameServices.");
+        patterns.add("EngineServices.");
+        patterns.add("RuntimeManager.getCurrent(");
+        patterns.add("EngineContext.fromLegacySingletonsForBootstrap(");
+        patterns.add("GameModuleRegistry.getCurrent(");
+        for (String singleton : MONITORED_SINGLETONS.keySet()) {
+            patterns.add(singleton + ".getInstance(");
+        }
+        return patterns;
+    }
+
     private static SourceScanText sourceWithoutCommentOnlyLines(List<String> lines) {
         StringBuilder source = new StringBuilder();
         List<Integer> lineByOffset = new ArrayList<>();
@@ -411,5 +557,3 @@ class TestObjectServicesMigrationGuard {
         }
     }
 }
-
-
