@@ -171,6 +171,10 @@ Primary gaps:
   `TestSidekickCpuControllerFlightAutoRecovery`, and `TestTimerManager` onto
   `TestEnvironment.resetAll()`, removing those methods from the lifecycle
   baseline.
+- Additional cleanup migrated `TestSonic1LevelInitProfile`,
+  `TestSonic2LevelInitProfile`, `TestObjectManagerLifecycle`, and
+  `TestDestructionEffects` onto `TestEnvironment.resetAll()`, further reducing
+  the lifecycle baseline.
 
 ## End-to-End Review
 
@@ -187,3 +191,6 @@ Primary gaps:
   `mvn test "-Dtest=TestSingletonLifecycleGuard,TestSidekickCpuDespawnParity,TestSidekickCpuControllerCatchUpFlight,TestSidekickCpuControllerFlightAutoRecovery,TestTimerManager"`
   and a final `mvn test` both reported
   `MSE:OK modules=1 passed=4906 failed=0 errors=0 skipped=6`.
+- Additional cleanup verification passed:
+  `mvn test "-Dtest=TestSingletonLifecycleGuard,TestSonic1LevelInitProfile,TestSonic2LevelInitProfile,TestObjectManagerLifecycle,TestDestructionEffects"`
+  reported `MSE:OK modules=1 passed=4906 failed=0 errors=0 skipped=6`.

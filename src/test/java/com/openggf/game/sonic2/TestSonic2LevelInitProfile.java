@@ -1,10 +1,8 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
-import com.openggf.game.session.EngineContext;
 import com.openggf.game.InitStep;
 import com.openggf.game.StaticFixup;
 import org.junit.jupiter.api.AfterEach;
@@ -20,8 +18,7 @@ public class TestSonic2LevelInitProfile {
 
     @BeforeEach
     public void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.resetAll();
     }
 
     @AfterEach
