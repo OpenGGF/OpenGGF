@@ -4,7 +4,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.Sonic3kPointsObjectInstance;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
@@ -24,43 +24,30 @@ import java.util.List;
  * Shared S3K badnik behavior: touch response, defeat handling, dynamic
  * position/collision, and sprite rendering.
  */
-abstract class AbstractS3kBadnikInstance extends AbstractObjectInstance
+abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
         implements TouchResponseProvider, TouchResponseAttackable {
 
     private final String rendererKey;
     private final int collisionSizeIndex;
     private final int priorityBucket;
 
-    protected int currentX;
-    protected int currentY;
-    protected int xVelocity;
-    protected int yVelocity;
     protected int xSubpixel;
     protected int ySubpixel;
     protected int mappingFrame;
-    protected boolean facingLeft;
-    protected boolean destroyed;
 
     protected AbstractS3kBadnikInstance(ObjectSpawn spawn, String name,
             String rendererKey, int collisionSizeIndex, int priorityBucket) {
-        super(spawn, name);
+        super(spawn, name, S3K_DESTRUCTION_CONFIG);
         this.rendererKey = rendererKey;
         this.collisionSizeIndex = collisionSizeIndex;
         this.priorityBucket = priorityBucket;
-        this.currentX = spawn.x();
-        this.currentY = spawn.y();
         // S3K render_flags bit 0 mirrors horizontally. Clear = face left, set = face right.
         this.facingLeft = (spawn.renderFlags() & 0x01) == 0;
     }
 
     @Override
-    public int getCollisionFlags() {
-        return collisionSizeIndex & 0x3F;
-    }
-
-    @Override
-    public int getCollisionProperty() {
-        return 0;
+    protected int getCollisionSizeIndex() {
+        return collisionSizeIndex;
     }
 
     @Override
@@ -79,10 +66,14 @@ abstract class AbstractS3kBadnikInstance extends AbstractObjectInstance
     );
 
     protected final void defeat(AbstractPlayableSprite player) {
-        if (destroyed) {
+        destroyBadnik(player);
+    }
+
+    @Override
+    protected void destroyBadnik(PlayableEntity player) {
+        if (isDestroyed()) {
             return;
         }
-        destroyed = true;
         int mySlot = getSlotIndex();
         // ROM parity: badnik destruction rewrites the current SST slot to
         // Obj_Explosion; child animal/points objects are allocated after it.
@@ -131,13 +122,23 @@ abstract class AbstractS3kBadnikInstance extends AbstractObjectInstance
     }
 
     @Override
+    protected int resolveDynamicSpawnX() {
+        return getBodyAnchorX();
+    }
+
+    @Override
+    protected int resolveDynamicSpawnY() {
+        return getBodyAnchorY();
+    }
+
+    @Override
     public int getPriorityBucket() {
         return priorityBucket;
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
         ObjectRenderManager renderManager = services().renderManager();
@@ -173,5 +174,9 @@ abstract class AbstractS3kBadnikInstance extends AbstractObjectInstance
 
     protected int getRenderAnchorY() {
         return getBodyAnchorY();
+    }
+
+    final boolean badnikFacingLeft() {
+        return facingLeft;
     }
 }
