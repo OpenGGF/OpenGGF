@@ -190,6 +190,34 @@ class TestAiz2BossEndSequenceObjects {
         assertEquals(SaveReason.PROGRESSION_SAVE, services.lastSaveReason);
     }
 
+    @Test
+    void hydrocityTransitionUsesRomCentreYRatherThanSpriteTopY() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x49D8);
+        camera.setX((short) 0x49D8);
+        camera.setY((short) 0x0100);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setHeight(38);
+        player.setCentreX((short) 0x4A80);
+        player.setTestY((short) 0x01D4);
+
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(services);
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+        Aiz2BossEndSequenceState.pressButton();
+
+        controller.update(100, player);
+
+        assertEquals(Sonic3kZoneIds.ZONE_HCZ, services.requestedZone,
+                "ROM y_pos maps to centre Y; top-left/test Y must not delay the HCZ transition");
+    }
+
     private static void setField(Object target, String fieldName, int value) throws Exception {
         Field field = findField(target.getClass(), fieldName);
         field.setAccessible(true);

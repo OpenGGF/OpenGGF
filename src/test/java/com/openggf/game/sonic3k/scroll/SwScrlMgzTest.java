@@ -122,6 +122,26 @@ public class SwScrlMgzTest {
     }
 
     @Test
+    public void initClearsMutableEventStateForLevelReentry() {
+        SwScrlMgz handler = new SwScrlMgz();
+        int[] hScroll = new int[224];
+
+        handler.setBgRiseState(8, 0x200);
+        handler.setBossBgScrollOffset(0x3D80);
+        handler.setScreenShakeOffset(3);
+        handler.update(hScroll, 0x3500, 0x0850, 1, 1);
+
+        handler.init(1, 0x1200, 0x0200);
+        handler.update(hScroll, 0x1200, 0x0200, 1, 1);
+
+        assertEquals(0, handler.getShakeOffsetY());
+        assertEquals(0x1200, handler.getBgCameraX(),
+                "MGZ handler init should clear event-owned BG camera overrides between level loads");
+        assertEquals(96, handler.getVscrollFactorBG(),
+                "MGZ handler init should clear BG rise overrides between level loads");
+    }
+
+    @Test
     public void act2StateEightKeepsCloudParallaxAtTopOfScreen() {
         SwScrlMgz handler = new SwScrlMgz();
         int[] rising = new int[224];

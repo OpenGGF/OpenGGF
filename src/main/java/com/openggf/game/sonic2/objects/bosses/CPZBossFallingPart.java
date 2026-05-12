@@ -92,11 +92,10 @@ public class CPZBossFallingPart extends AbstractObjectInstance {
         if (services().objectManager() == null) {
             return;
         }
-        ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager == null) {
+        if (services().renderManager() == null) {
             return;
         }
-        BossExplosionObjectInstance explosion = new BossExplosionObjectInstance(x, y, renderManager, Sonic2Sfx.BOSS_EXPLOSION.id);
+        BossExplosionObjectInstance explosion = new BossExplosionObjectInstance(x, y, Sonic2Sfx.BOSS_EXPLOSION.id);
         services().objectManager().addDynamicObject(explosion);
     }
 

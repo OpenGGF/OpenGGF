@@ -7,7 +7,8 @@ import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
-import com.openggf.game.sonic3k.scroll.SwScrlMgz;
+import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -17,7 +18,6 @@ import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.SwingMotion;
 import com.openggf.physics.TerrainCheckResult;
@@ -546,28 +546,26 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
      * Uses ScreenShakeArray2 indexed by {@code frameCounter & 0x3F}.
      */
     private void applyShakeOffset() {
-        SwScrlMgz mgzHandler = resolveMgzScrollHandler();
+        MgzZoneRuntimeState mgzHandler = resolveMgzRuntimeState();
         if (mgzHandler == null) return;
         int offset = SCREEN_SHAKE_CONTINUOUS[globalFrameCounter & 0x3F];
-        mgzHandler.setScreenShakeOffset(offset);
+        mgzHandler.requestScreenShakeOffset(offset);
     }
 
     private void setScreenShake(boolean active) {
         if (!active) {
-            SwScrlMgz handler = resolveMgzScrollHandler();
+            MgzZoneRuntimeState handler = resolveMgzRuntimeState();
             if (handler != null) {
-                handler.setScreenShakeOffset(0);
+                handler.clearScreenShakeOffset();
             }
         }
     }
 
-    private SwScrlMgz resolveMgzScrollHandler() {
+    private MgzZoneRuntimeState resolveMgzRuntimeState() {
         ObjectServices svc = tryServices();
         if (svc == null) return null;
-        var parallax = svc.parallaxManager();
-        if (parallax == null) return null;
-        ZoneScrollHandler handler = parallax.getHandler(Sonic3kZoneIds.ZONE_MGZ);
-        return (handler instanceof SwScrlMgz mgz) ? mgz : null;
+        if (svc.zoneRuntimeRegistry() == null) return null;
+        return S3kRuntimeStates.currentMgz(svc.zoneRuntimeRegistry()).orElse(null);
     }
 
     // ── Child spawning ──────────────────────────────────────────────────

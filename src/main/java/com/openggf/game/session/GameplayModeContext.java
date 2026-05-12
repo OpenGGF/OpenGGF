@@ -91,7 +91,8 @@ public final class GameplayModeContext implements ModeContext {
     }
 
     public boolean isGameplayRuntimeReady() {
-        return camera != null
+        return !managersTornDown
+                && camera != null
                 && timerManager != null
                 && gameStateManager != null
                 && fadeManager != null

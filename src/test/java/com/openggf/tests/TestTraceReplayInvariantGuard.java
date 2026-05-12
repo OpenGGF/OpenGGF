@@ -1,4 +1,4 @@
-package com.openggf.tests.trace;
+package com.openggf.tests;
 
 import com.openggf.trace.ToleranceConfig;
 import org.junit.jupiter.api.Test;
@@ -49,10 +49,8 @@ class TestTraceReplayInvariantGuard {
     }
 
     private static List<Path> replaySources() throws IOException {
-        List<Path> roots = List.of(
-                Path.of("src/main/java/com/openggf/trace"),
-                Path.of("src/test/java/com/openggf/tests/trace"));
         List<Path> sources = new ArrayList<>();
+        List<Path> roots = List.of(Path.of("src/main/java"), Path.of("src/test/java"));
         for (Path root : roots) {
             if (!Files.exists(root)) {
                 continue;
@@ -60,11 +58,35 @@ class TestTraceReplayInvariantGuard {
             try (var stream = Files.walk(root)) {
                 stream.filter(path -> path.toString().endsWith(".java"))
                         .filter(path -> !path.endsWith("TestTraceReplayInvariantGuard.java"))
+                        .filter(path -> !isAllowedTraceSupportSource(path))
+                        .filter(TestTraceReplayInvariantGuard::isTraceConsumerSource)
                         .forEach(sources::add);
             }
         }
         sources.add(Path.of("src/main/java/com/openggf/sprites/playable/SidekickCpuController.java"));
         return sources;
+    }
+
+    private static boolean isAllowedTraceSupportSource(Path source) {
+        String normalized = source.toString().replace('\\', '/');
+        return normalized.endsWith("src/main/java/com/openggf/sprites/ghost/GhostTraceRenderer.java")
+                || normalized.endsWith("src/test/java/com/openggf/tests/HeadlessTestFixture.java");
+    }
+
+    private static boolean isTraceConsumerSource(Path source) {
+        String normalized = source.toString().replace('\\', '/');
+        if (normalized.startsWith("src/main/java/com/openggf/trace/")
+                || normalized.startsWith("src/test/java/com/openggf/tests/trace/")) {
+            return true;
+        }
+        try {
+            String text = Files.readString(source);
+            return text.contains("import com.openggf.trace.*;")
+                    || text.contains("import com.openggf.trace.")
+                    || text.contains("com.openggf.trace.");
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to inspect trace consumer source: " + source, e);
+        }
     }
 
     /**

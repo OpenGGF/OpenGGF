@@ -5,7 +5,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
-import com.openggf.game.sonic3k.scroll.SwScrlMgz;
+import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -16,7 +17,6 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.level.scroll.ZoneScrollHandler;
 
 import java.util.List;
 
@@ -166,27 +166,26 @@ public class MGZTriggerPlatformObjectInstance extends AbstractObjectInstance
     }
 
     private void applyScreenShake(int frameCounter) {
-        SwScrlMgz mgzHandler = resolveMgzScrollHandler();
-        if (mgzHandler == null) {
+        MgzZoneRuntimeState mgzState = resolveMgzRuntimeState();
+        if (mgzState == null) {
             return;
         }
-        mgzHandler.setScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & SCREEN_SHAKE_MASK]);
+        mgzState.requestScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & SCREEN_SHAKE_MASK]);
     }
 
     private void clearScreenShake() {
-        SwScrlMgz mgzHandler = resolveMgzScrollHandler();
-        if (mgzHandler != null) {
-            mgzHandler.setScreenShakeOffset(0);
+        MgzZoneRuntimeState mgzState = resolveMgzRuntimeState();
+        if (mgzState != null) {
+            mgzState.clearScreenShakeOffset();
         }
     }
 
-    private SwScrlMgz resolveMgzScrollHandler() {
+    private MgzZoneRuntimeState resolveMgzRuntimeState() {
         var svc = tryServices();
-        if (svc == null || svc.parallaxManager() == null) {
+        if (svc == null || svc.zoneRuntimeRegistry() == null) {
             return null;
         }
-        ZoneScrollHandler handler = svc.parallaxManager().getHandler(Sonic3kZoneIds.ZONE_MGZ);
-        return (handler instanceof SwScrlMgz mgz) ? mgz : null;
+        return S3kRuntimeStates.currentMgz(svc.zoneRuntimeRegistry()).orElse(null);
     }
 
     @Override

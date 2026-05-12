@@ -28,4 +28,8 @@ public final class CompositeSnapshot {
     public Object get(String key) {
         return entries.get(key);
     }
+
+    public boolean containsKey(String key) {
+        return entries.containsKey(key);
+    }
 }

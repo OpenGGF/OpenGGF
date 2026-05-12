@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.scroll;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
 import com.openggf.level.scroll.compose.DeformationPlan;
 import com.openggf.level.scroll.compose.PersistentAccumulator;
@@ -93,6 +95,22 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         return lastBgCameraX;
     }
 
+    @Override
+    public void init(int actId, int cameraX, int cameraY) {
+        screenShakeOffset = 0;
+        pendingScreenShakeOffset = 0;
+        vscrollFactorFG = 0;
+        bgRiseRoutine = BG_RISE_NORMAL_STATE;
+        bgRiseOffset = 0;
+        bossBgScrollOffset = Integer.MIN_VALUE;
+        lastBgCameraX = actId == 0 ? Integer.MIN_VALUE : cameraX;
+        vscrollFactorBG = actId == 0 ? 0 : (short) computeMgz2BgY(cameraY);
+        mgz1CloudAccumulator.set(0);
+        mgz2CloudAccumulator.set(0);
+        mgz2CloudsFrozen = false;
+        lastActId = -1;
+    }
+
     private static final int HSCROLL_WORD_COUNT = 32;
 
     // MGZ1_BGDeformArray
@@ -142,10 +160,22 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         if (frameCounter == 0 || actId != lastActId) {
             resetActState(actId);
         }
+        MgzZoneRuntimeState runtimeState = currentRuntimeState();
+        if (runtimeState != null) {
+            bgRiseRoutine = runtimeState.bgRiseRoutine();
+            bgRiseOffset = runtimeState.bgRiseOffset();
+            bossBgScrollOffset = runtimeState.hasBossBgScrollOffset()
+                    ? runtimeState.bossBgScrollOffset()
+                    : Integer.MIN_VALUE;
+        }
 
         composer.reset();
-        screenShakeOffset = pendingScreenShakeOffset;
-        pendingScreenShakeOffset = 0;
+        if (runtimeState != null) {
+            screenShakeOffset = runtimeState.consumeScreenShakeOffset();
+        } else {
+            screenShakeOffset = pendingScreenShakeOffset;
+            pendingScreenShakeOffset = 0;
+        }
         short fgScroll = negWord(cameraX);
 
         if (actId == 0) {
@@ -191,7 +221,7 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             int bgY = bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE
                     ? computeMgz2BgY(cameraY - MGZ2_AFTER_MOVE_Y_BASE)
                     : computeMgz2BgY(cameraY);
-            lastBgCameraX = bossBgScrollOffset;
+            lastBgCameraX = getMgz2ParallaxCameraX(cameraX);
             composer.setVscrollFactorBG((short) bgY);
             buildMgz2HScrollTable(getMgz2ParallaxCameraX(cameraX), shouldAutoMoveMgz2Clouds(),
                     mgz2HScrollTable, mgz2ScatterSource);
@@ -227,6 +257,13 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
             mgz2CloudsFrozen = bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE;
         }
         lastActId = actId;
+    }
+
+    private MgzZoneRuntimeState currentRuntimeState() {
+        if (!GameServices.hasRuntime()) {
+            return null;
+        }
+        return S3kRuntimeStates.currentMgz(GameServices.zoneRuntimeRegistry()).orElse(null);
     }
 
     private int getMgz2ParallaxCameraX(int cameraX) {

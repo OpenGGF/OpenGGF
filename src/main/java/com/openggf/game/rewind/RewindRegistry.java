@@ -51,7 +51,9 @@ public final class RewindRegistry {
     public CompositeSnapshot capture() {
         var bundle = new LinkedHashMap<String, Object>(entries.size());
         for (var e : entries.entrySet()) {
-            bundle.put(e.getKey(), e.getValue().capture());
+            bundle.put(e.getKey(), Objects.requireNonNull(
+                    e.getValue().capture(),
+                    "Rewind snapshot must not be null for key: " + e.getKey()));
         }
         return new CompositeSnapshot(bundle);
     }
@@ -59,8 +61,11 @@ public final class RewindRegistry {
     public void restore(CompositeSnapshot cs) {
         Objects.requireNonNull(cs, "cs");
         for (var e : entries.entrySet()) {
+            if (!cs.containsKey(e.getKey())) {
+                e.getValue().resetForMissingSnapshot();
+                continue;
+            }
             Object snap = cs.get(e.getKey());
-            if (snap == null) continue;
             @SuppressWarnings({"rawtypes", "unchecked"})
             RewindSnapshottable raw = e.getValue();
             raw.restore(snap);

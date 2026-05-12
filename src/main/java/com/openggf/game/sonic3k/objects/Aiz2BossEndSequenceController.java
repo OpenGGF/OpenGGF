@@ -128,7 +128,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance {
         // Phase: Wait for player to fall past Y threshold, then transition
         if (buttonHandled && !transitionRequested) {
             int transitionY = arenaBaseY + NEXT_LEVEL_Y_OFFSET;
-            if ((player.getY() & 0xFFFF) >= transitionY) {
+            if ((player.getCentreY() & 0xFFFF) >= transitionY) {
                 transitionRequested = true;
                 services().requestSessionSave(SaveReason.PROGRESSION_SAVE);
                 services().requestZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0);
