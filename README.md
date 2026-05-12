@@ -118,7 +118,9 @@ hazards, and singleton lifecycle setup drift, with documented baselines for
 existing migration debt. A later architecture cleanup moved residual
 game-policy branches behind providers, removed profiler singleton escapes,
 gave editor mode an explicit level-view runtime, and trimmed hot-path
-allocation churn in shared render/palette systems. A subsequent rewind merge hardened generic rewind
+allocation churn in shared render/palette systems. The current line also
+continues S3K IceCap bring-up with Freezer and ice-cube object coverage.
+A subsequent rewind merge hardened generic rewind
 capture for final in-place helper fields such as `SubpixelMotion.State`,
 covering S3K monitor and AIZ cutscene object rewind capture paths. The
 latest architectural review merge tightens rewind registry ownership,

@@ -1487,6 +1487,9 @@ public class ObjectManager {
                         : allocateSlot();
                 if (slot >= 0) {
                     aoi.setSlotIndex(slot);
+                } else {
+                    aoi.setDestroyed(true);
+                    return;
                 }
             } else {
                 // Pre-assigned slot (e.g. from addDynamicObjectAtSlot for badnik
