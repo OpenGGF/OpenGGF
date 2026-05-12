@@ -136,6 +136,8 @@ public final class Sonic3kObjectIds {
     public static final int ICZ_SEGMENT_COLUMN = 0xB3;
     // S3KL object table: Obj_ICZSwingingPlatform.
     public static final int ICZ_SWINGING_PLATFORM = 0xB4;
+    // S3KL object table: Obj_ICZIceCube.
+    public static final int ICZ_ICE_CUBE = 0xB6;
     // S3KL object table: Obj_ICZHarmfulIce. SKL reuses $B8 for DDZMissile.
     public static final int ICZ_HARMFUL_ICE = 0xB8;
     public static final int TUNNELBOT = 0x9E;

@@ -464,6 +464,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczSwingingPlatformObjectInstance(spawn);
                 });
+        factories.put(Sonic3kObjectIds.ICZ_ICE_CUBE,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new IczIceCubeObjectInstance(spawn);
+                });
         factories.put(Sonic3kObjectIds.ICZ_HARMFUL_ICE,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
