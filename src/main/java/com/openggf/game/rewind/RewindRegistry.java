@@ -1,5 +1,7 @@
 package com.openggf.game.rewind;
 
+import com.openggf.debug.PerformanceProfiler;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -49,13 +51,18 @@ public final class RewindRegistry {
     }
 
     public CompositeSnapshot capture() {
-        var bundle = new LinkedHashMap<String, Object>(entries.size());
-        for (var e : entries.entrySet()) {
-            bundle.put(e.getKey(), Objects.requireNonNull(
-                    e.getValue().capture(),
-                    "Rewind snapshot must not be null for key: " + e.getKey()));
+        PerformanceProfiler.getInstance().beginSection("rewind.capture");
+        try {
+            var bundle = new LinkedHashMap<String, Object>(entries.size());
+            for (var e : entries.entrySet()) {
+                bundle.put(e.getKey(), Objects.requireNonNull(
+                        e.getValue().capture(),
+                        "Rewind snapshot must not be null for key: " + e.getKey()));
+            }
+            return new CompositeSnapshot(bundle);
+        } finally {
+            PerformanceProfiler.getInstance().endSection("rewind.capture");
         }
-        return new CompositeSnapshot(bundle);
     }
 
     public void restore(CompositeSnapshot cs) {

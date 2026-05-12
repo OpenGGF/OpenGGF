@@ -190,6 +190,31 @@ public class PerformanceProfiler {
     }
 
     /**
+     * Credits {@code elapsedNanos} to {@code name} without disturbing the currently
+     * active section. The active section's start timestamp is shifted forward by
+     * {@code elapsedNanos} so the carved-out interval is not double-counted when
+     * the active section eventually ends.
+     *
+     * <p>Use this when a piece of work runs inside an existing section and you want
+     * to measure it as its own bucket without truncating the outer section
+     * (e.g. {@code render.atlas_upload} firing inside {@code render.sprites} on DPLC
+     * bursts). The caller measures the interval itself with {@link System#nanoTime()}.
+     *
+     * <p>Non-overlapping invariant is preserved: total time across sections still
+     * sums to the frame duration, because the active section gives up the elapsed
+     * nanos in exchange for the credited section gaining them.
+     */
+    public void recordSectionTime(String name, long elapsedNanos) {
+        if (!enabled || elapsedNanos <= 0) {
+            return;
+        }
+        currentFrameSections.merge(name, elapsedNanos, Long::sum);
+        if (activeSection != null) {
+            sectionStartNanos += elapsedNanos;
+        }
+    }
+
+    /**
      * Returns an immutable snapshot of the current profiling data.
      * Safe to call from rendering code.
      *

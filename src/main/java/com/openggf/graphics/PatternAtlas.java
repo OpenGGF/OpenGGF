@@ -1,6 +1,7 @@
 package com.openggf.graphics;
 
 import org.lwjgl.system.MemoryUtil;
+import com.openggf.debug.PerformanceProfiler;
 import com.openggf.level.Pattern;
 
 import java.nio.ByteBuffer;
@@ -406,24 +407,36 @@ public class PatternAtlas {
         if (cpuPixels == null || dirtyPages == null) {
             return;
         }
-        int pagePixels = atlasWidth * atlasHeight;
-        ByteBuffer buf = ensureFullPageUploadBuffer();
-        for (int i = 0; i < pages.size(); i++) {
-            if (!dirtyPages[i]) {
-                continue;
+        // Time the per-dirty-page glTexSubImage2D uploads. endBatch() runs at most
+        // a few times per frame, but DPLC-driven calls happen mid render.sprites.
+        // Using beginSection here would truncate render.sprites every frame, so we
+        // measure manually and credit render.atlas_upload via recordSectionTime,
+        // which preserves the active section by shifting its start timestamp.
+        PerformanceProfiler profiler = PerformanceProfiler.getInstance();
+        long uploadStartNanos = System.nanoTime();
+        try {
+            int pagePixels = atlasWidth * atlasHeight;
+            ByteBuffer buf = ensureFullPageUploadBuffer();
+            for (int i = 0; i < pages.size(); i++) {
+                if (!dirtyPages[i]) {
+                    continue;
+                }
+                int textureId = getTextureId(i);
+                if (textureId == 0) {
+                    continue;
+                }
+                buf.clear();
+                buf.put(cpuPixels[i], 0, pagePixels);
+                buf.flip();
+                glBindTexture(GL_TEXTURE_2D, textureId);
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, atlasWidth, atlasHeight,
+                        GL_RED, GL_UNSIGNED_BYTE, buf);
+                glBindTexture(GL_TEXTURE_2D, 0);
+                dirtyPages[i] = false;
             }
-            int textureId = getTextureId(i);
-            if (textureId == 0) {
-                continue;
-            }
-            buf.clear();
-            buf.put(cpuPixels[i], 0, pagePixels);
-            buf.flip();
-            glBindTexture(GL_TEXTURE_2D, textureId);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, atlasWidth, atlasHeight,
-                    GL_RED, GL_UNSIGNED_BYTE, buf);
-            glBindTexture(GL_TEXTURE_2D, 0);
-            dirtyPages[i] = false;
+        } finally {
+            profiler.recordSectionTime("render.atlas_upload",
+                    System.nanoTime() - uploadStartNanos);
         }
     }
 
