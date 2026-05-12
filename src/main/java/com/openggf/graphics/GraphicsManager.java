@@ -43,6 +43,7 @@ public class GraphicsManager {
 	private Integer combinedPaletteTextureId;
 	private int currentPaletteTextureHeight = 0;
 	private PatternAtlas patternAtlas;
+	private com.openggf.debug.PerformanceProfiler profiler;
 	// Lazily allocated to avoid LWJGL native library loading in headless tests
 	private ByteBuffer paletteUploadBuffer;
 	private ByteBuffer underwaterPaletteUploadBuffer;
@@ -121,6 +122,10 @@ public class GraphicsManager {
 	 * Reference to the Engine for accessing projection matrix.
 	 */
 	private Engine engine;
+
+	public void setPerformanceProfiler(com.openggf.debug.PerformanceProfiler profiler) {
+		this.profiler = profiler;
+	}
 
 	/**
 	 * Projection matrix buffer for shader-based rendering.
@@ -235,7 +240,7 @@ public class GraphicsManager {
 			return;
 		}
 		this.glInitialized = true;
-		this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT);
+		this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 		this.patternAtlas.init();
 		this.defaultShaderProgram = new ShaderProgram(BASIC_VERTEX_SHADER_PATH, pixelShaderPath); // Load default shader
 		this.defaultShaderProgram.cacheUniformLocations();
@@ -276,7 +281,7 @@ public class GraphicsManager {
 		this.headlessMode = true;
 		this.glInitialized = false;
 		if (this.patternAtlas == null) {
-			this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT);
+			this.patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 		}
 		this.tilemapGpuRenderer = null;
 		this.instancedPatternRenderer = null;
@@ -1114,7 +1119,7 @@ public class GraphicsManager {
 		}
 		if (patternAtlas != null) {
 			patternAtlas.cleanup();
-			patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT);
+			patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 			patternAtlas.init();
 		}
 		// Reset combined palette texture so it's rebuilt from scratch
@@ -1191,7 +1196,7 @@ public class GraphicsManager {
 
 	private void ensurePatternAtlas() {
 		if (patternAtlas == null) {
-			patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT);
+			patternAtlas = new PatternAtlas(ATLAS_WIDTH, ATLAS_HEIGHT, profiler);
 		}
 		if (!patternAtlas.isInitialized() && glInitialized) {
 			patternAtlas.init();

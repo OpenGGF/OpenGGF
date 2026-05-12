@@ -56,6 +56,7 @@ public class PatternAtlas {
     private boolean[] dirtyPages;    // tracks which pages were written during batch
     private boolean batchMode = false;
     private byte[] patternUploadScratch;
+    private final PerformanceProfiler profiler;
 
     /** Describes a registered virtual pattern ID range for collision detection. */
     public record PatternRange(int base, int size, String category) {}
@@ -96,6 +97,10 @@ public class PatternAtlas {
     }
 
     public PatternAtlas(int atlasWidth, int atlasHeight) {
+        this(atlasWidth, atlasHeight, null);
+    }
+
+    public PatternAtlas(int atlasWidth, int atlasHeight, PerformanceProfiler profiler) {
         if (atlasWidth % TILE_SIZE != 0 || atlasHeight % TILE_SIZE != 0) {
             throw new IllegalArgumentException("Atlas size must be divisible by tile size");
         }
@@ -104,6 +109,7 @@ public class PatternAtlas {
         this.tilesPerRow = atlasWidth / TILE_SIZE;
         this.tilesPerColumn = atlasHeight / TILE_SIZE;
         this.maxSlots = tilesPerRow * tilesPerColumn;
+        this.profiler = profiler;
         // patternUploadBuffer is lazily allocated when first needed
     }
 
@@ -412,7 +418,6 @@ public class PatternAtlas {
         // Using beginSection here would truncate render.sprites every frame, so we
         // measure manually and credit render.atlas_upload via recordSectionTime,
         // which preserves the active section by shifting its start timestamp.
-        PerformanceProfiler profiler = PerformanceProfiler.getInstance();
         long uploadStartNanos = System.nanoTime();
         try {
             int pagePixels = atlasWidth * atlasHeight;
@@ -435,8 +440,10 @@ public class PatternAtlas {
                 dirtyPages[i] = false;
             }
         } finally {
-            profiler.recordSectionTime("render.atlas_upload",
-                    System.nanoTime() - uploadStartNanos);
+            if (profiler != null) {
+                profiler.recordSectionTime("render.atlas_upload",
+                        System.nanoTime() - uploadStartNanos);
+            }
         }
     }
 

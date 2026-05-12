@@ -193,6 +193,7 @@ public class Engine {
 		this.debugOverlayManager = engineServices.debugOverlay();
 		this.playbackDebugManager = engineServices.playbackDebug();
 		this.profiler = engineServices.profiler();
+		this.graphicsManager.setPerformanceProfiler(profiler);
 		this.editorOverlayRenderer = new EditorOverlayRenderer(levelEditorController, graphicsManager);
 		this.gameLoop = new GameLoop(engineServices);
 		this.gameLoop.setEditorStateSyncHandler(this::syncEditorState);
@@ -530,16 +531,11 @@ public class Engine {
 		short savedMaxX = camera != null ? camera.getMaxX() : 0;
 		short savedMinY = camera != null ? camera.getMinY() : 0;
 		short savedMaxY = camera != null ? camera.getMaxY() : 0;
+		Level editorLevel = levelEditorController.currentLevel();
 		SessionManager.enterEditorMode(new EditorCursorState(playerX, playerY), stash);
 		gameplayMode = null;
 		gameLoop.setGameplayMode(null);
-		levelManager.restoreEditorLevelView(levelEditorController.currentLevel());
-		if (camera != null) {
-			camera.setMinX(savedMinX);
-			camera.setMaxX(savedMaxX);
-			camera.setMinY(savedMinY);
-			camera.setMaxY(savedMaxY);
-		}
+		bindEditorLevelView(editorLevel, savedMinX, savedMaxX, savedMinY, savedMaxY);
 		syncEditorState();
 		gameLoop.setGameMode(GameMode.EDITOR);
 	}
@@ -618,7 +614,7 @@ public class Engine {
 
 	private void initializeGlobalGameplayServices() {
 		if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
-			audioManager.setBackend(new LWJGLAudioBackend());
+			audioManager.setBackend(new LWJGLAudioBackend(configService, profiler));
 		}
 
 		if (configService.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)) {
@@ -848,6 +844,39 @@ public class Engine {
 		this.spriteManager = gameplayMode.getSpriteManager();
 		this.levelManager = gameplayMode.getLevelManager();
 		gameLoop.setGameplayMode(gameplayMode);
+	}
+
+	private void bindEditorLevelView(Level editorLevel,
+	                                 short minX,
+	                                 short maxX,
+	                                 short minY,
+	                                 short maxY) {
+		Camera editorCamera = new Camera();
+		SpriteManager editorSprites = new SpriteManager();
+		com.openggf.level.WaterSystem editorWater = new com.openggf.level.WaterSystem();
+		com.openggf.level.ParallaxManager editorParallax = new com.openggf.level.ParallaxManager();
+		com.openggf.physics.TerrainCollisionManager editorTerrain =
+				new com.openggf.physics.TerrainCollisionManager();
+		com.openggf.physics.CollisionSystem editorCollision =
+				new com.openggf.physics.CollisionSystem(editorTerrain);
+		GameStateManager editorGameState = new GameStateManager();
+		LevelManager editorLevelManager = new LevelManager(
+				editorCamera,
+				editorSprites,
+				editorParallax,
+				editorCollision,
+				editorWater,
+				editorGameState,
+				EngineServices.current(),
+				SessionManager.getCurrentWorldSession());
+		editorLevelManager.restoreEditorLevelView(editorLevel);
+		editorCamera.setMinX(minX);
+		editorCamera.setMaxX(maxX);
+		editorCamera.setMinY(minY);
+		editorCamera.setMaxY(maxY);
+		this.camera = editorCamera;
+		this.spriteManager = editorSprites;
+		this.levelManager = editorLevelManager;
 	}
 
 	private void ensureRuntimeBound() {

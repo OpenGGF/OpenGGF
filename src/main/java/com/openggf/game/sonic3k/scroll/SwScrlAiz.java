@@ -115,6 +115,7 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
     private final ScrollValueTable introBandValues = ScrollValueTable.ofLength(INTRO_DEFORM_BANDS);
     private final ScrollValueTable deformValues = ScrollValueTable.ofLength(FLAT_VALUE_COUNT);
+    private final short[] aiz2SpeedValues = new short[AIZ2_SPEED_LEVELS];
 
     /** Persistent wave accumulator (ROM: HScroll_table+$03C, advances $2000/frame). */
     private long waveAccum;
@@ -309,17 +310,16 @@ public class SwScrlAiz extends AbstractZoneScrollHandler {
         d1 += d2;
 
         // Compute 7 speed level values (speed 0 = slowest, speed 6 = fastest)
-        short[] speedValues = new short[AIZ2_SPEED_LEVELS];
         long d0 = base;
         for (int i = 0; i < AIZ2_SPEED_LEVELS; i++) {
-            speedValues[i] = (short) (d0 >> 16);
+            aiz2SpeedValues[i] = (short) (d0 >> 16);
             d0 += d1;
         }
 
         // Scatter into 25-entry flat value array using BGDeformMake pattern
         deformValues.clear();
         for (int i = 0; i < FLAT_VALUE_COUNT; i++) {
-            deformValues.set(i, speedValues[AIZ2_SPEED_MAP[i]]);
+            deformValues.set(i, aiz2SpeedValues[AIZ2_SPEED_MAP[i]]);
         }
 
         // Distribute across scanlines using AIZ2_BGDeformArray heights.

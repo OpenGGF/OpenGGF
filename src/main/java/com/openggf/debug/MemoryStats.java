@@ -164,6 +164,21 @@ public class MemoryStats {
         }
     }
 
+    void reset() {
+        activeSection = null;
+        sectionStartAllocBytes = 0;
+        currentFrameAllocations.clear();
+        sectionAllocHistories.clear();
+        sectionAllocSums.clear();
+        frameCount = 0;
+        topAllocatorsCache.clear();
+        allocationRateBytesPerSec = 0;
+        lastHeapUsed = getHeapUsed();
+        lastAllocatedBytes = getThreadAllocatedBytes();
+        allocationWindowStartTime = System.nanoTime();
+        allocationWindowStartBytes = lastAllocatedBytes;
+    }
+
     // Reusable list for top allocators to avoid per-call allocation
     private final List<SectionAllocation> topAllocatorsCache = new ArrayList<>();
 

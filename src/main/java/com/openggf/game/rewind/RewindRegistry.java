@@ -24,6 +24,15 @@ public final class RewindRegistry {
 
     private final Map<String, RewindSnapshottable<?>> entries = new LinkedHashMap<>();
     private final Map<String, Runnable> postRestoreCallbacks = new LinkedHashMap<>();
+    private final PerformanceProfiler profiler;
+
+    public RewindRegistry() {
+        this.profiler = null;
+    }
+
+    public RewindRegistry(PerformanceProfiler profiler) {
+        this.profiler = profiler;
+    }
 
     public void register(RewindSnapshottable<?> s) {
         Objects.requireNonNull(s, "s");
@@ -51,7 +60,9 @@ public final class RewindRegistry {
     }
 
     public CompositeSnapshot capture() {
-        PerformanceProfiler.getInstance().beginSection("rewind.capture");
+        if (profiler != null) {
+            profiler.beginSection("rewind.capture");
+        }
         try {
             var bundle = new LinkedHashMap<String, Object>(entries.size());
             for (var e : entries.entrySet()) {
@@ -61,7 +72,9 @@ public final class RewindRegistry {
             }
             return new CompositeSnapshot(bundle);
         } finally {
-            PerformanceProfiler.getInstance().endSection("rewind.capture");
+            if (profiler != null) {
+                profiler.endSection("rewind.capture");
+            }
         }
     }
 

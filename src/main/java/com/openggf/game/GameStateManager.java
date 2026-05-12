@@ -248,15 +248,12 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
     }
 
     /**
-     * S3K behavior: scan from the current special stage index until an
-     * uncollected stage for the active emerald mode is found, then advance
-     * the cursor to the following slot.
-     *
-     * @param superEmeraldMode when true, skip collected super emerald stages;
-     *                         otherwise skip collected chaos emerald stages
-     * @return the stage index selected for entry
+     * Scans from the current special stage index until an uncollected stage
+     * for the requested emerald set is found, then advances the cursor to the
+     * following slot. Used by games whose ROM stage-selection policy skips
+     * already-collected emerald stages.
      */
-    public int consumeCurrentSpecialStageIndexAndAdvanceS3k(boolean superEmeraldMode) {
+    public int consumeCurrentSpecialStageIndexAndAdvanceSkippingCollected(boolean superEmeraldMode) {
         if (specialStageCount <= 0) {
             return 0;
         }
@@ -264,7 +261,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         int selectedIndex = startIndex;
         for (int offset = 0; offset < specialStageCount; offset++) {
             int candidateIndex = (startIndex + offset) % specialStageCount;
-            if (isS3kSpecialStageUncollected(candidateIndex, superEmeraldMode)) {
+            if (isSpecialStageUncollected(candidateIndex, superEmeraldMode)) {
                 selectedIndex = candidateIndex;
                 break;
             }
@@ -273,7 +270,7 @@ public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> 
         return selectedIndex;
     }
 
-    private boolean isS3kSpecialStageUncollected(int index, boolean superEmeraldMode) {
+    private boolean isSpecialStageUncollected(int index, boolean superEmeraldMode) {
         if (superEmeraldMode) {
             return !hasSuperEmerald(index);
         }

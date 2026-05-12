@@ -1,6 +1,7 @@
 package com.openggf.editor;
 
 import com.openggf.Engine;
+import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -541,8 +542,9 @@ class TestEditorToggleIntegration {
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(512, 384));
         engine.syncEditorState();
 
-        assertEquals(360, gameplayMode.getCamera().getX());
-        assertEquals(288, gameplayMode.getCamera().getY());
+        Camera editorCamera = engineCamera(engine);
+        assertEquals(360, editorCamera.getX());
+        assertEquals(288, editorCamera.getY());
     }
 
     @Test
@@ -559,8 +561,9 @@ class TestEditorToggleIntegration {
         engine.getLevelEditorController().setWorldCursor(new EditorCursorState(192, 288));
         engine.syncEditorState();
 
-        assertEquals(64, gameplayMode.getCamera().getX());
-        assertEquals(160, gameplayMode.getCamera().getY());
+        Camera editorCamera = engineCamera(engine);
+        assertEquals(64, editorCamera.getX());
+        assertEquals(160, editorCamera.getY());
     }
 
     @Test
@@ -928,6 +931,16 @@ class TestEditorToggleIntegration {
             return (LevelManager) field.get(engine);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to read Engine level manager", e);
+        }
+    }
+
+    private static Camera engineCamera(Engine engine) {
+        try {
+            Field field = Engine.class.getDeclaredField("camera");
+            field.setAccessible(true);
+            return (Camera) field.get(engine);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to read Engine camera", e);
         }
     }
 

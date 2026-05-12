@@ -211,7 +211,7 @@ public class TestGameStateManager {
         gsm.markEmeraldCollected(1);
         gsm.markEmeraldCollected(2);
 
-        assertEquals(3, gsm.consumeCurrentSpecialStageIndexAndAdvanceS3k(false),
+        assertEquals(3, gsm.consumeCurrentSpecialStageIndexAndAdvanceSkippingCollected(false),
                 "S3K should skip already-collected chaos emerald stages");
         assertEquals(4, gsm.getCurrentSpecialStageIndex(),
                 "Next S3K special stage should advance after the selected uncollected stage");
@@ -228,7 +228,7 @@ public class TestGameStateManager {
         gsm.markEmeraldCollected(0);
         gsm.markEmeraldCollected(1);
 
-        assertEquals(2, gsm.consumeCurrentSpecialStageIndexAndAdvanceS3k(false),
+        assertEquals(2, gsm.consumeCurrentSpecialStageIndexAndAdvanceSkippingCollected(false),
                 "S3K should wrap around to the next uncollected chaos emerald stage");
         assertEquals(3, gsm.getCurrentSpecialStageIndex(),
                 "Next S3K special stage should advance after the wrapped selection");
@@ -243,7 +243,7 @@ public class TestGameStateManager {
         gsm.markSuperEmeraldCollected(1);
         gsm.markSuperEmeraldCollected(2);
 
-        assertEquals(3, gsm.consumeCurrentSpecialStageIndexAndAdvanceS3k(true),
+        assertEquals(3, gsm.consumeCurrentSpecialStageIndexAndAdvanceSkippingCollected(true),
                 "S3K super stage selection should skip already-collected super emerald stages");
         assertEquals(4, gsm.getCurrentSpecialStageIndex(),
                 "Next S3K super special stage should advance after the selected uncollected stage");
