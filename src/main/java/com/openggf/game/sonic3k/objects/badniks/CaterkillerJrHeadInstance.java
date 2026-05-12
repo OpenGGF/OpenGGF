@@ -57,9 +57,9 @@ public final class CaterkillerJrHeadInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (destroyed) return;
+        if (isDestroyed()) return;
 
         // Obj_WaitOffscreen parity: ROM Obj_CaterKillerJr (sonic3k.asm:183317-183323)
         // begins with `jsr (Obj_WaitOffscreen).l`. Obj_WaitOffscreen

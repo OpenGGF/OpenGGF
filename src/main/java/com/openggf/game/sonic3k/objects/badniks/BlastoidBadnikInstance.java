@@ -121,8 +121,8 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (destroyed) return;
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed()) return;
 
         // Obj_WaitOffscreen parity: the ROM entry point begins with
         // jsr (Obj_WaitOffscreen).l which suppresses all logic every frame

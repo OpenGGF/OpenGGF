@@ -83,8 +83,8 @@ public final class BubblesBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (destroyed) return;
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed()) return;
 
         // Obj_BubblesBadnik starts with Obj_WaitOffscreen (sonic3k.asm:184598,
         // helper at 180266-180298). Its own routine does not run, and

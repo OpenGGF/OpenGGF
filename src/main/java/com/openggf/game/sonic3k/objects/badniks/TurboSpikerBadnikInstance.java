@@ -100,8 +100,8 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (destroyed || !isOnScreenX()) {
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed() || !isOnScreenX()) {
             return;
         }
 
@@ -129,7 +129,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
         ObjectRenderManager renderManager = services().renderManager();
@@ -347,7 +347,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private boolean shouldShowWaterfallOverlay() {
-        return waterfallOverlayVisible && !destroyed;
+        return waterfallOverlayVisible && !isDestroyed();
     }
 
     private int adjustedOffsetX(int baseOffset) {
@@ -387,9 +387,9 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         TurboSpikerShellChild(TurboSpikerBadnikInstance parent) {
             super(parent.getSpawn(), "TurboSpikerShell");
             this.parent = parent;
-            this.facingLeft = parent.facingLeft;
-            this.currentX = parent.currentX + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
-            this.currentY = parent.currentY;
+            this.facingLeft = parent.badnikFacingLeft();
+            this.currentX = parent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
+            this.currentY = parent.getY();
         }
 
         void launch() {
@@ -397,9 +397,9 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
                 return;
             }
             attached = false;
-            facingLeft = parent.facingLeft;
-            currentX = parent.currentX + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
-            currentY = parent.currentY;
+            facingLeft = parent.badnikFacingLeft();
+            currentX = parent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
+            currentY = parent.getY();
             xVelocity = facingLeft ? -SHELL_LAUNCH_SPEED_X : SHELL_LAUNCH_SPEED_X;
             yVelocity = SHELL_LAUNCH_SPEED_Y;
             trailEmitter = spawnChild(() -> new TurboSpikerTrailEmitter(this));
@@ -417,9 +417,9 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
                     setDestroyed(true);
                     return;
                 }
-                facingLeft = parent.facingLeft;
-                currentX = parent.currentX + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
-                currentY = parent.currentY;
+                facingLeft = parent.badnikFacingLeft();
+                currentX = parent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
+                currentY = parent.getY();
                 return;
             }
 
@@ -664,17 +664,17 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
         @Override
         public ObjectSpawn getSpawn() {
-            return buildSpawnAt(parent.currentX, parent.currentY);
+            return buildSpawnAt(parent.getX(), parent.getY());
         }
 
         @Override
         public int getX() {
-            return parent.currentX;
+            return parent.getX();
         }
 
         @Override
         public int getY() {
-            return parent.currentY;
+            return parent.getY();
         }
 
         @Override
@@ -692,7 +692,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
             if (renderer == null || !renderer.isReady()) {
                 return;
             }
-            renderer.drawFrameIndex(0, parent.currentX, parent.currentY, false, false);
+            renderer.drawFrameIndex(0, parent.getX(), parent.getY(), false, false);
         }
     }
 }
