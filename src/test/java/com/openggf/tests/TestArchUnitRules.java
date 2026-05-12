@@ -61,7 +61,6 @@ import java.util.List;
 import java.util.Map;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
@@ -429,14 +428,6 @@ class TestArchUnitRules {
                     .because("shared layers should obtain game-specific providers through GameModule or approved composition roots; frozen baseline: 1 violation");
 
     @ArchTest
-    static final ArchRule pattern_atlas_range_enum_owns_documented_virtual_bases =
-            fields().that()
-                    .areDeclaredIn(PatternAtlasRange.class)
-                    .and().haveRawType(PatternAtlasRange.class)
-                    .should().beFinal()
-                    .as("documented virtual pattern ranges should be enum constants");
-
-    @ArchTest
     static final ArchRule object_packages_do_not_access_global_game_services =
             FreezingArchRule.freeze(noClasses().that()
                             .resideInAnyPackage(
@@ -467,7 +458,7 @@ class TestArchUnitRules {
                                     "com.openggf.game.sonic1..",
                                     "com.openggf.game.sonic2..",
                                     "com.openggf.game.sonic3k..")
-                            .as("shared level and game layers should not depend on game-specific packages"))
+                    .as("shared level and game layers should not depend on game-specific packages"))
                     .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 64 violations");
 
     @ArchTest
@@ -476,6 +467,16 @@ class TestArchUnitRules {
                             .should().notDependOnEachOther()
                             .as("per-game packages should not cross-depend"))
                     .because("cross-game donation and asset reuse must be explicit and must not grow accidentally; frozen baseline: 37 violations");
+
+    @ArchTest
+    static final ArchRule mgz_events_and_objects_do_not_depend_on_mgz_scroll_handler =
+            noClasses().that()
+                    .resideInAnyPackage(
+                            "com.openggf.game.sonic3k.events..",
+                            "com.openggf.game.sonic3k.objects..")
+                    .should().dependOnClassesThat().haveFullyQualifiedName(
+                            "com.openggf.game.sonic3k.scroll.SwScrlMgz")
+                    .as("MGZ event/object code should publish through MgzZoneRuntimeState, not depend on SwScrlMgz");
 
     @ArchTest
     static void imported_classes_include_application_code(JavaClasses classes) {

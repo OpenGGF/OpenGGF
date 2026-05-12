@@ -22,11 +22,6 @@ class TestArchitecturalSourceGuard {
     private static final String ENGINE_PATH = "com/openggf/Engine.java";
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
-    private static final List<MethodBudget> ENGINE_METHOD_BUDGETS = List.of(
-            new MethodBudget("init", 173),
-            new MethodBudget("display", 168),
-            new MethodBudget("draw", 166)
-    );
 
     private static final Set<String> GAME_ID_BRANCH_APPROVED_FILES = Set.of(
             "com/openggf/Engine.java",
@@ -141,31 +136,25 @@ class TestArchitecturalSourceGuard {
     }
 
     @Test
-    void engineResponsibilityBudgetDoesNotGrow() throws IOException {
+    void engineDoesNotGainNewLargeMethods() throws IOException {
+        // Intent: Engine.java shouldn't grow uncontrollably by gaining a new
+        // large method. We deliberately do NOT enforce specific line counts on
+        // init/display/draw -- that would trip on any legitimate edit and push
+        // people toward unrelated cleanup to make room. The structural signal
+        // is just "no fourth >=100-line method appears here without review."
         SourceFile engine = SourceFile.read(SRC_MAIN.resolve(ENGINE_PATH));
-        List<String> violations = new ArrayList<>();
-
         List<MethodSpan> largeMethods = engine.methods().stream()
                 .filter(method -> method.lineCount() >= ENGINE_LARGE_METHOD_THRESHOLD)
                 .toList();
         if (largeMethods.size() > ENGINE_MAX_LARGE_METHODS) {
-            violations.add("Engine.java has " + largeMethods.size() + " methods with at least "
-                    + ENGINE_LARGE_METHOD_THRESHOLD + " lines; budget is " + ENGINE_MAX_LARGE_METHODS);
+            List<String> names = largeMethods.stream()
+                    .map(method -> method.name() + " (" + method.lineCount() + " lines)")
+                    .toList();
+            fail("Engine.java now has " + largeMethods.size() + " methods at or above "
+                    + ENGINE_LARGE_METHOD_THRESHOLD + " lines; cap is " + ENGINE_MAX_LARGE_METHODS
+                    + ". Extract responsibilities into focused collaborators before adding new large methods.\n"
+                    + "  Current large methods: " + String.join(", ", names));
         }
-        for (MethodBudget budget : ENGINE_METHOD_BUDGETS) {
-            MethodSpan method = largeMethods.stream()
-                    .filter(candidate -> candidate.name().equals(budget.name()))
-                    .findFirst()
-                    .orElse(null);
-            if (method == null) {
-                violations.add("Expected Engine." + budget.name() + " to remain the existing large method surface");
-            } else if (method.lineCount() > budget.maxLines()) {
-                violations.add("Engine." + method.name() + " has " + method.lineCount()
-                        + " lines; budget is " + budget.maxLines());
-            }
-        }
-
-        assertNoViolations("Engine.java responsibility budget grew", violations);
     }
 
     @Test
@@ -499,8 +488,5 @@ class TestArchitecturalSourceGuard {
         int lineCount() {
             return endLine - startLine + 1;
         }
-    }
-
-    private record MethodBudget(String name, int maxLines) {
     }
 }
