@@ -57,6 +57,26 @@ public class TestGraphicsManagerFadeRebinding {
     }
 
     @Test
+    public void testGetUiRenderPipelineRebindsRuntimeManagedReferences() throws Exception {
+        SessionManager.clear();
+        GraphicsManager graphicsManager = EngineContext.fromLegacySingletonsForBootstrap().graphics();
+        graphicsManager.resetState();
+
+        FadeManager bootstrapFade = graphicsManager.getFadeManager();
+        UiRenderPipeline pipeline = new UiRenderPipeline(graphicsManager);
+        pipeline.setFadeManager(bootstrapFade);
+        setPrivateField(graphicsManager, "uiRenderPipeline", pipeline);
+
+        TestEnvironment.activeGameplayMode();
+        FadeManager runtimeFade = GameServices.fade();
+
+        UiRenderPipeline resolvedPipeline = graphicsManager.getUiRenderPipeline();
+
+        assertSame(runtimeFade, resolvedPipeline.getFadeManager(),
+                "UiRenderPipeline returned directly from GraphicsManager should use the runtime FadeManager");
+    }
+
+    @Test
     public void testGetFadeManagerProvidesBootstrapDependenciesBeforeRuntime() throws Exception {
         SessionManager.clear();
         GraphicsManager graphicsManager = EngineContext.fromLegacySingletonsForBootstrap().graphics();

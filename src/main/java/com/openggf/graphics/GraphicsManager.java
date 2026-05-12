@@ -1624,6 +1624,7 @@ public class GraphicsManager {
 	 * Get the unified UI render pipeline for overlay + fade ordering.
 	 */
 	public UiRenderPipeline getUiRenderPipeline() {
+		syncRuntimeManagedReferences();
 		return uiRenderPipeline;
 	}
 

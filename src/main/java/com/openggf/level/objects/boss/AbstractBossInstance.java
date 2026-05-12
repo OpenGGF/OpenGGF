@@ -3,7 +3,6 @@ package com.openggf.level.objects.boss;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
-import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -210,8 +209,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * Uses standard random offset calculation: (random >> 2) - 0x20.
      */
     protected void spawnDefeatExplosion() {
-        ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager == null || services().objectManager() == null) {
+        if (services().renderManager() == null || services().objectManager() == null) {
             return;
         }
         int random = services().rng().nextWord();
@@ -220,7 +218,6 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         BossExplosionObjectInstance explosion = new BossExplosionObjectInstance(
                 state.x + xOffset,
                 state.y + yOffset,
-                renderManager,
                 getBossExplosionSfxId());
         services().objectManager().addDynamicObject(explosion);
     }

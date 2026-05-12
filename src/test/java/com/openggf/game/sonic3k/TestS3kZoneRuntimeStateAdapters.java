@@ -5,9 +5,11 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
+import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -78,5 +80,35 @@ class TestS3kZoneRuntimeStateAdapters {
         assertEquals(PlayerCharacter.TAILS_ALONE, state.playerCharacter());
         assertTrue(state.isActTransitionFlagActive());
         assertNotNull(state.bossBackgroundMode());
+    }
+
+    @Test
+    void mgzAdapterOwnsScrollRuntimePublications() {
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setEventsFg5(true);
+        events.setBgRiseRoutine(8);
+        events.setBgRiseOffset(0x120);
+
+        MgzZoneRuntimeState state = new MgzZoneRuntimeState(1, PlayerCharacter.KNUCKLES, events);
+
+        assertEquals("s3k", state.gameId());
+        assertEquals(2, state.zoneIndex());
+        assertEquals(1, state.actIndex());
+        assertEquals(PlayerCharacter.KNUCKLES, state.playerCharacter());
+        assertTrue(state.isActTransitionFlagActive());
+        assertEquals(8, state.bgRiseRoutine());
+        assertEquals(0x120, state.bgRiseOffset());
+
+        assertFalse(state.hasBossBgScrollOffset());
+        state.publishBossBgScrollOffset(0x13D80);
+        assertTrue(state.hasBossBgScrollOffset());
+        assertEquals(0x3D80, state.bossBgScrollOffset());
+
+        state.requestScreenShakeOffset(2);
+        state.requestScreenShakeOffset(6);
+        state.requestScreenShakeOffset(3);
+        assertEquals(6, state.consumeScreenShakeOffset());
+        assertEquals(0, state.consumeScreenShakeOffset());
     }
 }

@@ -826,7 +826,6 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
         spawnFreeChild(() -> new BossExplosionObjectInstance(
                 finalSourceX,
                 finalSourceY,
-                renderManager,
                 Sonic1Sfx.BOSS_EXPLOSION.id));
     }
 

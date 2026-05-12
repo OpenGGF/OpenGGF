@@ -18,12 +18,12 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.MgzEndBossInstance;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.game.sonic3k.objects.Mgz2LevelCollapseSolidInstance;
-import com.openggf.game.sonic3k.scroll.SwScrlMgz;
+import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -815,31 +815,30 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     private void applyScreenShake(int frameCounter) {
-        SwScrlMgz scrollHandler = resolveMgzScrollHandler();
-        if (scrollHandler == null) {
+        MgzZoneRuntimeState state = currentMgzRuntimeState();
+        if (state == null) {
             return;
         }
         int offset = isVisualShakeActive()
                 ? SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]
                 : 0;
-        scrollHandler.setScreenShakeOffset(offset);
+        if (offset == 0) {
+            state.clearScreenShakeOffset();
+        } else {
+            state.requestScreenShakeOffset(offset);
+        }
     }
 
     private boolean isVisualShakeActive() {
         return screenShakeActive || bgRiseFinalShakeTimer > 0;
     }
 
-    private SwScrlMgz resolveMgzScrollHandler() {
+    private MgzZoneRuntimeState currentMgzRuntimeState() {
         try {
-            if (!hasRuntime()) {
+            if (!GameServices.hasRuntime()) {
                 return null;
             }
-            var parallax = parallaxOrNull();
-            if (parallax == null) {
-                return null;
-            }
-            ZoneScrollHandler handler = parallax.getHandler(Sonic3kZoneIds.ZONE_MGZ);
-            return (handler instanceof SwScrlMgz mgz) ? mgz : null;
+            return S3kRuntimeStates.currentMgz(GameServices.zoneRuntimeRegistry()).orElse(null);
         } catch (Exception e) {
             return null;
         }
@@ -905,14 +904,12 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             default -> {
             }
         }
-        SwScrlMgz scrollHandler = resolveMgzScrollHandler();
-        if (scrollHandler == null) {
+        MgzZoneRuntimeState runtimeState = currentMgzRuntimeState();
+        if (runtimeState == null) {
             if (bgRiseRoutine == BG_RISE_SONIC) {
                 LOG.warning("MGZ BG-rise: state SONIC armed but scroll handler is null — "
                         + "BG formula will NOT shift in-game");
             }
-        } else {
-            scrollHandler.setBgRiseState(bgRiseRoutine, bgRiseOffset);
         }
     }
 
@@ -1784,9 +1781,9 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     private void publishBossBgScrollOffset() {
-        SwScrlMgz scrollHandler = resolveMgzScrollHandler();
-        if (scrollHandler != null) {
-            scrollHandler.setBossBgScrollOffset(bossBgScrollOffset);
+        MgzZoneRuntimeState state = currentMgzRuntimeState();
+        if (state != null) {
+            state.publishBossBgScrollOffset(bossBgScrollOffset);
         }
     }
 

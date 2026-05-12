@@ -105,6 +105,7 @@
                             <forkCount>${surefire.forkCount}</forkCount>
                             <reuseForks>true</reuseForks>
                             <includes>
+                                <include>**/tests/trace/**/*.java</include>
                                 <include>**/tests/trace/**/*TraceReplay.java</include>
                                 <include>**/tests/trace/**/*ReplayBootstrap.java</include>
                                 <include>**/tests/trace/s2/*Regression.java</include>
@@ -324,6 +325,7 @@
                         <exclude>**/TestAizFireCurtainGpuDiag.java</exclude>
                         <exclude>**/TestS3kSpecialStageResultsVisual.java</exclude>
                         <exclude>**/TestInstaShieldVisual.java</exclude>
+                        <exclude>**/tests/trace/**/*.java</exclude>
                         <exclude>**/tests/trace/**/*TraceReplay.java</exclude>
                         <exclude>**/tests/trace/**/*ReplayBootstrap.java</exclude>
                         <exclude>**/tests/trace/s2/*Regression.java</exclude>

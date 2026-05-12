@@ -7,7 +7,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
-import com.openggf.game.sonic3k.scroll.SwScrlMgz;
+import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -22,7 +23,6 @@ import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.SwingMotion;
 import com.openggf.physics.TerrainCheckResult;
@@ -255,7 +255,9 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         state.y -= 0x40;
         if (isKnuckles(playerEntity)) {
             boolean mirrored = randomIndex < 4;
-            spawnChild(() -> new KnucklesSpikePlatformChild(this, mirrored));
+            int cameraX = services().camera() != null ? services().camera().getX() : state.x;
+            int cameraY = services().camera() != null ? services().camera().getY() : state.y;
+            spawnChild(() -> new KnucklesSpikePlatformChild(this, mirrored, cameraX, cameraY));
         }
     }
 
@@ -569,16 +571,16 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
     }
 
     private void applyContinuousShake(int frameCounter) {
-        SwScrlMgz mgz = resolveMgzScrollHandler();
+        MgzZoneRuntimeState mgz = resolveMgzRuntimeState();
         if (mgz != null) {
-            mgz.setScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]);
+            mgz.requestScreenShakeOffset(SCREEN_SHAKE_CONTINUOUS[frameCounter & 0x3F]);
         }
     }
 
     private void clearScreenShake() {
-        SwScrlMgz mgz = resolveMgzScrollHandler();
+        MgzZoneRuntimeState mgz = resolveMgzRuntimeState();
         if (mgz != null) {
-            mgz.setScreenShakeOffset(0);
+            mgz.clearScreenShakeOffset();
         }
         setScreenShakeActive(false);
     }
@@ -589,12 +591,11 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         }
     }
 
-    private SwScrlMgz resolveMgzScrollHandler() {
-        if (services().parallaxManager() == null) {
+    private MgzZoneRuntimeState resolveMgzRuntimeState() {
+        if (services().zoneRuntimeRegistry() == null) {
             return null;
         }
-        ZoneScrollHandler handler = services().parallaxManager().getHandler(Sonic3kZoneIds.ZONE_MGZ);
-        return (handler instanceof SwScrlMgz mgz) ? mgz : null;
+        return S3kRuntimeStates.currentMgz(services().zoneRuntimeRegistry()).orElse(null);
     }
 
     private boolean isKnuckles(PlayableEntity playerEntity) {
@@ -958,13 +959,11 @@ public final class MgzMinibossInstance extends AbstractBossInstance {
         private int mappingFrame;
         private int animTimer;
 
-        private KnucklesSpikePlatformChild(MgzMinibossInstance parent, boolean mirrored) {
+        private KnucklesSpikePlatformChild(MgzMinibossInstance parent, boolean mirrored, int cameraX, int cameraY) {
             super(new ObjectSpawn(parent.state.x, parent.state.y, 0, 0, mirrored ? 1 : 0, false, 0),
                     "MgzKnucklesSpikePlatform");
             this.parent = parent;
             this.mirrored = mirrored;
-            int cameraX = parent.services().camera() != null ? parent.services().camera().getX() : parent.state.x;
-            int cameraY = parent.services().camera() != null ? parent.services().camera().getY() : parent.state.y;
             this.currentX = cameraX + 0x30 + (mirrored ? 0xE0 : 0);
             this.currentY = cameraY + 0xF0;
             this.baseY = currentY;
