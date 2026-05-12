@@ -612,8 +612,11 @@ public class TestGameLoop {
         deleteRecursively(saveDir);
 
         GameModule module = mock(GameModule.class);
+        EndingProvider endingProvider = mock(EndingProvider.class);
         when(module.getSaveSnapshotProvider()).thenReturn((reason, ctx) -> Map.of("marker", "credits"));
-        when(module.getGameId()).thenReturn(com.openggf.game.GameId.S2);
+        when(module.getEndingProvider()).thenReturn(endingProvider);
+        when(endingProvider.saveReasonOnEndingStart()).thenReturn(
+                java.util.Optional.of(com.openggf.game.save.SaveReason.PROGRESSION_SAVE));
         when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
 
         SaveSessionContext saveContext = SaveSessionContext.forSlot(
@@ -1442,6 +1445,20 @@ public class TestGameLoop {
                                   FadeManager fadeManager) {
         GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
         gameplayMode.tearDownManagers();
+        when(fadeManager.key()).thenReturn("fademanager");
+        when(fadeManager.capture()).thenReturn(new com.openggf.game.rewind.snapshot.FadeManagerSnapshot(
+                FadeManager.FadeState.NONE,
+                0,
+                0.0f,
+                0.0f,
+                0.0f,
+                0.0f,
+                FadeManager.FadeType.BLACK,
+                0,
+                0,
+                1,
+                0.0f,
+                0));
         when(spriteManager.rewindSnapshottable()).thenReturn(
                 new com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot>() {
             @Override
@@ -1451,7 +1468,9 @@ public class TestGameLoop {
 
             @Override
             public com.openggf.game.rewind.snapshot.SpriteManagerSnapshot capture() {
-                return null;
+                return new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot(
+                        0,
+                        new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry[0]);
             }
 
             @Override

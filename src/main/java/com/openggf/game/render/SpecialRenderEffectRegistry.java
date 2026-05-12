@@ -67,7 +67,11 @@ public final class SpecialRenderEffectRegistry
         return count;
     }
 
-    /** Executes all effects registered for the requested stage. */
+    /**
+     * Executes all effects registered for the requested stage.
+     * Registrations are a level/setup-time contract; callers must not mutate
+     * this registry while a stage dispatch is in progress.
+     */
     public void dispatch(SpecialRenderEffectStage stage, SpecialRenderEffectContext context) {
         Objects.requireNonNull(stage, "stage");
         Objects.requireNonNull(context, "context");
@@ -75,7 +79,7 @@ public final class SpecialRenderEffectRegistry
         if (effects == null || effects.isEmpty()) {
             return;
         }
-        for (SpecialRenderEffect effect : List.copyOf(effects)) {
+        for (SpecialRenderEffect effect : effects) {
             effect.render(context);
         }
     }

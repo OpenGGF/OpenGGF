@@ -1,6 +1,5 @@
 Class <com.openggf.graphics.FadeManager> has generic interface <com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.FadeManagerSnapshot>> with type argument depending on <com.openggf.game.rewind.snapshot.FadeManagerSnapshot> in (FadeManager.java:0)
 Class <com.openggf.graphics.FadeManager> implements interface <com.openggf.game.rewind.RewindSnapshottable> in (FadeManager.java:0)
-Constructor <com.openggf.audio.LWJGLAudioBackend.<init>()> calls method <com.openggf.game.GameServices.configuration()> in (LWJGLAudioBackend.java:108)
 Constructor <com.openggf.audio.smps.AbstractSmpsLoader.<init>(com.openggf.data.Rom)> has parameter of type <com.openggf.data.Rom> in (AbstractSmpsLoader.java:0)
 Constructor <com.openggf.audio.smps.SmpsSequencer.<init>(com.openggf.audio.smps.AbstractSmpsData, com.openggf.audio.smps.DacData, com.openggf.audio.smps.SmpsSequencerConfig)> calls method <com.openggf.game.GameServices.audio()> in (SmpsSequencer.java:304)
 Constructor <com.openggf.audio.smps.SmpsSequencer.<init>(com.openggf.audio.smps.AbstractSmpsData, com.openggf.audio.smps.DacData, com.openggf.audio.synth.Synthesizer, com.openggf.audio.smps.SmpsSequencerConfig)> calls method <com.openggf.game.GameServices.audio()> in (SmpsSequencer.java:314)

@@ -4,9 +4,11 @@ import com.openggf.debug.MemoryStats;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.ProfileSnapshot;
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -42,6 +44,27 @@ class TestPerformanceProfilerGating {
                 "Disabled profiling should not record section timing");
         assertTrue(memorySnapshot.topAllocators().isEmpty(),
                 "Disabled profiling should not record allocator data");
+    }
+
+    @Test
+    void profilerRejectsCrossThreadMutationAfterOwnerThreadIsClaimed() throws Exception {
+        PerformanceProfiler profiler = PerformanceProfiler.getInstance();
+        profiler.reset();
+        profiler.beginFrame();
+
+        AtomicReference<Throwable> thrown = new AtomicReference<>();
+        Thread worker = new Thread(() -> {
+            try {
+                profiler.beginSection("audio.callback");
+            } catch (Throwable t) {
+                thrown.set(t);
+            }
+        });
+        worker.start();
+        worker.join();
+
+        assertInstanceOf(IllegalStateException.class, thrown.get());
+        profiler.endFrame();
     }
 
     private static void setEnabled(PerformanceProfiler profiler, boolean enabled) {

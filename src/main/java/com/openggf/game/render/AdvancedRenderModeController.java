@@ -38,13 +38,17 @@ public final class AdvancedRenderModeController
         return modes.size();
     }
 
-    /** Resolves the current frame's aggregate render-mode state. */
+    /**
+     * Resolves the current frame's aggregate render-mode state.
+     * Contributors are registered during level/setup; callers must not mutate
+     * this controller while resolution is in progress.
+     */
     public AdvancedRenderFrameState resolve(AdvancedRenderModeContext context) {
         if (context == null || modes.isEmpty()) {
             return AdvancedRenderFrameState.disabled();
         }
         AdvancedRenderFrameState.Builder builder = AdvancedRenderFrameState.builder();
-        for (AdvancedRenderMode mode : List.copyOf(modes)) {
+        for (AdvancedRenderMode mode : modes) {
             mode.contribute(context, builder);
         }
         return builder.build();
