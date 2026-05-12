@@ -20,6 +20,7 @@ import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
 import com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance;
@@ -183,6 +184,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new CnzZoneRuntimeState(act, playerCharacter, cnzEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_HCZ && hczEvents != null) {
             registry.install(new HczZoneRuntimeState(act, playerCharacter, hczEvents));
+        } else if (zone == Sonic3kZoneIds.ZONE_MGZ && mgzEvents != null) {
+            registry.install(new MgzZoneRuntimeState(act, playerCharacter, mgzEvents));
         } else {
             registry.clear();
         }

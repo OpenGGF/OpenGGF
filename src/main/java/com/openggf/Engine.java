@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.*;
@@ -79,6 +80,7 @@ import static org.lwjgl.system.MemoryUtil.*;
  *
  * @author james
  */
+@CompositionRoot
 public class Engine {
 	private static final Logger LOGGER = Logger.getLogger(Engine.class.getName());
 	public static final String RESOURCES_SHADERS_PIXEL_SHADER_GLSL = "shaders/shader_the_hedgehog.glsl";

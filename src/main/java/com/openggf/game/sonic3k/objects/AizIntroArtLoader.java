@@ -4,6 +4,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.BootstrapObjectServices;
@@ -87,7 +88,7 @@ public class AizIntroArtLoader {
     private static ObjectServices activeServices;
 
     // Renderer cache — lazy-initialized on first render call
-    private static final int INTRO_PATTERN_BASE = 0x40000;
+    private static final int INTRO_PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
     private static PatternSpriteRenderer planeRenderer;
     private static PatternSpriteRenderer emeraldRenderer;
     private static PatternSpriteRenderer introSpritesRenderer;

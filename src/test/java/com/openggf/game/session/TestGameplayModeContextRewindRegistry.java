@@ -93,6 +93,8 @@ class TestGameplayModeContextRewindRegistry {
         GameplayModeContext ctx = buildAttachedContext();
         assertNotNull(ctx.getRewindRegistry());
         ctx.tearDownManagers();
+        assertFalse(ctx.isGameplayRuntimeReady(),
+                "A torn-down gameplay context must not be advertised as runtime-ready");
         assertNull(ctx.getRewindRegistry(),
                 "Registry should be null after tearDownManagers");
     }

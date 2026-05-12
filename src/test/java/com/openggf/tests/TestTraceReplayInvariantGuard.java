@@ -1,4 +1,4 @@
-package com.openggf.tests.trace;
+package com.openggf.tests;
 
 import com.openggf.trace.ToleranceConfig;
 import org.junit.jupiter.api.Test;
@@ -6,9 +6,9 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -21,7 +21,7 @@ class TestTraceReplayInvariantGuard {
     private static final Path MAIN_ROOT = Path.of("src/main/java");
     private static final Path TEST_ROOT = Path.of("src/test/java");
     private static final String SELF_PATH =
-            "src/test/java/com/openggf/tests/trace/TestTraceReplayInvariantGuard.java";
+            "src/test/java/com/openggf/tests/TestTraceReplayInvariantGuard.java";
 
     private static final Set<String> TRACE_REPLAY_BASE_ALLOWLIST = Set.of(
             "src/test/java/com/openggf/tests/trace/AbstractTraceReplayTest.java",
@@ -151,8 +151,15 @@ class TestTraceReplayInvariantGuard {
         sources.remove(Path.of(SELF_PATH));
         return sources.stream()
                 .filter(Files::exists)
+                .filter(path -> !isAllowedTraceSupportSource(path))
                 .sorted(Comparator.comparing(TestTraceReplayInvariantGuard::normalize))
                 .toList();
+    }
+
+    private static boolean isAllowedTraceSupportSource(Path source) {
+        String normalized = normalize(source);
+        return normalized.endsWith("src/main/java/com/openggf/sprites/ghost/GhostTraceRenderer.java")
+                || normalized.endsWith("src/test/java/com/openggf/tests/HeadlessTestFixture.java");
     }
 
     /**
@@ -200,9 +207,6 @@ class TestTraceReplayInvariantGuard {
                 || setterHydratesPrimaryPlayerState(line)
                 || setterHydratesCameraState(line)
                 || setterHydratesRingState(line)
-                // Direct setter-from-snapshot patterns. Kept as fast-path
-                // string checks for readability; the regex below catches
-                // less obvious variants.
                 || line.contains("setCentreX(state.")
                 || line.contains("setCentreY(state.")
                 || line.contains("setXSpeed(state.")
@@ -217,24 +221,10 @@ class TestTraceReplayInvariantGuard {
                 || line.contains("setCentreY((short) snapshot.yPos())")
                 || line.contains("setXSpeed((short) snapshot.xVel())")
                 || line.contains("setYSpeed((short) snapshot.yVel())")
-                // Snapshot-field reads used to derive a setter argument
-                // (e.g. parseBoolean(fields.get("control_locked"), false)).
-                // A {@code fields.get(} call only ever appears in trace-replay
-                // code when binding a {@link com.openggf.trace.TraceEvent.StateSnapshot}
-                // record's {@code fields()} map, so flag any line that pulls
-                // from it in committed test code.
                 || line.contains("fields.get(\"")
-                // Local variables that bind a frame-zero (or any trace
-                // frame) into engine setup. These names always feed
-                // setRingCount/camera.setX/.../engine state in the offending
-                // bootstrap path; comparison-only code reads frames straight
-                // into binder.compareFrame instead. Catching the assignment
-                // is more robust than chasing the downstream setters.
                 || line.contains("frameZero != null && frameZero.")
                 || line.contains("recordedRings = frameZero")
                 || line.contains("recordedCamera")
-                // Generic regex catch-all: setter on any reference where the
-                // argument expression directly reads a trace-side field.
                 || SETTER_FROM_TRACE_FIELD.matcher(line).find();
     }
 
@@ -324,7 +314,10 @@ class TestTraceReplayInvariantGuard {
     }
 
     private static boolean importsTraceReplayData(String text) {
-        return text.contains("import com.openggf.trace.TraceData;")
+        return text.contains("import com.openggf.trace.*;")
+                || text.contains("import com.openggf.trace.")
+                || text.contains("com.openggf.trace.")
+                || text.contains("import com.openggf.trace.TraceData;")
                 || text.contains("import com.openggf.trace.TraceFrame;")
                 || text.contains("import com.openggf.trace.TraceEvent;")
                 || text.contains("import com.openggf.trace.TraceReplayBootstrap;");

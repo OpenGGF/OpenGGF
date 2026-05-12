@@ -1,0 +1,1 @@
+Method <com.openggf.level.objects.DefaultPowerUpSpawner.spawnSplash(com.openggf.game.PlayableEntity)> calls constructor <com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance.<init>(int, int)> in (DefaultPowerUpSpawner.java:141)

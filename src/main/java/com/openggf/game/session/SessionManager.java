@@ -1,10 +1,12 @@
 package com.openggf.game.session;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.game.GameModule;
 import com.openggf.game.save.SaveSessionContext;
 
 import java.util.Objects;
 
+@CompositionRoot
 public final class SessionManager {
     private static WorldSession currentWorldSession;
     private static GameplayModeContext currentGameplayMode;

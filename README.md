@@ -118,6 +118,10 @@ lifecycle setup drift, with documented baselines for existing migration debt.
 This merge also hardens generic rewind capture for final in-place helper fields
 such as `SubpixelMotion.State`, covering S3K monitor and AIZ cutscene object
 rewind capture paths.
+The latest architectural review merge tightens rewind registry ownership,
+trace-replay comparison guardrails, object construction boundaries, graphics
+runtime rebinding, and MGZ scroll-event state routing through shared runtime
+state instead of direct scroll-handler mutation.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?
