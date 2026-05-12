@@ -3,9 +3,11 @@ package com.openggf.game.sonic2.credits;
 import com.openggf.game.EndingPhase;
 import com.openggf.game.EndingProvider;
 import com.openggf.game.GameServices;
+import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 /**
@@ -66,6 +68,11 @@ public class Sonic2EndingProvider implements EndingProvider {
     // ========================================================================
     // EndingProvider lifecycle
     // ========================================================================
+
+    @Override
+    public Optional<SaveReason> saveReasonOnEndingStart() {
+        return Optional.of(SaveReason.PROGRESSION_SAVE);
+    }
 
     @Override
     public void initialize() {

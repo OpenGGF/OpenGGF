@@ -20,7 +20,6 @@ import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.PerformanceProfiler;
-import com.openggf.game.GameServices;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -41,6 +40,7 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     private final Object streamLock = new Object();
     private final SonicConfigurationService configService;
+    private final PerformanceProfiler profiler;
 
     private long device;
     private long context;
@@ -106,11 +106,16 @@ public class LWJGLAudioBackend implements AudioBackend {
     private SmpsSequencerConfig smpsConfig;
 
     public LWJGLAudioBackend() {
-        this(GameServices.configuration());
+        this(SonicConfigurationService.createStandalone(), null);
     }
 
     public LWJGLAudioBackend(SonicConfigurationService configService) {
+        this(configService, null);
+    }
+
+    public LWJGLAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
         this.configService = Objects.requireNonNull(configService, "configService");
+        this.profiler = profiler;
         // Initialize fallback mappings
         // SFX
         sfxFallback.put("JUMP", "sfx/jump.wav");
@@ -679,11 +684,9 @@ public class LWJGLAudioBackend implements AudioBackend {
         // these inside the outer "audio" section in GameLoop will truncate that section
         // — that's expected. Called potentially multiple times per audio tick (once per
         // processed buffer in updateStream); PerformanceProfiler accumulates section time.
-        PerformanceProfiler profiler = PerformanceProfiler.getInstance();
-
         int sampleRate;
         synchronized (streamLock) {
-            profiler.beginSection("audio.music_stream");
+            beginProfileSection("audio.music_stream");
             try {
                 // Clear and reuse pre-allocated buffer
                 Arrays.fill(streamData, (short) 0);
@@ -697,10 +700,10 @@ public class LWJGLAudioBackend implements AudioBackend {
                     currentStream.read(streamData);
                 }
             } finally {
-                profiler.endSection("audio.music_stream");
+                endProfileSection("audio.music_stream");
             }
 
-            profiler.beginSection("audio.sfx_stream");
+            beginProfileSection("audio.sfx_stream");
             try {
                 boolean runtimePresentation = runtimeProvidesPresentationPcm();
                 if (!runtimePresentation && sfxStream != null) {
@@ -726,19 +729,31 @@ public class LWJGLAudioBackend implements AudioBackend {
 
                 sampleRate = (int) Math.round(getStreamSampleRate());
             } finally {
-                profiler.endSection("audio.sfx_stream");
+                endProfileSection("audio.sfx_stream");
             }
         }
 
         // Keep DirectBuffer/OpenAL operations outside lock to minimize contention
-        profiler.beginSection("audio.upload");
+        beginProfileSection("audio.upload");
         try {
             directShortBuffer.clear();
             directShortBuffer.put(streamData);
             directShortBuffer.flip();
             alBufferData(bufferId, AL_FORMAT_STEREO16, directShortBuffer, sampleRate);
         } finally {
-            profiler.endSection("audio.upload");
+            endProfileSection("audio.upload");
+        }
+    }
+
+    private void beginProfileSection(String section) {
+        if (profiler != null) {
+            profiler.beginSection(section);
+        }
+    }
+
+    private void endProfileSection(String section) {
+        if (profiler != null) {
+            profiler.endSection(section);
         }
     }
 

@@ -52,7 +52,8 @@ public final class GameplaySessionFactory {
                 ? sessionModule.rngFlavour()
                 : GameRng.Flavour.S1_S2);
         SolidExecutionRegistry solidExecutionRegistry = new DefaultSolidExecutionRegistry();
-        gameplayMode.attachGameplayManagers(camera, timers, gameState, fadeManager, rng, solidExecutionRegistry);
+        gameplayMode.attachGameplayManagers(camera, timers, gameState, fadeManager,
+                rng, solidExecutionRegistry, services.profiler(), services.audio());
 
         WaterSystem waterSystem = new WaterSystem();
         ParallaxManager parallaxManager = new ParallaxManager();
