@@ -1,8 +1,12 @@
 package com.openggf.game.sonic3k.runtime;
 
+import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
+import com.openggf.game.sonic3k.scroll.SwScrlMgz;
+import com.openggf.level.ParallaxManager;
+import com.openggf.level.scroll.ZoneScrollHandler;
 
 import java.util.Objects;
 
@@ -32,6 +36,41 @@ public final class MgzZoneRuntimeState implements S3kZoneRuntimeState {
 
     public int bgRiseOffset() {
         return events.getBgRiseOffset();
+    }
+
+    /**
+     * Writes through to the events state (the canonical source for
+     * {@code Events_bg+$00} / {@code Events_bg+$02}). Mirrors
+     * {@link #publishBossBgScrollOffset(int)} for the BG-rise state machine
+     * so callers outside the events class can drive it deterministically.
+     */
+    public void publishBgRiseState(int routine, int offset) {
+        events.setBgRiseRoutine(routine);
+        events.setBgRiseOffset(offset);
+    }
+
+    /**
+     * Pushes the current BG-rise state to the registered MGZ scroll handler so
+     * its cached {@code bgRiseRoutine}/{@code bgRiseOffset} and BG camera
+     * derivations reflect the events transition immediately. Bridges the
+     * events package (forbidden from depending on {@link SwScrlMgz}) and the
+     * scroll handler so collision probes between event tick and the next
+     * parallax draw see post-transition state.
+     */
+    public void syncBgRiseToScrollHandler() {
+        SwScrlMgz handler = resolveMgzScrollHandler();
+        if (handler != null) {
+            handler.syncBgRiseFromEvents();
+        }
+    }
+
+    private static SwScrlMgz resolveMgzScrollHandler() {
+        ParallaxManager parallax = GameServices.parallaxOrNull();
+        if (parallax == null) {
+            return null;
+        }
+        ZoneScrollHandler handler = parallax.getHandler(Sonic3kZoneIds.ZONE_MGZ);
+        return (handler instanceof SwScrlMgz mgz) ? mgz : null;
     }
 
     public int bossBgScrollOffset() {

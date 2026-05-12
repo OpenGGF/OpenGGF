@@ -910,7 +910,15 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
                 LOG.warning("MGZ BG-rise: state SONIC armed but scroll handler is null — "
                         + "BG formula will NOT shift in-game");
             }
+            return;
         }
+        // ROM: Events_bg is mutated in the object phase and read by MGZ2_BGDeform
+        // during the deform pass; that pass runs as part of the per-frame render.
+        // Headless paths skip parallax draw, so ask the runtime state to sync the
+        // registered scroll handler's cached BG-rise fields now so collision
+        // probes and tests that inspect the handler between event tick and render
+        // see the post-transition state.
+        runtimeState.syncBgRiseToScrollHandler();
     }
 
     /**

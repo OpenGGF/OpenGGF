@@ -6,6 +6,35 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Fix regressions from architectural review hardening.** Two
+  follow-up fixes for issues introduced by the previous entry.
+  `GenericFieldCapturer.usesCodecFieldSnapshot` now skips the codec
+  snapshot path for non-final fields whose codec declares
+  `requiresExistingTargetValue()` (currently `ObjectAnimationStateCodec`),
+  falling through to `deepCloneValue` so lazy-initialised animation
+  state — notably `MonitorObjectInstance.animationState` — restores
+  cleanly when null at restore time. `RewindSchemaRegistry`'s compact
+  path already had the equivalent guard; the generic path now matches.
+  Resolves `IllegalStateException: Cannot restore in-place rewind field
+  ... because the target value is null` in `TestRewindTorture`,
+  `TestRewindTraceSeekDeterminism`, `TestRewindIter1631Diagnostic`, and
+  `TestAbstractObjectInstanceRewindCapture#defaultClassFallsBackToGenericSidecarForNullableAnimationState`.
+  Separately, the MGZ BG-rise state machine now propagates correctly
+  to the registered `SwScrlMgz`: `MgzZoneRuntimeState` gains
+  `publishBgRiseState` (canonical events-side write) and
+  `syncBgRiseToScrollHandler` (resolves the registered handler via
+  `GameServices.parallaxOrNull` so the events package retains its
+  architectural separation), `SwScrlMgz.setBgRiseState` write-throughs
+  to runtime state, and `Sonic3kMGZEvents.updatePrePhysics` syncs the
+  handler after its state machine — previously `LevelFrameStep.execute`
+  skipped `parallaxManager.update()` so the handler cache stayed stale
+  between event tick and render, and `setBgRiseState` only mutated the
+  local cache which the next `update()` overwrote. Verified against
+  `MGZ2_BGEventTrigger` (`sonic3k.asm:107117`) and `MGZ2_BGDeform`
+  (`Lockon S3/Screen Events.asm:1090-1126`). Restores
+  `TestS3kMgz2BgRiseHeadless#eventsStateTransitionPropagatesToRegisteredSwScrlMgz`
+  and `#swScrlMgz_stateEightProducesDifferentScrollFromStateZero`.
+
 - **Architectural review hardening.** Tightens `RewindRegistry.capture()`
   to reject `null` snapshots and tightens `restore()` to require explicit
   `RewindSnapshottable.resetForMissingSnapshot()` for entries absent from

@@ -66,6 +66,33 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         }
         this.bgRiseRoutine = routine;
         this.bgRiseOffset = offset;
+        MgzZoneRuntimeState runtimeState = currentRuntimeState();
+        if (runtimeState != null) {
+            runtimeState.publishBgRiseState(routine, offset);
+        }
+        primeBgCollisionStateFromCurrentCamera();
+    }
+
+    /**
+     * Syncs the local cache fields from the events-class state (the canonical
+     * {@code Events_bg+$00 / +$02} source) without running a full parallax
+     * update. Called by {@link com.openggf.game.sonic3k.events.Sonic3kMGZEvents}
+     * after its state machine mutates the routine so collision probes that read
+     * {@link #getBgCameraX()} and {@link #getVscrollFactorBG()} between event
+     * tick and the next render see the post-transition state.
+     */
+    public void syncBgRiseFromEvents() {
+        MgzZoneRuntimeState runtimeState = currentRuntimeState();
+        if (runtimeState == null) {
+            return;
+        }
+        int newRoutine = runtimeState.bgRiseRoutine();
+        if (this.bgRiseRoutine != BG_RISE_AFTER_MOVE_STATE && newRoutine == BG_RISE_AFTER_MOVE_STATE) {
+            mgz2CloudAccumulator.set(0);
+            mgz2CloudsFrozen = true;
+        }
+        this.bgRiseRoutine = newRoutine;
+        this.bgRiseOffset = runtimeState.bgRiseOffset();
         primeBgCollisionStateFromCurrentCamera();
     }
 
