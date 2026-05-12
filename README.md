@@ -110,18 +110,18 @@ Recent engine work has also moved shared zone behavior onto runtime-owned framew
 Current migration status is intentionally partial rather than universal. Sonic 2 already uses the runtime-owned stack for HTZ/CNZ runtime state, palette ownership, animated tile orchestration, CNZ staged overlay rendering, and CNZ layout mutations via `ZoneLayoutMutationPipeline`. Sonic 3&K uses the same stack for AIZ/HCZ/CNZ runtime-state adapters, AIZ staged render effects and advanced render modes, HCZ/SOZ animated tile channels, CNZ runtime-state-backed scroll behavior, and seamless terrain-swap/mutation paths routed through the mutation pipeline. The shared scroll-composition helpers are live in AIZ, HCZ, and MGZ. Other S1/S2/S3K zones still mix these frameworks with older zone-local paths and should be treated as follow-up migration work rather than implied complete adoption.
 
 Work is ongoing across all three games. Recent branch work added compact
-palette-cycle rewind coverage and adopted ArchUnit architecture guard tests with
-frozen baselines for current boundary debt. The latest architecture-guarding
-merge expands those guards across runtime ownership, trace/rewind invariants,
-object-service access, source-level architecture hazards, and singleton
-lifecycle setup drift, with documented baselines for existing migration debt.
-This merge also hardens generic rewind capture for final in-place helper fields
-such as `SubpixelMotion.State`, covering S3K monitor and AIZ cutscene object
-rewind capture paths.
-The latest architectural review merge tightens rewind registry ownership,
+palette-cycle rewind coverage and adopted ArchUnit architecture guard tests
+with frozen baselines for current boundary debt. A follow-up architecture-
+guarding merge then expanded those guards across runtime ownership,
+trace/rewind invariants, object-service access, source-level architecture
+hazards, and singleton lifecycle setup drift, with documented baselines for
+existing migration debt. A subsequent rewind merge hardened generic rewind
+capture for final in-place helper fields such as `SubpixelMotion.State`,
+covering S3K monitor and AIZ cutscene object rewind capture paths. The
+latest architectural review merge tightens rewind registry ownership,
 trace-replay comparison guardrails, object construction boundaries, graphics
-runtime rebinding, and MGZ scroll-event state routing through shared runtime
-state instead of direct scroll-handler mutation.
+runtime rebinding, and MGZ scroll-event state routing through shared
+`MgzZoneRuntimeState` instead of direct scroll-handler mutation.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?
