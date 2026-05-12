@@ -16,4 +16,13 @@ public interface RewindSnapshottable<S> {
     String key();
     S capture();
     void restore(S snapshot);
+
+    /**
+     * Reset this subsystem when it is registered during restore but the
+     * composite snapshot has no entry for its key.
+     */
+    default void resetForMissingSnapshot() {
+        throw new IllegalStateException(
+                "Missing rewind snapshot for registered subsystem: " + key());
+    }
 }

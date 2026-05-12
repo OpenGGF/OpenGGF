@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
 import com.openggf.data.Rom;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
@@ -124,7 +125,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private static final int VRAM_HUD = 0x06CA;
     private static final int VRAM_END = 0x0710;        // End of HUD region (generous)
 
-    private static final int PATTERN_BASE = 0x40000;   // High ID to avoid conflicts (0x30000 used by water surface)
+    private static final int PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
     private static final int SOURCE_DIGITS_PATTERN_BASE = 0x41000;  // Separate base for preserved source digits
 
     // State tracking

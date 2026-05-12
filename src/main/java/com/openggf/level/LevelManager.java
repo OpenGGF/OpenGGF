@@ -34,6 +34,7 @@ import com.openggf.level.objects.HudStaticArt;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PatternAtlas;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.audio.AudioManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
@@ -78,10 +79,10 @@ import static org.lwjgl.opengl.GL11.glClearColor;
  */
 public class LevelManager {
     static final Logger LOGGER = Logger.getLogger(LevelManager.class.getName());
-    private static final int OBJECT_PATTERN_BASE = 0x20000;
-    private static final int HUD_PATTERN_BASE = 0x28000;
+    private static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
+    private static final int HUD_PATTERN_BASE = PatternAtlasRange.HUD.base();
     /** Base for extra sidekick-style DPLC banks — above water (0x30000) and below title cards (0x40000). */
-    public static final int SIDEKICK_PATTERN_BASE = 0x38000;
+    public static final int SIDEKICK_PATTERN_BASE = PatternAtlasRange.SIDEKICK_BANKS.base();
     private static final Palette.Color BLACK_BACKDROP = new Palette.Color((byte) 0, (byte) 0, (byte) 0);
     // Local mirror of the loaded Level owned by WorldSession. Reads use this
     // field directly for speed; writes go through writeCurrentLevel() to keep

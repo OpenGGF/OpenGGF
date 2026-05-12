@@ -16,6 +16,16 @@ class TestRewindRegistry {
         };
     }
 
+    private static RewindSnapshottable<Integer> resettableIntSnap(
+            String key, AtomicInteger ref, int resetValue) {
+        return new RewindSnapshottable<>() {
+            @Override public String key() { return key; }
+            @Override public Integer capture() { return ref.get(); }
+            @Override public void restore(Integer s) { ref.set(s); }
+            @Override public void resetForMissingSnapshot() { ref.set(resetValue); }
+        };
+    }
+
     @Test
     void captureWalksRegistrationOrder() {
         RewindRegistry reg = new RewindRegistry();
@@ -69,6 +79,40 @@ class TestRewindRegistry {
         reg.restore(new CompositeSnapshot(entries));
         // No exception — pass.
     }
+    @Test
+    void registeredSubsystemMissingFromSnapshotResetsExplicitly() {
+        RewindRegistry reg = new RewindRegistry();
+        AtomicInteger state = new AtomicInteger(99);
+        reg.register(resettableIntSnap("late", state, -1));
+
+        reg.restore(new CompositeSnapshot(new java.util.LinkedHashMap<>()));
+
+        assertEquals(-1, state.get(),
+                "registered subsystems absent from a snapshot should not retain newer state");
+    }
+
+    @Test
+    void registeredSubsystemMissingFromSnapshotFailsClosedByDefault() {
+        RewindRegistry reg = new RewindRegistry();
+        AtomicInteger state = new AtomicInteger(99);
+        reg.register(intSnap("late", state));
+
+        assertThrows(IllegalStateException.class,
+                () -> reg.restore(new CompositeSnapshot(new java.util.LinkedHashMap<>())));
+    }
+
+    @Test
+    void nullSnapshotsAreRejectedAtCapture() {
+        RewindRegistry reg = new RewindRegistry();
+        reg.register(new RewindSnapshottable<>() {
+            @Override public String key() { return "null"; }
+            @Override public Object capture() { return null; }
+            @Override public void restore(Object snapshot) { }
+        });
+
+        assertThrows(NullPointerException.class, reg::capture);
+    }
+
     @Test
     void restoreRunsPostRestoreCallbacksAfterSubsystems() {
         RewindRegistry reg = new RewindRegistry();

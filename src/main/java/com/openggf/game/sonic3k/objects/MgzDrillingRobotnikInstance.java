@@ -14,6 +14,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kMgzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -154,7 +155,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance {
     private static final int INVULNERABILITY_TIME = 0x20;
     /** ROM: ObjDat_MGZDrillBoss priority word = $300 → render bucket 6. */
     private static final int PRIORITY_BUCKET = 6;
-    private static final int OBJECT_PATTERN_BASE = 0x20000;
+    private static final int OBJECT_PATTERN_BASE = PatternAtlasRange.OBJECTS.base();
     private static final int MGZ_BOSS_PALETTE_LINE = 1;
     private static final int ROBOTNIK_SHIP_PALETTE_LINE = 0;
 

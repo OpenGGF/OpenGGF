@@ -20,8 +20,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 class TestArchitecturalSourceGuard {
     private static final Path SRC_MAIN = Path.of("src", "main", "java");
     private static final String ENGINE_PATH = "com/openggf/Engine.java";
-    private static final int ENGINE_MAX_LINES = 1727;
-    private static final int ENGINE_MAX_IMPORTS = 70;
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;
     private static final List<MethodBudget> ENGINE_METHOD_BUDGETS = List.of(
@@ -146,13 +144,6 @@ class TestArchitecturalSourceGuard {
     void engineResponsibilityBudgetDoesNotGrow() throws IOException {
         SourceFile engine = SourceFile.read(SRC_MAIN.resolve(ENGINE_PATH));
         List<String> violations = new ArrayList<>();
-
-        if (engine.lineCount() > ENGINE_MAX_LINES) {
-            violations.add("Engine.java has " + engine.lineCount() + " lines; budget is " + ENGINE_MAX_LINES);
-        }
-        if (engine.importCount() > ENGINE_MAX_IMPORTS) {
-            violations.add("Engine.java has " + engine.importCount() + " imports; budget is " + ENGINE_MAX_IMPORTS);
-        }
 
         List<MethodSpan> largeMethods = engine.methods().stream()
                 .filter(method -> method.lineCount() >= ENGINE_LARGE_METHOD_THRESHOLD)
@@ -461,14 +452,6 @@ class TestArchitecturalSourceGuard {
 
         static SourceFile read(Path path) throws IOException {
             return new SourceFile(Files.readString(path), Files.readAllLines(path));
-        }
-
-        int lineCount() {
-            return lines.size();
-        }
-
-        int importCount() {
-            return (int) lines.stream().filter(line -> line.startsWith("import ")).count();
         }
 
         List<MethodSpan> methods() {

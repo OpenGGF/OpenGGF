@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.GameSound;
@@ -49,6 +50,7 @@ import java.util.logging.Logger;
  * <p>Singleton. Activated via {@code CROSS_GAME_FEATURES_ENABLED} config key.
  * The donor ROM is opened as a secondary ROM (no module detection side-effect).
  */
+@CompositionRoot
 public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, SpindashDustArtProvider {
     private static final Logger LOGGER = Logger.getLogger(CrossGameFeatureProvider.class.getName());
 

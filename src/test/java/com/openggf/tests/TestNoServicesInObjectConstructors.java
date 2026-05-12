@@ -415,7 +415,7 @@ public class TestNoServicesInObjectConstructors {
         }
 
         // Seed: methods that directly call services()
-        Pattern servicesCall = Pattern.compile("(?<![.\\w])services\\(\\)");
+        Pattern servicesCall = Pattern.compile("(?<![\\w])(?:\\w+\\.)?services\\(\\)");
         Set<String> callers = new HashSet<>();
         for (var entry : methodBodies.entrySet()) {
             if (servicesCall.matcher(entry.getValue()).find()) {
@@ -571,7 +571,7 @@ public class TestNoServicesInObjectConstructors {
     private static List<ConstructorCall> findConstructorCalls(ClassSource source) {
         List<ConstructorCall> calls = new ArrayList<>();
         Pattern ctorPattern = Pattern.compile(
-                "(?:public|protected|private)\\s+" + Pattern.quote(source.className())
+                "(?:public\\s+|protected\\s+|private\\s+)?" + Pattern.quote(source.className())
                         + "\\s*\\([^)]*\\)\\s*\\{");
         Matcher ctorMatcher = ctorPattern.matcher(source.content());
 
@@ -652,7 +652,7 @@ public class TestNoServicesInObjectConstructors {
             String content, String className, String fileName,
             List<String> violations) {
         Pattern ctorPattern = Pattern.compile(
-                "(?:public|protected|private)\\s+" + Pattern.quote(className)
+                "(?:public\\s+|protected\\s+|private\\s+)?" + Pattern.quote(className)
                         + "\\s*\\([^)]*\\)\\s*\\{");
         Matcher ctorMatcher = ctorPattern.matcher(content);
 
@@ -669,7 +669,7 @@ public class TestNoServicesInObjectConstructors {
 
             String ctorBody = content.substring(start, end);
             // Match unqualified services() â€” not obj.services()
-            if (Pattern.compile("(?<![.\\w])services\\(\\)").matcher(ctorBody).find()) {
+            if (Pattern.compile("(?<![\\w])(?:\\w+\\.)?services\\(\\)").matcher(ctorBody).find()) {
                 violations.add(fileName + ": " + className
                         + " calls services() in constructor");
             }

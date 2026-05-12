@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.data.Rom;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -22,6 +23,7 @@ import java.util.logging.Logger;
  * <p>Use {@link #detectAndSetModule(Rom)} to auto-detect the game from a ROM,
  * or {@link #setCurrent(GameModule)} to set it manually.
  */
+@CompositionRoot
 public final class GameModuleRegistry {
     private static final Logger LOGGER = Logger.getLogger(GameModuleRegistry.class.getName());
 

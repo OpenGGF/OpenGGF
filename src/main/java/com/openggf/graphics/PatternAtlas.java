@@ -59,6 +59,10 @@ public class PatternAtlas {
     /** Describes a registered virtual pattern ID range for collision detection. */
     public record PatternRange(int base, int size, String category) {}
 
+    public void registerRange(PatternAtlasRange range) {
+        registerRange(range.base(), range.size(), range.category());
+    }
+
     private final List<PatternRange> registeredRanges = new ArrayList<>();
 
     /**

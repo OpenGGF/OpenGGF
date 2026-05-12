@@ -39,11 +39,10 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
     private static final Logger LOGGER = Logger.getLogger(DefaultPowerUpSpawner.class.getName());
 
     private final ObjectManager objectManager;
-    private final ObjectServices services;
+    private ObjectServices cachedServices;
 
     public DefaultPowerUpSpawner(ObjectManager objectManager) {
         this.objectManager = objectManager;
-        this.services = objectManager != null ? objectManager.services() : null;
     }
 
     @Override
@@ -66,6 +65,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
 
     @Override
     public PowerUpObject spawnInvincibilityStars(PlayableEntity player) {
+        ObjectServices services = objectServices();
         GameModule module = services != null ? services.gameModule() : null;
         AbstractObjectInstance stars;
         if (module != null) {
@@ -105,6 +105,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             return;
         }
 
+        ObjectServices services = objectServices();
         if (services == null) {
             return;
         }
@@ -116,7 +117,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
 
         // Get water level from WaterSystem
         // Use getVisualWaterLevelY so splash appears at the oscillating water surface (CPZ2)
-        WaterSystem waterSystem = services != null ? services.waterSystem() : null;
+        WaterSystem waterSystem = services.waterSystem();
         if (waterSystem == null) {
             return;
         }
@@ -141,7 +142,15 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         objectManager.addDynamicObject(s1Splash);
     }
 
+    private ObjectServices objectServices() {
+        if (cachedServices == null && objectManager != null) {
+            cachedServices = objectManager.services();
+        }
+        return cachedServices;
+    }
+
     private <T extends AbstractObjectInstance> T constructWithServices(Supplier<T> factory) {
+        ObjectServices services = objectServices();
         if (services == null) {
             return factory.get();
         }
@@ -194,6 +203,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         if (!(object instanceof ShieldObjectInstance)) {
             return -1;
         }
+        ObjectServices services = objectServices();
         if (services == null) {
             return -1;
         }

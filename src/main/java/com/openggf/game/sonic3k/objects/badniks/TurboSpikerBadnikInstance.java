@@ -359,14 +359,14 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private void spawnWaterSplashBurst() {
+        services().playSfx(Sonic3kSfx.SPLASH.id);
         for (int i = 0; i < WATER_SPLASH_OFFSETS_X.length; i++) {
             int index = i;
-            boolean playSound = i == 0;
             spawnChild(() -> new TurboSpikerWaterSplashParticle(
                     this,
                     currentX + adjustedOffsetX(WATER_SPLASH_OFFSETS_X[index]),
                     currentY + WATER_SPLASH_OFFSETS_Y[index],
-                    playSound));
+                    false));
         }
     }
 
@@ -575,10 +575,12 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         private final int[] frames;
         private final int frameDelay;
         private final int priorityBucket;
+        private final boolean playSound;
 
         private int frameIndex;
         private int frameTimer;
         private int mappingFrame;
+        private boolean soundPlayed;
 
         TurboSpikerAnimatedParticle(ObjectSpawn ownerSpawn, String name, int x, int y,
                 int[] frames, int frameDelay, int priorityBucket, boolean playSound) {
@@ -589,13 +591,15 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
             this.frameDelay = frameDelay;
             this.priorityBucket = priorityBucket;
             this.mappingFrame = frames[0];
-            if (playSound) {
-                services().playSfx(Sonic3kSfx.SPLASH.id);
-            }
+            this.playSound = playSound;
         }
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (playSound && !soundPlayed) {
+                services().playSfx(Sonic3kSfx.SPLASH.id);
+                soundPlayed = true;
+            }
             frameTimer--;
             if (frameTimer >= 0) {
                 return;
