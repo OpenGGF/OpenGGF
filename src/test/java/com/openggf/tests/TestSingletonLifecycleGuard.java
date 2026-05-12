@@ -60,8 +60,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/game/sonic3k/features/TestFireCurtainBoundaryDiag.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestAizVineHandleLogic.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestMGZSwingingPlatformObjectInstance.java#setUp
-            src/test/java/com/openggf/game/sonic3k/objects/TestMgzDrillingRobotnikInstance.java#setUp
-            src/test/java/com/openggf/game/sonic3k/objects/TestMgzMinibossInstance.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestSonic3kMonitorObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/TestSonic3kSpringObjectInstance.java#setUp
             src/test/java/com/openggf/game/sonic3k/objects/badniks/TestMegaChopperBadnikInstance.java#setUp
@@ -77,12 +75,9 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/level/objects/TestPlaneSwitcherStateIsolation.java#setUp
             src/test/java/com/openggf/level/scroll/SwScrlArzTest.java#setUp
             src/test/java/com/openggf/level/scroll/SwScrlMczTest.java#setUp
-            src/test/java/com/openggf/physics/TestCollisionSystemAirLanding.java#setUp
             src/test/java/com/openggf/physics/TestGroundSensor.java#setUp
             src/test/java/com/openggf/physics/TestTerrainCollisionManager.java#setUp
             src/test/java/com/openggf/physics/TestTerrainCollisionManagerReset.java#setUp
-            src/test/java/com/openggf/sprites/managers/TestPlayableSpriteAnimation.java#setUp
-            src/test/java/com/openggf/sprites/managers/TestPlayableSpriteMovement.java#setUp
             src/test/java/com/openggf/sprites/playable/TestAbstractPlayableSpriteRewindCapture.java#setUp
             src/test/java/com/openggf/sprites/playable/TestLogicalInputControlLockLatch.java#setUp
             src/test/java/com/openggf/sprites/playable/TestRespawnStrategies.java#setUp
@@ -92,7 +87,6 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/tests/TestMonitorIconTiming.java#setUp
             src/test/java/com/openggf/tests/TestOilSurfaceManager.java#setUp
             src/test/java/com/openggf/tests/TestRingManager.java#setUp
-            src/test/java/com/openggf/tests/TestS3kHczSnakeBlocksObject.java#setUp
             src/test/java/com/openggf/tests/TestSonic1MonitorObjectInstance.java#setUp
             src/test/java/com/openggf/tests/TestSonic3kLightningShieldObjectInstance.java#setUp
             src/test/java/com/openggf/tests/TestSonic3kMonitorObjectInstance.java#setUp
@@ -177,6 +171,21 @@ class TestSingletonLifecycleGuard {
         assertEquals(List.of(), violations);
     }
 
+    @Test
+    void sampleScannerAllowsClassLevelSingletonResetExtension() {
+        List<String> violations = scanAmbientGameplayModeSetups("sample/TestSafe.java", """
+                @ExtendWith(SingletonResetExtension.class)
+                class TestSafe {
+                    @BeforeEach
+                    void setUp() {
+                        TestEnvironment.activeGameplayMode();
+                    }
+                }
+                """);
+
+        assertEquals(List.of(), violations);
+    }
+
     private static List<String> ambientGameplayModeSetups() throws IOException {
         List<String> violations = new ArrayList<>();
         for (Path source : javaSources(TEST_ROOT)) {
@@ -190,6 +199,9 @@ class TestSingletonLifecycleGuard {
     }
 
     private static List<String> scanAmbientGameplayModeSetups(String relative, String source) {
+        if (declaresSingletonResetExtension(source)) {
+            return List.of();
+        }
         List<String> violations = new ArrayList<>();
         for (Map.Entry<String, String> method : setupMethods(source).entrySet()) {
             String body = method.getValue();
@@ -209,6 +221,15 @@ class TestSingletonLifecycleGuard {
                 || body.contains("TestEnvironment.configureGameModuleFixture(")
                 || body.contains("TestEnvironment.configureRomFixture(")
                 || body.contains("TestEnvironment.resetPerTest(");
+    }
+
+    private static boolean declaresSingletonResetExtension(String source) {
+        // Class- or method-level @ExtendWith(SingletonResetExtension.class) makes the
+        // reset run before each test (including before the test's own setUp), so the
+        // setUp's call to activeGameplayMode() is no longer "ambient" -- the lifecycle
+        // is explicit. Accept any whitespace between @ExtendWith and (.
+        return source.contains("SingletonResetExtension.class")
+                && source.contains("@ExtendWith");
     }
 
     private static Map<String, String> setupMethods(String source) {

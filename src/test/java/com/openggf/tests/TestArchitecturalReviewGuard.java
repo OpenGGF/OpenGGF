@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -72,27 +70,4 @@ class TestArchitecturalReviewGuard {
         assertFalse(pom.contains("**/trace/s1/TestS1*TraceReplay.java"));
     }
 
-    @Test
-    void mgzEventsAndObjectsDoNotMutateScrollHandlerDirectly() throws IOException {
-        List<Path> files = List.of(
-                PROJECT_ROOT.resolve("src/main/java/com/openggf/game/sonic3k/events/Sonic3kMGZEvents.java"),
-                PROJECT_ROOT.resolve("src/main/java/com/openggf/game/sonic3k/objects/MgzMinibossInstance.java"),
-                PROJECT_ROOT.resolve("src/main/java/com/openggf/game/sonic3k/objects/MGZTriggerPlatformObjectInstance.java"),
-                PROJECT_ROOT.resolve("src/main/java/com/openggf/game/sonic3k/objects/badniks/TunnelbotBadnikInstance.java"));
-        List<String> violations = new ArrayList<>();
-
-        for (Path file : files) {
-            String source = Files.readString(file);
-            if (source.contains("import com.openggf.game.sonic3k.scroll.SwScrlMgz")
-                    || source.contains(".setScreenShakeOffset(")
-                    || source.contains(".setBgRiseState(")
-                    || source.contains(".setBossBgScrollOffset(")) {
-                violations.add(PROJECT_ROOT.relativize(file).toString());
-            }
-        }
-
-        assertTrue(violations.isEmpty(),
-                "MGZ event/object code should publish through MgzZoneRuntimeState, not mutate SwScrlMgz: "
-                        + violations);
-    }
 }

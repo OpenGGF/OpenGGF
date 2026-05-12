@@ -20,6 +20,18 @@ explicit baseline update.
 - Do not use `freeze.refreeze=true` as a routine workflow; update baselines only
   when the architectural exception decision is reviewed.
 
+## Decay Targets
+
+Targets are observable (tied to specific migrations), not calendar-bound. When
+a target is hit, refresh the baseline in a dedicated commit and pick the next
+target rather than walking back the assertion.
+
+| Rule | Baseline | Target | Trigger |
+|------|----------|--------|---------|
+| `low_level_layers_do_not_depend_on_runtime_layers` | 213 | <=150 | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
+| `shared_layers_do_not_depend_on_game_specific_packages` | 64 | <=40 | `CrossGameFeatureProvider` donor construction and `ObjectManager` rewind dynamic-object recreation move behind shared provider/factory contracts |
+| `per_game_packages_do_not_cross_depend` | 37 | <=20 | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
+
 ## Frozen Rules
 
 ### Object Packages Must Not Access Global GameServices
