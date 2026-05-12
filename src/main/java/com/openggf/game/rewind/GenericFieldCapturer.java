@@ -598,8 +598,17 @@ public final class GenericFieldCapturer {
     }
 
     private static boolean usesCodecFieldSnapshot(Field field) {
-        return isDefaultObjectInPlaceHelperType(field.getType())
-                && RewindCodecs.codecFor(field).isPresent();
+        if (!isDefaultObjectInPlaceHelperType(field.getType())) {
+            return false;
+        }
+        RewindCodec codec = RewindCodecs.codecFor(field).orElse(null);
+        if (codec == null) {
+            return false;
+        }
+        if (!Modifier.isFinal(field.getModifiers()) && codec.requiresExistingTargetValue()) {
+            return false;
+        }
+        return true;
     }
 
     private static boolean usesFinalCodecFieldSnapshot(Field field) {
