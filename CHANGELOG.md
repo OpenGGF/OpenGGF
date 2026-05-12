@@ -6,6 +6,80 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Architectural review hardening.** Tightens `RewindRegistry.capture()`
+  to reject `null` snapshots and tightens `restore()` to require explicit
+  `RewindSnapshottable.resetForMissingSnapshot()` for entries absent from
+  the composite snapshot — the previous silent skip was masking
+  coverage gaps. The default `resetForMissingSnapshot()` throws so
+  registered subsystems fail closed unless they opt in.
+  `GameplayModeContext.isGameplayRuntimeReady()` now returns `false`
+  once `tearDownManagers()` has run, so callers can't treat a torn-down
+  context as live. MGZ scroll-event state (screen shake, BG rise routine
+  / offset, boss BG scroll offset) has moved off direct `SwScrlMgz`
+  setter calls onto a new `MgzZoneRuntimeState` adapter installed
+  through `ZoneRuntimeRegistry`; `SwScrlMgz.update()` now reads runtime
+  state at frame time and `SwScrlMgz.init()` clears event-owned
+  overrides on level re-entry. `Sonic3kMGZEvents`,
+  `MGZTriggerPlatformObjectInstance`, `MgzMinibossInstance`, and
+  `TunnelbotBadnikInstance` migrated to the new publication path; an
+  architecture guard in `TestArchitecturalReviewGuard` rejects any
+  future direct `SwScrlMgz` import or setter usage from those files.
+  `BossExplosionObjectInstance` drops its `ObjectRenderManager`
+  constructor argument and now resolves the renderer through
+  `services().renderManager()` at draw time, matching the prevailing
+  object construction pattern; threaded through
+  `AbstractBossInstance.spawnDefeatExplosion`, `Sonic1FZBossInstance`,
+  `FZPlasmaLauncher`, the S2 `Sonic2ObjectRegistry` boss explosion
+  factory, and `CPZBossFallingPart`.
+  `Aiz2BossEndSequenceController` now compares the HCZ transition Y
+  threshold against `player.getCentreY()` (matching ROM `y_pos`
+  semantics) rather than `player.getY()` (top-left). The
+  `MgzMinibossInstance.KnucklesSpikePlatformChild` constructor now
+  takes camera coords captured parent-side instead of reading
+  `services().camera()` mid-construction, and
+  `TurboSpikerBadnikInstance` moves its water-splash SFX off the child
+  constructor onto the parent (with a deferred replay on the child's
+  first update) so child constructors no longer depend on
+  `services()`. `TestNoServicesInObjectConstructors` is hardened to
+  also catch qualified `obj.services()` calls inside constructors and
+  to recognise constructors with no access modifier.
+  `GraphicsManager.getUiRenderPipeline()` now calls
+  `syncRuntimeManagedReferences()` so the returned pipeline's
+  `FadeManager` always reflects the live runtime `FadeManager` after
+  gameplay rebuild, and `DefaultPowerUpSpawner` stops caching
+  `ObjectServices` at construction (resolves lazily via
+  `objectManager.services()` so it survives manager teardown/rebuild).
+  Trace-replay invariant tests move out of a hidden Surefire exclusion
+  into the trace-replay profile under `**/tests/trace/**/*.java`, so
+  they now actually run alongside the rest of the trace suite. New
+  tests cover the registry tightening (`TestRewindRegistry`),
+  torn-down readiness (`TestGameplayModeContextRewindRegistry`), the
+  MGZ runtime adapter (`TestS3kZoneRuntimeStateAdapters`,
+  `SwScrlMgzTest.initClearsMutableEventStateForLevelReentry`), the
+  centre-Y transition fix (`TestAiz2BossEndSequenceObjects`), and the
+  pipeline fade rebinding (`TestGraphicsManagerFadeRebinding`).
+  `src/test/resources/archunit.properties` pins
+  `freeze.store.default.allowStoreUpdate=false` so frozen baselines do
+  not auto-update during normal test runs.
+- **Rewind capture for final in-place helper fields.**
+  `GenericFieldCapturer` now captures and restores `final` helper
+  fields (e.g. `final SubpixelMotion.State motion = new ...`) through
+  `RewindCodec`-driven `CodecFieldSnapshot` payloads. Codecs that opt
+  in via `RewindCodec.capturesFinalFields()` serialize the helper's
+  scalar state into a `RewindStateBuffer` at capture and restore it
+  back into the existing field at replay, bypassing the previous
+  reject-on-final policy that required helper references to be
+  reassignable. `CutsceneKnucklesAiz1Instance.motionState` is
+  annotated `@RewindTransient` to document that the helper is a
+  scratch holder rebuilt from captured scalar position/velocity
+  fields; the rewind annotation baseline in
+  `TestRewindArchitectureGuard` is updated accordingly. New tests:
+  `TestGenericFieldCapturer.roundTripsFinalSubpixelMotionStateInPlace`
+  covers the codec-backed round trip;
+  `TestCutsceneKnucklesAiz1Instance.rewindCaptureSkipsScratchMotionState`
+  and the parallel `TestSonic3kMonitorObjectInstance` case cover the
+  AIZ cutscene and S3K monitor capture paths called out as motivating
+  examples.
 - **Complete architecture guard coverage.** Expands the ArchUnit and source
   guard suite across runtime/session ownership, runtime-owned registry
   construction, concrete Sonic provider construction, trace replay hydration
