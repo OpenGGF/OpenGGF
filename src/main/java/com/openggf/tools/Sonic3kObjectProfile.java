@@ -142,6 +142,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xAE, // StarPointer
                 0xB3, // ICZSegmentColumn
                 0xB4, // ICZSwingingPlatform
+                0xB6, // ICZIceCube
                 0xB8  // ICZHarmfulIce
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
