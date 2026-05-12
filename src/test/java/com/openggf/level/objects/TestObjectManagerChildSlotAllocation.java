@@ -62,6 +62,40 @@ public class TestObjectManagerChildSlotAllocation {
     }
 
     @Test
+    public void childSpawnedAfterLastSlot_isDiscardedLikeAllocateObjectAfterCurrentFailure() {
+        ObjectManager[] holder = new ObjectManager[1];
+        ObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return holder[0];
+            }
+        };
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        when(camera.isVerticalWrapEnabled()).thenReturn(false);
+        ObjectManager manager = new ObjectManager(
+                List.of(), null, 0, null, null,
+                GraphicsManager.getInstance(), camera, services);
+        holder[0] = manager;
+
+        ParentObject parent = new ParentObject(new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+        manager.addDynamicObjectAtSlot(parent, 127);
+
+        manager.update(0, null, null, 1);
+
+        assertNotNull(parent.child, "the Java factory still constructs before manager insertion");
+        assertEquals(-1, parent.child.getSlotIndex(),
+                "AllocateObjectAfterCurrent has no slot after the final SST entry");
+        assertTrue(parent.child.isDestroyed(),
+                "ROM allocation failure leaves no live child object");
+        assertEquals(0, parent.child.updateCount,
+                "slotless overflow children must not execute through the fallback loop");
+    }
+
+    @Test
     public void childSpawnedWithFindFreeObj_usesLowestFreeSlotAndWaitsUntilNextFrame() {
         ObjectManager[] holder = new ObjectManager[1];
         ObjectServices services = new StubObjectServices() {
@@ -299,5 +333,4 @@ public class TestObjectManagerChildSlotAllocation {
         }
     }
 }
-
 
