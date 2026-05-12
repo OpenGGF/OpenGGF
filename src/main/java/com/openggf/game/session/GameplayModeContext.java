@@ -1,10 +1,11 @@
 package com.openggf.game.session;
 
 import com.openggf.camera.Camera;
+import com.openggf.audio.AudioManager;
+import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameRng;
-import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.NoOpBonusStageProvider;
 import com.openggf.game.animation.AnimatedTileChannelGraph;
@@ -48,6 +49,7 @@ public final class GameplayModeContext implements ModeContext {
     private TimerManager timerManager;
     private GameStateManager gameStateManager;
     private FadeManager fadeManager;
+    private AudioManager audioManager;
     private GameRng rng;
     private SolidExecutionRegistry solidExecutionRegistry;
 
@@ -145,15 +147,39 @@ public final class GameplayModeContext implements ModeContext {
                                        FadeManager fadeManager,
                                        GameRng rng,
                                        SolidExecutionRegistry solidExecutionRegistry) {
+        attachGameplayManagers(camera, timerManager, gameStateManager, fadeManager,
+                rng, solidExecutionRegistry, null);
+    }
+
+    public void attachGameplayManagers(Camera camera,
+                                       TimerManager timerManager,
+                                       GameStateManager gameStateManager,
+                                       FadeManager fadeManager,
+                                       GameRng rng,
+                                       SolidExecutionRegistry solidExecutionRegistry,
+                                       PerformanceProfiler profiler) {
+        attachGameplayManagers(camera, timerManager, gameStateManager, fadeManager,
+                rng, solidExecutionRegistry, profiler, null);
+    }
+
+    public void attachGameplayManagers(Camera camera,
+                                       TimerManager timerManager,
+                                       GameStateManager gameStateManager,
+                                       FadeManager fadeManager,
+                                       GameRng rng,
+                                       SolidExecutionRegistry solidExecutionRegistry,
+                                       PerformanceProfiler profiler,
+                                       AudioManager audioManager) {
         this.camera = Objects.requireNonNull(camera, "camera");
         this.timerManager = Objects.requireNonNull(timerManager, "timerManager");
         this.gameStateManager = Objects.requireNonNull(gameStateManager, "gameStateManager");
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
+        this.audioManager = audioManager;
         this.rng = Objects.requireNonNull(rng, "rng");
         this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
         this.managersTornDown = false;
 
-        this.rewindRegistry = new RewindRegistry();
+        this.rewindRegistry = new RewindRegistry(profiler);
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
@@ -438,7 +464,7 @@ public final class GameplayModeContext implements ModeContext {
                 inputs,
                 stepper,
                 keyframeInterval,
-                GameServices.audio());
+                audioManager);
         this.playbackController = new PlaybackController(rewindController);
         return playbackController;
     }

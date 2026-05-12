@@ -1327,14 +1327,7 @@ public class GameLoop {
         audioManager.fadeOutMusic();
 
         // Determine which stage to enter
-        GameStateManager gsm = this.gameState;
-        boolean s3kStageSelection = GameServices.module().getGameId() == GameId.S3K;
-        boolean superEmeraldMode = s3kStageSelection
-                && gsm.hasAllEmeralds()
-                && !gsm.hasAllSuperEmeralds();
-        final int stageIndex = s3kStageSelection
-                ? gsm.consumeCurrentSpecialStageIndexAndAdvanceS3k(superEmeraldMode)
-                : gsm.consumeCurrentSpecialStageIndexAndAdvance();
+        final int stageIndex = ssProvider.consumeStageIndexForEntry(this.gameState);
 
         if (screenAlreadyFaded) {
             // Screen is already fully faded (from S1 results screen after big ring).
@@ -3275,8 +3268,9 @@ public class GameLoop {
      */
     private void startEndingFade() {
         LOGGER.info("Starting fade-to-white for ending sequence");
-        if (GameServices.module().getGameId() == GameId.S2) {
-            requestSessionSave(SaveReason.PROGRESSION_SAVE);
+        EndingProvider provider = GameServices.module().getEndingProvider();
+        if (provider != null) {
+            provider.saveReasonOnEndingStart().ifPresent(this::requestSessionSave);
         }
         audioManager.fadeOutMusic();
         fadeManager.startFadeToWhite(this::doEnterEnding);

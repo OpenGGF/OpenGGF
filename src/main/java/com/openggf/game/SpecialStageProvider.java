@@ -18,6 +18,15 @@ import java.io.IOException;
  */
 public interface SpecialStageProvider extends MiniGameProvider {
     /**
+     * Selects the special-stage index for a new entry and advances any
+     * game-owned cursor state. The default matches the S1/S2 sequential
+     * cursor; games with different ROM selection policy override here.
+     */
+    default int consumeStageIndexForEntry(GameStateManager gameState) {
+        return gameState.consumeCurrentSpecialStageIndexAndAdvance();
+    }
+
+    /**
      * Gets the SFX ID to play when entering/exiting the special stage flow.
      *
      * @return game-specific SFX ID, or -1 to use the engine fallback

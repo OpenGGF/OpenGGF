@@ -6,7 +6,6 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public final class PaletteOwnershipRegistry implements RewindSnapshottable<PaletteOwnershipSnapshot> {
@@ -14,6 +13,7 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
 
     private final List<PaletteWrite> writes = new ArrayList<>();
     private final String[][][] owners = new String[2][4][16];
+    private final boolean[] normalDirty = new boolean[4];
 
     public PaletteOwnershipRegistry() {
         resetOwners();
@@ -38,11 +38,10 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
             return;
         }
 
-        boolean[] normalDirty = new boolean[4];
+        java.util.Arrays.fill(normalDirty, false);
 
-        List<PaletteWrite> sorted = new ArrayList<>(writes);
-        sorted.sort(Comparator.comparingInt(PaletteWrite::priority));
-        for (PaletteWrite write : sorted) {
+        writes.sort(java.util.Comparator.comparingInt(PaletteWrite::priority));
+        for (PaletteWrite write : writes) {
             applyWrite(surfaceArray(write.surface(), normal, underwater), write, normalDirty);
             applyOwners(write.surface(), write);
             if (write.mirrorToUnderwaterEnabled() && underwater != null) {

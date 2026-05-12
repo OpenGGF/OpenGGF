@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.specialstage;
 
+import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.SpecialStageAccessType;
@@ -27,6 +28,13 @@ public class Sonic3kSpecialStageProvider implements SpecialStageProvider {
 
     public Sonic3kSpecialStageProvider(Sonic3kSpecialStageManager manager) {
         this.manager = manager;
+    }
+
+    @Override
+    public int consumeStageIndexForEntry(GameStateManager gameState) {
+        boolean superEmeraldMode = gameState.hasAllEmeralds()
+                && !gameState.hasAllSuperEmeralds();
+        return gameState.consumeCurrentSpecialStageIndexAndAdvanceSkippingCollected(superEmeraldMode);
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k;
 import com.openggf.game.AbstractLevelInitProfile;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelLoadContext;
+import com.openggf.game.SidekickSpawnOffset;
 import com.openggf.game.StaticFixup;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 
@@ -60,10 +61,18 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
 
     /** S3K sidekick: -32px X, +4px Y (ROM: {@code player_pos - $20}, {@code player_pos + 4}). */
     @Override
+    public SidekickSpawnOffset sidekickSpawnOffset() {
+        return new SidekickSpawnOffset(-32, 4);
+    }
+
+    @Override
     protected InitStep spawnSidekickStep() {
         return new InitStep("SpawnSidekick",
             "S3K: SpawnLevelMainSprites_SpawnPlayers — Tails at player_pos - $20, +4 Y",
-            () -> GameServices.level().spawnSidekicks(-32, 4));
+            () -> {
+                SidekickSpawnOffset offset = sidekickSpawnOffset();
+                GameServices.level().spawnSidekicks(offset.xOffset(), offset.yOffset());
+            });
     }
 
     /** S3K: title card request follows the normal post-load path. */

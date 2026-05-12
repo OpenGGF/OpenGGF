@@ -2,8 +2,8 @@ package com.openggf.game.session;
 
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CrossGameFeatureProvider;
-import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
+import com.openggf.game.SidekickSpawnOffset;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -103,11 +103,8 @@ public final class GameplayTeamBootstrap {
         Objects.requireNonNull(module, "module");
         Objects.requireNonNull(levelManager, "levelManager");
 
-        if (module.getGameId() == GameId.S3K) {
-            levelManager.spawnSidekicks(-32, 4);
-            return;
-        }
-        levelManager.spawnSidekicks(-40, 0);
+        SidekickSpawnOffset offset = module.getLevelInitProfile().sidekickSpawnOffset();
+        levelManager.spawnSidekicks(offset.xOffset(), offset.yOffset());
     }
 
     private static AbstractPlayableSprite createPlayable(String characterName,
