@@ -47,6 +47,17 @@ python -c "import retro; env = retro.make('SonicAndKnuckles-Genesis'); print('OK
 | Events/boss | Visual comparison | Boss arena setup, floor/ceiling placement, camera lock boundaries |
 | Act transitions | Headless test | Correct destination zone/act, camera position after transition |
 
+## Slice Validation Standard
+
+For current S3K work, validation should answer whether a playable route slice is actually getting stronger. A validation pass should call out:
+
+- Route continuity: can the target route be traversed through its intended exits, boss gates, or act transitions?
+- Required mechanics: are traversal objects, hazards, forced-movement paths, water/chase pieces, and boss/miniboss support visible and behaving plausibly?
+- Visual coherence: do scroll/parallax, animated tiles, palette cycling, PLC-loaded art, overlays, and render modes make the zone recognizable?
+- Parity risk: are known trace blockers, sidekick-sensitive interactions, or rewind-relevant state covered by tests or explicitly documented as remaining gaps?
+
+Do not mark a slice validated just because a single feature screenshot matches. Use feature validation as evidence toward route-level readiness.
+
 ## Process
 
 ### Step 1: Capture Reference Screenshots

@@ -50,6 +50,10 @@ The GPU shader reads the 224-entry HScroll buffer (one value per visible scanlin
 
 Prefer `ScrollEffectComposer` and the helpers in `level.scroll.compose` over hand-rolled scanline buffer loops. Keep scroll handlers frame-local and read any shared mode/state through `GameServices` plus typed runtime-state adapters rather than adding new singleton dependencies or direct event-handler references.
 
+## Current Priority Context
+
+Parallax work should support playable S3K route slices. Prioritize scroll handlers and dynamic background state that unblock AIZ -> HCZ continuity first, then CNZ, MGZ, and ICZ validation. If a zone's scroll work depends on event state, palette/PLC changes, or layout mutations, route that state through the shared runtime frameworks instead of direct event-handler references. Broad cleanup of older handlers is useful only when it removes duplication or risk in the active slice.
+
 ## General Lessons From Recent S3K Work
 
 Do not treat "parallax background" as meaning only the scroll handler. In S3K, a visually correct background can depend on four cooperating systems:
