@@ -14,8 +14,12 @@ $ARGUMENTS: Zone abbreviation (e.g., "HCZ", "MGZ", "CNZ1", "LBZ Act 2") and opti
 ## Related Skills
 
 - **s3k-disasm-guide** (`.claude/skills/s3k-disasm-guide/skill.md`) for disassembly navigation, label conventions, RomOffsetFinder commands, and zone abbreviations.
-- **s3k-zone-analysis** (`.agent/skills/s3k-zone-analysis/skill.md`) for generating the analysis spec that feeds into this skill's Phase 1.
+- **s3k-zone-analysis** (`.claude/skills/s3k-zone-analysis/skill.md`) for generating the analysis spec that feeds into this skill's Phase 1.
 - **s3k-plc-system** (`.claude/skills/s3k-plc-system/skill.md`) for Pattern Load Cue operations triggered during boss spawns and act transitions.
+
+## Current Priority Context
+
+Zone events should be implemented to close playable S3K route slices. Prioritize event stages that gate AIZ -> HCZ continuity first, then CNZ, MGZ, and ICZ slice work: camera locks, route openings, water/chase state, boss/miniboss arenas, act transitions, palette mutations, PLC handoffs, and sidekick-sensitive state. Trivial or decorative event polish can wait until the route can be traversed coherently.
 
 ## Architecture
 
