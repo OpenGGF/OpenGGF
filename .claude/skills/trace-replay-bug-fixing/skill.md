@@ -166,6 +166,18 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
 10. Loop: read the new first-error frame, repeat from step 3.
 ```
 
+## Trace Triage Notes
+
+Classify sidekick failures by phase before changing AI: native route-start/title-card/object/scroll preludes, spawn/approach setup, normal following history, object contact/riding, and release/respawn recovery produce different signatures. A Tails mismatch at the first controllable frame usually points to bootstrap/prelude state; a later mismatch after object contact usually points to standing-bit or carry timing.
+
+For object-contact divergences, add or inspect fields that explain the contact edge: object id/subtype/routine, object centre position, piece index, player and sidekick standing bits, collision side, carried delta, release reason, and whether contact was persisted from the previous frame or freshly detected. These fields are diagnostic context only; they must not drive engine state.
+
+Separate moving-platform timing from generic collision timing. If a trace first diverges on a rideable solid, compare the object routine transition, timer pre-decrement, platform motion, `SolidObject` call frame, standing-bit refresh, player carry, and walk-off/release helper in that order. Do not collapse them into one "platform collision" fix.
+
+Route-start traces need their native preludes accounted for: title-card delays, route-start bootstrap, object spawning windows, scroll/parallax pre-advance, oscillation phase, and any zone intro skips. Prefer recording or replaying the real prelude when possible; use frame-0 bootstrap only for state ROM would already have at the BK2 start.
+
+Embedded `SolidObject` calls belong where the ROM calls them inside the object's routine, not automatically at the end of every engine object update. For objects that move, branch, then call solid handling mid-routine, preserve that placement so player/sidekick carry and release observe the same pre- or post-motion coordinates as the ROM.
+
 ## Trace Regeneration
 
 When you need new diagnostic data, regenerate the trace. The proven Windows PowerShell pattern:
