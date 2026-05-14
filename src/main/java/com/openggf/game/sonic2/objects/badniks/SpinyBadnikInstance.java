@@ -175,7 +175,7 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
             xVel = facingLeft ? -SPIKE_X_VEL : SPIKE_X_VEL;
         }
 
-        BadnikProjectileInstance projectile = new BadnikProjectileInstance(
+        services().objectManager().createDynamicObject(() -> new BadnikProjectileInstance(
                 spawn,
                 BadnikProjectileInstance.ProjectileType.SPINY_SPIKE,
                 currentX,
@@ -184,9 +184,7 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
                 SPIKE_Y_VEL,
                 true,  // Apply gravity
                 false  // No initial flip
-        );
-
-        services().objectManager().addDynamicObject(projectile);
+        ));
     }
 
     @Override

@@ -67,10 +67,10 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         // ROM entry / delete flow only gates Mantis on X visibility, so the
         // jump arc must continue even if it leaves the top of the viewport.
-        if (destroyed || !isOnScreenX()) {
+        if (isDestroyed() || !isOnScreenX()) {
             return;
         }
 
@@ -251,7 +251,7 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance {
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
-            if (parent.destroyed) {
+            if (parent.isDestroyed()) {
                 setDestroyed(true);
                 return;
             }
@@ -259,8 +259,8 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance {
         }
 
         private void syncFromParent() {
-            currentX = parent.currentX + (parent.facingLeft ? -9 : 9);
-            currentY = parent.currentY - 0x0B;
+            currentX = parent.getX() + (parent.badnikFacingLeft() ? -9 : 9);
+            currentY = parent.getY() - 0x0B;
             mappingFrame = parent.yVelocity < 0 ? CHILD_RISING_FRAME : CHILD_IDLE_FRAME;
             updateDynamicSpawn(currentX, currentY);
         }
@@ -282,14 +282,14 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance {
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
-            if (parent.destroyed) {
+            if (parent.isDestroyed()) {
                 return;
             }
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MGZ_MANTIS);
             if (renderer == null) {
                 return;
             }
-            renderer.drawFrameIndex(mappingFrame, currentX, currentY, !parent.facingLeft, false);
+            renderer.drawFrameIndex(mappingFrame, currentX, currentY, !parent.badnikFacingLeft(), false);
         }
     }
 }

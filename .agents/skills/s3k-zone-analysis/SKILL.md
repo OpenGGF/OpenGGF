@@ -11,6 +11,8 @@ For every extracted feature, also note which runtime-owned framework should host
 
 The output is a **zone analysis spec** -- a structured document listing every feature, its disassembly location, confidence level, and implementation notes. This is the prerequisite step before implementing any zone feature.
 
+Current S3K planning is slice-first. The analysis spec must distinguish features that block a playable route from features that are lower-impact polish. For the near term, call out relevance to AIZ -> HCZ continuity first, then CNZ, MGZ, and ICZ follow-up slices. Do not treat "all features in the zone" as equal priority.
+
 ## Inputs
 
 $ARGUMENTS: Zone abbreviation (e.g., "AIZ", "HCZ", "MGZ", "CNZ", "FBZ", "ICZ", "LBZ", "MHZ", "SOZ", "LRZ", "HPZ", "SSZ", "DEZ")
@@ -127,6 +129,12 @@ Objects unique to this zone or with zone-specific behavior.
 ```bash
 grep -n "Obj_{ZONE}\|{ZONE}_Object\|{ZONE}.*_obj\|Obj_.*{ZONE}" docs/skdisasm/sonic3k.asm | head -40
 ```
+
+For notable objects, classify route impact:
+
+- `BLOCKER`: required for traversal, act transition, boss gate, forced movement, water/chase flow, or terrain mutation.
+- `HIGH`: hazards, platforms, boss/miniboss support, or common badniks that affect trace/sidekick behavior.
+- `POLISH`: decorative, isolated, or low-impact objects that can wait until the slice is playable.
 
 Check the zone's object placement directory for object IDs in use:
 ```bash

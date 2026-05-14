@@ -123,8 +123,8 @@ public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance {
     private boolean babySpawned;
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (destroyed) return;
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed()) return;
 
         // Obj_WaitOffscreen parity: suppress logic until on-screen
         if (!isOnScreenX()) return;
@@ -381,7 +381,7 @@ public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance {
         Collection<ObjectInstance> objects = objectManager.getActiveObjects();
         for (ObjectInstance obj : objects) {
             if (obj instanceof BuggernautBadnikInstance parent
-                    && !parent.destroyed
+                    && !parent.isDestroyed()
                     && parent.childCount < MAX_CHILDREN) {
                 return parent;
             }

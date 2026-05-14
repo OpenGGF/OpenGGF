@@ -58,7 +58,7 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
         }
         updateMovement(frameCounter, player);
         updateAnimation(frameCounter);
-        updateDynamicSpawn(currentX, currentY);
+        updateDynamicSpawn(resolveDynamicSpawnX(), resolveDynamicSpawnY());
     }
 
     /**
@@ -99,6 +99,14 @@ public abstract class AbstractBadnikInstance extends AbstractObjectInstance
      */
     protected void updateAnimation(int frameCounter) {
         // Default: no animation. Subclasses override.
+    }
+
+    protected int resolveDynamicSpawnX() {
+        return currentX;
+    }
+
+    protected int resolveDynamicSpawnY() {
+        return currentY;
     }
 
     /**

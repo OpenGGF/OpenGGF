@@ -51,9 +51,9 @@ public final class BloominatorBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
 

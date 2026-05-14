@@ -114,6 +114,15 @@ public class SonicConfigurationService {
 		}
 	}
 
+	/**
+	 * Creates an independent configuration service with the same loading rules as
+	 * the process singleton. Intended for standalone tools that are not wired
+	 * through {@code EngineContext}.
+	 */
+	public static SonicConfigurationService createStandalone() {
+		return new SonicConfigurationService();
+	}
+
 	public short getShort(SonicConfiguration sonicConfiguration) {
 		Object value = getConfigValue(sonicConfiguration);
 		if (value instanceof Short) {

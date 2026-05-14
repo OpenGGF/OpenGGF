@@ -74,8 +74,8 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (destroyed || !isOnScreenX()) {
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed() || !isOnScreenX()) {
             return;
         }
 
@@ -279,7 +279,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
             if (isDestroyed()) {
                 return;
             }
-            if (parent.destroyed) {
+            if (parent.isDestroyed()) {
                 setDestroyed(true);
                 return;
             }
@@ -292,12 +292,12 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
         @Override
         public int getX() {
-            return parent.currentX + (leftSide ? -SIDE_LAUNCHER_OFFSET_X : SIDE_LAUNCHER_OFFSET_X);
+            return parent.getX() + (leftSide ? -SIDE_LAUNCHER_OFFSET_X : SIDE_LAUNCHER_OFFSET_X);
         }
 
         @Override
         public int getY() {
-            return parent.currentY + SIDE_LAUNCHER_OFFSET_Y;
+            return parent.getY() + SIDE_LAUNCHER_OFFSET_Y;
         }
 
         @Override
@@ -358,12 +358,12 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
             AbstractPlayableSprite target = playerEntity instanceof AbstractPlayableSprite sprite
                     ? parent.findNearestTarget(sprite) : null;
-            if (target == null || Math.abs(parent.currentX - target.getCentreX()) >= DETECT_RANGE) {
+            if (target == null || Math.abs(parent.getX() - target.getCentreX()) >= DETECT_RANGE) {
                 return;
             }
             boolean matchingSide = leftSide
-                    ? playerIsOnLeft(target, parent.currentX)
-                    : playerIsOnRight(target, parent.currentX);
+                    ? playerIsOnLeft(target, parent.getX())
+                    : playerIsOnRight(target, parent.getX());
             if (!matchingSide) {
                 return;
             }
@@ -419,7 +419,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
             if (isDestroyed()) {
                 return;
             }
-            if (parent.destroyed) {
+            if (parent.isDestroyed()) {
                 setDestroyed(true);
                 return;
             }
@@ -430,7 +430,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
         @Override
         public int getCollisionFlags() {
-            return cooldown > 0 || parent.destroyed ? 0 : COLLISION_FLAGS;
+            return cooldown > 0 || parent.isDestroyed() ? 0 : COLLISION_FLAGS;
         }
 
         @Override
@@ -440,7 +440,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
         @Override
         public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
-            if (cooldown > 0 || !(playerEntity instanceof AbstractPlayableSprite player) || parent.destroyed) {
+            if (cooldown > 0 || !(playerEntity instanceof AbstractPlayableSprite player) || parent.isDestroyed()) {
                 return;
             }
 
@@ -463,12 +463,12 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
         @Override
         public int getX() {
-            return parent.currentX;
+            return parent.getX();
         }
 
         @Override
         public int getY() {
-            return parent.currentY + TOP_SPIKE_OFFSET_Y;
+            return parent.getY() + TOP_SPIKE_OFFSET_Y;
         }
 
         @Override

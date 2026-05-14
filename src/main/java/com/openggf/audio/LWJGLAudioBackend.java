@@ -19,7 +19,7 @@ import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.game.GameServices;
+import com.openggf.debug.PerformanceProfiler;
 
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -40,6 +40,7 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     private final Object streamLock = new Object();
     private final SonicConfigurationService configService;
+    private final PerformanceProfiler profiler;
 
     private long device;
     private long context;
@@ -105,11 +106,16 @@ public class LWJGLAudioBackend implements AudioBackend {
     private SmpsSequencerConfig smpsConfig;
 
     public LWJGLAudioBackend() {
-        this(GameServices.configuration());
+        this(SonicConfigurationService.createStandalone(), null);
     }
 
     public LWJGLAudioBackend(SonicConfigurationService configService) {
+        this(configService, null);
+    }
+
+    public LWJGLAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
         this.configService = Objects.requireNonNull(configService, "configService");
+        this.profiler = profiler;
         // Initialize fallback mappings
         // SFX
         sfxFallback.put("JUMP", "sfx/jump.wav");
@@ -666,49 +672,89 @@ public class LWJGLAudioBackend implements AudioBackend {
     }
 
     private void fillBuffer(int bufferId) {
+        // Profiler sections inside fillBuffer. Names describe what is actually wrapped,
+        // not a clean SMPS/synth/resample split — SmpsDriver.read() interleaves the
+        // sequencer, YM2612/PSG synthesis, and the blip resampler at sample granularity,
+        // so those three phases cannot be separated at this seam.
+        //   - audio.music_stream: music AudioStream read() (SMPS + synth + resample,
+        //     interleaved).
+        //   - audio.sfx_stream:   separate-SFX stream read() plus the music/SFX mix loop.
+        //   - audio.upload:       DirectBuffer fill and OpenAL upload.
+        // Sections do not nest (see PerformanceProfiler.beginSection), so starting any of
+        // these inside the outer "audio" section in GameLoop will truncate that section
+        // — that's expected. Called potentially multiple times per audio tick (once per
+        // processed buffer in updateStream); PerformanceProfiler accumulates section time.
         int sampleRate;
         synchronized (streamLock) {
-            // Clear and reuse pre-allocated buffer
-            Arrays.fill(streamData, (short) 0);
-            boolean runtimePresentation = runtimeProvidesPresentationPcm();
-            if (reverseCursor != null) {
-                reverseCursor.readPrevious(streamData, STREAM_BUFFER_SIZE);
-            } else if (runtimePresentation) {
-                deterministicAudioRuntime.drainPcm(streamData, STREAM_BUFFER_SIZE);
-                clearCompletedRuntimeSfxIfNeeded();
-            } else if (currentStream != null) {
-                currentStream.read(streamData);
+            beginProfileSection("audio.music_stream");
+            try {
+                // Clear and reuse pre-allocated buffer
+                Arrays.fill(streamData, (short) 0);
+                boolean runtimePresentation = runtimeProvidesPresentationPcm();
+                if (reverseCursor != null) {
+                    reverseCursor.readPrevious(streamData, STREAM_BUFFER_SIZE);
+                } else if (runtimePresentation) {
+                    deterministicAudioRuntime.drainPcm(streamData, STREAM_BUFFER_SIZE);
+                    clearCompletedRuntimeSfxIfNeeded();
+                } else if (currentStream != null) {
+                    currentStream.read(streamData);
+                }
+            } finally {
+                endProfileSection("audio.music_stream");
             }
 
-            if (!runtimePresentation && sfxStream != null) {
-                Arrays.fill(sfxStreamData, (short) 0);
-                sfxStream.read(sfxStreamData);
+            beginProfileSection("audio.sfx_stream");
+            try {
+                boolean runtimePresentation = runtimeProvidesPresentationPcm();
+                if (!runtimePresentation && sfxStream != null) {
+                    Arrays.fill(sfxStreamData, (short) 0);
+                    sfxStream.read(sfxStreamData);
 
-                for (int i = 0; i < streamData.length; i++) {
-                    int mixed = streamData[i] + sfxStreamData[i];
-                    if (mixed > Short.MAX_VALUE)
-                        mixed = Short.MAX_VALUE;
-                    if (mixed < Short.MIN_VALUE)
-                        mixed = Short.MIN_VALUE;
-                    streamData[i] = (short) mixed;
+                    for (int i = 0; i < streamData.length; i++) {
+                        int mixed = streamData[i] + sfxStreamData[i];
+                        if (mixed > Short.MAX_VALUE)
+                            mixed = Short.MAX_VALUE;
+                        if (mixed < Short.MIN_VALUE)
+                            mixed = Short.MIN_VALUE;
+                        streamData[i] = (short) mixed;
+                    }
+
+                    if (sfxStream.isComplete()) {
+                        sfxStream = null;
+                    }
+                }
+                if (reverseCursor == null && pcmHistory != null) {
+                    pcmHistory.write(streamData, STREAM_BUFFER_SIZE);
                 }
 
-                if (sfxStream.isComplete()) {
-                    sfxStream = null;
-                }
+                sampleRate = (int) Math.round(getStreamSampleRate());
+            } finally {
+                endProfileSection("audio.sfx_stream");
             }
-            if (reverseCursor == null && pcmHistory != null) {
-                pcmHistory.write(streamData, STREAM_BUFFER_SIZE);
-            }
-
-            sampleRate = (int) Math.round(getStreamSampleRate());
         }
 
         // Keep DirectBuffer/OpenAL operations outside lock to minimize contention
-        directShortBuffer.clear();
-        directShortBuffer.put(streamData);
-        directShortBuffer.flip();
-        alBufferData(bufferId, AL_FORMAT_STEREO16, directShortBuffer, sampleRate);
+        beginProfileSection("audio.upload");
+        try {
+            directShortBuffer.clear();
+            directShortBuffer.put(streamData);
+            directShortBuffer.flip();
+            alBufferData(bufferId, AL_FORMAT_STEREO16, directShortBuffer, sampleRate);
+        } finally {
+            endProfileSection("audio.upload");
+        }
+    }
+
+    private void beginProfileSection(String section) {
+        if (profiler != null) {
+            profiler.beginSection(section);
+        }
+    }
+
+    private void endProfileSection(String section) {
+        if (profiler != null) {
+            profiler.endSection(section);
+        }
     }
 
     private boolean runtimeProvidesPresentationPcm() {

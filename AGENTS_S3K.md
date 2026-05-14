@@ -3,6 +3,22 @@
 This document captures S3K-specific implementation intricacies for AI agents and developers.
 Referenced from [CLAUDE.md](CLAUDE.md) § "Sonic 3&K Bring-up Notes".
 
+## Current Delivery Priority
+
+S3K work should be planned around playable vertical slices, not isolated checklist closure.
+The immediate route target is AIZ through HCZ, with CNZ, MGZ, and ICZ work feeding the
+same standard. A slice is not "done" because its level loads or an object exists; it needs
+coherent traversal, event/camera flow, scroll/parallax, animated tiles, palette/PLC state,
+boss or transition behavior, sidekick-sensitive interactions, rewind-relevant state capture,
+and trace or visual validation for known blockers.
+
+When implementing slice features, use the runtime-owned shared systems where they apply:
+`ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`,
+`ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and
+`AdvancedRenderModeController`. Broad S1/S2 or old-S3K migration is useful when it removes
+active duplication or risk in code already touched by the slice; it should not displace
+playable S3K progress.
+
 ## Per-Frame Palette Animation
 
 ### Overview
