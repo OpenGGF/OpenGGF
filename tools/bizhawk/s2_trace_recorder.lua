@@ -205,6 +205,7 @@ local start_zone_name = "unknown"
 local start_act = 0
 local emitted_checkpoints = {}
 local last_zone_act_state_key = nil
+local recorded_sidekick_present = false
 
 local prev_character_state = {
     sonic = { status = 0, routine = 0, ctrl_lock = 0 },
@@ -219,6 +220,7 @@ local known_objects = {}
 local physics_file = nil
 local aux_file = nil
 local close_files
+local read_character_trace_state
 
 -----------------
 --- Helpers   ---
@@ -351,6 +353,10 @@ end
 
 local function write_metadata()
     -- Use zone/act captured at recording start (not current RAM which may have advanced)
+    local sidekick_present = recorded_sidekick_present
+            or read_character_trace_state(SIDEKICK_BASE).present ~= 0
+    local characters_json = sidekick_present and '["sonic", "tails"]' or '["sonic"]'
+    local sidekicks_json = sidekick_present and '["tails"]' or '[]'
     local meta_file = io.open(OUTPUT_DIR .. "metadata.json", "w")
     meta_file:write("{\n")
     meta_file:write('  "game": "s2",\n')
@@ -362,11 +368,11 @@ local function write_metadata()
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
-    meta_file:write('  "characters": ["sonic", "tails"],\n')
+    meta_file:write('  "characters": ' .. characters_json .. ',\n')
     meta_file:write('  "main_character": "sonic",\n')
-    meta_file:write('  "sidekicks": ["tails"],\n')
+    meta_file:write('  "sidekicks": ' .. sidekicks_json .. ',\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "9.0-s2",\n')
+    meta_file:write('  "lua_script_version": "9.1-s2",\n')
     meta_file:write('  "trace_schema": 8,\n')
     meta_file:write('  "csv_version": 6,\n')
     meta_file:write('  "aux_schema_extras": [],\n')
@@ -383,7 +389,7 @@ local function write_metadata()
         start_zone_name, start_act + 1, trace_frame))
 end
 
-local function read_character_trace_state(base)
+function read_character_trace_state(base)
     local present = mainmemory.read_u8(base) ~= 0
     if not present then
         return {
@@ -909,6 +915,9 @@ local function on_frame_end()
     local vblank_counter = mainmemory.read_u16_be(ADDR_VBLA_WORD)
     local lag_counter = 0
     local sidekick = read_character_trace_state(SIDEKICK_BASE)
+    if sidekick.present ~= 0 then
+        recorded_sidekick_present = true
+    end
 
     -- v6 CSV: shared execution counters plus explicit Sonic/Tails state blocks.
     physics_file:write(string.format(
@@ -1024,7 +1033,7 @@ end
 -- The onframeend callback pattern doesn't work because callbacks stop
 -- firing when BizHawk pauses, and client.exit() can kill the process
 -- before file I/O completes.
-print(string.format("S2 Trace Recorder v9.0-s2 loaded. Profile=%s. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...",
+print(string.format("S2 Trace Recorder v9.1-s2 loaded. Profile=%s. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...",
     TRACE_PROFILE))
 
 while true do

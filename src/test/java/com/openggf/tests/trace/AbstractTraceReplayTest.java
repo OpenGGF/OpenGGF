@@ -547,10 +547,10 @@ public abstract class AbstractTraceReplayTest {
 
     private TraceCharacterState captureFirstSidekickState() {
         SpriteManager spriteManager = GameServices.sprites();
-        if (spriteManager == null || spriteManager.getRegisteredSidekicks().isEmpty()) {
+        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
             return null;
         }
-        return captureCharacterState(spriteManager.getRegisteredSidekicks().getFirst());
+        return captureCharacterState(spriteManager.getSidekicks().getFirst());
     }
 
     private TraceCharacterState captureCharacterState(AbstractPlayableSprite sprite) {
@@ -720,10 +720,10 @@ public abstract class AbstractTraceReplayTest {
 
     private String summariseSidekickStateDiagnostics(ObjectManager om) {
         SpriteManager spriteManager = GameServices.sprites();
-        if (spriteManager == null || spriteManager.getRegisteredSidekicks().isEmpty()) {
-            return "eng-tails-state none sidekick=missing";
+        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
+            return "eng-tails-state none sidekick=inactive";
         }
-        AbstractPlayableSprite sidekick = spriteManager.getRegisteredSidekicks().getFirst();
+        AbstractPlayableSprite sidekick = spriteManager.getSidekicks().getFirst();
         int standOnSlot = -1;
         int standOnType = -1;
         ObjectInstance ridingObj = om.getRidingObject(sidekick);
@@ -756,10 +756,10 @@ public abstract class AbstractTraceReplayTest {
 
     private String summariseSidekickNearbyObjects(ObjectManager om) {
         SpriteManager spriteManager = GameServices.sprites();
-        if (spriteManager == null || spriteManager.getRegisteredSidekicks().isEmpty()) {
-            return "eng-tails-near none sidekick=missing";
+        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
+            return "eng-tails-near none sidekick=inactive";
         }
-        AbstractPlayableSprite sidekick = spriteManager.getRegisteredSidekicks().getFirst();
+        AbstractPlayableSprite sidekick = spriteManager.getSidekicks().getFirst();
         List<EngineNearbyObject> nearbyObjects = new ArrayList<>();
         for (ObjectInstance instance : om.getActiveObjects()) {
             if (!(instance instanceof AbstractObjectInstance aoi)) {
@@ -803,10 +803,10 @@ public abstract class AbstractTraceReplayTest {
 
     private String summariseSidekickCylinderDiagnostics(ObjectManager om) {
         SpriteManager spriteManager = GameServices.sprites();
-        if (spriteManager == null || spriteManager.getRegisteredSidekicks().isEmpty()) {
-            return "eng-tails-cyl none sidekick=missing";
+        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
+            return "eng-tails-cyl none sidekick=inactive";
         }
-        AbstractPlayableSprite sidekick = spriteManager.getRegisteredSidekicks().getFirst();
+        AbstractPlayableSprite sidekick = spriteManager.getSidekicks().getFirst();
         List<String> parts = new ArrayList<>();
         for (ObjectInstance instance : om.getActiveObjects()) {
             if (!(instance instanceof com.openggf.game.sonic3k.objects.CnzCylinderInstance)
@@ -838,10 +838,10 @@ public abstract class AbstractTraceReplayTest {
 
     private String summariseSidekickCpuDiagnostics() {
         SpriteManager spriteManager = GameServices.sprites();
-        if (spriteManager == null || spriteManager.getRegisteredSidekicks().isEmpty()) {
-            return "eng-tails-cpu none sidekick=missing";
+        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
+            return "eng-tails-cpu none sidekick=inactive";
         }
-        AbstractPlayableSprite sidekick = spriteManager.getRegisteredSidekicks().getFirst();
+        AbstractPlayableSprite sidekick = spriteManager.getSidekicks().getFirst();
         if (sidekick.getCpuController() == null) {
             return "eng-tails-cpu none controller=missing";
         }

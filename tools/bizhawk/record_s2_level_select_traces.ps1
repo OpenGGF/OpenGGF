@@ -105,6 +105,12 @@ function Get-PhysicsRows([string]$TraceDir) {
     })
 }
 
+function Get-PhysicsLines([string]$TraceDir) {
+    $path = Resolve-TracePayload $TraceDir "physics.csv"
+    $text = Read-TextMaybeGzip $path
+    return @($text -split "`r?`n" | Where-Object { $_ -and -not $_.StartsWith("#") })
+}
+
 function Get-AuxEvents([string]$TraceDir) {
     $path = Resolve-TracePayload $TraceDir "aux_state.jsonl"
     $text = Read-TextMaybeGzip $path
@@ -242,6 +248,39 @@ function Assert-Metadata([object]$Route, [string]$TraceDir) {
     $rows = Get-PhysicsRows $TraceDir
     if ([int]$metadata.trace_frame_count -ne $rows.Count) {
         throw "metadata.trace_frame_count expected $($rows.Count), got $($metadata.trace_frame_count)"
+    }
+
+    $lines = Get-PhysicsLines $TraceDir
+    if ($lines.Count -gt 1 -and $lines[0].StartsWith("frame,")) {
+        $header = $lines[0].Split(",")
+        $tailsPresentColumn = [Array]::IndexOf($header, "tails_present")
+        if ($tailsPresentColumn -ge 0) {
+            $hasRecordedSidekick = $false
+            foreach ($row in $lines[1..($lines.Count - 1)]) {
+                $columns = $row.Split(",")
+                if ($columns.Length -gt $tailsPresentColumn -and $columns[$tailsPresentColumn] -ne "0") {
+                    $hasRecordedSidekick = $true
+                    break
+                }
+            }
+            $metadataSidekicks = if ($null -eq $metadata.sidekicks) { @() } else { @($metadata.sidekicks) }
+            $metadataCharacters = if ($null -eq $metadata.characters) { @() } else { @($metadata.characters) }
+            if ($hasRecordedSidekick) {
+                if ($metadataSidekicks -notcontains "tails") {
+                    throw "metadata.sidekicks must include tails when physics.csv records tails_present=1"
+                }
+                if ($metadataCharacters -notcontains "tails") {
+                    throw "metadata.characters must include tails when physics.csv records tails_present=1"
+                }
+            } else {
+                if ($metadataSidekicks.Count -ne 0) {
+                    throw "metadata.sidekicks must be empty when physics.csv records no active Tails sidekick"
+                }
+                if ($metadataCharacters -contains "tails") {
+                    throw "metadata.characters must not include tails when physics.csv records no active Tails sidekick"
+                }
+            }
+        }
     }
 }
 

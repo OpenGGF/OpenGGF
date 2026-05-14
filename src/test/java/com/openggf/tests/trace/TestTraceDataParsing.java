@@ -341,6 +341,20 @@ public class TestTraceDataParsing {
     }
 
     @Test
+    void suppressedS2RouteFixturesDoNotAdvertiseRecordedSidekicks() throws IOException {
+        for (String route : List.of("scz", "wfz")) {
+            TraceData data = TraceData.load(Path.of("src/test/resources/traces/s2", route));
+            TraceMetadata meta = data.metadata();
+
+            assertEquals(List.of("sonic"), meta.recordedCharacters(), route + " recorded characters");
+            assertTrue(meta.recordedSidekicks().isEmpty(), route + " recorded sidekicks");
+            assertNull(data.characterState(0, "tails"), route + " should not expose tails by metadata");
+            assertNotNull(data.getFrame(0).sidekick(), route + " CSV still carries the diagnostic Tails block");
+            assertFalse(data.getFrame(0).sidekick().present(), route + " frame 0 Tails block should be absent");
+        }
+    }
+
+    @Test
     public void testFrameCount() throws IOException {
         TraceData data = TraceData.load(SYNTHETIC_3FRAMES);
         assertEquals(3, data.frameCount());

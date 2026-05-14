@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.replay.TraceReplayFixture;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -260,7 +261,14 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             // 10. Initialize level events via production path
             GameServices.level().initLevelEventsForLevel();
 
-            // 11. Initial ground snap. ROM runs terrain probes during title card
+            // 11. Refresh sidekick CPU bounds after camera/event init. The
+            // level-load and reanchor paths can snapshot camera bounds before
+            // initCameraForLevel()/initLevelEventsForLevel() have finalized
+            // them; title-card sidekick prelude ticks must see the finalized
+            // bounds.
+            TraceReplaySessionBootstrap.refreshSidekickCpuBoundsFromCamera();
+
+            // 12. Initial ground snap. ROM runs terrain probes during title card
             // frames (~120 frames) which snap the player to ground and set the
             // correct terrain angle. Tests skip the title card, so do one probe
             // to establish ground attachment. Uses threshold=14 (S1 always uses
@@ -269,11 +277,11 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
             GameServices.collision().resolveGroundAttachment(
                     sprite, 14, () -> false);
 
-            // 12. Resolve the active session context and create runner
+            // 13. Resolve the active session context and create runner
             GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
             HeadlessTestRunner runner = new HeadlessTestRunner(sprite);
 
-            // 13. Wire BK2 recording if provided
+            // 14. Wire BK2 recording if provided
             if (bk2Movie != null) {
                 runner.setBk2Movie(bk2Movie, bk2FrameOffset);
             }
