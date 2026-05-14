@@ -217,18 +217,14 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         if (inFragmentPhase) {
             if (fragmentPhaseDelay > 0) {
                 fragmentPhaseDelay--;
-                // ROM: sub_10B36 — when delay reaches zero, detach both players.
-                // bclr #status.player.on_object / bset #status.player.in_air
+                // ROM: sub_10B36 (s2.asm:23730-23737) clears only
+                // Status_OnObj and Status_Push when the parent-fragment
+                // delay expires. Status_InAir is left for normal player
+                // movement to set on the next unsupported frame.
                 if (fragmentPhaseDelay <= 0) {
                     collapsed = true;
                     parentY = spawn.y();
-                    if (player != null) {
-                        if (services().objectManager() != null) {
-                            services().objectManager().clearRidingObject(player);
-                        }
-                        player.setAir(true);
-                        player.setOnObject(false);
-                    }
+                    detachFragmentRiders(batch);
                 }
             }
             return;
@@ -359,7 +355,11 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         // The parent stays solid at its original position during the fragment delay.
         // Only fragment 0 (the parent) provides collision; other fragments are visual only.
         inFragmentPhase = true;
-        fragmentPhaseDelay = config.delayData()[0];  // Parent gets first delay value
+        // ROM Obj1F_CreateFragments writes the delay byte, then the parent is
+        // seen as routine 4 before Obj1F_Fragment gets its first decrementing
+        // pass. The engine enters the fragment-phase branch immediately on the
+        // corresponding visible frame, so keep one pre-decrement tick here.
+        fragmentPhaseDelay = config.delayData()[0] + 1;  // Parent gets first delay value
         mappingFrame = 1;  // Show collapsed appearance
 
         // Play collapse sound
@@ -375,6 +375,21 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
 
         LOGGER.fine(() -> String.format("CollapsingPlatform at (%d,%d) collapsed, spawning %d fragments",
                 spawn.x(), spawn.y(), config.delayData().length));
+    }
+
+    private void detachFragmentRiders(SolidCheckpointBatch batch) {
+        ObjectManager objectManager = services().objectManager();
+        if (batch == null || objectManager == null) {
+            return;
+        }
+        for (PlayableEntity rider : batch.perPlayer().keySet()) {
+            if (rider != null && objectManager.isRidingObject(rider, this)) {
+                objectManager.clearRidingObject(rider);
+                rider.setOnObject(false);
+                rider.setPushing(false);
+                rider.forceAnimationRestart();
+            }
+        }
     }
 
     private void spawnFragments() {

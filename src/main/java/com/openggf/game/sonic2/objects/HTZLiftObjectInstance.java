@@ -147,16 +147,34 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     /**
      * Wait state: Check if player is standing on the platform.
-     * ROM: Obj16_Wait (lines 47380-47392)
+     * ROM: Obj16_Wait (docs/s2disasm/s2.asm:47405-47417)
      */
     private void updateWait() {
-        // The solid contact callback will set routineSecondary to STATE_SLIDE
-        // when player stands on the platform
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager != null && objectManager.isAnyPlayerRiding(this)) {
+            startSlide();
+        }
+    }
+
+    private void startSlide() {
+        if (routineSecondary != STATE_WAIT) {
+            return;
+        }
+
+        // ROM Obj16_Main runs Obj16_Wait before PlatformObject, so this reads
+        // the status standing bits persisted by the previous frame's contact pass.
+        // Obj16_Wait only arms the secondary routine and velocities.
+        // ObjectMove runs on the following frame after Obj16_Slide is entered.
+        routineSecondary = STATE_SLIDE;
+        xVel = flippedX ? -X_VEL : X_VEL;
+        yVel = Y_VEL;
+
+        LOGGER.fine("HTZLift: Player standing, starting slide");
     }
 
     /**
      * Slide state: Move diagonally and play click sound every 16 frames.
-     * ROM: Obj16_Slide (lines 47395-47416)
+     * ROM: Obj16_Slide (docs/s2disasm/s2.asm:47420-47433)
      */
     private void updateSlide(int frameCounter) {
         // Play click sound every 16 frames
@@ -244,26 +262,8 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (player == null || !contact.standing()) {
-            return;
-        }
-
-        if (routineSecondary == STATE_WAIT) {
-            // Player just stood on the platform - start sliding
-            // ROM: addq.b #2,routine_secondary(a0)
-            routineSecondary = STATE_SLIDE;
-
-            // Set X velocity based on flip
-            // ROM: move.w #$200,x_vel(a0) / btst #status.npc.x_flip,status(a0) / neg.w x_vel(a0)
-            xVel = flippedX ? -X_VEL : X_VEL;
-            yVel = Y_VEL;
-
-            LOGGER.fine("HTZLift: Player stepped on, starting slide");
-        }
-
-        // In fall state, player gets ejected when the platform goes off-screen
-        // This is handled in updateFall by the destroy() call
+        // Obj16_Wait reads the persisted standing bit during the object's next
+        // update. Starting slide from the contact callback moves one frame early.
     }
 
     @Override
