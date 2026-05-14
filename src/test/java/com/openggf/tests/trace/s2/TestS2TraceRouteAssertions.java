@@ -3,6 +3,8 @@ package com.openggf.tests.trace.s2;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.trace.TraceData;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -11,6 +13,29 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestS2TraceRouteAssertions {
+
+    @ParameterizedTest
+    @CsvSource({
+            "arz,2,15",
+            "cnz,3,12",
+            "cpz,1,13",
+            "dez_ending,10,14",
+            "htz,4,7",
+            "mcz,5,11",
+            "ooz,6,10",
+            "scz,8,16",
+            "wfz,9,6"
+    })
+    void generatedLevelSelectFixturesHaveRouteMetadata(String route,
+                                                       int engineZoneId,
+                                                       int romZoneId) throws IOException {
+        S2TraceRouteAssertions.assertRoute(
+                TraceData.load(Path.of("src/test/resources/traces/s2").resolve(route)),
+                route.replace("_ending", ""),
+                engineZoneId,
+                romZoneId,
+                1);
+    }
 
     @Test
     void acceptsRouteWithFrameZeroZoneActMarker() throws IOException {
