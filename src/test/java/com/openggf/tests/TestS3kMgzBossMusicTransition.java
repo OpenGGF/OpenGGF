@@ -16,6 +16,7 @@ import org.mockito.InOrder;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.anyBoolean;
@@ -72,6 +73,15 @@ class TestS3kMgzBossMusicTransition {
 
         assertEquals(List.of(Sonic3kMusic.BOSS.id), services.playedMusic,
                 "End-boss music should start after the ROM 120-frame wait");
+    }
+
+    @Test
+    void endBossRewindCaptureAcceptsBaseBossCustomMemory() {
+        MgzEndBossInstance boss = new MgzEndBossInstance(
+                new ObjectSpawn(0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0));
+
+        assertDoesNotThrow(() -> boss.captureRewindState(),
+                "MGZ2 end-boss rewind capture must preserve AbstractBossInstance customMemory");
     }
 
     @Test

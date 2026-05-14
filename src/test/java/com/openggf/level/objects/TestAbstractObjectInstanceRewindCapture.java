@@ -351,6 +351,22 @@ class TestAbstractObjectInstanceRewindCapture {
         }
     }
 
+    private static final class TestObjectWithFallbackValueMap extends AbstractObjectInstance {
+        private byte[] rasterCache = {1, 2, 3};
+        private final Map<Integer, Integer> customMemory = new LinkedHashMap<>();
+
+        TestObjectWithFallbackValueMap(ObjectSpawn spawn) {
+            super(spawn, "TestObjectWithFallbackValueMap");
+            customMemory.put(0x2E, 7);
+            customMemory.put(0x46, 1);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // no-op
+        }
+    }
+
     private static final class TestObjectWithStateHolder extends AbstractObjectInstance {
         private final TraversalState traversal = new TraversalState();
 
@@ -572,6 +588,27 @@ class TestAbstractObjectInstanceRewindCapture {
         assertEquals(List.of("left", "right"), new ArrayList<>(obj.values.keySet()));
         assertEquals(7, obj.values.get("left"));
         assertEquals(9, obj.values.get("right"));
+    }
+
+    @Test
+    void defaultClassCapturesAndRestoresFinalValueMapWhenCompactFallsBackToGenericSidecar() {
+        TestObjectWithFallbackValueMap obj = new TestObjectWithFallbackValueMap(spawn(0, 0));
+        Map<Integer, Integer> originalMap = obj.customMemory;
+
+        PerObjectRewindSnapshot snap = obj.captureRewindState();
+        assertNull(snap.compactGenericState());
+        assertNotNull(snap.genericState());
+
+        obj.rasterCache = new byte[] {9};
+        obj.customMemory.clear();
+        obj.customMemory.put(0x2E, 99);
+        obj.restoreRewindState(snap);
+
+        assertArrayEquals(new byte[] {1, 2, 3}, obj.rasterCache);
+        assertSame(originalMap, obj.customMemory);
+        assertEquals(List.of(0x2E, 0x46), new ArrayList<>(obj.customMemory.keySet()));
+        assertEquals(7, obj.customMemory.get(0x2E));
+        assertEquals(1, obj.customMemory.get(0x46));
     }
 
     @Test
