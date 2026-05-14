@@ -52,6 +52,9 @@ local HEADLESS = true
 -- results screen), the emulator would loop forever. This safety limit
 -- ensures the script finalises and exits.
 local MOVIE_FRAME_SAFETY_MARGIN = 30   -- frames past movie end before auto-exit
+local TRACE_PROFILE = os.getenv("OGGF_S2_TRACE_PROFILE") or "gameplay_unlock"
+local BK2_FRAME_COUNT = tonumber(os.getenv("OGGF_BK2_FRAME_COUNT") or "")
+local SOURCE_BK2 = os.getenv("OGGF_BK2_BASENAME") or ""
 
 -- S2 REV01 68K RAM addresses (mainmemory domain = $FF0000 base stripped)
 local ADDR_GAME_MODE       = 0xF600
@@ -164,6 +167,22 @@ local ZONE_NAMES = {
     [0x10] = "scz",
 }
 
+-- Engine progression zone ids used by Sonic2ZoneRegistry / TraceCatalog.
+local ROM_ZONE_TO_ENGINE_ZONE = {
+    [0x00] = 0,  -- EHZ
+    [0x0D] = 1,  -- CPZ
+    [0x0F] = 2,  -- ARZ
+    [0x0C] = 3,  -- CNZ
+    [0x07] = 4,  -- HTZ
+    [0x0B] = 5,  -- MCZ
+    [0x0A] = 6,  -- OOZ
+    [0x04] = 7,  -- MTZ
+    [0x05] = 7,  -- MTZ alternate act id
+    [0x10] = 8,  -- SCZ
+    [0x06] = 9,  -- WFZ
+    [0x0E] = 10, -- DEZ
+}
+
 -- Snapshot interval (frames between full state snapshots in aux file)
 local SNAPSHOT_INTERVAL = 60
 
@@ -181,8 +200,11 @@ local bk2_frame_offset = 0
 local start_x = 0
 local start_y = 0
 local start_zone_id = 0
+local start_rom_zone_id = 0
 local start_zone_name = "unknown"
 local start_act = 0
+local emitted_checkpoints = {}
+local last_zone_act_state_key = nil
 
 local prev_character_state = {
     sonic = { status = 0, routine = 0, ctrl_lock = 0 },
@@ -196,6 +218,7 @@ local known_objects = {}
 -- File handles
 local physics_file = nil
 local aux_file = nil
+local close_files
 
 -----------------
 --- Helpers   ---
@@ -224,6 +247,21 @@ local function hex(val, width)
     return string.format("%0" .. width .. "X", val)
 end
 
+local function json_escape(value)
+    value = tostring(value or "")
+    value = value:gsub("\\", "\\\\")
+    value = value:gsub('"', '\\"')
+    return value
+end
+
+local function is_level_gated_reset_aware_profile()
+    return TRACE_PROFILE == "level_gated_reset_aware"
+end
+
+local function engine_zone_for_rom_zone(rom_zone_id)
+    return ROM_ZONE_TO_ENGINE_ZONE[rom_zone_id] or rom_zone_id
+end
+
 -- Get ground mode from angle (offset quadrants matching ROM thresholds).
 -- Floor wraps: 0xE0-0xFF and 0x00-0x1F are both mode 0.
 local function angle_to_ground_mode(angle)
@@ -239,6 +277,56 @@ local function write_aux(json_str)
         aux_file:write(json_str .. "\n")
         aux_file:flush()
     end
+end
+
+local function emit_zone_act_state(frame, raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode)
+    local key = string.format("%d:%d:%d:%d:%d:%d",
+        frame, raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode)
+    if key == last_zone_act_state_key then
+        return
+    end
+    last_zone_act_state_key = key
+    write_aux(string.format(
+        '{"frame":%d,"event":"zone_act_state","actual_zone_id":%d,"engine_zone_id":%d,"actual_act":%d,"apparent_act":%d,"game_mode":%d}',
+        frame, raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode))
+end
+
+local function emit_checkpoint_once(frame, name, raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode, notes)
+    if emitted_checkpoints[name] then
+        return
+    end
+    emitted_checkpoints[name] = true
+    local notes_json = ""
+    if notes ~= nil and notes ~= "" then
+        notes_json = string.format(',"notes":"%s"', json_escape(notes))
+    end
+    write_aux(string.format(
+        '{"frame":%d,"event":"checkpoint","name":"%s","actual_zone_id":%d,"engine_zone_id":%d,"actual_act":%d,"apparent_act":%d,"game_mode":%d%s}',
+        frame, json_escape(name), raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode, notes_json))
+end
+
+local function reset_recording_state()
+    close_files()
+    os.remove(OUTPUT_DIR .. "metadata.json")
+    os.remove(OUTPUT_DIR .. "physics.csv")
+    os.remove(OUTPUT_DIR .. "aux_state.jsonl")
+    started = false
+    trace_frame = 0
+    bk2_frame_offset = 0
+    start_x = 0
+    start_y = 0
+    start_zone_id = 0
+    start_rom_zone_id = 0
+    start_zone_name = "unknown"
+    start_act = 0
+    prev_character_state = {
+        sonic = { status = 0, routine = 0, ctrl_lock = 0 },
+        tails = { status = 0, routine = 0, ctrl_lock = 0 },
+    }
+    prev_opl_screen = -1
+    known_objects = {}
+    emitted_checkpoints = {}
+    last_zone_act_state_key = nil
 end
 
 -----------------
@@ -268,6 +356,7 @@ local function write_metadata()
     meta_file:write('  "game": "s2",\n')
     meta_file:write('  "zone": "' .. start_zone_name .. '",\n')
     meta_file:write('  "zone_id": ' .. start_zone_id .. ',\n')
+    meta_file:write('  "rom_zone_id": ' .. start_rom_zone_id .. ',\n')
     meta_file:write('  "act": ' .. (start_act + 1) .. ',\n')
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
@@ -277,9 +366,15 @@ local function write_metadata()
     meta_file:write('  "main_character": "sonic",\n')
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "8.0-s2",\n')
+    meta_file:write('  "lua_script_version": "9.0-s2",\n')
     meta_file:write('  "trace_schema": 8,\n')
     meta_file:write('  "csv_version": 6,\n')
+    meta_file:write('  "aux_schema_extras": [],\n')
+    meta_file:write('  "trace_profile": "' .. json_escape(TRACE_PROFILE) .. '",\n')
+    meta_file:write('  "bizhawk_version": "2.11",\n')
+    meta_file:write('  "genesis_core": "Genplus-gx",\n')
+    meta_file:write('  "route": "' .. start_zone_name .. '",\n')
+    meta_file:write('  "source_bk2": "' .. json_escape(SOURCE_BK2) .. '",\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": ""\n')
     meta_file:write("}\n")
@@ -334,7 +429,7 @@ local function read_character_trace_state(base)
     }
 end
 
-local function close_files()
+function close_files()
     if physics_file then
         physics_file:close()
         physics_file = nil
@@ -700,9 +795,10 @@ local function on_frame_end()
             start_y = mainmemory.read_u16_be(PLAYER_BASE + OFF_Y_POS)
 
             -- Capture zone/act NOW at start, not at end when RAM may have advanced
-            start_zone_id = mainmemory.read_u8(ADDR_ZONE)
+            start_rom_zone_id = mainmemory.read_u8(ADDR_ZONE)
+            start_zone_id = engine_zone_for_rom_zone(start_rom_zone_id)
             start_act = mainmemory.read_u8(ADDR_ACT)
-            start_zone_name = ZONE_NAMES[start_zone_id] or string.format("unknown_%02x", start_zone_id)
+            start_zone_name = ZONE_NAMES[start_rom_zone_id] or string.format("unknown_%02x", start_rom_zone_id)
 
             open_files()
             -- Write metadata immediately so it exists even if the process is killed
@@ -714,6 +810,8 @@ local function on_frame_end()
             write_player_history_snapshot()
             write_tails_cpu_snapshot()
             write_object_snapshots()
+            emit_zone_act_state(0, start_rom_zone_id, start_zone_id, start_act, start_act, game_mode)
+            emit_checkpoint_once(0, "gameplay_start", start_rom_zone_id, start_zone_id, start_act, start_act, game_mode, nil)
             print(string.format("Trace recording started at BizHawk frame %d, zone %s act %d, pos (%04X, %04X)",
                 bk2_frame_offset, start_zone_name, start_act + 1, start_x, start_y))
             if movie.isloaded() then
@@ -729,6 +827,13 @@ local function on_frame_end()
     end
 
     if game_mode ~= GAMEMODE_LEVEL then
+        if is_level_gated_reset_aware_profile() and start_zone_name == "ehz" then
+            print(string.format(
+                "level_gated_reset_aware: detected EHZ debug/menu exit at trace frame %d. Discarding and re-arming.",
+                trace_frame))
+            reset_recording_state()
+            return
+        end
         print("Left level gameplay at trace frame " .. trace_frame .. ". Finalising.")
         finished = true
         return
@@ -740,6 +845,9 @@ local function on_frame_end()
     -- consume later.
     if HEADLESS and movie.isloaded() then
         local movie_length = movie.length()
+        if BK2_FRAME_COUNT ~= nil and BK2_FRAME_COUNT > movie_length then
+            movie_length = BK2_FRAME_COUNT
+        end
         if movie_length > 0 and (bk2_frame_offset + trace_frame) >= movie_length then
             print(string.format(
                 "Reached BK2 end at trace frame %d (bk2 offset %d, movie length %d). Finalising.",
@@ -916,7 +1024,8 @@ end
 -- The onframeend callback pattern doesn't work because callbacks stop
 -- firing when BizHawk pauses, and client.exit() can kill the process
 -- before file I/O completes.
-print("S2 Trace Recorder v3.0-s2 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
+print(string.format("S2 Trace Recorder v9.0-s2 loaded. Profile=%s. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...",
+    TRACE_PROFILE))
 
 while true do
     on_frame_end()

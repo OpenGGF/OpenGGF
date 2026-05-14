@@ -42,6 +42,7 @@ if "%~2"=="" (
 
 for %%I in ("%~1") do set "ROM_PATH=%%~fI"
 for %%I in ("%~2") do set "BK2_PATH=%%~fI"
+for %%I in ("%~2") do set "OGGF_BK2_BASENAME=%%~nxI"
 set "TRACE_PROFILE=%~3"
 if "%TRACE_PROFILE%"=="" set "TRACE_PROFILE=%OGGF_S2_TRACE_PROFILE%"
 if "%TRACE_PROFILE%"=="" set "TRACE_PROFILE=gameplay_unlock"
