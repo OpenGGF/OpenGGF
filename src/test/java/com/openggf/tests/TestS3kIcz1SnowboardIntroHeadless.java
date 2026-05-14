@@ -3,6 +3,7 @@ package com.openggf.tests;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.render.SpecialRenderEffectContext;
 import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.graphics.GLCommand;
@@ -122,6 +123,34 @@ public class TestS3kIcz1SnowboardIntroHeadless {
 
         assertTrue(sonic.getCentreX() >= 0x00C0,
                 "ICZ intro should keep Sonic moving into the snowboard even if he lands early");
+    }
+
+    @Test
+    public void snowboardIntroStillStartsAfterBlockingTitleCard() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(ZONE_ICZ, ACT_1)
+                .build();
+        AbstractPlayableSprite sonic = fixture.sprite();
+
+        assertTrue(hasSnowboardIntroObject(), "ICZ1 should spawn the Sonic snowboard intro object");
+
+        for (int frame = 0; frame < 45; frame++) {
+            GameServices.level().updateObjectPositions();
+            GameServices.camera().updatePosition(true);
+        }
+
+        ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider())
+                .applyZonePlayerState();
+
+        int startX = sonic.getCentreX();
+        for (int frame = 0; frame < 60; frame++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+
+        assertTrue(sonic.getCentreX() > startX + 0x10,
+                "ICZ intro should resume player movement after the blocking title card exits");
+        assertFalse(sonic.isObjectControlSuppressesMovement(),
+                "The title-card exit reapply must not leave object control suppressing movement");
     }
 
     @Test
