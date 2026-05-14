@@ -224,9 +224,10 @@ shared setup section when debug mode exits EHZ back to the menu, then starts the
 the selected gameplay route. For these traces, `zone_id` is the engine progression id used by the
 Java replay/catalog code, `rom_zone_id` is the raw Sonic 2 ROM zone id, and `act` remains 1-based in
 metadata. Frame `0` must include either `zone_act_state` or a `gameplay_start` checkpoint with
-`game_mode: 12` so the fixture cannot accidentally begin in the menu. The generator script validates
-that metadata, BK2 input alignment, frame-zero marker, and gzip-only payload storage before copying
-fixtures into `src/test/resources/traces/s2/<route>/`.
+`game_mode: 12` so the fixture cannot accidentally begin in the menu. The generator script
+normalizes the fixture input column from the BK2 log, then validates that metadata, BK2 input
+alignment, frame-zero marker, and gzip-only payload storage before copying fixtures into
+`src/test/resources/traces/s2/<route>/`.
 
 The Sonic 2 DEZ ending movie is catalog/parser-only until replay support for the ending sequence is
 proven; keep it out of replay test discovery unless that support is added deliberately.

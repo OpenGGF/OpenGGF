@@ -46,8 +46,9 @@ PowerShell -NoProfile -ExecutionPolicy Bypass -File tools\bizhawk\record_s2_leve
 
 Use `-Only cpz` or another route slug for a single fixture. The generator uses the
 `level_gated_reset_aware` recorder profile, validates that `zone_id` is the engine progression id
-and `rom_zone_id` is the raw Sonic 2 ROM zone id, checks BK2 input alignment, and stores only
-compressed `physics.csv.gz` and `aux_state.jsonl.gz` payloads under `src/test/resources/traces/s2`.
+and `rom_zone_id` is the raw Sonic 2 ROM zone id, normalizes the physics input column from the BK2
+log, checks BK2 input alignment, and stores only compressed `physics.csv.gz` and
+`aux_state.jsonl.gz` payloads under `src/test/resources/traces/s2`.
 `dez_ending` remains parser/catalog-only until the ending route has replay coverage.
 
 If you update the trace workflow, update the guide page above first so the contributor docs stay in

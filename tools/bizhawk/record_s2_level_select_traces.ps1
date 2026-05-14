@@ -66,6 +66,25 @@ function Read-TextMaybeGzip([string]$Path) {
     return [System.IO.File]::ReadAllText($Path)
 }
 
+function Write-GzipText([string]$Path, [string]$Text) {
+    $stream = [System.IO.File]::Create($Path)
+    try {
+        $gzip = [System.IO.Compression.GZipStream]::new($stream, [System.IO.Compression.CompressionLevel]::Optimal)
+        try {
+            $writer = [System.IO.StreamWriter]::new($gzip, [System.Text.UTF8Encoding]::new($false))
+            try {
+                $writer.Write($Text)
+            } finally {
+                $writer.Dispose()
+            }
+        } finally {
+            $gzip.Dispose()
+        }
+    } finally {
+        $stream.Dispose()
+    }
+}
+
 function Resolve-TracePayload([string]$Dir, [string]$BaseName) {
     $plain = Join-Path $Dir $BaseName
     $gzip = "$plain.gz"
@@ -133,6 +152,51 @@ function Get-Bk2InputMasks([string]$Bk2Path) {
         }
     } finally {
         $zip.Dispose()
+    }
+}
+
+function Normalize-PhysicsInputFromBk2([string]$Bk2Path, [string]$TraceDir) {
+    $metadata = Get-Content -LiteralPath (Join-Path $TraceDir "metadata.json") -Raw | ConvertFrom-Json
+    $offset = [int]$metadata.bk2_frame_offset
+    $path = Resolve-TracePayload $TraceDir "physics.csv"
+    $masks = Get-Bk2InputMasks $Bk2Path
+    $lines = @((Read-TextMaybeGzip $path) -split "`r?`n")
+    $rowIndex = 0
+    $changed = 0
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        $line = $lines[$i]
+        if (-not $line -or $line.StartsWith("#") -or $line.StartsWith("frame,")) {
+            continue
+        }
+        $bk2Index = $offset + $rowIndex
+        if ($bk2Index -ge $masks.Length) {
+            throw "Trace row $rowIndex needs BK2 input index $bk2Index, but movie has $($masks.Length) input rows"
+        }
+        $columns = $line.Split(",")
+        if ($columns.Length -lt 2) {
+            throw "Trace row $rowIndex has no input column: $line"
+        }
+        $bk2Input = $masks[$bk2Index]
+        $normalized = "{0:X4}" -f $bk2Input
+        if ($columns[1] -ne $normalized) {
+            $columns[1] = $normalized
+            $lines[$i] = [string]::Join(",", $columns)
+            $changed++
+        }
+        $rowIndex++
+    }
+
+    $text = [string]::Join("`n", $lines)
+    if (-not $text.EndsWith("`n")) {
+        $text += "`n"
+    }
+    if ($path.EndsWith(".gz", [StringComparison]::OrdinalIgnoreCase)) {
+        Write-GzipText $path $text
+    } else {
+        [System.IO.File]::WriteAllText($path, $text, [System.Text.UTF8Encoding]::new($false))
+    }
+    if ($changed -gt 0) {
+        Write-Host "Normalized $changed physics input rows from BK2 input log"
     }
 }
 
@@ -282,6 +346,7 @@ foreach ($route in $selectedRoutes) {
     Copy-Item -LiteralPath (Join-Path $traceOutput "aux_state.jsonl.gz") -Destination $targetDir -Force
     Copy-Item -LiteralPath $bk2Path -Destination $targetDir -Force
 
+    Normalize-PhysicsInputFromBk2 (Join-Path $targetDir $route.Bk2) $targetDir
     Assert-TraceOutput $route $targetDir (Join-Path $targetDir $route.Bk2)
     Write-Host "Route $($route.Route) validated into $targetDir"
 }
