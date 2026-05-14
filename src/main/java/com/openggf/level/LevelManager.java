@@ -956,6 +956,16 @@ public class LevelManager {
     }
 
     /**
+     * Advances zone scroll handlers that own foreground camera movement.
+     *
+     * @return true when the normal player-follow camera step should be skipped
+     */
+    public boolean advanceCameraDrivenScrollForFrame() {
+        return parallaxManager != null
+                && parallaxManager.advanceCameraDrivenScroll(currentZone, currentAct, camera, frameCounter);
+    }
+
+    /**
      * Runs pre-physics zone feature updates (e.g., LZ water slides and wind tunnels).
      *
      * <p>ROM order: {@code LZWaterFeatures} runs before {@code ExecuteObjects},
