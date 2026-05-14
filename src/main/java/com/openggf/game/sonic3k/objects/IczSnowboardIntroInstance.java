@@ -239,13 +239,13 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         if (--startupTimer > 0) {
             return;
         }
-        player.setObjectMappingFrameControl(false);
-        player.setObjectControlled(false);
+        releaseStartupObjectControl(player);
         state = State.WAIT_FOR_BOARD_JUMP;
     }
 
     private void updateWaitForBoardJump(AbstractPlayableSprite player) {
         player.setControlLocked(true);
+        releaseStartupObjectControl(player);
         player.clearForcedInputMask();
         if (!player.getAir()) {
             maintainPreBoardLaunchSpeed(player);
@@ -273,6 +273,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
 
     private void updateBoardLaunch(AbstractPlayableSprite player) {
         player.setControlLocked(true);
+        releaseStartupObjectControl(player);
         player.clearForcedInputMask();
         currentX = player.getCentreX();
         boardMotion.x = currentX;
@@ -410,6 +411,11 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         player.setObjectControlSuppressesMovement(false);
         player.setObjectMappingFrameControl(true);
         state = State.SNOWBOARDING;
+    }
+
+    private void releaseStartupObjectControl(AbstractPlayableSprite player) {
+        player.setObjectMappingFrameControl(false);
+        player.setObjectControlled(false);
     }
 
     private void animateFreeBoard() {
