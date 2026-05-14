@@ -148,7 +148,7 @@ versions are tracked independently in `metadata.json` (`trace_schema`, `csv_vers
 | Game | Recorder script | Launcher | `metadata.json["game"]` | `gameplay_frame_counter` | `vblank_counter` | `lag_counter` | Current `trace_schema` / `csv_version` / `lua_script_version` |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Sonic 1 | [`s1_trace_recorder.lua`](../../../tools/bizhawk/s1_trace_recorder.lua) | [`record_trace.bat`](../../../tools/bizhawk/record_trace.bat) | `s1` | `0xFE04` | `0xFE0E` | placeholder `0` | `3 / 4 / 3.0` |
-| Sonic 2 | [`s2_trace_recorder.lua`](../../../tools/bizhawk/s2_trace_recorder.lua) | [`record_s2_trace.bat`](../../../tools/bizhawk/record_s2_trace.bat) | `s2` | `0xFE04` | `0xFE0E` | placeholder `0` | `8 / 6 / 9.0-s2` |
+| Sonic 2 | [`s2_trace_recorder.lua`](../../../tools/bizhawk/s2_trace_recorder.lua) | [`record_s2_trace.bat`](../../../tools/bizhawk/record_s2_trace.bat) | `s2` | `0xFE04` | `0xFE0E` | placeholder `0` | `8 / 6 / 9.1-s2` |
 | Sonic 3&K | [`s3k_trace_recorder.lua`](../../../tools/bizhawk/s3k_trace_recorder.lua) | [`record_s3k_trace.bat`](../../../tools/bizhawk/record_s3k_trace.bat) | `s3k` | `0xFE08` | `0xFE12` | `0xF628` diagnostic counter | `5 / 5 / 6.4-s3k` |
 
 Schema versioning rules:

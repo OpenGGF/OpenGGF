@@ -218,6 +218,7 @@ public final class TraceReplaySessionBootstrap {
                 objectManager.update(cameraX, null, List.of(), -(objectPreludeFrames - i), false);
             }
         }
+        refreshSidekickCpuBoundsFromCamera();
         if (sidekickPreludeFrames > 0
                 && gameplayMode != null
                 && gameplayMode.getSpriteManager() != null
@@ -319,11 +320,40 @@ public final class TraceReplaySessionBootstrap {
             GroundSensor.setLevelManager(level);
             level.initCameraForLevel();
             level.initLevelEventsForLevel();
+            refreshSidekickCpuBoundsFromCamera();
         }
         // Ground snap: 14 subpixel threshold matches the fixture.
         var collision = GameServices.collisionOrNull();
         if (collision != null) {
             collision.resolveGroundAttachment(sprite, 14, () -> false);
+        }
+    }
+
+    /**
+     * Re-syncs the sidekick CPU's cached level-bound overrides after camera
+     * initialization or level-event setup has rewritten the live camera bounds.
+     *
+     * <p>This is native bootstrap state, not trace hydration: S2/S3K ROM Tails
+     * reads the same camera boundary words that Sonic does during its first
+     * title-card object ticks. The engine mirrors those words in
+     * {@code SidekickCpuController}, so replay setup must refresh the mirror
+     * before the sidekick-only prelude can run boundary checks.
+     */
+    public static void refreshSidekickCpuBoundsFromCamera() {
+        var camera = GameServices.cameraOrNull();
+        var spriteManager = GameServices.spritesOrNull();
+        if (camera == null || spriteManager == null) {
+            return;
+        }
+        int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget());
+        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
+            var cpu = sidekick.getCpuController();
+            if (cpu != null) {
+                cpu.setLevelBounds(
+                        (int) camera.getMinX(),
+                        (int) camera.getMaxX(),
+                        maxY);
+            }
         }
     }
 

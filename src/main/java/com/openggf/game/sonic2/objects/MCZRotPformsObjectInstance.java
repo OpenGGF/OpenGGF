@@ -109,6 +109,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
 
     // Child tracking for cleanup on unload
     private final List<MCZRotPformsObjectInstance> children = new ArrayList<>();
+    private boolean childrenSpawned;
 
     public MCZRotPformsObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -143,10 +144,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         // Load initial phase parameters
         loadPhaseParameters();
 
-        // Spawn child platforms for subtype 0x18
-        if (isParent) {
-            spawnChildren();
-        }
+        this.childrenSpawned = false;
 
         updateDynamicSpawn(x, y);
 
@@ -202,6 +200,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
 
         // Parent platforms don't need movement updates - children handle themselves
         if (isParent) {
+            ensureChildrenSpawned();
             return;
         }
 
@@ -330,10 +329,16 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
      * Spawn child platforms for subtype 0x18 multi-block formation.
      * Disassembly lines 53685-53705
      */
-    private void spawnChildren() {
+    private void ensureChildrenSpawned() {
+        if (!childrenSpawned && spawnChildren()) {
+            childrenSpawned = true;
+        }
+    }
+
+    private boolean spawnChildren() {
         ObjectManager manager = services().objectManager();
         if (manager == null) {
-            return;
+            return false;
         }
 
         // Child 1: +64, +64 from parent with subtype 6 (or C if parent x_flip)
@@ -367,6 +372,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         LOGGER.fine(() -> String.format(
                 "MCZRotPforms spawned children at (%d,%d) and (%d,%d)",
                 baseX + 0x40, baseY + 0x40, baseX - 0x40, baseY + 0x40));
+        return true;
     }
 
     @Override
