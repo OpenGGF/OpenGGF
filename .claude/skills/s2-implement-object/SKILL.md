@@ -375,6 +375,16 @@ Use `@RewindTransient(reason = "...")` only for structural or derived fields: `O
 
 Prefer standard value forms before object-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
 
+#### 2.8 Rideable Solid Parity Checks
+
+For rideable solids, match the ROM's standing-bit lifetime exactly. The persisted standing bit is often read by the object's next-frame routine before `SolidObject` refreshes contact; do not clear rider state early just because the player has visually stepped off this frame. Separate "was standing last frame" from "is touching this frame" when object logic, release helpers, or trace diagnostics need both.
+
+Use the generic `PlatformObject` walk-off behaviour only when the ROM relies on normal solid-object release. If the disassembly calls an object-specific release/helper path, preserve that path's timing and side effects instead of replacing it with generic walk-off cleanup. Moving or collapsing platforms frequently use the persisted contact bit to decide whether to carry, drop, or snap the player.
+
+Routine transitions and pre-decrements are timing-sensitive. If ROM code increments `routine` then falls through, or pre-decrements a timer before branching, keep the same frame boundary in Java; moving the transition to the end of `update()` can shift platform motion, standing bits, sidekick contact, and animation by one frame.
+
+When validating manually with checkpoints or short trace starts, include sidekick/contact checks: player and sidekick riding bits, object contact/release events, carried position deltas, and the first frame after checkpoint restoration. A checkpoint route that looks correct for Sonic alone can still be wrong if Tails lands, releases, or respawns one frame off.
+
 ### Phase 3: Code Quality
 
 Ensure the implementation:
