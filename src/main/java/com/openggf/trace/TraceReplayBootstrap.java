@@ -302,6 +302,20 @@ public final class TraceReplayBootstrap {
                 && !isLegacyS3kAizIntroTrace(trace);
     }
 
+    public static boolean usesS2TornadoRideStartForTraceReplay(TraceData trace) {
+        if (trace == null || trace.frameCount() == 0) {
+            return false;
+        }
+        TraceMetadata metadata = trace.metadata();
+        if (!"s2".equals(metadata.game())
+                || replaySeedTraceIndexForTraceReplay(trace) != 0) {
+            return false;
+        }
+        String zone = metadata.zone();
+        return "level_gated_reset_aware".equals(metadata.traceProfile())
+                && ("scz".equals(zone) || "wfz".equals(zone));
+    }
+
     public static int strictStartTraceIndexForTraceReplay(TraceData trace) {
         if (trace == null || trace.frameCount() == 0) {
             return 0;

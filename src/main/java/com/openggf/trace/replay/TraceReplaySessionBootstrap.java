@@ -2,12 +2,16 @@ package com.openggf.trace.replay;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.GroundMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayTeamBootstrap;
+import com.openggf.game.sonic2.objects.TornadoObjectInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.TraceData;
@@ -218,6 +222,7 @@ public final class TraceReplaySessionBootstrap {
                 objectManager.update(cameraX, null, List.of(), -(objectPreludeFrames - i), false);
             }
         }
+        applyS2TornadoRideStart(trace, fixture);
         refreshSidekickCpuBoundsFromCamera();
         if (sidekickPreludeFrames > 0
                 && gameplayMode != null
@@ -355,6 +360,53 @@ public final class TraceReplaySessionBootstrap {
                         maxY);
             }
         }
+    }
+
+    private static void applyS2TornadoRideStart(TraceData trace, TraceReplayFixture fixture) {
+        if (!TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace)
+                || fixture == null
+                || fixture.sprite() == null) {
+            return;
+        }
+        var gameplayMode = fixture.gameplayMode();
+        if (gameplayMode == null
+                || gameplayMode.getLevelManager() == null
+                || gameplayMode.getLevelManager().getObjectManager() == null) {
+            return;
+        }
+        ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
+        TornadoObjectInstance tornado = findRideStartTornado(objectManager);
+        if (tornado == null) {
+            return;
+        }
+
+        AbstractPlayableSprite player = fixture.sprite();
+        TraceMetadata meta = trace.metadata();
+        player.setCentreX(meta.startX());
+        player.setCentreY(meta.startY());
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0);
+        player.setGSpeed((short) 0);
+        player.setAngle((byte) 0);
+        player.setRolling(false);
+        player.setAir(false);
+        player.setOnObject(true);
+        player.setGroundMode(GroundMode.GROUND);
+
+        tornado.primeRideStart(meta.startX(), meta.startY());
+        objectManager.forceRidingObjectForBootstrap(player, tornado);
+        objectManager.refreshRidingTrackingPosition(tornado);
+    }
+
+    private static TornadoObjectInstance findRideStartTornado(ObjectManager objectManager) {
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (instance instanceof TornadoObjectInstance tornado
+                    && !tornado.isDestroyed()
+                    && tornado.isPersistent()) {
+                return tornado;
+            }
+        }
+        return null;
     }
 
     public record BootstrapResult(

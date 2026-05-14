@@ -1959,6 +1959,19 @@ public class ObjectManager {
     }
 
     /**
+     * One-time native bootstrap for route starts that begin with the player
+     * already riding a ROM solid object.
+     *
+     * <p>This must only be used before the first replay/gameplay frame. It
+     * publishes the same standing/riding state that SolidObject would have
+     * established during the title-card object prelude; it does not copy
+     * per-frame trace comparison data into the engine.
+     */
+    public void forceRidingObjectForBootstrap(PlayableEntity player, ObjectInstance instance) {
+        solidContacts.forceRidingObjectForBootstrap(player, instance);
+    }
+
+    /**
      * Clear riding state for Sonic_Jump's status-bit release.
      * <p>
      * Most engine ride records can be removed immediately. Objects whose ROM
@@ -5436,6 +5449,22 @@ public class ObjectManager {
                 latestStandingSnapshots.remove(player);
                 forceAirOnStaleSupportLoss.remove(player);
             }
+        }
+
+        void forceRidingObjectForBootstrap(PlayableEntity player, ObjectInstance instance) {
+            if (player == null || instance == null) {
+                return;
+            }
+            ridingStates.put(player, new RidingState(instance, instance.getX(), instance.getY(), -1));
+            latestStandingSnapshots.put(player, new PlayerStandingState(ContactKind.TOP, true, false));
+            inlineSupportedPlayers.add(player);
+            player.setOnObject(true);
+            player.setAir(false);
+            player.setYSpeed((short) 0);
+            if (player instanceof AbstractPlayableSprite sprite && instance.getSpawn() != null) {
+                sprite.setLatchedSolidObject(instance.getSpawn().objectId(), instance);
+            }
+            setObjectStandingBit(player, instance);
         }
 
         void clearRidingObjectForJump(PlayableEntity player) {
