@@ -1,8 +1,8 @@
 package com.openggf.game.sonic2.scroll;
 
 import com.openggf.camera.Camera;
-import com.openggf.game.GameServices;
 import com.openggf.level.scroll.AbstractZoneScrollHandler;
+import com.openggf.level.scroll.CameraDrivenScrollHandler;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 
@@ -27,7 +27,7 @@ import com.openggf.level.scroll.compose.ScrollEffectComposer;
  *   Phase 2 (descend): when cameraY >= $500 -> velX=1, velY=0
  *   Phase 3 (resume right): when cameraX >= $1400 -> velX=0, velY=0
  */
-public class SwScrlScz extends AbstractZoneScrollHandler {
+public class SwScrlScz extends AbstractZoneScrollHandler implements CameraDrivenScrollHandler {
 
     // Tornado velocity (pixels per frame), controlled by level events
     private int tornadoVelocityX = 0;
@@ -56,6 +56,24 @@ public class SwScrlScz extends AbstractZoneScrollHandler {
     }
 
     @Override
+    public boolean advanceCameraForFrame(Camera camera, int actId) {
+        // ROM: LevEvents_SCZ is reached from SwScrl_SCZ before the camera words
+        // are advanced by Tornado_Velocity_X/Y. Keep this in gameplay logic so
+        // headless trace replay and rendering observe the same camera state.
+        if (actId == 0) {
+            updateLevelEvents(camera);
+        }
+
+        camera.setX((short) (camera.getX() + tornadoVelocityX));
+        camera.setY((short) (camera.getY() + tornadoVelocityY));
+
+        if (tornadoVelocityX != 0) {
+            bgXPos32 += 0x8000;
+        }
+        return true;
+    }
+
+    @Override
     public void update(int[] horizScrollBuf,
                        int cameraX,
                        int cameraY,
@@ -64,42 +82,7 @@ public class SwScrlScz extends AbstractZoneScrollHandler {
         resetScrollTracking();
         composer.reset();
 
-        Camera camera = GameServices.camera();
-
-        // ==================== Level Events ====================
-        // ROM: LevEvents_SCZ (s2.asm lines 21793-21847)
-        // Only Act 1 has events; Act 2 (LevEvents_SCZ2) just returns
-        if (actId == 0) {
-            updateLevelEvents(camera);
-        }
-
-        // ==================== Camera Update ====================
-        // ROM: SwScrl_SCZ directly adds Tornado_Velocity to Camera_X/Y_pos
-        // This replaces the normal player-following camera logic.
-
-        // Camera_X_pos += Tornado_Velocity_X
-        short newCamX = (short) (camera.getX() + tornadoVelocityX);
-        camera.setX(newCamX);
-
-        // Camera_Y_pos += Tornado_Velocity_Y
-        short newCamY = (short) (camera.getY() + tornadoVelocityY);
-        camera.setY(newCamY);
-
-        // Re-read after modification
-        int camX = camera.getX() & 0xFFFF;
-        int camY = camera.getY() & 0xFFFF;
-
-        // ==================== BG X Accumulation ====================
-        // ROM: Camera_X_pos_diff is computed as (new - old) << 8
-        // If diff != 0, d4 = $100; else d4 = 0
-        // d4 is then ext.l; asl.l #7 -> $8000 (or 0 if no movement)
-        // SetHorizVertiScrollFlagsBG adds d4 to Camera_BG_X_pos (32-bit)
-        //
-        // So whenever there's ANY horizontal camera movement, BG X
-        // accumulates $8000 per frame = 0.5 pixels/frame in 16.16
-        if (tornadoVelocityX != 0) {
-            bgXPos32 += 0x8000;
-        }
+        int camX = cameraX & 0xFFFF;
 
         // BG Y is always 0 (d5 = 0 in SetHorizVertiScrollFlagsBG)
 

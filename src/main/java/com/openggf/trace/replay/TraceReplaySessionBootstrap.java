@@ -10,6 +10,8 @@ import com.openggf.game.LevelInitProfile;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.level.LevelData;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.GroundSensor;
@@ -216,6 +218,7 @@ public final class TraceReplaySessionBootstrap {
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
             var levelManager = gameplayMode.getLevelManager();
             var objectManager = levelManager.getObjectManager();
+            applyS2SczTitleCardScrollPrelude(trace);
             var camera = GameServices.cameraOrNull();
             int cameraX = camera != null ? camera.getX() : 0;
             for (int i = 0; i < objectPreludeFrames; i++) {
@@ -237,6 +240,32 @@ public final class TraceReplaySessionBootstrap {
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(hydration, replayStart);
+    }
+
+    private static void applyS2SczTitleCardScrollPrelude(TraceData trace) {
+        if (!TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace)
+                || trace == null
+                || trace.metadata() == null
+                || !"scz".equals(trace.metadata().zone())) {
+            return;
+        }
+        var camera = GameServices.cameraOrNull();
+        var parallax = GameServices.parallaxOrNull();
+        if (camera == null || parallax == null) {
+            return;
+        }
+
+        // ROM level load seeds Camera_X_pos from the level's default start
+        // before the level-select route places Sonic on ObjB2. The first
+        // compared row has already seen two pre-gameplay SwScrl_SCZ ticks; run
+        // the native camera-driven scroll hook so Tornado_Velocity_X is primed
+        // for ObjB2 on frame 0.
+        camera.setX((short) (LevelData.SKY_CHASE.getStartXPos() - 0xA0));
+        camera.setY((short) 0);
+        parallax.resetZoneState();
+        for (int i = 0; i < 2; i++) {
+            parallax.advanceCameraDrivenScroll(Sonic2ZoneConstants.ZONE_SCZ, 0, camera, -(2 - i));
+        }
     }
 
     /**
@@ -382,7 +411,13 @@ public final class TraceReplaySessionBootstrap {
 
         AbstractPlayableSprite player = fixture.sprite();
         TraceMetadata meta = trace.metadata();
-        player.setCentreX(meta.startX());
+        // SCZ's first compared row is after ObjB2's pre-frame support check.
+        // Prime one pixel ahead so the native first-frame riding correction lands
+        // on the metadata start coordinate without copying the trace row.
+        short playerStartX = "scz".equals(meta.zone())
+                ? (short) ((meta.startX() & 0xFFFF) + 1)
+                : meta.startX();
+        player.setCentreX(playerStartX);
         player.setCentreY(meta.startY());
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);

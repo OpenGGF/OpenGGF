@@ -112,6 +112,7 @@ public final class LevelFrameStep {
         if (levelEvents != null) {
             levelEvents.update();
         }
+        boolean cameraDrivenScroll = levelManager.advanceCameraDrivenScrollForFrame();
 
         levelManager.flushQueuedLayoutMutations();
 
@@ -126,7 +127,7 @@ public final class LevelFrameStep {
         }
 
         // 5. Camera — ease boundaries toward targets, then reposition.
-        if (!suppressDefaultCamera) {
+        if (!suppressDefaultCamera && !cameraDrivenScroll) {
             wrapper.wrap("camera", () -> {
                 camera.updateBoundaryEasing();
                 camera.updatePosition();
