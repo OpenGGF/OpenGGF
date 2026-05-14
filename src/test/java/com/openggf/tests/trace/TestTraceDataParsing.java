@@ -72,6 +72,54 @@ public class TestTraceDataParsing {
     }
 
     @Test
+    void parsesExtendedS2LevelSelectMetadata() throws IOException {
+        Path dir = Files.createTempDirectory("s2-level-select-meta");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s2",
+              "zone": "cpz",
+              "zone_id": 1,
+              "rom_zone_id": 13,
+              "act": 1,
+              "bk2_frame_offset": 1234,
+              "trace_frame_count": 1,
+              "start_x": "0x0060",
+              "start_y": "0x0290",
+              "recording_date": "2026-05-14",
+              "lua_script_version": "9.0-s2",
+              "trace_schema": 8,
+              "csv_version": 6,
+              "trace_profile": "level_gated_reset_aware",
+              "bizhawk_version": "2.11",
+              "genesis_core": "Genplus-gx",
+              "route": "cpz",
+              "source_bk2": "s2-lvl-select-CPZ.bk2",
+              "rom_checksum": "ABCDEF",
+              "notes": "test",
+              "characters": ["sonic", "tails"],
+              "main_character": "sonic",
+              "sidekicks": ["tails"]
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            0000,0000,0060,0290,0000,0000,0000,00,0,0,0
+            """);
+
+        TraceMetadata metadata = TraceData.load(dir).metadata();
+
+        assertEquals("s2", metadata.game());
+        assertEquals("cpz", metadata.zone());
+        assertEquals(1, metadata.zoneId());
+        assertEquals(13, metadata.romZoneId());
+        assertEquals(6, metadata.csvVersion());
+        assertEquals("level_gated_reset_aware", metadata.traceProfile());
+        assertEquals("2.11", metadata.bizhawkVersion());
+        assertEquals("Genplus-gx", metadata.genesisCore());
+        assertEquals("cpz", metadata.route());
+        assertEquals("s2-lvl-select-CPZ.bk2", metadata.sourceBk2());
+    }
+
+    @Test
     void metadataParsesInitialRngSeedWhenPresent() throws IOException {
         Path dir = Files.createTempDirectory("trace-meta-rng");
         Files.writeString(dir.resolve("metadata.json"), """
