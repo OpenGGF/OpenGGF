@@ -249,6 +249,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                         : new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), getCurrentZoneSet())));
         factories.put(Sonic3kObjectIds.BUBBLER,
                 (spawn, registry) -> new BubblerObjectInstance(spawn));
+        factories.put(Sonic3kObjectIds.ICZ_BREAKABLE_WALL,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new IczBreakableWallObjectInstance(spawn);
+                });
         factories.put(Sonic3kObjectIds.BUTTON,
                 (spawn, registry) -> new Sonic3kButtonObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.CUTSCENE_BUTTON,
