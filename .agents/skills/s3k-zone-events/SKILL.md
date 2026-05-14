@@ -17,6 +17,10 @@ $ARGUMENTS: Zone abbreviation (e.g., "HCZ", "MGZ", "CNZ1", "LBZ Act 2") and opti
 - **s3k-zone-analysis** (`.agents/skills/s3k-zone-analysis/SKILL.md`) for generating the analysis spec that feeds into this skill's Phase 1.
 - **s3k-plc-system** (`.agents/skills/s3k-plc-system/SKILL.md`) for Pattern Load Cue operations triggered during boss spawns and act transitions.
 
+## Current Priority Context
+
+Zone events should be implemented to close playable S3K route slices. Prioritize event stages that gate AIZ -> HCZ continuity first, then CNZ, MGZ, and ICZ slice work: camera locks, route openings, water/chase state, boss/miniboss arenas, act transitions, palette mutations, PLC handoffs, and sidekick-sensitive state. Trivial or decorative event polish can wait until the route can be traversed coherently.
+
 ## Architecture
 
 ### Class Hierarchy

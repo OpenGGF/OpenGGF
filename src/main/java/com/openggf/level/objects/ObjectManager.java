@@ -475,6 +475,9 @@ public class ObjectManager {
         clearActiveObjects();
         dynamicObjects.clear();
         reservedChildSlots.clear();
+        usedSlots.clear();
+        Arrays.fill(execOrder, null);
+        peakSlotCount = 0;
         cachedActiveObjects.clear();
         activeObjectsCacheDirty = true;
         bucketsDirty = true;

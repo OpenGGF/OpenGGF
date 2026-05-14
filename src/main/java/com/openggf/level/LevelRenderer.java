@@ -183,7 +183,9 @@ public final class LevelRenderer {
         WaterShaderProgram shader = graphics.getWaterShaderProgram();
         shader.use();
 
-        glGetIntegerv(GL_VIEWPORT, viewportBuffer);
+        // viewportBuffer is cached once per frame at the top of drawWithRenderOptions /
+        // renderEndingBackground — see cacheViewportForFrame(). Avoids per-site
+        // glGetIntegerv pipeline syncs.
         float windowHeight = (float) viewportBuffer[3];
         float screenHeightPixels = (float) configuration.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
 
@@ -278,7 +280,7 @@ public final class LevelRenderer {
         if (fgPerColumnVScrollLow != null) {
             tilemapRenderer.enablePerColumnVScroll(fgPerColumnVScrollLow);
         }
-        glGetIntegerv(GL_VIEWPORT, viewportBuffer);
+        // viewportBuffer cached once per frame; see cacheViewportForFrame().
         tilemapRenderer.render(
                 TilemapGpuRenderer.Layer.FOREGROUND,
                 pendingFgScreenW_low,
@@ -311,7 +313,7 @@ public final class LevelRenderer {
         if (fgPerColumnVScrollHigh != null) {
             tilemapRenderer.enablePerColumnVScroll(fgPerColumnVScrollHigh);
         }
-        glGetIntegerv(GL_VIEWPORT, viewportBuffer);
+        // viewportBuffer cached once per frame; see cacheViewportForFrame().
         tilemapRenderer.render(
                 TilemapGpuRenderer.Layer.FOREGROUND,
                 pendingFgScreenW_high,
@@ -406,15 +408,14 @@ public final class LevelRenderer {
                 if (pendingBgTilePassPerColumnVScroll != null && pendingBgTilePassPerColumnVScroll.length > 0) {
                     tilemapRenderer.enablePerColumnVScroll(pendingBgTilePassPerColumnVScroll);
                 }
-                glGetIntegerv(GL_VIEWPORT, viewportBuffer);
                 tilemapRenderer.render(
                         TilemapGpuRenderer.Layer.BACKGROUND,
                         pendingBgTilePassRenderWidth,
                         pendingBgTilePassRenderHeight,
-                        viewportBuffer[0],
-                        viewportBuffer[1],
-                        viewportBuffer[2],
-                        viewportBuffer[3],
+                        0,
+                        0,
+                        pendingBgTilePassRenderWidth,
+                        pendingBgTilePassRenderHeight,
                         pendingBgTilePassBgTilemapWorldOffsetX,
                         (float) pendingBgTilePassAlignedBgY,
                         lm.graphicsManager.getPatternAtlasWidth(),
@@ -454,6 +455,21 @@ public final class LevelRenderer {
     /** Drains the GLCommand to disable water shader (used by callers needing post-pass cleanup). */
     GLCommand getDisableWaterShaderCommand() {
         return disableWaterShaderCommand;
+    }
+
+    /**
+     * Reads the current GL viewport into {@link #viewportBuffer} once per frame.
+     *
+     * <p>The pre-allocated {@link GLCommand} lambdas for water shader setup and
+     * FG low/high passes expect the screen-space viewport. The BG tile pass runs
+     * inside the background FBO and passes that viewport explicitly.
+     * Skipped in headless mode where there is no GL context.
+     */
+    private void cacheViewportForFrame() {
+        if (lm.graphicsManager == null || !lm.graphicsManager.isGlInitialized()) {
+            return;
+        }
+        glGetIntegerv(GL_VIEWPORT, viewportBuffer);
     }
 
     private void applyForegroundScrollFeatures(TilemapGpuRenderer tilemapRenderer) {
@@ -498,6 +514,11 @@ public final class LevelRenderer {
         }
         LevelManager.LevelRenderOptions options = renderOptions != null ? renderOptions : LevelManager.LevelRenderOptions.gameplay();
 
+        // Cache the GL viewport once per frame so the deferred GL commands below
+        // (water shader setup, FG low/high passes) can reuse it
+        // instead of issuing redundant glGetIntegerv pipeline syncs.
+        cacheViewportForFrame();
+
         // frameCounter is now incremented in update() — see comment there.
         if (lm.animatedPatternManager != null) {
             lm.animatedPatternManager.update();
@@ -527,11 +548,13 @@ public final class LevelRenderer {
                 ? lm.debugRenderer.getCollisionCommands() : new ArrayList<>();
         collisionCommands.clear();
 
+        PerformanceProfiler profiler = lm.profiler;
         // Update water shader state before rendering level
+        profiler.beginSection("render.water_setup");
         updateWaterShaderState(camera);
+        profiler.endSection("render.water_setup");
 
         // Draw Background (Layer 1)
-        PerformanceProfiler profiler = lm.profiler;
         profiler.beginSection("render.bg");
         if (lm.useShaderBackground && lm.graphicsManager.getBackgroundRenderer() != null) {
             renderBackgroundShader(collisionCommands, bgScrollY);
@@ -585,10 +608,12 @@ public final class LevelRenderer {
         dispatchSpecialRenderEffects(SpecialRenderEffectStage.AFTER_FOREGROUND, lm.frameCounter);
 
         // Draw Foreground (Layer 0) high-priority pass to tile priority FBO
-        // This captures high-priority tile pixels for the sprite priority shader
-        profiler.beginSection("render.fg.priority");
+        // This captures high-priority tile pixels for the sprite priority shader.
+        // Section name reflects that the registered command sets up GL_MAX blend
+        // mode and renders into the TilePriorityFBO ("FBO compose").
+        profiler.beginSection("render.fbo_compose");
         renderHighPriorityTilesToFBO(camera);
-        profiler.endSection("render.fg.priority");
+        profiler.endSection("render.fbo_compose");
 
         // The HTZ earthquake BG high-priority cave-ceiling overlay used to render
         // here. It now runs as a SpecialRenderEffect at AFTER_FOREGROUND stage
@@ -1031,6 +1056,10 @@ public final class LevelRenderer {
         if (!lm.useShaderBackground || lm.graphicsManager.getBackgroundRenderer() == null) {
             return;
         }
+
+        // Refresh the cached viewport for the deferred BG tile pass command. The
+        // ending cutscene re-enters the BG render path outside drawWithRenderOptions.
+        cacheViewportForFrame();
 
         // Update parallax with camera=(0,0) and the ending's BG vscroll
         // This drives SwScrlDez TempArray accumulation for star parallax

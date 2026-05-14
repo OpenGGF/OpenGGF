@@ -45,13 +45,13 @@ Current migration status is still partial. On this branch Sonic 2 already uses t
 *   Reference: `docs/SMPS-rips/SMPSPlay/` (SMPSPlay source), `docs/SMPS-rips/` (ripped audio data).
 
 ### Suggested Tasks
-Current architectural priority is to uplift implemented Sonic 1 and Sonic 2 content onto the new runtime-owned frameworks where that removes bespoke code, while continuing incremental S3K bring-up on top of the same shared systems. When choosing new work, prefer reuse of `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`, `ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and `AdvancedRenderModeController` over introducing new zone-local machinery.
+Current delivery priority is S3K playable vertical-slice parity. Prefer work that closes a real route through S3K (objects, events, scroll, animated tiles, palette/PLC state, boss or transition flow, trace blockers, and visual validation) over broad architecture-only migrations. The shared runtime frameworks remain the preferred implementation path when touched by that slice: use `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`, `ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, `AdvancedRenderModeController`, and typed `ZoneRuntimeRegistry` state rather than adding new zone-local machinery.
 
-1.  **S3K object implementation** – Implement zone-specific objects, badniks, and bosses for S3K zones.
-2.  **S3K scroll handlers** – Add dedicated scroll handlers for remaining S3K zones beyond AIZ and MGZ.
-3.  **S2 remaining bosses** – Implement bosses for OOZ, WFZ, SCZ, DEZ (EHZ, CPZ, HTZ, ARZ, CNZ, MCZ done).
-4.  **Data select parity** – The S3K data select and save system is implemented with cross-game donation to S1/S2. Remaining work: native selector mapping art, save-slot visual states, and emerald display parity.
-5.  **Special Stage polish** – S2 special stage is functional; S1 special stage rendering is in progress.
+1.  **S3K route slice closure** – Drive AIZ -> HCZ first, then adjacent CNZ/MGZ/ICZ work, until traversal, transitions, bosses/events, sidekick behavior, visual parity, and trace/rewind-relevant state are stable enough to call the slice playable.
+2.  **S3K object implementation by route impact** – Prioritize traversal blockers, terrain modifiers, hazards, bosses/miniboss support, and high-usage badniks before decorative or isolated checklist entries.
+3.  **S3K scroll/events/PLC parity** – Add missing dedicated scroll handlers, event handlers, animated tile channels, palette ownership, and PLC/art loading only as needed to make a target slice visually and mechanically coherent.
+4.  **Architecture uplift where it pays rent** – Uplift S1/S2 or older S3K code onto runtime-owned frameworks when the work removes active duplication, fixes a parity bug, or prevents new slice-specific one-offs. Do not prioritize broad migration passes ahead of playable S3K progress.
+5.  **Data select and special stage polish** – Continue native selector mapping art, save-slot visual states, emerald display parity, S3K Blue Ball/bonus-stage parity, and S1/S2 polish after the immediate S3K route blockers.
 
 ## Agent Directives
 1.  **Branching:** Always create pull requests from the same branch within a session. Use the following naming convention:

@@ -1,6 +1,6 @@
 # Game Status
 
-Last updated: 2026-04-12 (v0.6.prerelease development)
+Last updated: 2026-05-13 (v0.6.prerelease development)
 
 This page describes the current state of each supported game. It is intended to set
 expectations honestly -- what works well, what is incomplete, and what you might encounter.
@@ -80,7 +80,7 @@ expectations honestly -- what works well, what is incomplete, and what you might
 
 ## Sonic 3 & Knuckles (S3K)
 
-**Status: Expanding. AIZ is substantially playable and HCZ now has early gameplay coverage into HCZ2.**
+**Status: Expanding, and the current development focus. AIZ is substantially playable and HCZ now has early gameplay coverage into HCZ2.**
 
 ### What works
 
@@ -110,7 +110,11 @@ expectations honestly -- what works well, what is incomplete, and what you might
 
 - S3K uses KosinskiM (Kosinski Moduled) compression, combined 1P+2P mapping tables,
   and a more complex Z80 sound driver than S1/S2.
-- S3K remains the current development focus after v0.5; see ROADMAP.md for the v0.6+ direction.
+- S3K work is now prioritized as playable vertical slices rather than isolated checklist
+  completion. A useful slice has traversal objects, event/camera behavior, scroll/parallax,
+  animated tiles, palette/PLC state, bosses or transitions, trace coverage for known blockers,
+  and visual validation where practical. The near-term route target is AIZ through HCZ, with
+  CNZ, MGZ, and ICZ work feeding the same standard.
 
 ---
 

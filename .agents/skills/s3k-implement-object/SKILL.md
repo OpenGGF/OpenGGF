@@ -22,6 +22,20 @@ When delegating agents to explore the disassembly, instruct them to use the **s3
 
 ## Implementation Process
 
+### Current Priority: Route-Impact Objects First
+
+S3K object work should advance playable vertical slices before low-impact checklist closure. Prioritize objects that unblock AIZ -> HCZ continuity, then CNZ, MGZ, and ICZ route work.
+
+Use this order when several objects are available:
+
+1. Route blockers: doors, launchers, forced movement, water/chase pieces, boss gates, and terrain mutations required to finish a route.
+2. Platforms and terrain modifiers: moving platforms, collapsing structures, carriers, crushers, and path-changing solids.
+3. Hazards and boss/miniboss support objects.
+4. High-usage badniks that affect traversal, sidekick behavior, or trace blockers.
+5. Decorative or isolated objects after the slice is playable.
+
+When an object owns state that other systems need, publish it through the shared runtime stack where appropriate (`ZoneRuntimeRegistry`, `ZoneLayoutMutationPipeline`, `PaletteOwnershipRegistry`, or render/scroll framework hooks) instead of adding one-off zone-local state.
+
 ### Critical: Use S&K-Side ROM Addresses — NEVER the Sonic 3 Standalone Addresses
 
 The locked-on ROM has two halves: **S&K** (0x000000–0x1FFFFF) and **S3** (0x200000–0x3FFFFF). Many shared assets exist in both halves with identical data. **Always use S&K-side addresses (< 0x200000)** for all ROM constants in `Sonic3kConstants.java`.

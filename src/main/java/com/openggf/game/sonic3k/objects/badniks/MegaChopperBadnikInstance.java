@@ -78,8 +78,8 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (destroyed) {
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed()) {
             return;
         }
 
@@ -95,7 +95,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     public int getCollisionFlags() {
-        if (destroyed) {
+        if (isDestroyed()) {
             return 0;
         }
         return SPECIAL_COLLISION_FLAGS;
@@ -108,7 +108,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
-        if (!(playerEntity instanceof AbstractPlayableSprite player) || destroyed) {
+        if (!(playerEntity instanceof AbstractPlayableSprite player) || isDestroyed()) {
             return;
         }
         if (isMainPlayer(player)) {
@@ -127,7 +127,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
     private void updateSwim(int frameCounter, AbstractPlayableSprite player) {
         processPendingCollisionProperty();
-        if (destroyed || state != State.SWIM) {
+        if (isDestroyed() || state != State.SWIM) {
             return;
         }
 
@@ -146,7 +146,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
     private void updateLeap(AbstractPlayableSprite player) {
         processPendingCollisionProperty();
-        if (destroyed || state != State.LEAP) {
+        if (isDestroyed() || state != State.LEAP) {
             return;
         }
 

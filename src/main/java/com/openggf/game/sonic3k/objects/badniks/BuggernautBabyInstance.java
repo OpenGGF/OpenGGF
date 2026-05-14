@@ -172,7 +172,7 @@ final class BuggernautBabyInstance extends AbstractObjectInstance {
         // btst #0,render_flags(a1)
         // beq.s +
         // bset #0,render_flags(a0)
-        facingLeft = parent.facingLeft;
+        facingLeft = parent.badnikFacingLeft();
 
         // Chase_Object toward parent (not player)
         chaseParent();
@@ -250,8 +250,8 @@ final class BuggernautBabyInstance extends AbstractObjectInstance {
      * axes match. See {@code sonic3k.asm} lines 179340–179386.
      */
     private void chaseParent() {
-        int targetX = parent.currentX;
-        int targetY = parent.currentY;
+        int targetX = parent.getX();
+        int targetY = parent.getY();
         boolean xEqual = (currentX == targetX);
 
         // X axis: skip if positions match (preserve old x velocity)
