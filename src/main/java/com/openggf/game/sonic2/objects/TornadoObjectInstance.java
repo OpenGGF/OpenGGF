@@ -253,6 +253,28 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         return routine == ROUTINE_SCZ_MAIN || routine == ROUTINE_WFZ_START || routine == ROUTINE_WFZ_END;
     }
 
+    /**
+     * Native bootstrap for SCZ/WFZ level-select trace starts where the title-card
+     * object prelude has already placed Sonic on the Tornado before the first
+     * compared Level_MainLoop frame.
+     *
+     * <p>ROM relation at the replay seed point: ObjB2 is one pixel ahead of
+     * Sonic and its center is $1C below Sonic's center (s2.asm:78301-78305,
+     * 78378-78385 call SolidObject with d1=$1B,d2=8,d3=9; frame 0 then carries
+     * the rider via the normal platform delta). This method primes only that
+     * native pre-frame relation; it does not read recorded object snapshots.
+     */
+    public void primeRideStart(short playerStartX, short playerStartY) {
+        currentX = (playerStartX & 0xFFFF) + 1;
+        currentY = (playerStartY & 0xFFFF) + 0x1C;
+        syncFixedFromPosition();
+        yVel = 0;
+        standingTransition = false;
+        lastMainStanding = true;
+        moveVertActive = false;
+        moveVert2Active = false;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -352,6 +374,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 if (scriptTimer >= 0) {
                     objectMove();
                     applyTornadoParallaxVelocity();
+                    checkpoint(player);
                     clampClosestPlayerHorizontal();
                     return;
                 }

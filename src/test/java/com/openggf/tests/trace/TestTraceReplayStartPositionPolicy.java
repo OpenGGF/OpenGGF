@@ -174,4 +174,22 @@ class TestTraceReplayStartPositionPolicy {
         assertFalse(TraceReplayBootstrap.shouldSeedReplayStartStateForTraceReplay(trace, 0),
                 "Pre-trace object snapshots and primary frame-0 rows are comparison data only.");
     }
+
+    @Test
+    void s2SczAndWfzLevelSelectUseNativeTornadoRideStart() throws Exception {
+        TraceData scz = TraceData.load(Path.of("src/test/resources/traces/s2/scz"));
+        TraceData wfz = TraceData.load(Path.of("src/test/resources/traces/s2/wfz"));
+
+        assertTrue(TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(scz),
+                "SCZ starts on ObjB2 after the native title-card object prelude, not as a ground spawn.");
+        assertTrue(TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(wfz),
+                "WFZ starts on ObjB2 after the native title-card object prelude, not as a ground spawn.");
+    }
+
+    @Test
+    void ordinaryS2TraceDoesNotUseTornadoRideStart() throws Exception {
+        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s2/ehz1_fullrun"));
+
+        assertFalse(TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace));
+    }
 }

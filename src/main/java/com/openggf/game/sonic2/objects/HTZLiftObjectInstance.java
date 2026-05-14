@@ -60,9 +60,9 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
     private static final int Y_VEL = 0x100;         // 1.0 pixels/frame
     private static final int FALL_GRAVITY = 0x38;   // 0.21875 pixels/frame^2
 
-    // Collision params - adjusted for platform standing detection
-    // Standing surface should be at objectY + 0x28 (40px down to platform)
-    // Since offsetY positions the collision box CENTER, we need: offsetY - y_radius = 0x28
+    // Collision params - adjusted for platform standing detection.
+    // S2 Obj16 passes d3 = -$28 to PlatformObject, so the platform surface is
+    // y_pos - d3 = objectY + $28 (docs/s2disasm/s2.asm:47384-47388).
     private static final int COLLISION_WIDTH = 0x20;    // 32 pixels half-width
     private static final int COLLISION_Y_RADIUS = 0x10; // 16 pixels
     private static final int COLLISION_Y_OFFSET = 0x38; // 0x28 + 0x10 = center offset for 40px standing surface
@@ -271,7 +271,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
         return new SolidObjectParams(
                 COLLISION_WIDTH,
                 COLLISION_Y_RADIUS,
-                COLLISION_Y_RADIUS + 1,
+                COLLISION_Y_RADIUS,
                 0,                    // offsetX
                 COLLISION_Y_OFFSET);  // offsetY - move collision down to platform
     }
