@@ -393,6 +393,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 scriptTimer--;
                 if (scriptTimer >= 0) {
                     alignPlaneAndSolid();
+                    checkpoint(player);
                     updateShotDownSmoke();
                     return;
                 }
@@ -404,6 +405,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 // ObjB2_Main_WFZ_Start_fall_down
                 objectMove();         // Extra ObjectMove before shared align path (ROM exact flow)
                 alignPlaneAndSolid();
+                checkpoint(player);
                 updateShotDownSmoke();
             }
             default -> {
