@@ -439,6 +439,16 @@ public final class TraceReplaySessionBootstrap {
         player.setGroundMode(GroundMode.GROUND);
 
         tornado.primeRideStart(playerStartX, meta.startY(), seed.tornadoYSubpixel8());
+        if ("wfz".equals(meta.zone())) {
+            // The 26-frame object prelude consumed by the engine collapses ROM's
+            // two ObjB2 init frames (ObjB2_Init at s2.asm:78271-78284 and
+            // ObjB2_Main_WFZ_Start_init at s2.asm:78368-78372) into one engine
+            // frame, leaving the WFZ Tornado one main-routine move ahead of ROM
+            // by frame -1. Roll the timer back by one tick so the
+            // WFZ_Start_main -> shot_down transition fires on the same trace
+            // frame as ROM (s2.asm:78375-78394).
+            tornado.compensateForCollapsedWfzInit();
+        }
         objectManager.forceRidingObjectForBootstrap(player, tornado);
         objectManager.refreshRidingTrackingPosition(tornado);
     }

@@ -280,6 +280,26 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         moveVert2Active = false;
     }
 
+    /**
+     * Compensates for the engine collapsing ROM's two-frame ObjB2 init
+     * (outer {@code ObjB2_Init} + inner {@code ObjB2_Main_WFZ_Start_init}, both
+     * no-move; s2.asm:78271-78284 and 78368-78372) into a single engine init
+     * frame. During the 26-frame S2 title-card object prelude, ROM consumes
+     * two of those frames on init and runs 24 main-routine moves; the engine
+     * runs 25 main moves, leaving {@link #scriptTimer} one less than the ROM's
+     * frame-(-1) snapshot value. This method restores parity by incrementing
+     * the timer back by one, so the WFZ_Start_main transition fires on the
+     * same trace frame as ROM (s2.asm:78375-78394).
+     *
+     * <p>Only relevant for the WFZ_START routine; SCZ_MAIN does not use a
+     * {@code routine_secondary} init step and has no timer to compensate.
+     */
+    public void compensateForCollapsedWfzInit() {
+        if (routine == ROUTINE_WFZ_START && routineSecondary == 2) {
+            scriptTimer++;
+        }
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
