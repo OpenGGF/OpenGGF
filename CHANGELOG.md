@@ -6,6 +6,30 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 native-prelude trace infrastructure (spec 2026-05-15).** The engine's
+  title-card phase now runs `ObjectManager` and player physics every frame
+  (universal ADR-1, matching ROM `TitleCard_Main` across S1/S2/S3K). This
+  populates Sonic's `Sonic_Pos_Record_Buf` natively during the prelude,
+  removing the root cause of the early-frontier Tails sub-state divergence
+  that capped every S2 level-select trace at ~300 frames. New trace
+  infrastructure surfaces: `TraceBinder.compareBootstrapFrame0` + new
+  `BootstrapDivergence` / `EngineSnapshot` records assert engine frame-0
+  state against the recorder's `player_history_snapshot`,
+  `cpu_state_snapshot`, and `object_state_snapshot` events for traces
+  recorded at `lua_script_version >= 9.2-s2` (see
+  `TraceMetadata.nativePreludeMode()`). Comparator results flow into
+  `DivergenceReport` as a new `bootstrap` category rendered ahead of the
+  per-frame divergences. `SidekickCpuController.hydrateFromRomCpuState`
+  widened to accept `targetX`/`targetY`. The deprecated
+  `*PreludeFramesForTraceReplay` knobs on `TraceReplayBootstrap` return 0
+  unconditionally (workaround for the title-card freeze, no longer needed).
+  New `oggf.trace.hydrate` system property (see CONFIGURATION.md) lets
+  developers snap engine state to the recorded frame-0 snapshot for
+  prelude-vs-gameplay bug isolation; off by default and CI-asserted off.
+  S2 level-select trace tests will pick up the improvement once their
+  metadata files are re-recorded with the v9.2-s2 recorder (T9 follow-up).
+
+
 - **Fix regressions from architectural review hardening.** Two
   follow-up fixes for issues introduced by the previous entry.
   `GenericFieldCapturer.usesCodecFieldSnapshot` now skips the codec

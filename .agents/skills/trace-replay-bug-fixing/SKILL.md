@@ -42,6 +42,24 @@ If a trace replay test passes only because engine state is snapped back to ROM-c
 - If the engine has no equivalent path, port the ROM logic with disassembly citations and a `PhysicsFeatureSet` flag if it's game-divergent.
 - If the trace lacks the diagnostic data needed to pinpoint the bug, extend the recorder. New fields are comparison context, not write-back targets.
 
+### Frame-0 bootstrap comparator (post-2026-05-15)
+
+For traces recorded at `lua_script_version >= 9.2-s2`, `TraceBinder.compareBootstrapFrame0(trace, EngineSnapshot)` runs once at the start of each test and asserts engine state at frame 0 against the recorder's `player_history_snapshot`, `cpu_state_snapshot`, and `object_state_snapshot` events. Mismatches become `BootstrapDivergence` entries rendered ahead of per-frame divergences in `target/trace-reports/<game>_<zone>_report.json`. Legacy traces (older recorder versions) are skipped — their frame-0 state was captured under the pre-ADR-1 freeze-during-title-card engine and is no longer valid for comparison; re-record at v9.2-s2 to opt in.
+
+### Engine title-card behaviour (post-2026-05-15)
+
+`GameLoop` ticks `ObjectManager` + player physics every frame during the title-card phase, matching ROM `TitleCard_Main` for S1/S2/S3K. Player input is locked via the same path the ROM uses (`Sonic_ControlsLock` / `Ctrl_locked`). This means `Sonic_Pos_Record_Buf` fills naturally during the prelude — previously the engine froze object updates during the card, leaving the position-history ring empty at frame 0 and triggering sidekick AI divergences in the first ~300 frames of every level-select trace.
+
+### Diagnostic hydration switch
+
+When a frame-0 bootstrap divergence is hard to pin down, set `-Doggf.trace.hydrate=true` on a single test invocation. The harness will:
+1. Apply the recorded `player_history_snapshot`, `cpu_state_snapshot`, and `object_state_snapshot` events to engine state BEFORE the per-frame comparison loop.
+2. Emit a WARN-level log line.
+3. Run the bootstrap comparator (should now pass — proves the hydrate path matches).
+4. Run the per-frame loop normally.
+
+A run with the switch enabled is **NOT a valid green replay** — it masks the very divergences the suite is built to surface. Use as an A/B probe: "is the bug in the prelude or in the gameplay loop?" `TestTraceHydrateSwitchDefault` is the CI guard that pins the property unset on master.
+
 ## Pipeline Overview
 
 ```
