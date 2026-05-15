@@ -64,6 +64,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
     private boolean paletteBlink; // Toggles every frame for Nebula bomb (ROM: bchg palette_bit_0)
     private int cluckerAnimTimer; // Clucker shot animation timer (counts down from duration)
     private int cluckerAnimIndex; // Clucker shot animation index (0-7, cycles through 8 frames)
+    private boolean loadSubObjectInitPending;
 
     /**
      * Create a new projectile.
@@ -159,9 +160,23 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         this.fixedFrame = fixedFrame;
     }
 
+    /**
+     * ROM Obj98 first runs routine 0, which only calls LoadSubObject and then
+     * advances to routine 2. Children allocated after the current object can
+     * execute that init routine in the same ExecuteObjects pass, before their
+     * first movement frame.
+     */
+    public void deferFirstMovementForLoadSubObjectInit() {
+        this.loadSubObjectInitPending = true;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (loadSubObjectInitPending) {
+            loadSubObjectInitPending = false;
+            return;
+        }
         // Initial delay: projectile stays stationary (Octus bullet: 16 frames)
         if (initialDelay > 0) {
             initialDelay--;
@@ -349,7 +364,8 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
                         fixedFrame,
                         paletteBlink,
                         cluckerAnimTimer,
-                        cluckerAnimIndex));
+                        cluckerAnimIndex,
+                        loadSubObjectInitPending));
     }
 
     @Override
@@ -371,6 +387,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
             paletteBlink = extra.paletteBlink();
             cluckerAnimTimer = extra.cluckerAnimTimer();
             cluckerAnimIndex = extra.cluckerAnimIndex();
+            loadSubObjectInitPending = extra.loadSubObjectInitPending();
             motionState.x = currentX;
             motionState.y = currentY;
             motionState.xSub = extra.xSub();

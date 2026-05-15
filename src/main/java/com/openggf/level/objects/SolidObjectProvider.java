@@ -181,6 +181,18 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether full-solid lower-half overlap should use the player's current
+     * y-radius rather than the standing y-radius.
+     * <p>
+     * Most callers keep the current game profile behaviour. Object-specific
+     * disassembly ports can opt in when a concrete helper path is known to
+     * build both halves from the live {@code y_radius(a1)} value.
+     */
+    default boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Called when the player is pushing against this object.
      * ROM: bset #p1_pushing_bit,status(a0) (s2.asm:35220-35226).
      * Objects that need to react to being pushed (e.g., spring walls) can override.

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects.badniks;
 
+import com.openggf.camera.Camera;
 import com.openggf.level.objects.AbstractBadnikInstance;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
@@ -95,11 +96,18 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance {
         currentX += parallax.getTornadoVelocityX();
         currentY += parallax.getTornadoVelocityY();
 
-        // ROM: Obj_DeleteBehindScreen - delete if scrolled off left
-        if (!isOnScreen(64)) {
-            setDestroyed(true);
+        // ROM: Obj_DeleteBehindScreen masks both X coordinates to $FF80 and
+        // only deletes when the object is behind Camera_X_pos_coarse.
+        if (isBehindScreen()) {
             setDestroyed(true);
         }
+    }
+
+    private boolean isBehindScreen() {
+        Camera camera = services().camera();
+        int cameraCoarse = camera.getX() & 0xFF80;
+        int objectCoarse = currentX & 0xFF80;
+        return (short) (objectCoarse - cameraCoarse) < 0;
     }
 
     /**

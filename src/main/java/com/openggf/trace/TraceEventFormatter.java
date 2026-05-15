@@ -8,6 +8,25 @@ public final class TraceEventFormatter {
     private TraceEventFormatter() {
     }
 
+    /**
+     * Renders a single {@link BootstrapDivergence} as a one-line summary
+     * suitable for inclusion in text reports or log lines. Pairs with the
+     * {@code "=== Bootstrap (frame 0) ===" } block emitted by
+     * {@link DivergenceReport#getContextWindow(int, int)}.
+     */
+    public static String summariseBootstrapDivergence(BootstrapDivergence divergence) {
+        if (divergence == null) {
+            return "";
+        }
+        String context = divergence.context() == null ? "" : divergence.context();
+        return String.format("[%s] %s expected=%s actual=%s%s",
+                divergence.severity().name(),
+                divergence.field(),
+                divergence.expected(),
+                divergence.actual(),
+                context.isBlank() ? "" : " (" + context + ")");
+    }
+
     public static String summariseFrameEvents(List<TraceEvent> events) {
         if (events == null || events.isEmpty()) {
             return "";
@@ -204,8 +223,41 @@ public final class TraceEventFormatter {
                             state.solidPreY() & 0xFFFF,
                             state.solidSurfaceY() & 0xFFFF,
                             state.solidDelta() & 0xFFFF);
+            case TraceEvent.StateSnapshot snapshot -> summariseStateSnapshot(snapshot);
             default -> "";
         };
+    }
+
+    private static String summariseStateSnapshot(TraceEvent.StateSnapshot snapshot) {
+        Object event = snapshot.fields().get("event");
+        if ("s2_tornado_state".equals(event)) {
+            return String.format("s2Tornado s%s @%s,%s sub=%s yv=%s rtn=%s/%s st=%s 2e=%s 2f=%s 30=%s 31=%s",
+                    snapshot.fields().getOrDefault("slot", "?"),
+                    snapshot.fields().getOrDefault("x", "?"),
+                    snapshot.fields().getOrDefault("y", "?"),
+                    snapshot.fields().getOrDefault("y_sub", "?"),
+                    snapshot.fields().getOrDefault("y_vel", "?"),
+                    snapshot.fields().getOrDefault("routine", "?"),
+                    snapshot.fields().getOrDefault("routine_secondary", "?"),
+                    snapshot.fields().getOrDefault("status_byte", "?"),
+                    snapshot.fields().getOrDefault("objoff_2e", "?"),
+                    snapshot.fields().getOrDefault("objoff_2f", "?"),
+                    snapshot.fields().getOrDefault("objoff_30", "?"),
+                    snapshot.fields().getOrDefault("objoff_31", "?"));
+        }
+        String character = String.valueOf(snapshot.fields().getOrDefault("character", ""));
+        String prefix = character == null || character.isBlank()
+                ? "state"
+                : character + " state";
+        return String.format("%s st=%s rtn=%s top=%s lrb=%s onObj=%s push=%s input=%s",
+                prefix,
+                snapshot.fields().getOrDefault("status_byte", "?"),
+                snapshot.fields().getOrDefault("routine", "?"),
+                snapshot.fields().getOrDefault("top_solid_bit", "?"),
+                snapshot.fields().getOrDefault("lrb_solid_bit", "?"),
+                snapshot.fields().getOrDefault("on_object", "?"),
+                snapshot.fields().getOrDefault("pushing", "?"),
+                snapshot.fields().getOrDefault("raw_input", "?"));
     }
 
     private static String summariseCageExecution(TraceEvent.CageExecution execution) {

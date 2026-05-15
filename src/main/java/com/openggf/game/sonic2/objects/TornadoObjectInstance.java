@@ -265,9 +265,14 @@ public class TornadoObjectInstance extends AbstractObjectInstance
      * native pre-frame relation; it does not read recorded object snapshots.
      */
     public void primeRideStart(short playerStartX, short playerStartY) {
+        primeRideStart(playerStartX, playerStartY, 0);
+    }
+
+    public void primeRideStart(short playerStartX, short playerStartY, int ySubpixel) {
         currentX = (playerStartX & 0xFFFF) + 1;
         currentY = (playerStartY & 0xFFFF) + 0x1C;
-        syncFixedFromPosition();
+        xPosFixed8 = currentX << 8;
+        yPosFixed8 = (currentY << 8) | (ySubpixel & 0xFF);
         yVel = 0;
         standingTransition = false;
         lastMainStanding = true;
@@ -307,7 +312,6 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         if (player == null) {
             return;
         }
-
         advanceMainAnimation();
         renderThisFrame = true;
         solidActive = true;
@@ -756,6 +760,22 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 DebugColor.CYAN);
     }
 
+    @Override
+    public String traceDebugDetails() {
+        if (routine != ROUTINE_SCZ_MAIN) {
+            return "";
+        }
+        return String.format("yfrac=%02X yv=%04X mt=%02X mv=%d mv2=%d tr=%d last=%d off=%d",
+                yPosFixed8 & 0xFF,
+                yVel & 0xFFFF,
+                moveVertTimer & 0xFF,
+                moveVertActive ? 1 : 0,
+                moveVert2Active ? 1 : 0,
+                standingTransition ? 1 : 0,
+                lastMainStanding ? 1 : 0,
+                smoothOffsetX);
+    }
+
     // ------------------------------------------------------------------------
     // SolidObject interfaces
     // ------------------------------------------------------------------------
@@ -828,7 +848,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         }
 
         currentX = anchorX + smoothOffsetX;
-        syncFixedFromPosition();
+        syncFixedXFromPosition();
         applyTornadoParallaxVelocity();
     }
 
@@ -861,7 +881,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 int targetX = orientation.target().getCentreX()
                         + (orientation.playerIsRight() ? -PLAYER_HORIZONTAL_CLAMP : PLAYER_HORIZONTAL_CLAMP);
                 currentX = targetX;
-                syncFixedFromPosition();
+                syncFixedXFromPosition();
 
                 // Refresh SolidContacts tracking position so the follow delta isn't
                 // double-applied as a riding delta. In the ROM, SolidObject runs inline
@@ -1010,6 +1030,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private void syncFixedFromPosition() {
         xPosFixed8 = currentX << 8;
         yPosFixed8 = currentY << 8;
+    }
+
+    private void syncFixedXFromPosition() {
+        xPosFixed8 = currentX << 8;
     }
 
     private void advanceMainAnimation() {

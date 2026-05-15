@@ -2340,10 +2340,10 @@ public class ObjectManager {
         Collection<ObjectSpawn> activeSpawns = placement.getActiveSpawns();
         boolean changed = false;
 
-        // ROM parity: OPL forward scans process entries left-to-right (a0 += 6),
-        // while backward scans process right-to-left (a0 -= 6). Counter-based
-        // S1 placement must preserve that direction so FindFreeObj assigns the
-        // same slot numbers the ROM would have used.
+        // ROM parity: OPL/ObjectManager forward scans process entries
+        // left-to-right (a0 += 6), while backward scans process right-to-left
+        // (a0 -= 6). Preserve that direction so FindFreeObj assigns the same
+        // slot numbers the ROM would have used.
         List<ObjectSpawn> sortedNewSpawns = new ArrayList<>();
         for (ObjectSpawn spawn : activeSpawns) {
             if (!activeObjects.containsKey(spawn)
@@ -2355,7 +2355,7 @@ public class ObjectManager {
         Comparator<ObjectSpawn> spawnOrder = Comparator
                 .comparingInt(ObjectSpawn::x)
                 .thenComparingInt(placement::getSpawnIndex);
-        if (placement.isCounterBasedRespawn() && placement.isLastScrollBackward()) {
+        if (placement.isLastScrollBackward()) {
             spawnOrder = Comparator
                     .comparingInt(ObjectSpawn::x)
                     .reversed()
@@ -3381,11 +3381,14 @@ public class ObjectManager {
             } else {
                 int delta = cameraX - lastCameraX;
                 if (Math.abs(delta) > (getLoadAhead() + getUnloadBehind())) {
+                    lastScrollBackward = cameraX < lastCameraX;
                     refreshWindow(cameraX);
                 } else if (cameraChunk > lastCameraChunk) {
+                    lastScrollBackward = false;
                     spawnForward(cameraX);
                     trimLeftNonCounter(cameraX);
                 } else if (cameraChunk < lastCameraChunk) {
+                    lastScrollBackward = true;
                     spawnBackwardNonCounter(cameraX);
                     trimRightNonCounter(cameraX);
                 }
@@ -3950,7 +3953,7 @@ public class ObjectManager {
         /**
          * ROM parity: true when the last chunk transition was leftward (backward).
          * Used by syncActiveSpawnsLoad to sort new spawns in descending X order,
-         * matching S1 ObjPosLoad's backward scan direction (a0 -= 6).
+         * matching ObjPosLoad/ObjectManager backward scan direction (a0 -= 6).
          */
         boolean isLastScrollBackward() {
             return lastScrollBackward;
@@ -6841,7 +6844,11 @@ public class ObjectManager {
             // current y-radius on both halves to avoid premature rolling underside
             // hits, while S2/S3K keep the taller underside half used by existing
             // solid/spring parity and the AIZ trace-replay spring contact.
-            int totalHeight = usesCurrentYRadiusOnlyForFullSolidBottomOverlap(player)
+            boolean useCurrentBottomRadius =
+                    usesCurrentYRadiusOnlyForFullSolidBottomOverlap(player)
+                            || (instance instanceof SolidObjectProvider provider
+                                    && provider.fullSolidBottomOverlapUsesCurrentYRadiusOnly(player));
+            int totalHeight = useCurrentBottomRadius
                     ? maxTop * 2
                     : maxTop + (monitorSolidity ? maxTop : halfHeight + getSolidTopYRadius(player));
             // SPG-style monitor callers keep zero here. S3K monitors branch into

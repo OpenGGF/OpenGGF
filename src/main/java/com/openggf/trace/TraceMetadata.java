@@ -47,6 +47,17 @@ public record TraceMetadata(
 ) {
 
     /**
+     * Recorder version at which the engine title-card phase began executing
+     * objects natively (matching ROM `TitleCard_Main`). Traces recorded at or
+     * after this version have frame-0 state captured against the
+     * universal-ADR-1 engine; the bootstrap comparator can assert against
+     * them. Earlier traces captured under the freeze-during-card workaround
+     * are not bootstrap-comparable.
+     */
+    private static final int BOOTSTRAP_MIN_MAJOR = 9;
+    private static final int BOOTSTRAP_MIN_MINOR = 2;
+
+    /**
      * Number of Level_MainLoop frames the ROM executed between OscillateNumInit
      * and the first trace frame. The engine must pre-advance OscillationManager
      * by this many updates to match the ROM's oscillation phase.
@@ -54,6 +65,36 @@ public record TraceMetadata(
      */
     public int preTraceOscillationFrames() {
         return preTraceOscFrames != null ? preTraceOscFrames : 0;
+    }
+
+    /**
+     * Whether this trace's frame-0 state is comparable against the
+     * post-universal-title-card engine (ADR-1, design spec 2026-05-15).
+     * Derived from {@link #luaScriptVersion}: true when the recorder version
+     * is at or above v9.2-s2. Older recordings captured frame-0 against the
+     * freeze-during-card engine workaround and are skipped by the bootstrap
+     * comparator.
+     */
+    public boolean nativePreludeMode() {
+        if (luaScriptVersion == null) {
+            return false;
+        }
+        int dot = luaScriptVersion.indexOf('.');
+        if (dot <= 0) {
+            return false;
+        }
+        int end = luaScriptVersion.indexOf('-', dot);
+        if (end < 0) {
+            end = luaScriptVersion.length();
+        }
+        try {
+            int major = Integer.parseInt(luaScriptVersion.substring(0, dot));
+            int minor = Integer.parseInt(luaScriptVersion.substring(dot + 1, end));
+            return major > BOOTSTRAP_MIN_MAJOR
+                    || (major == BOOTSTRAP_MIN_MAJOR && minor >= BOOTSTRAP_MIN_MINOR);
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /**

@@ -256,8 +256,9 @@ public class CluckerBadnikInstance extends AbstractBadnikInstance {
                 0, // y_vel = 0 (Obj98_CluckerShotMove uses ObjectMove, no gravity)
                 false,
                 !facingLeft);
+        projectile.deferFirstMovementForLoadSubObjectInit();
 
-        services().objectManager().addDynamicObject(projectile);
+        services().objectManager().addDynamicObjectAfterCurrent(projectile);
     }
 
     /**

@@ -19,6 +19,7 @@ import com.openggf.level.objects.TouchResponseDebugState;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.SharedLevel;
 import com.openggf.tests.TestEnvironment;
@@ -27,6 +28,7 @@ import com.openggf.tests.trace.s3k.S3kCheckpointProbe;
 import com.openggf.trace.DivergenceGroup;
 import com.openggf.trace.DivergenceReport;
 import com.openggf.trace.EngineDiagnostics;
+import com.openggf.trace.EngineSnapshot;
 import com.openggf.trace.EngineNearbyObject;
 import com.openggf.trace.EngineNearbyObjectFormatter;
 import com.openggf.trace.ToleranceConfig;
@@ -53,6 +55,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -63,8 +66,22 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>Originally used JUnit 4 because the ROM fixture was exposed as a JUnit 4 rule.
  */
 public abstract class AbstractTraceReplayTest {
+    private static final Logger LOGGER = Logger.getLogger(AbstractTraceReplayTest.class.getName());
+
     private static final boolean S3K_TRACE_PROBES =
             Boolean.getBoolean("openggf.trace.s3k.probes");
+
+    /**
+     * Diagnostic-only switch. When {@code true}, the replay loop snaps engine
+     * player-history rings, sidekick CPU state, and pre-trace SST snapshots to
+     * the recorded ROM values BEFORE the comparison loop starts. Runs with
+     * this flag set are NOT valid green replays — the writeback masks the
+     * very divergences the suite is designed to surface. See
+     * {@code TestTraceHydrateSwitchDefault} for the CI guard that pins this
+     * unset on master.
+     */
+    private static final boolean HYDRATE_PRE_TRACE =
+            Boolean.getBoolean("oggf.trace.hydrate");
 
     /** Which game ROM this test requires. */
     protected abstract SonicGame game();
@@ -157,8 +174,58 @@ public abstract class AbstractTraceReplayTest {
                 }
             }
 
+            // Diagnostic-only hydration switch (see HYDRATE_PRE_TRACE javadoc).
+            // Snaps engine state to recorded pre-trace snapshots so per-frame
+            // reports can be analysed from a known-good starting point. Runs
+            // with this enabled are explicitly NOT a green pass.
+            if (HYDRATE_PRE_TRACE && trace.metadata().nativePreludeMode()) {
+                LOGGER.warning("oggf.trace.hydrate enabled — engine state snapped "
+                        + "to recorded frame-0 snapshot. NOT a valid green run.");
+                TraceEvent.PlayerHistorySnapshot historySnapshot =
+                        trace.preTracePlayerHistorySnapshot();
+                if (historySnapshot != null) {
+                    TraceReplayBootstrap.applyPreTracePlayerHistory(
+                            historySnapshot, fixture.sprite());
+                }
+                String sidekickCode = meta.recordedSidekicks().isEmpty()
+                        ? null
+                        : meta.recordedSidekicks().getFirst();
+                if (sidekickCode != null) {
+                    TraceEvent.CpuStateSnapshot cpuSnapshot =
+                            trace.preTraceCpuStateSnapshot(sidekickCode);
+                    if (cpuSnapshot != null) {
+                        SpriteManager spriteManager = GameServices.sprites();
+                        if (spriteManager != null && !spriteManager.getSidekicks().isEmpty()) {
+                            SidekickCpuController cpu = spriteManager.getSidekicks()
+                                    .getFirst().getCpuController();
+                            if (cpu != null) {
+                                cpu.hydrateFromRomCpuState(
+                                        cpuSnapshot.cpuRoutine(),
+                                        cpuSnapshot.controlCounter(),
+                                        cpuSnapshot.respawnCounter(),
+                                        cpuSnapshot.interactId(),
+                                        cpuSnapshot.jumping(),
+                                        cpuSnapshot.targetX(),
+                                        cpuSnapshot.targetY());
+                            }
+                        }
+                    }
+                }
+                TraceReplayBootstrap.applyPreTraceState(trace, fixture);
+            }
+
             // 5. Run frame-by-frame comparison
             TraceBinder binder = new TraceBinder(tolerances());
+
+            // Frame-0 bootstrap comparison. Active only for traces recorded
+            // against the post-universal-title-card engine (TraceMetadata
+            // .nativePreludeMode() derived from lua_script_version >= 9.2-s2);
+            // a no-op return for legacy traces. Surfaces a BootstrapDivergence
+            // category in the final DivergenceReport for any mismatch between
+            // engine state at frame 0 and the recorded ROM frame-0 snapshot
+            // (player history ring, Tails CPU state, per-slot SST values).
+            EngineSnapshot frameZero = captureEngineSnapshot(fixture);
+            binder.compareBootstrapFrame0(trace, frameZero);
 
             if ("s3k".equals(meta.game())) {
                 replayS3kTrace(trace, meta, fixture, binder, replayStart);
@@ -250,6 +317,35 @@ public abstract class AbstractTraceReplayTest {
                 TestEnvironment.resetAll();
             }
         }
+    }
+
+    /**
+     * Capture a read-only snapshot of engine state at frame 0 for the
+     * bootstrap comparator. The comparator only activates for traces with
+     * {@code lua_script_version >= 9.2-s2} (see
+     * {@link TraceMetadata#nativePreludeMode()}); for legacy traces this
+     * snapshot is built but discarded. Captures whatever is readily
+     * available from the fixture; fields without an accessible source are
+     * left null/empty (the comparator emits WARNING entries for those).
+     */
+    private EngineSnapshot captureEngineSnapshot(HeadlessTestFixture fixture) {
+        AbstractPlayableSprite sprite = fixture != null ? fixture.sprite() : null;
+        short[] xHistory = sprite != null ? sprite.copyXHistory() : null;
+        short[] yHistory = sprite != null ? sprite.copyYHistory() : null;
+        short[] inputHistory = sprite != null ? sprite.copyInputHistory() : null;
+        byte[] statusHistory = sprite != null ? sprite.copyStatusHistory() : null;
+        int historyPos = sprite != null ? sprite.historyPos() : 0;
+
+        // SidekickCpuView and per-slot SST snapshots are left null/empty for
+        // now — they require additional accessors on SidekickCpuController
+        // (controlCounter/respawnCounter/cpuRoutine/interactId/jumping) and a
+        // per-slot SST extraction path on ObjectManager. The comparator emits
+        // WARNING entries for absent fields, which is the right behaviour
+        // until a native-prelude-mode trace (lua_script_version >= 9.2-s2)
+        // gives us something concrete to assert against. Plumbing scheduled
+        // for T10 when the first re-recorded trace surfaces real divergences.
+        return EngineSnapshot.capture(xHistory, yHistory, inputHistory, statusHistory,
+                historyPos, null, java.util.Map.of());
     }
 
     private void validateMetadata(TraceMetadata meta) {

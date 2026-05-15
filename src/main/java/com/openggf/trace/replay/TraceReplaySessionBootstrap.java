@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
@@ -231,6 +232,18 @@ public final class TraceReplaySessionBootstrap {
                 && gameplayMode != null
                 && gameplayMode.getSpriteManager() != null
                 && gameplayMode.getLevelManager() != null) {
+            // Establish ROM Obj01_Init's Pos_table pre-fill on the leader and
+            // place each sidekick at the Tails-spawn offset BEFORE the prelude
+            // begins ticking. Otherwise the first prelude leader-record write
+            // for slot 0 is overwritten when SidekickCpuController.updateInit
+            // re-runs the pre-fill from its own first tick.
+            for (AbstractPlayableSprite sidekick :
+                    gameplayMode.getSpriteManager().getRegisteredSidekicks()) {
+                SidekickCpuController cpu = sidekick.getCpuController();
+                if (cpu != null) {
+                    cpu.applyLevelStartSidekickPlacementForBootstrap();
+                }
+            }
             gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(
                     sidekickPreludeFrames,
                     gameplayMode.getLevelManager());
@@ -411,14 +424,11 @@ public final class TraceReplaySessionBootstrap {
 
         AbstractPlayableSprite player = fixture.sprite();
         TraceMetadata meta = trace.metadata();
-        // SCZ's first compared row is after ObjB2's pre-frame support check.
-        // Prime one pixel ahead so the native first-frame riding correction lands
-        // on the metadata start coordinate without copying the trace row.
-        short playerStartX = "scz".equals(meta.zone())
-                ? (short) ((meta.startX() & 0xFFFF) + 1)
-                : meta.startX();
+        short playerStartX = meta.startX();
         player.setCentreX(playerStartX);
         player.setCentreY(meta.startY());
+        Sonic2TornadoRidePrelude.Seed seed = Sonic2TornadoRidePrelude.forZone(meta.zone());
+        player.setSubpixelRaw(player.getXSubpixelRaw(), seed.playerYSubpixel());
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -428,7 +438,7 @@ public final class TraceReplaySessionBootstrap {
         player.setOnObject(true);
         player.setGroundMode(GroundMode.GROUND);
 
-        tornado.primeRideStart(meta.startX(), meta.startY());
+        tornado.primeRideStart(playerStartX, meta.startY(), seed.tornadoYSubpixel8());
         objectManager.forceRidingObjectForBootstrap(player, tornado);
         objectManager.refreshRidingTrackingPosition(tornado);
     }

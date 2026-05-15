@@ -62,19 +62,19 @@ class TestSidekickCpuControllerCarry {
 
     @Test
     void hydrateAccepts0x0CCarryInit() {
-        assertDoesNotThrow(() -> controller.hydrateFromRomCpuState(0x0C, 0, 0, 0, false));
+        assertDoesNotThrow(() -> controller.hydrateFromRomCpuState(0x0C, 0, 0, 0, false, 0, 0)); // TODO T7
         assertEquals(SidekickCpuController.State.CARRY_INIT, controller.getState());
     }
 
     @Test
     void hydrateAccepts0x0ECarrying() {
-        controller.hydrateFromRomCpuState(0x0E, 0, 0, 0, false);
+        controller.hydrateFromRomCpuState(0x0E, 0, 0, 0, false, 0, 0); // TODO T7
         assertEquals(SidekickCpuController.State.CARRYING, controller.getState());
     }
 
     @Test
     void hydrateAccepts0x20Carrying() {
-        controller.hydrateFromRomCpuState(0x20, 0, 0, 0, false);
+        controller.hydrateFromRomCpuState(0x20, 0, 0, 0, false, 0, 0); // TODO T7
         assertEquals(SidekickCpuController.State.CARRYING, controller.getState());
     }
 

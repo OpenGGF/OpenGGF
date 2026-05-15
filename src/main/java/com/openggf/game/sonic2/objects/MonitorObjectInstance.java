@@ -66,6 +66,17 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     private boolean mainCharacterPushing;
     private boolean sidekickStanding;
     private boolean sidekickPushing;
+    private String lastTouchBranch = "none";
+    private int lastTouchYSpeed;
+    private int lastTouchPlayerY;
+    private int lastTouchMonitorY;
+    private int lastTouchAnimation;
+    private int lastTouchMoveLock;
+    private int lastTouchForcedAnimation;
+    private boolean lastTouchObjectControlled;
+    private boolean lastTouchRolling;
+    private String lastTouchAnimationProfile = "none";
+    private int lastTouchAnimationScriptCount;
 
     public MonitorObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -158,6 +169,21 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         if (broken || player == null) {
             return;
         }
+        lastTouchBranch = "enter";
+        lastTouchYSpeed = player.getYSpeed();
+        lastTouchPlayerY = player.getCentreY();
+        lastTouchMonitorY = currentY;
+        lastTouchAnimation = player.getAnimationId();
+        lastTouchMoveLock = player.getMoveLockTimer();
+        lastTouchForcedAnimation = player.getForcedAnimationId();
+        lastTouchObjectControlled = player.isObjectControlled();
+        lastTouchRolling = player.getRolling();
+        lastTouchAnimationProfile = player.getAnimationProfile() == null
+                ? "none"
+                : player.getAnimationProfile().getClass().getSimpleName();
+        lastTouchAnimationScriptCount = player.getAnimationSet() == null
+                ? -1
+                : player.getAnimationSet().getScriptCount();
 
         // Hitting from below (Moving Up)
         // ROM reference: Touch_Monitor (s2.asm lines 84742-84763)
@@ -169,6 +195,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             // ROM check: move.w y_pos(a0),d0; subi.w #$10,d0; cmp.w y_pos(a1),d0; blo.s return
             // If player center - 16 >= monitor Y, then player is hitting from below
             if (playerCenterY - 0x10 >= monitorY) {
+                lastTouchBranch = "below";
                 LOGGER.fine(() -> "Monitor hit from below: player at (" + player.getX() + "," + player.getY() +
                     ") ySpeed=" + player.getYSpeed() + " monitor at (" + spawn.x() + "," + currentY + ")");
 
@@ -180,6 +207,8 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                     falling = true;
                     yVel = FALLING_INITIAL_VEL;  // -0x180 upward
                 }
+            } else {
+                lastTouchBranch = "below-side-return";
             }
             return;
         }
@@ -189,10 +218,12 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         // broader rolling status bit. The animation transition lags status changes
         // by a frame in some cases, which affects monitor break timing.
         if (player.getAnimationId() != Sonic2AnimationIds.ROLL.id()) {
+            lastTouchBranch = "not-roll-return";
             return;
         }
 
         // Break Monitor and Bounce Player Up
+        lastTouchBranch = "break";
         broken = true;
 
         boolean touchingMonitorAsSolid = wasTouchingMonitor(player);
@@ -224,6 +255,24 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                     new ExplosionObjectInstance(0x27, spawn.x(), spawn.y(), renderManager));
         }
         services().playSfx(Sonic2Sfx.EXPLOSION.id);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("touch=%s ys=%04X py=%04X my=%04X anim=%02X roll=%d ml=%02X forced=%02X objctl=%d prof=%s scripts=%d broken=%d fall=%d",
+                lastTouchBranch,
+                lastTouchYSpeed & 0xFFFF,
+                lastTouchPlayerY & 0xFFFF,
+                lastTouchMonitorY & 0xFFFF,
+                lastTouchAnimation & 0xFF,
+                lastTouchRolling ? 1 : 0,
+                lastTouchMoveLock & 0xFF,
+                lastTouchForcedAnimation & 0xFF,
+                lastTouchObjectControlled ? 1 : 0,
+                lastTouchAnimationProfile,
+                lastTouchAnimationScriptCount,
+                broken ? 1 : 0,
+                falling ? 1 : 0);
     }
 
     @Override

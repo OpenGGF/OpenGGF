@@ -376,7 +376,7 @@ public class GroundSensor extends Sensor {
         }
 
         // No collision found - return empty result with max distance
-        byte distance = calculateVerticalDistance((byte) 0, y, nextY, direction);
+        byte distance = calculateExtensionDefaultDistance(y);
         return reusableResult.set(FLAGGED_ANGLE, distance, 0, direction);
     }
 
@@ -550,6 +550,17 @@ public class GroundSensor extends Sensor {
         } else {
             return (byte) (origY - (checkBase + metric));
         }
+    }
+
+    private byte calculateExtensionDefaultDistance(short origY) {
+        // ROM FindFloor first-pass miss:
+        //   add.w a3,d2
+        //   bsr.w FindFloor2
+        //   sub.w a3,d2
+        //   addi.w #$10,d1
+        // FindFloor2's default path is 15 - (d2 & $F). Since +/-16 preserves
+        // the low nibble, the combined no-collision distance is 31 - yInTile.
+        return (byte) (0x1F - (origY & 0x0F));
     }
 
     // ========================================

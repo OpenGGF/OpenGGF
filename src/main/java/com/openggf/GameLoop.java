@@ -646,29 +646,46 @@ public class GameLoop {
                 exitTitleCard();
                 // Continue to LEVEL mode processing this frame (fall through)
             } else {
-                // Still in locked phase.
-                // Run player physics only if the title card provider allows it.
-                // S2: runs physics so Sonic settles onto ground / Tornado (SCZ).
-                // S1/S3K: ROM title card path is blocking for player movement; Sonic
-                // stays frozen until control is released (important for airborne
-                // starts like SBZ3, HCZ1, and LRZ1).
+                // Still in locked phase. The work performed differs by game,
+                // matching the ROM title-card wait loops:
+                //
+                //   S1  Level_TtlCardLoop (sonic.asm:2766-2794) -> ExecuteObjects
+                //                                                  + BuildSprites + RunPLC
+                //                                                  (NO camera, NO level events)
+                //   S2  Level_TtlCard     (s2.asm:4914-4924)    -> RunObjects + BuildSprites
+                //                                                  + RunPLC_RAM (camera ticks
+                //                                                  via VInt routine)
+                //   S3K title-card wait   (sonic3k.asm:7737-7748) -> Process_Sprites
+                //                                                  + Render_Sprites
+                //                                                  (NO camera, NO level events)
+                //
+                // The {@link TitleCardProvider#shouldRunPlayerPhysics()} gate
+                // selects per-game behaviour:
+                //   - S2 ROM advances player object slots through RunObjects
+                //     during Level_TtlCard so Sonic settles onto the Tornado
+                //     in SCZ. Use the full LevelFrameStep canonical order
+                //     (objects + camera + dynamic events + parallax + water).
+                //   - S1/S3K ROMs run a minimal wait loop that ticks objects
+                //     only — no camera update, no level events, no scroll.
+                //     Use the legacy minimal pre-orchestration path so the
+                //     S3K AIZ trace and S1 Level_TtlCardLoop parity hold.
+                beginGameplayAudioFrameForTick();
                 if (tcpCard.shouldRunPlayerPhysics()) {
-                    spriteManager.updateWithoutInput();
-                    if (levelManager.objectsExecuteAfterPlayerPhysics()) {
-                        levelManager.updateObjectPositionsPostPhysicsWithoutTouches();
-                    } else {
-                        levelManager.updateObjectPositions();
-                    }
+                    // S2: full title-card frame step.
+                    LevelFrameStep.execute(levelManager, camera, () -> spriteManager.update(inputHandler),
+                            (name, step) -> {
+                                profiler.beginSection(name);
+                                step.run();
+                                profiler.endSection(name);
+                            });
                 } else {
-                    // Keep objects updated during title card lock even when the player
-                    // is frozen. SCZ depends on ObjB2 (Tornado) solid updates during
-                    // this phase so Sonic lands on the plane instead of free-falling.
+                    // S1/S3K: ROM TitleCard_Main / Level_TtlCardLoop runs
+                    // ExecuteObjects only -- no camera tick, no level-event
+                    // routines, no scroll update.
                     levelManager.updateObjectPositions();
+                    camera.updatePosition(true);
                 }
-                // Force camera to snap to player position during title card (no smooth
-                // scrolling)
-                camera.updatePosition(true);
-                updateNonGameplayAudio(doFrameStep);
+                advanceGameplayAudioFrameForTick(doFrameStep);
                 profiler.endSection("input");
                 return; // Don't process LEVEL mode logic yet
             }
@@ -1548,6 +1565,7 @@ public class GameLoop {
         GameMode oldMode = currentGameMode;
         postTitleCardDestination = PostTitleCardDestination.BONUS_STAGE;
         currentGameMode = GameMode.TITLE_CARD;
+        applyTitleCardControlLock(true);
 
         // Cancel the FadeManager overlay — the bonus title card manages its own
         // per-channel background fade (matching ROM Pal_FadeFromBlack). The FadeManager
@@ -1788,6 +1806,7 @@ public class GameLoop {
         GameMode oldMode = currentGameMode;
         postTitleCardDestination = PostTitleCardDestination.LEVEL;
         currentGameMode = GameMode.TITLE_CARD;
+        applyTitleCardControlLock(true);
 
         // Play zone music (ROM: Restore_LevelMusic during title card wait)
         int zoneMusicId = levelManager.getCurrentLevelMusicId();
@@ -2141,6 +2160,7 @@ public class GameLoop {
                 }
             }
         }
+        applyTitleCardControlLock(true);
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
@@ -2191,6 +2211,7 @@ public class GameLoop {
             playable.setInvulnerableFrames(0);
             playable.setRolling(false);
         }
+        applyTitleCardControlLock(true);
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
@@ -2222,6 +2243,37 @@ public class GameLoop {
     }
 
     /**
+     * Applies (or releases) the control lock on all playable sprites for the
+     * duration of the title card.
+     *
+     * <p>ROM parity:
+     * <ul>
+     *   <li>S1 sets {@code Control_Locked} during the title-card setup so
+     *       Sonic_ControlsLock skips input parsing.</li>
+     *   <li>S2 sets {@code Control_Locked}/{@code Control_Locked_P2} at
+     *       s2.asm:4950-4951 immediately after the {@code Level_TtlCard}
+     *       wait loop, before the player is allowed to move.</li>
+     *   <li>S3K sets {@code Ctrl_1_locked}/{@code Ctrl_2_locked} at
+     *       sonic3k.asm:7774-7775 immediately after the title-card wait
+     *       loop, clearing them when the level proper starts.</li>
+     * </ul>
+     *
+     * <p>Both the main player and any CPU sidekicks are toggled so the
+     * canonical {@code LevelFrameStep} sprite update path reads no input
+     * while the title card is on screen.
+     */
+    private void applyTitleCardControlLock(boolean locked) {
+        if (spriteManager == null) {
+            return;
+        }
+        for (var sprite : spriteManager.getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.setControlLocked(locked);
+            }
+        }
+    }
+
+    /**
      * Exits the title card and returns to level mode.
      * Note: We do NOT reset the title card manager here because the overlay
      * (TEXT_WAIT and TEXT_EXIT phases) still needs to run. The title card
@@ -2234,6 +2286,7 @@ public class GameLoop {
         }
 
         GameMode oldMode = currentGameMode;
+        applyTitleCardControlLock(false);
 
         if (postTitleCardDestination == PostTitleCardDestination.BONUS_STAGE) {
             // Transitioning to bonus stage after "BONUS STAGE" title card

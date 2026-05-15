@@ -47,6 +47,7 @@ import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.managers.SpindashDustController;
@@ -3433,11 +3434,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
-         * Test helper for setting ROM-style follower history buffers directly.
-         * Trace replay must not call this; recorded history snapshots are
-         * comparison-only diagnostics, not engine input.
+         * Diagnostic-only writeback for ROM-style follower history buffers.
+         *
+         * <p><strong>Trace replay must not call this on a normal green run.</strong>
+         * Recorded history snapshots are comparison-only diagnostics. This
+         * accessor exists to support the {@code oggf.trace.hydrate} debug
+         * switch (see {@code TraceReplayBootstrap#applyPreTracePlayerHistory})
+         * which deliberately snaps the engine to recorded frame-0 state for
+         * root-causing per-frame divergence reports; runs that toggle the
+         * switch are NOT valid green replays.
          */
-        void hydrateRecordedHistory(short[] xHistory, short[] yHistory,
+        public void hydrateRecordedHistory(short[] xHistory, short[] yHistory,
                                     short[] inputHistory, byte[] statusHistory,
                                     int historyPos) {
                 if (xHistory == null || yHistory == null || inputHistory == null || statusHistory == null) {
@@ -3458,6 +3465,31 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 System.arraycopy(statusHistory, 0, this.statusHistory, 0, this.statusHistory.length);
                 this.historyPos = (byte) historyPos;
+        }
+
+        /**
+         * Read-only snapshot of the ROM-style follower history rings, for the
+         * trace replay bootstrap comparator (frame-0 assertion). Returns
+         * defensive copies so the caller cannot mutate engine state.
+         */
+        public short[] copyXHistory() {
+                return xHistory.clone();
+        }
+
+        public short[] copyYHistory() {
+                return yHistory.clone();
+        }
+
+        public short[] copyInputHistory() {
+                return inputHistory.clone();
+        }
+
+        public byte[] copyStatusHistory() {
+                return statusHistory.clone();
+        }
+
+        public int historyPos() {
+                return historyPos & 0xFF;
         }
 
         public boolean isCpuControlled() {
@@ -3521,6 +3553,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public void setRolling(boolean rolling) {
                 if (this.rolling == rolling) {
+                        if (rolling) {
+                                applyRollAnimationFromProfile();
+                        }
                         return;
                 }
 
@@ -3541,6 +3576,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 this.rolling = rolling;
+                if (rolling) {
+                        applyRollAnimationFromProfile();
+                }
+        }
+
+        private void applyRollAnimationFromProfile() {
+                if (animationProfile instanceof ScriptedVelocityAnimationProfile profile) {
+                        setAnimationId(profile.getRollAnimId());
+                }
         }
 
         /**
@@ -3845,6 +3889,55 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         jumpPressHistory[i] = 0;
                         statusHistory[i] = 0;
                 }
+                followerHistoryRecordedThisTick = false;
+        }
+
+        /**
+         * Pre-fills the position history ring with the leader's centre offset
+         * by the given delta, mirroring ROM Obj01_Init's
+         * {@code subi.w #$20,x_pos / addi_.w #4,y_pos / Sonic_RecordPos x 64 /
+         * addi.w #$20,x_pos / subi_.w #4,y_pos} sequence (s2.asm:35907-35918,
+         * sonic3k.asm:21936-21940). That sequence seeds Sonic_Pos_Record_Buf
+         * with Tails' spawn-offset position so the first ~16 frames of
+         * Tails_CPU_Normal read targetX = Tails_x (no acceleration) before
+         * the live Sonic_RecordPos writes the actual Sonic centre into the
+         * ring.
+         *
+         * <p>Used by the sidekick CPU bootstrap to recreate the same pre-fill
+         * profile when entering the title-card prelude. Input/jump/status
+         * history are left unchanged (ROM Init does not touch Stat_Record_Buf).
+         *
+         * <p>Also resets {@code historyPos} so the next
+         * {@link #recordFollowerHistoryForTick()} call writes to slot 0 — ROM
+         * {@code Sonic_Pos_Record_Index} is reset to 0 just before the 64-entry
+         * fill loop (s2.asm:35909), and the post-fill {@code addq.b #4,...}
+         * wraparound leaves it back at 0 so the first live Sonic_RecordPos
+         * write goes to slot 0.
+         */
+        public void prefillPositionHistoryWithOffset(int xOffset, int yOffset) {
+                short prefillX = (short) (getCentreX() + xOffset);
+                short prefillY = (short) (getCentreY() + yOffset);
+                for (int i = 0; i < xHistory.length; i++) {
+                        xHistory[i] = prefillX;
+                        yHistory[i] = prefillY;
+                }
+                // Engine's recordFollowerHistoryForTick() increments-then-writes,
+                // so set historyPos to 63 (one slot before slot 0) so the next
+                // record call writes to slot 0 matching ROM's first live write.
+                historyPos = 63;
+                followerHistoryRecordedThisTick = false;
+        }
+
+        /**
+         * Clears the per-tick gate that prevents
+         * {@link #recordFollowerHistoryForTick()} from running twice in the
+         * same playable tick. Normal frames call this from
+         * {@link #endOfTick()}; bootstrap paths that record follower history
+         * outside the standard playable tick (e.g. the title-card prelude
+         * which only ticks sidekicks but still needs Sonic_RecordPos parity)
+         * call it explicitly so the next prelude frame can record again.
+         */
+        public void clearFollowerHistoryRecordedFlag() {
                 followerHistoryRecordedThisTick = false;
         }
 

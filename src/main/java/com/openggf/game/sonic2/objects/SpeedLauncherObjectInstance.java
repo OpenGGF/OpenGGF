@@ -6,6 +6,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -15,7 +16,10 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * WFZ Speed Launcher (Object 0xC0) - catapult platform from Wing Fortress Zone.
@@ -108,6 +112,8 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     private int state;
     // Sub-pixel X accumulator for ObjectMove
     private int subPixelX;
+    private final Set<PlayableEntity> standingPlayers =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     private final SolidObjectParams solidParams;
 
@@ -178,7 +184,53 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
      * system. This state just checks if the platform is being stood on via onSolidContact.
      */
     private void updateIdle(AbstractPlayableSprite player) {
-        // Standing detection is handled by onSolidContact callback
+        AbstractPlayableSprite rider = firstStandingPlayer(player);
+        if (rider != null) {
+            onStandingIdle(rider);
+            standingPlayers.clear();
+        }
+    }
+
+    private AbstractPlayableSprite firstStandingPlayer(AbstractPlayableSprite player) {
+        if (player != null && standingPlayers.contains(player)) {
+            return player;
+        }
+
+        for (PlayableEntity sidekick : services().sidekicks()) {
+            if (standingPlayers.contains(sidekick)) {
+                return (AbstractPlayableSprite) sidekick;
+            }
+        }
+
+        return null;
+    }
+
+    private void forEachStandingPlayer(AbstractPlayableSprite main, java.util.function.Consumer<AbstractPlayableSprite> action) {
+        if (main != null && standingPlayers.contains(main)) {
+            action.accept(main);
+        }
+
+        for (PlayableEntity sidekick : services().sidekicks()) {
+            if (standingPlayers.contains(sidekick)) {
+                action.accept((AbstractPlayableSprite) sidekick);
+            }
+        }
+    }
+
+    private boolean wasStandingAtStateEntry(AbstractPlayableSprite player) {
+        return player != null && standingPlayers.contains(player);
+    }
+
+    private void clearIfNoLongerStanding(AbstractPlayableSprite player) {
+        if (player != null && !player.isOnObject()) {
+            standingPlayers.remove(player);
+        }
+
+        for (PlayableEntity sidekick : services().sidekicks()) {
+            if (!sidekick.isOnObject()) {
+                standingPlayers.remove(sidekick);
+            }
+        }
     }
 
     /**
@@ -226,19 +278,9 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         currentX = destX;
         subPixelX = destX << 8;
 
-        if (player == null) {
-            return;
-        }
-
         // ROM: Check standing_mask and launch each standing player
-        // The SolidContacts system tracks who is standing on us, but we need to
-        // launch them here. We check proximity since the solid system has already
-        // moved players to our surface.
-        launchPlayerIfStanding(player);
-
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            launchPlayerIfStanding((AbstractPlayableSprite) sidekick);
-        }
+        forEachStandingPlayer(player, this::launchPlayerIfStanding);
+        standingPlayers.clear();
     }
 
     /**
@@ -246,14 +288,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
      * ROM: loc_3C020 (s2.asm lines 80329-80333)
      */
     private void launchPlayerIfStanding(AbstractPlayableSprite player) {
-        // Check if this player is riding this object (standing on it)
-        if (!player.isOnObject()) {
-            return;
-        }
-        // Additional proximity check to confirm they're on THIS platform
-        int dx = Math.abs(player.getCentreX() - currentX);
-        int dy = player.getCentreY() - spawn.y();
-        if (dx > PLATFORM_HALF_WIDTH + 4 || dy < -(PLATFORM_HALF_HEIGHT_GROUND + 20) || dy > 4) {
+        if (!wasStandingAtStateEntry(player)) {
             return;
         }
 
@@ -273,12 +308,10 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
      * and sets player facing direction opposite to platform movement.
      */
     private void syncStandingPlayers(AbstractPlayableSprite player) {
-        if (player == null) {
-            return;
-        }
         // The SolidContacts system handles keeping the player on the platform surface.
         // The ROM explicitly syncs player X to platform X and clears their velocity.
-        // We handle this via onSolidContact during the accelerating state.
+        forEachStandingPlayer(player, this::syncPlayer);
+        clearIfNoLongerStanding(player);
     }
 
     /**
@@ -362,9 +395,13 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         }
 
         switch (state) {
-            case STATE_IDLE -> onStandingIdle(player);
-            case STATE_ACCELERATING -> onStandingAccelerating(player);
+            case STATE_IDLE, STATE_ACCELERATING -> standingPlayers.add(player);
         }
+    }
+
+    @Override
+    public void onSolidContactCleared(PlayableEntity player, int frameCounter) {
+        standingPlayers.remove(player);
     }
 
     /**
@@ -419,7 +456,11 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) 0);
 
         // ROM: move.w x_pos(a0),x_pos(a1)
-        player.setCentreX((short) currentX);
+        player.setCentreXPreserveSubpixel((short) currentX);
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager != null) {
+            objectManager.refreshRidingTrackingPosition(this);
+        }
 
         // ROM: Set player facing direction
         // bclr #status.player.x_flip,status(a1) - clear flip

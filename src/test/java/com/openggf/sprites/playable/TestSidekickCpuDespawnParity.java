@@ -249,7 +249,7 @@ class TestSidekickCpuDespawnParity {
         tails.setRenderFlagOnScreen(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 0, 0x4E, false);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x4E, false, 0, 0); // TODO T7
         tails.setLatchedSolidObject(0x4E, new DestroyedRideObject(0x4E));
         tails.setOnObject(true);
         tails.setRenderFlagOnScreen(false);
@@ -278,7 +278,7 @@ class TestSidekickCpuDespawnParity {
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 90, 0x01, false);
+        controller.hydrateFromRomCpuState(6, 0, 90, 0x01, false, 0, 0); // TODO T7
         tails.setLatchedSolidObjectId(0x11);
         tails.setOnObject(true);
         tails.setRenderFlagOnScreen(false);
@@ -306,7 +306,7 @@ class TestSidekickCpuDespawnParity {
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false);
+        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false, 0, 0); // TODO T7
         tails.setRenderFlagOnScreen(true);
 
         controller.update(3532);
@@ -329,7 +329,7 @@ class TestSidekickCpuDespawnParity {
         tails.setRenderFlagOnScreen(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 299, 0, false);
+        controller.hydrateFromRomCpuState(6, 0, 299, 0, false, 0, 0); // TODO T7
         tails.setHurt(true);
         tails.setRenderFlagOnScreen(false);
 
@@ -358,7 +358,7 @@ class TestSidekickCpuDespawnParity {
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false);
+        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false, 0, 0); // TODO T7
 
         tails.setRenderFlagOnScreen(true);
         controller.update(1);

@@ -371,6 +371,7 @@ public class CollisionSystem {
         SensorResult rightSensor = groundResult[1];
 
         SensorResult selectedResult = selectSensorWithAngle(sprite, rightSensor, leftSensor);
+        traceS2WfzGroundAttachmentProbe(sprite, "after-select", selectedResult, leftSensor, rightSensor, positiveThreshold);
         // Refresh ground mode after the angle has been updated by selectSensorWithAngle.
         // The initial updateGroundMode (line 292) uses the PREVIOUS frame's end-angle for
         // sensor configuration. This second call uses the NEW angle from terrain probes,
@@ -378,6 +379,7 @@ public class CollisionSystem {
         updateGroundMode(sprite);
 
         if (selectedResult == null) {
+            traceS2WfzGroundAttachmentProbe(sprite, "air-null", null, leftSensor, rightSensor, positiveThreshold);
             if (sprite.isStickToConvex()) {
                 return;
             }
@@ -413,6 +415,7 @@ public class CollisionSystem {
         }
 
         if (distance > positiveThreshold) {
+            traceS2WfzGroundAttachmentProbe(sprite, "air-threshold", selectedResult, leftSensor, rightSensor, positiveThreshold);
             if (sprite.isStickToConvex()) {
                 moveForSensorResult(sprite, selectedResult);
                 return;
@@ -423,6 +426,92 @@ public class CollisionSystem {
         }
 
         moveForSensorResult(sprite, selectedResult);
+    }
+
+    private void traceS2WfzGroundAttachmentProbe(AbstractPlayableSprite sprite,
+                                                String stage,
+                                                SensorResult selected,
+                                                SensorResult leftSensor,
+                                                SensorResult rightSensor,
+                                                int positiveThreshold) {
+        if (!Boolean.getBoolean("s2.wfz.collisionprobe")) {
+            return;
+        }
+        if (sprite.isCpuControlled()) {
+            return;
+        }
+        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.level();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return;
+        }
+        int frameCounter = levelManager.getObjectManager().getFrameCounter();
+        int centreX = sprite.getCentreX() & 0xFFFF;
+        int centreY = sprite.getCentreY() & 0xFFFF;
+        boolean inWfz4626Window = centreX >= 0x0D90 && centreX <= 0x0DF0
+                && centreY >= 0x03C0 && centreY <= 0x0400;
+        boolean inWfz7065Window = centreX >= 0x1AD0 && centreX <= 0x1B20
+                && centreY >= 0x0490 && centreY <= 0x04C0;
+        if (!inWfz4626Window && !inWfz7065Window) {
+            return;
+        }
+        int xRadius = sprite.getXRadius();
+        int yRadius = sprite.getYRadius();
+        System.out.printf(
+                "s2-wfz-groundprobe frame=%d stage=%s pos=(%04X,%04X) sub=(%04X,%04X) " +
+                        "spd=(xs=%04X ys=%04X gs=%04X) air=%d ang=%02X gm=%s thresh=%d foot=(L=%04X,R=%04X,Y=%04X) " +
+                        "left=%s right=%s selected=%s tileL=%s tileR=%s tileLext=%s tileRext=%s path1R=%s%n",
+                frameCounter, stage, centreX, centreY,
+                sprite.getXSubpixelRaw() & 0xFFFF, sprite.getYSubpixelRaw() & 0xFFFF,
+                sprite.getXSpeed() & 0xFFFF, sprite.getYSpeed() & 0xFFFF, sprite.getGSpeed() & 0xFFFF,
+                sprite.getAir() ? 1 : 0, sprite.getAngle() & 0xFF, sprite.getGroundMode(), positiveThreshold,
+                (centreX - xRadius) & 0xFFFF, (centreX + xRadius) & 0xFFFF, (centreY + yRadius) & 0xFFFF,
+                formatProbeResult(leftSensor), formatProbeResult(rightSensor), formatProbeResult(selected),
+                formatS2WfzTerrainAt(sprite, centreX - xRadius, centreY + yRadius),
+                formatS2WfzTerrainAt(sprite, centreX + xRadius, centreY + yRadius),
+                formatS2WfzTerrainAt(sprite, centreX - xRadius, centreY + yRadius + 16),
+                formatS2WfzTerrainAt(sprite, centreX + xRadius, centreY + yRadius + 16),
+                formatS2WfzTerrainAt(sprite, centreX + xRadius, centreY + yRadius, 0x0E));
+    }
+
+    private String formatProbeResult(SensorResult result) {
+        if (result == null) {
+            return "<null>";
+        }
+        return String.format("{dir=%s dist=%d angle=%02X tile=%d}",
+                result.direction(), result.distance(), result.angle() & 0xFF, result.tileId());
+    }
+
+    private String formatS2WfzTerrainAt(AbstractPlayableSprite sprite, int x, int y) {
+        return formatS2WfzTerrainAt(sprite, x, y, sprite.getTopSolidBit());
+    }
+
+    private String formatS2WfzTerrainAt(AbstractPlayableSprite sprite, int x, int y, int topSolidBit) {
+        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.level();
+        if (levelManager == null) {
+            return "<no-lm>";
+        }
+        com.openggf.level.ChunkDesc desc = levelManager.getChunkDescAt((byte) 0, (short) x, (short) y, sprite.isLoopLowPlane());
+        if (desc == null) {
+            return "<no-desc>";
+        }
+        com.openggf.level.SolidTile tile = levelManager.getSolidTileForChunkDesc(desc, topSolidBit);
+        int collisionIndex = -1;
+        byte metric = 0;
+        byte angle = 0;
+        if (tile != null) {
+            collisionIndex = tile.getIndex();
+            int idx = desc.getHFlip() ? 15 - (x & 0x0F) : (x & 0x0F);
+            metric = tile.getHeightAt((byte) idx);
+            if (metric != 0 && metric != 16 && desc.getVFlip()) {
+                metric = (byte) -metric;
+            }
+            angle = tile.getAngle(desc.getHFlip(), desc.getVFlip());
+        }
+        return String.format("{desc=%04X chunk=%03X topBit=%d topSet=%b pri=%s sec=%s hf=%b vf=%b col=%d metric=%d angle=%02X}",
+                desc.get() & 0xFFFF, desc.getChunkIndex() & 0x3FF, topSolidBit,
+                desc.isSolidityBitSet(topSolidBit),
+                desc.getPrimaryCollisionMode(), desc.getSecondaryCollisionMode(),
+                desc.getHFlip(), desc.getVFlip(), collisionIndex, metric, angle & 0xFF);
     }
 
     private boolean hasPendingStaleObjectSupportLoss(AbstractPlayableSprite sprite) {
@@ -607,7 +696,10 @@ public class CollisionSystem {
                                            SensorResult[] groundResult,
                                            SensorResult[] ceilingResult,
                                            boolean collisionResolved) {
-        if (!Boolean.getBoolean("s3k.cnz.collisionprobe") && !Boolean.getBoolean("cnz.collisionprobe")) {
+        boolean s2WfzProbe = Boolean.getBoolean("s2.wfz.collisionprobe");
+        if (!Boolean.getBoolean("s3k.cnz.collisionprobe")
+                && !Boolean.getBoolean("cnz.collisionprobe")
+                && !s2WfzProbe) {
             return;
         }
         com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.level();
@@ -617,7 +709,12 @@ public class CollisionSystem {
         int frameCounter = levelManager.getObjectManager().getFrameCounter();
         int centreX = sprite.getCentreX() & 0xFFFF;
         int centreY = sprite.getCentreY() & 0xFFFF;
-        if (centreX < 0x1200 || centreX > 0x1300 || centreY < 0x0680 || centreY > 0x0780) {
+        boolean inS3kCnzWindow = centreX >= 0x1200 && centreX <= 0x1300
+                && centreY >= 0x0680 && centreY <= 0x0780;
+        boolean inS2WfzWindow = s2WfzProbe
+                && centreX >= 0x0A80 && centreX <= 0x0C00
+                && centreY >= 0x0440 && centreY <= 0x0560;
+        if (!inS3kCnzWindow && !inS2WfzWindow) {
             return;
         }
         int xRadius = sprite.getXRadius();
@@ -628,12 +725,13 @@ public class CollisionSystem {
         int xSub = sprite.getXSubpixelRaw() & 0xFFFF;
         int ySub = sprite.getYSubpixelRaw() & 0xFFFF;
         String who = sprite.isCpuControlled() ? "tails" : "sonic";
+        String label = inS2WfzWindow ? "s2-wfz-probe" : "s3k-cnz-probe";
         System.out.printf(
-                "s3k-cnz-probe frame=%d who=%s stage=%s quad=%02X pos=(%04X,%04X) sub=(%04X,%04X) " +
+                "%s frame=%d who=%s stage=%s quad=%02X pos=(%04X,%04X) sub=(%04X,%04X) " +
                 "spd=(xs=%04X ys=%04X gs=%04X) air=%d ang=%02X gm=%s rolling=%b objCtrl=%b latchSolid=%d " +
                 "topBit=%d lrbBit=%d xRad=%d yRad=%d foot=(L=%04X,R=%04X,Y=%04X) " +
                 "ground=[%s] ceiling=[%s] resolved=%s%n",
-                frameCounter, who, stage, quadrant & 0xFF,
+                label, frameCounter, who, stage, quadrant & 0xFF,
                 centreX, centreY, xSub, ySub,
                 sprite.getXSpeed() & 0xFFFF, sprite.getYSpeed() & 0xFFFF, sprite.getGSpeed() & 0xFFFF,
                 sprite.getAir() ? 1 : 0, sprite.getAngle() & 0xFF,

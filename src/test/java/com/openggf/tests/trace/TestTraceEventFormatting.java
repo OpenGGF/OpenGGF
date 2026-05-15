@@ -98,6 +98,32 @@ public class TestTraceEventFormatting {
     }
 
     @Test
+    void summarisesStateSnapshotCollisionPlaneDiagnostics() {
+        TraceEvent event = TraceEvent.parseJsonLine(
+                """
+                {"frame":7065,"vfc":7090,"event":"state_snapshot","character":"sonic","status_byte":"0x03","routine":"0x02","top_solid_bit":"0x0E","lrb_solid_bit":"0x0F","raw_input":"0x04","on_object":false,"pushing":false}
+                """.trim(),
+                mapper);
+
+        assertTrue(event instanceof TraceEvent.StateSnapshot);
+        assertEquals("sonic state st=0x03 rtn=0x02 top=0x0E lrb=0x0F onObj=false push=false input=0x04",
+                TraceEventFormatter.summariseFrameEvents(List.of(event)));
+    }
+
+    @Test
+    void summarisesS2TornadoStateDiagnostics() {
+        TraceEvent event = TraceEvent.parseJsonLine(
+                """
+                {"frame":911,"vfc":912,"event":"s2_tornado_state","slot":16,"x":"0x04B6","y":"0x008F","y_sub":"0xC000","y_vel":"0x0000","routine":"0x02","routine_secondary":"0x00","status_byte":"0x08","objoff_2e":"0x08","objoff_2f":"0x00","objoff_30":"0x00","objoff_31":"0xFF"}
+                """.trim(),
+                mapper);
+
+        assertTrue(event instanceof TraceEvent.StateSnapshot);
+        assertEquals("s2Tornado s16 @0x04B6,0x008F sub=0xC000 yv=0x0000 rtn=0x02/0x00 st=0x08 2e=0x08 2f=0x00 30=0x00 31=0xFF",
+                TraceEventFormatter.summariseFrameEvents(List.of(event)));
+    }
+
+    @Test
     void parsesCheckpointAndZoneActStateIntoCompactSummary() {
         TraceEvent checkpoint = TraceEvent.parseJsonLine(
                 """
