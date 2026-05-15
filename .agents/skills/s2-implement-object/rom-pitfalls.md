@@ -375,6 +375,83 @@ as victim).
 
 ---
 
+## P12 -- Angle-based player detection ported as simplified bounding-box + facing guard
+
+**Symptom.** A patrolling badnik that should attack the player when in
+horizontal range either never attacks (player always on "wrong" facing
+side), attacks at completely wrong frames, or its position drifts from
+the ROM trace's position by tens of pixels over the trace lifetime
+because it skips ROM attacks. Trace shows ROM badnik moving with periodic
+stationary attack pauses; engine badnik continuously oscillates with no
+pauses.
+
+**Root cause.** ROM uses `Obj_GetOrientationToPlayer`
+(`docs/s2disasm/s2.asm:72320-72346`) which picks the *closest* player
+(MainCharacter vs Sidekick) by absolute horizontal x distance, then
+returns `d2 = obj.x - closest_player.x` (signed word). The badnik's
+attack-trigger condition is typically:
+
+```
+addi.w #$60, d2          ; d2 += 0x60 (offset)
+cmpi.w #$C0, d2          ; compare against 0xC0
+blo.s <attack>           ; branch if (d2 + 0x60) < 0xC0 unsigned
+```
+
+This is the canonical "is player within roughly +/-96px horizontally"
+test. **There is no Y-axis check and no facing-direction guard.** The
+test is symmetric around the badnik's x_pos.
+
+A naive engine port replaces this with `Math.abs(player.x - obj.x) <=
+DETECT_X_RANGE && Math.abs(player.y - obj.y) <= DETECT_Y_RANGE &&
+playerIsLeft == facingLeft`. The added Y check is wrong (ROM has none).
+The `playerIsLeft == facingLeft` guard is fundamentally wrong: it means
+the badnik only attacks when the player is "in front" of it, but ROM
+attacks regardless of facing. Plus the engine usually only reads
+MainCharacter, ignoring the Sidekick selection ROM does.
+
+**What to check.** When porting any badnik that uses
+`Obj_GetOrientationToPlayer` followed by an `addi.w/cmpi.w/blo` pattern:
+
+1. The check is horizontal-only -- do NOT add a Y bounds gate.
+2. Compare against the *closest* of MainCharacter and Sidekick. Iterate
+   `services().sidekicks()` and pick the sprite with minimum
+   `Math.abs(currentX - sprite.getCentreX())`, preferring MainCharacter
+   on ties (ROM `bls.s` keeps MainCharacter when distances equal).
+3. The detection result is `(currentX - player.getCentreX() + 0x60) &
+   0xFFFF < 0xC0`. Implement as a literal unsigned 16-bit window, not
+   as separate "in front" + "in range" Java conditionals.
+4. Preserve ROM ordering inside the patrol routine: detection runs
+   BEFORE the direction-timer decrement and BEFORE `ObjectMove`. When
+   attack triggers, the badnik enters attack state and does NOT move
+   on the trigger frame.
+5. ROM does NOT update `render_flags` / `x_flip` when transitioning to
+   attack; the badnik continues to face whichever direction it was
+   patrolling. Don't reset facing on attack entry.
+6. Projectile fire direction in `loc_38C22`-style spawn routines uses
+   ONLY MainCharacter (not the closest player) to decide left vs right.
+   ROM `cmp.w x_pos(a2),d0 ; blo.s + ; neg.w d1` with `a2 = MainCharacter`.
+7. Position at spawn for the projectile is `x_pos/y_pos` (no -8 or other
+   offset) unless the ROM explicitly adds one.
+
+**ROM citation.** `docs/s2disasm/s2.asm:75923-75976` (ObjA5 / Spiny
+patrol-detection-attack flow), `docs/s2disasm/s2.asm:72320-72346`
+(`Obj_GetOrientationToPlayer` closest-player selection +
+`d2 = obj.x - player.x`), `docs/s2disasm/s2.asm:76050-76070`
+(`loc_38C22` spike spawn uses MainCharacter for direction).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter
+4: CPZ F844 Spiny detection ported with `dx <= 0x80 && dy <= 0x40 &&
+playerIsLeft == facingLeft` bounding-box + facing guard; replaced with
+ROM horizontal-only closest-player gate. Reduced CPZ trace errors
+494 -> 434; frontier still at f844 due to a residual ~22 px Spiny
+position drift -- the new detection fires at a different first frame
+than ROM, indicating subtle timing/order details remain. Pattern itself
+applies to every patrolling-shooter badnik that uses the angle-based
+attack gate. ObjA4/Asteron, ObjA6/SpinyOnWall, and at least three S3K
+analogues share the same idiom.)
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
