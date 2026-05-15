@@ -156,6 +156,44 @@ public class TestTornadoObjectInstance {
     }
 
     @Test
+    public void tornadoSczMainPreservesEntryStandingBitForReleaseFrameBob() throws Exception {
+        TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
+                0x452, 0x97, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x452, (short) 0x70);
+        main.setOnObject(false);
+        main.setAir(true);
+
+        setField(tornado, "xPosFixed8", 0x45200);
+        setField(tornado, "yPosFixed8", 0x9740);
+        setField(tornado, "yVel", 0x120);
+        setField(tornado, "moveVertActive", true);
+        setField(tornado, "moveVertTimer", 0x0D);
+        setField(tornado, "lastMainStanding", true);
+
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        registry.beginFrame(1, List.of(main));
+        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+                main, new PlayerSolidContactResult(
+                        ContactKind.NONE,
+                        false,
+                        false,
+                        false,
+                        false,
+                        PreContactState.ZERO,
+                        PostContactState.ZERO,
+                        0))));
+
+        tornado.setServices(new CheckpointServices(registry.currentObject()));
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0x9A, tornado.getY(),
+                "Release frame should run ObjB2_Move_vert before SolidObject clears standing");
+        assertFalse((boolean) getField(tornado, "lastMainStanding"));
+        assertTrue((boolean) getField(tornado, "moveVert2Active"));
+    }
+
+    @Test
     public void unusedMoverUsesCloudVisualsAndMarkObjGoneRange() throws Exception {
         GameServices.camera().setX((short) 0);
 
