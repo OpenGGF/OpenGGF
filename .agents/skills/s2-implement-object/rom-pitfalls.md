@@ -315,6 +315,66 @@ ObjectManager.java`.
 
 ---
 
+## P11 — Solid object break/trigger condition leaks main-player state into sidekick contact
+
+**Symptom.** Sidekick (Tails) is suddenly knocked airborne + rolling + Y
+shifted by 1 px while the main player is rolling through nearby terrain.
+Trace shows ROM keeps the sidekick grounded with `status.standing` and
+`status.pushing`, while the engine reports `status.in_air | rolling` and a
+fresh downward `y_vel`. The divergence appears on the exact frame the
+main player passes a breakable / launchable object even though the
+sidekick isn't standing on that object.
+
+**Root cause.** The engine cached `playerWasRolling = player.getRolling()`
+inside the object's per-frame `update(...)` method, with `player` being
+whichever sprite the object manager happened to pass (typically the main
+player). The break/launch decision in `onSolidContact(player, contact)`
+then OR'd the cache with the contacting player's own `getRolling()`:
+`isRolling = playerWasRolling || player.getRolling()`. When the main
+player was rolling, the cache made the OR true even for the sidekick's
+side / bottom contact, so the object's break path fired with the
+sidekick as the victim — knocking them airborne, snapping `y_radius`
+from 11 down to 7 (`-1 px` apparent Y shift), and setting
+`rolling | in_air | y_vel = -$300`.
+
+**What to check.** Any solid object with a state-dependent break /
+launch / monitor-pop / arrow-trigger:
+1. Per-player conditions must read the *contacting* player's state, not
+   a per-frame cached "saw rolling once" flag. Use the player parameter
+   of `onSolidContact` directly: `player.getRolling()`,
+   `player.getAir()`, etc.
+2. ROM `Obj32_Main`, `Obj26_Main` (monitor), `Obj13_Main` (spring) check
+   the *object's* `status(a0) & standing_mask` (the per-player standing
+   bits the SolidObject routine sets on the OBJECT, indexed by which
+   player is standing on it) plus that player's *animation* — never a
+   global "was rolling" cache. Per-player anim is cached in
+   `breakableblock_mainchar_anim` (objoff_32) and
+   `breakableblock_sidekick_anim` (objoff_33), giving each player its
+   own state byte.
+3. Side / bottom contact almost never breaks ROM solids. Most breakable
+   objects only fire on `contact.standing()` (the player is currently
+   seated on top via SolidObject's standing path). A rolling player
+   hitting the underside gets a CEILING collision via SolidObject and
+   bonks; they do not break the block. Do not invent synthetic
+   `touchBottom()` / `touchSide()` break paths "for completeness".
+4. `update(...)` should not mutate player-derived caches that are read
+   from another player's `onSolidContact`. If you need per-player
+   state, key it on the player instance (IdentityHashMap) or read it
+   inside the contact callback.
+
+**ROM citation.** `docs/s2disasm/s2.asm:48889-48959` (Obj32 / BreakableBlock):
+- 48891-48892 cache MainCharacter.anim / Sidekick.anim per-player
+- 48899-48901 run SolidObject, then `andi.b #standing_mask, d0`
+- 48911-48913 check each standing player's anim against `AniIDSonAni_Roll`
+- 48940-48950 `Obj32_BouncePlayer` sets rolling + in_air + `y_vel = -$300`
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter
+3: HTZ F979 BreakableBlock leaked main-player rolling state into Tails'
+side-contact callback, knocking Tails airborne with the wrong character
+as victim).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
