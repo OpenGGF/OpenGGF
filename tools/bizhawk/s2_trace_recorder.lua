@@ -34,11 +34,21 @@
 -- v8.0-s2 changes: add character-scoped aux events and nearby-object scans
 -- for both Sonic and Tails so replay debugging can see which character first
 -- interacted with the world.
+-- v8.1-s2 changes: include top_solid_bit/lrb_solid_bit in state_snapshot
+-- diagnostics so collision-plane divergences can be checked against ROM.
+-- v8.2-s2 changes: emit focused ObjB2 Tornado state diagnostics for the
+-- SCZ/WFZ level-select route without feeding those values back into replay.
 ------------------------------------------------------------------------------
 
 -----------------
 --- Constants ---
 -----------------
+
+-- v9.2-s2: traces from this recorder version onward are bootstrap-comparable
+-- against the post-universal-title-card engine (ADR-1, design spec 2026-05-15).
+-- The bootstrap-comparator eligibility is derived from this version string by
+-- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
+local LUA_SCRIPT_VERSION = "9.2-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -87,6 +97,8 @@ local OFF_ANGLE            = 0x26   -- byte: terrain angle
 local OFF_STICK_CONVEX     = 0x38   -- byte
 local OFF_STAND_ON_OBJ     = 0x3D   -- byte: interact — SST index Sonic stands on (0=none)
 local OFF_CTRL_LOCK        = 0x2E   -- word: move_lock timer
+local OFF_TOP_SOLID_BIT    = 0x46   -- byte: active top collision plane ($0C/$0E)
+local OFF_LRB_SOLID_BIT    = 0x47   -- byte: active side/bottom collision plane ($0D/$0F)
 
 -- S2 player routine values (obRoutine byte → table index):
 --   0 = Obj01_Init
@@ -372,7 +384,7 @@ local function write_metadata()
     meta_file:write('  "main_character": "sonic",\n')
     meta_file:write('  "sidekicks": ' .. sidekicks_json .. ',\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "9.1-s2",\n')
+    meta_file:write('  "lua_script_version": "' .. LUA_SCRIPT_VERSION .. '",\n')
     meta_file:write('  "trace_schema": 8,\n')
     meta_file:write('  "csv_version": 6,\n')
     meta_file:write('  "aux_schema_extras": [],\n')
@@ -615,8 +627,24 @@ local function scan_objects(subjects)
         if obj_id ~= 0 then
             local obj_x = mainmemory.read_u16_be(addr + OFF_X_POS)
             local obj_y = mainmemory.read_u16_be(addr + OFF_Y_POS)
+            local obj_y_sub = mainmemory.read_u16_be(addr + OFF_Y_SUB)
+            local obj_y_vel = mainmemory.read_u16_be(addr + OFF_Y_VEL)
             local obj_status = mainmemory.read_u8(addr + OFF_STATUS)
             local obj_routine = mainmemory.read_u8(addr + OFF_ROUTINE)
+            if obj_id == 0xB2 then
+                write_aux(string.format(
+                    '{"frame":%d,"vfc":%d,"event":"s2_tornado_state","slot":%d,'
+                    .. '"x":"0x%04X","y":"0x%04X","y_sub":"0x%04X","y_vel":"0x%04X",'
+                    .. '"routine":"0x%02X","routine_secondary":"0x%02X","status_byte":"0x%02X",'
+                    .. '"objoff_2e":"0x%02X","objoff_2f":"0x%02X","objoff_30":"0x%02X","objoff_31":"0x%02X"}',
+                    trace_frame, vfc, slot,
+                    obj_x, obj_y, obj_y_sub, obj_y_vel,
+                    obj_routine, mainmemory.read_u8(addr + 0x25), obj_status,
+                    mainmemory.read_u8(addr + 0x2E),
+                    mainmemory.read_u8(addr + 0x2F),
+                    mainmemory.read_u8(addr + 0x30),
+                    mainmemory.read_u8(addr + 0x31)))
+            end
             for _, subject in ipairs(subjects) do
                 if subject.present ~= 0 and slot ~= subject.slot then
                     local dx = math.abs(obj_x - subject.x)
@@ -656,6 +684,8 @@ local function write_state_snapshot(character, base)
     local routine = mainmemory.read_u8(base + OFF_ROUTINE)
     local y_radius = mainmemory.read_s8(base + OFF_RADIUS_Y)
     local x_radius = mainmemory.read_s8(base + OFF_RADIUS_X)
+    local top_solid = mainmemory.read_u8(base + OFF_TOP_SOLID_BIT)
+    local lrb_solid = mainmemory.read_u8(base + OFF_LRB_SOLID_BIT)
     local raw_input = mainmemory.read_u8(ADDR_CTRL1)
     local logical_input = mainmemory.read_u8(ADDR_CTRL1_DUP)
     local vfc = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
@@ -663,6 +693,7 @@ local function write_state_snapshot(character, base)
     write_aux(string.format(
         '{"frame":%d,"vfc":%d,"event":"state_snapshot","character":"%s","control_locked":%s,"anim_id":%d,'
         .. '"status_byte":"0x%02X","routine":"0x%02X","y_radius":%d,"x_radius":%d,'
+        .. '"top_solid_bit":"0x%02X","lrb_solid_bit":"0x%02X",'
         .. '"raw_input":"0x%02X","raw_input_mask":"0x%02X","logical_input":"0x%02X","logical_input_mask":"0x%02X",'
         .. '"on_object":%s,"pushing":%s,"underwater":%s,'
         .. '"roll_jumping":%s}',
@@ -675,6 +706,8 @@ local function write_state_snapshot(character, base)
         routine,
         y_radius,
         x_radius,
+        top_solid,
+        lrb_solid,
         raw_input,
         rom_joypad_to_mask(raw_input),
         logical_input,
