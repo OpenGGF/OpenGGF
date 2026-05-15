@@ -313,13 +313,20 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         solidActive = true;
         highPriority = player.isHighPriority();
 
+        // ObjB2_Move_with_player reads Sonic's persisted standing bit before
+        // the inline SolidObject call refreshes contact (s2.asm:78298-78306,
+        // 78816-78823). The engine may have cleared player.isOnObject() during
+        // an earlier collision phase, so keep the object's previous checkpoint
+        // result as the ROM entry-state bit for the final release-frame bob.
+        boolean playerOnObjectAtEntry = lastMainStanding;
+        boolean objectStandingBeforeCheckpoint = lastMainStanding;
+        moveWithPlayer(player, playerOnObjectAtEntry);
+
         PlayerSolidContactResult contact = checkpoint(player);
         boolean mainStandingNow = contact.standingNow();
-        standingTransition = (mainStandingNow != lastMainStanding);
-        lastMainStanding = mainStandingNow;
-
-        moveWithPlayer(player, mainStandingNow);
+        standingTransition = (mainStandingNow != objectStandingBeforeCheckpoint);
         moveObeyPlayer(player, mainStandingNow);
+        lastMainStanding = mainStandingNow;
 
         // ROM: Camera_Min_X_pos = Camera_X_pos
         Camera camera = services().camera();
