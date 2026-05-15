@@ -74,14 +74,13 @@ public record EngineSnapshot(
     }
 
     /**
-     * Factory placeholder. The orchestrator (worker T7) will wire this up to
-     * the actual {@code HeadlessTestFixture} / {@code AbstractPlayableSprite}
-     * / {@code SidekickCpuController} / {@code ObjectManager} types when the
-     * comparator is plumbed into {@code AbstractTraceReplayTest}.
-     *
-     * <p>The interim implementation accepts the prebuilt parts so the
-     * comparator can be exercised in isolation by unit tests without dragging
-     * in {@code HeadlessTestFixture}.
+     * Factory that wraps prebuilt parts in an {@link EngineSnapshot}. Used by
+     * {@code AbstractTraceReplayTest.captureEngineSnapshot} (production path,
+     * pulls the parts from the live {@code HeadlessTestFixture}) and by
+     * synthetic unit tests in {@code com.openggf.trace} that exercise the
+     * comparator without dragging in fixture state. Sidekick CPU and per-slot
+     * object snapshots are optional ({@code null} / empty map) — the
+     * comparator emits WARNING entries for absent fields rather than failing.
      */
     public static EngineSnapshot capture(short[] xHistory, short[] yHistory,
                                          short[] inputHistory, byte[] statusHistory,
