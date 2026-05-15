@@ -200,6 +200,87 @@ deferred-despawn flow to match S2 Obj02_Dead`.
 
 ---
 
+## P9 — Integer math drops y_sub carry in 16:16 position updates
+
+**Symptom.** Post-warp / post-teleport y_pos is exactly 1 pixel low (or
+high) relative to ROM. The error appears only when the pre-event
+`y_sub_pos + (y_vel & 0xFF00)` overflows the 16-bit subpixel boundary.
+
+**Root cause.** ROM `ObjectMoveAndFall` / `MoveSprite` treats `y_pos:y_sub`
+as a single 32-bit long and executes `add.l d0,d3` where `d0 = y_vel<<8`
+(sign extended). Subpixel overflow carries into `y_pos`. Java code that
+does `y_pos += (y_vel >> 8)` after a `setCentreYPreserveSubpixel(...)`
+warp treats the halves as independent integers and DROPS the carry. The
+overflowed low byte still lands in `y_sub` (because `setCentreY*`
+preserves it), but `y_pos` is short by 1.
+
+**What to check.** Any code path that:
+1. Calls `setCentreXPreserveSubpixel(...)` / `setCentreYPreserveSubpixel(...)`
+   (ROM word-write equivalents to `x_pos` / `y_pos`),
+2. THEN integrates by a velocity stored in subpixel units (`x_vel` / `y_vel`),
+must use `AbstractSprite.move(xSpeed, ySpeed)` — which mirrors ROM's
+`add.l d0, x_pos(a0)` / `add.l d0, y_pos(a0)` — rather than manual
+`centreY += (ySpeed >> 8)` arithmetic.
+
+**ROM citation.** S3K `MoveSprite` (`docs/skdisasm/sonic3k.asm:36032-36042`)
+and `ObjectMoveAndFall`. Same 16:16 fixed-point convention as S1 / S2.
+Engine equivalent: `AbstractSprite.move` in
+`src/main/java/com/openggf/sprites/AbstractSprite.java`.
+
+**Originating commit.** `<pending>` (S2 trace frontier advancement loop
+iter 1: HTZ F538 + MCZ F443 deferred-despawn sub-pixel & solid-contact
+gating; cross-applies to S3K objects warping & integrating velocity).
+
+---
+
+## P10 — Solid object contacts must skip dead / despawning players
+
+**Symptom.** A dying CPU sidekick (or main player) "lands" on a moving
+solid object (lift / platform / drawbridge) under the impact point while
+ROM would have him fall past it. Engine's sidekick `y` freezes at the
+platform top and `y_speed` drops to 0, while ROM keeps Tails falling
+through the platform.
+
+**Root cause.** ROM `SolidObject_ChkBounds` (S3K equivalent of S2
+`s2.asm:35178-35182`) gates the full bounding-box check with:
+
+```
+SolidObject_ChkBounds:
+    tst.b    obj_control(a1)
+    bmi.w    SolidObject_TestClearPush   ; bit 7 set => skip
+    cmpi.b   #6,routine(a1)              ; routine >= 6?
+    bhs.w    SolidObject_NoCollision     ; Dead/Gone/Respawning => skip
+```
+
+The two gates are independent. The `obj_control bit 7` path covers
+respawning / object-controlled states. The `routine >= 6` path covers the
+Dead / Gone / Respawning routines themselves.
+
+For S3K, `obj_control` is set on frame N+1 immediately via `sub_13ECA`
+(`docs/skdisasm/sonic3k.asm:26800-26809`), which means the `obj_control`
+gate covers most of the dead-fall window. The S2 deferred-despawn flow
+spends multiple frames in routine = 6 BEFORE `obj_control` flips, so the
+`routine >= 6` gate is required there. An engine that ports only the
+`obj_control` gate will still apply solid contacts to a sidekick mid-
+deferred-death-fall (S2-specific), but the rule is universal.
+
+**What to check.** `blocksSolidContacts(player, candidate)` (or whatever
+the engine's SolidObject pre-filter is named) needs BOTH gates:
+1. `player.isObjectControlled()` — mirrors `obj_control` bit 7.
+2. CPU sidekick state `DEAD_FALLING` (engine equivalent of ROM Tails
+   routine = 6) — must short-circuit even though `obj_control` is still
+   0 during S2 deferred-despawn.
+
+**ROM citation.** S3K `SolidObject_ChkBounds` in
+`docs/skdisasm/sonic3k.asm` (mirrors S2 `s2.asm:35178-35182`). Engine
+equivalent: `ObjectManager.SolidContacts.blocksSolidContacts` in
+`src/main/java/com/openggf/level/objects/ObjectManager.java`.
+
+**Originating commit.** `<pending>` (S2 trace frontier advancement loop
+iter 1: HTZ F538 + MCZ F443).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
