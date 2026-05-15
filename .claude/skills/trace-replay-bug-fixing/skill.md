@@ -181,7 +181,28 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
 9. Commit with proper trailers (see Branch Documentation Policy in
    CLAUDE.md/AGENTS.md). No --no-verify.
 
-10. Loop: read the new first-error frame, repeat from step 3.
+10. **Skill catalogue update (object/badnik fixes only).** If the fix
+    touched code under `src/main/java/com/openggf/game/sonic{1,2,3k}/`
+    (objects, badniks, lifts, springs, monitors, etc.), evaluate
+    whether the root cause is a class of bug that could recur in any
+    not-yet-implemented object of the same game:
+      - Read the existing `.agents/skills/s{1,2,3k}-implement-object/rom-pitfalls.md`
+        for that game. Does the fix match an existing pattern? If yes,
+        consider adding the fresh commit hash + a one-line example to
+        the existing entry's "Originating commit" list.
+      - If the bug is a NEW pattern not yet catalogued, append a new
+        entry following the format in the pitfalls file. Mirror to
+        `.claude/skills/.../rom-pitfalls.md` in the same logical change.
+        Use the `Skills: updated` commit trailer.
+      - Cross-apply: if the pattern is plausibly cross-game (S2 and S3K
+        share the same ROM convention), copy the entry to the other
+        game's pitfalls file with that game's disasm citation.
+      - If the bug is a one-off (specific to this object's quirks, not
+        a generalisable rule), skip the catalogue and just commit.
+    Goal: each accumulated pitfall entry prevents that pattern from
+    recurring in future object implementations.
+
+11. Loop: read the new first-error frame, repeat from step 3.
 ```
 
 ## Trace Triage Notes

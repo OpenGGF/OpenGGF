@@ -1,6 +1,6 @@
 ---
 name: s3k-implement-object
-description: Use when implementing a Sonic 3&K object or badnik — ports object logic from skdisasm, zone-set-aware IDs, art loading, collision.
+description: Guide for implementing Sonic 3 and Knuckles objects and badniks with ROM-accurate art, behavior, and disassembly validation.
 ---
 
 # Implement Sonic 3&K Object/Badnik
@@ -59,7 +59,7 @@ The same ID can mean different objects depending on the zone set. For example, 0
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.claude/skills/s3k-disasm-guide/skill.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 Agents should:
 
@@ -107,6 +107,29 @@ Agents should:
 5. **Check for boss objects** - If the object is a mini-boss or end boss:
    - **Redirect to `/s3k-implement-boss`** skill instead
    - Boss indicators: `Obj_XXXMiniboss`, `Obj_XXXEndBoss`, `collision_property` used as hit counter, camera lock behavior
+
+### Phase 1.5: ROM Behavioural Pitfall Review
+
+Before writing implementation code, read `rom-pitfalls.md` in this skill's
+directory. The file lists ROM behaviour classes where naive engine ports
+have produced trace-replay-visible divergences during prior frontier work.
+
+For each pitfall pattern:
+
+1. Decide whether your S3K object is susceptible. Most patterns apply only
+   to specific object families (touch-response badniks, moving solids,
+   per-player interactives, free-fall objects, character-affecting state
+   transitions). Skip patterns the object can't trigger.
+2. For applicable patterns, plan your implementation to avoid the
+   anti-pattern. Quote the ROM convention from the pitfall entry in your
+   code comments where the convention matters.
+3. If you find a NEW pattern during Phase 2 / Phase 4 cross-validation
+   that isn't yet catalogued — pause and add it to `rom-pitfalls.md`
+   before continuing. The catalogue grows by accretion.
+4. **S3K-specific entries** (zone-set resolution, S&K-vs-S3 address
+   confusion, dynamic-resize / AniPLC interactions) should be tagged
+   `**S3K-specific:**` so they don't get duplicated to the S2 catalogue
+   on next sync.
 
 ### Phase 2: Implementation
 
@@ -222,7 +245,7 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 ```
 
 ##### Pattern 3: Boss
-**Use the dedicated `/s3k-implement-boss` skill** (`.claude/skills/s3k-implement-boss/skill.md`) for boss implementations.
+**Use the dedicated `/s3k-implement-boss` skill** (`.agents/skills/s3k-implement-boss/SKILL.md`) for boss implementations.
 
 **Detect a boss when:**
 - Object label contains `Miniboss` or `EndBoss`
@@ -423,7 +446,7 @@ Ensure the implementation:
 
 Delegate to a review agent to cross-validate against the disassembly. **Include this instruction in the agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.claude/skills/s3k-disasm-guide/skill.md`) for reference on disassembly structure, label conventions, and object system patterns.
+> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
 
 ```
 Review the implementation of [ObjectName] against the Sonic 3&K disassembly.
@@ -501,8 +524,8 @@ Once cross-validation is confirmed bug-free:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s3k-disasm-guide/skill.md` |
-| **Boss skill** | `.claude/skills/s3k-implement-boss/skill.md` |
+| **Disassembly guide** | `.agents/skills/s3k-disasm-guide/SKILL.md` |
+| **Boss skill** | `.agents/skills/s3k-implement-boss/SKILL.md` |
 | Zone set enum | `src/.../game/sonic3k/constants/S3kZoneSet.java` |
 | Object IDs | `src/.../game/sonic3k/constants/Sonic3kObjectIds.java` |
 | ROM offsets | `src/.../game/sonic3k/constants/Sonic3kConstants.java` |

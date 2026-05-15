@@ -143,6 +143,39 @@ pattern that future agents are likely to repeat. If skill edits are warranted,
 update both `.agents/skills/...` and `.claude/skills/...` mirrors in the same
 logical change, and use the commit trailer `Skills: updated`.
 
+## Skill Self-Improvement Feedback Loop
+
+When a frontier advancement commits a fix that touches code under
+`src/main/java/com/openggf/game/sonic{1,2,3k}/`, the loop closes back into
+the implement-object skill catalogue so future implementations don't
+repeat the same bug class. Execute step 10 of the
+`trace-replay-bug-fixing/SKILL.md` workflow:
+
+1. After landing the fix, classify the root cause. Is it:
+   - A class of bug that could occur in any not-yet-implemented object?
+     (Touch-response gating, multi-frame init collapse, per-player state,
+     character-dependent offsets, premature non-solid transition, gravity
+     order, centre-vs-top-left coordinates, per-game post-event flow.)
+   - Or a one-off specific to this object's quirks?
+2. If a class of bug, open the relevant `rom-pitfalls.md`:
+   - `.agents/skills/s2-implement-object/rom-pitfalls.md` (canonical) +
+     `.claude/skills/s2-implement-object/rom-pitfalls.md` (mirror).
+   - `.agents/skills/s3k-implement-object/rom-pitfalls.md` (canonical) +
+     `.claude/skills/s3k-implement-object/rom-pitfalls.md` (mirror).
+3. Decide: matches an existing P-numbered entry (append commit hash to
+   the entry's originating-commit list) or genuinely new (append a new
+   P-numbered entry following the template).
+4. If the pattern is cross-game (ROM convention shared between S2 and
+   S3K), copy the entry to the other game's pitfalls file with the
+   matching disasm citation.
+5. Commit the catalogue update on its own (or folded into the same
+   commit as the engine fix when the diff is small). Use the
+   `Skills: updated` trailer.
+
+The catalogue grows by accretion. Read `rom-pitfalls.md` at Phase 1.5 of
+the corresponding `*-implement-object/SKILL.md` before writing object
+code; check each entry against the object you're porting.
+
 ## Verification
 
 Use focused commands while iterating. Examples:

@@ -66,6 +66,31 @@ Agents should:
    - Check existing art keys in `Sonic2ObjectArtKeys.java`
    - Check if art is zone-specific or shared
 
+### Phase 1.5: ROM Behavioural Pitfall Review
+
+Before writing implementation code, read `rom-pitfalls.md` in this skill's
+directory. The file lists ROM behaviour classes where naive engine ports
+have produced trace-replay-visible divergences during prior frontier work.
+
+For each pitfall pattern:
+
+1. Decide whether your object is susceptible. Most patterns apply only to
+   specific object families (touch-response badniks, moving solids,
+   per-player interactives, free-fall objects, character-affecting state
+   transitions). Skip patterns the object can't trigger.
+2. For applicable patterns, plan your implementation to avoid the
+   anti-pattern. Quote the ROM convention from the pitfall entry in your
+   code comments where the convention matters (e.g., "P3: per-player
+   state at objoff_36 / objoff_37 — engine uses IdentityHashMap").
+3. If you find a NEW pattern during Phase 2 / Phase 4 cross-validation
+   that isn't yet catalogued — pause and add it to `rom-pitfalls.md`
+   before continuing. The catalogue grows by accretion; future
+   implementations benefit from each entry.
+
+This phase is short for objects that hit zero pitfalls (pass-through) and
+long for objects that hit several (e.g., a moving solid with rolling
+touch-response and per-player state hits P1, P3, P5, and P6 all at once).
+
 ### Phase 2: Implementation
 
 #### 2.1 Constants (if needed)
