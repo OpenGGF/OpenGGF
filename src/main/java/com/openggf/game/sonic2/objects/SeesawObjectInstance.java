@@ -271,15 +271,21 @@ public class SeesawObjectInstance extends BoxObjectInstance
             storedPlayerYVel = Math.max(p1Vel, p2Vel);
         }
 
-        if (standingPlayer1 != null || standingPlayer2 != null) {
-            int targetAngle = calculateCombinedTargetAngle();
-            updateAngle(targetAngle);
-        }
-
-        // ROM: Obj14_SetMapping is called every frame to animate visual transition
-        // Bug fix: Without this, seesaw doesn't tilt after ball lands because
-        // setCurrentAngle() only updates currentAngle, not mappingFrame
-        updateAngle(currentAngle);
+        // ROM Obj14_Main (s2.asm:47037-47073) calls Obj14_SetMapping EXACTLY ONCE
+        // per frame.  When p1/p2 is standing the target d1 is recomputed from
+        // player position; otherwise d1 keeps the value loaded at line 47038
+        // (the current objoff_3A, i.e. currentAngle).  The previous engine
+        // implementation called updateAngle() twice per frame (once with the
+        // recomputed target, once unconditionally with currentAngle) which
+        // advanced mapping_frame at twice ROM's rate during a tilt
+        // transition.  HTZ1 trace f989: engine reached mapping_frame=2 one
+        // frame before ROM, snapping Sonic to the far-tilt slope sample
+        // (SLOPE_TILTED[38] = -9 -> y=990) instead of ROM's flat sample
+        // (SLOPE_FLAT[9] = 5 -> y=976).
+        int targetAngle = (standingPlayer1 != null || standingPlayer2 != null)
+                ? calculateCombinedTargetAngle()
+                : currentAngle;
+        updateAngle(targetAngle);
     }
 
     /**
@@ -412,11 +418,15 @@ public class SeesawObjectInstance extends BoxObjectInstance
 
     @Override
     public int getSlopeBaseline() {
-        // ROM's SlopedPlatform overwrites d3 (height param) with the slope sample,
-        // so the surface is at object_y - slopeSample. But the Java framework bakes
-        // halfHeight into the landing snap via maxTop, so slopeBase must equal
-        // halfHeight to compensate: baseY - halfHeight = anchorY - slopeSample.
-        return COLLISION_HEIGHT;
+        // ROM SlopedPlatform (s2.asm:35787-35793) overwrites d3 with the slope
+        // sample (move.b (a2,d0.w),d3 / ext.w d3), then computes the surface as
+        // y_pos(a0) - d3 directly — no baseline subtraction. S2's slope tables
+        // (byte_21C8E / byte_21CBF) already encode absolute pixel offsets from
+        // object_y, with positive values lifting the surface above object_y and
+        // negative values dropping below. Subtracting COLLISION_HEIGHT would
+        // shift the apparent surface 8 px lower than ROM, causing the engine to
+        // miss the f988 HTZ1 landing where Sonic falls onto a tilted seesaw.
+        return 0;
     }
 
     @Override

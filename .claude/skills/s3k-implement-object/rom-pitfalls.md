@@ -401,6 +401,81 @@ pattern.
 
 ---
 
+## P13 -- SlopedSolidProvider.getSlopeBaseline() returning halfHeight when ROM slope table encodes absolute offsets
+
+**Symptom.** Player rolling-air-falls toward a sloped platform / bridge /
+ICZ snowpile that ROM cleanly lands them on, but the engine fires "no
+contact" and lets them fall through. Frontier divergence appears as a y /
+y_speed / air mismatch on the exact landing frame: ROM has `y_speed=0`,
+`air=0`, snapped y position; engine still has `y_speed = previous +
+gravity`, `air=1`, kept falling.
+
+**Root cause.** `SlopedSolidProvider.getSlopeBaseline()` controls
+`resolveSlopedContact`'s shift between the raw slope sample and the
+effective surface Y:
+
+```
+slopeOffset = slopeSample - slopeBase
+baseY       = anchorY - slopeOffset
+relY        = playerCenterY - baseY + 4 + playerYRadius
+```
+
+S3K slope-sampling helpers (`SolidObjCheckSloped`,
+`SolidObjCheckSloped2`, `loc_19EB6`-style direct surface compares)
+read the slope sample directly: `move.b (a2,d0.w),d3 / ext.w d3 /
+move.w y_pos(a0),d0 / sub.w d3,d0`.  There is no baseline subtraction;
+the slope table value IS the offset from object_y to the surface.
+S3K's slope tables (e.g. `IczBigSnowPile_HeightTable`, AIZ flipping
+bridge tables) already encode that convention, so `getSlopeBaseline()`
+must return `0` for any S3K slope object whose data is sampled
+directly by these helpers.
+
+The `COLLISION_HEIGHT` baseline pattern came from S1's GHZ bridge /
+SLZ seesaw slope tables, which encode the surface offset relative to
+the object's bottom edge.  S3K slope data does NOT follow that
+convention -- positive values lift the surface above object_y,
+negative values drop below.
+
+**What to check.** When porting any S3K SlopedSolidProvider:
+
+1. Find the ROM routine that samples the slope and computes the
+   surface.  S3K uses `SolidObjCheckSloped` (sonic3k.asm:41982-42015),
+   `SolidObjCheckSloped2` (sonic3k.asm:41887-41914), or the
+   per-object loc_19EB6-style direct subtraction.
+2. Look at the slope data values relative to ROM `y_pos(a0) - d3`:
+   - If slope[mid] ~= 0 and the surface visually sits at object_y,
+     the table encodes absolute offsets -> `getSlopeBaseline()` returns 0.
+   - If slope[mid] ~= halfHeight and the surface visually sits at
+     `object_y - halfHeight`, the table is relative to object bottom
+     -> `getSlopeBaseline()` returns halfHeight (rare; S1 only).
+3. Check existing S3K SlopedSolidProvider impls: `IczBigSnowPileInstance`
+   and `AizFlippingBridgeObjectInstance` both return 0 with the
+   comment "Height table values are absolute offsets from obj_y" --
+   that is the S3K-standard pattern.
+4. Confirm via trace replay: compute `surfaceTop = anchorY - rawSlopeSample`
+   and `playerBottom = playerY + yRadius + 4`. ROM lands when
+   `surfaceTop - playerBottom` is in `(-16, 0]`. The engine's `relY`
+   must equal `playerBottom - surfaceTop` for `relY` to land in
+   `[0, 16)`. If `slopeBase != 0` shifts the apparent surface by
+   halfHeight, the landing window shifts the same amount and the
+   player misses.
+
+**ROM citation.** `docs/skdisasm/sonic3k.asm` (SolidObjCheckSloped /
+SolidObjCheckSloped2 / per-object loc_19EB6 equivalents -- slope
+sample -> surface Y, direct subtraction, no baseline).  Engine
+equivalent: `SlopedSolidProvider.getSlopeBaseline()`, `ObjectManager.
+resolveSlopedContact` (`baseY = anchorY - slopeOffset`).
+
+**Originating commit.** `<pending>` (cross-game mirror of S2 P13 entry;
+the same pattern applies to any S3K SlopedSolidProvider whose slope
+table encodes absolute offsets from object_y.  The S2 case fixed was
+HTZ1 trace F988 Sonic missing the Seesaw landing because
+SeesawObjectInstance returned `COLLISION_HEIGHT` from
+`getSlopeBaseline()`, shifting the effective surface 8 px below
+ROM's.)
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
