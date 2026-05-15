@@ -493,6 +493,12 @@ public class SpriteManager {
 	 * player and BK2 cursor are intentionally untouched; callers restore
 	 * {@link #frameCounter} afterwards because ROM's Level_frame_counter has not
 	 * started advancing during this prelude.
+	 *
+	 * <p>ROM runs Obj01_Control before Obj02_Control inside the title-card
+	 * RunObjects loop, so Sonic_RecordPos overwrites the next Pos_table slot
+	 * with Sonic's current centre before Tails_CPU_Normal reads its delayed
+	 * lookup target. Mirror that ordering by ticking the leader's follower
+	 * history once per prelude frame.
 	 */
 	public void warmUpCpuSidekicksOnly(int frames, LevelManager levelManager) {
 		if (frames <= 0 || levelManager == null || sidekicks.isEmpty()) {
@@ -503,6 +509,25 @@ public class SpriteManager {
 			for (int i = 0; i < frames; i++) {
 				frameCounter++;
 				List<AbstractPlayableSprite> activeSidekicks = new ArrayList<>(getSidekicks());
+				// ROM Obj01_Control calls Sonic_RecordPos before Obj02_Control
+				// runs. Match that ordering so Tails_CPU_Normal's 16-frame
+				// delayed lookup sees the freshly written Pos_table entry.
+				AbstractPlayableSprite leaderToRecord = null;
+				for (AbstractPlayableSprite playable : activeSidekicks) {
+					var cpuController = playable.getCpuController();
+					if (cpuController != null) {
+						leaderToRecord = cpuController.getLeader();
+						break;
+					}
+				}
+				if (leaderToRecord != null) {
+					// The prelude does NOT run the leader's full tick (no
+					// endOfTick() to clear the per-tick gate), so reset the
+					// gate manually after writing so the next prelude frame
+					// can record again.
+					leaderToRecord.recordFollowerHistoryForTick();
+					leaderToRecord.clearFollowerHistoryRecordedFlag();
+				}
 				beginPlayableFrame(activeSidekicks);
 				try {
 					for (AbstractPlayableSprite playable : activeSidekicks) {

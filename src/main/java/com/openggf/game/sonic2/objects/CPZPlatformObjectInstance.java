@@ -105,6 +105,11 @@ public class CPZPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        return baseX;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Platform state is driven via ObjectManager standing checks.
@@ -306,6 +311,13 @@ public class CPZPlatformObjectInstance extends AbstractObjectInstance
         ctx.drawLine(right, top, right, bottom, 0.8f, 0.5f, 0.2f);
         ctx.drawLine(right, bottom, left, bottom, 0.8f, 0.5f, 0.2f);
         ctx.drawLine(left, bottom, left, top, 0.8f, 0.5f, 0.2f);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("sub=%X base=%04X,%04X vel=%04X w=%02X",
+                moveType & 0xF, baseX & 0xFFFF, baseY & 0xFFFF,
+                yVel & 0xFFFF, widthPixels & 0xFF);
     }
 
 }

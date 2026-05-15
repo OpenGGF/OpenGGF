@@ -234,6 +234,9 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
                         SonicConfigurationService.getInstance())
                         .mainSprite();
             }
+            if (sprite.getAnimationProfile() == null && GameServices.level() != null) {
+                GameServices.level().refreshPlayableSpriteArt();
+            }
 
             // 6. Preserve existing builder semantics for explicit custom starts by
             // reapplying the requested coordinates after any level load.

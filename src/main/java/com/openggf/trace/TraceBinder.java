@@ -1,6 +1,10 @@
 package com.openggf.trace;
 
+import com.openggf.level.objects.RomObjectSnapshot;
+
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,11 +15,40 @@ import java.util.Map;
  */
 public class TraceBinder {
 
+    /**
+     * Test-only override for the native-prelude-mode signal consumed by
+     * {@link #compareBootstrapFrame0(TraceData, EngineSnapshot)}. When
+     * non-{@code null}, the comparator uses this value instead of reading
+     * {@code trace.metadata().nativePreludeMode()} via reflection.
+     *
+     * <p>Worker T3 is adding the real {@code nativePreludeMode()} accessor
+     * to {@link TraceMetadata}; until that lands, production callers will
+     * receive {@code false} from the reflection fallback and the comparator
+     * stays silent. Tests in the {@code com.openggf.trace} package flip the
+     * override to exercise the comparator without depending on T3's changes.
+     */
+    private static volatile Boolean NATIVE_PRELUDE_OVERRIDE_FOR_TESTS = null;
+
     private final ToleranceConfig tolerances;
     private final List<FrameComparison> allComparisons = new ArrayList<>();
+    private List<BootstrapDivergence> lastBootstrapDivergences = List.of();
 
     public TraceBinder(ToleranceConfig tolerances) {
         this.tolerances = tolerances;
+    }
+
+    /**
+     * Package-private hook used only by tests in this package to flip the
+     * native-prelude-mode signal without depending on
+     * {@link TraceMetadata#nativePreludeMode() TraceMetadata.nativePreludeMode()}
+     * (which is being added by worker T3 and may not yet exist in HEAD).
+     *
+     * @param value {@code true} to force native-prelude mode on,
+     *              {@code false} to force it off, {@code null} to fall back
+     *              to the real metadata flag (read reflectively).
+     */
+    static void setNativePreludeOverrideForTests(Boolean value) {
+        NATIVE_PRELUDE_OVERRIDE_FOR_TESTS = value;
     }
 
     /**
@@ -159,17 +192,21 @@ public class TraceBinder {
 
     /**
      * Build a divergence report from all comparisons accumulated so far.
+     * Includes any bootstrap (frame-0) divergences captured via
+     * {@link #compareBootstrapFrame0(TraceData, EngineSnapshot)}.
      */
     public DivergenceReport buildReport() {
-        return new DivergenceReport(allComparisons);
+        return new DivergenceReport(allComparisons, null, lastBootstrapDivergences);
     }
 
     /**
      * Build a divergence report from all comparisons accumulated so far,
-     * enriched with trace-side checkpoint and zone/act context.
+     * enriched with trace-side checkpoint and zone/act context. Includes any
+     * bootstrap (frame-0) divergences captured via
+     * {@link #compareBootstrapFrame0(TraceData, EngineSnapshot)}.
      */
     public DivergenceReport buildReport(TraceData trace) {
-        return new DivergenceReport(allComparisons, trace);
+        return new DivergenceReport(allComparisons, trace, lastBootstrapDivergences);
     }
 
     /**
@@ -316,6 +353,280 @@ public class TraceBinder {
             return String.format("-%04X", -value);
         }
         return String.format("0x%04X", value & 0xFFFF);
+    }
+
+    // ---- Frame-0 bootstrap comparator (ADR-3) -------------------------------
+
+    /**
+     * Cross-references the engine state captured at frame 0 against the ROM
+     * frame -1 snapshots in {@code trace}. The bootstrap comparator is the
+     * test-time invariant that engine state arrives at frame 0 via natural
+     * simulation (running the title card / level init the same way the ROM
+     * does), not via state hydration from the trace.
+     *
+     * <p>Returns an empty list when the trace metadata says the recording
+     * was captured under legacy mode (no native title-card prelude). Legacy
+     * traces continue to short-circuit the comparator entirely.
+     *
+     * <p>Coverage v1 (conservative):
+     * <ul>
+     *     <li>{@code player_history_snapshot} — pos + 4 ring buffers (64 entries each).</li>
+     *     <li>{@code cpu_state_snapshot} for character "tails" — all named fields.</li>
+     *     <li>{@code object_state_snapshot} per slot — objectType + x_pos + y_pos
+     *         + routine + status only.</li>
+     * </ul>
+     * Per-slot SST bytes beyond the cardinal set are NOT compared in this
+     * pass; they will be added as confidence builds.
+     */
+    public List<BootstrapDivergence> compareBootstrapFrame0(TraceData trace,
+                                                            EngineSnapshot snapshot) {
+        if (trace == null || snapshot == null) {
+            return List.of();
+        }
+        if (!nativePreludeMode(trace)) {
+            return List.of();
+        }
+
+        List<BootstrapDivergence> divergences = new ArrayList<>();
+        comparePlayerHistory(trace, snapshot, divergences);
+        compareTailsCpu(trace, snapshot, divergences);
+        compareObjectSnapshots(trace, snapshot, divergences);
+
+        divergences.sort(Comparator.comparingInt(
+                (BootstrapDivergence d) -> d.severity() == BootstrapDivergence.Severity.ERROR
+                        ? 0 : 1));
+        lastBootstrapDivergences = List.copyOf(divergences);
+        return divergences;
+    }
+
+    /**
+     * Resolves the native-prelude-mode flag for {@code trace}. Tests can
+     * override via {@link #setNativePreludeOverrideForTests(Boolean)}.
+     * Production reads {@code trace.metadata().nativePreludeMode()} via
+     * reflection so this class compiles regardless of whether T3 has
+     * already added that accessor to {@link TraceMetadata}.
+     */
+    private static boolean nativePreludeMode(TraceData trace) {
+        Boolean override = NATIVE_PRELUDE_OVERRIDE_FOR_TESTS;
+        if (override != null) {
+            return override;
+        }
+        if (trace == null || trace.metadata() == null) {
+            return false;
+        }
+        try {
+            Method method = trace.metadata().getClass().getMethod("nativePreludeMode");
+            Object result = method.invoke(trace.metadata());
+            return result instanceof Boolean b && b;
+        } catch (NoSuchMethodException missing) {
+            // Worker T3's accessor hasn't shipped yet — treat as legacy.
+            return false;
+        } catch (ReflectiveOperationException unexpected) {
+            return false;
+        }
+    }
+
+    private static void comparePlayerHistory(TraceData trace,
+                                             EngineSnapshot snapshot,
+                                             List<BootstrapDivergence> out) {
+        TraceEvent.PlayerHistorySnapshot recorded = trace.preTracePlayerHistorySnapshot();
+        if (recorded == null) {
+            out.add(new BootstrapDivergence(
+                    "player_history.snapshot",
+                    BootstrapDivergence.Severity.WARNING,
+                    "present", "missing",
+                    "player_history_snapshot missing from trace at frame -1"));
+            return;
+        }
+
+        if (recorded.historyPos() != snapshot.playerHistoryPos()) {
+            out.add(new BootstrapDivergence(
+                    "player_history.pos",
+                    BootstrapDivergence.Severity.ERROR,
+                    String.format("0x%04X", recorded.historyPos() & 0xFFFF),
+                    String.format("0x%04X", snapshot.playerHistoryPos() & 0xFFFF),
+                    "ROM and engine ring-buffer positions disagree"));
+        }
+
+        compareShortArray("player_history.x", recorded.xHistory(),
+                snapshot.playerXHistory(), out);
+        compareShortArray("player_history.y", recorded.yHistory(),
+                snapshot.playerYHistory(), out);
+        compareShortArray("player_history.input", recorded.inputHistory(),
+                snapshot.playerInputHistory(), out);
+        compareByteArray("player_history.status", recorded.statusHistory(),
+                snapshot.playerStatusHistory(), out);
+    }
+
+    private static void compareShortArray(String fieldBase,
+                                          short[] expected,
+                                          short[] actual,
+                                          List<BootstrapDivergence> out) {
+        if (expected == null) {
+            out.add(new BootstrapDivergence(
+                    fieldBase, BootstrapDivergence.Severity.WARNING,
+                    "present", "missing",
+                    fieldBase + " absent from trace snapshot"));
+            return;
+        }
+        int len = Math.min(expected.length, actual == null ? 0 : actual.length);
+        for (int i = 0; i < len; i++) {
+            short e = expected[i];
+            short a = actual[i];
+            if (e != a) {
+                out.add(new BootstrapDivergence(
+                        fieldBase + "[" + i + "]",
+                        BootstrapDivergence.Severity.ERROR,
+                        String.format("0x%04X", e & 0xFFFF),
+                        String.format("0x%04X", a & 0xFFFF),
+                        fieldBase + " ring-buffer entry " + i
+                                + " differs from ROM snapshot"));
+            }
+        }
+        if (expected.length != (actual == null ? 0 : actual.length)) {
+            out.add(new BootstrapDivergence(
+                    fieldBase + ".length",
+                    BootstrapDivergence.Severity.WARNING,
+                    Integer.toString(expected.length),
+                    Integer.toString(actual == null ? 0 : actual.length),
+                    fieldBase + " ring-buffer length differs from ROM snapshot"));
+        }
+    }
+
+    private static void compareByteArray(String fieldBase,
+                                         byte[] expected,
+                                         byte[] actual,
+                                         List<BootstrapDivergence> out) {
+        if (expected == null) {
+            out.add(new BootstrapDivergence(
+                    fieldBase, BootstrapDivergence.Severity.WARNING,
+                    "present", "missing",
+                    fieldBase + " absent from trace snapshot"));
+            return;
+        }
+        int len = Math.min(expected.length, actual == null ? 0 : actual.length);
+        for (int i = 0; i < len; i++) {
+            byte e = expected[i];
+            byte a = actual[i];
+            if (e != a) {
+                out.add(new BootstrapDivergence(
+                        fieldBase + "[" + i + "]",
+                        BootstrapDivergence.Severity.ERROR,
+                        String.format("0x%02X", e & 0xFF),
+                        String.format("0x%02X", a & 0xFF),
+                        fieldBase + " ring-buffer entry " + i
+                                + " differs from ROM snapshot"));
+            }
+        }
+        if (expected.length != (actual == null ? 0 : actual.length)) {
+            out.add(new BootstrapDivergence(
+                    fieldBase + ".length",
+                    BootstrapDivergence.Severity.WARNING,
+                    Integer.toString(expected.length),
+                    Integer.toString(actual == null ? 0 : actual.length),
+                    fieldBase + " ring-buffer length differs from ROM snapshot"));
+        }
+    }
+
+    private static void compareTailsCpu(TraceData trace,
+                                        EngineSnapshot snapshot,
+                                        List<BootstrapDivergence> out) {
+        TraceEvent.CpuStateSnapshot recorded = trace.preTraceCpuStateSnapshot("tails");
+        EngineSnapshot.SidekickCpuView engine = snapshot.tailsCpu();
+        if (recorded == null && engine == null) {
+            return;
+        }
+        if (recorded == null) {
+            out.add(new BootstrapDivergence(
+                    "tails_cpu.snapshot",
+                    BootstrapDivergence.Severity.WARNING,
+                    "present", "missing",
+                    "cpu_state_snapshot for 'tails' missing from trace"));
+            return;
+        }
+        if (engine == null) {
+            out.add(new BootstrapDivergence(
+                    "tails_cpu.engine",
+                    BootstrapDivergence.Severity.WARNING,
+                    "present", "missing",
+                    "engine has no sidekick CPU view; cannot compare against ROM"));
+            return;
+        }
+
+        compareInt("tails_cpu.control_counter",
+                recorded.controlCounter(), engine.controlCounter(), out);
+        compareInt("tails_cpu.respawn_counter",
+                recorded.respawnCounter(), engine.respawnCounter(), out);
+        compareInt("tails_cpu.routine",
+                recorded.cpuRoutine(), engine.cpuRoutine(), out);
+        compareInt("tails_cpu.target_x",
+                recorded.targetX() & 0xFFFF, engine.targetX() & 0xFFFF, out);
+        compareInt("tails_cpu.target_y",
+                recorded.targetY() & 0xFFFF, engine.targetY() & 0xFFFF, out);
+        compareInt("tails_cpu.interact_id",
+                recorded.interactId(), engine.interactId(), out);
+        compareInt("tails_cpu.jumping",
+                recorded.jumping() ? 1 : 0, engine.jumping() ? 1 : 0, out);
+    }
+
+    private static void compareInt(String field, int expected, int actual,
+                                   List<BootstrapDivergence> out) {
+        if (expected == actual) {
+            return;
+        }
+        out.add(new BootstrapDivergence(
+                field,
+                BootstrapDivergence.Severity.ERROR,
+                String.format("0x%04X", expected & 0xFFFF),
+                String.format("0x%04X", actual & 0xFFFF),
+                field + " differs from ROM snapshot"));
+    }
+
+    private static void compareObjectSnapshots(TraceData trace,
+                                               EngineSnapshot snapshot,
+                                               List<BootstrapDivergence> out) {
+        List<TraceEvent.ObjectStateSnapshot> recordedSnapshots =
+                trace.preTraceObjectSnapshots();
+        if (recordedSnapshots == null || recordedSnapshots.isEmpty()) {
+            // Object snapshots are optional — emit a WARNING only when the
+            // engine has populated slots and the trace has none, so the
+            // legitimate "no slots" case stays silent.
+            if (!snapshot.slotStates().isEmpty()) {
+                out.add(new BootstrapDivergence(
+                        "object_snapshots",
+                        BootstrapDivergence.Severity.WARNING,
+                        "present", "missing",
+                        "object_state_snapshot events missing from trace, but engine has "
+                                + snapshot.slotStates().size() + " active slot(s)"));
+            }
+            return;
+        }
+
+        for (TraceEvent.ObjectStateSnapshot recorded : recordedSnapshots) {
+            EngineSnapshot.ObjectSnapshot engine = snapshot.slotStates().get(recorded.slot());
+            String slotLabel = "object_slot[" + recorded.slot() + "]";
+            if (engine == null) {
+                out.add(new BootstrapDivergence(
+                        slotLabel,
+                        BootstrapDivergence.Severity.WARNING,
+                        "present", "missing",
+                        "engine slot " + recorded.slot() + " empty but ROM recorded one"));
+                continue;
+            }
+            RomObjectSnapshot fields = recorded.fields();
+            compareInt(slotLabel + ".object_type",
+                    recorded.objectType() & 0xFF, engine.objectType() & 0xFF, out);
+            if (fields != null) {
+                compareInt(slotLabel + ".x_pos",
+                        fields.xPos() & 0xFFFF, engine.xPos() & 0xFFFF, out);
+                compareInt(slotLabel + ".y_pos",
+                        fields.yPos() & 0xFFFF, engine.yPos() & 0xFFFF, out);
+                compareInt(slotLabel + ".routine",
+                        fields.routine() & 0xFF, engine.routine() & 0xFF, out);
+                compareInt(slotLabel + ".status",
+                        fields.status() & 0xFF, engine.status() & 0xFF, out);
+            }
+        }
     }
 }
 

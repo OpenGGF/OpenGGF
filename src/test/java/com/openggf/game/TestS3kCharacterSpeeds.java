@@ -144,6 +144,29 @@ class TestS3kCharacterSpeeds {
         assertEquals(0x80, sprite.getRunDecel(), "After shoes expire: canonical decel");
     }
 
+    @Test
+    void speedShoesTimerStaysActiveForRomMovementFrames() {
+        TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
+        sprite.giveSpeedShoes();
+
+        for (int i = 0; i < 0x4B0; i++) {
+            GameServices.timers().update();
+        }
+
+        assertTrue(sprite.hasSpeedShoes(),
+                "ROM decrements speedshoes_time from Sonic_Display after movement");
+
+        GameServices.timers().update();
+
+        assertTrue(sprite.hasSpeedShoes(),
+                "ROM still applies speed shoes on the terminal movement frame");
+
+        GameServices.timers().update();
+
+        assertFalse(sprite.hasSpeedShoes(),
+                "Engine pre-physics timer expires on the tick after the ROM movement window");
+    }
+
     // --- S2 Comparison ---
 
     @Test

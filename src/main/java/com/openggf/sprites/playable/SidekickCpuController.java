@@ -132,6 +132,7 @@ public class SidekickCpuController {
     private boolean aizIntroDormantMarkerPrimed;
     private boolean suppressNextAizIntroNormalMovement;
     private boolean skipPhysicsThisFrame;
+    private boolean bootstrapPreludePlacementApplied;
     private boolean cpuFrameCounterFromStoredLevelFrame;
     private NormalStepDiagnostics latestNormalStepDiagnostics;
 
@@ -520,14 +521,14 @@ public class SidekickCpuController {
                 applyAizIntroDormantMarker();
                 return;
             }
-            initializeLevelStartSidekickPlacement();
+            initializeLevelStartSidekickPlacementIfNeeded();
             aizIntroDormantMarkerPrimed = true;
             skipPhysicsThisFrame = true;
             return;
         }
 
         aizIntroDormantMarkerPrimed = false;
-        initializeLevelStartSidekickPlacement();
+        initializeLevelStartSidekickPlacementIfNeeded();
 
         state = State.NORMAL;
 
@@ -539,6 +540,46 @@ public class SidekickCpuController {
     }
 
     private void initializeLevelStartSidekickPlacement() {
+        // Default updateInit path: keep the legacy "fill with current Sonic
+        // centre" behaviour. Trace replay bootstraps that need the ROM-
+        // accurate pre-fill go through
+        // {@link #applyLevelStartSidekickPlacementForBootstrap()} first.
+        applyLevelStartSidekickPlacement(false);
+    }
+
+    /**
+     * Trace-replay-aware variant of
+     * {@link #initializeLevelStartSidekickPlacement()}: when the prelude
+     * bootstrap has already established the ROM-accurate Pos_table pre-fill
+     * (S2 only today, via
+     * {@link #applyLevelStartSidekickPlacementForBootstrap()}),
+     * {@code updateInit} must NOT re-pre-fill the ring or it would obliterate
+     * the rows that the prelude leader-record path has already written for
+     * the first ~16 sidekick-only frames. Falls back to the legacy reset
+     * for non-bootstrap paths (S1, S3K) so already-tuned sidekick CPU traces
+     * keep their existing pre-fill behaviour.
+     */
+    private void initializeLevelStartSidekickPlacementIfNeeded() {
+        if (bootstrapPreludePlacementApplied) {
+            applyLevelStartSidekickPlacementSkipPrefill();
+        } else {
+            applyLevelStartSidekickPlacement(false);
+        }
+    }
+
+    /**
+     * Public bootstrap entry point used by S2 trace-replay setup (before the
+     * title-card prelude runs). Establishes the ROM-accurate Pos_table
+     * pre-fill on the leader and re-anchors each sidekick before the
+     * sidekick-only prelude begins ticking, so the prelude's first
+     * leader-record write goes to slot 0 of the freshly seeded ring rather
+     * than overwriting the pre-fill from the inside of {@code updateInit}.
+     */
+    public void applyLevelStartSidekickPlacementForBootstrap() {
+        applyLevelStartSidekickPlacement(true);
+    }
+
+    private void applyLevelStartSidekickPlacement(boolean useRomAccuratePrefill) {
         // S2 InitPlayers (s2.asm:5192-5195) and S3K SpawnLevelMainSprites
         // (s3.asm:6334-6337) place Player_2 with centre coordinates at
         // Player_1 - $20 X, +4 Y. The engine's level-load reanchor path uses
@@ -560,12 +601,58 @@ public class SidekickCpuController {
         sidekick.setGSpeed((short) 0);
         sidekick.setAir(false);
 
-        // The ROM CPU routine reads Sonic's delayed position buffer
-        // (S2 s2.asm:38808-38815, S3K sonic3k.asm:26564-26565).
-        // Trace/bootstrap level placement can move the leader after sprite
-        // construction, so seed the engine's native buffer before the first
-        // follow read instead of reading trace sidekick state back in.
-        leader.resetPositionHistory();
+        if (useRomAccuratePrefill) {
+            // ROM Obj01_Init (s2.asm:35907-35918, sonic3k.asm:21936-21940)
+            // temporarily applies the same Tails-spawn offset to Sonic's centre,
+            // fills Sonic_Pos_Record_Buf 64 times via Sonic_RecordPos, then
+            // restores Sonic's centre. The result is a pre-fill ring containing
+            // the sidekick's spawn position rather than Sonic's actual spawn —
+            // so the first ~16 frames of TailsCPU_Normal read targetX =
+            // Tails' own x_pos (dx = 0, no follow acceleration). The S2
+            // trace-replay bootstrap uses this branch so the prelude's first
+            // 16 leader-record writes layer on top of the sidekick-offset
+            // pre-fill rather than the live Sonic centre.
+            //
+            // Note: only the bootstrap path requests the ROM-accurate pre-fill
+            // today. Trace replay setups without a recorded title-card prelude
+            // (S1, S3K) keep the legacy "fill with current Sonic centre"
+            // behaviour to avoid altering already-tuned sidekick CPU traces.
+            leader.prefillPositionHistoryWithOffset(LEVEL_START_X_OFFSET, LEVEL_START_Y_OFFSET);
+        } else {
+            // The ROM CPU routine reads Sonic's delayed position buffer
+            // (S2 s2.asm:38808-38815, S3K sonic3k.asm:26564-26565).
+            // Trace/bootstrap level placement can move the leader after sprite
+            // construction, so seed the engine's native buffer before the first
+            // follow read instead of reading trace sidekick state back in.
+            leader.resetPositionHistory();
+        }
+        bootstrapPreludePlacementApplied = true;
+    }
+
+    /**
+     * Lighter-weight placement refresh used when the bootstrap path has
+     * already populated the leader's Pos_table pre-fill. Re-anchors the
+     * sidekick at the Tails-spawn offset and clears transient CPU counters
+     * WITHOUT touching the leader's Pos_table — the bootstrap pre-fill plus
+     * the prelude's per-frame Sonic_RecordPos writes are the authoritative
+     * source for the ring at this point.
+     */
+    private void applyLevelStartSidekickPlacementSkipPrefill() {
+        sidekick.setCentreXPreserveSubpixel((short) (leader.getCentreX() + LEVEL_START_X_OFFSET));
+        sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() + LEVEL_START_Y_OFFSET));
+
+        controlCounter = 0;
+        despawnCounter = 0;
+        normalFrameCount = 0;
+        jumpingFlag = false;
+        lastInteractObjectId = 0;
+        sidekick.setForcedAnimationId(-1);
+        sidekick.setControlLocked(false);
+        sidekick.setObjectControlled(false);
+        sidekick.setXSpeed((short) 0);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setGSpeed((short) 0);
+        sidekick.setAir(false);
     }
 
     private boolean shouldEnterAizIntroDormantMarker() {
@@ -2438,7 +2525,7 @@ public class SidekickCpuController {
      */
     public void hydrateFromRomCpuState(int cpuRoutine, int controlCounter,
                                        int respawnCounter, int interactId,
-                                       boolean jumping) {
+                                       boolean jumping, int targetX, int targetY) {
         state = mapRomCpuRoutine(cpuRoutine);
         aizIntroDormantMarkerPrimed = false;
         suppressNextAizIntroNormalMovement = false;
@@ -2452,6 +2539,11 @@ public class SidekickCpuController {
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
         aizObjectOrderGracePushBypassThisFrame = false;
+        // ROM Tails_CPU_target_X / Tails_CPU_target_Y (sonic3k.asm $F70A/$F70C).
+        // The trace recorder surfaces these as target_x / target_y; the engine stores
+        // them in the existing catch-up steering fields, which mirror that ROM word pair.
+        this.catchUpTargetX = targetX & 0xFFFF;
+        this.catchUpTargetY = targetY & 0xFFFF;
         clearInputs();
     }
 
@@ -2753,4 +2845,18 @@ public class SidekickCpuController {
         catchUpTargetX = 0;
         catchUpTargetY = 0;
     }
+
+    /**
+     * Accessor for the hydrated ROM {@code Tails_CPU_target_X} word
+     * (sonic3k.asm $F70A). Surfaces the value written by {@link #hydrateFromRomCpuState}
+     * and persisted in the catch-up steering field. Always masked to 16 bits.
+     */
+    public int targetX() { return catchUpTargetX & 0xFFFF; }
+
+    /**
+     * Accessor for the hydrated ROM {@code Tails_CPU_target_Y} word
+     * (sonic3k.asm $F70C). Surfaces the value written by {@link #hydrateFromRomCpuState}
+     * and persisted in the catch-up steering field. Always masked to 16 bits.
+     */
+    public int targetY() { return catchUpTargetY & 0xFFFF; }
 }

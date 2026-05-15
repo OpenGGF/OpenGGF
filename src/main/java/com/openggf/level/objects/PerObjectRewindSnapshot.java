@@ -226,7 +226,8 @@ public record PerObjectRewindSnapshot(
             int fixedFrame,
             boolean paletteBlink,
             int cluckerAnimTimer,
-            int cluckerAnimIndex
+            int cluckerAnimIndex,
+            boolean loadSubObjectInitPending
     ) implements ObjectSubclassRewindExtra {}
 
     public record BuzzerFlameRewindExtra(

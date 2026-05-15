@@ -2853,6 +2853,26 @@ public class LevelManager {
             }
             verticalWrapEnabled = camera.isVerticalWrapEnabled();
             camera.updatePosition(true);
+            // ROM parity: only when Get_LevelSizeStart had to clamp the camera
+            // Y down to Camera_max_Y_pos does the immediately-following
+            // DeformBgLayer call advance Camera_Y_pos past maxY. Levels whose
+            // player spawn sits within maxY have no maxY clamp on the snap, so
+            // the engine's normal first scroll converges without the ROM quirk.
+            // (For S3K AIZ1: player spawn is below maxY, snap clamps to $0390,
+            // setup-DeformBgLayer scrolls to $0396; for S1 GHZ1 player spawn is
+            // within maxY, no clamp/scroll quirk -- the engine matches ROM
+            // exactly without arming the flag.)
+            // ROM parity quirk is S3K-specific: only ROM's S3K MoveCameraY
+            // (sonic3k.asm:38556 loc_1C202) takes the non-clamp branch when
+            // Screen_Y_wrap_value = -1; S1/S2 ScrollVerti clamp eagerly so the
+            // bug-for-bug parity here is needed only for S3K traces.
+            GameModule armModule = activeGameModule();
+            if (armModule != null && armModule.getGameId() == com.openggf.game.GameId.S3K) {
+                short snapTargetY = (short) (playable.getCentreY() - 96);
+                if (snapTargetY > camera.getMaxY()) {
+                    camera.armSuppressFirstMaxYClamp();
+                }
+            }
         }
 
         // Apply per-game fast vertical scroll cap from PhysicsFeatureSet.
