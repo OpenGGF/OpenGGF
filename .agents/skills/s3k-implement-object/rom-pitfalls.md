@@ -281,6 +281,50 @@ iter 1: HTZ F538 + MCZ F443).
 
 ---
 
+## P11 — Solid object break/trigger condition leaks main-player state into sidekick contact
+
+**Symptom.** Sidekick (Tails / Knuckles) is suddenly knocked airborne +
+rolling + Y shifted by 1 px while the main player is rolling through
+nearby terrain. Trace shows ROM keeps the sidekick grounded with
+`status.standing` and `status.pushing`, while the engine reports
+`status.in_air | rolling` and a fresh downward `y_vel`. The divergence
+appears on the exact frame the main player passes a breakable /
+launchable object even though the sidekick isn't standing on that
+object.
+
+**Root cause.** The engine cached `playerWasRolling = player.getRolling()`
+inside the object's per-frame `update(...)` method, with `player` being
+whichever sprite the object manager happened to pass (typically the main
+player). The break/launch decision in `onSolidContact(player, contact)`
+then OR'd the cache with the contacting player's own `getRolling()`. When
+the main player was rolling, the cache made the OR true even for the
+sidekick's side / bottom contact, so the object's break path fired with
+the sidekick as the victim.
+
+**What to check.** Any S3K solid object with a state-dependent break /
+launch / monitor-pop / trigger:
+1. Per-player conditions must read the *contacting* player's state, not
+   a per-frame cached "saw rolling once" flag. Use the player parameter
+   of `onSolidContact` directly.
+2. ROM equivalents in S3K cache main / sidekick anim per-player in the
+   object's SST and check `status(a0) & standing_mask` — never a global
+   "was rolling" cache.
+3. Side / bottom contact rarely breaks ROM solids. Most breakable
+   objects only fire on `contact.standing()`. Rolling player into the
+   underside gets a CEILING collision via `SolidObject`, not a break.
+
+**ROM citation.** S2 `docs/s2disasm/s2.asm:48889-48959` (Obj32 / breakable
+block). S3K equivalents in `docs/skdisasm/sonic3k.asm` use the same
+SolidObject + per-player anim cache pattern; check for `standing_mask`
+and per-character anim bytes (objoff_32 / objoff_33 equivalents) in the
+object's main routine.
+
+**Originating commit.** `<pending>` (S2 trace frontier advancement loop
+iter 3: HTZ F979 BreakableBlock; cross-game mirror for S3K-implementable
+objects following the same pattern).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
