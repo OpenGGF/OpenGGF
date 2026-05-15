@@ -452,6 +452,87 @@ analogues share the same idiom.)
 
 ---
 
+## P13 -- SlopedSolidProvider.getSlopeBaseline() returning halfHeight when ROM slope table encodes absolute offsets
+
+**Symptom.** Player rolling-air-falls toward a sloped platform/seesaw/bridge
+that ROM cleanly lands them on, but the engine fires "no contact" and lets
+them fall through. Frontier divergence appears as a y / y_speed / air mismatch
+on the exact landing frame: ROM has `y_speed=0`, `air=0`, snapped y position;
+engine still has `y_speed = previous + gravity`, `air=1`, kept falling. HTZ1
+trace F988 surfaced this when Sonic should land on the tilted Seesaw (slope
+sample 20, ROM surface = `obj_y - 20 = 980`, player bottom = 983, ROM lands;
+engine `baseY = obj_y - (20 - 8) = 988`, computes `relY = -5 < minRelY = 0`,
+returns null, no landing.)
+
+**Root cause.** `SlopedSolidProvider.getSlopeBaseline()` controls
+`resolveSlopedContact`'s shift between the raw slope sample and the
+effective surface Y:
+
+```
+slopeOffset = slopeSample - slopeBase
+baseY       = anchorY - slopeOffset
+relY        = playerCenterY - baseY + 4 + playerYRadius
+```
+
+ROM `SlopedPlatform_cont` (s2.asm:35787-35793) reads the slope sample
+directly: `move.b (a2,d0.w),d3 / ext.w d3 / move.w y_pos(a0),d0 /
+sub.w d3,d0`.  There is no baseline subtraction; the slope table value
+IS the offset from object_y to the surface.  S2's slope tables (e.g.
+`byte_21C8E` for the seesaw) already encode that convention, so
+`getSlopeBaseline()` must return `0` for any S2 slope object whose
+data is sampled directly by SlopedPlatform / SlopedPlatform_cont.
+
+The `COLLISION_HEIGHT` baseline pattern came from S1's GHZ bridge /
+SLZ seesaw slope tables, which encode the surface offset relative to
+the object's bottom edge (so the table needs to be shifted up by
+COLLISION_HEIGHT to land on the object center).  S2 slope data
+does NOT follow that convention -- positive values lift the surface
+above object_y, negative values drop below.
+
+**What to check.** When porting any S2/S3K SlopedSolidProvider:
+
+1. Find the ROM routine that calls `SlopedPlatform` / `SlopedPlatform_cont`
+   (or the S3K equivalent SolidObjCheckSloped2 / loc_19EB6).
+2. Look at the slope data values relative to ROM `y_pos(a0) - d3`:
+   - If slope[mid] ~= 0 and the surface visually sits at object_y,
+     the table encodes absolute offsets -> `getSlopeBaseline()` returns 0.
+   - If slope[mid] ~= halfHeight and the surface visually sits at
+     `object_y - halfHeight`, the table is relative to object bottom
+     -> `getSlopeBaseline()` returns halfHeight (rare; S1 only).
+3. Check `Sonic2/S3k BridgeObjectInstance.getSlopeBaseline()` and
+   `AizFlippingBridgeObjectInstance.getSlopeBaseline()`: both return
+   0 with the comment "Height table values are absolute offsets from
+   obj_y".  That is the S2/S3K-standard pattern; objects that copy
+   the S1 `COLLISION_HEIGHT` baseline without checking will fail
+   the same way.
+4. Confirm via trace replay: compute `surfaceTop = anchorY - rawSlopeSample`
+   and `playerBottom = playerY + yRadius + 4`. ROM lands when
+   `surfaceTop - playerBottom` is in `(-16, 0]`. The engine's `relY`
+   must equal `-(surfaceTop - playerBottom) = playerBottom - surfaceTop`
+   for `relY` to land in `[0, 16)`. If `slopeBase != 0` shifts the
+   apparent surface by halfHeight, the landing window shifts the
+   same amount and the player misses.
+
+**ROM citation.** `docs/s2disasm/s2.asm:35787-35793` (SlopedPlatform_cont
+slope sample -> surface Y, direct subtraction, no baseline);
+`s2.asm:47103-47115` (Obj14_UpdateMappingAndCollision setup before
+calling SlopedPlatform).  Engine equivalent:
+`SlopedSolidProvider.getSlopeBaseline()`, `ObjectManager.
+resolveSlopedContact` (`baseY = anchorY - slopeOffset`).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter
+5: HTZ F988 Sonic missed Seesaw landing because SeesawObjectInstance
+returned `COLLISION_HEIGHT` from `getSlopeBaseline()`, shifting the
+effective surface 8 px below ROM's, so `relY` went negative and the
+contact resolver returned null.  Companion fix: `Obj14_Main` calls
+`Obj14_SetMapping` exactly once per frame, but the engine was calling
+`updateAngle()` twice (once with the recomputed target, once
+unconditionally with currentAngle), advancing `mapping_frame` at
+twice ROM's rate during tilt transitions.  Both bugs surfaced
+together at the f988 frontier.)
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
