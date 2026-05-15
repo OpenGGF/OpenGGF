@@ -2109,15 +2109,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			//     (s1disasm/_incObj/01 Sonic.asm:1014).
 			//   S2 Sonic_LevelBound Sonic_Boundary_CheckBottom: cmp.w y_pos(a0),d0
 			//     / blt.s Sonic_Boundary_Bottom (s2.asm:36950).
+			//   S2 Tails_LevelBound Tails_Boundary_CheckBottom: cmp.w y_pos(a0),d0
+			//     / blt.s Tails_Boundary_Bottom (s2.asm:39929).
 			//   S3K Player_LevelBound Player_Boundary_CheckBottom: cmp.w y_pos(a0),d0
 			//     / blt.s Player_Boundary_Bottom (sonic3k.asm:23195).
 			//   S3K Tails_Check_Screen_Boundaries loc_14F30: cmp.w y_pos(a0),d0
 			//     / blt.s loc_14F56 (sonic3k.asm:28430-28431).
 			// PhysicsFeatureSet.levelBoundaryUsesCentreY gates centre-Y for the
-			// games whose trace baselines have been validated against ROM
-			// parity (currently only SONIC_3K). S1/S2 stay on top-left until
+			// games whose player trace baselines have been validated against ROM
+			// parity (currently only SONIC_3K). S1/S2 players stay on top-left until
 			// their trace baselines are re-recorded.
-			boolean useCentreY = featureSet != null && featureSet.levelBoundaryUsesCentreY();
+			//
+			// CPU sidekicks always use centre-Y to match ROM Tails_LevelBound
+			// behavior regardless of game: MCZ1 F398 (S2 level-select trace, recorded
+			// at lua_script_version 9.2-s2) records Tails crossing the kill plane at
+			// centre-Y=0x0807 with maxY+screen_height=0x0800, triggering
+			// JmpTo2_KillCharacter (s2.asm:39929-39939). Using top-left (Y=0x07F9) misses
+			// the kill by 8 pixels and Tails keeps falling instead of dying.
+			boolean useCentreY = (featureSet != null && featureSet.levelBoundaryUsesCentreY())
+					|| (sprite.isCpuControlled() && sprite.getCpuController() != null);
 			int playerY = useCentreY ? sprite.getCentreY() : sprite.getY();
 			if (playerY > effectiveMaxY + 224) {
 				GameModule module = sprite.currentGameModule();
