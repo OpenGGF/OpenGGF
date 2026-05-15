@@ -96,7 +96,8 @@ public class TestHybridPhysicsFeatureSet {
                 false,  // permanentRespawnTableLatch - S1 only latches remembered spawns
                 true,   // objectsExecuteAfterPlayerPhysics - S1 uses post-physics object ordering per 2026-04-18-solid-ordering-rom-accuracy plan
                 6,      // shieldObjectFixedSlotIndex - S1 v_shieldobj at slot 6
-                true    // touchResponseUsesRenderFlagYGate - S1 ReactToItem reads obRender bit 7 cleared by BuildSprites Y-band
+                true,   // touchResponseUsesRenderFlagYGate - S1 ReactToItem reads obRender bit 7 cleared by BuildSprites Y-band
+                false   // sidekickDeathUsesDeferredDespawn - S1 has no Tails CPU
         );
 
         // Verify spindash is enabled (donor contribution)
