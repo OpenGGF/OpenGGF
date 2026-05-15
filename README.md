@@ -218,6 +218,18 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S2 native-prelude trace replay (2026-05-15).** Engine title-card phase now ticks objects and
+  player physics natively (ROM-faithful `TitleCard_Main` for S1/S2/S3K with per-game gating).
+  New `TraceBinder.compareBootstrapFrame0` + `BootstrapDivergence` infrastructure asserts engine
+  frame-0 state against the recorder's pre-trace snapshots for traces at `lua_script_version
+  >= 9.2-s2`. Diagnostic `oggf.trace.hydrate` switch (CI-asserted off) snaps engine state to the
+  recorded frame-0 snapshot for prelude-vs-gameplay bug isolation. All nine S2 trace recordings
+  re-recorded at v9.2-s2; comparator surfaced six real engine bugs (CPZ Grabber rolling-kill,
+  WFZ Tornado two-frame init, CNZ Flipper per-player cooldown + y_pos, HTZ Lift solid-while-falling,
+  S2 sidekick bottom-bound centre-Y kill, S2 sidekick deferred-despawn flow) all fixed against
+  `s2disasm` citations. See `docs/superpowers/specs/2026-05-15-s2-native-prelude-traces-design.md`
+  for the full orchestration record (12 stages, ADR-1 through ADR-7 with R1/R2 fold-ins, blocker
+  resolution pass).
 - **Editor groundwork:** a config-gated editor/playtest loop, focused block and chunk previews,
   derive edits, world-grid navigation, and safer mode switching are being built toward usable
   in-engine editing. The editor review pass now preserves controller-owned mutable levels across
