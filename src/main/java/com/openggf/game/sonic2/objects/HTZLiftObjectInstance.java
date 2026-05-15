@@ -203,15 +203,22 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     /**
      * Fall state: Apply gravity and eject player when off-screen.
-     * ROM: Obj16_Fall (lines 47419-47441)
+     * ROM: Obj16_Fall (docs/s2disasm/s2.asm:47444-47466)
+     *
+     * ROM order: ObjectMove (with current y_vel) FIRST, then add gravity.
+     * The first FALL frame therefore moves the lift by 0 (y_vel was just
+     * reset to 0 by the SLIDE -> FALL transition) and only sets y_vel to
+     * 0x38 for the next frame. Applying gravity before the move (engine
+     * ordering prior to this fix) advanced the lift's integer Y position
+     * one frame earlier than ROM, causing HTZ trace y/camera_y divergence
+     * at f311 once the prior isSolidFor() bug was fixed.
      */
     private void updateFall(AbstractPlayableSprite player) {
-        // Apply gravity
-        // ROM: addi.w #$38,y_vel(a0)
-        yVel += FALL_GRAVITY;
-
-        // Apply velocity
+        // ROM step 1: ObjectMove(y_vel) — move with the CURRENT y_vel.
         yFixed += yVel;
+
+        // ROM step 2: addi.w #$38,y_vel(a0) — add gravity AFTER move.
+        yVel += FALL_GRAVITY;
 
         // Check if fallen off bottom of screen
         Camera camera = services().camera();
@@ -284,8 +291,20 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Only solid in wait and slide states
-        return !isDestroyed() && routineSecondary != STATE_FALL;
+        // ROM parity: Obj16_Main (docs/s2disasm/s2.asm:47381-47389) calls
+        // Obj16_RunSecondaryRoutine (WAIT/SLIDE/FALL) THEN unconditionally calls
+        // PlatformObject. Obj16_Fall (s2.asm:47444-47466) only clears the
+        // standing bit when the lift has fallen below the camera + screen_height
+        // (the bhs.s +++ at line 47450 skips the clear while the lift is on
+        // screen). The engine's updateFall() destroys the lift via
+        // setDestroyed(true) once currentY > screenBottom, so isDestroyed()
+        // handles the off-screen unseat. While the lift is still on-screen
+        // (including the SLIDE -> FALL transition frame), the platform must
+        // remain solid so processInlineRidingObject continues to carry the
+        // riders. Treating FALL as non-solid (as the previous implementation
+        // did) immediately unseated Sonic and Tails on the transition frame,
+        // causing HTZ trace divergence at f308.
+        return !isDestroyed();
     }
 
     @Override
