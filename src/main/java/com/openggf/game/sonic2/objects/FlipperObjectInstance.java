@@ -15,6 +15,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.IdentityHashMap;
 import java.util.List;
 
 /**
@@ -63,7 +64,16 @@ public class FlipperObjectInstance extends BoxObjectInstance
     private boolean animInitialized;
     private final int idleAnimId;
     private int mappingFrame;
-    private int launchCooldown = 0;
+    // ROM parity: Obj86 has no global cooldown; each player is tracked
+    // independently via objoff_36 (P1) / objoff_37 (P2) in s2.asm:57870-57879.
+    // The engine previously used a single launchCooldown counter that would
+    // suppress the contact callback for ALL players for 16 frames after any
+    // launch, so a Tails-vs-flipper push immediately after a Sonic-vs-flipper
+    // launch silently dropped (CNZ trace f201, slot 23 horizontal flipper at
+    // @0280,0368).  Switch to a per-player cooldown so a launch on one
+    // character cannot starve the other.
+    private final IdentityHashMap<AbstractPlayableSprite, Integer> launchCooldown =
+            new IdentityHashMap<>();
 
     // Vertical flipper state tracking (per loc_2B20A in s2.asm)
     // 0 = not standing, 1 = standing/rolling on flipper
@@ -93,7 +103,13 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {
-        if (player == null || result == null || launchCooldown > 0) {
+        if (player == null || result == null) {
+            return;
+        }
+        // ROM parity: cooldown is per-player (objoff_36/37 are independent
+        // bytes in s2.asm).  Skip launch only when THIS player just got
+        // launched, not when the other character did.
+        if (launchCooldown.getOrDefault(player, 0) > 0) {
             return;
         }
 
@@ -225,7 +241,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
         triggerVerticalAnimation();
         playFlipperSound();
-        launchCooldown = 16;
+        launchCooldown.put(player, 16);
     }
 
     private void applyHorizontalLaunch(AbstractPlayableSprite player) {
@@ -260,15 +276,24 @@ public class FlipperObjectInstance extends BoxObjectInstance
         // ROM: bset #status.player.rolling / bne.s loc_2B3BC / addq.w #5,y_pos
         // Only adjust Y if not already rolling
         if (!player.getRolling()) {
+            // ROM parity (s2.asm:58040-58042 set rolling / bne loc_2B3BC /
+            // addq.w #5, y_pos): on first contact the flipper pushes
+            // y_pos down by a fixed 5 px, regardless of character.  Engine
+            // setRolling() shrinks the visual height which already moves
+            // the centre by (runHeight - rollHeight)/2 (10/2=5 for Sonic,
+            // 2/2=1 for Tails), so applying getRollHeightAdjustment() here
+            // only nets +5 centre for Sonic.  Capture pre-roll centre and
+            // write centre += 5 directly so Tails matches ROM as well.
+            short preCentreY = player.getCentreY();
             player.setRolling(true);
-            player.setY((short) (player.getY() + player.getRollHeightAdjustment()));
+            player.setCentreYPreserveSubpixel((short)(preCentreY + 5));
         }
         // ROM always explicitly sets collision radii (y=14, x=7) at loc_2B3BC
         player.applyRollingRadii(false);
 
         triggerHorizontalAnimation(playerIsRightOfFlipper);
         playFlipperSound();
-        launchCooldown = 16;
+        launchCooldown.put(player, 16);
     }
 
     private void triggerVerticalAnimation() {
@@ -344,8 +369,17 @@ public class FlipperObjectInstance extends BoxObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
-        if (launchCooldown > 0) {
-            launchCooldown--;
+        // Per-player cooldown decrement (mirrors ROM's independent objoff_36/37
+        // tracking in s2.asm:57870-57879).
+        if (!launchCooldown.isEmpty()) {
+            launchCooldown.entrySet().removeIf(entry -> {
+                int next = entry.getValue() - 1;
+                if (next <= 0) {
+                    return true;
+                }
+                entry.setValue(next);
+                return false;
+            });
         }
 
         SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
