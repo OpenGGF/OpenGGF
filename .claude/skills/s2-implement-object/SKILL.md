@@ -1,3 +1,8 @@
+---
+name: s2-implement-object
+description: Guide for implementing Sonic 2 objects and badniks with ROM-accurate art, behavior, subtypes, and disassembly validation.
+---
+
 # Implement Sonic 2 Object/Badnik
 
 Implement a Sonic 2 object or badnik with complete ROM accuracy. This skill guides complete implementation including art, animation, sound effects, all subtypes, and cross-validation against the disassembly.
@@ -22,7 +27,7 @@ When delegating agents to explore the disassembly, instruct them to use the **s2
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s2disasm-guide skill (`.claude/skills/s2disasm-guide/skill.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s2disasm-guide skill (`.agents/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 Agents should:
 
@@ -60,6 +65,31 @@ Agents should:
    - The ObjectDiscoveryTool checklist also shows PLC IDs per object per zone
    - Check existing art keys in `Sonic2ObjectArtKeys.java`
    - Check if art is zone-specific or shared
+
+### Phase 1.5: ROM Behavioural Pitfall Review
+
+Before writing implementation code, read `rom-pitfalls.md` in this skill's
+directory. The file lists ROM behaviour classes where naive engine ports
+have produced trace-replay-visible divergences during prior frontier work.
+
+For each pitfall pattern:
+
+1. Decide whether your object is susceptible. Most patterns apply only to
+   specific object families (touch-response badniks, moving solids,
+   per-player interactives, free-fall objects, character-affecting state
+   transitions). Skip patterns the object can't trigger.
+2. For applicable patterns, plan your implementation to avoid the
+   anti-pattern. Quote the ROM convention from the pitfall entry in your
+   code comments where the convention matters (e.g., "P3: per-player
+   state at objoff_36 / objoff_37 — engine uses IdentityHashMap").
+3. If you find a NEW pattern during Phase 2 / Phase 4 cross-validation
+   that isn't yet catalogued — pause and add it to `rom-pitfalls.md`
+   before continuing. The catalogue grows by accretion; future
+   implementations benefit from each entry.
+
+This phase is short for objects that hit zero pitfalls (pass-through) and
+long for objects that hit several (e.g., a moving solid with rolling
+touch-response and per-player state hits P1, P3, P5, and P6 all at once).
 
 ### Phase 2: Implementation
 
@@ -216,7 +246,7 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 
 ##### Pattern 5: Boss (Zone Act 2 Boss Fights)
 
-**Use the dedicated `/s2-implement-boss` skill** (`.claude/skills/s2-implement-boss/skill.md`) for boss implementations.
+**Use the dedicated `/s2-implement-boss` skill** (`.agents/skills/s2-implement-boss/SKILL.md`) for boss implementations.
 
 Bosses differ significantly from regular objects:
 - Dynamic spawning via `Sonic2LevelEventManager` (not level layout)
@@ -400,7 +430,7 @@ Ensure the implementation:
 
 Delegate to a review agent to cross-validate against the disassembly. **Include this instruction in the agent prompt:**
 
-> Use the s2disasm-guide skill (`.claude/skills/s2disasm-guide/skill.md`) for reference on disassembly structure, label conventions, and object system patterns.
+> Use the s2disasm-guide skill (`.agents/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
 
 ```
 Review the implementation of [ObjectName] (0xXX) against the Sonic 2 disassembly.
@@ -454,8 +484,8 @@ Once cross-validation is confirmed bug-free:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s2disasm-guide/skill.md` |
-| **Boss skill** | `.claude/skills/s2-implement-boss/skill.md` |
+| **Disassembly guide** | `.agents/skills/s2disasm-guide/SKILL.md` |
+| **Boss skill** | `.agents/skills/s2-implement-boss/SKILL.md` |
 | Object IDs | `src/.../game/sonic2/constants/Sonic2ObjectIds.java` |
 | ROM offsets | `src/.../game/sonic2/constants/Sonic2Constants.java` |
 | Art keys | `src/.../game/sonic2/Sonic2ObjectArtKeys.java` |
