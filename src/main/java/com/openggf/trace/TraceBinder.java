@@ -2,7 +2,6 @@ package com.openggf.trace;
 
 import com.openggf.level.objects.RomObjectSnapshot;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -19,13 +18,13 @@ public class TraceBinder {
      * Test-only override for the native-prelude-mode signal consumed by
      * {@link #compareBootstrapFrame0(TraceData, EngineSnapshot)}. When
      * non-{@code null}, the comparator uses this value instead of reading
-     * {@code trace.metadata().nativePreludeMode()} via reflection.
+     * {@code trace.metadata().nativePreludeMode()}.
      *
-     * <p>Worker T3 is adding the real {@code nativePreludeMode()} accessor
-     * to {@link TraceMetadata}; until that lands, production callers will
-     * receive {@code false} from the reflection fallback and the comparator
-     * stays silent. Tests in the {@code com.openggf.trace} package flip the
-     * override to exercise the comparator without depending on T3's changes.
+     * <p>Test-only hook for synthetic {@link TraceData} fixtures that omit
+     * {@code lua_script_version} or otherwise can't satisfy the production
+     * version-gate. Production callers leave the override {@code null} and
+     * read the real metadata flag, which derives bootstrap eligibility from
+     * {@code luaScriptVersion >= 9.2-s2}.
      */
     private static volatile Boolean NATIVE_PRELUDE_OVERRIDE_FOR_TESTS = null;
 
@@ -39,13 +38,12 @@ public class TraceBinder {
 
     /**
      * Package-private hook used only by tests in this package to flip the
-     * native-prelude-mode signal without depending on
-     * {@link TraceMetadata#nativePreludeMode() TraceMetadata.nativePreludeMode()}
-     * (which is being added by worker T3 and may not yet exist in HEAD).
+     * native-prelude-mode signal for synthetic {@link TraceData} fixtures
+     * that don't carry a realistic {@code luaScriptVersion}.
      *
      * @param value {@code true} to force native-prelude mode on,
      *              {@code false} to force it off, {@code null} to fall back
-     *              to the real metadata flag (read reflectively).
+     *              to {@link TraceMetadata#nativePreludeMode()}.
      */
     static void setNativePreludeOverrideForTests(Boolean value) {
         NATIVE_PRELUDE_OVERRIDE_FOR_TESTS = value;
@@ -401,10 +399,9 @@ public class TraceBinder {
 
     /**
      * Resolves the native-prelude-mode flag for {@code trace}. Tests can
-     * override via {@link #setNativePreludeOverrideForTests(Boolean)}.
-     * Production reads {@code trace.metadata().nativePreludeMode()} via
-     * reflection so this class compiles regardless of whether T3 has
-     * already added that accessor to {@link TraceMetadata}.
+     * override via {@link #setNativePreludeOverrideForTests(Boolean)};
+     * production reads {@link TraceMetadata#nativePreludeMode()} (which
+     * derives eligibility from {@code luaScriptVersion >= 9.2-s2}).
      */
     private static boolean nativePreludeMode(TraceData trace) {
         Boolean override = NATIVE_PRELUDE_OVERRIDE_FOR_TESTS;
@@ -414,16 +411,7 @@ public class TraceBinder {
         if (trace == null || trace.metadata() == null) {
             return false;
         }
-        try {
-            Method method = trace.metadata().getClass().getMethod("nativePreludeMode");
-            Object result = method.invoke(trace.metadata());
-            return result instanceof Boolean b && b;
-        } catch (NoSuchMethodException missing) {
-            // Worker T3's accessor hasn't shipped yet — treat as legacy.
-            return false;
-        } catch (ReflectiveOperationException unexpected) {
-            return false;
-        }
+        return trace.metadata().nativePreludeMode();
     }
 
     private static void comparePlayerHistory(TraceData trace,

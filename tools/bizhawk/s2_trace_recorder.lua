@@ -1066,7 +1066,7 @@ end
 -- The onframeend callback pattern doesn't work because callbacks stop
 -- firing when BizHawk pauses, and client.exit() can kill the process
 -- before file I/O completes.
-print(string.format("S2 Trace Recorder v9.1-s2 loaded. Profile=%s. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...",
+print(string.format("S2 Trace Recorder v" .. LUA_SCRIPT_VERSION .. " loaded. Profile=%s. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...",
     TRACE_PROFILE))
 
 while true do
