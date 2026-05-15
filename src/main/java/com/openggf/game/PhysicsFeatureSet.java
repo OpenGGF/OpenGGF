@@ -670,7 +670,34 @@ public record PhysicsFeatureSet(
          *  pre-Task-3 X-only gate for S3K returns MGZ trace replay's
          *  first-fail to its prior baseline (frame 2395 instead of frame
          *  1659 with the universal Y check). */
-        boolean touchResponseUsesRenderFlagYGate
+        boolean touchResponseUsesRenderFlagYGate,
+        /**
+         * Whether the sidekick CPU's post-kill flow defers the off-screen
+         * despawn marker write until the sidekick's body has fallen below
+         * {@code Tails_Max_Y_pos + 0x100}.
+         *
+         * <p>S2: {@code true}. ROM {@code Obj02_Dead}
+         * (docs/s2disasm/s2.asm:40736-40759) keeps Tails at his death
+         * position and routes each frame through {@code ObjectMoveAndFall}
+         * (s2.asm:29967-29981, applies {@code y_vel}, then {@code +$38}
+         * gravity). {@code Obj02_CheckGameOver} (s2.asm:40747-40759) then
+         * compares {@code Tails_Max_Y_pos + $100} against {@code y_pos};
+         * only when the body crosses below the threshold does ROM branch
+         * to {@code TailsCPU_Despawn} (s2.asm:39043-39052) and write
+         * {@code x_pos = $4000, y_pos = 0}. Without this deferral the
+         * engine warps to {@code $4000} on Frame N+1 (S3K semantics) which
+         * makes Tails appear off-screen immediately after the bottom kill,
+         * blocking HTZ trace f471 and MCZ trace f399.
+         *
+         * <p>S3K: {@code false}. ROM {@code sub_13ECA}
+         * (sonic3k.asm:26800-26809) writes {@code x_pos = $7F00,
+         * y_pos = 0} on Frame N+1 immediately after the {@code Kill_Character}
+         * setup frame; the deferred-fall window does not exist.
+         *
+         * <p>S1: {@code false}. S1 has no Tails CPU sidekick; value is
+         * unreachable.
+         */
+        boolean sidekickDeathUsesDeferredDespawn
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -760,7 +787,8 @@ public record PhysicsFeatureSet(
             false /* permanentRespawnTableLatch: S1 ObjectsManager_Main only latches remembered spawns; non-remembered spawns re-trigger when cursor passes */,
             true /* objectsExecuteAfterPlayerPhysics: S1 uses post-physics object ordering per 2026-04-18-solid-ordering-rom-accuracy plan */,
             6 /* shieldObjectFixedSlotIndex: S1 Variables.asm v_shieldobj = v_objspace + object_size*6 */,
-            true /* touchResponseUsesRenderFlagYGate: S1 ReactToItem (s1disasm/_incObj/sub ReactToItem.asm:26-27) reads obRender bit 7, cleared by BuildSprites (s1disasm/_inc/BuildSprites.asm:71-78) on Y-out-of-band */);
+            true /* touchResponseUsesRenderFlagYGate: S1 ReactToItem (s1disasm/_incObj/sub ReactToItem.asm:26-27) reads obRender bit 7, cleared by BuildSprites (s1disasm/_inc/BuildSprites.asm:71-78) on Y-out-of-band */,
+            false /* sidekickDeathUsesDeferredDespawn: S1 has no Tails CPU sidekick */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
@@ -793,7 +821,8 @@ public record PhysicsFeatureSet(
             false /* permanentRespawnTableLatch: S2 ObjectsManager_Main only latches remembered spawns (s2.asm:33402 tst.b 2(a0); bpl.s +); non-remembered spawns re-trigger when cursor passes */,
             true /* objectsExecuteAfterPlayerPhysics: S2 DUAL_PATH uses post-physics object ordering with inline solid checkpoints */,
             -1 /* shieldObjectFixedSlotIndex: S2 shields use the dynamic slot pool, no fixed v_shieldobj slot */,
-            false /* touchResponseUsesRenderFlagYGate: S2 Touch_Loop (s2.asm ~84502-84551) walks active objects without consulting the render flag; preserve pre-Task-3 X-only baseline */);
+            false /* touchResponseUsesRenderFlagYGate: S2 Touch_Loop (s2.asm ~84502-84551) walks active objects without consulting the render flag; preserve pre-Task-3 X-only baseline */,
+            true /* sidekickDeathUsesDeferredDespawn: S2 Obj02_Dead (s2.asm:40736-40759) runs ObjectMoveAndFall each frame and only branches to TailsCPU_Despawn (s2.asm:39043-39052) once y_pos exceeds Tails_Max_Y_pos + $100. Required to unblock HTZ trace f471 and MCZ trace f399 where engine warped Tails to $4000 on Frame N+1 instead of letting the body fall first. */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -830,7 +859,8 @@ public record PhysicsFeatureSet(
             true /* permanentRespawnTableLatch: S3K Touch_EnemyNormal (sonic3k.asm:20953 bset #7,status(a1)) sets the destroyed bit on kill; badnik becomes Obj_Explosion which never re-enters Sprite_OnScreen_Test clear path, so bit persists until level reset */,
             true /* objectsExecuteAfterPlayerPhysics: S3K DUAL_PATH uses post-physics object ordering with inline solid checkpoints */,
             -1 /* shieldObjectFixedSlotIndex: S3K shields use the dynamic slot pool, no fixed v_shieldobj slot */,
-            false /* touchResponseUsesRenderFlagYGate: S3K TouchResponse (sonic3k.asm:20655) consumes a pre-built Collision_response_list; render-flag gating happens upstream during list build, not at touch time. Adding a Y check inside the engine touch loop drops objects ROM had on the response list (MGZ trace replay first-fail moves from f2395 to f1659). */);
+            false /* touchResponseUsesRenderFlagYGate: S3K TouchResponse (sonic3k.asm:20655) consumes a pre-built Collision_response_list; render-flag gating happens upstream during list build, not at touch time. Adding a Y check inside the engine touch loop drops objects ROM had on the response list (MGZ trace replay first-fail moves from f2395 to f1659). */,
+            false /* sidekickDeathUsesDeferredDespawn: S3K sub_13ECA (sonic3k.asm:26800-26809) writes the despawn marker on Frame N+1 immediately; there is no deferred-fall window like S2 Obj02_Dead's Tails_Max_Y_pos + $100 gate */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {

@@ -729,6 +729,25 @@ public class SidekickCpuController {
         return (short) fs.sidekickDespawnX();
     }
 
+    /**
+     * Whether the sidekick CPU post-kill flow defers the despawn warp until
+     * the body falls below the bottom kill plane.
+     *
+     * <p>Read from the sidekick's physics feature set (ROM parity). Falls
+     * back to {@code false} (immediate-warp / S3K semantics) when no feature
+     * set is resolved. This matches the historical engine behaviour and
+     * the existing unit-test assertions in
+     * {@code TestSidekickCpuDespawnParity}, which were calibrated against
+     * the immediate-warp baseline.
+     */
+    private boolean resolveSidekickDeathUsesDeferredDespawn() {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs == null) {
+            return false;
+        }
+        return fs.sidekickDeathUsesDeferredDespawn();
+    }
+
     private PlayerCharacter resolvePlayerCharacter() {
         GameModule gameModule = sidekick.currentGameModule();
         if (gameModule != null) {
@@ -2197,6 +2216,29 @@ public class SidekickCpuController {
 
     private void triggerDespawn(DespawnCause cause) {
         if (cause == DespawnCause.LEVEL_BOUNDARY) {
+            // ROM Kill_Character writes routine = 6 (Obj02_Dead), so subsequent
+            // Tails_LevelBound calls from MdAir/MdJump no longer dispatch to
+            // the airborne path; the dispatcher routes routine 6 to Obj02_Dead
+            // (s2.asm:38652-38656). ROM Obj02_Dead does NOT call
+            // Tails_LevelBound -- only Obj02_CheckGameOver's kill-plane test
+            // (s2.asm:40736-40759). For S3K, sub_13ECA writes object_control
+            // bit 7 in the same frame (sonic3k.asm:26804-26807), which
+            // short-circuits all subsequent boundary checks via
+            // isObjectControlSuppressesMovement.
+            //
+            // The engine routes both games' bottom-kill through
+            // PlayableSpriteMovement.doLevelBoundary, which re-fires
+            // despawn(LEVEL_BOUNDARY) every frame while tails_y exceeds the
+            // kill plane. For S2's deferred-despawn flow (the kill plane stays
+            // above Tails until he falls past Tails_Max_Y_pos + $100) this
+            // would clobber the per-frame ObjectMoveAndFall gravity step with
+            // a fresh y_vel = -$700 every tick. Mirror ROM by treating the
+            // initial DEAD_FALLING entry as terminal: once the kill has
+            // begun, additional LEVEL_BOUNDARY triggers are no-ops until the
+            // dispatcher returns to a non-dead routine.
+            if (state == State.DEAD_FALLING) {
+                return;
+            }
             beginLevelBoundaryKill();
             return;
         }
@@ -2333,6 +2375,10 @@ public class SidekickCpuController {
      * the order of operations matching {@code MoveSprite}.
      */
     private void updateDeadFalling() {
+        if (resolveSidekickDeathUsesDeferredDespawn()) {
+            updateDeadFallingDeferredS2();
+            return;
+        }
         // ROM MoveSprite (sonic3k.asm:36037-36041) uses the OLD y_vel for
         // position before adding gravity; sub_13ECA does not touch y_vel so
         // the value entering MoveSprite is the Kill_Character write of -$700.
@@ -2344,6 +2390,78 @@ public class SidekickCpuController {
         sidekick.setCentreYPreserveSubpixel((short) newCentreY);
         // MoveSprite then adds +$38 (sonic3k.asm:36038) to y_vel.
         sidekick.setYSpeed((short) (oldYSpeed + 0x38));
+    }
+
+    /**
+     * Per-frame death-routine equivalent of ROM {@code Obj02_Dead}
+     * (docs/s2disasm/s2.asm:40736-40759). Unlike S3K's {@code sub_13ECA},
+     * S2 keeps the dead Tails at his death position and only warps to the
+     * despawn marker once his body has fallen below
+     * {@code Tails_Max_Y_pos + $100}. Each frame ROM runs:
+     *
+     * <pre>
+     *   Obj02_Dead:
+     *     bsr.w   Obj02_CheckGameOver
+     *     jsr     (ObjectMoveAndFall).l
+     *     ...
+     *
+     *   Obj02_CheckGameOver:
+     *     move.w  (Tails_Max_Y_pos).w,d0
+     *     addi.w  #$100,d0
+     *     cmp.w   y_pos(a0),d0
+     *     bge.w   return_1CD8E           ; not yet past kill plane
+     *     move.b  #2,routine(a0)
+     *     bra.w   TailsCPU_Despawn       ; warp to $4000, $0000
+     * </pre>
+     *
+     * The {@code bge.w return_1CD8E} branch returns BEFORE
+     * {@code ObjectMoveAndFall} when Tails is above the threshold and the
+     * threshold has already been crossed (i.e. {@code routine=2} for the
+     * despawn re-spawn flow). Until that branch fires, every Frame N+k
+     * applies {@code ObjectMoveAndFall} (s2.asm:29967-29981): position
+     * gets the OLD {@code y_vel}, then {@code y_vel += $38} gravity. The
+     * engine reproduces this without writing the off-screen marker so
+     * trace baselines see Tails fall naturally from his death position.
+     *
+     * <p>The threshold check on the FIRST deferred frame uses the
+     * post-{@code MoveSprite2} {@code y_pos} from
+     * {@link #beginLevelBoundaryKill()} (ROM Kill_Character's caller
+     * already ran MoveSprite2 on the kill frame), which mirrors ROM
+     * {@code Obj02_CheckGameOver} reading the same {@code y_pos} value
+     * via the {@code Obj02_Dead} entry on the next tick.
+     */
+    private void updateDeadFallingDeferredS2() {
+        // ROM Obj02_CheckGameOver reads y_pos BEFORE ObjectMoveAndFall on
+        // each frame (s2.asm:40747-40759). Use the current centre-Y, which
+        // matches y_pos for a CPU sidekick.
+        int currentY = sidekick.getCentreY();
+        int killPlane = getMaxYBound(Integer.MIN_VALUE);
+        if (killPlane != Integer.MIN_VALUE && currentY > killPlane + 0x100) {
+            // Crossed below Tails_Max_Y_pos + $100: ROM sets routine=2 and
+            // branches to TailsCPU_Despawn (s2.asm:40756-40759, 39043-39052)
+            // which writes x_pos=$4000, y_pos=0. ROM control then unwinds via
+            // `rts` back to Obj02_Dead, which continues with
+            // `jsr (ObjectMoveAndFall).l` (s2.asm:40738). That step uses the
+            // current y_vel (still the running death-fall value) to shift the
+            // freshly-warped y_pos and then adds $38 gravity. Trace HTZ F538
+            // confirms this: post-warp y = 0 + y_vel/256 ≈ 8 (not 0).
+            short oldYSpeed = sidekick.getYSpeed();
+            applyDespawnMarker();
+            // applyDespawnMarker sets objectControlled=true which makes
+            // PlayableSpriteMovement early-return; the post-warp
+            // ObjectMoveAndFall must be inlined here to mirror the ROM
+            // call-chain.
+            int newCentreY = (sidekick.getCentreY() & 0xFFFF) + (oldYSpeed >> 8);
+            sidekick.setCentreYPreserveSubpixel((short) newCentreY);
+            sidekick.setYSpeed((short) (oldYSpeed + 0x38));
+            return;
+        }
+        // Threshold not yet crossed: ROM Obj02_Dead's per-frame
+        // ObjectMoveAndFall is reproduced by PlayableSpriteMovement.modeAirborne's
+        // isCpuLevelBoundaryKillActive branch (it calls doObjectMoveAndFall
+        // exactly once per dead-falling frame, matching ROM s2.asm:40738).
+        // Do NOT apply gravity here — that would compound with the airborne
+        // path's gravity step and double-count y_vel and y_pos per frame.
     }
 
     /**
