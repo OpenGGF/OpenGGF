@@ -37,20 +37,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// When true, normal vertical scroll rules may be modified
 	private boolean maxYChanging = false;
 
-	// One-shot flag mirroring ROM's setup-block + first-LevelLoop DeformBgLayer
-	// pair (sonic3k.asm:7760 then 7897, s2.asm:4906 then 5092, sonic.asm:2740
-	// then 3105). ROM's first DeformBgLayer call runs MoveCameraY against the
-	// just-clamped Camera_Y_pos. When Screen_Y_wrap_value is the default -1
-	// the bottom clamp branch (loc_1C202 wrap-arithmetic path) does NOT
-	// trigger, so the camera can step one scroll cap past Camera_max_Y_pos.
-	// The engine's normal scroll always clamps to maxY, so it would otherwise
-	// collapse ROM's two-stage `snap then scroll` into a single clamped value
-	// (the f289 cam_y row in the S3K AIZ trace records the *first* state, not
-	// the *second*). This flag is armed by initCameraForLevel after the snap
-	// and consumed on the next updatePosition() tick to skip the bottom clamp
-	// exactly once -- after that the normal scroll-and-clamp behaviour resumes.
-	private boolean suppressFirstMaxYClamp = false;
-
 	// ROM: Horiz_scroll_delay_val - horizontal scroll delay counter
 	// When > 0, horizontal scroll uses position history while vertical scroll continues normally
 	private int horizScrollDelayFrames = 0;
@@ -285,16 +271,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// Normal (non-wrap) frames still clamp, which handles pit death in SBZ2
 		// where v_limitbtm2=$510 constrains the camera even though wrapping is active.
 		if (!lastFrameWrapped) {
-			if (suppressFirstMaxYClamp && !verticalWrapEnabled
-					&& maxY >= minY && y > maxY) {
-				// One-shot ROM-parity: leave Camera_Y_pos above max for the
-				// first scroll after level load (mirrors setup-DeformBgLayer).
-				y = clampAxisWithWrap(y, minY, Short.MAX_VALUE);
-			} else {
-				y = clampAxisWithWrap(y, minY, maxY);
-			}
+			y = clampAxisWithWrap(y, minY, maxY);
 		}
-		suppressFirstMaxYClamp = false;
 	}
 
 	private void wrapFocusedSpriteYPositionWord() {
@@ -771,16 +749,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void setMaxY(short maxY) {
 		this.maxY = maxY;
 		this.maxYTarget = maxY;
-	}
-
-	/**
-	 * Arms the one-shot ROM-parity flag that suppresses the next scroll's
-	 * bottom maxY clamp. See the field comment on {@code suppressFirstMaxYClamp}
-	 * for the ROM reference. Intended to be called from
-	 * {@code LevelManager.initCameraForLevel} after the post-bounds snap.
-	 */
-	public void armSuppressFirstMaxYClamp() {
-		this.suppressFirstMaxYClamp = true;
 	}
 
 	/**
