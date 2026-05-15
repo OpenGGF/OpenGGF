@@ -132,6 +132,13 @@ public class SidekickCpuController {
     private boolean aizIntroDormantMarkerPrimed;
     private boolean suppressNextAizIntroNormalMovement;
     private boolean skipPhysicsThisFrame;
+    // Set by updateDeadFallingDeferredS2 when running the per-frame Obj02_Dead
+    // ObjectMoveAndFall continuation (frame N+1+ of the deferred death-fall,
+    // before crossing Tails_Max_Y_pos + $100). ROM Obj02_Dead (s2.asm:40736-40742)
+    // runs ONLY ObjectMoveAndFall (no Tails_DoLevelCollision), so PlayableSpriteMovement
+    // skips its post-kill collision pass when this flag is set. Cleared at the start of
+    // every CPU update tick.
+    private boolean deferredDespawnDeadFallContinuingThisFrame;
     private boolean bootstrapPreludePlacementApplied;
     private boolean cpuFrameCounterFromStoredLevelFrame;
     private NormalStepDiagnostics latestNormalStepDiagnostics;
@@ -173,6 +180,7 @@ public class SidekickCpuController {
 
     public void update(int frameCount) {
         this.frameCounter = resolveCpuFrameCounter(frameCount);
+        deferredDespawnDeadFallContinuingThisFrame = false;
 
         boolean mgzReleasedCarryCooldown =
                 state == State.CARRYING
@@ -688,6 +696,23 @@ public class SidekickCpuController {
         sidekick.setObjectControlled(true);
         sidekick.setForcedAnimationId(flyAnimId);
         lastInteractObjectId = 0;
+    }
+
+    /**
+     * Returns true when {@link #updateDeadFallingDeferredS2()} ran the
+     * below-threshold Obj02_Dead continuation step this frame. The S2
+     * deferred-despawn flow keeps Tails in DEAD_FALLING for N+1..N+threshold
+     * frames; on each of those frames ROM {@code Obj02_Dead}
+     * (docs/s2disasm/s2.asm:40736-40742) executes
+     * {@code jsr (ObjectMoveAndFall).l} but does NOT call
+     * {@code Tails_DoLevelCollision} — Tails simply falls without colliding
+     * with terrain or moving solids. The kill frame itself (frame N) runs
+     * through ROM {@code Obj02_MdAir} (s2.asm:39259-39274) which DOES call
+     * {@code Tails_DoLevelCollision} as its final step, so it stays in the
+     * engine's post-kill collision pass.
+     */
+    public boolean isDeferredDespawnDeadFallContinuingThisFrame() {
+        return deferredDespawnDeadFallContinuingThisFrame;
     }
 
     public boolean consumeSkipPhysicsThisFrame() {
@@ -2439,20 +2464,35 @@ public class SidekickCpuController {
         if (killPlane != Integer.MIN_VALUE && currentY > killPlane + 0x100) {
             // Crossed below Tails_Max_Y_pos + $100: ROM sets routine=2 and
             // branches to TailsCPU_Despawn (s2.asm:40756-40759, 39043-39052)
-            // which writes x_pos=$4000, y_pos=0. ROM control then unwinds via
-            // `rts` back to Obj02_Dead, which continues with
-            // `jsr (ObjectMoveAndFall).l` (s2.asm:40738). That step uses the
-            // current y_vel (still the running death-fall value) to shift the
-            // freshly-warped y_pos and then adds $38 gravity. Trace HTZ F538
-            // confirms this: post-warp y = 0 + y_vel/256 ≈ 8 (not 0).
+            // which writes x_pos=$4000, y_pos=0 via `move.w` (word-sized)
+            // stores that preserve the low 16-bit y_sub/x_sub fields. ROM
+            // control then unwinds via `rts` back to Obj02_Dead, which
+            // continues with `jsr (ObjectMoveAndFall).l` (s2.asm:40738).
+            // ObjectMoveAndFall (s2.asm:29967-29981) does the 16:16
+            // fixed-point update:
+            //     move.l y_pos(a0),d3        ; load full y_pos:y_sub long
+            //     move.w y_vel(a0),d0
+            //     ext.l  d0 / asl.l #8,d0    ; d0 = y_vel sign-extended << 8
+            //     addi.w #$38,y_vel(a0)      ; gravity (memory only; d0 keeps pre-grav)
+            //     add.l  d0,d3               ; y_pos:y_sub += y_vel<<8, with carry
+            //     move.l d3,y_pos(a0)        ; store full long
+            // The y_sub overflow CARRIES into y_pos. Using integer math
+            // `y_pos += (y_vel >> 8)` drops that carry, which under-counts
+            // y_pos by 1 when (y_sub_preserved + (y_vel & 0xFF00)) overflows
+            // (HTZ F538: y_sub 0x2C00 + 0xE000 = 0x10C00, carry of 1 takes
+            // y_pos from 7 to ROM's 8). AbstractSprite.move performs the
+            // same 32-bit add as ROM, so call it instead of doing manual
+            // pixel arithmetic.
+            short oldXSpeed = sidekick.getXSpeed();
             short oldYSpeed = sidekick.getYSpeed();
             applyDespawnMarker();
-            // applyDespawnMarker sets objectControlled=true which makes
-            // PlayableSpriteMovement early-return; the post-warp
-            // ObjectMoveAndFall must be inlined here to mirror the ROM
-            // call-chain.
-            int newCentreY = (sidekick.getCentreY() & 0xFFFF) + (oldYSpeed >> 8);
-            sidekick.setCentreYPreserveSubpixel((short) newCentreY);
+            // applyDespawnMarker has called setCentreXPreserveSubpixel and
+            // setCentreYPreserveSubpixel((short) 0), matching ROM's two
+            // word writes; x_sub and y_sub are intact. It also sets
+            // objectControlled=true so PlayableSpriteMovement short-circuits
+            // the rest of this frame — we must therefore inline the
+            // post-warp ObjectMoveAndFall here.
+            sidekick.move(oldXSpeed, oldYSpeed);
             sidekick.setYSpeed((short) (oldYSpeed + 0x38));
             return;
         }
@@ -2462,6 +2502,16 @@ public class SidekickCpuController {
         // exactly once per dead-falling frame, matching ROM s2.asm:40738).
         // Do NOT apply gravity here — that would compound with the airborne
         // path's gravity step and double-count y_vel and y_pos per frame.
+        //
+        // Mark this frame as a deferred-fall continuation so
+        // PlayableSpriteMovement skips its post-kill Tails_DoLevelCollision
+        // pass: ROM Obj02_Dead (s2.asm:40736-40742) calls ObjectMoveAndFall
+        // but NOT Tails_DoLevelCollision. Without this gate, MCZ Tails
+        // (kill triggered above CollapsingPlatform s17) lands on the
+        // platform at trace F443 because the engine's normal post-kill
+        // collision pass — correct for ROM Obj02_MdAir's KILL-FRAME
+        // continuation — keeps firing on every deferred-fall frame.
+        deferredDespawnDeadFallContinuingThisFrame = true;
     }
 
     /**

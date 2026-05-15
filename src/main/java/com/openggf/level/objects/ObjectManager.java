@@ -33,6 +33,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.GroundMode;
@@ -5523,6 +5524,32 @@ public class ObjectManager {
         }
 
         private boolean blocksSolidContacts(PlayableEntity player, ObjectInstance candidate) {
+            // ROM SolidObject_ChkBounds (docs/s2disasm/s2.asm:35181-35182):
+            //   cmpi.b   #6,routine(a1)
+            //   bhs.w    SolidObject_NoCollision
+            // Skips solid-object collisions when the player's routine is >= 6
+            // (Dead / Gone / Respawning). For a CPU sidekick the engine
+            // equivalent of routine = 6 (Obj02_Dead, s2.asm:40736-40742) is
+            // SidekickCpuController.State.DEAD_FALLING. Post-warp routine = 8
+            // (Gone / TailsCPU_Despawn) and routine = $A (Respawning) are
+            // already gated below via the objectControlled check (ROM obj_control
+            // bit 7 is set on those entries). Without this DEAD_FALLING gate,
+            // MCZ Tails (kill triggered above CollapsingPlatform s17) lands on
+            // the platform at trace F443 because the engine kept running solid
+            // object contacts on a dead sidekick that ROM would have skipped
+            // here. Sonic 3&K uses immediate-warp (objectControlled=true on
+            // kill frame N+1), so its routine = 6 phase is gated by the
+            // objectControlled path below — this extra check is only needed
+            // for the S2 deferred-despawn window where Tails has routine = 6
+            // but obj_control bit 7 is not yet set.
+            if (player instanceof AbstractPlayableSprite sprite
+                    && sprite.isCpuControlled()) {
+                SidekickCpuController cpu = sprite.getCpuController();
+                if (cpu != null
+                        && cpu.getState() == SidekickCpuController.State.DEAD_FALLING) {
+                    return true;
+                }
+            }
             if (!player.isObjectControlled()) {
                 return false;
             }

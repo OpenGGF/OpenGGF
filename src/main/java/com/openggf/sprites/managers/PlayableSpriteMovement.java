@@ -556,9 +556,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// the missing MoveSprite step prevents the y_vel=-$700 from
 			// shifting Tails up before the collision sensors snap him to
 			// ground.
+			//
+			// S2 deferred-despawn divergence: ROM Obj02_Dead
+			// (s2.asm:40736-40742) runs ObjectMoveAndFall but NOT
+			// Tails_DoLevelCollision on deferred-fall continuation frames
+			// (kill frame N+1..N+threshold). The kill FRAME itself runs
+			// through ROM Obj02_MdAir (s2.asm:39259-39274) which DOES end
+			// in Tails_DoLevelCollision, so the collision pass remains
+			// active there. SidekickCpuController flags continuation frames
+			// via isDeferredDespawnDeadFallContinuingThisFrame(): when set,
+			// the engine mirrors ROM by running only ObjectMoveAndFall.
+			// MCZ trace F443 confirms: without this gate, the engine landed
+			// dead Tails on the CollapsingPlatform below (y_speed snapped to
+			// 0, position frozen), but ROM kept Tails falling through it.
 			doObjectMoveAndFall();
-			sprite.updateSensors(originalX, originalY);
-			doLevelCollision(sprite.isForceFloorCheck());
+			SidekickCpuController kc = sprite.getCpuController();
+			boolean deferredContinuation =
+					kc != null && kc.isDeferredDespawnDeadFallContinuingThisFrame();
+			if (!deferredContinuation) {
+				sprite.updateSensors(originalX, originalY);
+				doLevelCollision(sprite.isForceFloorCheck());
+			}
 			return;
 		}
 
