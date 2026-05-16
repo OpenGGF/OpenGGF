@@ -817,6 +817,93 @@ side resolution.)
 
 ---
 
+## P17 -- Child object out_of_range uses own X instead of parent anchor, causing chunk-boundary unload
+
+**Symptom.** A parent object's child (Seesaw ball, segmented body part, attached
+hazard, swung weapon, etc.) silently vanishes shortly after the parent appears
+on screen. The parent stays alive and behaves normally otherwise — its update
+runs, players can stand on it, scroll handlers see it — but a feature that
+depends on the child (ball launching the rider, body segment contact, attached
+hazard hitbox) never fires. Trace replay shows the parent's state advancing
+correctly while a player launch / contact event that requires the child silently
+fails to trigger. The engine's `parent.ball` (or equivalent child reference) is
+non-null and `child.destroyed=false`, but the child is no longer in
+`ObjectManager.dynamicObjects` and is not in `execOrder[child.slot]`.
+
+**Root cause.** The ROM dispatcher routes Obj14 (and similar parent+child
+objects) through a single `Obj_Index` table that calls `MarkObjGone2` with
+`d0 = objoff_30(a0)`. Crucially, `Obj14_Ball_Init` (`docs/s2disasm/s2.asm:47151`)
+stores the parent seesaw's `x_pos` into `objoff_30(a0)` BEFORE applying the
+ball's `addi.w #$28, x_pos(a0)` offset. So the ball's out-of-range check uses
+the PARENT'S x position, not its own offset position. Both parent and ball
+share the same camera-relative chunk reference and unload together.
+
+A naive engine port adds the child via `addDynamicObjectAfterCurrent(child)` and
+lets it fall back to the default `getOutOfRangeReferenceX()` which returns
+`getX()` (the child's current position). The default
+`ObjectManager.isOutOfRangeS1` formula rounds X to the nearest 128-byte chunk
+(`objX & 0xFF80`) and compares against `(cameraX - 128) & 0xFF80`. For a
+flipped seesaw whose parent is at `0x1520` and child at `0x1520 - 0x28 = 0x14F8`:
+- Parent chunk: `0x1520 & 0xFF80 = 0x1500`
+- Child chunk: `0x14F8 & 0xFF80 = 0x1480`
+When the camera advances to `cameraX >= 0x1580`, the screen-rounded value is
+`0x1500`. The parent's distance is `0x1500 - 0x1500 = 0` (in range), but the
+child's distance is `0x1480 - 0x1500 = 0xFF80` unsigned = 65408 (way past the
+640 threshold). The child alone is unloaded, leaving the parent's `child` field
+pointing at an instance that's no longer in dynamicObjects.
+
+**What to check.** For any parent+child pair where ROM's `Obj_Init` does the
+sequence:
+
+```
+move.w x_pos(a0),objoff_30(a0)  ; save parent x BEFORE offset
+addi.w #$xx,x_pos(a0)            ; apply child offset
+[...]
+move.b status(a0),status(a1)     ; copy parent status (with flip) to child
+move.l a0,objoff_3C(a1)          ; store parent pointer for the child
+```
+
+then the child needs `getOutOfRangeReferenceX()` to return the parent's x_pos
+(or, equivalently, the value saved in `objoff_30`). This applies to:
+- Seesaw ball (`Obj14_Ball_Init` at s2.asm:47142)
+- Any moving-solid child that's offset from its parent
+- Body segments on Caterkiller / Crawl / multi-piece badniks
+- Attached projectiles fired at a fixed offset from a parent gun mount
+
+The fix is one method:
+
+```java
+@Override
+public int getOutOfRangeReferenceX() {
+    return parentCenterX;  // ROM objoff_30(a0) = parent x_pos
+}
+```
+
+For S3K, the same rule applies whenever the disasm shows
+`move.w x_pos(a0),objoff_30(a0)` immediately followed by `addi.w` /
+`subi.w` on `x_pos(a0)` inside the child's init routine.
+
+**ROM citation.** `docs/s2disasm/s2.asm:47151` (`Obj14_Ball_Init` saves seesaw_x
+in objoff_30 before applying the ball offset), `s2.asm:46996`
+(`Obj14` dispatcher's `move.w objoff_30(a0),d0 / jmpto JmpTo_MarkObjGone2`),
+`s2.asm:30040-30057` (`MarkObjGone2` uses d0 = objoff_30 for the chunk-rounded
+out_of_range comparison). Engine equivalent: any `AbstractObjectInstance`
+subclass spawned as a positional offset from a parent should override
+`getOutOfRangeReferenceX()` to return the parent's centre X.
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 9:
+HTZ f4305 Sonic and Tails landed on the second (flipped) HTZ seesaw, but the
+seesaw's ball had been unloaded the instant the camera entered chunk 0x1500
+because the ball at 0x14F8 lived in chunk 0x1480. The seesaw's `ball` field
+held a now-orphaned reference; `Obj14_Ball_Main`'s `objoff_3A` delta check
+never ran, so the seesaw's `storedY=0x0760` launch velocity sat unused and
+the players never went airborne. Adding `getOutOfRangeReferenceX()` =
+parent seesaw x kept the ball alive while the parent is in range, restoring
+the launch path. Frontier: HTZ f4305 (396 errs) -> f5044 (446 errs, +739 frames).
+Pattern applies to every parent+offset-child pair in S2/S3K.)
+
+---
+
  ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
