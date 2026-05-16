@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.events;
 
 import com.openggf.game.sonic2.OilSurfaceManager;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
  * Oil Ocean Zone events.
@@ -21,11 +22,21 @@ public class Sonic2OOZEvents extends Sonic2ZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        if (oilManager != null) {
-            var player = camera().getFocusedSprite();
-            if (player != null) {
-                oilManager.update(player);
+        if (oilManager == null) {
+            return;
+        }
+        // ROM Obj07_Main processes both Player 1 and Player 2 every frame
+        // (s2.asm:49681-49736). Mirror that by ticking the oil layer for the
+        // camera-focused character (Sonic) and every registered sidekick.
+        AbstractPlayableSprite sonic = camera().getFocusedSprite();
+        if (sonic != null) {
+            oilManager.update(sonic);
+        }
+        for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
+            if (sidekick != null && sidekick != sonic) {
+                oilManager.update(sidekick);
             }
         }
+        oilManager.endFrame();
     }
 }
