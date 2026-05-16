@@ -38,17 +38,27 @@
 -- diagnostics so collision-plane divergences can be checked against ROM.
 -- v8.2-s2 changes: emit focused ObjB2 Tornado state diagnostics for the
 -- SCZ/WFZ level-select route without feeding those values back into replay.
+-- v9.3-s2 changes: derive the CSV `input` column from the BK2 movie input
+-- via `movie.getinput()` instead of `mainmemory.read_u8(ADDR_CTRL1)`. ROM-
+-- side `Ctrl_1_Held` ($FFF604) can lag the BK2's logical input by up to
+-- several frames during long V-int subroutines or lag-frame sequences in
+-- ARZ/OOZ/SCZ-style end-of-act windows (the SCZ Tornado section starting
+-- around BK2 frame 5337 showed a 3-frame stale-B-held divergence). Keep
+-- the raw_input/logical_input diagnostic fields in the `state_snapshot`
+-- aux events so ROM-vs-BK2 input drift is still surfaced for debugging.
 ------------------------------------------------------------------------------
 
 -----------------
 --- Constants ---
 -----------------
 
--- v9.2-s2: traces from this recorder version onward are bootstrap-comparable
--- against the post-universal-title-card engine (ADR-1, design spec 2026-05-15).
+-- v9.3-s2: traces from this recorder version onward are bootstrap-comparable
+-- against the post-universal-title-card engine (ADR-1, design spec 2026-05-15)
+-- AND derive their CSV `input` column from BK2 directly via movie.getinput
+-- (see v9.3-s2 change note above for context).
 -- The bootstrap-comparator eligibility is derived from this version string by
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
-local LUA_SCRIPT_VERSION = "9.2-s2"
+local LUA_SCRIPT_VERSION = "9.3-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -249,6 +259,42 @@ end
 local function rom_joypad_to_mask(raw)
     local mask = raw & 0x0F                        -- directions (bits 0-3)
     if (raw & 0x70) ~= 0 then mask = mask + INPUT_JUMP end  -- A|B|C -> JUMP
+    return mask
+end
+
+-- Read the BK2 movie's logical input for the just-completed frame and convert
+-- it to the engine's input bitmask. This bypasses ROM-side staleness in
+-- $FFF604 (Ctrl_1_Held) which can lag the BK2 input by several frames on
+-- specific lag-frame / long-V-int-subroutine windows (notably SCZ Tornado-
+-- handoff and OOZ/ARZ end-of-act transitions). The replay test fixture
+-- reads the same BK2 file directly, so using movie.getinput here keeps the
+-- trace's `input` column perfectly aligned with what the replay sees.
+--
+-- Returns the engine bitmask: bit0=UP, bit1=DOWN, bit2=LEFT, bit3=RIGHT,
+-- bit4=JUMP (if any of A/B/C are pressed). Falls back to the RAM-derived
+-- mask when no movie is loaded.
+local function bk2_input_mask(fallback_raw)
+    if not movie.isloaded() then
+        return rom_joypad_to_mask(fallback_raw)
+    end
+    -- emu.framecount() returns the just-completed frame index. BK2 indices
+    -- are 0-based and the input at index N drove frame N. on_frame_end
+    -- captures state after frame N completes, so movie.getinput(N, 1)
+    -- returns the input that BK2 just delivered to ROM.
+    local frame_index = emu.framecount()
+    local jp = movie.getinput(frame_index, 1)
+    if jp == nil then
+        return rom_joypad_to_mask(fallback_raw)
+    end
+    local mask = 0
+    if jp["P1 Up"]    or jp["Up"]    then mask = mask | INPUT_UP    end
+    if jp["P1 Down"]  or jp["Down"]  then mask = mask | INPUT_DOWN  end
+    if jp["P1 Left"]  or jp["Left"]  then mask = mask | INPUT_LEFT  end
+    if jp["P1 Right"] or jp["Right"] then mask = mask | INPUT_RIGHT end
+    if jp["P1 A"] or jp["A"] or jp["P1 B"] or jp["B"]
+            or jp["P1 C"] or jp["C"] then
+        mask = mask | INPUT_JUMP
+    end
     return mask
 end
 
@@ -926,10 +972,18 @@ local function on_frame_end()
     local rolling = (status & STATUS_ROLLING) ~= 0
     local ground_mode = air and 0 or angle_to_ground_mode(angle)
 
-    -- Read held input directly from RAM (works during movie playback;
-    -- joypad.get() returns physical controller state which is zero in headless)
+    -- v9.3-s2: derive CSV `input` column from the BK2 movie directly so the
+    -- recorded value perfectly matches what AbstractTraceReplayTest's BK2
+    -- reader will see during validation. ROM-side $FFF604 (Ctrl_1_Held) is
+    -- updated by Read_Joypads which only runs inside specific V-int
+    -- subroutines; on lag frames and during long V-int paths in SCZ/OOZ/ARZ
+    -- end-of-act windows it can lag the BK2 by several frames, producing
+    -- spurious "Input alignment error" failures.
+    --
+    -- raw_input still captures ROM-side $FFF604 for the state_snapshot aux
+    -- diagnostic; only the CSV `input` column switched to BK2-derived.
     local raw_input = mainmemory.read_u8(ADDR_CTRL1)
-    local input_mask = rom_joypad_to_mask(raw_input)
+    local input_mask = bk2_input_mask(raw_input)
 
     -- Format helper for unsigned 16-bit hex
     local function uhex(val)
