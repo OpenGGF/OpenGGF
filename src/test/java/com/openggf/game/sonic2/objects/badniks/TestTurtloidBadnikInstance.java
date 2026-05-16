@@ -5,12 +5,15 @@ import com.openggf.game.GameRng;
 import org.junit.jupiter.api.Test;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectConstructionContext;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
+import org.mockito.ArgumentCaptor;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -66,6 +69,49 @@ public class TestTurtloidBadnikInstance {
         assertEquals(-0x80, getIntField(base, "xVelocity"), "Base should resume default movement speed");
         assertEquals("DONE", getField(base, "state").toString(), "Base should transition to DONE movement state");
         verify(objectManager, times(3)).addDynamicObject(any());
+    }
+
+    @Test
+    public void riderAttackSpawnsAftermathAtPreUpdateTouchPosition() throws Exception {
+        LevelManager levelManager = mock(LevelManager.class);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        ObjectRenderManager objectRenderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer pointsRenderer = mock(PatternSpriteRenderer.class);
+        when(levelManager.getObjectManager()).thenReturn(objectManager);
+        when(levelManager.getObjectRenderManager()).thenReturn(objectRenderManager);
+        when(objectRenderManager.getPointsRenderer()).thenReturn(pointsRenderer);
+
+        com.openggf.level.objects.ObjectServices services = mock(com.openggf.level.objects.ObjectServices.class);
+        when(services.objectManager()).thenReturn(objectManager);
+        when(services.renderManager()).thenReturn(objectRenderManager);
+        when(services.rng()).thenReturn(new GameRng(GameRng.Flavour.S1_S2));
+
+        ObjectConstructionContext.setConstructionContext(services);
+        TurtloidBadnikInstance base;
+        try {
+            base = new TurtloidBadnikInstance(
+                    new ObjectSpawn(0x200, 0x100, Sonic2ObjectIds.TURTLOID, 0x18, 0, false, 0));
+        } finally {
+            ObjectConstructionContext.clearConstructionContext();
+        }
+        base.setServices(services);
+
+        TurtloidRiderInstance rider = (TurtloidRiderInstance) getField(base, "rider");
+        assertNotNull(rider, "Turtloid should spawn a rider child");
+        rider.snapshotTouchResponseState();
+        setIntField(rider, "currentX", 0x1D0);
+        setIntField(rider, "currentY", 0x120);
+
+        clearInvocations(objectManager);
+        rider.onPlayerAttack(null, null);
+
+        ArgumentCaptor<ObjectInstance> spawned = ArgumentCaptor.forClass(ObjectInstance.class);
+        verify(objectManager, times(3)).addDynamicObject(spawned.capture());
+        List<ObjectInstance> aftermath = spawned.getAllValues();
+        assertTrue(aftermath.stream().allMatch(object -> object.getX() == 0x204),
+                "Touch response aftermath should use the rider's pre-update X");
+        assertTrue(aftermath.stream().allMatch(object -> object.getY() == 0xE8),
+                "Touch response aftermath should use the rider's pre-update Y");
     }
 
     private static Object getField(Object target, String fieldName) throws Exception {

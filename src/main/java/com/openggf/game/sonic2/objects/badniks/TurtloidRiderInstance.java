@@ -83,9 +83,11 @@ public class TurtloidRiderInstance extends AbstractObjectInstance
             return;
         }
         // ROM parity: destroying the rider should not destroy the turtle base.
+        int hitX = getPreUpdateX();
+        int hitY = getPreUpdateY();
         destroyed = true;
         setDestroyed(true);
-        parent.onRiderDestroyed(currentX, currentY, player);
+        parent.onRiderDestroyed(hitX, hitY, player);
     }
 
     @Override
