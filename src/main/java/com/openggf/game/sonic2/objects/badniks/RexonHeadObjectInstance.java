@@ -218,10 +218,9 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
     private void updateInitialWait() {
         waitTimer--;
         if (waitTimer <= 0) {
-            // Start rising - set initial velocity (s2.asm:73831-73832)
-            // Heads rise upward and outward
-            int xDir = xFlip ? 1 : -1;
-            xVelocity = xDir * 0x120;  // -$120 or +$120 (s2.asm:73831)
+            // Start rising - Obj97_StartRaise always writes -$120, regardless of x_flip
+            // (docs/s2disasm/s2.asm:73831). x_flip only changes the initial X offset.
+            xVelocity = -0x120;
             yVelocity = -0x200;        // -$200 upward (s2.asm:73832)
 
             // Set raise timer (s2.asm:73833-73837)
@@ -232,14 +231,8 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
     }
 
     private void updateRaiseHead() {
-        // Decelerate outward X velocity (s2.asm:73845-73852)
-        // Original always adds +$10 to x_vel, which decelerates from -$120 toward zero
-        // For mirrored direction (xFlip), we need to subtract $10 to decelerate from +$120
-        if (xFlip) {
-            xVelocity -= 0x10;  // Decelerate rightward motion (+$120 toward 0)
-        } else {
-            xVelocity += 0x10;  // Decelerate leftward motion (-$120 toward 0)
-        }
+        // Obj97_RaiseHead always adds +$10 to x_vel (docs/s2disasm/s2.asm:73848).
+        xVelocity += 0x10;
 
         // Decrement raise timer (s2.asm:73847)
         raiseTimer--;
@@ -434,7 +427,9 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
 
         state = State.DEATH_DROP;
         xVelocity = DEATH_X_VELOCITIES[headNumber];
-        yVelocity = -0x200;  // Initial upward velocity
+        // Obj97_CheckHeadIsAlive only switches routine and writes x_vel
+        // (docs/s2disasm/s2.asm:73935-73942); y_vel remains stopped.
+        yVelocity = 0;
     }
 
     @Override
@@ -537,5 +532,21 @@ public class RexonHeadObjectInstance extends AbstractObjectInstance
         // - Neck segments (headIndex 0-6 / headNumber 0-3): use frame 1 (circular segment)
         int frame = (headNumber == 4) ? 0 : 1;
         renderer.drawFrameIndex(frame, currentX, currentY, xFlip, false);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("state=%s head=%d idx=%d xflip=%d vel=%04X,%04X phase=%02X dir=%d wait=%02X raise=%02X link=%d",
+                state,
+                headNumber,
+                headIndex,
+                xFlip ? 1 : 0,
+                xVelocity & 0xFFFF,
+                yVelocity & 0xFFFF,
+                oscillationPhase & 0xFF,
+                phaseDirection,
+                waitTimer & 0xFF,
+                raiseTimer & 0xFF,
+                linkedHead != null ? 1 : 0);
     }
 }
