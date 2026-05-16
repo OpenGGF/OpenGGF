@@ -535,6 +535,84 @@ Sonic transitioning to Spindash during overlap.)
 
 ---
 
+## P15 -- Object update() resolves solid contacts BEFORE refreshing slope / collision state
+
+**Symptom.** A sloped solid (seesaw, bridge, tilting platform, flipping
+platform) ports the ROM logic but the rider's Y trails ROM by one frame
+during a state transition.  Frontier divergence appears the frame the
+slope changes shape: ROM has snapped to the new surface; the engine
+still uses the previous frame's surface and lags 1-8 px depending on
+the slope-table delta.  The state itself transitioned at the right
+time -- it just happened AFTER the engine had already finished its
+slope sample.
+
+**Root cause.** ROM `Obj_Main` for sloped solids updates the
+mapping_frame / slope-table choice BEFORE the SolidObjCheckSloped2 /
+loc_19EB6 call.  A naive engine port often inverts this:
+
+```java
+public void update(int frame, PlayableEntity player) {
+    SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
+    // ... read standing players from batch ...
+    int target = calculateTargetAngle();
+    updateAngle(target);   // <-- TOO LATE: mapping_frame changes
+                            //     after collision has already run
+}
+```
+
+Because `getSlopeData()` and `isSlopeFlipped()` both key off
+`mappingFrame`, sampling them inside `resolveSolidNowAll` returns the
+previous frame's surface; the rider's Y lands one transition behind
+ROM.  See S2 P15 / cross-game mirror for the full S2 case study
+(HTZ Seesaw, mapping_frame 2 -> 1 transition, Sonic 3 px low for one
+frame).
+
+**What to check.** When implementing any S3K solid object whose
+collision geometry depends on a tickable state byte (mapping_frame,
+animation frame, internal angle, depression amount, slope offset
+table choice), look at the ROM `Obj_Main` to see where the state
+update happens relative to the SolidObjCheckSloped2 / loc_19EB6 /
+PlatformObject call:
+
+1. If ROM updates the state *before* the collision call, the engine
+   must update its equivalent *before* `resolveSolidNowAll()` /
+   `checkpointAll()`.  Compute the target from the PREVIOUS frame's
+   standing-player references (kept as instance fields) plus the
+   CURRENT player x positions -- ROM does that via per-player
+   standing bits on `status(a0)` and reads of `x_pos(a1)` for the
+   selected character.
+2. The previous-frame standing references are valid because ROM
+   itself reads them before the collision call clears / re-sets them.
+   In the engine, the latched `standingPlayer1` / `standingPlayer2`
+   fields from the end of the prior `update()` give the same view.
+3. Watch for sibling helpers that already follow the ROM order:
+   `BridgeObjectInstance` (S2 EHZ bridge) calls
+   `updateDepressionState()`, `rebuildBridgeShape()`,
+   `updateSlopeData()` FIRST and only then runs `checkpointAll()`.
+   `Sonic3kCollapsingPlatformObjectInstance` and
+   `AizFlippingBridgeObjectInstance` follow analogous patterns and
+   are good templates for new S3K sloped solids.
+4. The fix is purely a reorder; no new state, no new flags.  Don't
+   try to "buffer" the previous-frame slope -- match ROM order and
+   the divergence disappears.
+
+**ROM citation.** S2 originating fix: `docs/s2disasm/s2.asm:47037-47115`
+(Obj14_Main + Obj14_UpdateMappingAndCollision).  S3K analogues live
+in `docs/skdisasm/sonic3k.asm` per-object: AIZ flipping bridge
+state-update routine + `loc_19EB6` SolidObjCheckSloped2 call, MGZ
+tilting blocks, ICZ segment columns.  Engine equivalent: any S3K
+solid object's `update(int, PlayableEntity)` that calls
+`services().solidExecution().resolveSolidNowAll()` should perform
+slope-shape state updates BEFORE that call, mirroring ROM order.
+
+**Originating commit.** `<pending>` (cross-game mirror of S2 P15
+entry; HTZ Seesaw mapping_frame transition surfaced the ordering
+issue.  S3K state-driven sloped solids share the same idiom -- ROM
+updates state, then calls collision -- and a future S3K trace will
+surface the same bug if the engine port reverses the order.)
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

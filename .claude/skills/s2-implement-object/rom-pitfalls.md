@@ -620,6 +620,113 @@ pattern in S1/S2/S3K badnik implementations).
 
 ---
 
+## P15 -- Object update() resolves solid contacts BEFORE refreshing slope / collision state
+
+**Symptom.** A sloped solid (seesaw, bridge, tilting platform) ports the
+ROM logic but the rider's Y trails ROM by one frame during a state
+transition.  Frontier divergence appears the frame the slope changes shape:
+ROM has snapped to the new surface; the engine still uses the previous
+frame's surface and lags 1-8 px depending on the slope-table delta.  HTZ1
+trace f1017: ROM transitioned `mapping_frame` 2 -> 1 (tilted -> flat) and
+sampled `SLOPE_FLAT[20]=5`, putting Sonic at `y=0x03D0`; engine still had
+`mapping_frame=2` (xFlip) at sample time, sampled `SLOPE_TILTED[27]=2`
+and put Sonic at `y=0x03D3`.  The state itself transitioned at the right
+time -- it just happened AFTER the engine had already finished its
+slope sample.
+
+**Root cause.** ROM `Obj14_Main` (seesaw) order:
+
+```
+Obj14_Main:
+    move.b objoff_3A(a0),d1     ; previous-frame target
+    btst   #p1_standing_bit,status(a0)
+    beq.s  loc_21A12             ; if no standing, alt path
+    ; ... recompute d1 from player x ...
+Obj14_UpdateMappingAndCollision:
+    bsr.w  Obj14_SetMapping      ; <-- mapping_frame UPDATED here
+    lea    (byte_21C8E).l,a2     ; slope table selected from NEW mapping_frame
+    btst   #0,mapping_frame(a0)
+    beq.s  +
+    lea    (byte_21CBF).l,a2
++
+    move.w x_pos(a0),-(sp)
+    moveq  #0,d1
+    move.b width_pixels(a0),d1
+    moveq  #8,d3
+    move.w (sp)+,d4
+    bra.w  SlopedPlatform        ; <-- collision uses NEW state
+```
+
+ROM updates the slope-relevant state, **then** runs the collision call.
+A naive engine port often inverts this:
+
+```java
+public void update(int frame, PlayableEntity player) {
+    SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
+    // ... read standing players from batch ...
+    int target = calculateTargetAngle();
+    updateAngle(target);   // <-- TOO LATE: mapping_frame changes
+                            //     after collision has already run
+}
+```
+
+Because `getSlopeData()` and `isSlopeFlipped()` both key off
+`mappingFrame`, sampling them inside `resolveSolidNowAll` returns the
+previous frame's surface; the rider's Y lands one transition behind ROM.
+
+**What to check.** When implementing any solid object whose collision
+geometry depends on a tickable state byte (mapping_frame, animation
+frame, internal angle, depression amount, slope offset table choice),
+look at the ROM `Obj_Main` to see where the state update happens
+relative to the SolidObject / SlopedPlatform / PlatformObject call:
+
+1. If ROM updates the state *before* the collision call, the engine
+   must update its equivalent *before* `resolveSolidNowAll()` /
+   `checkpointAll()`.  Compute the target from the PREVIOUS frame's
+   standing-player references (kept as instance fields) plus the
+   CURRENT player x positions -- ROM does exactly that via
+   `btst p1_standing_bit, status(a0)` on the entry-frame status and
+   `move.w x_pos(a1), d0` on the current player position.
+2. The previous-frame standing references are valid because ROM
+   itself reads them before the collision call clears / re-sets them.
+   In the engine, the latched `standingPlayer1` / `standingPlayer2`
+   fields from the end of the prior `update()` give the same view.
+3. If ROM updates the state *after* the collision call (e.g. some
+   gravity / move-by-velocity is interleaved with collision in ROM
+   order), preserve that placement -- don't blindly hoist state
+   updates to the top of `update()`.
+4. Watch for sibling helpers that already follow the ROM order:
+   `BridgeObjectInstance.update()` calls `updateDepressionState()`,
+   `rebuildBridgeShape()`, `updateSlopeData()` FIRST and only then
+   runs `checkpointAll()`.  That is the correct template.
+5. The fix is purely a reorder; no new state, no new flags.  Don't
+   try to "buffer" the previous-frame slope -- match ROM order and
+   the divergence disappears.
+
+**ROM citation.** `docs/s2disasm/s2.asm:47037-47115` (Obj14_Main +
+Obj14_UpdateMappingAndCollision: target compute -> Obj14_SetMapping
+-> SlopedPlatform).  Same idiom in S1 Obj48 / Obj49 (S1 seesaw) and
+in S3K AIZ flipping bridge and Tension bridge -- they all update
+the slope-relevant state byte before calling the slope-collision
+routine.  Engine equivalent: any solid object's
+`update(int, PlayableEntity)` that calls
+`services().solidExecution().resolveSolidNowAll()` should perform
+slope-shape state updates BEFORE that call, mirroring ROM order.
+
+**Originating commit.** `<pending>` (trace frontier advancement loop
+iter 7: HTZ f1017 Sonic running across HTZ Seesaw during
+mapping_frame=2 -> mapping_frame=1 transition.  Engine resolved
+SlopedPlatform contact with stale mapping_frame=2, sampling
+SLOPE_TILTED[27]=2 instead of ROM's SLOPE_FLAT[20]=5, leaving
+Sonic 3 px low.  Reorder fixed: target compute + updateAngle()
+now run BEFORE resolveSolidNowAll(), so the slope sampled uses the
+freshly-transitioned mapping_frame.  Frontier: HTZ f1017 (943 errs)
+-> f1084 (1180 errs, +67 frames).  Pattern applies to every
+state-driven sloped solid that uses MANUAL_CHECKPOINT solid
+execution.)
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
