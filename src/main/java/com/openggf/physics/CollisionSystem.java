@@ -346,6 +346,16 @@ public class CollisionSystem {
     public void resolveGroundAttachment(AbstractPlayableSprite sprite,
                                         int positiveThreshold,
                                         BooleanSupplier hasObjectSupport) {
+        // ROM: btst #0,object_control(a0) at sonic3k.asm:21555-21561 skips the
+        // entire status-based dispatch (which includes terrain probes and
+        // air-state transitions) when object_control bit 0 is set. Mirror that
+        // here so an object-controlling sprite (e.g. AIZ1 intro plane gripping
+        // Sonic via {@code move.b #$53,object_control(a1)} at
+        // sonic3k.asm:135507) never gets {@code setAir(true)} from a manual
+        // ground probe — its position is owned by the controlling object.
+        if (sprite.isObjectControlSuppressesMovement()) {
+            return;
+        }
         // ROM: S1 Sonic_AnglePos, S2 AnglePos, and S3K Player_AnglePos all
         // return early only when the player's Status_OnObj bit is set
         // (S3K: docs/skdisasm/sonic3k.asm:18735-18741). Object-side standing
