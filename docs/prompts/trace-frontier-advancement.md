@@ -36,18 +36,30 @@ Current priority:
 2. Then advance the nearest failing frame among the other S2 level-select traces.
 3. Prefer a small, disassembly-backed engine fix over broad speculative work.
 
-Known recent frontier examples:
+Reconfirm the current failures before coding — frontiers move as fixes
+land. Use:
 
-- SCZ: frame 55, player `x` expected `0x017F`, actual `0x017E`.
-- WFZ: frame 207, player `y` expected `0x04B2`, actual `0x04B1`.
-- HTZ: frame 308, `tails_y` expected `0x0477`, actual `0x0476`.
-- OOZ: frame 230, `y_speed` expected `0x0000`, actual `0x05B0`.
-- ARZ: frame 303, `tails_y` expected `0x0363`, actual `0x0362`.
-- CNZ: frame 201, `tails_rolling` expected `1`, actual `0`.
-- CPZ: frame 339, `tails_g_speed` expected `0x042D`, actual `0x0000`.
-- MCZ: frame 216, `tails_air` expected `0`, actual `1`.
+```
+mvn -q "-Dtest=*TraceReplay" test -DfailIfNoTests=false 2>&1 | grep -E "First error|MSE:TESTS"
+```
 
-Reconfirm the current failures before coding; these frames may have moved.
+to enumerate live frontiers in one pass. Each first-error line names the
+zone, frame, field, and expected/actual values; pick the highest-impact
+target.
+
+**Target-selection heuristics** based on the iter-1..N history:
+- Same field + same first-error frame across multiple zones is a
+  strong signal of a shared root cause — investigate jointly.
+- A frontier that has stayed at the same frame across several iters
+  is "stuck" — either deeply nested (e.g., the CNZ f202 tails_x 1px
+  Flipper post-launch sub-pixel) or needs recorder-side diagnostics
+  before another speculative fix attempt.
+- A frontier that moves backward after a fix usually means the fix
+  was correct and uncovered an earlier-cascade bug; the new frontier
+  is the next thing to chase, not a regression.
+- A fix that drops the error count significantly but doesn't advance
+  the first-error frame is still real progress — the underlying bug
+  is partially addressed, and the residual deserves its own iter.
 
 ## Execution Loop
 
@@ -138,43 +150,76 @@ Use subagents when the work naturally splits into independent tracks:
 Do not delegate the immediate blocker if your next local step depends entirely
 on that answer. Continue local work on a non-overlapping task while agents run.
 
-Ask agents to suggest skill improvements only when they find a repeated failure
-pattern that future agents are likely to repeat. If skill edits are warranted,
-update both `.agents/skills/...` and `.claude/skills/...` mirrors in the same
-logical change, and use the commit trailer `Skills: updated`.
+### Subagent dispatch rules learned from prior loops
 
-## Skill Self-Improvement Feedback Loop
+These are non-negotiable for any agent you dispatch to land an engine fix:
 
-When a frontier advancement commits a fix that touches code under
-`src/main/java/com/openggf/game/sonic{1,2,3k}/`, the loop closes back into
-the implement-object skill catalogue so future implementations don't
-repeat the same bug class. Execute step 10 of the
-`trace-replay-bug-fixing/SKILL.md` workflow:
+1. **Worktree isolation defaults to `master`, not the current branch.**
+   Every dispatched agent must reset its worktree explicitly:
+   ```
+   git fetch origin develop 2>/dev/null || true
+   git reset --hard develop
+   git log --oneline -1
+   ```
+   Then verify by reading a landmark file you know lives only on the
+   feature branch (e.g., a trace-package file the master branch lacks).
+   Without this reset, the agent investigates and patches against the
+   master-baseline copy of files — its changes are real but against the
+   wrong baseline, and patches won't apply at integration time.
 
-1. After landing the fix, classify the root cause. Is it:
-   - A class of bug that could occur in any not-yet-implemented object?
-     (Touch-response gating, multi-frame init collapse, per-player state,
-     character-dependent offsets, premature non-solid transition, gravity
-     order, centre-vs-top-left coordinates, per-game post-event flow.)
-   - Or a one-off specific to this object's quirks?
-2. If a class of bug, open the relevant `rom-pitfalls.md`:
-   - `.agents/skills/s2-implement-object/rom-pitfalls.md` (canonical) +
-     `.claude/skills/s2-implement-object/rom-pitfalls.md` (mirror).
-   - `.agents/skills/s3k-implement-object/rom-pitfalls.md` (canonical) +
-     `.claude/skills/s3k-implement-object/rom-pitfalls.md` (mirror).
-3. Decide: matches an existing P-numbered entry (append commit hash to
-   the entry's originating-commit list) or genuinely new (append a new
-   P-numbered entry following the template).
-4. If the pattern is cross-game (ROM convention shared between S2 and
-   S3K), copy the entry to the other game's pitfalls file with the
-   matching disasm citation.
-5. Commit the catalogue update on its own (or folded into the same
-   commit as the engine fix when the diff is small). Use the
-   `Skills: updated` trailer.
+2. **Agents have hallucinated successful fixes.** An agent will sometimes
+   report `Files modified: X.java` (with a plausible diff sketch) while
+   the worktree contains zero on-disk changes. Bake the proof into the
+   prompt:
+   ```
+   Before reporting, run `git status --short` and `git diff --stat`.
+   Paste the output VERBATIM in your report. The status MUST show
+   modified files; the stat MUST show line counts > 0. If they're
+   empty, your fix didn't land — retry or report failure honestly.
+   ```
+   At integration time, verify in the orchestrator workspace:
+   `git -C <worktree> status --short` and confirm the claimed files
+   actually appear there before copying.
 
-The catalogue grows by accretion. Read `rom-pitfalls.md` at Phase 1.5 of
-the corresponding `*-implement-object/SKILL.md` before writing object
-code; check each entry against the object you're porting.
+3. **The Edit tool intermittently fails to write CRLF files** in
+   worktree-isolated agents (observed iter 4). Symptom: Edit reports
+   success, `Read` shows the new content, but `git diff` shows nothing
+   and the file's mtime doesn't update. Workaround in the prompt:
+   if `git diff <file>` after an Edit is empty, retry with the Write
+   tool (full-file rewrite) or via a small Python script with explicit
+   `open(path, "wb")`.
+
+4. **Single focused agent beats parallel-3** for the loop's typical
+   workload. Parallel runs had a ~33% real-fix rate in iter 2 (1 of 3
+   landed; 1 hallucinated, 1 honest failure). A single agent per iter
+   gives clearer signal, easier integration, and lower hallucination
+   risk. Reserve parallel dispatch for genuinely disjoint scopes
+   (different files, different bug families) where one agent's failure
+   doesn't block the others.
+
+5. **Honest failure is allowed.** If an agent investigates extensively
+   and cannot pin a root cause, the right thing is to revert any
+   exploratory edits and return an empty-diff report with the
+   investigation notes. Iter 2 Z did this correctly for CNZ f202;
+   that's much better than a hallucinated "fix" that wastes
+   integration time.
+
+### Skill self-improvement feedback loop
+
+When a frontier-advancement commit touches code under
+`src/main/java/com/openggf/game/sonic{1,2,3k}/` (objects, badniks,
+moving solids, springs, monitors, etc.), evaluate whether the root
+cause is a class of bug that could recur in any not-yet-implemented
+object of the same game. If yes, append a new P-numbered entry to
+`.agents/skills/s{1,2,3k}-implement-object/rom-pitfalls.md` AND the
+`.claude/` mirror. Cross-apply across S2 and S3K when the ROM
+convention is shared. Use the commit trailer `Skills: updated`.
+
+The pitfall catalogue currently runs P1–P16 across S2 and S3K (S3K
+catalogue tends to lag S2 by 1–2 entries — sync when you make
+cross-game updates). Read those entries before dispatching any new
+fix-attempt agent: a target may match an existing pattern, in which
+case the diagnosis is half-done.
 
 ## Verification
 
