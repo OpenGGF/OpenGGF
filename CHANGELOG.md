@@ -6,6 +6,19 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K AIZ1 Tails dormant-marker timing (AIZ trace replay).** ROM
+  `loc_13A10` (sonic3k.asm:26389-26397) writes Tails' dormant sentinel
+  (x_pos=$7F00, y_pos=0, Tails_CPU_routine=$A) on the FIRST tick that
+  dispatches Tails_CPU_Control — inside the same ROM frame that
+  SpawnLevelMainSprites placed her at `Player_1 - $20`. The engine's
+  `SidekickCpuController.updateInit` previously split the AIZ1 dormant
+  marker into two ticks (prime placement, then apply sentinel on the next
+  tick), so the first comparison frame after gameplay started (AIZ trace
+  frame 290) saw Tails at the level-start offset (0x0020, 0x0424) while
+  ROM already had her at (0x7F00, 0x0000). Combining the level-start
+  placement + dormant marker into a single `updateInit` branch matches
+  the ROM's single-tick sequence. AIZ first error advanced f290 -> f720.
+
 - **S3K sidekick bootstrap parity (CNZ/MGZ trace replay).** Three S3K
   level-start divergences shared the same root cause: the engine cleared
   `Status_InAir` on the sidekick after `applyZonePlayerState` set it for
