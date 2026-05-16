@@ -25,7 +25,13 @@ public record PhysicsProfile(
         short standXRadius,
         short standYRadius,
         short rollXRadius,
-        short rollYRadius
+        short rollYRadius,
+        // On-object balance edge threshold used by S2/S3K extended-balance mode.
+        // ROM: s2.asm:36287-36296 (Sonic, #2), s2.asm:39361-39368 (Tails, #4),
+        // sonic3k.asm:22465 (Sonic, #2), sonic3k.asm:27825 (Tails, #4),
+        // sonic3k.asm:31810 (Knuckles, #2). Unused in S1 (single-state balance
+        // uses a hard-coded #4; see s1disasm/_incObj/01 Sonic.asm:392).
+        short onObjectBalanceShift
 ) {
     // Sonic 2 Sonic (also identical for S1 Sonic; S3K canonical reset profile)
     // S3K uses this as the "reset" profile after water/shoes events (sonic3k.asm:22253)
@@ -47,7 +53,8 @@ public record PhysicsProfile(
             (short) 9,     // standXRadius
             (short) 19,    // standYRadius (0x13)
             (short) 7,     // rollXRadius
-            (short) 14     // rollYRadius
+            (short) 14,    // rollYRadius
+            (short) 2      // onObjectBalanceShift (s2.asm:36287, sonic3k.asm:22465)
     );
 
     // Sonic 2 Tails (differs in minStartRollSpeed, runHeight, standYRadius)
@@ -69,7 +76,8 @@ public record PhysicsProfile(
             (short) 9,     // standXRadius
             (short) 15,    // standYRadius (0x0F, shorter than Sonic)
             (short) 7,     // rollXRadius
-            (short) 14     // rollYRadius
+            (short) 14,    // rollYRadius
+            (short) 4      // onObjectBalanceShift (s2.asm:39361, sonic3k.asm:27825)
     );
 
     // S3K Knuckles (lower jump than Sonic: $600 vs $680)
@@ -93,7 +101,8 @@ public record PhysicsProfile(
             (short) 9,     // standXRadius
             (short) 19,    // standYRadius (0x13)
             (short) 7,     // rollXRadius
-            (short) 14     // rollYRadius
+            (short) 14,    // rollYRadius
+            (short) 2      // onObjectBalanceShift (sonic3k.asm:31810)
     );
 
     // S3K Super Sonic (higher speeds: max=0xA00, accel=0x30, decel=0x100)
@@ -115,7 +124,8 @@ public record PhysicsProfile(
             (short) 9,     // standXRadius
             (short) 19,    // standYRadius
             (short) 7,     // rollXRadius
-            (short) 14     // rollYRadius
+            (short) 14,    // rollYRadius
+            (short) 2      // onObjectBalanceShift (SuperSonic_Balance shares Sonic shift)
     );
 
     // S3K Sonic Competition mode — Character_Speeds table (sonic3k.asm:202288, loaded at line 21467)
@@ -139,7 +149,8 @@ public record PhysicsProfile(
             (short) 9,     // standXRadius
             (short) 19,    // standYRadius
             (short) 7,     // rollXRadius
-            (short) 14     // rollYRadius
+            (short) 14,    // rollYRadius
+            (short) 2      // onObjectBalanceShift
     );
 
     // S3K Tails Competition mode — Character_Speeds table (sonic3k.asm:202290)
@@ -162,7 +173,8 @@ public record PhysicsProfile(
             (short) 9,     // standXRadius
             (short) 15,    // standYRadius (0x0F, shorter than Sonic)
             (short) 7,     // rollXRadius
-            (short) 14     // rollYRadius
+            (short) 14,    // rollYRadius
+            (short) 4      // onObjectBalanceShift
     );
 
     // S3K Super Tails (sonic3k.asm:26325-26327: max=$800, accel=$18, decel=$C0)
@@ -184,7 +196,8 @@ public record PhysicsProfile(
             (short) 9,     // standXRadius
             (short) 15,    // standYRadius (Tails)
             (short) 7,     // rollXRadius
-            (short) 14     // rollYRadius
+            (short) 14,    // rollYRadius
+            (short) 4      // onObjectBalanceShift
     );
 
     // S2 Super Sonic (same values as S3K: max=0xA00, accel=0x30, decel=0x100)
@@ -207,6 +220,7 @@ public record PhysicsProfile(
             (short) 9,     // standXRadius
             (short) 19,    // standYRadius
             (short) 7,     // rollXRadius
-            (short) 14     // rollYRadius
+            (short) 14,    // rollYRadius
+            (short) 2      // onObjectBalanceShift (SuperSonic_Balance shares Sonic shift)
     );
 }
