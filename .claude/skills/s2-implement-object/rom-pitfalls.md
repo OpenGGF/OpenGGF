@@ -725,9 +725,99 @@ freshly-transitioned mapping_frame.  Frontier: HTZ f1017 (943 errs)
 state-driven sloped solid that uses MANUAL_CHECKPOINT solid
 execution.)
 
+
+
+## P16 -- Monitor (and ROM SolidObject_AtEdge) push bit set on any grounded side contact, not just movingInto
+
+**Symptom.** Player breaks a monitor (Touch_Monitor rolling break path) from
+the side, but ROM sets `in_air=1` while the engine keeps the player grounded
+(or vice-versa: engine fires in_air when ROM keeps grounded).  The break itself
+is correct; the divergence is on the airborne transition that `Obj26_Break`
+applies based on the monitor's accumulated standing/pushing bits.  MCZ f862:
+ROM `air=1`, engine `air=0` after Sonic rolls into a monitor he pushed two
+frames earlier.
+
+**Root cause.** ROM `SolidObject_cont` -> `SolidObject_LeftRight` ->
+`SolidObject_AtEdge` (`docs/s2disasm/s2.asm:35241-35248`) sets the OBJECT's
+push bit and the player's pushing bit for ANY side contact when the player
+is not airborne:
+
+```
+SolidObject_AtEdge:
+    sub.w d0,x_pos(a1)
+    btst #status.player.in_air,status(a1)
+    bne.s SolidObject_SideAir       ; air -> no push, exit
+    move.l d6,d4
+    addq.b #pushing_bit_delta,d4
+    bset d4,status(a0)              ; <- set OBJECT's push bit unconditionally
+    bset #status.player.pushing,status(a1)
+```
+
+The engine's monitor-specific `resolveMonitorContact` was more restrictive,
+gating `pushing` on `movingInto && !exactEdgeOverlap`:
+```
+boolean pushing = !player.getAir() && movingInto && !exactEdgeOverlap;
+```
+Position correction and speed zeroing should be gated on movingInto (ROM
+`SolidObject_StopCharacter` runs only when moving toward the object), but the
+push BIT is set even at rest on an edge.
+
+`Obj26_Break` (s2.asm:25502-25515) keys its airborne transition off the
+monitor's accumulated push/standing bits, so missing the push set when the
+player was at rest on the monitor's edge cascades into "broken monitor
+should fling Sonic upward but engine keeps him grounded" two frames later
+when he rolls back into it.
+
+**What to check.** When implementing any SolidObjectProvider whose ROM
+counterpart routes through SolidObject_cont (i.e. uses the standard
+SolidObject family, not a custom side-handler):
+
+1. The push bit on the OBJECT and player must be set for any grounded side
+   contact, regardless of movingInto.  `SolidObject_AtEdge` (ROM) /
+   `resolveMonitorContact` / `resolveContactInternal` (engine) should
+   compute `pushing = !player.getAir()` for the side branch.
+2. Position correction (`sub.w d0, x_pos`) and speed zeroing
+   (`SolidObject_StopCharacter`'s `move.w #0, inertia` / `x_vel`) remain
+   gated on movingInto.  ROM only zeroes speed when the player is moving
+   into the object; at rest or moving away the position correction and
+   speed zeroing skip but the push bit still gets set.
+3. The push bit must persist across rolling frames.  ROM
+   `SolidObject_Monitor_Sonic` returns early when the player is rolling,
+   leaving the previously-set push bit intact.  The engine's
+   IdentityHashMap (or per-player flag) used by listeners like
+   `MonitorObjectInstance.onSolidContact` must not be cleared while the
+   player is in the overlap area.
+4. Listener objects (BreakableBlock, Spring, Monitor, etc.) that key
+   behaviour on "player was previously standing/pushing" should rely on
+   the accumulated state, not on a single-frame contact check.
+5. Cross-game: S1 `SolidObject_AtEdge` (s1disasm/_incObj/sub SolidObject.asm,
+   `Solid_Centre` -> push bit set) and S3K's
+   `SolidObjectFull2_1P` (sonic3k.asm `loc_1E06E` notes: "ROM loc_1E06E
+   sets Status_Push for any grounded side contact") use the same rule.
+
+**ROM citation.** `docs/s2disasm/s2.asm:35241-35253` (`SolidObject_AtEdge`),
+`s2.asm:25502-25515` (`Obj26_Break` consumes the bits), `s2.asm:25448-25467`
+(`SolidObject_Monitor_Sonic` returns early for rolling, preserving bits).
+Engine equivalent: `ObjectManager.resolveMonitorContact` push gate
+(`src/main/java/com/openggf/level/objects/ObjectManager.java`) and any
+listener consuming the accumulated push/standing state in
+`onSolidContact` (`MonitorObjectInstance`, etc.).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter
+8: MCZ f862 Sonic spindash-rolled into a Monitor at the exact same Y, ROM
+fired Obj26_Break with the monitor's p1_pushing bit still set from a prior
+edge-rest frame and put Sonic airborne (y_vel=0, air=1) while the engine's
+resolveMonitorContact had gated `pushing` on movingInto && !exactEdgeOverlap,
+so the bit was never set, mainCharacterPushing stayed false, and the break
+left Sonic grounded.  Fix: drop the movingInto/exactEdgeOverlap gates from
+the push bit (keep them only on position correction / speed zeroing).
+Frontier: MCZ f862 (618 errs) -> f903 (612 errs, +41 frames).  Pattern
+applies to every solid object whose ROM uses standard SolidObject_cont
+side resolution.)
+
 ---
 
-## How to add a new entry
+ ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):
