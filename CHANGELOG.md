@@ -6,6 +6,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 HTZ Rexon detection-window asymmetry (HTZ trace replay).** ROM
+  `Obj94_WaitForPlayer` (s2.asm:73716-73722) uses `Obj_GetOrientationToPlayer`
+  to compute signed `d2 = body_x - player_x`, adds `$60`, and compares against
+  `$100` as UNSIGNED word (`bhs.s`). The window is asymmetric around the body:
+  signed `body_x - player_x` must lie in `[-$60, +$A0)`. The engine ported the
+  check as `Math.abs(...) + 0x60 < 0x100`, which is symmetric and includes a
+  64-px-wide left-side band (`(-$A0, -$60)`) that ROM rejects. With the player
+  approaching from the right, this fired detection ~34 frames earlier than ROM,
+  stopping the body several pixels right of ROM and shifting every downstream
+  head trajectory by the same offset. The Tails hurt-bounce direction at f5044
+  ended up reversed (engine +$200 vs ROM -$200) because the head that ultimately
+  hit Tails had drifted across her x-position. Fix ports the literal ROM
+  `(signedDelta + $60) & $FFFF < $100` window in `RexonBadnikInstance.
+  checkPlayerInRange`. HTZ frontier advanced f5044 (446 errs) -> f5511 (398 errs).
+  P12-class pitfall already catalogued.
+
 - **S3K AIZ1 Tails dormant-marker timing (AIZ trace replay).** ROM
   `loc_13A10` (sonic3k.asm:26389-26397) writes Tails' dormant sentinel
   (x_pos=$7F00, y_pos=0, Tails_CPU_routine=$A) on the FIRST tick that
