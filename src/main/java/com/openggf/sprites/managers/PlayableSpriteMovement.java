@@ -21,6 +21,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.game.ShieldType;
 import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -3134,9 +3135,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int objectX;
 		SolidObjectParams params;
 		int ridingPieceIndex = objectManager.getRidingPieceIndex(sprite);
+		boolean useMultiPieceWidth = false;
 		if (ridingPieceIndex >= 0 && ridingObject instanceof MultiPieceSolidProvider multiPiece) {
 			objectX = multiPiece.getPieceX(ridingPieceIndex);
 			params = multiPiece.getPieceParams(ridingPieceIndex);
+			useMultiPieceWidth = true;
 		} else {
 			objectX = ridingObject.getX();
 			params = provider.getSolidParams();
@@ -3148,7 +3151,26 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		boolean extended = featureSet != null && featureSet.extendedEdgeBalance();
 
-		int objectWidth = params.halfWidth(); // Half-width (radius)
+		// ROM Sonic_Move (s2.asm:36285) / Tails_Move (s2.asm:39359) read
+		// `width_pixels(a1)` from the object's SST for the balance computation,
+		// NOT the SolidObject-extended X-check width (which may be
+		// `width_pixels + N` for some objects, e.g. SmashableGround uses
+		// `width_pixels=$10` for balance but `width_pixels+$B=$1B` for
+		// SolidObject's d1 in s2.asm:48703-48705). The engine's
+		// `SolidObjectParams.halfWidth()` bakes in any per-object collision
+		// extension, so using it here makes Tails report d1 outside the
+		// (4, 2*width-4) Balance window on objects like SmashableGround and
+		// the Tails_Lookup branch falls through to Tails_Duck, which sets
+		// anim=Duck and spuriously triggers Tails_CheckSpindash the next
+		// frame when the delayed Ctrl_2 jump-press latches.
+		int objectWidth;
+		if (useMultiPieceWidth) {
+			objectWidth = params.halfWidth();
+		} else if (ridingObject instanceof com.openggf.level.objects.AbstractObjectInstance objectInstance) {
+			objectWidth = objectInstance.getOnScreenHalfWidth();
+		} else {
+			objectWidth = params.halfWidth();
+		}
 		int playerX = sprite.getCentreX();
 
 		// ROM formula: d1 = player_x + width - object_x
@@ -3156,9 +3178,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int d1 = playerX + objectWidth - objectX;
 
 		// S1: d2 = (width * 2) - 4, left threshold 4 (s1.asm:344,347)
-		// S2: d2 = (width * 2) - 2, left threshold 2 (s2.asm:36268)
-		int leftThreshold = extended ? 2 : 4;
-		int d2 = (objectWidth * 2) - (extended ? 2 : 4);
+		// S2 Sonic: d2 = (width * 2) - 2, left threshold 2 (s2.asm:36287-36296)
+		// S2 Tails: d2 = (width * 2) - 4, left threshold 4 (s2.asm:39361-39368
+		//   `subq.w #4,d2 / cmpi.w #4,d1`); S3K Tails matches the same Tails-
+		//   specific shift (sonic3k.asm:27828, also #4). Sonic and Tails balance
+		//   thresholds diverge on-object: Tails needs to be 4px past the edge
+		//   to enter Balance, otherwise Tails_Lookup runs and DOWN held sets
+		//   anim to Duck, which spuriously triggers Tails_CheckSpindash via the
+		//   delayed Ctrl_2 jump-press the next frame.
+		boolean tailsObjectBalance = extended && sprite instanceof Tails;
+		int balanceShift = (extended && !tailsObjectBalance) ? 2 : 4;
+		int leftThreshold = balanceShift;
+		int d2 = (objectWidth * 2) - balanceShift;
 
 		boolean facingRight = sprite.getDirection() == Direction.RIGHT;
 
