@@ -204,6 +204,48 @@ These are non-negotiable for any agent you dispatch to land an engine fix:
    that's much better than a hallucinated "fix" that wastes
    integration time.
 
+6. **Commit on your current branch, do NOT push.** When the agent is
+   in a worktree, `git reset --hard develop` makes `develop` the
+   worktree's checked-out branch name AND the orchestrator's shared
+   branch name. Committing in the worktree puts the commit on the
+   worktree's local branch ref; the orchestrator integrates it via
+   cherry-pick or by copying the file changes. Do NOT push. Phrase
+   the commit step as "commit on the current branch HEAD" — not "on
+   develop" — to avoid confusion about which `develop` was meant.
+   The orchestrator may also choose NOT to integrate ROM-correct
+   collateral changes from non-staged files; only the staged commit
+   is the contract.
+
+7. **Speculation creep: apply only the minimum-viable change.** When
+   reading the ROM you may notice ROM-correct improvements in
+   adjacent routines that don't affect the target frontier. These
+   are tempting but risky: combined with the target fix they have
+   regressed the frontier in several iters (HTZ Rexon iter 8 +
+   iter 9 — the head-routine alignments were individually correct
+   but slightly regressed when combined with the body fix). List
+   these as "noted-but-not-applied" breadcrumbs in your report so a
+   future iter can pursue them; do not bundle them into the current
+   commit.
+
+8. **Honest-failure → focused-followup pattern.** If your empty-diff
+   report identifies a more upstream root cause than the assigned
+   frontier (different file, different routine, different bug
+   class), name it explicitly with `file:line` and a one-sentence
+   fix hypothesis. The orchestrator's next iter will dispatch a
+   narrowly-scoped follow-up agent that often lands in one shot
+   (HTZ Rexon iter 8 → iter 9 demonstrated this).
+
+9. **Diagnostic-extension iter every N stuck frontiers.** When two
+   consecutive iters return honest-empty-diff citing the same
+   recorder/diagnostic gap (sub-pixel carry, engine-side
+   standing/ride truth, RAM-side value the recorder doesn't emit),
+   the next iter MUST be a recorder/parser extension iter rather
+   than another frontier-advance attempt. This batches the
+   diagnostic work and unblocks the next 2–3 stuck frontiers at
+   once (overnight iter cycle had 5 of 10 iters return empty-diff
+   on the same two gaps; a single diag iter mid-cycle would have
+   saved three of them).
+
 ### Skill self-improvement feedback loop
 
 When a frontier-advancement commit touches code under
