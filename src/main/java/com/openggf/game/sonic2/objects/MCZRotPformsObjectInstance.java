@@ -111,6 +111,15 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     private final List<MCZRotPformsObjectInstance> children = new ArrayList<>();
     private boolean childrenSpawned;
 
+    // ROM parity: Obj6A_Init (s2.asm:53686-53751) sets up phase params via
+    // loc_27CA2 but does NOT call ObjectMove. The first move happens on the
+    // NEXT frame when routine 4 (loc_27C66) runs. Without this skip, the
+    // engine's spawn frame applies an extra move because syncActiveSpawnsLoad
+    // runs before runExecLoop, so the constructor's loadPhaseParameters() +
+    // the same-frame update() call would move twice relative to ROM's
+    // init-then-next-frame ordering.
+    private boolean spawnFrameSkipPending;
+
     public MCZRotPformsObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
 
@@ -141,10 +150,14 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         this.xVel = 0;
         this.yVel = 0;
 
-        // Load initial phase parameters
+        // Load initial phase parameters (matches ROM loc_27CA2 called from Obj6A_Init).
         loadPhaseParameters();
 
         this.childrenSpawned = false;
+        // ROM Obj6A_Init does NOT call ObjectMove; movement starts on the
+        // next frame's routine 4 execution. Engine's same-frame load+exec
+        // ordering would otherwise apply one extra move on the spawn frame.
+        this.spawnFrameSkipPending = true;
 
         updateDynamicSpawn(x, y);
 
@@ -201,6 +214,17 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         // Parent platforms don't need movement updates - children handle themselves
         if (isParent) {
             ensureChildrenSpawned();
+            return;
+        }
+
+        // ROM parity: Obj6A_Init returns without calling ObjectMove. The very
+        // first move happens on the NEXT frame's routine 4 invocation
+        // (loc_27C66 at s2.asm:53810). The engine's load-then-exec ordering
+        // would otherwise cause a double-step (one in constructor's phase
+        // load, one in this same-frame update). Skip the first update() call.
+        if (spawnFrameSkipPending) {
+            spawnFrameSkipPending = false;
+            updateDynamicSpawn(x, y);
             return;
         }
 
