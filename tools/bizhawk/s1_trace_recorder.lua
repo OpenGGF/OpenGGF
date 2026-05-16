@@ -182,6 +182,34 @@ local function rom_joypad_to_mask(raw)
     return mask
 end
 
+-- Mirrors the S2 recorder's BK2-derived input read. ROM-side v_jpadhold1
+-- updates from inside ReadJoypads which runs only from specific V-int
+-- subroutines; on lag frames and during long V-int paths the written byte
+-- can lag the BK2 logical input by one game frame, producing spurious
+-- "Input alignment error" failures in AbstractCreditsDemoTraceReplayTest.
+-- Read the BK2 movie input directly so the CSV input column matches what
+-- the test fixture's BK2 reader will see during validation.
+local function bk2_input_mask(fallback_raw)
+    if not movie.isloaded() then
+        return rom_joypad_to_mask(fallback_raw)
+    end
+    local frame_index = emu.framecount()
+    local jp = movie.getinput(frame_index, 1)
+    if jp == nil then
+        return rom_joypad_to_mask(fallback_raw)
+    end
+    local mask = 0
+    if jp["P1 Up"]    or jp["Up"]    then mask = mask | INPUT_UP    end
+    if jp["P1 Down"]  or jp["Down"]  then mask = mask | INPUT_DOWN  end
+    if jp["P1 Left"]  or jp["Left"]  then mask = mask | INPUT_LEFT  end
+    if jp["P1 Right"] or jp["Right"] then mask = mask | INPUT_RIGHT end
+    if jp["P1 A"] or jp["A"] or jp["P1 B"] or jp["B"]
+            or jp["P1 C"] or jp["C"] then
+        mask = mask | INPUT_JUMP
+    end
+    return mask
+end
+
 -- Format a number as hex with specified width
 local function hex(val, width)
     width = width or 4
@@ -236,7 +264,7 @@ local function write_metadata()
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.0",\n')
+    meta_file:write('  "lua_script_version": "3.1",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
     meta_file:write('  "rom_checksum": "",\n')
@@ -541,10 +569,13 @@ local function on_frame_end()
     local rolling = (status & STATUS_ROLLING) ~= 0
     local ground_mode = air and 0 or angle_to_ground_mode(angle)
 
-    -- Read held input directly from RAM (works during movie playback;
-    -- joypad.get() returns physical controller state which is zero in headless)
+    -- Derive CSV `input` column from BK2 movie directly so the recorded
+    -- value matches AbstractCreditsDemoTraceReplayTest's BK2 reader; ROM-
+    -- side v_jpadhold1 is updated by ReadJoypads which only runs inside
+    -- specific V-int subroutines and can lag the BK2 by a frame on lag-
+    -- frame paths. raw_input still feeds the state_snapshot aux event.
     local raw_input = mainmemory.read_u8(0xF604)  -- v_jpadhold1
-    local input_mask = rom_joypad_to_mask(raw_input)
+    local input_mask = bk2_input_mask(raw_input)
 
     -- Format helper for unsigned 16-bit hex
     local function uhex(val)
