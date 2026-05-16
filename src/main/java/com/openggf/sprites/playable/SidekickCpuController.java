@@ -282,7 +282,7 @@ public class SidekickCpuController {
         return String.format(
                 "eng-tails-cpu f=%d state=%s branch=%s hist=%d/%02d in=%04X stat=%02X push=%02X "
                         + "pre=obj%02X st%02X xv%04X gv%04X "
-                        + "gen=%04X postCpu=obj%02X st%02X xv%04X gv%04X "
+                        + "gen=%04X jp=%s postCpu=obj%02X st%02X xv%04X gv%04X "
                         + "postPhys=%s obj%02X st%02X xv%04X gv%04X dx=%04X dy=%04X skip=%s",
                 d.frameCounter(),
                 d.state(),
@@ -297,6 +297,7 @@ public class SidekickCpuController {
                 d.preXVel() & 0xFFFF,
                 d.preGroundVel() & 0xFFFF,
                 d.generatedInput() & 0xFFFF,
+                d.inputJumpPress(),
                 d.postCpuObjectControl() & 0xFF,
                 d.postCpuStatus() & 0xFF,
                 d.postCpuXVel() & 0xFFFF,
@@ -356,6 +357,7 @@ public class SidekickCpuController {
                 diagnosticObjectControlByte(),
                 sidekick.getXSpeed(),
                 sidekick.getGSpeed(),
+                false,
                 0,
                 0,
                 (short) 0,
@@ -389,6 +391,7 @@ public class SidekickCpuController {
                 diagnosticObjectControlByte(),
                 sidekick.getXSpeed(),
                 sidekick.getGSpeed(),
+                inputJumpPress,
                 skipFollowSteering);
     }
 
@@ -441,6 +444,7 @@ public class SidekickCpuController {
             int postCpuObjectControl,
             short postCpuXVel,
             short postCpuGroundVel,
+            boolean inputJumpPress,
             int postPhysicsStatus,
             int postPhysicsObjectControl,
             short postPhysicsXVel,
@@ -461,6 +465,7 @@ public class SidekickCpuController {
                                             int postCpuObjectControl,
                                             short postCpuXVel,
                                             short postCpuGroundVel,
+                                            boolean inputJumpPress,
                                             boolean skipFollowSteering) {
             return new NormalStepDiagnostics(frameCounter, state, branch,
                     preStatus, preObjectControl, preXVel, preGroundVel,
@@ -468,6 +473,7 @@ public class SidekickCpuController {
                     recordedInput, recordedStatus, pushBypassStatus,
                     dx, dy, generatedInput,
                     postCpuStatus, postCpuObjectControl, postCpuXVel, postCpuGroundVel,
+                    inputJumpPress,
                     postPhysicsStatus, postPhysicsObjectControl, postPhysicsXVel, postPhysicsGroundVel,
                     skipFollowSteering, postPhysicsRecorded);
         }
@@ -482,6 +488,7 @@ public class SidekickCpuController {
                     recordedInput, recordedStatus, pushBypassStatus,
                     dx, dy, generatedInput,
                     postCpuStatus, postCpuObjectControl, postCpuXVel, postCpuGroundVel,
+                    inputJumpPress,
                     postPhysicsStatus, postPhysicsObjectControl, postPhysicsXVel, postPhysicsGroundVel,
                     skipFollowSteering, true);
         }
@@ -964,6 +971,7 @@ public class SidekickCpuController {
         }
         int followStatDelayFrames = resolveFollowStatDelayFrames();
         short recordedInput = effectiveLeader.getInputHistory(followStatDelayFrames);
+        boolean recordedJumpPress = effectiveLeader.getJumpPressHistory(followStatDelayFrames);
         byte recordedStatus = effectiveLeader.getStatusHistory(followStatDelayFrames);
         int targetX = effectiveLeader.getCentreX(ROM_FOLLOW_DELAY_FRAMES);
         int targetY = effectiveLeader.getCentreY(ROM_FOLLOW_DELAY_FRAMES);
@@ -1024,6 +1032,10 @@ public class SidekickCpuController {
         inputUp = (recordedInput & AbstractPlayableSprite.INPUT_UP) != 0;
         inputDown = (recordedInput & AbstractPlayableSprite.INPUT_DOWN) != 0;
         inputJump = (recordedInput & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        // ROM copies the delayed Ctrl_1_Logical word into Ctrl_2_Logical
+        // (s2.asm:38939-38946, 39025-39027). The held bits live in
+        // inputHistory; the low-byte jump press bit is tracked separately.
+        inputJumpPress = recordedJumpPress;
 
         byte pushBypassStatus = effectiveLeader.getStatusHistory(ROM_PUSH_BYPASS_STAT_DELAY_FRAMES);
         // ROM loc_13DD0 tests Tails' current Status_Push byte before loc_13E9C
@@ -1104,11 +1116,13 @@ public class SidekickCpuController {
         aizObjectOrderGracePushBypassThisFrame = aizObjectOrderGrace;
         if (airbornePushHandoff || aizObjectOrderGrace) {
             recordedInput = effectiveLeader.getInputHistory(ROM_PUSH_BYPASS_STAT_DELAY_FRAMES);
+            recordedJumpPress = effectiveLeader.getJumpPressHistory(ROM_PUSH_BYPASS_STAT_DELAY_FRAMES);
             inputLeft = (recordedInput & AbstractPlayableSprite.INPUT_LEFT) != 0;
             inputRight = (recordedInput & AbstractPlayableSprite.INPUT_RIGHT) != 0;
             inputUp = (recordedInput & AbstractPlayableSprite.INPUT_UP) != 0;
             inputDown = (recordedInput & AbstractPlayableSprite.INPUT_DOWN) != 0;
             inputJump = (recordedInput & AbstractPlayableSprite.INPUT_JUMP) != 0;
+            inputJumpPress = recordedJumpPress;
         }
         if (!skipFollowSteering) {
             // ROM enters FollowLeft/FollowRight for any nonzero dx; the per-game
