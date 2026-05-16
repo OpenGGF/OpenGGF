@@ -246,6 +246,67 @@ When a divergence can't be pinpointed without more ROM-side state:
 3. **Diagnostic use.** Wire the new data into `DivergenceReport.getContextWindow` rendering, or into a dedicated probe class for targeted bug investigation. **Do not** wire it into engine state mutation in the per-frame test loop.
 4. **Regenerate the affected trace(s).** Commit the regen separately from the recorder schema change so reviewers can see the data churn distinctly.
 
+## Recorder Limitations and Existing Tooling
+
+### "Input alignment error at trace frame N" failure mode
+
+```
+org.opentest4j.AssertionFailedError: Input alignment error at trace frame N:
+BK2 input=0xXXXX, trace input=0xYYYY. Check bk2_frame_offset in metadata.json.
+```
+
+This is **not** a parity bug in the engine — it means the trace's CSV `input`
+column does not match what BK2 plays for that frame. Two common root causes:
+
+1. **Stale `$FFF604` (ROM-side Ctrl_1_Held) reads.** ROM `Read_Joypads` runs
+   only from specific V-int subroutines. On lag frames and long V-int paths
+   (notably SCZ Tornado handoffs, OOZ tunnel exits, ARZ end-of-act
+   transitions), `$FFF604` can lag the BK2 logical input by one game frame.
+   The Lua recorder used to read `$FFF604` for the CSV `input` column;
+   modern recorders (S2 v9.3-s2+, S1 v3.1+, S3K v6.19-s3k+) read
+   `movie.getinput()` directly via the `bk2_input_mask` helper, so the CSV
+   column matches BK2 by construction.
+
+2. **`bk2_frame_offset` actually wrong** in `metadata.json`. Rare — happens
+   when the recorder armed at an unexpected `emu.framecount()` boundary or
+   the BK2 was edited after recording.
+
+**Existing repair tools** (use these BEFORE re-recording, which is slow):
+
+- `tools/bizhawk/normalize_s2_traces_input.ps1 -Routes <list>` — rewrites the
+  CSV `input` column on existing S2 traces by reading the BK2 movie's Input
+  Log directly. Resolves stale-`$FFF604` cases without re-recording.
+- `tools/bizhawk/record_s2_level_select_traces.ps1` — bundles the normalize
+  step at the end of every record, so freshly recorded S2 traces are already
+  BK2-aligned.
+
+For S1 / S3K, the same logic exists in their respective Lua recorders
+(`bk2_input_mask` helper) but no PowerShell normalize wrapper has been built
+yet. If an S1/S3K trace fails alignment, port the S2 normalize script.
+
+### Engine-side standing/ride diagnostic (post-2026-05-16)
+
+`EngineDiagnostics` exposes the engine's tri-state truth for:
+
+- `ride=N` — `ObjectManager.isRidingObject(player)` (1 = riding, 0 = not, -1 = not captured).
+- `standsnap=N` — `ObjectManager.latestStandingSnapshot(player)` (1 = standing, 0 = not).
+
+These render in the `ENG:` line of `<game>_<zone>_context.txt`. They diverge
+from the live `statusByte` bit 0x08 (on-object) during platform-release and
+walk-off transitions — the typical divergence class for "engine drops Sonic
+to airborne one frame before/after ROM" frontiers. Read these alongside
+`onSlot=N(0xTT)` (which slot Sonic is currently riding, if any) and the
+`sub=(xsub,ysub)` block (engine sub-pixel coordinates).
+
+### Sub-pixel diagnostic (P9 / 1-pixel-Y frontiers)
+
+The CSV columns `sonic_x_sub` / `sonic_y_sub` / `tails_x_sub` / `tails_y_sub`
+record ROM-side sub-pixel coordinates. The engine's matching values appear
+in the `ENG:` line as `sub=(XXXX,YYYY)`. For P9-pattern 1-pixel Y frontiers
+(MCZ f1085, S1 LZ3 f221, MGZ f1538), compare the ROM and engine `sub=`
+blocks across the frames around the divergence to identify which routine
+dropped the sub-pixel carry.
+
 ## Cross-Game Sanity Checks
 
 Always run all green trace tests every iteration when touching shared code:
