@@ -3213,6 +3213,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
+         * Returns the resolved per-character physics profile, or {@code null} if
+         * none has been bound yet (early bootstrap before
+         * {@link #resolvePhysicsProfile()}).
+         */
+        public PhysicsProfile getPhysicsProfile() {
+                return physicsProfile;
+        }
+
+        /**
          * Applies an external physics profile, overwriting current speed values.
          * Used by SuperStateController to swap between normal and Super physics.
          * Also clears the S3K init override since Super transitions reset constants.

@@ -21,7 +21,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
-import com.openggf.sprites.playable.Tails;
+import com.openggf.game.PhysicsProfile;
 import com.openggf.game.ShieldType;
 import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -3177,17 +3177,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// This gives player position relative to left edge of object
 		int d1 = playerX + objectWidth - objectX;
 
-		// S1: d2 = (width * 2) - 4, left threshold 4 (s1.asm:344,347)
-		// S2 Sonic: d2 = (width * 2) - 2, left threshold 2 (s2.asm:36287-36296)
-		// S2 Tails: d2 = (width * 2) - 4, left threshold 4 (s2.asm:39361-39368
-		//   `subq.w #4,d2 / cmpi.w #4,d1`); S3K Tails matches the same Tails-
-		//   specific shift (sonic3k.asm:27828, also #4). Sonic and Tails balance
-		//   thresholds diverge on-object: Tails needs to be 4px past the edge
-		//   to enter Balance, otherwise Tails_Lookup runs and DOWN held sets
-		//   anim to Duck, which spuriously triggers Tails_CheckSpindash via the
-		//   delayed Ctrl_2 jump-press the next frame.
-		boolean tailsObjectBalance = extended && sprite instanceof Tails;
-		int balanceShift = (extended && !tailsObjectBalance) ? 2 : 4;
+		// S1 (non-extended) hard-codes #4 (s1disasm/_incObj/01 Sonic.asm:392).
+		// Extended (S2/S3K) reads a per-character shift from PhysicsProfile:
+		// Sonic=2 (s2.asm:36287, sonic3k.asm:22465), Tails=4 (s2.asm:39361,
+		// sonic3k.asm:27825), Knuckles=2 (sonic3k.asm:31810).
+		int balanceShift;
+		if (!extended) {
+			balanceShift = 4;
+		} else {
+			PhysicsProfile profile = sprite.getPhysicsProfile();
+			balanceShift = profile != null ? profile.onObjectBalanceShift() : 2;
+		}
 		int leftThreshold = balanceShift;
 		int d2 = (objectWidth * 2) - balanceShift;
 
