@@ -531,14 +531,25 @@ public class SidekickCpuController {
         }
 
         if (shouldEnterAizIntroDormantMarker()) {
-            if (aizIntroDormantMarkerPrimed) {
-                aizIntroDormantMarkerPrimed = false;
-                applyAizIntroDormantMarker();
-                return;
-            }
+            // ROM Tails_Init (sonic3k.asm:26101-26156) plus the loc_13A10
+            // dormant-marker block (sonic3k.asm:26389-26397) run inside one
+            // ROM tick: SpawnLevelMainSprites installs the Tails object,
+            // Tails_Init seeds default fields, then Tails_Control dispatches
+            // Tails_CPU_Control with routine 0, which calls sub_13ECA and
+            // overwrites Tails_CPU_routine with $A. The trace records the
+            // post-sub_13ECA position (0x7F00, 0) on the same frame Tails
+            // becomes routine 2 in the index dispatch.
+            //
+            // The engine previously split this into two frames: a "prime"
+            // tick that seeded the leader's Pos_table history via the
+            // level-start placement, then an "apply" tick that wrote the
+            // dormant marker. That mismatch surfaced as an off-by-one at
+            // AIZ trace frame 290 (engine had Tails at level-start placement
+            // while ROM had her at the dormant sentinel). Combine the two
+            // phases so the marker lands on the same engine tick.
             initializeLevelStartSidekickPlacementIfNeeded();
-            aizIntroDormantMarkerPrimed = true;
-            skipPhysicsThisFrame = true;
+            applyAizIntroDormantMarker();
+            aizIntroDormantMarkerPrimed = false;
             return;
         }
 
@@ -682,9 +693,30 @@ public class SidekickCpuController {
         }
         LevelManager lm = sidekick.currentLevelManager();
         Camera camera = sidekick.currentCamera();
+        // ROM loc_13A10 (sonic3k.asm:26389-26397): when Tails_CPU_Control runs
+        // with routine=0 (uninitialized Tails) and Current_zone_and_act=0
+        // (AIZ Act 1), the special AIZ1 dormant-marker branch fires
+        // unconditionally — call sub_13ECA (write x_pos=$7F00/y_pos=0), set
+        // Tails_CPU_routine=$A, object_control=$83. The Last_star_post_hit
+        // pre-check at line 26390 only diverts to the standard intro recovery
+        // path if a checkpoint was hit before — irrelevant on first AIZ1 entry
+        // where Last_star_post_hit=0.
+        //
+        // The previous gate also required {@code !camera.isLevelStarted()} so
+        // the marker only fired during the engine's AIZ intro cutscene window.
+        // ROM does NOT gate on Level_started_flag here; Tails enters dormant
+        // whenever her first CPU tick lands on AIZ1, regardless of whether the
+        // intro cutscene is still running. The cutscene exit handoff
+        // ({@link CutsceneKnucklesAiz1Instance#completeIntroExitHandoff}) sets
+        // {@code levelStarted=true} before Tails sees her first INIT in some
+        // replay timings (notably the AIZ trace recorded with bk2_frame_offset
+        // 511 where Tails' first CPU tick lands AFTER the cutscene exits),
+        // so the levelStarted gate would skip the dormant marker entirely and
+        // leave Tails alive at the level-start offset instead of the
+        // {@code (0x7F00, 0x0000)} sentinel ROM writes — drives the first
+        // divergence at trace frame 290.
         return lm != null
                 && camera != null
-                && !camera.isLevelStarted()
                 && lm.getCurrentZone() == 0
                 && lm.getCurrentAct() == 0
                 && resolvePlayerCharacter() == PlayerCharacter.SONIC_AND_TAILS;
