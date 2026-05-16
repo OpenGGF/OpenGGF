@@ -7060,14 +7060,18 @@ public class ObjectManager {
                 return SolidContact.STANDING;
             }
 
-            // ROM loc_A220: Monitors never push player downward, only to sides.
-            // The positional push and velocity zeroing ONLY happen when the player
-            // is actively moving INTO the monitor. When d0=0 (centered) or moving
-            // away, the ROM skips the push entirely (falls through to loc_A246).
+            // ROM SolidObject_AtEdge (s2.asm:35241-35248): for any side contact
+            // when the player is not in air, set the OBJECT's push bit AND the
+            // player's pushing bit, regardless of moving direction.  Position
+            // correction and speed zeroing remain gated on movingInto.  This is
+            // required for MCZ f862 trace parity: Sonic stands on a monitor's left
+            // edge with xSpeed=0 on f860, ROM still sets the monitor's p1_pushing
+            // bit so Obj26_Break can use it to airborne Sonic when the monitor
+            // is broken two frames later.
             boolean leftSide = playerCenterX <= anchorX;
             boolean movingInto = leftSide ? player.getXSpeed() > 0 : player.getXSpeed() < 0;
             boolean exactEdgeOverlap = absDistX == 0;
-            boolean pushing = !player.getAir() && movingInto && !exactEdgeOverlap;
+            boolean pushing = !player.getAir();
             boolean skipMonitorSide = deferSideToPostMovement && player.getAir();
             if (apply && movingInto && !exactEdgeOverlap && !skipMonitorSide) {
                 player.setXSpeed((short) 0);
