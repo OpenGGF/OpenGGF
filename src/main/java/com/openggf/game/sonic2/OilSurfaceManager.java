@@ -8,31 +8,42 @@ import com.openggf.level.LevelManager;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
+
 /**
  * Manages OOZ oil surface collision and oil slides.
  * <p>
- * ROM equivalent: Obj07 (s2.asm:49655-49749) for oil surface,
+ * ROM equivalent: Obj07 (s2.asm:49659-49749) for oil surface,
  * OilSlides (s2.asm:5533-5650) for slide chunks.
  * <p>
- * Oil surface: invisible platform at Y=0x758. When Sonic lands on it,
+ * Oil surface: invisible platform at Y=0x758. When a character lands on it,
  * a submersion counter decrements from 0x30 (48) each frame. At 0,
- * Sonic suffocates (instant death). Jumping off lets the counter recover.
+ * the character suffocates (instant death). Jumping off lets the counter recover.
+ * <p>
+ * The ROM maintains two independent submersion counters
+ * ({@code oil_char1submersion}, {@code oil_char2submersion}) and runs the
+ * full platform-landing pipeline for both Player 1 (Sonic) and Player 2
+ * (Tails) every frame. The engine mirrors this with one {@link PlayerOilState}
+ * per playable character, keyed by sprite identity so the multi-sidekick
+ * novelty feature works as well.
  * <p>
  * Oil slides: 32 specific block IDs cause automatic acceleration with
  * direction-based speed targets.
  */
 public class OilSurfaceManager {
 
-    // Oil surface constants (ROM: Obj07_Init at s2.asm:49667-49672)
+    // Oil surface constants (ROM: Obj07_Init at s2.asm:49671-49677)
     private final int oilY = Sonic2Constants.OIL_SURFACE_Y;
     private final int submersionMax = Sonic2Constants.OIL_SUBMERSION_MAX;
 
-    // Per-player submersion state
-    private int submersion = Sonic2Constants.OIL_SUBMERSION_MAX;
-    private boolean standingOnOil = false;
+    // Per-player oil state, keyed by sprite identity.
+    private final Map<AbstractPlayableSprite, PlayerOilState> playerStates =
+            new IdentityHashMap<>();
 
     // Internal frame counter for slide sound timing
     private int frameCounter = 0;
+    private boolean frameAdvancedThisTick = false;
 
     // OilSlides_Chunks table (ROM: s2.asm:5647-5650)
     // 32 block IDs that trigger oil slide behavior
@@ -51,10 +62,38 @@ public class OilSurfaceManager {
     };
 
     /**
-     * Called every frame while in OOZ.
+     * Per-player oil state mirroring ROM's {@code oil_charNsubmersion}
+     * counter and standing flag for one character.
+     */
+    private static final class PlayerOilState {
+        int submersion;
+        boolean standingOnOil;
+
+        PlayerOilState(int initialSubmersion) {
+            this.submersion = initialSubmersion;
+            this.standingOnOil = false;
+        }
+    }
+
+    private PlayerOilState stateFor(AbstractPlayableSprite player) {
+        return playerStates.computeIfAbsent(player, p -> new PlayerOilState(submersionMax));
+    }
+
+    /**
+     * Called every frame while in OOZ for each playable character.
+     * ROM equivalent: a single tick of Obj07_Main processes both P1 and P2.
+     * This method must be invoked once per playable character (Sonic and
+     * each active sidekick) so both halves of the ROM routine are mirrored.
+     * <p>
+     * The frame counter advances on the first per-frame invocation only, so
+     * the oil-slide SFX cadence stays at one tick per game frame regardless
+     * of how many characters share the call.
      */
     public void update(AbstractPlayableSprite player) {
-        frameCounter++;
+        if (!frameAdvancedThisTick) {
+            frameCounter++;
+            frameAdvancedThisTick = true;
+        }
         // ROM order: OilSlides is called from NonWaterEffects (character processing),
         // Obj07 runs during object processing (after character).
         updateOilSlides(player);
@@ -62,83 +101,130 @@ public class OilSurfaceManager {
     }
 
     /**
+     * Called by the OOZ events handler at the end of each frame so the next
+     * frame's first character tick will advance the slide SFX cadence.
+     */
+    public void endFrame() {
+        frameAdvancedThisTick = false;
+    }
+
+    /**
      * Resets oil state (e.g. on level load or player respawn).
      */
     public void reset() {
-        submersion = submersionMax;
-        standingOnOil = false;
+        playerStates.clear();
         frameCounter = 0;
+        frameAdvancedThisTick = false;
     }
 
     // =========================================================================
     // Oil Surface (Obj07 equivalent)
-    // ROM: s2.asm:49655-49749
+    // ROM: s2.asm:49659-49749
     // =========================================================================
 
     private void updateOilSurface(AbstractPlayableSprite player) {
+        PlayerOilState state = stateFor(player);
+
         if (player.getDead() || player.isDebugMode()) {
-            clearOilSupport(player);
+            clearOilSupport(player, state);
             return;
         }
 
-        if (standingOnOil) {
+        if (state.standingOnOil) {
             // Movement runs before this manager and can temporarily set air=true.
             // Only release support when the player is actually moving upward.
             if (shouldExitOilSupport(player)) {
-                clearOilSupport(player);
+                clearOilSupport(player, state);
                 return;
             }
 
-            // ROM: Obj07_CheckKillChar1 (s2.asm:49691-49694)
-            if (submersion <= 0) {
+            // ROM: Obj07_CheckKillChar1 (s2.asm:49695-49698)
+            if (state.submersion <= 0) {
                 // Suffocate - instant death (ROM: JmpTo3_KillCharacter)
-                clearOilSupport(player);
+                clearOilSupport(player, state);
                 player.applyOilSuffocateDeath();
                 return;
             }
 
-            // Sink 1 pixel per frame
-            submersion--;
+            // Sink 1 pixel per frame (ROM: subq.b #1, oil_char1submersion)
+            state.submersion--;
 
-            // ROM: PlatformObject_SingleCharacter positions player at:
-            // oilY - submersion - y_radius
-            // As submersion decreases from 0x30 to 0, player sinks into the oil.
-            int targetY = oilY - submersion - player.getYRadius();
+            // ROM: when already standing (status bit set), the standing branch of
+            // PlatformObject_SingleCharacter calls MvSonicOnPtfm (s2.asm:35402-35421),
+            // which positions y_pos(a1) = y_pos(a0) - d3 - y_radius
+            // = oilY - submersion - yRadius. MvSonicOnPtfm does NOT touch x_vel,
+            // inertia, or y_vel - those evolve through normal player physics.
+            //
+            // ROM writes only the integer half (move.w to y_pos), so the
+            // sub-pixel fraction is preserved. Use the preserve-subpixel setter
+            // so engine sub-pixel accumulators stay aligned with ROM.
+            int targetY = oilY - state.submersion - player.getYRadius();
             player.setAir(false);
             player.setOnObject(true);
-            player.setCentreY((short) targetY);
-            player.setYSpeed((short) 0);
-            player.setGSpeed((short) 0);
+            player.setCentreYPreserveSubpixel((short) targetY);
         } else {
             // Not on oil - recover submersion counter
-            // ROM: Obj07_Main (s2.asm:49685-49688)
-            if (submersion < submersionMax) {
-                submersion++;
+            // ROM: Obj07_Main (s2.asm:49689-49692)
+            //   cmpi.b #$30, oil_char1submersion ; beq + ; addq.b #1, oil_char1submersion
+            if (state.submersion < submersionMax) {
+                state.submersion++;
             }
 
             // Check if player should land on oil surface
             // ROM: PlatformObject_SingleCharacter does the landing check
-            if (shouldLandOnOil(player)) {
-                standingOnOil = true;
+            if (shouldLandOnOil(player, state)) {
+                state.standingOnOil = true;
                 player.setAir(false);
-                player.setYSpeed((short) 0);
                 player.setOnObject(true);
 
-                // Position player at oil surface with current submersion offset
-                int targetY = oilY - submersion - player.getYRadius();
-                player.setCentreY((short) targetY);
+                // ROM RideObject_SetRide (s2.asm:35741-35743):
+                //   move.b #0, angle(a1)
+                //   move.w #0, y_vel(a1)
+                //   move.w x_vel(a1), inertia(a1)
+                // i.e. on the landing frame ROM zeroes y_vel and copies x_vel
+                // to inertia (gSpeed) - it does NOT clobber inertia to zero.
+                player.setYSpeed((short) 0);
+                player.setGSpeed(player.getXSpeed());
+                player.setAngle((byte) 0);
+
+                // ROM: PlatformObject_ChkYRange (s2.asm:35696-35712) snaps the
+                // player so that y_pos(a1) + y_radius + 4 = platform_top + 3,
+                // i.e. y_pos(a1) = oilY - submersion - yRadius - 1.
+                // (The "+3" in ROM applies after the +4 grace was subtracted, so
+                // the net offset versus MvSonicOnPtfm is -1 pixel on the landing
+                // frame; subsequent frames use MvSonicOnPtfm's exact -yRadius snap.)
+                //
+                // Preserve sub-pixel: ROM writes only the integer half
+                // (move.w d2,y_pos(a1)).
+                int targetY = oilY - state.submersion - player.getYRadius() - 1;
+                player.setCentreYPreserveSubpixel((short) targetY);
+
+                // ROM Sonic_ResetOnFloor_Part2 (s2.asm:37780-37786): when
+                // landing while rolling, clear the rolling bit, restore the
+                // standing collision radii, and lift y_pos by 5 (the radius
+                // diff between rolling y_radius=14 and standing y_radius=19)
+                // so the new larger hitbox does not clip into the platform.
+                // ROM does `subq.w #5, y_pos(a0)` - a word write that leaves
+                // the sub-pixel low word untouched.
+                if (player.getRolling()) {
+                    player.setRolling(false);
+                    player.setY((short) (player.getY() - player.getRollHeightAdjustment()));
+                }
             }
         }
     }
 
     /**
      * Check if the player should land on the oil surface.
-     * ROM: PlatformObject logic - player must be falling (ySpeed > 0),
-     * and their feet must be at or below the oil surface level.
+     * ROM: PlatformObject_cont + PlatformObject_ChkYRange (s2.asm:35681-35712).
+     * Player must be falling (y_vel >= 0), inside the X range of the platform
+     * (handled implicitly by the proximity check), and within the 16-pixel
+     * tolerance band ABOVE the platform top, measured from feetY + 4.
      */
-    private boolean shouldLandOnOil(AbstractPlayableSprite player) {
-        // Must be in the air and falling
-        if (!player.getAir() || player.getYSpeed() <= 0) {
+    private boolean shouldLandOnOil(AbstractPlayableSprite player, PlayerOilState state) {
+        // ROM PlatformObject_cont:35682 - tst.w y_vel ; bmi return.
+        // y_vel must be >= 0 (still falling). bmi triggers only on negative.
+        if (!player.getAir() || player.getYSpeed() < 0) {
             return false;
         }
 
@@ -147,20 +233,25 @@ public class OilSurfaceManager {
             return false;
         }
 
-        // Check if player's feet are at or past the oil surface
-        // Player centre Y + yRadius = feet position
+        // ROM PlatformObject_ChkYRange (s2.asm:35696-35705):
+        //   d0 = y_pos(a0) - d3 - (y_pos(a1) + y_radius + 4)
+        //   bhi  return        ; d0 unsigned > 0 -> player too high above top, abort
+        //   cmpi.w #-$10, d0
+        //   blo  return        ; word-unsigned cmp vs $FFF0. The carry flag is
+        //                      ; set when d0_unsigned < 0xFFF0, which covers
+        //                      ; d0 >= 0 AND d0 < -16. The only frames that
+        //                      ; land are those with d0 in [-16, -1].
+        // Net acceptance window: feetY in [platform_top-19, platform_top-5].
         int feetY = player.getCentreY() + player.getYRadius();
-        int oilSurfaceY = oilY - submersion;
-
-        // Previous frame feet position (approximate: current - ySpeed/256)
-        // ROM checks that player was above and is now at/below
-        int prevFeetY = feetY - (player.getYSpeed() >> 8);
-        if (prevFeetY > oilSurfaceY) {
-            // Was already below surface on previous frame - don't snap back up
-            return false;
+        int platformTop = oilY - state.submersion;
+        int d0 = platformTop - (feetY + 4);
+        if (d0 >= 0) {
+            return false;  // ROM bhi (d0>0) plus blo (d0==0 has C=1) both abort
         }
-
-        return feetY >= oilSurfaceY;
+        if (d0 < -0x10) {
+            return false;  // ROM blo -- d0 < -16
+        }
+        return true;
     }
 
     /**
@@ -170,8 +261,8 @@ public class OilSurfaceManager {
         return player.getYSpeed() < 0 || player.isJumping();
     }
 
-    private void clearOilSupport(AbstractPlayableSprite player) {
-        standingOnOil = false;
+    private void clearOilSupport(AbstractPlayableSprite player, PlayerOilState state) {
+        state.standingOnOil = false;
         player.setOnObject(false);
     }
 
@@ -359,11 +450,39 @@ public class OilSurfaceManager {
         }
     }
 
+    /**
+     * Returns whether the camera-focused (or supplied) character is standing
+     * on the oil surface. Used by zone diagnostics; defaults to checking the
+     * first registered player's state.
+     */
     public boolean isStandingOnOil() {
-        return standingOnOil;
+        for (PlayerOilState state : playerStates.values()) {
+            if (state.standingOnOil) {
+                return true;
+            }
+        }
+        return false;
     }
 
+    public boolean isStandingOnOil(AbstractPlayableSprite player) {
+        PlayerOilState state = playerStates.get(player);
+        return state != null && state.standingOnOil;
+    }
+
+    public int getSubmersion(AbstractPlayableSprite player) {
+        PlayerOilState state = playerStates.get(player);
+        return state != null ? state.submersion : submersionMax;
+    }
+
+    /**
+     * Returns the submersion counter for the first registered player.
+     * Convenience accessor for tests that only register a single character;
+     * matches ROM {@code oil_char1submersion} when only Sonic is active.
+     */
     public int getSubmersion() {
-        return submersion;
+        for (PlayerOilState state : playerStates.values()) {
+            return state.submersion;
+        }
+        return submersionMax;
     }
 }
