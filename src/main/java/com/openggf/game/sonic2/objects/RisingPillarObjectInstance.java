@@ -208,12 +208,15 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Apply gravity and move (ObjectMove + add gravity)
-        velY += GRAVITY;
+        // ROM loc_25B9A (s2.asm:51466-51468) does: ObjectMove first, THEN add
+        // gravity to y_vel. Doing gravity first applies one frame's worth of
+        // acceleration to the current frame's motion and accumulates a
+        // y-position drift of N*gravity sub-units over N frames.
         subX += velX;
         subY += velY;
         x = subX >> 8;
         y = subY >> 8;
+        velY += GRAVITY;
 
         // Check if off-screen - delete if beyond camera viewport + margin
         if (!isOnScreen(112)) {
