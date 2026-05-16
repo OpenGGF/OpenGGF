@@ -223,10 +223,10 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         }
 
         // Break Monitor and Bounce Player Up
-        lastTouchBranch = "break";
         broken = true;
 
         boolean touchingMonitorAsSolid = wasTouchingMonitor(player);
+        lastTouchBranch = "break-tms=" + (touchingMonitorAsSolid ? "1" : "0");
 
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
@@ -259,7 +259,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
     @Override
     public String traceDebugDetails() {
-        return String.format("touch=%s ys=%04X py=%04X my=%04X anim=%02X roll=%d ml=%02X forced=%02X objctl=%d prof=%s scripts=%d broken=%d fall=%d",
+        return String.format("touch=%s ys=%04X py=%04X my=%04X anim=%02X roll=%d ml=%02X forced=%02X objctl=%d prof=%s scripts=%d broken=%d fall=%d mcS=%d mcP=%d skS=%d skP=%d",
                 lastTouchBranch,
                 lastTouchYSpeed & 0xFFFF,
                 lastTouchPlayerY & 0xFFFF,
@@ -272,7 +272,11 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                 lastTouchAnimationProfile,
                 lastTouchAnimationScriptCount,
                 broken ? 1 : 0,
-                falling ? 1 : 0);
+                falling ? 1 : 0,
+                mainCharacterStanding ? 1 : 0,
+                mainCharacterPushing ? 1 : 0,
+                sidekickStanding ? 1 : 0,
+                sidekickPushing ? 1 : 0);
     }
 
     @Override
@@ -326,6 +330,11 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             return false;
         }
         if (player == null) {
+            return true;
+        }
+        if (isSidekick(player)) {
+            // S2 one-player mode: SolidObject_Monitor_Tails always branches to
+            // SolidObject_cont before checking roll anim (docs/s2disasm/s2.asm:25459-25466).
             return true;
         }
         return !player.getRolling();
