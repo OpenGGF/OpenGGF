@@ -239,6 +239,30 @@ public class SeesawObjectInstance extends BoxObjectInstance
         // Spawn ball on first update
         ensureBallSpawned();
 
+        // ROM Obj14_Main (s2.asm:47037-47115) order:
+        //   1. Read previous-frame p1_standing_bit / p2_standing_bit on the
+        //      seesaw object (status(a0)).
+        //   2. If any standing bit is set, recompute target d1 from the
+        //      standing player's current x_pos.
+        //   3. Obj14_UpdateMappingAndCollision -> Obj14_SetMapping FIRST
+        //      (updates mapping_frame BEFORE collision).
+        //   4. THEN SlopedPlatform runs with the freshly-updated
+        //      mapping_frame / slope table / x_flip.
+        //
+        // Engine equivalent: compute target from PREVIOUS-frame
+        // standingPlayer1/2 (which were latched at the end of the prior
+        // frame's update), call updateAngle() to step mapping_frame, then
+        // resolve solid contacts so getSlopeData() / isSlopeFlipped() see
+        // the new mapping_frame. The earlier ordering (resolve -> update)
+        // sampled the slope a frame behind: HTZ1 trace f1017 ROM
+        // transitioned mapping_frame 2 -> 1 and sampled SLOPE_FLAT (5),
+        // landing Sonic at y=0x03D0; the engine sampled mapping_frame=2
+        // SLOPE_TILTED xFlip (sample 2), landing him at y=0x03D3.
+        int targetAngle = (standingPlayer1 != null || standingPlayer2 != null)
+                ? calculateCombinedTargetAngle()
+                : currentAngle;
+        updateAngle(targetAngle);
+
         SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
         PlayerSolidContactResult mainResult = player != null ? batch.perPlayer().get(player) : null;
         standingPlayer1 = mainResult != null && mainResult.standingNow() ? player : null;
@@ -270,22 +294,6 @@ public class SeesawObjectInstance extends BoxObjectInstance
             // ROM: cmp.w d0,d2 / blt.s + / move.w d2,d0 then move.w d0,objoff_38(a1)
             storedPlayerYVel = Math.max(p1Vel, p2Vel);
         }
-
-        // ROM Obj14_Main (s2.asm:47037-47073) calls Obj14_SetMapping EXACTLY ONCE
-        // per frame.  When p1/p2 is standing the target d1 is recomputed from
-        // player position; otherwise d1 keeps the value loaded at line 47038
-        // (the current objoff_3A, i.e. currentAngle).  The previous engine
-        // implementation called updateAngle() twice per frame (once with the
-        // recomputed target, once unconditionally with currentAngle) which
-        // advanced mapping_frame at twice ROM's rate during a tilt
-        // transition.  HTZ1 trace f989: engine reached mapping_frame=2 one
-        // frame before ROM, snapping Sonic to the far-tilt slope sample
-        // (SLOPE_TILTED[38] = -9 -> y=990) instead of ROM's flat sample
-        // (SLOPE_FLAT[9] = 5 -> y=976).
-        int targetAngle = (standingPlayer1 != null || standingPlayer2 != null)
-                ? calculateCombinedTargetAngle()
-                : currentAngle;
-        updateAngle(targetAngle);
     }
 
     /**
