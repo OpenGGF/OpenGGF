@@ -1,7 +1,6 @@
 package com.openggf.trace;
 
 import com.openggf.game.GameServices;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.replay.TraceReplayFixture;
 
@@ -23,6 +22,9 @@ public final class TraceReplayBootstrap {
         public boolean hasSeededTraceState() {
             return seededTraceIndex >= 0;
         }
+    }
+
+    public record SnapshotReport(int attempted, int matched, List<String> warnings) {
     }
 
     public record ReplayPrimaryState(
@@ -75,75 +77,25 @@ public final class TraceReplayBootstrap {
     private TraceReplayBootstrap() {
     }
 
-    /** Diagnostic system property gating the pre-trace writeback path. */
-    private static final String HYDRATE_SWITCH = "oggf.trace.hydrate";
-
     /**
-     * Applies the recorded pre-trace object SST snapshots when (and only when)
-     * the {@code oggf.trace.hydrate} diagnostic switch is enabled. On a normal
-     * green replay run this method is a no-op: trace data remains a read-only
-     * comparison ledger and engine objects keep the state produced by their
-     * native level-load / prelude execution.
-     *
-     * <p>When the switch is on, the call delegates to
-     * {@link TraceObjectSnapshotBinder#apply(ObjectManager, java.util.List)}
-     * which iterates the recorded slots and copies the SST bytes onto the
-     * matching engine instance via
-     * {@link com.openggf.level.objects.AbstractObjectInstance#hydrateFromRomSnapshot}.
-     * The returned {@link TraceObjectSnapshotBinder.Result} truthfully reports
-     * the number of slots successfully addressed so divergence reports can
-     * distinguish "engine had no matching slot" from "engine matched but the
-     * subclass has no per-slot hydrate override".
+     * Reports recorded pre-trace object SST snapshots without mutating engine
+     * state. Trace rows are diagnostic comparison input only; replay bootstrap
+     * must not copy recorded object bytes back into live objects.
      */
-    public static TraceObjectSnapshotBinder.Result applyPreTraceState(TraceData trace,
-                                                                     TraceReplayFixture fixture) {
-        var level = GameServices.levelOrNull();
-        ObjectManager objectManager = level != null ? level.getObjectManager() : null;
+    public static SnapshotReport reportPreTraceObjectSnapshots(TraceData trace) {
         List<TraceEvent.ObjectStateSnapshot> snapshots = trace != null
                 ? trace.preTraceObjectSnapshots()
                 : List.of();
-        if (!Boolean.getBoolean(HYDRATE_SWITCH)) {
-            // Comparison-only mode — never mutate engine state. Report
-            // attempted-count truthfully so callers can log "we observed N
-            // snapshots without applying any of them".
-            return new TraceObjectSnapshotBinder.Result(snapshots.size(), 0, List.of());
-        }
-        return TraceObjectSnapshotBinder.apply(objectManager, snapshots);
+        return new SnapshotReport(snapshots.size(), 0, List.of());
     }
 
     /**
-     * Snaps the live sprite's follower-history rings to the recorded ROM
-     * pre-trace snapshot when (and only when) the {@code oggf.trace.hydrate}
-     * diagnostic switch is enabled. On a normal green replay run this method
-     * is a no-op.
-     *
-     * <p>When the switch is on, the snapshot's {@code xHistory}, {@code yHistory},
-     * {@code inputHistory}, and {@code statusHistory} arrays plus {@code historyPos}
-     * are copied verbatim onto the sprite via
-     * {@link AbstractPlayableSprite#hydrateRecordedHistory}. The sprite is the
-     * Player_1 follower target sampled by Tails_Normal, so hydrating it lines
-     * up the sidekick's delayed-input read with the ROM source-of-truth before
-     * the first compared frame.
+     * Compatibility name retained for replay bootstrap callers. Despite the
+     * historical name, this only reports recorded pre-trace snapshots and never
+     * applies trace data to engine state.
      */
-    public static void applyPreTracePlayerHistory(TraceEvent.PlayerHistorySnapshot snapshot,
-                                                  AbstractPlayableSprite sprite) {
-        if (snapshot == null || sprite == null) {
-            return;
-        }
-        if (!Boolean.getBoolean(HYDRATE_SWITCH)) {
-            // Comparison-only mode — never mutate engine state.
-            return;
-        }
-        if (snapshot.xHistory() == null || snapshot.yHistory() == null
-                || snapshot.inputHistory() == null || snapshot.statusHistory() == null) {
-            return;
-        }
-        sprite.hydrateRecordedHistory(
-                snapshot.xHistory(),
-                snapshot.yHistory(),
-                snapshot.inputHistory(),
-                snapshot.statusHistory(),
-                snapshot.historyPos());
+    public static SnapshotReport applyPreTraceState(TraceData trace, TraceReplayFixture fixture) {
+        return reportPreTraceObjectSnapshots(trace);
     }
 
     public static ReplayStartState applyReplayStartState(TraceData trace,

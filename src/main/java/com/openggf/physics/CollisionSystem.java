@@ -450,7 +450,7 @@ public class CollisionSystem {
         if (sprite.isCpuControlled()) {
             return;
         }
-        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.level();
+        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.levelOrNull();
         if (levelManager == null || levelManager.getObjectManager() == null) {
             return;
         }
@@ -496,7 +496,7 @@ public class CollisionSystem {
     }
 
     private String formatS2WfzTerrainAt(AbstractPlayableSprite sprite, int x, int y, int topSolidBit) {
-        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.level();
+        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.levelOrNull();
         if (levelManager == null) {
             return "<no-lm>";
         }
