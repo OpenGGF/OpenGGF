@@ -186,7 +186,7 @@ public class TestTraceBinder {
             (short) 0x0000, (short) 0x0000, (short) 0x0000,
             (byte) 0x00, false, false, 0,
             null, new EngineDiagnostics(0x02, -1, -1, 8, 0, 0, 0,
-                -1, -1, -1, -1, "", 0, 0));
+                -1, -1, -1, -1, "", 0, 0, -1, -1));
 
         assertTrue(result.hasDivergence());
         assertFalse(result.hasError());
@@ -207,7 +207,7 @@ public class TestTraceBinder {
             (short) 0x0000, (short) 0x0000, (short) 0x0000,
             (byte) 0x00, false, false, 0,
             null, new EngineDiagnostics(0x02, -1, -1, 8, 0, 0, 0,
-                -1, -1, -1, -1, "", 0, 0));
+                -1, -1, -1, -1, "", 0, 0, -1, -1));
 
         assertTrue(result.hasError());
         assertEquals(Severity.ERROR, result.fields().get("rings").severity());
@@ -228,7 +228,7 @@ public class TestTraceBinder {
             (short) 0x0000, (short) 0x0000, (short) 0x0000,
             (byte) 0x00, false, false, 0,
             null, new EngineDiagnostics(0x02, -1, -1, 8, 0, 0, 0,
-                -1, -1, -1, -1, "", 0, 0));
+                -1, -1, -1, -1, "", 0, 0, -1, -1));
 
         assertFalse(result.hasError());
         assertEquals(Severity.WARNING, result.fields().get("rings").severity());
@@ -249,7 +249,7 @@ public class TestTraceBinder {
             (short) 0x0000, (short) 0x0000, (short) 0x0000,
             (byte) 0x00, false, false, 0,
             null, new EngineDiagnostics(0x02, -1, -1, 8, 0, 0, 0,
-                -1, -1, -1, -1, "", 0, 0));
+                -1, -1, -1, -1, "", 0, 0, -1, -1));
 
         assertTrue(result.hasError());
         assertEquals(Severity.ERROR, result.fields().get("rings").severity());
@@ -269,7 +269,7 @@ public class TestTraceBinder {
             (short) 0x0000, (short) 0x0000, (short) 0x0000,
             (byte) 0x00, false, false, 0,
             null, new EngineDiagnostics(0x02, -1, -1, -1, 0, 0x0140, 0x00C0,
-                -1, -1, -1, -1, "", 0, 0));
+                -1, -1, -1, -1, "", 0, 0, -1, -1));
 
         assertEquals(Severity.MATCH, result.fields().get("camera_x").severity());
         assertEquals(Severity.MATCH, result.fields().get("camera_y").severity());
@@ -290,7 +290,7 @@ public class TestTraceBinder {
             (short) 0x0000, (short) 0x0000, (short) 0x0000,
             (byte) 0x00, false, false, 0,
             null, new EngineDiagnostics(0x02, -1, -1, -1, 0, 0x0142, 0x00C0,
-                -1, -1, -1, -1, "", 0, 0));
+                -1, -1, -1, -1, "", 0, 0, -1, -1));
 
         assertTrue(result.hasError());
         assertEquals(Severity.ERROR, result.fields().get("camera_x").severity());
@@ -310,7 +310,7 @@ public class TestTraceBinder {
             (short) 0x0000, (short) 0x0000, (short) 0x0000,
             (byte) 0x00, false, false, 0,
             null, new EngineDiagnostics(0x02, -1, -1, -1, 0, 0x0140, 0x00C0,
-                -1, -1, -1, -1, "", 0, 0));
+                -1, -1, -1, -1, "", 0, 0, -1, -1));
 
         assertFalse(result.fields().containsKey("camera_x"));
         assertFalse(result.fields().containsKey("camera_y"));
@@ -334,7 +334,7 @@ public class TestTraceBinder {
             (short) 0x0000, (short) 0x0000, (short) 0x0000,
             (byte) 0x00, false, false, 0,
             null, new EngineDiagnostics(0x02, -1, -1, -1, 0, 0xFFE0, 0x0040,
-                -1, -1, -1, -1, "", 0, 0));
+                -1, -1, -1, -1, "", 0, 0, -1, -1));
 
         assertEquals(Severity.MATCH, result.fields().get("camera_x").severity());
     }

@@ -743,6 +743,19 @@ public abstract class AbstractTraceReplayTest {
         int xSub = sprite.getXSubpixelRaw();
         int ySub = sprite.getYSubpixelRaw();
 
+        // Tri-state engine truth for "is this player riding any solid object?"
+        // and the latched standing snapshot. These diverge from statusByte
+        // bit 0x08 (live on-object flag) on platform release / walk-off /
+        // mid-frame standing transitions, and are critical for diagnosing
+        // late-game frontiers like WFZ f7065 where ROM transitions to
+        // airborne one frame before engine drops the ride.
+        int ridingObject = -1;
+        int standingSnapshot = -1;
+        if (om != null) {
+            ridingObject = om.isRidingObject(sprite) ? 1 : 0;
+            standingSnapshot = om.latestStandingSnapshot(sprite) ? 1 : 0;
+        }
+
         String solidEvent = "";
         if (om != null) {
             TouchResponseDebugState touchState = om.getTouchResponseDebugState();
@@ -811,7 +824,8 @@ public abstract class AbstractTraceReplayTest {
         }
 
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
-                camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub);
+                camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
+                ridingObject, standingSnapshot);
     }
 
     private String summariseSidekickStateDiagnostics(ObjectManager om) {

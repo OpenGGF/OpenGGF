@@ -407,7 +407,8 @@ public abstract class AbstractCreditsDemoTraceReplayTest {
         }
 
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
-                camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub);
+                camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
+                -1, -1);
     }
 
     private void writeReport(DivergenceReport report, int demoIndex) {
