@@ -46,8 +46,8 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
     private static final int PATROL_TIMER = 128;  // Frames before reversing direction
 
     // Detection constants
-    private static final int DETECT_ANGLE_OFFSET = 0x60;  // Added to angle before comparison
-    private static final int DETECT_ANGLE_RANGE = 0x100;  // If adjusted angle < this, player detected
+    private static final int DETECT_ANGLE_OFFSET = 0x60;  // Added to signed delta before unsigned-window compare
+    private static final int DETECT_ANGLE_RANGE = 0x100;  // ROM cmpi.w #$100,d2 / bhs out-of-range
 
     private enum State {
         WAIT_FOR_PLAYER,    // Routine 2 - Patrol and detect
@@ -117,15 +117,29 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
 
     /**
      * Check if player is within detection range using Obj_GetOrientationToPlayer's
-     * horizontal distance result. Obj94_WaitForPlayer checks d2 + $60 < $100 and
-     * does not require the body to be vertically visible (docs/s2disasm/s2.asm:73716-73722).
+     * horizontal distance result. ROM Obj94_WaitForPlayer (docs/s2disasm/s2.asm:73716-73722):
+     *   bsr.w  Obj_GetOrientationToPlayer
+     *   addi.w #$60,d2          ; d2 = (obj.x - player.x) + 0x60 (signed-word arithmetic)
+     *   cmpi.w #$100,d2
+     *   bhs.s  loc_37362        ; out of range when (unsigned word) >= 0x100
+     *   bsr.w  Obj94_CreateHead ; otherwise attack
+     *
+     * The unsigned-word comparison after `addi.w #$60` makes the window
+     * ASYMMETRIC around the body: signed `obj.x - player.x` must lie in
+     * [-0x60, +0xA0). A symmetric `Math.abs(...) + 0x60 < 0x100` window
+     * matches ROM only on the right side; on the left it widens to
+     * (-0xA0, -0x60) where ROM still says "out of range", firing detection
+     * up to ~64 px earlier and causing the body to stop several pixels
+     * right of ROM (P12-class divergence).
      */
     private boolean checkPlayerInRange(AbstractPlayableSprite target) {
         if (target == null) {
             return false;
         }
-        int horizontalDistance = Math.abs(currentX - target.getCentreX());
-        return horizontalDistance + DETECT_ANGLE_OFFSET < DETECT_ANGLE_RANGE;
+        // Emulate ROM 16-bit signed-then-unsigned semantics literally.
+        int signedDelta = (short) (currentX - target.getCentreX());
+        int windowed = (signedDelta + DETECT_ANGLE_OFFSET) & 0xFFFF;
+        return windowed < DETECT_ANGLE_RANGE;
     }
 
     private void createHeads() {
