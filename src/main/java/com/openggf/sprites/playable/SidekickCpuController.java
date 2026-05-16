@@ -614,7 +614,12 @@ public class SidekickCpuController {
         sidekick.setXSpeed((short) 0);
         sidekick.setYSpeed((short) 0);
         sidekick.setGSpeed((short) 0);
-        sidekick.setAir(false);
+        // Preserve zone-event-set in-air state. S3K MGZ1 / HCZ1 / LRZ1 / SSZ
+        // set status_InAir on the sidekick during applyZonePlayerState
+        // (ROM sonic3k.asm:8132-8205 mirrors loc_6886 / loc_68A6 setting
+        // Status_InAir on Player_2). Resetting to false here would
+        // override the falling-intro state before physics applies the
+        // first gravity tick. Leave the air state as set by level load.
 
         if (useRomAccuratePrefill) {
             // ROM Obj01_Init (s2.asm:35907-35918, sonic3k.asm:21936-21940)

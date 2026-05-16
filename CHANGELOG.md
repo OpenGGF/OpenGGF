@@ -6,6 +6,20 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K sidekick bootstrap parity (CNZ/MGZ trace replay).** Three S3K
+  level-start divergences shared the same root cause: the engine cleared
+  `Status_InAir` on the sidekick after `applyZonePlayerState` set it for
+  MGZ1 / HCZ1 / LRZ1 / SSZ falling intros. Fix preserves the zone-event
+  in-air state in `SidekickCpuController.applyLevelStartSidekickPlacement`,
+  re-runs `Sonic3kLevelEventManager.applyZonePlayerState` after the test
+  fixture's `repositionRegisteredSidekicks` step (matching ROM's
+  `SpawnLevelMainSprites_SpawnPlayers` -> `SpawnLevelMainSprites` order,
+  sonic3k.asm:8132-8427), and adds a one-tick S3K sidekick prelude for
+  seed-frame-mode traces (CNZ Sonic+Tails) so the Tails carry trigger
+  (`loc_13A5A`, sonic3k.asm:26405-26415) and one in-air gravity tick
+  (`MoveSprite_TestGravity`) run before the frame-0 seed comparator
+  fires. CNZ first error advanced f0 -> f4790; MGZ f0 -> f1538.
+
 - **S2 native-prelude trace infrastructure (spec 2026-05-15).** The engine's
   title-card phase now runs `ObjectManager` and player physics every frame
   (universal ADR-1, matching ROM `TitleCard_Main` across S1/S2/S3K). This
