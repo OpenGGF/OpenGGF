@@ -128,6 +128,24 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
                 originalSpawn.rawYWord());
     }
 
+    /**
+     * ROM parity: {@code Obj14_Ball_Init} (docs/s2disasm/s2.asm:47151) stores
+     * the parent seesaw's x_pos in {@code objoff_30(a0)} BEFORE applying the
+     * {@code addi.w #$28} ball offset. The dispatcher's {@code MarkObjGone2}
+     * (s2.asm:46996, {@code move.w objoff_30(a0),d0 / jmpto JmpTo_MarkObjGone2})
+     * therefore checks the ball's out-of-range using the parent seesaw's x,
+     * not the ball's own. Without this, a flipped seesaw whose ball spawns
+     * at {@code parent_x - 0x28} can straddle a 128-byte chunk boundary,
+     * causing the ball alone to be unloaded as soon as the camera enters
+     * the parent's chunk. The seesaw's own out-of-range check still passes,
+     * leaving the parent with a stale {@code ball} reference and the
+     * trace-replay path with a permanently launchless seesaw.
+     */
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return seesawCenterX;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;

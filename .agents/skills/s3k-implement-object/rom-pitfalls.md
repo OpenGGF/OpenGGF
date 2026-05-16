@@ -613,6 +613,74 @@ surface the same bug if the engine port reverses the order.)
 
 ---
 
+## P17 -- Child object out_of_range uses own X instead of parent anchor, causing chunk-boundary unload
+
+**Symptom.** A parent object's child (e.g. a multi-piece boss arm, attached
+segment, swung weapon, fixed-offset projectile spawner) silently vanishes
+shortly after the parent appears on screen. The parent stays alive and behaves
+normally, but a feature that depends on the child (contact, launch, swing
+attack) never fires. Trace replay shows the parent's state advancing
+correctly while a hit/launch event that requires the child silently fails.
+The engine's `parent.child` reference is non-null and `child.destroyed=false`,
+but the child is no longer in `ObjectManager.dynamicObjects`.
+
+**Root cause.** ROM dispatchers for parent+child objects often share one
+`Obj_Index` table whose tail uses `move.w objoff_30(a0),d0 / jmpto
+JmpTo_MarkObjGone2`. The child's init routine stores the PARENT's `x_pos`
+into `objoff_30(a0)` BEFORE applying the `addi.w` offset that moves the
+child relative to the parent. So both parent and child use the same camera-
+relative chunk reference and unload together.
+
+A naive engine port adds the child via `addDynamicObjectAfterCurrent` and
+lets it default to `getOutOfRangeReferenceX() = getX()` (the child's
+current position). The default `ObjectManager.isOutOfRangeS1` rounds X to
+128-byte chunks. If the child's offset puts it into a different chunk than
+the parent, the child can be unloaded as soon as the camera enters the
+parent's chunk -- leaving the parent with an orphaned `child` reference and
+permanent disablement of the child-dependent feature.
+
+**What to check.** For any parent+child pair where ROM's `Obj_*_Init` does:
+
+```
+move.w x_pos(a0),objoff_30(a0)  ; save parent x BEFORE offset
+addi.w #$xx,x_pos(a0)            ; apply child offset
+```
+
+the child must override `getOutOfRangeReferenceX()` to return the parent's
+x position. S3K parent+child idioms to audit:
+- Multi-piece boss children spawned by the main boss init
+- AIZ battleship attachments (turrets, arms)
+- Body segments on Caterkiller-style badniks
+- Any projectile that fires from a fixed parent-relative offset and reads
+  the parent via `objoff_3C`
+
+The fix is one method:
+
+```java
+@Override
+public int getOutOfRangeReferenceX() {
+    return parentCenterX;  // ROM objoff_30(a0) = parent x_pos
+}
+```
+
+**ROM citation.** S2 originating bug: `docs/s2disasm/s2.asm:47151`
+(`Obj14_Ball_Init`), `s2.asm:46996` (Obj14 dispatcher tail with
+`move.w objoff_30(a0),d0 / jmpto JmpTo_MarkObjGone2`), `s2.asm:30040-30057`
+(`MarkObjGone2` chunk-rounded comparison). S3K analogue is the standard
+multi-piece boss / hazard pattern; cite the specific
+`Obj_Init` block when porting an S3K instance. Engine equivalent: any
+`AbstractObjectInstance` subclass spawned at a positional offset from a
+parent should override `getOutOfRangeReferenceX()` to return the parent's
+centre X.
+
+**Originating commit.** `<pending>` (cross-game mirror of S2 P17 entry;
+HTZ Seesaw ball alone got unloaded when its chunk-boundary crossed the
+camera threshold, while the parent stayed loaded.  S3K parent+child
+objects share the ROM idiom and will surface the same trace divergence if
+the engine port relies on the default `getX()` reference X.)
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
