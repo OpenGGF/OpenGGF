@@ -1,6 +1,6 @@
 package com.openggf.tests.trace;
 
-import com.openggf.trace.replay.Sonic2TornadoRidePrelude;
+import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

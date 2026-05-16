@@ -1,4 +1,4 @@
-package com.openggf.trace.replay;
+package com.openggf.game.sonic2.trace;
 
 /**
  * Derives the small native pre-gameplay seeds needed by S2 SCZ/WFZ

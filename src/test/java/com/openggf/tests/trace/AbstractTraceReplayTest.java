@@ -41,7 +41,6 @@ import com.openggf.trace.TraceEventFormatter;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
-import com.openggf.trace.TraceObjectSnapshotBinder;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import com.openggf.tests.trace.s3k.S3kRequiredCheckpointGuard;
@@ -70,18 +69,6 @@ public abstract class AbstractTraceReplayTest {
 
     private static final boolean S3K_TRACE_PROBES =
             Boolean.getBoolean("openggf.trace.s3k.probes");
-
-    /**
-     * Diagnostic-only switch. When {@code true}, the replay loop snaps engine
-     * player-history rings, sidekick CPU state, and pre-trace SST snapshots to
-     * the recorded ROM values BEFORE the comparison loop starts. Runs with
-     * this flag set are NOT valid green replays — the writeback masks the
-     * very divergences the suite is designed to surface. See
-     * {@code TestTraceHydrateSwitchDefault} for the CI guard that pins this
-     * unset on master.
-     */
-    private static final boolean HYDRATE_PRE_TRACE =
-            Boolean.getBoolean("oggf.trace.hydrate");
 
     /** Which game ROM this test requires. */
     protected abstract SonicGame game();
@@ -159,7 +146,7 @@ public abstract class AbstractTraceReplayTest {
             TraceReplaySessionBootstrap.BootstrapResult boot =
                     TraceReplaySessionBootstrap.applyBootstrap(trace, fixture,
                             overridePreTraceOscFrames());
-            TraceObjectSnapshotBinder.Result hydration = boot.hydration();
+            TraceReplayBootstrap.SnapshotReport snapshotReport = boot.snapshotReport();
             TraceReplayBootstrap.ReplayStartState replayStart = boot.replayStart();
             ObjectManager om = GameServices.level().getObjectManager();
             List<TraceEvent.ObjectStateSnapshot> preTraceSnapshots =
@@ -167,51 +154,11 @@ public abstract class AbstractTraceReplayTest {
             if (!preTraceSnapshots.isEmpty() && om != null) {
                 System.out.printf(
                         "Reported %d/%d pre-trace object snapshots (%d warnings)%n",
-                        hydration.matched(), hydration.attempted(),
-                        hydration.warnings().size());
-                for (String warning : hydration.warnings()) {
+                        snapshotReport.matched(), snapshotReport.attempted(),
+                        snapshotReport.warnings().size());
+                for (String warning : snapshotReport.warnings()) {
                     System.out.println("  WARN: " + warning);
                 }
-            }
-
-            // Diagnostic-only hydration switch (see HYDRATE_PRE_TRACE javadoc).
-            // Snaps engine state to recorded pre-trace snapshots so per-frame
-            // reports can be analysed from a known-good starting point. Runs
-            // with this enabled are explicitly NOT a green pass.
-            if (HYDRATE_PRE_TRACE && trace.metadata().nativePreludeMode()) {
-                LOGGER.warning("oggf.trace.hydrate enabled — engine state snapped "
-                        + "to recorded frame-0 snapshot. NOT a valid green run.");
-                TraceEvent.PlayerHistorySnapshot historySnapshot =
-                        trace.preTracePlayerHistorySnapshot();
-                if (historySnapshot != null) {
-                    TraceReplayBootstrap.applyPreTracePlayerHistory(
-                            historySnapshot, fixture.sprite());
-                }
-                String sidekickCode = meta.recordedSidekicks().isEmpty()
-                        ? null
-                        : meta.recordedSidekicks().getFirst();
-                if (sidekickCode != null) {
-                    TraceEvent.CpuStateSnapshot cpuSnapshot =
-                            trace.preTraceCpuStateSnapshot(sidekickCode);
-                    if (cpuSnapshot != null) {
-                        SpriteManager spriteManager = GameServices.sprites();
-                        if (spriteManager != null && !spriteManager.getSidekicks().isEmpty()) {
-                            SidekickCpuController cpu = spriteManager.getSidekicks()
-                                    .getFirst().getCpuController();
-                            if (cpu != null) {
-                                cpu.hydrateFromRomCpuState(
-                                        cpuSnapshot.cpuRoutine(),
-                                        cpuSnapshot.controlCounter(),
-                                        cpuSnapshot.respawnCounter(),
-                                        cpuSnapshot.interactId(),
-                                        cpuSnapshot.jumping(),
-                                        cpuSnapshot.targetX(),
-                                        cpuSnapshot.targetY());
-                            }
-                        }
-                    }
-                }
-                TraceReplayBootstrap.applyPreTraceState(trace, fixture);
             }
 
             // 5. Run frame-by-frame comparison

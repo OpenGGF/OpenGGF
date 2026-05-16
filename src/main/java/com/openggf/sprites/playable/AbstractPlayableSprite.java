@@ -3438,11 +3438,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          *
          * <p><strong>Trace replay must not call this on a normal green run.</strong>
          * Recorded history snapshots are comparison-only diagnostics. This
-         * accessor exists to support the {@code oggf.trace.hydrate} debug
-         * switch (see {@code TraceReplayBootstrap#applyPreTracePlayerHistory})
-         * which deliberately snaps the engine to recorded frame-0 state for
-         * root-causing per-frame divergence reports; runs that toggle the
-         * switch are NOT valid green replays.
+         * accessor is kept for focused unit diagnostics and must not be wired
+         * into committed trace replay bootstrap or per-frame replay loops.
          */
         public void hydrateRecordedHistory(short[] xHistory, short[] yHistory,
                                     short[] inputHistory, byte[] statusHistory,

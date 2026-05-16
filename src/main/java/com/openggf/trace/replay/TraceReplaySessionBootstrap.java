@@ -11,6 +11,7 @@ import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.sonic2.objects.TornadoObjectInstance;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
 import com.openggf.level.LevelData;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -20,7 +21,6 @@ import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
-import com.openggf.trace.TraceObjectSnapshotBinder;
 import com.openggf.trace.TraceReplayBootstrap;
 
 import java.util.List;
@@ -177,7 +177,7 @@ public final class TraceReplaySessionBootstrap {
      *       timing, or from an explicit diagnostic override.</li>
      *   <li>Sidekick-only prelude ticks for title-card timing, when the
      *       trace policy can derive them from normal execution order.</li>
-     *   <li>{@link TraceReplayBootstrap#applyPreTraceState} - currently
+     *   <li>{@link TraceReplayBootstrap#reportPreTraceObjectSnapshots} -
      *       a comparison-only compatibility hook that reports zero
      *       applied snapshots.</li>
      *   <li>{@link TraceReplayBootstrap#applyReplayStartStateForTraceReplay}
@@ -248,11 +248,11 @@ public final class TraceReplaySessionBootstrap {
                     sidekickPreludeFrames,
                     gameplayMode.getLevelManager());
         }
-        TraceObjectSnapshotBinder.Result hydration =
-                TraceReplayBootstrap.applyPreTraceState(trace, fixture);
+        TraceReplayBootstrap.SnapshotReport snapshotReport =
+                TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
-        return new BootstrapResult(hydration, replayStart);
+        return new BootstrapResult(snapshotReport, replayStart);
     }
 
     private static void applyS2SczTitleCardScrollPrelude(TraceData trace) {
@@ -295,9 +295,9 @@ public final class TraceReplaySessionBootstrap {
         for (int i = 0; i < preTraceOsc; i++) {
             OscillationManager.update(-(preTraceOsc - i));
         }
-        TraceObjectSnapshotBinder.Result hydration =
-                TraceReplayBootstrap.applyPreTraceState(trace, fixture);
-        return new BootstrapResult(hydration, TraceReplayBootstrap.ReplayStartState.DEFAULT);
+        TraceReplayBootstrap.SnapshotReport snapshotReport =
+                TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
+        return new BootstrapResult(snapshotReport, TraceReplayBootstrap.ReplayStartState.DEFAULT);
     }
 
     /**
@@ -476,7 +476,7 @@ public final class TraceReplaySessionBootstrap {
     }
 
     public record BootstrapResult(
-            TraceObjectSnapshotBinder.Result hydration,
+            TraceReplayBootstrap.SnapshotReport snapshotReport,
             TraceReplayBootstrap.ReplayStartState replayStart) {
     }
 }
