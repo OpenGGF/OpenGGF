@@ -89,10 +89,53 @@ public class DivergenceReport {
             DivergenceGroup first = errors.get(0);
             sb.append(String.format(" First error: frame %d -- %s mismatch (expected=%s, actual=%s)",
                 first.startFrame(), first.field(), first.expectedAtStart(), first.actualAtStart()));
+            appendFirstErrorDiagnostics(sb, first);
         }
 
         appendTraceContextSummary(sb, summaryReferenceFrame());
         return sb.toString();
+    }
+
+    /**
+     * Surface sub-pixel + counter context for the first failing frame inline
+     * on the summary line so frontier-advancement iter loops can read it
+     * without opening the report JSON. Only emitted for position/speed-shape
+     * fields where the diagnostic context is informative.
+     */
+    private void appendFirstErrorDiagnostics(StringBuilder sb, DivergenceGroup first) {
+        String field = first.field();
+        if (field == null) {
+            return;
+        }
+        boolean positionShape = field.equals("x") || field.equals("y")
+                || field.endsWith("_x") || field.endsWith("_y")
+                || field.endsWith("_x_speed") || field.endsWith("_y_speed")
+                || field.endsWith("_g_speed")
+                || field.equals("x_speed") || field.equals("y_speed")
+                || field.equals("g_speed");
+        if (!positionShape) {
+            return;
+        }
+        FrameComparison fc = findComparison(first.startFrame());
+        if (fc == null) {
+            return;
+        }
+        String rom = fc.romDiagnostics();
+        String engine = fc.engineDiagnostics();
+        if ((rom == null || rom.isEmpty()) && (engine == null || engine.isEmpty())) {
+            return;
+        }
+        sb.append(" rom={").append(rom == null ? "" : rom).append('}');
+        sb.append(" engine={").append(engine == null ? "" : engine).append('}');
+    }
+
+    private FrameComparison findComparison(int frame) {
+        for (FrameComparison fc : allComparisons) {
+            if (fc.frame() == frame) {
+                return fc;
+            }
+        }
+        return null;
     }
 
     public String toJson() {
