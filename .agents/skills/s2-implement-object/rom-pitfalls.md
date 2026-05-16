@@ -533,6 +533,93 @@ together at the f988 frontier.)
 
 ---
 
+## P14 -- Engine edge-triggers ENEMY touch response but ROM polls every frame
+
+**Symptom.** A badnik (or other ENEMY-category object) that should be
+destroyed when the player transitions into an attacking state while
+already overlapping the badnik stays alive instead. Trace shows ROM
+killed the badnik AND applied the canonical Touch_KillEnemy bounce
+(typically `y_vel -= $100` for side, `y_vel = -y_vel` for top, `y_vel +=
+$100` for upward); engine has the badnik still in the active list and
+the player's y_vel/x_vel unchanged. The MCZ trace surfaced this at
+frame 825 when Sonic was standing in the Crawlton's bounding box with
+`invulnerable_time != 0` (Touch_NoHurt path), then pressed B+Down to
+start a Spindash. ROM `Touch_Enemy` re-read `anim(a0)` on frame 825,
+saw `AniIDSonAni_Spindash`, ran Touch_KillEnemy and set
+`y_vel = -$100`. Engine had Sonic in the badnik's overlap from a
+previous frame so the touch callback was edge-suppressed.
+
+**Root cause.** The engine's ReactToItem-equivalent loop in
+`ObjectManager.TouchResponses.processCollisionLoop` historically
+edge-triggered ENEMY (and SPECIAL) touch callbacks via:
+```
+boolean shouldTrigger = category == BOSS
+        || category == HURT
+        || provider.requiresContinuousTouchCallbacks()
+        || !overlappingSet.contains(instance);
+```
+The intent was an optimisation: once a player overlaps an enemy and
+the response runs, don't re-run while the overlap persists. ROM has
+no such gate. ROM `Touch_Loop` (s2.asm:84502-84548) iterates every
+frame and `Touch_Enemy` (s2.asm:84807-84890) re-reads
+`status_secondary(a0)` and `anim(a0)` each call. The decision between
+Touch_KillEnemy and Touch_ChkHurt is therefore made per-frame, not
+once on entry, so any later state transition into Spindash / Roll /
+Invincibility immediately switches the response to kill-and-bounce.
+
+The same gate suppresses cases like rolling into an enemy from above
+while frame-0 of the overlap is a hurt path (e.g. spike contact then
+roll), and any pattern where touch happens before attacking state is
+set.
+
+**What to check.** When implementing a badnik (any
+`AbstractBadnikInstance` subclass) or any object that uses the
+`ENEMY` `TouchCategory`:
+1. Do NOT rely on `wasAlreadyDestroyed` / "overlap memory" as a
+   correctness mechanism. The framework now polls every frame, so the
+   object's own `onPlayerAttack` must be idempotent and self-gating
+   (`isDestroyed()` check at top of `onPlayerAttack`,
+   pre-destruction state captured before mutating).
+2. ROM Touch_Enemy reads the current `anim` byte each call. If your
+   badnik wants to differentiate behaviour based on player state
+   (e.g. boss multi-sprite hit_count vs Touch_KillEnemy bounce),
+   read the player's current animation in `onPlayerAttack`, not
+   cached state from `update()`.
+3. The fix targets `ENEMY` only. SPECIAL is still edge-triggered to
+   keep monitors / object-controlled SolidObjects from firing
+   responses every frame. If a SPECIAL object genuinely needs every-
+   frame polling (e.g. a state machine that wants to observe the
+   player's animation transition), implement
+   `TouchResponseProvider.requiresContinuousTouchCallbacks()` and
+   return true.
+4. Trace replay test for any new badnik: run the badnik trace replay
+   with the player overlapping it from frame N-1 and starting a
+   spindash on frame N. ROM will fire Touch_KillEnemy on frame N;
+   engine must too. If it doesn't, check whether your badnik has
+   custom logic that depends on a one-shot trigger flag.
+
+**ROM citation.** `docs/s2disasm/s2.asm:84502-84548` (`TouchResponse`
+/ `Touch_Loop` — iterates every frame, no overlap memory),
+`s2.asm:84807-84890` (`Touch_Enemy` / `Touch_KillEnemy` — reads
+`status_secondary(a0)` / `anim(a0)` per call; the same routine handles
+both hurt and kill outcomes based on current state).  Same per-frame
+loop in S1 (`docs/s1disasm/_incObj/sub ReactToItem.asm`) and S3K
+(`docs/skdisasm/sonic3k.asm` `Collision_response_list` dispatcher).
+Engine equivalent: `ObjectManager.TouchResponses.processCollisionLoop`
+(`shouldTrigger` decision around the `!overlappingSet.contains`
+edge gate).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop
+iter 6: MCZ F825 Sonic standing in Crawlton overlap was edge-trigger-
+suppressed from the per-frame Touch_Enemy re-check; once continuous
+polling was restored for ENEMY, Spindash entry on f825 fired
+Touch_KillEnemy correctly and produced y_vel = -0x100, advancing the
+MCZ frontier from 825 to 862 (619 errors -> 618 errors; same touch
+loop also unmasks any future "transition-into-attack-during-overlap"
+pattern in S1/S2/S3K badnik implementations).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

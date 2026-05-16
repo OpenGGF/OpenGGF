@@ -4666,13 +4666,34 @@ public class ObjectManager {
                     continue;
                 }
                 buildingSet.add(instance);
-                // ROM touch checks run every frame for bosses. Most other objects are
-                // edge-triggered, but some special objects need per-frame polling behavior.
-                // ROM: Touch_ChkHurt runs every frame — no edge-triggering.
-                // HURT must be continuous so damage re-applies after i-frames expire
-                // while the player is still inside the hazard hitbox.
+                // ROM touch checks run every frame for BOSS/HURT/ENEMY. SPECIAL
+                // (collision_flags 0x40-0x7F) objects in ROM are run every
+                // frame too, but the object itself typically transitions to a
+                // 'touched' routine on first contact and ignores subsequent
+                // overlaps — so engine still edge-triggers SPECIAL callbacks
+                // to keep tests asserting that the object only responds once
+                // per overlap.
+                //
+                // ENEMY must be continuous so a ROM Touch_Enemy/Touch_KillEnemy
+                // path fires when the player transitions from non-attacking to
+                // attacking while still overlapping the badnik. E.g. S2 MCZ
+                // Crawlton at trace frame 825: Sonic stood in overlap (Hurt
+                // path gated by invulnerable_time → Touch_NoHurt), then
+                // initiated Spindash. ROM `Touch_Enemy` re-checks anim each
+                // frame; once it sees AniIDSonAni_Spindash it calls
+                // Touch_KillEnemy and applies the -$100 side-bounce
+                // (s2.asm:84807-84890). Without continuous re-check the
+                // badnik stays alive and Sonic's y_vel stays at 0, diverging
+                // from ROM.
+                //
+                // ROM citations: s2.asm:84502-84890 (`TouchResponse`,
+                // `Touch_Loop`, `Touch_Enemy`, `Touch_KillEnemy`); same
+                // every-frame loop in S1 (`docs/s1disasm/_incObj/sub ReactToItem.asm`)
+                // and S3K (`docs/skdisasm/sonic3k.asm` `Collision_response_list`
+                // dispatcher).
                 boolean shouldTrigger = category == TouchCategory.BOSS
                         || category == TouchCategory.HURT
+                        || category == TouchCategory.ENEMY
                         || provider.requiresContinuousTouchCallbacks()
                         || !overlappingSet.contains(instance);
                 if (shouldTrigger) {

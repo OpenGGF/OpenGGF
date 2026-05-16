@@ -476,6 +476,65 @@ ROM's.)
 
 ---
 
+## P14 -- Engine edge-triggers ENEMY touch response but ROM polls every frame
+
+**Symptom.** A badnik (or other ENEMY-category object) that should be
+destroyed when the player transitions into an attacking state while
+already overlapping the badnik stays alive instead. Trace shows ROM
+killed the badnik AND applied the canonical Touch_KillEnemy bounce
+(typically `y_vel -= $100` for side, `y_vel = -y_vel` for top, `y_vel +=
+$100` for upward); engine has the badnik still in the active list and
+the player's y_vel/x_vel unchanged. The S2 MCZ trace surfaced this
+at frame 825 when Sonic was standing in the Crawlton's bounding box
+with `invulnerable_time != 0` (Touch_NoHurt path), then pressed
+B+Down to start a Spindash; ROM re-checked anim on f825, saw
+Spindash, ran Touch_KillEnemy and set `y_vel = -$100`. The same
+pattern applies to S3K badniks whose touch response decisions are
+keyed on the current player animation (e.g. Lance / spear-type
+badniks that bounce rolling players, multi-sprite bosses whose
+`boss_hitcount2` check fires from Touch_Enemy).
+
+**Root cause.** The engine's `ObjectManager.TouchResponses.
+processCollisionLoop` historically edge-triggered ENEMY (and SPECIAL)
+touch callbacks. ROM has no such gate: the touch loop iterates every
+frame and `Touch_Enemy` re-reads `status_secondary(a0)` and
+`anim(a0)` each call, so the decision between Touch_KillEnemy and
+Touch_ChkHurt is made per-frame. The same applies to S3K where
+`Collision_response_list` is pre-built during ExecuteObjects and then
+re-walked every frame -- there is no overlap-memory gating.
+
+**What to check.** When implementing an S3K badnik or any object that
+uses the `ENEMY` `TouchCategory`:
+1. Make `onPlayerAttack` idempotent and self-gating (`isDestroyed()`
+   check up front, capture pre-destruction state before mutating).
+2. Read the player's current animation/state inside
+   `onPlayerAttack`, not from a cached `update()` value. ROM
+   Touch_Enemy reads `anim(a0)` each call.
+3. S3K bosses with `boss_hitcount2` must accept multiple touches per
+   overlap. The continuous polling lets the rolling/spindash player
+   land subsequent hits without the engine suppressing the callback.
+4. The fix is ENEMY-only. SPECIAL (collision_flags 0x40-0x7F) is
+   still edge-triggered to keep monitors / object-controlled
+   SolidObjects from firing responses every frame. If an S3K SPECIAL
+   object needs every-frame polling, opt-in via
+   `TouchResponseProvider.requiresContinuousTouchCallbacks()`.
+
+**ROM citation.** `docs/skdisasm/sonic3k.asm` `Collision_response_list`
+walking + `Touch_Enemy` equivalent (S3K mirrors S2 line 84807-84890;
+S3K's `loc_1E600` Touch_Enemy variant reads anim per-call). Cross-game
+S2 cite: `docs/s2disasm/s2.asm:84502-84548` (`Touch_Loop`),
+`s2.asm:84807-84890` (`Touch_Enemy` / `Touch_KillEnemy`). Engine
+equivalent: `ObjectManager.TouchResponses.processCollisionLoop`
+(`shouldTrigger` decision).
+
+**Originating commit.** `<pending>` (cross-game mirror of S2 P14
+entry; ENEMY-continuous polling restored a per-frame Touch_Enemy
+re-check that any future S3K badnik with state-dependent kill / hit
+behaviour will rely on. Originating S2 trace: MCZ F825 Crawlton with
+Sonic transitioning to Spindash during overlap.)
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
