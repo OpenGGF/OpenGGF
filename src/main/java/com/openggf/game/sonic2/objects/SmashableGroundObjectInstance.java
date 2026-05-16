@@ -78,10 +78,6 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
     private boolean broken;
     private int savedChainCounter;  // objoff_38 - saved counter at frame start
 
-    // Track player animation state each frame
-    private boolean player1WasRolling;
-    private boolean player2WasRolling;
-
     private boolean persistenceChecked;
 
     public SmashableGroundObjectInstance(ObjectSpawn spawn, String name) {
@@ -134,10 +130,6 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         // Save global chain counter at frame start to restore when breaking
         savedChainCounter = globalChainBonusCounter;
 
-        // Track player animation state each frame (for both players in 2P mode)
-        if (player != null) {
-            player1WasRolling = player.getRolling();
-        }
     }
 
     @Override
@@ -169,7 +161,9 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         // - Jump-breakable mode: any landing breaks it
         // - Normal mode: player must be rolling AND have solid bit = $E (from spin attack)
         boolean canBreak = false;
-        boolean isRolling = player1WasRolling || player.getRolling();
+        boolean wasRolling = services().objectManager() != null
+                ? services().objectManager().getPreContactRolling()
+                : player.getRolling();
 
         if (jumpBreakable) {
             // Jump-breakable mode: breaks when player lands on it
@@ -178,13 +172,19 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
             // Normal mode: check if player is rolling
             // Original checks: cmpi.b #AniIDSonAni_Roll,objoff_32(a0)
             // and: cmpi.b #$E,(MainCharacter+top_solid_bit).w
-            if (isRolling) {
+            if (wasRolling && (player.getTopSolidBit() & 0xFF) == 0x0E) {
                 canBreak = true;
             }
         }
 
         if (canBreak) {
             breakOneLayer(player);
+        } else {
+            // Obj2F_Main assigns primary solidity when the standing player did
+            // not satisfy the break branch (docs/s2disasm/s2.asm:48729-48741,
+            // 48766-48768, 48805-48807).
+            player.setTopSolidBit((byte) 0x0C);
+            player.setLrbSolidBit((byte) 0x0D);
         }
     }
 
@@ -204,7 +204,10 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
         // bset #status.player.rolling,status(a1)
         // move.b #$E,y_radius(a1)
         // move.b #7,x_radius(a1)
+        short preservedCentreY = player.getCentreY();
         player.setRolling(true);
+        // ROM writes status/radii/anim directly without moving y_pos.
+        player.setCentreYPreserveSubpixel(preservedCentreY);
 
         // Set player state to in-air
         // bset #status.player.in_air

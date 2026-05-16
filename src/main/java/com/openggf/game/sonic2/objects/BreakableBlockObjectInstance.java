@@ -128,17 +128,23 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
             return;
         }
 
-        // ROM Obj32_Main (s2.asm:48889-48959):
+        // ROM Obj32_Main snapshots player anim before SolidObject, then checks
+        // standing bits after SolidObject (docs/s2disasm/s2.asm:48889-48959).
+        // Use the pre-contact rolling state because landing resolution can clear
+        // rolling before this callback runs.
+        boolean wasRolling = services().objectManager() != null
+                ? services().objectManager().getPreContactRolling()
+                : player.getRolling();
         //   andi.b #standing_mask,d0         ; only break if a player is STANDING on the block
         //   bne.s  Obj32_SupportingSomeone
-        //   ; ... checks each standing player's anim individually:
-        //   ; - MainCharacter standing && anim==Roll  -> Obj32_BouncePlayer(MainCharacter)
-        //   ; - Sidekick standing      && anim==Roll  -> Obj32_BouncePlayer(Sidekick)
+        //   ; ... checks each standing player's saved anim individually:
+        //   ; - MainCharacter standing && saved anim==Roll  -> Obj32_BouncePlayer(MainCharacter)
+        //   ; - Sidekick standing      && saved anim==Roll  -> Obj32_BouncePlayer(Sidekick)
         // Side and below contacts NEVER break the block in ROM. Each player's own
         // rolling state determines if THIS player triggers the break (the engine's
         // previous "playerWasRolling" cache leaked Sonic's rolling state into Tails'
         // onSolidContact call, knocking Tails airborne via the side-touch path).
-        if (contact.standing() && player.getRolling()) {
+        if (contact.standing() && wasRolling) {
             breakBlock(player, contact);
         }
     }
@@ -156,13 +162,16 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
             objectManager.markRemembered(spawn);
         }
 
+        short preservedCentreY = player.getCentreY();
         // Force player into rolling state with proper hitbox (disassembly lines 48916-48919)
         // bset #status.player.rolling,status(a1)
         // move.b #$E,y_radius(a1)
         // move.b #7,x_radius(a1)
         // move.b #AniIDSonAni_Roll,anim(a1)
-        // setRolling(true) handles radius change and animation internally
+        // setRolling(true) handles radius change and animation internally, but
+        // ROM writes y_radius/x_radius/status without changing y_pos.
         player.setRolling(true);
+        player.setCentreYPreserveSubpixel(preservedCentreY);
 
         // Handle velocity based on contact direction:
         // - Standing on top: bounce upward
