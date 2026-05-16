@@ -84,7 +84,6 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     // Palette animation frame (toggles every 4 frames)
     private int paletteFrame;
     private int animTimer;
-
     // Store spawn for dynamic override
     private final ObjectSpawn originalSpawn;
 
@@ -208,6 +207,10 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
 
         // Reset parent's stored Y velocity
         parent.resetStoredPlayerYVel();
+
+        // ROM branches directly from Obj14_Ball_Main into Obj14_Ball_Fly after
+        // assigning velocity (docs/s2disasm/s2.asm:47142-47144).
+        updateFlying(player);
     }
 
     /**
@@ -238,37 +241,15 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
         xPos = (seesawCenterX + xOffset) << 16;
     }
 
-    /**
-     * Ball is flying - apply movement then gravity.
-     * ROM: Obj14_Ball_Fly calls ObjectMoveAndFall
-     *
-     * Bug fix #6: ROM's ObjectMoveAndFall applies movement FIRST, then gravity.
-     * Java had gravity before movement which is incorrect.
-     */
     private void updateFlying(AbstractPlayableSprite player) {
-        // Move ball with 16.16 fixed-point arithmetic (matches ROM ObjectMoveAndFall)
-        // ROM does: asl.l #8,d0 then add.l d0,x_pos(a0)
-        // Velocity is 8.8 format, position is 16.16, so shift velocity left by 8
-        xPos += (xVel << 8);
-        yPos += (yVel << 8);
-
-        // Apply gravity AFTER movement (ROM ObjectMoveAndFall order)
-        yVel += GRAVITY;
-
-        // Extract pixel positions for collision checks
-        int currentX = xPos >> 16;
-        int currentY = yPos >> 16;
-
-        // Check for landing on seesaw
-        // ROM: loc_21BB6 through loc_21C1E
-        if (yVel > 0) {
-            // Descending - check if we've reached seesaw surface
+        // S2 Obj14_Ball_Fly branches on y_vel before ObjectMoveAndFall
+        // (docs/s2disasm/s2.asm:47214-47231). A zero velocity is already descending.
+        if (yVel >= 0) {
+            moveAndFall();
+            int currentX = xPos >> 16;
+            int currentY = yPos >> 16;
             int landingY = calculateLandingY(currentX);
             if (currentY >= landingY) {
-                // Land on seesaw - snap to landing position
-                yPos = landingY << 16;
-                currentY = landingY;
-
                 // Determine which end we landed on
                 // ROM: moveq #2,d1 / tst.w x_vel(a0) / bmi.s + / moveq #0,d1
                 int landingAngle = (xVel < 0) ? 2 : 0;
@@ -297,6 +278,8 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
                 state = State.RESTING;
             }
         } else {
+            moveAndFall();
+            int currentY = yPos >> 16;
             // Ascending - ROM calls ObjectMoveAndFall TWICE when ball is below upper bound
             // ROM: loc_21BA0-21BB4:
             //   jsrto JmpTo_ObjectMoveAndFall  ; first call
@@ -309,11 +292,17 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
             if (currentY >= upperBound) {
                 // Below upper bound - apply movement+gravity a SECOND time
                 // This doubles the acceleration when ball is still ascending but near the apex
-                xPos += (xVel << 8);
-                yPos += (yVel << 8);
-                yVel += GRAVITY;
+                moveAndFall();
             }
         }
+    }
+
+    private void moveAndFall() {
+        // ObjectMoveAndFall adds old velocity to 16.16 position, then applies gravity
+        // (docs/s2disasm/s2.asm:29967-29981).
+        xPos += (xVel << 8);
+        yPos += (yVel << 8);
+        yVel += GRAVITY;
     }
 
     /**
@@ -432,6 +421,18 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public String traceDebugDetails() {
+        return String.format("state=%s pos=%04X.%04X,%04X.%04X vel=%04X,%04X stored=%d parentFrame=%d parentAngle=%d",
+                state,
+                xPos >> 16, xPos & 0xFFFF,
+                yPos >> 16, yPos & 0xFFFF,
+                xVel & 0xFFFF, yVel & 0xFFFF,
+                storedAngle,
+                parent.getMappingFrame(),
+                parent.getCurrentAngle());
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.SEESAW_BALL);
         if (renderer == null) return;
@@ -465,4 +466,5 @@ public class SeesawBallObjectInstance extends AbstractObjectInstance
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);
     }
+
 }

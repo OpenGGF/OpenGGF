@@ -130,7 +130,10 @@ public class SeesawObjectInstance extends BoxObjectInstance
         // Register the ball with ObjectManager
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
-            objectManager.addDynamicObject(ball);
+            // ROM Obj14_Init uses AllocateObjectAfterCurrent for the ball child
+            // (docs/s2disasm/s2.asm:47020), so the child executes after the
+            // parent in the same object pass when a higher slot is available.
+            objectManager.addDynamicObjectAfterCurrent(ball);
         }
     }
 
@@ -470,5 +473,15 @@ public class SeesawObjectInstance extends BoxObjectInstance
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("angle=%d frame=%d storedY=%04X p1=%s p2=%s",
+                currentAngle,
+                mappingFrame,
+                storedPlayerYVel & 0xFFFF,
+                standingPlayer1 != null,
+                standingPlayer2 != null);
     }
 }
