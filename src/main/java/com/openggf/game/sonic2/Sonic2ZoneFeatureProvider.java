@@ -354,6 +354,12 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void update(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        // CNZ map bumpers run from updateAfterPlayablePhysics so their bounce
+        // velocity is visible to later playable slots in the same frame.
+    }
+
+    @Override
+    public void updateAfterPlayablePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
         if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ) {
             if (cnzBumperManager != null) {
                 cnzBumperManager.update(player, cameraX, zoneIndex);

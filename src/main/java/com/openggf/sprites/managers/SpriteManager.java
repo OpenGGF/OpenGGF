@@ -446,6 +446,7 @@ public class SpriteManager {
 					tickPlayablePhysics(playable, effectiveUp, effectiveDown, effectiveLeft,
 							effectiveRight, effectiveJump, effectiveTest, speedUp, slowDown,
 							levelManager, frameCounter);
+					levelManager.updateZoneFeaturesAfterPlayablePhysics(playable);
 					if (cpuControllerForDiagnostics != null) {
 						cpuControllerForDiagnostics.recordDiagnosticPostPhysics();
 					}
@@ -477,6 +478,7 @@ public class SpriteManager {
 							false, false);
 					tickPlayablePhysics(playable, false, false, false, false, false, false, false, false,
 							levelManager, frameCounter);
+					levelManager.updateZoneFeaturesAfterPlayablePhysics(playable);
 				} finally {
 					runDeferredPostTickMutations(playable);
 					activePlayableUpdate = null;
@@ -582,6 +584,7 @@ public class SpriteManager {
 							tickPlayablePhysics(playable, effectiveUp, effectiveDown,
 									effectiveLeft, effectiveRight, effectiveJump, false,
 									false, false, levelManager, frameCounter);
+							levelManager.updateZoneFeaturesAfterPlayablePhysics(playable);
 						} finally {
 							runDeferredPostTickMutations(playable);
 							activePlayableUpdate = null;
