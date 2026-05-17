@@ -98,7 +98,6 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     private boolean isLinkedMode;
     private CNZSlotMachineManager slotMachineManager;
     private int slotReward = 0;
-    private int slotCompleteDelay = -1;
     private int prizesToSpawn = 0;        // Total prizes left to spawn (SlotMachine_Reward equivalent)
     private int prizeAngle = 0;
     private int prizeSpawnTimer = 0;
@@ -269,7 +268,6 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         }
         slotMachineManager = null;
         slotReward = 0;
-        slotCompleteDelay = -1;
         prizesToSpawn = 0;
         activePrizeCount[0] = 0;
         prizeAngle = 0;
@@ -363,12 +361,9 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
         // Check if slot machine is done
         if (slotMachineManager != null && slotMachineManager.isComplete()) {
-            if (slotCompleteDelay < 0) {
-                slotCompleteDelay = 8;
-            }
-            if (slotCompleteDelay-- > 0) {
-                return;
-            }
+            // ROM ObjD6 branches to prize/release handling as soon as
+            // SlotMachine_Routine returns to $18; reward 0 immediately ejects
+            // (s2.asm:58727-58731, 58628-58638).
             slotReward = slotMachineManager.getReward();
 
             if (slotReward == 0) {
@@ -476,6 +471,27 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         player.setOnObject(true);
         player.setAir(false);
         player.setLatchedSolidObject(spawn.objectId(), this);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        boolean slotComplete = slotMachineManager != null && slotMachineManager.isComplete();
+        int managerReward = slotMachineManager != null ? slotMachineManager.getReward() : 0;
+        String managerState = slotMachineManager != null ? slotMachineManager.traceDebugState() : "none";
+        return String.format(
+                "state=%d linked=%d countdown=%d slotComplete=%d slotReward=%d mgrReward=%d prizes=%d active=%d timer=%d occupied=%d frame=%d slot={%s}",
+                playerState,
+                isLinkedMode ? 1 : 0,
+                countdown,
+                slotComplete ? 1 : 0,
+                slotReward,
+                managerReward,
+                prizesToSpawn,
+                activePrizeCount[0],
+                prizeSpawnTimer,
+                playerOccupied ? 1 : 0,
+                mappingFrame,
+                managerState);
     }
 
     /**

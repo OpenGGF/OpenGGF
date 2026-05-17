@@ -661,6 +661,29 @@ public class CNZSlotMachineManager {
         return routine != ROUTINE_INACTIVE;
     }
 
+    public String traceDebugState() {
+        return String.format(
+                "rt=%02X timer=%02X idx=%d targ=%03X sub=%02X/%02X/%02X pos=%02X.%02X/%02X.%02X/%02X.%02X sp=%02X/%02X/%02X reward=%d done=%d",
+                routine & 0xFF,
+                slotTimer & 0xFF,
+                slotIndex & 0xFF,
+                packedTargets() & 0xFFF,
+                slotSubroutines[0] & 0xFF,
+                slotSubroutines[1] & 0xFF,
+                slotSubroutines[2] & 0xFF,
+                slotIndices[0] & 0xFF,
+                slotOffsets[0] & 0xFF,
+                slotIndices[1] & 0xFF,
+                slotOffsets[1] & 0xFF,
+                slotIndices[2] & 0xFF,
+                slotOffsets[2] & 0xFF,
+                slotSpeeds[0] & 0xFF,
+                slotSpeeds[1] & 0xFF,
+                slotSpeeds[2] & 0xFF,
+                reward,
+                rewardDetermined ? 1 : 0);
+    }
+
     private int vintLowByte() {
         return frameCounter & 0xFF;
     }
