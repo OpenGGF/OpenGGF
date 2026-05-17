@@ -175,10 +175,18 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
    All previously-green traces must stay green; the targeted trace
    should advance its first error frame (or, ideally, become green).
 
-9. Commit with proper trailers (see Branch Documentation Policy in
+9. Update `docs/TRACE_FRONTIER_LOG.md` whenever a trace frontier moves,
+   a trace fix is committed, a previously passing trace regresses, or a full
+   trace sweep is used to select the next target. Record the exact command,
+   commit/worktree context, pass/fail status, error count, and first-error
+   frame/field. If a result was measured with local uncommitted investigation
+   edits, say so explicitly so the snapshot is not mistaken for clean branch
+   state.
+
+10. Commit with proper trailers (see Branch Documentation Policy in
    CLAUDE.md/AGENTS.md). No --no-verify.
 
-10. **Skill catalogue update (object/badnik fixes only).** If the fix
+11. **Skill catalogue update (object/badnik fixes only).** If the fix
     touched code under `src/main/java/com/openggf/game/sonic{1,2,3k}/`
     (objects, badniks, lifts, springs, monitors, etc.), evaluate
     whether the root cause is a class of bug that could recur in any
@@ -199,7 +207,7 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
     Goal: each accumulated pitfall entry prevents that pattern from
     recurring in future object implementations.
 
-11. Loop: read the new first-error frame, repeat from step 3.
+12. Loop: read the new first-error frame, repeat from step 3.
 ```
 
 ## Trace Triage Notes

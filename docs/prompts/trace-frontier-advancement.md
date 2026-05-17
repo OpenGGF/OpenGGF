@@ -95,6 +95,10 @@ target.
    that exercise the same manager path.
 10. Record whether the frontier passed, moved later, or stayed at the same frame,
    and record which cross-game checks were run or why a narrower scope was safe.
+   Update `docs/TRACE_FRONTIER_LOG.md` with the command, commit/worktree
+   context, pass/fail status, error count, and first-error frame/field whenever
+   the frontier changes, a trace fix is committed, a passing trace regresses, or
+   a full trace sweep is used to pick the next target.
 11. If the target moved, decide whether to continue on the same trace or switch
    to the next highest-priority trace based on route impact and fix scope.
 
