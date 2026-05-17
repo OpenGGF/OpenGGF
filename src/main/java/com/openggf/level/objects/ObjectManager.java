@@ -642,7 +642,12 @@ public class ObjectManager {
                         inlineSolidResolution,
                         solidPostMovement);
             } else if (execThenLoad) {
-                syncActiveSpawnsLoad(false);
+                // S2 ObjectsManager_GoingForward/Backward calls ChkLoadObj
+                // directly after the X-window scan and has no Camera_Y_pos
+                // filter (docs/s2disasm/s2.asm:32870-32950). The bypass is
+                // gated inside isSpawnVerticallyEligibleForLoad() to S2 slot
+                // layout only; S3K still keeps its vertical filter here.
+                syncActiveSpawnsLoad(true);
                 cleanupDestroyedDynamicObjects();
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
             } else {
@@ -680,7 +685,7 @@ public class ObjectManager {
             placement.update(cameraX);
             if (execThenLoad) {
                 cleanupDestroyedDynamicObjects();
-                syncActiveSpawnsLoad(false);
+                syncActiveSpawnsLoad(true);
             }
         }
     }
