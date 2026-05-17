@@ -904,7 +904,66 @@ Pattern applies to every parent+offset-child pair in S2/S3K.)
 
 ---
 
- ## How to add a new entry
+## P18 -- Object bounce routines preserve unwritten velocity / inertia fields
+
+**Symptom.** A bumper / launcher trace diverges immediately after touch:
+ROM keeps the player's previous `x_vel`, `y_vel`, or `inertia`, while the
+engine zeros one of them and changes the next solid-object contact or sidekick
+follow state. CNZ f339/f340 surfaced this when ObjD7 Hex Bumper bounced Sonic
+into Obj86 Flipper; ROM preserved the unwritten velocity component, but the
+engine initialized both axes and cleared inertia.
+
+**Root cause.** Many ROM object handlers write only the fields they need for
+the chosen branch. ObjD7 left/right bounce writes `x_vel` only; up/down adjusts
+the existing `x_vel` and writes `y_vel`; `ObjD7_BounceEnd` sets air / clears
+status bits and plays sound, but does not clear `inertia`. A naive engine port
+initializes `xVel = 0`, `yVel = 0`, then calls `setGSpeed(0)`, erasing ROM
+state that later routines still observe.
+
+**What to check.** For every object bounce / launch branch, list the exact ROM
+writes. Preserve any velocity or inertia field the branch does not write:
+initialize from the live player value, mutate only the written component, and
+avoid clearing `gSpeed` unless the disassembly writes `inertia(a1)`.
+
+**ROM citation.** `docs/s2disasm/s2.asm:59403-59454`
+(`ObjD7_BouncePlayerOff`: left/right write only `x_vel`; up/down adjust
+existing `x_vel` and write `y_vel`; bounce end does not clear inertia).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 10:
+CNZ ObjD7 Hex Bumper velocity preservation and TouchResponse timing advanced
+the CNZ frontier from f202 to f507).
+
+---
+
+## P19 -- Shared monitor icon rewards use pre-move velocity tests
+
+**Symptom.** A monitor reward applies one frame too early. In CNZ this made a
+speed-shoes monitor double the player's air-control acceleration one physics
+frame before the ROM did.
+
+**Root cause.** The ROM monitor-content routine tests the icon's `y_vel`
+before moving it. If the current rise step adds `$18` and lands exactly on
+zero, the routine returns; the reward branch runs on the next object update.
+A shared engine helper that applies the reward immediately after changing
+`iconVelY` from negative to zero is one frame early.
+
+**What to check.** For shared monitor code, verify S1, S2, and S3K before
+changing the base routine. If all games match, keep it shared and cite all
+three. If one differs, gate the behaviour at the owning abstraction instead
+of changing every game implicitly.
+
+**ROM citation.** S2 `docs/s2disasm/s2.asm:25618-25631`; S1
+`docs/s1disasm/_incObj/2E Monitor Content Power-Up.asm:35-43`; S3K
+`docs/skdisasm/sonic3k.asm:40723-40753` and S3-side
+`docs/skdisasm/s3.asm:33392-33421`.
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 11:
+CNZ speed-shoes monitor reward timing advanced the CNZ frontier from f976 to
+f1146).
+
+---
+
+## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

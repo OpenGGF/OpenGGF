@@ -7,7 +7,6 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.GameId;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.solid.ContactKind;
@@ -357,6 +356,7 @@ public class ObjectManager {
     private final ObjectInstance[] execOrder;
     private int currentExecSlot = -1; // -1 when not in update loop
     private int peakSlotCount = 0;    // Track actual peak usedSlots cardinality
+    private final boolean skipVerticalSpawnLoadFilterForGame;
 
     private final ObjectServices objectServices;
 
@@ -426,6 +426,7 @@ public class ObjectManager {
         this.touchResponses = touchResponseTable != null
                 ? new TouchResponses(this, touchResponseTable)
                 : null;
+        this.skipVerticalSpawnLoadFilterForGame = slotLayout == ObjectSlotLayout.SONIC_2;
         // Initialize bucket arrays
         for (int i = 0; i < BUCKET_COUNT; i++) {
             lowPriorityBuckets[i] = new ArrayList<>();
@@ -500,7 +501,7 @@ public class ObjectManager {
         // manual camera resets and headless probes from sitting on an empty
         // active window until a later placement delta occurs. The load step is
         // idempotent, so the first gameplay update will not duplicate instances.
-        syncActiveSpawnsLoad();
+        syncActiveSpawnsLoad(false);
     }
 
     ObjectServices services() {
@@ -522,7 +523,7 @@ public class ObjectManager {
      * <p>Idempotent: objects that already exist are not re-created.
      */
     public void preloadInitialSpawnsForHydration() {
-        syncActiveSpawnsLoad();
+        syncActiveSpawnsLoad(false);
     }
 
     /**
@@ -641,13 +642,13 @@ public class ObjectManager {
                         inlineSolidResolution,
                         solidPostMovement);
             } else if (execThenLoad) {
-                syncActiveSpawnsLoad();
+                syncActiveSpawnsLoad(false);
                 cleanupDestroyedDynamicObjects();
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
             } else {
                 syncActiveSpawnsUnload();
                 cleanupDestroyedDynamicObjects();
-                syncActiveSpawnsLoad();
+                syncActiveSpawnsLoad(true);
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
             }
         } finally {
@@ -679,7 +680,7 @@ public class ObjectManager {
             placement.update(cameraX);
             if (execThenLoad) {
                 cleanupDestroyedDynamicObjects();
-                syncActiveSpawnsLoad();
+                syncActiveSpawnsLoad(false);
             }
         }
     }
@@ -877,7 +878,7 @@ public class ObjectManager {
         // Phase 3: ObjPosLoad — load new objects AFTER ExecuteObjects.
         // Slots freed during the exec loop and child slots allocated during exec
         // are now reflected in usedSlots. New objects get the correct slot numbers.
-        syncActiveSpawnsLoad();
+        syncActiveSpawnsLoad(false);
 
     }
 
@@ -1072,7 +1073,7 @@ public class ObjectManager {
         if (activeObjects.containsKey(spawn)) {
             return true; // Already exists
         }
-        if (!isSpawnVerticallyEligibleForLoad(spawn)) {
+        if (!isSpawnVerticallyEligibleForLoad(spawn, false)) {
             return false;
         }
         int preSlot = allocateSlot();
@@ -2338,7 +2339,7 @@ public class ObjectManager {
      * next frame, matching ROM timing where ObjPosLoad objects first run during
      * the following frame's ExecuteObjects.
      */
-    private void syncActiveSpawnsLoad() {
+    private void syncActiveSpawnsLoad(boolean allowVerticalLoadBypassForS2) {
         Collection<ObjectSpawn> activeSpawns = placement.getActiveSpawns();
         boolean changed = false;
 
@@ -2372,7 +2373,7 @@ public class ObjectManager {
         // getSlotIndex() returns the correct value and allocateSlotAfter()
         // gives the child a HIGHER slot (matching ROM's FindNextFreeObj).
         for (ObjectSpawn spawn : sortedNewSpawns) {
-            if (!isSpawnVerticallyEligibleForLoad(spawn)) {
+            if (!isSpawnVerticallyEligibleForLoad(spawn, allowVerticalLoadBypassForS2)) {
                 continue;
             }
             // Pre-allocate parent slot — consumed by AbstractObjectInstance's
@@ -2425,20 +2426,19 @@ public class ObjectManager {
     }
 
 
-        private boolean isSpawnVerticallyEligibleForLoad(ObjectSpawn spawn) {
+        private boolean isSpawnVerticallyEligibleForLoad(ObjectSpawn spawn, boolean allowVerticalLoadBypassForS2) {
             if (spawn == null || placement.isCounterBasedRespawn() || camera == null) {
                 return true;
             }
-            var module = GameServices.currentOrBootstrapGameModule();
-            if (module != null && module.getGameId() == GameId.S2) {
-                // S2 ObjectsManager_GoingForward/Backward calls ChkLoadObj
-                // directly after the X-window scan and has no Camera_Y_pos
-                // filter (docs/s2disasm/s2.asm:32870-32950). SCZ depends on
-                // this: high-Y badniks are spawned while the scripted camera is
-                // still at y=$0000, then survive until the Tornado route
-                // descends into them.
+            if (skipVerticalSpawnLoadFilterForGame && allowVerticalLoadBypassForS2) {
                 return true;
             }
+            // S2 ObjectsManager_GoingForward/Backward calls ChkLoadObj
+            // directly after the X-window scan and has no Camera_Y_pos
+            // filter (docs/s2disasm/s2.asm:32870-32950). SCZ depends on
+            // this: high-Y badniks are spawned while the scripted camera is
+            // still at y=$0000, then survive until the Tornado route
+            // descends into them.
             int wrapRange = camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0;
             return isNonCounterSpawnVerticallyEligible(spawn, camera.getY(), camera.getMinY(), wrapRange);
         }
@@ -3673,7 +3673,6 @@ public class ObjectManager {
         }
 
         private void trimRightNonCounter(int cameraX) {
-            int windowStart = getWindowStart(cameraX);
             int windowEnd = getWindowEnd(cameraX);
             while (cursorIndex > leftCursorIndex) {
                 ObjectSpawn previous = spawns.get(cursorIndex - 1);
@@ -4311,6 +4310,7 @@ public class ObjectManager {
         }
 
         private final Map<PlayableEntity, OverlapBufferPair> sidekickOverlaps = new IdentityHashMap<>();
+        private final Map<PlayableEntity, Integer> lastSpecialTouchFrame = new IdentityHashMap<>();
         private final TouchResponseDebugState debugState = new TouchResponseDebugState();
         private static final int SHIELD_TOUCH_HALF_SIZE = 0x18;
         private static final int SHIELD_TOUCH_SIZE = SHIELD_TOUCH_HALF_SIZE * 2;
@@ -4330,7 +4330,13 @@ public class ObjectManager {
             overlapping = bufferA;
             building = bufferB;
             sidekickOverlaps.values().forEach(OverlapBufferPair::reset);
+            lastSpecialTouchFrame.clear();
             currentFrameCounter = 0;
+        }
+
+        boolean hadSpecialTouchThisFrame(PlayableEntity player) {
+            return player != null
+                    && lastSpecialTouchFrame.getOrDefault(player, Integer.MIN_VALUE) == currentFrameCounter;
         }
 
         /**
@@ -4807,6 +4813,11 @@ public class ObjectManager {
             if (listener != null) {
                 listener.onTouchResponse(sidekick, result, currentFrameCounter);
             }
+            if (result.category() == TouchCategory.SPECIAL
+                    && instance instanceof TouchResponseProvider provider
+                    && provider.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {
+                lastSpecialTouchFrame.put(sidekick, currentFrameCounter);
+            }
 
             switch (result.category()) {
                 case HURT -> applySidekickHurt(sidekick, instance);
@@ -4952,8 +4963,10 @@ public class ObjectManager {
             int sizeIndex = flags & 0x3F;
             if (categoryBits == 0xC0
                     && provider != null
-                    && provider.usesS3kTouchSpecialPropertyResponse()
-                    && isS3kTouchSpecialPropertyIndex(sizeIndex)) {
+                    && ((provider.usesS3kTouchSpecialPropertyResponse()
+                            && isS3kTouchSpecialPropertyIndex(sizeIndex))
+                            || (provider.usesSonic2TouchSpecialPropertyResponse()
+                                    && isSonic2TouchSpecialPropertyIndex(sizeIndex)))) {
                 return TouchCategory.SPECIAL;
             }
             return switch (categoryBits) {
@@ -4971,6 +4984,14 @@ public class ObjectManager {
             };
         }
 
+        private boolean isSonic2TouchSpecialPropertyIndex(int sizeIndex) {
+            return switch (sizeIndex) {
+                case 0x06, 0x07, 0x0A, 0x0B, 0x0C, 0x14, 0x15, 0x16,
+                        0x17, 0x18, 0x1A, 0x21 -> true;
+                default -> false;
+            };
+        }
+
         private void handleTouchResponse(PlayableEntity player, ObjectInstance instance,
                 TouchResponseListener listener, TouchResponseResult result) {
             if (player == null) {
@@ -4978,6 +4999,11 @@ public class ObjectManager {
             }
             if (listener != null) {
                 listener.onTouchResponse(player, result, currentFrameCounter);
+            }
+            if (result.category() == TouchCategory.SPECIAL
+                    && instance instanceof TouchResponseProvider provider
+                    && provider.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {
+                lastSpecialTouchFrame.put(player, currentFrameCounter);
             }
 
             switch (result.category()) {
@@ -6077,6 +6103,26 @@ public class ObjectManager {
             int maxRelXExclusive = (ridingHalfWidth * 2) + stickyX;
             boolean inBounds = relX >= minRelX && relX < maxRelXExclusive;
 
+            boolean objectManagedRide = inBounds
+                    && provider.preservesObjectManagedRideWhileNotSolidFor(player);
+            if (objectManagedRide) {
+                Integer managedCentreY = provider.getObjectManagedRideCentreY(player, currentY, params);
+                if (managedCentreY != null) {
+                    if (player instanceof AbstractPlayableSprite sprite) {
+                        sprite.setCentreYPreserveSubpixel((short) (managedCentreY & 0xFFFF));
+                    } else {
+                        int newY = managedCentreY - (player.getHeight() / 2);
+                        player.setY((short) newY);
+                    }
+                }
+                ridingStates.put(player, new RidingState(instance, currentX, currentY, ridingPieceIndex));
+                setObjectStandingBit(player, instance);
+                player.setOnObject(true);
+                player.setAir(false);
+                inlineSupportedPlayers.add(player);
+                return SolidContact.STANDING;
+            }
+
             if (inBounds && provider.isSolidFor(player) && !blocksSolidContacts(player, instance)) {
                 int deltaX = currentX - ridingX;
                 if (deltaX != 0) {
@@ -6976,6 +7022,14 @@ public class ObjectManager {
             return player.getYRadius();
         }
 
+        private int getTopLandingSnapAdjustment(ObjectInstance instance,
+                PlayableEntity player) {
+            if (!(instance instanceof SolidObjectProvider provider)) {
+                return 0;
+            }
+            return provider.getTopLandingSnapAdjustment(player, getSolidTopYRadius(player));
+        }
+
         private void applyNonUnifiedTopSolidLandingHeightOverride(PlayableEntity player,
                 SolidContact contact, ObjectInstance instance, boolean topSolidOnly,
                 boolean wasAirborne, boolean wasRidingObject, int anchorY, SolidObjectParams params) {
@@ -7346,6 +7400,13 @@ public class ObjectManager {
                         && player.getYSpeed() >= 0) {
                     int anchorX = playerCenterX - (relX - halfWidth);
                     int anchorY = playerCenterY - (relY - 4 - maxTop);
+                    // S2 Obj85 vertical capture calls SolidObject_Always before
+                    // it writes rolling/y_radius=$E (s2.asm:57531-57538). Even
+                    // if the engine still has pinball/rolling state from a
+                    // previous launcher, this landing geometry must use the
+                    // standing radius that Solid_ResetFloor would have restored.
+                    int landingMaxTop = maxTop + getTopLandingSnapAdjustment(instance, player);
+                    int landingRelY = playerCenterY - anchorY + 4 + landingMaxTop;
                     int landingThreshold = 0x14; // ROM: Obj85 uses 0x14 in SolidObject_TopBottom
                     int landingFrame = 0;
                     int landingPrevRelX = 0;
@@ -7358,12 +7419,12 @@ public class ObjectManager {
                         short prevCenterY = player.getCentreY(framesBehind);
                         int idx = framesBehind - 1;
                         prevRelX[idx] = prevCenterX - anchorX + halfWidth;
-                        prevRelY[idx] = prevCenterY - anchorY + 4 + maxTop;
+                        prevRelY[idx] = prevCenterY - anchorY + 4 + landingMaxTop;
                         if (landingFrame == 0
                                 && prevRelX[idx] >= 0 && prevRelX[idx] <= halfWidth * 2
                                 && prevRelY[idx] < landingThreshold) {
-                            boolean withinTop = prevRelY[idx] >= 0 && prevRelY[idx] <= maxTop;
-                            boolean crossedTop = prevRelY[idx] < 0 && relY >= 0;
+                            boolean withinTop = prevRelY[idx] >= 0 && prevRelY[idx] <= landingMaxTop;
+                            boolean crossedTop = prevRelY[idx] < 0 && landingRelY >= 0;
                             if (!withinTop && !crossedTop) {
                                 continue;
                             }
@@ -7379,7 +7440,7 @@ public class ObjectManager {
                             return null;
                         }
                         if (apply) {
-                            int newCenterY = anchorY - maxTop - 1;
+                            int newCenterY = anchorY - landingMaxTop - 1;
                             int newY = newCenterY - (player.getHeight() / 2);
                             player.setY((short) newY);
                             // ROM: Solid_ResetFloor unconditionally sets these.
@@ -7422,9 +7483,22 @@ public class ObjectManager {
                         // ROM: Solid_Left zeros speed BEFORE the airborne check.
                         // Speed is zeroed when movingInto regardless of air state.
                         // The airborne check only affects the PUSH flag, not speed.
+                        // The shared helper zeroes x_vel for moving side contact
+                        // across games; object-local launch routines must finish
+                        // before this post-movement stop can apply.
+                        boolean airborneSpecialTouchEdge = instance instanceof SolidObjectProvider solidProvider
+                                && solidProvider.preservesPostSpecialTouchAirborneSideVelocity()
+                                && objectManager.touchResponses != null
+                                && objectManager.touchResponses.hadSpecialTouchThisFrame(player)
+                                && player.getAir()
+                                && distX == (player.getXSpeed() >> 8);
                         if (distX != 0 && movingInto) {
-                            player.setXSpeed((short) 0);
-                            player.setGSpeed((short) 0);
+                            if (!airborneSpecialTouchEdge) {
+                                player.setXSpeed((short) 0);
+                                player.setGSpeed((short) 0);
+                            } else if (airborneSpecialTouchEdge) {
+                                player.setGSpeed((short) 0);
+                            }
                         }
                         if (distX != 0) {
                             player.move((short) (-distX * 256), (short) 0);
@@ -7563,7 +7637,8 @@ public class ObjectManager {
                 }
 
                 if (apply) {
-                    int newCenterY = playerCenterY - distY + 3;
+                    int newCenterY = playerCenterY - distY + 3
+                            - getTopLandingSnapAdjustment(instance, player);
                     int newY = newCenterY - (player.getHeight() / 2);
                     player.setY((short) newY);
                     if (upwardVelocity) {

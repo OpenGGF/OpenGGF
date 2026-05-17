@@ -2627,9 +2627,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /**
          * Returns true when normal movement, gravity, boundary checks, and terrain
          * collision should be skipped by ROM {@code object_control} bit 0.
+         * Some object routines set only this movement gate while still allowing
+         * TouchResponse and later SolidObject checks in the same ExecuteObjects pass.
          */
         public boolean isObjectControlSuppressesMovement() {
-                return objectControlled && objectControlSuppressesMovement;
+                return objectControlSuppressesMovement;
         }
 
         public void setObjectControlSuppressesMovement(boolean objectControlSuppressesMovement) {

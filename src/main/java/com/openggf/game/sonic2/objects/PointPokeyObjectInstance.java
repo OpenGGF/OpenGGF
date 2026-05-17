@@ -4,6 +4,7 @@ import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.Sonic2ZoneFeatureProvider;
 import com.openggf.graphics.GLCommand;
@@ -97,6 +98,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     private boolean isLinkedMode;
     private CNZSlotMachineManager slotMachineManager;
     private int slotReward = 0;
+    private int slotCompleteDelay = -1;
     private int prizesToSpawn = 0;        // Total prizes left to spawn (SlotMachine_Reward equivalent)
     private int prizeAngle = 0;
     private int prizeSpawnTimer = 0;
@@ -128,6 +130,11 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
     public SolidObjectParams getSolidParams() {
         // From disassembly: d1 = 0x23 (half-width), d2 = 0x10 (air), d3 = 0x11 (ground)
         return new SolidObjectParams(HALF_WIDTH, AIR_HALF_HEIGHT, GROUND_HALF_HEIGHT);
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -163,8 +170,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         player.setPinballMode(true);
         player.setRolling(true);
 
-        // ROM: SolidObject -> RideObject_SetRide (s2.asm:35761) already cleared in_air
-        // before this code runs. ObjD6 capture does not modify in_air. No change needed here.
+        maintainCapturedRideState(player);
 
         // ROM: move.b #$81,obj_control(a1) - locks player control
         // Bit 0 (0x01): controlLocked - blocks player input
@@ -172,10 +178,11 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         player.setControlLocked(true);
         player.setObjectControlled(true);
 
-        // Lock player to cage center (use center coordinates - spawn.x/y are origin coords)
-        // Now that rolling state is set, height is correct for center calculation
-        player.setCentreX((short) spawn.x());
-        player.setCentreY((short) spawn.y());
+        // ROM writes only x_pos/y_pos here; x_sub/y_sub survive the capture
+        // (s2.asm:58600-58601). Use centre-coordinate APIs because object
+        // spawn coordinates map to ROM position fields in this engine.
+        player.setCentreXPreserveSubpixel((short) spawn.x());
+        player.setCentreYPreserveSubpixel((short) spawn.y());
 
         // Zero out all velocity
         player.setXSpeed((short) 0);
@@ -231,7 +238,10 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // Apply downward velocity (+0x400, positive Y = down)
         player.setYSpeed((short) EXIT_VELOCITY);
 
-        // Set player airborne
+        // ObjD6 release clears on_object and sets in_air before writing
+        // y_vel=$400 (s2.asm:58746-58756).
+        player.setOnObject(false);
+        player.setLatchedSolidObject(0, null);
         player.setAir(true);
 
         // Release player control
@@ -259,6 +269,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         }
         slotMachineManager = null;
         slotReward = 0;
+        slotCompleteDelay = -1;
         prizesToSpawn = 0;
         activePrizeCount[0] = 0;
         prizeAngle = 0;
@@ -283,6 +294,11 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // If player entered debug mode while captured, reset cage state
         if (player.isDebugMode() && playerState != STATE_IDLE) {
             resetCageState();
+            return;
+        }
+
+        if (playerState == STATE_IDLE) {
+            resolveIdleCaptureCheckpoint(player);
             return;
         }
 
@@ -322,8 +338,10 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
             services().objectManager().addDynamicObject(points);
         }
 
-        // Check if countdown expired
-        if (countdown <= 0) {
+        // ObjD6 decrements the timer, then releases only when the signed
+        // result is negative; a zero result still runs the bonus tick
+        // (s2.asm:58723-58745).
+        if (countdown < 0) {
             ejectPlayer(player);
         }
     }
@@ -345,6 +363,12 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
         // Check if slot machine is done
         if (slotMachineManager != null && slotMachineManager.isComplete()) {
+            if (slotCompleteDelay < 0) {
+                slotCompleteDelay = 8;
+            }
+            if (slotCompleteDelay-- > 0) {
+                return;
+            }
             slotReward = slotMachineManager.getReward();
 
             if (slotReward == 0) {
@@ -423,12 +447,35 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
      * Keep player locked in cage position.
      */
     private void keepPlayerLocked(AbstractPlayableSprite player) {
-        // Use center coordinates - spawn.x/y are origin coords
-        player.setCentreX((short) spawn.x());
-        player.setCentreY((short) spawn.y());
+        maintainCapturedRideState(player);
+        // Occupied routines keep the high-word position locked without
+        // touching the subpixel words, matching 68000 word stores.
+        player.setCentreXPreserveSubpixel((short) spawn.x());
+        player.setCentreYPreserveSubpixel((short) spawn.y());
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
+    }
+
+    private void resolveIdleCaptureCheckpoint(AbstractPlayableSprite player) {
+        // ObjD6 calls SolidObject_Always_SingleCharacter only from its idle
+        // capture routine. Once objoff_30/34 moves to occupied state, the ROM
+        // dispatches to cage-owned routines instead of re-running SolidObject
+        // (s2.asm:58554-58566, 58694-58756).
+        PlayerSolidContactResult result = services().solidExecution().resolveSolidNow(player);
+        if (result != null && result.standingNow()) {
+            capturePlayer(player);
+        }
+    }
+
+    private void maintainCapturedRideState(AbstractPlayableSprite player) {
+        // SolidObject_Always_SingleCharacter has already set the standing bit
+        // and cleared in_air when ObjD6 captures the player, and the occupied
+        // routines leave that state intact until loc_2BE2E releases the cage
+        // (s2.asm:58554-58566, 58746-58756).
+        player.setOnObject(true);
+        player.setAir(false);
+        player.setLatchedSolidObject(spawn.objectId(), this);
     }
 
     /**

@@ -58,7 +58,7 @@ public class ElevatorObjectInstance extends BoxObjectInstance
 
     // Platform collision dimensions
     // d1 = 0x10 (half-width = 16 pixels)
-    // d3 = 9 (platform height for collision)
+    // d3 = 9 (platform surface offset for PlatformObjectD5/MvSonicOnPtfm)
     private static final int HALF_WIDTH = 16;
     private static final int PLATFORM_HEIGHT = 9;
 
@@ -124,8 +124,9 @@ public class ElevatorObjectInstance extends BoxObjectInstance
     }
     @Override
     public SolidObjectParams getSolidParams() {
-        // From disassembly: d1 = 0x10 (half-width), d3 = 9 (platform height)
-        return new SolidObjectParams(HALF_WIDTH, PLATFORM_HEIGHT, PLATFORM_HEIGHT + 1);
+        // S2 ObjD5 passes d3=9 directly to PlatformObjectD5; continued riding
+        // uses that same value in MvSonicOnPtfm (s2.asm:58438-58443, 35621-35657).
+        return new SolidObjectParams(HALF_WIDTH, PLATFORM_HEIGHT, PLATFORM_HEIGHT);
     }
 
     @Override

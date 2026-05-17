@@ -940,24 +940,39 @@ public class CollisionSystem {
         PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
         boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
         if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
-            int oldYRadius = sprite.getYRadius();
-            int centreX = sprite.getCentreX();
-            int centreY = sprite.getCentreY();
-            boolean wallLanding = sprite.getGroundMode() == GroundMode.LEFTWALL
-                    || sprite.getGroundMode() == GroundMode.RIGHTWALL;
-            sprite.setRolling(false);
-            if (wallLanding) {
-                // S3K Player_TouchFloor restores radii and adjusts y_pos only
-                // (docs/skdisasm/sonic3k.asm:24335-24363). Preserve engine centre X when
-                // leaving the narrower roll shape after updateGroundMode has selected a wall.
-                sprite.setCentreXPreserveSubpixel((short) centreX);
-            }
+            if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
+                int oldYRadius = sprite.getYRadius();
+                int centreX = sprite.getCentreX();
+                int centreY = sprite.getCentreY();
+                boolean wallLanding = sprite.getGroundMode() == GroundMode.LEFTWALL
+                        || sprite.getGroundMode() == GroundMode.RIGHTWALL;
+                sprite.setRolling(false);
+                if (wallLanding) {
+                    // S3K Player_TouchFloor restores radii and adjusts y_pos only
+                    // (docs/skdisasm/sonic3k.asm:24335-24363). Preserve engine centre X when
+                    // leaving the narrower roll shape after updateGroundMode has selected a wall.
+                    sprite.setCentreXPreserveSubpixel((short) centreX);
+                }
 
-            int delta = oldYRadius - sprite.getStandYRadius();
-            if (((angle + 0x40) & 0x80) != 0) {
-                delta = -delta;
+                int delta = oldYRadius - sprite.getStandYRadius();
+                if (((angle + 0x40) & 0x80) != 0) {
+                    delta = -delta;
+                }
+                sprite.setCentreYPreserveSubpixel((short) (centreY + delta));
+            } else {
+                // S1/S2 Sonic_ResetOnFloor always clears rolling with a fixed
+                // y_pos lift after restoring standing radii (s1 Obj01.asm
+                // Sonic_ResetOnFloor, s2.asm:37781-37787), independent of the
+                // wall/ceiling angle that led into the reset.
+                int centreX = sprite.getCentreX();
+                boolean wallLanding = sprite.getGroundMode() == GroundMode.LEFTWALL
+                        || sprite.getGroundMode() == GroundMode.RIGHTWALL;
+                sprite.setRolling(false);
+                if (wallLanding) {
+                    sprite.setCentreXPreserveSubpixel((short) centreX);
+                }
+                sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
             }
-            sprite.setCentreYPreserveSubpixel((short) (centreY + delta));
         }
 
         if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballRoll)) {
