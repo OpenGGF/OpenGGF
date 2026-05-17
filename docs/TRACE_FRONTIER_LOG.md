@@ -303,3 +303,27 @@ solidity even when the object is offscreen
 The new blocker is a Sonic vertical-speed mismatch after the later monitor /
 bonus-block area: ROM is falling with `y_vel=$0070` at frame 6276 while the
 engine has entered an upward launch/rebound path (`y_vel=-$0700`).
+
+## 2026-05-17 - S2 CNZ ObjD8 touch radius and inertia preservation
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with ObjD8 touch/bounce fix, focused unit test, and mirrored S2 object skill notes staged next
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestBonusBlockObjectInstance" test -DfailIfNoTests=false`
+- Result: pass
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 284 errors
+- First error: frame 6815, `y_speed` (`expected=-017A`, `actual=-06C8`)
+- Previously-green checks: S1 GHZ and S2 EHZ both printed `All frames match trace. No divergences.`
+
+Frontier moved from frame 6276 through the first ObjD8 hit to frame 6815. The
+frame 6276 mismatch was an early CNZ Bonus Block hit: ObjD8 sets
+`collision_flags=$D7`, so the SPECIAL touch size is `Touch_Sizes[$17] = 8,8`
+radii, not the engine's old center-distance 12x24 box
+(`docs/s2disasm/s2.asm:59570,84623`). The object now uses the ROM
+TouchResponse rectangle math for its local collision check. A follow-up frame
+6281 mismatch showed that ObjD8's `loc_2C806` bounce tail sets in-air, clears
+roll-jump/pushing/jumping, and plays the bonus-bumper sound, but does not
+clear `inertia`; the engine now preserves `g_speed`
+(`docs/s2disasm/s2.asm:59687-59692`). The new blocker is a later ObjD8 /
+bumper cluster around frame 6815, where ROM has a shallow reflected velocity
+but the engine has already applied a strong vertical rebound.
