@@ -48,6 +48,14 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object accepts a new top-solid landing at the exact surface
+     * boundary even when the game's shared top-solid profile normally rejects it.
+     */
+    default boolean allowsZeroDistanceTopSolidLanding(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether a new airborne {@code SolidObjectTop} landing should be gated by
      * the player's previous-frame position before applying the current contact.
      * <p>
@@ -177,6 +185,30 @@ public interface SolidObjectProvider {
      * correct landing width and should not be narrowed again.
      */
     default boolean usesCollisionHalfWidthForTopLanding() {
+        return false;
+    }
+
+    /**
+     * Whether this top-only platform's new-contact geometry should use
+     * {@link SolidObjectParams#groundHalfHeight()} as the top surface height.
+     * <p>
+     * S2 {@code PlatformObject} callers pass the platform surface height in
+     * {@code d3}; the {@code d2} register is not part of the new-landing
+     * {@code PlatformObject_cont -> PlatformObject_ChkYRange} path.
+     */
+    default boolean usesGroundHalfHeightForTopSolidContact() {
+        return false;
+    }
+
+    /**
+     * Whether a newly established ride should remember this frame's pre-update
+     * object X as the baseline for the next continued-riding carry.
+     * <p>
+     * S2 {@code PlatformObject} callers pass the object's saved pre-move
+     * {@code x_pos} in {@code d4} to the solid helper, so the first continued
+     * riding frame carries by {@code current_x - d4}.
+     */
+    default boolean seedsNewRideCarryFromPreUpdateX() {
         return false;
     }
 

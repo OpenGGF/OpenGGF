@@ -337,19 +337,25 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         solidActive = true;
         highPriority = player.isHighPriority();
 
-        // ObjB2_Move_with_player reads Sonic's persisted standing bit before
-        // the inline SolidObject call refreshes contact (s2.asm:78298-78306,
-        // 78816-78823). The engine may have cleared player.isOnObject() during
-        // an earlier collision phase, so keep the object's previous checkpoint
-        // result as the ROM entry-state bit for the final release-frame bob.
-        boolean playerOnObjectAtEntry = lastMainStanding;
+        // ObjB2_Move_with_player reads Sonic's live Status_OnObj bit before
+        // the inline SolidObject call refreshes this object's own standing bit
+        // (s2.asm:78298-78306, 78816-78823). That bit may have been set by a
+        // different object earlier in the previous frame (for example SCZ
+        // Turtloid), while the final release-frame bob still needs this
+        // object's previous checkpoint latch.
+        boolean playerOnObjectAtEntry = player.isOnObject() || lastMainStanding;
         boolean objectStandingBeforeCheckpoint = lastMainStanding;
         moveWithPlayer(player, playerOnObjectAtEntry);
 
         PlayerSolidContactResult contact = checkpoint(player);
         boolean mainStandingNow = contact.standingNow();
         standingTransition = (mainStandingNow != objectStandingBeforeCheckpoint);
-        moveObeyPlayer(player, mainStandingNow);
+
+        // ObjB2_Move_obbey_player rereads Sonic's live Status_OnObj bit after
+        // SolidObject (s2.asm:78881-78886). Another object may own that bit,
+        // while lastMainStanding must still track ObjB2's own contact latch.
+        boolean playerOnObjectAfterCheckpoint = player.isOnObject() || mainStandingNow;
+        moveObeyPlayer(player, playerOnObjectAfterCheckpoint);
         lastMainStanding = mainStandingNow;
 
         // ROM: Camera_Min_X_pos = Camera_X_pos
@@ -360,7 +366,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         // Keep player near front edge of camera while riding Tornado.
         int playerX = player.getCentreX();
         if (playerX <= cameraX + SCZ_PLAYER_PUSH_MARGIN) {
-            player.setCentreX((short) (playerX + 1));
+            player.setCentreXPreserveSubpixel((short) (playerX + 1));
             playerX++;
         }
 
@@ -872,8 +878,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         applyTornadoParallaxVelocity();
     }
 
-    private void moveObeyPlayer(AbstractPlayableSprite player, boolean mainStandingNow) {
-        if (mainStandingNow) {
+    private void moveObeyPlayer(AbstractPlayableSprite player, boolean playerOnObjectNow) {
+        if (playerOnObjectNow) {
             if (!moveVertActive) {
                 yVel = 0;
                 int requestedVel = 0;
@@ -894,7 +900,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         // move.w x_pos(a1),d1 / add.w d3,d1 / move.w d1,x_pos(a0)
         // d3 = ±16 based on player orientation relative to tornado.
         // The TORNADO follows the PLAYER (not vice versa).
-        if (mainStandingNow) {
+        if (playerOnObjectNow) {
             Orientation orientation = getOrientationToClosestPlayer(player);
             if (orientation.absDistanceX() >= PLAYER_HORIZONTAL_CLAMP
                     && Math.abs(orientation.target().getGSpeed()) < PLAYER_INERTIA_CLAMP) {
@@ -912,7 +918,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 }
             }
         }
-        if (mainStandingNow) {
+        if (playerOnObjectNow) {
             return;
         }
 
@@ -997,7 +1003,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             return;
         }
         int targetX = currentX + (orientation.playerIsRight() ? PLAYER_HORIZONTAL_CLAMP : -PLAYER_HORIZONTAL_CLAMP);
-        orientation.target().setCentreX((short) targetX);
+        orientation.target().setCentreXPreserveSubpixel((short) targetX);
     }
 
     private void alignPlaneAndSolid() {

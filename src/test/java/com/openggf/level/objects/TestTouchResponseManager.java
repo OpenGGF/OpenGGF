@@ -353,6 +353,7 @@ public class TestTouchResponseManager {
     @Test
     public void testEnemyAttackedWhenPlayerRolling() {
         when(player.getRolling()).thenReturn(true); // Attacking state
+        when(player.getAnimationId()).thenReturn(0x02);
         when(player.getYSpeed()).thenReturn((short) 500); // Falling
         when(player.getCentreY()).thenReturn((short) 100); // Above enemy
 

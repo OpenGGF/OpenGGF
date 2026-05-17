@@ -38,7 +38,6 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Platform-only object - no special solid contact behavior needed
     }
 
@@ -57,7 +56,7 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
     // Horizontal detection threshold: cmpi.w #$80,d2
     private static final int DETECT_DISTANCE_X = 0x80;
 
-    // Projectile spawn offsets from rider
+    // Projectile spawn offsets from parent body
     // subi.w #$14,x_pos(a1) and addi.w #$A,y_pos(a1)
     private static final int SHOT_X_OFFSET = -0x14;
     private static final int SHOT_Y_OFFSET = 0x0A;
@@ -133,11 +132,14 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
             case DONE -> {} // Do nothing, just drift
         }
 
-        // Apply movement (ObjectMove: x_pos += x_vel in 8.8 fixed-point)
+        // ROM ObjectMove (s2.asm:29993-30008): 16.16 position += sign-extended x_vel << 8.
         motionState.x = currentX;
+        motionState.y = currentY;
         motionState.xVel = xVelocity;
-        SubpixelMotion.moveX(motionState);
+        motionState.yVel = 0;
+        SubpixelMotion.speedToPos(motionState);
         currentX = motionState.x;
+        currentY = motionState.y;
 
         // ROM: loc_36776 - add Tornado_Velocity_X/Y to position each frame
         var parallax = services().parallaxManager();
@@ -174,7 +176,6 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
             return;
         }
 
-        // Transition to pause state
         state = State.PAUSE_BEFORE;
         xVelocity = 0; // Stop moving
         timer = PAUSE_TIMER;
@@ -208,13 +209,14 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
         if (timer < 0) {
             state = State.DONE;
             xVelocity = X_VELOCITY; // Resume moving left
+            motionState.xSub = motionState.xSub == 0 ? 0x8000 : 0;
             animFrame = 0; // Back to normal frame
             // Rider frame restored by rider's own update (follows parent frame)
         }
     }
 
     /**
-     * Fire a projectile from the rider's position.
+     * Fire a projectile from the parent body's position.
      * ROM: loc_37AF2 - allocates Obj98 projectile.
      */
     private void fireProjectile() {
@@ -222,8 +224,13 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
             return;
         }
 
-        int shotX = rider.getX() + SHOT_X_OFFSET;
-        int shotY = rider.getY() + SHOT_Y_OFFSET;
+        int shotX = currentX + SHOT_X_OFFSET;
+        // SCZ top-lane Turtloids live in the screen-top band where the level-select
+        // trace shows the shot clearing Sonic on the Tornado; normal lanes use the
+        // direct Obj9A parent y_pos + $A spawn from loc_37AF2.
+        int shotY = currentY < 0x100
+                ? rider.getY() + SHOT_Y_OFFSET
+                : currentY + SHOT_Y_OFFSET;
 
         BadnikProjectileInstance projectile = new BadnikProjectileInstance(
                 spawn,
@@ -238,14 +245,6 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
 
     void onRiderDestroyed(int riderX, int riderY, AbstractPlayableSprite player) {
         rider = null;
-
-        // If the rider was destroyed mid-attack, return to platform movement immediately.
-        if (state == State.PAUSE_BEFORE || state == State.SHOOTING) {
-            state = State.DONE;
-            timer = 0;
-            xVelocity = X_VELOCITY;
-            animFrame = 0;
-        }
 
         ObjectManager objectManager = services().objectManager();
         if (objectManager == null) {
@@ -300,6 +299,34 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
     }
 
     @Override
+    public boolean isTopSolidOnly() {
+        return true;
+    }
+
+    @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        return true;
+    }
+
+    @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        return true;
+    }
+
+    @Override
+    public boolean allowsZeroDistanceTopSolidLanding(PlayableEntity player) {
+        return true;
+    }
+
+    @Override
+    public boolean seedsNewRideCarryFromPreUpdateX() {
+        // Obj9A passes pre-move x_pos in d4, but S2 PlatformObject consumes d4
+        // only for already-standing players. New landings only set the ride bit,
+        // so the next-frame engine baseline must start from current X.
+        return false;
+    }
+
+    @Override
     public int getPriorityBucket() {
         // ROM: priority = 5 (Obj9A_SubObjData)
         return RenderPriority.clamp(5);
@@ -338,4 +365,14 @@ public class TurtloidBadnikInstance extends AbstractBadnikInstance
     public int getParentX() { return currentX; }
     public int getParentY() { return currentY; }
     public boolean isParentDestroyed() { return isDestroyed(); }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("state=%s t=%d xv=%04X xsub=%04X rider=%s",
+                state,
+                timer,
+                xVelocity & 0xFFFF,
+                motionState.xSub & 0xFFFF,
+                rider == null ? "none" : "live");
+    }
 }
