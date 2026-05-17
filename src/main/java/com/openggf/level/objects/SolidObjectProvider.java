@@ -262,6 +262,21 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Number of newly-pressed horizontal-input frames to ignore while this
+     * object is the player's current riding solid.
+     * <p>
+     * Default is zero. Object-specific overrides are for ROM helper timing
+     * quirks where the BK2 input row is aligned to V-int, but the player
+     * movement routine does not consume the new logical horizontal value until
+     * a later gameplay step. Keep this object-local; do not broaden stale input
+     * suppression into shared movement unless all callers of the helper have
+     * been checked.
+     */
+    default int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
+        return 0;
+    }
+
+    /**
      * Whether full-solid lower-half overlap should use the player's current
      * y-radius rather than the standing y-radius.
      * <p>

@@ -1173,6 +1173,44 @@ f5336 / 219 errors to f5399 / 215 errors).
 
 ---
 
+## P26 -- Riding solids can own stale logical horizontal input windows
+
+**Symptom.** A player accelerates one or more frames before ROM while standing
+on a moving/scripted solid, even though the trace CSV/BK2 input column already
+shows the direction and the ROM `state_snapshot` sees no `move_lock` or
+control lock. In CNZ, Sonic's right input appeared at frame 5997 while riding
+ObjD5, but ROM inertia stayed zero until frame 6000.
+
+**Root cause.** Some solid-helper/object phase combinations expose BK2-aligned
+input before the player movement routine consumes the corresponding logical
+horizontal value for the sampled physics row. Treating that as a game-wide
+input offset breaks nearby jump/input edges. The timing belongs to the current
+riding object/helper, not to all S2 movement.
+
+**What to check.**
+1. When a trace shows early acceleration while the player is riding a concrete
+   solid, inspect the object's exact helper (`PlatformObject`, `PlatformObjectD5`,
+   direct `SolidObject`, or bespoke checkpoint) before changing shared input
+   handling.
+2. Prefer the `SolidObjectProvider.staleHorizontalLogicalInputFramesWhileRiding`
+   hook with a default of zero. Override it only on the object whose helper
+   proves the stale window.
+3. Keep existing object-specific windows on the owning object. SCZ Tornado and
+   CNZ ObjD5 use the hook; shared movement should not branch on game id or
+   object id directly.
+
+**ROM citation.** `docs/s2disasm/s2.asm:58435-58443` (ObjD5 calls
+`PlatformObjectD5` after its state routine), `docs/s2disasm/s2.asm:35617-35657`
+(`PlatformObjectD5` continued-riding/skip-existing-platform helper), and
+`docs/s2disasm/s2.asm:35402-35420` (`MvSonicOnPtfm` writes rider position).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 5997 Sonic accelerated three
+frames before ROM while riding ObjD5. Moving stale horizontal suppression to a
+per-solid hook and opting in ObjD5 advanced the CNZ frontier from f5997 / 197
+errors to f6018 / 289 errors while S1 GHZ and S2 EHZ stayed green).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

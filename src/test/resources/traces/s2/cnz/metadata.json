@@ -12,7 +12,7 @@
   "main_character": "sonic",
   "sidekicks": ["tails"],
   "recording_date": "2026-05-17",
-  "lua_script_version": "9.5-s2",
+  "lua_script_version": "9.6-s2",
   "trace_schema": 8,
   "csv_version": 6,
   "aux_schema_extras": ["cnz_slot_machine_state_per_frame"],
