@@ -759,6 +759,32 @@ public class SidekickCpuController {
         return deferredDespawnDeadFallContinuingThisFrame;
     }
 
+    /**
+     * S2 can also enter Tails' routine-6 dead fall through generic damage /
+     * crush paths that set the sprite's {@code dead} flag without routing the
+     * CPU controller through {@link State#DEAD_FALLING}. ROM still dispatches
+     * those frames through {@code Obj02_Dead}: when
+     * {@code y_pos > Tails_Max_Y_pos + $100}, it branches to
+     * {@code TailsCPU_Despawn} before the same frame's
+     * {@code ObjectMoveAndFall} (s2.asm:40736-40759, 39043-39052).
+     */
+    public boolean applyDeferredGenericDeadDespawnIfCrossed() {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs == null || !fs.sidekickDeathUsesDeferredDespawn() || !sidekick.getDead()) {
+            return false;
+        }
+        int killPlane = getMaxYBound(Integer.MIN_VALUE);
+        if (killPlane == Integer.MIN_VALUE || sidekick.getCentreY() <= killPlane + 0x100) {
+            return false;
+        }
+        short oldXSpeed = sidekick.getXSpeed();
+        short oldYSpeed = sidekick.getYSpeed();
+        applyDespawnMarker();
+        sidekick.move(oldXSpeed, oldYSpeed);
+        sidekick.setYSpeed((short) (oldYSpeed + 0x38));
+        return true;
+    }
+
     public boolean consumeSkipPhysicsThisFrame() {
         boolean result = skipPhysicsThisFrame;
         skipPhysicsThisFrame = false;
