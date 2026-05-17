@@ -145,6 +145,16 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         return true;
     }
 
+    @Override
+    protected boolean delayFirstIconUpdateAfterBreak() {
+        // ROM Obj_MonitorBreak spawns separate Obj_MonitorContents with
+        // Create_New_Sprite; the child owns the init+rise routine
+        // (sonic3k.asm:40645, 40673-40765). This embedded implementation skips
+        // the shell's same-frame post-break update so the content routine starts
+        // on the next object pass.
+        return true;
+    }
+
     private void ensureInitialized() {
         if (initialized) {
             return;
