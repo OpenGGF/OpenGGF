@@ -127,6 +127,40 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2FlyingRespawnTimeoutReturnsToSpawningAtZeroMarker() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x2375);
+        tails.setCentreY((short) 0x03D9);
+        tails.setSubpixelRaw(0x2300, 0xE000);
+        tails.setXSpeed((short) 0);
+        tails.setYSpeed((short) 0x00A8);
+        tails.setGSpeed((short) 0xFFD0);
+        tails.setRolling(true);
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+
+        for (int i = 0; i < 300; i++) {
+            tails.setRenderFlagOnScreen(false);
+            controller.update(i);
+        }
+
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState());
+        assertEquals((short) 0x0000, tails.getCentreX(),
+                "S2 TailsCPU_Flying timeout writes x_pos=0, not the normal $4000 despawn marker");
+        assertEquals((short) 0x0000, tails.getCentreY());
+        assertEquals(0x2300, tails.getXSubpixelRaw());
+        assertEquals(0xE000, tails.getYSubpixelRaw());
+        assertTrue(tails.getAir());
+        assertFalse(tails.getRolling());
+        assertTrue(tails.isObjectControlled());
+    }
+
+    @Test
     void s3kDespawnMarkerReturnsToCatchUpFlightRoutine() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

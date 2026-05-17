@@ -417,3 +417,26 @@ movement bounds and deletes only when both are outside the camera window
 narrow custom out-of-range hook, and only moving ObjD7 opts in; all other
 objects keep the previous shared path unless they explicitly override it. The
 new blocker is a later sidekick despawn/comparator mismatch at frame 8419.
+
+## 2026-05-17 - S2 CNZ Tails flying timeout marker split
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 Tails respawn/flying timeout fix staged next; unrelated line-ending-only dirty files remain unstaged
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.playable.TestSidekickCpuDespawnParity#s2FlyingRespawnTimeoutReturnsToSpawningAtZeroMarker" test -DfailIfNoTests=false`
+- Result: pass
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.playable.TestSidekickCpuDespawnParity,com.openggf.sprites.playable.TestSidekickCpuControllerFlightAutoRecovery" test -DfailIfNoTests=false`
+- Result: pass
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 10 errors
+- First error: frame 9147, `tails_x` (`expected=0x4000`, `actual=0x2908`)
+
+Frontier moved from frame 8419 to frame 9147. The frame 8419 mismatch was not
+the normal S2 `TailsCPU_CheckDespawn` marker path; ROM was in
+`TailsCPU_Flying`'s offscreen timeout, which writes `x_pos=0,y_pos=0`,
+`Tails_CPU_routine=2`, `obj_control=$81`, and `Status_InAir`
+(`docs/s2disasm/s2.asm:38795-38806`). The engine's APPROACHING path had run
+the generic normal despawn pre-check first, producing the `$4000,0` marker
+instead. Tails' respawn strategy now owns the S2 flying timeout and keeps S3K
+on its existing catch-up-flight path. The new blocker is an end-of-act Tails
+state mismatch: ROM marks Tails airborne and at the `$4000,0` normal marker
+around frame 9147 while the engine has already settled Tails beside Sonic.
