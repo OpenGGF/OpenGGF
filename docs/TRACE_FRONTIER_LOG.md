@@ -440,3 +440,24 @@ instead. Tails' respawn strategy now owns the S2 flying timeout and keeps S3K
 on its existing catch-up-flight path. The new blocker is an end-of-act Tails
 state mismatch: ROM marks Tails airborne and at the `$4000,0` normal marker
 around frame 9147 while the engine has already settled Tails beside Sonic.
+
+## 2026-05-17 - S2 CNZ Tails shared respawn counter green
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 Tails respawn-counter carry fix, focused parity test, frontier log, and mirrored trace skill notes staged next; unrelated line-ending-only dirty files remain unstaged
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.playable.TestSidekickCpuDespawnParity" test -DfailIfNoTests=false`
+- Result: pass
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: pass, 0 errors
+- First error: none
+
+CNZ is green. The frame 9147 blocker was the second half of the S2 Tails
+offscreen-counter split: ROM uses one `Tails_respawn_counter` word across
+`TailsCPU_Flying` and the later NORMAL `TailsCPU_CheckDespawn`. The engine had
+correctly separated the flying timeout marker (`0,0`) from the normal marker
+(`$4000,0`), but then discarded the accumulated offscreen fly-in frames when
+the approach completed. CNZ clears Tails' render flag at frame 8847, completes
+fly-in at frame 8862 with 16 counted offscreen frames, and therefore reaches
+the shared 300-frame normal despawn deadline at frame 9147. The fix is scoped
+to the Tails respawn strategy carry hook; other sidekick strategies and S3K's
+catch-up-flight path keep independent NORMAL despawn timers.
