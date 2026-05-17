@@ -126,6 +126,16 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     }
 
     @Override
+    protected boolean delayFirstIconUpdateAfterBreak() {
+        // ROM Obj26_Break spawns separate Obj2E monitor contents with FindFreeObj.
+        // In this trace the contents land in slot 21 while the shell is slot 26,
+        // so the child cannot execute until the next object pass (s2.asm:25523,
+        // 25557-25622). This class embeds Obj2E state in the shell, so skip the
+        // shell's same-frame post-break update to preserve child-object timing.
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
