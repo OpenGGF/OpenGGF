@@ -47,4 +47,21 @@ class TestBonusBlockObjectInstance {
         assertFalse(player.isJumping());
         assertTrue(player.getAir());
     }
+
+    @Test
+    void bonusBlockDoesNotPollCurrentOverlapInOwnUpdate() {
+        BonusBlockObjectInstance block = new BonusBlockObjectInstance(
+                new ObjectSpawn(0x1B78, 0x02E0, Sonic2ObjectIds.BONUS_BLOCK, 0x40, 0, false, 0),
+                "BonusBlock");
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x1B6D, (short) 0x02EF);
+        player.setXSpeed((short) -0x05FC);
+        player.setYSpeed((short) -0x01B2);
+
+        block.update(0, player);
+
+        assertEquals((short) -0x05FC, player.getXSpeed(),
+                "ObjD8_Main consumes Touch_Special's collision_property latch; it does not re-poll current overlap");
+        assertEquals((short) -0x01B2, player.getYSpeed(),
+                "Trace frame 6815 must keep the previous air velocity until TouchResponse latches the hit");
+    }
 }
