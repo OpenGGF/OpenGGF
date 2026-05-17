@@ -85,3 +85,21 @@ ROM-side ObjD4 had been active since frame 3330. The fix keeps the vertical
 spawn-filter bypass scoped to Sonic 2 object placement, matching S2's
 X-window-only `ObjectsManager_GoingForward` / `ObjectsManager_GoingBackward`
 path (`docs/s2disasm/s2.asm:32870-32950`).
+
+## 2026-05-17 - S2 CNZ Obj85 Tails recapture frontier advancement
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 Obj85 launcher-spring fix and line-ending-only test-file noise
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace' test -DfailIfNoTests=false`
+- Result: fail, 191 errors
+- First error: frame 3957, `tails_y` (`expected=0x06F1`, `actual=0x06F0`)
+
+Frontier moved from frame 3906 to frame 3957. The frame 3906 mismatch was a
+Tails-only Obj85 vertical launcher recapture: ROM had Tails already rolling on
+the previous frame, but the engine's current-frame state had been normalized
+before Obj85 capture code ran, so the object applied its Tails first-capture
+one-pixel lift again. The fix makes Obj85 consult the previous recorded status
+bit for Tails rolling recaptures and removes the extra top-landing lift for
+Tails's shorter `$0F` standing radius. The next blocker is after the launcher
+sequence: Tails lands from the launch with ROM still reporting rolling
+(`status=0x05`) while the engine clears rolling (`status=0x01`).

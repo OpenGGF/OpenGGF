@@ -1020,6 +1020,40 @@ CNZ frontier from f3830 to f3906).
 
 ---
 
+## P22 -- Object-local capture may need previous-frame status
+
+**Symptom.** A recapture on the same object is off by one pixel even though the
+current object position, subtype, and player speeds match ROM. In CNZ, Tails
+landed/re-landed on Obj85 LauncherSpring at the right X and subpixel, but the
+engine treated the contact like a fresh non-rolling Tails capture and applied
+the first-capture lift a second time.
+
+**Root cause.** Some object routines observe player status as it existed before
+the engine's current-frame normalization path. S2 Obj85's vertical capture
+calls `SolidObject_Always_SingleCharacter`, then writes rolling/radii after the
+standing bit is set. If engine-side physics has temporarily cleared the current
+rolling flag before the object sees the contact, a port that checks only
+`player.getRolling()` cannot distinguish a fresh Tails capture from a rolling
+recapture. Use the player's recorded previous status when the ROM path depends
+on that pre-normalized state.
+
+**What to check.** For object-controlled capture/release paths, compare the
+previous and current trace status bits before adding character-specific
+position corrections. If a correction exists only to bridge engine top-left
+hitbox semantics, gate it with the ROM-visible status history, not only the
+current engine flag. Keep the hook object-local; do not change shared
+SolidObject behavior for one object's capture quirk.
+
+**ROM citation.** `docs/s2disasm/s2.asm:57520-57540`
+(`Obj85_Up`/`loc_2AD26` captures after `SolidObject_Always_SingleCharacter`
+sets the standing bit, then writes rolling/y_radius/x_radius).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 14:
+S2 Obj85 Tails recapture used previous-frame rolling status and advanced the
+CNZ frontier from f3906 to f3957).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

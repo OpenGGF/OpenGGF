@@ -231,7 +231,9 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         //      move.b #7,x_radius(a1)
         //      move.b #AniIDSonAni_Roll,anim(a1)
         boolean wasRolling = player.getRolling();
-        if (!isDiagonal() && isTails(player) && !wasRolling) {
+        boolean wasRollingLastFrame =
+                (player.getStatusHistory(1) & AbstractPlayableSprite.STATUS_ROLLING) != 0;
+        if (!isDiagonal() && isTails(player) && !wasRolling && !wasRollingLastFrame) {
             player.setCentreYPreserveSubpixel((short) (player.getCentreY() - 1));
         }
         player.setRolling(true);
@@ -575,13 +577,17 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // Keep the contact window on the current radius, then apply only the
         // lift ROM expresses for this object:
         // - Sonic rolling->standing needs the full radius delta.
-        // - Tails standing capture still lands one pixel above the generic
-        //   engine top snap.
+        // - Tails already uses the ROM's shorter standing radius ($0F), so
+        //   the generic SolidObject_Landed correction produces the same
+        //   d3/subq #1 result as Obj85 without the extra engine lift.
         // - rolling recapture with no radius delta still needs the one-pixel
         //   lift used by this helper's top-landing path.
         int radiusDelta = solidTopYRadius - player.getYRadius();
         if (radiusDelta > 1) {
             return radiusDelta;
+        }
+        if (isTails(player)) {
+            return 0;
         }
         return radiusDelta == 0 ? 1 : 0;
     }
