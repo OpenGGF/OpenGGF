@@ -352,7 +352,10 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
     @Override
     public boolean hasMonitorSolidity() {
-        return true;
+        // S2 Obj26 does not use the SPG Mon_SolidSides geometry. Its monitor
+        // wrapper gates roll-animation hits, then branches to SolidObject_cont
+        // for normal solid classification (docs/s2disasm/s2.asm:25448-25452).
+        return false;
     }
 
     @Override

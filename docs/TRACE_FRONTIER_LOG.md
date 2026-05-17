@@ -370,3 +370,27 @@ so Obj84 now preserves the ROM centre X only on this object path. The next
 blocker is a later platform/ride-state camera-Y mismatch: player position and
 velocity match at frame 7874, but ROM has the on-object status bit and camera
 Y two pixels lower than the engine.
+
+## 2026-05-17 - S2 CNZ Obj26 SolidObject_cont geometry
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 Obj26 geometry fix staged next; unrelated line-ending-only dirty files remain unstaged
+- Rejected experiment: overriding S2 Obj26 `getMonitorSolidObjectVerticalOffset()` to `4` regressed CNZ to frame 7870, `x_speed` (`expected=0x0450`, `actual=0x0000`), because it combined the generic `SolidObject_cont` vertical bias with the SPG monitor-special side classifier.
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestMonitorObjectInstance" test -DfailIfNoTests=false`
+- Result: pass
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 56 errors
+- First error: frame 8082, `x_speed` (`expected=-0800`, `actual=0x0517`)
+- Previously-green checks: S1 GHZ and S2 EHZ both printed `All frames match trace. No divergences.`
+
+Frontier moved from frame 7874 to frame 8082. The frame 7874 mismatch was S2
+Obj26 monitor solid geometry: `SolidObject_Monitor_Sonic` only gates the
+rolling animation hit, then branches into generic `SolidObject_cont`
+(`docs/s2disasm/s2.asm:25448-25452`). Engine Obj26 was still opting into the
+shared SPG monitor-special classifier, whose top/side geometry differs from
+S2 `SolidObject_cont` and missed the ROM standing-bit transition on the
+monitor at slot 19 (`0x1E10,0x0291`). The fix is per-object and per-game:
+S2 Obj26 now uses normal solid classification after its existing roll gate.
+S1 monitor behavior and S3K monitor behavior are unchanged. The new blocker is
+an Obj84/ObjD4/bumper region handoff: at frame 8082 ROM launches Sonic left at
+`x_speed=-$0800`, while the engine continues right at `x_speed=$0517`.
