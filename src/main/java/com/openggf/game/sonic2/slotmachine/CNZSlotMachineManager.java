@@ -65,6 +65,12 @@ public class CNZSlotMachineManager {
     private static final int[] SLOT_SEQUENCE_1 = {3, 0, 1, 4, 2, 5, 4, 1};
     private static final int[] SLOT_SEQUENCE_2 = {3, 0, 1, 4, 2, 5, 0, 2};
     private static final int[] SLOT_SEQUENCE_3 = {3, 0, 1, 4, 2, 5, 4, 1};
+    private static final int[] SLOT_SEQUENCE_ROM_WINDOW = {
+            3, 0, 1, 4, 2, 5, 4, 1,
+            3, 0, 1, 4, 2, 5, 0, 2,
+            3, 0, 1, 4, 2, 5, 4, 1
+    };
+    private static final int SLOT_SEQUENCE_1_ROM_ADDR = 0x2C401;
 
     // Target value combinations (prob, slot1, slot2_3 packed).
     // From SlotTargetValues at s2.asm:59288-59289, including the $FF sentinel row.
@@ -79,7 +85,7 @@ public class CNZSlotMachineManager {
     };
 
     // State variables
-    private int routine = ROUTINE_INACTIVE;
+    private int routine = ROUTINE_INIT;
     private int slotTimer = 0;
     private int slotIndex = 0;  // Current slot being processed (0, 4, 8 for slots 1, 2, 3)
 
@@ -96,6 +102,10 @@ public class CNZSlotMachineManager {
     // Final reward (positive = rings, negative = bombs)
     private int reward = 0;
     private boolean rewardDetermined = false;
+    private boolean inUse = false;
+    private int lastActivationFrame = -1;
+    private int lastCompletionFrame = -1;
+    private int lastFineTuneTimerSeed = -1;
 
     private final AudioManager audioManager;
     private int frameCounter;
@@ -108,7 +118,7 @@ public class CNZSlotMachineManager {
      * Check if slot machine is available (inactive).
      */
     public boolean isAvailable() {
-        return routine == ROUTINE_INACTIVE;
+        return routine == ROUTINE_INACTIVE && !inUse;
     }
 
     /**
@@ -119,6 +129,8 @@ public class CNZSlotMachineManager {
             LOGGER.warning("Attempted to activate slot machine while busy");
             return;
         }
+        inUse = true;
+        lastActivationFrame = frameCounter;
         routine = ROUTINE_SETUP_TARGETS;
         rewardDetermined = false;
         reward = 0;
@@ -146,6 +158,7 @@ public class CNZSlotMachineManager {
         routine = ROUTINE_INIT;
         rewardDetermined = false;
         reward = 0;
+        inUse = false;
         slotTimer = 0;
         slotIndex = 0;
         for (int i = 0; i < 3; i++) {
@@ -164,6 +177,7 @@ public class CNZSlotMachineManager {
         routine = ROUTINE_INACTIVE;
         rewardDetermined = false;
         reward = 0;
+        inUse = false;
         slotTimer = 0;
         slotIndex = 0;
         for (int i = 0; i < 3; i++) {
@@ -181,8 +195,10 @@ public class CNZSlotMachineManager {
         int currentFrame = 0;
         var levelManager = GameServices.levelOrNull();
         if (levelManager != null) {
-            currentFrame = levelManager.getFrameCounter();
-            currentFrame += 2;
+            var objectManager = levelManager.getObjectManager();
+            currentFrame = objectManager != null
+                    ? objectManager.getVblaCounter()
+                    : levelManager.getFrameCounter();
         }
         update(currentFrame);
     }
@@ -276,7 +292,9 @@ public class CNZSlotMachineManager {
             int nextSeed = seed - threshold;
             if (nextSeed < 0) {
                 if (threshold == 0xFF) {
-                    selectFallbackTargetValues(seed);
+                    // The 68k branch tests carry after sub.b, but d0 already
+                    // contains the wrapped subtraction result (s2.asm:58908-58924).
+                    selectFallbackTargetValues(nextSeed);
                     return;
                 }
                 slot1Target = targetValue[1];
@@ -291,14 +309,27 @@ public class CNZSlotMachineManager {
 
     private void selectFallbackTargetValues(int seed) {
         // The ROM masks into d1, but slot 1 accidentally indexes SlotSequence1
-        // with the unmasked d0 byte (s2.asm:58915-58923). Keep the resulting
-        // modulo array behaviour explicit for the engine's bounded Java array.
+        // with the unmasked d0 byte (s2.asm:58915-58923). This can read past
+        // SlotSequence1 into the following SlotSequence2/3 bytes; do not wrap.
         int fallbackSeed = seed & 0xFF;
-        slot1Target = SLOT_SEQUENCE_1[fallbackSeed & 7];
+        slot1Target = readSlotSequence1Unmasked(fallbackSeed);
         fallbackSeed = rotateRightByte(fallbackSeed, 3);
         int slot2Target = SLOT_SEQUENCE_2[fallbackSeed & 7];
         fallbackSeed = rotateRightByte(fallbackSeed, 3);
         slot23Target = (slot2Target << 4) | SLOT_SEQUENCE_3[fallbackSeed & 7];
+    }
+
+    private int readSlotSequence1Unmasked(int index) {
+        try {
+            var rom = GameServices.rom().getRom();
+            return rom.readByte(SLOT_SEQUENCE_1_ROM_ADDR + index) & 0xFF;
+        } catch (Exception ignored) {
+            // Unit tests can exercise the manager without a ROM; fall back below.
+        }
+        if (index >= 0 && index < SLOT_SEQUENCE_ROM_WINDOW.length) {
+            return SLOT_SEQUENCE_ROM_WINDOW[index];
+        }
+        return SLOT_SEQUENCE_1[index & 7];
     }
 
     /**
@@ -314,6 +345,7 @@ public class CNZSlotMachineManager {
             }
 
             slotTimer = (vintLowByte() & 0x0F) + 0x0C;
+            lastFineTuneTimerSeed = vintLowByte();
             slotIndex = 0;
             routine = ROUTINE_FINE_TUNE;
         }
@@ -337,7 +369,7 @@ public class CNZSlotMachineManager {
         }
 
         if (allDone) {
-            routine = ROUTINE_DETERMINE_REWARD;
+            routineDetermineReward();
             return;
         }
 
@@ -403,8 +435,9 @@ public class CNZSlotMachineManager {
                     if (slotSpeeds[slot] > 0x20) {
                         slotSpeeds[slot] -= 0x0C;  // Reduce by 12
                     }
-                    // Additional deceleration when speed 0x19-0x20 and offset <= 0x80
-                    if (slotSpeeds[slot] > 0x18 && slotSpeeds[slot] <= 0x20) {
+                    // Additional deceleration when speed is still above
+                    // $18 and offset <= $80 (s2.asm:59059-59070).
+                    if (slotSpeeds[slot] > 0x18) {
                         if ((slotOffsets[slot] & 0xFF) <= 0x80) {
                             slotSpeeds[slot] -= 2;
                         }
@@ -497,6 +530,7 @@ public class CNZSlotMachineManager {
         // Calculate reward
         reward = calculateReward();
         rewardDetermined = true;
+        lastCompletionFrame = frameCounter;
         routine = ROUTINE_INACTIVE;
 
         // Debug output showing reel results
@@ -663,7 +697,12 @@ public class CNZSlotMachineManager {
 
     public String traceDebugState() {
         return String.format(
-                "rt=%02X timer=%02X idx=%d targ=%03X sub=%02X/%02X/%02X pos=%02X.%02X/%02X.%02X/%02X.%02X sp=%02X/%02X/%02X reward=%d done=%d",
+                "fc=%04X inUse=%d act=%04X doneAt=%04X ftSeed=%02X rt=%02X timer=%02X idx=%d targ=%03X sub=%02X/%02X/%02X pos=%02X.%02X/%02X.%02X/%02X.%02X sp=%02X/%02X/%02X reward=%d done=%d",
+                frameCounter & 0xFFFF,
+                inUse ? 1 : 0,
+                lastActivationFrame & 0xFFFF,
+                lastCompletionFrame & 0xFFFF,
+                lastFineTuneTimerSeed & 0xFF,
                 routine & 0xFF,
                 slotTimer & 0xFF,
                 slotIndex & 0xFF,

@@ -475,9 +475,13 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
     @Override
     public String traceDebugDetails() {
-        boolean slotComplete = slotMachineManager != null && slotMachineManager.isComplete();
-        int managerReward = slotMachineManager != null ? slotMachineManager.getReward() : 0;
-        String managerState = slotMachineManager != null ? slotMachineManager.traceDebugState() : "none";
+        CNZSlotMachineManager debugManager = slotMachineManager;
+        if (debugManager == null && isLinkedMode) {
+            debugManager = getSlotMachineManager();
+        }
+        boolean slotComplete = debugManager != null && debugManager.isComplete();
+        int managerReward = debugManager != null ? debugManager.getReward() : 0;
+        String managerState = debugManager != null ? debugManager.traceDebugState() : "none";
         return String.format(
                 "state=%d linked=%d countdown=%d slotComplete=%d slotReward=%d mgrReward=%d prizes=%d active=%d timer=%d occupied=%d frame=%d slot={%s}",
                 playerState,
