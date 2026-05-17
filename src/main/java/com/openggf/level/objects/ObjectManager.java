@@ -2275,16 +2275,10 @@ public class ObjectManager {
         } catch (NullPointerException e) {
             throw new IllegalStateException(describeCounterBasedUnloadObject(instance, spawn), e);
         }
-        int referenceX;
-        try {
-            // ROM parity: most objects feed obX(a0) to out_of_range, but some
-            // S1 objects store an alternate anchor/origin in objoff_30/32/3A.
-            // Use the object's explicit ROM reference X when provided.
-            referenceX = instance.getOutOfRangeReferenceX();
-        } catch (NullPointerException e) {
-            throw new IllegalStateException(describeCounterBasedUnloadObject(instance, spawn), e);
-        }
-        if (persistent || !isOutOfRangeS1(referenceX, cameraX)) {
+        boolean outOfRange = instance.usesCustomOutOfRangeCheck()
+                ? instance.isCustomOutOfRange(cameraX)
+                : isOutOfRangeS1(outOfRangeReferenceX(instance, spawn), cameraX);
+        if (persistent || !outOfRange) {
             return false;
         }
         if (instance instanceof AbstractObjectInstance aoi) {
@@ -2307,6 +2301,17 @@ public class ObjectManager {
             dynamicObjects.remove(instance);
         }
         return true;
+    }
+
+    private int outOfRangeReferenceX(ObjectInstance instance, ObjectSpawn spawn) {
+        try {
+            // ROM parity: most objects feed obX(a0) to out_of_range, but some
+            // S1 objects store an alternate anchor/origin in objoff_30/32/3A.
+            // Use the object's explicit ROM reference X when provided.
+            return instance.getOutOfRangeReferenceX();
+        } catch (NullPointerException e) {
+            throw new IllegalStateException(describeCounterBasedUnloadObject(instance, spawn), e);
+        }
     }
 
     private static String describeCounterBasedUnloadObject(ObjectInstance instance, ObjectSpawn spawn) {

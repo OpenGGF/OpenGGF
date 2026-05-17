@@ -1281,6 +1281,38 @@ advanced the CNZ frontier to frame 6815).
 
 ---
 
+## P29 -- Moving objects may own bespoke out_of_range delete bounds
+
+**Symptom.** A moving object disappears before ROM would delete it, so later
+collisions or bounces are missing even though the spawn record and movement
+routine are correct. In CNZ, the moving ObjD7 Hex Bumper from spawn
+`x=$1FF8,y=$028C,subtype=1` was gone by frame 8082; ROM still had it alive at
+slot 38 and used it to launch Sonic left.
+
+**Root cause.** Not every object tail-calls the standard `MarkObjGone` /
+`out_of_range` macro with the current object X. Moving ObjD7 runs its animation
+and movement, then checks both `objoff_30` and `objoff_32` movement bounds. It
+only deletes when both bounds are outside the camera window, so a single-X
+generic delete check can remove it too early.
+
+**What to check.**
+1. Read the end of the object routine before assuming the shared
+   counter-based out-of-range path is correct.
+2. If the ROM routine tests range endpoints, parent anchors, or other custom
+   words, prefer the narrowest per-object hook over a game-wide behavior flag.
+3. Keep stationary subtypes on the shared path unless the stationary ROM
+   routine also bypasses the standard macro.
+
+**ROM citation.** `docs/s2disasm/s2.asm:59489-59510` (moving ObjD7 tests
+`objoff_30` and `objoff_32`, displaying if either bound remains in range and
+deleting only after both fail the range check).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 8082 missing moving ObjD7;
+keeping ObjD7 alive by its ROM movement bounds advanced the CNZ frontier to
+frame 8419).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

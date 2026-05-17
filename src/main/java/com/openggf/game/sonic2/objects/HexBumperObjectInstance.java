@@ -267,6 +267,29 @@ public class HexBumperObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return (spawn.subtype() & 0xFF) == SUBTYPE_MOVING;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        if ((spawn.subtype() & 0xFF) != SUBTYPE_MOVING) {
+            return isRomOutOfRange(getCurrentX(), cameraX);
+        }
+        // Moving ObjD7 does not tail-call MarkObjGone. ROM tests both movement
+        // bounds, objoff_30/objoff_32, and deletes only when both are outside
+        // the camera window (docs/s2disasm/s2.asm:59489-59510).
+        return isRomOutOfRange(minX, cameraX) && isRomOutOfRange(maxX, cameraX);
+    }
+
+    private static boolean isRomOutOfRange(int objectX, int cameraX) {
+        int objRounded = objectX & 0xFF80;
+        int screenRounded = (cameraX - 128) & 0xFF80;
+        int distance = (objRounded - screenRounded) & 0xFFFF;
+        return distance > 0x280;
+    }
+
+    @Override
     public int getCollisionFlags() {
         // ROM collision_flags is $CA (Touch_Sizes[$0A]), but the engine's
         // high-bit category dispatch would treat $C0 as automatic boss bounce.

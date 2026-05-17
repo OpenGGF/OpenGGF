@@ -394,3 +394,26 @@ S2 Obj26 now uses normal solid classification after its existing roll gate.
 S1 monitor behavior and S3K monitor behavior are unchanged. The new blocker is
 an Obj84/ObjD4/bumper region handoff: at frame 8082 ROM launches Sonic left at
 `x_speed=-$0800`, while the engine continues right at `x_speed=$0517`.
+
+## 2026-05-17 - S2 CNZ ObjD7 moving range out_of_range
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 ObjD7 range-delete fix staged next; unrelated line-ending-only dirty files remain unstaged
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestHexBumperObjectInstance" test -DfailIfNoTests=false`
+- Result: pass
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 11 errors
+- First error: frame 8419, `tails_x` (`expected=0x0000`, `actual=0x4000`)
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail only on CNZ; S1 GHZ and S2 EHZ reports show `Failures: 0, Errors: 0`
+
+Frontier moved from frame 8082 to frame 8419. The frame 8082 mismatch was a
+missing moving ObjD7 Hex Bumper from CNZ spawn `0x1FF8,0x028C` subtype `1`:
+ROM kept it alive at slot 38 and launched Sonic left, while the engine had
+deleted it with the generic single-X `out_of_range` predicate. Moving ObjD7
+does not tail-call `MarkObjGone`; it tests both `objoff_30` and `objoff_32`
+movement bounds and deletes only when both are outside the camera window
+(`docs/s2disasm/s2.asm:59489-59510`). The shared object manager now has a
+narrow custom out-of-range hook, and only moving ObjD7 opts in; all other
+objects keep the previous shared path unless they explicitly override it. The
+new blocker is a later sidekick despawn/comparator mismatch at frame 8419.
