@@ -14,7 +14,7 @@ Recorded BizHawk traces verify that the engine plays back ROM behaviour pixel-fo
 1. **No hacks or dirty fixes.** Every behaviour change must be backed by the disassembly for the relevant game. Cite ROM file and line numbers in commits and code comments.
 2. **You may regenerate a trace** when the recorded data is genuinely insufficient for diagnosis (missing per-frame data, broken setup, recorder schema changed). Use the `tools/bizhawk/record_*_trace.bat` launcher with the matching `.lua` recorder. Regeneration is part of the loop — don't avoid it. **But** do not regenerate just to "make the test match"; regenerate to gain visibility.
 3. **If the engine architecture is missing or fundamentally broken**, or game objects/functionality aren't yet implemented, **plan and delegate**. Use review agents and parallel subagent execution for large-scope work. Don't try to land everything in one pass.
-4. **Cross-game parity is non-negotiable.** The engine supports three games (Sonic 1, Sonic 2, Sonic 3 & Knuckles). Before changing any shared/root code (physics, collision, sidekick AI, oscillation, rendering, audio, shared object base classes, shared object helpers, etc.), check the disassemblies for **all three games** to confirm whether the change is a universal correction or a per-game divergence. Universal corrections must cite the matching ROM pattern for each affected game and keep all games' traces green. Per-game divergences must be gated behind a `PhysicsFeatureSet` flag (see CLAUDE.md "Per-Game Physics Framework") or an equivalent explicit per-game behaviour flag at the owning abstraction. **Never** branch on `if (gameId == GameId.S3K) ...`.
+4. **Cross-game parity is non-negotiable.** The engine supports three games (Sonic 1, Sonic 2, Sonic 3 & Knuckles). Before changing any shared/root code (physics, collision, sidekick AI, oscillation, rendering, audio, shared object base classes, shared object helpers, etc.), check the disassemblies for **all three games** to confirm whether the change is a universal correction or a per-game divergence. Universal corrections must cite the matching ROM pattern for each affected game and keep all games' traces green. Per-game divergences must be gated behind a `PhysicsFeatureSet` flag (see CLAUDE.md "Per-Game Physics Framework") or an equivalent explicit behaviour flag at the owning abstraction. Prefer the smallest accurate scope: use a per-object or per-class hook when the divergence belongs to one object family, and reserve per-game flags for true game-wide ROM/system differences. **Never** branch on `if (gameId == GameId.S3K) ...`.
 
 ## The Core Invariant — Comparison Only, Never Sync
 
@@ -165,7 +165,10 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
 7. Implement the fix:
      - Disassembly-cited (file + line numbers).
      - Cross-check the other two games' disassemblies for shared code.
-     - Gate per-game divergences via PhysicsFeatureSet.
+     - Gate divergences at the narrowest owning abstraction:
+       per-object/per-class hook for object-family quirks, or
+       `PhysicsFeatureSet`/equivalent per-game flag only for game-wide
+       ROM/system behaviour.
 
 8. Run the trace test plus cross-game traces:
      mvn test -Dtest='Test<Game1>Ghz1TraceReplay,Test<Game1>Mz1TraceReplay,Test<Game2>Ehz1TraceReplay,Test<Game3><Zone>TraceReplay' -DfailIfNoTests=false
