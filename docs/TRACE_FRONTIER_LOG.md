@@ -1,0 +1,56 @@
+# Trace Frontier Log
+
+Persistent ledger for trace replay frontier work. Update this file whenever a
+trace fix is committed, a frontier moves, a previously passing trace regresses,
+or a full `*TraceReplay` sweep is run to choose the next target.
+
+## 2026-05-17 - BizHawk input-indexing fix impact snapshot
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Commit under test: `535895780 Fix BizHawk trace input indexing`
+- Worktree state: dirty with local CNZ slot-machine investigation edits
+- Command: `mvn -q -Dmse=off '-Dtest=*TraceReplay' test -DfailIfNoTests=false`
+- Result: 31 test methods run, 14 failures
+
+Recorder impact note: the committed recorder fix regenerated only the S2 CNZ
+trace. CNZ physics row count stayed at 9469, input bytes were unchanged, and
+all 9469 `vblank_counter` values changed from `0000` to real ROM VBlank
+counter values. The focused clean CNZ replay stayed at the same first failure
+before and after the recorder commit: frame 1691, 398 errors. The recorder fix
+was diagnostic-impact only for CNZ, but it made VBlank-driven slot timing
+debuggable.
+
+| Test | Status | Errors | First error |
+| --- | --- | ---: | --- |
+| `TestTraceReplayInvariantGuard` | pass | 0 | |
+| `TestTraceReplayStartPositionPolicy.s3kEndToEndTracePreLevelPrefixAdvancesMovieWithoutTickingLevel` | fail | n/a | first AIZ frame classified as `VBLANK_ONLY` instead of `FULL_LEVEL_FRAME` |
+| `TestTraceReplayStartPositionPolicy.s3kMgzGameplayTraceDrivesFrameZeroWhenSonicAlreadyMoved` | fail | n/a | S3K MGZ setup prelude assertion failed |
+| `TestTraceReplayStartPositionPolicy.vblankOnlyRowsAdvanceMovieButDoNotCompareGameplayState` | fail | n/a | `FULL_LEVEL_FRAME` strict-comparison assertion failed |
+| `TestS1Credits00Ghz1TraceReplay` | pass | 0 | |
+| `TestS1Credits01Mz2TraceReplay` | fail | 6 | frame 493, `y` |
+| `TestS1Credits02Syz3TraceReplay` | pass | 0 | |
+| `TestS1Credits03Lz3TraceReplay` | fail | 6 | frame 221, `y` |
+| `TestS1Credits04Slz3TraceReplay` | pass | 0 | |
+| `TestS1Credits05Sbz1TraceReplay` | pass | 0 | |
+| `TestS1Credits06Sbz2TraceReplay` | pass | 0 | |
+| `TestS1Credits07Ghz1bTraceReplay` | pass | 0 | |
+| `TestS1Ghz1TraceReplay` | pass | 0 | |
+| `TestS1Mz1TraceReplay` | pass | 0 | |
+| `TestS2ArzLevelSelectTraceReplay` | fail | 831 | frame 304, `tails_x_speed` |
+| `TestS2CnzLevelSelectTraceReplay` | fail | 413 | frame 1680, `air` |
+| `TestS2CpzLevelSelectTraceReplay` | fail | 434 | frame 844, `x_speed` |
+| `TestS2Ehz1TraceReplay` | pass | 0 | |
+| `TestS2HtzLevelSelectTraceReplay` | fail | 398 | frame 5511, `x` |
+| `TestS2MczLevelSelectTraceReplay` | fail | 394 | frame 1085, `y` |
+| `TestS2OozLevelSelectTraceReplay` | fail | 1118 | frame 397, `tails_y` |
+| `TestS2SczLevelSelectTraceReplay` | fail | 48 | frame 6222, `y_speed` |
+| `TestS2WfzLevelSelectTraceReplay` | fail | 595 | frame 4720, `x_speed` |
+| `TestS3kAizTraceReplay.playerMatchesTraceThroughFirstGiantRideVineWindow` | fail | n/a | trace frame 2876, player X |
+| `TestS3kAizTraceReplay.replayMatchesTrace` | fail | 1715 | frame 1057, `tails_x` |
+| `TestS3kCnzTraceReplay` | fail | 3707 | frame 4790, `tails_x` |
+| `TestS3kMgzTraceReplay` | fail | 2625 | frame 1538, `y` |
+
+Next active target: S2 CNZ slot-machine release timing. With the local
+investigation edits, CNZ moved from the clean-branch frame 1691 failure to frame
+1680, where the engine releases Sonic from the Point Pokey cage at VBlank
+`0x105A` while ROM still reports Sonic riding the cage.
