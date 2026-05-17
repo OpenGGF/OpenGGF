@@ -547,11 +547,17 @@ end
 -- BK2 logical input by one game frame, producing spurious "Input alignment
 -- error" failures in S3K trace replay. Read the BK2 movie input directly
 -- so the CSV input column matches what the test fixture's BK2 reader sees.
-local function bk2_input_mask(fallback_raw)
+local function bk2_input_mask(fallback_raw, trace_row)
     if not movie.isloaded() then
         return rom_joypad_to_mask(fallback_raw)
     end
-    local frame_index = emu.framecount()
+    -- Replay metadata defines trace row N as BK2 frame
+    -- (bk2_frame_offset + N). Use that same convention here; direct
+    -- emu.framecount() is one frame ahead in this recorder loop.
+    local frame_index = bk2_frame_offset ~= nil
+        and trace_row ~= nil
+        and (bk2_frame_offset + trace_row)
+        or emu.framecount()
     local jp = movie.getinput(frame_index, 1)
     if jp == nil then
         return rom_joypad_to_mask(fallback_raw)
@@ -868,7 +874,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.19-s3k",\n')
+    meta_file:write('  "lua_script_version": "6.20-s3k",\n')
     -- trace_schema: csv schema is unchanged from 5. v5 CSV + new per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
     -- events are detected by parsers via aux_schema_extras rather than a
@@ -3966,7 +3972,7 @@ function on_frame_end()
     -- subroutines and can lag the BK2 by a frame on lag-frame paths.
     -- raw_input still feeds the state_snapshot aux event diagnostics.
     local raw_input = mainmemory.read_u8(ADDR_CTRL1)
-    local input_mask = bk2_input_mask(raw_input)
+    local input_mask = bk2_input_mask(raw_input, trace_frame)
 
     local function uhex(val)
         if val < 0 then return val + 0x10000 end

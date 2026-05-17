@@ -58,7 +58,7 @@
 -- (see v9.3-s2 change note above for context).
 -- The bootstrap-comparator eligibility is derived from this version string by
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
-local LUA_SCRIPT_VERSION = "9.3-s2"
+local LUA_SCRIPT_VERSION = "9.4-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -85,7 +85,6 @@ local ADDR_CAMERA_X        = 0xEE00   -- long: Camera_X_pos
 local ADDR_CAMERA_Y        = 0xEE04   -- long: Camera_Y_pos
 local ADDR_ZONE            = 0xFE10   -- byte: Current_Zone
 local ADDR_ACT             = 0xFE11   -- byte: Current_Act
-
 -- Player object base ($FFFFB000 = MainCharacter)
 local PLAYER_BASE          = 0xB000
 local OFF_X_POS            = 0x08   -- word: centre X
@@ -154,9 +153,10 @@ local OBJ_DYNAMIC_COUNT    = 112  -- dynamic slots 16-127
 local SIDEKICK_BASE        = OBJ_TABLE_START + OBJ_SLOT_SIZE  -- slot 1 = Tails/sidekick
 
 -- Frame counter (v_framecount at $FFFE04, word — increments each Level_MainLoop)
--- NOTE: 0xFE0C is v_vbla_count (longword, VBlank interrupt counter — different!)
+-- NOTE: 0xFE0C is Vint_runcount (longword, VBlank interrupt counter);
+-- read +2 so the CSV stores the low word that changes during normal traces.
 local ADDR_FRAMECOUNT      = 0xFE04
-local ADDR_VBLA_WORD       = 0xFE0C
+local ADDR_VBLA_WORD       = 0xFE0E
 
 -- Genesis joypad bitmask (matching engine convention)
 local INPUT_UP    = 0x01
@@ -273,15 +273,17 @@ end
 -- Returns the engine bitmask: bit0=UP, bit1=DOWN, bit2=LEFT, bit3=RIGHT,
 -- bit4=JUMP (if any of A/B/C are pressed). Falls back to the RAM-derived
 -- mask when no movie is loaded.
-local function bk2_input_mask(fallback_raw)
+local function bk2_input_mask(fallback_raw, trace_row)
     if not movie.isloaded() then
         return rom_joypad_to_mask(fallback_raw)
     end
-    -- emu.framecount() returns the just-completed frame index. BK2 indices
-    -- are 0-based and the input at index N drove frame N. on_frame_end
-    -- captures state after frame N completes, so movie.getinput(N, 1)
-    -- returns the input that BK2 just delivered to ROM.
-    local frame_index = emu.framecount()
+    -- Replay metadata defines trace row N as BK2 frame
+    -- (bk2_frame_offset + N). Use that same convention here; direct
+    -- emu.framecount() is one frame ahead in this recorder loop.
+    local frame_index = bk2_frame_offset ~= nil
+        and trace_row ~= nil
+        and (bk2_frame_offset + trace_row)
+        or emu.framecount()
     local jp = movie.getinput(frame_index, 1)
     if jp == nil then
         return rom_joypad_to_mask(fallback_raw)
@@ -983,7 +985,7 @@ local function on_frame_end()
     -- raw_input still captures ROM-side $FFF604 for the state_snapshot aux
     -- diagnostic; only the CSV `input` column switched to BK2-derived.
     local raw_input = mainmemory.read_u8(ADDR_CTRL1)
-    local input_mask = bk2_input_mask(raw_input)
+    local input_mask = bk2_input_mask(raw_input, trace_frame)
 
     -- Format helper for unsigned 16-bit hex
     local function uhex(val)
@@ -1072,7 +1074,6 @@ local function on_frame_end()
         { character = "sonic", slot = 0, present = 1, x = x, y = y },
         { character = "tails", slot = 1, present = sidekick.present, x = sidekick.x, y = sidekick.y },
     })
-
     -- OPL cursor state: emit event on chunk transitions for ROM↔engine comparison.
     -- v_opl_screen changes only when OPL_Next processes a new chunk.
     local opl_screen = mainmemory.read_u16_be(ADDR_OPL_SCREEN)
