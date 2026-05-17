@@ -28,6 +28,14 @@ public interface SidekickRespawnStrategy {
     }
 
     /**
+     * Whether this approach routine owns its own off-screen timeout instead of
+     * using {@link SidekickCpuController}'s NORMAL-routine despawn check.
+     */
+    default boolean handlesApproachDespawn() {
+        return false;
+    }
+
+    /**
      * Apply character-specific state that the ROM restores on the frame the
      * approach completes, before the shared controller transitions to NORMAL.
      */

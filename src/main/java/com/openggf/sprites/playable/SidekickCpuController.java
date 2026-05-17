@@ -902,8 +902,16 @@ public class SidekickCpuController {
         suppressNextAirbornePushFollowSteering = false;
     }
 
+    void returnApproachToSpawningAfterFlyingTimeout() {
+        state = State.SPAWNING;
+        despawnCounter = 0;
+        normalFrameCount = 0;
+        jumpingFlag = false;
+        suppressNextAirbornePushFollowSteering = false;
+    }
+
     private void updateApproaching() {
-        if (checkDespawn()) {
+        if (!respawnStrategy.handlesApproachDespawn() && checkDespawn()) {
             normalPushingGraceFrames = 0;
             suppressNextAirbornePushFollowSteering = false;
             return;
