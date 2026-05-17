@@ -135,10 +135,16 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
 
     @Override
     public void onApproachComplete(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
-        offscreenFlightFrames = 0;
         sidekick.setHighPriority(leader.isHighPriority());
         sidekick.setTopSolidBit(leader.getTopSolidBit());
         sidekick.setLrbSolidBit(leader.getLrbSolidBit());
+    }
+
+    @Override
+    public int consumeApproachDespawnCarryFrames() {
+        int frames = offscreenFlightFrames;
+        offscreenFlightFrames = 0;
+        return frames;
     }
 
     private boolean handleS2FlyingOffscreenTimeout(AbstractPlayableSprite sidekick) {

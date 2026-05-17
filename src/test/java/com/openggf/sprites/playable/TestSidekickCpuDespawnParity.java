@@ -161,6 +161,51 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2FlyingOffscreenCounterCarriesIntoNormalDespawnAfterApproachCompletes() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x2908);
+        sonic.setCentreY((short) 0x0691);
+        sonic.resetPositionAndStatTableHistory();
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x2908);
+        tails.setCentreY((short) 0x0682);
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+
+        for (int i = 0; i < 15; i++) {
+            tails.setRenderFlagOnScreen(false);
+            controller.update(i);
+            assertEquals(SidekickCpuController.State.APPROACHING, controller.getState(),
+                    "The test setup should keep accumulating the S2 flying off-screen counter before landing");
+        }
+
+        tails.setRenderFlagOnScreen(false);
+        controller.update(15);
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                "The approach completion frame should carry the accumulated flying counter into NORMAL");
+
+        for (int i = 16; i < 299; i++) {
+            tails.setRenderFlagOnScreen(false);
+            controller.update(i);
+            assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                    "S2 normal despawn should not fire before the shared counter reaches 300");
+        }
+
+        tails.setRenderFlagOnScreen(false);
+        controller.update(299);
+
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState());
+        assertEquals((short) 0x4000, tails.getCentreX(),
+                "After TailsCPU_Flying lands, S2 TailsCPU_CheckDespawn continues the same counter and uses $4000");
+        assertEquals((short) 0x0000, tails.getCentreY());
+    }
+
+    @Test
     void s3kDespawnMarkerReturnsToCatchUpFlightRoutine() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

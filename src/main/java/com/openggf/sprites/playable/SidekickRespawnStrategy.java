@@ -41,4 +41,14 @@ public interface SidekickRespawnStrategy {
      */
     default void onApproachComplete(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
     }
+
+    /**
+     * Carries any approach-routine off-screen counter into the NORMAL routine.
+     * S2 Tails uses one {@code Tails_respawn_counter} across
+     * {@code TailsCPU_Flying} and {@code TailsCPU_CheckDespawn}; other
+     * strategies keep the NORMAL despawn timer independent.
+     */
+    default int consumeApproachDespawnCarryFrames() {
+        return 0;
+    }
 }
