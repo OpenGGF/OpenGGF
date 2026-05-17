@@ -54,3 +54,18 @@ Next active target: S2 CNZ slot-machine release timing. With the local
 investigation edits, CNZ moved from the clean-branch frame 1691 failure to frame
 1680, where the engine releases Sonic from the Point Pokey cage at VBlank
 `0x105A` while ROM still reports Sonic riding the cage.
+
+## 2026-05-17 - S2 CNZ slot-machine frontier advancement
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with CNZ slot-machine/bootstrap fixes staged next
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace' test -DfailIfNoTests=false`
+- Result: fail, 353 errors
+- First error: frame 3830, `x_speed` (`expected=-0833`, `actual=0x0000`)
+
+Frontier moved from the Point Pokey cage release at frame 1691 to the later
+CNZ Big Block / bumper-contact segment at frame 3830. The slot-machine fix
+used the regenerated `cnz_slot_machine_state` aux rows to verify the ROM target
+word (`0x0203`), VBlank seed window, and same-call Routine5->Routine6
+completion path. The aux rows remain diagnostic only; replay still drives the
+engine from BK2 input plus one-time native timing bootstrap.

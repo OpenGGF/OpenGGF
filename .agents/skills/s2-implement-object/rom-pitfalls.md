@@ -963,6 +963,35 @@ f1146).
 
 ---
 
+## P20 -- Level-event globals may need pre-object update order
+
+**Symptom.** An object waits one frame too long for a zone-global routine to
+finish. In CNZ, ObjD6 Point Pokey kept Sonic riding the cage for one extra
+frame because the shared slot-machine manager was updated in the engine's late
+zone-feature phase, after Point Pokey had already checked completion.
+
+**Root cause.** S2 `LevEvents_CNZ` calls `SlotMachine` from the level-event
+path, before the relevant object observes the global state. Treating the slot
+machine as an ordinary late zone feature changed the producer/consumer order:
+the global routine became inactive one frame too late from the object's point
+of view.
+
+**What to check.** When an object reads a zone-global manager or RAM flag,
+locate the ROM writer and the ROM object execution order before choosing the
+engine hook. Keep the ordering fix at the smallest owning scope. For CNZ this
+means the slot-machine tick belongs in the S2 CNZ pre-physics/level-event
+phase, while CNZ bumpers remain in the normal zone-feature update phase.
+
+**ROM citation.** `docs/s2disasm/s2.asm:21494-21500`
+(`LevEvents_CNZ` calls `SlotMachine`) and `docs/s2disasm/s2.asm:58827-58840`
+(`SlotMachine` routine dispatch).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 12:
+CNZ Point Pokey / slot-machine ordering advanced the CNZ frontier from f1691
+to f3830).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

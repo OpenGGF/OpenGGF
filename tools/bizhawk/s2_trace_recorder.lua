@@ -58,7 +58,7 @@
 -- (see v9.3-s2 change note above for context).
 -- The bootstrap-comparator eligibility is derived from this version string by
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
-local LUA_SCRIPT_VERSION = "9.4-s2"
+local LUA_SCRIPT_VERSION = "9.5-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -157,6 +157,20 @@ local SIDEKICK_BASE        = OBJ_TABLE_START + OBJ_SLOT_SIZE  -- slot 1 = Tails/
 -- read +2 so the CSV stores the low word that changes during normal traces.
 local ADDR_FRAMECOUNT      = 0xFE04
 local ADDR_VBLA_WORD       = 0xFE0E
+local ADDR_SLOT_MACHINE_IN_USE = 0xFF4C
+local ADDR_SLOT_MACHINE_ROUTINE = 0xFF4E
+local ADDR_SLOT_MACHINE_TIMER = 0xFF4F
+local ADDR_SLOT_MACHINE_INDEX = 0xFF51
+local ADDR_SLOT_MACHINE_REWARD = 0xFF52
+local ADDR_SLOT_MACHINE_SLOT1_POS = 0xFF54
+local ADDR_SLOT_MACHINE_SLOT1_SPEED = 0xFF56
+local ADDR_SLOT_MACHINE_SLOT1_ROUTINE = 0xFF57
+local ADDR_SLOT_MACHINE_SLOT2_POS = 0xFF58
+local ADDR_SLOT_MACHINE_SLOT2_SPEED = 0xFF5A
+local ADDR_SLOT_MACHINE_SLOT2_ROUTINE = 0xFF5B
+local ADDR_SLOT_MACHINE_SLOT3_POS = 0xFF5C
+local ADDR_SLOT_MACHINE_SLOT3_SPEED = 0xFF5E
+local ADDR_SLOT_MACHINE_SLOT3_ROUTINE = 0xFF5F
 
 -- Genesis joypad bitmask (matching engine convention)
 local INPUT_UP    = 0x01
@@ -435,7 +449,7 @@ local function write_metadata()
     meta_file:write('  "lua_script_version": "' .. LUA_SCRIPT_VERSION .. '",\n')
     meta_file:write('  "trace_schema": 8,\n')
     meta_file:write('  "csv_version": 6,\n')
-    meta_file:write('  "aux_schema_extras": [],\n')
+    meta_file:write('  "aux_schema_extras": ["cnz_slot_machine_state_per_frame"],\n')
     meta_file:write('  "trace_profile": "' .. json_escape(TRACE_PROFILE) .. '",\n')
     meta_file:write('  "bizhawk_version": "2.11",\n')
     meta_file:write('  "genesis_core": "Genplus-gx",\n')
@@ -493,6 +507,37 @@ function read_character_trace_state(base)
         status = status,
         stand_on_obj = mainmemory.read_u8(base + OFF_STAND_ON_OBJ),
     }
+end
+
+local function write_cnz_slot_machine_state()
+    if not aux_file then return end
+    if start_rom_zone_id ~= 0x0C then return end
+
+    local vfc = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
+    local vbc = mainmemory.read_u16_be(ADDR_VBLA_WORD)
+    write_aux(string.format(
+        '{"frame":%d,"vfc":%d,"vbc":"0x%04X","event":"cnz_slot_machine_state",'
+        .. '"in_use":"0x%04X","routine":"0x%02X","timer":"0x%02X","index":"0x%02X",'
+        .. '"reward":"0x%04X","slot1_pos":"0x%04X","slot1_speed":"0x%02X","slot1_routine":"0x%02X",'
+        .. '"slot2_pos":"0x%04X","slot2_speed":"0x%02X","slot2_routine":"0x%02X",'
+        .. '"slot3_pos":"0x%04X","slot3_speed":"0x%02X","slot3_routine":"0x%02X"}',
+        trace_frame,
+        vfc,
+        vbc,
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_IN_USE),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_ROUTINE),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_TIMER),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_INDEX),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_REWARD),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_SLOT1_POS),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT1_SPEED),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT1_ROUTINE),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_SLOT2_POS),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT2_SPEED),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT2_ROUTINE),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_SLOT3_POS),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT3_SPEED),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT3_ROUTINE)))
 end
 
 function close_files()
@@ -1061,6 +1106,7 @@ local function on_frame_end()
     check_mode_changes("sonic", PLAYER_BASE, prev_character_state.sonic, status, routine)
     check_mode_changes("tails", SIDEKICK_BASE, prev_character_state.tails,
         sidekick.status, sidekick.routine)
+    write_cnz_slot_machine_state()
 
     if trace_frame % SNAPSHOT_INTERVAL == 0
             or (trace_frame >= 5104 and trace_frame <= 5106) then
