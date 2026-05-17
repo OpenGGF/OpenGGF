@@ -279,3 +279,27 @@ longer hard-codes a Sonic 2 object id. The new blocker is Tails follow
 acceleration after the Obj74/invisible-block jump window: Sonic matches at
 frame 6018, but engine Tails has already applied follow steering
 (`tails_g_speed=0x0018`) while ROM keeps Tails at zero ground speed.
+
+## 2026-05-17 - S2 CNZ Obj74 SolidObject_Always offscreen bypass
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with Obj74 offscreen-gate bypass, focused unit test, and mirrored S2 object skill notes staged next
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestInvisibleBlockObjectInstance" test -DfailIfNoTests=false`
+- Result: pass
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 290 errors
+- First error: frame 6276, `y_speed` (`expected=0x0070`, `actual=-0700`)
+- Previously-green checks: S1 GHZ and S2 EHZ both printed `All frames match trace. No divergences.`
+
+Frontier moved from frame 6018 to frame 6276. The frame 6018 mismatch was S2
+Obj74 invisible block side contact: subtype `$33` gives `width_pixels=$20`,
+so `Obj74_Main` passes `d1=$2B` and the left edge is `$1560-$2B=$1535`,
+matching ROM Tails's stopped X position. The engine skipped the contact
+because Obj74 had not opted out of the shared offscreen sidekick full-solid
+gate. Obj74 calls `SolidObject_Always`, whose ROM helper explicitly checks
+solidity even when the object is offscreen
+(`docs/s2disasm/s2.asm:34863-34873,46152-46161`), so the bypass is scoped to
+`InvisibleBlockObjectInstance` rather than changing the game-wide solid gate.
+The new blocker is a Sonic vertical-speed mismatch after the later monitor /
+bonus-block area: ROM is falling with `y_vel=$0070` at frame 6276 while the
+engine has entered an upward launch/rebound path (`y_vel=-$0700`).
