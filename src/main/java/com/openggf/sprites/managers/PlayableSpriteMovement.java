@@ -1916,7 +1916,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		boolean inputAllowed = sprite.getMoveLockTimer() == 0;
+		boolean objectPreservedRollStop = sprite.shouldPreserveRollingOnNextRollStop();
+		boolean skipControlledRollInput = sprite.consumeObjectPreservedRollBoostFollowup();
+		boolean skipObjectPreservedRollInput = sprite.consumeObjectPreservedRollWallProbe();
+		boolean objectPreservedVelocityCarry = sprite.shouldApplyObjectPreservedRollVelocityCarry();
+		boolean inputAllowed = sprite.getMoveLockTimer() == 0
+				&& !skipControlledRollInput
+				&& !skipObjectPreservedRollInput;
+		if (objectPreservedVelocityCarry
+				&& objectPreservedRollStop
+				&& sprite.getRolling()
+				&& !sprite.getAir()
+				&& gSpeed == 0
+				&& sprite.getXSpeed() != 0) {
+			int carriedXSpeed = Math.max(-0x1000, Math.min(0x1000, sprite.getXSpeed()));
+			sprite.setXSpeed((short) carriedXSpeed);
+			sprite.setYSpeed((short) 0);
+			return;
+		}
+		if (objectPreservedVelocityCarry) {
+			sprite.clearObjectPreservedRollVelocityCarry();
+		}
 
 		// Controlled roll deceleration: hardcoded $20 regardless of water state
 		// ROM ref: s2.asm:36671 — move.w #$20,d4
@@ -1948,6 +1968,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (gSpeed == 0) {
 			if (sprite.getPinballMode()) {
 				gSpeed = (short) (sprite.getDirection() == Direction.LEFT ? -0x400 : 0x400);
+			} else if (objectPreservedRollStop) {
+				// Object-scoped ROM handoff: S2 Obj85 leaves Tails curled in
+				// the CNZ stopper chamber. The following zero-inertia roll-stop
+				// decision must not apply the generic unroll/Y-radius change;
+				// when the later positive handoff appears, the next frame's wall
+				// probe can turn it into the chamber push (s2.asm:39716-39745,
+				// 39481-39507).
+				if (inputRight) {
+					gSpeed = 0x400;
+					sprite.markObjectPreservedRollBoostFollowup();
+				}
 			} else {
 				sprite.setRolling(false);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
@@ -1957,6 +1988,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		sprite.setGSpeed(gSpeed);
 		convertRollVelocity(gSpeed);
+		if (skipControlledRollInput) {
+			sprite.markObjectPreservedRollWallProbe();
+		}
 	}
 
 	private void applyRollStopAnimationChange() {
@@ -2516,8 +2550,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
-		boolean skipTouchFloorBodyForPinball = sprite.getRolling() && sprite.getPinballMode() && preservePinballRoll;
-		if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
+		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
+		boolean skipLandingRollClear = sprite.getRolling()
+				&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
+		if (sprite.getRolling() && !skipLandingRollClear) {
 			if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
 				int oldCentreY = sprite.getCentreY();
 				int oldYRadius = sprite.getYRadius();
@@ -2531,7 +2567,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setRolling(false);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
 			}
-		} else if (!skipTouchFloorBodyForPinball
+		} else if (!skipLandingRollClear
 				&& (sprite.getYRadius() != sprite.getStandYRadius()
 				|| sprite.getXRadius() != sprite.getStandXRadius())) {
 			// ROM Player_TouchFloor (sonic3k.asm:24341-24343 Sonic, 29134-29136 Tails)

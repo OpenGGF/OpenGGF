@@ -40,6 +40,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 import java.io.IOException;
 import java.util.Objects;
@@ -61,6 +62,7 @@ public class DefaultObjectServices implements ObjectServices {
     private final FadeManager fadeManager;
     private final WaterSystem waterSystem;
     private final ParallaxManager parallaxManager;
+    private final CollisionSystem collisionSystem;
     private final WorldSession worldSession;
     private final GameRng rng;
     private final ZoneRuntimeRegistry zoneRuntimeRegistry;
@@ -82,6 +84,7 @@ public class DefaultObjectServices implements ObjectServices {
                 gameplayMode.getFadeManager(),
                 gameplayMode.getWaterSystem(),
                 gameplayMode.getParallaxManager(),
+                gameplayMode.getCollisionSystem(),
                 gameplayMode.getWorldSession(),
                 gameplayMode.getRng(),
                 gameplayMode.getZoneRuntimeRegistry(),
@@ -110,7 +113,7 @@ public class DefaultObjectServices implements ObjectServices {
                                  WaterSystem waterSystem,
                                  ParallaxManager parallaxManager) {
         this(levelManager, camera, gameState, spriteManager, fadeManager, waterSystem,
-                parallaxManager, null, new GameRng(GameRng.Flavour.S1_S2),
+                parallaxManager, GameServices.collision(), null, new GameRng(GameRng.Flavour.S1_S2),
                 new ZoneRuntimeRegistry(), null, new ZoneLayoutMutationPipeline(), SolidExecutionRegistry.inert(),
                 engineServicesFromGameServices(), NoOpBonusStageProvider.INSTANCE);
     }
@@ -122,6 +125,7 @@ public class DefaultObjectServices implements ObjectServices {
                                  FadeManager fadeManager,
                                  WaterSystem waterSystem,
                                  ParallaxManager parallaxManager,
+                                 CollisionSystem collisionSystem,
                                  WorldSession worldSession,
                                  GameRng rng,
                                  ZoneRuntimeRegistry zoneRuntimeRegistry,
@@ -137,6 +141,7 @@ public class DefaultObjectServices implements ObjectServices {
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
         this.waterSystem = Objects.requireNonNull(waterSystem, "waterSystem");
         this.parallaxManager = Objects.requireNonNull(parallaxManager, "parallaxManager");
+        this.collisionSystem = Objects.requireNonNull(collisionSystem, "collisionSystem");
         this.worldSession = worldSession;
         this.rng = Objects.requireNonNull(rng, "rng");
         this.zoneRuntimeRegistry = Objects.requireNonNull(zoneRuntimeRegistry, "zoneRuntimeRegistry");
@@ -259,6 +264,11 @@ public class DefaultObjectServices implements ObjectServices {
     @Override
     public SpriteManager spriteManager() {
         return spriteManager;
+    }
+
+    @Override
+    public CollisionSystem collisionSystem() {
+        return collisionSystem;
     }
 
     @Override

@@ -31,6 +31,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 
 import java.util.List;
@@ -83,6 +84,7 @@ public class StubObjectServices implements ObjectServices {
     @Override public RomByteReader romReader() { return null; }
     @Override public WaterSystem waterSystem() { return null; }
     @Override public ParallaxManager parallaxManager() { return null; }
+    @Override public CollisionSystem collisionSystem() { return null; }
     @Override public void advanceToNextLevel() {}
     @Override public void requestCreditsTransition() {}
     @Override public void requestSessionSave(SaveReason reason) {}
