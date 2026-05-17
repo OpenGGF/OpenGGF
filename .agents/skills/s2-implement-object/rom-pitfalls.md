@@ -1134,6 +1134,45 @@ f5336 / 219 errors).
 
 ---
 
+## P25 -- Obj85 preserved roll must suppress stale held jump, not fresh delayed press
+
+**Symptom.** Tails either jumps too early out of the vertical Obj85 stopper
+handoff, or never performs the later chamber-exit jump. In CNZ, letting all
+delayed jump state through made Tails launch around frame 4028 while ROM stayed
+grounded in the stopper. Suppressing all delayed jump state while the preserved
+roll flag was set fixed that early launch but missed ROM's later fresh delayed
+jump press at frame 5336.
+
+**Root cause.** S2 Tails CPU copies Sonic's delayed logical input word before
+the follow/filter path. Obj85's object-local preserved-roll handoff can leave a
+held jump bit in that delayed sample while Tails is still grounded, but that is
+not equivalent to a fresh press. The stale held bit must be suppressed during
+the grounded preserved-roll handoff; the later fresh delayed jump press must
+remain available so `Tails_Jump` can set `y_vel=-$680` and rolling air state.
+
+**What to check.**
+1. Keep Obj85 preserved-roll jump filtering object-scoped through the existing
+   preserved-roll flag; do not change generic sidekick CPU jump semantics.
+2. Distinguish delayed held jump from delayed jump press. Grounded preserved
+   Obj85 frames with no fresh press should clear both held and press before
+   `PlayableSpriteMovement` derives a new edge from held input.
+3. Once Tails is airborne, do not clear held jump; the hold is used by jump
+   height handling.
+4. If another object needs similar handling, add a named object-owned marker
+   rather than broadening the Obj85 gate.
+
+**ROM citation.** `docs/s2disasm/s2.asm:38939-38946` (Tails CPU copies the
+delayed `Ctrl_1_Logical` sample), `docs/s2disasm/s2.asm:57611-57625` (Obj85
+vertical release path), and `docs/s2disasm/s2.asm:36996-37070`
+(`Sonic_Jump`/`Tails_Jump` setup, including the `-$680` jump velocity).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 5336 Tails failed to enter
+air+rolling because preserved-roll filtering cleared a fresh delayed jump
+press. Suppressing only grounded stale held jump advanced the CNZ frontier from
+f5336 / 219 errors to f5399 / 215 errors).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

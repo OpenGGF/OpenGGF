@@ -191,3 +191,24 @@ radius restore belongs to the S3K `Player_TouchFloor` radius-delta model. The
 next blocker is a Tails Obj72/conveyor-area handoff: ROM puts Tails into
 air+rolling with `y_vel=-0x680` at frame 5336, while the engine remains
 grounded and continues normal CPU acceleration.
+
+## 2026-05-17 - S2 CNZ Obj85 preserved-roll delayed jump filtering
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 Obj85 preserved-roll sidekick CPU jump filtering and mirrored skill notes staged next
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace' test -DfailIfNoTests=false`
+- Result: fail, 215 errors
+- First error: frame 5399, `tails_y` (`expected=0x0329`, `actual=0x032A`)
+
+Frontier moved from frame 5336 to frame 5399. The frame 5336 mismatch was the
+same Obj85 vertical-stopper preserved-roll handoff, but on the sidekick CPU
+input path: the engine suppressed all delayed jump state while the preserved
+roll flag was set. That kept the earlier grounded stopper frames stable but
+also cleared the fresh delayed Sonic jump press ROM later copies through
+`TailsCPU_Normal` (`docs/s2disasm/s2.asm:38939-38946`), preventing
+`Tails_Jump` from entering air+rolling with `y_vel=-$680`
+(`docs/s2disasm/s2.asm:36996-37070`). The filter now remains scoped to the
+grounded Obj85 preserved-roll handoff: stale held jump with no fresh delayed
+press is cleared, while the later fresh delayed press is allowed through. The
+next blocker is a one-pixel Tails Y mismatch after the later airborne/dead
+routine handoff around frame 5399; ROM has `y=$0329`, engine has `y=$032A`.
