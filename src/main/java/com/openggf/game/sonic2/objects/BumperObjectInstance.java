@@ -185,7 +185,7 @@ public class BumperObjectInstance extends AbstractObjectInstance
         int angle = TrigLookupTable.calcAngle((short) dx, (short) dy);
 
         // ROM: move.b (Level_frame_counter).w,d1 reads the high byte of the
-        // word on 68k, then masks it with 3 (s2.asm:44663-44664).
+        // big-endian word on 68k, then masks it with 3 (s2.asm:44675-44677).
         int levelFrameCounter = services().levelManager() != null
                 ? services().levelManager().getFrameCounter()
                 : frameCounter;
