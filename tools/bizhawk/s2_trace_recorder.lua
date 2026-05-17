@@ -52,13 +52,16 @@
 --- Constants ---
 -----------------
 
+-- v9.6-s2 changes: include move_lock in state_snapshot diagnostics and emit
+-- focused snapshots around the current S2 CNZ elevator/input frontier.
+--
 -- v9.3-s2: traces from this recorder version onward are bootstrap-comparable
 -- against the post-universal-title-card engine (ADR-1, design spec 2026-05-15)
 -- AND derive their CSV `input` column from BK2 directly via movie.getinput
 -- (see v9.3-s2 change note above for context).
 -- The bootstrap-comparator eligibility is derived from this version string by
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
-local LUA_SCRIPT_VERSION = "9.5-s2"
+local LUA_SCRIPT_VERSION = "9.6-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -784,7 +787,7 @@ local function write_state_snapshot(character, base)
     local vfc = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
 
     write_aux(string.format(
-        '{"frame":%d,"vfc":%d,"event":"state_snapshot","character":"%s","control_locked":%s,"anim_id":%d,'
+        '{"frame":%d,"vfc":%d,"event":"state_snapshot","character":"%s","control_locked":%s,"move_lock":"0x%04X","anim_id":%d,'
         .. '"status_byte":"0x%02X","routine":"0x%02X","y_radius":%d,"x_radius":%d,'
         .. '"top_solid_bit":"0x%02X","lrb_solid_bit":"0x%02X",'
         .. '"raw_input":"0x%02X","raw_input_mask":"0x%02X","logical_input":"0x%02X","logical_input_mask":"0x%02X",'
@@ -794,6 +797,7 @@ local function write_state_snapshot(character, base)
         vfc,
         character,
         ctrl_lock > 0 and "true" or "false",
+        ctrl_lock,
         anim_id,
         status,
         routine,
@@ -1109,7 +1113,8 @@ local function on_frame_end()
     write_cnz_slot_machine_state()
 
     if trace_frame % SNAPSHOT_INTERVAL == 0
-            or (trace_frame >= 5104 and trace_frame <= 5106) then
+            or (trace_frame >= 5104 and trace_frame <= 5106)
+            or (trace_frame >= 5995 and trace_frame <= 6005) then
         write_state_snapshot("sonic", PLAYER_BASE)
         write_state_snapshot("tails", SIDEKICK_BASE)
     end
