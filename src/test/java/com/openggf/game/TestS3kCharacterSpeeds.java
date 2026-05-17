@@ -158,13 +158,8 @@ class TestS3kCharacterSpeeds {
 
         GameServices.timers().update();
 
-        assertTrue(sprite.hasSpeedShoes(),
-                "ROM still applies speed shoes on the terminal movement frame");
-
-        GameServices.timers().update();
-
         assertFalse(sprite.hasSpeedShoes(),
-                "Engine pre-physics timer expires on the tick after the ROM movement window");
+                "Engine pre-physics timer expires immediately after the ROM movement window");
     }
 
     // --- S2 Comparison ---

@@ -123,3 +123,27 @@ player, falsely classified a side contact, shifted Sonic right, and zeroed
 `x_speed`. S2 `SolidObject_cont` uses the live `y_radius(a1)` for ObjD4's
 bottom reject bound, so ObjD4 now opts into
 `fullSolidBottomOverlapUsesCurrentYRadiusOnly(...)`.
+
+## 2026-05-17 - S2 CNZ bumper integer trig and speed-shoes timer phase
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 CNZ bumper trig, speed-shoes feature flag, trace diagnostics, and skill notes staged next
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.game.TestS3kCharacterSpeeds#speedShoesTimerStaysActiveForRomMovementFrames,com.openggf.game.TestPhysicsProfile#testSpeedShoesTimerPhaseCompensation_PerGame,com.openggf.game.TestHybridPhysicsFeatureSet#testExpectedHybridFeatureSetValues' test -DfailIfNoTests=false`
+- Result: fail, 406 errors
+- First error: frame 4351, `tails_x` (`expected=0x4000`, `actual=0x0E0D`)
+
+Frontier moved from frame 4121 to frame 4351. The frame 4121 player
+`x_speed` mismatch was the S2 CNZ map bumper angle-reflection path:
+ROM uses `CalcAngle`/`CalcSine` integer tables before multiplying by
+`-$A00` (`docs/s2disasm/s2.asm:32334-32677`), while the engine used a
+floating-point `atan2`/`cos` approximation that rounded the incoming angle one
+step differently. The later frame 4216 mismatch was speed-shoes expiry phase:
+S2 `Obj01_ChkShoes` decrements the `$4B0` word timer from display after
+movement and clears speed shoes on the decrement-to-zero frame
+(`docs/s2disasm/s2.asm:36008-36025`), so the engine's pre-physics timer must
+not add the extra phase tick for S2. S3K keeps the existing extra tick behind
+`PhysicsFeatureSet.speedShoesTimerPrePhysicsExtraTicks()` because its ROM uses
+a byte `(20*60)/8` timer decremented only every eighth frame
+(`docs/skdisasm/sonic3k.asm:22067-22078,40818`). The next blocker is a Tails
+despawn mismatch: ROM has Tails at the S2 off-screen marker `$4000,0`, while
+the engine leaves her local at approximately `$0E0D,$0320`.
