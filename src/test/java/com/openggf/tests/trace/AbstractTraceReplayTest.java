@@ -705,13 +705,16 @@ public abstract class AbstractTraceReplayTest {
 
         String solidEvent = "";
         solidEvent = combineDiagnostics(solidEvent, String.format(
-                "eng-player vel=(%04X,%04X) g=%04X dir=%s rj=%s jump=%s lock=%s moveLock=%d objCtrl=%s objSup=%s in=(%s,%s,%s)",
+                "eng-player vel=(%04X,%04X) g=%04X dir=%s rj=%s jump=%s shoes=%s accel=%04X max=%04X lock=%s moveLock=%d objCtrl=%s objSup=%s in=(%s,%s,%s)",
                 sprite.getXSpeed() & 0xFFFF,
                 sprite.getYSpeed() & 0xFFFF,
                 sprite.getGSpeed() & 0xFFFF,
                 sprite.getDirection(),
                 sprite.getRollingJump(),
                 sprite.isJumping(),
+                sprite.hasSpeedShoes(),
+                sprite.getRunAccel() & 0xFFFF,
+                sprite.getMax() & 0xFFFF,
                 sprite.isControlLocked(),
                 sprite.getMoveLockTimer(),
                 sprite.isObjectControlled(),

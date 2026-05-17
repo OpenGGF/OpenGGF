@@ -11,17 +11,19 @@ import com.openggf.timer.AbstractTimer;
  */
 public class SpeedShoesTimer extends AbstractTimer {
     public static final int ROM_DURATION_FRAMES = 0x4B0; // speedshoes_time(a0)
-    // ROM Obj01_ChkShoes decrements speedshoes_time from Sonic_Display, after
-    // Sonic_Move. The engine TimerManager runs before sprite physics and clears
-    // when the decremented tick reaches zero, so add one phase tick plus the
-    // terminal tick that the ROM still applies to the just-finished movement.
-    public static final int DURATION_FRAMES = ROM_DURATION_FRAMES + 2;
 
     private final AbstractPlayableSprite sprite;
 
     public SpeedShoesTimer(String code, AbstractPlayableSprite sprite) {
-        super(code, DURATION_FRAMES);
+        super(code, durationFrames(sprite));
         this.sprite = sprite;
+    }
+
+    private static int durationFrames(AbstractPlayableSprite sprite) {
+        int extraTicks = sprite != null && sprite.getPhysicsFeatureSet() != null
+                ? sprite.getPhysicsFeatureSet().speedShoesTimerPrePhysicsExtraTicks()
+                : 0;
+        return ROM_DURATION_FRAMES + extraTicks;
     }
 
     @Override
