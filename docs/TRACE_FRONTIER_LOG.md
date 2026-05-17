@@ -254,3 +254,28 @@ it suppresses the Obj85 stale push/jump handoff (`docs/s2disasm/s2.asm:38939-389
 input edge turns RIGHT before S2 ROM `Ctrl_1_Held_Logical` reaches `Sonic_Move`
 (`docs/s2disasm/s2.asm:701,1361-1387,36253-36260`), so replay currently drives
 Sonic one input edge earlier than the sampled ROM physics row.
+
+## 2026-05-17 - S2 CNZ ObjD5 riding horizontal-input phase
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with ObjD5 riding-input phase hook, SCZ Tornado hook migration, regenerated CNZ trace v9.6 diagnostics, and mirrored skill notes staged next
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace' test -DfailIfNoTests=false`
+- Result: fail, 289 errors
+- First error: frame 6018, `tails_g_speed` (`expected=0x0000`, `actual=0x0018`)
+- Previously-green checks: S1 GHZ and S2 EHZ both printed `All frames match trace. No divergences.`
+
+Frontier moved from frame 5997 to frame 6018. The frame 5997 mismatch was a
+V-int/logical-input phase issue while Sonic was riding S2 CNZ ObjD5. The
+regenerated v9.6 recorder snapshots showed no `move_lock` or control lock;
+instead, the BK2/CSV right edge was visible before the ROM physics row showed
+the corresponding inertia change. The fix is object-scoped: shared movement
+now asks the current riding `SolidObjectProvider` whether to suppress newly
+pressed horizontal logical input for a small number of riding frames, with a
+default of zero. ObjD5 opts into three frames based on its
+`PlatformObjectD5`/`MvSonicOnPtfm` helper path (`docs/s2disasm/s2.asm:58435-58443,
+35617-35657,35402-35420`). The existing SCZ Tornado stale logical-input
+compensation was migrated onto the same object hook so shared movement no
+longer hard-codes a Sonic 2 object id. The new blocker is Tails follow
+acceleration after the Obj74/invisible-block jump window: Sonic matches at
+frame 6018, but engine Tails has already applied follow steering
+(`tails_g_speed=0x0018`) while ROM keeps Tails at zero ground speed.
