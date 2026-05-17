@@ -1211,6 +1211,41 @@ errors to f6018 / 289 errors while S1 GHZ and S2 EHZ stayed green).
 
 ---
 
+## P27 -- SolidObject_Always objects must bypass offscreen full-solid gates
+
+**Symptom.** A sidekick or offscreen-adjacent player passes through the side of
+an invisible/full solid even though ROM zeros `x_vel` and `inertia` at the
+solid edge. In CNZ, Tails reached Obj74 at `x=$1535` while airborne/rolling;
+ROM stopped him against the left edge, but the engine reported Obj74 as
+`no-touch` and kept accelerating.
+
+**Root cause.** Obj74 does not call the regular `SolidObject` helper. It calls
+`SolidObject_Always`, whose disassembly comment explicitly says Obj74/Obj30
+check solidity even if the object is offscreen. Applying the shared
+sidekick-on-screen/full-solid offscreen gate to Obj74 skips exactly the side
+contact ROM still resolves.
+
+**What to check.**
+1. For every solid object, identify the exact helper it calls before assuming
+   the normal render/on-screen gate applies.
+2. If the helper is `SolidObject_Always` or
+   `SolidObject_Always_SingleCharacter`, override
+   `bypassesOffscreenSolidGate()` on that object/class.
+3. Keep the bypass per object/helper. Do not disable the shared offscreen gate
+   for all S2 solids, because the regular `SolidObject` P2 path still gates on
+   sidekick render state.
+
+**ROM citation.** `docs/s2disasm/s2.asm:34863-34873`
+(`SolidObject_Always` / `SolidObject_Always_SingleCharacter`) and
+`docs/s2disasm/s2.asm:46152-46161` (`Obj74_Main` calls
+`SolidObject_Always` after deriving subtype dimensions).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 6018 Tails missed Obj74's
+left-edge side stop because the engine applied the offscreen sidekick full-solid
+gate to a `SolidObject_Always` caller).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
