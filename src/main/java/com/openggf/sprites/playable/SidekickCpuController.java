@@ -1253,7 +1253,15 @@ public class SidekickCpuController {
             // through the normal loc_13E7C distance/height gates instead and
             // leaves Ctrl_2_logical as RIGHT (sonic3k.asm:26702-26705,
             // 26760-26783, 27798-27805, 28103-28122).
-            boolean pushingBypass = currentPushBypass || localGracePushBypass;
+            // Vertical S2 Obj85 can hand Tails into a curled, zero-speed push
+            // state after release. That object-owned state preserves rolling
+            // without ROM's pinball-mode auto-push, and the CNZ trace shows it
+            // must not take the generic push auto-jump shortcut at the $3F
+            // frame gate (s2.asm:38943-38946, 39015-39022; Obj85 release:
+            // s2.asm:57611-57625).
+            boolean suppressObjectPreservedPushJump = sidekick.shouldPreserveRollingOnNextRollStop();
+            boolean pushingBypass = (currentPushBypass || localGracePushBypass)
+                    && !suppressObjectPreservedPushJump;
             boolean passesDistanceGate = pushingBypass
                     || (frameCounter & 0xFF) == 0
                     || Math.abs(dx) < JUMP_DISTANCE_TRIGGER;
@@ -1277,6 +1285,12 @@ public class SidekickCpuController {
                     suppressNextAirbornePushFollowSteering = true;
                 }
             }
+        }
+
+        if (sidekick.shouldPreserveRollingOnNextRollStop()) {
+            inputJump = false;
+            inputJumpPress = false;
+            jumpingFlag = false;
         }
 
         if (suppressNextAizIntroNormalMovement) {

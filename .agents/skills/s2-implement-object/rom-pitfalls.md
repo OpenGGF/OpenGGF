@@ -1054,6 +1054,46 @@ CNZ frontier from f3906 to f3957).
 
 ---
 
+## P23 -- Full-solid bottom overlap may use live rolling y_radius
+
+**Symptom.** A rolling airborne player is pushed sideways by a moving full
+solid after ROM would already reject the vertical overlap. In CNZ, Sonic kept
+ROM-correct air-control speed through ObjD4 Big Block, but the engine's solid
+resolver classified a side contact at `relY=93`, snapped him 2 px right, and
+zeroed `x_speed`.
+
+**Root cause.** S2 `SolidObject_cont` adds the live `y_radius(a1)` to `d2`,
+then doubles that same value for the lower reject bound. Rolling players
+therefore use the smaller rolling radius on both the top and bottom halves.
+The engine's default full-solid lower-half rule intentionally uses the taller
+standing radius for some S2/S3K solids, but ObjD4 is a direct `SolidObject`
+caller and needs the live-radius path.
+
+**What to check.** When porting a full solid:
+1. Read the exact helper it calls (`SolidObject`, `SolidObjectFull2`,
+   `PlatformObject`, monitor variant, slope variant).
+2. If the helper builds the lower bound from the same `d2 += y_radius(a1)`
+   value used for the top bound, override
+   `fullSolidBottomOverlapUsesCurrentYRadiusOnly(...)` on that object.
+3. Keep the override object-local. Do not broaden shared lower-half behaviour
+   unless all affected games and object families have been checked.
+4. Trace symptom to look for: live position/speed matches ROM before solid
+   contact, then the engine applies a sideways push/zero while ROM reports no
+   contact and preserves air-control acceleration.
+
+**ROM citation.** `docs/s2disasm/s2.asm:58348-58356` (ObjD4 passes
+`d1=$2B,d2=$20,d3=$21` to `SolidObject`), `s2.asm:35135-35166`
+(`SolidObject_cont` adds live `y_radius(a1)` to `d2`, doubles it, and rejects
+when `d3 >= d4`).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 15:
+CNZ ObjD4 Big Block lower-half overlap used standing-radius height in the
+engine and falsely side-pushed Sonic at f4074. Overriding
+`fullSolidBottomOverlapUsesCurrentYRadiusOnly` advanced the CNZ frontier from
+f4074 / 197 errors to f4121 / 227 errors).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

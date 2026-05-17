@@ -181,6 +181,15 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
+        // ObjD4 calls the shared S2 SolidObject helper (s2.asm:58348-58356).
+        // SolidObject_cont builds the bottom reject bound after adding the
+        // live y_radius(a1) to d2 (s2.asm:35135-35166), so rolling players use
+        // the smaller rolling radius on both halves.
+        return true;
+    }
+
+    @Override
     public int getOutOfRangeReferenceX() {
         // ObjD4_Main passes objoff_30, the saved target/origin X, to MarkObjGone2
         // after SolidObject (s2.asm:58380-58388). The oscillating x_pos can leave

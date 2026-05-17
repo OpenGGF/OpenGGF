@@ -103,3 +103,23 @@ bit for Tails rolling recaptures and removes the extra top-landing lift for
 Tails's shorter `$0F` standing radius. The next blocker is after the launcher
 sequence: Tails lands from the launch with ROM still reporting rolling
 (`status=0x05`) while the engine clears rolling (`status=0x01`).
+
+## 2026-05-17 - S2 CNZ Obj85 roll handoff and ObjD4 lower-bound frontier advancement
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 Obj85 roll-preservation and ObjD4 geometry fixes staged next
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace' test -DfailIfNoTests=false`
+- Result: fail, 227 errors
+- First error: frame 4121, `x_speed` (`expected=-058C`, `actual=-0559`)
+
+Frontier moved from frame 3957 through the Obj85 Tails landing/roll-stop
+sequence and then from frame 4074 to frame 4121 after the ObjD4 lower-bound
+fix. Obj85 now preserves the vertical launcher rolling handoff only for that
+object's post-release path, using its inclusive right-edge capture and
+object-local ground-wall follow-up rather than changing shared roll or solid
+behaviour. The later frame 4074 Sonic mismatch was ObjD4 Big Block: the engine
+used the taller standing-radius lower-half overlap for a rolling airborne
+player, falsely classified a side contact, shifted Sonic right, and zeroed
+`x_speed`. S2 `SolidObject_cont` uses the live `y_radius(a1)` for ObjD4's
+bottom reject bound, so ObjD4 now opts into
+`fullSolidBottomOverlapUsesCurrentYRadiusOnly(...)`.

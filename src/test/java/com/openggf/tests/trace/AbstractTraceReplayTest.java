@@ -704,6 +704,21 @@ public abstract class AbstractTraceReplayTest {
         }
 
         String solidEvent = "";
+        solidEvent = combineDiagnostics(solidEvent, String.format(
+                "eng-player vel=(%04X,%04X) g=%04X dir=%s rj=%s jump=%s lock=%s moveLock=%d objCtrl=%s objSup=%s in=(%s,%s,%s)",
+                sprite.getXSpeed() & 0xFFFF,
+                sprite.getYSpeed() & 0xFFFF,
+                sprite.getGSpeed() & 0xFFFF,
+                sprite.getDirection(),
+                sprite.getRollingJump(),
+                sprite.isJumping(),
+                sprite.isControlLocked(),
+                sprite.getMoveLockTimer(),
+                sprite.isObjectControlled(),
+                sprite.isObjectControlSuppressesMovement(),
+                sprite.isLeftPressed(),
+                sprite.isRightPressed(),
+                sprite.isJumpPressed()));
         if (om != null) {
             TouchResponseDebugState touchState = om.getTouchResponseDebugState();
             if (touchState != null) {
@@ -831,15 +846,22 @@ public abstract class AbstractTraceReplayTest {
                 ? sidekick.getCpuController().getMaxYBound(camMaxY) & 0xFFFF
                 : -1;
         return String.format(
-                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) onObj=%s ride=s%d type=%02X st=%02X boundsY=%04X/%04X/%04X cpuMax=%04X",
+                "eng-tails-state pos=(%04X,%04X) sub=(%04X,%04X) vel=(%04X,%04X) g=%04X dir=%s onObj=%s ride=s%d type=%02X st=%02X pin=%s lock=%s prs=%s boundsY=%04X/%04X/%04X cpuMax=%04X",
                 sidekick.getCentreX() & 0xFFFF,
                 sidekick.getCentreY() & 0xFFFF,
                 sidekick.getXSubpixelRaw() & 0xFFFF,
                 sidekick.getYSubpixelRaw() & 0xFFFF,
+                sidekick.getXSpeed() & 0xFFFF,
+                sidekick.getYSpeed() & 0xFFFF,
+                sidekick.getGSpeed() & 0xFFFF,
+                sidekick.getDirection(),
                 sidekick.isOnObject(),
                 standOnSlot,
                 standOnType & 0xFF,
                 buildStatusByte(sidekick),
+                sidekick.getPinballMode(),
+                sidekick.getPinballSpeedLock(),
+                sidekick.shouldPreserveRollingOnNextRollStop(),
                 camMinY,
                 camMaxY,
                 camMaxYTarget,

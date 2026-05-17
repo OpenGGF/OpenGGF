@@ -162,6 +162,8 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
             return;
         }
 
+        applyVerticalExactEdgeRollHandoff(player, contact);
+
         // ROM: cmpi.b #4,routine(a1) - skip if hurt/dead (routine >= 4)
         if (player.isHurt() || player.getDead()) {
             return;
@@ -186,6 +188,33 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
                 enterSpring(player, ps);
             }
         }
+    }
+
+    private void applyVerticalExactEdgeRollHandoff(AbstractPlayableSprite player, SolidContact contact) {
+        if (isDiagonal()
+                || !contact.pushing()
+                || contact.sideDistX() != 0
+                || !player.shouldPreserveRollingOnNextRollStop()
+                || !player.getRolling()
+                || player.getAir()
+                || player.getDirection() != Direction.LEFT
+                || player.getXSpeed() != 0
+                || player.getGSpeed() != 0) {
+            return;
+        }
+
+        // S2 Obj85's vertical stopper can leave Tails curled exactly on the
+        // inclusive right edge. ROM then runs the same Tails_KeepRolling /
+        // CalcRoomInFront handoff that turns facing-left -$400 inertia into
+        // the rightward chamber push (s2.asm:39716-39745, 39481-39507,
+        // 57531-57540).
+        player.setGSpeed((short) -0x400);
+        player.setXSpeed((short) -0x400);
+        player.setYSpeed((short) 0);
+        services().collisionSystem().resolveGroundWallCollision(player);
+        player.move(player.getXSpeed(), player.getYSpeed());
+        player.markObjectPreservedRollBoostFollowup();
+        player.markObjectPreservedRollVelocityCarry();
     }
 
     /**
@@ -485,6 +514,14 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         player.setObjectControlled(false);
         boolean keepPinball = preservePinball || ps.pinballBeforeCapture;
         player.setPinballMode(keepPinball);
+        if (!isDiagonal()) {
+            // Vertical Obj85 leaves the player curled after loc_2AE0C launch
+            // without making the airborne CPU path behave like Obj84 pinball
+            // mode. Preserve the next landing/zero-speed roll-clear decisions
+            // only (s2.asm:57531-57540, 57611-57625, 39716-39727).
+            player.preserveRollingOnNextLanding();
+            player.preserveRollingOnNextRollStop();
+        }
         resetPlayerState(ps);
     }
 
@@ -600,6 +637,14 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // SolidObject_Always_SingleCharacter keeps the right edge in range:
+        // S2 Obj85 can recapture Tails with relX == halfWidth*2 at the
+        // vertical stopper chamber edge (s2.asm:57531-57540).
+        return true;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         // ROM values from disassembly:
         // Vertical: halfWidth=0x23(35), halfHeightTop=0x20(32), halfHeightBottom=0x1D(29)
@@ -615,13 +660,27 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
 
     @Override
     public String traceDebugDetails() {
-        return String.format("sub=%02X comp=%02X head=%04X,%04X base=%04X,%04X",
+        AbstractPlayableSprite sidekick = null;
+        var sprites = com.openggf.game.GameServices.sprites();
+        if (sprites != null && !sprites.getSidekicks().isEmpty()) {
+            sidekick = sprites.getSidekicks().getFirst();
+        }
+        PlayerState sidekickState = sidekick != null ? playerStates.get(sidekick) : null;
+        int sidekickDx = sidekick != null ? sidekick.getCentreX() - currentSpriteX : 0;
+        int sidekickDy = sidekick != null ? sidekick.getCentreY() - currentSpriteY : 0;
+        boolean sidekickSolid = sidekick != null && isSolidFor(sidekick);
+        return String.format("sub=%02X comp=%02X head=%04X,%04X base=%04X,%04X p2state=%d p2cd=%d p2solid=%s p2d=(%d,%d)",
                 spawn.subtype() & 0xFF,
                 compression & 0xFFFF,
                 currentSpriteX & 0xFFFF,
                 currentSpriteY & 0xFFFF,
                 baseX & 0xFFFF,
-                baseY & 0xFFFF);
+                baseY & 0xFFFF,
+                sidekickState != null ? sidekickState.state : -1,
+                sidekickState != null ? sidekickState.launchCooldown : -1,
+                sidekickSolid,
+                sidekickDx,
+                sidekickDy);
     }
 
     @Override
