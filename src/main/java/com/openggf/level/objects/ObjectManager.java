@@ -7,6 +7,7 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.GameId;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.solid.ContactKind;
@@ -2424,9 +2425,18 @@ public class ObjectManager {
     }
 
 
-
         private boolean isSpawnVerticallyEligibleForLoad(ObjectSpawn spawn) {
             if (spawn == null || placement.isCounterBasedRespawn() || camera == null) {
+                return true;
+            }
+            var module = GameServices.currentOrBootstrapGameModule();
+            if (module != null && module.getGameId() == GameId.S2) {
+                // S2 ObjectsManager_GoingForward/Backward calls ChkLoadObj
+                // directly after the X-window scan and has no Camera_Y_pos
+                // filter (docs/s2disasm/s2.asm:32870-32950). SCZ depends on
+                // this: high-Y badniks are spawned while the scripted camera is
+                // still at y=$0000, then survive until the Tornado route
+                // descends into them.
                 return true;
             }
             int wrapRange = camera.isVerticalWrapEnabled() ? camera.getVerticalWrapRange() : 0;
@@ -5037,7 +5047,7 @@ public class ObjectManager {
                 return isS3kAbilityAttack(player, target);
             }
 
-            return player.getRolling() || player.getSpindash();
+            return false;
         }
 
         private boolean isSpinAttackAnimation(PlayableEntity player) {
@@ -5894,7 +5904,10 @@ public class ObjectManager {
             SolidObjectParams params = provider.getSolidParams();
             int anchorX = instance.getX() + params.offsetX();
             int anchorY = instance.getY() + params.offsetY();
-            int halfHeight = params.airHalfHeight();
+            int halfHeight = provider.isTopSolidOnly()
+                    && provider.usesGroundHalfHeightForTopSolidContact()
+                            ? params.groundHalfHeight()
+                            : params.airHalfHeight();
             boolean useStickyBuffer = provider.usesStickyContactBuffer();
             boolean wasAirborne = player.getAir();
             boolean wasRidingObject = useStickyBuffer && isRidingCurrentPlayerObject(instance);
@@ -6011,7 +6024,10 @@ public class ObjectManager {
                 provider.setPlayerPushing(player, true);
             }
             if (contact.standing()) {
-                ridingStates.put(player, new RidingState(instance, instance.getX(), instance.getY(), -1));
+                int newRideBaselineX = provider.seedsNewRideCarryFromPreUpdateX()
+                        ? instance.getPreUpdateX()
+                        : instance.getX();
+                ridingStates.put(player, new RidingState(instance, newRideBaselineX, instance.getY(), -1));
                 setObjectStandingBit(player, instance);
                 inlineSupportedPlayers.add(player);
             }
@@ -7048,11 +7064,7 @@ public class ObjectManager {
                     if (player.getAir()) {
                         LOGGER.fine(() -> "Monitor landing at (" + player.getX() + "," + player.getY() +
                             ") distY=" + distY);
-                        int savedDoubleJumpFlag = player.getDoubleJumpFlag();
-                        player.setAir(false);
-                        clearRollingOnLanding(player);
-                        player.setGroundMode(GroundMode.GROUND);
-                        player.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
+                        applyObjectLandingState(player);
                     }
                     // ROM: bset #status.player.on_object (s2.asm:35739)
                     player.setOnObject(true);
@@ -7278,11 +7290,7 @@ public class ObjectManager {
                     // (btst #1,obStatus(a1) / beq.s .notinair). This clears the air
                     // flag, resets rolling, and sets ground mode.
                     if (player.getAir()) {
-                        int savedDoubleJumpFlag = player.getDoubleJumpFlag();
-                        player.setAir(false);
-                        clearRollingOnLanding(player);
-                        player.setGroundMode(GroundMode.GROUND);
-                        player.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
+                        applyObjectLandingState(player);
                     }
                     player.setOnObject(true);
                 }
@@ -7379,11 +7387,7 @@ public class ObjectManager {
                             player.setYSpeed((short) 0);
                             player.setGSpeed(player.getXSpeed());
                             if (player.getAir()) {
-                                int savedDoubleJumpFlag = player.getDoubleJumpFlag();
-                                player.setAir(false);
-                                clearRollingOnLanding(player);
-                                player.setGroundMode(GroundMode.GROUND);
-                                player.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
+                                applyObjectLandingState(player);
                             }
                             player.setOnObject(true);
                         }
@@ -7529,7 +7533,9 @@ public class ObjectManager {
                         && rejectsZeroDistanceTopSolidLanding(instance);
                 if (topSolidOnly
                         ? distY > 0x10
-                                || (!allowsZeroDistTopSolidLanding(player) && distY == 0)
+                                || (!allowsZeroDistTopSolidLanding(player)
+                                        && !providerAllowsZeroDistanceTopSolidLanding(instance, player)
+                                        && distY == 0)
                                 || rejectsZeroDistanceTopLanding
                         : distY >= 0x10) {
                     if (rejectsZeroDistanceTopLanding) {
@@ -7580,11 +7586,7 @@ public class ObjectManager {
                     if (player.getAir()) {
                         LOGGER.fine(() -> "Solid object landing at (" + player.getX() + "," + player.getY() +
                             ") distY=" + distY);
-                        int savedDoubleJumpFlag = player.getDoubleJumpFlag();
-                        player.setAir(false);
-                        clearRollingOnLanding(player);
-                        player.setGroundMode(GroundMode.GROUND);
-                        player.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
+                        applyObjectLandingState(player);
                     }
                     // ROM: bset #status.player.on_object (s2.asm:35739)
                     player.setOnObject(true);
@@ -7722,6 +7724,11 @@ public class ObjectManager {
         private boolean rejectsZeroDistanceTopSolidLanding(ObjectInstance instance, PlayableEntity player) {
             return instance instanceof SolidObjectProvider provider
                     && provider.rejectsZeroDistanceTopSolidLanding(player);
+        }
+
+        private boolean providerAllowsZeroDistanceTopSolidLanding(ObjectInstance instance, PlayableEntity player) {
+            return instance instanceof SolidObjectProvider provider
+                    && provider.allowsZeroDistanceTopSolidLanding(player);
         }
 
         private void notifyZeroDistanceTopSolidLandingRejected(ObjectInstance instance, PlayableEntity player) {
@@ -7876,6 +7883,29 @@ public class ObjectManager {
                 // and can leave Tails with rolling radii but no roll bit.
                 sprite.applyStandingRadii(false);
             }
+        }
+
+        private void applyObjectLandingState(PlayableEntity player) {
+            AbstractPlayableSprite playableSprite = player instanceof AbstractPlayableSprite sprite ? sprite : null;
+            boolean wasHurt = playableSprite != null && playableSprite.isHurt();
+            int savedDoubleJumpFlag = player.getDoubleJumpFlag();
+
+            if (wasHurt) {
+                playableSprite.setAirAfterObjectHurtLanding();
+            } else {
+                player.setAir(false);
+            }
+            clearRollingOnLanding(player);
+            player.setGroundMode(GroundMode.GROUND);
+
+            if (wasHurt) {
+                // ROM object/platform landing clears Status_InAir here, but
+                // routine 4 and its velocities survive until Sonic_HurtStop runs
+                // on the next player update (S2: s2.asm:37848-37861).
+                return;
+            }
+
+            player.applyPostObjectLandingAbilities(savedDoubleJumpFlag);
         }
     }
 }

@@ -764,6 +764,7 @@ public abstract class AbstractTraceReplayTest {
             nearbyObjects.sort(Comparator.comparingInt(EngineNearbyObject::slot));
             solidEvent = combineDiagnostics(solidEvent,
                     EngineNearbyObjectFormatter.summarise(nearbyObjects));
+            solidEvent = combineDiagnostics(solidEvent, summariseS2SkyChaseBadnikDiagnostics(om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickStateDiagnostics(om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickNearbyObjects(om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickCpuDiagnostics());
@@ -773,6 +774,40 @@ public abstract class AbstractTraceReplayTest {
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
                 camX, camY, cursorIdx, leftCursorIdx, fwdCtr, bwdCtr, solidEvent, xSub, ySub,
                 ridingObject, standingSnapshot);
+    }
+
+    private String summariseS2SkyChaseBadnikDiagnostics(ObjectManager om) {
+        if (game() != SonicGame.SONIC_2 || zone() != 8 || om == null) {
+            return "";
+        }
+        List<String> parts = new ArrayList<>();
+        for (ObjectInstance instance : om.getActiveObjects()) {
+            if (!(instance instanceof AbstractObjectInstance aoi)) {
+                continue;
+            }
+            ObjectSpawn spawn = aoi.getSpawn();
+            if (spawn == null) {
+                continue;
+            }
+            int id = spawn.objectId() & 0xFF;
+            if (id != 0x98 && id != 0x99 && id != 0x9A && id != 0x9B && id != 0x9C && id != 0xAC) {
+                continue;
+            }
+            parts.add(String.format("sczobj s%d 0x%02X %s @%04X,%04X spawn=@%04X,%04X %s",
+                    aoi.getSlotIndex(),
+                    id,
+                    aoi.getName(),
+                    aoi.getX() & 0xFFFF,
+                    aoi.getY() & 0xFFFF,
+                    spawn.x() & 0xFFFF,
+                    spawn.y() & 0xFFFF,
+                    aoi.traceDebugDetails()));
+        }
+        parts.sort(String::compareTo);
+        if (parts.size() > 16) {
+            parts = new ArrayList<>(parts.subList(0, 16));
+        }
+        return parts.isEmpty() ? "sczobj none" : String.join(" | ", parts);
     }
 
     private String summariseSidekickStateDiagnostics(ObjectManager om) {

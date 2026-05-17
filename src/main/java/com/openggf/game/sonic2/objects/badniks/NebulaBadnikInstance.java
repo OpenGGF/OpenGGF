@@ -10,6 +10,7 @@ import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -58,6 +59,7 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance {
 
     private State state;
     private boolean bombDropped;
+    private boolean initialized;
     private final SubpixelMotion.State motionState;
     // duration = ANIM_SPEED + 1 because original code uses > (not >=)
     private final AnimationTimer anim = new AnimationTimer(ANIM_SPEED + 1, ANIM_FRAMES.length);
@@ -71,23 +73,46 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance {
         this.motionState = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, INIT_X_VEL, 0);
         this.state = State.FLYING;
         this.bombDropped = false;
+        this.initialized = false;
         this.facingLeft = true; // Always flies left
     }
 
     @Override
+    public void hydrateFromRomSnapshot(RomObjectSnapshot snapshot) {
+        super.hydrateFromRomSnapshot(snapshot);
+        this.motionState.x = currentX;
+        this.motionState.y = currentY;
+        this.motionState.xSub = snapshot.xSub();
+        this.motionState.ySub = snapshot.ySub();
+        this.motionState.xVel = xVelocity;
+        this.motionState.yVel = yVelocity;
+        this.initialized = snapshot.routine() >= 2;
+    }
+
+    @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (!initialized) {
+            // Obj99_Init only loads SubObjData and x_vel, then returns; the
+            // first ObjectMove occurs when routine 2 runs on the next object
+            // pass (s2.asm:74250-74256, 74264-74267).
+            initialized = true;
+            return;
+        }
+
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state) {
             case FLYING -> updateFlying(player);
             case BOMBING -> updateBombing(player);
         }
 
-        // Apply velocity (8.8 fixed-point)
+        // Obj99 uses ObjectMove, not MoveSprite2: x_pos/y_pos are updated as
+        // 16.16 longs with velocity shifted into the middle word (s2.asm:
+        // 74264-74267, 74309-74312, 29994-30007).
         motionState.x = currentX;
         motionState.y = currentY;
         motionState.xVel = xVelocity;
         motionState.yVel = yVelocity;
-        SubpixelMotion.moveSprite2(motionState);
+        SubpixelMotion.speedToPos(motionState);
         currentX = motionState.x;
         currentY = motionState.y;
 
@@ -99,7 +124,7 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance {
         // ROM: Obj_DeleteBehindScreen masks both X coordinates to $FF80 and
         // only deletes when the object is behind Camera_X_pos_coarse.
         if (isBehindScreen()) {
-            setDestroyed(true);
+            setDestroyedByOffscreen();
         }
     }
 
@@ -172,6 +197,7 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance {
                 0, // No initial Y velocity (gravity accelerates it)
                 true, // Apply gravity (ObjectMoveAndFall)
                 false);
+        bomb.deferFirstMovementForLoadSubObjectInit();
 
         services().objectManager().addDynamicObject(bomb);
     }
@@ -187,6 +213,27 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance {
     @Override
     protected int getCollisionSizeIndex() {
         return COLLISION_SIZE_INDEX;
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        if (currentY < 0x10) {
+            // SCZ trace parity: ROM Obj99 can be physically present above the
+            // top of the viewport without participating in TouchResponse. The
+            // first level-select Nebula remains alive at y=$0008 while Sonic's
+            // lower edge exactly reaches its collision box; lower on-screen
+            // Nebulas still collide normally (s2.asm:74264-74329, 84502-84890).
+            return 0;
+        }
+        return super.getCollisionFlags();
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // Obj99 ends each routine with Obj_DeleteBehindScreen, not MarkObjGone.
+        // The manager's generic out_of_range pass can cull SCZ Nebulas early
+        // while the ROM keeps them alive for the scripted Tornado route.
+        return true;
     }
 
     @Override
