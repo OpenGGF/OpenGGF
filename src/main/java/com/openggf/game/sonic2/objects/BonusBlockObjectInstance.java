@@ -8,6 +8,9 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -75,7 +78,8 @@ import java.util.List;
  * @see BumperObjectInstance Round bumper with radial physics
  * @see HexBumperObjectInstance Hex bumper with 4-direction quantized physics
  */
-public class BonusBlockObjectInstance extends AbstractObjectInstance {
+public class BonusBlockObjectInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, TouchResponseListener {
 
     // ========================================================================
     // ROM Constants
@@ -179,8 +183,14 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance {
     /** Animation timer */
     private int animTimer = 0;
 
-    /** Hit cooldown to prevent multiple hits per frame */
-    private int hitCooldown = 0;
+    /** ROM collision_property latch set by Touch_Special for P1/P2. */
+    private int collisionProperty = 0;
+
+    /** ROM objoff_30 cooldown for the main player. */
+    private int mainPlayerHitCooldown = 0;
+
+    /** ROM objoff_31 cooldown for the first sidekick. */
+    private int sidekickHitCooldown = 0;
 
     private static final int HIT_COOLDOWN_FRAMES = 4;
 
@@ -223,10 +233,7 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance {
             return;
         }
 
-        // Update hit cooldown
-        if (hitCooldown > 0) {
-            hitCooldown--;
-        }
+        processPendingTouches(player);
 
         // Update animation timer
         if (animTimer > 0) {
@@ -235,18 +242,40 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance {
                 animFrame = baseAnimFrame;
             }
         }
-
-        // Check collision with player
-        if (player != null && !player.isHurt() && !player.getDead() && hitCooldown == 0) {
-            if (checkCollision(player)) {
-                handleHit(player);
-            }
-        }
     }
 
-    private boolean checkCollision(AbstractPlayableSprite player) {
-        return overlapsRomTouchBox(player.getCentreX(), player.getCentreY(), player.getYRadius(),
-                spawn.x(), spawn.y(), COLLISION_RADIUS_X, COLLISION_RADIUS_Y);
+    private void processPendingTouches(AbstractPlayableSprite player) {
+        int pending = collisionProperty;
+        if (pending == 0 && mainPlayerHitCooldown == 0 && sidekickHitCooldown == 0) {
+            return;
+        }
+
+        if (mainPlayerHitCooldown > 0) {
+            mainPlayerHitCooldown--;
+        } else if ((pending & 0x01) != 0 && player != null && !player.isHurt() && !player.getDead()) {
+            handleHit(player);
+            mainPlayerHitCooldown = HIT_COOLDOWN_FRAMES;
+        }
+
+        if (isDestroyed()) {
+            collisionProperty = 0;
+            return;
+        }
+
+        if (sidekickHitCooldown > 0) {
+            sidekickHitCooldown--;
+        } else if ((pending & 0x02) != 0) {
+            List<PlayableEntity> sidekicks = services().sidekicks();
+            if (sidekicks != null && !sidekicks.isEmpty()
+                    && sidekicks.getFirst() instanceof AbstractPlayableSprite sidekick
+                    && !sidekick.isHurt()
+                    && !sidekick.getDead()) {
+                handleHit(sidekick);
+                sidekickHitCooldown = HIT_COOLDOWN_FRAMES;
+            }
+        }
+
+        collisionProperty = 0;
     }
 
     /**
@@ -319,8 +348,6 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance {
      * </pre>
      */
     private void handleHit(AbstractPlayableSprite player) {
-        hitCooldown = HIT_COOLDOWN_FRAMES;
-
         // Apply bounce
         applyBounce(player);
 
@@ -374,6 +401,42 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance {
         if (!isDestroyed()) {
             animFrame = HIT_FRAME_MAP[baseAnimFrame];
             animTimer = ANIM_DURATION;
+        }
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        return 0xD7;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return collisionProperty;
+    }
+
+    @Override
+    public boolean usesSonic2TouchSpecialPropertyResponse() {
+        return true;
+    }
+
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        return true;
+    }
+
+    @Override
+    public boolean requiresRenderFlagForTouch() {
+        // S2 TouchResponse scans collision_flags directly, then ObjD8 consumes
+        // collision_property in ObjD8_Main (docs/s2disasm/s2.asm:59565-59604).
+        return false;
+    }
+
+    @Override
+    public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
+        if (playerEntity instanceof AbstractPlayableSprite sprite && sprite.isCpuControlled()) {
+            collisionProperty |= 0x02;
+        } else {
+            collisionProperty |= 0x01;
         }
     }
 

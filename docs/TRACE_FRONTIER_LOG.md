@@ -327,3 +327,25 @@ clear `inertia`; the engine now preserves `g_speed`
 (`docs/s2disasm/s2.asm:59687-59692`). The new blocker is a later ObjD8 /
 bumper cluster around frame 6815, where ROM has a shallow reflected velocity
 but the engine has already applied a strong vertical rebound.
+
+## 2026-05-17 - S2 CNZ ObjD8 TouchResponse latch timing
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with ObjD8 latch-timing fix and focused unit test staged next
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestBonusBlockObjectInstance" test -DfailIfNoTests=false`
+- Result: pass
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 132 errors
+- First error: frame 7420, `x` (`expected=0x1C6C`, `actual=0x1C67`)
+- Previously-green checks: S1 GHZ and S2 EHZ both printed `All frames match trace. No divergences.`
+
+Frontier moved from frame 6815 to frame 7420. The frame 6815 mismatch was
+ObjD8 firing inside its own update by re-polling current player overlap. ROM
+does not do that: `TouchResponse` latches `collision_property(a0)`, then
+`ObjD8_Main` consumes P1/P2 bits and per-player cooldown bytes at `objoff_30`
+before calling `loc_2C74E` (`docs/s2disasm/s2.asm:59565-59604,59684-59702`).
+ObjD8 now follows the same object-local latch model as S2 Obj44 instead of
+changing the shared touch routine. The new blocker is a later forced-spin /
+camera-X mismatch after the CNZ bumper/bonus-block cluster: player speed and
+subpixel state match, but engine camera X is five pixels left when Sonic enters
+Obj84.
