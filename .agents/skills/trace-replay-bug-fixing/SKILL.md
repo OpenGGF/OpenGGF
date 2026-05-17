@@ -222,6 +222,8 @@ When a trace mismatch lands on trigonometric object physics, do not replace ROM 
 
 For power-up timer divergences, identify both the ROM counter value and the phase where the ROM decrements it. S1/S2 speed shoes use a word `$4B0` timer decremented from display after movement, while S3K uses a byte `(20*60)/8` timer decremented only every eighth frame. If the engine timer runs in a different phase, gate the compensation in `PhysicsFeatureSet` instead of changing a shared timer constant globally.
 
+When comparing sidekick CPU gates, distinguish ROM's raw `object_control` byte tests from the engine's split flags (`objectControlled`, `objectControlAllowsCpu`, `objectControlSuppressesMovement`). S2 `TailsCPU_Spawning` uses `tst.b obj_control(a1)` and must block respawn for any nonzero object-control byte; S3K catch-up code has narrower bit-7-style gates in other paths.
+
 Route-start traces need their native preludes accounted for: title-card delays, route-start bootstrap, object spawning windows, scroll/parallax pre-advance, oscillation phase, and any zone intro skips. Prefer recording or replaying the real prelude when possible; use frame-0 bootstrap only for state ROM would already have at the BK2 start.
 
 Do not leave gameplay-affecting scroll logic hidden in render-only parallax updates. If a ROM scroll routine owns camera words, velocity globals, or route object inputs (for example S2 `SwScrl_SCZ` driving `Camera_X_pos` and `Tornado_Velocity_X/Y`), expose that as a logic-frame hook used by headless replay and rendering. The render pass should consume the resulting scroll state, not be the only place that mutates it.
