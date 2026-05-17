@@ -235,3 +235,22 @@ frame's `ObjectMoveAndFall` (`docs/s2disasm/s2.asm:40736-40759,39043-39052`).
 The new blocker is a Tails air+rolling transition near an Obj74 invisible
 block/elevator area: ROM sets Tails airborne+rolling with `y_vel=-$680`, while
 the engine leaves Tails grounded at `y=$02B0`.
+
+## 2026-05-17 - S2 CNZ Obj85 preserved-roll lifetime scope
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with Obj85 preserved-roll lifetime scope fix
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace' test -DfailIfNoTests=false`
+- Result: fail, 197 errors
+- First error: frame 5997, `x_speed` (`expected=0x0000`, `actual=0x000C`)
+
+Frontier moved from frame 5951 to frame 5997. The frame 5951 mismatch came from
+the Obj85 preserved-roll marker leaking beyond the rolling stopper handoff: by
+frame 5951 Tails was grounded and non-rolling with the marker still set, so the
+engine suppressed the normal-follow auto-jump that ROM takes once the preserved
+rolling state is gone. The filter now requires Tails to still be rolling before
+it suppresses the Obj85 stale push/jump handoff (`docs/s2disasm/s2.asm:38939-38946,
+39015-39022,57611-57625`). The new blocker is not ObjD5 gameplay: the trace CSV
+input edge turns RIGHT before S2 ROM `Ctrl_1_Held_Logical` reaches `Sonic_Move`
+(`docs/s2disasm/s2.asm:701,1361-1387,36253-36260`), so replay currently drives
+Sonic one input edge earlier than the sampled ROM physics row.
