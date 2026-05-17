@@ -843,9 +843,6 @@ public class SidekickCpuController {
         if ((frameCounter & 0x3F) != 0) {
             return;
         }
-        if (target.isObjectControlled()) {
-            return;
-        }
         // Per-game grounded-leader gate: S2 TailsCPU_Spawning checks for
         // grounded / not in water / not roll-jumping (s2.asm:38751-38762);
         // S3K Tails_Catch_Up_Flying does NOT (sonic3k.asm:26474-26486) —
@@ -855,6 +852,9 @@ public class SidekickCpuController {
         // and the engine's SPAWNING state would block forever.
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         boolean strictGate = fs == null || fs.sidekickSpawningRequiresGroundedLeader();
+        if (target.isObjectControlled() || (strictGate && target.isObjectControlSuppressesMovement())) {
+            return;
+        }
         if (strictGate) {
             if (target.getAir() || target.getRollingJump() || target.isInWater() || target.isPreventTailsRespawn()) {
                 return;

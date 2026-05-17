@@ -147,3 +147,22 @@ a byte `(20*60)/8` timer decremented only every eighth frame
 (`docs/skdisasm/sonic3k.asm:22067-22078,40818`). The next blocker is a Tails
 despawn mismatch: ROM has Tails at the S2 off-screen marker `$4000,0`, while
 the engine leaves her local at approximately `$0E0D,$0320`.
+
+## 2026-05-17 - S2 CNZ Tails spawning object-control gate
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 strict sidekick spawning gate and skill notes staged next
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace' test -DfailIfNoTests=false`
+- Result: fail, 459 errors
+- First error: frame 4599, `tails_x` (`expected=0x0EA5`, `actual=0x0EA4`)
+
+Frontier moved from frame 4351 to frame 4599. The frame 4351 mismatch was an
+S2 `TailsCPU_Spawning` gate: ROM tests Sonic's raw `obj_control` byte before
+respawning Tails (`docs/s2disasm/s2.asm:38743-38762`), while the engine only
+checked the high-level full-object-control flag and missed a movement
+suppression-only object-control state from Sonic's flipper/object release. The
+fix is scoped to the strict S2-style spawning gate via the existing
+`sidekickSpawningRequiresGroundedLeader()` feature; S3K's catch-up path keeps
+its narrower gates. The next blocker is a Tails follow/respawn X drift: after
+the marker delay and respawn, engine Tails is one pixel left of ROM at frame
+4599.
