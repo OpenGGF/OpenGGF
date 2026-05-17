@@ -2567,7 +2567,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setRolling(false);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
 			}
-		} else if (!skipLandingRollClear
+		} else if (featureSet != null
+				&& featureSet.landingRollClearUsesCurrentYRadiusDelta()
+				&& !skipLandingRollClear
 				&& (sprite.getYRadius() != sprite.getStandYRadius()
 				|| sprite.getXRadius() != sprite.getStandXRadius())) {
 			// ROM Player_TouchFloor (sonic3k.asm:24341-24343 Sonic, 29134-29136 Tails)

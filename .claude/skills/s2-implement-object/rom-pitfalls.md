@@ -1094,6 +1094,46 @@ f4074 / 197 errors to f4121 / 227 errors).
 
 ---
 
+## P24 -- Landing radius restore is not always shared across games
+
+**Symptom.** A sidekick or object-controlled player stays one pixel too high
+or too low on the first grounded frame after a launch/capture release, even
+though position, subpixels, and speeds matched the previous frame. In CNZ,
+Tails landed from Obj85 with ROM and engine both at `y=$0331`, then the engine
+snapped to `y=$0330` on the next grounded frame and missed the following
+Obj72-area airborne/rolling handoff.
+
+**Root cause.** S2 `Tails_ResetOnFloor` only restores Tails's standing radii
+inside the rolling branch. If Tails lands while already non-rolling but still
+has object-written rolling radii (`y_radius=$0E,x_radius=7`), ROM leaves those
+radii in place. The shared engine cleanup previously restored any non-rolling
+custom radii to standing defaults, which is correct for S3K
+`Player_TouchFloor` but not for S1/S2 reset-on-floor routines.
+
+**What to check.** Before moving radius or landing cleanup into shared
+playable code, read the reset routine for each game and character:
+
+1. S1/S2 Sonic apply fixed roll-clear lifts only when rolling is set.
+2. S2 Tails applies the one-pixel lift and `$0F/$09` radius restore only when
+   rolling is set.
+3. S3K restores default radii before checking roll state and uses the
+   current-radius delta model.
+4. Gate shared cleanup through the owning feature flag (or a narrower object
+   hook) instead of assuming all games consume the same landing radii.
+
+**ROM citation.** `docs/s2disasm/s2.asm:40629-40636`
+(`Tails_ResetOnFloor_Part2` branches past radius restore when rolling is
+clear), `docs/s2disasm/s2.asm:37781-37786` (S2 Sonic fixed rolling lift), and
+`docs/skdisasm/sonic3k.asm:24341-24363` (S3K Player_TouchFloor restores
+defaults and applies radius delta).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 5328 Tails Y mismatch was
+caused by the shared non-rolling radius restore; gating it behind the S3K
+radius-delta feature advanced the CNZ frontier from f5328 / 221 errors to
+f5336 / 219 errors).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

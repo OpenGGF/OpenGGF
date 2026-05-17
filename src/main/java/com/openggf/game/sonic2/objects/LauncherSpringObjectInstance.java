@@ -514,11 +514,12 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         player.setObjectControlled(false);
         boolean keepPinball = preservePinball || ps.pinballBeforeCapture;
         player.setPinballMode(keepPinball);
-        if (!isDiagonal()) {
+        if (!isDiagonal() && isTails(player)) {
             // Vertical Obj85 leaves the player curled after loc_2AE0C launch
             // without making the airborne CPU path behave like Obj84 pinball
             // mode. Preserve the next landing/zero-speed roll-clear decisions
-            // only (s2.asm:57531-57540, 57611-57625, 39716-39727).
+            // only for Tails's shorter standing radius handoff observed in
+            // CNZ; Sonic_ResetOnFloor clears rolling normally (s2.asm:37780-37786).
             player.preserveRollingOnNextLanding();
             player.preserveRollingOnNextRollStop();
         }

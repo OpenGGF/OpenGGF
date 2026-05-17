@@ -166,3 +166,28 @@ fix is scoped to the strict S2-style spawning gate via the existing
 its narrower gates. The next blocker is a Tails follow/respawn X drift: after
 the marker delay and respawn, engine Tails is one pixel left of ROM at frame
 4599.
+
+## 2026-05-17 - S2 CNZ post-playable bumper timing and Tails landing radii
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 CNZ post-playable zone-feature hook, Obj85 Tails-only landing preserve, and shared landing-radius gate staged next
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace' test -DfailIfNoTests=false`
+- Result: fail, 219 errors
+- First error: frame 5336, `tails_x_speed` (`expected=0x00C0`, `actual=0x00CC`)
+
+Frontier moved from frame 4599 through a temporary f5294 Sonic landing
+regression and the f5328 Tails one-pixel ground snap to frame 5336. The f4599
+X drift came from S2 CNZ map bumpers updating too early relative to the
+playable loop; `SpecialCNZBumpers` follows player/object execution in the ROM
+main loop, so CNZ now updates its bumper manager through a zone-feature
+post-playable-physics hook rather than the generic pre-player feature phase.
+The f5294 Sonic regression was Obj85's vertical-launch roll-preserve hook
+applying to Sonic even though `Sonic_ResetOnFloor` clears rolling normally.
+The f5328 Tails Y mismatch came from shared landing cleanup restoring
+non-rolling custom radii for S2 Tails; S2 `Tails_ResetOnFloor` only restores
+Tails's `$0F/$09` standing radii inside the rolling branch
+(`docs/s2disasm/s2.asm:40629-40636`), while the unconditional non-rolling
+radius restore belongs to the S3K `Player_TouchFloor` radius-delta model. The
+next blocker is a Tails Obj72/conveyor-area handoff: ROM puts Tails into
+air+rolling with `y_vel=-0x680` at frame 5336, while the engine remains
+grounded and continues normal CPU acceleration.
