@@ -349,3 +349,24 @@ changing the shared touch routine. The new blocker is a later forced-spin /
 camera-X mismatch after the CNZ bumper/bonus-block cluster: player speed and
 subpixel state match, but engine camera X is five pixels left when Sonic enters
 Obj84.
+
+## 2026-05-17 - S2 CNZ Obj84 wall-mode autoroll X preservation
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with Obj84 wall-mode autoroll fix and focused unit test staged next
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestForcedSpinObjectInstance" test -DfailIfNoTests=false`
+- Result: pass
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 130 errors
+- First error: frame 7874, `camera_y` (`expected=0x020E`, `actual=0x020C`)
+- Previously-green checks: S1 GHZ and S2 EHZ both printed `All frames match trace. No divergences.`
+
+Frontier moved from frame 7420 to frame 7874. The frame 7420 mismatch was
+S2 Obj84 forced-spin autoroll on a wall-mode surface: `Obj84` sets rolling,
+writes the rolling radii/status/animation, and applies `addq.w #5,y_pos(a1)`,
+but it never adjusts `x_pos` (`docs/s2disasm/s2.asm:46377-46495`). The engine's
+generic wall-mode rolling transition can shift centre X when the width changes,
+so Obj84 now preserves the ROM centre X only on this object path. The next
+blocker is a later platform/ride-state camera-Y mismatch: player position and
+velocity match at frame 7874, but ROM has the on-object status bit and camera
+Y two pixels lower than the engine.
