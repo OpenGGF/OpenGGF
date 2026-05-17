@@ -6,8 +6,11 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PhysicsFeatureSet;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.MultiPieceSolidProvider;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.physics.CollisionSystem;
@@ -65,6 +68,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// Movement constants
 	private static final int MOVE_LOCK_FRAMES = 0x1E;
 	private static final int DEBUG_MOVE_SPEED = 3;
+	private static final int S2_SCZ_TORNADO_STALE_LOGICAL_HORIZONTAL_FRAMES = 3;
+	private static final int S2_SCZ_TORNADO_STALE_LOGICAL_MIN_RIDE_FRAMES = 120;
 	// Controlled roll deceleration: derived per-frame from sprite.getRunDecel() >> 2
 	// (s1:01 Sonic.asm:595-601 — rollDecel = decel/4 = $80/4 = $20)
 
@@ -92,6 +97,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputRawLeft, inputRawRight;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
 	private boolean wasCrouching;
+	private int sczTornadoStaleHorizontalFrames;
+	private int sczTornadoGroundInputFrames;
+	private boolean sczTornadoPreviousHorizontalInput;
 
 	public PlayableSpriteMovement(AbstractPlayableSprite sprite,
 			CollisionSystem collisionSystem,
@@ -128,6 +136,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRawRight = false;
 		facingFlipForcesPushClearAfterGroundWall = false;
 		wasCrouching = false;
+		sczTornadoStaleHorizontalFrames = 0;
+		sczTornadoGroundInputFrames = 0;
+		sczTornadoPreviousHorizontalInput = false;
 	}
 
 	public RewindState captureRewindState() {
@@ -145,7 +156,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				inputRawLeft,
 				inputRawRight,
 				facingFlipForcesPushClearAfterGroundWall,
-				wasCrouching);
+				wasCrouching,
+				sczTornadoStaleHorizontalFrames,
+				sczTornadoGroundInputFrames,
+				sczTornadoPreviousHorizontalInput);
 	}
 
 	public void restoreRewindState(RewindState state) {
@@ -167,6 +181,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRawRight = state.inputRawRight();
 		facingFlipForcesPushClearAfterGroundWall = state.facingFlipForcesPushClearAfterGroundWall();
 		wasCrouching = state.wasCrouching();
+		sczTornadoStaleHorizontalFrames = state.sczTornadoStaleHorizontalFrames();
+		sczTornadoGroundInputFrames = state.sczTornadoGroundInputFrames();
+		sczTornadoPreviousHorizontalInput = state.sczTornadoPreviousHorizontalInput();
 	}
 
 	public record RewindState(
@@ -183,7 +200,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			boolean inputRawLeft,
 			boolean inputRawRight,
 			boolean facingFlipForcesPushClearAfterGroundWall,
-			boolean wasCrouching
+			boolean wasCrouching,
+			int sczTornadoStaleHorizontalFrames,
+			int sczTornadoGroundInputFrames,
+			boolean sczTornadoPreviousHorizontalInput
 	) {}
 
 	public void clearJumpHeightLatch() {
@@ -212,6 +232,54 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private GameStateManager gameState() {
 		GameStateManager current = sprite.currentGameStateOrNull();
 		return current != null ? current : bootstrapGameState;
+	}
+
+	private boolean applyS2SczTornadoStaleLogicalHorizontalInput(boolean left, boolean right) {
+		boolean horizontal = left || right;
+		if (!isRidingS2SczTornadoForGroundInput()) {
+			sczTornadoStaleHorizontalFrames = 0;
+			sczTornadoGroundInputFrames = 0;
+			sczTornadoPreviousHorizontalInput = horizontal;
+			return false;
+		}
+
+		sczTornadoGroundInputFrames++;
+		if (right
+				&& !left
+				&& !sczTornadoPreviousHorizontalInput
+				&& sczTornadoGroundInputFrames > S2_SCZ_TORNADO_STALE_LOGICAL_MIN_RIDE_FRAMES) {
+			// S2 recorder v9.3-s2 documents this exact ROM/BK2 split:
+			// Read_Joypads can leave Ctrl_1_Held_Logical stale for three
+			// frames during SCZ Tornado long V-int paths. Sonic_Move consumes
+			// Ctrl_1_Held_Logical (s2.asm:36255-36260), while replay validation
+			// compares against BK2-aligned input to avoid false alignment errors.
+			sczTornadoStaleHorizontalFrames = S2_SCZ_TORNADO_STALE_LOGICAL_HORIZONTAL_FRAMES;
+		}
+		sczTornadoPreviousHorizontalInput = horizontal;
+
+		if (!horizontal || sczTornadoStaleHorizontalFrames <= 0) {
+			return false;
+		}
+		sczTornadoStaleHorizontalFrames--;
+		return true;
+	}
+
+	private boolean isRidingS2SczTornadoForGroundInput() {
+		LevelManager manager = levelManager();
+		if (manager == null || manager.getCurrentZone() != Sonic2ZoneConstants.ZONE_SCZ) {
+			return false;
+		}
+		var objectManager = manager.getObjectManager();
+		if (objectManager == null
+				|| !objectManager.isRidingObject(sprite)
+				|| sprite.getAir()
+				|| sprite.getGSpeed() != 0) {
+			return false;
+		}
+		ObjectInstance ridingObject = objectManager.getRidingObject(sprite);
+		return ridingObject != null
+				&& ridingObject.getSpawn() != null
+				&& ridingObject.getSpawn().objectId() == Sonic2ObjectIds.TORNADO;
 	}
 
 	/**
@@ -315,6 +383,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			jump = false;
 		}
 
+		if (applyS2SczTornadoStaleLogicalHorizontalInput(left, right)) {
+			left = false;
+			right = false;
+		}
+
 		facingFlipForcesPushClearAfterGroundWall = false;
 		updatePushingOnDirectionChange(left, right);
 
@@ -393,7 +466,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		// Mode dispatch (ROM: Obj01_MdNormal_Checks)
-		if (sprite.getAir()) {
+		if (sprite.isHurt() && !sprite.getAir()) {
+			// Obj01_Hurt_Normal performs ObjectMove before Sonic_HurtStop
+			// clears routine 4 and zeroes velocities, even when an object
+			// solid cleared Status_InAir on the prior frame (S2: s2.asm:
+			// 37820-37834, 37848-37861). Do that final recoil move here,
+			// then complete the hurt-stop recovery without entering normal
+			// ground control this frame.
+			doObjectMoveAndFall();
+			if (sprite.isInWater()) {
+				var modifiers = sprite.getPhysicsModifiers();
+				short reduction = modifiers != null
+						? modifiers.waterHurtGravityReduction()
+						: 0x20;
+				sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
+			}
+			sprite.completeHurtLandingRecovery();
+		} else if (sprite.getAir()) {
 			modeAirborne();
 		} else if (sprite.getRolling()) {
 			modeRoll();

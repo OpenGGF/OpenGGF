@@ -1580,6 +1580,39 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
+        /**
+         * Object/platform solid landings can clear Status_InAir while Sonic is
+         * still in routine 4. ROM then runs Sonic_HurtStop on the next player
+         * update and only there clears routine 4 plus velocities.
+         */
+        public void setAirAfterObjectHurtLanding() {
+                if (this.air) {
+                        rollingJump = false;
+                        jumping = false;
+                        if (doubleJumpFlag > 0 && !rolling) {
+                                applyStandingRadii(false);
+                                objectMappingFrameControl = false;
+                                forcedAnimationId = -1;
+                        }
+                        doubleJumpFlag = 0;
+                        doubleJumpProperty = 0;
+                        currentGameState().resetItemBonus();
+                }
+                this.air = false;
+                updatePushSensorYOffset();
+                resetBadnikChain();
+        }
+
+        public void completeHurtLandingRecovery() {
+                hurt = false;
+                setHighPriority(false);
+                invulnerableFrames = 0x78;
+                setXSpeed((short) 0);
+                setYSpeed((short) 0);
+                setGSpeed((short) 0);
+                setSpindash(false);
+        }
+
         public boolean isJumping() {
                 return jumping;
         }

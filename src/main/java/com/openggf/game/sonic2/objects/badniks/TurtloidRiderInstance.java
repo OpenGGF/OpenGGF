@@ -77,6 +77,11 @@ public class TurtloidRiderInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean requiresRenderFlagForTouch() {
+        return false;
+    }
+
+    @Override
     public void onPlayerAttack(PlayableEntity playerEntity, TouchResponseResult result) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (destroyed) {

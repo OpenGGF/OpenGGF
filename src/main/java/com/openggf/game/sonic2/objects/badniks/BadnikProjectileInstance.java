@@ -231,6 +231,9 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
+        if (loadSubObjectInitPending) {
+            return 0;
+        }
         // HURT category (0x80) + size index
         return 0x80 | (collisionSizeIndex & 0x3F);
     }
