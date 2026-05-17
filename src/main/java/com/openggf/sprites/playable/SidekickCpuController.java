@@ -1285,7 +1285,8 @@ public class SidekickCpuController {
             // must not take the generic push auto-jump shortcut at the $3F
             // frame gate (s2.asm:38943-38946, 39015-39022; Obj85 release:
             // s2.asm:57611-57625).
-            boolean suppressObjectPreservedPushJump = sidekick.shouldPreserveRollingOnNextRollStop();
+            boolean suppressObjectPreservedPushJump =
+                    sidekick.getRolling() && sidekick.shouldPreserveRollingOnNextRollStop();
             boolean pushingBypass = (currentPushBypass || localGracePushBypass)
                     && !suppressObjectPreservedPushJump;
             boolean passesDistanceGate = pushingBypass
@@ -1317,7 +1318,8 @@ public class SidekickCpuController {
         // the delayed leader sample while Tails is still grounded. Suppress that
         // stale hold, but allow the later fresh delayed jump press that ROM uses
         // to leave the stopper chamber (S2 s2.asm:38939-38946, 57611-57625).
-        if (sidekick.shouldPreserveRollingOnNextRollStop()
+        if (sidekick.getRolling()
+                && sidekick.shouldPreserveRollingOnNextRollStop()
                 && !sidekick.getAir()
                 && (currentPushBypass || localGracePushBypass || !recordedJumpPress)) {
             inputJump = false;
