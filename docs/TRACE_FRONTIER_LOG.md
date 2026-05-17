@@ -69,3 +69,19 @@ used the regenerated `cnz_slot_machine_state` aux rows to verify the ROM target
 word (`0x0203`), VBlank seed window, and same-call Routine5->Routine6
 completion path. The aux rows remain diagnostic only; replay still drives the
 engine from BK2 input plus one-time native timing bootstrap.
+
+## 2026-05-17 - S2 CNZ object-streaming vertical-filter fix
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with S2 placement fix and Big Block trace diagnostics
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace' test -DfailIfNoTests=false`
+- Result: fail, 191 errors
+- First error: frame 3906, `tails_y` (`expected=0x06C0`, `actual=0x06BF`)
+
+Frontier moved from the frame 3830 CNZ Big Block side-contact stop to frame
+3906, where Tails lands/re-leaves a launcher spring one pixel lower than ROM.
+The frame 3830 Big Block report showed only 39 engine updates for ObjD4 while
+ROM-side ObjD4 had been active since frame 3330. The fix keeps the vertical
+spawn-filter bypass scoped to Sonic 2 object placement, matching S2's
+X-window-only `ObjectsManager_GoingForward` / `ObjectsManager_GoingBackward`
+path (`docs/s2disasm/s2.asm:32870-32950`).

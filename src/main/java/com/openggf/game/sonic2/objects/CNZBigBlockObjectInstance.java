@@ -57,6 +57,7 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
     private final int targetY;  // Original spawn = target Y
     private int xVel, yVel;     // Velocity (16-bit signed)
     private final int moveType; // 0 = horizontal, 2 = vertical
+    private int updateCount;
 
     public CNZBigBlockObjectInstance(ObjectSpawn spawn, String name) {
         // 64x64 pixel visual size, half dimensions = 32
@@ -108,6 +109,7 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
         } else {
             updateVerticalMovement();
         }
+        updateCount++;
     }
 
     /**
@@ -253,5 +255,17 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
     @Override
     public int getY() {
         return y;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("upd=%d sub=(%04X,%04X) vel=(%04X,%04X) target=(%04X,%04X)",
+                updateCount,
+                xSub & 0xFFFF,
+                ySub & 0xFFFF,
+                xVel & 0xFFFF,
+                yVel & 0xFFFF,
+                targetX & 0xFFFF,
+                targetY & 0xFFFF);
     }
 }

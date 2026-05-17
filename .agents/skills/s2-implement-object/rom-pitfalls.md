@@ -992,6 +992,34 @@ to f3830).
 
 ---
 
+## P21 -- Sonic 2 object streaming is X-window only
+
+**Symptom.** A placement object spawns hundreds of frames late when the route
+passes above or below it. In CNZ, ObjD4 Big Block at `x=$0F00,y=$03A0` did not
+exist until the camera-Y band reached it, leaving the oscillating block 537
+updates behind the ROM at the first contact.
+
+**Root cause.** S2 `ObjectsManager_GoingForward` / `ObjectsManager_GoingBackward`
+load objects directly from the X-window scan via `ChkLoadObj`; there is no
+`Camera_Y_pos` eligibility test in that path. Reusing a shared vertical spawn
+filter for S2 exec-then-load placement silently delayed off-route objects whose
+movement later affects the player.
+
+**What to check.** For S2 object placement bugs, compare the object's update
+count or phase against the ROM, not just its current coordinates. Keep the
+vertical-filter bypass scoped to S2 placement; S3K and other games may still
+need their own spawn-window rules.
+
+**ROM citation.** `docs/s2disasm/s2.asm:32870-32950`
+(`ObjectsManager_GoingBackward` / `ObjectsManager_GoingForward` call
+`ChkLoadObj` from the X-window scan).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 13:
+S2 exec-then-load placement bypassed the vertical spawn filter and advanced the
+CNZ frontier from f3830 to f3906).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
