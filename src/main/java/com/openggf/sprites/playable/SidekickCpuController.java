@@ -1287,7 +1287,13 @@ public class SidekickCpuController {
             }
         }
 
-        if (sidekick.shouldPreserveRollingOnNextRollStop()) {
+        // Obj85's preserved roll-stop handoff can keep a stale held jump bit in
+        // the delayed leader sample while Tails is still grounded. Suppress that
+        // stale hold, but allow the later fresh delayed jump press that ROM uses
+        // to leave the stopper chamber (S2 s2.asm:38939-38946, 57611-57625).
+        if (sidekick.shouldPreserveRollingOnNextRollStop()
+                && !sidekick.getAir()
+                && (currentPushBypass || localGracePushBypass || !recordedJumpPress)) {
             inputJump = false;
             inputJumpPress = false;
             jumpingFlag = false;
