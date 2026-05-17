@@ -681,6 +681,36 @@ the engine port relies on the default `getX()` reference X.)
 
 ---
 
+## P18 -- Shared monitor icon rewards use pre-move velocity tests
+
+**Symptom.** A monitor reward applies one frame too early. The same shared
+engine helper is used by S2 and S3K monitors, so a timing fix in the base
+routine must be proven against all monitor-content ROM routines.
+
+**Root cause.** The ROM monitor-content routine tests the icon's `y_vel`
+before moving it. If the current rise step adds `$18` and lands exactly on
+zero, the routine returns; the reward branch runs on the next object update.
+A shared engine helper that applies the reward immediately after changing
+`iconVelY` from negative to zero is one frame early.
+
+**What to check.** For shared monitor code, verify S1, S2, and S3K before
+changing the base routine. S3K has both S&K-side and S3-side monitor-content
+code; cite the side that applies to the object being ported. If one game
+differs, gate the behaviour at the owning abstraction instead of changing
+every game implicitly.
+
+**ROM citation.** S3K `docs/skdisasm/sonic3k.asm:40723-40753`; S3-side
+`docs/skdisasm/s3.asm:33392-33421`; S2 analogue
+`docs/s2disasm/s2.asm:25618-25631`; S1 analogue
+`docs/s1disasm/_incObj/2E Monitor Content Power-Up.asm:35-43`.
+
+**Originating commit.** `<pending>` (cross-game mirror of S2 P19 entry;
+CNZ speed-shoes monitor reward timing advanced the S2 CNZ frontier from f976
+to f1146 after confirming S1, S2, and S3K all use the same pre-move velocity
+test).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

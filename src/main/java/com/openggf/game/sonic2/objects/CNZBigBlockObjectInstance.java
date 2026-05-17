@@ -122,9 +122,10 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
      */
     private void updateHorizontalMovement() {
         // Accelerate toward target
-        // ROM: move.w objoff_30(a0),d0 / cmp.w x_pos(a0),d0 / bge.s + / neg.w d1
+        // ROM: move.w objoff_30(a0),d0 / cmp.w x_pos(a0),d0 / bhi.s + / neg.w d1.
+        // Equality accelerates negative; otherwise ObjD4 drifts one phase ahead at each crossing.
         int accel = ACCELERATION;
-        if (targetX < x) {
+        if (targetX <= x) {
             accel = -accel;
         }
         xVel += accel;
@@ -143,9 +144,9 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
      * ROM: loc_2B7E0 - Accelerate toward target Y, apply velocity to position.
      */
     private void updateVerticalMovement() {
-        // Accelerate toward target
+        // Same `bhi.s` equality-negative rule as ObjD4_Horizontal (s2.asm:58375-58384).
         int accel = ACCELERATION;
-        if (targetY < y) {
+        if (targetY <= y) {
             accel = -accel;
         }
         yVel += accel;
@@ -175,6 +176,27 @@ public class CNZBigBlockObjectInstance extends BoxObjectInstance
         // No offset needed: getX()/getY() already return the current oscillating position,
         // so the collision anchor is already correct without additional displacement.
         return new SolidObjectParams(HALF_WIDTH, AIR_HALF_HEIGHT, GROUND_HALF_HEIGHT, 0, 0);
+    }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        // ObjD4_Main passes objoff_30, the saved target/origin X, to MarkObjGone2
+        // after SolidObject (s2.asm:58380-58388). The oscillating x_pos can leave
+        // the object-load band while the origin is still in range; unloading on the
+        // current X incorrectly leaves the spawn dormant until the cursor re-enters.
+        return targetX;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        // ObjD4_Init sets width_pixels to $20 (s2.asm:58321), and the shared
+        // solid-contact render gate uses this footprint as the ROM render flag proxy.
+        return 0x20;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 0x20;
     }
 
     @Override

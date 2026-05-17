@@ -12,6 +12,7 @@ import com.openggf.level.objects.*;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Tails;
 
 import java.util.HashMap;
 import java.util.List;
@@ -139,6 +140,14 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         return isDiagonal() ? DIAGONAL_BASE_VELOCITY : VERTICAL_BASE_VELOCITY;
     }
 
+    private int getVerticalPlayerYOffset(AbstractPlayableSprite player) {
+        return VERTICAL_PLAYER_Y_OFFSET;
+    }
+
+    private boolean isTails(AbstractPlayableSprite player) {
+        return player instanceof Tails;
+    }
+
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -194,18 +203,22 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         player.setPinballMode(true);
 
         // Snap player to center of spring (use setCentreX/Y for ROM-compatible center coords)
-        short targetX, targetY;
         if (isDiagonal()) {
             // ROM: ALWAYS adds 0x13 to X (player positioned to the RIGHT of head)
             // H-flip only affects visual rendering, not player positioning
-            targetX = (short) (currentSpriteX + DIAGONAL_PLAYER_X_OFFSET);
-            targetY = (short) (currentSpriteY - DIAGONAL_PLAYER_Y_OFFSET);
+            short targetX = (short) (currentSpriteX + DIAGONAL_PLAYER_X_OFFSET);
+            short targetY = (short) (currentSpriteY - DIAGONAL_PLAYER_Y_OFFSET);
+            // ROM writes only x_pos/y_pos here; the low-word subpixel fractions
+            // are left intact (s2.asm:57711-57714).
+            player.setCentreXPreserveSubpixel(targetX);
+            player.setCentreYPreserveSubpixel(targetY);
         } else {
-            targetX = (short) currentSpriteX;
-            targetY = (short) (currentSpriteY - VERTICAL_PLAYER_Y_OFFSET);
+            // Vertical Obj85 capture only writes x_pos immediately. The y_pos
+            // snap is in loc_2ADFE and does not run until the next object call
+            // after objoff_36 has already become non-zero (s2.asm:57531,
+            // 57579-57583).
+            player.setCentreXPreserveSubpixel((short) currentSpriteX);
         }
-        player.setCentreX(targetX);
-        player.setCentreY(targetY);
 
         // Clear velocities
         player.setXSpeed((short) 0);
@@ -218,9 +231,16 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         //      move.b #7,x_radius(a1)
         //      move.b #AniIDSonAni_Roll,anim(a1)
         boolean wasRolling = player.getRolling();
+        if (!isDiagonal() && isTails(player) && !wasRolling) {
+            player.setCentreYPreserveSubpixel((short) (player.getCentreY() - 1));
+        }
         player.setRolling(true);
         if (!wasRolling) {
-            player.setY((short) (player.getY() + player.getRollHeightAdjustment()));
+            // Obj85 writes the rolling flag/radii directly without changing
+            // y_pos (s2.asm:57535-57538, 57715-57718). The engine's height
+            // change is top-left based, so move by the radius delta only to
+            // keep the ROM centre coordinate stable.
+            player.setY((short) (player.getY() + (player.getRollHeightAdjustment() / 2)));
         }
         // Explicitly set roll animation (ROM: move.b #AniIDSonAni_Roll,anim(a1))
         player.setAnimationId(Sonic2AnimationIds.ROLL);
@@ -522,6 +542,58 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity playerEntity) {
+        if (!(playerEntity instanceof AbstractPlayableSprite player)) {
+            return false;
+        }
+        PlayerState ps = playerStates.get(player);
+        // ROM Obj85 capture keeps Status_OnObj / standing-bit set while its
+        // routine owns x_pos/y_pos writes under obj_control=$81
+        // (s2.asm:57520-57545, 57684-57711). Generic solid contacts must stay
+        // suppressed so they do not fight the object-managed positioning.
+        return ps != null && ps.state != STATE_EMPTY;
+    }
+
+    @Override
+    public Integer getObjectManagedRideCentreY(PlayableEntity playerEntity, int objectY, SolidObjectParams params) {
+        if (isDiagonal() || !(playerEntity instanceof AbstractPlayableSprite player)) {
+            return null;
+        }
+        return objectY + params.offsetY() - getVerticalPlayerYOffset(player);
+    }
+
+    @Override
+    public int getTopLandingSnapAdjustment(PlayableEntity playerEntity, int solidTopYRadius) {
+        if (isDiagonal()
+                || spawn.subtype() != 0
+                || !(playerEntity instanceof AbstractPlayableSprite player)
+                || player.getYSpeed() < 0) {
+            return 0;
+        }
+        // S2 Obj85 vertical launcher calls SolidObject_Always before its
+        // capture code writes rolling/y_radius=$E (s2.asm:57520-57538).
+        // Keep the contact window on the current radius, then apply only the
+        // lift ROM expresses for this object:
+        // - Sonic rolling->standing needs the full radius delta.
+        // - Tails standing capture still lands one pixel above the generic
+        //   engine top snap.
+        // - rolling recapture with no radius delta still needs the one-pixel
+        //   lift used by this helper's top-landing path.
+        int radiusDelta = solidTopYRadius - player.getYRadius();
+        if (radiusDelta > 1) {
+            return radiusDelta;
+        }
+        return radiusDelta == 0 ? 1 : 0;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj85 captures both players through SolidObject_Always_SingleCharacter
+        // (s2.asm:57531-57540, 57688-57700), not the gated SolidObject path.
+        return true;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         // ROM values from disassembly:
         // Vertical: halfWidth=0x23(35), halfHeightTop=0x20(32), halfHeightBottom=0x1D(29)
@@ -536,6 +608,17 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public String traceDebugDetails() {
+        return String.format("sub=%02X comp=%02X head=%04X,%04X base=%04X,%04X",
+                spawn.subtype() & 0xFF,
+                compression & 0xFFFF,
+                currentSpriteX & 0xFFFF,
+                currentSpriteY & 0xFFFF,
+                baseX & 0xFFFF,
+                baseY & 0xFFFF);
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         Camera camera = services().camera();
@@ -543,6 +626,13 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // ROM: move.b #0,objoff_3A(a0) - clear compression-processed flag at start of update
         // This allows ONE compression increment per frame across all players
         compressionProcessedThisFrame = false;
+
+        // ROM Obj85 computes x_pos/y_pos from the previous objoff_38 value at
+        // the start of the routine, then processes compression. loc_2AFFE /
+        // loc_2ADFE writes the player position from that already-computed head
+        // position, so a compression increment affects position on the next
+        // frame, not the current frame (s2.asm:57490-57530, 57630-57686).
+        updateSpringPosition();
 
         // Process all tracked players (supports two-player mode)
         // ROM uses objoff_36 for P1 and objoff_37 for P2
@@ -577,25 +667,19 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
             }
         }
 
-        // Update spring position based on current compression
-        // This must happen after handleCompression/decay so player position matches spring
-        updateSpringPosition();
-
         // Update position of all players on the spring
         for (Map.Entry<AbstractPlayableSprite, PlayerState> entry : playerStates.entrySet()) {
             AbstractPlayableSprite p = entry.getKey();
             PlayerState ps = entry.getValue();
             if (ps.state != STATE_EMPTY) {
-                short oldX = p.getX();
-                short oldY = p.getY();
                 if (isDiagonal()) {
                     // ROM: ALWAYS adds 0x13 to X (player positioned to the RIGHT of head)
                     // H-flip only affects visual rendering, not player positioning
-                    p.setCentreX((short) (currentSpriteX + DIAGONAL_PLAYER_X_OFFSET));
-                    p.setCentreY((short) (currentSpriteY - DIAGONAL_PLAYER_Y_OFFSET));
+                    p.setCentreXPreserveSubpixel((short) (currentSpriteX + DIAGONAL_PLAYER_X_OFFSET));
+                    p.setCentreYPreserveSubpixel((short) (currentSpriteY - DIAGONAL_PLAYER_Y_OFFSET));
                 } else {
                     // ROM: vertical spring only updates Y while standing (loc_2ADFE)
-                    p.setCentreY((short) (currentSpriteY - VERTICAL_PLAYER_Y_OFFSET));
+                    p.setCentreYPreserveSubpixel((short) (currentSpriteY - getVerticalPlayerYOffset(p)));
                 }
             }
         }
