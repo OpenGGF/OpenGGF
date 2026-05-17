@@ -129,6 +129,10 @@ latest architectural review merge tightens rewind registry ownership,
 trace-replay comparison guardrails, object construction boundaries, graphics
 runtime rebinding, and MGZ scroll-event state routing through shared
 `MgzZoneRuntimeState` instead of direct scroll-handler mutation.
+The latest S2 trace-frontier merge advances the Sky Chase level-select replay
+through the Tornado/Turtloid route by tightening SCZ object spawning, Tornado
+ride input timing, Turtloid projectile placement, and object hurt/platform
+landing parity.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?
