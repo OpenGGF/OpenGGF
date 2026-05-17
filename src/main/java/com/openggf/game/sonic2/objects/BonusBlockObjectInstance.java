@@ -35,7 +35,7 @@ import java.util.List;
  *   <tr><td>Object ID</td><td>0xD8</td><td>ObjPtr_BonusBlock</td></tr>
  *   <tr><td>Bounce Velocity</td><td>$700 (1792)</td><td>line 59653</td></tr>
  *   <tr><td>Collision Flags</td><td>$D7</td><td>line 59541</td></tr>
- *   <tr><td>Collision Box</td><td>12x24 pixels</td><td>Touch_Sizes[0x17]</td></tr>
+ *   <tr><td>Collision Box</td><td>8x8 pixel radii</td><td>Touch_Sizes[0x17]</td></tr>
  *   <tr><td>width_pixels</td><td>$10 (16 px)</td><td>line 59539</td></tr>
  *   <tr><td>Sound</td><td>SndID_BonusBumper (0xD8)</td><td>line 59667</td></tr>
  *   <tr><td>Max Hits</td><td>3</td><td>line 59681</td></tr>
@@ -89,18 +89,20 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance {
     private static final int BOUNCE_VELOCITY = 0x700;
 
     /**
-     * Collision box width = 12 pixels.
+     * Collision half-width = 8 pixels.
      * <p>
-     * ROM Reference: Touch_Sizes[0x17] at s2.asm line 84574
+     * ROM Reference: collision_flags=$D7 selects Touch_Sizes[0x17] at
+     * docs/s2disasm/s2.asm:59570 and docs/s2disasm/s2.asm:84623.
      */
-    private static final int COLLISION_WIDTH = 12;
+    private static final int COLLISION_RADIUS_X = 8;
 
     /**
-     * Collision box height = 24 pixels.
+     * Collision half-height = 8 pixels.
      * <p>
-     * ROM Reference: Touch_Sizes[0x17] at s2.asm line 84574
+     * ROM Reference: collision_flags=$D7 selects Touch_Sizes[0x17] at
+     * docs/s2disasm/s2.asm:59570 and docs/s2disasm/s2.asm:84623.
      */
-    private static final int COLLISION_HEIGHT = 24;
+    private static final int COLLISION_RADIUS_Y = 8;
 
     /**
      * Maximum hits before block is destroyed.
@@ -242,21 +244,53 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance {
         }
     }
 
-    /**
-     * Check collision using player center position.
-     * <p>
-     * Note: Player getX()/getY() returns top-left corner, so we use getCentreX()/getCentreY()
-     * to compare with the bonus block's center position (spawn.x(), spawn.y()).
-     */
     private boolean checkCollision(AbstractPlayableSprite player) {
-        int dx = Math.abs(player.getCentreX() - spawn.x());
-        int dy = Math.abs(player.getCentreY() - spawn.y());
+        return overlapsRomTouchBox(player.getCentreX(), player.getCentreY(), player.getYRadius(),
+                spawn.x(), spawn.y(), COLLISION_RADIUS_X, COLLISION_RADIUS_Y);
+    }
 
-        int playerHalfWidth = 8; // Approximate
-        int playerHalfHeight = player.getYRadius();
+    /**
+     * S2 TouchResponse rectangle overlap used by ObjD8's SPECIAL collision flag.
+     * <p>
+     * ROM references: ObjD8 sets {@code collision_flags=$D7} (docs/s2disasm/s2.asm:59570);
+     * {@code Touch_Sizes[$17]} is {@code 8,8} radii (docs/s2disasm/s2.asm:84623);
+     * {@code Touch_Boss}/SPECIAL checks use {@code x_pos-8}, {@code y_pos-(y_radius-3)},
+     * width {@code $10}, and doubled height before comparing against object radii
+     * (docs/s2disasm/s2.asm:84658-84706).
+     */
+    static boolean overlapsRomTouchBox(int playerCentreX, int playerCentreY, int playerYRadius,
+            int objectCentreX, int objectCentreY, int objectRadiusX, int objectRadiusY) {
+        int playerX = playerCentreX - 8;
+        int baseYRadius = Math.max(1, playerYRadius - 3);
+        int playerY = playerCentreY - baseYRadius;
+        int playerHeight = baseYRadius * 2;
+        return overlapsRomTouchBox(playerX, playerY, playerHeight,
+                objectCentreX, objectCentreY, objectRadiusX, objectRadiusY, 0x10);
+    }
 
-        return dx < (COLLISION_WIDTH / 2 + playerHalfWidth) &&
-               dy < (COLLISION_HEIGHT / 2 + playerHalfHeight);
+    private static boolean overlapsRomTouchBox(int playerX, int playerY, int playerHeight,
+            int objectCentreX, int objectCentreY, int objectRadiusX, int objectRadiusY, int playerWidth) {
+        int dx = objectCentreX - objectRadiusX - playerX;
+        if (dx < 0) {
+            int sum = (dx & 0xFFFF) + ((objectRadiusX * 2) & 0xFFFF);
+            if (sum <= 0xFFFF) {
+                return false;
+            }
+        } else if (dx > playerWidth) {
+            return false;
+        }
+
+        int dy = objectCentreY - objectRadiusY - playerY;
+        if (dy < 0) {
+            int sum = (dy & 0xFFFF) + ((objectRadiusY * 2) & 0xFFFF);
+            if (sum <= 0xFFFF) {
+                return false;
+            }
+        } else if (dy > playerHeight) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -378,10 +412,12 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance {
                 break;
         }
 
-        // Common state changes (ROM: loc_2C806, lines 59683-59687)
+        // Common state changes (ROM: loc_2C806, docs/s2disasm/s2.asm:59687-59691).
+        // ObjD8 does not clear inertia; preserve gSpeed after the bounce.
         player.setAir(true);
+        player.setRollingJump(false);
+        player.setJumping(false);
         player.setPushing(false);
-        player.setGSpeed((short) 0);
     }
 
     /**

@@ -1246,6 +1246,41 @@ gate to a `SolidObject_Always` caller).
 
 ---
 
+## P28 -- SPECIAL touch objects use Touch_Sizes radii and object-specific bounce tails
+
+**Symptom.** A SPECIAL object bounces or triggers several frames too early, or
+the immediate post-bounce physics fields differ even though the written
+velocity matches ROM. In CNZ, ObjD8 applied `y_vel=-$700` at frame 6276 while
+ROM was still falling, then later zeroed `inertia` even though ROM preserved
+`$040E`.
+
+**Root cause.** S2 `collision_flags` low six bits index the `Touch_Sizes` table,
+whose bytes are X/Y radii, not full width/height. ObjD8 sets
+`collision_flags=$D7`, selecting `Touch_Sizes[$17] = 8,8`; replacing this with
+an approximate center-distance box changes the trigger frame. Also read the
+object's common bounce tail literally: ObjD8's `loc_2C806` sets in-air and
+clears roll-jump/pushing/jumping, but does not clear `inertia`.
+
+**What to check.**
+1. Decode `collision_flags & $3F` and use the `Touch_Sizes` radii before
+   writing any manual SPECIAL-object overlap.
+2. Prefer the shared touch-response rectangle math. If an object must poll its
+   own `collision_property` or cooldown bytes, copy the ROM rectangle shape
+   locally rather than inventing a center-distance approximation.
+3. Do not assume all object rebounds clear `inertia`. Check for an explicit
+   `clr.w inertia(a1)` in the object routine before calling `setGSpeed(0)`.
+
+**ROM citation.** `docs/s2disasm/s2.asm:59570` (ObjD8
+`collision_flags=$D7`), `docs/s2disasm/s2.asm:84623` (`Touch_Sizes[$17] =
+8,8`), and `docs/s2disasm/s2.asm:59687-59692` (ObjD8 bounce tail does not
+clear `inertia`).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 6276 early ObjD8 bounce and
+frame 6281 inertia mismatch; fixing ObjD8 touch radii and preserving inertia
+advanced the CNZ frontier to frame 6815).
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
