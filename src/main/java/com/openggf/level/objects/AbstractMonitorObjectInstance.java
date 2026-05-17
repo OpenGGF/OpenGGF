@@ -59,9 +59,11 @@ public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstan
         iconWaitFrames = 0;
         effectApplied = false;
         effectTarget = player;
-        // ROM parity: the spawned PowerUp object spends one frame in Pow_Main
-        // before Pow_Move starts advancing the icon upward.
-        iconPendingInit = true;
+        // ROM Pow_Main falls through to Pow_Move on the spawn frame
+        // (s2.asm:25571-25622, s1: 2E Monitor Content Power-Up.asm:17-39),
+        // so the first updateIcon() call runs the first rising iteration
+        // rather than skipping a frame.
+        iconPendingInit = false;
     }
 
     /**
@@ -83,15 +85,18 @@ public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstan
             // Rising phase: apply velocity and deceleration
             iconSubY += iconVelY;
             iconVelY += ICON_RISE_ACCEL;
-            if (iconVelY >= 0) {
-                iconVelY = 0;
-                iconWaitFrames = ICON_WAIT_FRAMES;
-                if (!effectApplied && effectTarget != null) {
-                    applyPowerup(effectTarget);
-                    effectApplied = true;
-                    effectTarget = null;
-                }
-            }
+            return;
+        }
+        if (!effectApplied && effectTarget != null) {
+            // ROM tests y_vel before moving the monitor icon. When the
+            // previous rise step adds $18 up to zero, the effect branch waits
+            // until the next object update (S2 Obj2E_Raise, s2.asm:25618-25631;
+            // S1 Pow_Move, 2E Monitor Content Power-Up.asm:35-43).
+            iconVelY = 0;
+            iconWaitFrames = ICON_WAIT_FRAMES;
+            applyPowerup(effectTarget);
+            effectApplied = true;
+            effectTarget = null;
             return;
         }
 
