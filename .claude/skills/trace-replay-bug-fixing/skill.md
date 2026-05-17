@@ -230,6 +230,20 @@ Do not leave gameplay-affecting scroll logic hidden in render-only parallax upda
 
 Embedded `SolidObject` calls belong where the ROM calls them inside the object's routine, not automatically at the end of every engine object update. For objects that move, branch, then call solid handling mid-routine, preserve that placement so player/sidekick carry and release observe the same pre- or post-motion coordinates as the ROM.
 
+For death and dead-fall divergences, verify the exact ROM motion helper and
+velocity ordering before changing generic death code. S2 `Obj01_Dead` /
+`Obj02_Dead` call `ObjectMoveAndFall`, which loads old `y_vel` for the 16:16
+position add, then stores `y_vel += $38` for the next frame
+(`docs/s2disasm/s2.asm:37901-37911,40736-40738,29967-29981`). S1 hurt/death
+and S3K Tails death paths follow the same old-velocity-for-position pattern
+via `SpeedToPos` / `MoveSprite_TestGravity`
+(`docs/s1disasm/_incObj/01 Sonic.asm:1792-1795`,
+`docs/skdisasm/sonic3k.asm:29280-29285,36068-36083`). If the engine moves with
+post-gravity velocity, subpixel carry will be off by one or more pixels. For
+S2 sidekick generic-dead frames, remember that `Obj02_Dead` can branch to
+`TailsCPU_Despawn` when `y_pos > Tails_Max_Y_pos + $100` and then still run the
+same frame's `ObjectMoveAndFall` from the marker (`docs/s2disasm/s2.asm:40736-40759,39043-39052`).
+
 ## Trace Regeneration
 
 When you need new diagnostic data, regenerate the trace. The proven Windows PowerShell pattern:

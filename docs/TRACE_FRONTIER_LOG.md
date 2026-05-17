@@ -212,3 +212,26 @@ grounded Obj85 preserved-roll handoff: stale held jump with no fresh delayed
 press is cleared, while the later fresh delayed press is allowed through. The
 next blocker is a one-pixel Tails Y mismatch after the later airborne/dead
 routine handoff around frame 5399; ROM has `y=$0329`, engine has `y=$032A`.
+
+## 2026-05-17 - S2 CNZ dead-fall ObjectMoveAndFall ordering
+
+- Branch: `feature/ai-trace-frontier-continuation`
+- Worktree state: dirty with shared death-movement ordering and S2 deferred generic-dead despawn fixes staged next
+- Command: `mvn -q -Dmse=off '-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace' test -DfailIfNoTests=false`
+- Result: fail, 200 errors
+- First error: frame 5951, `tails_y` (`expected=0x02B1`, `actual=0x02B0`)
+
+Frontier moved from frame 5399 through the S2 Tails dead-fall marker handoff
+to frame 5951. The frame 5399 mismatch came from the shared generic death
+path moving with the post-gravity `y_vel`; ROM dead/fall routines load the old
+velocity for position, then store the gravity-incremented velocity for the
+next frame (`docs/s2disasm/s2.asm:37901-37911,40736-40738,29967-29981`;
+S1 `docs/s1disasm/_incObj/01 Sonic.asm:1792-1795`; S3K
+`docs/skdisasm/sonic3k.asm:29280-29285,36068-36083`). The frame 5544 mismatch
+was the same S2 `Obj02_Dead` deferred-despawn rule reached through the generic
+`dead` flag instead of the sidekick CPU `DEAD_FALLING` state: ROM checks
+`Tails_Max_Y_pos + $100`, branches to `TailsCPU_Despawn`, then still runs that
+frame's `ObjectMoveAndFall` (`docs/s2disasm/s2.asm:40736-40759,39043-39052`).
+The new blocker is a Tails air+rolling transition near an Obj74 invisible
+block/elevator area: ROM sets Tails airborne+rolling with `y_vel=-$680`, while
+the engine leaves Tails grounded at `y=$02B0`.

@@ -409,8 +409,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		if (sprite.getDead()) {
-			applyDeathMovement();
-			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			SidekickCpuController cpu = sprite.getCpuController();
+			if (cpu != null && cpu.applyDeferredGenericDeadDespawnIfCrossed()) {
+				sprite.updateSensors(originalX, originalY);
+				applyScreenYWrapValueAfterControl();
+				return;
+			}
+			short oldYSpeed = applyDeathMovement();
+			sprite.move(sprite.getXSpeed(), oldYSpeed);
 			sprite.updateSensors(originalX, originalY);
 			applyScreenYWrapValueAfterControl();
 			return;
@@ -2951,7 +2957,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
         }
     }
 
-	private void applyDeathMovement() {
+	private short applyDeathMovement() {
+		short oldYSpeed = sprite.getYSpeed();
 		applyGravity();  // Gated on isObjectControlled(); a controlled sprite never enters the death routine anyway but keep gates consistent
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
@@ -2971,6 +2978,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				levelManager().requestRespawn();
 			}
 		}
+		return oldYSpeed;
 	}
 
 	/**
