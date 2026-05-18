@@ -11,10 +11,16 @@ abstract class AbstractS2LevelSelectTraceReplayTest extends AbstractTraceReplayT
 
     private final String route;
     private final int zone;
+    private final int act;
 
     AbstractS2LevelSelectTraceReplayTest(String route, int zone) {
+        this(route, zone, 0);
+    }
+
+    AbstractS2LevelSelectTraceReplayTest(String route, int zone, int act) {
         this.route = route;
         this.zone = zone;
+        this.act = act;
     }
 
     @Override
@@ -29,7 +35,7 @@ abstract class AbstractS2LevelSelectTraceReplayTest extends AbstractTraceReplayT
 
     @Override
     protected int act() {
-        return 0;
+        return act;
     }
 
     @Override

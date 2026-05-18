@@ -4,6 +4,114 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-18 - Full trace replay frontier sweep after S2 act expansion
+
+- Branch: `develop`
+- Worktree state: dirty with S2 act fixture/test expansion and trace recorder updates
+- Command: `mvn -q -Dmse=off '-Dtest=*TraceReplay' test -DfailIfNoTests=false`
+- Result: fail, 51 trace replay/invariant/policy methods inspected, 25 failures
+
+This snapshot is from the current workspace after adding Sonic 2 act-specific
+level-select replay tests and regenerated fixtures. Passing rows reached their
+full configured trace/assertion window. Failing rows record the first mismatched
+frame or first assertion failure.
+
+| Test | Status | Errors | Warnings | Frontier / first error |
+| --- | --- | ---: | ---: | --- |
+| `TestTraceReplayInvariantGuard.concreteTraceReplayTestsUseSharedReplayBaseClass` | pass | 0 | 0 | full trace |
+| `TestTraceReplayInvariantGuard.defaultTraceReplayToleranceIsStrict` | pass | 0 | 0 | full trace |
+| `TestTraceReplayInvariantGuard.traceParserDataAndCatalogStayIndependentOfEngineRuntime` | pass | 0 | 0 | full trace |
+| `TestTraceReplayInvariantGuard.traceReplayCodeDoesNotWriteRecordedStateBackIntoEngine` | pass | 0 | 0 | full trace |
+| `TestTraceReplayStartPositionPolicy.ordinaryS2TraceDoesNotUseTornadoRideStart` | pass | 0 | 0 | full trace |
+| `TestTraceReplayStartPositionPolicy.s2SczAndWfzLevelSelectUseNativeTornadoRideStart` | pass | 0 | 0 | full trace |
+| `TestTraceReplayStartPositionPolicy.s3kEndToEndTracePreLevelPrefixAdvancesMovieWithoutTickingLevel` | fail | 1 | 0 | frame 289 classified as `VBLANK_ONLY` instead of `FULL_LEVEL_FRAME` |
+| `TestTraceReplayStartPositionPolicy.s3kEndToEndTraceStartsAtFrameZeroWithoutSkippingIntro` | pass | 0 | 0 | full trace |
+| `TestTraceReplayStartPositionPolicy.s3kEndToEndTraceUsesLiveIntroSpawnInsteadOfRecordedFrameZeroPosition` | pass | 0 | 0 | full trace |
+| `TestTraceReplayStartPositionPolicy.s3kGameplayTraceSeedsFrameZeroAfterSidekickTitleCardPrelude` | pass | 0 | 0 | full trace |
+| `TestTraceReplayStartPositionPolicy.s3kGameplayTraceStillDoesNotSeedFrameZeroWhenObjectSnapshotsExist` | pass | 0 | 0 | full trace |
+| `TestTraceReplayStartPositionPolicy.s3kMgzGameplayTraceDrivesFrameZeroWhenSonicAlreadyMoved` | fail | 1 | 0 | S3K MGZ sidekick prelude assertion |
+| `TestTraceReplayStartPositionPolicy.vblankOnlyRowsAdvanceMovieButDoNotCompareGameplayState` | fail | 1 | 0 | `FULL_LEVEL_FRAME` strict comparison assertion |
+| `TestS1Credits00Ghz1TraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS1Credits01Mz2TraceReplay.replayMatchesTrace` | fail | 6 | 0 | frame 493, `y` |
+| `TestS1Credits02Syz3TraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS1Credits03Lz3TraceReplay.replayMatchesTrace` | fail | 6 | 0 | frame 221, `y` |
+| `TestS1Credits04Slz3TraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS1Credits05Sbz1TraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS1Credits06Sbz2TraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS1Credits07Ghz1bTraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS1Ghz1TraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS1Mz1TraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS2ArzLevelSelectTraceReplay.replayMatchesTrace` | fail | 813 | 0 | frame 304, `tails_x_speed` |
+| `TestS2Arz2LevelSelectTraceReplay.replayMatchesTrace` | fail | 2129 | 0 | frame 225, `y` |
+| `TestS2CnzLevelSelectTraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS2Cnz2LevelSelectTraceReplay.replayMatchesTrace` | fail | 1262 | 0 | frame 0, `air` |
+| `TestS2CpzLevelSelectTraceReplay.replayMatchesTrace` | fail | 434 | 0 | frame 844, `x_speed` |
+| `TestS2Cpz2LevelSelectTraceReplay.replayMatchesTrace` | fail | 1646 | 0 | frame 962, `y` |
+| `TestS2DezEndingLevelSelectTraceReplay.replayMatchesTrace` | fail | 174 | 0 | frame 536, `rolling` |
+| `TestS2Ehz1TraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS2HtzLevelSelectTraceReplay.replayMatchesTrace` | fail | 398 | 0 | frame 5511, `x` |
+| `TestS2Htz2LevelSelectTraceReplay.replayMatchesTrace` | fail | 821 | 0 | frame 762, `tails_y` |
+| `TestS2MczLevelSelectTraceReplay.replayMatchesTrace` | fail | 452 | 0 | frame 1085, `y` |
+| `TestS2Mcz2LevelSelectTraceReplay.replayMatchesTrace` | fail | 936 | 0 | frame 198, `y_speed` |
+| `TestS2MtzLevelSelectTraceReplay.replayMatchesTrace` | fail | 964 | 0 | frame 281, `y` |
+| `TestS2Mtz2LevelSelectTraceReplay.replayMatchesTrace` | fail | 2335 | 0 | frame 221, `y` |
+| `TestS2Mtz3LevelSelectTraceReplay.replayMatchesTrace` | fail | 2414 | 0 | frame 298, `air` |
+| `TestS2OozLevelSelectTraceReplay.replayMatchesTrace` | fail | 1117 | 0 | frame 509, `y_speed` |
+| `TestS2Ooz2LevelSelectTraceReplay.replayMatchesTrace` | fail | 1329 | 0 | frame 301, `tails_y_speed` |
+| `TestS2SczLevelSelectTraceReplay.replayMatchesTrace` | pass | 0 | 0 | full trace |
+| `TestS2WfzLevelSelectTraceReplay.replayMatchesTrace` | fail | 589 | 0 | frame 4719, `x_speed` |
+| `TestS3kAizTraceReplay.cameraMatchesTraceThroughFirstDelayedScrollBurst` | pass | 0 | 0 | full trace |
+| `TestS3kAizTraceReplay.playerMatchesTraceThroughFirstGiantRideVineWindow` | fail | 1 | 0 | frame 2876, assertion mismatch |
+| `TestS3kAizTraceReplay.replayMatchesTrace` | fail | 1738 | 22 | frame 1057, `tails_x` |
+| `TestS3kAizTraceReplay.rhinobotDoesNotDespawnOneFrameBeforeRomContact` | pass | 0 | 0 | full trace |
+| `TestS3kCnzTraceReplay.replayMatchesTrace` | fail | 3876 | 17 | frame 4790, `tails_x` |
+| `TestS3kCnzTraceReplay.traceReplayAppliesDelayedRightInputToTailsOnFrame123` | pass | 0 | 0 | full trace |
+| `TestS3kCnzTraceReplay.traceReplayAppliesFirstCarryRightPulseOnFrame31` | pass | 0 | 0 | full trace |
+| `TestS3kCnzTraceReplay.traceReplayAppliesFirstMainJumpOnFrame142` | pass | 0 | 0 | full trace |
+| `TestS3kCnzTraceReplay.traceReplayDoesNotPulseCarryRightOnFrame1` | pass | 0 | 0 | full trace |
+| `TestS3kCnzTraceReplay.traceReplayHorizontalSpringLandingHandoffMatchesFrame3649` | pass | 0 | 0 | full trace |
+| `TestS3kCnzTraceReplay.traceReplayS3kRightWallPathRunsCeilingSeparationOnFrame5236` | pass | 0 | 0 | full trace |
+| `TestS3kMgzTraceReplay.replayMatchesTrace` | fail | 2625 | 60 | frame 1538, `y` |
+
+## 2026-05-18 - S2 level-select act coverage expansion
+
+- Branch: `develop`
+- Worktree state: dirty with generated S2 act fixtures and replay test additions
+- Command: `mvn -Dmse=off '-Dtest=TestS2TraceRouteAssertions' test`
+- Result: pass, 22 tests
+
+S2 level-select replay coverage now has fixtures and concrete replay test
+classes for every main Sonic 2 zone/act except EHZ Act 2. Multi-act BK2s are
+split into independent fixtures using `OGGF_TRACE_GAMEPLAY_SEGMENT`, so each
+fixture keeps its own `bk2_frame_offset` and contiguous gameplay input window.
+DEZ uses the existing `dez_ending` fixture, which contains Death Egg gameplay
+and the ending sequence. MTZ Act 3 uses ROM zone id `0x05` with raw act byte
+`0`, and the recorder now emits metadata act 3 while retaining the raw ROM
+zone/act in aux diagnostics.
+
+| Fixture | Status | Errors | First error |
+| --- | --- | ---: | --- |
+| `TestS2Ehz1TraceReplay` | existing replay test | n/a | not rerun |
+| `TestS2Ehz2TraceReplay` | missing fixture/test | n/a | no BK2/fixture yet |
+| `TestS2CpzLevelSelectTraceReplay` | existing replay test | n/a | not rerun |
+| `TestS2Cpz2LevelSelectTraceReplay` | added fixture/test | n/a | not rerun |
+| `TestS2ArzLevelSelectTraceReplay` | existing replay test | n/a | not rerun |
+| `TestS2Arz2LevelSelectTraceReplay` | added test for existing fixture | n/a | not rerun |
+| `TestS2CnzLevelSelectTraceReplay` | existing replay test | n/a | not rerun |
+| `TestS2Cnz2LevelSelectTraceReplay` | added test for existing fixture | n/a | not rerun |
+| `TestS2HtzLevelSelectTraceReplay` | existing replay test | n/a | not rerun |
+| `TestS2Htz2LevelSelectTraceReplay` | added fixture/test | n/a | not rerun |
+| `TestS2MczLevelSelectTraceReplay` | existing replay test | n/a | not rerun |
+| `TestS2Mcz2LevelSelectTraceReplay` | added fixture/test | n/a | not rerun |
+| `TestS2OozLevelSelectTraceReplay` | existing replay test | n/a | not rerun |
+| `TestS2Ooz2LevelSelectTraceReplay` | added fixture/test | n/a | not rerun |
+| `TestS2MtzLevelSelectTraceReplay` | added fixture/test | n/a | not rerun |
+| `TestS2Mtz2LevelSelectTraceReplay` | added fixture/test | n/a | not rerun |
+| `TestS2Mtz3LevelSelectTraceReplay` | added fixture/test | n/a | not rerun |
+| `TestS2SczLevelSelectTraceReplay` | existing replay test | n/a | not rerun |
+| `TestS2WfzLevelSelectTraceReplay` | existing replay test | n/a | not rerun |
+| `TestS2DezEndingLevelSelectTraceReplay` | added replay test for existing fixture | n/a | not rerun |
+
 ## 2026-05-17 - BizHawk input-indexing fix impact snapshot
 
 - Branch: `feature/ai-trace-frontier-continuation`
@@ -461,3 +569,38 @@ fly-in at frame 8862 with 16 counted offscreen frames, and therefore reaches
 the shared 300-frame normal despawn deadline at frame 9147. The fix is scoped
 to the Tails respawn strategy carry hook; other sidekick strategies and S3K's
 catch-up-flight path keep independent NORMAL despawn timers.
+
+## 2026-05-18 - S2 CNZ2 frame-0 jump-edge bootstrap fix
+
+- Branch: `develop`
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 1193 errors (down from 1262)
+- First error: frame 16, `tails_air` (was frame 0, `air`)
+
+The CNZ2 trace recorded the player holding the jump button (input `0x0010`)
+continuously from the last title-card frame through the first dozen gameplay
+frames. The headless replay fixture skips the title card entirely, so the
+leader's `jumpInputPressedPreviousFrame` / `PlayableSpriteMovement.jumpPrevious`
+edge trackers entered gameplay frame 0 with virgin `false`. When the BK2
+delivered a held jump on frame 0, the engine's edge detector computed
+`(jump && !false) = true` and fired `Sonic_Jump` (`docs/s2disasm/s2.asm:36253-36260`)
+one frame ahead of ROM, perturbing frame-0 `y`, `y_speed`, `air`, `rolling`, and
+cascading to every subsequent row.
+
+Fix: `TraceReplaySessionBootstrap.applyBootstrap` now reads the BK2 input
+mask at the cursor offset `-1` (the last title-card frame the production
+GameLoop would have ticked) and seeds both the sprite-level jump edge
+(`AbstractPlayableSprite.setJumpInputPressed`) and the movement-controller
+edge (`PlayableSpriteMovement.primeJumpPreviousForBootstrap`) accordingly.
+This mirrors ROM's continuously-updated `Ctrl_1_Held` (`s2.asm:701,1361-1387`
+`ReadJoypads` — updated from V-int regardless of `Sonic_ControlsLock`) so the
+engine's edge detector correctly computes a held-not-pressed state.
+
+Cross-game regression: S1 GHZ1, S2 EHZ1, S2 CNZ1 all stayed green. Other
+act-2 traces (MTZ2, ARZ2, MCZ2, MTZ3, OOZ2, HTZ2, CPZ2) start frame 0 with
+no jump held so their frontiers are unchanged.
+
+Next active target: frame 16 `tails_air` on CNZ2. Diagnostic shows Tails CPU
+emitting held jump state but Tails ends up `air+rolling` post-physics. The
+bootstrap history-pos mismatch (`0x0068` ROM vs `0x0019` engine) may be
+causing the 16-frame delayed jump-press lookup to read the wrong slot.

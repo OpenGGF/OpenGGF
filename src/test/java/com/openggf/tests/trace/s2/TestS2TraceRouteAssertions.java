@@ -16,25 +16,36 @@ class TestS2TraceRouteAssertions {
 
     @ParameterizedTest
     @CsvSource({
-            "arz,2,15",
-            "cnz,3,12",
-            "cpz,1,13",
-            "dez_ending,10,14",
-            "htz,4,7",
-            "mcz,5,11",
-            "ooz,6,10",
-            "scz,8,16",
-            "wfz,9,6"
+            "arz,arz,2,15,1",
+            "arz2,arz,2,15,2",
+            "cnz,cnz,3,12,1",
+            "cnz2,cnz,3,12,2",
+            "cpz,cpz,1,13,1",
+            "cpz2,cpz,1,13,2",
+            "dez_ending,dez,10,14,1",
+            "htz,htz,4,7,1",
+            "htz2,htz,4,7,2",
+            "mcz,mcz,5,11,1",
+            "mcz2,mcz,5,11,2",
+            "mtz,mtz,7,4,1",
+            "mtz2,mtz,7,4,2",
+            "mtz3,mtz,7,5,3",
+            "ooz,ooz,6,10,1",
+            "ooz2,ooz,6,10,2",
+            "scz,scz,8,16,1",
+            "wfz,wfz,9,6,1"
     })
     void generatedLevelSelectFixturesHaveRouteMetadata(String route,
+                                                       String zoneSlug,
                                                        int engineZoneId,
-                                                       int romZoneId) throws IOException {
+                                                       int romZoneId,
+                                                       int metadataAct) throws IOException {
         S2TraceRouteAssertions.assertRoute(
                 TraceData.load(Path.of("src/test/resources/traces/s2").resolve(route)),
-                route.replace("_ending", ""),
+                zoneSlug,
                 engineZoneId,
                 romZoneId,
-                1);
+                metadataAct);
     }
 
     @Test

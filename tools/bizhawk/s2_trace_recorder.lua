@@ -54,6 +54,10 @@
 
 -- v9.6-s2 changes: include move_lock in state_snapshot diagnostics and emit
 -- focused snapshots around the current S2 CNZ elevator/input frontier.
+-- v9.7-s2 changes: support selecting later gameplay segments from
+-- level-select BK2s. Those movies can cross from act 1 into act 2, but the
+-- recorder used to finalise at the first non-level transition and therefore
+-- only captured the first controllable segment.
 --
 -- v9.3-s2: traces from this recorder version onward are bootstrap-comparable
 -- against the post-universal-title-card engine (ADR-1, design spec 2026-05-15)
@@ -61,7 +65,7 @@
 -- (see v9.3-s2 change note above for context).
 -- The bootstrap-comparator eligibility is derived from this version string by
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
-local LUA_SCRIPT_VERSION = "9.6-s2"
+local LUA_SCRIPT_VERSION = "9.7-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -76,6 +80,7 @@ local HEADLESS = true
 -- ensures the script finalises and exits.
 local MOVIE_FRAME_SAFETY_MARGIN = 30   -- frames past movie end before auto-exit
 local TRACE_PROFILE = os.getenv("OGGF_S2_TRACE_PROFILE") or "gameplay_unlock"
+local TARGET_GAMEPLAY_SEGMENT = tonumber(os.getenv("OGGF_TRACE_GAMEPLAY_SEGMENT") or "0") or 0
 local BK2_FRAME_COUNT = tonumber(os.getenv("OGGF_BK2_FRAME_COUNT") or "")
 local SOURCE_BK2 = os.getenv("OGGF_BK2_BASENAME") or ""
 
@@ -234,6 +239,9 @@ local OBJECT_PROXIMITY = 160
 
 local started = false
 local finished = false   -- once true, never re-arm
+local skipping_segment = false
+local skipped_segment_zone_name = nil
+local gameplay_segment_index = 0
 local trace_frame = 0
 local bk2_frame_offset = 0
 local start_x = 0
@@ -341,6 +349,13 @@ local function engine_zone_for_rom_zone(rom_zone_id)
     return ROM_ZONE_TO_ENGINE_ZONE[rom_zone_id] or rom_zone_id
 end
 
+local function apparent_act_for(rom_zone_id, actual_act)
+    if rom_zone_id == 0x05 then
+        return actual_act + 2
+    end
+    return actual_act
+end
+
 -- Get ground mode from angle (offset quadrants matching ROM thresholds).
 -- Floor wraps: 0xE0-0xFF and 0x00-0x1F are both mode 0.
 local function angle_to_ground_mode(angle)
@@ -382,6 +397,19 @@ local function emit_checkpoint_once(frame, name, raw_zone_id, engine_zone_id, ac
     write_aux(string.format(
         '{"frame":%d,"event":"checkpoint","name":"%s","actual_zone_id":%d,"engine_zone_id":%d,"actual_act":%d,"apparent_act":%d,"game_mode":%d%s}',
         frame, json_escape(name), raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode, notes_json))
+end
+
+local function emit_current_zone_act_state(frame, game_mode)
+    local raw_zone_id = mainmemory.read_u8(ADDR_ZONE)
+    local engine_zone_id = engine_zone_for_rom_zone(raw_zone_id)
+    local actual_act = mainmemory.read_u8(ADDR_ACT)
+    local apparent_act = apparent_act_for(raw_zone_id, actual_act)
+    emit_zone_act_state(frame, raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode)
+    if actual_act ~= start_act then
+        emit_checkpoint_once(frame,
+            string.format("act_transition_to_%s%d", start_zone_name, apparent_act + 1),
+            raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode, nil)
+    end
 end
 
 local function reset_recording_state()
@@ -440,7 +468,8 @@ local function write_metadata()
     meta_file:write('  "zone": "' .. start_zone_name .. '",\n')
     meta_file:write('  "zone_id": ' .. start_zone_id .. ',\n')
     meta_file:write('  "rom_zone_id": ' .. start_rom_zone_id .. ',\n')
-    meta_file:write('  "act": ' .. (start_act + 1) .. ',\n')
+    meta_file:write('  "act": ' .. (apparent_act_for(start_rom_zone_id, start_act) + 1) .. ',\n')
+    meta_file:write('  "gameplay_segment": ' .. gameplay_segment_index .. ',\n')
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
@@ -913,6 +942,26 @@ local function on_frame_end()
 
     if not started then
         if finished then return end
+        if skipping_segment then
+            if game_mode ~= GAMEMODE_LEVEL then
+                if is_level_gated_reset_aware_profile() and skipped_segment_zone_name == "ehz" then
+                    print("Skipped EHZ debug/menu bootstrap segment without counting it as a route segment.")
+                else
+                    print(string.format("Skipped gameplay segment %d.", gameplay_segment_index))
+                    gameplay_segment_index = gameplay_segment_index + 1
+                end
+                skipped_segment_zone_name = nil
+                skipping_segment = false
+            end
+            return
+        end
+        if HEADLESS and movie.isloaded() and movie.mode() == "FINISHED" then
+            print(string.format(
+                "Movie finished before gameplay segment %d became recordable. Finalising without trace rows.",
+                TARGET_GAMEPLAY_SEGMENT))
+            finished = true
+            return
+        end
         -- Start when: level gameplay active AND player control lock timer is 0.
         -- The control lock timer (move_lock, word at MainCharacter+$2E) is set during the title
         -- card and counts down to 0 when Sonic can first move. Using the player object's
@@ -920,6 +969,15 @@ local function on_frame_end()
         -- which delayed recording if the player was already pressing a direction.
         local ctrl_lock_timer = mainmemory.read_u16_be(PLAYER_BASE + OFF_CTRL_LOCK)
         if game_mode == GAMEMODE_LEVEL and ctrl_lock_timer == 0 then
+            if gameplay_segment_index < TARGET_GAMEPLAY_SEGMENT then
+                print(string.format(
+                    "Skipping gameplay segment %d while seeking target segment %d.",
+                    gameplay_segment_index, TARGET_GAMEPLAY_SEGMENT))
+                local skip_zone_id = mainmemory.read_u8(ADDR_ZONE)
+                skipped_segment_zone_name = ZONE_NAMES[skip_zone_id] or string.format("unknown_%02x", skip_zone_id)
+                skipping_segment = true
+                return
+            end
             started = true
             -- emu.framecount() returns the frame that just completed. Since we
             -- skip the detection frame (return below without recording), frame 0
@@ -946,10 +1004,11 @@ local function on_frame_end()
             write_player_history_snapshot()
             write_tails_cpu_snapshot()
             write_object_snapshots()
-            emit_zone_act_state(0, start_rom_zone_id, start_zone_id, start_act, start_act, game_mode)
-            emit_checkpoint_once(0, "gameplay_start", start_rom_zone_id, start_zone_id, start_act, start_act, game_mode, nil)
-            print(string.format("Trace recording started at BizHawk frame %d, zone %s act %d, pos (%04X, %04X)",
-                bk2_frame_offset, start_zone_name, start_act + 1, start_x, start_y))
+            local start_apparent_act = apparent_act_for(start_rom_zone_id, start_act)
+            emit_zone_act_state(0, start_rom_zone_id, start_zone_id, start_act, start_apparent_act, game_mode)
+            emit_checkpoint_once(0, "gameplay_start", start_rom_zone_id, start_zone_id, start_act, start_apparent_act, game_mode, nil)
+            print(string.format("Trace recording started at BizHawk frame %d, segment %d, zone %s act %d, pos (%04X, %04X)",
+                bk2_frame_offset, gameplay_segment_index, start_zone_name, start_apparent_act + 1, start_x, start_y))
             if movie.isloaded() then
                 print(string.format("Movie length: %d frames", movie.length()))
             end
@@ -999,6 +1058,8 @@ local function on_frame_end()
             return
         end
     end
+
+    emit_current_zone_act_state(trace_frame, game_mode)
 
     -- Primary physics state
     local x = mainmemory.read_u16_be(PLAYER_BASE + OFF_X_POS)
@@ -1172,8 +1233,8 @@ end
 -- The onframeend callback pattern doesn't work because callbacks stop
 -- firing when BizHawk pauses, and client.exit() can kill the process
 -- before file I/O completes.
-print(string.format("S2 Trace Recorder v" .. LUA_SCRIPT_VERSION .. " loaded. Profile=%s. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...",
-    TRACE_PROFILE))
+print(string.format("S2 Trace Recorder v" .. LUA_SCRIPT_VERSION .. " loaded. Profile=%s. TargetSegment=%d. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...",
+    TRACE_PROFILE, TARGET_GAMEPLAY_SEGMENT))
 
 while true do
     on_frame_end()
@@ -1183,11 +1244,18 @@ while true do
     -- the process immediately.
     if finished then
         print("Recording complete. Writing final output...")
-        if physics_file then physics_file:flush() end
-        write_metadata()
+        local recorded_trace = physics_file ~= nil
+        if recorded_trace then
+            physics_file:flush()
+            write_metadata()
+        else
+            print("No gameplay trace rows were recorded.")
+        end
         close_files()
-        print(string.format("Trace finalised: %s act %d, %d frames.",
-            start_zone_name, start_act + 1, trace_frame))
+        if recorded_trace then
+            print(string.format("Trace finalised: %s act %d, %d frames.",
+                start_zone_name, apparent_act_for(start_rom_zone_id, start_act) + 1, trace_frame))
+        end
         if HEADLESS then
             client.exit()
         end

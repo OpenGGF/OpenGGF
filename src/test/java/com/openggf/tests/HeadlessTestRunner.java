@@ -352,6 +352,29 @@ public class HeadlessTestRunner {
     }
 
     /**
+     * Returns the BK2 input mask at the given offset from the current cursor
+     * without advancing the cursor or stepping gameplay. Offset 0 is the next
+     * frame {@link #stepFrameFromRecording} would consume; negative offsets
+     * read prior BK2 frames. Returns -1 when no BK2 movie is loaded or the
+     * requested frame is out of range.
+     */
+    public int peekRecordingInputAt(int offset) {
+        if (bk2Movie == null) {
+            return -1;
+        }
+        int targetIndex = currentBk2Index + offset;
+        if (targetIndex < 0 || targetIndex >= bk2Movie.getFrameCount()) {
+            return -1;
+        }
+        Bk2FrameInput frameInput = bk2Movie.getFrame(targetIndex);
+        int mask = frameInput.p1InputMask();
+        if (frameInput.p1ActionMask() != 0) {
+            mask |= AbstractPlayableSprite.INPUT_JUMP;
+        }
+        return mask;
+    }
+
+    /**
      * Returns the number of BK2 recording frames remaining.
      *
      * @return Remaining frames, or 0 if no movie is loaded
