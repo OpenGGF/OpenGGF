@@ -36,6 +36,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 import java.io.IOException;
 import java.util.List;
@@ -119,6 +120,12 @@ public interface ObjectServices {
 
     /** Returns the sprite manager for player sprite access. */
     SpriteManager spriteManager();
+
+    /**
+     * Returns the active collision system for object-local ROM handoffs that
+     * must reuse terrain/wall probes.
+     */
+    CollisionSystem collisionSystem();
 
     // --- Rendering ---
 

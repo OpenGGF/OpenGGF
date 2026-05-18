@@ -69,6 +69,22 @@ public interface TraceExecutionModel {
         if (vblankCounterAdvanced(previous, current)) {
             return TraceExecutionPhase.VBLANK_ONLY;
         }
+        // gameplay_frame_counter is the authoritative signal for "game logic
+        // ticked" (S1: v_framecount in WaitForVBla, S2: Level_frame_counter in
+        // WaitForVint). When gfc didn't advance, Level_MainLoop did not
+        // complete an iteration even though the recorder ran -- this is a
+        // lag frame and the engine must skip physics.
+        //
+        // We reach this branch when both gameplay_frame_counter and
+        // vblank_counter are unchanged. The recorder for v9.x S1/S2 traces
+        // writes the high word of v_vbla_count/Vint_runcount (always 0 for
+        // sub-65k frame counts), so vblank deltas cannot distinguish lag
+        // from real frames in checked-in S1/S2 traces. gameplay_frame_counter
+        // -- read as a 16-bit word from the correct address -- is reliable.
+        // Treat a gfc plateau as a lag frame regardless of vblank state.
+        if (current.gameplayFrameCounter() >= 0 && previous.gameplayFrameCounter() >= 0) {
+            return TraceExecutionPhase.VBLANK_ONLY;
+        }
         return TraceExecutionPhase.FULL_LEVEL_FRAME;
     }
 

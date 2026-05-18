@@ -168,6 +168,19 @@ These keys are only active while a Special Stage is running.
 
 ---
 
+## Test-only system properties
+
+These properties are read by JVM system property lookups (`-D<name>=<value>` on
+the `mvn` or `java` command line) rather than `config.json`. They exist for
+diagnostic test runs only and must remain unset in CI.
+
+| Property | Type | Purpose |
+| --- | --- | --- |
+| `oggf.trace.hydrate` | Boolean (default `false`) | Diagnostic hydrate switch for trace replay tests. When `true` AND the trace's `metadata.json` declares a recorder version at or above `9.2-s2` (see `TraceMetadata.nativePreludeMode()`), the test harness snaps engine state to the recorded ROM frame-0 snapshot (player position-record buffer, sidekick CPU state, per-slot SST values) BEFORE the per-frame comparison loop begins. A run with this enabled is **NOT a valid green replay**: the switch masks the very divergences trace replay is designed to surface. Use only to isolate prelude bugs from gameplay-loop bugs. A `WARN`-level log line emits when the switch fires; `TestTraceHydrateSwitchDefault` is the CI guard that asserts the property is unset on master. |
+| `openggf.trace.s3k.probes` | Boolean (default `false`) | Enables verbose S3K-specific trace replay probes (cnz cylinder, aiz boundary, etc.). Diagnostic only. |
+
+---
+
 ## Example `config.json`
 
 ```json

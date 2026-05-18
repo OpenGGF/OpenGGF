@@ -737,9 +737,32 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // The event fallback may run through a separate AIZ event instance during bootstrap,
         // so reuse the existing parent instead of allocating a second scroll controller.
         ObjectSpawn spawn = new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0);
-        if (spawnObject(() -> new AizPlaneIntroInstance(spawn)) == null) {
+        AizPlaneIntroInstance intro = spawnObject(() -> new AizPlaneIntroInstance(spawn));
+        if (intro == null) {
             return false;
         }
+        // ROM parity: Process_Sprites runs once during level setup
+        // (sonic3k.asm:7853) BEFORE LevelLoop starts ticking
+        // Level_frame_counter (sonic3k.asm:7884-7889). That setup pass dispatches
+        // the intro plane's routine 0 init, which writes
+        // {@code object_control = $53} on Player_1 (sonic3k.asm:135507) and
+        // {@code Events_fg_1 = -5864} (sonic3k.asm:135503), then invokes
+        // sub_67A08 (scrollVelocity, sonic3k.asm:135470, 135940) once. Mirror
+        // that pre-LevelLoop tick here so:
+        //   - Sonic enters the first gameplay frame already object-controlled
+        //     and hidden, matching ROM. Downstream terrain probes
+        //     ({@link com.openggf.physics.CollisionSystem#resolveGroundAttachment}
+        //     gate on {@code isObjectControlled()} to mirror ROM
+        //     {@code btst #0,object_control} at sonic3k.asm:21555-21561) so the
+        //     manual ground snap in HeadlessTestFixture won't flip air=true.
+        //   - The {@code eventsFg1} accumulator and routine counter are one
+        //     scrollVelocity-call ahead of the first LevelLoop tick, matching
+        //     the ROM's setup-pass advance.
+        com.openggf.sprites.playable.AbstractPlayableSprite focused = null;
+        try {
+            focused = camera().getFocusedSprite();
+        } catch (Exception ignored) { /* test env */ }
+        intro.update(0, focused);
         LOG.info("AIZ1 intro: spawned plane intro object");
         return true;
     }

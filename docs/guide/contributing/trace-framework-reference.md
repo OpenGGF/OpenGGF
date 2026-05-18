@@ -637,8 +637,9 @@ Minimum required fields across all games:
 | `rom_checksum` | string | optional |
 | `notes` | string | optional |
 
-S2-specific additions: `characters: ["sonic","tails"]`, `main_character: "sonic"`,
-`sidekicks: ["tails"]`.
+S2-specific additions: `characters`, `main_character: "sonic"`, and `sidekicks`. Normal Sonic
+and Tails routes record `characters: ["sonic","tails"]` and `sidekicks: ["tails"]`; routes where
+the ROM suppresses Tails, such as SCZ and WFZ, record `characters: ["sonic"]` and `sidekicks: []`.
 
 S3K-specific additions (only in `aiz_end_to_end` profile):
 `bizhawk_version: "2.11"`, `genesis_core: "Genplus-gx"`, and a descriptive `notes`.

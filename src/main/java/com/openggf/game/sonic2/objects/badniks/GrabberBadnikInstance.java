@@ -445,20 +445,19 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
             return;
         }
 
-        // Grabber is ceiling-mounted - can only be destroyed from above
-        // Player must be above the Grabber's center and moving downward (or at least not upward)
-        int playerCentreY = player.getCentreY();
-        int grabberCentreY = currentY;
+        // ROM parity: Touch_Enemy / Touch_KillEnemy (s2.asm:84807-84890) destroys
+        // the badnik whenever Sonic is rolling, spindashing, or invincible — the
+        // touch response is direction-agnostic.  Only the bounce-back direction
+        // depends on Sonic's relative position; the kill itself is unconditional.
+        // The Grabber is no exception (collision_flags=$B in ObjA7_SubObjData at
+        // s2.asm:76603, which is the standard "kill on roll" mask).  The previous
+        // "only destroy from above" guard rejected legitimate roll-jump kills
+        // from below (CPZ f680 trace divergence: Sonic kept his roll arc through
+        // the Grabber but the engine never killed it, then DIVING/grabPlayer
+        // zeroed his speeds).  ROM destroys the Grabber the moment Sonic's roll
+        // sensor overlaps it regardless of vertical direction.
 
-        // Only allow attack if player is above the grabber
-        if (playerCentreY >= grabberCentreY) {
-            // Player is at same level or below - ignore the attack
-            // This prevents destruction from jumping up into it from below
-            return;
-        }
-
-        // Player is above - allow the attack
-        // Release any grabbed player before destruction
+        // Release any grabbed player before destruction.
         if (grabbedPlayer != null) {
             releasePlayer(true);
         }

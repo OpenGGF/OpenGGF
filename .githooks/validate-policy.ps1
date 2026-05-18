@@ -135,7 +135,11 @@ function Get-DecisionKind([string]$Value) {
 }
 
 function Print-CommitTemplate() {
-    [Console]::Error.WriteLine(@"
+    # Single-quote here-string so the backtick before `updated` on the final
+    # line is treated as a literal character, not a PowerShell escape (the
+    # double-quote here-string parser would otherwise see `u and try to
+    # consume a Unicode escape, causing a parse error on PS 5.1+).
+    [Console]::Error.WriteLine(@'
 Use these trailers on non-master branch commits:
 
 Changelog: updated|n/a
@@ -147,7 +151,7 @@ Configuration-Docs: updated|n/a
 Skills: updated|n/a
 
 If a trailer says `updated`, the matching files must be staged in the same commit.
-"@)
+'@)
 }
 
 $script:Errors = New-Object System.Collections.Generic.List[string]

@@ -30,11 +30,11 @@ class TestTraceExecutionModel {
     }
 
     @Test
-    void sonic1NoCounterDelta_defaultsToFullFrame() {
+    void sonic1NoCounterDelta_gameplayPlateauIsVblankOnly() {
         TraceFrame previous = TraceFrame.executionTestFrame(0, 0x0120, 0x3456, 0);
         TraceFrame current = TraceFrame.executionTestFrame(1, 0x0120, 0x3456, 0);
 
-        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceExecutionModel.forGame("s1").phaseFor(previous, current));
     }
 

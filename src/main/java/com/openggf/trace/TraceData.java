@@ -225,6 +225,21 @@ public class TraceData {
         return null;
     }
 
+    /**
+     * Returns generic state snapshots for the requested frame. These are
+     * diagnostic-only aux events; replay must never hydrate engine state from
+     * the preserved field map.
+     */
+    public List<TraceEvent.StateSnapshot> stateSnapshotsForFrame(int frame) {
+        List<TraceEvent.StateSnapshot> snapshots = new ArrayList<>();
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.StateSnapshot snapshot) {
+                snapshots.add(snapshot);
+            }
+        }
+        return snapshots;
+    }
+
     public TraceEvent.Checkpoint latestCheckpointAtOrBefore(int frame) {
         int index = latestIndexedFrameAtOrBefore(checkpointFramesAscending, frame);
         return index >= 0 ? checkpointsByFrame.get(checkpointFramesAscending.get(index)) : null;

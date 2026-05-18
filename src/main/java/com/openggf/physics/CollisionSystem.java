@@ -346,6 +346,16 @@ public class CollisionSystem {
     public void resolveGroundAttachment(AbstractPlayableSprite sprite,
                                         int positiveThreshold,
                                         BooleanSupplier hasObjectSupport) {
+        // ROM: btst #0,object_control(a0) at sonic3k.asm:21555-21561 skips the
+        // entire status-based dispatch (which includes terrain probes and
+        // air-state transitions) when object_control bit 0 is set. Mirror that
+        // here so an object-controlling sprite (e.g. AIZ1 intro plane gripping
+        // Sonic via {@code move.b #$53,object_control(a1)} at
+        // sonic3k.asm:135507) never gets {@code setAir(true)} from a manual
+        // ground probe — its position is owned by the controlling object.
+        if (sprite.isObjectControlSuppressesMovement()) {
+            return;
+        }
         // ROM: S1 Sonic_AnglePos, S2 AnglePos, and S3K Player_AnglePos all
         // return early only when the player's Status_OnObj bit is set
         // (S3K: docs/skdisasm/sonic3k.asm:18735-18741). Object-side standing
@@ -371,6 +381,7 @@ public class CollisionSystem {
         SensorResult rightSensor = groundResult[1];
 
         SensorResult selectedResult = selectSensorWithAngle(sprite, rightSensor, leftSensor);
+        traceS2WfzGroundAttachmentProbe(sprite, "after-select", selectedResult, leftSensor, rightSensor, positiveThreshold);
         // Refresh ground mode after the angle has been updated by selectSensorWithAngle.
         // The initial updateGroundMode (line 292) uses the PREVIOUS frame's end-angle for
         // sensor configuration. This second call uses the NEW angle from terrain probes,
@@ -378,6 +389,7 @@ public class CollisionSystem {
         updateGroundMode(sprite);
 
         if (selectedResult == null) {
+            traceS2WfzGroundAttachmentProbe(sprite, "air-null", null, leftSensor, rightSensor, positiveThreshold);
             if (sprite.isStickToConvex()) {
                 return;
             }
@@ -413,6 +425,7 @@ public class CollisionSystem {
         }
 
         if (distance > positiveThreshold) {
+            traceS2WfzGroundAttachmentProbe(sprite, "air-threshold", selectedResult, leftSensor, rightSensor, positiveThreshold);
             if (sprite.isStickToConvex()) {
                 moveForSensorResult(sprite, selectedResult);
                 return;
@@ -423,6 +436,92 @@ public class CollisionSystem {
         }
 
         moveForSensorResult(sprite, selectedResult);
+    }
+
+    private void traceS2WfzGroundAttachmentProbe(AbstractPlayableSprite sprite,
+                                                String stage,
+                                                SensorResult selected,
+                                                SensorResult leftSensor,
+                                                SensorResult rightSensor,
+                                                int positiveThreshold) {
+        if (!Boolean.getBoolean("s2.wfz.collisionprobe")) {
+            return;
+        }
+        if (sprite.isCpuControlled()) {
+            return;
+        }
+        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.levelOrNull();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return;
+        }
+        int frameCounter = levelManager.getObjectManager().getFrameCounter();
+        int centreX = sprite.getCentreX() & 0xFFFF;
+        int centreY = sprite.getCentreY() & 0xFFFF;
+        boolean inWfz4626Window = centreX >= 0x0D90 && centreX <= 0x0DF0
+                && centreY >= 0x03C0 && centreY <= 0x0400;
+        boolean inWfz7065Window = centreX >= 0x1AD0 && centreX <= 0x1B20
+                && centreY >= 0x0490 && centreY <= 0x04C0;
+        if (!inWfz4626Window && !inWfz7065Window) {
+            return;
+        }
+        int xRadius = sprite.getXRadius();
+        int yRadius = sprite.getYRadius();
+        System.out.printf(
+                "s2-wfz-groundprobe frame=%d stage=%s pos=(%04X,%04X) sub=(%04X,%04X) " +
+                        "spd=(xs=%04X ys=%04X gs=%04X) air=%d ang=%02X gm=%s thresh=%d foot=(L=%04X,R=%04X,Y=%04X) " +
+                        "left=%s right=%s selected=%s tileL=%s tileR=%s tileLext=%s tileRext=%s path1R=%s%n",
+                frameCounter, stage, centreX, centreY,
+                sprite.getXSubpixelRaw() & 0xFFFF, sprite.getYSubpixelRaw() & 0xFFFF,
+                sprite.getXSpeed() & 0xFFFF, sprite.getYSpeed() & 0xFFFF, sprite.getGSpeed() & 0xFFFF,
+                sprite.getAir() ? 1 : 0, sprite.getAngle() & 0xFF, sprite.getGroundMode(), positiveThreshold,
+                (centreX - xRadius) & 0xFFFF, (centreX + xRadius) & 0xFFFF, (centreY + yRadius) & 0xFFFF,
+                formatProbeResult(leftSensor), formatProbeResult(rightSensor), formatProbeResult(selected),
+                formatS2WfzTerrainAt(sprite, centreX - xRadius, centreY + yRadius),
+                formatS2WfzTerrainAt(sprite, centreX + xRadius, centreY + yRadius),
+                formatS2WfzTerrainAt(sprite, centreX - xRadius, centreY + yRadius + 16),
+                formatS2WfzTerrainAt(sprite, centreX + xRadius, centreY + yRadius + 16),
+                formatS2WfzTerrainAt(sprite, centreX + xRadius, centreY + yRadius, 0x0E));
+    }
+
+    private String formatProbeResult(SensorResult result) {
+        if (result == null) {
+            return "<null>";
+        }
+        return String.format("{dir=%s dist=%d angle=%02X tile=%d}",
+                result.direction(), result.distance(), result.angle() & 0xFF, result.tileId());
+    }
+
+    private String formatS2WfzTerrainAt(AbstractPlayableSprite sprite, int x, int y) {
+        return formatS2WfzTerrainAt(sprite, x, y, sprite.getTopSolidBit());
+    }
+
+    private String formatS2WfzTerrainAt(AbstractPlayableSprite sprite, int x, int y, int topSolidBit) {
+        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.levelOrNull();
+        if (levelManager == null) {
+            return "<no-lm>";
+        }
+        com.openggf.level.ChunkDesc desc = levelManager.getChunkDescAt((byte) 0, (short) x, (short) y, sprite.isLoopLowPlane());
+        if (desc == null) {
+            return "<no-desc>";
+        }
+        com.openggf.level.SolidTile tile = levelManager.getSolidTileForChunkDesc(desc, topSolidBit);
+        int collisionIndex = -1;
+        byte metric = 0;
+        byte angle = 0;
+        if (tile != null) {
+            collisionIndex = tile.getIndex();
+            int idx = desc.getHFlip() ? 15 - (x & 0x0F) : (x & 0x0F);
+            metric = tile.getHeightAt((byte) idx);
+            if (metric != 0 && metric != 16 && desc.getVFlip()) {
+                metric = (byte) -metric;
+            }
+            angle = tile.getAngle(desc.getHFlip(), desc.getVFlip());
+        }
+        return String.format("{desc=%04X chunk=%03X topBit=%d topSet=%b pri=%s sec=%s hf=%b vf=%b col=%d metric=%d angle=%02X}",
+                desc.get() & 0xFFFF, desc.getChunkIndex() & 0x3FF, topSolidBit,
+                desc.isSolidityBitSet(topSolidBit),
+                desc.getPrimaryCollisionMode(), desc.getSecondaryCollisionMode(),
+                desc.getHFlip(), desc.getVFlip(), collisionIndex, metric, angle & 0xFF);
     }
 
     private boolean hasPendingStaleObjectSupportLoss(AbstractPlayableSprite sprite) {
@@ -607,7 +706,10 @@ public class CollisionSystem {
                                            SensorResult[] groundResult,
                                            SensorResult[] ceilingResult,
                                            boolean collisionResolved) {
-        if (!Boolean.getBoolean("s3k.cnz.collisionprobe") && !Boolean.getBoolean("cnz.collisionprobe")) {
+        boolean s2WfzProbe = Boolean.getBoolean("s2.wfz.collisionprobe");
+        if (!Boolean.getBoolean("s3k.cnz.collisionprobe")
+                && !Boolean.getBoolean("cnz.collisionprobe")
+                && !s2WfzProbe) {
             return;
         }
         com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.level();
@@ -617,7 +719,12 @@ public class CollisionSystem {
         int frameCounter = levelManager.getObjectManager().getFrameCounter();
         int centreX = sprite.getCentreX() & 0xFFFF;
         int centreY = sprite.getCentreY() & 0xFFFF;
-        if (centreX < 0x1200 || centreX > 0x1300 || centreY < 0x0680 || centreY > 0x0780) {
+        boolean inS3kCnzWindow = centreX >= 0x1200 && centreX <= 0x1300
+                && centreY >= 0x0680 && centreY <= 0x0780;
+        boolean inS2WfzWindow = s2WfzProbe
+                && centreX >= 0x0A80 && centreX <= 0x0C00
+                && centreY >= 0x0440 && centreY <= 0x0560;
+        if (!inS3kCnzWindow && !inS2WfzWindow) {
             return;
         }
         int xRadius = sprite.getXRadius();
@@ -628,12 +735,13 @@ public class CollisionSystem {
         int xSub = sprite.getXSubpixelRaw() & 0xFFFF;
         int ySub = sprite.getYSubpixelRaw() & 0xFFFF;
         String who = sprite.isCpuControlled() ? "tails" : "sonic";
+        String label = inS2WfzWindow ? "s2-wfz-probe" : "s3k-cnz-probe";
         System.out.printf(
-                "s3k-cnz-probe frame=%d who=%s stage=%s quad=%02X pos=(%04X,%04X) sub=(%04X,%04X) " +
+                "%s frame=%d who=%s stage=%s quad=%02X pos=(%04X,%04X) sub=(%04X,%04X) " +
                 "spd=(xs=%04X ys=%04X gs=%04X) air=%d ang=%02X gm=%s rolling=%b objCtrl=%b latchSolid=%d " +
                 "topBit=%d lrbBit=%d xRad=%d yRad=%d foot=(L=%04X,R=%04X,Y=%04X) " +
                 "ground=[%s] ceiling=[%s] resolved=%s%n",
-                frameCounter, who, stage, quadrant & 0xFF,
+                label, frameCounter, who, stage, quadrant & 0xFF,
                 centreX, centreY, xSub, ySub,
                 sprite.getXSpeed() & 0xFFFF, sprite.getYSpeed() & 0xFFFF, sprite.getGSpeed() & 0xFFFF,
                 sprite.getAir() ? 1 : 0, sprite.getAngle() & 0xFF,
@@ -833,24 +941,39 @@ public class CollisionSystem {
         boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
         boolean preservePinballMode = featureSet != null && featureSet.pinballLandingPreservesPinballMode();
         if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
-            int oldYRadius = sprite.getYRadius();
-            int centreX = sprite.getCentreX();
-            int centreY = sprite.getCentreY();
-            boolean wallLanding = sprite.getGroundMode() == GroundMode.LEFTWALL
-                    || sprite.getGroundMode() == GroundMode.RIGHTWALL;
-            sprite.setRolling(false);
-            if (wallLanding) {
-                // S3K Player_TouchFloor restores radii and adjusts y_pos only
-                // (docs/skdisasm/sonic3k.asm:24335-24363). Preserve engine centre X when
-                // leaving the narrower roll shape after updateGroundMode has selected a wall.
-                sprite.setCentreXPreserveSubpixel((short) centreX);
-            }
+            if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
+                int oldYRadius = sprite.getYRadius();
+                int centreX = sprite.getCentreX();
+                int centreY = sprite.getCentreY();
+                boolean wallLanding = sprite.getGroundMode() == GroundMode.LEFTWALL
+                        || sprite.getGroundMode() == GroundMode.RIGHTWALL;
+                sprite.setRolling(false);
+                if (wallLanding) {
+                    // S3K Player_TouchFloor restores radii and adjusts y_pos only
+                    // (docs/skdisasm/sonic3k.asm:24335-24363). Preserve engine centre X when
+                    // leaving the narrower roll shape after updateGroundMode has selected a wall.
+                    sprite.setCentreXPreserveSubpixel((short) centreX);
+                }
 
-            int delta = oldYRadius - sprite.getStandYRadius();
-            if (((angle + 0x40) & 0x80) != 0) {
-                delta = -delta;
+                int delta = oldYRadius - sprite.getStandYRadius();
+                if (((angle + 0x40) & 0x80) != 0) {
+                    delta = -delta;
+                }
+                sprite.setCentreYPreserveSubpixel((short) (centreY + delta));
+            } else {
+                // S1/S2 Sonic_ResetOnFloor always clears rolling with a fixed
+                // y_pos lift after restoring standing radii (s1 Obj01.asm
+                // Sonic_ResetOnFloor, s2.asm:37781-37787), independent of the
+                // wall/ceiling angle that led into the reset.
+                int centreX = sprite.getCentreX();
+                boolean wallLanding = sprite.getGroundMode() == GroundMode.LEFTWALL
+                        || sprite.getGroundMode() == GroundMode.RIGHTWALL;
+                sprite.setRolling(false);
+                if (wallLanding) {
+                    sprite.setCentreXPreserveSubpixel((short) centreX);
+                }
+                sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
             }
-            sprite.setCentreYPreserveSubpixel((short) (centreY + delta));
         }
 
         if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {

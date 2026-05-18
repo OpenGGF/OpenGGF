@@ -66,6 +66,31 @@ Agents should:
    - Check existing art keys in `Sonic2ObjectArtKeys.java`
    - Check if art is zone-specific or shared
 
+### Phase 1.5: ROM Behavioural Pitfall Review
+
+Before writing implementation code, read `rom-pitfalls.md` in this skill's
+directory. The file lists ROM behaviour classes where naive engine ports
+have produced trace-replay-visible divergences during prior frontier work.
+
+For each pitfall pattern:
+
+1. Decide whether your object is susceptible. Most patterns apply only to
+   specific object families (touch-response badniks, moving solids,
+   per-player interactives, free-fall objects, character-affecting state
+   transitions). Skip patterns the object can't trigger.
+2. For applicable patterns, plan your implementation to avoid the
+   anti-pattern. Quote the ROM convention from the pitfall entry in your
+   code comments where the convention matters (e.g., "P3: per-player
+   state at objoff_36 / objoff_37 — engine uses IdentityHashMap").
+3. If you find a NEW pattern during Phase 2 / Phase 4 cross-validation
+   that isn't yet catalogued — pause and add it to `rom-pitfalls.md`
+   before continuing. The catalogue grows by accretion; future
+   implementations benefit from each entry.
+
+This phase is short for objects that hit zero pitfalls (pass-through) and
+long for objects that hit several (e.g., a moving solid with rolling
+touch-response and per-player state hits P1, P3, P5, and P6 all at once).
+
 ### Phase 2: Implementation
 
 #### 2.1 Constants (if needed)
@@ -379,6 +404,16 @@ Before finalizing a new object or badnik, classify every instance field for rewi
 Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable `ObjectSpawn` identity, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Dynamic spawn coordinates are gameplay state; capture them explicitly rather than treating the live `ObjectSpawn` reference as structural.
 
 Prefer standard value forms before object-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+#### 2.8 Rideable Solid Parity Checks
+
+For rideable solids, match the ROM's standing-bit lifetime exactly. The persisted standing bit is often read by the object's next-frame routine before `SolidObject` refreshes contact; do not clear rider state early just because the player has visually stepped off this frame. Separate "was standing last frame" from "is touching this frame" when object logic, release helpers, or trace diagnostics need both.
+
+Use the generic `PlatformObject` walk-off behaviour only when the ROM relies on normal solid-object release. If the disassembly calls an object-specific release/helper path, preserve that path's timing and side effects instead of replacing it with generic walk-off cleanup. Moving or collapsing platforms frequently use the persisted contact bit to decide whether to carry, drop, or snap the player.
+
+Routine transitions and pre-decrements are timing-sensitive. If ROM code increments `routine` then falls through, or pre-decrements a timer before branching, keep the same frame boundary in Java; moving the transition to the end of `update()` can shift platform motion, standing bits, sidekick contact, and animation by one frame.
+
+When validating manually with checkpoints or short trace starts, include sidekick/contact checks: player and sidekick riding bits, object contact/release events, carried position deltas, and the first frame after checkpoint restoration. A checkpoint route that looks correct for Sonic alone can still be wrong if Tails lands, releases, or respawns one frame off.
 
 ### Phase 3: Code Quality
 

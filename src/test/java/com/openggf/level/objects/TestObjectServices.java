@@ -31,6 +31,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 
 import java.util.List;
@@ -48,6 +49,7 @@ public class TestObjectServices implements ObjectServices {
     private FadeManager fadeManager;
     private WaterSystem waterSystem;
     private ParallaxManager parallaxManager;
+    private CollisionSystem collisionSystem;
     private GraphicsManager graphicsManager;
     private AudioManager audioManager;
     private GameRng rng = new GameRng(GameRng.Flavour.S3K);
@@ -98,6 +100,11 @@ public class TestObjectServices implements ObjectServices {
 
     public TestObjectServices withParallaxManager(ParallaxManager parallaxManager) {
         this.parallaxManager = parallaxManager;
+        return this;
+    }
+
+    public TestObjectServices withCollisionSystem(CollisionSystem collisionSystem) {
+        this.collisionSystem = collisionSystem;
         return this;
     }
 
@@ -298,6 +305,11 @@ public class TestObjectServices implements ObjectServices {
     @Override
     public ParallaxManager parallaxManager() {
         return parallaxManager;
+    }
+
+    @Override
+    public CollisionSystem collisionSystem() {
+        return collisionSystem;
     }
 
     @Override

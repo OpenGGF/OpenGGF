@@ -21,8 +21,9 @@ import static org.junit.jupiter.api.Assertions.*;
  * <p>ROM reference: LevEvents_SCZ (s2.asm:21803-21861)
  *
  * <p><b>Important:</b> SCZ level events are NOT in {@link Sonic2SCZEvents} (which is empty).
- * They are implemented in {@link SwScrlScz#update} because the Tornado velocity
- * and camera auto-scroll are tightly coupled with the scroll handler.
+ * They are implemented in {@link SwScrlScz#advanceCameraForFrame} because the
+ * Tornado velocity and camera auto-scroll are gameplay state owned by the
+ * scroll handler.
  *
  * SCZ Act 1 Routines (managed by SwScrlScz):
  * <ol start="0">
@@ -40,7 +41,6 @@ public class TestTodo11_SCZEventSpecs {
 
     private SwScrlScz scrollHandler;
     private Camera cam;
-    private int[] scrollBuf;
 
     @BeforeEach
     public void setUp() {
@@ -49,7 +49,6 @@ public class TestTodo11_SCZEventSpecs {
         cam = GameServices.camera();
         scrollHandler = new SwScrlScz();
         scrollHandler.init();
-        scrollBuf = new int[224];
     }
 
     @AfterEach
@@ -76,7 +75,7 @@ public class TestTodo11_SCZEventSpecs {
     @Test
     public void testSCZAct2_NoEvents() {
         // Act 2 (actId=1): updateLevelEvents is skipped
-        scrollHandler.update(scrollBuf, 0, 0, 0, 1);
+        scrollHandler.advanceCameraForFrame(cam, 1);
         assertEquals(0, scrollHandler.getTornadoVelocityX(), "Tornado X velocity should remain 0 for Act 2");
         assertEquals(0, scrollHandler.getTornadoVelocityY(), "Tornado Y velocity should remain 0 for Act 2");
     }
@@ -94,7 +93,7 @@ public class TestTodo11_SCZEventSpecs {
     @Test
     public void testSCZRoutine0_InitialVelocity() {
         // First update triggers routine 0 -> sets velocity and advances
-        scrollHandler.update(scrollBuf, 0, 0, 0, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         assertEquals(1, scrollHandler.getTornadoVelocityX(), "Initial Tornado X velocity should be 1 (rightward)");
         assertEquals(0, scrollHandler.getTornadoVelocityY(), "Initial Tornado Y velocity should be 0");
     }
@@ -114,9 +113,9 @@ public class TestTodo11_SCZEventSpecs {
     @Test
     public void testSCZRoutine1_DoesNotTriggerBelowThreshold() {
         // Initialize (routine 0 -> 1)
-        scrollHandler.update(scrollBuf, 0, 0, 0, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         // Camera still below $1180 -- should stay at routine 1
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 1, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         assertEquals(1, scrollHandler.getTornadoVelocityX(), "Should still fly rightward below $1180");
         assertEquals(0, scrollHandler.getTornadoVelocityY(), "Should have no vertical movement below $1180");
     }
@@ -124,10 +123,10 @@ public class TestTodo11_SCZEventSpecs {
     @Test
     public void testSCZRoutine1_BeginDescentAtThreshold() {
         // Initialize (routine 0 -> 1)
-        scrollHandler.update(scrollBuf, 0, 0, 0, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         // Move camera to threshold
         cam.setX((short) 0x1180);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 1, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         assertEquals(-1, scrollHandler.getTornadoVelocityX(), "Tornado X velocity should be -1 (leftward) at $1180");
         assertEquals(1, scrollHandler.getTornadoVelocityY(), "Tornado Y velocity should be 1 (downward) at $1180");
         assertEquals((short) 0x500, cam.getMaxYTarget(), "Max Y target should be set to $500");
@@ -147,13 +146,13 @@ public class TestTodo11_SCZEventSpecs {
     @Test
     public void testSCZRoutine2_ResumeRightwardAtThreshold() {
         // Initialize (routine 0 -> 1)
-        scrollHandler.update(scrollBuf, 0, 0, 0, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         // Trigger descent (routine 1 -> 2)
         cam.setX((short) 0x1180);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 1, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         // Now at routine 2, set Y to threshold
         cam.setY((short) 0x500);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 2, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         assertEquals(1, scrollHandler.getTornadoVelocityX(), "Tornado X velocity should be 1 (rightward) at Y >= $500");
         assertEquals(0, scrollHandler.getTornadoVelocityY(), "Tornado Y velocity should be 0 (stopped) at Y >= $500");
     }
@@ -172,16 +171,16 @@ public class TestTodo11_SCZEventSpecs {
     @Test
     public void testSCZRoutine3_StopTornadoAtThreshold() {
         // Initialize (routine 0 -> 1)
-        scrollHandler.update(scrollBuf, 0, 0, 0, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         // Trigger descent (routine 1 -> 2)
         cam.setX((short) 0x1180);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 1, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         // Resume rightward (routine 2 -> 3)
         cam.setY((short) 0x500);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 2, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         // Stop tornado (routine 3 -> 4)
         cam.setX((short) 0x1400);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 3, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         assertEquals(0, scrollHandler.getTornadoVelocityX(), "Tornado X velocity should be 0 (stopped) at X >= $1400");
         assertEquals(0, scrollHandler.getTornadoVelocityY(), "Tornado Y velocity should be 0 (stopped) at X >= $1400");
     }
@@ -192,16 +191,16 @@ public class TestTodo11_SCZEventSpecs {
     @Test
     public void testSCZRoutine4_NoOp() {
         // Progress through all routines
-        scrollHandler.update(scrollBuf, 0, 0, 0, 0);           // 0 -> 1
+        scrollHandler.advanceCameraForFrame(cam, 0);           // 0 -> 1
         cam.setX((short) 0x1180);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 1, 0);  // 1 -> 2
+        scrollHandler.advanceCameraForFrame(cam, 0);  // 1 -> 2
         cam.setY((short) 0x500);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 2, 0);  // 2 -> 3
+        scrollHandler.advanceCameraForFrame(cam, 0);  // 2 -> 3
         cam.setX((short) 0x1400);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 3, 0);  // 3 -> 4
+        scrollHandler.advanceCameraForFrame(cam, 0);  // 3 -> 4
 
         // Now at routine 4 (null) -- further updates should not change velocity
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 4, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         assertEquals(0, scrollHandler.getTornadoVelocityX(), "Velocity should remain 0 after stage complete");
         assertEquals(0, scrollHandler.getTornadoVelocityY(), "Velocity should remain 0 after stage complete");
     }
@@ -217,25 +216,25 @@ public class TestTodo11_SCZEventSpecs {
     @Test
     public void testSCZFlightPath() {
         // Phase 0 -> 1: initialize velocity
-        scrollHandler.update(scrollBuf, 0, 0, 0, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         assertEquals(1, scrollHandler.getTornadoVelocityX(), "Phase 1 X velocity");
         assertEquals(0, scrollHandler.getTornadoVelocityY(), "Phase 1 Y velocity");
 
         // Phase 1 -> 2: descent at $1180
         cam.setX((short) 0x1180);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 1, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         assertEquals(-1, scrollHandler.getTornadoVelocityX(), "Phase 2 X velocity");
         assertEquals(1, scrollHandler.getTornadoVelocityY(), "Phase 2 Y velocity");
 
         // Phase 2 -> 3: rightward again at Y=$500
         cam.setY((short) 0x500);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 2, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         assertEquals(1, scrollHandler.getTornadoVelocityX(), "Phase 3 X velocity");
         assertEquals(0, scrollHandler.getTornadoVelocityY(), "Phase 3 Y velocity");
 
         // Phase 3 -> 4: stop at $1400
         cam.setX((short) 0x1400);
-        scrollHandler.update(scrollBuf, cam.getX(), cam.getY(), 3, 0);
+        scrollHandler.advanceCameraForFrame(cam, 0);
         assertEquals(0, scrollHandler.getTornadoVelocityX(), "Phase 4 X velocity");
         assertEquals(0, scrollHandler.getTornadoVelocityY(), "Phase 4 Y velocity");
     }

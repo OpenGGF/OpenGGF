@@ -127,6 +127,85 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2FlyingRespawnTimeoutReturnsToSpawningAtZeroMarker() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x2375);
+        tails.setCentreY((short) 0x03D9);
+        tails.setSubpixelRaw(0x2300, 0xE000);
+        tails.setXSpeed((short) 0);
+        tails.setYSpeed((short) 0x00A8);
+        tails.setGSpeed((short) 0xFFD0);
+        tails.setRolling(true);
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+
+        for (int i = 0; i < 300; i++) {
+            tails.setRenderFlagOnScreen(false);
+            controller.update(i);
+        }
+
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState());
+        assertEquals((short) 0x0000, tails.getCentreX(),
+                "S2 TailsCPU_Flying timeout writes x_pos=0, not the normal $4000 despawn marker");
+        assertEquals((short) 0x0000, tails.getCentreY());
+        assertEquals(0x2300, tails.getXSubpixelRaw());
+        assertEquals(0xE000, tails.getYSubpixelRaw());
+        assertTrue(tails.getAir());
+        assertFalse(tails.getRolling());
+        assertTrue(tails.isObjectControlled());
+    }
+
+    @Test
+    void s2FlyingOffscreenCounterCarriesIntoNormalDespawnAfterApproachCompletes() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        sonic.setCentreX((short) 0x2908);
+        sonic.setCentreY((short) 0x0691);
+        sonic.resetPositionAndStatTableHistory();
+
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x2908);
+        tails.setCentreY((short) 0x0682);
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.APPROACHING, 0);
+
+        for (int i = 0; i < 15; i++) {
+            tails.setRenderFlagOnScreen(false);
+            controller.update(i);
+            assertEquals(SidekickCpuController.State.APPROACHING, controller.getState(),
+                    "The test setup should keep accumulating the S2 flying off-screen counter before landing");
+        }
+
+        tails.setRenderFlagOnScreen(false);
+        controller.update(15);
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                "The approach completion frame should carry the accumulated flying counter into NORMAL");
+
+        for (int i = 16; i < 299; i++) {
+            tails.setRenderFlagOnScreen(false);
+            controller.update(i);
+            assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                    "S2 normal despawn should not fire before the shared counter reaches 300");
+        }
+
+        tails.setRenderFlagOnScreen(false);
+        controller.update(299);
+
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState());
+        assertEquals((short) 0x4000, tails.getCentreX(),
+                "After TailsCPU_Flying lands, S2 TailsCPU_CheckDespawn continues the same counter and uses $4000");
+        assertEquals((short) 0x0000, tails.getCentreY());
+    }
+
+    @Test
     void s3kDespawnMarkerReturnsToCatchUpFlightRoutine() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -249,7 +328,7 @@ class TestSidekickCpuDespawnParity {
         tails.setRenderFlagOnScreen(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 0, 0x4E, false);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x4E, false, 0, 0); // TODO T7
         tails.setLatchedSolidObject(0x4E, new DestroyedRideObject(0x4E));
         tails.setOnObject(true);
         tails.setRenderFlagOnScreen(false);
@@ -278,7 +357,7 @@ class TestSidekickCpuDespawnParity {
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 90, 0x01, false);
+        controller.hydrateFromRomCpuState(6, 0, 90, 0x01, false, 0, 0); // TODO T7
         tails.setLatchedSolidObjectId(0x11);
         tails.setOnObject(true);
         tails.setRenderFlagOnScreen(false);
@@ -306,7 +385,7 @@ class TestSidekickCpuDespawnParity {
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false);
+        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false, 0, 0); // TODO T7
         tails.setRenderFlagOnScreen(true);
 
         controller.update(3532);
@@ -329,7 +408,7 @@ class TestSidekickCpuDespawnParity {
         tails.setRenderFlagOnScreen(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 299, 0, false);
+        controller.hydrateFromRomCpuState(6, 0, 299, 0, false, 0, 0); // TODO T7
         tails.setHurt(true);
         tails.setRenderFlagOnScreen(false);
 
@@ -358,7 +437,7 @@ class TestSidekickCpuDespawnParity {
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false);
+        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false, 0, 0); // TODO T7
 
         tails.setRenderFlagOnScreen(true);
         controller.update(1);

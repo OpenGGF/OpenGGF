@@ -129,6 +129,14 @@ latest architectural review merge tightens rewind registry ownership,
 trace-replay comparison guardrails, object construction boundaries, graphics
 runtime rebinding, and MGZ scroll-event state routing through shared
 `MgzZoneRuntimeState` instead of direct scroll-handler mutation.
+The latest S2 trace-frontier merge advances the Sky Chase level-select replay
+through the Tornado/Turtloid route by tightening SCZ object spawning, Tornado
+ride input timing, Turtloid projectile placement, and object hurt/platform
+landing parity.
+A follow-up S2 trace-frontier merge closes the Casino Night level-select
+replay to green by tightening CNZ object streaming, slot machine, bumper,
+bonus-block, forced-spin, monitor/solid-object, Hex Bumper, and Tails CPU
+off-screen respawn parity.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?
@@ -218,6 +226,23 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S2 native-prelude trace replay (2026-05-15).** Engine title-card phase now ticks objects and
+  player physics natively (ROM-faithful `TitleCard_Main` for S1/S2/S3K with per-game gating).
+  New `TraceBinder.compareBootstrapFrame0` + `BootstrapDivergence` infrastructure asserts engine
+  frame-0 state against the recorder's pre-trace snapshots for traces at `lua_script_version
+  >= 9.2-s2`. Diagnostic `oggf.trace.hydrate` switch (CI-asserted off) snaps engine state to the
+  recorded frame-0 snapshot for prelude-vs-gameplay bug isolation. All nine S2 trace recordings
+  re-recorded at v9.2-s2; comparator surfaced six real engine bugs (CPZ Grabber rolling-kill,
+  WFZ Tornado two-frame init, CNZ Flipper per-player cooldown + y_pos, HTZ Lift solid-while-falling,
+  S2 sidekick bottom-bound centre-Y kill, S2 sidekick deferred-despawn flow) all fixed against
+  `s2disasm` citations. See `docs/superpowers/specs/2026-05-15-s2-native-prelude-traces-design.md`
+  for the full orchestration record (12 stages, ADR-1 through ADR-7 with R1/R2 fold-ins, blocker
+  resolution pass).
+- **S2 CNZ trace-frontier closure (2026-05-18).** Casino Night Zone level-select replay now reaches
+  green. The branch fixed CNZ slot-machine timing, object streaming and out-of-range behavior,
+  bumper/bonus-block/forced-spin parity, S2 monitor and Big Block solid geometry, launcher-spring
+  Tails recapture, and S2 Tails CPU off-screen respawn marker/counter behavior while keeping trace
+  data comparison-only and updating the trace frontier log.
 - **Editor groundwork:** a config-gated editor/playtest loop, focused block and chunk previews,
   derive edits, world-grid navigation, and safer mode switching are being built toward usable
   in-engine editing. The editor review pass now preserves controller-owned mutable levels across

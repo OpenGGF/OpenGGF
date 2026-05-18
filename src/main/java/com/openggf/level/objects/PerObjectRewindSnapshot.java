@@ -226,7 +226,8 @@ public record PerObjectRewindSnapshot(
             int fixedFrame,
             boolean paletteBlink,
             int cluckerAnimTimer,
-            int cluckerAnimIndex
+            int cluckerAnimIndex,
+            boolean loadSubObjectInitPending
     ) implements ObjectSubclassRewindExtra {}
 
     public record BuzzerFlameRewindExtra(
@@ -333,7 +334,12 @@ public record PerObjectRewindSnapshot(
             boolean prePhysicsAir, byte prePhysicsAngle,
             short prePhysicsGSpeed, short prePhysicsXSpeed, short prePhysicsYSpeed,
             boolean air, boolean rolling, boolean jumping, boolean rollingJump,
-            boolean pinballMode, boolean pinballSpeedLock, boolean tunnelMode,
+            boolean pinballMode, boolean pinballSpeedLock,
+            boolean preserveRollingOnNextLanding, boolean preserveRollingOnNextRollStop,
+            boolean objectPreservedRollBoostFollowup,
+            boolean objectPreservedRollWallProbe,
+            boolean objectPreservedRollVelocityCarry,
+            boolean tunnelMode,
             // Surface interaction / collision
             boolean onObject, boolean onObjectAtFrameStart,
             int latchedSolidObjectId, boolean slopeRepelJustSlipped,
