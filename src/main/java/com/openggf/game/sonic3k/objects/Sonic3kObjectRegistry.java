@@ -464,6 +464,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczFreezerObjectInstance(spawn);
                 });
+        factories.put(Sonic3kObjectIds.ICZ_PATH_FOLLOW_PLATFORM,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new IczPathFollowPlatformObjectInstance(spawn);
+                });
         factories.put(Sonic3kObjectIds.ICZ_SEGMENT_COLUMN,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();

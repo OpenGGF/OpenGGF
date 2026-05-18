@@ -191,6 +191,26 @@ public class TestCamera {
         assertEquals(6, camera.getY(), "Camera should use medium scroll (6px) when inertia is low");
     }
 
+    @Test
+    public void testFastVerticalScrollRequestUsesFastCapForOneFrame() {
+        // S3K moving platforms set Fast_V_scroll_flag so grounded camera follow uses
+        // the fast vertical cap even when Sonic's own ground speed is low.
+        when(mockSprite.getAir()).thenReturn(false);
+        when(mockSprite.getGSpeed()).thenReturn((short) 0);
+        camera.setFastScrollCap(24);
+        camera.setY((short) 0);
+        when(mockSprite.getCentreY()).thenReturn((short) 200);
+
+        camera.requestFastVerticalScroll();
+        camera.updatePosition();
+
+        assertEquals(24, camera.getY(), "Camera should use the requested fast vertical cap");
+
+        camera.updatePosition();
+
+        assertEquals(30, camera.getY(), "Fast vertical scroll request should not persist to the next frame");
+    }
+
     // ==================== Boundary Tests ====================
 
     @Test
@@ -350,5 +370,4 @@ public class TestCamera {
         assertEquals(120, camera.getY(), "incrementY should subtract when negative");
     }
 }
-
 
