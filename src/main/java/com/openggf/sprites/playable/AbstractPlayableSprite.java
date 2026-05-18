@@ -47,6 +47,7 @@ import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.managers.SpindashDustController;
@@ -169,6 +170,41 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * {@link #pinballMode} which only prevents uncurling at low speed.
          */
         protected boolean pinballSpeedLock = false;
+
+        /**
+         * One-shot object handoff flag for ROM paths that keep a player curled
+         * through the next floor touch without enabling general pinball-mode
+         * movement while airborne. Set by the owning object and consumed by
+         * {@code PlayableSpriteMovement.resetOnFloor()}.
+         */
+        protected boolean preserveRollingOnNextLanding = false;
+
+        /**
+         * One-shot object handoff flag for ROM paths that leave the player curled
+         * at zero ground speed without enabling pinball-mode's forced speed boost.
+         * Set by the owning object and consumed by roll-stop handling.
+         */
+        protected boolean preserveRollingOnNextRollStop = false;
+
+        /**
+         * One-frame companion to {@link #preserveRollingOnNextRollStop}. Set when
+         * an object-preserved zero-speed roll seeds the stopper-chamber boost so
+         * the next roll-speed tick applies natural friction only.
+         */
+        protected boolean objectPreservedRollBoostFollowup = false;
+
+        /**
+         * One-frame ground-wall probe extension after an object-preserved roll
+         * boost. Used by S2 Obj85 stopper chambers where the ROM reaches the
+         * chamber wall one frame after the zero-speed keep-rolling push.
+         */
+        protected boolean objectPreservedRollWallProbe = false;
+
+        /**
+         * Object-scoped velocity carry after a preserved zero-speed roll is
+         * converted into a solid-wall push by the owning object.
+         */
+        protected boolean objectPreservedRollVelocityCarry = false;
 
         /**
          * Whether the player is in a roll-tunnel section (S1 GHZ S-tubes).
@@ -734,6 +770,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.rollingJump = false;
                 this.pinballMode = false;
                 this.pinballSpeedLock = false;
+                this.preserveRollingOnNextLanding = false;
+                this.preserveRollingOnNextRollStop = false;
+                this.objectPreservedRollBoostFollowup = false;
+                this.objectPreservedRollWallProbe = false;
+                this.objectPreservedRollVelocityCarry = false;
                 this.tunnelMode = false;
                 this.spindash = false;
                 this.lookDelayCounter = 0;
@@ -842,7 +883,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         prePhysicsAir, prePhysicsAngle,
                         prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
                         air, rolling, jumping, rollingJump,
-                        pinballMode, pinballSpeedLock, tunnelMode,
+                        pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
+                        preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
+                        objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
                         onObject, onObjectAtFrameStart,
                         latchedSolidObjectId, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
@@ -962,6 +1005,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.rollingJump = extra.rollingJump();
                 this.pinballMode = extra.pinballMode();
                 this.pinballSpeedLock = extra.pinballSpeedLock();
+                this.preserveRollingOnNextLanding = extra.preserveRollingOnNextLanding();
+                this.preserveRollingOnNextRollStop = extra.preserveRollingOnNextRollStop();
+                this.objectPreservedRollBoostFollowup = extra.objectPreservedRollBoostFollowup();
+                this.objectPreservedRollWallProbe = extra.objectPreservedRollWallProbe();
+                this.objectPreservedRollVelocityCarry = extra.objectPreservedRollVelocityCarry();
                 this.tunnelMode = extra.tunnelMode();
                 this.onObject = extra.onObject();
                 this.onObjectAtFrameStart = extra.onObjectAtFrameStart();
@@ -1577,6 +1625,39 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         // Reset badnik chain when landing
                         resetBadnikChain();
                 }
+        }
+
+        /**
+         * Object/platform solid landings can clear Status_InAir while Sonic is
+         * still in routine 4. ROM then runs Sonic_HurtStop on the next player
+         * update and only there clears routine 4 plus velocities.
+         */
+        public void setAirAfterObjectHurtLanding() {
+                if (this.air) {
+                        rollingJump = false;
+                        jumping = false;
+                        if (doubleJumpFlag > 0 && !rolling) {
+                                applyStandingRadii(false);
+                                objectMappingFrameControl = false;
+                                forcedAnimationId = -1;
+                        }
+                        doubleJumpFlag = 0;
+                        doubleJumpProperty = 0;
+                        currentGameState().resetItemBonus();
+                }
+                this.air = false;
+                updatePushSensorYOffset();
+                resetBadnikChain();
+        }
+
+        public void completeHurtLandingRecovery() {
+                hurt = false;
+                setHighPriority(false);
+                invulnerableFrames = 0x78;
+                setXSpeed((short) 0);
+                setYSpeed((short) 0);
+                setGSpeed((short) 0);
+                setSpindash(false);
         }
 
         public boolean isJumping() {
@@ -2593,9 +2674,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /**
          * Returns true when normal movement, gravity, boundary checks, and terrain
          * collision should be skipped by ROM {@code object_control} bit 0.
+         * Some object routines set only this movement gate while still allowing
+         * TouchResponse and later SolidObject checks in the same ExecuteObjects pass.
          */
         public boolean isObjectControlSuppressesMovement() {
-                return objectControlled && objectControlSuppressesMovement;
+                return objectControlSuppressesMovement;
         }
 
         public void setObjectControlSuppressesMovement(boolean objectControlSuppressesMovement) {
@@ -3212,6 +3295,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
+         * Returns the resolved per-character physics profile, or {@code null} if
+         * none has been bound yet (early bootstrap before
+         * {@link #resolvePhysicsProfile()}).
+         */
+        public PhysicsProfile getPhysicsProfile() {
+                return physicsProfile;
+        }
+
+        /**
          * Applies an external physics profile, overwriting current speed values.
          * Used by SuperStateController to swap between normal and Super physics.
          * Also clears the S3K init override since Super transitions reset constants.
@@ -3433,11 +3525,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
-         * Test helper for setting ROM-style follower history buffers directly.
-         * Trace replay must not call this; recorded history snapshots are
-         * comparison-only diagnostics, not engine input.
+         * Diagnostic-only writeback for ROM-style follower history buffers.
+         *
+         * <p><strong>Trace replay must not call this on a normal green run.</strong>
+         * Recorded history snapshots are comparison-only diagnostics. This
+         * accessor is kept for focused unit diagnostics and must not be wired
+         * into committed trace replay bootstrap or per-frame replay loops.
          */
-        void hydrateRecordedHistory(short[] xHistory, short[] yHistory,
+        public void hydrateRecordedHistory(short[] xHistory, short[] yHistory,
                                     short[] inputHistory, byte[] statusHistory,
                                     int historyPos) {
                 if (xHistory == null || yHistory == null || inputHistory == null || statusHistory == null) {
@@ -3458,6 +3553,31 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 System.arraycopy(statusHistory, 0, this.statusHistory, 0, this.statusHistory.length);
                 this.historyPos = (byte) historyPos;
+        }
+
+        /**
+         * Read-only snapshot of the ROM-style follower history rings, for the
+         * trace replay bootstrap comparator (frame-0 assertion). Returns
+         * defensive copies so the caller cannot mutate engine state.
+         */
+        public short[] copyXHistory() {
+                return xHistory.clone();
+        }
+
+        public short[] copyYHistory() {
+                return yHistory.clone();
+        }
+
+        public short[] copyInputHistory() {
+                return inputHistory.clone();
+        }
+
+        public byte[] copyStatusHistory() {
+                return statusHistory.clone();
+        }
+
+        public int historyPos() {
+                return historyPos & 0xFF;
         }
 
         public boolean isCpuControlled() {
@@ -3521,6 +3641,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public void setRolling(boolean rolling) {
                 if (this.rolling == rolling) {
+                        if (rolling) {
+                                applyRollAnimationFromProfile();
+                        }
                         return;
                 }
 
@@ -3541,6 +3664,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 this.rolling = rolling;
+                if (rolling) {
+                        applyRollAnimationFromProfile();
+                }
+        }
+
+        private void applyRollAnimationFromProfile() {
+                if (animationProfile instanceof ScriptedVelocityAnimationProfile profile) {
+                        setAnimationId(profile.getRollAnimId());
+                }
         }
 
         /**
@@ -3586,6 +3718,66 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setPinballSpeedLock(boolean pinballSpeedLock) {
                 this.pinballSpeedLock = pinballSpeedLock;
+        }
+
+        public void preserveRollingOnNextLanding() {
+                this.preserveRollingOnNextLanding = true;
+        }
+
+        public boolean consumePreserveRollingOnNextLanding() {
+                boolean preserve = preserveRollingOnNextLanding;
+                preserveRollingOnNextLanding = false;
+                return preserve;
+        }
+
+        public void preserveRollingOnNextRollStop() {
+                this.preserveRollingOnNextRollStop = true;
+        }
+
+        public boolean consumePreserveRollingOnNextRollStop() {
+                boolean preserve = preserveRollingOnNextRollStop;
+                preserveRollingOnNextRollStop = false;
+                return preserve;
+        }
+
+        public boolean shouldPreserveRollingOnNextRollStop() {
+                return preserveRollingOnNextRollStop;
+        }
+
+        public void markObjectPreservedRollBoostFollowup() {
+                this.objectPreservedRollBoostFollowup = true;
+        }
+
+        public boolean consumeObjectPreservedRollBoostFollowup() {
+                boolean followup = objectPreservedRollBoostFollowup;
+                objectPreservedRollBoostFollowup = false;
+                return followup;
+        }
+
+        public void markObjectPreservedRollWallProbe() {
+                this.objectPreservedRollWallProbe = true;
+        }
+
+        public boolean shouldApplyObjectPreservedRollWallProbe() {
+                return objectPreservedRollWallProbe;
+        }
+
+        public boolean consumeObjectPreservedRollWallProbe() {
+                boolean probe = objectPreservedRollWallProbe;
+                objectPreservedRollWallProbe = false;
+                return probe;
+        }
+
+        public void markObjectPreservedRollVelocityCarry() {
+                this.objectPreservedRollVelocityCarry = true;
+        }
+
+        public boolean shouldApplyObjectPreservedRollVelocityCarry() {
+                return objectPreservedRollVelocityCarry;
+        }
+
+        public void clearObjectPreservedRollVelocityCarry() {
+                this.objectPreservedRollVelocityCarry = false;
         }
 
         public boolean isTunnelMode() {
@@ -3845,6 +4037,55 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         jumpPressHistory[i] = 0;
                         statusHistory[i] = 0;
                 }
+                followerHistoryRecordedThisTick = false;
+        }
+
+        /**
+         * Pre-fills the position history ring with the leader's centre offset
+         * by the given delta, mirroring ROM Obj01_Init's
+         * {@code subi.w #$20,x_pos / addi_.w #4,y_pos / Sonic_RecordPos x 64 /
+         * addi.w #$20,x_pos / subi_.w #4,y_pos} sequence (s2.asm:35907-35918,
+         * sonic3k.asm:21936-21940). That sequence seeds Sonic_Pos_Record_Buf
+         * with Tails' spawn-offset position so the first ~16 frames of
+         * Tails_CPU_Normal read targetX = Tails_x (no acceleration) before
+         * the live Sonic_RecordPos writes the actual Sonic centre into the
+         * ring.
+         *
+         * <p>Used by the sidekick CPU bootstrap to recreate the same pre-fill
+         * profile when entering the title-card prelude. Input/jump/status
+         * history are left unchanged (ROM Init does not touch Stat_Record_Buf).
+         *
+         * <p>Also resets {@code historyPos} so the next
+         * {@link #recordFollowerHistoryForTick()} call writes to slot 0 — ROM
+         * {@code Sonic_Pos_Record_Index} is reset to 0 just before the 64-entry
+         * fill loop (s2.asm:35909), and the post-fill {@code addq.b #4,...}
+         * wraparound leaves it back at 0 so the first live Sonic_RecordPos
+         * write goes to slot 0.
+         */
+        public void prefillPositionHistoryWithOffset(int xOffset, int yOffset) {
+                short prefillX = (short) (getCentreX() + xOffset);
+                short prefillY = (short) (getCentreY() + yOffset);
+                for (int i = 0; i < xHistory.length; i++) {
+                        xHistory[i] = prefillX;
+                        yHistory[i] = prefillY;
+                }
+                // Engine's recordFollowerHistoryForTick() increments-then-writes,
+                // so set historyPos to 63 (one slot before slot 0) so the next
+                // record call writes to slot 0 matching ROM's first live write.
+                historyPos = 63;
+                followerHistoryRecordedThisTick = false;
+        }
+
+        /**
+         * Clears the per-tick gate that prevents
+         * {@link #recordFollowerHistoryForTick()} from running twice in the
+         * same playable tick. Normal frames call this from
+         * {@link #endOfTick()}; bootstrap paths that record follower history
+         * outside the standard playable tick (e.g. the title-card prelude
+         * which only ticks sidekicks but still needs Sonic_RecordPos parity)
+         * call it explicitly so the next prelude frame can record again.
+         */
+        public void clearFollowerHistoryRecordedFlag() {
                 followerHistoryRecordedThisTick = false;
         }
 

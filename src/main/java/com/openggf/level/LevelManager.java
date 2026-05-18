@@ -956,6 +956,16 @@ public class LevelManager {
     }
 
     /**
+     * Advances zone scroll handlers that own foreground camera movement.
+     *
+     * @return true when the normal player-follow camera step should be skipped
+     */
+    public boolean advanceCameraDrivenScrollForFrame() {
+        return parallaxManager != null
+                && parallaxManager.advanceCameraDrivenScroll(currentZone, currentAct, camera, frameCounter);
+    }
+
+    /**
      * Runs pre-physics zone feature updates (e.g., LZ water slides and wind tunnels).
      *
      * <p>ROM order: {@code LZWaterFeatures} runs before {@code ExecuteObjects},
@@ -968,6 +978,12 @@ public class LevelManager {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
             zoneFeatureProvider.updatePrePhysics(playable, camera.getX(), getFeatureZoneId());
+        }
+    }
+
+    public void updateZoneFeaturesAfterPlayablePhysics(AbstractPlayableSprite playable) {
+        if (zoneFeatureProvider != null && level != null && playable != null) {
+            zoneFeatureProvider.updateAfterPlayablePhysics(playable, camera.getX(), getFeatureZoneId());
         }
     }
 
@@ -2843,6 +2859,15 @@ public class LevelManager {
             }
             verticalWrapEnabled = camera.isVerticalWrapEnabled();
             camera.updatePosition(true);
+            // ROM parity: only when Get_LevelSizeStart had to clamp the camera
+            // Y down to Camera_max_Y_pos does the immediately-following
+            // DeformBgLayer call advance Camera_Y_pos past maxY. Levels whose
+            // player spawn sits within maxY have no maxY clamp on the snap, so
+            // the engine's normal first scroll converges without the ROM quirk.
+            // (For S3K AIZ1: player spawn is below maxY, snap clamps to $0390,
+            // setup-DeformBgLayer scrolls to $0396; for S1 GHZ1 player spawn is
+            // within maxY, no clamp/scroll quirk -- the engine matches ROM
+            // exactly without arming the flag.)
         }
 
         // Apply per-game fast vertical scroll cap from PhysicsFeatureSet.

@@ -8,6 +8,7 @@ import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.MultiPieceSolidProvider;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.physics.CollisionSystem;
@@ -21,6 +22,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.level.objects.SkidDustObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.game.PhysicsProfile;
 import com.openggf.game.ShieldType;
 import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -91,6 +93,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputRawLeft, inputRawRight;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
 	private boolean wasCrouching;
+	private ObjectInstance staleHorizontalInputRideObject;
+	private int staleHorizontalInputSuppressFrames;
+	private int staleHorizontalInputRideFrames;
+	private boolean staleHorizontalInputPreviousHorizontal;
 
 	public PlayableSpriteMovement(AbstractPlayableSprite sprite,
 			CollisionSystem collisionSystem,
@@ -127,6 +133,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRawRight = false;
 		facingFlipForcesPushClearAfterGroundWall = false;
 		wasCrouching = false;
+		staleHorizontalInputRideObject = null;
+		staleHorizontalInputSuppressFrames = 0;
+		staleHorizontalInputRideFrames = 0;
+		staleHorizontalInputPreviousHorizontal = false;
 	}
 
 	public RewindState captureRewindState() {
@@ -144,7 +154,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				inputRawLeft,
 				inputRawRight,
 				facingFlipForcesPushClearAfterGroundWall,
-				wasCrouching);
+				wasCrouching,
+				staleHorizontalInputRideObject,
+				staleHorizontalInputSuppressFrames,
+				staleHorizontalInputRideFrames,
+				staleHorizontalInputPreviousHorizontal);
 	}
 
 	public void restoreRewindState(RewindState state) {
@@ -166,6 +180,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRawRight = state.inputRawRight();
 		facingFlipForcesPushClearAfterGroundWall = state.facingFlipForcesPushClearAfterGroundWall();
 		wasCrouching = state.wasCrouching();
+		staleHorizontalInputRideObject = state.staleHorizontalInputRideObject();
+		staleHorizontalInputSuppressFrames = state.staleHorizontalInputSuppressFrames();
+		staleHorizontalInputRideFrames = state.staleHorizontalInputRideFrames();
+		staleHorizontalInputPreviousHorizontal = state.staleHorizontalInputPreviousHorizontal();
 	}
 
 	public record RewindState(
@@ -182,7 +200,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			boolean inputRawLeft,
 			boolean inputRawRight,
 			boolean facingFlipForcesPushClearAfterGroundWall,
-			boolean wasCrouching
+			boolean wasCrouching,
+			ObjectInstance staleHorizontalInputRideObject,
+			int staleHorizontalInputSuppressFrames,
+			int staleHorizontalInputRideFrames,
+			boolean staleHorizontalInputPreviousHorizontal
 	) {}
 
 	public void clearJumpHeightLatch() {
@@ -211,6 +233,51 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private GameStateManager gameState() {
 		GameStateManager current = sprite.currentGameStateOrNull();
 		return current != null ? current : bootstrapGameState;
+	}
+
+	private boolean applyStaleRidingLogicalHorizontalInput(boolean left, boolean right) {
+		boolean horizontal = left || right;
+		ObjectInstance ridingObject = currentRidingSolidForStaleHorizontalInput();
+		if (ridingObject == null || !(ridingObject instanceof SolidObjectProvider provider)) {
+			staleHorizontalInputRideObject = null;
+			staleHorizontalInputSuppressFrames = 0;
+			staleHorizontalInputRideFrames = 0;
+			staleHorizontalInputPreviousHorizontal = horizontal;
+			return false;
+		}
+		if (ridingObject != staleHorizontalInputRideObject) {
+			staleHorizontalInputRideObject = ridingObject;
+			staleHorizontalInputSuppressFrames = 0;
+			staleHorizontalInputRideFrames = 0;
+			staleHorizontalInputPreviousHorizontal = false;
+		}
+
+		staleHorizontalInputRideFrames++;
+		if (right
+				&& !left
+				&& !staleHorizontalInputPreviousHorizontal) {
+			staleHorizontalInputSuppressFrames =
+					provider.staleHorizontalLogicalInputFramesWhileRiding(sprite, staleHorizontalInputRideFrames);
+		}
+		staleHorizontalInputPreviousHorizontal = horizontal;
+
+		if (!horizontal || staleHorizontalInputSuppressFrames <= 0) {
+			return false;
+		}
+		staleHorizontalInputSuppressFrames--;
+		return true;
+	}
+
+	private ObjectInstance currentRidingSolidForStaleHorizontalInput() {
+		LevelManager manager = levelManager();
+		var objectManager = manager != null ? manager.getObjectManager() : null;
+		if (objectManager == null
+				|| !objectManager.isRidingObject(sprite)
+				|| sprite.getAir()
+				|| sprite.getGSpeed() != 0) {
+			return null;
+		}
+		return objectManager.getRidingObject(sprite);
 	}
 
 	/**
@@ -314,6 +381,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			jump = false;
 		}
 
+		if (applyStaleRidingLogicalHorizontalInput(left, right)) {
+			left = false;
+			right = false;
+		}
+
 		facingFlipForcesPushClearAfterGroundWall = false;
 		updatePushingOnDirectionChange(left, right);
 
@@ -335,8 +407,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		if (sprite.getDead()) {
-			applyDeathMovement();
-			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			SidekickCpuController cpu = sprite.getCpuController();
+			if (cpu != null && cpu.applyDeferredGenericDeadDespawnIfCrossed()) {
+				sprite.updateSensors(originalX, originalY);
+				applyScreenYWrapValueAfterControl();
+				return;
+			}
+			short oldYSpeed = applyDeathMovement();
+			sprite.move(sprite.getXSpeed(), oldYSpeed);
 			sprite.updateSensors(originalX, originalY);
 			applyScreenYWrapValueAfterControl();
 			return;
@@ -392,7 +470,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		// Mode dispatch (ROM: Obj01_MdNormal_Checks)
-		if (sprite.getAir()) {
+		if (sprite.isHurt() && !sprite.getAir()) {
+			// Obj01_Hurt_Normal performs ObjectMove before Sonic_HurtStop
+			// clears routine 4 and zeroes velocities, even when an object
+			// solid cleared Status_InAir on the prior frame (S2: s2.asm:
+			// 37820-37834, 37848-37861). Do that final recoil move here,
+			// then complete the hurt-stop recovery without entering normal
+			// ground control this frame.
+			doObjectMoveAndFall();
+			if (sprite.isInWater()) {
+				var modifiers = sprite.getPhysicsModifiers();
+				short reduction = modifiers != null
+						? modifiers.waterHurtGravityReduction()
+						: 0x20;
+				sprite.setYSpeed((short) (sprite.getYSpeed() - reduction));
+			}
+			sprite.completeHurtLandingRecovery();
+		} else if (sprite.getAir()) {
 			modeAirborne();
 		} else if (sprite.getRolling()) {
 			modeRoll();
@@ -556,9 +650,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// the missing MoveSprite step prevents the y_vel=-$700 from
 			// shifting Tails up before the collision sensors snap him to
 			// ground.
+			//
+			// S2 deferred-despawn divergence: ROM Obj02_Dead
+			// (s2.asm:40736-40742) runs ObjectMoveAndFall but NOT
+			// Tails_DoLevelCollision on deferred-fall continuation frames
+			// (kill frame N+1..N+threshold). The kill FRAME itself runs
+			// through ROM Obj02_MdAir (s2.asm:39259-39274) which DOES end
+			// in Tails_DoLevelCollision, so the collision pass remains
+			// active there. SidekickCpuController flags continuation frames
+			// via isDeferredDespawnDeadFallContinuingThisFrame(): when set,
+			// the engine mirrors ROM by running only ObjectMoveAndFall.
+			// MCZ trace F443 confirms: without this gate, the engine landed
+			// dead Tails on the CollapsingPlatform below (y_speed snapped to
+			// 0, position frozen), but ROM kept Tails falling through it.
 			doObjectMoveAndFall();
-			sprite.updateSensors(originalX, originalY);
-			doLevelCollision(sprite.isForceFloorCheck());
+			SidekickCpuController kc = sprite.getCpuController();
+			boolean deferredContinuation =
+					kc != null && kc.isDeferredDespawnDeadFallContinuingThisFrame();
+			if (!deferredContinuation) {
+				sprite.updateSensors(originalX, originalY);
+				doLevelCollision(sprite.isForceFloorCheck());
+			}
 			return;
 		}
 
@@ -1808,7 +1920,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		boolean inputAllowed = sprite.getMoveLockTimer() == 0;
+		boolean objectPreservedRollStop = sprite.shouldPreserveRollingOnNextRollStop();
+		boolean skipControlledRollInput = sprite.consumeObjectPreservedRollBoostFollowup();
+		boolean skipObjectPreservedRollInput = sprite.consumeObjectPreservedRollWallProbe();
+		boolean objectPreservedVelocityCarry = sprite.shouldApplyObjectPreservedRollVelocityCarry();
+		boolean inputAllowed = sprite.getMoveLockTimer() == 0
+				&& !skipControlledRollInput
+				&& !skipObjectPreservedRollInput;
+		if (objectPreservedVelocityCarry
+				&& objectPreservedRollStop
+				&& sprite.getRolling()
+				&& !sprite.getAir()
+				&& gSpeed == 0
+				&& sprite.getXSpeed() != 0) {
+			int carriedXSpeed = Math.max(-0x1000, Math.min(0x1000, sprite.getXSpeed()));
+			sprite.setXSpeed((short) carriedXSpeed);
+			sprite.setYSpeed((short) 0);
+			return;
+		}
+		if (objectPreservedVelocityCarry) {
+			sprite.clearObjectPreservedRollVelocityCarry();
+		}
 
 		// Controlled roll deceleration: hardcoded $20 regardless of water state
 		// ROM ref: s2.asm:36671 — move.w #$20,d4
@@ -1840,6 +1972,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (gSpeed == 0) {
 			if (sprite.getPinballMode()) {
 				gSpeed = (short) (sprite.getDirection() == Direction.LEFT ? -0x400 : 0x400);
+			} else if (objectPreservedRollStop) {
+				// Object-scoped ROM handoff: S2 Obj85 leaves Tails curled in
+				// the CNZ stopper chamber. The following zero-inertia roll-stop
+				// decision must not apply the generic unroll/Y-radius change;
+				// when the later positive handoff appears, the next frame's wall
+				// probe can turn it into the chamber push (s2.asm:39716-39745,
+				// 39481-39507).
+				if (inputRight) {
+					gSpeed = 0x400;
+					sprite.markObjectPreservedRollBoostFollowup();
+				}
 			} else {
 				sprite.setRolling(false);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
@@ -1849,6 +1992,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		sprite.setGSpeed(gSpeed);
 		convertRollVelocity(gSpeed);
+		if (skipControlledRollInput) {
+			sprite.markObjectPreservedRollWallProbe();
+		}
 	}
 
 	private void applyRollStopAnimationChange() {
@@ -2109,15 +2255,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			//     (s1disasm/_incObj/01 Sonic.asm:1014).
 			//   S2 Sonic_LevelBound Sonic_Boundary_CheckBottom: cmp.w y_pos(a0),d0
 			//     / blt.s Sonic_Boundary_Bottom (s2.asm:36950).
+			//   S2 Tails_LevelBound Tails_Boundary_CheckBottom: cmp.w y_pos(a0),d0
+			//     / blt.s Tails_Boundary_Bottom (s2.asm:39929).
 			//   S3K Player_LevelBound Player_Boundary_CheckBottom: cmp.w y_pos(a0),d0
 			//     / blt.s Player_Boundary_Bottom (sonic3k.asm:23195).
 			//   S3K Tails_Check_Screen_Boundaries loc_14F30: cmp.w y_pos(a0),d0
 			//     / blt.s loc_14F56 (sonic3k.asm:28430-28431).
 			// PhysicsFeatureSet.levelBoundaryUsesCentreY gates centre-Y for the
-			// games whose trace baselines have been validated against ROM
-			// parity (currently only SONIC_3K). S1/S2 stay on top-left until
+			// games whose player trace baselines have been validated against ROM
+			// parity (currently only SONIC_3K). S1/S2 players stay on top-left until
 			// their trace baselines are re-recorded.
-			boolean useCentreY = featureSet != null && featureSet.levelBoundaryUsesCentreY();
+			//
+			// CPU sidekicks always use centre-Y to match ROM Tails_LevelBound
+			// behavior regardless of game: MCZ1 F398 (S2 level-select trace, recorded
+			// at lua_script_version 9.2-s2) records Tails crossing the kill plane at
+			// centre-Y=0x0807 with maxY+screen_height=0x0800, triggering
+			// JmpTo2_KillCharacter (s2.asm:39929-39939). Using top-left (Y=0x07F9) misses
+			// the kill by 8 pixels and Tails keeps falling instead of dying.
+			boolean useCentreY = (featureSet != null && featureSet.levelBoundaryUsesCentreY())
+					|| (sprite.isCpuControlled() && sprite.getCpuController() != null);
 			int playerY = useCentreY ? sprite.getCentreY() : sprite.getY();
 			if (playerY > effectiveMaxY + 224) {
 				GameModule module = sprite.currentGameModule();
@@ -2399,8 +2555,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
 		boolean preservePinballMode = featureSet != null && featureSet.pinballLandingPreservesPinballMode();
-		boolean skipTouchFloorBodyForPinball = sprite.getRolling() && sprite.getPinballMode() && preservePinballRoll;
-		if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
+		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
+		boolean skipLandingRollClear = sprite.getRolling()
+				&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
+		if (sprite.getRolling() && !skipLandingRollClear) {
 			if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
 				int oldCentreY = sprite.getCentreY();
 				int oldYRadius = sprite.getYRadius();
@@ -2414,7 +2572,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setRolling(false);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
 			}
-		} else if (!skipTouchFloorBodyForPinball
+		} else if (featureSet != null
+				&& featureSet.landingRollClearUsesCurrentYRadiusDelta()
+				&& !skipLandingRollClear
 				&& (sprite.getYRadius() != sprite.getStandYRadius()
 				|| sprite.getXRadius() != sprite.getStandXRadius())) {
 			// ROM Player_TouchFloor (sonic3k.asm:24341-24343 Sonic, 29134-29136 Tails)
@@ -2633,6 +2793,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// UTILITY HELPERS
 	// ========================================
 
+	/**
+	 * Bootstrap-only seed for the jump-press edge tracker. Trace replay's
+	 * title-card prelude does not invoke this manager (sidekick-only warmup),
+	 * so {@code jumpPrevious} stays {@code false}. If the BK2 movie was
+	 * already holding A/B/C across the title-card boundary, the first
+	 * {@link #storeInputState} call on the first compared frame would
+	 * compute {@code inputJumpPress = (jump && !false) = true} and fire
+	 * {@code doJump} one frame before the ROM (s2.asm:36253-36260
+	 * Obj01_Control reads {@code Ctrl_1_Press}; V-int's edge detector
+	 * already cleared the bit because the button was held throughout
+	 * title-card frames).
+	 *
+	 * <p>Call once during {@code TraceReplaySessionBootstrap.applyBootstrap}
+	 * with the last title-card-frame BK2 jump state to mirror the ROM
+	 * post-title-card edge state. Comparison-only — no trace data is read
+	 * or written by this hook.
+	 */
+	public void primeJumpPreviousForBootstrap(boolean jumpHeldAtPriorBk2Frame) {
+		this.jumpPrevious = jumpHeldAtPriorBk2Frame;
+	}
+
 	private void storeInputState(boolean up, boolean down, boolean left, boolean right, boolean jump) {
 		inputUp = up;
 		inputDown = down;
@@ -2640,7 +2821,24 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRight = right;
 		inputJump = sprite.isHurt() ? false : jump;
 		boolean suppressJumpPress = sprite.consumeSuppressNextJumpPress();
-		inputJumpPress = ((jump && !jumpPrevious) && !suppressJumpPress) || sprite.isForcedJumpPress();
+		if (sprite.isCpuControlled()) {
+			// ROM Tails CPU writes the whole delayed Ctrl_1_Logical word into
+			// Ctrl_2_Logical (s2.asm:38939-38946, 39025-39027), so the held bits
+			// and the press low-byte both come from the leader's delayed sample.
+			// In the engine, the press edge is conveyed via forcedJumpPress
+			// (set by SpriteManager when SidekickCpuController.getInputJumpPress()
+			// is true). Computing a fresh (jump && !jumpPrevious) edge against
+			// Tails' own jumpPrevious would manufacture a spurious press whenever
+			// the leader's delayed held bit transitions from clear to set without
+			// a corresponding press edge — the bootstrap held-jump case is the
+			// canonical example (CNZ2 trace frame 16: leader's BK2 prelude held
+			// jump, Tails reads the held bit but recorded_press=false). The CPU
+			// controller is the authoritative source for Tails' Ctrl_2_Press low
+			// byte, so consume the forced press signal directly.
+			inputJumpPress = sprite.isForcedJumpPress() && !suppressJumpPress;
+		} else {
+			inputJumpPress = ((jump && !jumpPrevious) && !suppressJumpPress) || sprite.isForcedJumpPress();
+		}
 		sprite.setForcedJumpPress(false); // consume one-shot signal
 		jumpPrevious = jump;
 	}
@@ -2798,7 +2996,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
         }
     }
 
-	private void applyDeathMovement() {
+	private short applyDeathMovement() {
+		short oldYSpeed = sprite.getYSpeed();
 		applyGravity();  // Gated on isObjectControlled(); a controlled sprite never enters the death routine anyway but keep gates consistent
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
@@ -2818,6 +3017,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				levelManager().requestRespawn();
 			}
 		}
+		return oldYSpeed;
 	}
 
 	/**
@@ -3109,9 +3309,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int objectX;
 		SolidObjectParams params;
 		int ridingPieceIndex = objectManager.getRidingPieceIndex(sprite);
+		boolean useMultiPieceWidth = false;
 		if (ridingPieceIndex >= 0 && ridingObject instanceof MultiPieceSolidProvider multiPiece) {
 			objectX = multiPiece.getPieceX(ridingPieceIndex);
 			params = multiPiece.getPieceParams(ridingPieceIndex);
+			useMultiPieceWidth = true;
 		} else {
 			objectX = ridingObject.getX();
 			params = provider.getSolidParams();
@@ -3123,17 +3325,45 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		boolean extended = featureSet != null && featureSet.extendedEdgeBalance();
 
-		int objectWidth = params.halfWidth(); // Half-width (radius)
+		// ROM Sonic_Move (s2.asm:36285) / Tails_Move (s2.asm:39359) read
+		// `width_pixels(a1)` from the object's SST for the balance computation,
+		// NOT the SolidObject-extended X-check width (which may be
+		// `width_pixels + N` for some objects, e.g. SmashableGround uses
+		// `width_pixels=$10` for balance but `width_pixels+$B=$1B` for
+		// SolidObject's d1 in s2.asm:48703-48705). The engine's
+		// `SolidObjectParams.halfWidth()` bakes in any per-object collision
+		// extension, so using it here makes Tails report d1 outside the
+		// (4, 2*width-4) Balance window on objects like SmashableGround and
+		// the Tails_Lookup branch falls through to Tails_Duck, which sets
+		// anim=Duck and spuriously triggers Tails_CheckSpindash the next
+		// frame when the delayed Ctrl_2 jump-press latches.
+		int objectWidth;
+		if (useMultiPieceWidth) {
+			objectWidth = params.halfWidth();
+		} else if (ridingObject instanceof com.openggf.level.objects.AbstractObjectInstance objectInstance) {
+			objectWidth = objectInstance.getOnScreenHalfWidth();
+		} else {
+			objectWidth = params.halfWidth();
+		}
 		int playerX = sprite.getCentreX();
 
 		// ROM formula: d1 = player_x + width - object_x
 		// This gives player position relative to left edge of object
 		int d1 = playerX + objectWidth - objectX;
 
-		// S1: d2 = (width * 2) - 4, left threshold 4 (s1.asm:344,347)
-		// S2: d2 = (width * 2) - 2, left threshold 2 (s2.asm:36268)
-		int leftThreshold = extended ? 2 : 4;
-		int d2 = (objectWidth * 2) - (extended ? 2 : 4);
+		// S1 (non-extended) hard-codes #4 (s1disasm/_incObj/01 Sonic.asm:392).
+		// Extended (S2/S3K) reads a per-character shift from PhysicsProfile:
+		// Sonic=2 (s2.asm:36287, sonic3k.asm:22465), Tails=4 (s2.asm:39361,
+		// sonic3k.asm:27825), Knuckles=2 (sonic3k.asm:31810).
+		int balanceShift;
+		if (!extended) {
+			balanceShift = 4;
+		} else {
+			PhysicsProfile profile = sprite.getPhysicsProfile();
+			balanceShift = profile != null ? profile.onObjectBalanceShift() : 2;
+		}
+		int leftThreshold = balanceShift;
+		int d2 = (objectWidth * 2) - balanceShift;
 
 		boolean facingRight = sprite.getDirection() == Direction.RIGHT;
 

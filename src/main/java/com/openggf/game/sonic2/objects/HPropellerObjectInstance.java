@@ -134,6 +134,10 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
     private int animFrameIndex; // index into ANIM_SCRIPTS[currentAnim], starting after speed byte
     private int animTimer;
     private int mappingFrame;
+    private int lastOscByte;
+    private int lastPlayerDy = Integer.MIN_VALUE;
+    private int lastPush;
+    private boolean lastPushedPlayer;
 
     public HPropellerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "HPropeller");
@@ -314,7 +318,11 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
         // ROM: moveq #0,d1 / move.b (Oscillating_Data+$14).w,d1
         //      add.w y_pos(a1),d1 / addi.w #$60,d1 / sub.w y_pos(a0),d1
         int oscByte = OscillationManager.getByte(OSC_DATA_OFFSET);
+        lastOscByte = oscByte;
+        lastPushedPlayer = false;
+        lastPush = 0;
         int dy = oscByte + playerY + PUSH_Y_OFFSET - objY;
+        lastPlayerDy = dy;
 
         // ROM: bcs.s ++ (rts)  -> dy < 0 means out of range (carry set after sub)
         if (dy < 0) {
@@ -339,6 +347,8 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
         dy = (short) ((dy + PUSH_Y_OFFSET) & 0xFFFF);
         dy = -dy;
         int push = dy >> 4; // arithmetic shift right 4
+        lastPush = push;
+        lastPushedPlayer = true;
 
         // ROM: add.w d1,y_pos(a1)
         player.setY((short) (player.getY() + push));
@@ -368,6 +378,18 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
 
         // ROM: move.b #8,flip_speed(a1)
         player.setFlipSpeed(8);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("osc14=%02X dy=%s push=%d anim=%d timer=%d frame=%d pushed=%d",
+                lastOscByte & 0xFF,
+                lastPlayerDy == Integer.MIN_VALUE ? "--" : String.format("%04X", lastPlayerDy & 0xFFFF),
+                lastPush,
+                currentAnim,
+                animTimer,
+                mappingFrame,
+                lastPushedPlayer ? 1 : 0);
     }
 
     // ========== Rendering ==========

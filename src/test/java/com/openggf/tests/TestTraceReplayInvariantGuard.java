@@ -44,8 +44,7 @@ class TestTraceReplayInvariantGuard {
             "src/main/java/com/openggf/trace/TraceCharacterState.java depends on com.openggf.level.objects.AbstractObjectInstance",
             "src/main/java/com/openggf/trace/TraceCharacterState.java depends on com.openggf.level.objects.ObjectManager",
             "src/main/java/com/openggf/trace/TraceCharacterState.java depends on com.openggf.sprites.",
-            "src/main/java/com/openggf/trace/TraceEvent.java depends on com.openggf.sprites.",
-            "src/main/java/com/openggf/trace/TraceObjectSnapshotBinder.java depends on com.openggf.level.objects.ObjectManager"
+            "src/main/java/com/openggf/trace/TraceEvent.java depends on com.openggf.sprites."
     );
 
     @Test
@@ -130,7 +129,8 @@ class TestTraceReplayInvariantGuard {
                 continue;
             }
             if (!text.contains("extends AbstractTraceReplayTest")
-                    && !text.contains("extends AbstractCreditsDemoTraceReplayTest")) {
+                    && !text.contains("extends AbstractCreditsDemoTraceReplayTest")
+                    && !text.contains("extends AbstractS2LevelSelectTraceReplayTest")) {
                 violations.add(normalized);
             }
         }

@@ -262,13 +262,19 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance {
             return;
         }
 
+        short centreX = player.getCentreX();
+        short centreY = player.getCentreY();
         // Force into rolling state
-        // setRolling(true) handles radii and visual dimensions but NOT Y position
+        // setRolling(true) handles radii and visual dimensions.
         player.setRolling(true);
+        // ROM Obj84 writes radii/status/anim and adds 5 to y_pos only; it
+        // never adjusts x_pos. The engine's generic wall-mode roll transition
+        // changes width, so preserve the ROM centre X for this object path.
+        player.setCentreXPreserveSubpixel(centreX);
 
-        // Adjust Y position for roll height change (ROM: addq.w #5,y_pos)
-        // ROM uses center coordinates (+5 radius diff), our engine uses top-left (+10 height diff)
-        player.setY((short) (player.getY() + player.getRollHeightAdjustment()));
+        // ROM Obj84 loc_212C4 applies a fixed addq.w #5,y_pos(a1) after
+        // setting rolling radii, for Sonic and Tails alike (docs/s2disasm/s2.asm:46377-46495).
+        player.setCentreYPreserveSubpixel((short) (centreY + 5));
 
         // Set roll animation
         forceRollAnimation(player);

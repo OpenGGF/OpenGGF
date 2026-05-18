@@ -7,6 +7,7 @@ import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.DefaultSolidExecutionRegistry;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.PlayerStandingState;
 import com.openggf.game.solid.PostContactState;
 import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
@@ -153,6 +154,92 @@ public class TestTornadoObjectInstance {
                 "SCZ Tornado should use the current-frame checkpoint standing state");
         assertTrue((boolean) getField(tornado, "standingTransition"),
                 "SCZ Tornado should detect the same-frame standing transition before follow motion");
+    }
+
+    @Test
+    public void tornadoSczMainPreservesEntryStandingBitForReleaseFrameBob() throws Exception {
+        TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
+                0x452, 0x97, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x452, (short) 0x70);
+        main.setOnObject(false);
+        main.setAir(true);
+
+        setField(tornado, "xPosFixed8", 0x45200);
+        setField(tornado, "yPosFixed8", 0x9740);
+        setField(tornado, "yVel", 0x120);
+        setField(tornado, "moveVertActive", true);
+        setField(tornado, "moveVertTimer", 0x0D);
+        setField(tornado, "lastMainStanding", true);
+
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        registry.beginFrame(1, List.of(main));
+        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+                main, new PlayerSolidContactResult(
+                        ContactKind.NONE,
+                        false,
+                        false,
+                        false,
+                        false,
+                        PreContactState.ZERO,
+                        PostContactState.ZERO,
+                        0))));
+
+        tornado.setServices(new CheckpointServices(registry.currentObject()));
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0x9A, tornado.getY(),
+                "Release frame should run ObjB2_Move_vert before SolidObject clears standing");
+        assertFalse((boolean) getField(tornado, "lastMainStanding"));
+        assertTrue((boolean) getField(tornado, "moveVert2Active"));
+    }
+
+    @Test
+    public void tornadoSczMainUsesLivePlayerOnObjectBitForMoveWithPlayer() throws Exception {
+        TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
+                0x739, 0x8F, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x73A, (short) 0x63);
+        main.setOnObject(true);
+        main.setAir(false);
+
+        setField(tornado, "xPosFixed8", 0x73900);
+        setField(tornado, "yPosFixed8", 0x8F00);
+        setField(tornado, "lastMainStanding", false);
+
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        registry.beginFrame(1, List.of(main));
+        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+                main, PlayerSolidContactResult.noContact(
+                        PlayerStandingState.NONE,
+                        PreContactState.ZERO,
+                        PostContactState.ZERO))));
+
+        tornado.setServices(new CheckpointServices(registry.currentObject()));
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0x739, tornado.getX(),
+                "ObjB2_Move_with_player branches on Sonic's live Status_OnObj bit, even if ObjB2 itself is not the current standing object");
+        assertFalse((boolean) getField(tornado, "moveVert2Active"),
+                "ObjB2_Move_obbey_player also branches on Sonic's live Status_OnObj bit after SolidObject");
+        assertFalse((boolean) getField(tornado, "lastMainStanding"),
+                "The ObjB2 standing latch should still reflect only Tornado's own SolidObject result");
+    }
+
+    @Test
+    public void sczCameraEdgePushPreservesPlayerXSubpixel() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x640, 0x99, 0x50);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x63E, (short) 0x3C);
+        main.setSubpixelRaw(0xE900, 0x6000);
+        GameServices.camera().setX((short) 0x62F);
+
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0x63F, main.getCentreX(),
+                "SCZ edge push should increment x_pos by one pixel");
+        assertEquals(0xE900, main.getXSubpixelRaw(),
+                "SCZ edge push is a ROM word write to x_pos and must preserve x_sub");
     }
 
     @Test

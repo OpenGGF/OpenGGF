@@ -1,7 +1,6 @@
 package com.openggf.trace;
 
 import com.openggf.game.GameServices;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.trace.replay.TraceReplayFixture;
 
@@ -23,6 +22,9 @@ public final class TraceReplayBootstrap {
         public boolean hasSeededTraceState() {
             return seededTraceIndex >= 0;
         }
+    }
+
+    public record SnapshotReport(int attempted, int matched, List<String> warnings) {
     }
 
     public record ReplayPrimaryState(
@@ -75,18 +77,25 @@ public final class TraceReplayBootstrap {
     private TraceReplayBootstrap() {
     }
 
-    public static TraceObjectSnapshotBinder.Result applyPreTraceState(TraceData trace,
-                                                                     TraceReplayFixture fixture) {
-        var level = GameServices.levelOrNull();
-        return TraceObjectSnapshotBinder.apply(
-                level != null ? level.getObjectManager() : null,
-                List.of());
+    /**
+     * Reports recorded pre-trace object SST snapshots without mutating engine
+     * state. Trace rows are diagnostic comparison input only; replay bootstrap
+     * must not copy recorded object bytes back into live objects.
+     */
+    public static SnapshotReport reportPreTraceObjectSnapshots(TraceData trace) {
+        List<TraceEvent.ObjectStateSnapshot> snapshots = trace != null
+                ? trace.preTraceObjectSnapshots()
+                : List.of();
+        return new SnapshotReport(snapshots.size(), 0, List.of());
     }
 
-    public static void applyPreTracePlayerHistory(TraceEvent.PlayerHistorySnapshot snapshot,
-                                                  AbstractPlayableSprite sprite) {
-        // Deliberately no-op: trace history snapshots are diagnostic context,
-        // not engine input.
+    /**
+     * Compatibility name retained for replay bootstrap callers. Despite the
+     * historical name, this only reports recorded pre-trace snapshots and never
+     * applies trace data to engine state.
+     */
+    public static SnapshotReport applyPreTraceState(TraceData trace, TraceReplayFixture fixture) {
+        return reportPreTraceObjectSnapshots(trace);
     }
 
     public static ReplayStartState applyReplayStartState(TraceData trace,
@@ -231,26 +240,39 @@ public final class TraceReplayBootstrap {
     /**
      * Number of native sidekick-only object ticks that occur after level load
      * but before the first gameplay comparison frame. Sonic 2's title-card
-     * path runs Obj02/Tails CPU for ten frames while Sonic's own level-frame
-     * physics is still held; the first recorded gameplay row then observes
-     * Sonic's first input-driven movement frame and Tails' eleventh follower
-     * tick. This is derived from execution timing, not from recorded Tails
-     * fields.
+     * path runs Obj02/Tails CPU for ~104 frames while Sonic's own level-frame
+     * physics is held with input locked; the first recorded gameplay row then
+     * observes Sonic's first input-driven movement frame and Tails' 105th
+     * follower tick. This is derived from execution timing, not from recorded
+     * Tails fields.
+     *
+     * <p>The production {@link com.openggf.GameLoop} title-card branch runs
+     * objects + locked-input physics natively during {@code TITLE_CARD} mode,
+     * but headless trace fixtures skip the title-card entirely and arrive at
+     * frame 0 with virgin state ({@code history_pos=0}, Tails at spawn with
+     * zero velocity). For S2 traces recorded with the v9.2-s2 native-prelude
+     * recorder where a sidekick is present, replay must reproduce those ~104
+     * prelude frames by ticking objects and sidekick CPU (with Sonic input
+     * locked) so frame-0 engine state matches the ROM's recorded
+     * {@code player_history_snapshot}, {@code cpu_state_snapshot}, and
+     * {@code object_state_snapshot}.
      */
     public static int sidekickTitleCardPreludeFramesForTraceReplay(TraceData trace) {
-        if (trace == null || trace.frameCount() == 0
-                || trace.metadata().recordedSidekicks().isEmpty()
-                || shouldUseLegacyS3kAizIntroWarmup(trace)) {
-            return 0;
+        int s2Frames = resolveS2TitleCardPreludeFrames(trace);
+        if (s2Frames > 0) {
+            return s2Frames;
         }
-        if ("s3k".equals(trace.metadata().game())) {
-            return hasS3kSidekickTitleCardPrelude(trace) ? 1 : 0;
-        }
-        if (!"s2".equals(trace.metadata().game())) {
-            return 0;
-        }
-        TraceFrame firstFrame = trace.getFrame(replaySeedTraceIndexForTraceReplay(trace));
-        return firstFrame.gameplayFrameCounter() == 1 ? 10 : 0;
+        // S3K Sonic+Tails CNZ Act 1 seed-frame mode: trace frame 0 has
+        // Level_frame_counter=1, i.e. the row was sampled AFTER ROM's first
+        // LevelLoop iteration (sonic3k.asm:7884-7910). Tails_CPU_Control's
+        // loc_13A5A (sonic3k.asm:26405-26415) repositions Tails to
+        // (0x18, 0x600) with status_InAir set during that iteration, and
+        // Tails_Modes' in-air gravity (MoveSprite_TestGravity) then writes
+        // y_vel = 0x38 before the LevelLoop ends. Run one sidekick-only
+        // prelude tick during bootstrap so the seed-frame compare sees the
+        // post-loc_13A5A + post-gravity state instead of the raw post-spawn
+        // state ((tails_x ~0x0A clamped, air=false, y_vel=0)).
+        return resolveS3kSidekickSeedFramePreludeFrames(trace);
     }
 
     /**
@@ -260,15 +282,91 @@ public final class TraceReplayBootstrap {
      * s2.asm:5060-5066, and s2.asm:5077-5092. Headless replay starts directly
      * at gameplay frame 1, so it must reproduce that native object prelude
      * without copying pre-trace SST snapshots back into the engine.
+     *
+     * <p>Returns 104 when the trace's metadata declares native-prelude mode
+     * (recorder >= v9.2-s2), the game is S2, and the recording team has at
+     * least one sidekick. Returns 0 otherwise.
      */
     public static int levelObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
-        if (trace == null || trace.frameCount() == 0
-                || shouldUseLegacyS3kAizIntroWarmup(trace)
-                || !"s2".equals(trace.metadata().game())) {
+        return resolveS2TitleCardPreludeFrames(trace);
+    }
+
+    /**
+     * Number of CNZ SlotMachine title-card ticks needed before S2 level-select
+     * trace comparison begins. The regenerated CNZ trace records SlotMachine
+     * entering Routine2 at {@code vbc=0x09CA} with positions seeded from
+     * {@code Vint_runcount+3 == 0xC1}; replay therefore advances the native
+     * short slot-init window separately from the object prelude rather than
+     * copying slot RAM from the trace.
+     */
+    public static int zoneFeatureTitleCardPreludeFramesForTraceReplay(TraceData trace) {
+        if (trace == null || trace.metadata() == null) {
             return 0;
         }
-        TraceFrame firstFrame = trace.getFrame(replaySeedTraceIndexForTraceReplay(trace));
-        return firstFrame.gameplayFrameCounter() == 1 ? 25 : 0;
+        TraceMetadata meta = trace.metadata();
+        if (!"s2".equals(meta.game()) || !meta.nativePreludeMode()) {
+            return 0;
+        }
+        Integer romZoneId = meta.romZoneId();
+        if (romZoneId == null || romZoneId != 0x0C) {
+            return 0;
+        }
+        return 4;
+    }
+
+    public static int zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(TraceData trace) {
+        if (zoneFeatureTitleCardPreludeFramesForTraceReplay(trace) == 0) {
+            return 0;
+        }
+        return 10;
+    }
+
+    /**
+     * Frame count of the ROM title-card object prelude that S2 traces sampled
+     * at {@code frame -1}. The recorded {@code player_history_snapshot}
+     * {@code history_pos=0x68 = 104} is the raw byte index of
+     * {@code Sonic_Pos_Record_Index} (s2.asm:36043-36048). Each
+     * {@code Sonic_RecordPos} call advances the index by 4 (one 4-byte
+     * Pos_table entry), so {@code history_pos = 4 * frames_recorded}.
+     * Therefore the actual prelude length is {@code 104 / 4 = 26} frames of
+     * the ROM title-card {@code RunObjects} loop running Obj01_Control after
+     * Obj01_Init has completed its 64-entry pre-fill.
+     */
+    private static final int S2_TITLE_CARD_PRELUDE_FRAMES = 26;
+
+    /**
+     * Frame count of the S3K pre-LevelLoop sidekick prelude. Returns 1 only
+     * when seed-frame mode applies (S3K Sonic+Tails trace whose frame 0 row
+     * has Level_frame_counter=1 and Sonic primary movement still zero). The
+     * single tick fires Tails' carry-trigger init (CNZ loc_13A5A) and
+     * applies the in-air gravity that the ROM observes during that first
+     * iteration of LevelLoop's Process_Sprites pass.
+     */
+    private static int resolveS3kSidekickSeedFramePreludeFrames(TraceData trace) {
+        if (trace == null) {
+            return 0;
+        }
+        if (!usesSidekickTitleCardSeedFrame(trace)) {
+            return 0;
+        }
+        return 1;
+    }
+
+    private static int resolveS2TitleCardPreludeFrames(TraceData trace) {
+        if (trace == null) {
+            return 0;
+        }
+        TraceMetadata meta = trace.metadata();
+        if (meta == null || !"s2".equals(meta.game())) {
+            return 0;
+        }
+        if (!meta.nativePreludeMode()) {
+            return 0;
+        }
+        if (meta.recordedSidekicks().isEmpty()) {
+            return 0;
+        }
+        return S2_TITLE_CARD_PRELUDE_FRAMES;
     }
 
     /**
@@ -300,6 +398,20 @@ public final class TraceReplayBootstrap {
     public static boolean shouldApplyMetadataStartPositionForTraceReplay(TraceData trace) {
         return replaySeedTraceIndexForTraceReplay(trace) == 0
                 && !isLegacyS3kAizIntroTrace(trace);
+    }
+
+    public static boolean usesS2TornadoRideStartForTraceReplay(TraceData trace) {
+        if (trace == null || trace.frameCount() == 0) {
+            return false;
+        }
+        TraceMetadata metadata = trace.metadata();
+        if (!"s2".equals(metadata.game())
+                || replaySeedTraceIndexForTraceReplay(trace) != 0) {
+            return false;
+        }
+        String zone = metadata.zone();
+        return "level_gated_reset_aware".equals(metadata.traceProfile())
+                && ("scz".equals(zone) || "wfz".equals(zone));
     }
 
     public static int strictStartTraceIndexForTraceReplay(TraceData trace) {
@@ -342,6 +454,24 @@ public final class TraceReplayBootstrap {
                 // Sonic/Tails. Advance the BK2/VBlank cursor for these frames,
                 // but do not tick the loaded AIZ level until the first real
                 // Level frame at the Obj_AIZPlaneIntro spawn point.
+                return TraceExecutionPhase.VBLANK_ONLY;
+            }
+            if (current.frame() == firstLevelFrame) {
+                // The first Level-mode frame (Game_Mode just transitioned from
+                // $8C to $0C) is the boundary between ROM's synchronous setup
+                // block (loc_62FE..loc_7882 -- Get_LevelSizeStart +
+                // setup-DeformBgLayer + SpawnLevelMainSprites + Pal_FillBlack)
+                // and the first LevelLoop iteration. ROM has already snapped
+                // Camera_Y_pos via setup-DeformBgLayer (sonic3k.asm:7760), but
+                // LevelLoop's Wait_VSync (sonic3k.asm:7888) -> DeformBgLayer
+                // (sonic3k.asm:7897) doesn't run until the NEXT BK2 frame.
+                //
+                // The headless replay collapses ROM's two-phase setup into
+                // initCameraForLevel + first LevelFrameStep, which already ran
+                // by the time the comparator first checks this row. Treat this
+                // boundary frame as VBLANK_ONLY so the engine's first physics
+                // tick aligns with ROM's first LevelLoop iteration on the next
+                // trace frame instead of double-counting the setup work.
                 return TraceExecutionPhase.VBLANK_ONLY;
             }
             return deriveLegacyPhase(previous, current);

@@ -77,15 +77,22 @@ public class TurtloidRiderInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean requiresRenderFlagForTouch() {
+        return false;
+    }
+
+    @Override
     public void onPlayerAttack(PlayableEntity playerEntity, TouchResponseResult result) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (destroyed) {
             return;
         }
         // ROM parity: destroying the rider should not destroy the turtle base.
+        int hitX = getPreUpdateX();
+        int hitY = getPreUpdateY();
         destroyed = true;
         setDestroyed(true);
-        parent.onRiderDestroyed(currentX, currentY, player);
+        parent.onRiderDestroyed(hitX, hitY, player);
     }
 
     @Override

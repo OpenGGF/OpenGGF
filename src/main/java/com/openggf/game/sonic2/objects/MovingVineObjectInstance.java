@@ -359,18 +359,23 @@ public class MovingVineObjectInstance extends AbstractObjectInstance {
             return;
         }
 
-        // Check for A/B/C button press to release
+        // Check for a new A/B/C press to release. Obj80 receives the full Ctrl_1
+        // word (docs/s2disasm/s2.asm:56279-56288), whose low byte is press
+        // bits from Joypad_Read (s2.asm:1362-1387). Directional release uses
+        // the high held byte later, but A/B/C release does not treat a held jump
+        // from the grab frame as another release input.
         // ROM: andi.b #button_B_mask|button_C_mask|button_A_mask,d0 / beq.w loc_29B50
-        if (player.isJumpPressed()) {
+        if (player.isJumpJustPressed()) {
             releasePlayer(player, isPlayer2, true);
             return;
         }
 
-        // Keep player attached to vine (using center coordinates per CLAUDE.md)
-        // ROM: loc_29B50 - move.w x_pos(a0),x_pos(a1) / move.w y_pos(a0),y_pos(a1) / addi.w #$94,y_pos(a1)
-        player.setCentreX((short) spawn.x());
+        // Keep player attached to vine (using center coordinates per CLAUDE.md).
+        // ROM loc_29B50 only refreshes y_pos while grabbed; x_pos is written on
+        // initial grab at loc_29BC8 and then left alone.
+        // ROM: move.w y_pos(a0),y_pos(a1) / addi.w #$94,y_pos(a1)
         int hangY = currentY + 0x94;
-        player.setCentreY((short) hangY);
+        player.setCentreYPreserveSubpixel((short) hangY);
     }
 
     /**
@@ -435,11 +440,12 @@ public class MovingVineObjectInstance extends AbstractObjectInstance {
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
 
-        // Position player on vine (using center coordinates per CLAUDE.md)
+        // Position player on vine (using center coordinates per CLAUDE.md).
+        // The ROM uses move.w x_pos/y_pos, so x_sub/y_sub are preserved.
         // ROM: move.w x_pos(a0),x_pos(a1) / move.w y_pos(a0),y_pos(a1) / addi.w #$94,y_pos(a1)
-        player.setCentreX((short) spawn.x());
+        player.setCentreXPreserveSubpixel((short) spawn.x());
         int hangY = currentY + 0x94;
-        player.setCentreY((short) hangY);
+        player.setCentreYPreserveSubpixel((short) hangY);
 
         // Set animation to hanging pose
         // ROM: move.b #AniIDSonAni_Hang2,anim(a1)

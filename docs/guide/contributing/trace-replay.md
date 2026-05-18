@@ -148,7 +148,7 @@ versions are tracked independently in `metadata.json` (`trace_schema`, `csv_vers
 | Game | Recorder script | Launcher | `metadata.json["game"]` | `gameplay_frame_counter` | `vblank_counter` | `lag_counter` | Current `trace_schema` / `csv_version` / `lua_script_version` |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Sonic 1 | [`s1_trace_recorder.lua`](../../../tools/bizhawk/s1_trace_recorder.lua) | [`record_trace.bat`](../../../tools/bizhawk/record_trace.bat) | `s1` | `0xFE04` | `0xFE0E` | placeholder `0` | `3 / 4 / 3.0` |
-| Sonic 2 | [`s2_trace_recorder.lua`](../../../tools/bizhawk/s2_trace_recorder.lua) | [`record_s2_trace.bat`](../../../tools/bizhawk/record_s2_trace.bat) | `s2` | `0xFE04` | `0xFE0E` | placeholder `0` | `8 / 6 / 8.0-s2` |
+| Sonic 2 | [`s2_trace_recorder.lua`](../../../tools/bizhawk/s2_trace_recorder.lua) | [`record_s2_trace.bat`](../../../tools/bizhawk/record_s2_trace.bat) | `s2` | `0xFE04` | `0xFE0E` | placeholder `0` | `8 / 6 / 9.1-s2` |
 | Sonic 3&K | [`s3k_trace_recorder.lua`](../../../tools/bizhawk/s3k_trace_recorder.lua) | [`record_s3k_trace.bat`](../../../tools/bizhawk/record_s3k_trace.bat) | `s3k` | `0xFE08` | `0xFE12` | `0xF628` diagnostic counter | `5 / 5 / 6.4-s3k` |
 
 Schema versioning rules:
@@ -175,6 +175,15 @@ tools\bizhawk\record_trace.bat ^
 tools\bizhawk\record_s2_trace.bat ^
   "Sonic The Hedgehog 2 (W) (REV01) [!].gen" ^
   "docs\BizHawk-2.11-win-x64\Movies\s2-ehz1.bk2"
+
+tools\bizhawk\record_s2_trace.bat ^
+  "Sonic The Hedgehog 2 (W) (REV01) [!].gen" ^
+  "docs\BizHawk-2.11-win-x64\Movies\s2-lvl-select-CPZ.bk2" ^
+  level_gated_reset_aware
+
+PowerShell -NoProfile -ExecutionPolicy Bypass -File tools\bizhawk\record_s2_level_select_traces.ps1 ^
+  -RomPath "Sonic The Hedgehog 2 (W) (REV01) [!].gen" ^
+  -Only cpz
 
 tools\bizhawk\record_s3k_trace.bat ^
   "Sonic and Knuckles & Sonic 3 (W) [!].gen" ^
@@ -209,6 +218,19 @@ Sanity-check `metadata.json` before trusting the trace:
   in the recorder source (see the table above)
 - `bizhawk_version` should be `2.11`
 - `genesis_core` should be `Genplus-gx`
+
+Sonic 2 level-select traces use the `level_gated_reset_aware` profile. The profile discards the
+shared setup section when debug mode exits EHZ back to the menu, then starts the persisted trace at
+the selected gameplay route. For these traces, `zone_id` is the engine progression id used by the
+Java replay/catalog code, `rom_zone_id` is the raw Sonic 2 ROM zone id, and `act` remains 1-based in
+metadata. Frame `0` must include either `zone_act_state` or a `gameplay_start` checkpoint with
+`game_mode: 12` so the fixture cannot accidentally begin in the menu. The generator script
+normalizes the fixture input column from the BK2 log, then validates that metadata, BK2 input
+alignment, frame-zero marker, and gzip-only payload storage before copying fixtures into
+`src/test/resources/traces/s2/<route>/`.
+
+The Sonic 2 DEZ ending movie is catalog/parser-only until replay support for the ending sequence is
+proven; keep it out of replay test discovery unless that support is added deliberately.
 
 If `trace_schema` is below the engine's expected version for that game, the parser will load
 the trace but warn about missing fields. Older fixtures may need regeneration.

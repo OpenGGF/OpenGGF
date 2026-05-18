@@ -20,15 +20,35 @@ public class DivergenceReport {
     private final List<FrameComparison> allComparisons;
     private final List<DivergenceGroup> errors;
     private final List<DivergenceGroup> warnings;
+    private final List<BootstrapDivergence> bootstrapDivergences;
     private final TraceData traceData;
 
     public DivergenceReport(List<FrameComparison> comparisons) {
-        this(comparisons, null);
+        this(comparisons, null, List.of());
     }
 
     public DivergenceReport(List<FrameComparison> comparisons, TraceData traceData) {
+        this(comparisons, traceData, List.of());
+    }
+
+    /**
+     * Variant that includes bootstrap (frame-0) divergences detected by
+     * {@link TraceBinder#compareBootstrapFrame0(TraceData, EngineSnapshot)}.
+     * Bootstrap divergences render ahead of the per-frame block in both
+     * JSON and text outputs.
+     */
+    public DivergenceReport(List<FrameComparison> comparisons,
+                            TraceData traceData,
+                            List<BootstrapDivergence> bootstrapDivergences) {
         this.allComparisons = List.copyOf(comparisons);
         this.traceData = traceData;
+        List<BootstrapDivergence> boot = bootstrapDivergences == null
+                ? new ArrayList<>()
+                : new ArrayList<>(bootstrapDivergences);
+        boot.sort(Comparator.comparingInt(
+                (BootstrapDivergence d) -> d.severity() == BootstrapDivergence.Severity.ERROR
+                        ? 0 : 1));
+        this.bootstrapDivergences = List.copyOf(boot);
         List<DivergenceGroup> allGroups = buildGroups(comparisons);
         this.errors = allGroups.stream()
             .filter(g -> g.severity() == Severity.ERROR)
@@ -42,6 +62,15 @@ public class DivergenceReport {
     public List<DivergenceGroup> warnings() { return warnings; }
     public boolean hasErrors() { return !errors.isEmpty(); }
     public boolean hasWarnings() { return !warnings.isEmpty(); }
+
+    /** Bootstrap (frame-0) divergences, sorted ERROR-first then WARNING. */
+    public List<BootstrapDivergence> bootstrapDivergences() {
+        return bootstrapDivergences;
+    }
+
+    public boolean hasBootstrapDivergences() {
+        return !bootstrapDivergences.isEmpty();
+    }
 
     public String toSummary() {
         int errorCount = errors.size();
@@ -60,10 +89,53 @@ public class DivergenceReport {
             DivergenceGroup first = errors.get(0);
             sb.append(String.format(" First error: frame %d -- %s mismatch (expected=%s, actual=%s)",
                 first.startFrame(), first.field(), first.expectedAtStart(), first.actualAtStart()));
+            appendFirstErrorDiagnostics(sb, first);
         }
 
         appendTraceContextSummary(sb, summaryReferenceFrame());
         return sb.toString();
+    }
+
+    /**
+     * Surface sub-pixel + counter context for the first failing frame inline
+     * on the summary line so frontier-advancement iter loops can read it
+     * without opening the report JSON. Only emitted for position/speed-shape
+     * fields where the diagnostic context is informative.
+     */
+    private void appendFirstErrorDiagnostics(StringBuilder sb, DivergenceGroup first) {
+        String field = first.field();
+        if (field == null) {
+            return;
+        }
+        boolean positionShape = field.equals("x") || field.equals("y")
+                || field.endsWith("_x") || field.endsWith("_y")
+                || field.endsWith("_x_speed") || field.endsWith("_y_speed")
+                || field.endsWith("_g_speed")
+                || field.equals("x_speed") || field.equals("y_speed")
+                || field.equals("g_speed");
+        if (!positionShape) {
+            return;
+        }
+        FrameComparison fc = findComparison(first.startFrame());
+        if (fc == null) {
+            return;
+        }
+        String rom = fc.romDiagnostics();
+        String engine = fc.engineDiagnostics();
+        if ((rom == null || rom.isEmpty()) && (engine == null || engine.isEmpty())) {
+            return;
+        }
+        sb.append(" rom={").append(rom == null ? "" : rom).append('}');
+        sb.append(" engine={").append(engine == null ? "" : engine).append('}');
+    }
+
+    private FrameComparison findComparison(int frame) {
+        for (FrameComparison fc : allComparisons) {
+            if (fc.frame() == frame) {
+                return fc;
+            }
+        }
+        return null;
     }
 
     public String toJson() {
@@ -96,6 +168,13 @@ public class DivergenceReport {
                 }
             }
 
+            // Bootstrap (frame-0) divergences render ahead of the per-frame
+            // groups so consumers see prelude failures first.
+            ArrayNode bootstrapNode = root.putArray("bootstrap");
+            for (BootstrapDivergence divergence : bootstrapDivergences) {
+                bootstrapNode.add(bootstrapDivergenceToJson(mapper, divergence));
+            }
+
             ArrayNode errorsNode = root.putArray("errors");
             for (DivergenceGroup g : errors) {
                 errorsNode.add(groupToJson(mapper, g));
@@ -118,7 +197,9 @@ public class DivergenceReport {
         int end = Math.min(allComparisons.size() - 1, centreIndex + radius);
 
         StringBuilder sb = new StringBuilder();
+        appendBootstrapSection(sb);
         appendTraceContextWindow(sb, centreFrame);
+        sb.append("=== Per-frame ===\n");
         sb.append(String.format("%-6s", "Frame"));
 
         Set<String> fieldNames = new LinkedHashSet<>();
@@ -270,6 +351,7 @@ public class DivergenceReport {
             return;
         }
         List<TraceEvent> diagnostics = new ArrayList<>();
+        diagnostics.addAll(traceData.stateSnapshotsForFrame(frame));
         diagnostics.addAll(traceData.cageStatesForFrame(frame));
         TraceEvent.CageExecution cageExecution = traceData.cageExecutionForFrame(frame);
         if (cageExecution != null) {
@@ -451,6 +533,41 @@ public class DivergenceReport {
         } else {
             node.put(field, value);
         }
+    }
+
+    /**
+     * Appends the "=== Bootstrap (frame 0) ===" section to the text context
+     * window. Always emits the header so the per-frame header that follows
+     * is unambiguous; the body is empty for legacy traces.
+     */
+    private void appendBootstrapSection(StringBuilder sb) {
+        sb.append("=== Bootstrap (frame 0) ===\n");
+        if (bootstrapDivergences.isEmpty()) {
+            sb.append("(no bootstrap divergences)\n");
+            return;
+        }
+        for (BootstrapDivergence divergence : bootstrapDivergences) {
+            sb.append(String.format("[%s] %s  expected=%s  actual=%s%n",
+                    divergence.severity().name(),
+                    divergence.field(),
+                    divergence.expected(),
+                    divergence.actual()));
+            if (divergence.context() != null && !divergence.context().isBlank()) {
+                sb.append("    ").append(divergence.context()).append("\n");
+            }
+        }
+    }
+
+    /** Builds the JSON node for a single {@link BootstrapDivergence}. */
+    private ObjectNode bootstrapDivergenceToJson(ObjectMapper mapper,
+                                                 BootstrapDivergence divergence) {
+        ObjectNode node = mapper.createObjectNode();
+        node.put("field", divergence.field());
+        node.put("severity", divergence.severity().name());
+        node.put("expected", divergence.expected());
+        node.put("actual", divergence.actual());
+        node.put("context", divergence.context() == null ? "" : divergence.context());
+        return node;
     }
 
     private static class DivergenceGroupBuilder {

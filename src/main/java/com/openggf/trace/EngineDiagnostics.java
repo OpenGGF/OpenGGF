@@ -19,6 +19,15 @@ package com.openggf.trace;
  * @param fwdCtr        Forward counter value (-1 if not counter-based)
  * @param bwdCtr        Backward counter value (-1 if not counter-based)
  * @param solidEvent    Description of SolidContacts/touch event this frame, or empty
+ * @param ridingObject  Tri-state engine truth from {@code ObjectManager.isRidingObject(player)}:
+ *                      1 = riding, 0 = not riding, -1 = not captured.
+ * @param standingSnapshot Tri-state engine truth from
+ *                      {@code ObjectManager.latestStandingSnapshot(player)}:
+ *                      1 = standing, 0 = not standing, -1 = not captured. The
+ *                      snapshot is the latched standing flag that persists for a
+ *                      frame after physical contact ends; it diverges from
+ *                      {@code statusByte} bit 0x08 (the live on-object flag) on
+ *                      walk-off and platform-release transitions.
  */
 public record EngineDiagnostics(
     int routine,
@@ -34,16 +43,18 @@ public record EngineDiagnostics(
     int bwdCtr,
     String solidEvent,
     int xSub,
-    int ySub
+    int ySub,
+    int ridingObject,
+    int standingSnapshot
 ) {
     /** No diagnostics available. */
     public static final EngineDiagnostics EMPTY = new EngineDiagnostics(
-            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, "", -1, -1);
+            -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, "", -1, -1, -1, -1);
 
     /** Wrap a preformatted diagnostics string for context rendering. */
     public static EngineDiagnostics formattedOnly(String formatted) {
         return new EngineDiagnostics(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                formatted == null ? "" : formatted, -1, -1);
+                formatted == null ? "" : formatted, -1, -1, -1, -1);
     }
 
     /**
@@ -54,7 +65,7 @@ public record EngineDiagnostics(
     public static EngineDiagnostics formattedWithCamera(int cameraX, int cameraY, String formatted) {
         return new EngineDiagnostics(-1, -1, -1, -1, -1, cameraX, cameraY,
                 -1, -1, -1, -1,
-                formatted == null ? "" : formatted, -1, -1);
+                formatted == null ? "" : formatted, -1, -1, -1, -1);
     }
 
     /**
@@ -91,6 +102,14 @@ public record EngineDiagnostics(
         if (xSub >= 0) {
             if (!sb.isEmpty()) sb.append(' ');
             sb.append(String.format("sub=(%04X,%04X)", xSub & 0xFFFF, ySub & 0xFFFF));
+        }
+        if (ridingObject >= 0) {
+            if (!sb.isEmpty()) sb.append(' ');
+            sb.append(String.format("ride=%d", ridingObject));
+        }
+        if (standingSnapshot >= 0) {
+            if (!sb.isEmpty()) sb.append(' ');
+            sb.append(String.format("standsnap=%d", standingSnapshot));
         }
         if (solidEvent != null && !solidEvent.isEmpty()) {
             if (!sb.isEmpty()) sb.append(' ');

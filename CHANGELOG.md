@@ -6,6 +6,84 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 horizontal spring right-edge collision parity (CNZ2 trace replay).** ROM
+  `Obj41_Horizontal` routes through `SolidObject_cont` (`s2.asm:35147`), which
+  rejects the X range with `bhi` (strictly greater than). This makes `relX ==
+  halfWidth*2` (player centre exactly at the spring's right edge) a valid side
+  contact. The engine's `usesInclusiveRightEdge()` defaulted to `false`
+  (`relXRaw >= rightLimit`), silently skipping that one-pixel boundary case.
+  `SpringObjectInstance` now overrides `usesInclusiveRightEdge()` to return
+  `true` for `TYPE_HORIZONTAL`, matching the existing pattern in
+  `Sonic3kSpringObjectInstance`. CNZ2 trace frontier advanced from frame 205
+  (`camera_x`) to frame 435 (`x_speed`).
+
+- **S2 HTZ Rexon detection-window asymmetry (HTZ trace replay).** ROM
+  `Obj94_WaitForPlayer` (s2.asm:73716-73722) uses `Obj_GetOrientationToPlayer`
+  to compute signed `d2 = body_x - player_x`, adds `$60`, and compares against
+  `$100` as UNSIGNED word (`bhs.s`). The window is asymmetric around the body:
+  signed `body_x - player_x` must lie in `[-$60, +$A0)`. The engine ported the
+  check as `Math.abs(...) + 0x60 < 0x100`, which is symmetric and includes a
+  64-px-wide left-side band (`(-$A0, -$60)`) that ROM rejects. With the player
+  approaching from the right, this fired detection ~34 frames earlier than ROM,
+  stopping the body several pixels right of ROM and shifting every downstream
+  head trajectory by the same offset. The Tails hurt-bounce direction at f5044
+  ended up reversed (engine +$200 vs ROM -$200) because the head that ultimately
+  hit Tails had drifted across her x-position. Fix ports the literal ROM
+  `(signedDelta + $60) & $FFFF < $100` window in `RexonBadnikInstance.
+  checkPlayerInRange`. HTZ frontier advanced f5044 (446 errs) -> f5511 (398 errs).
+  P12-class pitfall already catalogued.
+
+- **S3K AIZ1 Tails dormant-marker timing (AIZ trace replay).** ROM
+  `loc_13A10` (sonic3k.asm:26389-26397) writes Tails' dormant sentinel
+  (x_pos=$7F00, y_pos=0, Tails_CPU_routine=$A) on the FIRST tick that
+  dispatches Tails_CPU_Control — inside the same ROM frame that
+  SpawnLevelMainSprites placed her at `Player_1 - $20`. The engine's
+  `SidekickCpuController.updateInit` previously split the AIZ1 dormant
+  marker into two ticks (prime placement, then apply sentinel on the next
+  tick), so the first comparison frame after gameplay started (AIZ trace
+  frame 290) saw Tails at the level-start offset (0x0020, 0x0424) while
+  ROM already had her at (0x7F00, 0x0000). Combining the level-start
+  placement + dormant marker into a single `updateInit` branch matches
+  the ROM's single-tick sequence. AIZ first error advanced f290 -> f720.
+
+- **S3K sidekick bootstrap parity (CNZ/MGZ trace replay).** Three S3K
+  level-start divergences shared the same root cause: the engine cleared
+  `Status_InAir` on the sidekick after `applyZonePlayerState` set it for
+  MGZ1 / HCZ1 / LRZ1 / SSZ falling intros. Fix preserves the zone-event
+  in-air state in `SidekickCpuController.applyLevelStartSidekickPlacement`,
+  re-runs `Sonic3kLevelEventManager.applyZonePlayerState` after the test
+  fixture's `repositionRegisteredSidekicks` step (matching ROM's
+  `SpawnLevelMainSprites_SpawnPlayers` -> `SpawnLevelMainSprites` order,
+  sonic3k.asm:8132-8427), and adds a one-tick S3K sidekick prelude for
+  seed-frame-mode traces (CNZ Sonic+Tails) so the Tails carry trigger
+  (`loc_13A5A`, sonic3k.asm:26405-26415) and one in-air gravity tick
+  (`MoveSprite_TestGravity`) run before the frame-0 seed comparator
+  fires. CNZ first error advanced f0 -> f4790; MGZ f0 -> f1538.
+
+- **S2 native-prelude trace infrastructure (spec 2026-05-15).** The engine's
+  title-card phase now runs `ObjectManager` and player physics every frame
+  (universal ADR-1, matching ROM `TitleCard_Main` across S1/S2/S3K). This
+  populates Sonic's `Sonic_Pos_Record_Buf` natively during the prelude,
+  removing the root cause of the early-frontier Tails sub-state divergence
+  that capped every S2 level-select trace at ~300 frames. New trace
+  infrastructure surfaces: `TraceBinder.compareBootstrapFrame0` + new
+  `BootstrapDivergence` / `EngineSnapshot` records assert engine frame-0
+  state against the recorder's `player_history_snapshot`,
+  `cpu_state_snapshot`, and `object_state_snapshot` events for traces
+  recorded at `lua_script_version >= 9.2-s2` (see
+  `TraceMetadata.nativePreludeMode()`). Comparator results flow into
+  `DivergenceReport` as a new `bootstrap` category rendered ahead of the
+  per-frame divergences. `SidekickCpuController.hydrateFromRomCpuState`
+  widened to accept `targetX`/`targetY`. The deprecated
+  `*PreludeFramesForTraceReplay` knobs on `TraceReplayBootstrap` return 0
+  unconditionally (workaround for the title-card freeze, no longer needed).
+  New `oggf.trace.hydrate` system property (see CONFIGURATION.md) lets
+  developers snap engine state to the recorded frame-0 snapshot for
+  prelude-vs-gameplay bug isolation; off by default and CI-asserted off.
+  S2 level-select trace tests will pick up the improvement once their
+  metadata files are re-recorded with the v9.2-s2 recorder (T9 follow-up).
+
+
 - **Fix regressions from architectural review hardening.** Two
   follow-up fixes for issues introduced by the previous entry.
   `GenericFieldCapturer.usesCodecFieldSnapshot` now skips the codec

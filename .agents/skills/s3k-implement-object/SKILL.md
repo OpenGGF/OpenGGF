@@ -108,6 +108,29 @@ Agents should:
    - **Redirect to `/s3k-implement-boss`** skill instead
    - Boss indicators: `Obj_XXXMiniboss`, `Obj_XXXEndBoss`, `collision_property` used as hit counter, camera lock behavior
 
+### Phase 1.5: ROM Behavioural Pitfall Review
+
+Before writing implementation code, read `rom-pitfalls.md` in this skill's
+directory. The file lists ROM behaviour classes where naive engine ports
+have produced trace-replay-visible divergences during prior frontier work.
+
+For each pitfall pattern:
+
+1. Decide whether your S3K object is susceptible. Most patterns apply only
+   to specific object families (touch-response badniks, moving solids,
+   per-player interactives, free-fall objects, character-affecting state
+   transitions). Skip patterns the object can't trigger.
+2. For applicable patterns, plan your implementation to avoid the
+   anti-pattern. Quote the ROM convention from the pitfall entry in your
+   code comments where the convention matters.
+3. If you find a NEW pattern during Phase 2 / Phase 4 cross-validation
+   that isn't yet catalogued — pause and add it to `rom-pitfalls.md`
+   before continuing. The catalogue grows by accretion.
+4. **S3K-specific entries** (zone-set resolution, S&K-vs-S3 address
+   confusion, dynamic-resize / AniPLC interactions) should be tagged
+   `**S3K-specific:**` so they don't get duplicated to the S2 catalogue
+   on next sync.
+
 ### Phase 2: Implementation
 
 #### 2.1 Constants (if needed)

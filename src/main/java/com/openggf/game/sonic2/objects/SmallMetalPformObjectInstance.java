@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -112,7 +113,9 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
                 spawn.rawYWord());
         SmallMetalPformChildInstance child = new SmallMetalPformChildInstance(
                 childSpawn, (spawn.renderFlags() & 0x01) != 0);
-        manager.addDynamicObject(child);
+        // ROM: loc_3BCF8 uses AllocateObjectAfterCurrent. The child then
+        // runs its own loc_3BC6C init routine when its slot is reached.
+        manager.addDynamicObjectAfterCurrent(child);
     }
 
     // ========================================================================
@@ -188,6 +191,7 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
         // ====================================================================
 
         private enum ChildState {
+            INIT,       // routine_secondary 0: LoadSubObject/init, then return
             UNFOLD,     // routine_secondary 2: unfold animation
             MOVE,       // routine_secondary 4: moving with solid collision
             FOLD,       // routine_secondary 6: fold animation
@@ -233,10 +237,9 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
             int subtypeIndex = (spawn.subtype() & 0xFF) - 0x7E;
             this.yVelocity = (subtypeIndex == 0) ? Y_VEL_ASCENDING : Y_VEL_DESCENDING;
 
-            // Start unfold animation (routine_secondary = 2)
-            // ROM: AnimateSprite resets anim_frame_duration to 0 on animation change,
-            // so on the first tick it immediately decrements to -1 and loads the first frame.
-            this.state = ChildState.UNFOLD;
+            // First execution is routine_secondary 0 (loc_3BC6C), which only
+            // initializes the child and returns. Animation starts next time.
+            this.state = ChildState.INIT;
             this.animFrameIndex = -1;
             this.animDelayCounter = 0;
 
@@ -262,12 +265,24 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
         public void update(int frameCounter, PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             switch (state) {
+                case INIT -> updateInit();
                 case UNFOLD -> updateUnfold();
                 case MOVE -> updateMove(frameCounter);
                 case FOLD -> updateFold();
                 case DELETE -> updateDelete();
             }
             updateDynamicSpawn(currentX, currentY);
+        }
+
+        // ================================================================
+        // State 0: Init (loc_3BC6C)
+        // ROM: LoadSubObject, mapping_frame=2, routine_secondary += 2,
+        // timer/velocity setup, then RTS. Constructor already populated the
+        // fields; this state preserves the first execution's init-only frame.
+        // ================================================================
+
+        private void updateInit() {
+            state = ChildState.UNFOLD;
         }
 
         // ================================================================
@@ -321,7 +336,8 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
             currentY = (int) (yPos32 >> 16);
             ySubpixel = (int) (yPos32 & 0xFFFF);
 
-            // PlatformObject collision is handled by the engine's SolidObjectProvider
+            // ROM: loc_3BCDE calls ObjectMove, then PlatformObject immediately.
+            services().solidExecution().resolveSolidNowAll();
         }
 
         // ================================================================
@@ -375,6 +391,11 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
         }
 
         @Override
+        public SolidExecutionMode solidExecutionMode() {
+            return SolidExecutionMode.MANUAL_CHECKPOINT;
+        }
+
+        @Override
         public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             // Solid collision handled by ObjectManager
@@ -385,6 +406,17 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
         public boolean isSolidFor(PlayableEntity playerEntity) {
             AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
             return state == ChildState.MOVE;
+        }
+
+        @Override
+        public String traceDebugDetails() {
+            return String.format("state=%s frame=%d timer=%d yv=%04X ysub=%04X flip=%d",
+                    state.name(),
+                    mappingFrame,
+                    moveTimer,
+                    yVelocity & 0xFFFF,
+                    ySubpixel & 0xFFFF,
+                    xFlipped ? 1 : 0);
         }
 
         // ================================================================

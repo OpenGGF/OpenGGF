@@ -69,6 +69,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     // ------------------------------------------------------------------------
 
     private static final SolidObjectParams TORNADO_SOLID_PARAMS = new SolidObjectParams(0x1B, 8, 9);
+    private static final int SCZ_STALE_LOGICAL_HORIZONTAL_FRAMES = 3;
+    private static final int SCZ_STALE_LOGICAL_MIN_RIDE_FRAMES = 120;
     private static final int SCZ_CAMERA_FINISH_X = 0x1400;
     private static final int SCZ_PLAYER_FINISH_X = 0x1568;
     private static final int SCZ_PLAYER_PUSH_MARGIN = 0x11;
@@ -253,6 +255,53 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         return routine == ROUTINE_SCZ_MAIN || routine == ROUTINE_WFZ_START || routine == ROUTINE_WFZ_END;
     }
 
+    /**
+     * Native bootstrap for SCZ/WFZ level-select trace starts where the title-card
+     * object prelude has already placed Sonic on the Tornado before the first
+     * compared Level_MainLoop frame.
+     *
+     * <p>ROM relation at the replay seed point: ObjB2 is one pixel ahead of
+     * Sonic and its center is $1C below Sonic's center (s2.asm:78301-78305,
+     * 78378-78385 call SolidObject with d1=$1B,d2=8,d3=9; frame 0 then carries
+     * the rider via the normal platform delta). This method primes only that
+     * native pre-frame relation; it does not read recorded object snapshots.
+     */
+    public void primeRideStart(short playerStartX, short playerStartY) {
+        primeRideStart(playerStartX, playerStartY, 0);
+    }
+
+    public void primeRideStart(short playerStartX, short playerStartY, int ySubpixel) {
+        currentX = (playerStartX & 0xFFFF) + 1;
+        currentY = (playerStartY & 0xFFFF) + 0x1C;
+        xPosFixed8 = currentX << 8;
+        yPosFixed8 = (currentY << 8) | (ySubpixel & 0xFF);
+        yVel = 0;
+        standingTransition = false;
+        lastMainStanding = true;
+        moveVertActive = false;
+        moveVert2Active = false;
+    }
+
+    /**
+     * Compensates for the engine collapsing ROM's two-frame ObjB2 init
+     * (outer {@code ObjB2_Init} + inner {@code ObjB2_Main_WFZ_Start_init}, both
+     * no-move; s2.asm:78271-78284 and 78368-78372) into a single engine init
+     * frame. During the 26-frame S2 title-card object prelude, ROM consumes
+     * two of those frames on init and runs 24 main-routine moves; the engine
+     * runs 25 main moves, leaving {@link #scriptTimer} one less than the ROM's
+     * frame-(-1) snapshot value. This method restores parity by incrementing
+     * the timer back by one, so the WFZ_Start_main transition fires on the
+     * same trace frame as ROM (s2.asm:78375-78394).
+     *
+     * <p>Only relevant for the WFZ_START routine; SCZ_MAIN does not use a
+     * {@code routine_secondary} init step and has no timer to compensate.
+     */
+    public void compensateForCollapsedWfzInit() {
+        if (routine == ROUTINE_WFZ_START && routineSecondary == 2) {
+            scriptTimer++;
+        }
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -285,19 +334,31 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         if (player == null) {
             return;
         }
-
         advanceMainAnimation();
         renderThisFrame = true;
         solidActive = true;
         highPriority = player.isHighPriority();
 
+        // ObjB2_Move_with_player reads Sonic's live Status_OnObj bit before
+        // the inline SolidObject call refreshes this object's own standing bit
+        // (s2.asm:78298-78306, 78816-78823). That bit may have been set by a
+        // different object earlier in the previous frame (for example SCZ
+        // Turtloid), while the final release-frame bob still needs this
+        // object's previous checkpoint latch.
+        boolean playerOnObjectAtEntry = player.isOnObject() || lastMainStanding;
+        boolean objectStandingBeforeCheckpoint = lastMainStanding;
+        moveWithPlayer(player, playerOnObjectAtEntry);
+
         PlayerSolidContactResult contact = checkpoint(player);
         boolean mainStandingNow = contact.standingNow();
-        standingTransition = (mainStandingNow != lastMainStanding);
-        lastMainStanding = mainStandingNow;
+        standingTransition = (mainStandingNow != objectStandingBeforeCheckpoint);
 
-        moveWithPlayer(player, mainStandingNow);
-        moveObeyPlayer(player, mainStandingNow);
+        // ObjB2_Move_obbey_player rereads Sonic's live Status_OnObj bit after
+        // SolidObject (s2.asm:78881-78886). Another object may own that bit,
+        // while lastMainStanding must still track ObjB2's own contact latch.
+        boolean playerOnObjectAfterCheckpoint = player.isOnObject() || mainStandingNow;
+        moveObeyPlayer(player, playerOnObjectAfterCheckpoint);
+        lastMainStanding = mainStandingNow;
 
         // ROM: Camera_Min_X_pos = Camera_X_pos
         Camera camera = services().camera();
@@ -307,7 +368,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         // Keep player near front edge of camera while riding Tornado.
         int playerX = player.getCentreX();
         if (playerX <= cameraX + SCZ_PLAYER_PUSH_MARGIN) {
-            player.setCentreX((short) (playerX + 1));
+            player.setCentreXPreserveSubpixel((short) (playerX + 1));
             playerX++;
         }
 
@@ -352,6 +413,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 if (scriptTimer >= 0) {
                     objectMove();
                     applyTornadoParallaxVelocity();
+                    checkpoint(player);
                     clampClosestPlayerHorizontal();
                     return;
                 }
@@ -370,6 +432,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 scriptTimer--;
                 if (scriptTimer >= 0) {
                     alignPlaneAndSolid();
+                    checkpoint(player);
                     updateShotDownSmoke();
                     return;
                 }
@@ -381,6 +444,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 // ObjB2_Main_WFZ_Start_fall_down
                 objectMove();         // Extra ObjectMove before shared align path (ROM exact flow)
                 alignPlaneAndSolid();
+                checkpoint(player);
                 updateShotDownSmoke();
             }
             default -> {
@@ -724,6 +788,22 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 DebugColor.CYAN);
     }
 
+    @Override
+    public String traceDebugDetails() {
+        if (routine != ROUTINE_SCZ_MAIN) {
+            return "";
+        }
+        return String.format("yfrac=%02X yv=%04X mt=%02X mv=%d mv2=%d tr=%d last=%d off=%d",
+                yPosFixed8 & 0xFF,
+                yVel & 0xFFFF,
+                moveVertTimer & 0xFF,
+                moveVertActive ? 1 : 0,
+                moveVert2Active ? 1 : 0,
+                standingTransition ? 1 : 0,
+                lastMainStanding ? 1 : 0,
+                smoothOffsetX);
+    }
+
     // ------------------------------------------------------------------------
     // SolidObject interfaces
     // ------------------------------------------------------------------------
@@ -736,6 +816,19 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     @Override
     public SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    @Override
+    public int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
+        if (routine != ROUTINE_SCZ_MAIN || rideFrames <= SCZ_STALE_LOGICAL_MIN_RIDE_FRAMES) {
+            return 0;
+        }
+        // S2 recorder v9.3-s2 documents this exact ROM/BK2 split:
+        // Read_Joypads can leave Ctrl_1_Held_Logical stale for three frames
+        // during SCZ Tornado long V-int paths. Sonic_Move consumes the logical
+        // byte (s2.asm:36255-36260), while trace validation compares against
+        // BK2-aligned input to avoid false alignment errors.
+        return SCZ_STALE_LOGICAL_HORIZONTAL_FRAMES;
     }
 
     @Override
@@ -796,12 +889,12 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         }
 
         currentX = anchorX + smoothOffsetX;
-        syncFixedFromPosition();
+        syncFixedXFromPosition();
         applyTornadoParallaxVelocity();
     }
 
-    private void moveObeyPlayer(AbstractPlayableSprite player, boolean mainStandingNow) {
-        if (mainStandingNow) {
+    private void moveObeyPlayer(AbstractPlayableSprite player, boolean playerOnObjectNow) {
+        if (playerOnObjectNow) {
             if (!moveVertActive) {
                 yVel = 0;
                 int requestedVel = 0;
@@ -822,14 +915,14 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         // move.w x_pos(a1),d1 / add.w d3,d1 / move.w d1,x_pos(a0)
         // d3 = ±16 based on player orientation relative to tornado.
         // The TORNADO follows the PLAYER (not vice versa).
-        if (mainStandingNow) {
+        if (playerOnObjectNow) {
             Orientation orientation = getOrientationToClosestPlayer(player);
             if (orientation.absDistanceX() >= PLAYER_HORIZONTAL_CLAMP
                     && Math.abs(orientation.target().getGSpeed()) < PLAYER_INERTIA_CLAMP) {
                 int targetX = orientation.target().getCentreX()
                         + (orientation.playerIsRight() ? -PLAYER_HORIZONTAL_CLAMP : PLAYER_HORIZONTAL_CLAMP);
                 currentX = targetX;
-                syncFixedFromPosition();
+                syncFixedXFromPosition();
 
                 // Refresh SolidContacts tracking position so the follow delta isn't
                 // double-applied as a riding delta. In the ROM, SolidObject runs inline
@@ -840,7 +933,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 }
             }
         }
-        if (mainStandingNow) {
+        if (playerOnObjectNow) {
             return;
         }
 
@@ -925,7 +1018,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             return;
         }
         int targetX = currentX + (orientation.playerIsRight() ? PLAYER_HORIZONTAL_CLAMP : -PLAYER_HORIZONTAL_CLAMP);
-        orientation.target().setCentreX((short) targetX);
+        orientation.target().setCentreXPreserveSubpixel((short) targetX);
     }
 
     private void alignPlaneAndSolid() {
@@ -978,6 +1071,10 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     private void syncFixedFromPosition() {
         xPosFixed8 = currentX << 8;
         yPosFixed8 = currentY << 8;
+    }
+
+    private void syncFixedXFromPosition() {
+        xPosFixed8 = currentX << 8;
     }
 
     private void advanceMainAnimation() {

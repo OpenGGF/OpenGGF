@@ -9,9 +9,9 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
@@ -46,6 +46,7 @@ public class BalkiryBadnikInstance extends AbstractBadnikInstance {
     // Subpixel position accumulators (16.16 fixed point for ObjectMove)
     private int subPixelX;
     private int subPixelY;
+    private boolean initialized;
 
     public BalkiryBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Balkiry", Sonic2BadnikConfig.DESTRUCTION);
@@ -71,8 +72,19 @@ public class BalkiryBadnikInstance extends AbstractBadnikInstance {
     }
 
     @Override
+    public void hydrateFromRomSnapshot(RomObjectSnapshot snapshot) {
+        super.hydrateFromRomSnapshot(snapshot);
+        this.subPixelX = snapshot.xSub() & 0xFF;
+        this.subPixelY = snapshot.ySub() & 0xFF;
+        this.initialized = snapshot.routine() >= 2;
+    }
+
+    @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (!initialized) {
+            initialized = true;
+            return;
+        }
         // ROM: JmpTo26_ObjectMove - apply velocity to position (subpixel precision)
         // x_pos += x_vel (as 16.16 fixed point)
         subPixelX += xVelocity;

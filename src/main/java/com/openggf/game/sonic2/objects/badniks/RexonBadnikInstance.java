@@ -46,8 +46,8 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
     private static final int PATROL_TIMER = 128;  // Frames before reversing direction
 
     // Detection constants
-    private static final int DETECT_ANGLE_OFFSET = 0x60;  // Added to angle before comparison
-    private static final int DETECT_ANGLE_RANGE = 0x100;  // If adjusted angle < this, player detected
+    private static final int DETECT_ANGLE_OFFSET = 0x60;  // Added to signed delta before unsigned-window compare
+    private static final int DETECT_ANGLE_RANGE = 0x100;  // ROM cmpi.w #$100,d2 / bhs out-of-range
 
     private enum State {
         WAIT_FOR_PLAYER,    // Routine 2 - Patrol and detect
@@ -60,6 +60,8 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
     private final SubpixelMotion.State motionState;
     private boolean xFlipFlag;
     private final List<RexonHeadObjectInstance> heads = new ArrayList<>();
+    private int lastTargetX;
+    private int lastTargetDistance;
 
     public RexonBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Rexon", Sonic2BadnikConfig.DESTRUCTION);
@@ -73,6 +75,8 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
         // Initial flip from spawn
         this.xFlipFlag = (spawn.renderFlags() & 0x01) != 0;
         this.facingLeft = !xFlipFlag;
+        this.lastTargetX = 0;
+        this.lastTargetDistance = 0;
     }
 
     @Override
@@ -86,9 +90,11 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
     }
 
     private void updatePatrol(AbstractPlayableSprite player) {
-        // Check if player is in detection range
-        if (checkPlayerInRange(player)) {
-            state = State.READY_TO_CREATE;
+        AbstractPlayableSprite target = getClosestPlayerByHorizontalDistance();
+        // Obj94_WaitForPlayer calls Obj94_CreateHead immediately after the range check
+        // succeeds; it does not defer head creation to a later frame (docs/s2disasm/s2.asm:73716-73725).
+        if (checkPlayerInRange(target)) {
+            createHeads(target);
             return;
         }
 
@@ -110,43 +116,44 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
     }
 
     /**
-     * Check if player is within detection range using Obj_GetOrientationToPlayer logic.
+     * Check if player is within detection range using Obj_GetOrientationToPlayer's
+     * horizontal distance result. ROM Obj94_WaitForPlayer (docs/s2disasm/s2.asm:73716-73722):
+     *   bsr.w  Obj_GetOrientationToPlayer
+     *   addi.w #$60,d2          ; d2 = (obj.x - player.x) + 0x60 (signed-word arithmetic)
+     *   cmpi.w #$100,d2
+     *   bhs.s  loc_37362        ; out of range when (unsigned word) >= 0x100
+     *   bsr.w  Obj94_CreateHead ; otherwise attack
      *
-     * The original code (s2.asm:72295-72321) does NOT calculate a full angle - it returns
-     * a simple 2-bit quadrant value (0, 2, 4, or 6):
-     * - d0 = 0 if player is RIGHT, d0 = 2 if player is LEFT
-     * - d1 = 0 if object is ABOVE/SAME, d1 = 2 if object is BELOW
-     * - Combined result is 0, 2, 4, or 6
-     *
-     * With quadrant values 0, 2, 4, or 6 plus 0x60 offset = 0x60, 0x62, 0x64, or 0x66.
-     * All are < 0x100, so heads ALWAYS spawn when body is on screen.
+     * The unsigned-word comparison after `addi.w #$60` makes the window
+     * ASYMMETRIC around the body: signed `obj.x - player.x` must lie in
+     * [-0x60, +0xA0). A symmetric `Math.abs(...) + 0x60 < 0x100` window
+     * matches ROM only on the right side; on the left it widens to
+     * (-0xA0, -0x60) where ROM still says "out of range", firing detection
+     * up to ~64 px earlier and causing the body to stop several pixels
+     * right of ROM (P12-class divergence).
      */
-    private boolean checkPlayerInRange(AbstractPlayableSprite player) {
-        if (player == null || !isOnScreen()) {
+    private boolean checkPlayerInRange(AbstractPlayableSprite target) {
+        if (target == null) {
             return false;
         }
-
-        int dx = currentX - player.getCentreX();  // Object X - Player X (like disasm)
-        int dy = currentY - player.getCentreY();  // Object Y - Player Y
-
-        // Quadrant logic from Obj_GetOrientationToPlayer (s2.asm:72295-72321)
-        // Returns 0, 2, 4, or 6 based on player position relative to object
-        int orientation = 0;
-        if (dx < 0) orientation += 2;  // Player is to the right (object X < player X)
-        if (dy < 0) orientation += 2;  // Player is above (object Y < player Y)
-
-        // Add offset and check (16-bit compare, no mask)
-        int adjusted = orientation + DETECT_ANGLE_OFFSET;
-        return adjusted < DETECT_ANGLE_RANGE;
+        // Emulate ROM 16-bit signed-then-unsigned semantics literally.
+        int signedDelta = (short) (currentX - target.getCentreX());
+        int windowed = (signedDelta + DETECT_ANGLE_OFFSET) & 0xFFFF;
+        return windowed < DETECT_ANGLE_RANGE;
     }
 
     private void createHeads() {
-        // Determine flip direction based on player position
-        AbstractPlayableSprite player = getPlayer();
-        if (player != null) {
-            boolean playerLeft = player.getCentreX() < currentX;
-            xFlipFlag = !playerLeft;
-            facingLeft = playerLeft;
+        createHeads(getClosestPlayerByHorizontalDistance());
+    }
+
+    private void createHeads(AbstractPlayableSprite target) {
+        // Obj94_CreateHead uses d0 from Obj_GetOrientationToPlayer, which selects
+        // the horizontally closest character before setting x_flip (docs/s2disasm/s2.asm:72295-72321, 74019-74025).
+        if (target != null) {
+            lastTargetX = target.getCentreX();
+            lastTargetDistance = Math.abs(currentX - lastTargetX);
+            xFlipFlag = target.getCentreX() > currentX;
+            facingLeft = !xFlipFlag;
         }
 
         // Spawn 5 head segments with indices 0, 2, 4, 6, 8
@@ -207,17 +214,24 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
         // (In original, body stays but this keeps behavior simple)
     }
 
-    private AbstractPlayableSprite getPlayer() {
+    private AbstractPlayableSprite getClosestPlayerByHorizontalDistance() {
         var spriteManager = services().spriteManager();
         if (spriteManager == null) {
             return null;
         }
+        AbstractPlayableSprite closest = null;
+        int closestDistance = Integer.MAX_VALUE;
         for (Sprite sprite : spriteManager.getAllSprites()) {
             if (sprite instanceof AbstractPlayableSprite) {
-                return (AbstractPlayableSprite) sprite;
+                AbstractPlayableSprite candidate = (AbstractPlayableSprite) sprite;
+                int distance = Math.abs(currentX - candidate.getCentreX());
+                if (distance < closestDistance) {
+                    closest = candidate;
+                    closestDistance = distance;
+                }
             }
         }
-        return null;
+        return closest;
     }
 
     /**
@@ -270,5 +284,17 @@ public class RexonBadnikInstance extends AbstractBadnikInstance
 
         // Body uses frame 2 (s2.asm:73691)
         renderer.drawFrameIndex(2, currentX, currentY, xFlipFlag, false);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("state=%s xflip=%d xv=%04X timer=%02X heads=%d target=%04X dist=%04X",
+                state,
+                xFlipFlag ? 1 : 0,
+                xVelocity & 0xFFFF,
+                patrolTimer & 0xFF,
+                heads.size(),
+                lastTargetX & 0xFFFF,
+                lastTargetDistance & 0xFFFF);
     }
 }

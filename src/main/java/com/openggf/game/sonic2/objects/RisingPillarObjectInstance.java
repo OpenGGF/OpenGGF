@@ -208,12 +208,15 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Apply gravity and move (ObjectMove + add gravity)
-        velY += GRAVITY;
+        // ROM loc_25B9A (s2.asm:51466-51468) does: ObjectMove first, THEN add
+        // gravity to y_vel. Doing gravity first applies one frame's worth of
+        // acceleration to the current frame's motion and accumulates a
+        // y-position drift of N*gravity sub-units over N frames.
         subX += velX;
         subY += velY;
         x = subX >> 8;
         y = subY >> 8;
+        velY += GRAVITY;
 
         // Check if off-screen - delete if beyond camera viewport + margin
         if (!isOnScreen(112)) {
@@ -227,8 +230,20 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
      * Corresponds to loc_25ACE and loc_25BF6 in disassembly.
      */
     private void releasePlayerAndBreak(AbstractPlayableSprite player) {
-        // Set player to rolling state and in-air
+        // ROM loc_25AF6 (s2.asm:51393-51405) does: bset rolling; move.b #$E,y_radius;
+        // move.b #7,x_radius; set Roll anim; bset in_air; bclr on_object; routine=2.
+        // ROM y_pos is the CENTRE, so the y_radius change does not move the centre.
+        // The engine stores top-left, so naively calling setRolling(true) here would
+        // shrink height by 2 (runHeight 30 → rollHeight 28) and drop centreY by 1,
+        // since SolidObject_Landed's RideObject_SetRide → Tails_ResetOnFloor_Part2
+        // (s2.asm:40629-40636) already uncurled Tails (clearRollingOnLanding mirrors
+        // that, including the subq.w #1, y_pos lift) before the pillar re-curls here.
+        // Preserve the post-landing centreY across the curl toggle.
+        short centreYBeforeCurl = player.getCentreY();
         player.setRolling(true);
+        if (player.getCentreY() != centreYBeforeCurl) {
+            player.setCentreYPreserveSubpixel(centreYBeforeCurl);
+        }
         player.setAir(true);
 
         // Play slow smash sound effect

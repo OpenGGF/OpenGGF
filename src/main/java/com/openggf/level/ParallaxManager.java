@@ -4,10 +4,10 @@ import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
-import com.openggf.game.GameServices;
 import com.openggf.game.ScrollHandlerProvider;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.rewind.snapshot.ParallaxSnapshot;
+import com.openggf.level.scroll.CameraDrivenScrollHandler;
 import com.openggf.level.scroll.ZoneScrollHandler;
 
 import java.io.IOException;
@@ -332,6 +332,32 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
         } else {
             fillMinimal(cam);
         }
+    }
+
+    /**
+     * Advances scroll routines that drive foreground camera movement as gameplay
+     * state. Render-time parallax updates must only consume the resulting state.
+     */
+    public boolean advanceCameraDrivenScroll(int zoneId, int actId, Camera cam, int frameCounter) {
+        if (!providerLoaded) {
+            try {
+                Rom rom = GameServices.rom().getRom();
+                if (rom != null) {
+                    load(rom);
+                }
+            } catch (IOException e) {
+                LOGGER.warning("Failed to lazy-load scroll provider: " + e.getMessage());
+            }
+        }
+        if (scrollProvider == null || cam == null) {
+            return false;
+        }
+        initZone(zoneId, actId, cam.getX(), cam.getY());
+        ZoneScrollHandler handler = scrollProvider.getHandler(zoneId);
+        if (handler instanceof CameraDrivenScrollHandler cameraDriven) {
+            return cameraDriven.advanceCameraForFrame(cam, actId);
+        }
+        return false;
     }
 
     /**

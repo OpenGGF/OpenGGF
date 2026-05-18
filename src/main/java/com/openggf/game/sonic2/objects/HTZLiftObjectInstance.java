@@ -60,9 +60,9 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
     private static final int Y_VEL = 0x100;         // 1.0 pixels/frame
     private static final int FALL_GRAVITY = 0x38;   // 0.21875 pixels/frame^2
 
-    // Collision params - adjusted for platform standing detection
-    // Standing surface should be at objectY + 0x28 (40px down to platform)
-    // Since offsetY positions the collision box CENTER, we need: offsetY - y_radius = 0x28
+    // Collision params - adjusted for platform standing detection.
+    // S2 Obj16 passes d3 = -$28 to PlatformObject, so the platform surface is
+    // y_pos - d3 = objectY + $28 (docs/s2disasm/s2.asm:47384-47388).
     private static final int COLLISION_WIDTH = 0x20;    // 32 pixels half-width
     private static final int COLLISION_Y_RADIUS = 0x10; // 16 pixels
     private static final int COLLISION_Y_OFFSET = 0x38; // 0x28 + 0x10 = center offset for 40px standing surface
@@ -147,16 +147,34 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     /**
      * Wait state: Check if player is standing on the platform.
-     * ROM: Obj16_Wait (lines 47380-47392)
+     * ROM: Obj16_Wait (docs/s2disasm/s2.asm:47405-47417)
      */
     private void updateWait() {
-        // The solid contact callback will set routineSecondary to STATE_SLIDE
-        // when player stands on the platform
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager != null && objectManager.isAnyPlayerRiding(this)) {
+            startSlide();
+        }
+    }
+
+    private void startSlide() {
+        if (routineSecondary != STATE_WAIT) {
+            return;
+        }
+
+        // ROM Obj16_Main runs Obj16_Wait before PlatformObject, so this reads
+        // the status standing bits persisted by the previous frame's contact pass.
+        // Obj16_Wait only arms the secondary routine and velocities.
+        // ObjectMove runs on the following frame after Obj16_Slide is entered.
+        routineSecondary = STATE_SLIDE;
+        xVel = flippedX ? -X_VEL : X_VEL;
+        yVel = Y_VEL;
+
+        LOGGER.fine("HTZLift: Player standing, starting slide");
     }
 
     /**
      * Slide state: Move diagonally and play click sound every 16 frames.
-     * ROM: Obj16_Slide (lines 47395-47416)
+     * ROM: Obj16_Slide (docs/s2disasm/s2.asm:47420-47433)
      */
     private void updateSlide(int frameCounter) {
         // Play click sound every 16 frames
@@ -185,15 +203,22 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     /**
      * Fall state: Apply gravity and eject player when off-screen.
-     * ROM: Obj16_Fall (lines 47419-47441)
+     * ROM: Obj16_Fall (docs/s2disasm/s2.asm:47444-47466)
+     *
+     * ROM order: ObjectMove (with current y_vel) FIRST, then add gravity.
+     * The first FALL frame therefore moves the lift by 0 (y_vel was just
+     * reset to 0 by the SLIDE -> FALL transition) and only sets y_vel to
+     * 0x38 for the next frame. Applying gravity before the move (engine
+     * ordering prior to this fix) advanced the lift's integer Y position
+     * one frame earlier than ROM, causing HTZ trace y/camera_y divergence
+     * at f311 once the prior isSolidFor() bug was fixed.
      */
     private void updateFall(AbstractPlayableSprite player) {
-        // Apply gravity
-        // ROM: addi.w #$38,y_vel(a0)
-        yVel += FALL_GRAVITY;
-
-        // Apply velocity
+        // ROM step 1: ObjectMove(y_vel) — move with the CURRENT y_vel.
         yFixed += yVel;
+
+        // ROM step 2: addi.w #$38,y_vel(a0) — add gravity AFTER move.
+        yVel += FALL_GRAVITY;
 
         // Check if fallen off bottom of screen
         Camera camera = services().camera();
@@ -244,26 +269,8 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (player == null || !contact.standing()) {
-            return;
-        }
-
-        if (routineSecondary == STATE_WAIT) {
-            // Player just stood on the platform - start sliding
-            // ROM: addq.b #2,routine_secondary(a0)
-            routineSecondary = STATE_SLIDE;
-
-            // Set X velocity based on flip
-            // ROM: move.w #$200,x_vel(a0) / btst #status.npc.x_flip,status(a0) / neg.w x_vel(a0)
-            xVel = flippedX ? -X_VEL : X_VEL;
-            yVel = Y_VEL;
-
-            LOGGER.fine("HTZLift: Player stepped on, starting slide");
-        }
-
-        // In fall state, player gets ejected when the platform goes off-screen
-        // This is handled in updateFall by the destroy() call
+        // Obj16_Wait reads the persisted standing bit during the object's next
+        // update. Starting slide from the contact callback moves one frame early.
     }
 
     @Override
@@ -271,7 +278,7 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
         return new SolidObjectParams(
                 COLLISION_WIDTH,
                 COLLISION_Y_RADIUS,
-                COLLISION_Y_RADIUS + 1,
+                COLLISION_Y_RADIUS,
                 0,                    // offsetX
                 COLLISION_Y_OFFSET);  // offsetY - move collision down to platform
     }
@@ -284,8 +291,20 @@ public class HTZLiftObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Only solid in wait and slide states
-        return !isDestroyed() && routineSecondary != STATE_FALL;
+        // ROM parity: Obj16_Main (docs/s2disasm/s2.asm:47381-47389) calls
+        // Obj16_RunSecondaryRoutine (WAIT/SLIDE/FALL) THEN unconditionally calls
+        // PlatformObject. Obj16_Fall (s2.asm:47444-47466) only clears the
+        // standing bit when the lift has fallen below the camera + screen_height
+        // (the bhs.s +++ at line 47450 skips the clear while the lift is on
+        // screen). The engine's updateFall() destroys the lift via
+        // setDestroyed(true) once currentY > screenBottom, so isDestroyed()
+        // handles the off-screen unseat. While the lift is still on-screen
+        // (including the SLIDE -> FALL transition frame), the platform must
+        // remain solid so processInlineRidingObject continues to carry the
+        // riders. Treating FALL as non-solid (as the previous implementation
+        // did) immediately unseated Sonic and Tails on the transition frame,
+        // causing HTZ trace divergence at f308.
+        return !isDestroyed();
     }
 
     @Override

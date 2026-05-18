@@ -171,6 +171,30 @@ public interface ObjectInstance {
     }
 
     /**
+     * Returns true when this object needs to replace the shared ROM-style
+     * out_of_range X check with an object-specific delete predicate.
+     * <p>
+     * Most objects should leave this false and provide, at most, a custom
+     * {@link #getOutOfRangeReferenceX()}. Use a full override only for ROM
+     * routines that do not call the standard macro, such as objects that test
+     * both ends of a movement range before deleting.
+     */
+    default boolean usesCustomOutOfRangeCheck() {
+        return false;
+    }
+
+    /**
+     * Object-specific out-of-range delete predicate. Called only when
+     * {@link #usesCustomOutOfRangeCheck()} returns true.
+     *
+     * @param cameraX current camera X position
+     * @return true when the object should delete itself as off-screen
+     */
+    default boolean isCustomOutOfRange(int cameraX) {
+        return false;
+    }
+
+    /**
      * Returns true if this object should stay in the active spawn set even after being
      * marked as remembered. Used by objects like monitors and capsules that need to
      * complete their destruction/animation sequence before being removed.

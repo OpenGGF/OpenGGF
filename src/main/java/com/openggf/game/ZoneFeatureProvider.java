@@ -106,6 +106,23 @@ public interface ZoneFeatureProvider {
     }
 
     /**
+     * Updates zone features that must observe a playable after its movement
+     * slot, before the next playable's CPU/controller slot runs.
+     *
+     * <p>This is narrower than {@link #updatePrePhysics(AbstractPlayableSprite, int, int)}
+     * and is intended for ROM pseudo-objects that consume the just-moved
+     * player state but also publish velocity/status changes that later player
+     * slots can read in the same object pass.
+     *
+     * @param player the playable sprite whose movement slot just finished
+     * @param cameraX the camera X position
+     * @param zoneIndex the current zone
+     */
+    default void updateAfterPlayablePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        // Default implementation does nothing
+    }
+
+    /**
      * Queues render commands for zone features that should appear after foreground tiles
      * but before sprites (e.g., slot machine display that covers corrupted tiles).
      * Called after high-priority foreground tilemap pass but before sprite passes.

@@ -34,11 +34,38 @@
 -- v8.0-s2 changes: add character-scoped aux events and nearby-object scans
 -- for both Sonic and Tails so replay debugging can see which character first
 -- interacted with the world.
+-- v8.1-s2 changes: include top_solid_bit/lrb_solid_bit in state_snapshot
+-- diagnostics so collision-plane divergences can be checked against ROM.
+-- v8.2-s2 changes: emit focused ObjB2 Tornado state diagnostics for the
+-- SCZ/WFZ level-select route without feeding those values back into replay.
+-- v9.3-s2 changes: derive the CSV `input` column from the BK2 movie input
+-- via `movie.getinput()` instead of `mainmemory.read_u8(ADDR_CTRL1)`. ROM-
+-- side `Ctrl_1_Held` ($FFF604) can lag the BK2's logical input by up to
+-- several frames during long V-int subroutines or lag-frame sequences in
+-- ARZ/OOZ/SCZ-style end-of-act windows (the SCZ Tornado section starting
+-- around BK2 frame 5337 showed a 3-frame stale-B-held divergence). Keep
+-- the raw_input/logical_input diagnostic fields in the `state_snapshot`
+-- aux events so ROM-vs-BK2 input drift is still surfaced for debugging.
 ------------------------------------------------------------------------------
 
 -----------------
 --- Constants ---
 -----------------
+
+-- v9.6-s2 changes: include move_lock in state_snapshot diagnostics and emit
+-- focused snapshots around the current S2 CNZ elevator/input frontier.
+-- v9.7-s2 changes: support selecting later gameplay segments from
+-- level-select BK2s. Those movies can cross from act 1 into act 2, but the
+-- recorder used to finalise at the first non-level transition and therefore
+-- only captured the first controllable segment.
+--
+-- v9.3-s2: traces from this recorder version onward are bootstrap-comparable
+-- against the post-universal-title-card engine (ADR-1, design spec 2026-05-15)
+-- AND derive their CSV `input` column from BK2 directly via movie.getinput
+-- (see v9.3-s2 change note above for context).
+-- The bootstrap-comparator eligibility is derived from this version string by
+-- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
+local LUA_SCRIPT_VERSION = "9.7-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -52,6 +79,10 @@ local HEADLESS = true
 -- results screen), the emulator would loop forever. This safety limit
 -- ensures the script finalises and exits.
 local MOVIE_FRAME_SAFETY_MARGIN = 30   -- frames past movie end before auto-exit
+local TRACE_PROFILE = os.getenv("OGGF_S2_TRACE_PROFILE") or "gameplay_unlock"
+local TARGET_GAMEPLAY_SEGMENT = tonumber(os.getenv("OGGF_TRACE_GAMEPLAY_SEGMENT") or "0") or 0
+local BK2_FRAME_COUNT = tonumber(os.getenv("OGGF_BK2_FRAME_COUNT") or "")
+local SOURCE_BK2 = os.getenv("OGGF_BK2_BASENAME") or ""
 
 -- S2 REV01 68K RAM addresses (mainmemory domain = $FF0000 base stripped)
 local ADDR_GAME_MODE       = 0xF600
@@ -62,7 +93,6 @@ local ADDR_CAMERA_X        = 0xEE00   -- long: Camera_X_pos
 local ADDR_CAMERA_Y        = 0xEE04   -- long: Camera_Y_pos
 local ADDR_ZONE            = 0xFE10   -- byte: Current_Zone
 local ADDR_ACT             = 0xFE11   -- byte: Current_Act
-
 -- Player object base ($FFFFB000 = MainCharacter)
 local PLAYER_BASE          = 0xB000
 local OFF_X_POS            = 0x08   -- word: centre X
@@ -84,6 +114,8 @@ local OFF_ANGLE            = 0x26   -- byte: terrain angle
 local OFF_STICK_CONVEX     = 0x38   -- byte
 local OFF_STAND_ON_OBJ     = 0x3D   -- byte: interact — SST index Sonic stands on (0=none)
 local OFF_CTRL_LOCK        = 0x2E   -- word: move_lock timer
+local OFF_TOP_SOLID_BIT    = 0x46   -- byte: active top collision plane ($0C/$0E)
+local OFF_LRB_SOLID_BIT    = 0x47   -- byte: active side/bottom collision plane ($0D/$0F)
 
 -- S2 player routine values (obRoutine byte → table index):
 --   0 = Obj01_Init
@@ -129,9 +161,24 @@ local OBJ_DYNAMIC_COUNT    = 112  -- dynamic slots 16-127
 local SIDEKICK_BASE        = OBJ_TABLE_START + OBJ_SLOT_SIZE  -- slot 1 = Tails/sidekick
 
 -- Frame counter (v_framecount at $FFFE04, word — increments each Level_MainLoop)
--- NOTE: 0xFE0C is v_vbla_count (longword, VBlank interrupt counter — different!)
+-- NOTE: 0xFE0C is Vint_runcount (longword, VBlank interrupt counter);
+-- read +2 so the CSV stores the low word that changes during normal traces.
 local ADDR_FRAMECOUNT      = 0xFE04
-local ADDR_VBLA_WORD       = 0xFE0C
+local ADDR_VBLA_WORD       = 0xFE0E
+local ADDR_SLOT_MACHINE_IN_USE = 0xFF4C
+local ADDR_SLOT_MACHINE_ROUTINE = 0xFF4E
+local ADDR_SLOT_MACHINE_TIMER = 0xFF4F
+local ADDR_SLOT_MACHINE_INDEX = 0xFF51
+local ADDR_SLOT_MACHINE_REWARD = 0xFF52
+local ADDR_SLOT_MACHINE_SLOT1_POS = 0xFF54
+local ADDR_SLOT_MACHINE_SLOT1_SPEED = 0xFF56
+local ADDR_SLOT_MACHINE_SLOT1_ROUTINE = 0xFF57
+local ADDR_SLOT_MACHINE_SLOT2_POS = 0xFF58
+local ADDR_SLOT_MACHINE_SLOT2_SPEED = 0xFF5A
+local ADDR_SLOT_MACHINE_SLOT2_ROUTINE = 0xFF5B
+local ADDR_SLOT_MACHINE_SLOT3_POS = 0xFF5C
+local ADDR_SLOT_MACHINE_SLOT3_SPEED = 0xFF5E
+local ADDR_SLOT_MACHINE_SLOT3_ROUTINE = 0xFF5F
 
 -- Genesis joypad bitmask (matching engine convention)
 local INPUT_UP    = 0x01
@@ -164,6 +211,22 @@ local ZONE_NAMES = {
     [0x10] = "scz",
 }
 
+-- Engine progression zone ids used by Sonic2ZoneRegistry / TraceCatalog.
+local ROM_ZONE_TO_ENGINE_ZONE = {
+    [0x00] = 0,  -- EHZ
+    [0x0D] = 1,  -- CPZ
+    [0x0F] = 2,  -- ARZ
+    [0x0C] = 3,  -- CNZ
+    [0x07] = 4,  -- HTZ
+    [0x0B] = 5,  -- MCZ
+    [0x0A] = 6,  -- OOZ
+    [0x04] = 7,  -- MTZ
+    [0x05] = 7,  -- MTZ alternate act id
+    [0x10] = 8,  -- SCZ
+    [0x06] = 9,  -- WFZ
+    [0x0E] = 10, -- DEZ
+}
+
 -- Snapshot interval (frames between full state snapshots in aux file)
 local SNAPSHOT_INTERVAL = 60
 
@@ -176,13 +239,20 @@ local OBJECT_PROXIMITY = 160
 
 local started = false
 local finished = false   -- once true, never re-arm
+local skipping_segment = false
+local skipped_segment_zone_name = nil
+local gameplay_segment_index = 0
 local trace_frame = 0
 local bk2_frame_offset = 0
 local start_x = 0
 local start_y = 0
 local start_zone_id = 0
+local start_rom_zone_id = 0
 local start_zone_name = "unknown"
 local start_act = 0
+local emitted_checkpoints = {}
+local last_zone_act_state_key = nil
+local recorded_sidekick_present = false
 
 local prev_character_state = {
     sonic = { status = 0, routine = 0, ctrl_lock = 0 },
@@ -196,6 +266,8 @@ local known_objects = {}
 -- File handles
 local physics_file = nil
 local aux_file = nil
+local close_files
+local read_character_trace_state
 
 -----------------
 --- Helpers   ---
@@ -215,6 +287,44 @@ local function rom_joypad_to_mask(raw)
     return mask
 end
 
+-- Read the BK2 movie's logical input for the just-completed frame and convert
+-- it to the engine's input bitmask. This bypasses ROM-side staleness in
+-- $FFF604 (Ctrl_1_Held) which can lag the BK2 input by several frames on
+-- specific lag-frame / long-V-int-subroutine windows (notably SCZ Tornado-
+-- handoff and OOZ/ARZ end-of-act transitions). The replay test fixture
+-- reads the same BK2 file directly, so using movie.getinput here keeps the
+-- trace's `input` column perfectly aligned with what the replay sees.
+--
+-- Returns the engine bitmask: bit0=UP, bit1=DOWN, bit2=LEFT, bit3=RIGHT,
+-- bit4=JUMP (if any of A/B/C are pressed). Falls back to the RAM-derived
+-- mask when no movie is loaded.
+local function bk2_input_mask(fallback_raw, trace_row)
+    if not movie.isloaded() then
+        return rom_joypad_to_mask(fallback_raw)
+    end
+    -- Replay metadata defines trace row N as BK2 frame
+    -- (bk2_frame_offset + N). Use that same convention here; direct
+    -- emu.framecount() is one frame ahead in this recorder loop.
+    local frame_index = bk2_frame_offset ~= nil
+        and trace_row ~= nil
+        and (bk2_frame_offset + trace_row)
+        or emu.framecount()
+    local jp = movie.getinput(frame_index, 1)
+    if jp == nil then
+        return rom_joypad_to_mask(fallback_raw)
+    end
+    local mask = 0
+    if jp["P1 Up"]    or jp["Up"]    then mask = mask | INPUT_UP    end
+    if jp["P1 Down"]  or jp["Down"]  then mask = mask | INPUT_DOWN  end
+    if jp["P1 Left"]  or jp["Left"]  then mask = mask | INPUT_LEFT  end
+    if jp["P1 Right"] or jp["Right"] then mask = mask | INPUT_RIGHT end
+    if jp["P1 A"] or jp["A"] or jp["P1 B"] or jp["B"]
+            or jp["P1 C"] or jp["C"] then
+        mask = mask | INPUT_JUMP
+    end
+    return mask
+end
+
 -- Format a number as hex with specified width
 local function hex(val, width)
     width = width or 4
@@ -222,6 +332,28 @@ local function hex(val, width)
         val = val + 0x10000
     end
     return string.format("%0" .. width .. "X", val)
+end
+
+local function json_escape(value)
+    value = tostring(value or "")
+    value = value:gsub("\\", "\\\\")
+    value = value:gsub('"', '\\"')
+    return value
+end
+
+local function is_level_gated_reset_aware_profile()
+    return TRACE_PROFILE == "level_gated_reset_aware"
+end
+
+local function engine_zone_for_rom_zone(rom_zone_id)
+    return ROM_ZONE_TO_ENGINE_ZONE[rom_zone_id] or rom_zone_id
+end
+
+local function apparent_act_for(rom_zone_id, actual_act)
+    if rom_zone_id == 0x05 then
+        return actual_act + 2
+    end
+    return actual_act
 end
 
 -- Get ground mode from angle (offset quadrants matching ROM thresholds).
@@ -239,6 +371,69 @@ local function write_aux(json_str)
         aux_file:write(json_str .. "\n")
         aux_file:flush()
     end
+end
+
+local function emit_zone_act_state(frame, raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode)
+    local key = string.format("%d:%d:%d:%d:%d:%d",
+        frame, raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode)
+    if key == last_zone_act_state_key then
+        return
+    end
+    last_zone_act_state_key = key
+    write_aux(string.format(
+        '{"frame":%d,"event":"zone_act_state","actual_zone_id":%d,"engine_zone_id":%d,"actual_act":%d,"apparent_act":%d,"game_mode":%d}',
+        frame, raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode))
+end
+
+local function emit_checkpoint_once(frame, name, raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode, notes)
+    if emitted_checkpoints[name] then
+        return
+    end
+    emitted_checkpoints[name] = true
+    local notes_json = ""
+    if notes ~= nil and notes ~= "" then
+        notes_json = string.format(',"notes":"%s"', json_escape(notes))
+    end
+    write_aux(string.format(
+        '{"frame":%d,"event":"checkpoint","name":"%s","actual_zone_id":%d,"engine_zone_id":%d,"actual_act":%d,"apparent_act":%d,"game_mode":%d%s}',
+        frame, json_escape(name), raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode, notes_json))
+end
+
+local function emit_current_zone_act_state(frame, game_mode)
+    local raw_zone_id = mainmemory.read_u8(ADDR_ZONE)
+    local engine_zone_id = engine_zone_for_rom_zone(raw_zone_id)
+    local actual_act = mainmemory.read_u8(ADDR_ACT)
+    local apparent_act = apparent_act_for(raw_zone_id, actual_act)
+    emit_zone_act_state(frame, raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode)
+    if actual_act ~= start_act then
+        emit_checkpoint_once(frame,
+            string.format("act_transition_to_%s%d", start_zone_name, apparent_act + 1),
+            raw_zone_id, engine_zone_id, actual_act, apparent_act, game_mode, nil)
+    end
+end
+
+local function reset_recording_state()
+    close_files()
+    os.remove(OUTPUT_DIR .. "metadata.json")
+    os.remove(OUTPUT_DIR .. "physics.csv")
+    os.remove(OUTPUT_DIR .. "aux_state.jsonl")
+    started = false
+    trace_frame = 0
+    bk2_frame_offset = 0
+    start_x = 0
+    start_y = 0
+    start_zone_id = 0
+    start_rom_zone_id = 0
+    start_zone_name = "unknown"
+    start_act = 0
+    prev_character_state = {
+        sonic = { status = 0, routine = 0, ctrl_lock = 0 },
+        tails = { status = 0, routine = 0, ctrl_lock = 0 },
+    }
+    prev_opl_screen = -1
+    known_objects = {}
+    emitted_checkpoints = {}
+    last_zone_act_state_key = nil
 end
 
 -----------------
@@ -263,23 +458,35 @@ end
 
 local function write_metadata()
     -- Use zone/act captured at recording start (not current RAM which may have advanced)
+    local sidekick_present = recorded_sidekick_present
+            or read_character_trace_state(SIDEKICK_BASE).present ~= 0
+    local characters_json = sidekick_present and '["sonic", "tails"]' or '["sonic"]'
+    local sidekicks_json = sidekick_present and '["tails"]' or '[]'
     local meta_file = io.open(OUTPUT_DIR .. "metadata.json", "w")
     meta_file:write("{\n")
     meta_file:write('  "game": "s2",\n')
     meta_file:write('  "zone": "' .. start_zone_name .. '",\n')
     meta_file:write('  "zone_id": ' .. start_zone_id .. ',\n')
-    meta_file:write('  "act": ' .. (start_act + 1) .. ',\n')
+    meta_file:write('  "rom_zone_id": ' .. start_rom_zone_id .. ',\n')
+    meta_file:write('  "act": ' .. (apparent_act_for(start_rom_zone_id, start_act) + 1) .. ',\n')
+    meta_file:write('  "gameplay_segment": ' .. gameplay_segment_index .. ',\n')
     meta_file:write('  "bk2_frame_offset": ' .. bk2_frame_offset .. ',\n')
     meta_file:write('  "trace_frame_count": ' .. trace_frame .. ',\n')
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
-    meta_file:write('  "characters": ["sonic", "tails"],\n')
+    meta_file:write('  "characters": ' .. characters_json .. ',\n')
     meta_file:write('  "main_character": "sonic",\n')
-    meta_file:write('  "sidekicks": ["tails"],\n')
+    meta_file:write('  "sidekicks": ' .. sidekicks_json .. ',\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "8.0-s2",\n')
+    meta_file:write('  "lua_script_version": "' .. LUA_SCRIPT_VERSION .. '",\n')
     meta_file:write('  "trace_schema": 8,\n')
     meta_file:write('  "csv_version": 6,\n')
+    meta_file:write('  "aux_schema_extras": ["cnz_slot_machine_state_per_frame"],\n')
+    meta_file:write('  "trace_profile": "' .. json_escape(TRACE_PROFILE) .. '",\n')
+    meta_file:write('  "bizhawk_version": "2.11",\n')
+    meta_file:write('  "genesis_core": "Genplus-gx",\n')
+    meta_file:write('  "route": "' .. start_zone_name .. '",\n')
+    meta_file:write('  "source_bk2": "' .. json_escape(SOURCE_BK2) .. '",\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": ""\n')
     meta_file:write("}\n")
@@ -288,7 +495,7 @@ local function write_metadata()
         start_zone_name, start_act + 1, trace_frame))
 end
 
-local function read_character_trace_state(base)
+function read_character_trace_state(base)
     local present = mainmemory.read_u8(base) ~= 0
     if not present then
         return {
@@ -334,7 +541,38 @@ local function read_character_trace_state(base)
     }
 end
 
-local function close_files()
+local function write_cnz_slot_machine_state()
+    if not aux_file then return end
+    if start_rom_zone_id ~= 0x0C then return end
+
+    local vfc = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
+    local vbc = mainmemory.read_u16_be(ADDR_VBLA_WORD)
+    write_aux(string.format(
+        '{"frame":%d,"vfc":%d,"vbc":"0x%04X","event":"cnz_slot_machine_state",'
+        .. '"in_use":"0x%04X","routine":"0x%02X","timer":"0x%02X","index":"0x%02X",'
+        .. '"reward":"0x%04X","slot1_pos":"0x%04X","slot1_speed":"0x%02X","slot1_routine":"0x%02X",'
+        .. '"slot2_pos":"0x%04X","slot2_speed":"0x%02X","slot2_routine":"0x%02X",'
+        .. '"slot3_pos":"0x%04X","slot3_speed":"0x%02X","slot3_routine":"0x%02X"}',
+        trace_frame,
+        vfc,
+        vbc,
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_IN_USE),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_ROUTINE),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_TIMER),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_INDEX),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_REWARD),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_SLOT1_POS),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT1_SPEED),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT1_ROUTINE),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_SLOT2_POS),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT2_SPEED),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT2_ROUTINE),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_SLOT3_POS),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT3_SPEED),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT3_ROUTINE)))
+end
+
+function close_files()
     if physics_file then
         physics_file:close()
         physics_file = nil
@@ -514,8 +752,24 @@ local function scan_objects(subjects)
         if obj_id ~= 0 then
             local obj_x = mainmemory.read_u16_be(addr + OFF_X_POS)
             local obj_y = mainmemory.read_u16_be(addr + OFF_Y_POS)
+            local obj_y_sub = mainmemory.read_u16_be(addr + OFF_Y_SUB)
+            local obj_y_vel = mainmemory.read_u16_be(addr + OFF_Y_VEL)
             local obj_status = mainmemory.read_u8(addr + OFF_STATUS)
             local obj_routine = mainmemory.read_u8(addr + OFF_ROUTINE)
+            if obj_id == 0xB2 then
+                write_aux(string.format(
+                    '{"frame":%d,"vfc":%d,"event":"s2_tornado_state","slot":%d,'
+                    .. '"x":"0x%04X","y":"0x%04X","y_sub":"0x%04X","y_vel":"0x%04X",'
+                    .. '"routine":"0x%02X","routine_secondary":"0x%02X","status_byte":"0x%02X",'
+                    .. '"objoff_2e":"0x%02X","objoff_2f":"0x%02X","objoff_30":"0x%02X","objoff_31":"0x%02X"}',
+                    trace_frame, vfc, slot,
+                    obj_x, obj_y, obj_y_sub, obj_y_vel,
+                    obj_routine, mainmemory.read_u8(addr + 0x25), obj_status,
+                    mainmemory.read_u8(addr + 0x2E),
+                    mainmemory.read_u8(addr + 0x2F),
+                    mainmemory.read_u8(addr + 0x30),
+                    mainmemory.read_u8(addr + 0x31)))
+            end
             for _, subject in ipairs(subjects) do
                 if subject.present ~= 0 and slot ~= subject.slot then
                     local dx = math.abs(obj_x - subject.x)
@@ -555,13 +809,16 @@ local function write_state_snapshot(character, base)
     local routine = mainmemory.read_u8(base + OFF_ROUTINE)
     local y_radius = mainmemory.read_s8(base + OFF_RADIUS_Y)
     local x_radius = mainmemory.read_s8(base + OFF_RADIUS_X)
+    local top_solid = mainmemory.read_u8(base + OFF_TOP_SOLID_BIT)
+    local lrb_solid = mainmemory.read_u8(base + OFF_LRB_SOLID_BIT)
     local raw_input = mainmemory.read_u8(ADDR_CTRL1)
     local logical_input = mainmemory.read_u8(ADDR_CTRL1_DUP)
     local vfc = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
 
     write_aux(string.format(
-        '{"frame":%d,"vfc":%d,"event":"state_snapshot","character":"%s","control_locked":%s,"anim_id":%d,'
+        '{"frame":%d,"vfc":%d,"event":"state_snapshot","character":"%s","control_locked":%s,"move_lock":"0x%04X","anim_id":%d,'
         .. '"status_byte":"0x%02X","routine":"0x%02X","y_radius":%d,"x_radius":%d,'
+        .. '"top_solid_bit":"0x%02X","lrb_solid_bit":"0x%02X",'
         .. '"raw_input":"0x%02X","raw_input_mask":"0x%02X","logical_input":"0x%02X","logical_input_mask":"0x%02X",'
         .. '"on_object":%s,"pushing":%s,"underwater":%s,'
         .. '"roll_jumping":%s}',
@@ -569,11 +826,14 @@ local function write_state_snapshot(character, base)
         vfc,
         character,
         ctrl_lock > 0 and "true" or "false",
+        ctrl_lock,
         anim_id,
         status,
         routine,
         y_radius,
         x_radius,
+        top_solid,
+        lrb_solid,
         raw_input,
         rom_joypad_to_mask(raw_input),
         logical_input,
@@ -682,6 +942,26 @@ local function on_frame_end()
 
     if not started then
         if finished then return end
+        if skipping_segment then
+            if game_mode ~= GAMEMODE_LEVEL then
+                if is_level_gated_reset_aware_profile() and skipped_segment_zone_name == "ehz" then
+                    print("Skipped EHZ debug/menu bootstrap segment without counting it as a route segment.")
+                else
+                    print(string.format("Skipped gameplay segment %d.", gameplay_segment_index))
+                    gameplay_segment_index = gameplay_segment_index + 1
+                end
+                skipped_segment_zone_name = nil
+                skipping_segment = false
+            end
+            return
+        end
+        if HEADLESS and movie.isloaded() and movie.mode() == "FINISHED" then
+            print(string.format(
+                "Movie finished before gameplay segment %d became recordable. Finalising without trace rows.",
+                TARGET_GAMEPLAY_SEGMENT))
+            finished = true
+            return
+        end
         -- Start when: level gameplay active AND player control lock timer is 0.
         -- The control lock timer (move_lock, word at MainCharacter+$2E) is set during the title
         -- card and counts down to 0 when Sonic can first move. Using the player object's
@@ -689,6 +969,15 @@ local function on_frame_end()
         -- which delayed recording if the player was already pressing a direction.
         local ctrl_lock_timer = mainmemory.read_u16_be(PLAYER_BASE + OFF_CTRL_LOCK)
         if game_mode == GAMEMODE_LEVEL and ctrl_lock_timer == 0 then
+            if gameplay_segment_index < TARGET_GAMEPLAY_SEGMENT then
+                print(string.format(
+                    "Skipping gameplay segment %d while seeking target segment %d.",
+                    gameplay_segment_index, TARGET_GAMEPLAY_SEGMENT))
+                local skip_zone_id = mainmemory.read_u8(ADDR_ZONE)
+                skipped_segment_zone_name = ZONE_NAMES[skip_zone_id] or string.format("unknown_%02x", skip_zone_id)
+                skipping_segment = true
+                return
+            end
             started = true
             -- emu.framecount() returns the frame that just completed. Since we
             -- skip the detection frame (return below without recording), frame 0
@@ -700,9 +989,10 @@ local function on_frame_end()
             start_y = mainmemory.read_u16_be(PLAYER_BASE + OFF_Y_POS)
 
             -- Capture zone/act NOW at start, not at end when RAM may have advanced
-            start_zone_id = mainmemory.read_u8(ADDR_ZONE)
+            start_rom_zone_id = mainmemory.read_u8(ADDR_ZONE)
+            start_zone_id = engine_zone_for_rom_zone(start_rom_zone_id)
             start_act = mainmemory.read_u8(ADDR_ACT)
-            start_zone_name = ZONE_NAMES[start_zone_id] or string.format("unknown_%02x", start_zone_id)
+            start_zone_name = ZONE_NAMES[start_rom_zone_id] or string.format("unknown_%02x", start_rom_zone_id)
 
             open_files()
             -- Write metadata immediately so it exists even if the process is killed
@@ -714,8 +1004,11 @@ local function on_frame_end()
             write_player_history_snapshot()
             write_tails_cpu_snapshot()
             write_object_snapshots()
-            print(string.format("Trace recording started at BizHawk frame %d, zone %s act %d, pos (%04X, %04X)",
-                bk2_frame_offset, start_zone_name, start_act + 1, start_x, start_y))
+            local start_apparent_act = apparent_act_for(start_rom_zone_id, start_act)
+            emit_zone_act_state(0, start_rom_zone_id, start_zone_id, start_act, start_apparent_act, game_mode)
+            emit_checkpoint_once(0, "gameplay_start", start_rom_zone_id, start_zone_id, start_act, start_apparent_act, game_mode, nil)
+            print(string.format("Trace recording started at BizHawk frame %d, segment %d, zone %s act %d, pos (%04X, %04X)",
+                bk2_frame_offset, gameplay_segment_index, start_zone_name, start_apparent_act + 1, start_x, start_y))
             if movie.isloaded() then
                 print(string.format("Movie length: %d frames", movie.length()))
             end
@@ -729,6 +1022,13 @@ local function on_frame_end()
     end
 
     if game_mode ~= GAMEMODE_LEVEL then
+        if is_level_gated_reset_aware_profile() and start_zone_name == "ehz" then
+            print(string.format(
+                "level_gated_reset_aware: detected EHZ debug/menu exit at trace frame %d. Discarding and re-arming.",
+                trace_frame))
+            reset_recording_state()
+            return
+        end
         print("Left level gameplay at trace frame " .. trace_frame .. ". Finalising.")
         finished = true
         return
@@ -740,6 +1040,9 @@ local function on_frame_end()
     -- consume later.
     if HEADLESS and movie.isloaded() then
         local movie_length = movie.length()
+        if BK2_FRAME_COUNT ~= nil and BK2_FRAME_COUNT > movie_length then
+            movie_length = BK2_FRAME_COUNT
+        end
         if movie_length > 0 and (bk2_frame_offset + trace_frame) >= movie_length then
             print(string.format(
                 "Reached BK2 end at trace frame %d (bk2 offset %d, movie length %d). Finalising.",
@@ -755,6 +1058,8 @@ local function on_frame_end()
             return
         end
     end
+
+    emit_current_zone_act_state(trace_frame, game_mode)
 
     -- Primary physics state
     local x = mainmemory.read_u16_be(PLAYER_BASE + OFF_X_POS)
@@ -779,10 +1084,18 @@ local function on_frame_end()
     local rolling = (status & STATUS_ROLLING) ~= 0
     local ground_mode = air and 0 or angle_to_ground_mode(angle)
 
-    -- Read held input directly from RAM (works during movie playback;
-    -- joypad.get() returns physical controller state which is zero in headless)
+    -- v9.3-s2: derive CSV `input` column from the BK2 movie directly so the
+    -- recorded value perfectly matches what AbstractTraceReplayTest's BK2
+    -- reader will see during validation. ROM-side $FFF604 (Ctrl_1_Held) is
+    -- updated by Read_Joypads which only runs inside specific V-int
+    -- subroutines; on lag frames and during long V-int paths in SCZ/OOZ/ARZ
+    -- end-of-act windows it can lag the BK2 by several frames, producing
+    -- spurious "Input alignment error" failures.
+    --
+    -- raw_input still captures ROM-side $FFF604 for the state_snapshot aux
+    -- diagnostic; only the CSV `input` column switched to BK2-derived.
     local raw_input = mainmemory.read_u8(ADDR_CTRL1)
-    local input_mask = rom_joypad_to_mask(raw_input)
+    local input_mask = bk2_input_mask(raw_input, trace_frame)
 
     -- Format helper for unsigned 16-bit hex
     local function uhex(val)
@@ -801,6 +1114,9 @@ local function on_frame_end()
     local vblank_counter = mainmemory.read_u16_be(ADDR_VBLA_WORD)
     local lag_counter = 0
     local sidekick = read_character_trace_state(SIDEKICK_BASE)
+    if sidekick.present ~= 0 then
+        recorded_sidekick_present = true
+    end
 
     -- v6 CSV: shared execution counters plus explicit Sonic/Tails state blocks.
     physics_file:write(string.format(
@@ -855,9 +1171,11 @@ local function on_frame_end()
     check_mode_changes("sonic", PLAYER_BASE, prev_character_state.sonic, status, routine)
     check_mode_changes("tails", SIDEKICK_BASE, prev_character_state.tails,
         sidekick.status, sidekick.routine)
+    write_cnz_slot_machine_state()
 
     if trace_frame % SNAPSHOT_INTERVAL == 0
-            or (trace_frame >= 5104 and trace_frame <= 5106) then
+            or (trace_frame >= 5104 and trace_frame <= 5106)
+            or (trace_frame >= 5995 and trace_frame <= 6005) then
         write_state_snapshot("sonic", PLAYER_BASE)
         write_state_snapshot("tails", SIDEKICK_BASE)
     end
@@ -868,7 +1186,6 @@ local function on_frame_end()
         { character = "sonic", slot = 0, present = 1, x = x, y = y },
         { character = "tails", slot = 1, present = sidekick.present, x = sidekick.x, y = sidekick.y },
     })
-
     -- OPL cursor state: emit event on chunk transitions for ROM↔engine comparison.
     -- v_opl_screen changes only when OPL_Next processes a new chunk.
     local opl_screen = mainmemory.read_u16_be(ADDR_OPL_SCREEN)
@@ -916,7 +1233,8 @@ end
 -- The onframeend callback pattern doesn't work because callbacks stop
 -- firing when BizHawk pauses, and client.exit() can kill the process
 -- before file I/O completes.
-print("S2 Trace Recorder v3.0-s2 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
+print(string.format("S2 Trace Recorder v" .. LUA_SCRIPT_VERSION .. " loaded. Profile=%s. TargetSegment=%d. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...",
+    TRACE_PROFILE, TARGET_GAMEPLAY_SEGMENT))
 
 while true do
     on_frame_end()
@@ -926,11 +1244,18 @@ while true do
     -- the process immediately.
     if finished then
         print("Recording complete. Writing final output...")
-        if physics_file then physics_file:flush() end
-        write_metadata()
+        local recorded_trace = physics_file ~= nil
+        if recorded_trace then
+            physics_file:flush()
+            write_metadata()
+        else
+            print("No gameplay trace rows were recorded.")
+        end
         close_files()
-        print(string.format("Trace finalised: %s act %d, %d frames.",
-            start_zone_name, start_act + 1, trace_frame))
+        if recorded_trace then
+            print(string.format("Trace finalised: %s act %d, %d frames.",
+                start_zone_name, apparent_act_for(start_rom_zone_id, start_act) + 1, trace_frame))
+        end
         if HEADLESS then
             client.exit()
         end

@@ -130,7 +130,10 @@ public class SeesawObjectInstance extends BoxObjectInstance
         // Register the ball with ObjectManager
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
-            objectManager.addDynamicObject(ball);
+            // ROM Obj14_Init uses AllocateObjectAfterCurrent for the ball child
+            // (docs/s2disasm/s2.asm:47020), so the child executes after the
+            // parent in the same object pass when a higher slot is available.
+            objectManager.addDynamicObjectAfterCurrent(ball);
         }
     }
 
@@ -239,6 +242,30 @@ public class SeesawObjectInstance extends BoxObjectInstance
         // Spawn ball on first update
         ensureBallSpawned();
 
+        // ROM Obj14_Main (s2.asm:47037-47115) order:
+        //   1. Read previous-frame p1_standing_bit / p2_standing_bit on the
+        //      seesaw object (status(a0)).
+        //   2. If any standing bit is set, recompute target d1 from the
+        //      standing player's current x_pos.
+        //   3. Obj14_UpdateMappingAndCollision -> Obj14_SetMapping FIRST
+        //      (updates mapping_frame BEFORE collision).
+        //   4. THEN SlopedPlatform runs with the freshly-updated
+        //      mapping_frame / slope table / x_flip.
+        //
+        // Engine equivalent: compute target from PREVIOUS-frame
+        // standingPlayer1/2 (which were latched at the end of the prior
+        // frame's update), call updateAngle() to step mapping_frame, then
+        // resolve solid contacts so getSlopeData() / isSlopeFlipped() see
+        // the new mapping_frame. The earlier ordering (resolve -> update)
+        // sampled the slope a frame behind: HTZ1 trace f1017 ROM
+        // transitioned mapping_frame 2 -> 1 and sampled SLOPE_FLAT (5),
+        // landing Sonic at y=0x03D0; the engine sampled mapping_frame=2
+        // SLOPE_TILTED xFlip (sample 2), landing him at y=0x03D3.
+        int targetAngle = (standingPlayer1 != null || standingPlayer2 != null)
+                ? calculateCombinedTargetAngle()
+                : currentAngle;
+        updateAngle(targetAngle);
+
         SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
         PlayerSolidContactResult mainResult = player != null ? batch.perPlayer().get(player) : null;
         standingPlayer1 = mainResult != null && mainResult.standingNow() ? player : null;
@@ -270,16 +297,6 @@ public class SeesawObjectInstance extends BoxObjectInstance
             // ROM: cmp.w d0,d2 / blt.s + / move.w d2,d0 then move.w d0,objoff_38(a1)
             storedPlayerYVel = Math.max(p1Vel, p2Vel);
         }
-
-        if (standingPlayer1 != null || standingPlayer2 != null) {
-            int targetAngle = calculateCombinedTargetAngle();
-            updateAngle(targetAngle);
-        }
-
-        // ROM: Obj14_SetMapping is called every frame to animate visual transition
-        // Bug fix: Without this, seesaw doesn't tilt after ball lands because
-        // setCurrentAngle() only updates currentAngle, not mappingFrame
-        updateAngle(currentAngle);
     }
 
     /**
@@ -412,11 +429,15 @@ public class SeesawObjectInstance extends BoxObjectInstance
 
     @Override
     public int getSlopeBaseline() {
-        // ROM's SlopedPlatform overwrites d3 (height param) with the slope sample,
-        // so the surface is at object_y - slopeSample. But the Java framework bakes
-        // halfHeight into the landing snap via maxTop, so slopeBase must equal
-        // halfHeight to compensate: baseY - halfHeight = anchorY - slopeSample.
-        return COLLISION_HEIGHT;
+        // ROM SlopedPlatform (s2.asm:35787-35793) overwrites d3 with the slope
+        // sample (move.b (a2,d0.w),d3 / ext.w d3), then computes the surface as
+        // y_pos(a0) - d3 directly — no baseline subtraction. S2's slope tables
+        // (byte_21C8E / byte_21CBF) already encode absolute pixel offsets from
+        // object_y, with positive values lifting the surface above object_y and
+        // negative values dropping below. Subtracting COLLISION_HEIGHT would
+        // shift the apparent surface 8 px lower than ROM, causing the engine to
+        // miss the f988 HTZ1 landing where Sonic falls onto a tilted seesaw.
+        return 0;
     }
 
     @Override
@@ -452,5 +473,15 @@ public class SeesawObjectInstance extends BoxObjectInstance
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("angle=%d frame=%d storedY=%04X p1=%s p2=%s",
+                currentAngle,
+                mappingFrame,
+                storedPlayerYVel & 0xFFFF,
+                standingPlayer1 != null,
+                standingPlayer2 != null);
     }
 }

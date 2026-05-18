@@ -52,6 +52,14 @@ public class InvisibleBlockObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // S2 Obj74 calls SolidObject_Always, which checks solidity even when
+        // the object or sidekick is offscreen (docs/s2disasm/s2.asm:34863-34873,
+        // 46152-46161).
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity,
                                SolidContact contact, int frameCounter) {
         // No special behavior - standard collision handled by ObjectManager

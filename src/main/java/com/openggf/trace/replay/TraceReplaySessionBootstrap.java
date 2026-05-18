@@ -2,18 +2,25 @@ package com.openggf.trace.replay;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.GroundMode;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.InitStep;
 import com.openggf.game.LevelInitProfile;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayTeamBootstrap;
+import com.openggf.game.sonic2.objects.TornadoObjectInstance;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.sonic2.trace.Sonic2TornadoRidePrelude;
+import com.openggf.level.LevelData;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceMetadata;
-import com.openggf.trace.TraceObjectSnapshotBinder;
 import com.openggf.trace.TraceReplayBootstrap;
 
 import java.util.List;
@@ -29,9 +36,9 @@ import java.util.logging.Logger;
  *       caller loads the level.</li>
  *   <li>{@link #applyBootstrap}: derive any allowed timing prelude from
  *       trace-visible execution timing, advance native timing-only state
- *       where policy allows, and choose the replay comparison cursor.
- *       It must not copy recorded object, player, sidekick, RNG, camera,
- *       or vblank state into the engine.</li>
+ *       where policy allows, seed trace-start global timing counters, and
+ *       choose the replay comparison cursor. It must not copy recorded
+ *       object, player, sidekick, RNG, or camera state into the engine.</li>
  * </ol>
  */
 public final class TraceReplaySessionBootstrap {
@@ -170,7 +177,7 @@ public final class TraceReplaySessionBootstrap {
      *       timing, or from an explicit diagnostic override.</li>
      *   <li>Sidekick-only prelude ticks for title-card timing, when the
      *       trace policy can derive them from normal execution order.</li>
-     *   <li>{@link TraceReplayBootstrap#applyPreTraceState} - currently
+     *   <li>{@link TraceReplayBootstrap#reportPreTraceObjectSnapshots} -
      *       a comparison-only compatibility hook that reports zero
      *       applied snapshots.</li>
      *   <li>{@link TraceReplayBootstrap#applyReplayStartStateForTraceReplay}
@@ -205,32 +212,145 @@ public final class TraceReplaySessionBootstrap {
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace);
         int objectPreludeFrames =
                 TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace);
+        int zoneFeaturePreludeFrames =
+                TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(trace);
         var gameplayMode = fixture.gameplayMode();
+        if (gameplayMode != null
+                && gameplayMode.getLevelManager() != null
+                && gameplayMode.getLevelManager().getObjectManager() != null) {
+            ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
+            int zoneFeatureVblankOffset =
+                    TraceReplayBootstrap.zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(trace);
+            if (zoneFeaturePreludeFrames > 0
+                    && zoneFeatureVblankOffset > 0
+                    && gameplayMode.getLevelManager().getZoneFeatureProvider() != null) {
+                var levelManager = gameplayMode.getLevelManager();
+                var camera = GameServices.cameraOrNull();
+                int cameraX = camera != null ? camera.getX() : 0;
+                objectManager.initVblaCounter(trace.initialVblankCounter() - zoneFeatureVblankOffset);
+                for (int i = 0; i < zoneFeaturePreludeFrames; i++) {
+                    objectManager.advanceVblaCounter();
+                    levelManager.getZoneFeatureProvider().updatePrePhysics(
+                            null, cameraX, levelManager.getFeatureZoneId());
+                }
+            }
+            objectManager.initVblaCounter(
+                    trace.initialVblankCounter() - objectPreludeFrames - 1);
+        }
         if (objectPreludeFrames > 0
                 && gameplayMode != null
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
             var levelManager = gameplayMode.getLevelManager();
             var objectManager = levelManager.getObjectManager();
+            applyS2SczTitleCardScrollPrelude(trace);
             var camera = GameServices.cameraOrNull();
             int cameraX = camera != null ? camera.getX() : 0;
             for (int i = 0; i < objectPreludeFrames; i++) {
                 objectManager.update(cameraX, null, List.of(), -(objectPreludeFrames - i), false);
             }
         }
+        applyS2TornadoRideStart(trace, fixture);
+        refreshSidekickCpuBoundsFromCamera();
         if (sidekickPreludeFrames > 0
                 && gameplayMode != null
                 && gameplayMode.getSpriteManager() != null
                 && gameplayMode.getLevelManager() != null) {
+            // Establish ROM Obj01_Init's Pos_table pre-fill on the leader and
+            // place each sidekick at the Tails-spawn offset BEFORE the prelude
+            // begins ticking. Otherwise the first prelude leader-record write
+            // for slot 0 is overwritten when SidekickCpuController.updateInit
+            // re-runs the pre-fill from its own first tick.
+            for (AbstractPlayableSprite sidekick :
+                    gameplayMode.getSpriteManager().getRegisteredSidekicks()) {
+                SidekickCpuController cpu = sidekick.getCpuController();
+                if (cpu != null) {
+                    cpu.applyLevelStartSidekickPlacementForBootstrap();
+                }
+            }
             gameplayMode.getSpriteManager().warmUpCpuSidekicksOnly(
                     sidekickPreludeFrames,
                     gameplayMode.getLevelManager());
         }
-        TraceObjectSnapshotBinder.Result hydration =
-                TraceReplayBootstrap.applyPreTraceState(trace, fixture);
+        primeLeaderJumpEdgeFromBk2Prelude(fixture);
+        TraceReplayBootstrap.SnapshotReport snapshotReport =
+                TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
-        return new BootstrapResult(hydration, replayStart);
+        return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+    /**
+     * Prime the leader's jump-button edge tracker so a BK2 input that holds
+     * jump across the title-card / level boundary is not treated as a
+     * fresh press on the first comparison frame.
+     *
+     * <p>ROM continuously updates {@code Ctrl_1_Held} from V-int regardless
+     * of {@code Sonic_ControlsLock} (s2.asm:701,1361-1387 ReadJoypads /
+     * sonic3k.asm equivalent). Edge detection ({@code Ctrl_1_Press}) is computed
+     * each V-int as {@code (held ^ previous_held) & held}, so a button that
+     * was held throughout the title card is NOT a press at the first
+     * gameplay frame. Headless trace replay skips the title-card phase, so
+     * the leader's {@code jumpInputPressedPreviousFrame} is virgin false
+     * when frame 0 is consumed — a held jump button then masquerades as a
+     * fresh press and the engine fires {@code Obj01_Jump} (s2.asm:36253-36260)
+     * one frame before the ROM would. This perturbs frame 0 {@code air},
+     * {@code y_speed}, and {@code y} and cascades to every subsequent row.
+     *
+     * <p>Read the BK2 frame immediately before the cursor (the last
+     * title-card frame the production GameLoop would have ticked) and seed
+     * both edge trackers with that jump bit.
+     *
+     * <p>This is bootstrap state equivalent to the BK2 save-state point;
+     * it does not consume or hydrate trace data.
+     */
+    private static void primeLeaderJumpEdgeFromBk2Prelude(TraceReplayFixture fixture) {
+        if (fixture == null || fixture.sprite() == null) {
+            return;
+        }
+        int priorMask = fixture.peekRecordingInputAt(-1);
+        if (priorMask < 0) {
+            // No BK2 movie loaded or no frame before the cursor — leave
+            // the virgin edge state untouched.
+            return;
+        }
+        boolean priorJump = (priorMask & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        AbstractPlayableSprite leader = fixture.sprite();
+        // Seed both the sprite-level edge (read by SidekickCpuController's
+        // isJumpJustPressed gate) and the movement-controller edge (read by
+        // PlayableSpriteMovement's inputJumpPress computation for Obj01_Jump).
+        if (priorJump) {
+            leader.setJumpInputPressed(true);
+        }
+        if (leader.getMovementManager() instanceof com.openggf.sprites.managers.PlayableSpriteMovement movement) {
+            movement.primeJumpPreviousForBootstrap(priorJump);
+        }
+    }
+
+    private static void applyS2SczTitleCardScrollPrelude(TraceData trace) {
+        if (!TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace)
+                || trace == null
+                || trace.metadata() == null
+                || !"scz".equals(trace.metadata().zone())) {
+            return;
+        }
+        var camera = GameServices.cameraOrNull();
+        var parallax = GameServices.parallaxOrNull();
+        if (camera == null || parallax == null) {
+            return;
+        }
+
+        // ROM level load seeds Camera_X_pos from the level's default start
+        // before the level-select route places Sonic on ObjB2. The first
+        // compared row has already seen two pre-gameplay SwScrl_SCZ ticks; run
+        // the native camera-driven scroll hook so Tornado_Velocity_X is primed
+        // for ObjB2 on frame 0.
+        camera.setX((short) (LevelData.SKY_CHASE.getStartXPos() - 0xA0));
+        camera.setY((short) 0);
+        parallax.resetZoneState();
+        for (int i = 0; i < 2; i++) {
+            parallax.advanceCameraDrivenScroll(Sonic2ZoneConstants.ZONE_SCZ, 0, camera, -(2 - i));
+        }
     }
 
     /**
@@ -247,9 +367,9 @@ public final class TraceReplaySessionBootstrap {
         for (int i = 0; i < preTraceOsc; i++) {
             OscillationManager.update(-(preTraceOsc - i));
         }
-        TraceObjectSnapshotBinder.Result hydration =
-                TraceReplayBootstrap.applyPreTraceState(trace, fixture);
-        return new BootstrapResult(hydration, TraceReplayBootstrap.ReplayStartState.DEFAULT);
+        TraceReplayBootstrap.SnapshotReport snapshotReport =
+                TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
+        return new BootstrapResult(snapshotReport, TraceReplayBootstrap.ReplayStartState.DEFAULT);
     }
 
     /**
@@ -319,6 +439,18 @@ public final class TraceReplaySessionBootstrap {
             GroundSensor.setLevelManager(level);
             level.initCameraForLevel();
             level.initLevelEventsForLevel();
+            // Re-apply zone player state after sidekick reposition. ROM's
+            // SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8335-8427) sets
+            // sidekick position FIRST, then SpawnLevelMainSprites
+            // (sonic3k.asm:8132-8205) sets the in-air status for zones like
+            // MGZ1 / HCZ1 / LRZ1 / SSZ. repositionRegisteredSidekicks above
+            // clears the in-air bit via spawnSidekicks, so the zone-event
+            // handler must run again to restore the falling-intro state.
+            var levelEventProvider = GameServices.module().getLevelEventProvider();
+            if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
+                s3kLem.applyZonePlayerState();
+            }
+            refreshSidekickCpuBoundsFromCamera();
         }
         // Ground snap: 14 subpixel threshold matches the fixture.
         var collision = GameServices.collisionOrNull();
@@ -327,8 +459,96 @@ public final class TraceReplaySessionBootstrap {
         }
     }
 
+    /**
+     * Re-syncs the sidekick CPU's cached level-bound overrides after camera
+     * initialization or level-event setup has rewritten the live camera bounds.
+     *
+     * <p>This is native bootstrap state, not trace hydration: S2/S3K ROM Tails
+     * reads the same camera boundary words that Sonic does during its first
+     * title-card object ticks. The engine mirrors those words in
+     * {@code SidekickCpuController}, so replay setup must refresh the mirror
+     * before the sidekick-only prelude can run boundary checks.
+     */
+    public static void refreshSidekickCpuBoundsFromCamera() {
+        var camera = GameServices.cameraOrNull();
+        var spriteManager = GameServices.spritesOrNull();
+        if (camera == null || spriteManager == null) {
+            return;
+        }
+        int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget());
+        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
+            var cpu = sidekick.getCpuController();
+            if (cpu != null) {
+                cpu.setLevelBounds(
+                        (int) camera.getMinX(),
+                        (int) camera.getMaxX(),
+                        maxY);
+            }
+        }
+    }
+
+    private static void applyS2TornadoRideStart(TraceData trace, TraceReplayFixture fixture) {
+        if (!TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace)
+                || fixture == null
+                || fixture.sprite() == null) {
+            return;
+        }
+        var gameplayMode = fixture.gameplayMode();
+        if (gameplayMode == null
+                || gameplayMode.getLevelManager() == null
+                || gameplayMode.getLevelManager().getObjectManager() == null) {
+            return;
+        }
+        ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
+        TornadoObjectInstance tornado = findRideStartTornado(objectManager);
+        if (tornado == null) {
+            return;
+        }
+
+        AbstractPlayableSprite player = fixture.sprite();
+        TraceMetadata meta = trace.metadata();
+        short playerStartX = meta.startX();
+        player.setCentreX(playerStartX);
+        player.setCentreY(meta.startY());
+        Sonic2TornadoRidePrelude.Seed seed = Sonic2TornadoRidePrelude.forZone(meta.zone());
+        player.setSubpixelRaw(player.getXSubpixelRaw(), seed.playerYSubpixel());
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0);
+        player.setGSpeed((short) 0);
+        player.setAngle((byte) 0);
+        player.setRolling(false);
+        player.setAir(false);
+        player.setOnObject(true);
+        player.setGroundMode(GroundMode.GROUND);
+
+        tornado.primeRideStart(playerStartX, meta.startY(), seed.tornadoYSubpixel8());
+        if ("wfz".equals(meta.zone())) {
+            // The 26-frame object prelude consumed by the engine collapses ROM's
+            // two ObjB2 init frames (ObjB2_Init at s2.asm:78271-78284 and
+            // ObjB2_Main_WFZ_Start_init at s2.asm:78368-78372) into one engine
+            // frame, leaving the WFZ Tornado one main-routine move ahead of ROM
+            // by frame -1. Roll the timer back by one tick so the
+            // WFZ_Start_main -> shot_down transition fires on the same trace
+            // frame as ROM (s2.asm:78375-78394).
+            tornado.compensateForCollapsedWfzInit();
+        }
+        objectManager.forceRidingObjectForBootstrap(player, tornado);
+        objectManager.refreshRidingTrackingPosition(tornado);
+    }
+
+    private static TornadoObjectInstance findRideStartTornado(ObjectManager objectManager) {
+        for (ObjectInstance instance : objectManager.getActiveObjects()) {
+            if (instance instanceof TornadoObjectInstance tornado
+                    && !tornado.isDestroyed()
+                    && tornado.isPersistent()) {
+                return tornado;
+            }
+        }
+        return null;
+    }
+
     public record BootstrapResult(
-            TraceObjectSnapshotBinder.Result hydration,
+            TraceReplayBootstrap.SnapshotReport snapshotReport,
             TraceReplayBootstrap.ReplayStartState replayStart) {
     }
 }
