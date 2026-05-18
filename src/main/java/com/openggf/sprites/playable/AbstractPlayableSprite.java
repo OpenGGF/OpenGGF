@@ -4278,7 +4278,6 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 xHistory[historyPos] = getCentreX();
                 yHistory[historyPos] = getCentreY();
 
-                // ROM: Sonic_Stat_Record_Buf records Ctrl_1_Logical each frame.
                 inputHistory[historyPos] = logicalInputState;
                 jumpPressHistory[historyPos] = (byte) (logicalJumpPressState ? 1 : 0);
 

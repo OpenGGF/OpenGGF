@@ -698,3 +698,61 @@ New blocker: frame 554 `tails_y` (expected=0x05F1, actual=0x05F0). Tails Y off b
 1 px when rolling-mode transition occurs (engine `st=00`, ROM `status=04`). Crawl
 in slot 20 is in WALKING state (rtn=02), not involved. Likely a Tails rolling-mode
 transition timing issue: `tails mode rolling 0→1` annotation present at frame 554.
+
+## 2026-05-18 - S2 CNZ2 pinball-mode Tails jump and landing-clear fixes
+
+- Branch: `develop`
+- Command: `mvn -q "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 1057 errors (down from 1078)
+- Frontier moved: frame 554 `tails_y` → frame 1490 `tails_y_speed`
+
+Root cause: Two bugs in sidekick CPU and landing logic related to `pinball_mode`
+(set by S2 Obj84/FORCED_SPIN when Tails crosses the x=0x0400 horizontal trigger
+in CNZ2).
+
+1. **`PlayableSpriteMovement.resetOnFloor()` cleared `pinball_mode` unconditionally**:
+   ROM `Tails_ResetOnFloor` (`docs/s2disasm/s2.asm:40624-40660`) branches to
+   `Tails_ResetOnFloor_Part3` when `tst.b pinball_mode(a0)` is non-zero (`bne.s`),
+   skipping the roll-clear block entirely. Part3 only clears in_air/pushing/
+   rolljumping/jumping flags — it never touches `pinball_mode`. The engine's
+   unconditional `sprite.setPinballMode(false)` was clearing pinball mode on every
+   landing, causing the 16-frame delayed B-press to fire a jump at frame 936 when
+   pinball mode should have been preserved. Fix: made the `setPinballMode(false)` call
+   conditional on `!(rolling && pinballMode && preservePinballRoll)`, matching both
+   ROM `Sonic_ResetOnFloor` (`s2.asm:37770-37771`) and the already-correct
+   `CollisionSystem.java` implementation.
+
+2. **`SidekickCpuController.updateNormal()` did not suppress jump when rolling in
+   pinball mode**: ROM `Obj02_MdRoll` (`docs/s2disasm/s2.asm:39279-39282`) skips
+   `bsr.w Tails_Jump` entirely when `pinball_mode` is set. The engine's 16-frame
+   delayed press at frame 937 (Tails lands at frame 930-931, fresh B-press delayed
+   from frame 921) would reach `doJump()` unguarded. Fix: added pinball-mode check
+   in `updateNormal()` after the existing Obj85 rolling suppression block.
+
+3. **`doCheckStartRoll()` narrowed CPU move_lock guard to S3K only**: S1/S2
+   `Sonic_RollStart` has no `move_lock` gate (`docs/s2disasm/s2.asm:36954-36963,
+   39939-39942`). The prior over-broad guard for all games blocked S2 Tails from
+   rolling during move_lock even though the ROM never suppresses it. Narrowed to
+   S3K only (where `Tails_InputAcceleration_Path` at `sonic3k.asm:27797-27815` gates
+   duck/direction input on `move_lock`). This allowed the frame 554 Tails rolling
+   start to propagate correctly. Updated `TestPlayableSpriteMovement.
+   cpuSidekickMoveLockSuppressesGeneratedDownRoll` to use S3K physics explicitly.
+
+Files changed:
+- `src/main/java/com/openggf/game/sonic2/objects/badniks/CrawlBadnikInstance.java`
+  (deferred ATTACKING touch via `TouchResponseListener`, `getCollisionFlags()` 0xD7)
+- `src/main/java/com/openggf/sprites/managers/PlayableSpriteMovement.java`
+  (`resetOnFloor` pinball guard, `doCheckStartRoll` S3K-only move_lock guard)
+- `src/main/java/com/openggf/sprites/playable/SidekickCpuController.java`
+  (pinball-mode jump suppression in `updateNormal`)
+- `src/test/java/com/openggf/sprites/managers/TestPlayableSpriteMovement.java`
+  (updated `testS2LandingPreservesRollingInPinballMode` and
+  `cpuSidekickMoveLockSuppressesGeneratedDownRoll` to match ROM-accurate behavior)
+
+New blocker: frame 1490 `tails_y_speed` (expected=-0x059B, actual=-0x052B).
+Tails bounced by ATTACKING Crawl (rtn=06, slot 19) at x=0x0735, but engine Crawl
+is at x=0x732 (3 px left). The 3-pixel x-position difference changes the `CalcAngle`
+result, reducing the upward component of the radial bounce by 0x70. Root cause is
+a Crawl walking-position drift accumulated before the ATTACKING transition —
+likely the proximity check fires at a different frame in engine vs ROM, causing the
+Crawl to stop walking at a different x.

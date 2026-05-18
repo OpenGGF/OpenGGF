@@ -1323,6 +1323,10 @@ public class TestPlayableSpriteMovement {
 
         @Test
         public void cpuSidekickMoveLockSuppressesGeneratedDownRoll() throws Exception {
+                // S3K Tails_InputAcceleration_Path skips duck/direction input when move_lock
+                // is active (sonic3k.asm:27797-27815). S1/S2 have no move_lock gate on
+                // Sonic_RollStart (s2.asm:36954-36963, 39939-39942), so the guard is S3K-only.
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
                 mockSprite.setCpuControlled(true);
                 mockSprite.setAir(false);
                 mockSprite.setRolling(false);
@@ -1336,7 +1340,7 @@ public class TestPlayableSpriteMovement {
                 rollMethod.invoke(manager);
 
                 assertFalse(mockSprite.getRolling(),
-                                "CPU follow DOWN must not start an engine-only sidekick roll while move_lock is active");
+                                "S3K CPU follow DOWN must not start a sidekick roll while move_lock is active");
         }
 
         @Test
@@ -1944,7 +1948,8 @@ public class TestPlayableSpriteMovement {
 
                 assertTrue(mockSprite.getRolling(),
                                 "S2 Sonic_ResetOnFloor skips the roll-clear block when pinball_mode is set");
-                assertTrue(!mockSprite.getPinballMode(), "Landing should still clear engine pinball mode");
+                assertTrue(mockSprite.getPinballMode(),
+                                "ROM Tails_ResetOnFloor never clears pinball_mode (bne.s *_Part3 skips the roll-clear block; s2.asm:40625-40626)");
         }
 
         @Test
