@@ -6,6 +6,21 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 CNZ2 pinball-mode Tails jump and landing-clear fix.** Three related fixes
+  advancing the CNZ2 trace frontier from frame 554 to frame 1490. (1) ROM
+  `Tails_ResetOnFloor` (`s2.asm:40624-40660`) branches past the roll-clear block
+  when `pinball_mode` is set and never clears it; `PlayableSpriteMovement.
+  resetOnFloor()` was unconditionally calling `setPinballMode(false)`, preventing
+  Tails from staying in pinball mode through a landing. (2) ROM `Obj02_MdRoll`
+  (`s2.asm:39279-39282`) skips `Tails_Jump` entirely when `pinball_mode` is set;
+  `SidekickCpuController.updateNormal()` did not mirror this check, so the 16-frame
+  delayed B-press fired a jump even while Tails was rolling in pinball mode on the
+  ground. (3) `doCheckStartRoll()` had an over-broad move_lock CPU guard that
+  prevented S2 Tails from rolling during move_lock; S1/S2 `Sonic_RollStart` has no
+  such gate (`s2.asm:36954-36963,39939-39942`), so the guard is now scoped to S3K
+  only where `Tails_InputAcceleration_Path` actually gates it
+  (`sonic3k.asm:27797-27815`).
+
 - **S2 Crawl (0xC8) bounce physics and ENEMY dispatch fix (CNZ2 trace replay).**
   Two bugs combined to produce wrong post-bounce velocity. First, `COLLISION_SIZE_INDEX`
   was 0x09 (12×16 px) instead of ROM's 0x17 (8×8 px), inflating the touch window.

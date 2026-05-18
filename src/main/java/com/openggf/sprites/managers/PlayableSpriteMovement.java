@@ -1848,19 +1848,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void doCheckStartRoll() {
 		short gSpeed = sprite.getGSpeed();
 
+		// S3K uses movingCrouchThreshold ($100) as the roll speed threshold;
+		// below that speed, down enters crouch (handled in updateCrouchState).
+		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+		int rollThreshold = (fs != null && fs.movingCrouchThreshold() > 0)
+				? fs.movingCrouchThreshold() : minStartRollSpeed;
+
 		// Sidekick CPU input is generated before the shared movement code, not
 		// read directly from Ctrl_2 inside Tails' mode routines. While grounded
 		// move_lock is active, S3K Tails_InputAcceleration_Path takes the
 		// lockout branch before consuming current Ctrl_2 direction/duck handling
 		// (sonic3k.asm:27797-27815); do not let the shared Sonic roll starter
 		// reinterpret delayed CPU DOWN as a fresh sidekick roll in that window.
-		if (sprite.isCpuControlled() && sprite.getMoveLockTimer() > 0) return;
+		// S1/S2 Sonic_RollStart has no move_lock gate (s2.asm:36954-36963,
+		// 39939-39942) — only apply this guard for S3K (movingCrouchThreshold > 0).
+		if (sprite.isCpuControlled() && sprite.getMoveLockTimer() > 0
+				&& fs != null && fs.movingCrouchThreshold() > 0) return;
 
-		// S3K uses movingCrouchThreshold ($100) as the roll speed threshold;
-		// below that speed, down enters crouch (handled in updateCrouchState).
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		int rollThreshold = (fs != null && fs.movingCrouchThreshold() > 0)
-				? fs.movingCrouchThreshold() : minStartRollSpeed;
 		if (Math.abs(gSpeed) < rollThreshold) return;
 		// ROM roll-entry tests the held controller bits directly, not the
 		// move_lock-filtered left/right movement inputs. This matters for CPU

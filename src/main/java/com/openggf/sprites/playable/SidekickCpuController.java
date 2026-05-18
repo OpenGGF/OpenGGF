@@ -1335,6 +1335,18 @@ public class SidekickCpuController {
             jumpingFlag = false;
         }
 
+        // ROM Obj02_MdRoll skips bsr.w Tails_Jump entirely when pinball_mode is
+        // set (s2.asm:39279-39282). Tails_Jump reads Ctrl_2_Press_Logical; without
+        // this check the 16-frame-delayed fresh jump press fires a jump even though
+        // the ROM would never reach Tails_Jump in this rolling-pinball-mode state.
+        if (sidekick.getRolling()
+                && sidekick.getPinballMode()
+                && !sidekick.getAir()) {
+            inputJump = false;
+            inputJumpPress = false;
+            jumpingFlag = false;
+        }
+
         if (suppressNextAizIntroNormalMovement) {
             // AIZ1 intro releases the dormant marker before Tails' first
             // visible follow pulse. Consume this on the first post-release CPU
