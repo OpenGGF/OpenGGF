@@ -14,7 +14,7 @@ Recorded BizHawk traces verify that the engine plays back ROM behaviour pixel-fo
 1. **No hacks or dirty fixes.** Every behaviour change must be backed by the disassembly for the relevant game. Cite ROM file and line numbers in commits and code comments.
 2. **You may regenerate a trace** when the recorded data is genuinely insufficient for diagnosis (missing per-frame data, broken setup, recorder schema changed). Use the `tools/bizhawk/record_*_trace.bat` launcher with the matching `.lua` recorder. Regeneration is part of the loop — don't avoid it. **But** do not regenerate just to "make the test match"; regenerate to gain visibility.
 3. **If the engine architecture is missing or fundamentally broken**, or game objects/functionality aren't yet implemented, **plan and delegate**. Use review agents and parallel subagent execution for large-scope work. Don't try to land everything in one pass.
-4. **Cross-game parity is non-negotiable.** The engine supports three games (Sonic 1, Sonic 2, Sonic 3 & Knuckles). Before changing any "root" code (physics, collision, sidekick AI, oscillation, rendering, audio, etc.), check the disassemblies for **all three games** to confirm whether the change is a universal correction or a per-game divergence. Universal corrections must keep all games' traces green. Per-game divergences must be gated behind a `PhysicsFeatureSet` flag (see CLAUDE.md "Per-Game Physics Framework"). **Never** branch on `if (gameId == GameId.S3K) ...`.
+4. **Cross-game parity is non-negotiable.** The engine supports three games (Sonic 1, Sonic 2, Sonic 3 & Knuckles). Before changing any shared/root code (physics, collision, sidekick AI, oscillation, rendering, audio, shared object base classes, shared object helpers, etc.), check the disassemblies for **all three games** to confirm whether the change is a universal correction or a per-game divergence. Universal corrections must cite the matching ROM pattern for each affected game and keep all games' traces green. Per-game divergences must be gated behind a `PhysicsFeatureSet` flag (see CLAUDE.md "Per-Game Physics Framework") or an equivalent explicit behaviour flag at the owning abstraction. Prefer the smallest accurate scope: use a per-object or per-class hook when the divergence belongs to one object family, and reserve per-game flags for true game-wide ROM/system differences. **Never** branch on `if (gameId == GameId.S3K) ...`.
 
 ## The Core Invariant — Comparison Only, Never Sync
 
@@ -165,17 +165,28 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
 7. Implement the fix:
      - Disassembly-cited (file + line numbers).
      - Cross-check the other two games' disassemblies for shared code.
-     - Gate per-game divergences via PhysicsFeatureSet.
+     - Gate divergences at the narrowest owning abstraction:
+       per-object/per-class hook for object-family quirks, or
+       `PhysicsFeatureSet`/equivalent per-game flag only for game-wide
+       ROM/system behaviour.
 
 8. Run the trace test plus cross-game traces:
      mvn test -Dtest='Test<Game1>Ghz1TraceReplay,Test<Game1>Mz1TraceReplay,Test<Game2>Ehz1TraceReplay,Test<Game3><Zone>TraceReplay' -DfailIfNoTests=false
    All previously-green traces must stay green; the targeted trace
    should advance its first error frame (or, ideally, become green).
 
-9. Commit with proper trailers (see Branch Documentation Policy in
+9. Update `docs/TRACE_FRONTIER_LOG.md` whenever a trace frontier moves,
+   a trace fix is committed, a previously passing trace regresses, or a full
+   trace sweep is used to select the next target. Record the exact command,
+   commit/worktree context, pass/fail status, error count, and first-error
+   frame/field. If a result was measured with local uncommitted investigation
+   edits, say so explicitly so the snapshot is not mistaken for clean branch
+   state.
+
+10. Commit with proper trailers (see Branch Documentation Policy in
    CLAUDE.md/AGENTS.md). No --no-verify.
 
-10. **Skill catalogue update (object/badnik fixes only).** If the fix
+11. **Skill catalogue update (object/badnik fixes only).** If the fix
     touched code under `src/main/java/com/openggf/game/sonic{1,2,3k}/`
     (objects, badniks, lifts, springs, monitors, etc.), evaluate
     whether the root cause is a class of bug that could recur in any
@@ -196,7 +207,7 @@ Pre-trace setup events (frame `-1`) capture starting state for one-time bootstra
     Goal: each accumulated pitfall entry prevents that pattern from
     recurring in future object implementations.
 
-11. Loop: read the new first-error frame, repeat from step 3.
+12. Loop: read the new first-error frame, repeat from step 3.
 ```
 
 ## Trace Triage Notes
@@ -207,11 +218,31 @@ For object-contact divergences, add or inspect fields that explain the contact e
 
 Separate moving-platform timing from generic collision timing. If a trace first diverges on a rideable solid, compare the object routine transition, timer pre-decrement, platform motion, `SolidObject` call frame, standing-bit refresh, player carry, and walk-off/release helper in that order. Do not collapse them into one "platform collision" fix.
 
+When a trace mismatch lands on trigonometric object physics, do not replace ROM math with host floating-point approximations. Check whether the ROM routine calls `CalcAngle`, `CalcSine`, or a game-specific lookup table, then use the engine's integer lookup helpers (for example `TrigLookupTable`) or add an equivalent integer path with disassembly cites. S2 CNZ map bumpers are a concrete case: `CNZBumpersReact_Angle` reflects the incoming `CalcAngle` result and multiplies the `CalcSine` components by `-$A00` (`docs/s2disasm/s2.asm:32334-32677`); a one-angle rounding difference changed the bounce velocity and moved the CNZ frontier.
+
+For power-up timer divergences, identify both the ROM counter value and the phase where the ROM decrements it. S1/S2 speed shoes use a word `$4B0` timer decremented from display after movement, while S3K uses a byte `(20*60)/8` timer decremented only every eighth frame. If the engine timer runs in a different phase, gate the compensation in `PhysicsFeatureSet` instead of changing a shared timer constant globally.
+
+When comparing sidekick CPU gates, distinguish ROM's raw `object_control` byte tests from the engine's split flags (`objectControlled`, `objectControlAllowsCpu`, `objectControlSuppressesMovement`). S2 `TailsCPU_Spawning` uses `tst.b obj_control(a1)` and must block respawn for any nonzero object-control byte; S3K catch-up code has narrower bit-7-style gates in other paths. Keep S2's Tails respawn/flying timeout separate from normal despawn: `TailsCPU_CheckDespawn` writes the `$4000,0` marker, but `TailsCPU_Flying`'s 300-frame offscreen timeout writes `x_pos=0,y_pos=0`, `Tails_CPU_routine=2`, `obj_control=$81`, and `Status_InAir` (`docs/s2disasm/s2.asm:38795-38806,39043-39052`). However, S2 uses the same `Tails_respawn_counter` word across `TailsCPU_Flying` and `TailsCPU_CheckDespawn`; if Tails is offscreen during fly-in and lands before the 300-frame flying timeout, the accumulated count must carry into the NORMAL despawn check rather than restarting at zero.
+
 Route-start traces need their native preludes accounted for: title-card delays, route-start bootstrap, object spawning windows, scroll/parallax pre-advance, oscillation phase, and any zone intro skips. Prefer recording or replaying the real prelude when possible; use frame-0 bootstrap only for state ROM would already have at the BK2 start.
 
 Do not leave gameplay-affecting scroll logic hidden in render-only parallax updates. If a ROM scroll routine owns camera words, velocity globals, or route object inputs (for example S2 `SwScrl_SCZ` driving `Camera_X_pos` and `Tornado_Velocity_X/Y`), expose that as a logic-frame hook used by headless replay and rendering. The render pass should consume the resulting scroll state, not be the only place that mutates it.
 
 Embedded `SolidObject` calls belong where the ROM calls them inside the object's routine, not automatically at the end of every engine object update. For objects that move, branch, then call solid handling mid-routine, preserve that placement so player/sidekick carry and release observe the same pre- or post-motion coordinates as the ROM.
+
+For death and dead-fall divergences, verify the exact ROM motion helper and
+velocity ordering before changing generic death code. S2 `Obj01_Dead` /
+`Obj02_Dead` call `ObjectMoveAndFall`, which loads old `y_vel` for the 16:16
+position add, then stores `y_vel += $38` for the next frame
+(`docs/s2disasm/s2.asm:37901-37911,40736-40738,29967-29981`). S1 hurt/death
+and S3K Tails death paths follow the same old-velocity-for-position pattern
+via `SpeedToPos` / `MoveSprite_TestGravity`
+(`docs/s1disasm/_incObj/01 Sonic.asm:1792-1795`,
+`docs/skdisasm/sonic3k.asm:29280-29285,36068-36083`). If the engine moves with
+post-gravity velocity, subpixel carry will be off by one or more pixels. For
+S2 sidekick generic-dead frames, remember that `Obj02_Dead` can branch to
+`TailsCPU_Despawn` when `y_pos > Tails_Max_Y_pos + $100` and then still run the
+same frame's `ObjectMoveAndFall` from the marker (`docs/s2disasm/s2.asm:40736-40759,39043-39052`).
 
 ## Trace Regeneration
 
@@ -236,6 +267,7 @@ Profiles are declared inside the lua via `is_*_profile()` predicates — check t
 When a divergence can't be pinpointed without more ROM-side state:
 
 1. **Lua side.** Add a helper function (e.g. `write_<feature>_per_frame()`) that reads the RAM block of interest and emits a JSONL line with a new `event` type. Call it from the per-frame entry. Bump `LUA_SCRIPT_VERSION`. Add an opt-in key to `aux_schema_extras` (e.g. `"<feature>_per_frame"`).
+   If a focused frontier only needs a few extra fields on an existing generic diagnostic such as `state_snapshot`, add the fields there and force snapshots for a narrow frame window instead of creating a new event type. Typical S1/S2 movement-input questions need both BK2/CSV input and ROM-side `Ctrl_1_Held_Logical` plus `move_lock`, because `Sonic_Move` consumes the logical RAM byte after `ReadJoypads` runs from V-int (`docs/s2disasm/s2.asm:701,1361-1387,36253-36260`).
 2. **Java parser.** Add a new sealed-record type to `TraceEvent` (e.g. `TraceEvent.<Feature>State`). Parse the new JSON event in `TraceEvent.parseJsonLine`. Add `TraceMetadata.hasPerFrame<Feature>()` and `TraceData.<feature>StateForFrame(frame)`. Keep parsers tolerant — old traces without the new key must still load.
 3. **Diagnostic use.** Wire the new data into `DivergenceReport.getContextWindow` rendering, or into a dedicated probe class for targeted bug investigation. **Do not** wire it into engine state mutation in the per-frame test loop.
 4. **Regenerate the affected trace(s).** Commit the regen separately from the recorder schema change so reviewers can see the data churn distinctly.

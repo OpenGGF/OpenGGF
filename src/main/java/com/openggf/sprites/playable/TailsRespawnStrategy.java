@@ -12,6 +12,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
 
     private static final int RESPAWN_Y_OFFSET = 192;
     private static final int MAX_FLY_ACCEL = 12;
+    private static final int S2_FLYING_OFFSCREEN_TIMEOUT_FRAMES = 300;
     private final int flyAnimId;
     /** S2 fallback if no PhysicsFeatureSet is resolved (legacy unit-test sidekicks). */
     private static final int FLY_LAND_BLOCKERS_FALLBACK = PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2;
@@ -20,6 +21,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     private static final int LEADER_DEAD_ROUTINE_THRESHOLD = 6;
 
     private final SidekickCpuController controller;
+    private int offscreenFlightFrames;
 
     public TailsRespawnStrategy(SidekickCpuController controller) {
         this.controller = controller;
@@ -28,6 +30,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
 
     @Override
     public boolean beginApproach(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
+        offscreenFlightFrames = 0;
         sidekick.setCentreXPreserveSubpixel(leader.getCentreX());
         sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() - RESPAWN_Y_OFFSET));
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
@@ -58,6 +61,10 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
         sidekick.setObjectControlled(true);
+
+        if (handleS2FlyingOffscreenTimeout(sidekick)) {
+            return false;
+        }
 
         int targetX = leader.getCentreX(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES);
         int targetY = controller.clampTargetYToWater(
@@ -122,9 +129,58 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
     }
 
     @Override
+    public boolean handlesApproachDespawn() {
+        return true;
+    }
+
+    @Override
     public void onApproachComplete(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
         sidekick.setHighPriority(leader.isHighPriority());
         sidekick.setTopSolidBit(leader.getTopSolidBit());
         sidekick.setLrbSolidBit(leader.getLrbSolidBit());
+    }
+
+    @Override
+    public int consumeApproachDespawnCarryFrames() {
+        int frames = offscreenFlightFrames;
+        offscreenFlightFrames = 0;
+        return frames;
+    }
+
+    private boolean handleS2FlyingOffscreenTimeout(AbstractPlayableSprite sidekick) {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs != null && fs.sidekickRespawnEntersCatchUpFlight()) {
+            return false;
+        }
+        boolean onScreen = sidekick.hasRenderFlagOnScreenState()
+                ? sidekick.isRenderFlagOnScreen()
+                : sidekick.currentCamera() != null && sidekick.currentCamera().isOnScreen(sidekick);
+        if (onScreen) {
+            offscreenFlightFrames = 0;
+            return false;
+        }
+        offscreenFlightFrames++;
+        if (offscreenFlightFrames < S2_FLYING_OFFSCREEN_TIMEOUT_FRAMES) {
+            return false;
+        }
+
+        // S2 TailsCPU_Flying timeout writes Tails_respawn_counter=0,
+        // Tails_CPU_routine=2, obj_control=$81, Status_InAir, x_pos=0,
+        // y_pos=0, and fly animation (docs/s2disasm/s2.asm:38795-38806).
+        // This is distinct from TailsCPU_CheckDespawn's $4000 marker.
+        offscreenFlightFrames = 0;
+        sidekick.clearRollingFlagPreserveRadii();
+        sidekick.clearUnderwaterStatusPreserveWaterPhysics();
+        sidekick.setOnObject(false);
+        sidekick.setPushing(false);
+        sidekick.setLatchedSolidObjectId(0);
+        sidekick.setAir(true);
+        sidekick.setCentreXPreserveSubpixel((short) 0);
+        sidekick.setCentreYPreserveSubpixel((short) 0);
+        sidekick.setForcedAnimationId(flyAnimId);
+        sidekick.setControlLocked(true);
+        sidekick.setObjectControlled(true);
+        controller.returnApproachToSpawningAfterFlyingTimeout();
+        return true;
     }
 }

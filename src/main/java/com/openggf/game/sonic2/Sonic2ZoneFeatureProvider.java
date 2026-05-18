@@ -343,13 +343,26 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     }
 
     @Override
+    public void updatePrePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ && cnzSlotMachineManager != null) {
+            // ROM LevEvents_CNZ calls SlotMachine before object execution
+            // (s2.asm:21494, 58827-58840), so PointPokey sees completion
+            // on the same frame the slot routine goes inactive.
+            cnzSlotMachineManager.update();
+        }
+    }
+
+    @Override
     public void update(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        // CNZ map bumpers run from updateAfterPlayablePhysics so their bounce
+        // velocity is visible to later playable slots in the same frame.
+    }
+
+    @Override
+    public void updateAfterPlayablePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
         if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_CNZ) {
             if (cnzBumperManager != null) {
                 cnzBumperManager.update(player, cameraX, zoneIndex);
-            }
-            if (cnzSlotMachineManager != null) {
-                cnzSlotMachineManager.update();
             }
         }
     }

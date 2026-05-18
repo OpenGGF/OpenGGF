@@ -133,6 +133,10 @@ The latest S2 trace-frontier merge advances the Sky Chase level-select replay
 through the Tornado/Turtloid route by tightening SCZ object spawning, Tornado
 ride input timing, Turtloid projectile placement, and object hurt/platform
 landing parity.
+A follow-up S2 trace-frontier merge closes the Casino Night level-select
+replay to green by tightening CNZ object streaming, slot machine, bumper,
+bonus-block, forced-spin, monitor/solid-object, Hex Bumper, and Tails CPU
+off-screen respawn parity.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?
@@ -234,6 +238,11 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   `s2disasm` citations. See `docs/superpowers/specs/2026-05-15-s2-native-prelude-traces-design.md`
   for the full orchestration record (12 stages, ADR-1 through ADR-7 with R1/R2 fold-ins, blocker
   resolution pass).
+- **S2 CNZ trace-frontier closure (2026-05-18).** Casino Night Zone level-select replay now reaches
+  green. The branch fixed CNZ slot-machine timing, object streaming and out-of-range behavior,
+  bumper/bonus-block/forced-spin parity, S2 monitor and Big Block solid geometry, launcher-spring
+  Tails recapture, and S2 Tails CPU off-screen respawn marker/counter behavior while keeping trace
+  data comparison-only and updating the trace frontier log.
 - **Editor groundwork:** a config-gated editor/playtest loop, focused block and chunk previews,
   derive edits, world-grid navigation, and safer mode switching are being built toward usable
   in-engine editing. The editor review pass now preserves controller-owned mutable levels across

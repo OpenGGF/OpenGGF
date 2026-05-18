@@ -82,6 +82,11 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.rollingJump = true;
         sonic.pinballMode = true;
         sonic.pinballSpeedLock = true;
+        sonic.preserveRollingOnNextLanding = true;
+        sonic.preserveRollingOnNextRollStop = true;
+        sonic.objectPreservedRollBoostFollowup = true;
+        sonic.objectPreservedRollWallProbe = true;
+        sonic.objectPreservedRollVelocityCarry = true;
         sonic.tunnelMode = true;
         sonic.onObject = true;
         sonic.latchedSolidObjectId = 0xBEEF;
@@ -184,6 +189,11 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertTrue(e1.rollingJump(), "rollingJump mismatch");
         assertTrue(e1.pinballMode(), "pinballMode mismatch");
         assertTrue(e1.pinballSpeedLock(), "pinballSpeedLock mismatch");
+        assertTrue(e1.preserveRollingOnNextLanding(), "preserveRollingOnNextLanding mismatch");
+        assertTrue(e1.preserveRollingOnNextRollStop(), "preserveRollingOnNextRollStop mismatch");
+        assertTrue(e1.objectPreservedRollBoostFollowup(), "objectPreservedRollBoostFollowup mismatch");
+        assertTrue(e1.objectPreservedRollWallProbe(), "objectPreservedRollWallProbe mismatch");
+        assertTrue(e1.objectPreservedRollVelocityCarry(), "objectPreservedRollVelocityCarry mismatch");
         assertTrue(e1.tunnelMode(), "tunnelMode mismatch");
         assertTrue(e1.onObject(), "onObject mismatch");
         assertEquals(0xBEEF, e1.latchedSolidObjectId(), "latchedSolidObjectId mismatch");
@@ -274,6 +284,11 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.rollingJump = false;
         sonic.pinballMode = false;
         sonic.pinballSpeedLock = false;
+        sonic.preserveRollingOnNextLanding = false;
+        sonic.preserveRollingOnNextRollStop = false;
+        sonic.objectPreservedRollBoostFollowup = false;
+        sonic.objectPreservedRollWallProbe = false;
+        sonic.objectPreservedRollVelocityCarry = false;
         sonic.tunnelMode = false;
         sonic.onObject = false;
         sonic.latchedSolidObjectId = 0;
@@ -381,6 +396,11 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertEquals(e1.rollingJump(), e2.rollingJump(), "rollingJump not restored");
         assertEquals(e1.pinballMode(), e2.pinballMode(), "pinballMode not restored");
         assertEquals(e1.pinballSpeedLock(), e2.pinballSpeedLock(), "pinballSpeedLock not restored");
+        assertEquals(e1.preserveRollingOnNextLanding(), e2.preserveRollingOnNextLanding(), "preserveRollingOnNextLanding not restored");
+        assertEquals(e1.preserveRollingOnNextRollStop(), e2.preserveRollingOnNextRollStop(), "preserveRollingOnNextRollStop not restored");
+        assertEquals(e1.objectPreservedRollBoostFollowup(), e2.objectPreservedRollBoostFollowup(), "objectPreservedRollBoostFollowup not restored");
+        assertEquals(e1.objectPreservedRollWallProbe(), e2.objectPreservedRollWallProbe(), "objectPreservedRollWallProbe not restored");
+        assertEquals(e1.objectPreservedRollVelocityCarry(), e2.objectPreservedRollVelocityCarry(), "objectPreservedRollVelocityCarry not restored");
         assertEquals(e1.tunnelMode(), e2.tunnelMode(), "tunnelMode not restored");
         assertEquals(e1.onObject(), e2.onObject(), "onObject not restored");
         assertEquals(e1.onObjectAtFrameStart(), e2.onObjectAtFrameStart(), "onObjectAtFrameStart not restored");

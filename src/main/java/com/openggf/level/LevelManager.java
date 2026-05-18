@@ -981,6 +981,12 @@ public class LevelManager {
         }
     }
 
+    public void updateZoneFeaturesAfterPlayablePhysics(AbstractPlayableSprite playable) {
+        if (zoneFeatureProvider != null && level != null && playable != null) {
+            zoneFeatureProvider.updateAfterPlayablePhysics(playable, camera.getX(), getFeatureZoneId());
+        }
+    }
+
     public void update() {
         // NOTE: OscillationManager and objectManager are now updated via updateObjectPositions()
         // which is called earlier in GameLoop to fix platform riding sync (1-frame lag fix).

@@ -101,6 +101,16 @@ class TestMonitorObjectInstance {
         verify(objectManager).markRemembered(monitor.getSpawn());
     }
 
+    @Test
+    void solidityUsesGenericSolidObjectContGeometry() {
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x1E10, 0x0291, 0x26, 0x00, 0, false, 0),
+                "Monitor");
+
+        assertFalse(monitor.hasMonitorSolidity(),
+                "S2 Obj26 branches to SolidObject_cont after the roll-animation gate");
+    }
+
     private static boolean isBroken(MonitorObjectInstance monitor) {
         try {
             Field field = MonitorObjectInstance.class.getDeclaredField("broken");

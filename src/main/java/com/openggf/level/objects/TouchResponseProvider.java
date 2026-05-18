@@ -27,6 +27,22 @@ public interface TouchResponseProvider {
     }
 
     /**
+     * Returns whether Sonic 2 {@code Touch_Special} property-style {@code 0xC0}
+     * collision flags should dispatch as listener-only special callbacks.
+     */
+    default boolean usesSonic2TouchSpecialPropertyResponse() {
+        return false;
+    }
+
+    /**
+     * Returns whether a SPECIAL touch from this object should enable same-frame
+     * airborne side-velocity preservation on a following solid object.
+     */
+    default boolean enablesPostSpecialTouchAirborneSideVelocityPreservation() {
+        return false;
+    }
+
+    /**
      * Returns whether touch response should be gated by the engine's render-flag
      * equivalent before testing this object.
      */

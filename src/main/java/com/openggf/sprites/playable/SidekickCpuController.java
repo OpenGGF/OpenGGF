@@ -759,6 +759,32 @@ public class SidekickCpuController {
         return deferredDespawnDeadFallContinuingThisFrame;
     }
 
+    /**
+     * S2 can also enter Tails' routine-6 dead fall through generic damage /
+     * crush paths that set the sprite's {@code dead} flag without routing the
+     * CPU controller through {@link State#DEAD_FALLING}. ROM still dispatches
+     * those frames through {@code Obj02_Dead}: when
+     * {@code y_pos > Tails_Max_Y_pos + $100}, it branches to
+     * {@code TailsCPU_Despawn} before the same frame's
+     * {@code ObjectMoveAndFall} (s2.asm:40736-40759, 39043-39052).
+     */
+    public boolean applyDeferredGenericDeadDespawnIfCrossed() {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs == null || !fs.sidekickDeathUsesDeferredDespawn() || !sidekick.getDead()) {
+            return false;
+        }
+        int killPlane = getMaxYBound(Integer.MIN_VALUE);
+        if (killPlane == Integer.MIN_VALUE || sidekick.getCentreY() <= killPlane + 0x100) {
+            return false;
+        }
+        short oldXSpeed = sidekick.getXSpeed();
+        short oldYSpeed = sidekick.getYSpeed();
+        applyDespawnMarker();
+        sidekick.move(oldXSpeed, oldYSpeed);
+        sidekick.setYSpeed((short) (oldYSpeed + 0x38));
+        return true;
+    }
+
     public boolean consumeSkipPhysicsThisFrame() {
         boolean result = skipPhysicsThisFrame;
         skipPhysicsThisFrame = false;
@@ -843,9 +869,6 @@ public class SidekickCpuController {
         if ((frameCounter & 0x3F) != 0) {
             return;
         }
-        if (target.isObjectControlled()) {
-            return;
-        }
         // Per-game grounded-leader gate: S2 TailsCPU_Spawning checks for
         // grounded / not in water / not roll-jumping (s2.asm:38751-38762);
         // S3K Tails_Catch_Up_Flying does NOT (sonic3k.asm:26474-26486) —
@@ -855,6 +878,9 @@ public class SidekickCpuController {
         // and the engine's SPAWNING state would block forever.
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         boolean strictGate = fs == null || fs.sidekickSpawningRequiresGroundedLeader();
+        if (target.isObjectControlled() || (strictGate && target.isObjectControlSuppressesMovement())) {
+            return;
+        }
         if (strictGate) {
             if (target.getAir() || target.getRollingJump() || target.isInWater() || target.isPreventTailsRespawn()) {
                 return;
@@ -876,8 +902,16 @@ public class SidekickCpuController {
         suppressNextAirbornePushFollowSteering = false;
     }
 
+    void returnApproachToSpawningAfterFlyingTimeout() {
+        state = State.SPAWNING;
+        despawnCounter = 0;
+        normalFrameCount = 0;
+        jumpingFlag = false;
+        suppressNextAirbornePushFollowSteering = false;
+    }
+
     private void updateApproaching() {
-        if (checkDespawn()) {
+        if (!respawnStrategy.handlesApproachDespawn() && checkDespawn()) {
             normalPushingGraceFrames = 0;
             suppressNextAirbornePushFollowSteering = false;
             return;
@@ -900,7 +934,7 @@ public class SidekickCpuController {
             sidekick.setAir(true);
             state = State.NORMAL;
             normalFrameCount = 0;
-            despawnCounter = 0;
+            despawnCounter = Math.max(0, respawnStrategy.consumeApproachDespawnCarryFrames());
         }
     }
 
@@ -1253,7 +1287,16 @@ public class SidekickCpuController {
             // through the normal loc_13E7C distance/height gates instead and
             // leaves Ctrl_2_logical as RIGHT (sonic3k.asm:26702-26705,
             // 26760-26783, 27798-27805, 28103-28122).
-            boolean pushingBypass = currentPushBypass || localGracePushBypass;
+            // Vertical S2 Obj85 can hand Tails into a curled, zero-speed push
+            // state after release. That object-owned state preserves rolling
+            // without ROM's pinball-mode auto-push, and the CNZ trace shows it
+            // must not take the generic push auto-jump shortcut at the $3F
+            // frame gate (s2.asm:38943-38946, 39015-39022; Obj85 release:
+            // s2.asm:57611-57625).
+            boolean suppressObjectPreservedPushJump =
+                    sidekick.getRolling() && sidekick.shouldPreserveRollingOnNextRollStop();
+            boolean pushingBypass = (currentPushBypass || localGracePushBypass)
+                    && !suppressObjectPreservedPushJump;
             boolean passesDistanceGate = pushingBypass
                     || (frameCounter & 0xFF) == 0
                     || Math.abs(dx) < JUMP_DISTANCE_TRIGGER;
@@ -1277,6 +1320,19 @@ public class SidekickCpuController {
                     suppressNextAirbornePushFollowSteering = true;
                 }
             }
+        }
+
+        // Obj85's preserved roll-stop handoff can keep a stale held jump bit in
+        // the delayed leader sample while Tails is still grounded. Suppress that
+        // stale hold, but allow the later fresh delayed jump press that ROM uses
+        // to leave the stopper chamber (S2 s2.asm:38939-38946, 57611-57625).
+        if (sidekick.getRolling()
+                && sidekick.shouldPreserveRollingOnNextRollStop()
+                && !sidekick.getAir()
+                && (currentPushBypass || localGracePushBypass || !recordedJumpPress)) {
+            inputJump = false;
+            inputJumpPress = false;
+            jumpingFlag = false;
         }
 
         if (suppressNextAizIntroNormalMovement) {

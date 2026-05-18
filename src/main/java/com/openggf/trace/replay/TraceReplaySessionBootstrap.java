@@ -36,9 +36,9 @@ import java.util.logging.Logger;
  *       caller loads the level.</li>
  *   <li>{@link #applyBootstrap}: derive any allowed timing prelude from
  *       trace-visible execution timing, advance native timing-only state
- *       where policy allows, and choose the replay comparison cursor.
- *       It must not copy recorded object, player, sidekick, RNG, camera,
- *       or vblank state into the engine.</li>
+ *       where policy allows, seed trace-start global timing counters, and
+ *       choose the replay comparison cursor. It must not copy recorded
+ *       object, player, sidekick, RNG, or camera state into the engine.</li>
  * </ol>
  */
 public final class TraceReplaySessionBootstrap {
@@ -212,7 +212,31 @@ public final class TraceReplaySessionBootstrap {
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace);
         int objectPreludeFrames =
                 TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace);
+        int zoneFeaturePreludeFrames =
+                TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(trace);
         var gameplayMode = fixture.gameplayMode();
+        if (gameplayMode != null
+                && gameplayMode.getLevelManager() != null
+                && gameplayMode.getLevelManager().getObjectManager() != null) {
+            ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
+            int zoneFeatureVblankOffset =
+                    TraceReplayBootstrap.zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(trace);
+            if (zoneFeaturePreludeFrames > 0
+                    && zoneFeatureVblankOffset > 0
+                    && gameplayMode.getLevelManager().getZoneFeatureProvider() != null) {
+                var levelManager = gameplayMode.getLevelManager();
+                var camera = GameServices.cameraOrNull();
+                int cameraX = camera != null ? camera.getX() : 0;
+                objectManager.initVblaCounter(trace.initialVblankCounter() - zoneFeatureVblankOffset);
+                for (int i = 0; i < zoneFeaturePreludeFrames; i++) {
+                    objectManager.advanceVblaCounter();
+                    levelManager.getZoneFeatureProvider().updatePrePhysics(
+                            null, cameraX, levelManager.getFeatureZoneId());
+                }
+            }
+            objectManager.initVblaCounter(
+                    trace.initialVblankCounter() - objectPreludeFrames - 1);
+        }
         if (objectPreludeFrames > 0
                 && gameplayMode != null
                 && gameplayMode.getLevelManager() != null

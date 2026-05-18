@@ -292,6 +292,36 @@ public final class TraceReplayBootstrap {
     }
 
     /**
+     * Number of CNZ SlotMachine title-card ticks needed before S2 level-select
+     * trace comparison begins. The regenerated CNZ trace records SlotMachine
+     * entering Routine2 at {@code vbc=0x09CA} with positions seeded from
+     * {@code Vint_runcount+3 == 0xC1}; replay therefore advances the native
+     * short slot-init window separately from the object prelude rather than
+     * copying slot RAM from the trace.
+     */
+    public static int zoneFeatureTitleCardPreludeFramesForTraceReplay(TraceData trace) {
+        if (trace == null || trace.metadata() == null) {
+            return 0;
+        }
+        TraceMetadata meta = trace.metadata();
+        if (!"s2".equals(meta.game()) || !meta.nativePreludeMode()) {
+            return 0;
+        }
+        Integer romZoneId = meta.romZoneId();
+        if (romZoneId == null || romZoneId != 0x0C) {
+            return 0;
+        }
+        return 4;
+    }
+
+    public static int zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(TraceData trace) {
+        if (zoneFeatureTitleCardPreludeFramesForTraceReplay(trace) == 0) {
+            return 0;
+        }
+        return 10;
+    }
+
+    /**
      * Frame count of the ROM title-card object prelude that S2 traces sampled
      * at {@code frame -1}. The recorded {@code player_history_snapshot}
      * {@code history_pos=0x68 = 104} is the raw byte index of

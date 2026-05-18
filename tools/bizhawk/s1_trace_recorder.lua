@@ -189,11 +189,17 @@ end
 -- "Input alignment error" failures in AbstractCreditsDemoTraceReplayTest.
 -- Read the BK2 movie input directly so the CSV input column matches what
 -- the test fixture's BK2 reader will see during validation.
-local function bk2_input_mask(fallback_raw)
+local function bk2_input_mask(fallback_raw, trace_row)
     if not movie.isloaded() then
         return rom_joypad_to_mask(fallback_raw)
     end
-    local frame_index = emu.framecount()
+    -- Replay metadata defines trace row N as BK2 frame
+    -- (bk2_frame_offset + N). Use that same convention here; direct
+    -- emu.framecount() is one frame ahead in this recorder loop.
+    local frame_index = bk2_frame_offset ~= nil
+        and trace_row ~= nil
+        and (bk2_frame_offset + trace_row)
+        or emu.framecount()
     local jp = movie.getinput(frame_index, 1)
     if jp == nil then
         return rom_joypad_to_mask(fallback_raw)
@@ -264,7 +270,7 @@ local function write_metadata()
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "3.1",\n')
+    meta_file:write('  "lua_script_version": "3.2",\n')
     meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
     meta_file:write('  "rom_checksum": "",\n')
@@ -575,7 +581,7 @@ local function on_frame_end()
     -- specific V-int subroutines and can lag the BK2 by a frame on lag-
     -- frame paths. raw_input still feeds the state_snapshot aux event.
     local raw_input = mainmemory.read_u8(0xF604)  -- v_jpadhold1
-    local input_mask = bk2_input_mask(raw_input)
+    local input_mask = bk2_input_mask(raw_input, trace_frame)
 
     -- Format helper for unsigned 16-bit hex
     local function uhex(val)

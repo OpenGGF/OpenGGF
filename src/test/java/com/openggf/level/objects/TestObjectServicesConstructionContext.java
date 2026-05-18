@@ -58,6 +58,7 @@ class TestObjectServicesConstructionContext {
         @Override public com.openggf.data.RomByteReader romReader() { return null; }
         @Override public com.openggf.level.WaterSystem waterSystem() { return null; }
         @Override public com.openggf.level.ParallaxManager parallaxManager() { return null; }
+        @Override public com.openggf.physics.CollisionSystem collisionSystem() { return null; }
         @Override public void advanceToNextLevel() {}
         @Override public void requestCreditsTransition() {}
         @Override public void requestSessionSave(com.openggf.game.save.SaveReason reason) {}
