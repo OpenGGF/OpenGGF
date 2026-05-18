@@ -633,3 +633,30 @@ than re-deriving an edge from her own held bit.
 Note: the `player_history.pos expected=0x0068 actual=0x0019` BootstrapDivergence
 is a comparator unit-mismatch (ROM byte offset vs engine slot index) — both
 represent the same ring fill state. Not the root cause of the frame-16 failure.
+
+## 2026-05-18 - S2 CNZ2 horizontal spring inclusive right-edge fix
+
+- Branch: `develop`
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 1130 errors (down from 1217)
+- Frontier moved: frame 205 `camera_x` → frame 435 `x_speed`
+
+Root cause: `SpringObjectInstance.getSolidParams()` (HORIZONTAL subtype) did not
+override `usesInclusiveRightEdge()`, so it defaulted to `false` (exclusive `>=`).
+At frame 205 Sonic's centre X = 539 = spring.centreX (520) + halfWidth (19), exactly
+the right boundary. ROM `SolidObject_cont` (`docs/s2disasm/s2.asm:35147-35150`)
+rejects with `bhi` (strictly greater), so `relX == width*2` IS a valid contact.
+The engine's default `>=` treated that same case as out-of-range and skipped the
+spring entirely. Spring at (0x0208, 0x05F0) then fired correctly: Sonic snapped to
+0x0213 (x−8) with x_vel=+$1000, matching the CSV transition at frame 205.
+
+Fix: `SpringObjectInstance` now overrides `usesInclusiveRightEdge()` to return `true`
+when `getType() == TYPE_HORIZONTAL`, matching the same pattern already used in
+`Sonic3kSpringObjectInstance` for `TYPE_HORIZONTAL`. ROM reference:
+`Obj41_Horizontal` routes through `SolidObject_Always_SingleCharacter` →
+`SolidObject_cont` (`docs/s2disasm/s2.asm:33780-33784,35147`), whose X gate uses
+`bhi`, making the right-edge pixel a valid side contact.
+
+New blocker: frame 435 `x_speed` (expected=0x01CD, actual=-0x05FE). Engine has
+Sonic moving fast leftward while ROM continues rightward; engine diagnostic shows
+a Crawl (0xC8) touch at slot 20 and matching subpixel position at frame start.
