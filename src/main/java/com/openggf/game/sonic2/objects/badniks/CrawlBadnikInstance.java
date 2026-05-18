@@ -11,6 +11,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.util.AnimationTimer;
 
@@ -81,8 +82,8 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance {
     /** Bounce velocity magnitude = $700 (1792 in 8.8 fixed point) */
     private static final int BOUNCE_VELOCITY = 0x700;
 
-    /** Collision size index 0x09 (from disassembly pattern) */
-    private static final int COLLISION_SIZE_INDEX = 0x09;
+    /** Collision size index 0x17 = collision_flags($D7) & $3F — maps to Touch_Sizes[23] = (8,8) */
+    private static final int COLLISION_SIZE_INDEX = 0x17;
 
     /** Animation delay for walking (frames per animation tick) */
     private static final int ANIM_DELAY = 0x13; // 19 frames
@@ -116,7 +117,6 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance {
     private int pauseTimer;          // Frames until resume walking
     private int impactTimer;         // Frames showing impact animation
     private int xSubpixel;           // Subpixel accumulator for smooth movement
-    private boolean playerApproaching; // True when player is near and rolling
     private boolean vulnerable;      // True when hit from back (collision_flags = $17)
     private final AnimationTimer walkAnim = new AnimationTimer(ANIM_DELAY, 2);
     private int lastFrameCounter;    // Cached for wobble calculation in applyBounce
@@ -129,7 +129,6 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance {
         this.pauseTimer = 0;
         this.impactTimer = 0;
         this.xSubpixel = 0;
-        this.playerApproaching = false;
         this.vulnerable = false;
 
         // Initial facing based on x_flip spawn flag
@@ -146,58 +145,34 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         lastFrameCounter = frameCounter;
 
-        // Check if player is approaching (to switch to attack mode)
-        checkPlayerProximity(player);
-
+        // ROM: each routine handles its own state transitions; proximity check
+        // (loc_3D416) is called AFTER movement in the walking routine only.
         switch (state) {
-            case WALKING -> updateWalking(frameCounter);
+            case WALKING -> updateWalking(player);
             case PAUSING -> updatePausing();
-            case ATTACKING -> updateAttacking(frameCounter, player);
+            case ATTACKING -> updateAttacking(player);
         }
 
-        // Decrement impact timer
         if (impactTimer > 0) {
             impactTimer--;
         }
     }
 
     /**
-     * Check if player is approaching and should trigger attack mode.
-     * ROM: loc_3D416 in ObjC8_Walking - saves current routine before switching to attack.
-     * ROM: loc_3D39A in ObjC8_Attacking - restores previous routine when out of range.
+     * Walking state (Routine 2) — mirrors loc_3D27C (s2.asm:81826).
+     * ROM: decrement timer → if zero transition to pause; else move + check proximity.
+     * Proximity check (loc_3D416) runs AFTER movement, not before.
      */
-    private void checkPlayerProximity(AbstractPlayableSprite player) {
-        if (player == null) {
-            playerApproaching = false;
+    private void updateWalking(AbstractPlayableSprite player) {
+        walkTimer--;
+        if (walkTimer <= 0) {
+            state = State.PAUSING;
+            pauseTimer = PAUSE_DURATION;
+            xVelocity = 0;
             return;
         }
 
-        // Simple proximity check - if player is within reasonable range
-        int dx = Math.abs(player.getCentreX() - currentX);
-        int dy = Math.abs(player.getCentreY() - currentY);
-
-        // Player must be close and rolling (or in air rolling)
-        boolean isRolling = player.getRolling() || player.getRollingJump();
-        playerApproaching = dx < 64 && dy < 48 && isRolling;
-
-        // Switch to attacking mode when player approaches
-        // ROM: move.b routine(a0),objoff_2C(a0) - save current routine
-        if (playerApproaching && state != State.ATTACKING) {
-            previousState = state;  // Save current state (WALKING or PAUSING)
-            state = State.ATTACKING;
-        } else if (!playerApproaching && state == State.ATTACKING) {
-            // ROM: move.b objoff_2C(a0),routine(a0) - restore previous routine
-            state = previousState;  // Restore saved state
-        }
-    }
-
-    /**
-     * Walking state (Routine 2):
-     * - Move horizontally at walk speed
-     * - Count down until pause
-     */
-    private void updateWalking(int frameCounter) {
-        // Apply velocity using subpixel accumulator for smooth movement
+        // ObjectMove — subpixel-accurate horizontal motion
         xSubpixel += Math.abs(xVelocity);
         if (xSubpixel >= 0x100) {
             int pixels = xSubpixel >> 8;
@@ -209,26 +184,24 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance {
             }
         }
 
-        // Decrement walk timer
-        walkTimer--;
-        if (walkTimer <= 0) {
-            // Transition to pause state
-            state = State.PAUSING;
-            pauseTimer = PAUSE_DURATION;
-            xVelocity = 0;
+        // loc_3D416: enter attack mode if player within 64×64 px box.
+        // ROM does NOT check rolling here; the bounce check is in loc_3D2D4.
+        if (player != null) {
+            int dx = Math.abs(player.getCentreX() - currentX);
+            int dy = Math.abs(player.getCentreY() - currentY);
+            if (dx < 64 && dy < 64) {
+                previousState = state;
+                state = State.ATTACKING;
+            }
         }
     }
 
     /**
-     * Pausing state (Routine 4):
-     * - Stop movement
-     * - Wait for pause duration
-     * - Then reverse direction
+     * Pausing state (Routine 4) — mirrors loc_3D2A6 (s2.asm:81841).
      */
     private void updatePausing() {
         pauseTimer--;
         if (pauseTimer <= 0) {
-            // Reverse direction
             facingLeft = !facingLeft;
             xVelocity = facingLeft ? -WALK_VELOCITY : WALK_VELOCITY;
             walkTimer = WALK_DURATION;
@@ -237,13 +210,19 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance {
     }
 
     /**
-     * Attacking state (Routine 6):
-     * - Stop movement (stay in place)
-     * - Collision handling will bounce or destroy based on direction
+     * Attacking state (Routine 6) — mirrors loc_3D2D4 (s2.asm:81856).
+     * ROM: sets collision_flags=$D7, then exits to previous routine if
+     * |dx| >= 64 OR |dy| >= 64 (loc_3D39A).
      */
-    private void updateAttacking(int frameCounter, AbstractPlayableSprite player) {
-        // In attack mode, Crawl stops and waits
-        // Collision handling is done through onPlayerAttack
+    private void updateAttacking(AbstractPlayableSprite player) {
+        if (player == null) {
+            return;
+        }
+        int dx = Math.abs(player.getCentreX() - currentX);
+        int dy = Math.abs(player.getCentreY() - currentY);
+        if (dx >= 64 || dy >= 64) {
+            state = previousState;
+        }
     }
 
     @Override
@@ -299,39 +278,37 @@ public class CrawlBadnikInstance extends AbstractBadnikInstance {
     }
 
     /**
-     * Apply radial bounce to player (similar to BumperObjectInstance).
-     * ROM Reference: lines 81930-81954
+     * Apply radial bounce to player (mirrors loc_3D3A4, s2.asm:81932-81958).
+     * ROM Reference: lines 81932-81958
      */
     private void applyBounce(AbstractPlayableSprite player, int impactFrame) {
-        // Calculate direction from Crawl to player
+        // ROM: d1=x_pos(Crawl)-x_pos(Player), d2=y_pos(Crawl)-y_pos(Player)
         int dx = currentX - player.getCentreX();
         int dy = currentY - player.getCentreY();
 
-        // Calculate angle
-        double angle = StrictMath.atan2(dy, dx);
+        // ROM: jsr (CalcAngle).l — integer arctangent lookup (returns 0x40 when dx=dy=0)
+        int angle = TrigLookupTable.calcAngle((short) dx, (short) dy);
 
-        // If player is exactly at center, push them away from front
-        if (dx == 0 && dy == 0) {
-            angle = facingLeft ? Math.PI : 0;
-        }
+        // ROM: move.b (Level_frame_counter).w,d1; andi.w #3,d1
+        // Level_frame_counter is a big-endian word; move.b reads the HIGH byte.
+        // Engine stores frame counter as 8.8 fixed-point → >>8 gives the high byte.
+        angle = (angle + ((lastFrameCounter >> 8) & 3)) & 0xFF;
 
-        // Add wobble based on frame counter (ROM: add (Timer_frames & 3) to angle)
-        double wobble = (lastFrameCounter & 3) * (2.0 * StrictMath.PI / 256.0);
-        angle += wobble;
+        // ROM: CalcSine → d1=cos(angle), d0=sin(angle)
+        // x_vel = cos * -$700 >> 8; y_vel = sin * -$700 >> 8
+        int cosVal = TrigLookupTable.cosHex(angle);
+        int sinVal = TrigLookupTable.sinHex(angle);
+        int xVel = cosVal * -BOUNCE_VELOCITY >> 8;
+        int yVel = sinVal * -BOUNCE_VELOCITY >> 8;
 
-        // Calculate velocity components
-        // ROM: vel = -sin/cos(angle) * $700 >> 8
-        int xVel = (int) (-StrictMath.sin(angle) * BOUNCE_VELOCITY);
-        int yVel = (int) (-StrictMath.cos(angle) * BOUNCE_VELOCITY);
-
-        // Apply to player
         player.setXSpeed((short) xVel);
         player.setYSpeed((short) yVel);
 
-        // Set player to airborne state
+        // ROM: bset #in_air; bclr #rolljumping; bclr #pushing; clr.b jumping
         player.setAir(true);
+        player.setRollingJump(false);
+        player.setJumping(false);
         player.setPushing(false);
-        player.setGSpeed((short) 0);
 
         // Show impact animation
         animFrame = impactFrame;
