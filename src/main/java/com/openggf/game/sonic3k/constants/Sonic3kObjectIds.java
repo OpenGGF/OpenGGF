@@ -133,6 +133,8 @@ public final class Sonic3kObjectIds {
     public static final int HCZ_TWISTING_LOOP = 0x69;
     public static final int HCZ_WATER_SPLASH = 0x6D;
     public static final int HCZ_WATER_DROP = 0x6E;
+    // S3KL object table: Obj_ICZPathFollowPlatform.
+    public static final int ICZ_PATH_FOLLOW_PLATFORM = 0xB0;
     // S3KL object table: Obj_ICZBreakableWall.
     public static final int ICZ_BREAKABLE_WALL = 0xB1;
     // S3KL object table: Obj_ICZFreezer.

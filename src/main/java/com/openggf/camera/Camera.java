@@ -95,6 +95,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	private static final short DEFAULT_FAST_SCROLL_CAP = 16;
 	private short fastScrollCap = DEFAULT_FAST_SCROLL_CAP;
 
+	// ROM: Fast_V_scroll_flag. Moving solids request this for the current frame
+	// when the player is standing on them, so grounded vertical follow uses the
+	// fast cap even if the player's own ground speed is low.
+	private boolean fastVerticalScrollRequested = false;
+
 	public Camera() {
 		this(GameServices.configuration());
 	}
@@ -127,11 +132,13 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			// produce max < min at low X in this engine representation.
 			x = clampAxisWithWrap(x, minX, maxX);
 			y = clampAxisWithWrap(y, minY, maxY);
+			fastVerticalScrollRequested = false;
 			return;
 		}
 
 		// Full camera freeze (death, cutscenes) - don't update X or Y at all
 		if (frozen) {
+			fastVerticalScrollRequested = false;
 			return;
 		}
 
@@ -206,7 +213,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				} else {
 					// Bias is normal (96) - check inertia for medium vs fast
 					short absInertia = (short) Math.abs(focusedSprite.getGSpeed());
-					if (absInertia >= FAST_SCROLL_INERTIA_THRESHOLD) {
+					if (fastVerticalScrollRequested || absInertia >= FAST_SCROLL_INERTIA_THRESHOLD) {
 						// ROM: .doScroll_fast - player moving very fast on ground
 						// S2: 16px cap, S3K: 24px cap
 						tolerance = fastScrollCap;
@@ -273,6 +280,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		if (!lastFrameWrapped) {
 			y = clampAxisWithWrap(y, minY, maxY);
 		}
+		fastVerticalScrollRequested = false;
 	}
 
 	private void wrapFocusedSpriteYPositionWord() {
@@ -955,6 +963,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		focusedSprite = null;
 		yPosBias = DEFAULT_Y_BIAS;
 		fastScrollCap = DEFAULT_FAST_SCROLL_CAP;
+		fastVerticalScrollRequested = false;
 		verticalWrapEnabled = false;
 		verticalWrapRange = VERTICAL_WRAP_RANGE;
 		verticalWrapMask = VERTICAL_WRAP_RANGE - 1;
@@ -976,6 +985,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	/** Returns the current fast vertical scroll cap in pixels/frame. */
 	public int getFastScrollCap() {
 		return fastScrollCap;
+	}
+
+	/**
+	 * Requests ROM {@code Fast_V_scroll_flag} behavior for the next camera update.
+	 * The request is frame-scoped and is cleared by {@link #updatePosition()}.
+	 */
+	public void requestFastVerticalScroll() {
+		fastVerticalScrollRequested = true;
 	}
 
 	@Override
