@@ -604,3 +604,32 @@ Next active target: frame 16 `tails_air` on CNZ2. Diagnostic shows Tails CPU
 emitting held jump state but Tails ends up `air+rolling` post-physics. The
 bootstrap history-pos mismatch (`0x0068` ROM vs `0x0019` engine) may be
 causing the 16-frame delayed jump-press lookup to read the wrong slot.
+
+## 2026-05-18 - S2 CNZ2 Tails held-jump bootstrap fix
+
+- Branch: `develop`
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 1217 errors
+- Frontier moved: frame 16 `tails_air` → frame 205 `camera_x`
+- Cross-game `*TraceReplay` sweep: 41 tests / 22 failures, same baseline — no regressions
+
+Root cause: `PlayableSpriteMovement.storeInputState` computed
+`inputJumpPress = (jump && !jumpPrevious) || forcedJumpPress` uniformly for
+both human-driven and CPU-controlled sprites. For CPU sprites whose `aiJump`
+mirrors the leader's delayed held bit but whose `aiJumpPress` mirrors the
+delayed press byte, the edge calculation against Tails' virgin `jumpPrevious=false`
+manufactured a spurious press the first time the leader's held bit transitioned
+from clear to set. CNZ2's BK2 starts with jump held in the title-card prelude,
+so Tails inherited a recorded held jump bit without a matching recorded press
+byte, and fired `doJump()` at frame 16 putting her into `air+rolling y_speed=-0x680`.
+
+Fix: for `sprite.isCpuControlled()` consume only the explicit `forcedJumpPress`
+signal from `SidekickCpuController.getInputJumpPress()`. ROM cite:
+`TailsCPU_Normal` (`docs/s2disasm/s2.asm:38939-38946,39025-39027`) writes
+the whole delayed `Ctrl_1_Logical` word into `Ctrl_2_Logical`, so Tails'
+`Ctrl_2_Press` low byte always matches the leader's delayed press byte rather
+than re-deriving an edge from her own held bit.
+
+Note: the `player_history.pos expected=0x0068 actual=0x0019` BootstrapDivergence
+is a comparator unit-mismatch (ROM byte offset vs engine slot index) — both
+represent the same ring fill state. Not the root cause of the frame-16 failure.
