@@ -101,6 +101,42 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object keeps the player attached while object-local code,
+     * rather than the generic solid routine, owns player positioning.
+     * <p>
+     * Default is false: when an object is no longer solid for the current
+     * player, the generic platform path treats that as a ride exit. Bespoke ROM
+     * objects can opt in when their routine keeps the standing/on-object state
+     * set while suppressing normal solid contacts for an object-control capture.
+     * Example: S2 CNZ Obj85 launcher springs set {@code obj_control=$81} and
+     * continue writing {@code x_pos/y_pos} in loc_2ADFE / loc_2AFFE without
+     * clearing {@code status.player.on_object}; they only clear it on off-screen
+     * release or launch (docs/s2disasm/s2.asm:57520-57545, 57684-57711).
+     */
+    default boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Optional centre-Y write for objects that preserve a ride while object-local
+     * code owns player positioning. Return {@code null} to leave Y unchanged.
+     */
+    default Integer getObjectManagedRideCentreY(PlayableEntity player, int objectY, SolidObjectParams params) {
+        return null;
+    }
+
+    /**
+     * Object-local correction applied when the shared solid resolver snaps a
+     * player onto this object's top surface.
+     * <p>
+     * Use this for ROM helper quirks that belong to a concrete object routine
+     * instead of broadening the shared top-solid behavior across games.
+     */
+    default int getTopLandingSnapAdjustment(PlayableEntity player, int solidTopYRadius) {
+        return 0;
+    }
+
+    /**
      * Whether this solid uses S3K's {@code SolidObjectFull} Player 2 visibility
      * gate. That helper processes Player 1, then skips Player 2 when Player 2's
      * {@code render_flags} bit 7 is clear (sonic3k.asm:41003-41008).
@@ -150,6 +186,19 @@ public interface SolidObjectProvider {
      * edge cadence (for example Sonic 1 push blocks) can return true.
      */
     default boolean preservesEdgeSubpixelMotion() {
+        return false;
+    }
+
+    /**
+     * Whether this object preserves a same-frame SPECIAL TouchResponse velocity
+     * handoff through the following airborne post-movement side contact.
+     * <p>
+     * Default is false because shared Sonic solid helpers zero horizontal speed
+     * on moving side contact across games. Object-local ROM ordering exceptions
+     * must opt in with a citation and are additionally gated on an actual
+     * SPECIAL touch callback in the current frame.
+     */
+    default boolean preservesPostSpecialTouchAirborneSideVelocity() {
         return false;
     }
 
@@ -210,6 +259,21 @@ public interface SolidObjectProvider {
      */
     default boolean seedsNewRideCarryFromPreUpdateX() {
         return false;
+    }
+
+    /**
+     * Number of newly-pressed horizontal-input frames to ignore while this
+     * object is the player's current riding solid.
+     * <p>
+     * Default is zero. Object-specific overrides are for ROM helper timing
+     * quirks where the BK2 input row is aligned to V-int, but the player
+     * movement routine does not consume the new logical horizontal value until
+     * a later gameplay step. Keep this object-local; do not broaden stale input
+     * suppression into shared movement unless all callers of the helper have
+     * been checked.
+     */
+    default int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
+        return 0;
     }
 
     /**

@@ -52,13 +52,16 @@
 --- Constants ---
 -----------------
 
+-- v9.6-s2 changes: include move_lock in state_snapshot diagnostics and emit
+-- focused snapshots around the current S2 CNZ elevator/input frontier.
+--
 -- v9.3-s2: traces from this recorder version onward are bootstrap-comparable
 -- against the post-universal-title-card engine (ADR-1, design spec 2026-05-15)
 -- AND derive their CSV `input` column from BK2 directly via movie.getinput
 -- (see v9.3-s2 change note above for context).
 -- The bootstrap-comparator eligibility is derived from this version string by
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
-local LUA_SCRIPT_VERSION = "9.3-s2"
+local LUA_SCRIPT_VERSION = "9.6-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -85,7 +88,6 @@ local ADDR_CAMERA_X        = 0xEE00   -- long: Camera_X_pos
 local ADDR_CAMERA_Y        = 0xEE04   -- long: Camera_Y_pos
 local ADDR_ZONE            = 0xFE10   -- byte: Current_Zone
 local ADDR_ACT             = 0xFE11   -- byte: Current_Act
-
 -- Player object base ($FFFFB000 = MainCharacter)
 local PLAYER_BASE          = 0xB000
 local OFF_X_POS            = 0x08   -- word: centre X
@@ -154,9 +156,24 @@ local OBJ_DYNAMIC_COUNT    = 112  -- dynamic slots 16-127
 local SIDEKICK_BASE        = OBJ_TABLE_START + OBJ_SLOT_SIZE  -- slot 1 = Tails/sidekick
 
 -- Frame counter (v_framecount at $FFFE04, word — increments each Level_MainLoop)
--- NOTE: 0xFE0C is v_vbla_count (longword, VBlank interrupt counter — different!)
+-- NOTE: 0xFE0C is Vint_runcount (longword, VBlank interrupt counter);
+-- read +2 so the CSV stores the low word that changes during normal traces.
 local ADDR_FRAMECOUNT      = 0xFE04
-local ADDR_VBLA_WORD       = 0xFE0C
+local ADDR_VBLA_WORD       = 0xFE0E
+local ADDR_SLOT_MACHINE_IN_USE = 0xFF4C
+local ADDR_SLOT_MACHINE_ROUTINE = 0xFF4E
+local ADDR_SLOT_MACHINE_TIMER = 0xFF4F
+local ADDR_SLOT_MACHINE_INDEX = 0xFF51
+local ADDR_SLOT_MACHINE_REWARD = 0xFF52
+local ADDR_SLOT_MACHINE_SLOT1_POS = 0xFF54
+local ADDR_SLOT_MACHINE_SLOT1_SPEED = 0xFF56
+local ADDR_SLOT_MACHINE_SLOT1_ROUTINE = 0xFF57
+local ADDR_SLOT_MACHINE_SLOT2_POS = 0xFF58
+local ADDR_SLOT_MACHINE_SLOT2_SPEED = 0xFF5A
+local ADDR_SLOT_MACHINE_SLOT2_ROUTINE = 0xFF5B
+local ADDR_SLOT_MACHINE_SLOT3_POS = 0xFF5C
+local ADDR_SLOT_MACHINE_SLOT3_SPEED = 0xFF5E
+local ADDR_SLOT_MACHINE_SLOT3_ROUTINE = 0xFF5F
 
 -- Genesis joypad bitmask (matching engine convention)
 local INPUT_UP    = 0x01
@@ -273,15 +290,17 @@ end
 -- Returns the engine bitmask: bit0=UP, bit1=DOWN, bit2=LEFT, bit3=RIGHT,
 -- bit4=JUMP (if any of A/B/C are pressed). Falls back to the RAM-derived
 -- mask when no movie is loaded.
-local function bk2_input_mask(fallback_raw)
+local function bk2_input_mask(fallback_raw, trace_row)
     if not movie.isloaded() then
         return rom_joypad_to_mask(fallback_raw)
     end
-    -- emu.framecount() returns the just-completed frame index. BK2 indices
-    -- are 0-based and the input at index N drove frame N. on_frame_end
-    -- captures state after frame N completes, so movie.getinput(N, 1)
-    -- returns the input that BK2 just delivered to ROM.
-    local frame_index = emu.framecount()
+    -- Replay metadata defines trace row N as BK2 frame
+    -- (bk2_frame_offset + N). Use that same convention here; direct
+    -- emu.framecount() is one frame ahead in this recorder loop.
+    local frame_index = bk2_frame_offset ~= nil
+        and trace_row ~= nil
+        and (bk2_frame_offset + trace_row)
+        or emu.framecount()
     local jp = movie.getinput(frame_index, 1)
     if jp == nil then
         return rom_joypad_to_mask(fallback_raw)
@@ -433,7 +452,7 @@ local function write_metadata()
     meta_file:write('  "lua_script_version": "' .. LUA_SCRIPT_VERSION .. '",\n')
     meta_file:write('  "trace_schema": 8,\n')
     meta_file:write('  "csv_version": 6,\n')
-    meta_file:write('  "aux_schema_extras": [],\n')
+    meta_file:write('  "aux_schema_extras": ["cnz_slot_machine_state_per_frame"],\n')
     meta_file:write('  "trace_profile": "' .. json_escape(TRACE_PROFILE) .. '",\n')
     meta_file:write('  "bizhawk_version": "2.11",\n')
     meta_file:write('  "genesis_core": "Genplus-gx",\n')
@@ -491,6 +510,37 @@ function read_character_trace_state(base)
         status = status,
         stand_on_obj = mainmemory.read_u8(base + OFF_STAND_ON_OBJ),
     }
+end
+
+local function write_cnz_slot_machine_state()
+    if not aux_file then return end
+    if start_rom_zone_id ~= 0x0C then return end
+
+    local vfc = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
+    local vbc = mainmemory.read_u16_be(ADDR_VBLA_WORD)
+    write_aux(string.format(
+        '{"frame":%d,"vfc":%d,"vbc":"0x%04X","event":"cnz_slot_machine_state",'
+        .. '"in_use":"0x%04X","routine":"0x%02X","timer":"0x%02X","index":"0x%02X",'
+        .. '"reward":"0x%04X","slot1_pos":"0x%04X","slot1_speed":"0x%02X","slot1_routine":"0x%02X",'
+        .. '"slot2_pos":"0x%04X","slot2_speed":"0x%02X","slot2_routine":"0x%02X",'
+        .. '"slot3_pos":"0x%04X","slot3_speed":"0x%02X","slot3_routine":"0x%02X"}',
+        trace_frame,
+        vfc,
+        vbc,
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_IN_USE),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_ROUTINE),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_TIMER),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_INDEX),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_REWARD),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_SLOT1_POS),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT1_SPEED),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT1_ROUTINE),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_SLOT2_POS),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT2_SPEED),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT2_ROUTINE),
+        mainmemory.read_u16_be(ADDR_SLOT_MACHINE_SLOT3_POS),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT3_SPEED),
+        mainmemory.read_u8(ADDR_SLOT_MACHINE_SLOT3_ROUTINE)))
 end
 
 function close_files()
@@ -737,7 +787,7 @@ local function write_state_snapshot(character, base)
     local vfc = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
 
     write_aux(string.format(
-        '{"frame":%d,"vfc":%d,"event":"state_snapshot","character":"%s","control_locked":%s,"anim_id":%d,'
+        '{"frame":%d,"vfc":%d,"event":"state_snapshot","character":"%s","control_locked":%s,"move_lock":"0x%04X","anim_id":%d,'
         .. '"status_byte":"0x%02X","routine":"0x%02X","y_radius":%d,"x_radius":%d,'
         .. '"top_solid_bit":"0x%02X","lrb_solid_bit":"0x%02X",'
         .. '"raw_input":"0x%02X","raw_input_mask":"0x%02X","logical_input":"0x%02X","logical_input_mask":"0x%02X",'
@@ -747,6 +797,7 @@ local function write_state_snapshot(character, base)
         vfc,
         character,
         ctrl_lock > 0 and "true" or "false",
+        ctrl_lock,
         anim_id,
         status,
         routine,
@@ -983,7 +1034,7 @@ local function on_frame_end()
     -- raw_input still captures ROM-side $FFF604 for the state_snapshot aux
     -- diagnostic; only the CSV `input` column switched to BK2-derived.
     local raw_input = mainmemory.read_u8(ADDR_CTRL1)
-    local input_mask = bk2_input_mask(raw_input)
+    local input_mask = bk2_input_mask(raw_input, trace_frame)
 
     -- Format helper for unsigned 16-bit hex
     local function uhex(val)
@@ -1059,9 +1110,11 @@ local function on_frame_end()
     check_mode_changes("sonic", PLAYER_BASE, prev_character_state.sonic, status, routine)
     check_mode_changes("tails", SIDEKICK_BASE, prev_character_state.tails,
         sidekick.status, sidekick.routine)
+    write_cnz_slot_machine_state()
 
     if trace_frame % SNAPSHOT_INTERVAL == 0
-            or (trace_frame >= 5104 and trace_frame <= 5106) then
+            or (trace_frame >= 5104 and trace_frame <= 5106)
+            or (trace_frame >= 5995 and trace_frame <= 6005) then
         write_state_snapshot("sonic", PLAYER_BASE)
         write_state_snapshot("tails", SIDEKICK_BASE)
     end
@@ -1072,7 +1125,6 @@ local function on_frame_end()
         { character = "sonic", slot = 0, present = 1, x = x, y = y },
         { character = "tails", slot = 1, present = sidekick.present, x = sidekick.x, y = sidekick.y },
     })
-
     -- OPL cursor state: emit event on chunk transitions for ROM↔engine comparison.
     -- v_opl_screen changes only when OPL_Next processes a new chunk.
     local opl_screen = mainmemory.read_u16_be(ADDR_OPL_SCREEN)

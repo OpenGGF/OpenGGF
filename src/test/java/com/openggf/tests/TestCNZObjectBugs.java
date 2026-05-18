@@ -717,7 +717,9 @@ public class TestCNZObjectBugs {
 
         // Step through the capture period, tracking camera Y.
         // Grounded scroll at 6px/frame should center camera within ~6 frames.
-        int captureFrames = isSimpleMode ? 120 : 180;
+        // ROM Obj_D6 release: subq.w #1, then bpl to continue (s2.asm:58739-58751);
+        // the simple cage's $78 countdown therefore underflows on frame 121.
+        int captureFrames = isSimpleMode ? 122 : 180;
         int cameraYAtCapture = camera.getY();
         System.out.println("Camera Y at capture: " + cameraYAtCapture);
         System.out.println("Cage Y: " + cageY);

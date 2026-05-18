@@ -6,8 +6,6 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PhysicsFeatureSet;
 
 import com.openggf.camera.Camera;
-import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
-import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectInstance;
@@ -68,8 +66,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// Movement constants
 	private static final int MOVE_LOCK_FRAMES = 0x1E;
 	private static final int DEBUG_MOVE_SPEED = 3;
-	private static final int S2_SCZ_TORNADO_STALE_LOGICAL_HORIZONTAL_FRAMES = 3;
-	private static final int S2_SCZ_TORNADO_STALE_LOGICAL_MIN_RIDE_FRAMES = 120;
 	// Controlled roll deceleration: derived per-frame from sprite.getRunDecel() >> 2
 	// (s1:01 Sonic.asm:595-601 — rollDecel = decel/4 = $80/4 = $20)
 
@@ -97,9 +93,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputRawLeft, inputRawRight;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
 	private boolean wasCrouching;
-	private int sczTornadoStaleHorizontalFrames;
-	private int sczTornadoGroundInputFrames;
-	private boolean sczTornadoPreviousHorizontalInput;
+	private ObjectInstance staleHorizontalInputRideObject;
+	private int staleHorizontalInputSuppressFrames;
+	private int staleHorizontalInputRideFrames;
+	private boolean staleHorizontalInputPreviousHorizontal;
 
 	public PlayableSpriteMovement(AbstractPlayableSprite sprite,
 			CollisionSystem collisionSystem,
@@ -136,9 +133,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRawRight = false;
 		facingFlipForcesPushClearAfterGroundWall = false;
 		wasCrouching = false;
-		sczTornadoStaleHorizontalFrames = 0;
-		sczTornadoGroundInputFrames = 0;
-		sczTornadoPreviousHorizontalInput = false;
+		staleHorizontalInputRideObject = null;
+		staleHorizontalInputSuppressFrames = 0;
+		staleHorizontalInputRideFrames = 0;
+		staleHorizontalInputPreviousHorizontal = false;
 	}
 
 	public RewindState captureRewindState() {
@@ -157,9 +155,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				inputRawRight,
 				facingFlipForcesPushClearAfterGroundWall,
 				wasCrouching,
-				sczTornadoStaleHorizontalFrames,
-				sczTornadoGroundInputFrames,
-				sczTornadoPreviousHorizontalInput);
+				staleHorizontalInputRideObject,
+				staleHorizontalInputSuppressFrames,
+				staleHorizontalInputRideFrames,
+				staleHorizontalInputPreviousHorizontal);
 	}
 
 	public void restoreRewindState(RewindState state) {
@@ -181,9 +180,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRawRight = state.inputRawRight();
 		facingFlipForcesPushClearAfterGroundWall = state.facingFlipForcesPushClearAfterGroundWall();
 		wasCrouching = state.wasCrouching();
-		sczTornadoStaleHorizontalFrames = state.sczTornadoStaleHorizontalFrames();
-		sczTornadoGroundInputFrames = state.sczTornadoGroundInputFrames();
-		sczTornadoPreviousHorizontalInput = state.sczTornadoPreviousHorizontalInput();
+		staleHorizontalInputRideObject = state.staleHorizontalInputRideObject();
+		staleHorizontalInputSuppressFrames = state.staleHorizontalInputSuppressFrames();
+		staleHorizontalInputRideFrames = state.staleHorizontalInputRideFrames();
+		staleHorizontalInputPreviousHorizontal = state.staleHorizontalInputPreviousHorizontal();
 	}
 
 	public record RewindState(
@@ -201,9 +201,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			boolean inputRawRight,
 			boolean facingFlipForcesPushClearAfterGroundWall,
 			boolean wasCrouching,
-			int sczTornadoStaleHorizontalFrames,
-			int sczTornadoGroundInputFrames,
-			boolean sczTornadoPreviousHorizontalInput
+			ObjectInstance staleHorizontalInputRideObject,
+			int staleHorizontalInputSuppressFrames,
+			int staleHorizontalInputRideFrames,
+			boolean staleHorizontalInputPreviousHorizontal
 	) {}
 
 	public void clearJumpHeightLatch() {
@@ -234,52 +235,49 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		return current != null ? current : bootstrapGameState;
 	}
 
-	private boolean applyS2SczTornadoStaleLogicalHorizontalInput(boolean left, boolean right) {
+	private boolean applyStaleRidingLogicalHorizontalInput(boolean left, boolean right) {
 		boolean horizontal = left || right;
-		if (!isRidingS2SczTornadoForGroundInput()) {
-			sczTornadoStaleHorizontalFrames = 0;
-			sczTornadoGroundInputFrames = 0;
-			sczTornadoPreviousHorizontalInput = horizontal;
+		ObjectInstance ridingObject = currentRidingSolidForStaleHorizontalInput();
+		if (ridingObject == null || !(ridingObject instanceof SolidObjectProvider provider)) {
+			staleHorizontalInputRideObject = null;
+			staleHorizontalInputSuppressFrames = 0;
+			staleHorizontalInputRideFrames = 0;
+			staleHorizontalInputPreviousHorizontal = horizontal;
 			return false;
 		}
+		if (ridingObject != staleHorizontalInputRideObject) {
+			staleHorizontalInputRideObject = ridingObject;
+			staleHorizontalInputSuppressFrames = 0;
+			staleHorizontalInputRideFrames = 0;
+			staleHorizontalInputPreviousHorizontal = false;
+		}
 
-		sczTornadoGroundInputFrames++;
+		staleHorizontalInputRideFrames++;
 		if (right
 				&& !left
-				&& !sczTornadoPreviousHorizontalInput
-				&& sczTornadoGroundInputFrames > S2_SCZ_TORNADO_STALE_LOGICAL_MIN_RIDE_FRAMES) {
-			// S2 recorder v9.3-s2 documents this exact ROM/BK2 split:
-			// Read_Joypads can leave Ctrl_1_Held_Logical stale for three
-			// frames during SCZ Tornado long V-int paths. Sonic_Move consumes
-			// Ctrl_1_Held_Logical (s2.asm:36255-36260), while replay validation
-			// compares against BK2-aligned input to avoid false alignment errors.
-			sczTornadoStaleHorizontalFrames = S2_SCZ_TORNADO_STALE_LOGICAL_HORIZONTAL_FRAMES;
+				&& !staleHorizontalInputPreviousHorizontal) {
+			staleHorizontalInputSuppressFrames =
+					provider.staleHorizontalLogicalInputFramesWhileRiding(sprite, staleHorizontalInputRideFrames);
 		}
-		sczTornadoPreviousHorizontalInput = horizontal;
+		staleHorizontalInputPreviousHorizontal = horizontal;
 
-		if (!horizontal || sczTornadoStaleHorizontalFrames <= 0) {
+		if (!horizontal || staleHorizontalInputSuppressFrames <= 0) {
 			return false;
 		}
-		sczTornadoStaleHorizontalFrames--;
+		staleHorizontalInputSuppressFrames--;
 		return true;
 	}
 
-	private boolean isRidingS2SczTornadoForGroundInput() {
+	private ObjectInstance currentRidingSolidForStaleHorizontalInput() {
 		LevelManager manager = levelManager();
-		if (manager == null || manager.getCurrentZone() != Sonic2ZoneConstants.ZONE_SCZ) {
-			return false;
-		}
-		var objectManager = manager.getObjectManager();
+		var objectManager = manager != null ? manager.getObjectManager() : null;
 		if (objectManager == null
 				|| !objectManager.isRidingObject(sprite)
 				|| sprite.getAir()
 				|| sprite.getGSpeed() != 0) {
-			return false;
+			return null;
 		}
-		ObjectInstance ridingObject = objectManager.getRidingObject(sprite);
-		return ridingObject != null
-				&& ridingObject.getSpawn() != null
-				&& ridingObject.getSpawn().objectId() == Sonic2ObjectIds.TORNADO;
+		return objectManager.getRidingObject(sprite);
 	}
 
 	/**
@@ -383,7 +381,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			jump = false;
 		}
 
-		if (applyS2SczTornadoStaleLogicalHorizontalInput(left, right)) {
+		if (applyStaleRidingLogicalHorizontalInput(left, right)) {
 			left = false;
 			right = false;
 		}
@@ -409,8 +407,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		if (sprite.getDead()) {
-			applyDeathMovement();
-			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
+			SidekickCpuController cpu = sprite.getCpuController();
+			if (cpu != null && cpu.applyDeferredGenericDeadDespawnIfCrossed()) {
+				sprite.updateSensors(originalX, originalY);
+				applyScreenYWrapValueAfterControl();
+				return;
+			}
+			short oldYSpeed = applyDeathMovement();
+			sprite.move(sprite.getXSpeed(), oldYSpeed);
 			sprite.updateSensors(originalX, originalY);
 			applyScreenYWrapValueAfterControl();
 			return;
@@ -1916,7 +1920,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return;
 		}
 
-		boolean inputAllowed = sprite.getMoveLockTimer() == 0;
+		boolean objectPreservedRollStop = sprite.shouldPreserveRollingOnNextRollStop();
+		boolean skipControlledRollInput = sprite.consumeObjectPreservedRollBoostFollowup();
+		boolean skipObjectPreservedRollInput = sprite.consumeObjectPreservedRollWallProbe();
+		boolean objectPreservedVelocityCarry = sprite.shouldApplyObjectPreservedRollVelocityCarry();
+		boolean inputAllowed = sprite.getMoveLockTimer() == 0
+				&& !skipControlledRollInput
+				&& !skipObjectPreservedRollInput;
+		if (objectPreservedVelocityCarry
+				&& objectPreservedRollStop
+				&& sprite.getRolling()
+				&& !sprite.getAir()
+				&& gSpeed == 0
+				&& sprite.getXSpeed() != 0) {
+			int carriedXSpeed = Math.max(-0x1000, Math.min(0x1000, sprite.getXSpeed()));
+			sprite.setXSpeed((short) carriedXSpeed);
+			sprite.setYSpeed((short) 0);
+			return;
+		}
+		if (objectPreservedVelocityCarry) {
+			sprite.clearObjectPreservedRollVelocityCarry();
+		}
 
 		// Controlled roll deceleration: hardcoded $20 regardless of water state
 		// ROM ref: s2.asm:36671 — move.w #$20,d4
@@ -1948,6 +1972,17 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (gSpeed == 0) {
 			if (sprite.getPinballMode()) {
 				gSpeed = (short) (sprite.getDirection() == Direction.LEFT ? -0x400 : 0x400);
+			} else if (objectPreservedRollStop) {
+				// Object-scoped ROM handoff: S2 Obj85 leaves Tails curled in
+				// the CNZ stopper chamber. The following zero-inertia roll-stop
+				// decision must not apply the generic unroll/Y-radius change;
+				// when the later positive handoff appears, the next frame's wall
+				// probe can turn it into the chamber push (s2.asm:39716-39745,
+				// 39481-39507).
+				if (inputRight) {
+					gSpeed = 0x400;
+					sprite.markObjectPreservedRollBoostFollowup();
+				}
 			} else {
 				sprite.setRolling(false);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
@@ -1957,6 +1992,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		sprite.setGSpeed(gSpeed);
 		convertRollVelocity(gSpeed);
+		if (skipControlledRollInput) {
+			sprite.markObjectPreservedRollWallProbe();
+		}
 	}
 
 	private void applyRollStopAnimationChange() {
@@ -2516,8 +2554,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
-		boolean skipTouchFloorBodyForPinball = sprite.getRolling() && sprite.getPinballMode() && preservePinballRoll;
-		if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
+		boolean preserveObjectLandingRoll = sprite.consumePreserveRollingOnNextLanding();
+		boolean skipLandingRollClear = sprite.getRolling()
+				&& ((sprite.getPinballMode() && preservePinballRoll) || preserveObjectLandingRoll);
+		if (sprite.getRolling() && !skipLandingRollClear) {
 			if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
 				int oldCentreY = sprite.getCentreY();
 				int oldYRadius = sprite.getYRadius();
@@ -2531,7 +2571,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setRolling(false);
 				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
 			}
-		} else if (!skipTouchFloorBodyForPinball
+		} else if (featureSet != null
+				&& featureSet.landingRollClearUsesCurrentYRadiusDelta()
+				&& !skipLandingRollClear
 				&& (sprite.getYRadius() != sprite.getStandYRadius()
 				|| sprite.getXRadius() != sprite.getStandXRadius())) {
 			// ROM Player_TouchFloor (sonic3k.asm:24341-24343 Sonic, 29134-29136 Tails)
@@ -2913,7 +2955,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
         }
     }
 
-	private void applyDeathMovement() {
+	private short applyDeathMovement() {
+		short oldYSpeed = sprite.getYSpeed();
 		applyGravity();  // Gated on isObjectControlled(); a controlled sprite never enters the death routine anyway but keep gates consistent
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
@@ -2933,6 +2976,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				levelManager().requestRespawn();
 			}
 		}
+		return oldYSpeed;
 	}
 
 	/**

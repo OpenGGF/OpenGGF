@@ -172,6 +172,41 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean pinballSpeedLock = false;
 
         /**
+         * One-shot object handoff flag for ROM paths that keep a player curled
+         * through the next floor touch without enabling general pinball-mode
+         * movement while airborne. Set by the owning object and consumed by
+         * {@code PlayableSpriteMovement.resetOnFloor()}.
+         */
+        protected boolean preserveRollingOnNextLanding = false;
+
+        /**
+         * One-shot object handoff flag for ROM paths that leave the player curled
+         * at zero ground speed without enabling pinball-mode's forced speed boost.
+         * Set by the owning object and consumed by roll-stop handling.
+         */
+        protected boolean preserveRollingOnNextRollStop = false;
+
+        /**
+         * One-frame companion to {@link #preserveRollingOnNextRollStop}. Set when
+         * an object-preserved zero-speed roll seeds the stopper-chamber boost so
+         * the next roll-speed tick applies natural friction only.
+         */
+        protected boolean objectPreservedRollBoostFollowup = false;
+
+        /**
+         * One-frame ground-wall probe extension after an object-preserved roll
+         * boost. Used by S2 Obj85 stopper chambers where the ROM reaches the
+         * chamber wall one frame after the zero-speed keep-rolling push.
+         */
+        protected boolean objectPreservedRollWallProbe = false;
+
+        /**
+         * Object-scoped velocity carry after a preserved zero-speed roll is
+         * converted into a solid-wall push by the owning object.
+         */
+        protected boolean objectPreservedRollVelocityCarry = false;
+
+        /**
          * Whether the player is in a roll-tunnel section (S1 GHZ S-tubes).
          * Suppresses the S2-derived ground wall check which falsely detects
          * narrow tunnel walls. Set by Sonic1LoopManager each frame on tunnel tiles.
@@ -735,6 +770,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.rollingJump = false;
                 this.pinballMode = false;
                 this.pinballSpeedLock = false;
+                this.preserveRollingOnNextLanding = false;
+                this.preserveRollingOnNextRollStop = false;
+                this.objectPreservedRollBoostFollowup = false;
+                this.objectPreservedRollWallProbe = false;
+                this.objectPreservedRollVelocityCarry = false;
                 this.tunnelMode = false;
                 this.spindash = false;
                 this.lookDelayCounter = 0;
@@ -843,7 +883,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         prePhysicsAir, prePhysicsAngle,
                         prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
                         air, rolling, jumping, rollingJump,
-                        pinballMode, pinballSpeedLock, tunnelMode,
+                        pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
+                        preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
+                        objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
                         onObject, onObjectAtFrameStart,
                         latchedSolidObjectId, slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
@@ -963,6 +1005,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.rollingJump = extra.rollingJump();
                 this.pinballMode = extra.pinballMode();
                 this.pinballSpeedLock = extra.pinballSpeedLock();
+                this.preserveRollingOnNextLanding = extra.preserveRollingOnNextLanding();
+                this.preserveRollingOnNextRollStop = extra.preserveRollingOnNextRollStop();
+                this.objectPreservedRollBoostFollowup = extra.objectPreservedRollBoostFollowup();
+                this.objectPreservedRollWallProbe = extra.objectPreservedRollWallProbe();
+                this.objectPreservedRollVelocityCarry = extra.objectPreservedRollVelocityCarry();
                 this.tunnelMode = extra.tunnelMode();
                 this.onObject = extra.onObject();
                 this.onObjectAtFrameStart = extra.onObjectAtFrameStart();
@@ -2627,9 +2674,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         /**
          * Returns true when normal movement, gravity, boundary checks, and terrain
          * collision should be skipped by ROM {@code object_control} bit 0.
+         * Some object routines set only this movement gate while still allowing
+         * TouchResponse and later SolidObject checks in the same ExecuteObjects pass.
          */
         public boolean isObjectControlSuppressesMovement() {
-                return objectControlled && objectControlSuppressesMovement;
+                return objectControlSuppressesMovement;
         }
 
         public void setObjectControlSuppressesMovement(boolean objectControlSuppressesMovement) {
@@ -3669,6 +3718,66 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setPinballSpeedLock(boolean pinballSpeedLock) {
                 this.pinballSpeedLock = pinballSpeedLock;
+        }
+
+        public void preserveRollingOnNextLanding() {
+                this.preserveRollingOnNextLanding = true;
+        }
+
+        public boolean consumePreserveRollingOnNextLanding() {
+                boolean preserve = preserveRollingOnNextLanding;
+                preserveRollingOnNextLanding = false;
+                return preserve;
+        }
+
+        public void preserveRollingOnNextRollStop() {
+                this.preserveRollingOnNextRollStop = true;
+        }
+
+        public boolean consumePreserveRollingOnNextRollStop() {
+                boolean preserve = preserveRollingOnNextRollStop;
+                preserveRollingOnNextRollStop = false;
+                return preserve;
+        }
+
+        public boolean shouldPreserveRollingOnNextRollStop() {
+                return preserveRollingOnNextRollStop;
+        }
+
+        public void markObjectPreservedRollBoostFollowup() {
+                this.objectPreservedRollBoostFollowup = true;
+        }
+
+        public boolean consumeObjectPreservedRollBoostFollowup() {
+                boolean followup = objectPreservedRollBoostFollowup;
+                objectPreservedRollBoostFollowup = false;
+                return followup;
+        }
+
+        public void markObjectPreservedRollWallProbe() {
+                this.objectPreservedRollWallProbe = true;
+        }
+
+        public boolean shouldApplyObjectPreservedRollWallProbe() {
+                return objectPreservedRollWallProbe;
+        }
+
+        public boolean consumeObjectPreservedRollWallProbe() {
+                boolean probe = objectPreservedRollWallProbe;
+                objectPreservedRollWallProbe = false;
+                return probe;
+        }
+
+        public void markObjectPreservedRollVelocityCarry() {
+                this.objectPreservedRollVelocityCarry = true;
+        }
+
+        public boolean shouldApplyObjectPreservedRollVelocityCarry() {
+                return objectPreservedRollVelocityCarry;
+        }
+
+        public void clearObjectPreservedRollVelocityCarry() {
+                this.objectPreservedRollVelocityCarry = false;
         }
 
         public boolean isTunnelMode() {

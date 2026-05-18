@@ -33,7 +33,7 @@ class TestMonitorIconTiming {
     }
 
     @Test
-    void iconRiseHonorsInitialSetupFrameBeforeApplyingEffect() {
+    void separateMonitorContentsFallThroughToRiseOnFirstTick() {
         TestMonitor monitor = new TestMonitor();
         DummyPlayer player = new DummyPlayer();
 
@@ -44,12 +44,33 @@ class TestMonitorIconTiming {
         }
 
         assertFalse(monitor.effectApplied(),
-                "Pow_Main consumes the first frame, so the effect must not apply on the 32nd icon tick");
+                "The rise reaches zero velocity on the 32nd icon tick, so the effect is still pending");
 
         monitor.stepIcon();
 
         assertTrue(monitor.effectApplied(),
-                "The effect should apply on the 33rd icon tick after the setup frame");
+                "Pow_Main/Obj2E_Init falls through to the rise routine, so effect applies on tick 33");
+        assertEquals(1, monitor.effectCount());
+    }
+
+    @Test
+    void embeddedMonitorShellCanSkipSameFrameBreakUpdate() {
+        TestEmbeddedMonitor monitor = new TestEmbeddedMonitor();
+        DummyPlayer player = new DummyPlayer();
+
+        monitor.startRise(player);
+
+        for (int i = 0; i < 33; i++) {
+            monitor.stepIcon();
+        }
+
+        assertFalse(monitor.effectApplied(),
+                "Embedded shells must not let the parent same-frame update advance monitor contents");
+
+        monitor.stepIcon();
+
+        assertTrue(monitor.effectApplied(),
+                "After the skipped parent update, the content effect applies one frame later");
         assertEquals(1, monitor.effectCount());
     }
 
@@ -74,6 +95,58 @@ class TestMonitorIconTiming {
 
         private int effectCount() {
             return effectCount;
+        }
+
+        @Override
+        protected void applyPowerup(PlayableEntity player) {
+            effectCount++;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            return false;
+        }
+
+        @Override
+        public boolean isDestroyed() {
+            return false;
+        }
+    }
+
+    private static final class TestEmbeddedMonitor extends AbstractMonitorObjectInstance {
+        private int effectCount;
+
+        private TestEmbeddedMonitor() {
+            super(new ObjectSpawn(0x100, 0x100, 0, 0, 0, false, 0), "TestEmbeddedMonitor");
+        }
+
+        private void startRise(PlayableEntity player) {
+            startIconRise(0x100, player);
+        }
+
+        private void stepIcon() {
+            updateIcon();
+        }
+
+        private boolean effectApplied() {
+            return effectApplied;
+        }
+
+        private int effectCount() {
+            return effectCount;
+        }
+
+        @Override
+        protected boolean delayFirstIconUpdateAfterBreak() {
+            return true;
         }
 
         @Override

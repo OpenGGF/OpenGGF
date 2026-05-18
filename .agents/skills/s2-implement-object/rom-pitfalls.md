@@ -904,7 +904,416 @@ Pattern applies to every parent+offset-child pair in S2/S3K.)
 
 ---
 
- ## How to add a new entry
+## P18 -- Object bounce routines preserve unwritten velocity / inertia fields
+
+**Symptom.** A bumper / launcher trace diverges immediately after touch:
+ROM keeps the player's previous `x_vel`, `y_vel`, or `inertia`, while the
+engine zeros one of them and changes the next solid-object contact or sidekick
+follow state. CNZ f339/f340 surfaced this when ObjD7 Hex Bumper bounced Sonic
+into Obj86 Flipper; ROM preserved the unwritten velocity component, but the
+engine initialized both axes and cleared inertia.
+
+**Root cause.** Many ROM object handlers write only the fields they need for
+the chosen branch. ObjD7 left/right bounce writes `x_vel` only; up/down adjusts
+the existing `x_vel` and writes `y_vel`; `ObjD7_BounceEnd` sets air / clears
+status bits and plays sound, but does not clear `inertia`. A naive engine port
+initializes `xVel = 0`, `yVel = 0`, then calls `setGSpeed(0)`, erasing ROM
+state that later routines still observe.
+
+**What to check.** For every object bounce / launch branch, list the exact ROM
+writes. Preserve any velocity or inertia field the branch does not write:
+initialize from the live player value, mutate only the written component, and
+avoid clearing `gSpeed` unless the disassembly writes `inertia(a1)`.
+
+**ROM citation.** `docs/s2disasm/s2.asm:59403-59454`
+(`ObjD7_BouncePlayerOff`: left/right write only `x_vel`; up/down adjust
+existing `x_vel` and write `y_vel`; bounce end does not clear inertia).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 10:
+CNZ ObjD7 Hex Bumper velocity preservation and TouchResponse timing advanced
+the CNZ frontier from f202 to f507).
+
+---
+
+## P19 -- Shared monitor icon rewards use pre-move velocity tests
+
+**Symptom.** A monitor reward applies one frame too early. In CNZ this made a
+speed-shoes monitor double the player's air-control acceleration one physics
+frame before the ROM did.
+
+**Root cause.** The ROM monitor-content routine tests the icon's `y_vel`
+before moving it. If the current rise step adds `$18` and lands exactly on
+zero, the routine returns; the reward branch runs on the next object update.
+A shared engine helper that applies the reward immediately after changing
+`iconVelY` from negative to zero is one frame early.
+
+**What to check.** For shared monitor code, verify S1, S2, and S3K before
+changing the base routine. If all games match, keep it shared and cite all
+three. If one differs, gate the behaviour at the owning abstraction instead
+of changing every game implicitly.
+
+**ROM citation.** S2 `docs/s2disasm/s2.asm:25618-25631`; S1
+`docs/s1disasm/_incObj/2E Monitor Content Power-Up.asm:35-43`; S3K
+`docs/skdisasm/sonic3k.asm:40723-40753` and S3-side
+`docs/skdisasm/s3.asm:33392-33421`.
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 11:
+CNZ speed-shoes monitor reward timing advanced the CNZ frontier from f976 to
+f1146).
+
+---
+
+## P20 -- Level-event globals may need pre-object update order
+
+**Symptom.** An object waits one frame too long for a zone-global routine to
+finish. In CNZ, ObjD6 Point Pokey kept Sonic riding the cage for one extra
+frame because the shared slot-machine manager was updated in the engine's late
+zone-feature phase, after Point Pokey had already checked completion.
+
+**Root cause.** S2 `LevEvents_CNZ` calls `SlotMachine` from the level-event
+path, before the relevant object observes the global state. Treating the slot
+machine as an ordinary late zone feature changed the producer/consumer order:
+the global routine became inactive one frame too late from the object's point
+of view.
+
+**What to check.** When an object reads a zone-global manager or RAM flag,
+locate the ROM writer and the ROM object execution order before choosing the
+engine hook. Keep the ordering fix at the smallest owning scope. For CNZ this
+means the slot-machine tick belongs in the S2 CNZ pre-physics/level-event
+phase, while CNZ bumpers remain in the normal zone-feature update phase.
+
+**ROM citation.** `docs/s2disasm/s2.asm:21494-21500`
+(`LevEvents_CNZ` calls `SlotMachine`) and `docs/s2disasm/s2.asm:58827-58840`
+(`SlotMachine` routine dispatch).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 12:
+CNZ Point Pokey / slot-machine ordering advanced the CNZ frontier from f1691
+to f3830).
+
+---
+
+## P21 -- Sonic 2 object streaming is X-window only
+
+**Symptom.** A placement object spawns hundreds of frames late when the route
+passes above or below it. In CNZ, ObjD4 Big Block at `x=$0F00,y=$03A0` did not
+exist until the camera-Y band reached it, leaving the oscillating block 537
+updates behind the ROM at the first contact.
+
+**Root cause.** S2 `ObjectsManager_GoingForward` / `ObjectsManager_GoingBackward`
+load objects directly from the X-window scan via `ChkLoadObj`; there is no
+`Camera_Y_pos` eligibility test in that path. Reusing a shared vertical spawn
+filter for S2 exec-then-load placement silently delayed off-route objects whose
+movement later affects the player.
+
+**What to check.** For S2 object placement bugs, compare the object's update
+count or phase against the ROM, not just its current coordinates. Keep the
+vertical-filter bypass scoped to S2 placement; S3K and other games may still
+need their own spawn-window rules.
+
+**ROM citation.** `docs/s2disasm/s2.asm:32870-32950`
+(`ObjectsManager_GoingBackward` / `ObjectsManager_GoingForward` call
+`ChkLoadObj` from the X-window scan).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 13:
+S2 exec-then-load placement bypassed the vertical spawn filter and advanced the
+CNZ frontier from f3830 to f3906).
+
+---
+
+## P22 -- Object-local capture may need previous-frame status
+
+**Symptom.** A recapture on the same object is off by one pixel even though the
+current object position, subtype, and player speeds match ROM. In CNZ, Tails
+landed/re-landed on Obj85 LauncherSpring at the right X and subpixel, but the
+engine treated the contact like a fresh non-rolling Tails capture and applied
+the first-capture lift a second time.
+
+**Root cause.** Some object routines observe player status as it existed before
+the engine's current-frame normalization path. S2 Obj85's vertical capture
+calls `SolidObject_Always_SingleCharacter`, then writes rolling/radii after the
+standing bit is set. If engine-side physics has temporarily cleared the current
+rolling flag before the object sees the contact, a port that checks only
+`player.getRolling()` cannot distinguish a fresh Tails capture from a rolling
+recapture. Use the player's recorded previous status when the ROM path depends
+on that pre-normalized state.
+
+**What to check.** For object-controlled capture/release paths, compare the
+previous and current trace status bits before adding character-specific
+position corrections. If a correction exists only to bridge engine top-left
+hitbox semantics, gate it with the ROM-visible status history, not only the
+current engine flag. Keep the hook object-local; do not change shared
+SolidObject behavior for one object's capture quirk.
+
+**ROM citation.** `docs/s2disasm/s2.asm:57520-57540`
+(`Obj85_Up`/`loc_2AD26` captures after `SolidObject_Always_SingleCharacter`
+sets the standing bit, then writes rolling/y_radius/x_radius).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 14:
+S2 Obj85 Tails recapture used previous-frame rolling status and advanced the
+CNZ frontier from f3906 to f3957).
+
+---
+
+## P23 -- Full-solid bottom overlap may use live rolling y_radius
+
+**Symptom.** A rolling airborne player is pushed sideways by a moving full
+solid after ROM would already reject the vertical overlap. In CNZ, Sonic kept
+ROM-correct air-control speed through ObjD4 Big Block, but the engine's solid
+resolver classified a side contact at `relY=93`, snapped him 2 px right, and
+zeroed `x_speed`.
+
+**Root cause.** S2 `SolidObject_cont` adds the live `y_radius(a1)` to `d2`,
+then doubles that same value for the lower reject bound. Rolling players
+therefore use the smaller rolling radius on both the top and bottom halves.
+The engine's default full-solid lower-half rule intentionally uses the taller
+standing radius for some S2/S3K solids, but ObjD4 is a direct `SolidObject`
+caller and needs the live-radius path.
+
+**What to check.** When porting a full solid:
+1. Read the exact helper it calls (`SolidObject`, `SolidObjectFull2`,
+   `PlatformObject`, monitor variant, slope variant).
+2. If the helper builds the lower bound from the same `d2 += y_radius(a1)`
+   value used for the top bound, override
+   `fullSolidBottomOverlapUsesCurrentYRadiusOnly(...)` on that object.
+3. Keep the override object-local. Do not broaden shared lower-half behaviour
+   unless all affected games and object families have been checked.
+4. Trace symptom to look for: live position/speed matches ROM before solid
+   contact, then the engine applies a sideways push/zero while ROM reports no
+   contact and preserves air-control acceleration.
+
+**ROM citation.** `docs/s2disasm/s2.asm:58348-58356` (ObjD4 passes
+`d1=$2B,d2=$20,d3=$21` to `SolidObject`), `s2.asm:35135-35166`
+(`SolidObject_cont` adds live `y_radius(a1)` to `d2`, doubles it, and rejects
+when `d3 >= d4`).
+
+**Originating commit.** `<pending>` (trace frontier advancement loop iter 15:
+CNZ ObjD4 Big Block lower-half overlap used standing-radius height in the
+engine and falsely side-pushed Sonic at f4074. Overriding
+`fullSolidBottomOverlapUsesCurrentYRadiusOnly` advanced the CNZ frontier from
+f4074 / 197 errors to f4121 / 227 errors).
+
+---
+
+## P24 -- Landing radius restore is not always shared across games
+
+**Symptom.** A sidekick or object-controlled player stays one pixel too high
+or too low on the first grounded frame after a launch/capture release, even
+though position, subpixels, and speeds matched the previous frame. In CNZ,
+Tails landed from Obj85 with ROM and engine both at `y=$0331`, then the engine
+snapped to `y=$0330` on the next grounded frame and missed the following
+Obj72-area airborne/rolling handoff.
+
+**Root cause.** S2 `Tails_ResetOnFloor` only restores Tails's standing radii
+inside the rolling branch. If Tails lands while already non-rolling but still
+has object-written rolling radii (`y_radius=$0E,x_radius=7`), ROM leaves those
+radii in place. The shared engine cleanup previously restored any non-rolling
+custom radii to standing defaults, which is correct for S3K
+`Player_TouchFloor` but not for S1/S2 reset-on-floor routines.
+
+**What to check.** Before moving radius or landing cleanup into shared
+playable code, read the reset routine for each game and character:
+
+1. S1/S2 Sonic apply fixed roll-clear lifts only when rolling is set.
+2. S2 Tails applies the one-pixel lift and `$0F/$09` radius restore only when
+   rolling is set.
+3. S3K restores default radii before checking roll state and uses the
+   current-radius delta model.
+4. Gate shared cleanup through the owning feature flag (or a narrower object
+   hook) instead of assuming all games consume the same landing radii.
+
+**ROM citation.** `docs/s2disasm/s2.asm:40629-40636`
+(`Tails_ResetOnFloor_Part2` branches past radius restore when rolling is
+clear), `docs/s2disasm/s2.asm:37781-37786` (S2 Sonic fixed rolling lift), and
+`docs/skdisasm/sonic3k.asm:24341-24363` (S3K Player_TouchFloor restores
+defaults and applies radius delta).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 5328 Tails Y mismatch was
+caused by the shared non-rolling radius restore; gating it behind the S3K
+radius-delta feature advanced the CNZ frontier from f5328 / 221 errors to
+f5336 / 219 errors).
+
+---
+
+## P25 -- Obj85 preserved roll must suppress stale held jump, not fresh delayed press
+
+**Symptom.** Tails either jumps too early out of the vertical Obj85 stopper
+handoff, or never performs the later chamber-exit jump. In CNZ, letting all
+delayed jump state through made Tails launch around frame 4028 while ROM stayed
+grounded in the stopper. Suppressing all delayed jump state while the preserved
+roll flag was set fixed that early launch but missed ROM's later fresh delayed
+jump press at frame 5336.
+
+**Root cause.** S2 Tails CPU copies Sonic's delayed logical input word before
+the follow/filter path. Obj85's object-local preserved-roll handoff can leave a
+held jump bit in that delayed sample while Tails is still grounded, but that is
+not equivalent to a fresh press. The stale held bit must be suppressed during
+the grounded preserved-roll handoff; the later fresh delayed jump press must
+remain available so `Tails_Jump` can set `y_vel=-$680` and rolling air state.
+
+**What to check.**
+1. Keep Obj85 preserved-roll jump filtering object-scoped through the existing
+   preserved-roll flag; do not change generic sidekick CPU jump semantics.
+2. Distinguish delayed held jump from delayed jump press. Grounded preserved
+   Obj85 frames with no fresh press should clear both held and press before
+   `PlayableSpriteMovement` derives a new edge from held input.
+3. Once Tails is airborne, do not clear held jump; the hold is used by jump
+   height handling.
+4. If another object needs similar handling, add a named object-owned marker
+   rather than broadening the Obj85 gate.
+
+**ROM citation.** `docs/s2disasm/s2.asm:38939-38946` (Tails CPU copies the
+delayed `Ctrl_1_Logical` sample), `docs/s2disasm/s2.asm:57611-57625` (Obj85
+vertical release path), and `docs/s2disasm/s2.asm:36996-37070`
+(`Sonic_Jump`/`Tails_Jump` setup, including the `-$680` jump velocity).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 5336 Tails failed to enter
+air+rolling because preserved-roll filtering cleared a fresh delayed jump
+press. Suppressing only grounded stale held jump advanced the CNZ frontier from
+f5336 / 219 errors to f5399 / 215 errors).
+
+---
+
+## P26 -- Riding solids can own stale logical horizontal input windows
+
+**Symptom.** A player accelerates one or more frames before ROM while standing
+on a moving/scripted solid, even though the trace CSV/BK2 input column already
+shows the direction and the ROM `state_snapshot` sees no `move_lock` or
+control lock. In CNZ, Sonic's right input appeared at frame 5997 while riding
+ObjD5, but ROM inertia stayed zero until frame 6000.
+
+**Root cause.** Some solid-helper/object phase combinations expose BK2-aligned
+input before the player movement routine consumes the corresponding logical
+horizontal value for the sampled physics row. Treating that as a game-wide
+input offset breaks nearby jump/input edges. The timing belongs to the current
+riding object/helper, not to all S2 movement.
+
+**What to check.**
+1. When a trace shows early acceleration while the player is riding a concrete
+   solid, inspect the object's exact helper (`PlatformObject`, `PlatformObjectD5`,
+   direct `SolidObject`, or bespoke checkpoint) before changing shared input
+   handling.
+2. Prefer the `SolidObjectProvider.staleHorizontalLogicalInputFramesWhileRiding`
+   hook with a default of zero. Override it only on the object whose helper
+   proves the stale window.
+3. Keep existing object-specific windows on the owning object. SCZ Tornado and
+   CNZ ObjD5 use the hook; shared movement should not branch on game id or
+   object id directly.
+
+**ROM citation.** `docs/s2disasm/s2.asm:58435-58443` (ObjD5 calls
+`PlatformObjectD5` after its state routine), `docs/s2disasm/s2.asm:35617-35657`
+(`PlatformObjectD5` continued-riding/skip-existing-platform helper), and
+`docs/s2disasm/s2.asm:35402-35420` (`MvSonicOnPtfm` writes rider position).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 5997 Sonic accelerated three
+frames before ROM while riding ObjD5. Moving stale horizontal suppression to a
+per-solid hook and opting in ObjD5 advanced the CNZ frontier from f5997 / 197
+errors to f6018 / 289 errors while S1 GHZ and S2 EHZ stayed green).
+
+---
+
+## P27 -- SolidObject_Always objects must bypass offscreen full-solid gates
+
+**Symptom.** A sidekick or offscreen-adjacent player passes through the side of
+an invisible/full solid even though ROM zeros `x_vel` and `inertia` at the
+solid edge. In CNZ, Tails reached Obj74 at `x=$1535` while airborne/rolling;
+ROM stopped him against the left edge, but the engine reported Obj74 as
+`no-touch` and kept accelerating.
+
+**Root cause.** Obj74 does not call the regular `SolidObject` helper. It calls
+`SolidObject_Always`, whose disassembly comment explicitly says Obj74/Obj30
+check solidity even if the object is offscreen. Applying the shared
+sidekick-on-screen/full-solid offscreen gate to Obj74 skips exactly the side
+contact ROM still resolves.
+
+**What to check.**
+1. For every solid object, identify the exact helper it calls before assuming
+   the normal render/on-screen gate applies.
+2. If the helper is `SolidObject_Always` or
+   `SolidObject_Always_SingleCharacter`, override
+   `bypassesOffscreenSolidGate()` on that object/class.
+3. Keep the bypass per object/helper. Do not disable the shared offscreen gate
+   for all S2 solids, because the regular `SolidObject` P2 path still gates on
+   sidekick render state.
+
+**ROM citation.** `docs/s2disasm/s2.asm:34863-34873`
+(`SolidObject_Always` / `SolidObject_Always_SingleCharacter`) and
+`docs/s2disasm/s2.asm:46152-46161` (`Obj74_Main` calls
+`SolidObject_Always` after deriving subtype dimensions).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 6018 Tails missed Obj74's
+left-edge side stop because the engine applied the offscreen sidekick full-solid
+gate to a `SolidObject_Always` caller).
+
+---
+
+## P28 -- SPECIAL touch objects use Touch_Sizes radii and object-specific bounce tails
+
+**Symptom.** A SPECIAL object bounces or triggers several frames too early, or
+the immediate post-bounce physics fields differ even though the written
+velocity matches ROM. In CNZ, ObjD8 applied `y_vel=-$700` at frame 6276 while
+ROM was still falling, then later zeroed `inertia` even though ROM preserved
+`$040E`.
+
+**Root cause.** S2 `collision_flags` low six bits index the `Touch_Sizes` table,
+whose bytes are X/Y radii, not full width/height. ObjD8 sets
+`collision_flags=$D7`, selecting `Touch_Sizes[$17] = 8,8`; replacing this with
+an approximate center-distance box changes the trigger frame. Also read the
+object's common bounce tail literally: ObjD8's `loc_2C806` sets in-air and
+clears roll-jump/pushing/jumping, but does not clear `inertia`.
+
+**What to check.**
+1. Decode `collision_flags & $3F` and use the `Touch_Sizes` radii before
+   writing any manual SPECIAL-object overlap.
+2. Prefer the shared touch-response rectangle math. If an object must poll its
+   own `collision_property` or cooldown bytes, copy the ROM rectangle shape
+   locally rather than inventing a center-distance approximation.
+3. Do not assume all object rebounds clear `inertia`. Check for an explicit
+   `clr.w inertia(a1)` in the object routine before calling `setGSpeed(0)`.
+
+**ROM citation.** `docs/s2disasm/s2.asm:59570` (ObjD8
+`collision_flags=$D7`), `docs/s2disasm/s2.asm:84623` (`Touch_Sizes[$17] =
+8,8`), and `docs/s2disasm/s2.asm:59687-59692` (ObjD8 bounce tail does not
+clear `inertia`).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 6276 early ObjD8 bounce and
+frame 6281 inertia mismatch; fixing ObjD8 touch radii and preserving inertia
+advanced the CNZ frontier to frame 6815).
+
+---
+
+## P29 -- Moving objects may own bespoke out_of_range delete bounds
+
+**Symptom.** A moving object disappears before ROM would delete it, so later
+collisions or bounces are missing even though the spawn record and movement
+routine are correct. In CNZ, the moving ObjD7 Hex Bumper from spawn
+`x=$1FF8,y=$028C,subtype=1` was gone by frame 8082; ROM still had it alive at
+slot 38 and used it to launch Sonic left.
+
+**Root cause.** Not every object tail-calls the standard `MarkObjGone` /
+`out_of_range` macro with the current object X. Moving ObjD7 runs its animation
+and movement, then checks both `objoff_30` and `objoff_32` movement bounds. It
+only deletes when both bounds are outside the camera window, so a single-X
+generic delete check can remove it too early.
+
+**What to check.**
+1. Read the end of the object routine before assuming the shared
+   counter-based out-of-range path is correct.
+2. If the ROM routine tests range endpoints, parent anchors, or other custom
+   words, prefer the narrowest per-object hook over a game-wide behavior flag.
+3. Keep stationary subtypes on the shared path unless the stationary ROM
+   routine also bypasses the standard macro.
+
+**ROM citation.** `docs/s2disasm/s2.asm:59489-59510` (moving ObjD7 tests
+`objoff_30` and `objoff_32`, displaying if either bound remains in range and
+deleting only after both fail the range check).
+
+**Originating commit.** `<pending>` (S2 CNZ frame 8082 missing moving ObjD7;
+keeping ObjD7 alive by its ROM movement bounds advanced the CNZ frontier to
+frame 8419).
+
+---
+
+## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
 cause is a class of bug (not a one-off):

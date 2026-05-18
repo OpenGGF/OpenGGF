@@ -69,6 +69,8 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     // ------------------------------------------------------------------------
 
     private static final SolidObjectParams TORNADO_SOLID_PARAMS = new SolidObjectParams(0x1B, 8, 9);
+    private static final int SCZ_STALE_LOGICAL_HORIZONTAL_FRAMES = 3;
+    private static final int SCZ_STALE_LOGICAL_MIN_RIDE_FRAMES = 120;
     private static final int SCZ_CAMERA_FINISH_X = 0x1400;
     private static final int SCZ_PLAYER_FINISH_X = 0x1568;
     private static final int SCZ_PLAYER_PUSH_MARGIN = 0x11;
@@ -814,6 +816,19 @@ public class TornadoObjectInstance extends AbstractObjectInstance
     @Override
     public SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    @Override
+    public int staleHorizontalLogicalInputFramesWhileRiding(PlayableEntity player, int rideFrames) {
+        if (routine != ROUTINE_SCZ_MAIN || rideFrames <= SCZ_STALE_LOGICAL_MIN_RIDE_FRAMES) {
+            return 0;
+        }
+        // S2 recorder v9.3-s2 documents this exact ROM/BK2 split:
+        // Read_Joypads can leave Ctrl_1_Held_Logical stale for three frames
+        // during SCZ Tornado long V-int paths. Sonic_Move consumes the logical
+        // byte (s2.asm:36255-36260), while trace validation compares against
+        // BK2-aligned input to avoid false alignment errors.
+        return SCZ_STALE_LOGICAL_HORIZONTAL_FRAMES;
     }
 
     @Override
