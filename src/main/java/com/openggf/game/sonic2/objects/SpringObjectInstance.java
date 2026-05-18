@@ -450,6 +450,13 @@ public class SpringObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM: SolidObject_cont X gate rejects with bhi (s2.asm:35147-35150),
+        // so relX == halfWidth*2 is a valid side contact — match with inclusive edge.
+        return getType() == TYPE_HORIZONTAL;
+    }
+
+    @Override
     public byte[] getSlopeData() {
         int type = getType();
         if (type == TYPE_DIAGONAL_UP) {

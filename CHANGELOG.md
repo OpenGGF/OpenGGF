@@ -6,6 +6,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 horizontal spring right-edge collision parity (CNZ2 trace replay).** ROM
+  `Obj41_Horizontal` routes through `SolidObject_cont` (`s2.asm:35147`), which
+  rejects the X range with `bhi` (strictly greater than). This makes `relX ==
+  halfWidth*2` (player centre exactly at the spring's right edge) a valid side
+  contact. The engine's `usesInclusiveRightEdge()` defaulted to `false`
+  (`relXRaw >= rightLimit`), silently skipping that one-pixel boundary case.
+  `SpringObjectInstance` now overrides `usesInclusiveRightEdge()` to return
+  `true` for `TYPE_HORIZONTAL`, matching the existing pattern in
+  `Sonic3kSpringObjectInstance`. CNZ2 trace frontier advanced from frame 205
+  (`camera_x`) to frame 435 (`x_speed`).
+
 - **S2 HTZ Rexon detection-window asymmetry (HTZ trace replay).** ROM
   `Obj94_WaitForPlayer` (s2.asm:73716-73722) uses `Obj_GetOrientationToPlayer`
   to compute signed `d2 = body_x - player_x`, adds `$60`, and compares against
