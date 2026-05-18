@@ -73,6 +73,11 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         runner.advanceRecordingCursor(frameCount);
     }
 
+    @Override
+    public int peekRecordingInputAt(int offset) {
+        return runner.peekRecordingInputAt(offset);
+    }
+
     /** Returns the playable sprite managed by this fixture. */
     public AbstractPlayableSprite sprite() {
         return sprite;

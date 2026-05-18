@@ -24,4 +24,16 @@ public interface TraceReplayFixture {
 
     /** Advance the BK2 cursor by N frames, no gameplay ticks. */
     void advanceRecordingCursor(int frameCount);
+
+    /**
+     * Returns the BK2 input mask at the given offset from the current cursor
+     * without advancing the cursor or mutating gameplay state. Offset 0 is
+     * the next frame {@link #stepFrameFromRecording} would consume; negative
+     * offsets read prior BK2 frames (e.g. the last title-card frame at
+     * offset -1). Returns -1 when no BK2 movie is loaded or the requested
+     * frame is out of range.
+     */
+    default int peekRecordingInputAt(int offset) {
+        return -1;
+    }
 }

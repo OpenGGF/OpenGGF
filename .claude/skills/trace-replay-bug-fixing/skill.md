@@ -226,6 +226,10 @@ When comparing sidekick CPU gates, distinguish ROM's raw `object_control` byte t
 
 Route-start traces need their native preludes accounted for: title-card delays, route-start bootstrap, object spawning windows, scroll/parallax pre-advance, oscillation phase, and any zone intro skips. Prefer recording or replaying the real prelude when possible; use frame-0 bootstrap only for state ROM would already have at the BK2 start.
 
+S2 level-select route BK2s can contain multiple controllable gameplay segments: an EHZ debug/menu bootstrap, the selected zone act 1, and for long routes the selected zone act 2 after the inter-act transition. Do not splice those segments into one physics trace because BK2 input alignment would skip non-gameplay frames. Use `OGGF_TRACE_GAMEPLAY_SEGMENT` / `record_s2_level_select_traces.ps1` segment routes (for example `cnz2`) to record later acts as separate fixtures with their own `bk2_frame_offset`; `metadata.act` and `metadata.gameplay_segment` must describe that fixture's starting segment.
+
+S2 Metropolis Act 3 is a ROM-zone special case: the raw zone id is `0x05` with act byte `0`, while the engine progression zone remains MTZ and trace metadata must report act 3. Keep raw ROM zone/act diagnostics intact; only the fixture metadata/route identity should normalize it to `mtz3`.
+
 Do not leave gameplay-affecting scroll logic hidden in render-only parallax updates. If a ROM scroll routine owns camera words, velocity globals, or route object inputs (for example S2 `SwScrl_SCZ` driving `Camera_X_pos` and `Tornado_Velocity_X/Y`), expose that as a logic-frame hook used by headless replay and rendering. The render pass should consume the resulting scroll state, not be the only place that mutates it.
 
 Embedded `SolidObject` calls belong where the ROM calls them inside the object's routine, not automatically at the end of every engine object update. For objects that move, branch, then call solid handling mid-routine, preserve that placement so player/sidekick carry and release observe the same pre- or post-motion coordinates as the ROM.

@@ -2790,6 +2790,27 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	// UTILITY HELPERS
 	// ========================================
 
+	/**
+	 * Bootstrap-only seed for the jump-press edge tracker. Trace replay's
+	 * title-card prelude does not invoke this manager (sidekick-only warmup),
+	 * so {@code jumpPrevious} stays {@code false}. If the BK2 movie was
+	 * already holding A/B/C across the title-card boundary, the first
+	 * {@link #storeInputState} call on the first compared frame would
+	 * compute {@code inputJumpPress = (jump && !false) = true} and fire
+	 * {@code doJump} one frame before the ROM (s2.asm:36253-36260
+	 * Obj01_Control reads {@code Ctrl_1_Press}; V-int's edge detector
+	 * already cleared the bit because the button was held throughout
+	 * title-card frames).
+	 *
+	 * <p>Call once during {@code TraceReplaySessionBootstrap.applyBootstrap}
+	 * with the last title-card-frame BK2 jump state to mirror the ROM
+	 * post-title-card edge state. Comparison-only — no trace data is read
+	 * or written by this hook.
+	 */
+	public void primeJumpPreviousForBootstrap(boolean jumpHeldAtPriorBk2Frame) {
+		this.jumpPrevious = jumpHeldAtPriorBk2Frame;
+	}
+
 	private void storeInputState(boolean up, boolean down, boolean left, boolean right, boolean jump) {
 		inputUp = up;
 		inputDown = down;

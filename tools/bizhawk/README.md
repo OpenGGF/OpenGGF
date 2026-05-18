@@ -44,12 +44,17 @@ PowerShell -NoProfile -ExecutionPolicy Bypass -File tools\bizhawk\record_s2_leve
   -RomPath "Sonic The Hedgehog 2 (W) (REV01) [!].gen"
 ```
 
-Use `-Only cpz` or another route slug for a single fixture. The generator uses the
-`level_gated_reset_aware` recorder profile, validates that `zone_id` is the engine progression id
-and `rom_zone_id` is the raw Sonic 2 ROM zone id, normalizes the physics input column from the BK2
-log, checks BK2 input alignment, and stores only compressed `physics.csv.gz` and
-`aux_state.jsonl.gz` payloads under `src/test/resources/traces/s2`.
+Use `-Only cpz` or another route slug for a single fixture. Long level-select BK2s can include
+both act 1 and act 2; the generator exposes act-2 fixtures as separate slugs such as `cpz2` and
+`cnz2` so each trace keeps a contiguous BK2 input offset across only one controllable gameplay
+segment. The generator uses the `level_gated_reset_aware` recorder profile, validates that `zone_id`
+is the engine progression id and `rom_zone_id` is the raw Sonic 2 ROM zone id, normalizes the
+physics input column from the BK2 log, checks BK2 input alignment, and stores only compressed
+`physics.csv.gz` and `aux_state.jsonl.gz` payloads under `src/test/resources/traces/s2`.
 `dez_ending` remains parser/catalog-only until the ending route has replay coverage.
+Metropolis Act 3 is recorded as route `mtz3`; Sonic 2 stores it as raw ROM zone id `0x05`
+with act byte `0`, so the recorder reports metadata act `3` while preserving the raw
+zone/act in aux diagnostics.
 
 If you update the trace workflow, update the guide page above first so the contributor docs stay in
 sync with the tools.

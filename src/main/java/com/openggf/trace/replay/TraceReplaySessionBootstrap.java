@@ -272,11 +272,59 @@ public final class TraceReplaySessionBootstrap {
                     sidekickPreludeFrames,
                     gameplayMode.getLevelManager());
         }
+        primeLeaderJumpEdgeFromBk2Prelude(fixture);
         TraceReplayBootstrap.SnapshotReport snapshotReport =
                 TraceReplayBootstrap.reportPreTraceObjectSnapshots(trace);
         TraceReplayBootstrap.ReplayStartState replayStart =
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, fixture);
         return new BootstrapResult(snapshotReport, replayStart);
+    }
+
+    /**
+     * Prime the leader's jump-button edge tracker so a BK2 input that holds
+     * jump across the title-card / level boundary is not treated as a
+     * fresh press on the first comparison frame.
+     *
+     * <p>ROM continuously updates {@code Ctrl_1_Held} from V-int regardless
+     * of {@code Sonic_ControlsLock} (s2.asm:701,1361-1387 ReadJoypads /
+     * sonic3k.asm equivalent). Edge detection ({@code Ctrl_1_Press}) is computed
+     * each V-int as {@code (held ^ previous_held) & held}, so a button that
+     * was held throughout the title card is NOT a press at the first
+     * gameplay frame. Headless trace replay skips the title-card phase, so
+     * the leader's {@code jumpInputPressedPreviousFrame} is virgin false
+     * when frame 0 is consumed — a held jump button then masquerades as a
+     * fresh press and the engine fires {@code Obj01_Jump} (s2.asm:36253-36260)
+     * one frame before the ROM would. This perturbs frame 0 {@code air},
+     * {@code y_speed}, and {@code y} and cascades to every subsequent row.
+     *
+     * <p>Read the BK2 frame immediately before the cursor (the last
+     * title-card frame the production GameLoop would have ticked) and seed
+     * both edge trackers with that jump bit.
+     *
+     * <p>This is bootstrap state equivalent to the BK2 save-state point;
+     * it does not consume or hydrate trace data.
+     */
+    private static void primeLeaderJumpEdgeFromBk2Prelude(TraceReplayFixture fixture) {
+        if (fixture == null || fixture.sprite() == null) {
+            return;
+        }
+        int priorMask = fixture.peekRecordingInputAt(-1);
+        if (priorMask < 0) {
+            // No BK2 movie loaded or no frame before the cursor — leave
+            // the virgin edge state untouched.
+            return;
+        }
+        boolean priorJump = (priorMask & AbstractPlayableSprite.INPUT_JUMP) != 0;
+        AbstractPlayableSprite leader = fixture.sprite();
+        // Seed both the sprite-level edge (read by SidekickCpuController's
+        // isJumpJustPressed gate) and the movement-controller edge (read by
+        // PlayableSpriteMovement's inputJumpPress computation for Obj01_Jump).
+        if (priorJump) {
+            leader.setJumpInputPressed(true);
+        }
+        if (leader.getMovementManager() instanceof com.openggf.sprites.managers.PlayableSpriteMovement movement) {
+            movement.primeJumpPreviousForBootstrap(priorJump);
+        }
     }
 
     private static void applyS2SczTitleCardScrollPrelude(TraceData trace) {
