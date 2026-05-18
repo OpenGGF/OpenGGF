@@ -88,6 +88,12 @@ public record PhysicsFeatureSet(
          *  S3K: true (sonic3k.asm:24325-24327 Player_TouchFloor_Check_Spindash branches
          *  directly to loc_121D8 when spin_dash_flag is set, skipping Status_Roll clear). */
         boolean pinballLandingPreservesRoll,
+        /** Whether landing in pinball mode preserves the engine pinball/spin-dash flag mirror.
+         *  S2: false; the pinball_mode landing path skips Status_Roll clear but still clears
+         *  pinball_mode at the end of Sonic_ResetOnFloor.
+         *  S3K: true; Player_TouchFloor_Check_Spindash branches around the touch-floor body
+         *  while spin_dash_flag is non-zero, leaving AutoSpin tunnel control latched. */
+        boolean pinballLandingPreservesPinballMode,
         /** Whether top-solid landing accepts the exact edge-contact boundary.
          *  Engine terms: allow a new landing when {@code distY == 0}.
          *  S1/S3K: true for current shared platform parity.
@@ -739,7 +745,7 @@ public record PhysicsFeatureSet(
             RING_FLOOR_CHECK_MASK_S1, RING_COLLISION_SIZE_S1, RING_COLLISION_SIZE_S1, false,
             null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S1 wall response sets push unconditionally (s1disasm/_incObj/01 Sonic.asm:551-568) */, false /* animationChangeClearsPush: S1 clear is FixBugs-only (s1disasm/_incObj/01 Sonic.asm:2055-2065) */, false,
             false /* slopeResistStartsFromRest: S1 Sonic_SlopeResist returns on zero inertia (s1disasm/_incObj/01 Sonic.asm:1043-1044) */,
-            false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2, false, true,
+            false, false, false, false, true, false, false, false, true, FAST_SCROLL_CAP_S2, false, true,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE, true /* sidekickSpawningRequiresGroundedLeader: S1 has no Tails CPU */, false /* useScreenYWrapValueForVisibility: S1 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S1 has no Tails CPU; symmetric with S2 */,
             SIDEKICK_FLY_LAND_BLOCKERS_NONE, false /* sidekickFlyLandRequiresLeaderAlive: S1 has no CPU sidekick */, false /* solidObjectOffscreenGate: keep current S1 trace baseline */,
@@ -772,7 +778,10 @@ public record PhysicsFeatureSet(
             RING_FLOOR_CHECK_MASK_S2, RING_COLLISION_SIZE_S2, RING_COLLISION_SIZE_S2, false,
             null, (short) 0, true, false /* groundWallPushRequiresFacingIntoWall: S2 Sonic/Tails set push unconditionally in wall response (s2.asm:36536-36547,39506-39519) */, true /* animationChangeClearsPush: S2 Sonic/Tails animation clears pushing on anim change (s2.asm:38033-38038,40879-40884) */, false,
             false /* slopeResistStartsFromRest: S2 Sonic/Tails_SlopeResist returns on zero inertia (s2.asm:37369-37370,40224-40225) */,
-            true, false, true, false, false, false, false, false, FAST_SCROLL_CAP_S2, false, false,
+            true, false,
+            true /* pinballLandingPreservesRoll: S2 skips the Status_Roll clear while pinball_mode is set (s2.asm:37770-37771) */,
+            false /* pinballLandingPreservesPinballMode: S2 landing still clears the pinball_mode mirror */,
+            false, false, false, false, false, FAST_SCROLL_CAP_S2, false, false,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE, true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
             SIDEKICK_FLY_LAND_BLOCKERS_S2, false /* sidekickFlyLandRequiresLeaderAlive: S2 TailsCPU_Flying_Part2 has no Sonic-routine check */, false /* solidObjectOffscreenGate: keep current S2 trace baseline */,
@@ -809,7 +818,10 @@ public record PhysicsFeatureSet(
             0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00
     }, (short) 0x100, true, true /* groundWallPushRequiresFacingIntoWall: S3K wall response gates Status_Push on Status_Facing (sonic3k.asm:22752-22756,22768-22772,27997-28001,28013-28017) */, true /* animationChangeClearsPush: S3K Tails/Tails2P animation clears Status_Push on anim change (sonic3k.asm:29359-29364,29681-29686) */, true,
             true /* slopeResistStartsFromRest: S3K Player_SlopeResist applies abs(slope effect) >= $0D even when ground_vel is zero (sonic3k.asm:23848-23856) */,
-            false, true, false, true, true, true, true, false, FAST_SCROLL_CAP_S3K, true, false,
+            false, true,
+            true /* pinballLandingPreservesRoll: S3K Player_TouchFloor_Check_Spindash skips the roll-clear body while spin_dash_flag is set (sonic3k.asm:24325-24327) */,
+            true /* pinballLandingPreservesPinballMode: S3K Player_TouchFloor_Check_Spindash leaves spin_dash_flag set while AutoSpin tunnel control is active */,
+            true, true, true, true, false, FAST_SCROLL_CAP_S3K, true, false,
             SIDEKICK_FOLLOW_SNAP_S3K, SIDEKICK_DESPAWN_X_S3K, SIDEKICK_FOLLOW_LEAD_OFFSET_S3K, false, true /* useScreenYWrapValueForVisibility: S3K Render_Sprites height_pixels=0x18 */,
             false /* sidekickDespawnUsesObjectIdMismatch: S3K cmp.w (a3),d0 in sub_13EFC (sonic3k.asm:26823) compares routine-pointer high word; all gameplay objects share the same high word so the check almost never fires */,
             SIDEKICK_FLY_LAND_BLOCKERS_S3K, true /* sidekickFlyLandRequiresLeaderAlive: sonic3k.asm:26629 cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42 */, true /* solidObjectOffscreenGate: ROM SolidObject_cont uses render_flags bit 7 to skip side-push for off-screen objects (sonic3k.asm:41390 loc_1DF88) */,

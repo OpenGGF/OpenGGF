@@ -1848,7 +1848,7 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void testS3kLandingClearsRollingEvenInPinballMode() throws Exception {
+        public void testS3kLandingPreservesRollingInPinballMode() throws Exception {
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
                 mockSprite.setRolling(true);
                 mockSprite.setPinballMode(true);
@@ -1858,9 +1858,10 @@ public class TestPlayableSpriteMovement {
                 method.setAccessible(true);
                 method.invoke(manager);
 
-                assertTrue(!mockSprite.getRolling(),
-                                "S3K Player_TouchFloor clears Status_Roll without a spin_dash_flag guard");
-                assertTrue(!mockSprite.getPinballMode(), "Landing should clear engine pinball mode");
+                assertTrue(mockSprite.getRolling(),
+                                "S3K Player_TouchFloor_Check_Spindash skips the Status_Roll clear while spin_dash_flag is set");
+                assertTrue(mockSprite.getPinballMode(),
+                                "S3K landing should preserve the engine spin_dash_flag mirror for AutoSpin tunnels");
         }
 
         @Test

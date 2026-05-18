@@ -62,6 +62,7 @@ public class TestHybridPhysicsFeatureSet {
                 false,  // slopeRepelChecksOnObject - S1
                 false,  // slopeRepelUsesS3kSlipKick - S1
                 false,  // pinballLandingPreservesRoll - S1
+                false,  // pinballLandingPreservesPinballMode - S1
                 true,   // topSolidLandingAllowsZeroDist - S1
                 false,  // airBottomSolidHitClearsGroundSpeed - S1
                 false,  // airRightWallHitContinuesIntoCeilingSeparation - S1
