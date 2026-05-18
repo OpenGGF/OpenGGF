@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.objects.badniks.MegaChopperBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.BubblesBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.PoindexterBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
@@ -749,6 +750,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }
                     return new BatbotBadnikInstance(spawn);
+                });
+        factories.put(Sonic3kObjectIds.PENGUINATOR,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new PenguinatorBadnikInstance(spawn);
                 });
         factories.put(Sonic3kObjectIds.STAR_POINTER,
                 (spawn, registry) -> {
