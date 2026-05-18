@@ -831,6 +831,7 @@ public class CollisionSystem {
 
         PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
         boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
+        boolean preservePinballMode = featureSet != null && featureSet.pinballLandingPreservesPinballMode();
         if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
             int oldYRadius = sprite.getYRadius();
             int centreX = sprite.getCentreX();
@@ -852,7 +853,7 @@ public class CollisionSystem {
             sprite.setCentreYPreserveSubpixel((short) (centreY + delta));
         }
 
-        if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballRoll)) {
+        if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
             sprite.setPinballMode(false);
         }
         sprite.setAir(false);

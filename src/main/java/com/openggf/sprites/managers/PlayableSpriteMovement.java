@@ -2398,6 +2398,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
+		boolean preservePinballMode = featureSet != null && featureSet.pinballLandingPreservesPinballMode();
 		boolean skipTouchFloorBodyForPinball = sprite.getRolling() && sprite.getPinballMode() && preservePinballRoll;
 		if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
 			if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
@@ -2434,7 +2435,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// without this engine accumulates a 4-pixel y_pos drift).
 			sprite.applyStandingRadii(false);
 		}
-		sprite.setPinballMode(false);
+		if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
+			sprite.setPinballMode(false);
+		}
 		sprite.setAir(false);
 		sprite.setPushing(false);
 		sprite.setRollingJump(false);
