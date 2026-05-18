@@ -6,6 +6,20 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 Crawl (0xC8) bounce physics and ENEMY dispatch fix (CNZ2 trace replay).**
+  Two bugs combined to produce wrong post-bounce velocity. First, `COLLISION_SIZE_INDEX`
+  was 0x09 (12×16 px) instead of ROM's 0x17 (8×8 px), inflating the touch window.
+  Second, `applyBounce` applied a flat −$700 y_vel instead of the ROM's radial
+  `CalcAngle + CalcSine` computation (`loc_3D3A4`, s2.asm:81932-81958), and the
+  ENEMY touch dispatch in `ObjectManager` called `applyEnemyBounce` after
+  `onPlayerAttack` because `hpBeforeHit=0 && !wasAlreadyDestroyed`, overwriting
+  the radial y_vel with the standard kill-bounce (+256 offset). `CrawlBadnikInstance`:
+  size index corrected to 0x17; `applyBounce` rewritten with `TrigLookupTable`.
+  `ObjectManager`: `applyEnemyBounce` now gated on instance being destroyed by
+  `onPlayerAttack` (both player and sidekick paths), so shield-bounce objects that
+  handle their own velocity without self-destructing are not double-bounced.
+  CNZ2 trace frontier advanced from frame 435 (`x_speed`) to frame 554 (`tails_y`).
+
 - **S2 horizontal spring right-edge collision parity (CNZ2 trace replay).** ROM
   `Obj41_Horizontal` routes through `SolidObject_cont` (`s2.asm:35147`), which
   rejects the X range with `bhi` (strictly greater than). This makes `relX ==

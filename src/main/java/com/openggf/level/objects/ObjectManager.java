@@ -4861,10 +4861,14 @@ public class ObjectManager {
                                 sidekick.setGSpeed((short) -sidekick.getGSpeed());
                             }
                         } else if (!wasAlreadyDestroyed) {
-                            // Touch_EnemyNormal bounce: ROM applies +$100 (moving up),
-                            // -$100 (player above), or negate (otherwise). Always fires
-                            // when this player's pass is the one performing the kill.
-                            applyEnemyBounce(sidekick, instance);
+                            // Touch_EnemyNormal bounce: fires when this player's pass kills
+                            // the instance. Objects that handle their own bounce (like Crawl
+                            // shield mode) without self-destructing are excluded.
+                            boolean isNowDestroyed = instance instanceof AbstractObjectInstance postAoi
+                                    && postAoi.isDestroyed();
+                            if (isNowDestroyed) {
+                                applyEnemyBounce(sidekick, instance);
+                            }
                         }
                     } else {
                         applySidekickHurt(sidekick, instance);
@@ -5044,8 +5048,14 @@ public class ObjectManager {
                                 player.setGSpeed((short) -player.getGSpeed());
                             }
                         } else if (!wasAlreadyDestroyed) {
-                            // Touch_KillEnemy: position-based bounce (one-hit kill)
-                            applyEnemyBounce(player, instance);
+                            // Touch_KillEnemy: position-based bounce only when onPlayerAttack
+                            // destroyed the instance. Objects like Crawl that handle their own
+                            // custom bounce without self-destructing must not get a second bounce.
+                            boolean isNowDestroyed = instance instanceof AbstractObjectInstance postAoi
+                                    && postAoi.isDestroyed();
+                            if (isNowDestroyed) {
+                                applyEnemyBounce(player, instance);
+                            }
                         }
                     } else {
                         applyHurt(player, instance);

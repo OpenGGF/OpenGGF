@@ -660,3 +660,41 @@ when `getType() == TYPE_HORIZONTAL`, matching the same pattern already used in
 New blocker: frame 435 `x_speed` (expected=0x01CD, actual=-0x05FE). Engine has
 Sonic moving fast leftward while ROM continues rightward; engine diagnostic shows
 a Crawl (0xC8) touch at slot 20 and matching subpixel position at frame start.
+
+## 2026-05-18 - S2 CNZ2 Crawl (0xC8) bounce physics and ENEMY dispatch fix
+
+- Branch: `develop`
+- Command: `mvn -q "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 1078 errors (down from 1130)
+- Frontier moved: frame 435 `x_speed` → frame 554 `tails_y`
+
+Root cause: Two bugs in `CrawlBadnikInstance` and one in `ObjectManager` ENEMY dispatch.
+
+1. **Wrong collision size index** (`CrawlBadnikInstance.COLLISION_SIZE_INDEX`): was 0x09
+   (Touch_Sizes[9] = 12×16 px) instead of ROM's 0x17 (Touch_Sizes[23] = 8×8 px).
+   This caused a wider touch window, producing the first touch 3 frames earlier
+   (frame 435) than the actual first contact (frame 438).
+
+2. **Incorrect radial bounce**: `applyBounce` applied a flat −$700 y_vel instead of
+   the ROM's radial `CalcAngle + CalcSine × −$700 / 256` formula (`loc_3D3A4`,
+   s2.asm:81932-81958). Rewritten using `TrigLookupTable.calcAngle` / `cosHex` /
+   `sinHex`, matching the wobble `(Level_frame_counter >> 8) & 3` exactly.
+   For the trace contact at frame 438 (dx=16, dy=12, angle=27), expected
+   y_vel = −$44B (−1099) was confirmed correct.
+
+3. **Double-bounce from ENEMY dispatch** (`ObjectManager.handleTouchResponse`):
+   after `onPlayerAttack` applied the radial bounce (y_vel=−1099), the ENEMY path
+   called `applyEnemyBounce` because `hpBeforeHit=0 && !wasAlreadyDestroyed`.
+   `applyEnemyBounce` overwrote y_vel to −843 (+256 offset vs expected). Fix:
+   `applyEnemyBounce` is now conditional on `instance.isDestroyed()` after
+   `onPlayerAttack`. Normal badniks (destroy-in-one-hit) are unaffected; Crawl's
+   shield bounce (survives) correctly skips the second bounce.
+
+Files changed:
+- `src/main/java/com/openggf/game/sonic2/objects/badniks/CrawlBadnikInstance.java`
+- `src/main/java/com/openggf/level/objects/ObjectManager.java`
+
+New blocker: frame 554 `tails_y` (expected=0x05F1, actual=0x05F0). Tails Y off by
+1 px when rolling-mode transition occurs (engine `st=00`, ROM `status=04`). Crawl
+in slot 20 is in WALKING state (rtn=02), not involved. Likely a Tails rolling-mode
+transition timing issue: `tails mode rolling 0→1` annotation present at frame 554.
