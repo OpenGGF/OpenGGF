@@ -2818,7 +2818,24 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		inputRight = right;
 		inputJump = sprite.isHurt() ? false : jump;
 		boolean suppressJumpPress = sprite.consumeSuppressNextJumpPress();
-		inputJumpPress = ((jump && !jumpPrevious) && !suppressJumpPress) || sprite.isForcedJumpPress();
+		if (sprite.isCpuControlled()) {
+			// ROM Tails CPU writes the whole delayed Ctrl_1_Logical word into
+			// Ctrl_2_Logical (s2.asm:38939-38946, 39025-39027), so the held bits
+			// and the press low-byte both come from the leader's delayed sample.
+			// In the engine, the press edge is conveyed via forcedJumpPress
+			// (set by SpriteManager when SidekickCpuController.getInputJumpPress()
+			// is true). Computing a fresh (jump && !jumpPrevious) edge against
+			// Tails' own jumpPrevious would manufacture a spurious press whenever
+			// the leader's delayed held bit transitions from clear to set without
+			// a corresponding press edge — the bootstrap held-jump case is the
+			// canonical example (CNZ2 trace frame 16: leader's BK2 prelude held
+			// jump, Tails reads the held bit but recorded_press=false). The CPU
+			// controller is the authoritative source for Tails' Ctrl_2_Press low
+			// byte, so consume the forced press signal directly.
+			inputJumpPress = sprite.isForcedJumpPress() && !suppressJumpPress;
+		} else {
+			inputJumpPress = ((jump && !jumpPrevious) && !suppressJumpPress) || sprite.isForcedJumpPress();
+		}
 		sprite.setForcedJumpPress(false); // consume one-shot signal
 		jumpPrevious = jump;
 	}
