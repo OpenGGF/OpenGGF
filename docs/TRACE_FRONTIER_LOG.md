@@ -4,6 +4,100 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-19 - Full test run and fresh trace frontier sweep
+
+- Branch: `develop`
+- Worktree state: dirty with S1 credits trace fixes and existing local changes
+- Commands:
+  - `mvn -q -Dmse=off test`
+  - cleared generated `target/trace-reports`
+  - `mvn -q -Dmse=off "-Dtest=*TraceReplay,*ReplayBootstrap" test -DfailIfNoTests=false`
+- Result: full suite failed with 4870 tests, 21 failures, 2 errors, 6 skipped; fresh trace sweep failed with 74 tests, 38 failures, 0 errors, 0 skipped
+
+The fresh trace sweep confirms no S1 trace replay regression from the credits
+fixes: `TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`, and all eight
+`TestS1Credits*TraceReplay` classes pass. The full suite still has a separate
+debug-probe failure, `DebugS1Credits01Mz2PushBlockProbe`, because it asks for
+frame 539 outside the current probe window.
+
+Other non-trace full-suite failures remain outside this frontier table,
+including `DefaultObjectServices`/object-service migration guards, a
+`TestGroundSensor` top-solid expectation, rewind torture divergences, CNZ slot
+machine RNG, several S3K event/object assertions, HTZ boss touch response, S2
+MCZ rotating platform lifecycle, and singleton lifecycle guard coverage.
+
+Fresh JSON reports under `target/trace-reports` produced these first
+non-cascading frontiers:
+
+| Trace | Errors | Warnings | Frames | Frontier / first error |
+| --- | ---: | ---: | ---: | --- |
+| `s2_arz1` | 813 | 0 | 5064 | frame 304, `tails_x_speed` expected `0x00D0`, actual `0x00C2` |
+| `s2_arz2` | 2129 | 0 | 7716 | frame 225, `y` expected `0x04DC`, actual `0x04D9` |
+| `s2_cnz1` | 22 | 0 | 9469 | frame 3906, `tails_y` expected `0x06C0`, actual `0x06C1` |
+| `s2_cnz2` | 1057 | 0 | 12081 | frame 1490, `tails_y_speed` expected `-059B`, actual `-052B` |
+| `s2_cpz1` | 434 | 0 | 5741 | frame 844, `x_speed` expected `-0200`, actual `0x00E4` |
+| `s2_cpz2` | 1646 | 0 | 12142 | frame 962, `y` expected `0x03AD`, actual `0x03AC` |
+| `s2_dez1` | 174 | 0 | 7888 | frame 536, `rolling` expected `1`, actual `0` |
+| `s2_htz1` | 490 | 0 | 8856 | frame 5511, `x` expected `0x151B`, actual `0x1523` |
+| `s2_htz2` | 815 | 0 | 10160 | frame 795, `tails_air` expected `0`, actual `1` |
+| `s2_mcz1` | 452 | 0 | 6083 | frame 1085, `y` expected `0x056C`, actual `0x056B` |
+| `s2_mcz2` | 936 | 0 | 10953 | frame 198, `y_speed` expected `0x0000`, actual `-0300` |
+| `s2_mtz1` | 1015 | 0 | 10133 | frame 281, `y` expected `0x024D`, actual `0x0255` |
+| `s2_mtz2` | 2335 | 0 | 12697 | frame 221, `y` expected `0x062D`, actual `0x062A` |
+| `s2_mtz3` | 2414 | 0 | 15622 | frame 298, `air` expected `0`, actual `1` |
+| `s2_ooz1` | 1117 | 0 | 11015 | frame 509, `y_speed` expected `0x0300`, actual `-0300` |
+| `s2_ooz2` | 1329 | 0 | 13317 | frame 301, `tails_y_speed` expected `-0278`, actual `-0178` |
+| `s2_wfz1` | 589 | 0 | 16426 | frame 4719, `x_speed` expected `0x08D6`, actual `0x08E2` |
+| `s3k_aiz1` | 1738 | 22 | 20463 | frame 1057, `tails_x` expected `0x13CC`, actual `0x7F00` |
+| `s3k_cnz1` | 3776 | 17 | 42242 | frame 4790, `tails_x` expected `0x6125`, actual `0x7F00` |
+| `s3k_mgz1` | 2625 | 60 | 35861 | frame 1538, `y` expected `0x0DC9`, actual `0x0DC8` |
+
+Fresh trace sweep pass rows:
+`TestS1Ghz1TraceReplay`,
+`TestS1Mz1TraceReplay`,
+`TestS1Credits00Ghz1TraceReplay` through
+`TestS1Credits07Ghz1bTraceReplay`,
+`TestS2Ehz1TraceReplay`,
+`TestS2SczLevelSelectTraceReplay`,
+and the non-`replayMatchesTrace` S3K CNZ/AIZ focused assertions except the AIZ
+bootstrap/player-window failures listed below.
+
+`TestS3kAizReplayBootstrap` has 17 current assertion frontiers that are not
+represented by the JSON comparator table: frame 0 AIZ intro object routine state,
+legacy pre-level prefix classification, missing/incorrect gameplay-start anchor
+at frame 1387, gameplay-start detection off by two frames, title-card/Knuckles
+state around gameplay start, missing `aiz1_fire_transition_begin`, frame 1800
+post-fire-transition player X, frame 1719 Monkey Dude height, frame 1983 roll
+rock debris, frame 2006 rolling hitbox and replay X, frame 2110/2155 floating
+platform state, and frame 4886 AIZ2 reload resume mismatches.
+
+`TestS3kAizTraceReplay.playerMatchesTraceThroughFirstGiantRideVineWindow` also
+fails at trace frame 2876: player X expected `8023`, actual `7692`.
+
+## 2026-05-19 - S1 credits LZ and MZ trace fixes
+
+- Branch: `develop`
+- Worktree state: dirty with S1 credits trace fixes
+- Commands:
+  - `mvn -q -Dmse=off "-Dtest=TestS1Credits03Lz3TraceReplay" test -DfailIfNoTests=false`
+  - `mvn -q -Dmse=off "-Dtest=TestS1Credits01Mz2TraceReplay,TestS1Credits03Lz3TraceReplay" test -DfailIfNoTests=false`
+  - `mvn -q -Dmse=off "-Dtest=TestS1Credits01Mz2TraceReplay" test -DfailIfNoTests=false`
+  - `mvn -q -Dmse=off "-Dtest=TestS1Ghz1TraceReplay,TestS1Mz1TraceReplay,TestS1Credits*TraceReplay" test -DfailIfNoTests=false`
+- Result: targeted LZ3 and MZ2 pass; S1 GHZ1, MZ1, and all S1 credits traces pass in the targeted regression sweep
+
+`TestS1Credits03Lz3TraceReplay` now reaches the full trace window after
+emulating the Sonic 1 REV01 non-FixBugs `LZWindTunnels` d0 clobber and seeding
+the LZ credits-demo vblank phase at the lamppost bootstrap.
+
+`TestS1Credits01Mz2TraceReplay` now reaches the full trace window. Parent-spawned
+lava geyser makers delay their first proximity-triggered advance by one live
+tick, matching the ROM slot timing through the original frame-493 divergence.
+The remaining one-pixel push-block vertical-motion delta at frame 499 was closed
+by preserving the first airborne frame's REV01 launch phase: the geyser maker
+sets the parent push block airborne from a later SST slot, and the block's
+subpixel/velocity seed now keeps the first `#-$580` displacement before
+`loc_C056`'s `+$18` gravity affects the next visible velocity.
+
 ## 2026-05-18 - Full trace replay frontier sweep after S2 act expansion
 
 - Branch: `develop`

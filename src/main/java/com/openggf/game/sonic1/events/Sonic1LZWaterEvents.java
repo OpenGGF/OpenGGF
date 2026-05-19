@@ -792,19 +792,16 @@ public class Sonic1LZWaterEvents {
             windTunnelActive = true;
             windTunnelPreserveGroundContact = !player.getAir();
 
-            // ROM: subi.w #$80,d0 / cmp.w (a2),d0 / bhs.s .movesonic
-            // Check if player is in the "curve" zone (first $80 pixels of tunnel)
-            //
-            // KNOWN DISCREPANCY: the original ROM REV01 has a bug here -- d0 was
-            // overwritten by `move.b (v_vbla_byte).w,d0` (and possibly `move.w
-            // #sfx_Waterfall,d0` when sound plays), but the curve check still
-            // reads d0 as if it held obX. The disassembly's `if FixBugs` block
-            // adds `move.w d1,d0` to restore the saved obX before the check.
-            // We implement the FIXED behavior, which means the trace-recorded
-            // ROM bumps Y by +2 every ~64 frames in the tunnel that the engine
-            // does not. See docs/KNOWN_DISCREPANCIES.md.
-            // (s1disasm/_inc/LZWaterFeatures.asm:309-331)
-            if ((playerX - WIND_TUNNEL_CURVE_OFFSET) < left) {
+            // ROM REV01 parity: the non-FixBugs path clobbers d0 with
+            // v_vblank_byte during the sound gate and then reuses d0 for the
+            // curve check as if it still held obX. On sound frames d0 is the
+            // waterfall SFX id; otherwise only its low byte is replaced.
+            // Reference: docs/s1disasm/_inc/LZWaterFeatures.asm:309-331.
+            int curveCheckX = (playerX & 0xFF00) | (vblaByte() & 0x3F);
+            if ((vblaByte() & 0x3F) == 0) {
+                curveCheckX = Sonic1Sfx.WATERFALL.id;
+            }
+            if ((curveCheckX - WIND_TUNNEL_CURVE_OFFSET) < left) {
                 // ROM: moveq #2,d0
                 // In act 2, Y adjustment is negated (Sonic curves upward)
                 // cmpi.b #1,(v_act).w / bne.s .notact2 / neg.w d0

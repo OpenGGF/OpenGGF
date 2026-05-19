@@ -852,8 +852,16 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     void applyLavaGeyserLaunch(int velY) {
         // bset #1,obStatus(a1) -> airborne flag (separate from obSolid)
         airborne = true;
-        // move.w #-$580,obVelY(a1)
-        yVelocity = (short) velY;
+        // GMake_MakeLava runs from a later SST slot than its parent push block.
+        // The recorded REV01 MZ2 credits trace shows the first parent airborne
+        // frame using the raw #-$580 displacement before loc_C056's +$18 gravity
+        // becomes visible in the next frame's velocity. Seeding the pre-gravity
+        // value plus the compensating subpixel fraction preserves that slot phase.
+        // References:
+        //   docs/s1disasm/_incObj/4C & 4D Lava Geyser Maker.asm (GMake_MakeLava)
+        //   docs/s1disasm/_incObj/33 Pushable Blocks.asm (loc_C056)
+        yVelocity = (short) (velY - FALL_GRAVITY);
+        motion.ySub = (FALL_GRAVITY << 8) & 0xFFFF;
     }
 
     /**

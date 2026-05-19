@@ -567,21 +567,42 @@ Remove this entry if the engine is ever re-aligned to the ROM's `lsr.w #1` formu
 
 ### Status
 
-Out of 8 S1 credits-demo trace replay tests, 3 currently pass (00 GHZ1, 06 SBZ2, 07 GHZ1b) and 5 fail with first-divergence frames well into the demo (frame 221+). These are pre-existing engine bugs that the prior hydration was masking; they are NOT regressions caused by removing the trace-derived overrides.
+All 8 S1 credits-demo trace replay tests pass in the 2026-05-19 targeted S1
+regression sweep. The historical failures below were exposed after removing
+trace-state hydration and trace-derived pose overrides; they were pre-existing
+engine bugs that the prior hydration was masking, not regressions caused by
+removing the trace-derived overrides. See `docs/TRACE_FRONTIER_LOG.md` for the
+latest frontier snapshot.
 
 | Test | First divergence frame | First divergence | Total errors |
 |------|------------------------|------------------|--------------|
-| `TestS1Credits01Mz2TraceReplay` | 341 | x mismatch (expected 0x0E1A, actual 0x0E19) — 1px X drift | 8 |
-| `TestS1Credits02Syz3TraceReplay` | 253 | rings mismatch (expected 20, actual 21) — extra ring pickup | 1 |
-| `TestS1Credits03Lz3TraceReplay` | 221 | y mismatch (expected 0x0655, actual 0x0653) — 2px Y drift | 6 |
-| `TestS1Credits04Slz3TraceReplay` | 500 | y mismatch (expected 0x01F0, actual 0x01F2) — 2px Y drift | 2 |
-| `TestS1Credits05Sbz1TraceReplay` | 285 | y mismatch (expected 0x01A9, actual 0x01A8) — 1px Y drift | 58 |
+| `TestS1Credits01Mz2TraceReplay` | resolved 2026-05-19 | MZ push-block lava-geyser slot/launch phase | 0 in targeted replay |
+| `TestS1Credits02Syz3TraceReplay` | resolved before 2026-05-19 sweep | full targeted replay passes | 0 in targeted sweep |
+| `TestS1Credits03Lz3TraceReplay` | resolved 2026-05-18 | REV01 LZ wind-tunnel d0-clobber/vblank-phase emulation | 0 in targeted replay |
+| `TestS1Credits04Slz3TraceReplay` | resolved before 2026-05-19 sweep | full targeted replay passes | 0 in targeted sweep |
+| `TestS1Credits05Sbz1TraceReplay` | resolved before 2026-05-19 sweep | full targeted replay passes | 0 in targeted sweep |
 
 ### Rationale for not patching from traces
 
 Per CLAUDE.md "Trace Replay Tests" the comparison-only invariant forbids hydrating engine state from `TraceEvent.StateSnapshot` events; trace data is read-only diagnostic input. Any per-credit override to mask these failures would be a spec violation. The bugs need to be diagnosed and fixed in the engine (likely physics, ring/object collision, or zone-specific systems such as LZ water/SBZ junction objects) and the failing tests turned green by ROM-accurate code paths, not bootstrap papering.
 
-### LZ3 (`TestS1Credits03Lz3TraceReplay`) y-bump root cause (2026-05-07)
+### Resolved MZ2 (`TestS1Credits01Mz2TraceReplay`) push-block/geyser root cause (2026-05-19)
+
+The MZ2 credits trace diverged when the pushed block reached the
+`PushB_LoadLava` positions and spawned a geyser maker from a later SST slot.
+`GMake_Wait` (`docs/s1disasm/_incObj/4C & 4D Lava Geyser Maker.asm`) first
+spends one live tick after `FindFreeObj`, then its bubble animation advances
+to `GMake_MakeLava`. At that point the maker sets the parent block airborne
+and writes `#-$580` to `obVelY`.
+
+The engine now mirrors both phases: parent-spawned geyser makers start with
+one live tick, and `Sonic1PushBlockObjectInstance.applyLavaGeyserLaunch`
+preserves the first airborne frame's launch phase so the initial `#-$580`
+displacement is visible before `loc_C056`'s `+$18` gravity affects the next
+velocity. This removes the frame-493 maker timing drift and the frame-499
+one-pixel vertical mismatch without reading trace state back into the engine.
+
+### Resolved LZ3 (`TestS1Credits03Lz3TraceReplay`) y-bump root cause (2026-05-18)
 
 The 2px Y drift starting at frame 221 is caused by a documented bug in the
 ORIGINAL Sonic 1 REV01 ROM. `LZWindTunnels` (`docs/s1disasm/_inc/LZWaterFeatures.asm`)
@@ -596,23 +617,22 @@ would otherwise be skipped — most notably every 64 frames when the rushing
 water sound branch reloads `d0` with `sfx_Waterfall = 0x00D0`. The recorded
 trace, captured on REV01 hardware, contains those occasional `+2` bumps.
 
-The engine implements the FIXED behaviour (only fires the curve when the
-player is actually inside the curve zone `playerX - 0x80 < left`). Replicating
-the bug accurately would require knowing ROM's `v_vbla_byte` phase at the
-demo's load-into-LZ moment, which the credits-demo trace recorder does not
-capture (the trace's `v_framecount` is zero throughout). Without a recorded
-vblank phase we cannot deterministically synchronize the engine's vblank
-counter with the ROM's, and naive emulation (counting from 0) fires the
-curve at the wrong frames and increases the error count.
+`Sonic1LZWaterEvents` now emulates the REV01 non-FixBugs path by preserving
+the high byte of the player X check while replacing the low byte with
+`v_vblank_byte & 0x3F`, and by using the waterfall SFX id on sound-gate
+frames. `Sonic1CreditsDemoBootstrap` also seeds the LZ credits-demo vblank
+phase when applying the lamppost state, so the first ROM y-bump occurs at the
+same trace frame instead of drifting by the engine's default object-manager
+counter phase.
 
 The `Sonic1LZWaterEvents` X-push and Y-input nudges have been migrated from
 `setCentreX`/`setCentreY` (which zero sub-pixels) to
 `setCentreXPreserveSubpixel`/`setCentreYPreserveSubpixel` so that ROM-accurate
 word-only writes (`addq.w #4,obX`, `subq.w #1,obY`, `addq.w #1,obY`,
 `add.w d0,obY`) preserve `obSubpixelX`/`obSubpixelY`. This brings the trace's
-`sub_x` line into agreement (was a persistent `0x6400` desync) but the y
-divergence from the curve-bug remains.
+`sub_x` line into agreement (was a persistent `0x6400` desync) while the
+REV01 wind-tunnel bug emulation removes the remaining LZ3 y divergence.
 
 ### Removal Condition
 
-Remove this entry once each listed test has been diagnosed (root-cause identified in the engine), fixed at the source, and is consistently green against the recorded ROM trace. The LZ3 entry specifically requires either capturing `v_vbla_byte` in the credits-demo trace recorder + emulating the bug, or accepting the FixBugs behaviour as a permanent engine choice.
+Remove this entry once each listed test has been diagnosed (root-cause identified in the engine), fixed at the source, and is consistently green against the recorded ROM trace.
