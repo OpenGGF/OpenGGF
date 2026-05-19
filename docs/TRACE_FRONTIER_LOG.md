@@ -4,6 +4,38 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-19 - S2 MTZ SteamSpring timing and MTZLongPlatform props-lookup fix
+
+- Branch: `develop`
+- Worktree state: clean develop + MTZ fixes
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: MTZ1 and MTZ2 frontiers advance; MTZ3 unchanged
+  - MTZ1: 1015 → 945 errors. Frontier moves frame 281 (`y` 0x024D vs 0x0255) → frame 375 (`tails_air` 1 vs 0)
+  - MTZ2: 2335 → 2370 errors. Frontier moves frame 221 (`y`) → frame 222 (`x` 0x028C vs 0x028E)
+  - MTZ3: unchanged at frame 298 (`air` 0 vs 1); root cause is `MCZRotatingPlatformsObjectInstance` placement
+- Cross-game regression: S1 GHZ1, S1 MZ1, S2 EHZ1, S2 CNZ1, S2 SCZ still green
+
+Root causes fixed:
+
+1. **SteamSpring (Obj42) solid-checkpoint ordering:** Engine ran the state machine THEN
+   resolved solid contacts (post-update), so the player followed the spring's new y_pos one
+   frame too early. ROM `loc_26688` (`s2.asm:52030-52049`) calls
+   `SolidObject_Always_SingleCharacter` BEFORE the state-machine branches update `objoff_36`
+   / `y_pos`. Fix: switched to `MANUAL_CHECKPOINT` mode; `checkpointAll()` runs first in
+   `update()`, spring fire applied from batch result (manual mode suppresses the compatibility
+   `onSolidContact` callback). MTZ1 frontier moved 281 → 375.
+
+2. **MTZLongPlatform (Obj65) properties off-by-2 indexing:** Engine used `d0 >> 2` for
+   both the props-table entry AND `mapping_frame`, collapsing 8 ROM entries to 4. ROM
+   `s2.asm:52386-52394` does `lea Obj65_Properties(pc,d0.w),a3` (entry index = d0/2) then
+   separately `lsr.w #2,d0` for `mapping_frame` (= d0/4). For subtype 0xB1 this picked
+   entry 3 `{0x40, 0x03}` (stationary) instead of entry 6 `{0x40, 0x0C}` (moveSubtype=7,
+   maxDist=0x80), so the platform never moved. Fix: `entryIndex = d0 >> 1`,
+   `frameIndex = d0 >> 2`. MTZ2 frontier moved 221 → 222.
+
+MTZ3 frame 298 `air` mismatch: `MCZRotatingPlatformsObjectInstance` (Obj6A) has placement/
+subtype divergence. Noted for separate investigation.
+
 ## 2026-05-19 - S2 OOZ Octus collision and rise timing parity
 
 - Branch: `develop`

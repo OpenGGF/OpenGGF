@@ -6,6 +6,8 @@ import com.openggf.audio.GameSound;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -13,10 +15,13 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpringBounceHelper;
+
+import java.util.Map;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -86,8 +91,41 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public SolidExecutionMode solidExecutionMode() {
+        // ROM: Obj42 loc_26688 calls SolidObject_Always_SingleCharacter at the
+        // start of every routine-2 update, BEFORE the state-machine branches
+        // update objoff_36 / y_pos (s2.asm:52030-52049). Use manual checkpoint
+        // so the solid resolution sees the spring's pre-move y_pos and the
+        // player's position update lags the spring by one frame, matching ROM.
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        // ROM: s2.asm:52030-52049 -- loc_26688 calls SolidObject_Always_SingleCharacter
+        // BEFORE the state machine moves the spring's y_pos. This lets the player land
+        // / stand at the pre-move surface, then the spring updates its position; the
+        // player follows next frame via continued-riding carry.
+        //
+        // After the solid checkpoint, loc_26688 calls loc_2678E for each character
+        // that is now standing (p1/p2_standing_bit set) and the spring fires if its
+        // routine_secondary == 2 (RISING). Manual checkpoint mode suppresses the
+        // engine's compatibility onSolidContact callback, so we inspect the batch
+        // result directly and apply the spring here, then let the state machine run.
+        SolidCheckpointBatch batch = checkpointAll();
+        if (state == STATE_RISING) {
+            for (Map.Entry<PlayableEntity, PlayerSolidContactResult> entry
+                    : batch.perPlayer().entrySet()) {
+                PlayerSolidContactResult result = entry.getValue();
+                if (result == null || !result.standingNow()) {
+                    continue;
+                }
+                if (entry.getKey() instanceof AbstractPlayableSprite standing) {
+                    applySpring(standing);
+                }
+            }
+        }
         switch (state) {
             case STATE_WAIT_BEFORE_RISE -> updateWaitBeforeRise();
             case STATE_RISING -> updateRising();
@@ -175,18 +213,9 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (player == null || !contact.standing()) {
-            return;
-        }
-        // ROM: loc_2678E - only spring when state == STATE_RISING (routine_secondary == 2)
-        // Actually ROM checks cmpi.b #2,routine_secondary(a0) which is the rising state
-        if (state != STATE_RISING) {
-            return;
-        }
-        // ROM: yOffset reaches 0 at the moment of spring, but the spring check happens
-        // every frame during state 2 when player is standing
-        applySpring(player);
+        // Spring fire is handled by the manual checkpoint pass in update() — see ROM
+        // loc_26688 / loc_2678E (s2.asm:52030-52049, 52121-52124). Manual checkpoint
+        // mode does not invoke this callback, so it is intentionally a no-op.
     }
 
     /**
