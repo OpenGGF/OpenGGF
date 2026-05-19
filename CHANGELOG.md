@@ -6,6 +6,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 CNZ2 frontier investigation: Crawl closer-player selection.** No code change.
+  Confirmed that `CrawlBadnikInstance` must use `Obj_GetOrientationToPlayer`–style
+  closest-player selection (by absolute X distance) for proximity and orientation
+  checks. The fix advances CNZ2 frontier from f1490 to f630, but f630 exposes a
+  pre-existing 1px X-position drift in the first CNZ2 Crawl (slot s20) that
+  produces an incorrect bounce angle. Both the s20 (1px) and s17 (3px) Crawl X drifts
+  are pre-existing bugs unrelated to the closer-player change. Closer-player fix
+  reverted until the Crawl X-position drift is diagnosed. See `TRACE_FRONTIER_LOG.md`
+  for the full analysis.
+
 - **S2 MTZ3 Obj6A per-phase activation gate.** `MCZRotPformsObjectInstance.
   loadPhaseParameters()` did not mirror ROM `loc_27CA2`'s `move.b #0,objoff_36
   (a0)` (`s2.asm:53844`). ROM Obj6A in MTZ runs via routine 2 (`loc_27BDE` at

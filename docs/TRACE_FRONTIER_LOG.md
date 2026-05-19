@@ -4,6 +4,89 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-19 - S2 CNZ2 Crawl closer-player investigation (frontier unchanged at f1490)
+
+- Branch: `develop` (HEAD `1b5308308`)
+- Worktree: isolated agent worktree, `git reset --hard develop`
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: unchanged, 1057 errors, frame 1490 `tails_y_speed` mismatch
+- Outcome: closer-player fix attempted and reverted (see below); frontier log updated only
+
+### Investigation summary
+
+CNZ2 frame 1490 root cause: Crawl (`ObjC8`, slot s17 at `@0735,0470`) is in ATTACKING state
+(`rtn=06`) in the ROM but stays in ENEMY (`col=$17`) in the engine. ROM `Obj_GetOrientationToPlayer`
+(`s2.asm:72320-72346`) picks the **closer** of Sonic and Tails by absolute X distance (`mvabs.w`
++ `bls.s`). At frame 1490, Tails (dx≈0x003D) is closer to the second Crawl than Sonic (standing
+at `@0776`), so the ROM's `loc_3D416` proximity check fires on Tails → Crawl enters ATTACKING.
+Engine only passes the main player (Sonic) to `updateWalking`/`updatePausing` proximity checks →
+ATTACKING never fires for Tails-triggered proximity → Crawl stays ENEMY → no Tails y_speed change.
+
+### Closer-player fix attempt
+
+Added `closestPlayer(mainPlayer)` helper in `CrawlBadnikInstance` that walks `services().sidekicks()`
+and returns the player with the smaller `|getCentreX() - currentX|`, matching the ROM's `mvabs.w +
+bls.s` logic (sidekick wins only if **strictly** closer). Also fixed `updatePausing()` to accept
+and use the closest player for the proximity check (ROM `loc_3D2A6` calls `loc_3D416` before the
+timer-expiry branch), and corrected the pause-timer comparison from `<= 0` to `< 0` to match ROM's
+`bmi` (fires when result is negative, not zero).
+
+Result: frontier moved from **f1490 → f630** (1057 → 1096 errors). The fix correctly enters
+ATTACKING at the right frame for the second Crawl (Tails trigger at f1490), but introduces a new
+first-error at f630.
+
+### Frame 630 regression analysis
+
+At frame 630, a **different Crawl** (slot s20, the first CNZ2 Crawl at X≈0x032E/0x032F) bounces
+Sonic. The bounce happened in the ROM too (ROM rtn=06 at f630, Sonic velocity changes). But the
+engine Crawl s20 is 1 pixel further right (X=0x032F) than the ROM Crawl (X=0x032E), causing a
+different `calcAngle(dx, dy)` → different bounce velocities (`y_speed: expected=-0666, actual=-0682`).
+
+**Key findings:**
+1. The 1px X position drift in Crawl s20 (`@032F` engine vs `@032E` ROM) is **pre-existing** —
+   it exists in the original code too (confirmed by reverting the fix and observing the same
+   Crawl position in the diagnostic text). The drift is invisible in the original code because
+   Sonic never reaches s20 with the right trajectory to trigger a bounce.
+2. The second Crawl (s17) also has a 3px X drift (`@0732` engine vs `@0735` ROM), also pre-existing.
+3. Both Crawl position drifts are NOT caused by the closer-player fix. They are a separate bug in
+   `CrawlBadnikInstance`'s subpixel movement accumulation or spawn-position initialization.
+4. The closer-player fix is ROM-accurate per `Obj_GetOrientationToPlayer` but cannot land until
+   the Crawl X-position drift is diagnosed and fixed.
+
+### Crawl X-position drift: candidate root causes
+
+The ROM's `ObjectMove` (s2.asm:29994-30008) uses **32-bit fixed-point**:
+- Loads `(x_pos << 16 | x_sub)` as 32-bit value `d2`
+- `ext.l; asl.l #8` on x_vel → for vel=0x0020, becomes 0x00002000
+- `add.l d0, d2` → x_sub (lower 16 bits) += 0x2000 per frame; overflow carries to x_pos
+
+Engine Crawl uses 8-bit xSubpixel: `xSubpixel += 0x20; if xSubpixel >= 0x100: x += 1, xSubpixel &= 0xFF`
+which is equivalent to the upper byte of ROM x_sub — should produce identical pixel steps.
+
+Candidate sources of the 1px/3px drift:
+- **Spawn x_sub initialization**: if ROM initializes x_sub to a non-zero value (e.g., from
+  adjacent memory or LoadSubObject), the first pixel arrives sooner in the ROM than in the engine
+  (where xSubpixel starts at 0). Level layout parsing may not provide a sub-pixel component.
+- **Proximity check timing delta (pre-existing, not from this fix)**: if the original engine code
+  triggers ATTACKING 1 frame earlier/later than the ROM (due to Sonic-only vs closest-player
+  selection), the Crawl walks 1 extra frame → accumulates 0x20 subpixels → may produce 1 pixel if
+  the accumulator was at 0xE0-0xFF before the stop.
+- **Walk-timer beq/bmi boundary**: ROM walking uses `beq.s` (branch when timer==0), original engine
+  used `<= 0` (same for normal countdown); these are equivalent for fresh timer values.
+
+### Prerequisites for the closer-player fix to land
+
+1. Diagnose and fix the Crawl X-position drift (need to add Crawl x_sub/xSubpixel to the trace
+   recorder or add targeted logging to narrow down which frame the 1px diverges).
+2. Or, if the drift is purely from the proximity timing: fix the proxy timing independently first,
+   verify Crawl position matches, then add the closer-player change on top.
+
+### Cross-game regression check
+
+Reverted code is on develop; no new test failures introduced. CNZ1, EHZ1, MCZ2 frontiers unchanged.
+
+---
+
 ## 2026-05-19 - S2 SwingingPlatform chainCount cap + half-link platform offset (MCZ2 frame 1006 -> 1079)
 
 - Branch: `develop` (HEAD `6acc363ef`)
