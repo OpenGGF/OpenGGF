@@ -182,6 +182,33 @@ therefore does not move for either OOZ replay even though the Aquis behaviour
 is now ROM-accurate. The OOZ2 error-count improvement is the verifiable signal
 that the fix is correct. No cross-game regressions in EHZ1, MTZ, or CNZ.
 
+## 2026-05-19 - Fix S2 MCZ VineSwitch release input and Tails support
+
+- Branch: `develop` (worktree `agent-ab982cb17d078747f`)
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Status: PASS-not-yet (frontier advanced)
+- Result: MCZ2 frontier advanced from frame 198 to frame 925 (936 -> 737 errors)
+- Regression: `TestS2Ehz1TraceReplay`, `TestS2Cnz1LevelSelectTraceReplay`, `TestS2Mcz1LevelSelectTraceReplay` all PASS
+
+Two related bugs in `VineSwitchObjectInstance` (S2 Obj7F):
+
+1. Release used held-button state (`isJumpPressed()`) instead of just-pressed
+   edge (`isJumpJustPressed()`). ROM `Obj7F_Action` does
+   `move.w (Ctrl_1).w,d0 / andi.b #button_B_mask|button_C_mask|button_A_mask,d0`
+   - the `.b` operates on the low byte of `Ctrl_1`, which is `Ctrl_1_Press`
+   (just-pressed this frame), not `Ctrl_1_Held`. With the engine reading held
+   state, Sonic was released a single frame after grabbing whenever the player
+   held B (which is the same input that triggered the jump that put him near
+   the vine).
+
+2. Sidekick (Tails) was never processed. ROM iterates twice: once for
+   `MainCharacter` with `Ctrl_1`, once for `Sidekick` with `Ctrl_2`. The
+   engine looped only over the main character with a "Player 2 deferred"
+   comment. Added a sidekick pass using `services().sidekicks()` so Tails can
+   grab and hang from the vine.
+
+Files: `src/main/java/com/openggf/game/sonic2/objects/VineSwitchObjectInstance.java`
+
 ## 2026-05-19 - S2 OOZ Aquis investigation (no committed change; frontiers unchanged)
 
 - Branch: `develop`
