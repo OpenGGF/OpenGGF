@@ -4,6 +4,73 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-19 - S2 OOZ Aquis investigation (no committed change; frontiers unchanged)
+
+- Branch: `develop`
+- Worktree state: clean develop (no commit; experimental Aquis edits reverted)
+- Commands:
+  - `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+  - `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: unchanged frontiers
+  - OOZ1: 1412 errors, frontier frame 563 (`g_speed` 0x0341 vs 0x033D)
+  - OOZ2: 1305 errors, frontier frame 389 (`y_speed` -0x0358 vs +0x0358)
+
+OOZ2 frame 389 corresponds to CSV row 0185 (trace frame numbering differs from CSV row
+numbering after pre-trace ROM warmup). ROM state at that row: Sonic at (0x051D, 0x0525)
+with y_speed flipping from +0x0320 (f184) to -0x0358 (f185) — a classic enemy-bounce
+negation. ROM events `obj+ s16 0x27 @0524,0536`, `obj+ s20 0x29`, `obj+ s21 0x28` show
+an Aquis at slot 16 destroyed at (0x0524, 0x0536), spawning animal/points group. Engine
+slot 16 still holds a live Aquis at (0x04FE, 0x054C) — 38 px left and 22 px below the
+ROM position, so the engine's Sonic does not intersect the Aquis touch box (0x10, 0x08)
+and never bounces.
+
+Aquis movement diverges over many chase/shoot cycles before f389. Three ROM-vs-engine
+Obj50 (`AquisBadnikInstance`) deltas were identified and individually exercised against
+both OOZ traces (each reverted before the next):
+
+1. **Initial x_vel (`s2.asm:60100`):** `move.w #-$100, x_vel(a0)` in `Obj50_Init` was not
+   applied. Adding `xVelocity = -0x100` at construction time moved OOZ2 by -134 errors
+   (1305 → 1171) but introduced **+27 OOZ1 errors** (1412 → 1439). Frontier frames did
+   not move.
+2. **P30 timer (`s2.asm:60244-60245, 60275-60276`):** `Obj50_FollowPlayer` and
+   `Obj50_WaitForNextShot` both use `subq.b #1, timer; bmi.s ...`, which fires at
+   timer=-1 (after the decrement); the engine used `timer--; if (timer <= 0)`, firing
+   one frame earlier. Switching to the byte-signed `(byte) timer < 0` test plus
+   ordering decrement-before-movement (so the transition frame skips ObjectMove, matching
+   ROM `Obj50_DoneFollowing` falling through `MoveStop`) moved OOZ2 by -46 errors
+   (1305 → 1259) but introduced **+54 OOZ1 errors** (1412 → 1466). Frontier frames did
+   not move.
+3. **Closer-player orientation (`s2.asm:72320-72346`):** `Obj_GetOrientationToPlayer`
+   targets the closer of Sonic/Tails (`mvabs.w` + `bls.s`); the engine uses Sonic only.
+   Adding closer-player selection on top of the P30 fix only changed OOZ2 by -1 more
+   error (1259 → 1258) and did not advance the frontier. (Behaviour at f389 has Sonic
+   and Tails at almost the same x_pos, so closer-player doesn't matter there.)
+
+Combined fixes (initial x_vel + P30 + closer-player) produced a 1172-error OOZ2 result
+(net -133) but kept the OOZ1 regression around +30 errors. None of the combinations
+advanced the OOZ2 f389 frontier; all variants left engine Aquis position ~38 px X and
+~22 px Y away from ROM at the moment Sonic should have hit it.
+
+OOZ1 f563 (`g_speed` 0x0341 vs 0x033D, no nearby objects in diagnostic, flat ground at
+camera (0462, 064C)) is a 4-subpixel velocity drift unrelated to Aquis touch geometry.
+Aquis-only changes that should be ROM-accurate (especially the initial x_vel from
+`Obj50_Init`) introduced new error frames after f563 in OOZ1, suggesting either a
+downstream engine bug whose effect was masked by the previously-incorrect Aquis behaviour
+or an additional Aquis discrepancy still unaccounted for. Without a fix that advances at
+least one frontier and does not regress the other, no commit was made.
+
+Not yet explored / ruled out:
+- `Obj50_CheckIfOnScreen` triggers on `render_flags.on_screen` (set after object renders
+  inside the precise camera viewport). Engine uses `isOnScreen(32)` (camera bounds + 32 px
+  margin). These can fire on different frames, changing how long the first chase phase
+  has to move the Aquis before the player gets close enough.
+- Wing child object: ROM allocates a separate OST slot in `Obj50_Init`. Engine renders
+  the wing inline. Wing should not affect physics, but the slot allocation could shift
+  slot numbering for other objects in the same window.
+- `Obj_CapSpeed` exact rounding — verified equivalent to engine's `clampSpeed`.
+- Trace replay test harness uses CSV-after-warmup frame numbering; the diagnostic `frame
+  389` corresponds to CSV row 0185 in `src/test/resources/traces/s2/ooz2/physics.csv.gz`.
+
 ## 2026-05-19 - S2 CNZ2 pinball_mode preservation flag fix (silent regression)
 
 - Branch: `develop`

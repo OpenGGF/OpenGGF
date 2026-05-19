@@ -6,6 +6,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 OOZ Aquis investigation (no committed fix).** Documented an Aquis (`Obj50`)
+  investigation against the OOZ1 (frontier frame 563 `g_speed`) and OOZ2 (frontier
+  frame 389 `y_speed` sign reversal) traces. Three ROM-vs-engine deltas were
+  identified — missing `move.w #-$100, x_vel(a0)` in `Obj50_Init` (`s2.asm:60100`),
+  P30 `bmi`-style timer pattern in `Obj50_FollowPlayer` / `Obj50_WaitForNextShot`
+  (`s2.asm:60244-60245, 60275-60276`), and closer-player orientation in
+  `Obj_GetOrientationToPlayer` (`s2.asm:72320-72346`). Each individually reduces
+  OOZ2 error counts but introduces a smaller OOZ1 regression, and none advances
+  either frontier; reverted pending further investigation. See `docs/
+  TRACE_FRONTIER_LOG.md` for the full investigation.
+
 - **S2 CNZ2 pinball_mode preservation flag fix.** `PhysicsFeatureSet.SONIC_2.
   pinballLandingPreservesPinballMode` was still `false`, causing CNZ2 to regress to
   frame 936. ROM `Sonic_ResetOnFloor` / `Tails_ResetOnFloor` (`s2.asm:37770-37771,
