@@ -4,6 +4,65 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-19 - S2 SwingingPlatform chainCount cap + half-link platform offset (MCZ2 frame 1006 -> 1079)
+
+- Branch: `develop` (HEAD `6acc363ef`)
+- Worktree: isolated agent worktree, `git reset --hard develop`
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: MCZ2 frontier advanced from frame 1006 to frame 1079 (781 -> 802 errors).
+- Regression check: `TestS2Mcz1LevelSelectTraceReplay` PASS;
+  `TestS2Ehz1TraceReplay` PASS;
+  `TestS2CnzLevelSelectTraceReplay` still at frame 3906 (22 errors, pre-existing — verified by `git stash` baseline run).
+
+### Root cause
+
+`SwingingPlatformObjectInstance` (Object 0x15) caused Sonic to land 24 pixels
+higher than the ROM platform in MCZ2 at frame 1006. Two related bugs:
+
+1. **chainCount clamp**: The engine capped subtype low-nybble at 7
+   (`Math.min(7, subtype & 0x0F)`), but ROM `Obj15_Init` (`s2.asm:22480`) just
+   does `andi.w #$F,d1` with no upper cap. The MCZ2 spawn at `(0x0620, 0x0548)`
+   has subtype `0x18`, so ROM uses 8 chain links while the engine used 7.
+2. **Missing half-link platform offset**: ROM `sub_FE70` (`s2.asm:22645-22654`)
+   accumulates `sin/cos*0x10` per chain link in the chain loop, then halves the
+   last increment (`asr.l #1`) when writing the platform's final position. Net
+   effect: the platform's offset from the pivot is `(chainCount + 0.5) * 0x10`,
+   not `chainCount * 0x10`. The engine omitted the half-link, putting the
+   platform 8 pixels too high.
+
+With chainCount=7 and no half-link offset, the engine placed the platform at
+`baseY + 0x70 = 0x05B8` while ROM placed it at `baseY + 0x80 + 0x08 = 0x05D0`.
+The 24-pixel gap meant the engine's platform-top was at y=0x05B0 (still in
+Sonic's fall path) while ROM's was at y=0x05C8 (below where ROM Sonic landed at
+y=0x05B4 on a different object, slot 10). Engine therefore "caught" Sonic on
+the SwingingPlatform that ROM never touched.
+
+### Fix
+
+`SwingingPlatformObjectInstance.java`:
+- Removed the `Math.min(7, ...)` cap; chainCount is now `max(1, subtype & 0x0F)`
+  matching the ROM mask.
+- Changed `chainLength = chainCount * 0x10` to `chainCount * 0x10 + 8` for the
+  platform's position offset; chain link positions still use `(i+1)*0x10`.
+
+### New MCZ2 frontier (frame 1079)
+
+`y mismatch (expected=0x05B4, actual=0x05A9)`. Engine now correctly avoids
+landing on the first MCZ2 SwingingPlatform during the f1006-f1009 fall, and
+Sonic position matches ROM exactly through frames 1000-1078. At frame 1079
+the engine has Sonic riding the **second** MCZ2 SwingingPlatform
+(`onSlot=23(0x15) @061C,05C5`), while ROM has Sonic standing on `onObj=10`
+(unidentified non-`near` object at y=0x05B4). The second platform spawn
+(`subtype 0x38 -> BOUNCE_RIGHT, 8 chains`) sits at ROM `@0683,05C5` (positive
+X offset from pivot 0x0650) but the engine computes a *negative* X offset
+(@061C). This is a separate swing-direction issue: engine pre-rotates oscValue
+by `-0x40` and assigns `Y=cos, X=sin`, while ROM passes oscValue directly to
+`CalcSine` and assigns `Y=sin, X=cos` (mirrored convention). Attempted that
+fix in this iter — it makes Sonic match ROM exactly through frames 1000-1008
+but reverts the frontier to 1009 because Sonic lands 1 frame later (1 pixel
+gap on the BOUNCE_LEFT platform top). Needs paired investigation of the
+landing-edge condition; deferred to a follow-up iter.
+
 ## 2026-05-19 - S2 Vertical/Diagonal Spring clears Hurt routine (MCZ2 frame 925 -> 1006)
 
 - Branch: `develop` (HEAD `4b2b42097`)

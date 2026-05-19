@@ -6,6 +6,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 SwingingPlatform (Obj15) chainCount cap removal + half-link offset.**
+  Advances MCZ2 trace frontier from frame 1006 to frame 1079 (781 -> 802 errors).
+  `SwingingPlatformObjectInstance` clamped subtype's low nybble to `min(7, ...)`
+  for chainCount, but ROM `Obj15_Init` (`s2.asm:22480`) only does
+  `andi.w #$F,d1` with no upper cap; MCZ2's first swinging platform (spawn
+  subtype `0x18`) needs 8 chains. The platform's position offset from the
+  pivot was also missing the half-link bias: ROM `sub_FE70`
+  (`s2.asm:22645-22654`) accumulates `sin/cos*0x10` per chain link then halves
+  the last increment (`asr.l #1`) for the platform's final position, yielding
+  `(chainCount + 0.5) * 0x10`, not `chainCount * 0x10`. Together these put the
+  engine's MCZ2 platform 24 pixels too high at `(0x0620, 0x05B8)` while ROM
+  had it at `(0x0620, 0x05D0)`, causing the engine to catch Sonic on a
+  platform he never landed on in ROM. Removed the `min(7, ...)` cap and added
+  the `+8` half-link offset to `chainLength` for the platform position only
+  (chain link positions still use `(i+1)*0x10`).
+
 - **S2 MTZ2 Conveyor (Obj6C) child base-position fix.** Children spawned by an
   Obj6C parent (bit 7 of subtype set) were each constructed with their own
   offset spawn position used as the waypoint-path origin (`baseX/baseY`,
