@@ -170,9 +170,24 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
             new SolidObjectParams(WIDTH_PIXELS, Y_RADIUS, Y_RADIUS + 1);
 
     public ConveyorObjectInstance(ObjectSpawn spawn, String name) {
+        this(spawn, name, spawn.x(), spawn.y());
+    }
+
+    /**
+     * Constructor with explicit base position for the waypoint path origin.
+     * <p>
+     * Children spawned by a parent subtype (bit 7 set) inherit the PARENT's
+     * x_pos/y_pos as their objoff_30/objoff_32 (path base), not their own spawn
+     * position. ROM Obj6C_LoadSubObject (s2.asm:54137-54151) writes the parent's
+     * d2/d3 (parent x/y, captured before the loop) into the child's objoff_30/_32
+     * even though the child's x_pos/y_pos is set to {@code parent + layoutOffset}.
+     * Without this distinction every child orbits around its own offset position
+     * instead of the shared parent center, scattering the platforms.
+     */
+    public ConveyorObjectInstance(ObjectSpawn spawn, String name, int baseX, int baseY) {
         super(spawn, name);
-        this.baseX = spawn.x();
-        this.baseY = spawn.y();
+        this.baseX = baseX;
+        this.baseY = baseY;
         this.xFlip = (spawn.renderFlags() & 0x01) != 0;
 
         int subtype = spawn.subtype();
@@ -267,7 +282,11 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
                     false,
                     spawn.rawYWord());
 
-            ConveyorObjectInstance childInstance = new ConveyorObjectInstance(childSpawn, "Conveyor");
+            // ROM: each child inherits the parent's x_pos/y_pos as its objoff_30/_32
+            // (loc_28122 captures d2/d3 from the parent before the spawn loop and
+            // writes them unchanged into every child's base position).
+            ConveyorObjectInstance childInstance =
+                    new ConveyorObjectInstance(childSpawn, "Conveyor", parentX, parentY);
             manager.addDynamicObject(childInstance);
         }
 
