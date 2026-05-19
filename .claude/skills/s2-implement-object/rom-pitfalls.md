@@ -1538,6 +1538,67 @@ and Tails grab`.
 
 ---
 
+## P36 — `move.b #2,routine(a1)` clears the Hurt routine; engine must call `setHurt(false)`
+
+**Symptom.** After a state-changing object interaction (spring launch, vine
+release, conveyor exit, teleporter, etc.) the engine player's airborne gravity
+stays at +$30 instead of +$38, and `Sonic_UpVelCap` (-$FC0) is skipped.
+Trace-replay y_speed diverges by exactly the cap delta (0x40) plus an extra
+0x08-per-frame gravity-step shortfall when the player launched from a hurt
+state.
+
+**Root cause.** ROM dispatches the player's outer state through
+`Obj01_Index` / `Obj02_Index`: `0=Init, 2=Control, 4=Hurt, 6=Dead, 8=Gone`.
+The Hurt routine (`Obj01_Hurt loc_1B12C`) runs its own physics tick with
+`addi.w #$30,y_vel(a0)` and no upward velocity cap. ROM objects that "wake"
+the player into normal play write `move.b #2,routine(a1)` directly,
+unconditionally clearing the Hurt routine. The next player tick then dispatches
+to `Obj01_Control` -> `Obj01_MdAir`, which uses +$38 gravity and the
+`Sonic_UpVelCap` cap (`s2.asm:37113`).
+
+The engine encodes Hurt as a boolean `hurt` field on the sprite, and the
+trace test maps `isHurt() -> rtn=04` for comparison.
+`PlayableSpriteMovement.airbornePhysics()` short-circuits `doJumpHeight()`
+(and therefore the velocity cap) when `hurt=true`;
+`AbstractPlayableSprite.getGravity()` returns 0x30 instead of 0x38 when hurt.
+Without an explicit `setHurt(false)` in the engine object code, the
+spring/vine/launcher launches Sonic but leaves him in the hurt physics
+regime.
+
+**What to check.** For every object that writes `move.b #2,routine(a1)` in
+ROM:
+- The Vertical/Diagonal Spring branches (`Obj41_Up`, `Obj41_Down`,
+  `Obj41_DiagonallyUp`, `Obj41_DiagonallyDown` — `s2.asm:33735, 34023,
+  34090, 34173`) all clear the routine. Note that `Obj41_Horizontal`
+  does NOT, because horizontal springs keep the player grounded.
+- `Touch_ChkValue` post-hurt recovery branches.
+- Object-control exits (e.g., `loc_298E6` in `Obj7F` for vine grab).
+- Teleporters, launchers, and tubes that take over the player and then
+  release it back into Control.
+
+Mirror the ROM by calling `player.setHurt(false)` alongside the velocity /
+position assignment that ROM does under the `move.b #2,routine(a1)` line.
+Do NOT also reset `invulnerable_time` — ROM keeps the existing value, and
+`AbstractPlayableSprite` already exposes invulnerability via a separate
+counter that the spring does not touch.
+
+**ROM citation.** Spring up `Obj41_Up loc_189CA` (`s2.asm:33728-33735`):
+```
+loc_189CA:
+    move.w  #(1<<8)|(0<<0),anim(a0)
+    addq.w  #8,y_pos(a1)
+    move.w  objoff_30(a0),y_vel(a1)
+    bset    #status.player.in_air,status(a1)
+    bclr    #status.player.on_object,status(a1)
+    move.b  #AniIDSonAni_Spring,anim(a1)
+    move.b  #2,routine(a1)                ; <-- clears Hurt
+```
+
+**Originating commit.** Fix S2 vertical/diagonal Spring (Obj41) clears Hurt
+routine on launch — advances MCZ2 frontier from 925 to 1006.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

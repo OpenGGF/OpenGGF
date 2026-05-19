@@ -182,6 +182,14 @@ public class SpringObjectInstance extends BoxObjectInstance
         // off. Without this clear, OnObj remains true into subsequent frames where
         // ROM has it cleared, biasing leader-OnObj reads in CPU follow steering.
         player.setOnObject(false);
+        // ROM loc_189CA (s2.asm:33735): move.b #2,routine(a1)
+        // Unconditionally forces the player back to Obj01_Control routine. When the
+        // player was in the Hurt routine (routine=4), this clears the hurt state so
+        // subsequent airborne frames use Obj01_MdAir's +$38 gravity and the
+        // Sonic_UpVelCap (-$FC0) cap rather than the hurt routine's +$30 gravity
+        // (no cap). MCZ2 trace F925: Sonic was hurt mid-air, hit an up-spring; the
+        // engine left hurt=true and produced y_speed=-$FD0 instead of ROM's -$F88.
+        player.setHurt(false);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
         trigger(player);
     }
@@ -202,6 +210,8 @@ public class SpringObjectInstance extends BoxObjectInstance
         player.setAir(true);
         // ROM Obj41_Down trigger mirrors Obj41_Up (s2.asm:33732-33733): bclr Status_OnObj.
         player.setOnObject(false);
+        // ROM loc_18CC6 (s2.asm:34023): move.b #2,routine(a1) — clears Hurt routine.
+        player.setHurt(false);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
         trigger(player);
     }
@@ -292,6 +302,9 @@ public class SpringObjectInstance extends BoxObjectInstance
         // ROM diagonal spring trigger mirrors Obj41_Up (s2.asm:33732-33733):
         // bset Status_InAir then bclr Status_OnObj.
         player.setOnObject(false);
+        // ROM loc_18DD8 (s2.asm:34090) / loc_18EE6 (s2.asm:34173): move.b #2,routine(a1)
+        // — clears Hurt routine. Matches Up/Down springs.
+        player.setHurt(false);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 
         trigger(player);
