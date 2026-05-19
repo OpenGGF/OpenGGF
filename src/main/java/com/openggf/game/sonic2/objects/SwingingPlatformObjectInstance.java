@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.sonic2.S2SpriteDataLoader;
+import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.GLCommand;
@@ -162,9 +163,14 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         this.trapRotatingClockwise = false;
         this.trapCooldown = 0;
 
-        // Calculate initial positions
-        updatePositions(0);
-        updateDynamicSpawn(x, y);
+        // Do NOT call updatePositions() here with a guessed oscillator value.
+        // ROM parity: Obj15_Init sets up child sprite data and records the base coords
+        // in objoff_38/3A; Obj15_State2 calls sub_FE70 on the very first active frame
+        // to compute actual positions from the live oscillator. Computing positions here
+        // with oscValue=0 would place x far from baseX (up to +136 px for chainCount=8),
+        // causing the out_of_range check to immediately unload the object the same frame
+        // it is spawned (distance > 640) and permanently mark it dormant.
+        // this.x and this.y are already initialised to baseX/baseY above.
 
         LOGGER.fine(() -> String.format(
                 "SwingingPlatform init: pos=(%d,%d), subtype=0x%02X, chains=%d, mode=%s, zone=%s",
@@ -193,6 +199,21 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
     public int getY() {
         return y;
     }
+
+    /**
+     * ROM parity: the Obj15 parent's x_pos stays at the spawn/pivot X (baseX) for the
+     * entire lifetime of the object — only the child multi-sprite's position oscillates.
+     * The ROM out_of_range macro feeds obX(a0) (the parent's x_pos = baseX, not the
+     * swinging platform x) to the distance check. Using the oscillating platform X would
+     * cause the engine to spuriously unload the object on its first frame (platform starts
+     * at baseX + 136 when oscValue = 0, pushing distance past the 640 px threshold while
+     * the camera is near the spawn X).
+     */
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return baseX;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -222,31 +243,42 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * Bounce swing mode: Triggers swing on player proximity.
+     * Bounce swing mode.
+     * <p>
+     * ROM sub_FE70 (s2.asm:22556-22586): unconditional oscillation clamp —
+     * no player-proximity gate exists in the ROM.
+     * <p>
+     * BOUNCE_LEFT (subtype bits 4-6 == 0x10):
+     *   osc &lt; 0x3F  → clamp to 0x40 (no sound)
+     *   osc == 0x3F → play SndID_PlatformKnock, clamp to 0x40
+     *   osc &gt;= 0x40 → use raw osc value (bhs loc_FEC2)
+     * <p>
+     * BOUNCE_RIGHT (subtype bits 4-6 == 0x30):
+     *   osc == 0x41 → play SndID_PlatformKnock, clamp to 0x40
+     *   osc &gt; 0x41  → clamp to 0x40 (no sound)
+     *   osc &lt; 0x41  → use raw osc value (blo loc_FEC2)
      */
     private void updateBounceSwing(AbstractPlayableSprite player, boolean bounceLeft) {
-        // Check player proximity
         int oscValue = OscillationManager.getByte(0x18);
 
-        if (player != null) {
-            int playerX = player.getCentreX();
-            int dx = playerX - baseX;
-
-            // Proximity check: within ±0x20 pixels
-            if (Math.abs(dx) < 0x20) {
-                // Player is close - use oscillation value
-                if (bounceLeft) {
-                    // Bounce left: use oscillation when < 0x40
-                    if (oscValue < 0x40) {
-                        oscValue = 0x40;  // Clamp to middle position
-                    }
-                } else {
-                    // Bounce right: use oscillation when > 0x40
-                    if (oscValue > 0x40) {
-                        oscValue = 0x40;  // Clamp to middle position
-                    }
-                }
+        if (bounceLeft) {
+            // ROM s2.asm:22563-22575: BOUNCE_LEFT unconditional clamp
+            if (oscValue == 0x3F) {
+                services().playSfx(Sonic2Sfx.PLATFORM_KNOCK.id);
+                oscValue = 0x40;
+            } else if (oscValue < 0x3F) {
+                oscValue = 0x40;
             }
+            // osc >= 0x40: use raw value (bhs loc_FEC2)
+        } else {
+            // ROM s2.asm:22580-22586: BOUNCE_RIGHT unconditional clamp
+            if (oscValue == 0x41) {
+                services().playSfx(Sonic2Sfx.PLATFORM_KNOCK.id);
+                oscValue = 0x40;
+            } else if (oscValue > 0x41) {
+                oscValue = 0x40;
+            }
+            // osc < 0x41: use raw value (blo loc_FEC2)
         }
 
         updatePositions(oscValue);
@@ -317,36 +349,39 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
      * </ul>
      */
     private void updatePositions(int oscValue) {
-        // Center oscillation at 0x40 for pendulum motion
-        // This converts the oscillation range to a signed swing angle
-        // where 0 = hanging down, negative = left, positive = right
-        int swingAngle = (oscValue - 0x40) & 0xFF;
+        // ROM sub_FE70 (s2.asm:22604-22654): jsrto JmpTo2_CalcSine with d0=oscValue.
+        // CalcSine returns d0=sin(oscValue), d1=cos(oscValue) from the SINCOSLIST table.
+        //
+        // The chain-link loop accumulates d0 (sin) into Y and d1 (cos) into X:
+        //   sin(oscValue) drives Y: oscValue=0x40 → sin=256 → hangs straight down
+        //   cos(oscValue) drives X: oscValue=0x40 → cos=0   → centred horizontally
+        //
+        // ROM fixed-point equivalence (verified exhaustively for all 3840 osc×chain combos):
+        //   ROM: (chainCount + 0.5) * val * 4096 >> 16
+        //   Engine: (val * (chainCount*0x10 + 8)) >> 8
+        // Both produce identical results for all inputs in the SINCOSLIST table.
+        //
+        // IMPORTANT: do NOT use swingAngle=(oscValue-0x40). The SINCOSLIST table is NOT
+        // perfectly antisymmetric (e.g. SINCOSLIST[147]=-117 while SINCOSLIST[19]=115),
+        // so sin(osc-0x40) ≠ -cos(osc) for all values. Using oscValue directly is the
+        // only way to match the ROM's CalcSine(oscValue) call exactly.
+        int sin = calcSine(oscValue);   // d0 = sin(oscValue) → drives Y
+        int cos = calcCosine(oscValue); // d1 = cos(oscValue) → drives X
 
-        // Get sin/cos for the swing angle (values from -256 to +256)
-        // sin gives horizontal offset (negative = left, positive = right)
-        // cos gives vertical offset (always positive for |angle| <= 90°)
-        int sin = calcSine(swingAngle);
-        int cos = calcCosine(swingAngle);
-
-        // Calculate platform position (at end of chain).
-        // ROM sub_FE70 (s2.asm:22645-22654) accumulates sin/cos*0x10 per chain link in the
-        // chain loop, then halves the last increment (`asr.l #1`) for the platform position.
-        // Net result: platform offset = (chainCount + 0.5) * 0x10 = chainCount*0x10 + 8.
+        // Platform hangs at (chainCount + 0.5) increments of 0x10 per link from pivot.
         int chainLength = chainCount * 0x10 + 8;
-        int xOffset = (sin * chainLength) >> 8;  // Divide by 256
-        int yOffset = (cos * chainLength) >> 8;
+        int xOffset = (cos * chainLength) >> 8;
+        int yOffset = (sin * chainLength) >> 8;
 
-        // Platform hangs down from pivot point
+        // Platform position
         this.x = baseX + xOffset;
         this.y = baseY + yOffset;
 
-        // Calculate chain link positions (evenly distributed along arc)
+        // Chain link positions (i-th link is at (i+1) increments from pivot)
         for (int i = 0; i < chainCount; i++) {
             int linkLength = (i + 1) * 0x10;
-            int linkXOffset = (sin * linkLength) >> 8;
-            int linkYOffset = (cos * linkLength) >> 8;
-            chainX[i] = baseX + linkXOffset;
-            chainY[i] = baseY + linkYOffset;
+            chainX[i] = baseX + ((cos * linkLength) >> 8);
+            chainY[i] = baseY + ((sin * linkLength) >> 8);
         }
     }
 

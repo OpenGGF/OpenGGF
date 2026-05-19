@@ -6,6 +6,29 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 SwingingPlatform (Obj15) out-of-range unload and CalcSine angle convention.**
+  Advances MCZ2 trace frontier from frame 1009 (909 errors) to frame 1290 (816 errors).
+  Two bugs fixed:
+  (1) The constructor called `updatePositions(0)` which placed the platform 136 px east
+  of its pivot (for chainCount=8), exceeding the 640 px `isOutOfRangeS1` threshold.
+  Because the S2 exec loop runs `syncActiveSpawnsLoad` before `runExecLoop`, the object
+  was immediately unloaded and marked dormant before its first `update()` call, preventing
+  it from ever becoming active. Fix: removed the constructor call; `this.x` starts at
+  `baseX`. Added `getOutOfRangeReferenceX()` override returning `baseX` so the range
+  check anchors on the spawn pivot, matching the ROM's `obX(a0)` = parent `x_pos` = baseX
+  at the time of the check (ROM `s2.asm:22541-22551` / `loc_FE50`).
+  (2) `updatePositions` applied `swingAngle = (oscValue - 0x40) & 0xFF` before looking
+  up sin/cos, then used `(-sin, cos)` as `(X, Y)`. This assumed the SINCOSLIST is
+  perfectly antisymmetric (SINCOSLIST[i+128] == -SINCOSLIST[i]), but the ROM table is
+  not: SINCOSLIST[147] = -117 while SINCOSLIST[19] = 115 (difference = 2; verified
+  against `docs/s2disasm/misc/sinewave.bin`). The ROM calls `CalcSine(oscValue)` directly
+  (`s2.asm:22604`) and assigns d0=sin to Y, d1=cos to X. Fix: removed the swingAngle
+  offset; now calls `calcSine(oscValue)` and `calcCosine(oscValue)` directly (verified
+  against ROM's fixed-point accumulation for all 3840 osc×chainCount combinations).
+  BOUNCE_LEFT/BOUNCE_RIGHT clamp logic was also corrected to remove a spurious
+  player-proximity gate (ROM sub_FE70 has no gate) and fix BOUNCE_LEFT osc==0x3F
+  threshold (plays knock sound + clamps; was previously clumped with `< 0x40`).
+
 - **S2 MTZ2 Conveyor (Obj6C) parent factory re-spawn loop.**
   `ConveyorObjectInstance.createOrSpawnChildren` returned `null` for
   parent-spawner subtypes (bit 7 set). Because the `ObjectManager` placement
