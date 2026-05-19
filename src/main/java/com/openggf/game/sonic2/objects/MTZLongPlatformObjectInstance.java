@@ -212,18 +212,25 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     }
 
     private void init() {
-        // Calculate properties index: (subtype >> 2) & 0x1C gives byte offset,
-        // then >> 2 again for index (s2.asm lines 52383-52389)
+        // ROM s2.asm:52386-52394 -- subtype to props lookup:
+        //   lsr.w #2,d0; andi.w #$1C,d0     -> d0 = byte offset into PROPERTIES
+        //   lea Obj65_Properties(pc,d0.w),a3 -> a3 = entry at byte offset d0
+        //   move.b (a3)+,width_pixels        -> entry width
+        //   move.b (a3)+,y_radius            -> entry y_radius
+        //   lsr.w #2,d0; move.b d0,mapping_frame -> mapping_frame = d0/4
+        // Each PROPERTIES entry is 2 bytes, so the ENTRY INDEX is d0/2, while
+        // the mapping_frame is d0/4. These are NOT the same index.
         int rawSubtype = spawn.subtype();
-        int d0 = (rawSubtype >> 2) & 0x1C; // lsr.w #2 + andi.w #$1C
-        int propsIndex = d0 >> 2; // lsr.w #2 for mapping_frame
-        if (propsIndex >= PROPERTIES.length) {
-            propsIndex = 0;
+        int d0 = (rawSubtype >> 2) & 0x1C;
+        int entryIndex = d0 >> 1;             // a3 = props + d0 -> entry index = d0/2
+        int frameIndex = d0 >> 2;             // mapping_frame = d0/4
+        if (entryIndex >= PROPERTIES.length) {
+            entryIndex = 0;
         }
 
-        widthPixels = PROPERTIES[propsIndex][0];
-        yRadius = PROPERTIES[propsIndex][1];
-        mappingFrame = propsIndex;
+        widthPixels = PROPERTIES[entryIndex][0];
+        yRadius = PROPERTIES[entryIndex][1];
+        mappingFrame = frameIndex;
 
         // Note: propsIndex 2 (standalone cog) is routed to MTZLongPlatformCogInstance by the factory.
 
@@ -239,7 +246,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         // to the next entry. The 3rd read ((a3)+) gives maxDist (= width of next entry),
         // and the 4th read ((a3)) gives the child subtype (= y_radius of next entry).
         // s2.asm lines 52407-52414
-        int nextIndex = propsIndex + 1;
+        int nextIndex = entryIndex + 1;
         if (nextIndex < PROPERTIES.length) {
             maxDist = PROPERTIES[nextIndex][0];
         } else {

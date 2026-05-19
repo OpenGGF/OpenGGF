@@ -6,6 +6,25 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ SteamSpring timing and MTZLongPlatform props-lookup fix.** Two
+  independent MTZ object fixes advancing the MTZ1 frontier from frame 281 to 375
+  and MTZ2 from 221 to 222. `SteamSpringObjectInstance` switched to
+  `MANUAL_CHECKPOINT` mode so `SolidObject_Always_SingleCharacter` runs before the
+  state machine moves `y_pos`, matching ROM `loc_26688` (`s2.asm:52030-52049`).
+  `MTZLongPlatformObjectInstance.init()` used `d0 >> 2` for both the props-table
+  entry index and `mapping_frame`, collapsing 8 ROM entries to 4; ROM
+  `s2.asm:52386-52394` uses `d0/2` for the entry and `d0/4` for the frame
+  independently.
+
+- **S2 OOZ Octus collision size and rise timing fix.** Two fixes advancing OOZ1
+  frontier from frame 509 to 563 and OOZ2 from 301 to 389. `OctusBadnikInstance`
+  used touch size index 0x0C ((20,16) half-extents) where ROM writes
+  `collision_flags=$A` → Touch_Sizes[0xA]=(16,8) (`s2.asm:59905`). Octus
+  rise/hover state transitions used `timer <= 0` (triggered at zero) where ROM uses
+  `bmi` (triggered when timer goes negative), and the rise transition did not apply
+  `y_vel=-$200` on the transition frame as ROM's fall-through to `JmpTo19_ObjectMove`
+  does (`s2.asm:59958-59988`).
+
 - **S2 CNZ2 pinball-mode Tails jump and landing-clear fix.** Three related fixes
   advancing the CNZ2 trace frontier from frame 554 to frame 1490. (1) ROM
   `Tails_ResetOnFloor` (`s2.asm:40624-40660`) branches past the roll-clear block
