@@ -4,6 +4,35 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-19 - S2 MTZ3 Obj6A zone-aware behavior and activation gating fix
+
+- Branch: `worktree-agent-a10cbe7b6f47980c4` (reset to `develop` @ `7eaa19993`)
+- Worktree state: clean develop + Obj6A rewrite
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: MTZ3 frontier advances
+  - MTZ3: 2414 → 2349 errors. Frontier moves frame 298 (`air` 0 vs 1) → frame 340 (`tails_g_speed` 0x0000 vs 0x0018)
+- Regression check: MTZ1 unchanged at frame 375 (`tails_air`, 945 errors); MTZ2 unchanged at frame 222 (`x`, 2370 errors)
+- Cross-game smoke: S1 GHZ1 + S2 EHZ1 still green. CNZ1 fails at frame 3906 (pre-existing, confirmed by re-running with stashed fix)
+
+Root cause: `MCZRotPformsObjectInstance` (Obj6A) was hard-wired to MCZ behavior
+across both zones. ROM `Obj6A_Init` (`s2.asm:53686-53751`) branches on
+`Current_Zone`: MTZ uses `byte_27CDC` (4-phase, faster), `y_radius=0x0C`,
+routine 2 (wait for player to walk off via `loc_27BDE`), and skips the
+subtype-0x18 child-spawn block. MCZ uses `byte_27CF4`/`byte_27D12`,
+`y_radius=0x20`, routine 4 (`loc_27C66`, move unconditionally), and spawns
+two child platforms for subtype 0x18. Additionally, the engine masked
+`spawn.subtype() & 0x0F` to derive `phaseIndex`, but ROM (`s2.asm:53750`)
+stores the FULL subtype byte into `objoff_38` and uses it as a byte offset
+into the velocity table (same P31 trap as the Obj65 fix).
+
+For MTZ3 subtype-0 entries at `(0x02A0, 0x020C)` / `(0x02E0, 0x020C)`, the
+combined defects caused platforms to use MCZ `y_radius=0x20` (32 px) instead
+of MTZ `0x0C` (12 px) and start moving immediately, drifting `y +0x40` and
+`x -0x4A` by frame 298 so the platform's right edge slid past the player and
+triggered an air state ROM never sees.
+
+ROM cite: `docs/s2disasm/s2.asm:53670-53871`.
+
 ## 2026-05-19 - S2 OOZ Aquis investigation (no committed change; frontiers unchanged)
 
 - Branch: `develop`
