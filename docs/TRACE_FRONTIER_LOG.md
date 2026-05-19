@@ -1467,3 +1467,60 @@ frame 536. Tractable next step: extend the trace recorder to capture the
 ENEMY/ATTACK touch slot per frame so the engine's first rolling-clear can be
 isolated, or replay just the DEZ ending with a per-frame rolling-state
 printout to localise the divergent frame.
+
+## 2026-05-19 - S2 MTZ3 Obj6A per-phase activation gate
+
+- Branch: `worktree-agent-ac2f125d8f7e5c121` (merged from `develop`)
+- Command: `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 2626 errors (was 2349)
+- Frontier moved: frame 340 `tails_g_speed` -> frame 460 `tails_air` (Tails
+  missed-landing event; ROM lands and tails_x jumps to 0x4000 indicating
+  CPU respawn / despawn marker; engine keeps falling)
+- Cross-game `*TraceReplay` regression check:
+  - EHZ1: green (all frames match)
+  - MTZ1: still frame 375 `tails_air`, errors 945 -> 905 (improved)
+  - MTZ2: unchanged at frame 305 `y` (conveyor-cluster landing parity, separate bug)
+  - ARZ/ARZ2/CPZ/CPZ2/CNZ/CNZ2/HTZ/HTZ2/MCZ/MCZ2/OOZ/OOZ2/SCZ/WFZ/DEZ all
+    unchanged
+  - S3K AIZ/CNZ/MGZ unchanged
+
+Root cause: `MCZRotPformsObjectInstance.loadPhaseParameters()` did not mirror
+ROM `loc_27CA2`'s `move.b #0,objoff_36(a0)` (`docs/s2disasm/s2.asm:53844`).
+ROM Obj6A in MTZ routes through routine 2 (`loc_27BDE` at s2.asm:53754) which
+gates `ObjectMove` on `objoff_36` (the activation flag). Each call to
+`loc_27CA2` clears that flag at the end, so the next frame falls back to
+standing-bit edge detection (`loc_27BDE` -> `loc_27C28`) and the platform
+waits for another walk-off before running its next phase. The engine's
+prior implementation latched `activated=true` permanently after the first
+walk-off, so once Sonic stepped off any MTZ Obj6A it would cycle through
+all four MTZ phases unattended -- across ~340 frames the cumulative phase
+offset put slot 17's platform 0x2C px right and 0x16 px up of ROM, exactly
+the position where Tails landed on the engine's platform top while ROM's
+Tails kept falling.
+
+Fix: in `loadPhaseParameters`, clear `activated` when `isMtz` (MCZ uses
+routine 4 `loc_27C66` which ignores `objoff_36`, so its `activated=true`
+seed must survive). Also documented the ROM citation alongside the reset.
+
+File changed:
+- `src/main/java/com/openggf/game/sonic2/objects/MCZRotPformsObjectInstance.java`
+
+New blocker: frame 460 `tails_air` expected=0, actual=1, with cascading
+tails_y_speed/tails_g_speed/tails_y/tails_x errors. ROM Tails y_speed jumps
+from 0x428 (still falling) at f459 to 0 at f460 (landing), tails_x lifts to
+0x4000 at f461 (CPU despawn marker). Engine continues falling with
+y_speed=0x450. Diagnosis target: identify which solid surface ROM Tails
+lands on at f460 (`pos=(0x0328, 0x02D0)`) and why engine misses it.
+
+MTZ2 conveyor frontier (still frame 305 `y` 0x05EB vs 0x05F2): investigated
+but not fixed. Engine player lands on a child conveyor whose Y is ~7 px
+lower than ROM's equivalent conveyor (slot s29 `0x6C @0320,0607`). The
+engine's `eng-near` debug list shows only one of the three left-column
+conveyors (column 0x0320), so the offending slot 127 is presumably the
+middle child at ~y=0x060E rather than the ROM's y=0x0607. Layout offset
+tables and parent base-position routing match ROM exactly; the displacement
+suggests either differential waypoint-velocity timing among siblings or a
+spawn position issue not visible in the current trace surface. Tractable
+next step: extend the trace recorder to dump ALL conveyor slot positions
+(not just the truncated near list) so the engine's full column-0x0320
+conveyor set can be diff'd against ROM s28/s29/s30.

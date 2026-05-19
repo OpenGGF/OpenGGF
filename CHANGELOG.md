@@ -6,6 +6,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ3 Obj6A per-phase activation gate.** `MCZRotPformsObjectInstance.
+  loadPhaseParameters()` did not mirror ROM `loc_27CA2`'s `move.b #0,objoff_36
+  (a0)` (`s2.asm:53844`). ROM Obj6A in MTZ runs via routine 2 (`loc_27BDE` at
+  s2.asm:53754) which gates `ObjectMove` on `objoff_36`, so each call to
+  `loc_27CA2` clears the gate and the next frame falls back to standing-bit
+  walk-off detection. The engine latched `activated=true` permanently after
+  the first walk-off, cycling through all four MTZ phases unattended; over
+  ~340 frames the cumulative drift put MTZ3 slot 17's platform 0x2C px right
+  and 0x16 px up of ROM, exactly where engine Tails lands on the platform top
+  while ROM Tails keeps falling. Fix: reset `activated` on phase end when
+  `isMtz` (MCZ uses routine 4 which ignores `objoff_36`). Advances MTZ3 trace
+  frontier frame 340 (`tails_g_speed` 0x0000 vs 0x0018) -> frame 460
+  (`tails_air` 0 vs 1, Tails missed-landing event). MTZ1 errors drop from
+  945 -> 905 at the same frame 375 frontier. MTZ2/EHZ1/ARZ/CPZ/CNZ/HTZ/MCZ/
+  OOZ/SCZ/WFZ/DEZ unchanged; S3K AIZ/CNZ/MGZ unchanged.
+
 - **S2 SwingingPlatform (Obj15) chainCount cap removal + half-link offset.**
   Advances MCZ2 trace frontier from frame 1006 to frame 1079 (781 -> 802 errors).
   `SwingingPlatformObjectInstance` clamped subtype's low nybble to `min(7, ...)`

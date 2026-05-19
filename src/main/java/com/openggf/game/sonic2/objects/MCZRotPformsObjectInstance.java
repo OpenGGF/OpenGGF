@@ -316,7 +316,12 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     /**
      * Implements loc_27CA2 (s2.asm:53835): read the current 6-byte entry from
      * the velocity table at byte offset {@code phaseIndex}, advance the cursor
-     * by 6, and wrap at {@code 6*4 = 24}.
+     * by 6, wrap at {@code 6*4 = 24}, AND clear the activation flag
+     * ({@code move.b #0,objoff_36(a0)} at s2.asm:53844). The activation reset
+     * is critical for MTZ behavior: each completed phase requires the player
+     * to walk on then off again before the next phase can run. Without it,
+     * the engine moves platforms continuously after the first activation,
+     * cycling through all 4 phases unattended.
      */
     private void loadPhaseParameters() {
         // ROM uses the raw byte offset to index a packed word table. Each
@@ -334,6 +339,15 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
             xVel = 0;
             yVel = 0;
             phaseDuration = 0;
+        }
+
+        // s2.asm:53844 -- move.b #0,objoff_36(a0). Phase end clears the
+        // activation gate so MTZ platforms must wait for another walk-off
+        // event before the next phase runs. MCZ keeps activated=true via
+        // the unconditional routine 4 path (loc_27C66 ignores objoff_36),
+        // so only re-arm the gate for MTZ.
+        if (isMtz) {
+            activated = false;
         }
 
         // s2.asm:53845-53848: addq.b #6,objoff_38; cmpi.b #6*4,objoff_38;
