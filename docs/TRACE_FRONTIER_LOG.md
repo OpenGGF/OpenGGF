@@ -1,5 +1,93 @@
 # Trace Frontier Log
 
+## 2026-05-19 - S2 SteamSpring (Obj42) bypasses offscreen sidekick gate (MTZ3 frame 460 -> 765)
+
+- Branch: `develop` (HEAD `1b5308308`)
+- Worktree: isolated agent worktree, `git reset --hard develop`
+- Command: `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: MTZ3 frontier advanced from frame 460 to frame 765 (2626 -> 2601 errors).
+- Regression check (run together): TestS2Mtz3 PASS-advance; TestS2Mtz (MTZ1)
+  unchanged frame 375 tails_air (905 errors, pre-existing); TestS2Mtz2 unchanged
+  frame 305 y mismatch (2325 errors, pre-existing); TestS2Mcz2 unchanged
+  frame 1079 y mismatch (802 errors, pre-existing); TestS2Ehz1 PASS.
+  Pre-fix baseline confirmed by `git stash` run of MTZ/MTZ2 -> same
+  frontier+error counts (905 @ f375 and 2325 @ f305).
+
+### Root cause
+
+ROM `Obj42` (SteamSpring) routine 2 (`loc_26688`, `s2.asm:52030-52049`) calls
+`SolidObject_Always_SingleCharacter` for BOTH Sonic and Tails with no
+intervening on-screen check:
+
+```
+loc_26688:
+    ; Sonic call
+    moveq #p1_standing_bit,d6
+    jsrto JmpTo2_SolidObject_Always_SingleCharacter
+    ; Tails call
+    lea (Sidekick).w,a1
+    moveq #p2_standing_bit,d6
+    jsrto JmpTo2_SolidObject_Always_SingleCharacter   ; no on_screen gate
+```
+
+This is the same pattern documented as pitfall **P27**
+(`.agents/skills/s2-implement-object/rom-pitfalls.md:1214-1245`):
+`SolidObject_Always_SingleCharacter` jumps directly to `SolidObject_cont`
+(`s2.asm:35147`) without the `SolidObject_OnScreenTest` gate at
+`s2.asm:35140-35145`, and the regular `SolidObject` P2 prologue's
+`render_flags.on_screen` check at `s2.asm:34825-34828` is not on this
+code path.
+
+The engine still applied `shouldSkipOffscreenSidekickFullSolid`
+(`ObjectManager.java:7861`) to the SteamSpring's P2 contact pass, returning
+early before reaching the new-landing detection in
+`processInlineObjectForPlayer`. The gate only short-circuits when the
+sidekick is off-screen for render purposes; at MTZ3 f460 Tails is at
+`(0x0328, 0x02D0)` and the camera is at `(0x0282, 0x018C)`. With a 32-pixel
+Y margin and a 224-pixel viewport, Tails' `relY = 0x143 = 323` exceeds the
+`height + margin = 256` limit, so the gate fires. The SteamSpring at
+`(0x0330, 0x02F0)` with `half_height = 0x10` exposes a landing surface at
+`y = 0x02E0`; ROM lands Tails exactly there (`y = 0x02D0` with
+`half_height = 0x10` puts her bottom on the surface). Engine Tails kept
+falling (`y_speed = 0x0450` vs ROM's snap-to-0).
+
+### Fix
+
+`SteamSpringObjectInstance` now overrides `bypassesOffscreenSolidGate()`
+to return `true`, mirroring `SpringObjectInstance` and
+`LauncherSpringObjectInstance`. The override is per-object as required by
+P27 step 3 -- the regular `SolidObject` P2 path still gates on sidekick
+render state for objects that don't use the `Always` variant.
+
+### Noted-but-not-applied (P27 follow-up candidates)
+
+S2 callers of `SolidObject_Always_SingleCharacter` from `s2.asm` that lack
+the override in the engine today:
+
+- Obj66 (MTZSpringWall) -- `s2.asm:52805/52824` (`Obj66_Main`).
+- Obj7B (PipeExitSpring) -- `s2.asm:55919/55927` (`Obj7B_Main`).
+- Obj86 (Flipper) -- `s2.asm:58002/58011` (`Obj86_HorizontalType`).
+- ObjD6 (PointPokey) -- `s2.asm:58597` (`ObjD6_Main`).
+
+These are candidates for follow-up iters when their zone's trace frontier
+points at sidekick missed-landing or missed-side-collision behaviour. Not
+applied here per `docs/prompts/trace-frontier-advancement.md` rule 7
+(minimum-viable-change).
+
+### MCZ2 frontier (f1079) -- still blocked, not advanced this iter
+
+MCZ2's first error is at frame 1079 with `y mismatch (expected=0x05B4,
+actual=0x05A9)`. Sonic stands on a SwingingPlatform (`Obj15`); ROM's
+`onObj=10` (slot 16) vs engine `onSlot=23(0x15)`. Both engine and ROM
+have multiple SwingingPlatforms at similar positions, but the slot
+assignment differs (engine slot 17 @0620,05D0 matches ROM slot 16; engine
+slot 23 @061C,05C5 matches ROM slot 17 @0683,05C5 by y but the engine x
+is 0x67 px west of the ROM x). The 5-pixel y discrepancy and 0x67-pixel
+x discrepancy suggest the engine and ROM are riding *different* swinging
+platforms with different rotation phases or different chain configurations.
+This is a deeper SwingingPlatform parity issue that needs dedicated
+investigation; not in scope for this iter.
+
 Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
