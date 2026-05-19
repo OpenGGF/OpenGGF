@@ -4,6 +4,57 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-19 - S2 OOZ post-Octus frontier diagnosis (no committed change; new blockers identified)
+
+- Branch: `develop` (HEAD `805852e8b`)
+- Worktree state: clean develop
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: both still fail, frontiers stand at post-Octus-fix locations
+  - OOZ1: 1482 errors, frontier frame 563 (`g_speed` expected `0x0341`, actual `0x033D`)
+  - OOZ2: 1238 errors, frontier frame 389 (`y_speed` expected `-0358`, actual `0x0358`)
+- Confirmed the prompt's stated frontiers (OOZ1 f509 Buzzer, OOZ2 f301 spring/fan) are stale;
+  the 2026-05-19 Octus collision-size and rise-timing fix already moved them.
+
+### OOZ1 f563 root cause (deferred: sub-pixel friction divergence)
+
+Sonic on ground (angle 0, ground_mode 0, rolling 0, jump 0). g_speed sequence:
+f560 0x0365, f561 0x0359, f562 0x034D (both -0x0C/frame friction), f563 ROM 0x0341
+(-0x0C continues), engine 0x033D (-0x10). Engine applies an extra 4 sub-pixels of
+deceleration on this frame. No nearby objects in the `near` list, no input change.
+Could be water-exit friction, an off-by-one on the frame `inertia` is capped, or
+a friction-step issue when `g_speed` crosses a particular threshold. Needs recorder
+extension to log the per-frame friction delta to pin down.
+
+### OOZ2 f389 root cause (deferred: missing/displaced flying Aquis kill bounce)
+
+Sonic at (0x051D, 0x0525) in air falling, y_vel +0x0320 -> engine sees gravity only
+(+0x0358), ROM sees `neg.w y_vel` on a Touch_KillEnemy top-branch bounce (-0x0358 after
+the same +0x38 gravity). ROM `near` lists fresh `obj+ s16 0x27 / s20 0x29 / s21 0x28
+@0524,0536` (Explosion / Points / Animal): a badnik was killed at that position on
+this frame. No static OOZ_2.bin spawn matches `(0x524, 0x536)`, so the kill target
+was a FLYING badnik. Static Aquis spawns are at `(0x0558, 0x8558)` and `(0x05C8,
+0x8578)` (idx 13, 14). Engine `eng-near` at f389-f392 still has Aquis at the static
+positions: engine Aquis is not chasing far enough to reach `(0x0524, 0x0536)` and so
+never gets bounce-killed there. ROM Aquis flew there, was killed, neg.w bounced Sonic.
+
+The recent Obj50 four-bug fix (62abeb4d7) addressed init x_vel, bmi timers,
+closer-player target, and on_screen lag, but the chase-distance divergence is not
+covered. Two leads worth following: (a) `Obj50_Chase` enters as soon as `on_screen`,
+but ROM `render_flags.on_screen` is set via `RememberState` after `DisplaySprite` runs
+in the same execute pass: the engine's last-frame snapshot may still trigger one
+frame late vs. ROM, delaying chase entry; (b) `Obj50_FollowPlayer` adds `+/-$10` to
+both axes per frame from `Obj50_Speeds`, capped at `$100`: the engine's cap or
+sub-pixel accumulator may be discarding tiny velocity increments that ROM keeps.
+Without a recorder field for `Obj50_timer`, `Obj50_shots_remaining`, and per-Aquis
+position, narrowing the bug further is speculative.
+
+ROM cite: `docs/s2disasm/s2.asm:60181-60295` (Obj50 chase/shoot/flee state machine).
+
+Did not commit a fix: chase/sub-pixel divergence requires recorder-side diagnostics
+(Aquis position over time) or a careful re-derivation of the speed/cap path that
+risks regressing the four bugs the previous Aquis fix addressed. EHZ1 still green
+locally.
+
 ## 2026-05-19 - S2 MTZ3 Obj6A zone-aware behavior and activation gating fix
 
 - Branch: `worktree-agent-a10cbe7b6f47980c4` (reset to `develop` @ `7eaa19993`)
