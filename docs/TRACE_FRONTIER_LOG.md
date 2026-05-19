@@ -1751,3 +1751,108 @@ fires in the ROM requires either the `Tails_interact_ID` value or the
 `Tails_respawn_counter` to be exposed in the trace; both are currently
 absent from the schema. Not committed; flagged as a recorder-extension
 candidate.
+
+## 2026-05-19 - S2 MTZ3 Tails air=0 at frame 765 investigation (no committed change; dead end)
+
+- Branch: `develop` (HEAD `6acc363ef`)
+- Worktree: isolated agent worktree
+- Command: `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 2601 errors, frontier frame 765, field `air` (expected=1, actual=0)
+- Outcome: investigation only; no fix identified; frontier unchanged
+
+This investigation follows the SteamSpring `bypassesOffscreenSolidGate` fix that
+advanced MTZ3 from f460 to f765. The new frontier has ROM Tails airborne (`air=1`)
+while the engine has Tails grounded (`air=0`).
+
+### ROM state at frame 765
+
+From `aux_state.jsonl.gz` and `physics.csv.gz`:
+- Tails at `(0x05D5, 0x01CB)`, ysp=0x0000, `air=1`, `stand_on_obj=22` (slot 22)
+- Sonic undergoes routine change from 2 to 4 (hurt), `stand_obj_slot=23`
+  (a LargeRotPform, Obj6E, at x=0x0534, y=0x021A — Sonic lands on it)
+- Lost rings (type 0x37) spawn at slots 20, 28, 31, 32, 33
+- Frame 760-765: Tails position oscillates slowly around `(0x05C5-0x05D5, 0x01D0-0x01CB)`,
+  ysp=0x0000, air=1, no change in stand_on_obj (=22 throughout this window)
+
+Nearby ROM objects at f765 (from aux slot dump):
+- Slot 49: type 0x36 (Spikes), status=0x02 (upside-down), at `(0x05C0, 0x0130)`
+- Slot 23: type 0x6E (LargeRotPform), `(0x0534, 0x021A)` — the platform Sonic lands on
+- Slot 30: type 0x6E (LargeRotPform), `(0x056D, 0x021A)`
+- Slot 16, 18, 35, 39-42: type 0x6E (additional LargeRotPforms in the MTZ3 room)
+- Slot 43: type 0x9F (Shellcracker)
+- Slot 29: type 0x42 (SteamSpring)
+
+### Solid-object candidates eliminated
+
+1. **ShellcrackerClaw (slots 44-46, 52-56, type 0xA0):** Not a `SolidObjectProvider`;
+   cannot ground Tails.
+
+2. **Spikes slot 49 (upside-down, Obj36 routine 6 at `(0x05C0, 0x0130)`):** Upside-down
+   spikes call `SolidObject` (`s2.asm:29260`) to produce a ground-contact box whose top
+   surface is at `y = 0x0130 - 0x10 = 0x0120 = 288`. Tails is at y=0x01CB = 459, which
+   is 171 px below the spike box top. Cannot ground Tails.
+
+3. **LargeRotPform slot 30 (`(0x056D, 0x021A)`):** Entry index for this platform (from
+   byte_283C0, `s2.asm:54473`) is likely subtype 2 (width=0x60, yRadius=0x18). The
+   platform top surface is at `y_centre - yRadius = 0x021A - 0x18 = 0x0202 = 514`.
+   Tails is at y=0x01CB = 459. Tails is 55 px ABOVE the top of this platform — it
+   cannot be the source of a ground contact from below.
+
+4. **LargeRotPform slot 23:** Dropped out of Tails' `object_near` list by frame 765
+   (too far away to register contact). Tails is still logged with `stand_on_obj=22`
+   from prior frames, but slot 22 is not a nearby solid at f765.
+
+5. **Offscreen gate false positive:** Tails is at `(0x05D5, 0x01CB)`, camera at
+   approximately `(0x04E0, 0x014D)` for MTZ3 at this region. Relative Y from camera
+   top is approximately 0x01CB - 0x014D = 0x7E = 126 px, well within the 224 px
+   viewport plus any margin. `shouldSkipOffscreenSidekickFullSolid` returns false
+   (Tails is on-screen).
+
+### Root cause hypothesis (unconfirmed)
+
+After the SteamSpring launches Tails at frame 460, ROM moves Tails to `(0x4000, 0x0000)`
+and keeps her in `TailsCPU_Flying` state (`obj_control=0x81`) for approximately 178
+frames (`s2.asm:38788-38888`). The engine's equivalent is `TailsRespawnStrategy` in
+`APPROACHING` state (`objectControlled=true`, `requiresPhysics()=false`). In both ROM
+and engine, terrain collision is suppressed during this flight phase.
+
+The transition out of flight:
+- **ROM:** `TailsCPU_Flying_Part2` exits to normal when Tails reaches Sonic's 16-frame-
+  delayed position AND `andi.b #$D2,d2; bne.s return` clears (d2 is Sonic's status —
+  must not have in_air, roll_jump, underwater, or bit7 set). On exit, Tails is placed
+  at Sonic's position with `obj_control` cleared; normal physics resumes.
+- **Engine:** `TailsRespawnStrategy.updateApproaching()` returns true when
+  `remainingDx==0 && dy==0 && (recordedStatus & 0xD2)==0`.
+  `SidekickCpuController.updateApproaching()` then clears `objectControlled`, zeroes
+  XSpeed/YSpeed/GSpeed, sets `air=true`, and transitions to `NORMAL` state.
+
+The engine Tails at frame 765 has `air=0` (grounded) while ROM Tails has `air=1`. This
+implies the engine Tails exits APPROACHING at a position where terrain collision
+immediately grounds her, while ROM Tails exits `TailsCPU_Flying` airborne.
+
+Two candidate causes:
+- **Y position offset on APPROACHING-to-NORMAL transition:** The engine's APPROACHING
+  trajectory places Tails at a Y that happens to coincide with the top of an oscillating
+  LargeRotPform at that exact frame. The oscillator phase difference between engine and
+  ROM would determine which pform top is where.
+- **Oscillator phase mismatch:** If `OscillationManager.getByte(0x20)` / `getByte(0x24)`
+  are at a slightly different phase in the engine vs ROM at f765, one of the many
+  LargeRotPforms in the MTZ3 room could present its collision top exactly at Tails' Y
+  in the engine but not in the ROM.
+
+### What would be needed to confirm
+
+1. **Recorder extension:** Add `tails_cpu_state` (maps to `obj_control` byte),
+   `tails_cpu_target_x`, and `tails_cpu_target_y` fields to `physics.csv` so the
+   APPROACHING-to-NORMAL transition frame can be pinpointed precisely (currently
+   impossible from existing trace fields).
+2. **Oscillator field:** Add `oscillator_0x20` and `oscillator_0x24` to aux diagnostics
+   so the LargeRotPform platform positions can be reconstructed from the ROM side and
+   compared against the engine positions at the transition frame.
+3. **Alternative:** Run the engine with diagnostic logging of the APPROACHING-to-NORMAL
+   transition frame, Tails' exact position at that frame, and which solid object (if any)
+   grounds her.
+
+Did not commit a fix. Root cause requires recorder extension or runtime diagnostic
+logging to identify the exact frame and platform involved. Flagged as a
+recorder-extension candidate.
