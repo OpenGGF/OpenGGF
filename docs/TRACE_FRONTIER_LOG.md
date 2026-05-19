@@ -1,5 +1,54 @@
 # Trace Frontier Log
 
+## 2026-05-19 - S2 SwingingPlatform (Obj15) out-of-range unload + CalcSine angle convention (MCZ2 frame 1009 -> 1290)
+
+- Branch: `develop` worktree `agent-a262078995bf698e7`
+- Command: `mvn test -Dtest=TestS2Mcz2LevelSelectTraceReplay -q`
+- Result: MCZ2 frontier advanced from frame 1009 (909 errors) to frame 1290 (816 errors).
+- Regression check: `TestS2MczLevelSelectTraceReplay` still at frame 1085 (452 errors,
+  pre-existing); `TestS2Ehz1TraceReplay` still at frame 304 (813 errors, pre-existing);
+  `TestS2ArzLevelSelectTraceReplay` still at frame 563 (1482 errors, pre-existing).
+
+### Root causes
+
+Two independent bugs in `SwingingPlatformObjectInstance`:
+
+**Bug 1 — Constructor position-based immediate unload:**
+The constructor called `updatePositions(0)` to initialise the platform position.
+At oscValue=0 with chainCount=8, `cos(0)=256` produces `xOffset = 256*136/256 = 136`.
+So `this.x = baseX + 136`. For the MCZ2 spawn at baseX=0x0620, camera≈0x03C0:
+`isOutOfRangeS1(0x06A8, 0x03C0) = (0x06A8 - 0x03C0 + 128) = 0x380 = 896 > 640` → immediate
+unload. Marked dormant before first `update()`. The platform never became active.
+
+Fix: removed `updatePositions(0)` from constructor; `this.x = baseX`, `this.y = baseY`.
+Added `getOutOfRangeReferenceX()` override returning `baseX`, matching ROM's use of
+`obX(a0)` (parent `x_pos` = spawn X = baseX during the out-of-range check in `loc_FE50`).
+
+**Bug 2 — Wrong CalcSine angle convention (1-pixel X error):**
+`updatePositions` used `swingAngle = (oscValue - 0x40) & 0xFF` and mapped `(-sin, cos)` to
+`(X, Y)`. This assumed SINCOSLIST perfect antisymmetry. The ROM table is NOT antisymmetric:
+SINCOSLIST[147] = -117 while SINCOSLIST[19] = 115 (verified against `sinewave.bin`).
+At osc=0x53: ROM X offset = cos(0x53) * chainLength / 256 = -117*40/256 ≈ -19 px;
+engine: -SINCOSLIST[0x13] * 40 / 256 = -115*40/256 ≈ -18 px. Off by 1 pixel.
+
+Fix: call `calcSine(oscValue)` / `calcCosine(oscValue)` directly (matching ROM `CalcSine`),
+then use sin→Y, cos→X. Verified exhaustively: 0 divergences over all 3840
+(osc ∈ 0..255) × (chainCount ∈ 1..15) combinations against the ROM fixed-point simulation.
+
+**Additional fix — BOUNCE clamp logic:**
+The `updateBounceSwing` method previously had a `Math.abs(dx) < 0x20` player-proximity gate
+that does not exist in ROM `sub_FE70` (s2.asm:22556-22586). Also, BOUNCE_LEFT threshold
+was `oscValue < 0x40` (should be `< 0x3F`; osc==0x3F requires sound + clamp).
+Both fixed to match ROM exactly.
+
+### New MCZ2 frontier (frame 1290)
+
+`tails_y mismatch (expected=0x04FE, actual=0x04FF)`. Tails is not riding the
+expected SwingingPlatform (`ROM: onObj=23, engine: onObj=FFFFFFFF`). The engine's
+nearby platform for Tails (s23 @06D7,054E) differs from the ROM's (s25 @068F,054B)
+in X position (06D7 vs 068F). This is a separate sidekick-on-platform riding
+issue; not in scope for this iter.
+
 ## 2026-05-19 - S2 SteamSpring (Obj42) bypasses offscreen sidekick gate (MTZ3 frame 460 -> 765)
 
 - Branch: `develop` (HEAD `1b5308308`)
