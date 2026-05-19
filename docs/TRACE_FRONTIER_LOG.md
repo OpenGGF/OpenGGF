@@ -1695,3 +1695,59 @@ spawn position issue not visible in the current trace surface. Tractable
 next step: extend the trace recorder to dump ALL conveyor slot positions
 (not just the truncated near list) so the engine's full column-0x0320
 conveyor set can be diff'd against ROM s28/s29/s30.
+
+## 2026-05-19 — S2 MTZ2 Conveyor (Obj6C) parent factory re-spawn loop fix
+
+- Target: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- Baseline (HEAD develop / `1b5308308`): MTZ2 frontier frame 305, y 0x05F2 vs ROM 0x05EB (7 px), 2325 errors
+- Result: frame 305, y 0x05EA vs ROM 0x05EB (1 px, sub-pixel residual), 2770 errors
+- Branch context: worktree `agent-a6827fe9d2a969098` on `develop`
+
+Root cause. `ConveyorObjectInstance.createOrSpawnChildren` returned `null` for
+parent-spawner subtypes (bit 7 set), expecting `ObjectManager` to skip
+registering the parent in `activeObjects`. The placement loop
+(`syncActiveSpawnsLoad` `sortedNewSpawns` gate at
+`ObjectManager.java:2362`) only filters spawns already in `activeObjects`,
+so the parent re-entered the spawn list every frame the chunk stayed in the
+camera window. Diagnostic logging in `createOrSpawnChildren` showed the
+8-child cohort spawning 207,312 times across the test run (≈ 25,914 parent
+re-spawns).
+
+Fix. Mirror ROM `Obj6C_Init` `loc_28112` (`s2.asm:54269-54301`), which uses
+`movea.l a0,a1` to reuse the parent slot as the first child:
+`createOrSpawnChildren` now constructs the first child instance from
+`layout[0]` using the parent's own spawn and returns it as the factory
+result. The remaining 7 children spawn via `addDynamicObject` as before.
+Because the factory now returns non-null, `registerActiveObject(spawn,
+firstInstance)` runs and the placement's `activeObjects.containsKey(spawn)`
+gate suppresses re-spawn.
+
+Verification:
+- `TestS2Mtz2LevelSelectTraceReplay`: frame 305 first error, y 7 px → 1 px
+- `TestS2MtzLevelSelectTraceReplay`: unchanged at frame 375 `tails_air`
+- `TestS2Mtz3LevelSelectTraceReplay`: unchanged at frame 460 `tails_air`
+- `TestS2Ehz1TraceReplay`: green
+- `TestS2CnzLevelSelectTraceReplay`: unchanged 22 errors at frame 3906
+  `tails_y` 1 px (pre-existing sub-pixel residual)
+- `TestS2Mcz2LevelSelectTraceReplay`: unchanged at frame 1079, 802 errors
+- All S3K HCZ conveyor unit tests pass
+
+The 1 px residual at MTZ2 f305 is sub-pixel rounding at landing; the
+conveyor cluster positions now match ROM exactly (engine s28 @0320,0607
+matches ROM s29 @0320,0607; engine s29 @0320,064D matches ROM s30
+@0320,064D).
+
+MTZ1 frontier (frame 375 `tails_air` expected 1 actual 0) investigated.
+ROM warps Tails to (0x4000, 0x0000) with `in_air` set — the classic
+`TailsCPU_Despawn` marker (`s2.asm:39043-39052`). At frame 374 Tails is
+standing (yvel=0) at (0x02BC, 0x0250); the camera at (0x020C, 0x014D)
+puts Tails roughly 0x103 (259) px below the bottom of the 224 px screen.
+Sonic just rocketed up off the SteamSpring (`y_vel=-0x300` at f375), so
+the camera is locked high enough that Tails is off-screen.
+`TailsCPU_CheckDespawn` (`s2.asm:39055-39081`) immediate-despawns when
+off-screen + `status.player.on_object` + `Tails_interact_ID` mismatch, or
+ticks `Tails_respawn_counter` to 0x12C otherwise. Determining which path
+fires in the ROM requires either the `Tails_interact_ID` value or the
+`Tails_respawn_counter` to be exposed in the trace; both are currently
+absent from the schema. Not committed; flagged as a recorder-extension
+candidate.

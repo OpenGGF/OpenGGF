@@ -6,6 +6,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ2 Conveyor (Obj6C) parent factory re-spawn loop.**
+  `ConveyorObjectInstance.createOrSpawnChildren` returned `null` for
+  parent-spawner subtypes (bit 7 set). Because the `ObjectManager` placement
+  `sortedNewSpawns` gate (`ObjectManager.java:2362`) only suppresses spawns
+  already in `activeObjects`, the parent re-entered the spawn list every
+  frame it stayed in the camera window — Diagnostic logging showed the
+  8-child cohort spawning ≈25,914 times in a single MTZ2 trace. Fix: mirror
+  ROM `Obj6C_Init` `loc_28112` (`s2.asm:54269-54301`), which uses
+  `movea.l a0,a1` to reuse the parent slot as the first child. The factory
+  now constructs the first child from `layout[0]` using the parent's own
+  `ObjectSpawn` and returns it, so `registerActiveObject` records the spawn
+  and placement stops re-spawning. Remaining 7 children still spawn via
+  `addDynamicObject`. Advances MTZ2 trace frontier y mismatch at frame 305
+  from 7 px (engine 0x05F2 vs ROM 0x05EB) to 1 px (engine 0x05EA);
+  MTZ1/MTZ3/EHZ1/CNZ/MCZ2 unchanged.
+
 - **S2 SteamSpring (Obj42) bypasses offscreen sidekick full-solid gate.**
   Advances MTZ3 trace frontier from frame 460 (`tails_air` 0 vs 1, Tails
   missed-landing event) to frame 765 (`air` 1 vs 0); error count drops
