@@ -1599,6 +1599,76 @@ routine on launch — advances MCZ2 frontier from 925 to 1006.
 
 ---
 
+## P37 — Parent-spawner factory returning `null` re-spawns children every frame
+
+**Symptom.** A "parent-spawner" object (e.g. MTZ Obj6C with subtype bit 7 set)
+spawns N children to form a cluster. The cluster appears to work at first, but
+something downstream is subtly off — landing positions for the player are 5-10
+pixels misaligned, child phase relationships drift, or a single child slot at
+an unusually high slot index (engine slot 127 for S2 with 112 dynamic slots)
+turns out to be the one the player actually stands on. The "lost" object
+debug formatter / `eng-near` window may even omit the player's standing
+target because the formatter truncates to the first ~12 slots by index.
+
+The MTZ2 case: Sonic landed 7 pixels below the ROM landing height because the
+engine had silently spawned dozens of redundant conveyor cohorts, and the
+cohort he physically landed on was one freshly re-spawned several frames after
+camera entry, not the original cohort the ROM tracks.
+
+**Root cause.** The factory pattern used `return null` to mean "I spawned my
+children via `ObjectManager.addDynamicObject`; do not register a parent
+instance." The `inlineCreateObject` / `applyPendingSpawns` paths interpret a
+`null` factory result as "spawn failed" and release the pre-allocated parent
+slot WITHOUT calling `registerActiveObject(spawn, instance)`. Because the
+parent `ObjectSpawn` is never added to `activeObjects`, the placement's
+"already loaded" gate (`!activeObjects.containsKey(spawn)`) lets the parent
+re-enter `sortedNewSpawns` every frame the camera keeps the chunk in window.
+Each re-entry spawns a full N-child cohort, filling slots and producing
+multiple parallel cohorts of the same cluster with different waypoint phases.
+
+ROM does not have this problem because the parent's `Obj6C_Init` reuses the
+parent's own SST entry as the first child (`movea.l a0,a1`), overwriting its
+subtype with the first child's subtype (clearing bit 7). The parent slot
+becomes a regular child object that runs `Obj6C_Main` from the next frame on
+and never re-enters the `loc_28112` parent-spawn branch.
+
+**Fix.** Mirror the ROM "parent becomes first child" pattern. The factory
+constructs the first child from `layout[0]` (using the parent's own
+`ObjectSpawn` slot), spawns the remaining N-1 children via
+`addDynamicObject`, and returns the first child instance. Because the factory
+now returns non-null, `registerActiveObject` runs, `activeObjects` contains
+the spawn, and the placement does not re-enter the spawn into
+`sortedNewSpawns` on subsequent frames.
+
+**What to check.**
+1. Any factory in `*ObjectRegistry.java` that returns `null` on a "parent
+   subtype set" path. Greppable pattern: `(subtype & 0x80) != 0` /
+   `return null;` inside a static factory.
+2. Cross-reference with ROM `Init`: if the ROM uses `movea.l a0,a1` (or
+   equivalent) to write the first child into the parent slot, replicate by
+   returning the first child from the factory rather than `null`.
+3. Verify after the fix that `eng-near` only shows the expected N child
+   instances at the cluster (no duplicates at incrementing slot numbers,
+   no slot index >> the rest of the cluster).
+4. Watch for child base-position inheritance: parent-spawned children use
+   the parent's `x_pos/y_pos` as `objoff_30/objoff_32` (waypoint base), not
+   their own per-child layout offset. The engine constructor must accept an
+   explicit `baseX/baseY` distinct from the child's spawn position.
+
+**ROM citation.** S2 Obj6C `loc_28112`/`Obj6C_LoadSubObject`
+(`docs/s2disasm/s2.asm:54269-54301`): `movea.l a0,a1` sets the first child
+target to the parent's own slot; the `dbf` loop then `JmpTo8_AllocateObject`s
+remaining children. After the loop `addq.l #4,sp; rts` unwinds the
+intermediate stack frame and returns to `Obj6C`'s post-jsr instruction.
+
+**Originating commit.** Fix S2 MTZ2 Conveyor (Obj6C) parent factory re-spawn
+loop — engine now returns the first child from the factory instead of `null`,
+so `activeObjects` records the spawn and placement stops re-spawning the
+cluster every frame. Advances MTZ2 frontier y mismatch from 7 px to 1 px at
+frame 305.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
