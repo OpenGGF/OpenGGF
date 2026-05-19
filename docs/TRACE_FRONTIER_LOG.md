@@ -128,6 +128,60 @@ Did NOT commit because:
 
 Cross-game regression: not run (no commit to verify).
 
+## 2026-05-19 - S2 OOZ Aquis (Obj50) four-bug ROM-accuracy fix
+
+- Branch: `worktree-agent-a11d73c9194c58ed5`
+- Commit context: dirty worktree, base `d140c9d07` ("Fix S1 credits trace parity")
+- Targets: S2 OOZ1 + OOZ2 trace replays, `AquisBadnikInstance` (Obj50)
+- Commands:
+  - `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace" test`
+  - `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" test`
+  - cross-game: `TestS2Ehz1TraceReplay`, `TestS2MtzLevelSelectTraceReplay`, `TestS2CnzLevelSelectTraceReplay`
+
+Four ROM-accuracy fixes applied to `AquisBadnikInstance` in a single patch:
+
+1. **Initial x_vel.** `Obj50_Init` (s2.asm:60100) executes
+   `move.w #-$100, x_vel(a0)` immediately after the standard init block. The
+   engine constructor was leaving `xVelocity = 0`. Set `xVelocity = -0x100` in
+   the constructor.
+2. **`bmi` timer semantics.** `Obj50_FollowPlayer` (s2.asm:60244-60245) and
+   `Obj50_WaitForNextShot` (s2.asm:60275-60276) use
+   `subq.b #1, timer / bmi`, which fires when the byte wraps from `0x00` to
+   `0xFF`. The engine used `if (--timer <= 0)` which fires one frame early.
+   Switched both call sites to `timer = (byte)(timer - 1); if (timer < 0)`.
+3. **Closer-player orientation.** `Obj_GetOrientationToPlayer`
+   (s2.asm:72320-72346) picks the closer of MainCharacter and Sidekick by
+   `|x_pos - obX|`. The engine only used the main player. Added a
+   `closestPlayer(PlayableEntity main)` helper that walks `services().sidekicks()`
+   and returns the sprite with minimum absolute X distance.
+4. **`render_flags.on_screen` one-frame lag.** `Obj50_CheckIfOnScreen`
+   (s2.asm:60181-60188) tests `render_flags.on_screen`, which the ROM clears at
+   the start of each `BuildSprites` pass and only re-sets if the sprite is
+   actually drawn this frame. The engine used `isOnScreen(32)` which has no
+   lag. Added paired `onScreenLastFrame` / `onScreenThisFrame` flags: snapshot
+   in `updateMovement()`, set `onScreenThisFrame = true` in
+   `appendRenderCommands()` when `isOnScreen(0)` (exact viewport, matching the
+   ROM bounds test), and gate the WAIT_FOR_SCREEN transition on
+   `onScreenLastFrame`.
+
+Result (before -> after):
+
+| Test                                     | Before        | After         | Delta |
+|------------------------------------------|---------------|---------------|-------|
+| TestS2OozLevelSelectTraceReplay          | 1117 @ f509  | 1117 @ f509  | 0     |
+| TestS2Ooz2LevelSelectTraceReplay         | 1329 @ f301  | 1280 @ f301  | -49   |
+| TestS2Ehz1TraceReplay                    | PASS         | PASS         | -     |
+| TestS2MtzLevelSelectTraceReplay          | 1015 @ f281  | 1015 @ f281  | 0     |
+| TestS2CnzLevelSelectTraceReplay          | PASS         | PASS         | -     |
+
+OOZ2 total error count drops by 49 (Aquis-attributable mismatches eliminated),
+while the OOZ1 frontier is unrelated (gated by a Buzzer `0x4A` enemy bounce at
+f509) and the OOZ2 first-error frontier is also unrelated (gated by a
+Tails+Spring/Fan `tails_y_speed` mismatch at f301). The first-error frame
+therefore does not move for either OOZ replay even though the Aquis behaviour
+is now ROM-accurate. The OOZ2 error-count improvement is the verifiable signal
+that the fix is correct. No cross-game regressions in EHZ1, MTZ, or CNZ.
+
 ## 2026-05-19 - S2 OOZ Aquis investigation (no committed change; frontiers unchanged)
 
 - Branch: `develop`

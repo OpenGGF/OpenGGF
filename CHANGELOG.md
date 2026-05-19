@@ -22,6 +22,22 @@ All notable changes to the OpenGGF project are documented in this file.
   detect zone via `services().currentZone()`, pick the correct table /
   `y_radius` / parent-flag, store the full subtype byte as the phase cursor,
   and gate movement on `activated` (MTZ waits, MCZ starts activated).
+- **S2 OOZ Aquis (Obj50) four-bug ROM-accuracy fix.** Combined patch addressing
+  four confirmed divergences from `s2disasm` Obj50: (1) missing initial
+  `move.w #-$100, x_vel` from `Obj50_Init` (s2.asm:60100); (2) `bmi`-style
+  timer semantics in `Obj50_FollowPlayer` and `Obj50_WaitForNextShot`
+  (s2.asm:60244-60245, 60275-60276) replacing the engine's off-by-one
+  `if (--timer <= 0)`; (3) closer-player orientation via
+  `Obj_GetOrientationToPlayer` (s2.asm:72320-72346) using the sidekick when
+  it's closer than the main player; (4) `render_flags.on_screen` one-frame lag
+  in `Obj50_CheckIfOnScreen` (s2.asm:60181-60188) replacing the engine's
+  instantaneous `isOnScreen(32)` check with a paired this-frame/last-frame
+  flag set from `appendRenderCommands()`. Reduces OOZ2 trace-replay error
+  count from 1329 to 1280 (-49). OOZ1 first-error frontier (Buzzer at f509)
+  and OOZ2 first-error frontier (Tails+Spring/Fan `tails_y_speed` at f301)
+  are both gated by unrelated bugs and do not move; see
+  `docs/TRACE_FRONTIER_LOG.md` for details. No EHZ1/MTZ/CNZ regression.
+
 - **S2 OOZ Aquis investigation (no committed fix).** Documented an Aquis (`Obj50`)
   investigation against the OOZ1 (frontier frame 563 `g_speed`) and OOZ2 (frontier
   frame 389 `y_speed` sign reversal) traces. Three ROM-vs-engine deltas identified
