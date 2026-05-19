@@ -32,6 +32,101 @@ of MTZ `0x0C` (12 px) and start moving immediately, drifting `y +0x40` and
 triggered an air state ROM never sees.
 
 ROM cite: `docs/s2disasm/s2.asm:53670-53871`.
+## 2026-05-19 - S2 MTZ1 / MTZ2 frontier investigation (no committed change; frontiers unchanged)
+
+- Branch: `develop`
+- Worktree state: clean develop
+- Commands:
+  - `mvn -q -Dmse=off "-Dtest=TestS2MtzLevelSelectTraceReplay" test`
+  - `mvn -q -Dmse=off "-Dtest=TestS2Mtz2LevelSelectTraceReplay" test`
+- Result: unchanged frontiers
+  - MTZ1: 945 errors, frontier frame 375 (`tails_air` expected `1`, actual `0`)
+  - MTZ2: 2370 errors, frontier frame 222 (`x` expected `0x028C`, actual `0x028E`)
+
+### MTZ1 root cause (deferred — requires SidekickCpuController investigation)
+
+ROM physics CSV f0x176→f0x177 shows Tails transitioning from `(x=0x02BC,y=0x0250,status=0x09,
+stand_on_obj=0x13)` to `(x=0x4000,y=0x0000,status=0x02,stand_on_obj=0x13)` with x_sub/y_sub
+preserved (`0xE600,0xCF00`). These exact post-transition values are the literal stores in
+`TailsCPU_Despawn` (`s2.asm:39043-39052`): `move.w #$4000,x_pos(a0); move.w #0,y_pos(a0);
+move.b #$81,obj_control(a0); move.b #1<<status.player.in_air,status(a0)`. So ROM despawns
+Tails one frame after the SteamSpring launch.
+
+The trigger path is `TailsCPU_CheckDespawn` (`s2.asm:39055-39081`): when Tails is off-screen
+AND `on_object` is clear (just launched off the spring), it ticks `Tails_respawn_counter`;
+when on-screen WITH `on_object` set but `id(interact) != Tails_interact_ID`, it immediately
+jumps to `TailsCPU_Despawn`. In the trace Tails was on slot 0x13 (SteamSpring) one frame
+earlier with `interact=0x13` set, then the spring launched him (`loc_26798`: y_vel=-0xA00,
+in_air=1, on_object=0). The exact frame-after-launch despawn implies an interact-ID
+mismatch trigger or a separate path I didn't trace down.
+
+Engine behavior: at the same frame the engine keeps Tails on the spring
+(`eng-tails-state pos=(02B3,0251) ride=s19 type=42 st=09 ... onObj=true`) — the
+`SidekickCpuController` despawn predicates aren't matching ROM's immediate-despawn case.
+This shows up downstream as `tails_air=1` (ROM) vs `0` (engine) and follows as a long
+tail of position/state mismatches once ROM's Tails is parked at (0x4000, 0x0000) while
+engine's Tails continues riding.
+
+Fix scope is the sidekick-CPU despawn predicates (likely a `Tails_interact_ID` check that
+fires when the interact-slot's object ID changes mid-spring-cycle, or an off-screen
+post-launch immediate despawn). Did NOT commit because the predicate change touches
+shared sidekick logic that must not regress S2 CNZ/SCZ/MCZ traces.
+
+### MTZ2 root cause (deferred — platform-carry timing mismatch)
+
+ROM physics CSV around frame 222 shows Sonic riding s18 (MTZLongPlatform subtype 5
+conveyor) with platform moving +2px/frame and player position incrementing by exactly
+`x_vel/256` per frame (NO platform carry observed in trace). Engine increments position
+by `x_vel/256 + 2 (carry)` every frame, so the divergence grows +2px/frame starting
+at the frame Sonic mounts the platform:
+
+```
+f222: ROM x=0x028C ENG x=0x028E (+2)
+f223: ROM x=0x028E ENG x=0x0292 (+4)
+f224: ROM x=0x0290 ENG x=0x0296 (+6)
+f225: ROM x=0x0292 ENG x=0x029A (+8)
+...
+```
+
+Both engine and ROM have the same `x_speed=0x01F4` and same `inertia`. The platform itself
+moves +2/frame in both (verified via consecutive `near s18` x positions: ENG
+`02A2->02A4->02A6` lockstep with ROM `02A4->02A6->02A8`, just lagged by 2px globally).
+
+Per `s2.asm:52450-52468` (Obj65 `loc_26C1C`): platform's update saves x_pos to
+`objoff_2E`, runs subtype 5 (`loc_26E4A:addq.w #2,x_pos`), loads `d4 = objoff_2E`
+(pre-move x), then calls `JmpTo10_SolidObject` → `MvSonicOnPtfm` (`s2.asm:35402-35426`):
+`sub.w x_pos(a0),d2; sub.w d2,x_pos(a1)`, which carries player by `+delta = +2`. So per
+my code-read of the ROM, the carry SHOULD apply.
+
+What I ruled out:
+1. **Not `obj_control` gating** — engine output shows `objCtrl=false`, ROM player isn't
+   in MTZ tube state (`obj_control=$81`) here.
+2. **Not `routine >= 6` gating** — Sonic routine is 0x02 (Obj01_Control) the whole sequence.
+3. **Not `Debug_placement_mode`** — gameplay is active.
+4. **Not the landing-frame skip** — `SolidObject_Landed` skips carry only on the landing
+   frame f221; the divergence persists on every subsequent frame.
+5. **Not the platform stepping forward** — both ENG and ROM platforms step +2/frame,
+   verified across 10 consecutive frames.
+6. **Not the inertia/x_vel calculation** — both ENG and ROM have identical x_vel/inertia
+   trajectories per frame.
+
+What I could NOT reconcile: the trace data unambiguously shows the player's 32-bit
+position (`x_pos:x_sub`) advancing by exactly `x_vel*0x100` per frame with zero extra
+delta from the platform, while my reading of `MvSonicOnPtfm` says +2 should be added to
+the high word. Either MvSonicOnPtfm is not running for the MTZ conveyor case (some gate I
+missed), or the trace recorder samples before the carry, or the inertia accumulation
+secretly absorbs the carry. Engine fix would need to suppress carry for MTZ Long
+Platform conveyor — but the rationale isn't clear enough to land without verifying the
+exact ROM gate. Risk of regressing CPZ/OOZ/MCZ moving platform traces if applied broadly.
+
+Did NOT commit because:
+- The "engine carry = ROM carry, just verified" reading conflicts with the trace data
+  by a constant +2 delta per frame. Need to instrument a recording at the exact pre/post
+  MvSonicOnPtfm point to know which side of the boundary the trace samples.
+- Suppressing carry for MTZLongPlatform alone would mask the bug; need to understand the
+  generic rule first to avoid cross-zone regression.
+
+Cross-game regression: not run (no commit to verify).
 
 ## 2026-05-19 - S2 OOZ Aquis investigation (no committed change; frontiers unchanged)
 
