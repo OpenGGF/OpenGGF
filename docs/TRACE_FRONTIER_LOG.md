@@ -4,6 +4,53 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-19 - S2 Vertical/Diagonal Spring clears Hurt routine (MCZ2 frame 925 -> 1006)
+
+- Branch: `develop` (HEAD `4b2b42097`)
+- Worktree: isolated agent worktree, `git reset --hard origin/develop`
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: MCZ2 frontier advanced from frame 925 to frame 1006 (737 -> 781 errors).
+- Regression check: `TestS2Ehz1TraceReplay` PASS;
+  `TestS2MczLevelSelectTraceReplay` still at frame 1085 (452 errors, pre-existing);
+  `TestS2CnzLevelSelectTraceReplay` still at frame 3906 (22 errors, pre-existing);
+  `TestS2Cnz2LevelSelectTraceReplay` still at frame 1490 (1057 errors, pre-existing).
+
+### Root cause
+
+`SpringObjectInstance.applyUpSpring` (and Down/Diagonal variants) did not clear
+the engine's `hurt` flag when launching the player. ROM `Obj41_Up loc_189CA`
+(`s2.asm:33735`), `Obj41_Down loc_18CC6` (`s2.asm:34023`), and the diagonal
+launchers (`loc_18DD8` line 34090, `loc_18EE6` line 34173) all unconditionally
+write `move.b #2,routine(a1)`, which overwrites the routine byte from 4
+(`Obj01_Hurt`) to 2 (`Obj01_Control`). The ROM thus exits the Hurt routine when
+a vertical spring fires while Sonic is hurt mid-air; subsequent airborne frames
+use `Obj01_MdAir`'s +$38 gravity plus `Sonic_UpVelCap` (-$FC0) instead of
+`Obj01_Hurt`'s +$30 gravity (no cap).
+
+The engine encoded `routine` differently — `hurt` is a boolean and the trace
+test maps `isHurt() -> rtn=04`. With `hurt` left set after the spring launch,
+`PlayableSpriteMovement.airbornePhysics()` skipped `doJumpHeight()` (which
+contains `applyUpwardVelocityCap`) entirely, and `getGravity()` returned 0x30
+rather than 0x38. MCZ2 trace frame 925: ROM y_speed `-0F88` (cap from -$1000 to
+-$FC0 then +$38), engine y_speed `-0FD0` (uncapped -$1000 + $30). Diff: 0x48
+subunits = exactly the missing 0x40 cap delta plus the 0x08 gravity-step
+shortfall.
+
+### Fix
+
+`SpringObjectInstance.java`: added `player.setHurt(false)` to `applyUpSpring`,
+`applyDownSpring`, and `applyDiagonalSpring`. `applyHorizontalSpring` was left
+alone because horizontal springs (`Obj41_Horizontal loc_18AEE`) do NOT write
+`routine = 2` in ROM (they keep the player grounded and unchanged in routine).
+
+### New MCZ2 frontier (frame 1006)
+
+`y_speed expected=0x0850, actual=0x0000`. Engine landed on a SwingingPlatform
+(`onSlot=17(0x15)`, `st=08`, `ride=1`), but ROM trace has Sonic still falling
+(`status=02`, `air=1`). The frame-925 spring launch and the f925-f1005
+airborne arc now match exactly; the divergence is a new SwingingPlatform
+landing/collision issue, not the same root cause.
+
 ## 2026-05-19 - S2 OOZ post-Octus frontier diagnosis (no committed change; new blockers identified)
 
 - Branch: `develop` (HEAD `805852e8b`)

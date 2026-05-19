@@ -6,6 +6,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 Spring (Obj41) clears Hurt routine on vertical/diagonal launch.**
+  Advances MCZ2 trace frontier from frame 925 to frame 1006 (737 -> 781 errors).
+  `SpringObjectInstance.applyUpSpring`/`applyDownSpring`/`applyDiagonalSpring`
+  did not clear the engine's `hurt` flag when launching the player. ROM
+  `Obj41_Up loc_189CA` (`s2.asm:33735`), `Obj41_Down loc_18CC6` (`s2.asm:34023`),
+  and the diagonal launchers (`loc_18DD8` line 34090, `loc_18EE6` line 34173)
+  all unconditionally write `move.b #2,routine(a1)` — overwriting the routine
+  byte from 4 (`Obj01_Hurt`) to 2 (`Obj01_Control`) so subsequent airborne
+  frames use `Obj01_MdAir`'s +$38 gravity plus `Sonic_UpVelCap` (-$FC0) instead
+  of `Obj01_Hurt`'s +$30 gravity (no cap). The engine left `hurt=true`, which
+  skipped `doJumpHeight()`/`applyUpwardVelocityCap` and returned 0x30 from
+  `getGravity()`. MCZ2 f925: ROM `y_speed=-0F88` (cap from -$1000 to -$FC0
+  then +$38) vs engine `-0FD0` (uncapped -$1000 + $30); diff 0x48 = missing
+  0x40 cap delta plus 0x08 gravity-step shortfall. `applyHorizontalSpring`
+  intentionally left alone — `Obj41_Horizontal loc_18AEE` does NOT write
+  `routine = 2` (player stays grounded).
 - **S2 MTZ3 Obj6A (MCZRotPforms) zone-aware behavior fix.** Advances MTZ3 trace
   frontier from frame 298 (`air` 0 vs 1) to frame 340 (`tails_g_speed`).
   `MCZRotPformsObjectInstance` was hard-wired to MCZ behavior in every zone:
