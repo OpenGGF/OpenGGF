@@ -1479,6 +1479,65 @@ landing to restore CNZ2 frontier`.
 
 ---
 
+## P34 — `Ctrl_1` byte-read is just-pressed edge, not held state
+
+**Symptom.** An object that grabs or releases the player on button press
+triggers one frame too early (on the frame the button is held from a prior
+action) rather than only on a fresh press.
+
+**Root cause.** ROM reads `move.w (Ctrl_1).w, d0` — this loads a word where
+the **high byte is `Ctrl_1_Held`** (currently held buttons) and the **low
+byte is `Ctrl_1_Press`** (buttons pressed this frame only). Any subsequent
+`andi.b #buttons, d0` or `btst #button, d0` operates on the **low byte**
+(`Ctrl_1_Press`), so the check tests just-pressed state. Engine methods like
+`isJumpPressed()` return held state; `isJumpJustPressed()` (or its
+equivalent) returns the just-pressed edge. If the object grabs on a held
+check, it immediately releases the player the same frame the player arrived
+via a held jump.
+
+**What to check.** Whenever the ROM does
+`move.w (Ctrl_1).w, d0 / andi.b #..., d0` or
+`move.w (Ctrl_2).w, d0 / andi.b #..., d0`, the engine must use
+`isJumpJustPressed()` / `isActionJustPressed()`, not the `*Pressed()` held
+variants. This applies equally to grab-initiation, grab-release, and any
+other button-gated state transition in object code.
+
+**ROM citation.** `Obj7F_Action` (`s2.asm:56083-56106`):
+`move.w (Ctrl_1).w,d0 / andi.b #button_B_mask|button_C_mask|button_A_mask,d0`.
+
+**Originating commit.** `d14450c48 Fix S2 MCZ VineSwitch (0x7F) release input
+and Tails grab`.
+
+---
+
+## P35 — Sidekick pass left as "Player 2 deferred" stub
+
+**Symptom.** Object behaves correctly for Sonic but Tails can never interact
+with it, or the interaction counter diverges whenever Tails reaches the object
+first (wrong player targeted, wrong timing).
+
+**Root cause.** ROM typically processes both `MainCharacter` and `Sidekick`
+in sequence: `lea (MainCharacter).w,a1 / bsr Obj_Action` then
+`lea (Sidekick).w,a1 / bsr Obj_Action` (or an analogous loop). Engine
+implementations often stub the second pass with a `// Player 2 deferred`
+comment and never fill it in. As a result, Tails cannot grab vines, trigger
+switches, or interact with any object that explicitly processes both sprites.
+
+**What to check.** After implementing the main-player interaction, search the
+disassembly for a second `a1` load targeting `Sidekick` or `Ctrl_2` within
+the same sub-routine. Implement the sidekick pass using
+`services().sidekicks()` before committing. Do not leave "Player 2 deferred"
+stubs in production code; they silently break two-player trace parity.
+
+**ROM citation.** `Obj7F_Action` (`s2.asm:56071-56080`):
+`lea (MainCharacter).w,a1 / move.w (Ctrl_1).w,d0 / bsr.s Obj7F_Action` then
+`lea (Sidekick).w,a1 / move.w (Ctrl_2).w,d0 / bsr.s Obj7F_Action`.
+
+**Originating commit.** `d14450c48 Fix S2 MCZ VineSwitch (0x7F) release input
+and Tails grab`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
