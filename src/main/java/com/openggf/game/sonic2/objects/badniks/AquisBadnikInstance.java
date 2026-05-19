@@ -65,6 +65,13 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
     private final ObjectAnimationState wingAnimationState;
     private boolean wingDestroyed;
 
+    // Bug 4 fix: track render_flags.on_screen one-frame lag like ROM does.
+    // ROM's Obj50_CheckIfOnScreen tests the on_screen bit, which is cleared
+    // at the start of each frame's BuildSprites pass and only re-set if the
+    // object was actually drawn (visible). This is "was drawn last frame".
+    private boolean onScreenLastFrame;
+    private boolean onScreenThisFrame;
+
     public AquisBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Aquis", Sonic2BadnikConfig.DESTRUCTION);
         this.state = State.WAIT_FOR_SCREEN;
@@ -76,11 +83,23 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
         this.animationState = new ObjectAnimationState(ANIMATIONS, 0, 0);
         this.wingAnimationState = new ObjectAnimationState(WING_ANIMATIONS, 0, 1);
         this.wingDestroyed = false;
+        this.onScreenLastFrame = false;
+        this.onScreenThisFrame = false;
+        // Bug 1 fix: ROM Obj50_Init writes move.w #-$100, x_vel(a0) immediately
+        // after the standard init block (s2.asm:60100).
+        this.xVelocity = -0x100;
     }
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        // Bug 4 fix: snapshot last-frame on-screen state, then clear the
+        // this-frame flag. It will be re-set by appendRenderCommands() if the
+        // object is drawn this frame, matching the ROM render_flags.on_screen
+        // one-frame lag.
+        onScreenLastFrame = onScreenThisFrame;
+        onScreenThisFrame = false;
+
+        AbstractPlayableSprite player = closestPlayer(playerEntity);
         switch (state) {
             case WAIT_FOR_SCREEN -> updateWaitForScreen();
             case CHASE -> updateChase(player);
@@ -99,7 +118,11 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void updateWaitForScreen() {
-        if (isOnScreen(32)) {
+        // Bug 4 fix: ROM Obj50_CheckIfOnScreen tests render_flags.on_screen,
+        // which means "was drawn last frame" (set by BuildSprites after it
+        // passes the viewport check and draws the sprite). Use the lagged
+        // one-frame-tracked flag instead of an instantaneous viewport test.
+        if (onScreenLastFrame) {
             state = State.CHASE;
             timer = CHASE_TIMER;
             animationState.setAnimId(1); // Flapping body animation
@@ -130,8 +153,11 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
 
         applyMovement();
 
-        timer--;
-        if (timer <= 0) {
+        // Bug 2 fix: ROM uses subq.b #1, timer / bmi (s2.asm:60244-60245).
+        // bmi fires when the byte becomes negative (0x00 -> 0xFF). Original
+        // engine code used <=0 which fired one frame early.
+        timer = (byte) (timer - 1);
+        if (timer < 0) {
             // Stop movement, transition to shooting
             xVelocity = 0;
             yVelocity = 0;
@@ -151,8 +177,9 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
             }
         }
 
-        timer--;
-        if (timer <= 0) {
+        // Bug 2 fix: ROM uses subq.b #1, timer / bmi (s2.asm:60275-60276).
+        timer = (byte) (timer - 1);
+        if (timer < 0) {
             shotsRemaining--;
             if (shotsRemaining > 0) {
                 // Return to chase
@@ -202,6 +229,37 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
                 bulletHFlip));
     }
 
+    /**
+     * Bug 3 fix: ROM Obj_GetOrientationToPlayer (s2.asm:72320-72346) picks the
+     * closer of MainCharacter and Sidekick by |x_pos - obX|. Engine previously
+     * only used the main player. Walk the sidekick list and return the player
+     * with minimum absolute X distance.
+     */
+    private AbstractPlayableSprite closestPlayer(PlayableEntity mainPlayer) {
+        AbstractPlayableSprite best = null;
+        int bestDist = Integer.MAX_VALUE;
+        if (mainPlayer instanceof AbstractPlayableSprite mainSprite) {
+            best = mainSprite;
+            bestDist = Math.abs(mainSprite.getCentreX() - currentX);
+        }
+        ObjectServices svc = tryServices();
+        if (svc != null) {
+            List<PlayableEntity> sidekicks = svc.sidekicks();
+            if (sidekicks != null) {
+                for (PlayableEntity sk : sidekicks) {
+                    if (sk instanceof AbstractPlayableSprite skSprite) {
+                        int dist = Math.abs(skSprite.getCentreX() - currentX);
+                        if (dist < bestDist) {
+                            best = skSprite;
+                            bestDist = dist;
+                        }
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
     private void applyMovement() {
         motionState.x = currentX;
         motionState.y = currentY;
@@ -236,6 +294,15 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
 
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.AQUIS);
         if (renderer == null) return;
+
+        // Bug 4 fix: ROM render_flags.on_screen is set when BuildSprites
+        // passes the X/Y bounds test and draws the sprite. We mirror that here
+        // by marking on_screen this frame whenever we actually emit draw
+        // commands, gated by an exact viewport check (no margin) to match the
+        // ROM bounds test.
+        if (isOnScreen(0)) {
+            onScreenThisFrame = true;
+        }
 
         // Draw main body (priority 4)
         renderer.drawFrameIndex(animFrame, currentX, currentY, !facingLeft, false);
