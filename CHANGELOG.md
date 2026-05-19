@@ -22,6 +22,20 @@ All notable changes to the OpenGGF project are documented in this file.
   detect zone via `services().currentZone()`, pick the correct table /
   `y_radius` / parent-flag, store the full subtype byte as the phase cursor,
   and gate movement on `activated` (MTZ waits, MCZ starts activated).
+- **S2 MCZ VineSwitch (0x7F) edge-trigger release and Tails grab support
+  (MCZ2 trace replay).** Two bugs in `VineSwitchObjectInstance`. (1) The
+  release-on-button check used `isJumpPressed()` (held state). ROM
+  `Obj7F_Action` loads `Ctrl_1` as a word and then `andi.b #ABC,d0`, which
+  operates on the low byte that holds `Ctrl_1_Press` (just-pressed this
+  frame), not `Ctrl_1_Held` — so the player only releases on a fresh ABC
+  press. With held state, Sonic was released a single frame after grabbing
+  whenever B was still held from the jump that brought him to the vine.
+  Switched to `isJumpJustPressed()`. (2) The sidekick branch (ROM
+  `lea (Sidekick).w,a1 / move.w (Ctrl_2).w,d0 / bsr.s Obj7F_Action`) was
+  marked as deferred, so Tails could never grab the vine. Added a sidekick
+  pass via `services().sidekicks()`. Advances the MCZ2 trace frontier from
+  frame 198 to frame 925 (936 -> 737 errors).
+
 - **S2 OOZ Aquis (Obj50) four-bug ROM-accuracy fix.** Combined patch addressing
   four confirmed divergences from `s2disasm` Obj50: (1) missing initial
   `move.w #-$100, x_vel` from `Obj50_Init` (s2.asm:60100); (2) `bmi`-style

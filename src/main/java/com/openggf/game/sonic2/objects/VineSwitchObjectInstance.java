@@ -105,7 +105,12 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
         // Process player interactions
         // ROM: Obj7F_Main (loc_2981E) calls Obj7F_Action for each player
         processPlayerInteraction(player, false);  // Player 1 (MainCharacter)
-        // Note: Player 2 (Sidekick) support deferred - underlying state fields are in place
+        // ROM: lea (Sidekick).w,a1 / move.w (Ctrl_2).w,d0 / bsr.s Obj7F_Action
+        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
+                processPlayerInteraction(sidekick, true);
+            }
+        }
 
         // Update mapping frame based on grab state
         // ROM: tst.w objoff_30(a0) / beq.s + / move.b #1,mapping_frame(a0)
@@ -159,9 +164,13 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
      * @param isPlayer2 true if this is player 2
      */
     private void handleGrabbedPlayer(AbstractPlayableSprite player, boolean isPlayer2) {
-        // Check for A/B/C button press to release
+        // Check for A/B/C button PRESS (edge-triggered) to release.
         // ROM: andi.b #button_B_mask|button_C_mask|button_A_mask,d0 / beq.w return_29936
-        if (player.isJumpPressed()) {
+        // Critical: `move.w (Ctrl_1).w,d0` followed by `andi.b` operates on the LOW byte
+        // of d0, which is Ctrl_1_Press (just-pressed this frame), not Ctrl_1_Held. The
+        // player must freshly press a jump button to release; merely holding the button
+        // since before grab does not release.
+        if (player.isJumpJustPressed()) {
             releasePlayer(player, isPlayer2);
             return;
         }
