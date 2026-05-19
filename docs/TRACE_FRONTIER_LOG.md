@@ -51,6 +51,45 @@ alone because horizontal springs (`Obj41_Horizontal loc_18AEE`) do NOT write
 airborne arc now match exactly; the divergence is a new SwingingPlatform
 landing/collision issue, not the same root cause.
 
+## 2026-05-19 - S2 MTZ2 Conveyor (Obj6C) child base position fix
+
+- Branch: worktree `agent-a6ca59e26305ee5a1` on top of `develop`
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 2325 errors (was 2189 after Long Platform). Frontier frame
+  unchanged at 305.
+- Frontier moved: nominal frame stays at 305 (y mismatch), but the misfire
+  changed from a missed-platform fall-through to a pure landing-y-snap delta.
+  Engine now lands on the correct conveyor at frame 305 (`onSlot=127(0x6C)
+  ride=1 vel=(0050,0000)`) at y=0x05F2 instead of ROM's y=0x05EB (7-px low).
+  Per-frame data shows perfect parity for x, x_speed, y_speed, g_speed, angle,
+  air, rolling, ground_mode, tails through frame 304; only y diverges by ~6-7
+  px for the post-landing run on the s29 conveyor.
+
+Root cause: `ConveyorObjectInstance.createOrSpawnChildren()` was constructing
+each child with the child's offset spawn position used as its own `baseX/baseY`
+(path origin). ROM `Obj6C_LoadSubObject` (s2.asm:54137-54151) captures the
+PARENT's `x_pos`/`y_pos` into `d2`/`d3` before the spawn loop and writes those
+unchanged into every child's `objoff_30`/`objoff_32`, even though the child's
+`x_pos`/`y_pos` is set to `parent + layoutOffset`. Without this each child
+orbited its own offset point instead of orbiting the shared parent center,
+scattering the platforms (engine had conveyors at x=0x0340/0x037D where ROM
+had them at x=0x0320 forming the vertical spine of the route across the lava
+pit).
+
+Fix: added a second `ConveyorObjectInstance` constructor accepting explicit
+`baseX`/`baseY` and threaded the parent's `x_pos`/`y_pos` through from
+`createOrSpawnChildren` to each child.
+
+Files changed:
+- `src/main/java/com/openggf/game/sonic2/objects/ConveyorObjectInstance.java`
+
+Cross-game regression sweep:
+- MTZ (act 1): 989 errors @ frame 281 (unchanged)
+- MTZ2 (act 2): 2325 errors @ frame 305 (was 2189; frontier unchanged, residual
+  7-px landing-y snap delta only)
+- MTZ3 (act 3): 2414 errors @ frame 298 (unchanged)
+- EHZ1: pass
+
 ## 2026-05-19 - S2 OOZ post-Octus frontier diagnosis (no committed change; new blockers identified)
 
 - Branch: `develop` (HEAD `805852e8b`)

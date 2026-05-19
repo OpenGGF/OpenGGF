@@ -6,6 +6,23 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ2 Conveyor (Obj6C) child base-position fix.** Children spawned by an
+  Obj6C parent (bit 7 of subtype set) were each constructed with their own
+  offset spawn position used as the waypoint-path origin (`baseX/baseY`,
+  `objoff_30/_32`). ROM `Obj6C_LoadSubObject` (`s2.asm:54137-54151`) captures
+  the PARENT's `x_pos`/`y_pos` into `d2`/`d3` before the spawn loop and writes
+  those unchanged into every child's `objoff_30/_32`, while the child's
+  `x_pos/y_pos` is set to `parent + layoutOffset`. Without this each child
+  orbited its own initial offset point instead of the shared parent center,
+  scattering the MTZ2 layout-1 platforms (engine had conveyors at
+  x=0x0340/0x037D where ROM had them at x=0x0320 forming the vertical spine
+  across the lava pit). Added a second `ConveyorObjectInstance` constructor
+  accepting explicit `baseX/baseY` and routed the parent's position through
+  `createOrSpawnChildren`. MTZ2 trace replay: engine now correctly lands Sonic
+  on the s29 conveyor at frame 305; frontier frame unchanged (305 y-snap delta),
+  error count 2189 → 2325 (post-landing y is 7 px low for the conveyor run
+  instead of falling off-screen). Other MTZ acts, MTZ3, and EHZ1 unaffected.
+
 - **S2 Spring (Obj41) clears Hurt routine on vertical/diagonal launch.**
   Advances MCZ2 trace frontier from frame 925 to frame 1006 (737 -> 781 errors).
   `SpringObjectInstance.applyUpSpring`/`applyDownSpring`/`applyDiagonalSpring`
