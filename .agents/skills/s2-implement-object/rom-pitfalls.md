@@ -1313,6 +1313,172 @@ frame 8419).
 
 ---
 
+## P30 -- `bmi` countdown timers fire at -1, not 0
+
+**Symptom.** A badnik or object waits one frame longer than ROM before a state
+transition. Timer-indexed trace fields (e.g. `timer`, `scriptTimer`) match ROM
+for one extra frame, then diverge by 1 as the state-machine branch fires one
+frame late. OOZ1/OOZ2 trace: Octus hovered one frame lower than ROM (4 px
+extra downward displacement) because the rise delay fired late.
+
+**Root cause.** ROM countdown loops use:
+```
+subq.w  #1, timer(a0)
+bmi.s   <transition>
+```
+`bmi` ("branch if minus") fires when the result is negative — that is, when the
+timer decrements from 0 to -1 (the **next** frame after it reaches 0). Java
+`if (timer <= 0)` fires when the timer reaches 0, one frame early. The correct
+port is `timer--; if (timer < 0)`.
+
+**What to check.** For every countdown timer in a ROM object routine, find the
+branch instruction: `bmi` fires at -1, `beq` fires at 0, `bne` fires as long as
+the value is non-zero. Do not use `<= 0` as a default "timer expired" check —
+read the actual branch opcode in the disassembly.
+
+**ROM citation.** `docs/s2disasm/s2.asm:59958-59967` (Octus `ObjA2_DelayBeforeRise`:
+`subq.w #1, d1 / bmi.s ObjA2_Rise` — fires when d1 wraps to -1). The same pattern
+appears in virtually every S2/S3K object's wait/delay phase.
+
+**Originating commit.** `31567cb35 Fix S2 Octus collision size and rise-state
+transition timing`.
+
+---
+
+## P31 -- Property table byte-offset mistakenly divided as entry index
+
+**Symptom.** Object selects the wrong art frame, wrong collision dimensions,
+wrong speed constant, or wrong movement waypoint from an object properties table.
+The wrong frame or dimension is consistent (not random) and is typically one or
+two entries away from the correct one. MTZ LongPlatform (Obj65) trace: platforms
+always selected the wrong mapping_frame (and wrong props) because the table index
+was off by a factor of 2 in the byte dimension.
+
+**Root cause.** ROM property tables are addressed by byte offset via
+`lea Table(pc,d0.w), a1` — `d0` is a byte offset, not a 0-based entry index.
+A 2-byte-per-field table addressed with `d0 = subtype << 2` means the byte
+offset is `subtype * 4`; the engine's `entryIndex = d0 / 4` collapses the
+separate byte strides used for the first field (byte offset ÷ 2 → entry) and the
+art frame index (byte offset ÷ 4 → frame). These two derived values must be
+computed from the raw byte offset independently:
+```
+int entryIndex = d0 >> 1;   // byte offset / sizeof(word) = entry number
+int frameIndex = d0 >> 2;   // byte offset / sizeof(longword) = art frame
+```
+Using `d0 >> 2` for both silently picks the wrong entry in the props table while
+occasionally getting the frame right, giving inconsistent but deterministic
+errors.
+
+**What to check.** When a ROM routine has:
+```
+moveq   #<N>, d0
+move.b  subtype(a0), d1
+mulu.w  d1, d0
+lea     SomeTable(pc,d0.w), a1
+move.w  (a1)+, firstField(a0)   ; first word read
+move.w  (a1),  secondField(a0)  ; second word read
+```
+trace the byte offset `d0` at the `lea` and at every subsequent `move.w`. Each
+derived value (frame index, dimension, speed) is the byte offset divided by the
+field size. Don't collapse them to a single Java `index = d0 / totalStride`.
+
+**ROM citation.** `docs/s2disasm/s2.asm:52366-52376` (`Obj65_Properties` table,
+2 words per entry), `s2.asm:52386-52394` (`Obj65_Init`: `mulu.w #4,d0 /
+lea Obj65_Properties(pc,d0.w),a1 / move.w (a1)+,d1 / move.w (a1),d2`).
+
+**Originating commit.** `a574826b6 Fix S2 MTZ SteamSpring timing and
+MTZLongPlatform props-lookup`.
+
+---
+
+## P32 -- Solid checkpoint must run before state-machine position update, not after
+
+**Symptom.** A player riding a vertically-moving solid is one frame behind ROM's
+position during the transition. Specifically, the player lands on the rising
+platform's pre-move surface in the engine but ROM places them at the pre-move
+surface too — yet ROM then launches them (spring-fires / snaps position) one
+frame before the engine does. MTZ1 trace: SteamSpring didn't fire until one frame
+after ROM because the engine ran the state machine (which moved the spring up)
+before the solid checkpoint.
+
+**Root cause.** ROM `Obj42` (`loc_26688`) calls `SolidObject_Always_SingleCharacter`
+**first** at the top of every frame, then the state machine branches run and update
+`y_pos`. This means the solid contact sees the **pre-move** surface. The engine
+naively put the state machine first (updating `yOffset` → new platform Y) and
+then ran `checkpointAll()`, so players saw the post-move surface and the spring
+fire was delayed by one frame.
+
+```
+; ROM order (s2.asm:52030-52049):
+loc_26688:
+    bsr SolidObject_Always_SingleCharacter   ; contact on PRE-move y
+    bsr Obj42_StateMachine                   ; NOW update y_pos
+
+; Naive engine order (WRONG):
+void update() {
+    updateStateMachine();   // moves yOffset first
+    checkpointAll();        // contact on POST-move y  ← one frame late
+}
+```
+
+The same rule applies when an object must fire a spring/launch from the contact
+result before the position changes: capture the contact batch before the
+state machine, then use the batch to decide whether to launch.
+
+**What to check.** For any vertically (or horizontally) moving solid: find the
+ROM dispatch order in `Obj_Main`. If the SolidObject/PlatformObject call appears
+before the movement code, put `checkpointAll()` / `resolveSolidNowAll()` at the
+top of `update()` before any position mutation. See also P15 (slope state update
+order) for the complementary rule on sloped solids.
+
+**ROM citation.** `docs/s2disasm/s2.asm:52030-52049` (`loc_26688`:
+`SolidObject_Always_SingleCharacter` called BEFORE the `Obj42` state-machine
+dispatch). `s2.asm:52121-52124` (`loc_2678E`: spring fire inside the standing
+player loop, also pre-move).
+
+**Originating commit.** `a574826b6 Fix S2 MTZ SteamSpring timing and
+MTZLongPlatform props-lookup`.
+
+---
+
+## P33 -- PhysicsFeatureSet flags must be set to the correct ROM value when guard code is added
+
+**Symptom.** A PhysicsFeatureSet flag is added to gate new behaviour, the guard
+is wired into the physics code path, and all existing tests still pass — but the
+trace diverges at the exact frame the guarded behaviour should fire, because the
+flag is set to the wrong default for one or more games. CNZ2 trace regressed from
+f1490 to f936 when `pinballLandingPreservesPinballMode` was added with `false` in
+`SONIC_2` even though S2 ROM preserves pinball mode on landing.
+
+**Root cause.** PhysicsFeatureSet constants (`SONIC_1`, `SONIC_2`, `SONIC_3K`)
+are long field lists. A new field typically has a conservative default in the
+shared constructor, and the per-game factory constant must explicitly set the
+correct value. It is easy to add the flag, wire the guard, verify that S1/S3K
+behave correctly, and forget to flip the flag for S2 (or vice versa). Unit tests
+rarely cover the exact multi-frame state required to exercise a newly-gated
+branch, so the error is silent until the trace replay runs.
+
+**What to check.** When adding a PhysicsFeatureSet field:
+1. Open the disassembly for ALL three games and find the equivalent routine.
+2. Set the correct value in `SONIC_1`, `SONIC_2`, and `SONIC_3K` factory
+   constants immediately — never leave any game at the fallback default unless
+   you have verified the disassembly confirms it.
+3. If a game's behaviour is unknown, mark it `TODO` in a comment beside the
+   constant and log it in `docs/KNOWN_DISCREPANCIES.md`, but do not leave the
+   wrong value silently in place.
+4. Run the relevant trace replay for all three games after the change.
+
+**ROM citation.** `docs/s2disasm/s2.asm:37770-37771` (`Sonic_ResetOnFloor` S2:
+`bclr #status.player.in_pinball_mode,status(a1)` is absent — pinball mode is
+NOT cleared on landing), `s2.asm:40625-40626` (S2 `Tails_ResetOnFloor_Part2`:
+same omission). Compare S1 which does NOT have pinball mode at all, and S3K
+which has its own `Player_TouchFloor`.
+
+**Originating commit.** `7eaa19993 Preserve S2 pinball_mode mirror across
+landing to restore CNZ2 frontier`.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
