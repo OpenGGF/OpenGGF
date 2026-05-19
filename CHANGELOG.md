@@ -6,6 +6,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 SteamSpring (Obj42) bypasses offscreen sidekick full-solid gate.**
+  Advances MTZ3 trace frontier from frame 460 (`tails_air` 0 vs 1, Tails
+  missed-landing event) to frame 765 (`air` 1 vs 0); error count drops
+  2626 -> 2601. ROM `Obj42` (`s2.asm:52030-52049`, `loc_26688`) calls
+  `SolidObject_Always_SingleCharacter` for BOTH Sonic and Tails, which jumps
+  directly to `SolidObject_cont` (`s2.asm:35147`) without consulting the
+  regular `SolidObject` P2 `render_flags.on_screen` gate (`s2.asm:34825-34828`)
+  or the `SolidObject_OnScreenTest` (`s2.asm:35140-35145`). The engine
+  applied `shouldSkipOffscreenSidekickFullSolid` to the SteamSpring's P2 pass,
+  so off-screen Tails passed through the piston instead of landing. Fix mirrors
+  `SpringObjectInstance.bypassesOffscreenSolidGate() = true` and follows
+  pitfall P27. MTZ/MTZ2/MCZ2/EHZ1 baselines unchanged. Noted-but-not-applied:
+  Obj66 (MTZSpringWall), Obj7B (PipeExitSpring), Obj86 (Flipper), and ObjD6
+  (PointPokey) also use `SolidObject_Always_SingleCharacter` and currently
+  lack the override; pursue when the next relevant trace frontier surfaces.
+
 - **S2 CNZ2 frontier investigation: Crawl closer-player selection.** No code change.
   Confirmed that `CrawlBadnikInstance` must use `Obj_GetOrientationToPlayer`–style
   closest-player selection (by absolute X distance) for proximity and orientation

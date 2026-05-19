@@ -211,6 +211,23 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
         return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
     }
 
+    /**
+     * ROM divergence (P27): Obj42 uses
+     * {@code SolidObject_Always_SingleCharacter} for BOTH Sonic and Tails
+     * (s2.asm:52030-52049), which jumps directly to {@code SolidObject_cont}
+     * (s2.asm:35147) without traversing the {@code SolidObject_OnScreenTest}
+     * on-screen gate (s2.asm:35140-35145) and without consulting the
+     * sidekick render_flags.on_screen check that the regular
+     * {@code SolidObject} P2 prologue performs (s2.asm:34825-34828).
+     * Off-screen Tails must therefore still resolve top/side/bottom contact
+     * against the steam piston, matching the MTZ3 trace at f460 where Tails
+     * lands on this spring while vertically below the camera viewport.
+     */
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        return true;
+    }
+
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         // Spring fire is handled by the manual checkpoint pass in update() — see ROM
