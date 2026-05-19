@@ -6145,7 +6145,7 @@ public class ObjectManager {
 
             if (inBounds && provider.isSolidFor(player) && !blocksSolidContacts(player, instance)) {
                 int deltaX = currentX - ridingX;
-                if (deltaX != 0) {
+                if (deltaX != 0 && provider.carriesRiderOnHorizontalMove(player)) {
                     player.shiftX(deltaX);
                 }
                 // ROM: S3K Obj_CollapsingPlatform state-1 -> state-2 transition

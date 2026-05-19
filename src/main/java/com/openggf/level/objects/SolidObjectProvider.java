@@ -298,6 +298,30 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object's continued-riding path should carry the rider by
+     * this frame's horizontal platform delta.
+     * <p>
+     * ROM divergence: the S2 {@code SolidObject} caller passes the platform's
+     * pre-{@code MvSonicOnPtfm} carry reference x in {@code d4} (s2.asm:35418).
+     * That reference is read from {@code objoff_2E}, which the platform's main
+     * routine saves at the start of each frame and which the per-subtype
+     * movement routine may or may not refresh after updating {@code x_pos}.
+     * If the subtype routine refreshes {@code objoff_2E} to the new x_pos
+     * (e.g. S2 Obj65 button-triggered subtypes 1/2/6/7 via {@code loc_26D50}),
+     * {@code MvSonicOnPtfm} sees a zero delta and the rider is not carried.
+     * If the subtype leaves {@code objoff_2E} untouched (e.g. S2 Obj65
+     * conveyor subtype 5 {@code loc_26E4A}), the carry reference stays at the
+     * pre-move x and the rider follows the platform by the full delta.
+     * <p>
+     * Default {@code true} preserves existing behaviour. Override with the
+     * platform's current movement-routine semantics when porting a ROM
+     * object that exposes both refreshing and non-refreshing movement modes.
+     */
+    default boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        return true;
+    }
+
+    /**
      * Whether this object should run a DropOnFloor terrain check after repositioning
      * the player each frame. When enabled, if terrain is detected at or above the
      * player's feet, the player detaches from this object and enters the air state.

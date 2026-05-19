@@ -157,6 +157,20 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         return !isDestroyed();
     }
 
+    /**
+     * ROM s2.asm Obj65 carries the rider only for the conveyor subtype 5
+     * ({@code loc_26E4A}), which updates only {@code x_pos} and leaves the
+     * {@code objoff_2E} carry reference saved at the pre-move x. All other
+     * Obj65 movement subtypes use {@code loc_26D50} (subtypes 1/2/6/7) or
+     * {@code loc_26E1A} (subtype 3), both of which refresh {@code objoff_2E}
+     * to the new x_pos so {@code MvSonicOnPtfm} sees a zero delta and the
+     * rider stands still while the platform glides underneath.
+     */
+    @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        return moveSubtype == 5;
+    }
+
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;

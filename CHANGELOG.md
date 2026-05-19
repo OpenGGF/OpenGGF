@@ -22,6 +22,28 @@ All notable changes to the OpenGGF project are documented in this file.
   detect zone via `services().currentZone()`, pick the correct table /
   `y_radius` / parent-flag, store the full subtype byte as the phase cursor,
   and gate movement on `activated` (MTZ waits, MCZ starts activated).
+- **S2 MTZ Long Platform (Obj65) properties-index and non-conveyor carry fix.**
+  Two bugs in `MTZLongPlatformObjectInstance` that combined to keep button-
+  triggered platforms stationary at spawn and then, once they moved, to carry
+  the rider as if they were conveyor belts. (1) ROM `Obj65_Init`
+  (`s2.asm:52379-52414`) decodes the subtype byte into a byte-offset `d0` into
+  the 2-byte-per-entry `Obj65_Properties` table (`s2.asm:52366-52376`) and uses
+  a separate second `lsr.w #2,d0` for `mapping_frame`; the engine was using the
+  shifted-twice value as the `PROPERTIES[]` row index, so a subtype `0xB1`
+  platform read width/y_radius from entry 3 and maxDist/childSubtype from entry
+  4 instead of entries 6/7, ending up with `moveSubtype = 0` (stationary) and
+  `currentDist = 0` (no retract baseline). (2) Once the platform-index fix made
+  the subtype-7 retract platform glide left, the engine's continued-riding path
+  shifted the rider by the full `currentX - ridingX` delta, whereas ROM `Obj65`
+  refreshes `objoff_2E` to the new x_pos in `loc_26D50` (subtypes 1/2/6/7) and
+  `loc_26E1A` (subtype 3) so `MvSonicOnPtfm` (`s2.asm:35402-35423`) sees a
+  zero carry delta. Added `SolidObjectProvider.carriesRiderOnHorizontalMove`
+  (default true) and overrode it on `MTZLongPlatformObjectInstance` to return
+  true only for the conveyor subtype 5 (`loc_26E4A`), matching ROM's two
+  carry-reference refresh paths. MTZ2 trace frontier moves from frame 221 to
+  frame 305 (-181 errors); MTZ act 1 drops from 1015 to 989 errors at the
+  same frame 281 Steam Spring frontier; ARZ/CNZ/CNZ2/EHZ1/MTZ3/OOZ unchanged.
+
 - **S2 MCZ VineSwitch (0x7F) edge-trigger release and Tails grab support
   (MCZ2 trace replay).** Two bugs in `VineSwitchObjectInstance`. (1) The
   release-on-button check used `isJumpPressed()` (held state). ROM
