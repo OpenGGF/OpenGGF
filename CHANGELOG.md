@@ -6,16 +6,30 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ3 Obj6A (MCZRotPforms) zone-aware behavior fix.** Advances MTZ3 trace
+  frontier from frame 298 (`air` 0 vs 1) to frame 340 (`tails_g_speed`).
+  `MCZRotPformsObjectInstance` was hard-wired to MCZ behavior in every zone:
+  MCZ velocity tables (`byte_27CF4`/`byte_27D12`), MCZ `y_radius=0x20`,
+  unconditional movement, and `spawn.subtype() & 0x0F` as the table cursor.
+  ROM `Obj6A_Init` (`s2.asm:53686-53751`) branches on `Current_Zone`: MTZ uses
+  `byte_27CDC` (4-phase), `y_radius=0x0C`, routine 2 (`loc_27BDE`, wait for
+  the player to walk off), and skips the subtype-0x18 child-spawn block; MCZ
+  uses `byte_27CF4`/`byte_27D12`, `y_radius=0x20`, routine 4 (`loc_27C66`,
+  move unconditionally), and spawns two child platforms for subtype 0x18.
+  ROM also stores the FULL `subtype` byte into `objoff_38` (`s2.asm:53750`)
+  and uses it as a byte offset into the velocity table — same "byte offset
+  is not array index" pitfall as the Obj65 fix. Rewrote the constructor to
+  detect zone via `services().currentZone()`, pick the correct table /
+  `y_radius` / parent-flag, store the full subtype byte as the phase cursor,
+  and gate movement on `activated` (MTZ waits, MCZ starts activated).
 - **S2 OOZ Aquis investigation (no committed fix).** Documented an Aquis (`Obj50`)
   investigation against the OOZ1 (frontier frame 563 `g_speed`) and OOZ2 (frontier
-  frame 389 `y_speed` sign reversal) traces. Three ROM-vs-engine deltas were
-  identified — missing `move.w #-$100, x_vel(a0)` in `Obj50_Init` (`s2.asm:60100`),
-  P30 `bmi`-style timer pattern in `Obj50_FollowPlayer` / `Obj50_WaitForNextShot`
-  (`s2.asm:60244-60245, 60275-60276`), and closer-player orientation in
-  `Obj_GetOrientationToPlayer` (`s2.asm:72320-72346`). Each individually reduces
-  OOZ2 error counts but introduces a smaller OOZ1 regression, and none advances
-  either frontier; reverted pending further investigation. See `docs/
-  TRACE_FRONTIER_LOG.md` for the full investigation.
+  frame 389 `y_speed` sign reversal) traces. Three ROM-vs-engine deltas identified
+  — missing `move.w #-$100, x_vel(a0)` in `Obj50_Init` (`s2.asm:60100`), P30
+  `bmi`-style timer in `Obj50_FollowPlayer`/`Obj50_WaitForNextShot`
+  (`s2.asm:60244, 60275`), and closer-player orientation
+  (`Obj_GetOrientationToPlayer`, `s2.asm:72320-72346`). Each fix reduces OOZ2
+  errors but introduces an OOZ1 regression; none advances either frontier.
 
 - **S2 CNZ2 pinball_mode preservation flag fix.** `PhysicsFeatureSet.SONIC_2.
   pinballLandingPreservesPinballMode` was still `false`, causing CNZ2 to regress to
