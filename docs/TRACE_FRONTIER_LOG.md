@@ -4,6 +4,30 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-19 - S2 OOZ Octus collision and rise timing parity
+
+- Branch: `develop`
+- Worktree state: clean develop + Octus fixes
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2OozLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ooz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: both still fail, but frontiers advance
+  - OOZ1: 1117 → 1412 errors. Frontier moves frame 509 (`y_speed` 0x0300 vs -0x0300) → frame 563 (`g_speed` 0x0341 vs 0x033D)
+  - OOZ2: 1337 → 1305 errors. Frontier moves frame 301 (`tails_y_speed` -0x0278 vs -0x0178) → frame 389 (`y_speed` -0x0358 vs +0x0358)
+- Cross-game regression: S1 GHZ1, S1 MZ1, S2 EHZ1 still green
+
+Root causes fixed:
+
+1. **Octus (Obj4A) touch box size:** `OctusBadnikInstance` hard-coded `COLLISION_SIZE_INDEX = 0x0C`
+   ((20,16) half-extents). ROM `s2.asm:59905` writes `collision_flags = $A`, mapping to
+   `Touch_Sizes[$A] = (16,8)`. The oversized box made Sonic bounce off Octuses 1–2 frames
+   early, producing the OOZ1 frame-509 y_speed sign reversal and the OOZ2 frame-301 cascade.
+
+2. **Octus rise/hover transition timing:** ROM `Obj4A_DelayBeforeMoveUp` (`s2.asm:59958-59967`)
+   uses `bmi` (branch when timer is negative after decrement) and falls through to
+   `JmpTo19_ObjectMove` on the transition frame, applying `y_vel=-$200` immediately. The engine
+   used `timer <= 0` and skipped movement on the transition frame, leaving Octus ~4px lower than
+   ROM throughout `MoveUp`. Same `bmi`-vs-zero correction applied to `Obj4A_Hover`
+   (`s2.asm:59981-59988`).
+
 ## 2026-05-19 - Full test run and fresh trace frontier sweep
 
 - Branch: `develop`
