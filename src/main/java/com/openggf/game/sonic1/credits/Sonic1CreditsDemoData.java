@@ -158,6 +158,8 @@ public final class Sonic1CreditsDemoData {
     public static final int LZ_LAMP_WATER_HEIGHT = 0x0308;
     /** LZ demo water routine at lamppost. ROM: EndDemo_LampVar dc.b 1 (v_wtr_routine) */
     public static final int LZ_LAMP_WATER_ROUTINE = 1;
+    /** LZ credits vblank phase entering the wind tunnel, preserving the REV01 y-bump cadence. */
+    public static final int LZ_LAMP_VBLA_COUNTER = 52;
 
     /** Text display duration (frames). ROM: move.w #120,(v_generictimer).w */
     public static final int TEXT_DISPLAY_FRAMES = 120;

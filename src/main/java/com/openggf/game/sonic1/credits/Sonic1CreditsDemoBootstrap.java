@@ -78,6 +78,10 @@ public final class Sonic1CreditsDemoBootstrap {
         if (featureProvider != null) {
             featureProvider.setWaterRoutine(Sonic1CreditsDemoData.LZ_LAMP_WATER_ROUTINE);
         }
+        if (GameServices.level().getObjectManager() != null) {
+            GameServices.level().getObjectManager().initVblaCounter(
+                    Sonic1CreditsDemoData.LZ_LAMP_VBLA_COUNTER);
+        }
 
         // Sync player's underwater flag with the water level we just set.
         // Without this, the first frame runs with inWater=false and uses

@@ -141,7 +141,12 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance 
         super(new ObjectSpawn(x, y, 0x4C, subtype, 0, false, 0), "GeyserMaker");
         this.subtype = subtype;
         this.timerReload = TIMER_RELOAD;
-        this.timer = 0;
+        // PushB_LoadLava-created makers are inserted during ExecuteObjects.
+        // The ROM slot appears one frame before its proximity-triggered
+        // bubble animation advances, so start with one live tick here while
+        // normal ObjPosLoad-created makers keep the routine-0 fall-through
+        // timer=0 behaviour.
+        this.timer = 1;
         this.routine = 2;
         this.visible = false;
         this.parentBlock = parentBlock;
