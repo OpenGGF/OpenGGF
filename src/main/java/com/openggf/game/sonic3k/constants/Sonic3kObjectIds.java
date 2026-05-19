@@ -142,8 +142,12 @@ public final class Sonic3kObjectIds {
     public static final int ICZ_SEGMENT_COLUMN = 0xB3;
     // S3KL object table: Obj_ICZSwingingPlatform.
     public static final int ICZ_SWINGING_PLATFORM = 0xB4;
+    // S3KL object table: Obj_ICZStalagtite.
+    public static final int ICZ_STALAGTITE = 0xB5;
     // S3KL object table: Obj_ICZIceCube.
     public static final int ICZ_ICE_CUBE = 0xB6;
+    // S3KL object table: Obj_ICZIceSpikes. SKL reuses $B7 for DDZAsteroid.
+    public static final int ICZ_ICE_SPIKES = 0xB7;
     // S3KL object table: Obj_ICZHarmfulIce. SKL reuses $B8 for DDZMissile.
     public static final int ICZ_HARMFUL_ICE = 0xB8;
     public static final int TUNNELBOT = 0x9E;
@@ -163,6 +167,8 @@ public final class Sonic3kObjectIds {
     public static final int PENGUINATOR = 0xAD;
     // S3KL object table: Obj_StarPointer.
     public static final int STAR_POINTER = 0xAE;
+    // S3KL object table: Obj_ICZCrushingColumn.
+    public static final int ICZ_CRUSHING_COLUMN = 0xAF;
 
     private Sonic3kObjectIds() {
     }
