@@ -4,6 +4,33 @@ Persistent ledger for trace replay frontier work. Update this file whenever a
 trace fix is committed, a frontier moves, a previously passing trace regresses,
 or a full `*TraceReplay` sweep is run to choose the next target.
 
+## 2026-05-19 - S2 CNZ2 pinball_mode preservation flag fix (silent regression)
+
+- Branch: `develop`
+- Worktree state: clean develop + flag fix
+- Command: `mvn -q -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 1057 errors — frontier restored to frame 1490 `tails_y_speed`
+- Cross-game: `*TraceReplay` sweep (41 tests, 21 failures), all matching pre-existing frontiers
+
+On a clean develop reset, CNZ2 was failing at frame 936 (`tails_air`, 1161 errors), not frame
+1490 (1057 errors) as the prior commit narrative described. `PhysicsFeatureSet.SONIC_2.
+pinballLandingPreservesPinballMode` was still `false`, so `PlayableSpriteMovement.resetOnFloor()`
+unconditionally cleared the engine `pinball_mode` mirror on every landing. That broke
+`SidekickCpuController.updateNormal()`'s rolling+pinball+!air suppress guard.
+
+Fix: flipped `pinballLandingPreservesPinballMode` to `true` in `PhysicsFeatureSet.SONIC_2`.
+ROM `Sonic_ResetOnFloor` / `Tails_ResetOnFloor` (`s2.asm:37770-37771, 40625-40626`) both
+`tst.b pinball_mode` / `bne.s Part3`; Part3 only clears in_air/pushing/rolljumping/jumping —
+`pinball_mode` is never cleared.
+
+CNZ2 frame 1490 `tails_y_speed` root cause investigated: Crawl (`ObjC8`) proximity and range
+checks use `Obj_GetOrientationToPlayer` (`s2.asm:72320-72346`) which tests the **closer** of
+Sonic/Tails (`mvabs.w` + `bls.s`). Engine `CrawlBadnikInstance` only passes the leader (Sonic).
+Implementing closer-player selection fixed the 3-px x-position drift at frame 1490, but
+introduced a 1-pixel regression at frame 630 (`y_speed -0666` vs `-0682`, 1096 errors) that
+could not be diagnosed. Closer-player fix reverted. Frame 630 Crawl x-position needs further
+recorder diagnostics before the frame-1490 fix can land.
+
 ## 2026-05-19 - S2 MTZ SteamSpring timing and MTZLongPlatform props-lookup fix
 
 - Branch: `develop`

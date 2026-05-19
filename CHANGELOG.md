@@ -6,6 +6,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 CNZ2 pinball_mode preservation flag fix.** `PhysicsFeatureSet.SONIC_2.
+  pinballLandingPreservesPinballMode` was still `false`, causing CNZ2 to regress to
+  frame 936. ROM `Sonic_ResetOnFloor` / `Tails_ResetOnFloor` (`s2.asm:37770-37771,
+  40625-40626`) never clear `pinball_mode`; both branch to `Part3` which only clears
+  in_air/pushing/rolljumping/jumping. Flag flipped to `true` restores the CNZ2
+  frontier to frame 1490.
+
 - **S2 MTZ SteamSpring timing and MTZLongPlatform props-lookup fix.** Two
   independent MTZ object fixes advancing the MTZ1 frontier from frame 281 to 375
   and MTZ2 from 221 to 222. `SteamSpringObjectInstance` switched to

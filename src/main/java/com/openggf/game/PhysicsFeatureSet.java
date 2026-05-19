@@ -824,7 +824,7 @@ public record PhysicsFeatureSet(
             false /* slopeResistStartsFromRest: S2 Sonic/Tails_SlopeResist returns on zero inertia (s2.asm:37369-37370,40224-40225) */,
             true, false,
             true /* pinballLandingPreservesRoll: S2 skips the Status_Roll clear while pinball_mode is set (s2.asm:37770-37771) */,
-            false /* pinballLandingPreservesPinballMode: S2 landing still clears the pinball_mode mirror */,
+            true /* pinballLandingPreservesPinballMode: S2 Sonic_ResetOnFloor / Tails_ResetOnFloor never clear pinball_mode (s2.asm:37770-37771,40625-40626) — both branch to Part3 on pinball_mode, and Part3 only clears in_air/pushing/rolljumping/jumping */,
             false, false, false, false, false, FAST_SCROLL_CAP_S2, false, false,
             SIDEKICK_FOLLOW_SNAP_S2, SIDEKICK_DESPAWN_X_S2, SIDEKICK_FOLLOW_LEAD_OFFSET_NONE, true, false /* useScreenYWrapValueForVisibility: S2 keeps 32-margin */,
             true /* sidekickDespawnUsesObjectIdMismatch: S2 cmp.b id(a3),d0 in TailsCPU_CheckDespawn (s2.asm:39067) */,
