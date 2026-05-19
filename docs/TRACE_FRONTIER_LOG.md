@@ -1205,3 +1205,69 @@ result, reducing the upward component of the radial bounce by 0x70. Root cause i
 a Crawl walking-position drift accumulated before the ATTACKING transition —
 likely the proximity check fires at a different frame in engine vs ROM, causing the
 Crawl to stop walking at a different x.
+
+## 2026-05-19 - S2 MTZ Long Platform PROPERTIES table index + non-conveyor carry fixes
+
+- Branch: `develop`
+- Command: `mvn -Dmse=off "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay#replayMatchesTrace" test -DfailIfNoTests=false`
+- Result: fail, 2189 errors (down from 2370)
+- Frontier moved: frame 221 `y` -> frame 305 `y` (now an MTZ2 conveyor landing
+  issue at slot s29 `0x6C` Conveyor near `(0x0320,0x0607)`)
+- Cross-game `*TraceReplay` regression: S1 GHZ1, S2 EHZ1, S2 CNZ, S2 CNZ2, S2 ARZ,
+  S2 MTZ3, S2 OOZ unchanged. S2 MTZ act 1 dropped from 1015 -> 989 errors at the
+  same frame 281 `y` Steam Spring frontier.
+
+Root cause: Two bugs in `MTZLongPlatformObjectInstance` (s2.asm Obj65).
+
+1. **`PROPERTIES` table indexed by `d0 >> 2` instead of `d0 >> 1`**: ROM
+   `Obj65_Init` (`docs/s2disasm/s2.asm:52379-52414`) computes
+   `d0 = (subtype >> 2) & $1C` as the **byte offset** into the 2-byte-per-entry
+   `Obj65_Properties` table (`s2.asm:52366-52376`), then performs a second
+   `lsr.w #2,d0` to derive the mapping_frame (= entry_index / 2). The engine was
+   conflating these two values and using `d0 >> 2` (= mapping_frame) as the
+   `PROPERTIES[]` row index, so a button-spawned platform with subtype `0xB1`
+   (entry 6, mapping_frame 3) ended up reading entry 3 `{0x40, 0x03}` instead
+   of entry 6 `{0x40, 0x0C}` for width/y_radius, and entry 4 `{0x10, 0x10}`
+   instead of entry 7 `{0x80, 0x07}` for maxDist and the child subtype. With
+   `childSubtype` decoded as `0x10` rather than `7`, the engine set
+   `moveSubtype = 0x10 & 0x0F = 0` (stationary) and skipped the
+   `currentDist = maxDist` seeding, so the button-triggered platform at
+   `(0x02C0, 0x064D)` in MTZ2 never moved off its spawn x. Fix: split the
+   shared index into `entryIndex = d0 >> 1` (table row) and
+   `frameIndex = d0 >> 2` (mapping_frame).
+
+2. **Continued-riding carry applied for non-conveyor movement subtypes**: ROM
+   `Obj65` saves `x_pos` to `objoff_2E` before each frame's subtype routine
+   (`s2.asm:52454`) and uses `objoff_2E` as the `d4` carry reference for
+   `MvSonicOnPtfm` (`s2.asm:35402-35423`). The movement routines for subtypes
+   1/2/6/7 (`loc_26D50`) and 3 (`loc_26E1A`) refresh `objoff_2E` to the new
+   `x_pos` after the move, so `MvSonicOnPtfm` computes a zero carry delta and
+   the rider stays still while the platform glides underneath. Only the
+   conveyor subtype 5 (`loc_26E4A`) leaves `objoff_2E` untouched, producing
+   the conveyor's `+2 px/frame` rider carry. The engine's `ObjectManager`
+   inline continued-riding path was unconditionally shifting the rider by
+   `currentX - ridingX`, so once the platform-index bug was fixed and the
+   subtype-7 retract started moving, Sonic was being carried +2 px/frame
+   matching the platform speed. Fix: added
+   `SolidObjectProvider.carriesRiderOnHorizontalMove(player)` (default
+   `true`) and overrode it on `MTZLongPlatformObjectInstance` to return
+   `moveSubtype == 5`, so only the conveyor subtype carries the rider.
+
+Files changed:
+- `src/main/java/com/openggf/game/sonic2/objects/MTZLongPlatformObjectInstance.java`
+- `src/main/java/com/openggf/level/objects/SolidObjectProvider.java`
+- `src/main/java/com/openggf/level/objects/ObjectManager.java`
+
+DEZ ending investigation (no fix this session): frontier still at frame 536
+`rolling` (expected=1, actual=0) for `TestS2DezEndingLevelSelectTraceReplay`,
+174 errors. The trace shows Sonic in an air+rolling jump from frame 417 with
+a hard radial velocity reversal at frame 536 (`xv 0x0178 -> 0xFE70`,
+`yv 0x03E0 -> 0xFBE8`) inside a fixed-camera arena (`camera_x=0x0224`). The
+nearby DEZ_1 layout has only Obj2D barriers and the Obj C7 Death Egg Robot,
+none at the bounce x; the reversal pattern looks like a scripted
+boss-arena bounce. The default trace reporter does not surface enough
+post-bounce engine state to localise which rolling-clear path fires before
+frame 536. Tractable next step: extend the trace recorder to capture the
+ENEMY/ATTACK touch slot per frame so the engine's first rolling-clear can be
+isolated, or replay just the DEZ ending with a per-frame rolling-state
+printout to localise the divergent frame.
