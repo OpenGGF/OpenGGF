@@ -36,7 +36,7 @@ import java.util.logging.Logger;
  * <p>
  * <b>Subtype encoding:</b>
  * <ul>
- *   <li>Bits 0-3 (0x0F): Number of chain links (1-7)</li>
+ *   <li>Bits 0-3 (0x0F): Number of chain links (1-15; ROM masks low nybble with no upper clamp)</li>
  *   <li>Bits 4-6 (0x70): Behavior mode</li>
  *   <li>Bit 7 (0x80): Display-only mode (no chain creation)</li>
  * </ul>
@@ -132,7 +132,11 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
 
         // Parse subtype
         int subtype = spawn.subtype();
-        this.chainCount = Math.max(1, Math.min(7, subtype & 0x0F));
+        // ROM Obj15_Init (s2.asm:22480) masks bits 0-3 (`andi.w #$F,d1`) with no upper clamp;
+        // values up to 15 are valid. The chainCount drives the platform's hanging distance.
+        // (Note: the ROM's multi-sprite parent only has 6 sub-sprite slots so visible chain
+        // links cap at 6, but the math still uses the full chainCount.)
+        this.chainCount = Math.max(1, subtype & 0x0F);
         this.displayOnly = (subtype & 0x80) != 0;
 
         // Determine behavior mode from bits 4-6
@@ -324,9 +328,11 @@ public class SwingingPlatformObjectInstance extends AbstractObjectInstance
         int sin = calcSine(swingAngle);
         int cos = calcCosine(swingAngle);
 
-        // Calculate platform position (at end of chain)
-        // Chain length factor: 0x10 pixels per chain segment
-        int chainLength = chainCount * 0x10;
+        // Calculate platform position (at end of chain).
+        // ROM sub_FE70 (s2.asm:22645-22654) accumulates sin/cos*0x10 per chain link in the
+        // chain loop, then halves the last increment (`asr.l #1`) for the platform position.
+        // Net result: platform offset = (chainCount + 0.5) * 0x10 = chainCount*0x10 + 8.
+        int chainLength = chainCount * 0x10 + 8;
         int xOffset = (sin * chainLength) >> 8;  // Divide by 256
         int yOffset = (cos * chainLength) >> 8;
 
