@@ -250,6 +250,23 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a new airborne top-solid landing should apply the absolute
+     * {@code PlatformObject_ChkYRange} snap formula
+     * {@code anchorY - groundHalfHeight - yRadius - 1} after
+     * {@code resolveContactInternal} places the player.
+     * <p>
+     * S2 {@code PlatformObject}-based objects use this formula (true).
+     * S2 {@code SolidObject} (JmpTo22_SolidObject / {@code SolidObject_Landed})-based
+     * objects do NOT — {@code resolveContactInternal} already produces the
+     * correct position ({@code playerY - distY + 3}), so the override must not
+     * overwrite it.  Default is {@code true} to preserve the established
+     * PlatformObject-style landing snap for the majority of top-solid objects.
+     */
+    default boolean usesPlatformObjectLandingSnap() {
+        return true;
+    }
+
+    /**
      * Whether a newly established ride should remember this frame's pre-update
      * object X as the baseline for the next continued-riding carry.
      * <p>

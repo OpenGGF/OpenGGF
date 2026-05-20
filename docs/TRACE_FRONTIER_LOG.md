@@ -1,5 +1,45 @@
 # Trace Frontier Log
 
+## 2026-05-20 - S2 MCZ Drawbridge (Obj81) landing position, zero-dist gate, half-width (MCZ2 frame 1774 -> 2226)
+
+- Branch: `develop` worktree `agent-a1d6ae52d5b453e92`
+- Command: `mvn test -Dtest=TestS2Mcz2LevelSelectTraceReplay -q`
+- Result: MCZ2 frontier advanced from frame 1774 (806 errors) to frame 2226 (724 errors).
+- Regression check: `TestS2MczLevelSelectTraceReplay` unchanged at frame 1085 (452 errors);
+  `TestS2ArzLevelSelectTraceReplay` unchanged at frame 311 (868 errors, pre-existing Tails AI mismatch).
+
+### Root causes
+
+Three bugs in `MCZDrawbridgeObjectInstance` (Obj81 / `JmpTo22_SolidObject`):
+
+**Bug 1 — halfWidth=64 too narrow (s2.asm:56578):**
+`PARAMS_DOWN` used `halfWidth=64` (matching `width_pixels=$40` in the object header), but ROM
+`loc_2A1A8` (`move.w #$4B,d1`) passes `d1=0x4B=75` to `JmpTo22_SolidObject`. The `$40=64`
+value is used only for the secondary inner hit-width check inside `SolidObject_Landed`; the
+primary detection/riding halfWidth is 75. With 64 the engine detached Sonic from the bridge
+3px inside the left edge, causing the frame 1796 `air mismatch`.
+
+**Bug 2 — zero-distance landing rejected:**
+The global `topSolidLandingAllowsZeroDist=false` for S2 was modeled on `PlatformObject_ChkYRange`
+(`s2.asm:35696-35712`). But Obj81 routes through `SolidObject_TopBottom` →
+`SolidObject_Landed` (`s2.asm:35297-35308`), gated by `blo.s SolidObject_Landed` (unsigned
+lower, includes `d3=0`). Zero-distance landings ARE valid for `SolidObject`-based objects.
+Override `allowsZeroDistanceTopSolidLanding()` → `true` in `MCZDrawbridgeObjectInstance`.
+
+**Bug 3 — PlatformObject snap formula overwriting correct SolidObject position:**
+`applyNonUnifiedTopSolidLandingHeightOverride` implements `PlatformObject_ChkYRange`
+(`anchorY - groundHalfHeight - yRadius - 1`). But `resolveContactInternal` already produces
+the correct `SolidObject_Landed` result (`playerY - distY + 3 = 0x04AC`). The override was
+then replacing it with the wrong `PlatformObject_ChkYRange` result (`0x04AB`).
+Added `SolidObjectProvider.usesPlatformObjectLandingSnap()` (default `true`); override to
+`false` in `MCZDrawbridgeObjectInstance`; added early-return guard in the override method.
+
+### New MCZ2 frontier (frame 2226)
+
+`y mismatch (expected=0x033E, actual=0x0340)` — Sonic lands on a Springboard (Obj40,
+`SlopedSolidProvider`) 2px too low. This is a pre-existing sloped-solid landing formula
+divergence separate from the drawbridge fixes.
+
 ## 2026-05-20 - S2 Tails y_radius preservation on non-rolling landing (MCZ2 frame 1290 -> 1487)
 
 - Branch: `develop` worktree `agent-a6820a41fdf6642c1`
@@ -2129,3 +2169,43 @@ Files changed:
 
 `air mismatch (expected=0, actual=1)` — Sonic's air flag diverges. A separate, unrelated
 blocker, not investigated in this iteration.
+
+## 2026-05-20 - S2 MCZ Drawbridge (Obj81) landing position, zero-dist gate, half-width (MCZ2 frame 1774 -> 2226)
+
+- Branch: `develop` worktree `agent-a1d6ae52d5b453e92`
+- Command: `mvn test -Dtest=TestS2Mcz2LevelSelectTraceReplay -q`
+- Result: MCZ2 frontier advanced from frame 1774 (806 errors) to frame 2226 (724 errors).
+- Regression check: `TestS2MczLevelSelectTraceReplay` unchanged at frame 1085 (452 errors);
+  `TestS2ArzLevelSelectTraceReplay` unchanged at frame 311 (868 errors, pre-existing Tails AI mismatch).
+
+### Root causes
+
+Three bugs in `MCZDrawbridgeObjectInstance` (Obj81 / `JmpTo22_SolidObject`):
+
+**Bug 1 — halfWidth=64 too narrow (s2.asm:56578):**
+`PARAMS_DOWN` used `halfWidth=64` (matching `width_pixels=$40` in the object header), but ROM
+`loc_2A1A8` (`move.w #$4B,d1`) passes `d1=0x4B=75` to `JmpTo22_SolidObject`. The `$40=64`
+value is used only for the secondary inner hit-width check inside `SolidObject_Landed`; the
+primary detection/riding halfWidth is 75. With 64 the engine detached Sonic from the bridge
+3px inside the left edge, causing the frame 1796 `air mismatch`.
+
+**Bug 2 — zero-distance landing rejected:**
+The global `topSolidLandingAllowsZeroDist=false` for S2 was modeled on `PlatformObject_ChkYRange`
+(`s2.asm:35696-35712`). But Obj81 routes through `SolidObject_TopBottom` →
+`SolidObject_Landed` (`s2.asm:35297-35308`), gated by `blo.s SolidObject_Landed` (unsigned
+lower, includes `d3=0`). Zero-distance landings ARE valid for `SolidObject`-based objects.
+Override `allowsZeroDistanceTopSolidLanding()` → `true` in `MCZDrawbridgeObjectInstance`.
+
+**Bug 3 — PlatformObject snap formula overwriting correct SolidObject position:**
+`applyNonUnifiedTopSolidLandingHeightOverride` implements `PlatformObject_ChkYRange`
+(`anchorY - groundHalfHeight - yRadius - 1`). But `resolveContactInternal` already produces
+the correct `SolidObject_Landed` result (`playerY - distY + 3 = 0x04AC`). The override was
+then replacing it with the wrong `PlatformObject_ChkYRange` result (`0x04AB`).
+Added `SolidObjectProvider.usesPlatformObjectLandingSnap()` (default `true`); override to
+`false` in `MCZDrawbridgeObjectInstance`; added early-return guard in the override method.
+
+### New MCZ2 frontier (frame 2226)
+
+`y mismatch (expected=0x033E, actual=0x0340)` — Sonic lands on a Springboard (Obj40,
+`SlopedSolidProvider`) 2px too low. This is a pre-existing sloped-solid landing formula
+divergence separate from the drawbridge fixes.
