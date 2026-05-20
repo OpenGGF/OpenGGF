@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 
 import java.util.List;
@@ -226,7 +227,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
         lastDirectionBits = 0;                   // objoff_36 = 0
 
         // Lock player movement (obj_control = $81)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setAnimationId(Sonic2AnimationIds.FLOAT);  // Per disassembly line 76221
@@ -326,7 +327,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
      */
     private void hurtAndReleasePlayer() {
         if (grabbedPlayer != null) {
-            grabbedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(grabbedPlayer);
             grabbedPlayer.setAir(true);
 
             // ROM: Hurt_Sidekick - CPU Tails only gets knockback, no ring scatter or death
@@ -356,7 +357,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
 
     private void releasePlayer(boolean escaped) {
         if (grabbedPlayer != null) {
-            grabbedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(grabbedPlayer);
             grabbedPlayer.setAir(true);
             // Per disassembly: player just becomes airborne and falls naturally
             // No velocity change on escape
