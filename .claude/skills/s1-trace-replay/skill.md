@@ -151,6 +151,10 @@ S1 routines: 0=init, 2=control, **4=hurt**, 6=death, 8=reset. NOT the same as S2
 grep '"slot":75' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl | grep "appeared\|removed"
 ```
 
+Object positions in trace rows and aux events are ROM centre coordinates. Do not compare them directly to debug HUD `Pos:` values or `getX()` / `getY()` top-left bounds; use `getCentreX()` / `getCentreY()` when tracing engine state.
+
+**Object/player participation mismatch** — If the first error involves object contact, standing state, sidekick state, or object removal, classify it with the standard object contracts when present: `ObjectControlState` for controlled-player gates, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy` for which player(s) the object should inspect, and `ObjectLifetimeOps` for delete/despawn/remembered-object behavior. Prefer canonical profile compatibility wrappers over object-local fixes when the issue is generic, but prove wrapper equivalence before changing behavior.
+
 **`object_near`** — Per-frame proximity log of objects within 160px of Sonic:
 ```bash
 grep '"frame":3193' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl | grep "object_near"

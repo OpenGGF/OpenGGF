@@ -127,6 +127,7 @@ Delegate multiple agents to explore the disassembly. **Include this instruction 
 
 **Key disassembly patterns to identify:**
 - `collision_flags` set to boss collision category
+- ROM `x_pos` / `y_pos` as centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
 - `collision_property` used for hit count (starts at 8, decremented)
 - Boss palette flash via palette RAM writes
 - Camera boundary manipulation for arena lock
@@ -390,6 +391,18 @@ Before finalizing a boss or boss child, classify every instance field for rewind
 Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable spawn identity, parent/child graph references, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Boss `dynamicSpawn` references are not structural by default; capture coordinates explicitly or defer generic migration.
 
 Prefer standard value forms before boss-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+Bosses participate in player/object lifecycle beyond hit counts. Cross-check Sonic/Tails/Knuckles contacts, sidekick carry/release, shield reactions, invulnerability/hurt timing, child despawn, and arena-lock latches against the ROM, especially across defeat and transition frames.
+
+### Phase 9.5: Shared Object Contracts
+
+Bosses and boss children may need bespoke state, but still prefer shared contracts when they fit:
+
+- Use `ObjectControlState` for forced-control, cutscene-control, and sidekick suppression predicates instead of raw boolean combinations.
+- Use `ObjectPlayerQuery` and `ObjectPlayerParticipationPolicy` for hit, contact, targeting, and Knuckles/Tails variant decisions. Native S3K slot behavior and OpenGGF multi-sidekick behavior must be distinguished deliberately.
+- Use `ObjectLifetimeOps` for child deletion, despawn, and dynamic-expire semantics once available.
+- Reuse canonical `TouchResponseProfile` / `ObjectLifecycleProfile` compatibility wrappers where they preserve existing boss behavior.
+- Ratchet guard baselines when adding source guards; do not let historical direct-control or lifecycle calls block new hard-fail enforcement.
 
 ### Phase 10: Code Quality
 

@@ -216,6 +216,16 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 | `isOnScreen(margin)` | Inherited from `AbstractObjectInstance`. Off-screen visibility check. |
 | `DebugRenderContext` | `com.openggf.debug.DebugRenderContext` — use for `appendDebugRenderCommands()`. |
 
+##### Standard Object Contracts
+
+When the current branch provides shared object contracts, prefer them over new object-local booleans or direct state writes:
+
+- Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. Do not infer all meanings from `isObjectControlled()` alone.
+- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, or all engine participants. S1 native behavior is main-only, but OpenGGF sidekicks are engine participants and must be handled deliberately.
+- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics once available; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
+- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
+- When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
+
 #### 2.5 Implementation Requirements
 
 **Engine Extensions**: If the ROM uses functionality that the engine doesn't expose, **you MUST extend the engine** rather than working around it or documenting it as a limitation.
@@ -231,8 +241,8 @@ private static final int X_VELOCITY = 0x100;
 **S1 field name mapping**: When translating disassembly, use these S1→engine mappings:
 | S1 Field | Engine Method/Field |
 |----------|-------------------|
-| `obX` | `getX()` / `setX()` (center coords) |
-| `obY` | `getY()` / `setY()` (center coords) |
+| `obX` | `getCentreX()` / `setCentreX()` (ROM position) |
+| `obY` | `getCentreY()` / `setCentreY()` (ROM position) |
 | `obVelX` | X velocity |
 | `obVelY` | Y velocity |
 | `obRoutine` | routine state variable |
@@ -242,6 +252,8 @@ private static final int X_VELOCITY = 0x100;
 | `obColProp` | collision property (hit count for bosses) |
 | `obFrame` | current mapping frame |
 | `obAnim` | current animation ID |
+
+`getX()` / `getY()` are top-left sprite bounds, not ROM `obX` / `obY`. Use them only for render extents or explicit bounds checks. If camera, collision, anchoring, or trace positions drift, audit for accidental top-left/centre mixing first.
 
 **Subtypes**: Implement ALL subtypes from the subtype byte:
 ```java
@@ -292,6 +304,10 @@ Before finalizing a new object or badnik, classify every instance field for rewi
 Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable `ObjectSpawn` identity, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Dynamic spawn coordinates are gameplay state; capture them explicitly rather than treating the live `ObjectSpawn` reference as structural.
 
 Prefer standard value forms before object-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+#### 2.8 Player/Object Participation Checks
+
+When an object can affect the player or sidekick, validate both participants against the ROM routine: standing bits, carried deltas, release timing, object-control gates, hurt/bounce state, and whether the contact is evaluated before or after object movement. Preserve the ROM's `SolidObject` call placement instead of moving all collision work to the end of `update()`.
 
 ### Phase 3: Code Quality
 

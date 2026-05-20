@@ -177,6 +177,31 @@ The test guard suite enforces this contract with `TestObjectServicesMigrationGua
 exception is truly needed, document the exact bridge line and reason in the guard rather
 than exempting a whole class.
 
+### Object Behavior Profiles And Control Contracts
+
+Object behavior vocabulary should be shared at the game layer and executed by the
+object layer:
+
+- Canonical profiles live under `com.openggf.game.profiles.*`, with family
+  subpackages such as solid routines, touch response, and object lifecycle. These
+  profiles describe cross-game behavior; they are not zone-local or object-manager
+  implementation details.
+- `level.objects` remains the compatibility and execution layer. It may adapt
+  legacy provider booleans and hooks to canonical profiles, but new profile types
+  should not be invented in game-specific object packages.
+- `ObjectControlState` should describe object-control intent and derived predicates
+  instead of adding new raw setter combinations.
+- `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` should decide which
+  playable entities participate in object logic. Code that uses only the focused
+  player or first sidekick needs an explicit native-P1/P2 reason.
+- `ObjectLifetimeOps` should own object destruction, offscreen expiry,
+  respawn-latch mutation, and slot transfer operations. Direct lifecycle mutation
+  is legacy or compatibility code unless a documented profile gap requires it.
+
+When source guards enforce these rules, keep their baselines as shrink-only migration
+artifacts. Adding a new object, boss, badnik, or trace fix should either use the shared
+contract or document why an existing compatibility wrapper is still required.
+
 ## Runtime-Owned Systems
 
 The old `GameRuntime`/`RuntimeManager` facade has been retired from production code.
@@ -279,8 +304,11 @@ commands are sorted by priority bucket and executed.
 
 ### Destruction
 
-Objects mark themselves for removal by calling `setDestroyed(true)`. The object manager
-removes them at the end of the frame. Common reasons:
+Objects mark themselves for removal through the lifecycle contract. New code should use
+`ObjectLifetimeOps` or an existing `level.objects` compatibility wrapper so respawn
+latches, dynamic expiry, and slot-transfer behavior stay consistent. Legacy code may still
+call `setDestroyed(true)` directly; treat that as a migration target rather than a pattern
+to copy. Common reasons:
 - Off-screen cleanup (the `isOnScreen()` check, equivalent to `MarkObjGone`)
 - Defeated badnik (after explosion animation)
 - Collected item (ring, monitor)
@@ -289,8 +317,11 @@ removes them at the end of the frame. Common reasons:
 ### Dynamic Objects
 
 Objects created at runtime (projectiles, explosions, debris) are not part of the
-placement list. They are added via `ObjectManager.addDynamicObject(obj)`. They follow
-the same update/render/destroy lifecycle but are not subject to camera-based spawn/despawn.
+placement list. New object code should prefer `spawnChild(...)`, `spawnFreeChild(...)`,
+or another `level.objects` compatibility wrapper so construction context and lifecycle
+semantics stay centralized. Direct `ObjectManager.addDynamicObject(obj)` remains a
+legacy bridge for unusual allocation paths. Dynamic objects follow the same
+update/render/destroy lifecycle but are not subject to camera-based spawn/despawn.
 
 ## Rendering Pipeline
 

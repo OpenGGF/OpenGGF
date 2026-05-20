@@ -23,6 +23,8 @@ Zone events should be implemented to close playable S3K route slices. Prioritize
 
 ## Architecture
 
+When event logic reads player or object positions, use ROM centre-coordinate semantics (`getCentreX()` / `getCentreY()` for sprites and objects). Camera words are already world coordinates, while `getX()` / `getY()` on sprites are top-left render bounds.
+
 ### Class Hierarchy
 
 ```
@@ -106,6 +108,7 @@ When porting a `_Resize` routine, route the behavior into the shared runtime fra
 - **Palette mutations** -> use the palette helper methods backed by `PaletteOwnershipRegistry` / `S3kPaletteWriteSupport`, not direct palette buffer edits.
 - **Tile/block/chunk swaps** -> use `S3kSeamlessMutationExecutor` or `ZoneLayoutMutationPipeline`, not ad-hoc `Level` mutations sprinkled through the handler.
 - **Extra draw passes / render flags** -> expose them via `SpecialRenderEffectRegistry` or `AdvancedRenderModeController` through the zone feature provider, not handler-local booleans.
+- **Object/player control** -> use `ObjectControlState`, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy`, and `ObjectLifetimeOps` when events force player control, spawn/despawn bosses or blockers, or decide which participants a trigger affects. Use canonical profile compatibility wrappers for standard object behavior and ratchet any new guard baselines from current inventory.
 
 ## Implementation Process
 
