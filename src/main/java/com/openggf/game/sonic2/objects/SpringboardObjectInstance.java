@@ -320,13 +320,30 @@ public class SpringboardObjectInstance extends BoxObjectInstance
             return;
         }
 
-        boolean launchContactNow = result.standingNow()
-                || result.postContact().onObject()
-                || (result.kind() != ContactKind.NONE && result.preContact().ySpeed() > 0);
+        // launchContactNow: true when the checkpoint reports actual contact
+        // with this springboard. Only use per-object contact fields (standingNow,
+        // kind) — do NOT include postContact.onObject() here because that
+        // reflects the player's global on-object state (e.g. riding a nearby
+        // swinging platform), not contact with this specific springboard.
+        // The ySpeed>0 restriction was removed: SlopedSolid_cont sets the
+        // standing bit on any successful contact (top/side), and the ROM's
+        // fast-path keeps the bit set within X range regardless of contact type.
+        boolean launchContactNow = result.kind() != ContactKind.NONE;
         if (launchContactNow && isPlayerOnHighSide(player)) {
             launchSequenceActive = true;
             launchPlayer = player;
-        } else if (!(launchSequenceActive && launchPlayer == player && isWithinLaunchXRange(player))) {
+        } else {
+            // ROM SlopedSolid_SingleCharacter fast path: the standing bit is
+            // cleared when there is no contact (Y out of range via
+            // SolidObject_TestClearPush, or player went airborne/left X range
+            // via loc_1980A). Once the standing bit is cleared, loc_2641E is
+            // not reached and the launch sequence does not advance.
+            // In the engine we clear launchSequenceActive whenever the
+            // checkpoint returns no contact, which is the same condition.
+            // The previous "persist within X range" logic caused a stale
+            // launchSequenceActive to fire the launch when Sonic was riding
+            // a nearby swinging platform within X range but at a completely
+            // different Y (MCZ2 trace f1487).
             clearLaunchSequence();
             return;
         }
