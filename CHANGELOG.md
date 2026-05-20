@@ -6,6 +6,31 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 Tails y_radius preservation on non-rolling terrain/object landing (MCZ2 f1290 -> f1487).**
+  `ObjectManager.SolidContacts.clearRollingOnLanding()` had an else-if branch that called
+  `applyStandingRadii(false)` whenever a player landed with `rolling=false` but with non-default
+  radii (e.g. y_radius=14 left over from a prior rolling state). This is S3K behavior:
+  ROM `Player_TouchFloor` (`sonic3k.asm:24341-24343` / `29134-29136`) unconditionally resets
+  y_radius/x_radius before testing `Status_Roll`, so S3K can leave Tails with rolling radii
+  but no roll bit set (via the despawn marker's `Status_InAir` direct write) and still recover
+  on the next landing. S2 `Tails_ResetOnFloor` (`s2.asm:40624-40641`) uses `btst #Status_Roll;
+  bne Tails_ResetOnFloor_Part2`, gating the y_radius reset on `Status_Roll` being set. When
+  not rolling it skips the reset, preserving the stale y_radius value that the despawn path
+  left behind. In MCZ2 at frame 1290, `TailsCPU_Flying` respawn (`s2.asm:38797`) clears rolling
+  via a direct status byte write without touching y_radius, leaving y_radius=14 (rollYRadius).
+  The spurious `applyStandingRadii(false)` call then reset y_radius 14→15 one pixel too early,
+  raising Tails' ceiling probe position by 1 px and causing a different ceiling collision result.
+  Fix: gate the non-rolling radius reset on `featureSet.landingRollClearUsesCurrentYRadiusDelta()`
+  (true only for S3K). Advances MCZ2 trace frontier from frame 1290 (816 errors) to frame 1487
+  (773 errors — air mismatch from SwingingPlatform oscillation divergence, pre-existing issue).
+  MCZ1 (frame 1085, 452 errors) and EHZ1 (frame 304, 813 errors) unchanged.
+  Also fixed `GroundSensor.scanTileVertical()` PARTIAL_EMPTY path: the `-16` correction
+  applied to `prevResult` distance after a `FindFloor2` extension pass was double-counting
+  the tile-relative offset. ROM `loc_1E86A` applies `subi.w #$10,d1` to adjust for
+  FindFloor2's d2-relative distance, but the engine's `scanTileVertical` always computes
+  distance relative to `origY` (not the shifted check position), so the -16 is already
+  embedded. Removed the redundant subtraction.
+
 - **S2 SwingingPlatform (Obj15) out-of-range unload and CalcSine angle convention.**
   Advances MCZ2 trace frontier from frame 1009 (909 errors) to frame 1290 (816 errors).
   Two bugs fixed:

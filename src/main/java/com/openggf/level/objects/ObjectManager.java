@@ -7973,10 +7973,18 @@ public class ObjectManager {
             } else if (player instanceof AbstractPlayableSprite sprite
                     && (sprite.getYRadius() != sprite.getStandYRadius()
                     || sprite.getXRadius() != sprite.getStandXRadius())) {
-                // ROM Player_TouchFloor restores default radii before testing
-                // Status_Roll. S3K despawn marker writes Status_InAir directly
-                // and can leave Tails with rolling radii but no roll bit.
-                sprite.applyStandingRadii(false);
+                // ROM Player_TouchFloor (sonic3k.asm:24341-24343 / 29134-29136) unconditionally
+                // resets y_radius/x_radius before testing Status_Roll. S3K despawn marker
+                // writes Status_InAir directly and can leave Tails with rolling radii but no
+                // roll bit — so S3K needs this reset even when not rolling.
+                // S2 Tails_ResetOnFloor (s2.asm:40624-40641) uses btst/bne to gate the
+                // y_radius reset on Status_Roll being set; when not rolling it skips the
+                // reset, preserving any stale y_radius value from the despawn path.
+                // Gate this non-rolling radius reset to S3K (landingRollClearUsesCurrentYRadiusDelta).
+                PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+                if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
+                    sprite.applyStandingRadii(false);
+                }
             }
         }
 
