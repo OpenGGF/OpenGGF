@@ -41,6 +41,12 @@ class TestS3kMgzTwistingLoopObject {
         loop.update(1, player); // first active frame
 
         assertTrue(player.isObjectControlled(), "Loop should still own the player after the first active frame");
+        assertTrue(player.isObjectControlAllowsCpu(),
+                "MGZ loop uses bits 0-6 object_control, so CPU/touch remain allowed while carried");
+        assertTrue(player.isObjectControlSuppressesMovement(),
+                "MGZ loop bit 0 should suppress normal movement while the object owns traversal");
+        assertFalse(player.isTouchResponseSuppressedByObjectControl(),
+                "MGZ loop bits 0-6 should not suppress touch responses");
         assertTrue(player.getCentreY() > LOOP_Y,
                 "Captured MGZ loop entry should advance downward on the first active frame");
     }
@@ -132,6 +138,28 @@ class TestS3kMgzTwistingLoopObject {
                 "Plain MGZ direct entries should not inherit the compensated convex handoff");
         assertFalse(player.getAir(),
                 "Plain MGZ direct entries should remain grounded on release");
+    }
+
+    @Test
+    void mgzTwistingLoopJumpReleaseKeepsBits0To6ControlUntilReleaseFramesEnd() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite player = createDirectEntryPlayer();
+
+        loop.update(0, player); // capture
+        player.setJumpInputPressed(true);
+        loop.update(1, player); // jump release starts
+
+        assertTrue(player.isObjectControlled(),
+                "Jump release keeps temporary object control while the loop owns launch movement");
+        assertTrue(player.isObjectControlAllowsCpu(),
+                "Jump release should preserve the MGZ loop bits 0-6 CPU/touch policy");
+        assertTrue(player.isObjectControlSuppressesMovement(),
+                "Jump release should keep movement suppressed until release frames expire");
+        assertFalse(player.isTouchResponseSuppressedByObjectControl(),
+                "Bits 0-6 jump release should not suppress touch responses");
+        assertFalse(player.isControlLocked(),
+                "Jump release should unlock player control even while temporary object control remains");
     }
 
     private static TestablePlayableSprite createDirectEntryPlayer() {
