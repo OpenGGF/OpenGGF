@@ -2007,3 +2007,59 @@ top at 0x0376 is 6 px below Tails' bottom, so no touch contact. The Arrow positi
 was already present at frame 304 (engine 0x02E4 vs ROM 0x0300) before this fix — it was
 masked by the earlier pillar-launch failure. Root cause: Obj22 Arrow movement or spawn
 position divergence, pre-existing and separate from this fix.
+
+## 2026-05-20 - S2 Springboard (Obj40) stale launch sequence fires via global on-object state (MCZ2 frame 1487 -> 1774)
+
+- Branch: `develop` worktree `agent-aaa0fe830f71211c4`
+- Command: `mvn test -Dtest=TestS2Mcz2LevelSelectTraceReplay -q`
+- Result: MCZ2 frontier advanced from frame 1487 (773 errors) to frame 1774 (806 errors).
+- Regression check: `TestS2MczLevelSelectTraceReplay` unchanged at frame 1085 (452 errors,
+  pre-existing); `TestS2ArzLevelSelectTraceReplay` frontier unchanged at frame 304 (816 errors,
+  +3 from pre-existing 813; extra errors appear after existing frontier, not before it).
+
+### Root cause
+
+`SpringboardObjectInstance.updateLaunchSequence()` computed `launchContactNow` as:
+
+```java
+boolean launchContactNow = result.standingNow()
+        || result.postContact().onObject()
+        || (result.kind() != ContactKind.NONE && result.preContact().ySpeed() > 0);
+```
+
+`result.postContact().onObject()` captures the player's GLOBAL `isOnObject()` state after the
+springboard's checkpoint resolves — not contact with this specific object. In MCZ2 at frame 1487,
+Sonic is riding a SwingingPlatform in slot 17 (position ~0x06A0, 0x05B4), within the springboard's
+X range but 564 px below it. Because `player.isOnObject()=true` globally (riding the swinging
+platform), `postContact().onObject()=true`, and the stale `launchSequenceActive` flag (set when
+Sonic briefly contacted the springboard in an earlier frame) was not cleared. The `else if`
+persistence branch kept `launchSequenceActive` alive, causing `applyLaunch()` to fire:
+`player.setAir(true)`, `player.setYSpeed(-0x0400)`, `player.setGSpeed(1)`.
+
+The ROM's `SlopedSolid_SingleCharacter` fast-path clears the standing bit whenever
+`SolidObject_TestClearPush` or `loc_1980A` determines the player is out of Y range, airborne,
+or out of X range. There is no separate persistence window — the standing bit is cleared the
+moment contact is lost.
+
+### Fix
+
+Replaced `launchContactNow` with `result.kind() != ContactKind.NONE` (per-object contact only,
+from the checkpoint result). Changed the `else if` persistence branch to a plain `else`:
+always call `clearLaunchSequence()` when the checkpoint returns no contact. This matches the
+ROM exactly — no contact from this specific springboard = standing bit cleared = no launch.
+
+Files changed:
+- `SpringboardObjectInstance.java` (`updateLaunchSequence`) — fixed launchContactNow and else branch
+
+### New MCZ2 frontier (frame 1774)
+
+`y mismatch (expected=0x04AC, actual=0x04A9)` — Sonic's Y position diverges by 3 px. Involves
+`MCZDrawbridge` (Obj6A) — a separate, unrelated object with independent parity issues. Not
+investigated in this iter.
+
+### ARZ1 +3 error note
+
+ARZ1 error count increased from 813 to 816; the frontier frame is unchanged at 304
+(`tails_x_speed mismatch`, pre-existing). The 3 extra errors appear after frame 304 where
+the trace divergence has already compounded. They are a downstream consequence of the corrected
+springboard behavior in ARZ1 after the existing cascade.

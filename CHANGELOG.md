@@ -6,6 +6,25 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 Springboard (Obj40) stale launch sequence fires when riding nearby swinging platform (MCZ2 f1487 -> f1774).**
+  `SpringboardObjectInstance.updateLaunchSequence()` used `result.postContact().onObject()` as
+  part of the `launchContactNow` guard. `postContact().onObject()` reflects the player's GLOBAL
+  `isOnObject()` state after the springboard's checkpoint runs — not contact with this specific
+  springboard. In MCZ2 at frame 1487, Sonic is riding a SwingingPlatform within X range of the
+  springboard. The stale `launchSequenceActive` flag combined with `postContact().onObject()=true`
+  kept `launchContactNow=true`, triggering `applyLaunch()` (air=1, ySpeed=FC00, gSpeed=0001)
+  while Sonic was 564 px below the springboard. Root cause: the previous `else if` branch that
+  preserved `launchSequenceActive` within X range also bypassed the `clearLaunchSequence()` call
+  when the player was riding any object nearby, not specifically this springboard.
+  Fix: replaced `launchContactNow` with `result.kind() != ContactKind.NONE` (per-object contact
+  only), and changed `else if` persistence to a plain `else` (always clear when no contact).
+  This matches the ROM's `SlopedSolid_SingleCharacter` fast-path: the standing bit is cleared
+  on any frame where `SolidObject_TestClearPush` or `loc_1980A` determines the player is out
+  of Y range, airborne, or out of X range — there is no separate persistence window. Advances
+  MCZ2 frontier from frame 1487 (773 errors) to frame 1774 (806 errors). ARZ1 error count
+  increases from 813 to 816 (same frontier frame 304, pre-existing tails_x_speed mismatch;
+  the 3 extra errors appear after the existing frontier, not before it).
+
 - **S2 ARZ Rising Pillar (Obj2B) player-release clears on_object and riding state (ARZ1 f304 -> f311).**
   `RisingPillarObjectInstance.releasePlayerAndBreak()` set rolling=true and in_air=true on the
   launched player but omitted `bclr #status.player.on_object,status(a1)` from ROM `loc_25AF6`
