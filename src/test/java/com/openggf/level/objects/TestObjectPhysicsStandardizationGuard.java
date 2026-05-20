@@ -117,8 +117,6 @@ class TestObjectPhysicsStandardizationGuard {
             baseline("com/openggf/game/sonic3k/objects/S3kResultsScreenObjectInstance.java", "sidekick.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
             baseline("com/openggf/game/sonic3k/objects/S3kSignpostInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
             baseline("com/openggf/game/sonic3k/objects/S3kSignpostInstance.java", "sidekick.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
-            baseline("com/openggf/game/sonic3k/objects/S3kSlotBonusCageObjectInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic3k/objects/S3kSlotBonusCageObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/game/sonic3k/objects/Sonic3kSSEntryRingObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
 
             baseline("com/openggf/game/sonic2/objects/BonusBlockObjectInstance.java", "&& sidekicks.getFirst() instanceof AbstractPlayableSprite sidekick", ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS, ReasonCode.PENDING_PARITY_TRIAGE, 1),
