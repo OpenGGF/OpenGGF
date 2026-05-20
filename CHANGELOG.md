@@ -6,6 +6,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 ceiling extension scan missing `+16` correction fixed (ARZ1 f1102 -> f1106).**
+  `GroundSensor.scanTileVertical` with `isExtension=true` and `metric<0, adjusted<0` returned
+  `(byte)~yInTile` directly from FindFloor2's `not.w d1`, but the ROM's FindFloor
+  (`loc_1E7E2`, s2.asm:42989) follows the FindFloor2 call with `addi.w #$10,d1` (+16).
+  Without the +16 the extension tile at y=037F (one tile above the probe at y=038F) in ARZ1
+  produced distance=-1 at frame 1102 — a spurious ceiling hit that zeroed ySpeed and pushed
+  Sonic 1px too low. Fix: changed `(byte)~yInTile` to `(byte)(~yInTile + 16)` in the
+  `isExtension=true, metric<0, adjusted<0` branch. ROM refs: `FindFloor2` `loc_1E900`
+  (`not.w d1`, s2.asm:43064); `FindFloor` `loc_1E7E2` (`addi.w #$10,d1`, s2.asm:42989).
+  Advances ARZ1 frontier from frame 1102 (648 errors) to frame 1106 (624 errors).
+
 - **S2 Springboard (Obj40) sidekick (Tails) contact drives animation switch (MCZ2 f2418 -> f3003).**
   `SpringboardObjectInstance.update()` previously called `updateLaunchSequence` only for the
   main character (Sonic). The ROM's `Obj40_Main` calls `SlopedSolid_SingleCharacter` and
