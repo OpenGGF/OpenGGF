@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -115,7 +116,7 @@ public class Sonic1RingFlashObjectInstance extends AbstractObjectInstance {
             // ROM: clr.b (v_shield).w - remove shield
             if (player != null) {
                 player.setHidden(true);
-                player.setObjectControlled(true);
+                ObjectControlState.nativeBit7FullControl().applyTo(player);
                 player.clearPowerUps();
             }
 
