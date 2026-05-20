@@ -57,6 +57,28 @@ class TestCanonicalObjectPhysicsProfiles {
     }
 
     @Test
+    void canonicalSolidProfileConvertsThroughLegacyWrapperWithoutFieldLoss() {
+        SolidRoutineProfile canonical = new SolidRoutineProfile(
+                SolidRoutineKind.MONITOR_SOLID,
+                false,
+                true,
+                11,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true);
+
+        assertEquals(canonical,
+                com.openggf.level.objects.SolidRoutineProfile.fromCanonical(canonical).toCanonical());
+    }
+
+    @Test
     void canonicalSlopedProfileMapsCurrentProviderDefaultsAndDelegatesSlopeData() {
         byte[] slopeData = {1, 2, 3};
         SlopedSolidProvider provider = new MinimalSlopedProvider(slopeData, true);
@@ -66,6 +88,14 @@ class TestCanonicalObjectPhysicsProfiles {
         assertTrue(profile.usesSlopeForNewLanding());
         assertEquals(1, profile.slopeBaseline());
         assertArrayEquals(slopeData, SlopedSolidRoutineProfile.adapt(provider).getSlopeData());
+    }
+
+    @Test
+    void canonicalSlopedProfileConvertsThroughLegacyWrapperWithoutFieldLoss() {
+        SlopedSolidRoutineProfile canonical = new SlopedSolidRoutineProfile(false, true, false, 9);
+
+        assertEquals(canonical,
+                com.openggf.level.objects.SlopedSolidRoutineProfile.fromCanonical(canonical).toCanonical());
     }
 
     @Test
@@ -91,6 +121,23 @@ class TestCanonicalObjectPhysicsProfiles {
 
         assertEquals(TouchShieldDeflectCapability.SHIELD_DEFLECT, canonical.shieldDeflectCapability());
         assertEquals(0x08, canonical.shieldReactionFlags());
+    }
+
+    @Test
+    void canonicalTouchProfileConvertsThroughLegacyWrapperWithoutFieldLoss() {
+        TouchResponseProfile canonical = new TouchResponseProfile(
+                TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
+                true,
+                true,
+                true,
+                TouchShieldDeflectCapability.SHIELD_DEFLECT,
+                0x8C,
+                com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                com.openggf.game.profiles.touchresponse.TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
+
+        assertEquals(canonical,
+                com.openggf.level.objects.TouchResponseProfile.fromCanonical(canonical).toCanonical());
     }
 
     @Test
