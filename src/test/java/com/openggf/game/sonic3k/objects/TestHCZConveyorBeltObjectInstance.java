@@ -82,12 +82,16 @@ class TestHCZConveyorBeltObjectInstance {
         top.update(50, player);
         bottom.update(50, player);
         assertTrue(player.isObjectControlled());
+        assertTrue(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
         assertEquals(0x63, player.getMappingFrame());
         assertEquals(0x0214, player.getCentreY() & 0xFFFF);
 
         player.setJumpInputPressed(true);
         top.update(51, player);
         assertFalse(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertFalse(player.isObjectControlSuppressesMovement());
         assertEquals(-0x500, player.getYSpeed());
 
         player.setJumpInputPressed(false);
@@ -98,6 +102,8 @@ class TestHCZConveyorBeltObjectInstance {
         bottom.update(52, player);
 
         assertTrue(player.isObjectControlled());
+        assertTrue(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
         assertEquals(0x65, player.getMappingFrame());
         assertEquals(0x0216, player.getCentreY() & 0xFFFF);
     }

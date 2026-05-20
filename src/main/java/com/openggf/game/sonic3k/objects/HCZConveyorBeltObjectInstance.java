@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -428,8 +429,8 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         // ROM: move.b #0,anim(a1) — idle animation base
         player.setAnimationId(0);
 
-        // ROM: move.b #3,object_control(a1) — full object control
-        player.setObjectControlled(true);
+        // ROM: move.b #3,object_control(a1) — bits 0-6, movement suppressed but CPU/touch remain allowed.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // ROM: move.b #$63/$65,mapping_frame(a1) — initial frame
         player.setObjectMappingFrameControl(true);
@@ -658,7 +659,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
      */
     private void safeReleaseCapturedPlayer(PlayerBeltState state) {
         if (state.active && state.capturedPlayer != null) {
-            state.capturedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(state.capturedPlayer);
             state.capturedPlayer.setObjectMappingFrameControl(false);
             state.capturedPlayer.setAir(true);
             state.active = false;
