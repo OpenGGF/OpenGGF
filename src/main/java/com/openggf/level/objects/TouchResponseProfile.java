@@ -27,6 +27,32 @@ public record TouchResponseProfile(
         return fromCanonical(com.openggf.game.profiles.touchresponse.TouchResponseProfile.fromProvider(provider));
     }
 
+    public static TouchResponseProfile fromProvider(TouchResponseProvider provider, boolean multiRegionSource) {
+        Objects.requireNonNull(provider, "provider");
+        boolean sonic2 = provider.usesSonic2TouchSpecialPropertyResponse();
+        boolean s3k = provider.usesS3kTouchSpecialPropertyResponse();
+        if (sonic2 && s3k) {
+            throw new IllegalArgumentException(
+                    "Touch special-property decode mode must be Sonic 2 or S3K, not both");
+        }
+        TouchCategoryDecodeMode decodeMode = sonic2
+                ? TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY
+                : s3k ? TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY : TouchCategoryDecodeMode.NORMAL;
+
+        return new TouchResponseProfile(
+                decodeMode,
+                provider.requiresContinuousTouchCallbacks(),
+                provider.requiresRenderFlagForTouch(),
+                multiRegionSource,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                multiRegionSource
+                        ? TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
+                        : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+    }
+
     public com.openggf.game.profiles.touchresponse.TouchResponseProfile toCanonical() {
         return new com.openggf.game.profiles.touchresponse.TouchResponseProfile(
                 categoryDecodeMode.toCanonical(),

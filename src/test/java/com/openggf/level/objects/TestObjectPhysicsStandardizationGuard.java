@@ -24,6 +24,14 @@ class TestObjectPhysicsStandardizationGuard {
     private static final Pattern DIRECT_LIFECYCLE_OPERATION = Pattern.compile(
             "(?:setSlotIndex\\s*\\(\\s*-\\s*1\\s*\\)|\\.markRemembered\\s*\\(|"
                     + "\\.removeFromActiveSpawns\\s*\\(|\\.addDynamicObjectAtSlot\\s*\\()");
+    private static final List<Pattern> DIRECT_TOUCH_POLICY_CALLS = List.of(
+            Pattern.compile("(?<!\\btouchProfile)\\.requiresRenderFlagForTouch\\s*\\("),
+            Pattern.compile("(?<!\\btouchProfile)\\.requiresContinuousTouchCallbacks\\s*\\("),
+            Pattern.compile("\\.usesS3kTouchSpecialPropertyResponse\\s*\\("),
+            Pattern.compile("\\.usesSonic2TouchSpecialPropertyResponse\\s*\\("),
+            Pattern.compile("\\bTouchResponseProvider\\s+touchProfile\\b"),
+            Pattern.compile("\\bvar\\s+touchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider\\b"),
+            Pattern.compile("\\btouchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider\\b"));
 
     private static final List<BaselineViolation> BASELINE = List.of(
             baseline("com/openggf/game/sonic3k/objects/AbstractS3kFloatingEndEggCapsuleInstance.java", "sprite.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
@@ -76,6 +84,13 @@ class TestObjectPhysicsStandardizationGuard {
                 ".markRemembered(",
                 ".removeFromActiveSpawns(",
                 ".addDynamicObjectAtSlot("));
+    }
+
+    @Test
+    void objectManagerTouchDispatchConsumesTouchResponseProfileForStablePolicy() throws IOException {
+        SourceText source = source("com/openggf/level/objects/ObjectManager.java");
+
+        assertEquals(List.of(), forbiddenLines(source, DIRECT_TOUCH_POLICY_CALLS));
     }
 
     @Test
@@ -173,9 +188,25 @@ class TestObjectPhysicsStandardizationGuard {
                 .toList();
     }
 
+    private static List<String> forbiddenLines(SourceText source, List<Pattern> patterns) {
+        return source.lines().stream()
+                .map(String::trim)
+                .filter(line -> matchesAny(line, patterns))
+                .toList();
+    }
+
     private static boolean containsAny(String line, String... fragments) {
         for (String fragment : fragments) {
             if (line.contains(fragment)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean matchesAny(String line, List<Pattern> patterns) {
+        for (Pattern pattern : patterns) {
+            if (pattern.matcher(line).find()) {
                 return true;
             }
         }
