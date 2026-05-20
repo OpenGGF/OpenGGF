@@ -9,17 +9,30 @@ public record SlopedSolidRoutineProfile(
         int slopeBaseline) {
 
     public static SlopedSolidRoutineProfile fromProvider(SlopedSolidProvider provider) {
-        Objects.requireNonNull(provider, "provider");
-        return new SlopedSolidRoutineProfile(
-                provider.usesSlopeForNewLanding(),
-                provider.usesGroundedStandingCatchWindow(),
-                provider.addsSlopeCatchRangeToVerticalOverlap(),
-                provider.getSlopeBaseline());
+        return fromCanonical(com.openggf.game.profiles.solidroutine.SlopedSolidRoutineProfile.fromProvider(provider));
     }
 
     public static SlopedSolidRoutineAdapter adapt(SlopedSolidProvider provider) {
         return new SlopedSolidRoutineAdapter(
                 Objects.requireNonNull(provider, "provider"),
                 fromProvider(provider));
+    }
+
+    public com.openggf.game.profiles.solidroutine.SlopedSolidRoutineProfile toCanonical() {
+        return new com.openggf.game.profiles.solidroutine.SlopedSolidRoutineProfile(
+                usesSlopeForNewLanding,
+                usesGroundedStandingCatchWindow,
+                addsSlopeCatchRangeToVerticalOverlap,
+                slopeBaseline);
+    }
+
+    public static SlopedSolidRoutineProfile fromCanonical(
+            com.openggf.game.profiles.solidroutine.SlopedSolidRoutineProfile canonical) {
+        Objects.requireNonNull(canonical, "canonical");
+        return new SlopedSolidRoutineProfile(
+                canonical.usesSlopeForNewLanding(),
+                canonical.usesGroundedStandingCatchWindow(),
+                canonical.addsSlopeCatchRangeToVerticalOverlap(),
+                canonical.slopeBaseline());
     }
 }

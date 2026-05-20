@@ -144,6 +144,27 @@ class TestObjectPlayerQuery {
         assertSame(tails, query.mainPlayerOrNull());
     }
 
+    @Test
+    void objectServicesExposesPlayerQueryWhileRetainingRawSidekicks() {
+        AbstractPlayableSprite main = mock(AbstractPlayableSprite.class);
+        when(main.isCpuControlled()).thenReturn(false);
+        AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
+        when(sidekick.isCpuControlled()).thenReturn(true);
+
+        SpriteManager spriteManager = mock(SpriteManager.class);
+        when(spriteManager.getAllSprites()).thenReturn(List.<Sprite>of(main, sidekick));
+
+        TestObjectServices services = new TestObjectServices()
+                .withSpriteManager(spriteManager)
+                .withSidekicks(List.of(sidekick));
+
+        ObjectPlayerQuery query = services.playerQuery();
+
+        assertEquals(List.of(sidekick), services.sidekicks());
+        assertEquals(List.of(main, sidekick),
+                query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS));
+    }
+
     private static ObjectPlayerQuery query(FakePlayer main, FakePlayer... sidekicks) {
         return new ObjectPlayerQuery(() -> main, () -> Arrays.asList(sidekicks));
     }

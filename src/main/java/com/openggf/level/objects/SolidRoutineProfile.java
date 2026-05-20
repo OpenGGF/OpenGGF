@@ -19,24 +19,7 @@ public record SolidRoutineProfile(
         boolean carriesAirborneRiderAfterExitPlatform) {
 
     public static SolidRoutineProfile fromProvider(SolidObjectProvider provider) {
-        Objects.requireNonNull(provider, "provider");
-        boolean topSolidOnly = provider.isTopSolidOnly();
-        boolean monitorSolidity = provider.hasMonitorSolidity();
-        return new SolidRoutineProfile(
-                kindFor(topSolidOnly, monitorSolidity),
-                topSolidOnly,
-                monitorSolidity,
-                provider.getMonitorSolidObjectVerticalOffset(),
-                provider.usesInclusiveRightEdge(),
-                provider.usesStickyContactBuffer(),
-                provider.usesPlatformObjectLandingSnap(),
-                provider.usesCollisionHalfWidthForTopLanding(),
-                provider.usesGroundHalfHeightForTopSolidContact(),
-                provider.bypassesOffscreenSolidGate(),
-                provider.allowsObjectControlledSolidContacts(),
-                provider.forceAirOnRideExit(),
-                provider.dropOnFloor(),
-                provider.carriesAirborneRiderAfterExitPlatform());
+        return fromCanonical(com.openggf.game.profiles.solidroutine.SolidRoutineProfile.fromProvider(provider));
     }
 
     public static SolidRoutineAdapter adapt(SolidObjectProvider provider) {
@@ -45,10 +28,41 @@ public record SolidRoutineProfile(
                 fromProvider(provider));
     }
 
-    private static SolidRoutineKind kindFor(boolean topSolidOnly, boolean monitorSolidity) {
-        if (monitorSolidity) {
-            return SolidRoutineKind.MONITOR_SOLID;
-        }
-        return topSolidOnly ? SolidRoutineKind.TOP_SOLID_ONLY : SolidRoutineKind.FULL_SOLID;
+    public com.openggf.game.profiles.solidroutine.SolidRoutineProfile toCanonical() {
+        return new com.openggf.game.profiles.solidroutine.SolidRoutineProfile(
+                kind.toCanonical(),
+                topSolidOnly,
+                monitorSolidity,
+                monitorVerticalOffset,
+                inclusiveRightEdge,
+                stickyContactBuffer,
+                usesPlatformLandingSnap,
+                usesCollisionHalfWidthForTopLanding,
+                usesGroundHalfHeightForTopSolidContact,
+                bypassesOffscreenSolidGate,
+                allowsObjectControlledSolidContacts,
+                forceAirOnRideExit,
+                dropOnFloor,
+                carriesAirborneRiderAfterExitPlatform);
+    }
+
+    public static SolidRoutineProfile fromCanonical(
+            com.openggf.game.profiles.solidroutine.SolidRoutineProfile canonical) {
+        Objects.requireNonNull(canonical, "canonical");
+        return new SolidRoutineProfile(
+                SolidRoutineKind.fromCanonical(canonical.kind()),
+                canonical.topSolidOnly(),
+                canonical.monitorSolidity(),
+                canonical.monitorVerticalOffset(),
+                canonical.inclusiveRightEdge(),
+                canonical.stickyContactBuffer(),
+                canonical.usesPlatformLandingSnap(),
+                canonical.usesCollisionHalfWidthForTopLanding(),
+                canonical.usesGroundHalfHeightForTopSolidContact(),
+                canonical.bypassesOffscreenSolidGate(),
+                canonical.allowsObjectControlledSolidContacts(),
+                canonical.forceAirOnRideExit(),
+                canonical.dropOnFloor(),
+                canonical.carriesAirborneRiderAfterExitPlatform());
     }
 }
