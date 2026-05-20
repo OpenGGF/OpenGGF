@@ -7061,6 +7061,15 @@ public class ObjectManager {
                     || usesUnifiedCollisionModel(player)) {
                 return;
             }
+            // ROM: SolidObject_Landed (s2.asm:35368-35387) uses playerY - relY + 3,
+            // which resolveContactInternal already computes correctly. The absolute
+            // anchorY-groundHalfHeight formula below only matches PlatformObject_ChkYRange
+            // (s2.asm:35696-35712). Skip the snap for SolidObject-based objects so
+            // resolveContactInternal's result is preserved.
+            if (instance instanceof SolidObjectProvider provider
+                    && !provider.usesPlatformObjectLandingSnap()) {
+                return;
+            }
             int targetCentreY = anchorY - params.groundHalfHeight() - player.getYRadius() - 1;
             if (player instanceof AbstractPlayableSprite sprite) {
                 sprite.setCentreYPreserveSubpixel((short) targetCentreY);

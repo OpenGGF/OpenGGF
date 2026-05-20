@@ -6,6 +6,25 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 MCZ Drawbridge (Obj81) landing position, zero-distance landing gate, and half-width (MCZ2 f1774 -> f2226).**
+  Three ROM-accuracy fixes for `MCZDrawbridgeObjectInstance` (Obj81 / `JmpTo22_SolidObject`):
+  (1) `PARAMS_DOWN.halfWidth` corrected from 64 to 75 (ROM `loc_2A1A8` s2.asm:56578:
+  `move.w #$4B,d1` — `d1` is the halfWidth passed to `JmpTo22_SolidObject`; the narrower
+  `width_pixels=$40=64` in the object header is used only for the secondary
+  `SolidObject_Landed` inner hit-width check, not the primary detection/riding width).
+  (2) `allowsZeroDistanceTopSolidLanding()` overridden to return `true`: ROM
+  `SolidObject_TopBottom` → `SolidObject_Landed` is guarded by `blo.s SolidObject_Landed`
+  (unsigned lower, includes d3=0), so zero-distance landings are valid on SolidObject-based
+  objects. The global `topSolidLandingAllowsZeroDist=false` for S2 was modeled on
+  `PlatformObject_ChkYRange`, which has a different gate.
+  (3) `usesPlatformObjectLandingSnap()` overridden to return `false` in
+  `MCZDrawbridgeObjectInstance` and the new default `true` added to `SolidObjectProvider`:
+  `applyNonUnifiedTopSolidLandingHeightOverride` implements `PlatformObject_ChkYRange`
+  (`anchorY - groundHalfHeight - yRadius - 1`), but Obj81 uses `SolidObject_Landed`
+  (`playerY - relY + 3`), which `resolveContactInternal` already computes correctly. Without
+  this guard the override was overwriting the correct position with a wrong one.
+  Advances MCZ2 frontier from frame 1774 (806 errors) to frame 2226 (724 errors).
+
 - **S2 Arrow Shooter (Obj22) sidekick-detection and animation-timing fixes (ARZ1 f311 -> f964).**
   Three bugs in `ArrowShooterObjectInstance` caused the fired Arrow to be 28px behind ROM position
   at frame 311, preventing Tails from being hit. (1) `updateDetection` only checked the main player
