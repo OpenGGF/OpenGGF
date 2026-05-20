@@ -110,6 +110,8 @@ class TestS3kIczFreezerObject {
 
         IczFreezerObjectInstance.FrozenPlayerBlock block = cloud.frozenBlockForTesting();
         assertTrue(player.isObjectControlled(), "Freezer child should take over player control");
+        assertTrue(player.isObjectControlSuppressesMovement(), "Freezer capture should suppress player movement");
+        assertFalse(player.isObjectControlAllowsCpu(), "Freezer capture should not leave CPU movement enabled");
         assertEquals(0x1A, player.getAnimationId());
         assertSame(player, block.capturedPlayerForTesting());
 
@@ -119,6 +121,8 @@ class TestS3kIczFreezerObject {
         }
 
         assertFalse(player.isObjectControlled(), "Frozen block should release control when it breaks");
+        assertFalse(player.isObjectControlSuppressesMovement(), "Frozen block should clear movement suppression on release");
+        assertFalse(player.isObjectControlAllowsCpu(), "Frozen block should clear CPU movement allowance on release");
         assertEquals(120, player.getInvulnerableFrames());
         assertTrue(block.isDestroyed());
         assertEquals(12, block.debrisSpawnedForTesting());

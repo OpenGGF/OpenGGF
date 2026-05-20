@@ -17,6 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -325,8 +326,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
 
         private void capture(AbstractPlayableSprite player) {
-            player.setObjectControlled(true);
-            player.setObjectControlSuppressesMovement(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setAir(true);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
@@ -416,8 +416,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
             if (capturedPlayer == null) {
                 return;
             }
-            capturedPlayer.setObjectControlled(true);
-            capturedPlayer.setObjectControlSuppressesMovement(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(capturedPlayer);
             capturedPlayer.setCentreX((short) motion.x);
             capturedPlayer.setCentreY((short) motion.y);
             capturedPlayer.setXSpeed((short) 0);
