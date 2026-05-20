@@ -20,6 +20,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
 
 import java.util.List;
@@ -267,7 +268,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
         int yRadius = (player instanceof Tails) ? GRAB_Y_RADIUS_TAILS : GRAB_Y_RADIUS_DEFAULT;
         player.applyCustomRadii(GRAB_X_RADIUS, yRadius);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setPushing(false);
 
         int snapX = facingLeft ? baseX + GRAB_X_SNAP_OFFSET : baseX - GRAB_X_SNAP_OFFSET;
@@ -285,7 +286,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         player.setGSpeed((short) (ESCAPE_GROUND_VEL * xDir));
         player.setXSpeed((short) (ESCAPE_X_VEL * xDir));
         player.setYSpeed((short) ESCAPE_Y_VEL);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setOnObject(false);
         player.setAir(true);
 
@@ -324,7 +325,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
             player.setXSpeed((short) (LAUNCH_X_VEL * xDir));
             player.setYSpeed((short) 0);
             player.setAnimationId(0);
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setOnObject(false);
             return;
         }

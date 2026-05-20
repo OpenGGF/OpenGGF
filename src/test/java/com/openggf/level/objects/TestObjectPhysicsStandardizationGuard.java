@@ -51,8 +51,6 @@ class TestObjectPhysicsStandardizationGuard {
             baseline("com/openggf/game/sonic3k/objects/HCZBreakableBarObjectInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 2),
             baseline("com/openggf/game/sonic3k/objects/HCZBreakableBarObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/game/sonic3k/objects/HCZBreakableBarObjectInstance.java", "sidekick.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic3k/objects/HCZHandLauncherObjectInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 2),
-            baseline("com/openggf/game/sonic3k/objects/HCZHandLauncherObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/game/sonic3k/objects/HczMinibossInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
             baseline("com/openggf/game/sonic3k/objects/HczMinibossInstance.java", "sidekick.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
             baseline("com/openggf/game/sonic3k/objects/HczMinibossInstance.java", "sprite.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
