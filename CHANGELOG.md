@@ -6,6 +6,26 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 Arrow Shooter (Obj22) sidekick-detection and animation-timing fixes (ARZ1 f311 -> f964).**
+  Three bugs in `ArrowShooterObjectInstance` caused the fired Arrow to be 28px behind ROM position
+  at frame 311, preventing Tails from being hit. (1) `updateDetection` only checked the main player
+  (Sonic) via `update()`'s `playerEntity` arg; the ROM checks both `MainCharacter` and `Sidekick`
+  (`bsr Obj22_DetectPlayer` called twice). In this trace Tails is the closer character, so the
+  engine never detected via Sonic only and transitioned from idle→detecting 15 frames early when
+  Sonic briefly crossed the 0x40-pixel threshold. (2) On the idle→firing transition, `animTimer`
+  was set to `DELAY_FIRING=7` instead of 0; ROM's `AnimateSprite` processes the first firing-entry
+  immediately on the same call that sets `anim=2` (since `anim_frame_duration` is reset to 0 then
+  immediately decremented to −1), adding 8 extra frames. (3) The engine fired the arrow after all
+  5 `FIRING_SEQUENCE` entries (`FIRING_CALLBACK_INDEX=5`) instead of after entry index 2 (which
+  represents the frame after the ROM's `$FC` callback); ROM's `$FC` fires after showing only
+  frames 3 and 4 (entries 0–1). Fix: `updateDetection` now uses `isWithinDetectionRange(entity)`
+  for both the main player and all sidekicks from `services().sidekicks()`; `animTimer` is
+  initialised to 0 on FIRING entry; `FIRING_CALLBACK_INDEX` changed from 5 to 3 (fires after
+  FIRING_SEQUENCE[2]=4 is set, matching the frame after ROM's `$FC`); `fireArrow()` uses
+  `addDynamicObjectNextFrame` instead of `addDynamicObject` to replicate the 1-frame gap between
+  `$FC` changing `routine` and `Obj22_ShootArrow` actually allocating the arrow on the next frame.
+  Advances ARZ1 frontier from frame 311 (868 errors) to frame 964 (664 errors).
+
 - **S2 Springboard (Obj40) stale launch sequence fires when riding nearby swinging platform (MCZ2 f1487 -> f1774).**
   `SpringboardObjectInstance.updateLaunchSequence()` used `result.postContact().onObject()` as
   part of the `launchContactNow` guard. `postContact().onObject()` reflects the player's GLOBAL
