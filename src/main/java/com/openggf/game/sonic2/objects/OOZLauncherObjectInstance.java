@@ -21,6 +21,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -323,7 +324,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
 
         // Launch the player (ROM: loc_24FC2)
         // ROM: move.b #$81,obj_control(a1)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         // ROM: move.b #AniIDSonAni_Roll,anim(a1)
         player.setAnimationId(Sonic2AnimationIds.ROLL);
@@ -374,7 +375,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         // Check if player is off-screen (ROM: btst #render_flags.on_screen)
         if (!isPlayerOnScreen(player)) {
             // Release player
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setControlLocked(false);
             player.setAir(true);
             player.setOnObject(false);

@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -404,7 +405,7 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         // Set player state for tube traversal
         // ROM: move.b #$81,obj_control(a1) - locks player to object control
         // This disables normal physics - the tube controls the player completely
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setRolling(true);
         // ROM: move.b #AniIDSonAni_Roll,anim(a1) - force roll animation.
