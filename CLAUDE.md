@@ -363,6 +363,15 @@ Objects use a factory pattern with game-specific registries. `ObjectRegistry` cr
 
 Badniks extend `AbstractBadnikInstance` (`com.openggf.level.objects` — game-agnostic) which provides touch response collision, destruction behavior via `DestructionEffects`, and movement/animation framework. Subclasses implement `updateMovement()` and `getCollisionSizeIndex()`.
 
+**Object behavior contracts:** New object, boss, badnik, and trace work should prefer the shared contracts being introduced for object physics standardization:
+
+- `ObjectControlState` for native object-control bit intent and derived movement/touch/solid/CPU predicates. Do not add new raw object-control setter combinations unless they are compatibility bridges with tests.
+- `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` for deciding whether a routine uses the main player, native P1/P2, all engine players, nearest player, or extended sidekick participation. Direct focused-player or first-sidekick access needs an explicit native-only reason.
+- `ObjectLifetimeOps` for destruction, offscreen expiry, respawn-latch behavior, and slot transfer semantics. Keep direct `setDestroyed(true)` / remembered-spawn mutations as legacy exceptions or short compatibility wrappers.
+- Canonical behavior profiles belong under `com.openggf.game.profiles.*`; `level.objects` should host execution code and compatibility adapters over existing provider methods while migrations are partial.
+
+When a guard baseline is needed for existing violations, ratchet it downward as migrations land. Do not grow baselines for new object implementations without documenting the exact legacy reason.
+
 ### Reusable Object Utilities
 
 **Before implementing any object, check these utilities. Do NOT reimplement existing functionality.** The implement-object skills (S1/S2/S3K) have full details in their section 2.4.

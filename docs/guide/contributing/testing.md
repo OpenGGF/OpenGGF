@@ -59,6 +59,13 @@ Use `"-Dexec.args=--annotation-density"` to report `@RewindTransient` /
 `@RewindDeferred` density by class, declared type, and package, including
 redundant transient annotations that central policy already infers.
 
+When object, boss, badnik, or trace work touches source guards, treat baselines as
+shrink-only migration artifacts. New code should prefer `ObjectControlState`,
+`ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy`, `ObjectLifetimeOps`, and
+canonical profiles under `com.openggf.game.profiles.*`; only add a baseline entry for a
+documented legacy bridge or a temporary `level.objects` compatibility wrapper, and remove
+entries when a migration closes them.
+
 Run the child/spawn graph audit when planning object family coverage:
 
 ```bash

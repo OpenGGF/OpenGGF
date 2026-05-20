@@ -125,6 +125,10 @@ Expected output:
 
 See the `s1-trace-replay` skill for full divergence report interpretation, aux_state.jsonl cross-referencing, and common divergence patterns. The output format is identical between BizHawk and stable-retro recorders.
 
+Recorded `x_pos` / `y_pos` values are ROM centre coordinates. Engine comparisons must use `getCentreX()` / `getCentreY()`, not debug HUD `Pos:` values or `getX()` / `getY()` top-left bounds.
+
+For object/contact/frontier work, keep the recorder comparison-only. New stable-retro diagnostics may expose fields that help classify `ObjectControlState`, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy`, `ObjectLifetimeOps`, and canonical profile decisions, but they must not hydrate engine state. If a generic guard is added around these patterns, ratchet its baseline from current violations rather than broadening the rule.
+
 ## Available Savestates
 
 stable-retro ships with savestates for every Sonic 1 zone/act:

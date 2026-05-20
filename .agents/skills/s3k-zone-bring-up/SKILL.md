@@ -56,7 +56,9 @@ Every bring-up plan should identify:
 - Traversal blockers: doors, launchers, forced-movement paths, water/chase mechanics, boss gates, and terrain mutations required to finish the route.
 - Event flow: camera locks, bounds, cutscenes, act transitions, boss/miniboss arenas, and palette mutations.
 - Visual coherence: parallax, animated tiles, palette cycling, PLC/art loads, staged overlays, and render-mode state needed for the area to look recognizable.
-- Parity gates: known trace blockers, sidekick-sensitive interactions, rewind-relevant state, focused headless tests, and stable-retro visual validation where practical.
+- Parity gates: known trace blockers, object lifecycle, player/sidekick participation, coordinate semantics, rewind-relevant state, focused headless tests, and stable-retro visual validation where practical.
+
+When route blockers involve objects or bosses, make the object contract decision explicit in the plan: `ObjectControlState` for forced/control bits, `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` for native slots versus OpenGGF sidekicks, `ObjectLifetimeOps` for delete/despawn/remembered-object behavior, and canonical solid/touch/lifecycle profiles through compatibility wrappers. Guard work should ratchet baselines from inventory before hard-failing new shortcuts.
 
 ## Zone Priority Order
 

@@ -356,8 +356,8 @@ private static final int X_VELOCITY = 0x100;
 **S3K field name mapping**: When translating disassembly, use these S3K→engine mappings:
 | S3K Field | Engine Method/Field |
 |-----------|-------------------|
-| `x_pos` | `getX()` / `setX()` (center coords) |
-| `y_pos` | `getY()` / `setY()` (center coords) |
+| `x_pos` | `getCentreX()` / `setCentreX()` (ROM position) |
+| `y_pos` | `getCentreY()` / `setCentreY()` (ROM position) |
 | `x_vel` | X velocity |
 | `y_vel` | Y velocity |
 | `routine` | routine state variable |
@@ -368,6 +368,8 @@ private static final int X_VELOCITY = 0x100;
 | `mapping_frame` | current mapping frame |
 | `shield_reaction` | shield reaction flags (S3K-specific) |
 | `character_id` | player character type (Sonic/Tails/Knuckles) |
+
+`getX()` / `getY()` are top-left sprite bounds, not ROM `x_pos` / `y_pos`. Use them only for render extents or explicit bounds checks. This matters for route blockers, moving solids, kill planes, boss triggers, and trace comparisons.
 
 **Shield reactions** (S3K-specific): If the object uses `shield_reaction`:
 ```java
@@ -430,6 +432,20 @@ Before finalizing a new object or badnik, classify every instance field for rewi
 Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable `ObjectSpawn` identity, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Dynamic spawn coordinates are gameplay state; capture them explicitly rather than treating the live `ObjectSpawn` reference as structural.
 
 Prefer standard value forms before object-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+##### Standard Object Contracts
+
+When the current branch provides shared object contracts, prefer them over new object-local booleans or direct state writes:
+
+- Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. S3K has narrower bit-7-style gates in some sidekick paths; do not collapse them into one generic `isObjectControlled()` check.
+- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, all engine players, or engine sidekicks extended from native P2 logic. Character-specific Knuckles/Tails paths still need explicit policy.
+- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics once available; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
+- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
+- When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
+
+#### 2.8 Player/Object Participation Checks
+
+For route-impact objects, validate every participant the ROM touches: Sonic, Tails, Knuckles, CPU sidekick paths, ride/carry latches, `object_control` gates, forced movement, shield reactions, and child-object ownership. Preserve embedded `SolidObject` timing where the ROM calls it; moving collision to the end of `update()` can shift standing bits, sidekick carry, and trace frontiers by one frame.
 
 ### Phase 3: Code Quality
 

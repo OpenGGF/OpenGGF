@@ -328,6 +328,16 @@ Bosses differ significantly from regular objects:
 | `isOnScreen(margin)` | Inherited from `AbstractObjectInstance`. Off-screen visibility check. |
 | `DebugRenderContext` | `com.openggf.debug.DebugRenderContext` — use for `appendDebugRenderCommands()`. |
 
+##### Standard Object Contracts
+
+When the current branch provides shared object contracts, prefer them over new object-local booleans or direct state writes:
+
+- Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. Distinguish bit-0, bit-6, and bit-7 style gates instead of treating every controlled player as the same state.
+- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, all engine players, or engine sidekicks extended from native P2 logic. This is required for S2 Tails parity and OpenGGF multi-sidekick coherence.
+- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics once available; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
+- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
+- When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
+
 #### 2.5 Implementation Requirements
 
 **Engine Extensions**: If the ROM uses functionality that the engine doesn't expose, **you MUST extend the engine** rather than working around it or documenting it as a limitation. Examples:
@@ -349,6 +359,8 @@ When extending the engine:
 // From disassembly: move.w #$180,x_vel(a0)
 private static final int X_VELOCITY = 0x180;
 ```
+
+**Coordinate semantics**: ROM `x_pos` / `y_pos` map to `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()`. `getX()` / `getY()` are top-left sprite bounds and should only be used for render extents or explicit bounds checks. If a solid, camera trigger, or trace drifts by the sprite radius, audit for centre/top-left mixing first.
 
 **Subtypes**: Implement ALL subtypes from the subtype byte interpretation:
 ```java
