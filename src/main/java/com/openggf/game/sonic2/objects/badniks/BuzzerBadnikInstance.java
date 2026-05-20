@@ -160,13 +160,7 @@ public class BuzzerBadnikInstance extends AbstractBadnikInstance {
             return mainPlayer;
         }
 
-        List<PlayableEntity> sidekicks = services().sidekicks();
-        if (sidekicks.isEmpty()) {
-            return mainPlayer;
-        }
-
-        PlayableEntity firstSidekick = sidekicks.getFirst();
-        if (firstSidekick instanceof AbstractPlayableSprite sidekick) {
+        if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
             return sidekick;
         }
         return mainPlayer;
