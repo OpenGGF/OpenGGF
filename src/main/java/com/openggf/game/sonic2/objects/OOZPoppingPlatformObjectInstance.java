@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -284,7 +285,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
      *      bclr #status.player.pushing,status(a1) / bclr #high_priority_bit,art_tile(a1)
      */
     private void lockPlayer(AbstractPlayableSprite player) {
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setGSpeed((short) 0);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
