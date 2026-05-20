@@ -117,13 +117,15 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     private boolean activated;      // objoff_36: MTZ gate -- 0 = wait, 1 = move
     private int prevStandingFlags;  // objoff_3C: previous frame's player standing status
 
-    // Configuration captured at construct time.
-    private final boolean isMtz;
-    private final int[][] moveTable;
-    private final int yRadius;
+    // Zone-derived configuration. Initialized lazily after ObjectServices has
+    // been injected; constructors must not call services().
+    private boolean initialized;
+    private boolean isMtz;
+    private int[][] moveTable;
+    private int yRadius;
     private final boolean xFlip;
     private final boolean yFlip;
-    private final boolean isParent;  // Only MCZ subtype 0x18 acts as parent.
+    private boolean isParent;  // Only MCZ subtype 0x18 acts as parent.
 
     // Child tracking for cleanup on unload.
     private final List<MCZRotPformsObjectInstance> children = new ArrayList<>();
@@ -141,14 +143,43 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     public MCZRotPformsObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
 
+        this.xFlip = (spawn.renderFlags() & 0x01) != 0;
+        this.yFlip = (spawn.renderFlags() & 0x02) != 0;
+
+        this.baseX = spawn.x();
+        this.baseY = spawn.y();
+        this.x = baseX;
+        this.y = baseY;
+        this.xFixed = x << 8;
+        this.yFixed = y << 8;
+
+        // ROM s2.asm:53750 -- move.b subtype(a0),objoff_38(a0).
+        // The FULL subtype byte is the byte-offset cursor, not subtype & 0x0F.
+        // Subtypes 0, 6, 0xC, 0x18 land on table entries 0, 1, 2, (3-via-wrap).
+        this.phaseIndex = spawn.subtype() & 0xFF;
+        this.phaseDuration = 0;
+        this.activated = false;
+        this.prevStandingFlags = 0;
+        this.xVel = 0;
+        this.yVel = 0;
+
+        this.childrenSpawned = false;
+        // Suppress the spawn-frame move; see field docstring above.
+        this.spawnFrameSkipPending = true;
+
+        updateDynamicSpawn(x, y);
+    }
+
+    private void ensureInitialized() {
+        if (initialized) {
+            return;
+        }
+
         // Zone determines which table, y_radius, and gating behavior to use.
         // s2.asm:53696 -- cmpi.b #mystic_cave_zone,(Current_Zone).w
         // services().currentZone() returns the ROM zone id.
         int zoneId = services().currentZone();
         this.isMtz = (zoneId != Sonic2ZoneConstants.ROM_ZONE_MCZ);
-
-        this.xFlip = (spawn.renderFlags() & 0x01) != 0;
-        this.yFlip = (spawn.renderFlags() & 0x02) != 0;
 
         if (isMtz) {
             this.moveTable = MOVE_TABLE_MTZ;
@@ -163,35 +194,15 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
             this.isParent = (spawn.subtype() == 0x18);
         }
 
-        this.baseX = spawn.x();
-        this.baseY = spawn.y();
-        this.x = baseX;
-        this.y = baseY;
-        this.xFixed = x << 8;
-        this.yFixed = y << 8;
-
-        // ROM s2.asm:53750 -- move.b subtype(a0),objoff_38(a0).
-        // The FULL subtype byte is the byte-offset cursor, not subtype & 0x0F.
-        // Subtypes 0, 6, 0xC, 0x18 land on table entries 0, 1, 2, (3-via-wrap).
-        this.phaseIndex = spawn.subtype() & 0xFF;
-        this.phaseDuration = 0;
         // Activation routing matches ROM routine selection:
         //   MTZ (routine 2, loc_27BDE): wait for player to walk off.
         //   MCZ (routine 4, loc_27C66): move unconditionally from the start.
         this.activated = !isMtz;
-        this.prevStandingFlags = 0;
-        this.xVel = 0;
-        this.yVel = 0;
 
         // Init's tail call to loc_27CA2 (s2.asm:53751) preloads the first
         // phase's velocity/duration and advances objoff_38 by 6.
         loadPhaseParameters();
-
-        this.childrenSpawned = false;
-        // Suppress the spawn-frame move; see field docstring above.
-        this.spawnFrameSkipPending = true;
-
-        updateDynamicSpawn(x, y);
+        initialized = true;
 
         LOGGER.fine(() -> String.format(
                 "Obj6A init: pos=(%d,%d), subtype=0x%02X, xFlip=%b, isParent=%b, isMtz=%b",
@@ -210,6 +221,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
+        ensureInitialized();
         // s2.asm:53797-53802 (MTZ) and 53822-53827 (MCZ):
         //   d1 = width_pixels + 0x0B  -> collision half-width
         //   d2 = y_radius              -> collision half-height (top)
@@ -225,6 +237,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
+        ensureInitialized();
         // MCZ subtype 0x18 parents don't render and don't collide (children do).
         return !isDestroyed() && !isParent;
     }
@@ -236,6 +249,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        ensureInitialized();
         if (isDestroyed()) {
             return;
         }
@@ -417,6 +431,7 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        ensureInitialized();
         if (isParent) {
             return;
         }
