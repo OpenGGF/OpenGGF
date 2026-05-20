@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -224,7 +225,7 @@ public final class CnzTeleporterInstance extends AbstractObjectInstance {
         int beamCounter = beam.getBeamCounter();
         if (!playerCaptured && beamCounter == CnzTeleporterBeamInstance.PLAYER_CAPTURE_COUNTER) {
             playerCaptured = true;
-            player.setObjectControlled(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setControlLocked(true);
             player.setRolling(true);
             player.setCentreX((short) TELEPORT_X);
