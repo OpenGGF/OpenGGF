@@ -6,6 +6,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseListener;
@@ -373,9 +374,7 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
 
             // Mark as destroyed in persistence table to prevent respawning
             ObjectManager objectManager = services().objectManager();
-            if (objectManager != null) {
-                objectManager.markRemembered(spawn);
-            }
+            ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
             // ROM: Increment group destroy counter (lines 59676-59680)
             int groupIndex = getSaucerDataIndex();
