@@ -130,13 +130,7 @@ class TestObjectPhysicsStandardizationGuard {
             baseline("com/openggf/game/sonic3k/objects/CnzCylinderInstance.java", "return !sidekicks.isEmpty() && sidekicks.getFirst() == sprite;", ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS, ReasonCode.PENDING_PARITY_TRIAGE, 1),
 
             baseline("com/openggf/game/sonic1/objects/badniks/Sonic1BallHogBadnikInstance.java", "setSlotIndex(-1);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic1/objects/badniks/Sonic1BatbrainBadnikInstance.java", "objectManager.markRemembered(spawn);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic1/objects/badniks/Sonic1BombBadnikInstance.java", "objectManager.markRemembered(spawn);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic1/objects/badniks/Sonic1BombBadnikInstance.java", "objectManager.removeFromActiveSpawns(spawn);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/game/sonic1/objects/badniks/Sonic1CaterkillerBadnikInstance.java", "setSlotIndex(-1);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic1/objects/Sonic1BreakableWallObjectInstance.java", "objectManager.markRemembered(spawn);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic1/objects/Sonic1SmashBlockObjectInstance.java", "objectManager.markRemembered(spawn);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic1/objects/Sonic1StomperDoorObjectInstance.java", "objectManager.markRemembered(getSpawn());", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/game/sonic3k/objects/badniks/AbstractS3kBadnikInstance.java", "setSlotIndex(-1);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/game/sonic3k/objects/ClamerObjectInstance.java", "setSlotIndex(-1);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/level/objects/DefaultPowerUpSpawner.java", "aoi.setSlotIndex(-1);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
