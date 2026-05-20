@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -26,8 +27,8 @@ public class TestPachinkoMagnetOrbObjectInstance {
 
         verify(main).setControlLocked(true);
         verify(sidekick).setControlLocked(true);
-        verify(main).setObjectControlled(true);
-        verify(sidekick).setObjectControlled(true);
+        verify(main).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
         verify(main).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(sidekick).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(main, never()).setRolling(true);
@@ -66,7 +67,7 @@ public class TestPachinkoMagnetOrbObjectInstance {
         orb.update(1, main);
         orb.update(2, main);
 
-        verify(main, times(1)).setObjectControlled(true);
+        verify(main, times(1)).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
     }
 
     @Test
