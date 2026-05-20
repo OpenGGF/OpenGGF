@@ -6,6 +6,18 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 Monitor (Obj26) rolling gate bypassed for already-standing player (ARZ1 f964 -> f980).**
+  `MonitorObjectInstance.isSolidFor()` returned `!player.getRolling()` unconditionally for the
+  main character. When Sonic started rolling at frame 964 while standing on a monitor, this
+  returned `false`, causing `SolidContacts` to clear the riding state. The terrain probe then
+  set `air=1` since Sonic was above the terrain surface. Root cause: ROM's
+  `SolidObject_Monitor_Sonic` (s2.asm:25448-25453) gates on rolling only for *new* landings.
+  When the p1_standing_bit is already set in the monitor's status byte it skips the rolling
+  check entirely (`btst d6,status(a0)` / `bne.s Obj26_ChkOverEdge`) and goes straight to the
+  edge/carry path. Fix: added `if (mainCharacterStanding) { return true; }` before the rolling
+  check, matching the ROM's "already standing → bypass" path.
+  Advances ARZ1 frontier from frame 964 (664 errors) to frame 980 (675 errors).
+
 - **S2 MCZ Drawbridge (Obj81) landing position, zero-distance landing gate, and half-width (MCZ2 f1774 -> f2226).**
   Three ROM-accuracy fixes for `MCZDrawbridgeObjectInstance` (Obj81 / `JmpTo22_SolidObject`):
   (1) `PARAMS_DOWN.halfWidth` corrected from 64 to 75 (ROM `loc_2A1A8` s2.asm:56578:

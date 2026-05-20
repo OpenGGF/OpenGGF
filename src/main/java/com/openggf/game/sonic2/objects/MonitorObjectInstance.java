@@ -347,6 +347,17 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             // SolidObject_cont before checking roll anim (docs/s2disasm/s2.asm:25459-25466).
             return true;
         }
+        // ROM: SolidObject_Monitor_Sonic (s2disasm/s2.asm:25448-25453):
+        //   btst d6,status(a0)              ; is Sonic already standing on the monitor?
+        //   bne.s Obj26_ChkOverEdge         ; if yes → carry him regardless of rolling
+        //   cmpi.b #AniIDSonAni_Roll,anim(a1) ; is Sonic spinning?
+        //   bne.w SolidObject_cont           ; if not spinning → solid
+        //   rts                              ; if spinning → not solid (new landing blocked)
+        // The rolling gate only blocks NEW landings. A player already standing
+        // bypasses the check and goes straight to the edge/carry path.
+        if (mainCharacterStanding) {
+            return true;
+        }
         return !player.getRolling();
     }
 
