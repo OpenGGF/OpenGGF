@@ -2325,3 +2325,45 @@ Fix: add `return` after `setAnimId(ANIM_COMPRESSED)` when anim was not already c
 
 `tails_y mismatch (expected=0x02ED, actual=0x02EB)` - Tails stands on a Springboard 2px too high.
 Sidekick slot assignment and Tails-on-Springboard riding position are pre-existing separate issues.
+
+## 2026-05-20 - S2 Springboard sidekick contact drives animation switch (MCZ2 f2418 -> f3003)
+
+- Branch: `develop`, worktree `agent-a6bbed386117bca64` (HEAD `093d9abb2`)
+- Command: `mvn test "-Dtest=TestS2Mcz2LevelSelectTraceReplay" -q`
+- Result: MCZ2 frontier advances from frame 2418 (571 errors) to frame 3003 (527 errors)
+- Regression check: ARZ f1102, CNZ f3906, CPZ f844, HTZ f5511, MCZ1 f1085, EHZ1 pass — all unchanged vs develop baseline
+
+### Root cause
+
+`SpringboardObjectInstance.update()` called `updateLaunchSequence` only for the main character
+(Sonic). ROM `Obj40_Main` (s2.asm:51839-51847) calls `SlopedSolid_SingleCharacter` and `loc_2641E`
+for BOTH `MainCharacter` (p1_standing_bit) AND `Sidekick` (p2_standing_bit):
+
+```
+lea (Sidekick).w,a1        ; a1 = Tails
+moveq #p2_standing_bit,d6
+jsrto JmpTo_SlopedSolid_SingleCharacter
+btst #p2_standing_bit,status(a0)
+beq.s +
+bsr.s loc_2641E            ; animation switch / launch for Tails
+```
+
+At frame 2417, Tails X (0x0755) crosses the high-side threshold (spring_x - 0x10 = 0x0764 -
+0x10 = 0x0754). ROM `loc_2641E` switches the Springboard from IDLE to COMPRESSED. On frame 2418,
+`AnimateSprite` advances to `mapping_frame=1`, selecting `Obj40_SlopeData_Straight` over
+`Obj40_SlopeData_DiagUp`. At sampleX=12: Straight[12]=0x0C=12, DiagUp[12]=0x0E=14 — 2px
+difference. Engine used DiagUp (mapping_frame stayed 0), yielding tails_y=0x02EB vs ROM 0x02ED.
+
+### Fix
+
+Resolved checkpoint batch ONCE via `checkpointAll()` (avoids double-resolution from calling
+`resolveSolidNow` separately per player — the resolver processes all players in one shot).
+For each sidekick that is an `AbstractPlayableSprite`, extract their result from the shared
+batch and call `updateLaunchSequence`. No change to animation state sharing or launch state
+management — Springboard has one animation and serializes launches naturally.
+
+### New MCZ2 frontier (frame 3003)
+
+`tails_x mismatch (expected=0x4000, actual=0x0990)` — Tails teleportation/despawn coordinate
+mismatch (0x4000 is the ROM's off-screen park position for the sidekick slot). Unrelated to
+Springboard; likely a Tails CPU despawn/respawn parity issue.

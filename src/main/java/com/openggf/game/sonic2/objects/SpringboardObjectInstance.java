@@ -1,14 +1,14 @@
 package com.openggf.game.sonic2.objects;
+
+import com.openggf.audio.GameSound;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.PlayerSolidContactResult;
-import com.openggf.level.objects.SpringHelper;
-import com.openggf.level.objects.BoxObjectInstance;
-import com.openggf.level.objects.ObjectAnimationState;
-
-import com.openggf.audio.GameSound;
-import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
+import com.openggf.game.solid.PostContactState;
+import com.openggf.game.solid.PreContactState;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
@@ -314,8 +314,22 @@ public class SpringboardObjectInstance extends BoxObjectInstance
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
 
+        // ROM: Obj40_Main calls SlopedSolid_SingleCharacter + loc_2641E for BOTH
+        // MainCharacter (p1_standing_bit) and Sidekick (p2_standing_bit).
+        // The resolver processes all players in one shot; resolve the checkpoint
+        // batch once and extract per-player results to avoid double-resolution.
+        // s2.asm:51839-51847 — lea (Sidekick).w,a1 / jsrto SlopedSolid_SingleCharacter
+        //                      / btst #p2_standing_bit / bsr loc_2641E
+        SolidCheckpointBatch batch = checkpointAll();
+
         if (player != null) {
-            updateLaunchSequence(player, checkpoint(player));
+            updateLaunchSequence(player, resultFromBatch(player, batch));
+        }
+
+        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
+                updateLaunchSequence(sidekick, resultFromBatch(sidekick, batch));
+            }
         }
     }
 
@@ -394,8 +408,11 @@ public class SpringboardObjectInstance extends BoxObjectInstance
         return relX >= 0 && relX < width;
     }
 
-    private PlayerSolidContactResult checkpoint(AbstractPlayableSprite player) {
-        return services().solidExecution().resolveSolidNow(player);
+    private PlayerSolidContactResult resultFromBatch(AbstractPlayableSprite player, SolidCheckpointBatch batch) {
+        return batch.perPlayer().getOrDefault(player, PlayerSolidContactResult.noContact(
+                services().solidExecutionRegistry().previousStanding(this, player),
+                PreContactState.ZERO,
+                PostContactState.ZERO));
     }
 
     private void clearLaunchSequence() {
