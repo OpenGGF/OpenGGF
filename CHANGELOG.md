@@ -6,6 +6,16 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 MTZ object parity fixes for steam springs, signposts, and long platforms.**
+  `SteamSpringObjectInstance` now clears both `status.player.on_object` and the
+  `ObjectManager` riding latch when Obj42 launches the player, matching ROM `bclr
+  #status.player.on_object` behavior and preventing stale platform support after launch.
+  `SignpostObjectInstance` and `MTZLongPlatformObjectInstance` now compare
+  `services().currentZone()` against `Sonic2ZoneConstants.ROM_ZONE_MTZ` instead of the
+  internal engine zone id, restoring the MTZ Act 2 signpost exception and the MTZ Act 3
+  subtype-5 two-stop conveyor branch. Added focused regressions in
+  `TestSonic2ObjectBugFixes`.
+
 - **S2 Monitor (Obj26) rolling gate bypassed for already-standing player (ARZ1 f964 -> f980).**
   `MonitorObjectInstance.isSolidFor()` returned `!player.getRolling()` unconditionally for the
   main character. When Sonic started rolling at frame 964 while standing on a monitor, this
