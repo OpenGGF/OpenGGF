@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -74,10 +75,9 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
         if (isDestroyed()) {
             return;
         }
-        int mySlot = getSlotIndex();
         // ROM parity: badnik destruction rewrites the current SST slot to
         // Obj_Explosion; child animal/points objects are allocated after it.
-        setSlotIndex(-1);
+        int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
         setDestroyed(true);
 
         DestructionEffects.destroyBadnik(

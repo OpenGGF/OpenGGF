@@ -90,6 +90,26 @@ class TestObjectLifetimeOps {
     }
 
     @Test
+    void clearPreviousManagerSlotDropsStaleSlotBeforeReRegistration() {
+        TestObject object = testObject();
+        objectManager.addDynamicObjectAtSlot(object, 41);
+
+        ObjectLifetimeOps.clearPreviousManagerSlot(object);
+
+        assertEquals(-1, object.getSlotIndex());
+    }
+
+    @Test
+    void reservedSlotAdditionUsesRequestedDynamicSlot() {
+        TestObject object = testObject();
+
+        ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, object, 42);
+
+        assertEquals(42, object.getSlotIndex());
+        assertTrue(objectManager.getActiveObjects().contains(object));
+    }
+
+    @Test
     void transferredReplacementWithoutSlotUsesNormalDynamicAllocation() {
         TestObject replacement = testObject();
 

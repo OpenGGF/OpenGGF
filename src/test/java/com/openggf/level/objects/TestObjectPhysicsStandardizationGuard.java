@@ -48,16 +48,7 @@ class TestObjectPhysicsStandardizationGuard {
             baseline("com/openggf/game/sonic3k/objects/S3kResultsScreenObjectInstance.java", "sidekick.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
             baseline("com/openggf/game/sonic3k/objects/S3kSignpostInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
             baseline("com/openggf/game/sonic3k/objects/S3kSignpostInstance.java", "sidekick.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
-            baseline("com/openggf/game/sonic3k/objects/Sonic3kSSEntryRingObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
-
-
-            baseline("com/openggf/game/sonic1/objects/badniks/Sonic1BallHogBadnikInstance.java", "setSlotIndex(-1);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic1/objects/badniks/Sonic1CaterkillerBadnikInstance.java", "setSlotIndex(-1);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic3k/objects/badniks/AbstractS3kBadnikInstance.java", "setSlotIndex(-1);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic3k/objects/ClamerObjectInstance.java", "setSlotIndex(-1);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/level/objects/DefaultPowerUpSpawner.java", "aoi.setSlotIndex(-1);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/level/objects/DefaultPowerUpSpawner.java", "objectManager.addDynamicObjectAtSlot(object, fixedSlot);", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/level/objects/DefaultPowerUpSpawner.java", "objectManager.addDynamicObjectAtSlot(object, restored.slotIndex());", ViolationKind.DIRECT_LIFECYCLE_OPERATION, ReasonCode.PENDING_PARITY_TRIAGE, 1)
+            baseline("com/openggf/game/sonic3k/objects/Sonic3kSSEntryRingObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1)
     );
 
     @Test
