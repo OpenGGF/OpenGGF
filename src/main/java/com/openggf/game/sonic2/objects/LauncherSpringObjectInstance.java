@@ -662,9 +662,14 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     @Override
     public String traceDebugDetails() {
         AbstractPlayableSprite sidekick = null;
-        var sprites = com.openggf.game.GameServices.sprites();
-        if (sprites != null && !sprites.getSidekicks().isEmpty()) {
-            sidekick = sprites.getSidekicks().getFirst();
+        ObjectServices currentServices = tryServices();
+        if (currentServices != null) {
+            for (PlayableEntity candidate : currentServices.sidekicks()) {
+                if (candidate instanceof AbstractPlayableSprite sprite) {
+                    sidekick = sprite;
+                    break;
+                }
+            }
         }
         PlayerState sidekickState = sidekick != null ? playerStates.get(sidekick) : null;
         int sidekickDx = sidekick != null ? sidekick.getCentreX() - currentSpriteX : 0;

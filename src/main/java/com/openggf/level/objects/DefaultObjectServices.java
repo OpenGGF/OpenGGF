@@ -41,6 +41,7 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
 import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.managers.SpriteManager;
 import java.io.IOException;
 import java.util.Objects;
@@ -113,7 +114,7 @@ public class DefaultObjectServices implements ObjectServices {
                                  WaterSystem waterSystem,
                                  ParallaxManager parallaxManager) {
         this(levelManager, camera, gameState, spriteManager, fadeManager, waterSystem,
-                parallaxManager, GameServices.collision(), null, new GameRng(GameRng.Flavour.S1_S2),
+                parallaxManager, legacyCollisionSystem(), null, new GameRng(GameRng.Flavour.S1_S2),
                 new ZoneRuntimeRegistry(), null, new ZoneLayoutMutationPipeline(), SolidExecutionRegistry.inert(),
                 engineServicesFromGameServices(), NoOpBonusStageProvider.INSTANCE);
     }
@@ -163,6 +164,12 @@ public class DefaultObjectServices implements ObjectServices {
                 GameServices.playbackDebug(),
                 GameServices.romDetection(),
                 GameServices.crossGameFeatures());
+    }
+
+    private static CollisionSystem legacyCollisionSystem() {
+        return GameServices.hasRuntime()
+                ? GameServices.collision()
+                : new CollisionSystem(new TerrainCollisionManager());
     }
 
     private LevelManager lm() {
