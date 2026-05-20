@@ -245,6 +245,16 @@ public class RisingPillarObjectInstance extends AbstractObjectInstance
             player.setCentreYPreserveSubpixel(centreYBeforeCurl);
         }
         player.setAir(true);
+        player.setOnObject(false); // ROM loc_25AF6 s2.asm:51401 bclr #status.player.on_object,status(a1)
+
+        // Clear riding state so the stale-riding-state recovery in PlayableSpriteMovement
+        // (which fires before inline solid contacts on the next frame) does not re-ground
+        // the player. In the ROM this is implicit: once on_object is cleared and routine=2
+        // is set, SolidObject no longer treats the player as riding this object.
+        ObjectManager om = services().objectManager();
+        if (om != null) {
+            om.clearRidingObject(player);
+        }
 
         // Play slow smash sound effect
         services().playSfx(GameSound.SLOW_SMASH);

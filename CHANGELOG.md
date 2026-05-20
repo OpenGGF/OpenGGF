@@ -6,6 +6,22 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 ARZ Rising Pillar (Obj2B) player-release clears on_object and riding state (ARZ1 f304 -> f311).**
+  `RisingPillarObjectInstance.releasePlayerAndBreak()` set rolling=true and in_air=true on the
+  launched player but omitted `bclr #status.player.on_object,status(a1)` from ROM `loc_25AF6`
+  (s2.asm:51401), leaving the engine player with both in_air=true and on_object=true. Two
+  consequences:
+  (1) The stale riding-state entry in `ObjectManager.SolidContacts.ridingStates` caused
+  `PlayableSpriteMovement`'s pre-movement recovery (line 456) to re-ground the player on the
+  next frame (`hasGroundingObjectSupport()` returned true from stale data → setAir(false),
+  setOnObject(true)), applying object-riding deceleration instead of pure air deceleration.
+  Engine produced tails_x_speed=0x00C2; ROM expects 0x00D0 (−0x18 air deceleration per frame).
+  Fix: call `player.setOnObject(false)` (matching ROM bclr on_object) and
+  `objectManager.clearRidingObject(player)` (clears stale riding state) in `releasePlayerAndBreak`.
+  Advances ARZ1 (TestS2ArzLevelSelectTraceReplay) trace frontier from frame 304 (813 errors)
+  to frame 311 (846 errors — Tails misses arrow hit due to pre-existing Obj22 Arrow
+  position divergence, separate issue). EHZ1 passes; ARZ2/MCZ1/MCZ2 unchanged.
+
 - **S2 Tails y_radius preservation on non-rolling terrain/object landing (MCZ2 f1290 -> f1487).**
   `ObjectManager.SolidContacts.clearRollingOnLanding()` had an else-if branch that called
   `applyStandingRadii(false)` whenever a player landed with `rolling=false` but with non-default
