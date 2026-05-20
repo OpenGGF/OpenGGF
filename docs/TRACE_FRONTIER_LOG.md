@@ -2209,3 +2209,52 @@ Added `SolidObjectProvider.usesPlatformObjectLandingSnap()` (default `true`); ov
 `y mismatch (expected=0x033E, actual=0x0340)` — Sonic lands on a Springboard (Obj40,
 `SlopedSolidProvider`) 2px too low. This is a pre-existing sloped-solid landing formula
 divergence separate from the drawbridge fixes.
+
+## 2026-05-20 - S2 Monitor (Obj26) rolling gate bypass for already-standing player (ARZ1 frame 964 -> 980)
+
+- Branch: `develop` worktree `agent-a1fecc74cd8033c95`
+- Command: `mvn test -Dtest=TestS2Arz1LevelSelectTraceReplay -q`
+- Result: ARZ1 frontier advanced from frame 964 (664 errors) to frame 980 (675 errors).
+
+### Root cause
+
+`MonitorObjectInstance.isSolidFor()` returned `!player.getRolling()` unconditionally for the
+main character. When Sonic started rolling at frame 964 while already standing on a monitor
+(slot 16, type 0x26, `stand_on_obj=0x10` visible in the trace), this returned `false`.
+`SolidContacts.update()` then cleared the riding state. Because `on_object` became `false`,
+the `CollisionSystem` terrain probe ran and set `air=1`, since Sonic was floating above the
+terrain surface.
+
+ROM `SolidObject_Monitor_Sonic` (s2.asm:25448-25453):
+```
+btst d6,status(a0)              ; is Sonic already standing on the monitor?
+bne.s Obj26_ChkOverEdge         ; yes → carry him regardless of rolling
+cmpi.b #AniIDSonAni_Roll,anim(a1) ; is Sonic spinning?
+bne.w SolidObject_cont           ; not spinning → solid
+rts                              ; spinning → not solid (blocks NEW landings only)
+```
+The rolling check only blocks *new* landings. A player who is already standing (p1_standing_bit
+set in the monitor's status byte) bypasses the rolling check entirely and goes straight to
+`Obj26_ChkOverEdge` → `MvSonicOnPtfm` (carry formula:
+`y_pos(player) = y_pos(monitor) - groundHalfHeight(0x10) - y_radius(player)`).
+
+### Fix
+
+`MonitorObjectInstance.isSolidFor()`: added `if (mainCharacterStanding) { return true; }`
+before the `return !player.getRolling()` line. The `mainCharacterStanding` field tracks whether
+the main character is already standing on this monitor instance, directly matching the ROM's
+p1_standing_bit check.
+
+Files changed:
+- `MonitorObjectInstance.java` — `isSolidFor()`: bypass rolling check when `mainCharacterStanding`
+
+### New ARZ1 frontier (frame 980)
+
+`tails_y mismatch (expected=0x03A3, actual=0x03A2)` — Tails's Y position is 1 pixel high when
+rolling starts. At frame 980 in the ROM, Tails transitions from standing (yRadius=15) to rolling
+(yRadius=14) while being carried on the same monitor. The monitor carry formula places Tails at
+`centreY = monitorY(0x03C1) - groundHalfHeight(0x10) - yRadius`. With yRadius=14 (rolling):
+0x03A3. The engine's CPU controller delays Tails's rolling by 1 frame (the 16-frame-delayed
+Sonic input from frame 964 triggers rolling at frame 981 instead of 980), so yRadius=15 is
+still in effect at frame 980 in the engine, yielding 0x03A2. This is a CPU controller timing
+parity issue, not investigated further in this iteration.
