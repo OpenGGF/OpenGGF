@@ -26,11 +26,6 @@ class TestObjectPhysicsStandardizationGuard {
                     + "\\.removeFromActiveSpawns\\s*\\(|\\.addDynamicObjectAtSlot\\s*\\()");
 
     private static final List<BaselineViolation> BASELINE = List.of(
-            baseline("com/openggf/game/sonic1/objects/Sonic1JunctionObjectInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 2),
-            baseline("com/openggf/game/sonic1/objects/Sonic1JunctionObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic1/objects/Sonic1PoleThatBreaksObjectInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic1/objects/Sonic1PoleThatBreaksObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic1/objects/Sonic1RingFlashObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/game/sonic1/objects/Sonic1TeleporterObjectInstance.java", "controlledPlayer.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/game/sonic1/objects/Sonic1TeleporterObjectInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/game/sonic1/objects/Sonic1TeleporterObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),

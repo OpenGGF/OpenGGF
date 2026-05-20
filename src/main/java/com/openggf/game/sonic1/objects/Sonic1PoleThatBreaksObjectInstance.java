@@ -17,6 +17,7 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
 import java.util.List;
@@ -120,7 +121,7 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
         player.setAnimationId(Sonic1AnimationIds.HANG);
 
         // move.b #1,(f_playerctrl).w
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
 
         // move.b #1,(f_wtunnelallow).w
         setWindTunnelDisabled(true);
@@ -178,7 +179,7 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
 
         // clr.b (f_playerctrl).w / clr.b (f_wtunnelallow).w
         if (player != null) {
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
         }
         setWindTunnelDisabled(false);
 
