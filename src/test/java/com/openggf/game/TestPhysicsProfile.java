@@ -50,9 +50,10 @@ public class TestPhysicsProfile {
         assertEquals(sonic.runAccel(), tails.runAccel(), "accel same");
         assertEquals(sonic.max(), tails.max(), "max same");
         assertEquals(sonic.jump(), tails.jump(), "jump same");
+        // ROM Tails_Roll (s2.asm:39962) uses cmpi.w #$80,d0 — identical to Sonic_Roll (s2.asm:36983)
+        assertEquals(0x80, tails.minStartRollSpeed(), "minStartRollSpeed same as Sonic");
 
         // Tails-specific differences
-        assertEquals(264, tails.minStartRollSpeed(), "minStartRollSpeed");
         assertEquals(30, tails.runHeight(), "runHeight");
         assertEquals(15, tails.standYRadius(), "standYRadius");
     }
