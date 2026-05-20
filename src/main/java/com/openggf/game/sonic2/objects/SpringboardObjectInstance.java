@@ -281,6 +281,19 @@ public class SpringboardObjectInstance extends BoxObjectInstance
         return new SolidObjectParams(COLLISION_HALF_WIDTH, COLLISION_HEIGHT, COLLISION_HEIGHT);
     }
 
+    /**
+     * ROM: Obj40_Main calls SlopedSolid_SingleCharacter which dispatches to
+     * SlopedSolid_cont (s2.asm:35066) on new contact. SlopedSolid_cont adds
+     * the object's half-height (d2) to the catch range before computing relY:
+     * {@code add.w d3,d2} (d2 = halfHeight + yRadius)
+     * {@code add.w d2,d3} (d3 = playerY - baseY + 4 + halfHeight + yRadius)
+     * This matches the behaviour described in SlopedSolidProvider.addsSlopeCatchRangeToVerticalOverlap().
+     */
+    @Override
+    public boolean addsSlopeCatchRangeToVerticalOverlap() {
+        return true;
+    }
+
     @Override
     public byte[] getSlopeData() {
         // ROM: Obj40_Main selects slope data based on mapping_frame
@@ -355,13 +368,19 @@ public class SpringboardObjectInstance extends BoxObjectInstance
         }
 
         // ROM: loc_26446 - Check animation state
+        // cmpi.b #1,anim(a0) / beq.s loc_26456 - if already compressed, check frame
+        // move.w #(1<<8)|(0<<0),anim(a0) / rts  - if NOT compressed, set it and return
         int currentAnim = animationState.getAnimId();
         if (currentAnim != ANIM_COMPRESSED) {
-            // Animation switched back (shouldn't normally happen during sequence)
+            // Not yet compressed: switch animation and return immediately.
+            // ROM does not fall through to the mapping_frame check on the
+            // frame that switches the animation (s2.asm:51868-51872).
             animationState.setAnimId(ANIM_COMPRESSED);
+            return;
         }
 
-        // ROM: loc_26456 - anim is 1, check if mapping_frame is 0
+        // ROM: loc_26456 - anim is already 1, check if mapping_frame is 0
+        // tst.b mapping_frame(a0) / beq.s loc_2645E
         if (mappingFrame == 0) {
             // ROM: loc_2645E - Launch the player!
             applyLaunch(player);

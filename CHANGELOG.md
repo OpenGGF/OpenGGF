@@ -16,6 +16,25 @@ All notable changes to the OpenGGF project are documented in this file.
   subtype-5 two-stop conveyor branch. Added focused regressions in
   `TestSonic2ObjectBugFixes`.
 
+- **S2 Springboard (Obj40) first-contact launch guard and sloped catch range (MCZ2 f2226 -> f2418).**
+  Two ROM-accuracy fixes for `SpringboardObjectInstance`:
+  (1) `addsSlopeCatchRangeToVerticalOverlap()` overridden to return `true`: ROM
+  `SlopedSolid_cont` (s2.asm:35066) adds the object's half-height (d2=8) to the catch range
+  before computing relY: `add.w d3,d2` (d2=halfHeight+yRadius), then `add.w d2,d3`
+  (d3=playerY−baseY+4+halfHeight+yRadius). The default in `SlopedSolidProvider` was `false`,
+  placing Sonic 2px too low on initial contact (frame 2226: actual y=0x0340, expected=0x033E).
+  (2) `updateLaunchSequence` no longer falls through to the `mapping_frame==0` launch check
+  on the same frame the animation switches from idle to compressed. ROM `loc_26446`
+  (s2.asm:51868): `cmpi.b #1,anim(a0) / beq.s loc_26456` — if NOT already compressed, it
+  sets anim=1 and `rts`, returning without checking `mapping_frame`. The engine previously
+  fell through unconditionally; since `mapping_frame==0` at the start of IDLE→COMPRESSED
+  transitions, the launch fired one frame early, producing gSpeed=0x0001 (twirl inertia)
+  instead of gSpeed=0x0100 (xSpeed set by the landing snap). Fix: add `return` after
+  `setAnimId(ANIM_COMPRESSED)` when the animation was not already compressed.
+  Advances MCZ2 frontier from frame 2226 (724 errors) to frame 2418 (571 errors). ARZ1
+  improved as a downstream effect from frame 964 (664 errors) to frame 964 (625 errors).
+  MCZ1 unchanged at frame 1085 (452 errors). EHZ1 still passes full trace.
+
 - **S2 Tails `minStartRollSpeed` corrected from 264 to 128 (ARZ1 f980 -> f1102).**
   `PhysicsProfile.SONIC_2_TAILS.minStartRollSpeed` was 264 (0x108) — a stale placeholder.
   ROM `Tails_Roll` (`s2.asm:39962`) uses `cmpi.w #$80,d0`, identical to `Sonic_Roll`
