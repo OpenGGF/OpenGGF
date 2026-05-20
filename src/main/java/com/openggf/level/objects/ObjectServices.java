@@ -118,6 +118,16 @@ public interface ObjectServices {
     // Player/sidekick access
     List<PlayableEntity> sidekicks();
 
+    /**
+     * Returns the preferred object-facing player participation query API.
+     * <p>
+     * Raw {@link #sidekicks()} remains available while object code migrates to
+     * explicit participation policies through this query layer.
+     */
+    default ObjectPlayerQuery playerQuery() {
+        return ObjectPlayerQuery.from(this);
+    }
+
     /** Returns the sprite manager for player sprite access. */
     SpriteManager spriteManager();
 

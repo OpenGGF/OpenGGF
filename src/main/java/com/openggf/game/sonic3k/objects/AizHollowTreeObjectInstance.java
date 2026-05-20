@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -180,9 +181,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         // The tree owns the player's vertical path and animation while riding.
         // setPlayerOnTree applies the preserved horizontal inertia before the
         // ROM path formula so the path delta still uses the moved x_pos.
-        player.setObjectControlled(true);
-        player.setObjectControlSuppressesMovement(false);
-        player.setObjectControlAllowsCpu(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
         player.setSuppressGroundWallCollision(true);
         player.setControlLocked(false);
         player.setAir(false);
