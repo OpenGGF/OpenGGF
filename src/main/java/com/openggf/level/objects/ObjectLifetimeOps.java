@@ -32,6 +32,18 @@ public final class ObjectLifetimeOps {
         return slot;
     }
 
+    public static void clearPreviousManagerSlot(AbstractObjectInstance instance) {
+        Objects.requireNonNull(instance, "instance").setSlotIndex(-1);
+    }
+
+    public static void addDynamicAtReservedSlot(ObjectManager objectManager,
+                                                ObjectInstance object,
+                                                int reservedSlot) {
+        Objects.requireNonNull(objectManager, "objectManager");
+        Objects.requireNonNull(object, "object");
+        objectManager.addDynamicObjectAtSlot(object, reservedSlot);
+    }
+
     public static void addReplacementAtTransferredSlot(ObjectManager objectManager,
                                                        ObjectInstance replacement,
                                                        int transferredSlot) {
