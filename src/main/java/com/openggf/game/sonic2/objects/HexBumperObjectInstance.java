@@ -207,9 +207,7 @@ public class HexBumperObjectInstance extends AbstractObjectInstance
             applyBounce(player);
         }
         if ((pending & 0x02) != 0) {
-            List<PlayableEntity> sidekicks = services().sidekicks();
-            if (sidekicks != null && !sidekicks.isEmpty()
-                    && sidekicks.getFirst() instanceof AbstractPlayableSprite sidekick) {
+            if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
                 applyBounce(sidekick);
             }
         }
