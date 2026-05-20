@@ -13,6 +13,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -154,8 +155,8 @@ public class PachinkoMagnetOrbObjectInstance extends AbstractObjectInstance {
         player.setGSpeed((short) 0x0800);
         player.setControlLocked(true);
         // Engine movement skips only when objectControlled is true, so mirror the
-        // ROM's captured-player ownership with the engine's full-control flag.
-        player.setObjectControlled(true);
+        // ROM's captured-player ownership with the engine's full-control policy.
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setAir(true);
         player.setOnObject(false);
         player.setJumping(false);
