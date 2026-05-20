@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -246,7 +247,7 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         player.setGSpeed((short) 0);
         player.setCentreX((short) handleX);
         player.setCentreY((short) handleY);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setOnObject(false);
         player.setAir(true);
         player.setAnimationId(PLAYER_HANG_ANIM);
@@ -269,7 +270,7 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
@@ -296,7 +297,7 @@ public class MGZPulleyObjectInstance extends AbstractObjectInstance
         if (player.isObjectControlled()) {
             player.releaseFromObjectControl(frameCounter);
         } else {
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
         }
         clearRidingObject(player);
 
