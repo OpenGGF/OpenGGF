@@ -214,8 +214,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
 
     private void updateWaitForPlayer(AbstractPlayableSprite player, int frameCounter) {
         ObjectManager objectManager = services().objectManager();
-        var sidekicks = services().sidekicks();
-        AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
 
         // ROM: Check standing bits first, then X range
         boolean mainStanding = isPlayerStandingOnThis(player, objectManager);
@@ -327,8 +326,7 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
         }
         mainCharLocked = false;
 
-        var sidekicks = services().sidekicks();
-        AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
         if (sidekickLocked && sidekick != null && objectManager.isRidingObject(sidekick, this)) {
             launchPlayer(sidekick, frameCounter);
         }
@@ -343,12 +341,17 @@ public class OOZPoppingPlatformObjectInstance extends AbstractObjectInstance
             mainChar.setCentreX((short) x);
             mainChar.setCentreY((short) (currentY - SOLID_HALF_HEIGHT_AIR));
         }
-        var sidekicks2 = services().sidekicks();
-        AbstractPlayableSprite sidekick = sidekicks2.isEmpty() ? null : (AbstractPlayableSprite) sidekicks2.getFirst();
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
         if (sidekickLocked && sidekick != null) {
             sidekick.setCentreX((short) x);
             sidekick.setCentreY((short) (currentY - SOLID_HALF_HEIGHT_AIR));
         }
+    }
+
+    private AbstractPlayableSprite firstTrackedSidekick() {
+        return services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                ? sidekick
+                : null;
     }
 
     /**
