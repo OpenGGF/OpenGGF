@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -133,7 +134,7 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance {
         boolean capturedFromRight = player.getCentreX() >= spawn.x();
         state.phaseAngle = capturedFromRight ? 0x00 : 0x80;
 
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
         player.setGSpeed((short) CAPTURE_GROUND_SPEED);
@@ -239,7 +240,7 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance {
      */
     private void releaseAtLastPoint(AbstractPlayableSprite player, PlayerState state) {
         writePositionWordY(player, player.getCentreY() & 0x0FFF);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
         player.setJumping(false);
         state.reset();

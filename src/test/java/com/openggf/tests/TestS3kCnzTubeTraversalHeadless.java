@@ -234,6 +234,12 @@ class TestS3kCnzTubeTraversalHeadless {
 
         assertTrue(player.isObjectControlled(),
                 "Spiral Tube capture should set object_control=$81 via the engine's object-control flag");
+        assertFalse(player.isObjectControlAllowsCpu(),
+                "object_control=$81 should not leave CPU movement enabled");
+        assertTrue(player.isObjectControlSuppressesMovement(),
+                "object_control=$81 should suppress normal movement while the tube owns traversal");
+        assertTrue(player.isTouchResponseSuppressedByObjectControl(),
+                "object_control=$81 should suppress normal touch responses while the tube owns traversal");
         assertTrue(tube.isPersistent(),
                 "An active Spiral Tube must survive object-window unloading while it controls the player");
         assertTrue(player.isControlLocked(),
@@ -284,6 +290,12 @@ class TestS3kCnzTubeTraversalHeadless {
                 "Spiral Tube should release control lock at the final route point");
         assertFalse(player.isObjectControlled(),
                 "Spiral Tube should release object control at the final route point");
+        assertFalse(player.isObjectControlAllowsCpu(),
+                "Spiral Tube release should clear the CPU movement allowance bit with object control");
+        assertFalse(player.isObjectControlSuppressesMovement(),
+                "Spiral Tube release should clear movement suppression with object control");
+        assertFalse(player.isTouchResponseSuppressedByObjectControl(),
+                "Spiral Tube release should clear touch-response suppression with object control");
         assertFalse(tube.isPersistent(),
                 "After release the controller can return to the normal out-of-range unload path");
         assertFalse(player.isJumping(),
