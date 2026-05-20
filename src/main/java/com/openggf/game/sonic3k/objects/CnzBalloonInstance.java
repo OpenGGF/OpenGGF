@@ -14,6 +14,7 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -174,7 +175,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         player.setRollingJump(false);
         player.setJumping(false);
         player.setControlLocked(false);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
             objectManager.clearRidingObject(player);
