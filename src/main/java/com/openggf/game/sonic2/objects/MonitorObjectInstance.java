@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -240,8 +241,8 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
         if (objectManager != null) {
-            objectManager.markRemembered(spawn);
             objectManager.clearRidingObject(player);
         }
 
