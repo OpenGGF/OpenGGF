@@ -4610,12 +4610,16 @@ public class ObjectManager {
                 if (instance.isSkipTouchThisFrame()) {
                     continue;
                 }
+                if (instance.isSkipSolidContactThisFrame()) {
+                    continue;
+                }
 
                 // Multi-region providers (e.g., spiked pole helix) check each region independently
                 TouchResponseProvider.TouchRegion[] regions = provider.getMultiTouchRegions();
+                TouchResponseProfile touchProfile = TouchResponseProfile.fromProvider(provider, regions != null);
                 if (regions != null) {
                     boolean hit = processMultiRegionTouch(player, playerX, playerY, playerHeight,
-                            instance, provider, regions, playerWidth,
+                            instance, provider, touchProfile, regions, playerWidth,
                             buildingSet, overlappingSet, isSidekick);
                     if (hit) {
                         break;
@@ -4647,10 +4651,7 @@ public class ObjectManager {
                 // future S2/S3K-specific object needs to skip the render-flag gate.
                 // Use isOnScreenForTouch() as the engine's equivalent of obRender
                 // bit 7.
-                if (instance.isSkipSolidContactThisFrame()) {
-                    continue;
-                }
-                if (provider.requiresRenderFlagForTouch()
+                if (touchProfile.requiresRenderFlagForTouch()
                         && instance instanceof AbstractObjectInstance aoi
                         && !aoi.isOnScreenForTouch()) {
                     continue;
@@ -4668,7 +4669,7 @@ public class ObjectManager {
                 int sizeIndex = flags & 0x3F;
                 int width = table.getWidthRadius(sizeIndex);
                 int height = table.getHeightRadius(sizeIndex);
-                TouchCategory category = decodeCategory(flags, provider);
+                TouchCategory category = decodeCategory(flags, touchProfile);
                 if (category == TouchCategory.HURT
                         && tryShieldDeflect(player, instance, provider, width, height)) {
                     continue;
@@ -4721,7 +4722,7 @@ public class ObjectManager {
                 boolean shouldTrigger = category == TouchCategory.BOSS
                         || category == TouchCategory.HURT
                         || category == TouchCategory.ENEMY
-                        || provider.requiresContinuousTouchCallbacks()
+                        || touchProfile.continuousCallbacks()
                         || !overlappingSet.contains(instance);
                 if (shouldTrigger) {
                     TouchResponseResult result = new TouchResponseResult(sizeIndex, width, height, category);
@@ -4748,7 +4749,7 @@ public class ObjectManager {
          */
         private boolean processMultiRegionTouch(PlayableEntity player,
                 int playerX, int playerY, int playerHeight,
-                ObjectInstance instance, TouchResponseProvider provider,
+                ObjectInstance instance, TouchResponseProvider provider, TouchResponseProfile profile,
                 TouchResponseProvider.TouchRegion[] regions, int playerWidth,
                 Set<ObjectInstance> buildingSet, Set<ObjectInstance> overlappingSet,
                 boolean isSidekick) {
@@ -4760,7 +4761,7 @@ public class ObjectManager {
                 int sizeIndex = flags & 0x3F;
                 int width = table.getWidthRadius(sizeIndex);
                 int height = table.getHeightRadius(sizeIndex);
-                TouchCategory category = decodeCategory(flags, provider);
+                TouchCategory category = decodeCategory(flags, profile);
 
                 boolean overlap = isOverlappingXY(playerX, playerY, playerHeight,
                         region.x(), region.y(), width, height, playerWidth);
@@ -4772,7 +4773,7 @@ public class ObjectManager {
                 // ROM: HURT is continuous (same as BOSS) — see processCollisionLoop comment
                 boolean shouldTrigger = category == TouchCategory.BOSS
                         || category == TouchCategory.HURT
-                        || provider.requiresContinuousTouchCallbacks()
+                        || profile.continuousCallbacks()
                         || !overlappingSet.contains(instance);
                 if (shouldTrigger) {
                     TouchResponseResult result = new TouchResponseResult(sizeIndex, width, height, category);
@@ -4973,16 +4974,18 @@ public class ObjectManager {
             return true;
         }
 
-        private TouchCategory decodeCategory(int flags, TouchResponseProvider provider) {
+        private TouchCategory decodeCategory(int flags, TouchResponseProfile profile) {
             int categoryBits = flags & 0xC0;
             int sizeIndex = flags & 0x3F;
-            if (categoryBits == 0xC0
-                    && provider != null
-                    && ((provider.usesS3kTouchSpecialPropertyResponse()
-                            && isS3kTouchSpecialPropertyIndex(sizeIndex))
-                            || (provider.usesSonic2TouchSpecialPropertyResponse()
-                                    && isSonic2TouchSpecialPropertyIndex(sizeIndex)))) {
-                return TouchCategory.SPECIAL;
+            if (categoryBits == 0xC0 && profile != null) {
+                boolean propertySpecial = switch (profile.categoryDecodeMode()) {
+                    case S3K_SPECIAL_PROPERTY -> isS3kTouchSpecialPropertyIndex(sizeIndex);
+                    case SONIC2_SPECIAL_PROPERTY -> isSonic2TouchSpecialPropertyIndex(sizeIndex);
+                    case NORMAL -> false;
+                };
+                if (propertySpecial) {
+                    return TouchCategory.SPECIAL;
+                }
             }
             return switch (categoryBits) {
                 case 0x00 -> TouchCategory.ENEMY;

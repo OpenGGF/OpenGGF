@@ -100,6 +100,15 @@ class TestTouchResponseProfileMapping {
         assertEquals(TouchCategoryDecodeMode.NORMAL, profile.categoryDecodeMode());
     }
 
+    @Test
+    void dispatcherMappingUsesKnownRegionPresenceWithoutReadingRegionGeometry() {
+        TouchResponseProfile profile = TouchResponseProfile.fromProvider(new ThrowingRegionProvider(), true);
+
+        assertTrue(profile.multiRegionSource());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY,
+                profile.stopAfterFirstOverlapPolicy());
+    }
+
     private static class DefaultProvider implements TouchResponseProvider {
         @Override
         public int getCollisionFlags() {
@@ -196,6 +205,13 @@ class TestTouchResponseProfileMapping {
         @Override
         public boolean onShieldDeflect(com.openggf.game.PlayableEntity player) {
             throw new AssertionError("shield effects must stay delegated");
+        }
+    }
+
+    private static final class ThrowingRegionProvider extends DefaultProvider {
+        @Override
+        public TouchRegion[] getMultiTouchRegions() {
+            throw new AssertionError("region geometry must stay delegated");
         }
     }
 }
