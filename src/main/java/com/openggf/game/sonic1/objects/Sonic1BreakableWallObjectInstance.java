@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -190,9 +191,7 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
 
         // Mark as remembered (RememberState) so it stays broken
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         // From disassembly: move.w smash_speed(a0),obVelX(a1)
         player.setXSpeed((short) impactSpeed);
