@@ -369,9 +369,7 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         spawnFragments();
 
         // Mark as remembered to prevent respawn (ROM-accurate behavior)
-        if (services().objectManager() != null) {
-            services().objectManager().markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(services().objectManager(), spawn);
 
         LOGGER.fine(() -> String.format("CollapsingPlatform at (%d,%d) collapsed, spawning %d fragments",
                 spawn.x(), spawn.y(), config.delayData().length));

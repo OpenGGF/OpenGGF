@@ -12,6 +12,7 @@ import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -192,9 +193,7 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
         setDestroyed(true);
 
         var objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.removeFromActiveSpawns(spawn);
-        }
+        ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
 
         // Spawn explosion at current position
         final int explosionX = currentX;
