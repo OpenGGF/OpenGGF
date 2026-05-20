@@ -14,6 +14,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.sonic2.slotmachine.CNZSlotMachineManager;
 import com.openggf.game.sonic2.slotmachine.CNZSlotMachineRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -175,7 +176,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
         // Bit 0 (0x01): controlLocked - blocks player input
         // Bit 7 (0x80): objectControlled - disables all physics (gravity, movement)
         player.setControlLocked(true);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
 
         // ROM writes only x_pos/y_pos here; x_sub/y_sub survive the capture
         // (s2.asm:58600-58601). Use centre-coordinate APIs because object
@@ -245,7 +246,7 @@ public class PointPokeyObjectInstance extends BoxObjectInstance
 
         // Release player control
         player.setControlLocked(false);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setPinballMode(false);
 
         // Reset cage internal state
