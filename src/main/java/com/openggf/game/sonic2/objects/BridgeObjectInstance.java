@@ -16,7 +16,6 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
-import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.Arrays;
@@ -266,11 +265,9 @@ public class BridgeObjectInstance extends BoxObjectInstance
     }
 
     private AbstractPlayableSprite firstTrackedSidekick() {
-        SpriteManager spriteManager = services().spriteManager();
-        if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
-            return null;
-        }
-        return spriteManager.getSidekicks().getFirst();
+        return services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                ? sidekick
+                : null;
     }
 
     private int computeLogIndex(AbstractPlayableSprite player) {
