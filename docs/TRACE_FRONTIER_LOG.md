@@ -2292,3 +2292,36 @@ Files changed:
 `y mismatch (expected=0x039D, actual=0x039E)` — Sonic is 1 pixel too low at the frame the
 monitor breaks (`broken=1`). This is a different object interaction than the Tails rolling bug
 and requires separate investigation.
+
+## 2026-05-20 - S2 Springboard (Obj40) sloped catch range and first-contact launch guard (MCZ2 f2226 -> f2418)
+
+- Branch: `develop` worktree `agent-a3702473724ceec0b`
+- Command: `mvn test -Dtest=TestS2Mcz2LevelSelectTraceReplay -q`
+- Result: MCZ2 frontier advanced from frame 2226 (724 errors) to frame 2418 (571 errors).
+- Regression check: `TestS2MczLevelSelectTraceReplay` unchanged at frame 1085 (452 errors, pre-existing);
+  `TestS2Ehz1TraceReplay` PASS (0 errors, unchanged); `TestS2ArzLevelSelectTraceReplay` improved
+  to frame 964 (625 errors, was 664 pre-existing); `TestS2HtzLevelSelectTraceReplay` unchanged
+  at frame 5511 (490 errors, pre-existing); `TestS2CnzLevelSelectTraceReplay` unchanged at
+  frame 3906 (22 errors, pre-existing).
+
+### Root causes
+
+**Bug 1 - addsSlopeCatchRangeToVerticalOverlap missing override:**
+ROM `SlopedSolid_cont` (s2.asm:35066) adds the object half-height (d2=8) to the vertical
+overlap catch range before computing relY. `SlopedSolidProvider.addsSlopeCatchRangeToVerticalOverlap()`
+defaults to `false`. `SpringboardObjectInstance` did not override it, so halfHeight was not
+added to relY. With yRadius=19 (standing) and halfHeight=8: the missing 8 shifted the landing
+snap Y by 2px (frame 2226: actual y=0x0340, expected=0x033E). Fix: override returns `true`.
+
+**Bug 2 - First-contact launch fires one frame early:**
+`updateLaunchSequence` switched the animation from IDLE to COMPRESSED, then fell through to
+the `if (mappingFrame == 0)` check. Since IDLE starts at frame 0 (delay=0xF not yet elapsed),
+`mappingFrame==0` was true and `applyLaunch` fired on the same frame as the initial landing.
+ROM `loc_26446` (s2.asm:51868-51872): when anim is not already 1, sets anim=1 then `rts`
+without checking `mapping_frame`. On the first contact frame the ROM returns immediately.
+Fix: add `return` after `setAnimId(ANIM_COMPRESSED)` when anim was not already compressed.
+
+### New MCZ2 frontier (frame 2418)
+
+`tails_y mismatch (expected=0x02ED, actual=0x02EB)` - Tails stands on a Springboard 2px too high.
+Sidekick slot assignment and Tails-on-Springboard riding position are pre-existing separate issues.
