@@ -4,9 +4,9 @@ Generated: 2026-04-19 12:00:00
 
 ## Summary
 
-- **Total unique objects found:** 303
-- **Implemented:** 77 (25.4%)
-- **Unimplemented:** 226 (74.6%)
+- **Total unique objects found:** 302
+- **Implemented:** 88 (29.0%)
+- **Unimplemented:** 214 (70.6%)
 
 ## Implemented Objects
 
@@ -88,6 +88,18 @@ Generated: 2026-04-19 12:00:00
 | 0x9B | BubblesBadnik | 41 |  | MGZ1, MGZ2 |
 | 0x9C | Spiker | 23 |  | MGZ1, MGZ2 |
 | 0x9E | Tunnelbot | 3 |  | MGZ1 |
+| 0xAD | Penguinator | 44 |  | ICZ1, ICZ2 |
+| 0xAE | StarPointer | 20 |  | ICZ1, ICZ2 |
+| 0xAF | ICZCrushingColumn | 24 |  | ICZ1, ICZ2 |
+| 0xB0 | ICZPathFollowPlatform | 9 |  | ICZ1, ICZ2 |
+| 0xB1 | ICZBreakableWall | 12 |  | ICZ1 |
+| 0xB2 | ICZFreezer | 22 |  | ICZ1, ICZ2 |
+| 0xB3 | ICZSegmentColumn | 4 |  | ICZ1, ICZ2 |
+| 0xB4 | ICZSwingingPlatform | 12 |  | ICZ1, ICZ2 |
+| 0xB5 | ICZStalagtite | 9 |  | ICZ1 |
+| 0xB6 | ICZIceCube | 32 |  | ICZ1, ICZ2 |
+| 0xB7 | ICZIceSpikes | 31 |  | ICZ1, ICZ2 |
+| 0xB8 | ICZHarmfulIce | 69 |  | ICZ1, ICZ2 |
 
 ## Unimplemented Objects (By Usage)
 
@@ -107,14 +119,12 @@ Generated: 2026-04-19 12:00:00
 | 0x47 | Object | CNZCylinder | 75 |  | CNZ1, CNZ2 |
 | 0x4D | Object | DEZTorpedoLauncher | 74 |  | DEZ1, DEZ2 |
 | 0x19 | Object | LBZCupElevatorPole | 72 |  | LBZ1, LBZ2 |
-| 0xB8 | Object | ICZHarmfulIce | 69 |  | ICZ1, ICZ2 |
 | 0x9A | Badnik | Iwamodoki | 66 |  | LRZ1, LRZ2 |
 | 0xE1 | Object | FBZMine | 60 |  | FBZ1, FBZ2 |
 | 0x29 | Object | LRZFlameThrower | 52 |  | LRZ2 |
 | 0x2D | Object | LRZSolidMovingPlatforms | 52 |  | LRZ2 |
 | 0x11 | Object | LBZMovingPlatform | 50 |  | LBZ1, LBZ2 |
 | 0xB8 | Object | DDZMissile | 50 |  | DDZ1 |
-| 0xAD | Badnik | Penguinator | 44 |  | ICZ1, ICZ2 |
 | 0x5A | Object | DEZGravityTube | 41 |  | DEZ1, DEZ2 |
 | 0x2C | Object | LRZOrbitingSpikeBallV | 40 |  | LRZ2 |
 | 0xA9 | Badnik | TechnoSqueek | 39 |  | FBZ1, FBZ2 |
@@ -125,10 +135,8 @@ Generated: 2026-04-19 12:00:00
 | 0x43 | Object | SOZSwingingPlatform | 33 |  | SOZ1, SOZ2 |
 | 0x4F | Object | DEZStaircase | 33 |  | DEZ1, DEZ2 |
 | 0x76 | Object | FBZBentPipe | 32 |  | FBZ1 |
-| 0xB6 | Object | ICZIceCube | 32 |  | ICZ1, ICZ2 |
 | 0x95 | Badnik | Sandworm | 32 |  | SOZ1, SOZ2 |
 | 0x4B | Object | CNZTriangleBumpers | 31 |  | CNZ1, CNZ2 |
-| 0xB7 | Object | ICZIceSpikes | 31 |  | ICZ1, ICZ2 |
 | 0xBF | Badnik | Ribot | 31 |  | LBZ1, LBZ2 |
 | 0x9B | Badnik | Toxomister | 31 |  | LRZ1, LRZ2 |
 | 0x44 | Object | SOZBreakableSandRock | 30 |  | SOZ1, SOZ2 |
@@ -151,13 +159,11 @@ Generated: 2026-04-19 12:00:00
 | 0x55 | Object | DEZEnergyBridge | 25 |  | DEZ1, DEZ2 |
 | 0x9D | Badnik | Mantis | 24 |  | MGZ2 |
 | 0xA8 | Badnik | Blaster | 24 |  | FBZ1, FBZ2 |
-| 0xAF | Object | ICZCrushingColumn | 24 |  | ICZ1, ICZ2 |
 | 0x15 | Object | LBZPlayerLauncher | 24 |  | LBZ1, LBZ2 |
 | 0x31 | Object | LBZRollingDrum | 24 |  | LBZ1, LBZ2 |
 | 0x09 | Object | MHZCurledVine | 23 |  | MHZ1, MHZ2 |
 | 0x71 | Object | FBZFloatingPlatform | 22 |  | FBZ1, FBZ2 |
 | 0x7A | Object | FBZScrewDoor | 22 |  | FBZ1, FBZ2 |
-| 0xB2 | Object | ICZFreezer | 22 |  | ICZ1, ICZ2 |
 | 0x18 | Object | LBZCupElevator | 22 |  | LBZ1, LBZ2 |
 | 0x78 | Object | FBZDEZPlayerLauncher | 21 |  | FBZ1, FBZ2, DEZ1 |
 | 0xC0 | Badnik | Orbinaut | 21 |  | LBZ1, LBZ2 |
@@ -167,7 +173,6 @@ Generated: 2026-04-19 12:00:00
 | 0x72 | Object | FBZChainLink | 20 |  | FBZ1, FBZ2 |
 | 0x74 | Object | FBZMagneticPlatform | 20 |  | FBZ1, FBZ2 |
 | 0xE4 | Object | FBZFlamethrower | 20 |  | FBZ1, FBZ2 |
-| 0xAE | Badnik | StarPointer | 20 |  | ICZ1, ICZ2 |
 | 0x46 | Object | SOZDoor | 20 |  | SOZ2 |
 | 0x45 | Object | SOZPushSwitch | 19 |  | SOZ2 |
 | 0xA4 | Badnik | Sparkle | 18 |  | CNZ1, CNZ2 |
@@ -191,8 +196,6 @@ Generated: 2026-04-19 12:00:00
 | 0x50 | Object | DEZConveyorBelt | 13 |  | DEZ1, DEZ2 |
 | 0x5D | Object | DEZRetractingSpring | 13 |  | DEZ2 |
 | 0xE2 | Object | FBZElevator | 12 |  | FBZ2 |
-| 0xB1 | Object | ICZBreakableWall | 12 |  | ICZ1 |
-| 0xB4 | Object | ICZSwingingPlatform | 12 |  | ICZ1, ICZ2 |
 | 0xBE | Badnik | SnaleBlaster | 12 |  | LBZ1, LBZ2 |
 | 0x1B | Object | LBZPipePlug | 12 |  | LBZ2 |
 | 0xC2 | Badnik | Flybot767 | 12 |  | LBZ2 |
@@ -214,8 +217,6 @@ Generated: 2026-04-19 12:00:00
 | 0x60 | Object | DEZBumperWall | 10 |  | DEZ1 |
 | 0x4A | Object | DEZFloatingPlatform | 10 |  | DEZ2 |
 | 0x70 | Object | FBZWireCageStationary | 9 |  | FBZ1 |
-| 0xB0 | Object | ICZPathFollowPlatform | 9 |  | ICZ1, ICZ2 |
-| 0xB5 | Object | ICZStalagtite | 9 |  | ICZ1 |
 | 0xBA | Object | ICZTensionPlatform | 9 |  | ICZ2 |
 | 0x22 | Object | LBZAlarm | 9 |  | LBZ1 |
 | 0x37 | Object | LRZSpikeBallLauncher | 9 |  | LRZ2 |
@@ -259,7 +260,6 @@ Generated: 2026-04-19 12:00:00
 | 0x7A | Object | SSZElevatorBar | 5 |  | SSZ1 |
 | 0x58 | Object | DEZGravitySwitch | 5 |  | DEZ2 |
 | 0x6D | Object | HCZWaterSplash | 4 |  | HCZ2 |
-| 0xB3 | Object | ICZSegmentColumn | 4 |  | ICZ1, ICZ2 |
 | 0x1F | Object | LBZLoweringGrapple | 4 |  | LBZ2 |
 | 0x12 | Object | MHZMushroomParachute | 4 |  | MHZ1, MHZ2 |
 | 0x47 | Object | SOZSandCork | 4 |  | SOZ2 |
@@ -747,11 +747,11 @@ Total: 440 objects | Implemented: 14 | Unimplemented: 23
 
 #### Act 1
 
-Total: 249 objects | Implemented: 12 | Unimplemented: 12
+Total: 249 objects | Implemented: 24 | Unimplemented: 0
 
 **Badniks:**
-- [ ] 0xAD Penguinator (x12) [0x30, 0x20]
-- [ ] 0xAE StarPointer (x2) [0x00]
+- [x] 0xAD Penguinator (x12) [0x30, 0x20]
+- [x] 0xAE StarPointer (x2) [0x00]
 
 **Objects:**
 - [x] 0x01 Monitor (x4) [0x03, 0x06, 0x08]
@@ -766,24 +766,24 @@ Total: 249 objects | Implemented: 12 | Unimplemented: 12
 - [x] 0x6B InvisibleHurtBlockV (x14) [5 subtypes]
 - [x] 0x6C TensionBridge (x1) [0x0C]
 - [x] 0x85 SSEntryRing (x2) [0x01, 0x02]
-- [ ] 0xAF ICZCrushingColumn (x17) [4 subtypes]
-- [ ] 0xB0 ICZPathFollowPlatform (x2) [0x00, 0x02]
-- [ ] 0xB1 ICZBreakableWall (x12) [0x00]
-- [ ] 0xB2 ICZFreezer (x9) [0x00]
-- [ ] 0xB3 ICZSegmentColumn (x2) [0x02]
-- [ ] 0xB4 ICZSwingingPlatform (x9) [0x00, 0x02]
-- [ ] 0xB5 ICZStalagtite (x9) [0x00]
-- [ ] 0xB6 ICZIceCube (x11) [0x00]
-- [ ] 0xB7 ICZIceSpikes (x9) [0x00]
-- [ ] 0xB8 ICZHarmfulIce (x55) [0x00, 0x02]
+- [x] 0xAF ICZCrushingColumn (x17) [4 subtypes]
+- [x] 0xB0 ICZPathFollowPlatform (x2) [0x00, 0x02]
+- [x] 0xB1 ICZBreakableWall (x12) [0x00]
+- [x] 0xB2 ICZFreezer (x9) [0x00]
+- [x] 0xB3 ICZSegmentColumn (x2) [0x02]
+- [x] 0xB4 ICZSwingingPlatform (x9) [0x00, 0x02]
+- [x] 0xB5 ICZStalagtite (x9) [0x00]
+- [x] 0xB6 ICZIceCube (x11) [0x00]
+- [x] 0xB7 ICZIceSpikes (x9) [0x00]
+- [x] 0xB8 ICZHarmfulIce (x55) [0x00, 0x02]
 
 #### Act 2
 
-Total: 356 objects | Implemented: 14 | Unimplemented: 15
+Total: 356 objects | Implemented: 24 | Unimplemented: 5
 
 **Badniks:**
-- [ ] 0xAD Penguinator (x32) [0x10, 0x20, 0x40]
-- [ ] 0xAE StarPointer (x18) [0x00, 0x02, 0x04]
+- [x] 0xAD Penguinator (x32) [0x10, 0x20, 0x40]
+- [x] 0xAE StarPointer (x18) [0x00, 0x02, 0x04]
 
 **Bosses:**
 - [ ] 0xBC ICZMiniboss (x2) [0x00, 0x02]
@@ -804,14 +804,14 @@ Total: 356 objects | Implemented: 14 | Unimplemented: 15
 - [x] 0x6C TensionBridge (x10) [0x0C, 0x8C]
 - [x] 0x80 HiddenMonitor (x6) [0x03, 0x06]
 - [x] 0x85 SSEntryRing (x3) [0x03, 0x04, 0x05]
-- [ ] 0xAF ICZCrushingColumn (x7) [0x02, 0x03, 0x04]
-- [ ] 0xB0 ICZPathFollowPlatform (x7) [0x06]
-- [ ] 0xB2 ICZFreezer (x13) [0x00]
-- [ ] 0xB3 ICZSegmentColumn (x2) [0x00, 0x02]
-- [ ] 0xB4 ICZSwingingPlatform (x3) [0x00]
-- [ ] 0xB6 ICZIceCube (x21) [0x00]
-- [ ] 0xB7 ICZIceSpikes (x22) [0x00, 0x02]
-- [ ] 0xB8 ICZHarmfulIce (x14) [0x00]
+- [x] 0xAF ICZCrushingColumn (x7) [0x02, 0x03, 0x04]
+- [x] 0xB0 ICZPathFollowPlatform (x7) [0x06]
+- [x] 0xB2 ICZFreezer (x13) [0x00]
+- [x] 0xB3 ICZSegmentColumn (x2) [0x00, 0x02]
+- [x] 0xB4 ICZSwingingPlatform (x3) [0x00]
+- [x] 0xB6 ICZIceCube (x21) [0x00]
+- [x] 0xB7 ICZIceSpikes (x22) [0x00, 0x02]
+- [x] 0xB8 ICZHarmfulIce (x14) [0x00]
 - [ ] 0xB9 ICZSnowPile (x28) [5 subtypes]
 - [ ] 0xBA ICZTensionPlatform (x9) [0x00]
 - [ ] 0xBB ICZIceBlock (x5) [0x00]
