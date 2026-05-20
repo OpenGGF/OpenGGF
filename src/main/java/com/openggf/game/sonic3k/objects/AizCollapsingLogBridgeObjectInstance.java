@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -240,9 +241,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         }
 
         var objManager = services().objectManager();
-        if (objManager != null) {
-            objManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objManager, spawn);
 
         int delay = subtypeBase;
         for (int i = 0; i < SEGMENT_COUNT; i++) {

@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -295,9 +296,7 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     private void markRemembered() {
         try {
             ObjectManager om = getObjectManager();
-            if (om != null) {
-                om.markRemembered(spawn);
-            }
+            ObjectLifetimeOps.markSpawnRemembered(om, spawn);
         } catch (Exception e) {
             // Safe fallback for tests.
         }

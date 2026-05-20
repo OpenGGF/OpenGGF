@@ -9,6 +9,7 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -478,9 +479,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
     private void markRemembered() {
         try {
             var om = services().objectManager();
-            if (om != null) {
-                om.markRemembered(spawn);
-            }
+            ObjectLifetimeOps.markSpawnRemembered(om, spawn);
         } catch (Exception e) {
             // Safe fallback
         }
