@@ -119,9 +119,6 @@ class TestObjectPhysicsStandardizationGuard {
             baseline("com/openggf/game/sonic3k/objects/S3kSignpostInstance.java", "sidekick.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
             baseline("com/openggf/game/sonic3k/objects/Sonic3kSSEntryRingObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
 
-            baseline("com/openggf/game/sonic3k/objects/AizGiantRideVineObjectInstance.java", "AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();", ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS, ReasonCode.PENDING_PARITY_TRIAGE, 3),
-            baseline("com/openggf/game/sonic3k/objects/AizHollowTreeObjectInstance.java", "updatePlayer((AbstractPlayableSprite) sidekicks.getFirst(), PLAYER_SLOT_SIDEKICK, false);", ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS, ReasonCode.PENDING_PARITY_TRIAGE, 1),
-            baseline("com/openggf/game/sonic3k/objects/AizRideVineObjectInstance.java", "AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();", ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS, ReasonCode.PENDING_PARITY_TRIAGE, 3),
             baseline("com/openggf/game/sonic3k/objects/CnzCylinderInstance.java", "PlayableEntity first = sidekicks.getFirst();", ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS, ReasonCode.PENDING_PARITY_TRIAGE, 1),
             baseline("com/openggf/game/sonic3k/objects/CnzCylinderInstance.java", "return !sidekicks.isEmpty() && sidekicks.getFirst() == sprite;", ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS, ReasonCode.PENDING_PARITY_TRIAGE, 1),
 

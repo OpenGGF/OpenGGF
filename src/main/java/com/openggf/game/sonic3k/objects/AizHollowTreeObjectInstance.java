@@ -74,9 +74,9 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         updatePlayer(player, PLAYER_SLOT_MAIN, true);
-        var sidekicks = services().sidekicks();
-        if (!sidekicks.isEmpty()) {
-            updatePlayer((AbstractPlayableSprite) sidekicks.getFirst(), PLAYER_SLOT_SIDEKICK, false);
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
+        if (sidekick != null) {
+            updatePlayer(sidekick, PLAYER_SLOT_SIDEKICK, false);
         }
         updateCameraLock(player);
     }
@@ -84,6 +84,12 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // Object is logic-only in ROM (no mappings/art configured in Obj_AIZHollowTree init).
+    }
+
+    private AbstractPlayableSprite firstTrackedSidekick() {
+        return services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                ? sidekick
+                : null;
     }
 
     private void updatePlayer(AbstractPlayableSprite player,
