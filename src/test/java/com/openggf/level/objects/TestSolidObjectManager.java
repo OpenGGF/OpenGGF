@@ -338,6 +338,29 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void solidRoutineProfileSnapshotsInclusiveRightEdgeBeforeDelegatedHooks() {
+        SolidObjectParams params = new SolidObjectParams(19, 14, 15);
+        TestSolidObject object = new MutatingInclusiveRightEdgeSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setAir(false);
+        player.setXSpeed((short) -0x100);
+        player.setGSpeed((short) -0x100);
+        player.setCentreX((short) (100 + params.halfWidth()));
+        player.setCentreY((short) 100);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getPushing(),
+                "Solid routine profile should capture inclusive-right-edge policy before provider hooks mutate");
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getGSpeed());
+    }
+
+    @Test
     public void upwardBottomCollisionPreservesGroundSpeed() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestSolidObject object = new TestSolidObject(100, 100, params);
@@ -904,6 +927,25 @@ public class TestSolidObjectManager {
         @Override
         public boolean usesInclusiveRightEdge() {
             return true;
+        }
+    }
+
+    private static final class MutatingInclusiveRightEdgeSolidObject extends TestSolidObject {
+        private boolean inclusiveRightEdge = true;
+
+        private MutatingInclusiveRightEdgeSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public SolidObjectParams getSolidParams() {
+            inclusiveRightEdge = false;
+            return super.getSolidParams();
+        }
+
+        @Override
+        public boolean usesInclusiveRightEdge() {
+            return inclusiveRightEdge;
         }
     }
 
