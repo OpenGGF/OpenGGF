@@ -14,6 +14,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -146,7 +147,7 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
     private void markRemembered() {
         ObjectServices services = tryServices();
         if (services != null && services.objectManager() != null) {
-            services.objectManager().markRemembered(spawn);
+            ObjectLifetimeOps.markSpawnRemembered(services.objectManager(), spawn);
         }
     }
 
