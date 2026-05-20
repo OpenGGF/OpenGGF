@@ -13,6 +13,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -453,7 +454,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance {
 
         // Lock player control
         // ROM: move.b #1,obj_control(a1)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // Mark as grabbed
         // ROM: move.b #1,(a2)
@@ -490,7 +491,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance {
     private void releasePlayer(AbstractPlayableSprite player, boolean isPlayer2, boolean jumped) {
         // Clear control lock
         // ROM: clr.b obj_control(a1)
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
 
         // Clear grab flag
         // ROM: clr.b (a2)
