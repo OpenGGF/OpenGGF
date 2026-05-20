@@ -25,11 +25,12 @@ Default order of work:
 ```bash
 mvn package                          # Build (creates executable JAR with dependencies)
 mvn test                             # Run tests
-mvn test -Dtest=TestCollisionLogic   # Run a single test class
+mvn "-Dtest=TestCollisionLogic" test # Run a single test class in PowerShell
 java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar  # Run (requires ROM)
 ```
 
 Maven Silent Extension (MSE) is configured in this repo via `.mvn/extensions.xml`, and `.mvn/maven.config` enables `-Dmse=relaxed` by default for repo-local Maven commands. Use `-Dmse=off` when full Maven logs are needed.
+In PowerShell, quote Maven `-D...` properties, especially focused test selectors such as `"-Dtest=com.openggf.package.TestClassName"`, so the shell does not reinterpret dots or punctuation.
 
 Tests in this repository must use JUnit 5 / Jupiter only. Do not add JUnit 4 tests, rules, runners, or `org.junit.*` imports.
 

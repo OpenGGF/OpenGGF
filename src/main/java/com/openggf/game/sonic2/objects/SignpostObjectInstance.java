@@ -8,6 +8,7 @@ import com.openggf.game.CollisionModel;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectAnimationState;
@@ -101,7 +102,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
         // ROM check: if (Current_Act != 0 && Current_ZoneAndAct != metropolis_zone_act_2)
         // metropolis_zone_act_2 = (7 << 8) | 1 = 0x0701
         if (currentAct > 0) {
-            boolean isMTZAct2 = (currentZone == 7 && currentAct == 1);
+            boolean isMTZAct2 = (currentZone == Sonic2ZoneConstants.ROM_ZONE_MTZ && currentAct == 1);
             if (!isMTZAct2) {
                 // Mark as remembered to prevent respawning, then destroy
                 // This prevents the spawn-destroy cycle every frame

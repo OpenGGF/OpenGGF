@@ -246,7 +246,11 @@ public class SteamSpringObjectInstance extends AbstractObjectInstance
         player.setAir(true);
 
         // ROM: bclr #status.player.on_object,status(a1)
-        // Engine handles this through the solid contact system
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager != null) {
+            objectManager.clearRidingObject(player);
+        }
+        player.setOnObject(false);
 
         // ROM: move.b #AniIDSonAni_Spring,anim(a1)
         player.setAnimationId(Sonic2AnimationIds.SPRING);
