@@ -351,7 +351,7 @@ final class AizVineHandleLogic {
         player.setObjectMappingFrameControl(false);
         player.setForcedAnimationId(-1);
         player.setControlLocked(false);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.suppressNextJumpPress();
     }
 
