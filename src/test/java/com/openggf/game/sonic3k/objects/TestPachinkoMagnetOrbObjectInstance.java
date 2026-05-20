@@ -36,6 +36,36 @@ public class TestPachinkoMagnetOrbObjectInstance {
     }
 
     @Test
+    public void duplicateSidekickEntriesDoNotTickCapturedSidekickTwiceOnFirstCapture() {
+        PachinkoMagnetOrbObjectInstance orb = new PachinkoMagnetOrbObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0xEC, 0, 0, false, 0));
+        AbstractPlayableSprite main = mockPlayerAt(0x100, 0x100);
+        AbstractPlayableSprite sidekick = mockPlayerAt(0x108, 0x108);
+        CountingObjectServices services = new CountingObjectServices();
+        services.withSidekicks(List.of(sidekick, sidekick));
+        orb.setServices(services);
+
+        orb.update(0, main);
+
+        verify(sidekick, times(1)).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        assertEquals(0, services.sfxCount);
+    }
+
+    @Test
+    public void capturesUpdatePlayerWhenPlayerQueryCannotResolveMain() {
+        PachinkoMagnetOrbObjectInstance orb = new PachinkoMagnetOrbObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0xEC, 0, 0, false, 0));
+        AbstractPlayableSprite main = mockPlayerAt(0x100, 0x100);
+        AbstractPlayableSprite sidekick = mockPlayerAt(0x108, 0x108);
+
+        orb.setServices(new TestObjectServices().withSidekicks(List.of(sidekick)));
+        orb.update(0, main);
+
+        verify(main).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+    }
+
+    @Test
     public void launchReleaseAppliesRollState() {
         PachinkoMagnetOrbObjectInstance orb = new PachinkoMagnetOrbObjectInstance(
                 new ObjectSpawn(0x100, 0x100, 0xEC, 0, 0, false, 0));
