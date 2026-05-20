@@ -19,6 +19,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -491,13 +492,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         if (!hasSeamlessTransition && shouldRestorePlayerControlsOnExit()) {
             if (playerRef != null) {
                 playerRef.setControlLocked(false);
-                playerRef.setObjectControlled(false);
+                ObjectControlState.none().applyTo(playerRef);
                 playerRef.setForcedAnimationId(-1);
             }
             for (PlayableEntity sidekickEntity : services().sidekicks()) {
                 AbstractPlayableSprite sidekick = (AbstractPlayableSprite) sidekickEntity;
                 sidekick.setControlLocked(false);
-                sidekick.setObjectControlled(false);
+                ObjectControlState.none().applyTo(sidekick);
                 sidekick.setForcedAnimationId(-1);
             }
         }
