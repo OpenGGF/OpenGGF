@@ -906,7 +906,6 @@ public class CollisionSystem {
         if (lowestResult == null || lowestResult.distance() >= 0) {
             return;
         }
-
         moveForSensorResult(sprite, lowestResult);
 
         int ceilingAngle = lowestResult.angle() & 0xFF;

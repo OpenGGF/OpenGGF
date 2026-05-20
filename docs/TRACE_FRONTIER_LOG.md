@@ -1,5 +1,51 @@
 # Trace Frontier Log
 
+## 2026-05-20 - S2 Tails y_radius preservation on non-rolling landing (MCZ2 frame 1290 -> 1487)
+
+- Branch: `develop` worktree `agent-a6820a41fdf6642c1`
+- Command: `mvn test -Dtest=TestS2Mcz2LevelSelectTraceReplay -q`
+- Result: MCZ2 frontier advanced from frame 1290 (816 errors) to frame 1487 (773 errors).
+- Regression check: `TestS2MczLevelSelectTraceReplay` still at frame 1085 (452 errors,
+  pre-existing); `TestS2Ehz1TraceReplay` still at frame 304 (813 errors, pre-existing);
+  `TestS2ArzLevelSelectTraceReplay` passes (unchanged).
+
+### Root cause
+
+`ObjectManager.SolidContacts.clearRollingOnLanding()` had an else-if branch that called
+`applyStandingRadii(false)` whenever a player landed with `rolling=false` and non-default
+collision radii. This is S3K behavior (`Player_TouchFloor`, `sonic3k.asm:24341-24343` /
+`29134-29136` — unconditionally resets y_radius/x_radius before testing `Status_Roll`).
+
+S2 `Tails_ResetOnFloor` (`s2.asm:40624-40641`) uses `btst #Status_Roll; bne
+Tails_ResetOnFloor_Part2`, gating the y_radius reset on `Status_Roll` being set. When not
+rolling, the reset is skipped entirely, preserving any stale y_radius from the despawn path.
+
+In MCZ2 at frame 1290, the `TailsCPU_Flying` respawn path (`s2.asm:38797`) clears rolling via
+a direct status byte write (`Status_InAir`) without touching y_radius, leaving y_radius=14
+(rollYRadius, not standYRadius=15). The spurious `applyStandingRadii(false)` reset y_radius
+14→15 one pixel too early, raising Tails' ceiling probe by 1 px and producing a different
+ceiling collision result from the ROM.
+
+### Fix
+
+Gated the non-rolling radius reset in `clearRollingOnLanding()` on
+`featureSet.landingRollClearUsesCurrentYRadiusDelta()`, which is true only for S3K. S2 and S1
+now skip the else-if branch entirely when not rolling, matching `Tails_ResetOnFloor` gate.
+
+Files changed:
+- `ObjectManager.java` (`SolidContacts.clearRollingOnLanding`) — gate added
+- Debug prints removed from `PlayableSpriteMovement.java`, `CollisionSystem.java`,
+  `AbstractPlayableSprite.java` (no logic change)
+- `DebugMCZ2BlockDump.java` deleted (diagnostic test file)
+
+### New MCZ2 frontier (frame 1487)
+
+`air mismatch (expected=0, actual=1)` — Sonic is in the air in the engine but on the ground
+in the ROM. At frame 1487, Sonic is riding SwingingPlatform slot 17 (x=0x06A0, y=0x05B4) in
+the ROM. The engine SwingingPlatform position diverges due to OscillationManager byte drift,
+a pre-existing SwingingPlatform oscillation issue separate from the fix in this commit. The
+frame 1290 cascade (816 → 773 errors, 43-error improvement) was hidden behind the y_radius bug.
+
 ## 2026-05-19 - S2 SwingingPlatform (Obj15) out-of-range unload + CalcSine angle convention (MCZ2 frame 1009 -> 1290)
 
 - Branch: `develop` worktree `agent-a262078995bf698e7`

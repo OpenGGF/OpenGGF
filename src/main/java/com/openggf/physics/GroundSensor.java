@@ -480,14 +480,12 @@ public class GroundSensor extends Sensor {
             SensorResult prevResult = scanTileVertical(origX, origY, checkX, prevCheckY, solidityBit, direction, true);
 
             if (prevResult != null) {
-                // Adjust distance by -16 (ROM: subi.w #$10,d1)
-                // prevResult is reusableResult, so mutate in place
-                return reusableResult.set(
-                    prevResult.angle(),
-                    (byte) (prevResult.distance() - 16),
-                    prevResult.tileId(),
-                    prevResult.direction()
-                );
+                // ROM loc_1E86A does `subi.w #$10,d1` after FindFloor2 because FindFloor2's
+                // distance is relative to the shifted d2. The engine's scanTileVertical always
+                // calculates distance relative to origY (see calculateVerticalDistance), so the
+                // -16 offset is already embedded. No extra subtraction needed — same reasoning
+                // as the FULL_TILE path above.
+                return prevResult;
             }
             return null;
         }
