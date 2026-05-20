@@ -58,6 +58,8 @@ class TestCnzCannonInstance {
         cannon.onSolidContact(player, new SolidContact(true, false, false, true, false), 3898);
 
         assertTrue(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
         assertTrue(player.isControlLocked());
         assertTrue(player.getRolling());
         assertTrue(player.getAir());
