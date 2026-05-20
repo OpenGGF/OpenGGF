@@ -1951,3 +1951,59 @@ Two candidate causes:
 Did not commit a fix. Root cause requires recorder extension or runtime diagnostic
 logging to identify the exact frame and platform involved. Flagged as a
 recorder-extension candidate.
+
+---
+
+## 2026-05-20 - S2 ARZ Rising Pillar (Obj2B) player-release on_object clear (ARZ1 f304 -> f311)
+
+- Branch: `develop` worktree `agent-ae0e08d9dae24b8cc`
+- Command: `mvn test -Dtest=TestS2ArzLevelSelectTraceReplay`
+- Result: ARZ1 frontier advanced from frame 304 (813 errors) to frame 311 (846 errors).
+- Regression check: `TestS2Ehz1TraceReplay` PASS (0 errors); `TestS2Arz2LevelSelectTraceReplay`
+  still at frame 225 (2129 errors, pre-existing); `TestS2MczLevelSelectTraceReplay` and
+  `TestS2Mcz2LevelSelectTraceReplay` unchanged.
+
+### Correction to prior log entries
+
+Two entries from the 2026-05-20 MCZ2 session incorrectly stated:
+- "TestS2Ehz1TraceReplay still at frame 304 (813 errors, pre-existing)"
+- "TestS2ArzLevelSelectTraceReplay passes (unchanged)"
+
+These were transposed. `TestS2Ehz1TraceReplay` was and remains PASS (0 errors, full trace).
+`TestS2ArzLevelSelectTraceReplay` was the test at frame 304/813 errors.
+
+### Root cause
+
+`RisingPillarObjectInstance.releasePlayerAndBreak()` (s2.asm:51393-51405, `loc_25AF6`) set
+`rolling=true` and `in_air=true` on the launched player but omitted the ROM's
+`bclr #status.player.on_object,status(a1)` (s2.asm:51401), leaving on_object set.
+
+Two cascading effects:
+
+1. **status bit mismatch:** Engine Tails entered frame 304 with both in_air=true and
+   on_object=true (status 0x0F), while ROM Tails had only in_air=true (status 0x07).
+
+2. **Stale riding state re-grounding:** The `ridingStates` map in `ObjectManager.SolidContacts`
+   still held a Tails→pillar entry from frame 303. In `PlayableSpriteMovement` at the start
+   of frame 304, the pre-movement recovery check (`!isUnifiedCollision && sprite.getAir() &&
+   hasGroundingObjectSupport() && sprite.getYSpeed() >= 0`) fired: `hasGroundingObjectSupport()`
+   returned true from the stale riding state entry, forcing `setAir(false)` and `setOnObject(true)`
+   again. This caused the solid contacts path to apply object-riding deceleration (−0x26) instead
+   of air deceleration (−0x18), producing tails_x_speed=0x00C2 vs ROM's 0x00D0.
+
+### Fix
+
+In `releasePlayerAndBreak()`:
+- Added `player.setOnObject(false)` matching ROM s2.asm:51401.
+- Added `objectManager.clearRidingObject(player)` to flush the stale riding-state entry
+  so the pre-movement recovery cannot re-ground the player on the next frame.
+
+### New frontier at frame 311
+
+ROM Tails enters hurt routine (routine 02→04) at frame 311 when hit by an Arrow (Obj22,
+slot 18) at position (0x031C, 0x0378). Engine Arrow is at (0x0300, 0x0378) — 0x1C (28px)
+to the left. Tails' centre Y (0x0369) with roll radius 7 px gives bottom at 0x0370; Arrow
+top at 0x0376 is 6 px below Tails' bottom, so no touch contact. The Arrow position error
+was already present at frame 304 (engine 0x02E4 vs ROM 0x0300) before this fix — it was
+masked by the earlier pillar-launch failure. Root cause: Obj22 Arrow movement or spawn
+position divergence, pre-existing and separate from this fix.
