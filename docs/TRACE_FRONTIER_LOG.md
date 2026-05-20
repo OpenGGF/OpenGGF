@@ -2063,3 +2063,69 @@ ARZ1 error count increased from 813 to 816; the frontier frame is unchanged at 3
 (`tails_x_speed mismatch`, pre-existing). The 3 extra errors appear after frame 304 where
 the trace divergence has already compounded. They are a downstream consequence of the corrected
 springboard behavior in ARZ1 after the existing cascade.
+
+## 2026-05-20 - S2 Arrow Shooter (Obj22) sidekick-detection and animation-timing (ARZ1 f311 -> f964)
+
+- Branch: `develop` worktree `agent-a7604e7a5d2c6d17e`
+- Command: `mvn test -Dtest=TestS2ArzLevelSelectTraceReplay -q`
+- Result: ARZ1 frontier advanced from frame 311 (868 errors) to frame 964 (664 errors).
+- Regression check: `TestS2Ehz1TraceReplay` PASS (0 errors); `TestS2Arz2LevelSelectTraceReplay`
+  still at frame 225 (2067 errors, pre-existing; 62 fewer errors vs prior 2129 is a downstream
+  improvement from corrected Arrow timing, not a new failure).
+
+### Root cause
+
+Three bugs in `ArrowShooterObjectInstance` caused the Arrow projectile to spawn 7 frames late,
+placing it 28px behind the ROM at frame 311 so Tails was not hit.
+
+**Bug 1 — Sidekick detection missing.**
+The ROM's `Obj22_DetectPlayer` subroutine is called twice per frame: once for `MainCharacter`
+and once for `Sidekick`. If either is within 0x40 px of the shooter, the detecting animation
+activates. The engine's `updateDetection(player)` only checked the main player (Sonic) passed
+via `update()`'s `playerEntity` argument. In this trace, Tails was the closer character
+(tails_x at frame 179: 0x018B, dx=0x3B; sonic_x: 0x1D1, dx=0x81). Sonic was never within
+detection range at all. The engine only detected via Sonic when he briefly passed within 0x40 px
+(frames 117–164), causing an idle→detecting→firing transition at frame 165 — 15 frames before
+the ROM transition at frame 180 when Tails left detection range.
+
+**Bug 2 — `animTimer` initialised to 7 instead of 0 on FIRING entry.**
+ROM's `AnimateSprite` sees `anim != prev_anim` → resets `anim_frame_duration=0`, then
+immediately decrements to −1 and processes the first entry, all in the same call that sets
+`anim=2`. The engine set `animTimer = DELAY_FIRING = 7`, so the first firing entry was not
+processed until 8 frames after the transition (7 decrements to 0, then one more to −1). This
+added 8 frames of delay relative to the ROM.
+
+**Bug 3 — Arrow fired after 5 animation entries instead of after 2.**
+`FIRING_CALLBACK_INDEX = 5` caused the arrow to be fired after ALL five `FIRING_SEQUENCE`
+entries `{3, 4, 4, 3, 1}` were shown (firingIndex reaches 5). In the ROM, the `$FC` callback
+fires after only 2 entries (frame=3, frame=4 — `anim_frame` values 0 and 1), then `routine`
+is incremented to 4 (`Obj22_ShootArrow`). The remaining entries `{4, 3, 1}` are the post-fire
+animation shown by `Obj22_ShootArrow`'s own `AnimateSprite` call. The engine fired 24 extra
+frames late (3 extra entries × 8 frames each).
+
+**Net timing:** Bug 1 fired 15 frames early. Bugs 2+3 added 8+24=32 extra frames. Net: 15
+early − 32 late = 17 late. But with all bugs compounding: ROM fires arrow at frame 197 (anim=2
+set at 180, $FC at 196, ShootArrow at 197); engine fired at frame 204 (anim=FIRING at 165,
+entry-0 at 172, entry-4 at 204). Difference: 204−197 = 7 frames → 7×4 = 28px. ✓
+
+### Fix
+
+`ArrowShooterObjectInstance`:
+- `updateDetection` refactored to use `isWithinDetectionRange(entity)` helper, called for both
+  the main player and all `services().sidekicks()`. Detection matches ROM: either character
+  within 0x40 px triggers the detecting state.
+- `animTimer` set to 0 (not `DELAY_FIRING`) on the idle→firing transition so the first firing
+  animation entry is processed on the same frame that ANIM_FIRING is entered.
+- `FIRING_CALLBACK_INDEX` changed from 5 to 3 (fires when `firingIndex` reaches 3, after
+  processing `FIRING_SEQUENCE[2]=4`, which is the first post-`$FC` visible frame).
+- `fireArrow()` now calls `addDynamicObjectNextFrame` instead of `addDynamicObject`, replicating
+  the ROM's 1-frame gap between `$FC` setting `routine=4` and `Obj22_ShootArrow` running the
+  next frame to allocate the arrow object.
+
+Files changed:
+- `ArrowShooterObjectInstance.java` — sidekick detection, animTimer init, FIRING_CALLBACK_INDEX, addDynamicObjectNextFrame
+
+### New ARZ1 frontier (frame 964)
+
+`air mismatch (expected=0, actual=1)` — Sonic's air flag diverges. A separate, unrelated
+blocker, not investigated in this iteration.
