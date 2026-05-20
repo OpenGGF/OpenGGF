@@ -6,6 +6,19 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S2 Springboard (Obj40) sidekick (Tails) contact drives animation switch (MCZ2 f2418 -> f3003).**
+  `SpringboardObjectInstance.update()` previously called `updateLaunchSequence` only for the
+  main character (Sonic). The ROM's `Obj40_Main` calls `SlopedSolid_SingleCharacter` and
+  `loc_2641E` for BOTH `MainCharacter` (p1_standing_bit) and `Sidekick` (p2_standing_bit)
+  (s2.asm:51839-51847). When Tails stands on the high side of the Springboard, loc_2641E
+  checks the threshold and switches the animation from IDLE to COMPRESSED. Without this,
+  the engine kept using `Obj40_SlopeData_DiagUp` (height[sampleX=12]=0x0E=14) instead of
+  `Obj40_SlopeData_Straight` (height[sampleX=12]=0x0C=12), placing Tails 2px too high
+  (actual y=0x02EB, expected y=0x02ED at frame 2418). Fix: resolve the checkpoint batch
+  once via `checkpointAll()` (avoids double-resolution) and call `updateLaunchSequence`
+  for each sidekick using their result from the shared batch.
+  Advances MCZ2 frontier from frame 2418 (571 errors) to frame 3003 (527 errors).
+
 - **S2 MTZ object parity fixes for steam springs, signposts, and long platforms.**
   `SteamSpringObjectInstance` now clears both `status.player.on_object` and the
   `ObjectManager` riding latch when Obj42 launches the player, matching ROM `bclr
