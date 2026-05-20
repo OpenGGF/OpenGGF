@@ -11,6 +11,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -411,9 +412,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     private void destroyWithWindowGatedRespawn() {
         if (!isDestroyed()) {
             ObjectManager objectManager = services().objectManager();
-            if (objectManager != null) {
-                objectManager.removeFromActiveSpawns(spawn);
-            }
+            ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
         }
         setDestroyed(true);
     }
