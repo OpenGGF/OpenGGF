@@ -7,6 +7,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -320,8 +321,8 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance {
     private void capturePlayer(AbstractPlayableSprite player, PlayerState state) {
         state.phase = 2;  // ROM: addq.b #2,(a4)
 
-        // ROM: move.b #1,object_control(a1)
-        player.setObjectControlled(true);
+        // ROM: move.b #1,object_control(a1) — bits 0-6, movement suppressed but CPU/touch remain allowed.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // ROM: move.b #2,anim(a1) — force rolling animation
         player.setRolling(true);
@@ -356,7 +357,7 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance {
      * Releases the player from object control — ROM: move.b #0,object_control(a1).
      */
     private void releasePlayer(AbstractPlayableSprite player) {
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         LOG.fine("HCZTwistingLoop: released player");
     }
 
