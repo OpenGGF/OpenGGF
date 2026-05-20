@@ -1,0 +1,71 @@
+package com.openggf.level.objects;
+
+import java.util.Objects;
+
+/**
+ * Named lifecycle operations for object destruction, respawn, and slot transfer.
+ */
+public final class ObjectLifetimeOps {
+    private ObjectLifetimeOps() {
+    }
+
+    public static void destroyLatched(AbstractObjectInstance instance) {
+        Objects.requireNonNull(instance, "instance").setDestroyed(true);
+    }
+
+    public static void destroyRespawnableOffscreen(AbstractObjectInstance instance) {
+        Objects.requireNonNull(instance, "instance").setDestroyedByOffscreen();
+    }
+
+    public static void deleteNoRespawn(AbstractObjectInstance instance) {
+        Objects.requireNonNull(instance, "instance").setDestroyed(true);
+    }
+
+    public static void expireDynamic(AbstractObjectInstance instance) {
+        Objects.requireNonNull(instance, "instance").setDestroyed(true);
+    }
+
+    public static int detachSlotForTransfer(AbstractObjectInstance instance) {
+        Objects.requireNonNull(instance, "instance");
+        int slot = instance.getSlotIndex();
+        instance.setSlotIndex(-1);
+        return slot;
+    }
+
+    public static void addReplacementAtTransferredSlot(ObjectManager objectManager,
+                                                       ObjectInstance replacement,
+                                                       int transferredSlot) {
+        Objects.requireNonNull(objectManager, "objectManager");
+        Objects.requireNonNull(replacement, "replacement");
+        if (transferredSlot >= 0) {
+            objectManager.addDynamicObjectAtSlot(replacement, transferredSlot);
+        } else {
+            objectManager.addDynamicObject(replacement);
+        }
+    }
+
+    public static void markSpawnRemembered(ObjectManager objectManager, ObjectSpawn spawn) {
+        if (objectManager != null && spawn != null) {
+            objectManager.markRemembered(spawn);
+        }
+    }
+
+    public static void removeSpawnFromActive(ObjectManager objectManager, ObjectSpawn spawn) {
+        if (objectManager != null && spawn != null) {
+            objectManager.removeFromActiveSpawns(spawn);
+        }
+    }
+
+    public static void releaseParentSlotKeepingChildren(ObjectManager objectManager,
+                                                       AbstractObjectInstance parent) {
+        if (objectManager != null && parent != null) {
+            objectManager.releaseParentSlot(parent);
+        }
+    }
+
+    public static void freeReservedChildSlot(ObjectManager objectManager, ObjectSpawn parentSpawn, int childIndex) {
+        if (objectManager != null && parentSpawn != null) {
+            objectManager.freeReservedChildSlot(parentSpawn, childIndex);
+        }
+    }
+}
