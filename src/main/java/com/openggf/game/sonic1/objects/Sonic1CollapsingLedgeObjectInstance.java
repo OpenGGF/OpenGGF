@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -236,9 +237,7 @@ public class Sonic1CollapsingLedgeObjectInstance extends AbstractObjectInstance
     private void destroyWithWindowGatedRespawn() {
         if (!isDestroyed() ) {
             var objectManager = services().objectManager();
-            if (objectManager != null) {
-                objectManager.removeFromActiveSpawns(spawn);
-            }
+            ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
         }
         setDestroyed(true);
     }
