@@ -12,6 +12,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -252,7 +253,7 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
 
         // Lock player control
         // ROM: move.b #1,obj_control(a1)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
 
         // Mark as grabbed
         // ROM: move.b #1,(a2)
@@ -285,7 +286,7 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
     private void releasePlayer(AbstractPlayableSprite player, boolean isPlayer2) {
         // Clear control lock
         // ROM: clr.b obj_control(a1)
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
 
         // Clear grab flag
         // ROM: clr.b (a2)
