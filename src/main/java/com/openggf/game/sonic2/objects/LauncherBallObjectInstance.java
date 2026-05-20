@@ -6,6 +6,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -131,12 +132,17 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
             return;
         }
 
-        // Process main character
-        processPlayer(player, frameCounter);
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (!participants.contains(player)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(player);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
+        }
 
-        // Process sidekick(s)
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            processPlayer((AbstractPlayableSprite) sidekick, frameCounter);
+        for (PlayableEntity participant : participants) {
+            processPlayer((AbstractPlayableSprite) participant, frameCounter);
         }
     }
 
