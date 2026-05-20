@@ -15,6 +15,7 @@ import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -337,7 +338,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         // ROM: move.b #1,object_control(a1)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         // ROM: move.b #$11,anim(a1) (or #$14 for horizontal)
         player.setAnimationId(hangAnim);
         player.setForcedAnimationId(hangAnim);
@@ -356,7 +357,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
         captured[pi] = false;
         releaseCooldown[pi] = RELEASE_COOLDOWN;
         // ROM: andi.b #$FE,object_control(a1)
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setForcedAnimationId(-1);
         // ROM: bclr d2,(_unkF7C7).w — re-enables water tunnel capture
         HCZWaterRushObjectInstance.HCZBreakableBarState.clearBit(pi);
@@ -392,14 +393,14 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
 
         // ROM: loc_1EEEC / loc_1F09A — release both players if captured
         if (captured[0]) {
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setForcedAnimationId(-1);
         }
         // Release P2 (sidekick)
         if (captured[1]) {
             for (PlayableEntity sidekickEntity : services().sidekicks()) {
                 if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                    sidekick.setObjectControlled(false);
+                    ObjectControlState.none().applyTo(sidekick);
                     sidekick.setForcedAnimationId(-1);
                 }
             }
