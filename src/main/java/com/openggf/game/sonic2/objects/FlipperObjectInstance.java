@@ -15,6 +15,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -137,7 +138,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 // Obj01_Control skips the player movement dispatch while
                 // obj_control bit 0 is set, then still runs display/record/
                 // animation/TouchResponse (s2.asm:35937-35962).
-                player.setObjectControlSuppressesMovement(true);
+                ObjectControlState.movementSuppressedOnly().applyTo(player);
                 lockedPlayer = player;
 
                 if (playerFlipperState == 0) {
@@ -166,7 +167,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 if (playerFlipperState != 0 && (lockedPlayer == null || lockedPlayer == player)) {
                     releaseLockedPlayer();
                     player.setControlLocked(false);
-                    player.setObjectControlSuppressesMovement(false);
+                    ObjectControlState.none().applyTo(player);
                     player.setPinballMode(false);
                     playerFlipperState = 0;
                 }
@@ -232,7 +233,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
         // ROM: move.b #0,obj_control(a1) at loc_2B2E2 - release control lock
         player.setControlLocked(false);
-        player.setObjectControlSuppressesMovement(false);
+        ObjectControlState.none().applyTo(player);
         player.setPinballMode(false);
         lockedPlayer = null;
 
@@ -443,7 +444,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
     private void releaseLockedPlayer() {
         if (lockedPlayer != null) {
             lockedPlayer.setControlLocked(false);
-            lockedPlayer.setObjectControlSuppressesMovement(false);
+            ObjectControlState.none().applyTo(lockedPlayer);
             lockedPlayer.setPinballMode(false);
             lockedPlayer = null;
         }
