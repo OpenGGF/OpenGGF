@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -159,7 +160,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance {
         }
 
         player.setControlLocked(true);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setObjectMappingFrameControl(true);
         player.setOnObject(true);
         player.setAir(false);
@@ -269,7 +270,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance {
         player.setObjectMappingFrameControl(false);
         player.setControlLocked(false);
         if (jumpedOut) {
-            player.setObjectControlled(true);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         } else if (state.compensateReleaseHandoff) {
             player.deferObjectControlRelease();
         } else {
