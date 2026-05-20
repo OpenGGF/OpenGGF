@@ -5951,6 +5951,7 @@ public class ObjectManager {
                 return result.aggregateContact();
             }
 
+            SolidRoutineProfile solidProfile = SolidRoutineProfile.fromProvider(provider);
             SolidObjectParams params = provider.getSolidParams();
             int anchorX = instance.getX() + params.offsetX();
             int anchorY = instance.getY() + params.offsetY();
@@ -6051,7 +6052,7 @@ public class ObjectManager {
                 contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
                         provider.isTopSolidOnly(), provider.hasMonitorSolidity(),
                         provider.getMonitorSolidObjectVerticalOffset(),
-                        useStickyBuffer, instance, true);
+                        useStickyBuffer, solidProfile.inclusiveRightEdge(), instance, true);
             }
 
             if (contact == null) {
@@ -6751,6 +6752,7 @@ public class ObjectManager {
                     continue;
                 }
 
+                SolidRoutineProfile solidProfile = SolidRoutineProfile.fromProvider(provider);
                 SolidObjectParams params = provider.getSolidParams();
                 int anchorX = instance.getX() + params.offsetX();
                 int anchorY = instance.getY() + params.offsetY();
@@ -6794,7 +6796,7 @@ public class ObjectManager {
                     contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
                             provider.isTopSolidOnly(), provider.hasMonitorSolidity(),
                             provider.getMonitorSolidObjectVerticalOffset(),
-                            useStickyBuffer, instance, true);
+                            useStickyBuffer, solidProfile.inclusiveRightEdge(), instance, true);
                 }
 
                 if (contact == null) {
@@ -6939,7 +6941,26 @@ public class ObjectManager {
                 boolean monitorSolidity, int monitorVerticalOffset,
                 boolean useStickyBuffer, ObjectInstance instance, boolean apply) {
             return resolveContact(player, anchorX, anchorY, halfWidth, halfHeight, topSolidOnly,
-                    monitorSolidity, monitorVerticalOffset, useStickyBuffer, instance, -1, apply);
+                    monitorSolidity, monitorVerticalOffset, useStickyBuffer, false, instance, -1, apply);
+        }
+
+        private SolidContact resolveContact(PlayableEntity player,
+                int anchorX, int anchorY, int halfWidth, int halfHeight, boolean topSolidOnly,
+                boolean monitorSolidity, int monitorVerticalOffset,
+                boolean useStickyBuffer, boolean inclusiveRightEdge,
+                ObjectInstance instance, boolean apply) {
+            return resolveContact(player, anchorX, anchorY, halfWidth, halfHeight, topSolidOnly,
+                    monitorSolidity, monitorVerticalOffset, useStickyBuffer,
+                    inclusiveRightEdge, instance, -1, apply);
+        }
+
+        private SolidContact resolveContact(PlayableEntity player,
+                int anchorX, int anchorY, int halfWidth, int halfHeight, boolean topSolidOnly,
+                boolean monitorSolidity, int monitorVerticalOffset,
+                boolean useStickyBuffer, ObjectInstance instance, int pieceIndex, boolean apply) {
+            return resolveContact(player, anchorX, anchorY, halfWidth, halfHeight, topSolidOnly,
+                    monitorSolidity, monitorVerticalOffset, useStickyBuffer,
+                    false, instance, pieceIndex, apply);
         }
 
         private boolean shouldUseSlopeForContact(ObjectInstance instance, SlopedSolidProvider sloped) {
@@ -6953,7 +6974,8 @@ public class ObjectManager {
         private SolidContact resolveContact(PlayableEntity player,
                 int anchorX, int anchorY, int halfWidth, int halfHeight, boolean topSolidOnly,
                 boolean monitorSolidity, int monitorVerticalOffset,
-                boolean useStickyBuffer, ObjectInstance instance, int pieceIndex, boolean apply) {
+                boolean useStickyBuffer, boolean inclusiveRightEdge,
+                ObjectInstance instance, int pieceIndex, boolean apply) {
             int playerCenterX = player.getCentreX();
             int playerCenterY = player.getCentreY();
             if (topSolidOnly && instance instanceof SolidObjectProvider provider) {
@@ -7008,8 +7030,6 @@ public class ObjectManager {
             // ridden piece. Without this, fast moving platforms (ObjB2 Tornado, etc.)
             // can drop contact for one frame at edges.
             int stickyX = ridingThisPiece ? 16 : 0;
-            boolean inclusiveRightEdge = instance instanceof SolidObjectProvider provider
-                    && provider.usesInclusiveRightEdge();
             int rightLimit = width2 + stickyX;
             if (relXRaw < -stickyX || (inclusiveRightEdge ? relXRaw > rightLimit : relXRaw >= rightLimit)) {
                 return null;
