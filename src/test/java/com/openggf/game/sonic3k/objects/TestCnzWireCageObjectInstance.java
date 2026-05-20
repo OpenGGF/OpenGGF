@@ -236,6 +236,9 @@ class TestCnzWireCageObjectInstance {
         assertTrue(player.getAir());
         assertEquals((short) 0x0800, player.getXSpeed());
         assertEquals((short) JUMP_RELEASE_Y_SPEED_FOR_TEST, player.getYSpeed());
+        assertFalse(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertFalse(player.isObjectControlSuppressesMovement());
         assertEquals(0x6500, player.getXSubpixelRaw(),
                 "loc_33B62 clears the cage latch without touching x_sub");
         assertEquals(0xD800, player.getYSubpixelRaw(),

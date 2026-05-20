@@ -607,7 +607,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
         if (services != null && services.objectManager() != null) {
             services.objectManager().clearRidingObject(player);
         }
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
     }
 
     private static final class CageState {
