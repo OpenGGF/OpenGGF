@@ -266,9 +266,7 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
         if (sidekickHitCooldown > 0) {
             sidekickHitCooldown--;
         } else if ((pending & 0x02) != 0) {
-            List<PlayableEntity> sidekicks = services().sidekicks();
-            if (sidekicks != null && !sidekicks.isEmpty()
-                    && sidekicks.getFirst() instanceof AbstractPlayableSprite sidekick
+            if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
                     && !sidekick.isHurt()
                     && !sidekick.getDead()) {
                 handleHit(sidekick);
