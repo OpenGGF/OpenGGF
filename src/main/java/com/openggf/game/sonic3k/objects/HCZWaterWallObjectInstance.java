@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -507,12 +508,12 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
         if (playersControlled) return;
         playersControlled = true;
 
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
 
         for (PlayableEntity sidekickEntity : services().sidekicks()) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                sidekick.setObjectControlled(true);
+                ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
                 sidekick.setControlLocked(true);
             }
         }
@@ -522,12 +523,12 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
         if (!playersControlled) return;
         playersControlled = false;
 
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
 
         for (PlayableEntity sidekickEntity : services().sidekicks()) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                sidekick.setObjectControlled(false);
+                ObjectControlState.none().applyTo(sidekick);
                 sidekick.setControlLocked(false);
             }
         }
