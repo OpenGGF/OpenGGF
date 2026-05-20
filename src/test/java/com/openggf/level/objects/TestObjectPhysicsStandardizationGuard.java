@@ -12,10 +12,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestObjectPhysicsStandardizationGuard {
+    private static final Pattern OBJECT_CONTROL_SETTER = Pattern.compile(
+            "\\.setObjectControl(?:led|AllowsCpu|SuppressesMovement)\\s*\\(");
+    private static final Pattern NATIVE_P2_SIDEKICK_ACCESS = Pattern.compile(
+            "(?:getFirst\\s*\\(\\s*\\)|\\.get\\s*\\(\\s*0\\s*\\)|\\.stream\\s*\\(\\s*\\)\\.findFirst\\s*\\()");
+    private static final Pattern DIRECT_LIFECYCLE_OPERATION = Pattern.compile(
+            "(?:setSlotIndex\\s*\\(\\s*-\\s*1\\s*\\)|\\.markRemembered\\s*\\(|"
+                    + "\\.removeFromActiveSpawns\\s*\\(|\\.addDynamicObjectAtSlot\\s*\\()");
+
     private static final List<BaselineViolation> BASELINE = List.of(
             baseline("com/openggf/game/sonic1/objects/Sonic1JunctionObjectInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 2),
             baseline("com/openggf/game/sonic1/objects/Sonic1JunctionObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.PENDING_PARITY_TRIAGE, 1),
@@ -200,7 +209,7 @@ class TestObjectPhysicsStandardizationGuard {
         SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
                 "class Sample {",
                 "  void update(Player player) {",
-                "    player.setObjectControlled(true);",
+                "    player.setObjectControlled (true);",
                 "  }",
                 "}"));
 
@@ -208,7 +217,7 @@ class TestObjectPhysicsStandardizationGuard {
 
         assertEquals(List.of(new SourceViolation(
                         path,
-                        "player.setObjectControlled(true);",
+                        "player.setObjectControlled (true);",
                         ViolationKind.DIRECT_OBJECT_CONTROL_SETTER)),
                 scanSource(path, source));
     }
@@ -219,15 +228,26 @@ class TestObjectPhysicsStandardizationGuard {
                 "class Sample {",
                 "  void update(List<Player> sidekicks) {",
                 "    Player p2 = sidekicks.getFirst();",
+                "    Player p2b = sidekicks.get( 0 );",
+                "    Player p2c = getSidekicks().stream().findFirst().orElse(null);",
                 "  }",
                 "}"));
 
         String path = "com/openggf/game/sonic2/objects/Sample.java";
 
-        assertEquals(List.of(new SourceViolation(
+        assertEquals(List.of(
+                        new SourceViolation(
                         path,
                         "Player p2 = sidekicks.getFirst();",
-                        ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS)),
+                        ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "Player p2b = sidekicks.get( 0 );",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "Player p2c = getSidekicks().stream().findFirst().orElse(null);",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS)),
                 scanSource(path, source));
     }
 
@@ -236,14 +256,25 @@ class TestObjectPhysicsStandardizationGuard {
         SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
                 "class Sample {",
                 "  void update(ObjectManager objectManager, Spawn spawn) {",
-                "    objectManager.markRemembered(spawn);",
+                "    objectManager.markRemembered (spawn);",
+                "    objectManager.addDynamicObjectAtSlot (null, 0);",
+                "    setSlotIndex(- 1);",
                 "  }",
                 "}"));
 
-        assertEquals(List.of(new SourceViolation(
-                        "Sample.java",
-                        "objectManager.markRemembered(spawn);",
-                        ViolationKind.DIRECT_LIFECYCLE_OPERATION)),
+        assertEquals(List.of(
+                        new SourceViolation(
+                                "Sample.java",
+                                "objectManager.markRemembered (spawn);",
+                                ViolationKind.DIRECT_LIFECYCLE_OPERATION),
+                        new SourceViolation(
+                                "Sample.java",
+                                "objectManager.addDynamicObjectAtSlot (null, 0);",
+                                ViolationKind.DIRECT_LIFECYCLE_OPERATION),
+                        new SourceViolation(
+                                "Sample.java",
+                                "setSlotIndex(- 1);",
+                                ViolationKind.DIRECT_LIFECYCLE_OPERATION)),
                 scanSource("Sample.java", source));
     }
 
@@ -299,10 +330,7 @@ class TestObjectPhysicsStandardizationGuard {
             if (trimmed.isEmpty()) {
                 continue;
             }
-            if (gameObjectPath && containsAny(trimmed,
-                    ".setObjectControlled(",
-                    ".setObjectControlAllowsCpu(",
-                    ".setObjectControlSuppressesMovement(")) {
+            if (gameObjectPath && OBJECT_CONTROL_SETTER.matcher(trimmed).find()) {
                 violations.add(new SourceViolation(path, trimmed,
                         ViolationKind.DIRECT_OBJECT_CONTROL_SETTER));
             }
@@ -335,16 +363,12 @@ class TestObjectPhysicsStandardizationGuard {
 
     private static boolean isRawNativeP2SidekickAccess(String trimmed) {
         String lower = trimmed.toLowerCase(Locale.ROOT);
-        return trimmed.contains("getFirst()")
+        return NATIVE_P2_SIDEKICK_ACCESS.matcher(trimmed).find()
                 && (lower.contains("sidekick") || trimmed.contains("getSidekicks()"));
     }
 
     private static boolean isDirectLifecycleOperation(String trimmed) {
-        return containsAny(trimmed,
-                "setSlotIndex(-1)",
-                ".markRemembered(",
-                ".removeFromActiveSpawns(",
-                ".addDynamicObjectAtSlot(");
+        return DIRECT_LIFECYCLE_OPERATION.matcher(trimmed).find();
     }
 
     private static Map<ViolationKey, Integer> baselineCounts() {
