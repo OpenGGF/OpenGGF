@@ -491,12 +491,9 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         if (svc == null) {
             return null;
         }
-        var sidekicks = svc.sidekicks();
-        if (sidekicks.isEmpty()) {
-            return null;
-        }
-        PlayableEntity first = sidekicks.getFirst();
-        return first instanceof AbstractPlayableSprite sprite ? sprite : null;
+        return svc.playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sprite
+                ? sprite
+                : null;
     }
 
     private void captureSlot(RiderSlot slot, AbstractPlayableSprite player) {
@@ -776,8 +773,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         if (svc == null) {
             return false;
         }
-        var sidekicks = svc.sidekicks();
-        return !sidekicks.isEmpty() && sidekicks.getFirst() == sprite;
+        return svc.playerQuery().nativeP2OrNull() == sprite;
     }
 
     private int slotMask(RiderSlot slot) {
