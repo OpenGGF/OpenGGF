@@ -30,6 +30,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
 import java.util.List;
@@ -685,7 +686,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 player.setAnimationId(Sonic2AnimationIds.HANG);
                 player.setAnimationFrameIndex(0);
                 player.setAnimationTick(0);
-                player.setObjectControlled(true);
+                ObjectControlState.nativeBit7FullControl().applyTo(player);
                 player.setControlLocked(true);
                 ownsPlayerControl = true;
             }
@@ -858,7 +859,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             player.clearForcedInputMask();
             player.setControlLocked(false);
             if (player.isObjectControlled()) {
-                player.setObjectControlled(false);
+                ObjectControlState.none().applyTo(player);
             }
         }
         ownsPlayerControl = false;
