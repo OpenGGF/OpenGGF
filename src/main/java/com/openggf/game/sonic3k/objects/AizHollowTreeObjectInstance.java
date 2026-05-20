@@ -102,7 +102,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
 
         if (releaseObjectControlPending[slot]) {
             releaseObjectControlPending[slot] = false;
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             lastDecision[slot] = "release-control";
         }
 
@@ -291,7 +291,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         player.setForcedAnimationId(-1);
         player.setObjectMappingFrameControl(false);
         player.setControlLocked(false);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setSuppressGroundWallCollision(false);
         releaseObjectControlPending[slot] = false;
         player.setXSpeed((short) (player.getXSpeed() >> 1));
