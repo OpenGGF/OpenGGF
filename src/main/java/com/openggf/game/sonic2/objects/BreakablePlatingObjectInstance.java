@@ -18,6 +18,7 @@ import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
 import java.util.List;
@@ -321,7 +322,7 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
         player.setAnimationId(Sonic2AnimationIds.HANG);
 
         // ROM: move.b #1,(MainCharacter+obj_control).w
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
 
         // ROM: move.b #1,(WindTunnel_holding_flag).w
         // This prevents wind tunnel from interfering - handled by objectControlled in our engine
@@ -341,7 +342,7 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
             collisionFlags = 0;
 
             // ROM: clr.b (MainCharacter+obj_control).w
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
 
             // ROM: clr.b (WindTunnel_holding_flag).w
             // Handled by clearing objectControlled

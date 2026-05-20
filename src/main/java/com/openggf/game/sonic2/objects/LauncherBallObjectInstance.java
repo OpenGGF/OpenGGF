@@ -9,6 +9,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -196,7 +197,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
         player.setCentreY((short) spawn.y());
 
         // Setup character state (ROM: move.b #$81,obj_control(a1))
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setAnimationId(Sonic2AnimationIds.ROLL);
         player.setGSpeed((short) 0x1000);
@@ -288,7 +289,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
         // Check if this is an exit launcher (subtype bit 7 set = negative byte)
         if ((subtype & 0x80) != 0) {
             // Final launcher: release player to normal physics
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setControlLocked(false);
             player.setAir(true);
             player.setOnObject(false);
@@ -381,7 +382,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance {
      * Release player from this launcher (emergency release on death/debug/offscreen).
      */
     private void releasePlayer(AbstractPlayableSprite player) {
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
         player.setAir(true);
         player.setOnObject(false);
