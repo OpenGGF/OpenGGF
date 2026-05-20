@@ -12,6 +12,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -188,9 +189,7 @@ public class Sonic1MonitorObjectInstance extends AbstractMonitorObjectInstance
 
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         // Bounce player: neg.w obVelY(a0)
         player.setYSpeed((short) -player.getYSpeed());
