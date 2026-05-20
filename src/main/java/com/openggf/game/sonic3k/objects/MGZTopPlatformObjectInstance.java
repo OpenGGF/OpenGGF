@@ -27,6 +27,7 @@ import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.io.IOException;
 import java.util.IdentityHashMap;
@@ -565,7 +566,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         player.setCentreX((short) posX);
         // ROM sets object_control bit 7 during MGZ carry, so normal movement/collision
         // paths stop entirely while the platform owns the player.
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setMgzTopPlatformCarrySolidContactObject(this);
         player.setControlLocked(false);
         player.setOnObject(false);
@@ -842,7 +843,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     }
 
     private void releasePlayer(AbstractPlayableSprite player, PlayerGrabState state, boolean airborneRelease) {
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setMgzTopPlatformCarrySolidContactObject(null);
         player.setControlLocked(false);
         player.setOnObject(false);
@@ -1519,7 +1520,8 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             state.entrySideBias = 0;
             if (entry.getKey() instanceof AbstractPlayableSprite player) {
                 if (player.isMgzTopPlatformCarryOwnedBy(this)) {
-                    player.setObjectControlled(false);
+                    ObjectControlState.none().applyTo(player);
+                    player.setMgzTopPlatformCarrySolidContactObject(null);
                     player.setControlLocked(false);
                     player.setOnObject(false);
                     player.setForcedAnimationId(-1);
