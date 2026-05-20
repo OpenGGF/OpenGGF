@@ -35,6 +35,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.GroundMode;
 
@@ -6129,7 +6130,7 @@ public class ObjectManager {
                 Integer managedCentreY = provider.getObjectManagedRideCentreY(player, currentY, params);
                 if (managedCentreY != null) {
                     if (player instanceof AbstractPlayableSprite sprite) {
-                        sprite.setCentreYPreserveSubpixel((short) (managedCentreY & 0xFFFF));
+                        NativePositionOps.writeYPosPreserveSubpixel(sprite, managedCentreY);
                     } else {
                         int newY = managedCentreY - (player.getHeight() / 2);
                         player.setY((short) newY);
@@ -7072,7 +7073,7 @@ public class ObjectManager {
             }
             int targetCentreY = anchorY - params.groundHalfHeight() - player.getYRadius() - 1;
             if (player instanceof AbstractPlayableSprite sprite) {
-                sprite.setCentreYPreserveSubpixel((short) targetCentreY);
+                NativePositionOps.writeYPosPreserveSubpixel(sprite, targetCentreY);
                 return;
             }
             int newY = targetCentreY - (player.getHeight() / 2);

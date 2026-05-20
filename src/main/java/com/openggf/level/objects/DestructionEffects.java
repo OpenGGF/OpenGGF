@@ -92,9 +92,9 @@ public final class DestructionEffects {
         var objectManager = services != null ? services.objectManager() : null;
         if (objectManager != null) {
             if (config.useRespawnTracking() && spawn.respawnTracked()) {
-                objectManager.markRemembered(spawn);
+                ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
             } else {
-                objectManager.removeFromActiveSpawns(spawn);
+                ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
             }
         }
 
@@ -116,11 +116,7 @@ public final class DestructionEffects {
             ObjectInstance explosion = config.explosionFactory() != null
                     ? config.explosionFactory().create(x, y, services, pointsValue)
                     : new ExplosionObjectInstance(0x27, x, y, renderManager);
-            if (badnikSlot >= 0) {
-                objectManager.addDynamicObjectAtSlot(explosion, badnikSlot);
-            } else {
-                objectManager.addDynamicObject(explosion);
-            }
+            ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, explosion, badnikSlot);
         }
 
         // --- Optionally spawn animal ---
