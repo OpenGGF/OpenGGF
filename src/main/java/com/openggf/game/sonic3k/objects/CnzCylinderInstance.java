@@ -15,6 +15,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -521,7 +522,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             svc.objectManager().clearRidingObject(player);
         }
 
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setControlLocked(true);
         player.setObjectMappingFrameControl(true);
         // ROM sub_324C0 restores default_y_radius/default_x_radius and clears
