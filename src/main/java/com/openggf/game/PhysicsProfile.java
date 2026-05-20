@@ -57,7 +57,8 @@ public record PhysicsProfile(
             (short) 2      // onObjectBalanceShift (s2.asm:36287, sonic3k.asm:22465)
     );
 
-    // Sonic 2 Tails (differs in minStartRollSpeed, runHeight, standYRadius)
+    // Sonic 2 Tails (differs in runHeight, standYRadius; minStartRollSpeed matches Sonic's $80)
+    // ROM Tails_Roll (s2.asm:39962): cmpi.w #$80,d0 — identical threshold to Sonic_Roll (s2.asm:36983)
     public static final PhysicsProfile SONIC_2_TAILS = new PhysicsProfile(
             (short) 12,    // runAccel
             (short) 128,   // runDecel
@@ -68,7 +69,7 @@ public record PhysicsProfile(
             (short) 20,    // slopeRollingUp
             (short) 80,    // slopeRollingDown
             (short) 32,    // rollDecel
-            (short) 264,   // minStartRollSpeed (Tails-specific)
+            (short) 128,   // minStartRollSpeed (0x80, same as Sonic — s2.asm:39962)
             (short) 128,   // minRollSpeed
             (short) 4096,  // maxRoll
             (short) 28,    // rollHeight

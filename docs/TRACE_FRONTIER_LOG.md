@@ -2258,3 +2258,37 @@ rolling starts. At frame 980 in the ROM, Tails transitions from standing (yRadiu
 Sonic input from frame 964 triggers rolling at frame 981 instead of 980), so yRadius=15 is
 still in effect at frame 980 in the engine, yielding 0x03A2. This is a CPU controller timing
 parity issue, not investigated further in this iteration.
+
+## 2026-05-20 - S2 Tails minStartRollSpeed corrected from 264 to 128 (ARZ1 frame 980 -> 1102)
+
+- Branch: `develop` worktree `agent-adafbc69d851f3941`
+- Command: `mvn test -Dtest=TestS2ArzLevelSelectTraceReplay -q`
+- Result: ARZ1 frontier advanced from frame 980 (675 errors) to frame 1102 (648 errors).
+- Regression check: `TestS2Ehz1TraceReplay` PASS; `TestS2CpzLevelSelectTraceReplay` still at
+  frame 844 (pre-existing); `TestS2HtzLevelSelectTraceReplay` still at frame 5511 (pre-existing);
+  no regressions introduced.
+
+### Root cause
+
+`PhysicsProfile.SONIC_2_TAILS.minStartRollSpeed` was set to 264 (0x108) — a stale placeholder
+value that was never verified against the ROM. ROM `Tails_Roll` (`s2.asm:39962`) uses
+`cmpi.w #$80,d0`, setting the roll-start threshold at 0x80 = 128, identical to `Sonic_Roll`
+(`s2.asm:36983`). At frame 980, the Tails CPU controller correctly set `inputDown=true` (Sonic's
+16-frame-delayed input from frame 964 included DOWN), but `doCheckStartRoll()` in
+`PlayableSpriteMovement` returned early because `|gSpeed|=253 < minStartRollSpeed=264`. With the
+correct threshold of 128, 253 >= 128, so rolling starts on the right frame.
+
+### Fix
+
+`PhysicsProfile.SONIC_2_TAILS.minStartRollSpeed`: 264 → 128. Updated inline comment with ROM
+reference (`s2.asm:39962`). Also updated the class-level comment for `SONIC_2_TAILS` to note
+that `minStartRollSpeed` matches Sonic's `$80`, not a Tails-specific value.
+
+Files changed:
+- `PhysicsProfile.java` — `SONIC_2_TAILS.minStartRollSpeed` and related comments
+
+### New ARZ1 frontier (frame 1102)
+
+`y mismatch (expected=0x039D, actual=0x039E)` — Sonic is 1 pixel too low at the frame the
+monitor breaks (`broken=1`). This is a different object interaction than the Tails rolling bug
+and requires separate investigation.

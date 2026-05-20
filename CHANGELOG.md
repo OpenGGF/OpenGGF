@@ -16,6 +16,16 @@ All notable changes to the OpenGGF project are documented in this file.
   subtype-5 two-stop conveyor branch. Added focused regressions in
   `TestSonic2ObjectBugFixes`.
 
+- **S2 Tails `minStartRollSpeed` corrected from 264 to 128 (ARZ1 f980 -> f1102).**
+  `PhysicsProfile.SONIC_2_TAILS.minStartRollSpeed` was 264 (0x108) — a stale placeholder.
+  ROM `Tails_Roll` (`s2.asm:39962`) uses `cmpi.w #$80,d0`, identical to `Sonic_Roll`
+  (`s2.asm:36983`). With the wrong threshold, Tails's `doCheckStartRoll()` returned early
+  when `|gSpeed|=253 < 264`, so Tails never rolled when starting to be carried on a monitor
+  at frame 980. Root cause: the `minStartRollSpeed` field comment said "Tails-specific" and
+  the value 264 was carried from before ROM verification. Fix: changed threshold to 128 (0x80)
+  and updated the comment with the ROM reference.
+  Advances ARZ1 frontier from frame 980 (675 errors) to frame 1102 (648 errors).
+
 - **S2 Monitor (Obj26) rolling gate bypassed for already-standing player (ARZ1 f964 -> f980).**
   `MonitorObjectInstance.isSolidFor()` returned `!player.getRolling()` unconditionally for the
   main character. When Sonic started rolling at frame 964 while standing on a monitor, this
