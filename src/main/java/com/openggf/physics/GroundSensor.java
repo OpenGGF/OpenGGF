@@ -468,9 +468,17 @@ public class GroundSensor extends Sensor {
             }
 
             if (isExtension) {
-                // Second pass (FindFloor2): return ~yInTile distance
-                // ROM: loc_1E900 → not.w d1 where d1 = yInTile
-                byte distance = (byte) ~yInTile;
+                // Second pass (FindFloor2): ROM loc_1E900 → not.w d1 where d1 = yInTile.
+                // The caller (FindFloor, loc_1E7E2) then applies addi.w #$10,d1 (+16).
+                // calculateVerticalDistance already embeds +16 for positive-metric extension
+                // tiles (by measuring from origY to tileY). For the negative-metric case we
+                // must add 16 explicitly so the final distance matches the ROM:
+                //   FindFloor2 raw:  ~yInTile
+                //   After addi #$10: ~yInTile + 16
+                // Without the +16, a partial ceiling in the extension tile (one tile above the
+                // probe) returns distance = -1, causing a spurious ceiling hit even though the
+                // ROM sees distance = 15 (positive → no collision).  s2.asm:43064-43068.
+                byte distance = (byte) (~yInTile + 16);
                 return createResultWithDistance(tile, desc, distance, direction);
             }
 

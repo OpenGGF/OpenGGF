@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -70,6 +71,10 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     private static final int FLOOR_LOST_THRESHOLD = 8; // loc_8A04C: cmpi.w #8,d1.
     private static final int WALL_RIGHT_SENSOR_X = 0x1C;
     private static final int WALL_LEFT_SENSOR_X = -0x1C;
+    private static final int FALLING_WALL_RIGHT_SENSOR_X = 0x20;
+    private static final int FALLING_WALL_LEFT_SENSOR_X = -0x20;
+    private static final int REVEALED_SPRING_X = 0x5D5A;
+    private static final int REVEALED_SPRING_Y = 0x027A;
 
     private final int spawnX;
     private final int spawnY;
@@ -121,7 +126,7 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
             }
             case JITTER_WAIT -> updateJitterWait(frameCounter);
             case WAIT_PUSH -> updateWaitPush(pushing, pusherX);
-            case FOLLOW_FLOOR -> updateFollowFloor();
+            case FOLLOW_FLOOR -> updateFollowFloor(playerEntity);
             case FALLING -> updateFalling();
             case WAIT_STANDING_SINK -> {
                 if (standing) {
@@ -174,10 +179,11 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         }
 
         phase = Phase.FOLLOW_FLOOR;
-        xVel = pusherX < x ? -PUSH_SPEED : PUSH_SPEED;
+        xVel = pusherX < x ? PUSH_SPEED : -PUSH_SPEED;
     }
 
-    private void updateFollowFloor() {
+    private void updateFollowFloor(PlayableEntity playerEntity) {
+        applyVerticalWrapMaskIfNeeded();
         moveSprite2();
 
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(x, y, FLOOR_Y_RADIUS);
@@ -187,7 +193,7 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        angle = floor.angle() & 0xFF;
+        angle = romObjectFloorAngle(floor.angle());
         y += floor.distance();
 
         int absAngle = angle;
@@ -195,19 +201,19 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
             absAngle = (-((byte) absAngle)) & 0xFF;
         }
         if ((absAngle & 0xF8) != 0) {
-            int adjusted = xVel + (((byte) angle) >> 1);
+            int adjusted = xVel + romSlopeAccelerationDelta(angle);
             clampXVelocity(adjusted);
         }
 
         if (xVel > 0) {
             TerrainCheckResult wall = ObjectTerrainUtils.checkRightWallDist(x + WALL_RIGHT_SENSOR_X, y);
             if (wall.distance() < 0) {
-                stopAgainstWall(wall.distance());
+                stopFollowFloorAgainstWall(true, playerEntity);
             }
         } else if (xVel < 0) {
             TerrainCheckResult wall = ObjectTerrainUtils.checkLeftWallDist(x + WALL_LEFT_SENSOR_X, y);
             if (wall.distance() < 0) {
-                stopAgainstWall(wall.distance());
+                stopFollowFloorAgainstWall(false, playerEntity);
             }
         }
     }
@@ -218,9 +224,22 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
 
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(x, y, FLOOR_Y_RADIUS);
         if (floor.distance() < 0) {
-            angle = floor.angle() & 0xFF;
+            angle = romObjectFloorAngle(floor.angle());
             phase = Phase.FOLLOW_FLOOR;
             seedXVelocityFromFall();
+            return;
+        }
+
+        if (xVel > 0) {
+            TerrainCheckResult wall = ObjectTerrainUtils.checkRightWallDist(x + FALLING_WALL_RIGHT_SENSOR_X, y);
+            if (wall.distance() < 0) {
+                stopFallingAgainstWall(wall.distance());
+            }
+        } else if (xVel < 0) {
+            TerrainCheckResult wall = ObjectTerrainUtils.checkLeftWallDist(x + FALLING_WALL_LEFT_SENSOR_X, y);
+            if (wall.distance() < 0) {
+                stopFallingAgainstWall(wall.distance());
+            }
         }
     }
 
@@ -255,13 +274,42 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         xVel = sign16(velocity);
     }
 
-    private void stopAgainstWall(int wallDistance) {
+    private void stopFollowFloorAgainstWall(boolean rightWall, PlayableEntity playerEntity) {
         phase = Phase.STOPPED;
-        x += wallDistance;
         xVel = 0;
         yVel = 0;
         xSub = 0;
         ySub = 0;
+        if (rightWall && (spawn.subtype() & 0xFF) != 0) {
+            spawnRevealedSpring();
+            displacePlayerOffObject(playerEntity);
+            // loc_8A0AA jumps to loc_85088 after allocating the spring.
+            setDestroyedByOffscreen();
+        }
+    }
+
+    private void stopFallingAgainstWall(int wallDistance) {
+        x += wallDistance;
+        xVel = 0;
+        xSub = 0;
+    }
+
+    private void spawnRevealedSpring() {
+        spawnChild(() -> new Sonic3kSpringObjectInstance(new ObjectSpawn(
+                REVEALED_SPRING_X, REVEALED_SPRING_Y,
+                Sonic3kObjectIds.SPRING, 0, 0, false, 0)));
+    }
+
+    private void displacePlayerOffObject(PlayableEntity playerEntity) {
+        if (playerEntity == null) {
+            return;
+        }
+        ObjectServices services = tryServices();
+        if (services != null && services.objectManager() != null) {
+            services.objectManager().clearRidingObject(playerEntity);
+        }
+        playerEntity.setOnObject(false);
+        playerEntity.setAir(true);
     }
 
     private void updateFastVerticalScrollRequest(boolean standing) {
@@ -275,6 +323,20 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         Camera camera = services.camera();
         if (camera != null) {
             camera.requestFastVerticalScroll();
+        }
+    }
+
+    private void applyVerticalWrapMaskIfNeeded() {
+        ObjectServices services = tryServices();
+        if (services == null) {
+            return;
+        }
+        Camera camera = services.camera();
+        if (camera != null && camera.isVerticalWrapEnabled()) {
+            int range = camera.getVerticalWrapRange();
+            if (range > 0 && (range & (range - 1)) == 0) {
+                y &= range - 1;
+            }
         }
     }
 
@@ -301,6 +363,17 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
         }
     }
 
+    private static int romSlopeAccelerationDelta(int angle) {
+        // loc_8A066: add.w d3,d3; ext.w d3; asr.w #1,d3. This is not angle / 2.
+        return ((byte) ((angle << 1) & 0xFF)) >> 1;
+    }
+
+    private static int romObjectFloorAngle(byte rawAngle) {
+        int result = rawAngle & 0xFF;
+        // ObjCheckFloorDist clears odd Primary_Angle values before returning d3.
+        return (result & 0x01) != 0 ? 0 : result;
+    }
+
     @Override
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
@@ -309,6 +382,13 @@ public class IczPathFollowPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isSolidFor(PlayableEntity player) {
         return !isDestroyed();
+    }
+
+    @Override
+    public boolean seedsNewRideCarryFromPreUpdateX() {
+        // loc_89F4E-loc_89F62 saves x_pos before ICZPathFollowPlatform_Index
+        // and passes the saved value in d4 to SolidObjectFull.
+        return true;
     }
 
     @Override
