@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TouchActorContextPolicy;
@@ -222,8 +224,9 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
         if (svc == null) {
             return nearest;
         }
-        for (PlayableEntity sidekick : svc.sidekicks()) {
-            if (!(sidekick instanceof AbstractPlayableSprite sprite) || sprite.getDead()) {
+        ObjectPlayerQuery query = svc.playerQuery();
+        for (PlayableEntity candidate : query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (!(candidate instanceof AbstractPlayableSprite sprite) || sprite.getDead()) {
                 continue;
             }
             int distance = Math.abs(currentX - sprite.getCentreX());

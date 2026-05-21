@@ -4,6 +4,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -19,6 +20,18 @@ import java.util.List;
 final class S3kBadnikProjectileInstance extends AbstractObjectInstance implements TouchResponseProvider {
     private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
     private static final int DEFLECT_SPEED = 0x800;
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
+            new com.openggf.game.profiles.touchresponse.TouchResponseProfile(
+                    com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode.NORMAL,
+                    false,
+                    true,
+                    false,
+                    com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability.SHIELD_DEFLECT,
+                    SHIELD_REACTION_BOUNCE,
+                    com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                    com.openggf.game.profiles.touchresponse.TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                    com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy
+                            .STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS));
 
     private final String rendererKey;
     private final int mappingFrame;
@@ -93,6 +106,16 @@ final class S3kBadnikProjectileInstance extends AbstractObjectInstance implement
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

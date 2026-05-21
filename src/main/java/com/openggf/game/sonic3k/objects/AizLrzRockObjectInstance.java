@@ -14,6 +14,8 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -55,6 +57,8 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
     private static final int BIT_BREAK_BOTTOM = 0x08;
     private static final int KNUCKLES_ONLY_STANDING_NIBBLE = 0x0F;
     private static final int SIDE_BREAK_SPEED_THRESHOLD = 0x480;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     private static final int[][][] DEBRIS_POSITIONS = {
             {{-8, -0x18}, {0x0B, -0x1C}, {-4, -0x0C}, {0x0C, -4},
@@ -154,13 +158,12 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
         }
 
         SolidCheckpointBatch batch = checkpointAll();
-        applyCheckpointContact(player, player != null ? batch.perPlayer().get(player) : null);
-        for (PlayableEntity sidekick : services().sidekicks()) {
+        for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
             if (breaking) {
                 break;
             }
-            if (sidekick instanceof AbstractPlayableSprite sidekickSprite) {
-                applyCheckpointContact(sidekickSprite, batch.perPlayer().get(sidekick));
+            if (participant instanceof AbstractPlayableSprite participantSprite) {
+                applyCheckpointContact(participantSprite, batch.perPlayer().get(participant));
             }
         }
         if (breaking) {
@@ -420,5 +423,10 @@ public class AizLrzRockObjectInstance extends AbstractObjectInstance
 
     protected SolidCheckpointBatch checkpointAll() {
         return services().solidExecution().resolveSolidNowAll();
+    }
+
+    private ObjectPlayerQuery playerQuery(PlayableEntity primary) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> primary, query::sidekicks);
     }
 }

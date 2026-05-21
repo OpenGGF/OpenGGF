@@ -10,6 +10,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -79,6 +81,8 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     private static final int FRAME_REST = 0;
     private static final int FRAME_EXTENDED = 4;
     private static final int CHILD_FRAME_MASK = 0x03;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     private final int triggerIndex;
     /** Trigger facing direction: false = bit 0 clear (right), true = bit 0 set (left). */
@@ -114,11 +118,12 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
         // player charging a spindash while pressed against the side still arms
         // the trigger even though no SolidContact event fires.
         if (armTimer == 0) {
-            tryArmFromPlayer((AbstractPlayableSprite) playerEntity);
-            if (armTimer == 0) {
-                for (PlayableEntity sk : services().sidekicks()) {
-                    tryArmFromPlayer((AbstractPlayableSprite) sk);
-                    if (armTimer != 0) break;
+            for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
+                if (participant instanceof AbstractPlayableSprite sprite) {
+                    tryArmFromPlayer(sprite);
+                    if (armTimer != 0) {
+                        break;
+                    }
                 }
             }
         }
@@ -142,9 +147,10 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
         Sonic3kLevelTriggerManager.setBit(triggerIndex, 0);
 
         // ROM: per standing player, sub_25EA6 launches them and plays sfx_SmallBumpers.
-        launchIfRiding((AbstractPlayableSprite) playerEntity);
-        for (PlayableEntity sk : services().sidekicks()) {
-            launchIfRiding((AbstractPlayableSprite) sk);
+        for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                launchIfRiding(sprite);
+            }
         }
 
         // ROM: subq.b #1,anim_frame_timer(a0) / move.b #1,anim_frame_timer(a0)
@@ -237,6 +243,11 @@ public class MGZDashTriggerObjectInstance extends AbstractObjectInstance
     private boolean isRiding(AbstractPlayableSprite player) {
         ObjectManager om = services().objectManager();
         return om != null && om.isRidingObject(player, this);
+    }
+
+    private ObjectPlayerQuery playerQuery(PlayableEntity primary) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> primary, query::sidekicks);
     }
 
     // ===== SolidObjectProvider (sloped solid bumper -- pushes from sides too) =====

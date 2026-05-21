@@ -7,6 +7,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
@@ -392,8 +394,12 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
             return nearest;
         }
 
-        for (PlayableEntity sidekickEntity : svc.sidekicks()) {
-            if (!(sidekickEntity instanceof AbstractPlayableSprite sidekick) || sidekick.getDead()) {
+        ObjectPlayerQuery query = svc.playerQuery();
+        for (PlayableEntity candidateEntity :
+                query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (!(candidateEntity instanceof AbstractPlayableSprite sidekick)
+                    || sidekick == mainPlayer
+                    || sidekick.getDead()) {
                 continue;
             }
             int distance = Math.abs(currentX - sidekick.getCentreX());
@@ -414,11 +420,9 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
 
         AbstractPlayableSprite sidekick = pendingSidekickPlayer;
         if (sidekick == null && svc != null) {
-            for (PlayableEntity entity : svc.sidekicks()) {
-                if (entity instanceof AbstractPlayableSprite candidate) {
-                    sidekick = candidate;
-                    break;
-                }
+            PlayableEntity nativeP2 = svc.playerQuery().nativeP2OrNull();
+            if (nativeP2 instanceof AbstractPlayableSprite candidate) {
+                sidekick = candidate;
             }
         }
 

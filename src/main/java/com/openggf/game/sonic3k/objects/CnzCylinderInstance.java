@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SolidContact;
@@ -794,8 +795,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             return 0x02;
         }
         if (svc != null) {
-            for (PlayableEntity sidekick : svc.sidekicks()) {
-                if (sidekick == sprite) {
+            PlayableEntity main = svc.playerQuery().mainPlayerOrNull();
+            for (PlayableEntity candidate : svc.playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+                if (candidate != main && candidate == sprite) {
                     return 0x02;
                 }
             }

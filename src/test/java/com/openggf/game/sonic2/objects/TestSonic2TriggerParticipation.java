@@ -13,6 +13,7 @@ import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
+import com.openggf.game.sonic2.objects.badniks.SpinyBadnikInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -253,6 +254,20 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void spinyTargetsQueryOnlyClosestSidekick() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1800, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1008, 0x1000);
+        SpinyBadnikInstance spiny = new SpinyBadnikInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0xA5, 0, 0, false, 0));
+        spiny.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        spiny.update(0, main);
+
+        assertEquals("ATTACKING", field(spiny, "state").toString(),
+                "Spiny should resolve closest P2 candidates through ObjectPlayerQuery");
+    }
+
+    @Test
     void tiltingPlatformOrientationUsesQueryPlayersWhenRawSidekickListIsEmpty() throws Exception {
         TestablePlayableSprite main = player("sonic", 0x1200, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x0FF0, 0x1000);
@@ -312,6 +327,12 @@ class TestSonic2TriggerParticipation {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static Object field(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(target);
     }
 
     private static PlayerSolidContactResult pushingContact() {
