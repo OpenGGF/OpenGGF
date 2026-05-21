@@ -236,7 +236,7 @@ spawned, body vs. detached part), plan to split them into separate classes.
 | `anim(a0)` values 0/1/2 | `currentAnim` field: IDLE, DETECTING, FIRING |
 | `x_vel(a0)` = $400 | `xVelocity` field with fixed-point math |
 | `collision_flags(a0)` = $9B | `getCollisionFlags()` returns 0x9B |
-| `AllocateObject` + copy | `spawnChild(...)` / `spawnFreeChild(...)`; legacy code may still use `addDynamicObject()` |
+| `AllocateObject` + copy | `spawnChild(...)` / `spawnFreeChild(...)`; reserve direct manager allocation for documented bridge code |
 | `MarkObjGone` | `isOnScreen()` check |
 | `DeleteObject` | `ObjectLifetimeOps` / compatibility deletion helper; legacy code may still use `setDestroyed(true)` |
 | `PlaySound` | `services().playSfx(id)` |
@@ -388,8 +388,9 @@ private void fireArrow() {
 
 In the ASM, `AllocateObject` finds a free slot and the code copies properties manually.
 In the engine, prefer the `level.objects` child-spawn helpers so construction context,
-parentage, and future lifecycle policies stay centralized. Direct `addDynamicObject(...)`
-calls remain compatibility bridges for legacy code and unusual allocation paths.
+parentage, and lifecycle policies stay centralized. Direct `addDynamicObject(...)`
+calls are compatibility bridges for legacy code or unusual allocation paths that cannot
+use the standard helpers.
 
 ### Rendering
 

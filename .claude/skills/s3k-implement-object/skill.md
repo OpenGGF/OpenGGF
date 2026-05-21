@@ -339,7 +339,9 @@ Prefer `spawnChild()` for runtime-spawned children (body segments, projectiles, 
 ChildObject child = spawnChild(() -> new ChildObject(spawn, params));
 ```
 
-Legacy pattern (still works): `services().objectManager().addDynamicObject(childInstance)`.
+Avoid direct `services().objectManager().addDynamicObject(childInstance)` in new object
+work unless the allocation path is documented as a lifecycle bridge that cannot use the
+standard helpers.
 
 #### 2.5 Implementation Requirements
 
@@ -439,7 +441,7 @@ When the current branch provides shared object contracts, prefer them over new o
 
 - Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. S3K has narrower bit-7-style gates in some sidekick paths; do not collapse them into one generic `isObjectControlled()` check.
 - Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, all engine players, or engine sidekicks extended from native P2 logic. Character-specific Knuckles/Tails paths still need explicit policy.
-- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics once available; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
+- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
 - Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
 - When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
 

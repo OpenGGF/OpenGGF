@@ -536,8 +536,10 @@ Sections:
    scrolls, objects within range are spawned via the `ObjectRegistry`. Each spawned
    object is an `ObjectInstance` subclass. Every frame, active objects receive
    `update()` and `appendRenderCommands()` calls. Objects set themselves as destroyed
-   when they should be removed. Dynamic objects (projectiles, debris) are added via
-   `ObjectManager.addDynamicObject()`.
+   when they should be removed. Dynamic child objects (projectiles, debris, boss
+   parts) should be spawned through the object's lifecycle helper, usually
+   `spawnChild(...)`, so ownership, remembered slots, and parent/child cleanup stay
+   consistent.
 
 6. **Rendering pipeline** — GPU-based. Tile patterns are uploaded to a texture atlas.
    Sprites are drawn as instanced quads referencing atlas regions. Background layers
@@ -607,8 +609,8 @@ Walk through creating `ArrowShooterObjectInstance`:
 - Constructor: extract position and flip from `ObjectSpawn`
 - `update()`: detection logic (compare player X to shooter X, threshold $40)
 - Animation state machine: idle -> detecting -> firing -> idle
-- `fireArrow()`: play SFX, create `ArrowProjectileInstance`, add via
-  `ObjectManager.addDynamicObject()`
+- `fireArrow()`: play SFX, create `ArrowProjectileInstance`, and spawn it via
+  `spawnChild(...)`
 - `appendRenderCommands()`: get renderer by art key, draw current frame
 - `appendDebugRenderCommands()`: draw bounding box for debug overlay
 

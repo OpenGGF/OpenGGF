@@ -222,7 +222,7 @@ When the current branch provides shared object contracts, prefer them over new o
 
 - Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. Do not infer all meanings from `isObjectControlled()` alone.
 - Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, or all engine participants. S1 native behavior is main-only, but OpenGGF sidekicks are engine participants and must be handled deliberately.
-- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics once available; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
+- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
 - Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
 - When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
 
