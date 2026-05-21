@@ -34,8 +34,6 @@ class TestObjectPhysicsStandardizationGuard {
             Pattern.compile("\\btouchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider\\b"));
 
     private static final List<BaselineViolation> BASELINE = List.of(
-            baseline("com/openggf/game/sonic3k/objects/bosses/HczEndBossWaterColumn.java", "sprite.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 3),
-            baseline("com/openggf/game/sonic3k/objects/bosses/HczEndBossWaterColumn.java", "sprite.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 2),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 4),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlSuppressesMovement(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 3),
@@ -137,6 +135,13 @@ class TestObjectPhysicsStandardizationGuard {
                 .filter(baseline -> baseline.path().endsWith("AbstractS3kFloatingEndEggCapsuleInstance.java")
                         || baseline.path().endsWith("bosses/HczEndBossEggCapsuleInstance.java")
                         || baseline.path().endsWith("bosses/HczEndBossGeyserCutscene.java"))
+                .toList());
+    }
+
+    @Test
+    void hczEndBossWaterColumnUsesObjectControlStatePolicyInsteadOfBaseline() {
+        assertEquals(List.of(), BASELINE.stream()
+                .filter(baseline -> baseline.path().endsWith("bosses/HczEndBossWaterColumn.java"))
                 .toList());
     }
 

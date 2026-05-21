@@ -10,6 +10,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -682,7 +683,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         if (sprite.getDead()) {
             if (isGrabbed) {
                 clearGrabFlag(isPlayer1);
-                sprite.setObjectControlled(false);
+                ObjectControlState.none().applyTo(sprite);
             }
             return;
         }
@@ -691,7 +692,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         if (sprite.getInvulnerable()) {
             if (isGrabbed) {
                 clearGrabFlag(isPlayer1);
-                sprite.setObjectControlled(false);
+                ObjectControlState.none().applyTo(sprite);
             }
             return;
         }
@@ -759,7 +760,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             player2Grabbed = true;
         }
         sprite.setAir(true);
-        sprite.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
         // ROM: move.b #$18,anim(a2) — animation $18 = tumbling/death sprite pose.
         // In the vortex context this shows the player spinning in the water column.
         sprite.setForcedAnimationId(Sonic3kAnimationIds.DEATH.id());
@@ -841,7 +842,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     private void releasePlayer(AbstractPlayableSprite sprite, boolean isPlayer1) {
         clearGrabFlag(isPlayer1);
         sprite.setAir(true);
-        sprite.setObjectControlled(false);
+        ObjectControlState.none().applyTo(sprite);
         // ROM: move.b #2,anim(a2) — roll animation
         sprite.setForcedAnimationId(Sonic3kAnimationIds.ROLL.id());
         sprite.setYSpeed((short) -0x200);
