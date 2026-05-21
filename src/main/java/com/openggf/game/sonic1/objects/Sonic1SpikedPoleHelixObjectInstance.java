@@ -7,7 +7,13 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -43,6 +49,11 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     // HURT ($80) + size index 4
     private static final int COLLISION_TYPE_HARMFUL = 0x84;
 
+    private static final TouchResponseProfile MULTI_REGION_HURT_PROFILE = hurtProfile(
+            true, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
+    private static final TouchResponseProfile SINGLE_REGION_HURT_PROFILE = hurtProfile(
+            false, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+
     // v_ani0_frame timer period: v_ani0_time resets to $0B (12 frames per tick)
     private static final int ANIM_FRAME_DURATION = 12;
 
@@ -66,6 +77,20 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     // Decrements every ANIM_FRAME_DURATION frames, wraps at FRAME_COUNT (AND #7)
     private int animTimer = ANIM_FRAME_DURATION - 1;
     private int animCounter = 0;
+
+    private static TouchResponseProfile hurtProfile(boolean multiRegionSource,
+            TouchOverlapStopPolicy stopPolicy) {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                multiRegionSource,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                stopPolicy);
+    }
 
     public Sonic1SpikedPoleHelixObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SpikedPoleHelix");
@@ -194,6 +219,16 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     // processes each provider once per frame. For multi-spike collision, each spike that
     // is harmful needs to participate. Since we render all spikes from one object instance,
     // we override getMultiTouchRegions() to report all harmful spike positions.
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(getMultiTouchRegions() != null);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return multiRegionSource ? MULTI_REGION_HURT_PROFILE : SINGLE_REGION_HURT_PROFILE;
+    }
 
     @Override
     public int getCollisionFlags() {

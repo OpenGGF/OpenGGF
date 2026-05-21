@@ -11,6 +11,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -23,6 +24,7 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -63,6 +65,8 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
     private static final int DETECT_X_THRESHOLD = 0x80;  // Must be < 128 to trigger
     private static final int DETECT_Y_OFFSET = 0x10;     // +16 pixels offset to Y delta
     private static final int DETECT_Y_THRESHOLD = 0x20;  // Must be < 32 to trigger
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     // State
     private final int baseX;
@@ -117,7 +121,6 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
         }
@@ -132,7 +135,7 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
 
         if (currentSubtype == 0) {
             // Mode 0: Waiting - check for player approach
-            checkForPlayer(player);
+            checkForPlayers(playerEntity);
         } else if (currentSubtype == 2) {
             // Mode 2: Sliding out
             slideOut();
@@ -202,14 +205,21 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
      *   lea (Sidekick).w,a1
      *   ; fall through to Obj76_CheckPlayer
      */
-    private void checkForPlayer(AbstractPlayableSprite player) {
-        // Check main character
-        checkSinglePlayer(player);
-
-        // Check sidekick(s) if present - matches disassembly behavior
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            checkSinglePlayer((AbstractPlayableSprite) sidekick);
+    private void checkForPlayers(PlayableEntity updatePlayer) {
+        for (PlayableEntity participant : detectionParticipants(updatePlayer)) {
+            checkSinglePlayer((AbstractPlayableSprite) participant);
         }
+    }
+
+    private List<PlayableEntity> detectionParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
     }
 
     /**
