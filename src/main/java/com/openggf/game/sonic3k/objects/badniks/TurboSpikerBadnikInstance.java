@@ -16,7 +16,6 @@ import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -329,28 +328,17 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     private TargetSelection findNearestTarget(AbstractPlayableSprite mainPlayer) {
         ObjectServices svc = tryServices();
         ObjectPlayerQuery query = new ObjectPlayerQuery(
-                () -> livePlayable(mainPlayer),
-                () -> liveSidekicks(svc));
-        ObjectPlayerQuery.NearestPlayerX nearest = query.nearestByRomX(TARGET_PARTICIPATION, currentX);
+                () -> mainPlayer,
+                () -> svc != null ? svc.playerQuery().sidekicks() : List.of());
+        ObjectPlayerQuery.NearestPlayerX nearest = query.nearestByRomX(
+                TARGET_PARTICIPATION,
+                currentX,
+                TurboSpikerBadnikInstance::isLivePlayable);
         return new TargetSelection((AbstractPlayableSprite) nearest.player(), nearest.distance());
     }
 
-    private static AbstractPlayableSprite livePlayable(AbstractPlayableSprite player) {
-        return player != null && !player.getDead() ? player : null;
-    }
-
-    private static List<PlayableEntity> liveSidekicks(ObjectServices svc) {
-        if (svc == null) {
-            return List.of();
-        }
-
-        ArrayList<PlayableEntity> live = new ArrayList<>();
-        for (PlayableEntity sidekick : svc.sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sprite && !sprite.getDead()) {
-                live.add(sprite);
-            }
-        }
-        return live;
+    private static boolean isLivePlayable(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite && !sprite.getDead();
     }
 
     private int romSignedXDelta(AbstractPlayableSprite target) {

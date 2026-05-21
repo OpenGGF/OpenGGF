@@ -11,6 +11,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -46,6 +47,8 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     private static final int HEIGHT_PIXELS = 8;
     private static final int PRIORITY = 4;
     private static final int COLLAPSE_DELAY_INCREMENT = 8;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     private static volatile boolean drawBridgeBurnActive;
 
@@ -179,9 +182,8 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
         if (state == STATE_IDLE || collapseStartedThisFrame) {
             SolidCheckpointBatch batch = checkpointAll();
-            recordStandingPlayer(playerEntity, batch.perPlayer().get(playerEntity));
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                recordStandingPlayer(sidekick, batch.perPlayer().get(sidekick));
+            for (PlayableEntity participant : participatingPlayers(playerEntity)) {
+                recordStandingPlayer(participant, batch.perPlayer().get(participant));
             }
         }
 
@@ -212,6 +214,17 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
             }
         }
         deleteSpriteIfNotInRange();
+    }
+
+    private List<PlayableEntity> participatingPlayers(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer == null || participants.contains(updatePlayer)) {
+            return participants;
+        }
+        ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+        withUpdatePlayer.add(updatePlayer);
+        withUpdatePlayer.addAll(participants);
+        return withUpdatePlayer;
     }
 
     private void recordStandingPlayer(PlayableEntity player, PlayerSolidContactResult result) {

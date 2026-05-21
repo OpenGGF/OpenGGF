@@ -4,6 +4,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -120,32 +122,19 @@ public final class MantisBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private AbstractPlayableSprite findNearestTarget(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite nearest = null;
-        int nearestDistance = Integer.MAX_VALUE;
-
-        if (mainPlayer != null && !mainPlayer.getDead()) {
-            nearest = mainPlayer;
-            nearestDistance = Math.abs(mainPlayer.getCentreX() - currentX);
-        }
-
         ObjectServices svc = tryServices();
-        if (svc == null) {
-            return nearest;
-        }
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> svc != null ? svc.playerQuery().sidekicks() : List.of());
+        PlayableEntity nearest = query.nearestByRomX(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2,
+                currentX,
+                MantisBadnikInstance::isLivePlayable).player();
+        return nearest instanceof AbstractPlayableSprite sprite ? sprite : null;
+    }
 
-        for (PlayableEntity sidekickEntity : svc.sidekicks()) {
-            if (!(sidekickEntity instanceof AbstractPlayableSprite sidekick) || sidekick.getDead()) {
-                continue;
-            }
-            int distance = Math.abs(sidekick.getCentreX() - currentX);
-            if (distance < nearestDistance) {
-                nearest = sidekick;
-                nearestDistance = distance;
-            }
-            break;
-        }
-
-        return nearest;
+    private static boolean isLivePlayable(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite && !sprite.getDead();
     }
 
     private void updatePrep() {

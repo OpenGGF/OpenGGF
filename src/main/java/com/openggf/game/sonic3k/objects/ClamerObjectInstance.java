@@ -11,9 +11,12 @@ import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseListener;
@@ -54,11 +57,26 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
 
     /** ROM loc_88FEC: cmpi.w #$60, d2; bhs loc_8900C. */
     private static final int AUTO_CLOSE_DX_THRESHOLD = 0x60;
+    private static final ObjectPlayerParticipationPolicy AUTO_CLOSE_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
+    private static final ObjectPlayerParticipationPolicy CPROP_TARGET_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
     /** Routine values from Clamer_Index (sonic3k.asm:185866-185874). */
     private static final int ROUTINE_IDLE = 0x02;
     private static final int ROUTINE_SNAP_SHUT = 0x04;
     private static final int ROUTINE_AUTO_CLOSE = 0x06;
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
+            new com.openggf.game.profiles.touchresponse.TouchResponseProfile(
+                    com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
+                    true,
+                    true,
+                    true,
+                    com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability.NONE,
+                    0,
+                    com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                    com.openggf.game.profiles.touchresponse.TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                    com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY));
     private static final DestructionConfig S3K_DESTRUCTION_CONFIG = new DestructionConfig(
             Sonic3kSfx.BREAK.id,
             AnimalObjectInstance::new,
@@ -237,7 +255,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
      *   <li>3 -> P2 (both touched same frame; sidekick wins)
      *   <li>0 -> caller already returned no-fire
      * </ul>
-     * The engine resolves "P2" via {@link ObjectServices#sidekicks()};
+     * The engine resolves "P2" via {@link ObjectPlayerQuery};
      * "P1" is the {@code playerEntity} passed into {@code update()}.
      */
     private AbstractPlayableSprite resolveCpropTarget(PlayableEntity primary) {
@@ -246,8 +264,9 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             return (primary instanceof AbstractPlayableSprite p) ? p : null;
         }
         if (sel == 2 || sel == 3) {
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                if (sidekick instanceof AbstractPlayableSprite p) {
+            ObjectPlayerQuery query = playerQuery(primary);
+            for (PlayableEntity candidate : query.playersFor(CPROP_TARGET_PARTICIPATION)) {
+                if (candidate != primary && candidate instanceof AbstractPlayableSprite p) {
                     return p;
                 }
             }
@@ -386,6 +405,16 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         // property indices (sonic3k.asm:21165-21194). Without this hook the
         // engine decoder maps $C0 to BOSS, blocking SPECIAL dispatch.
         return true;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override
@@ -532,23 +561,26 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
      */
     private ClosestPlayer findClosestPlayer(PlayableEntity primary) {
         ClosestPlayer best = null;
-        if (primary instanceof AbstractPlayableSprite leader && !leader.getDead()) {
-            int dx = leader.getCentreX() - currentX;
-            best = new ClosestPlayer(leader, dx);
-        }
-        ObjectServices svc = tryServices();
-        if (svc != null) {
-            for (PlayableEntity entity : svc.sidekicks()) {
-                if (!(entity instanceof AbstractPlayableSprite s) || s.getDead()) {
-                    continue;
-                }
-                int dx = s.getCentreX() - currentX;
-                if (best == null || Math.abs(dx) < Math.abs(best.dx)) {
-                    best = new ClosestPlayer(s, dx);
-                }
+        ObjectPlayerQuery query = playerQuery(primary);
+        for (PlayableEntity entity : query.playersFor(AUTO_CLOSE_PARTICIPATION)) {
+            if (!(entity instanceof AbstractPlayableSprite sprite) || sprite.getDead()) {
+                continue;
+            }
+            int dx = sprite.getCentreX() - currentX;
+            if (best == null || Math.abs(dx) < Math.abs(best.dx)) {
+                best = new ClosestPlayer(sprite, dx);
             }
         }
         return best;
+    }
+
+    private ObjectPlayerQuery playerQuery(PlayableEntity primary) {
+        ObjectServices svc = tryServices();
+        if (svc == null) {
+            return new ObjectPlayerQuery(() -> primary, List::of);
+        }
+        ObjectPlayerQuery query = svc.playerQuery();
+        return new ObjectPlayerQuery(() -> primary, query::sidekicks);
     }
 
     private record ClosestPlayer(AbstractPlayableSprite player, int dx) {
