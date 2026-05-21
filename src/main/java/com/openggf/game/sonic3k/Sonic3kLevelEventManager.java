@@ -31,6 +31,7 @@ import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.camera.Camera;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.logging.Logger;
 
@@ -630,12 +631,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
         AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
         if (player != null) {
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setControlLocked(false);
             player.setForcedAnimationId(-1);
         }
         for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
-            sidekick.setObjectControlled(false);
+            ObjectControlState.none().applyTo(sidekick);
             sidekick.setControlLocked(false);
             sidekick.setForcedAnimationId(-1);
         }

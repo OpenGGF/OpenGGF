@@ -67,6 +67,9 @@ class TestObjectPhysicsStandardizationGuard {
             "com/openggf/game/sonic3k/objects",
             "com/openggf/level/objects",
     };
+    private static final String[] PHYSICS_STANDARDIZATION_SCAN_FILE_PATHS = {
+            "com/openggf/game/sonic3k/Sonic3kLevelEventManager.java",
+    };
 
     private static final List<BaselineViolation> BASELINE = List.of();
 
@@ -108,6 +111,15 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void productionObjectPhysicsStandardizationBaselinesDoNotGrow() throws IOException {
         assertEquals(baselineCounts(), violationCounts(scanProductionSources()));
+    }
+
+    @Test
+    void productionObjectPhysicsStandardizationScanIncludesSonic3kLevelEventManagerOnly() throws IOException {
+        List<String> paths = productionScanRelativePaths();
+
+        assertEquals(true, paths.contains("com/openggf/game/sonic3k/Sonic3kLevelEventManager.java"));
+        assertEquals(true, paths.contains("com/openggf/game/sonic3k/events/Sonic3kHCZEvents.java"));
+        assertEquals(false, paths.contains("com/openggf/game/sonic3k/Sonic3kLevelAnimationManager.java"));
     }
 
     @Test
@@ -475,14 +487,36 @@ class TestObjectPhysicsStandardizationGuard {
             throw new IOException("Could not locate src/main/java");
         }
         List<SourceViolation> violations = new ArrayList<>();
-        for (Path sourceFile : ObjectGuardSourceScanner.javaFilesUnderPackages(
-                srcMain, PHYSICS_STANDARDIZATION_SCAN_PACKAGE_PATHS)) {
+        for (Path sourceFile : productionScanFiles(srcMain)) {
             String path = srcMain.relativize(sourceFile).toString().replace('\\', '/');
             SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(
                     Files.readAllLines(sourceFile));
             violations.addAll(scanSource(path, source));
         }
         return violations;
+    }
+
+    private static List<String> productionScanRelativePaths() throws IOException {
+        Path srcMain = ObjectGuardSourceScanner.findSourceRoot();
+        if (srcMain == null) {
+            throw new IOException("Could not locate src/main/java");
+        }
+        return productionScanFiles(srcMain)
+                .stream()
+                .map(sourceFile -> srcMain.relativize(sourceFile).toString().replace('\\', '/'))
+                .toList();
+    }
+
+    private static List<Path> productionScanFiles(Path srcMain) throws IOException {
+        List<Path> files = new ArrayList<>(ObjectGuardSourceScanner.javaFilesUnderPackages(
+                srcMain, PHYSICS_STANDARDIZATION_SCAN_PACKAGE_PATHS));
+        for (String filePath : PHYSICS_STANDARDIZATION_SCAN_FILE_PATHS) {
+            Path sourceFile = srcMain.resolve(filePath);
+            if (Files.isRegularFile(sourceFile)) {
+                files.add(sourceFile);
+            }
+        }
+        return files;
     }
 
     private static List<SourceViolation> scanSource(String path, SourceText source) {
@@ -499,7 +533,7 @@ class TestObjectPhysicsStandardizationGuard {
             if (trimmed.isEmpty()) {
                 continue;
             }
-            if (gameObjectPath && OBJECT_CONTROL_SETTER.matcher(trimmed).find()) {
+            if ((gameObjectPath || isSonic3kEventPath(path)) && OBJECT_CONTROL_SETTER.matcher(trimmed).find()) {
                 violations.add(new SourceViolation(path, trimmed,
                         ViolationKind.DIRECT_OBJECT_CONTROL_SETTER));
             }
@@ -536,6 +570,11 @@ class TestObjectPhysicsStandardizationGuard {
             }
         }
         return false;
+    }
+
+    private static boolean isSonic3kEventPath(String path) {
+        return path.startsWith("com/openggf/game/sonic3k/events/")
+                || path.equals("com/openggf/game/sonic3k/Sonic3kLevelEventManager.java");
     }
 
     private static boolean isPhysicsStandardizationPath(String path) {

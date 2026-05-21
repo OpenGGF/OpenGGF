@@ -16,6 +16,7 @@ import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.logging.Logger;
 
@@ -319,7 +320,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         cutsceneCurrentY = player.getY();
 
         // Keep player locked in float animation during descent
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setAir(true);
         player.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
@@ -329,7 +330,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
         // Do the same for sidekick
         for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
-            sidekick.setObjectControlled(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
             sidekick.setControlLocked(true);
             sidekick.setAir(true);
             sidekick.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
@@ -394,7 +395,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
 
         // Release player
         player.setControlLocked(false);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setForcedAnimationId(-1);
         player.setAir(true);
         player.setXSpeed((short) 0);
@@ -403,7 +404,7 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         // Release sidekick
         for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
             sidekick.setControlLocked(false);
-            sidekick.setObjectControlled(false);
+            ObjectControlState.none().applyTo(sidekick);
             sidekick.setForcedAnimationId(-1);
             sidekick.setAir(true);
             sidekick.setXSpeed((short) 0);
