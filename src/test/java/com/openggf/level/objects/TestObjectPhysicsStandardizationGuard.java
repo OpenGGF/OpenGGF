@@ -55,10 +55,6 @@ class TestObjectPhysicsStandardizationGuard {
     };
 
     private static final List<BaselineViolation> BASELINE = List.of(
-            baseline("com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java",
-                    "AbstractPlayableSprite p2 = sidekicks.getFirst();",
-                    ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS,
-                    ReasonCode.PENDING_NATIVE_P2_QUERY_MIGRATION, 2),
             baseline("com/openggf/game/sonic1/objects/bosses/Sonic1FalseFloorInstance.java",
                     "for (PlayableEntity sidekick : services().sidekicks()) {",
                     ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS,
