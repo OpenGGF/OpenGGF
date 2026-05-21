@@ -50,8 +50,7 @@ class TestObjectPhysicsStandardizationGuard {
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 2),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 4),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlSuppressesMovement(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 3),
-            baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlSuppressesMovement(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 2),
-            baseline("com/openggf/game/sonic3k/objects/Sonic3kSSEntryRingObjectInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1)
+            baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlSuppressesMovement(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 2)
     );
 
     @Test
@@ -105,6 +104,13 @@ class TestObjectPhysicsStandardizationGuard {
     void s3kSignpostUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
                 .filter(baseline -> baseline.path().endsWith("S3kSignpostInstance.java"))
+                .toList());
+    }
+
+    @Test
+    void sonic3kSsEntryRingUsesObjectControlStatePolicyInsteadOfBaseline() {
+        assertEquals(List.of(), BASELINE.stream()
+                .filter(baseline -> baseline.path().endsWith("Sonic3kSSEntryRingObjectInstance.java"))
                 .toList());
     }
 
