@@ -147,12 +147,15 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         }
 
         // Save player state before solid collision (ROM: Obj3D_Main)
-        savedSonicAnim = player.getAnimationId();
-        savedSonicYVel = player.getYSpeed();
+        AbstractPlayableSprite nativeP1 = nativeP1OrUpdatePlayer(player);
+        if (nativeP1 != null) {
+            savedSonicAnim = nativeP1.getAnimationId();
+            savedSonicYVel = nativeP1.getYSpeed();
+        }
 
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            savedTailsAnim = sidekick.getAnimationId();
-            savedTailsYVel = sidekick.getYSpeed();
+        if (nativeP2OrNull() instanceof AbstractPlayableSprite nativeP2) {
+            savedTailsAnim = nativeP2.getAnimationId();
+            savedTailsYVel = nativeP2.getYSpeed();
         }
 
         // Solid collision is handled by SolidObjectProvider/SolidObjectListener
@@ -167,7 +170,11 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         }
 
         // Determine which player is contacting
-        boolean isSidekick = services().sidekicks().contains(player);
+        PlayableEntity nativeP1 = services().playerQuery().mainPlayerOrNull();
+        boolean isSidekick = nativeP2OrNull() == player;
+        if (!isSidekick && nativeP1 != null && nativeP1 != player) {
+            return;
+        }
 
         // Check if standing player is rolling (ROM: cmpi.b #AniIDSonAni_Roll,objoff_32)
         int savedAnim = isSidekick ? savedTailsAnim : savedSonicAnim;
@@ -267,11 +274,14 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         }
 
         // Process main character (Sonic)
-        sonicLauncherState = processLauncherState(player, sonicLauncherState);
+        AbstractPlayableSprite nativeP1 = nativeP1OrUpdatePlayer(player);
+        if (nativeP1 != null) {
+            sonicLauncherState = processLauncherState(nativeP1, sonicLauncherState);
+        }
 
         // Process Tails
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            tailsLauncherState = processLauncherState((AbstractPlayableSprite) sidekick, tailsLauncherState);
+        if (nativeP2OrNull() instanceof AbstractPlayableSprite nativeP2 && nativeP2 != nativeP1) {
+            tailsLauncherState = processLauncherState(nativeP2, tailsLauncherState);
         }
 
         // Delete when both states are 0 (ROM: beq.w JmpTo3_MarkObjGone3)
@@ -317,7 +327,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         // ROM: Skip Tails if flying (CPU routine 4)
         // The engine doesn't expose Tails CPU routine directly, but this check
         // prevents capturing Tails while they're in flight mode
-        if (services().sidekicks().contains(player)
+        if (nativeP2OrNull() == player
                 && player.getAir() && !player.getRolling()) {
             return 0;
         }
@@ -390,6 +400,18 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         player.setCentreY((short) (player.getCentreY() + (yVel >> 8)));
 
         return 2; // Stay in tracking state
+    }
+
+    private AbstractPlayableSprite nativeP1OrUpdatePlayer(AbstractPlayableSprite updatePlayer) {
+        PlayableEntity nativeP1 = services().playerQuery().mainPlayerOrNull();
+        if (nativeP1 instanceof AbstractPlayableSprite sprite) {
+            return sprite;
+        }
+        return updatePlayer;
+    }
+
+    private PlayableEntity nativeP2OrNull() {
+        return services().playerQuery().nativeP2OrNull();
     }
 
     private boolean isPlayerOnScreen(AbstractPlayableSprite player) {

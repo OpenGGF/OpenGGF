@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -16,6 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -91,6 +93,8 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     private static final int STATE_IDLE = 0;
     private static final int STATE_ACCELERATING = 2;
     private static final int STATE_RETURNING = 4;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     // ========================================================================
     // Instance State
@@ -192,13 +196,9 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     }
 
     private AbstractPlayableSprite firstStandingPlayer(AbstractPlayableSprite player) {
-        if (player != null && standingPlayers.contains(player)) {
-            return player;
-        }
-
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (standingPlayers.contains(sidekick)) {
-                return (AbstractPlayableSprite) sidekick;
+        for (PlayableEntity participant : playerParticipants(player)) {
+            if (standingPlayers.contains(participant)) {
+                return (AbstractPlayableSprite) participant;
             }
         }
 
@@ -206,15 +206,22 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     }
 
     private void forEachStandingPlayer(AbstractPlayableSprite main, java.util.function.Consumer<AbstractPlayableSprite> action) {
-        if (main != null && standingPlayers.contains(main)) {
-            action.accept(main);
-        }
-
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (standingPlayers.contains(sidekick)) {
-                action.accept((AbstractPlayableSprite) sidekick);
+        for (PlayableEntity participant : playerParticipants(main)) {
+            if (standingPlayers.contains(participant)) {
+                action.accept((AbstractPlayableSprite) participant);
             }
         }
+    }
+
+    private List<PlayableEntity> playerParticipants(AbstractPlayableSprite updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
     }
 
     private boolean wasStandingAtStateEntry(AbstractPlayableSprite player) {
@@ -222,15 +229,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     }
 
     private void clearIfNoLongerStanding(AbstractPlayableSprite player) {
-        if (player != null && !player.isOnObject()) {
-            standingPlayers.remove(player);
-        }
-
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (!sidekick.isOnObject()) {
-                standingPlayers.remove(sidekick);
-            }
-        }
+        standingPlayers.removeIf(participant -> !participant.isOnObject());
     }
 
     /**
@@ -429,9 +428,9 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         // ROM: Sync both standing players (loc_3BFB4)
         syncPlayer(player);
 
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick.isOnObject()) {
-                syncPlayer((AbstractPlayableSprite) sidekick);
+        for (PlayableEntity participant : playerParticipants(player)) {
+            if (participant != player && participant.isOnObject()) {
+                syncPlayer((AbstractPlayableSprite) participant);
             }
         }
     }
