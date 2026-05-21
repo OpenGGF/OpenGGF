@@ -11,6 +11,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -351,14 +353,11 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
 
         // ROM line 176215: st (Ctrl_2_locked).w — lock sidekick input
         // Also apply Set_PlayerEndingPose equivalent so Tails does a victory pose
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            AbstractPlayableSprite sidekick = (AbstractPlayableSprite) sidekickEntity;
-            ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
-            sidekick.setControlLocked(true);
-            sidekick.setXSpeed((short) 0);
-            sidekick.setYSpeed((short) 0);
-            sidekick.setGSpeed((short) 0);
-            sidekick.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        for (PlayableEntity candidate : playerQuery(player)
+                .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (candidate instanceof AbstractPlayableSprite sprite) {
+                applyEndingPose(sprite);
+            }
         }
 
         // Spawn the results screen — pass apparentAct (ROM's Apparent_act), not
@@ -368,6 +367,20 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
                 getPlayerCharacter(), apparentAct));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
+    }
+
+    private void applyEndingPose(AbstractPlayableSprite sprite) {
+        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
+        sprite.setControlLocked(true);
+        sprite.setXSpeed((short) 0);
+        sprite.setYSpeed((short) 0);
+        sprite.setGSpeed((short) 0);
+        sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
+    }
+
+    private ObjectPlayerQuery playerQuery(PlayableEntity updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> updatePlayer, query::sidekicks);
     }
 
     // =========================================================================

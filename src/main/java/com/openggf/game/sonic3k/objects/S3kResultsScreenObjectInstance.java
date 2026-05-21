@@ -14,6 +14,8 @@ import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.tools.NemesisReader;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
@@ -490,16 +492,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         // changes underneath. The seamless transition handler in executeActTransition
         // resets the player state after the layout reload, so they fall naturally.
         if (!hasSeamlessTransition && shouldRestorePlayerControlsOnExit()) {
-            if (playerRef != null) {
-                playerRef.setControlLocked(false);
-                ObjectControlState.none().applyTo(playerRef);
-                playerRef.setForcedAnimationId(-1);
-            }
-            for (PlayableEntity sidekickEntity : services().sidekicks()) {
-                AbstractPlayableSprite sidekick = (AbstractPlayableSprite) sidekickEntity;
-                sidekick.setControlLocked(false);
-                ObjectControlState.none().applyTo(sidekick);
-                sidekick.setForcedAnimationId(-1);
+            for (PlayableEntity candidate : playerQuery()
+                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (candidate instanceof AbstractPlayableSprite sprite) {
+                    sprite.setControlLocked(false);
+                    ObjectControlState.none().applyTo(sprite);
+                    sprite.setForcedAnimationId(-1);
+                }
             }
         }
         // Restore camera. When the AIZ2 cutscene override is active, the
@@ -568,6 +567,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
 
     protected boolean shouldRestorePlayerControlsOnExit() {
         return true;
+    }
+
+    private ObjectPlayerQuery playerQuery() {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> playerRef, query::sidekicks);
     }
 
     /**
