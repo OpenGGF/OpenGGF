@@ -19,6 +19,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -607,12 +608,12 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private void releaseVortexPlayers() {
         PlayableEntity focused = services().camera().getFocusedSprite();
         if (focused instanceof AbstractPlayableSprite player && player.isObjectControlled()) {
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setForcedAnimationId(-1);
         }
         for (PlayableEntity entity : services().sidekicks()) {
             if (entity instanceof AbstractPlayableSprite sidekick && sidekick.isObjectControlled()) {
-                sidekick.setObjectControlled(false);
+                ObjectControlState.none().applyTo(sidekick);
                 sidekick.setForcedAnimationId(-1);
             }
         }
@@ -873,7 +874,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         }
 
         if (!sprite.isObjectControlled()) {
-            sprite.setObjectControlled(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sprite);
             sprite.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
             sprite.setXSpeed((short) 0);
             sprite.setYSpeed((short) 0);

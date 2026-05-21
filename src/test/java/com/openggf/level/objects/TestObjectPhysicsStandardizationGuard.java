@@ -43,9 +43,6 @@ class TestObjectPhysicsStandardizationGuard {
             baseline("com/openggf/game/sonic3k/objects/bosses/HczEndBossWaterColumn.java", "sprite.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 3),
             baseline("com/openggf/game/sonic3k/objects/bosses/HczEndBossWaterColumn.java", "sprite.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
             baseline("com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java", "ps.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
-            baseline("com/openggf/game/sonic3k/objects/HczMinibossInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
-            baseline("com/openggf/game/sonic3k/objects/HczMinibossInstance.java", "sidekick.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
-            baseline("com/openggf/game/sonic3k/objects/HczMinibossInstance.java", "sprite.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 2),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 4),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlSuppressesMovement(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 3),
@@ -117,6 +114,13 @@ class TestObjectPhysicsStandardizationGuard {
     void cnzEndBossUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
                 .filter(baseline -> baseline.path().endsWith("bosses/CnzEndBossInstance.java"))
+                .toList());
+    }
+
+    @Test
+    void hczMinibossUsesObjectControlStatePolicyInsteadOfBaseline() {
+        assertEquals(List.of(), BASELINE.stream()
+                .filter(baseline -> baseline.path().endsWith("HczMinibossInstance.java"))
                 .toList());
     }
 
