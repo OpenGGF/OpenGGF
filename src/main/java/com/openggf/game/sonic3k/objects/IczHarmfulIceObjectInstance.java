@@ -12,10 +12,16 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.ArrayList;
@@ -84,14 +90,27 @@ public class IczHarmfulIceObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean usesS3kTouchSpecialPropertyResponse() {
-        // ROM Touch_ChkValue routes collision_flags $D7 through Touch_Special;
-        // generic $C0 handling would otherwise decode as BOSS in the engine.
-        return breakOnTouch;
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        boolean specialMultiRegion = breakOnTouch && multiRegionSource;
+        return new TouchResponseProfile(
+                specialMultiRegion ? TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY : TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                specialMultiRegion,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                specialMultiRegion
+                        ? TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
+                        : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
     }
 
     @Override
     public TouchRegion[] getMultiTouchRegions() {
+        if (!breakOnTouch) {
+            return null;
+        }
         if (broken || isDestroyed()) {
             return new TouchRegion[0];
         }

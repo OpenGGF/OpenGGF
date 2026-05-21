@@ -5,6 +5,8 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -14,6 +16,7 @@ import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -71,6 +74,12 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         TURN_PAUSE,
         LAUNCH_PREP,
         SHELLLESS_RUN
+    }
+
+    private static final ObjectPlayerParticipationPolicy TARGET_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
+
+    private record TargetSelection(AbstractPlayableSprite player, int distance) {
     }
 
     private final boolean hiddenVariant;
@@ -161,8 +170,8 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private void updateHiddenWait(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite target = findNearestTarget(mainPlayer);
-        if (target == null || findNearestPlayerXDistance(target) >= DETECT_RANGE) {
+        TargetSelection target = findNearestTarget(mainPlayer);
+        if (target.player() == null || target.distance() >= DETECT_RANGE) {
             return;
         }
 
@@ -194,7 +203,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private void updatePatrol(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite target = findNearestTarget(mainPlayer);
+        TargetSelection target = findNearestTarget(mainPlayer);
         if (shouldLaunchShell(target)) {
             enterLaunchPrep();
             return;
@@ -286,13 +295,13 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private void trackInitialFacing(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite target = findNearestTarget(mainPlayer);
-        if (target == null || target.getDead()) {
+        AbstractPlayableSprite target = findNearestTarget(mainPlayer).player();
+        if (target == null) {
             xVelocity = facingLeft ? -INITIAL_TRACK_SPEED : INITIAL_TRACK_SPEED;
             return;
         }
 
-        if (currentX - target.getCentreX() >= 0) {
+        if (romSignedXDelta(target) >= 0) {
             facingLeft = true;
             xVelocity = -INITIAL_TRACK_SPEED;
         } else {
@@ -301,49 +310,51 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    private boolean shouldLaunchShell(AbstractPlayableSprite target) {
-        if (target == null || target.getDead()) {
+    private boolean shouldLaunchShell(TargetSelection target) {
+        AbstractPlayableSprite player = target.player();
+        if (player == null) {
             return false;
         }
-        if (findNearestPlayerXDistance(target) >= DETECT_RANGE) {
+        if (target.distance() >= DETECT_RANGE) {
             return false;
         }
 
-        int directionCode = currentX - target.getCentreX() >= 0 ? 0 : 2;
+        int directionCode = romSignedXDelta(player) >= 0 ? 0 : 2;
         if (!facingLeft) {
             directionCode -= 2;
         }
         return directionCode == 0;
     }
 
-    private AbstractPlayableSprite findNearestTarget(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite nearest = null;
-        int nearestDistance = Integer.MAX_VALUE;
-
-        if (mainPlayer != null && !mainPlayer.getDead()) {
-            nearest = mainPlayer;
-            nearestDistance = Math.abs(currentX - mainPlayer.getCentreX());
-        }
+    private TargetSelection findNearestTarget(AbstractPlayableSprite mainPlayer) {
         ObjectServices svc = tryServices();
-        if (svc == null) {
-            return nearest;
-        }
-
-        for (PlayableEntity sidekick : svc.sidekicks()) {
-            if (!(sidekick instanceof AbstractPlayableSprite sprite) || sprite.getDead()) {
-                continue;
-            }
-            int distance = Math.abs(currentX - sprite.getCentreX());
-            if (distance < nearestDistance) {
-                nearest = sprite;
-                nearestDistance = distance;
-            }
-        }
-        return nearest;
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> livePlayable(mainPlayer),
+                () -> liveSidekicks(svc));
+        ObjectPlayerQuery.NearestPlayerX nearest = query.nearestByRomX(TARGET_PARTICIPATION, currentX);
+        return new TargetSelection((AbstractPlayableSprite) nearest.player(), nearest.distance());
     }
 
-    private int findNearestPlayerXDistance(AbstractPlayableSprite target) {
-        return target == null ? Integer.MAX_VALUE : Math.abs(currentX - target.getCentreX());
+    private static AbstractPlayableSprite livePlayable(AbstractPlayableSprite player) {
+        return player != null && !player.getDead() ? player : null;
+    }
+
+    private static List<PlayableEntity> liveSidekicks(ObjectServices svc) {
+        if (svc == null) {
+            return List.of();
+        }
+
+        ArrayList<PlayableEntity> live = new ArrayList<>();
+        for (PlayableEntity sidekick : svc.sidekicks()) {
+            if (sidekick instanceof AbstractPlayableSprite sprite && !sprite.getDead()) {
+                live.add(sprite);
+            }
+        }
+        return live;
+    }
+
+    private int romSignedXDelta(AbstractPlayableSprite target) {
+        return (short) ((currentX - target.getCentreX()) & 0xFFFF);
     }
 
     private boolean shouldShowWaterfallOverlay() {
