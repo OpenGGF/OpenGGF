@@ -5,6 +5,7 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectAnimationState;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
@@ -244,15 +245,15 @@ public class AquisBadnikInstance extends AbstractBadnikInstance {
         }
         ObjectServices svc = tryServices();
         if (svc != null) {
-            List<PlayableEntity> sidekicks = svc.sidekicks();
-            if (sidekicks != null) {
-                for (PlayableEntity sk : sidekicks) {
-                    if (sk instanceof AbstractPlayableSprite skSprite) {
-                        int dist = Math.abs(skSprite.getCentreX() - currentX);
-                        if (dist < bestDist) {
-                            best = skSprite;
-                            bestDist = dist;
-                        }
+            for (PlayableEntity sk : svc.playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (sk == mainPlayer) {
+                    continue;
+                }
+                if (sk instanceof AbstractPlayableSprite skSprite) {
+                    int dist = Math.abs(skSprite.getCentreX() - currentX);
+                    if (dist < bestDist) {
+                        best = skSprite;
+                        bestDist = dist;
                     }
                 }
             }

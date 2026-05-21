@@ -227,7 +227,9 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
     private void updateCleanup(AbstractPlayableSprite player) {
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
-            ObjectPlayerQuery query = new ObjectPlayerQuery(() -> player, services()::sidekicks);
+            ObjectPlayerQuery query = new ObjectPlayerQuery(
+                    () -> player,
+                    () -> services().playerQuery().sidekicks());
             for (PlayableEntity participant : query.playersFor(CLEANUP_PARTICIPATION)) {
                 objectManager.clearRidingObject(participant);
             }

@@ -151,9 +151,10 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
 
     private int nearestPlayerXDistance(PlayableEntity playerEntity) {
         ObjectServices services = tryServices();
+        ObjectPlayerQuery serviceQuery = services != null ? services.playerQuery() : null;
         ObjectPlayerQuery query = new ObjectPlayerQuery(
                 () -> playerEntity,
-                () -> services != null ? services.sidekicks() : List.of());
+                () -> serviceQuery != null ? serviceQuery.sidekicks() : List.of());
         return query.nearestByRomX(PLAYER_PARTICIPATION, x).distance();
     }
 

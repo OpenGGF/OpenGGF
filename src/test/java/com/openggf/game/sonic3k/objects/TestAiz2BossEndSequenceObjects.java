@@ -15,6 +15,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossEggCapsuleInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -191,6 +193,28 @@ class TestAiz2BossEndSequenceObjects {
     }
 
     @Test
+    void controllerLocksAllEngineSidekicksFromPlayerQueryDuringCutsceneWalk() {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+        camera.setMaxX((short) 0x4880);
+        camera.setX((short) 0x4880);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x4900);
+        TestablePlayableSprite firstSidekick = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        TestablePlayableSprite extraSidekick = new TestablePlayableSprite("knuckles", (short) 0, (short) 0);
+
+        Aiz2BossEndSequenceController controller = new Aiz2BossEndSequenceController(0x4880, 0x0000);
+        controller.setServices(new QueryOnlyServices(camera, player, List.of(firstSidekick, extraSidekick)));
+        Aiz2BossEndSequenceState.releaseEggCapsule();
+
+        controller.update(1, player);
+
+        assertTrue(firstSidekick.isControlLocked());
+        assertTrue(extraSidekick.isControlLocked());
+    }
+
+    @Test
     void hydrocityTransitionUsesRomCentreYRatherThanSpriteTopY() {
         Camera camera = TestEnvironment.activeGameplayMode().getCamera();
         camera.resetState();
@@ -282,6 +306,31 @@ class TestAiz2BossEndSequenceObjects {
         @Override
         public void requestSessionSave(SaveReason reason) {
             lastSaveReason = reason;
+        }
+    }
+
+    private static final class QueryOnlyServices extends TestObjectServices {
+        private final Camera camera;
+        private final ObjectPlayerQuery playerQuery;
+
+        QueryOnlyServices(Camera camera, TestablePlayableSprite main, List<TestablePlayableSprite> sidekicks) {
+            this.camera = camera;
+            this.playerQuery = new ObjectPlayerQuery(() -> main, () -> sidekicks);
+        }
+
+        @Override
+        public Camera camera() {
+            return camera;
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return playerQuery;
+        }
+
+        @Override
+        public List<com.openggf.game.PlayableEntity> sidekicks() {
+            throw new AssertionError("AIZ2 end sequence should use ObjectPlayerQuery for cutscene sidekick control");
         }
     }
 }
