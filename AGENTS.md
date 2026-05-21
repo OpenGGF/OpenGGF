@@ -440,11 +440,13 @@ Future object, badnik, boss, and trace work should use the shared object-control
 ```java
 // CORRECT — use spawnChild() helper:
 ChildObject child = spawnChild(() -> new ChildObject(spawn, params));
-
-// Legacy pattern (still works but prefer spawnChild):
-ObjectManager om = services().objectManager();
-om.addDynamicObject(childInstance);
 ```
+
+Do not add new manual `ObjectManager.addDynamicObject(...)` child-spawn call
+sites. Use `spawnChild(...)` so slot ownership, parent/child lifecycle, and
+remembered-spawn behavior stay on the shared object-lifetime path. Direct
+manager insertion is reserved for manager/framework bridge code with focused
+tests.
 
 ### Adding New Objects
 1. Add object ID to `Sonic2ObjectIds.java`
