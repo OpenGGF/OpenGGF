@@ -50,6 +50,19 @@ public record TouchResponseProfile(
                         : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
     }
 
+    public static TouchResponseProfile standardEnemy() {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                false,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+    }
+
     private static TouchCategoryDecodeMode decodeMode(TouchResponseProvider provider) {
         boolean sonic2 = provider.usesSonic2TouchSpecialPropertyResponse();
         boolean s3k = provider.usesS3kTouchSpecialPropertyResponse();

@@ -36,6 +36,22 @@ class TestTouchResponseProfileMapping {
     }
 
     @Test
+    void namedStandardEnemyProfileMatchesSingleRegionBadnikDefaults() {
+        TouchResponseProfile profile = TouchResponseProfile.standardEnemy();
+
+        assertEquals(TouchCategoryDecodeMode.NORMAL, profile.categoryDecodeMode());
+        assertFalse(profile.continuousCallbacks());
+        assertTrue(profile.requiresRenderFlagForTouch());
+        assertFalse(profile.multiRegionSource());
+        assertEquals(TouchShieldDeflectCapability.NONE, profile.shieldDeflectCapability());
+        assertEquals(0, profile.shieldReactionFlags());
+        assertEquals(TouchAttackBouncePolicy.STANDARD_ENEMY_KILL, profile.attackBouncePolicy());
+        assertEquals(TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY, profile.actorContextPolicy());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
+                profile.stopAfterFirstOverlapPolicy());
+    }
+
+    @Test
     void sonic2SpecialPropertyProviderMapsToSonic2DecodeMode() {
         TouchResponseProfile profile = TouchResponseProfile.fromProvider(new Sonic2SpecialProvider());
 
