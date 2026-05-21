@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -136,18 +137,72 @@ public class TestMegaChopperBadnikInstance {
         assertTrue(megaChopper.getCollisionFlags() != 0);
     }
 
+    @Test
+    public void nativeP2CollisionFallbackUsesObjectPlayerQueryWhenRawSidekickListIsEmpty() throws Exception {
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x210, (short) 0x180);
+        nativeP2.setRingCount(3);
+        MegaChopperBadnikInstance megaChopper = new MegaChopperBadnikInstance(
+                new ObjectSpawn(0x210, 0x180, Sonic3kObjectIds.MEGA_CHOPPER, 0, 0, false, 0));
+        megaChopper.setServices(new QueryOnlyPlayerServices(null, List.of(nativeP2), List.of()));
+
+        writeIntField(megaChopper, "pendingCollisionProperty", 2);
+        megaChopper.update(0, new TestablePlayableSprite("sonic", (short) 0x300, (short) 0x180));
+
+        assertEquals("CARRY", readState(megaChopper),
+                "MegaChopper native P2 fallback should resolve through ObjectPlayerQuery");
+
+        nativeP2.setCentreX((short) 0x220);
+        nativeP2.setCentreY((short) 0x184);
+        megaChopper.update(1, new TestablePlayableSprite("sonic", (short) 0x300, (short) 0x180));
+
+        assertEquals(0x220, megaChopper.getX(),
+                "Captured native P2 should drive carry follow even when raw sidekicks() is empty");
+        assertEquals(0x184, megaChopper.getY());
+    }
+
     private static String readState(MegaChopperBadnikInstance megaChopper) throws Exception {
         Field field = MegaChopperBadnikInstance.class.getDeclaredField("state");
         field.setAccessible(true);
         return String.valueOf(field.get(megaChopper));
     }
 
-    private static final class RecordingServices extends StubObjectServices {
+    private static void writeIntField(MegaChopperBadnikInstance megaChopper, String fieldName, int value)
+            throws Exception {
+        Field field = MegaChopperBadnikInstance.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(megaChopper, value);
+    }
+
+    private static class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
 
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);
+        }
+    }
+
+    private static final class QueryOnlyPlayerServices extends RecordingServices {
+        private final TestablePlayableSprite main;
+        private final List<? extends TestablePlayableSprite> queriedSidekicks;
+        private final List<com.openggf.game.PlayableEntity> rawSidekicks;
+
+        private QueryOnlyPlayerServices(TestablePlayableSprite main,
+                List<? extends TestablePlayableSprite> queriedSidekicks,
+                List<com.openggf.game.PlayableEntity> rawSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+            this.rawSidekicks = List.copyOf(rawSidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<com.openggf.game.PlayableEntity> sidekicks() {
+            return rawSidekicks;
         }
     }
 }

@@ -1,11 +1,13 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchActorContextPolicy;
@@ -162,6 +164,24 @@ class TestSpikerBadnikInstance {
     }
 
     @Test
+    void bodyDetectionUsesObjectPlayerQueryWhenRawSidekickListIsEmpty() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x220, (short) 0x100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x100, (short) 0x100);
+        RecordingServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2), List.of());
+        SpikerBadnikInstance spiker = new SpikerBadnikInstance(
+                new ObjectSpawn(0x120, 0x100, Sonic3kObjectIds.SPIKER, 0, 0, false, 0));
+        spiker.setServices(services);
+
+        spiker.update(0, main);
+        for (int frame = 1; frame <= 10; frame++) {
+            spiker.update(frame, main);
+        }
+
+        assertEquals("OPEN", readState(spiker),
+                "Spiker should detect query native P2 even when raw sidekicks() is empty");
+    }
+
+    @Test
     void spikeProjectileDeclaresShieldDeflectProfileAndKeepsDeflectBehavior() throws Exception {
         RecordingServices services = new RecordingServices();
         SpikerBadnikInstance spiker = new SpikerBadnikInstance(
@@ -232,7 +252,7 @@ class TestSpikerBadnikInstance {
                 .orElseThrow(() -> new AssertionError("Missing child named " + name));
     }
 
-    private static final class RecordingServices extends StubObjectServices {
+    private static class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
         private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
         private final ObjectManager objectManager;
@@ -257,6 +277,30 @@ class TestSpikerBadnikInstance {
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);
+        }
+    }
+
+    private static final class QueryOnlyPlayerServices extends RecordingServices {
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+        private final List<PlayableEntity> rawSidekicks;
+
+        private QueryOnlyPlayerServices(PlayableEntity main,
+                List<? extends PlayableEntity> queriedSidekicks,
+                List<PlayableEntity> rawSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+            this.rawSidekicks = List.copyOf(rawSidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return rawSidekicks;
         }
     }
 }
