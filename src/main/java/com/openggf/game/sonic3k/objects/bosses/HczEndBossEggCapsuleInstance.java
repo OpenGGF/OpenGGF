@@ -19,6 +19,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -279,7 +280,7 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     }
 
     private void lockForResults(AbstractPlayableSprite sprite) {
-        sprite.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setControlLocked(true);
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);

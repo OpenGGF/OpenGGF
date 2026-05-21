@@ -14,6 +14,7 @@ import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -313,7 +314,7 @@ public class HczEndBossGeyserCutscene extends AbstractObjectInstance {
         if (geyserY - GRAB_Y_OFFSET < playerY) {
             // Grab the player (ROM: loc_6B882 grab branch)
             // ROM: move.b #$81,object_control(a1)
-            player.setObjectControlled(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
 
