@@ -11,6 +11,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
@@ -249,6 +250,11 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return true;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.topSolid(true);
     }
 
     @Override

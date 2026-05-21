@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
@@ -100,7 +101,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
      */
     @Override
     public void onUnload() {
-        setDestroyed(true);
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     @Override
