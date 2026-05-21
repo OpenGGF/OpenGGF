@@ -331,6 +331,26 @@ class TestS3kCnzTubeTraversalHeadless {
                 "Release should preserve the last segment's dominant-axis y_vel");
     }
 
+    @Test
+    void spiralTubeProcessesOnlyNativeP2ThroughPlayerQuery() {
+        CnzSpiralTubeInstance tube = new CnzSpiralTubeInstance(
+                new ObjectSpawn(0x13C0, 0x02D0, Sonic3kObjectIds.CNZ_SPIRAL_TUBE, 0x00, 0, false, 0));
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x13D0, (short) 0x02D0);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x13D0, (short) 0x02D0);
+        TestablePlayableSprite extraSidekick =
+                new TestablePlayableSprite("knuckles", (short) 0x13D0, (short) 0x02D0);
+        tube.setServices(new TestObjectServices().withSidekicks(List.of(nativeP2, extraSidekick)));
+
+        tube.update(0, main);
+
+        assertTrue(main.isObjectControlled(),
+                "The direct update player should remain the P1 fallback when services cannot resolve main");
+        assertTrue(nativeP2.isObjectControlled(),
+                "CNZ Spiral Tube has one ROM Player_2 state block and should process the native sidekick");
+        assertFalse(extraSidekick.isObjectControlled(),
+                "Route carrier state must not be extended to extra engine sidekicks without dedicated state blocks");
+    }
+
     private static CnzVacuumTubeInstance spawnVacuumTube(int x, int y, int subtype, int renderFlags) {
         CnzVacuumTubeInstance object = new CnzVacuumTubeInstance(
                 new ObjectSpawn(x, y, Sonic3kObjectIds.CNZ_VACUUM_TUBE, subtype, renderFlags, false, 0));

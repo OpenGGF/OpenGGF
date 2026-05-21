@@ -58,7 +58,8 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite mainPlayer = services().camera().getFocusedSprite();
+        PlayableEntity queriedMainPlayer = services().playerQuery().mainPlayerOrNull();
+        AbstractPlayableSprite mainPlayer = queriedMainPlayer instanceof AbstractPlayableSprite sprite ? sprite : null;
         if (mainPlayer == null && playerEntity instanceof AbstractPlayableSprite sprite) {
             mainPlayer = sprite;
         }
@@ -66,12 +67,8 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance {
             processPlayer(mainPlayer, p1State);
         }
 
-        AbstractPlayableSprite sidekick = null;
-        for (AbstractPlayableSprite candidate : services().spriteManager().getSidekicks()) {
-            sidekick = candidate;
-            break;
-        }
-        if (sidekick != null && sidekick != mainPlayer) {
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        if (nativeP2 instanceof AbstractPlayableSprite sidekick && sidekick != mainPlayer) {
             processPlayer(sidekick, p2State);
         }
     }
