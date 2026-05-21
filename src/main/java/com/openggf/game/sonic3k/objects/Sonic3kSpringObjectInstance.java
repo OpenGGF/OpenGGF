@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -373,32 +374,36 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
         proactiveTriggeredThisUpdate.clear();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM sub_2326C (sonic3k.asm:47957) — proactive horizontal-spring zone.
         // The whole routine is gated on `cmpi.b #3,anim(a0) / beq.w locret_23324`
         // (sonic3k.asm:47958-47959); within that gate, Player_1 (line 47973) and
-        // Player_2 (line 47999) are checked independently.  Engine equivalent:
-        // iterate the leader and every active sidekick so Tails-as-CPU and
-        // Knuckles-as-CPU get the same proactive trigger Tails-as-Player_2 has
-        // in ROM.  Without this, an air→ground transition that lands the
-        // sidekick onto a horizontal spring while she's outside the side-push
+        // Player_2 (line 47999) are checked independently. Engine equivalent:
+        // query native Player_1 plus native Player_2 only. Native Player_2 is
+        // the first sidekick; extra engine sidekicks are not promoted into the
+        // ROM Player_2 block. Without this, a native sidekick can land
+        // onto a horizontal spring while she is outside the side-push
         // collision box (CNZ trace F3649: spring at (0x1D37,0x08B0), Tails at
         // (0x1D21,0x08B0) — 3 px past the box's left edge) leaves the spring
         // unfired because the engine's per-player solid-contact path also has
         // no overlap to resolve.  The proactive zone (±$28 X, ±$18 Y) is the
         // ROM's safety net for exactly this geometry.
         if (springType == TYPE_HORIZONTAL && animationState.getAnimId() == ANIM_IDLE) {
-            if (player != null) {
-                checkHorizontalApproach(player);
-            }
             // ROM sub_2326C falls through from the Player_1 block to the
             // Player_2 block (sonic3k.asm:47998→47999) regardless of whether
             // Player_1 fired the spring, so the second-player check must run
             // unconditionally inside the outer animation gate.
-            for (PlayableEntity sidekickEntity : services().sidekicks()) {
-                if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                    checkHorizontalApproach(sidekick);
+            boolean sawUpdatePlayer = false;
+            for (PlayableEntity candidate : services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                if (candidate == playerEntity) {
+                    sawUpdatePlayer = true;
                 }
+                if (candidate instanceof AbstractPlayableSprite player) {
+                    checkHorizontalApproach(player);
+                }
+            }
+            if (!sawUpdatePlayer && playerEntity instanceof AbstractPlayableSprite player) {
+                checkHorizontalApproach(player);
             }
         }
 

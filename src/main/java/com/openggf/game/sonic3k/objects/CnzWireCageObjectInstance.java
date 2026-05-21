@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
@@ -133,10 +134,9 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
         if (services == null) {
             return;
         }
-        for (PlayableEntity sidekick : services.sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sprite && sprite != leader) {
-                processPlayer(frameCounter, sprite, true, leaderDplcClobberedD6);
-            }
+        AbstractPlayableSprite nativeP2 = nativeP2From(services, leader);
+        if (nativeP2 != null) {
+            processPlayer(frameCounter, nativeP2, true, leaderDplcClobberedD6);
         }
     }
 
@@ -501,6 +501,15 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
             return P1_STANDING_BIT;
         }
         return leaderDplcClobberedD6 ? DIRTY_P2_STANDING_BIT : P2_STANDING_BIT;
+    }
+
+    private AbstractPlayableSprite nativeP2From(ObjectServices services, AbstractPlayableSprite leader) {
+        for (PlayableEntity candidate : services.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate instanceof AbstractPlayableSprite sprite && sprite != leader) {
+                return sprite;
+            }
+        }
+        return null;
     }
 
     private void updateReleaseRide(AbstractPlayableSprite player, CageState state) {

@@ -16,7 +16,13 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 
@@ -55,6 +61,16 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     private static final int FALL_COLLISION_FLAGS = 0x82;
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            false,
+            true,
+            true,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
 
     private enum Phase {
         WAITING,
@@ -189,6 +205,16 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override
