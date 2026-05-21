@@ -46,17 +46,24 @@ public record SolidRoutineProfile(
     }
 
     public static SolidRoutineProfile fullSolid(boolean stickyContactBuffer) {
+        return fullSolid(stickyContactBuffer, false, false);
+    }
+
+    public static SolidRoutineProfile fullSolid(
+            boolean stickyContactBuffer,
+            boolean inclusiveRightEdge,
+            boolean bypassesOffscreenSolidGate) {
         return new SolidRoutineProfile(
                 SolidRoutineKind.FULL_SOLID,
                 false,
                 false,
                 0,
-                false,
+                inclusiveRightEdge,
                 stickyContactBuffer,
                 true,
                 false,
                 false,
-                false,
+                bypassesOffscreenSolidGate,
                 false,
                 true,
                 false,

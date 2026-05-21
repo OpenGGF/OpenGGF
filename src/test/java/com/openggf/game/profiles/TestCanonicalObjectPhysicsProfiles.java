@@ -81,12 +81,16 @@ class TestCanonicalObjectPhysicsProfiles {
     @Test
     void canonicalSolidFactoriesNameFullAndMonitorPolicies() {
         SolidRoutineProfile full = SolidRoutineProfile.fullSolid(false);
+        SolidRoutineProfile horizontalSpring = SolidRoutineProfile.fullSolid(true, true, true);
         SolidRoutineProfile monitor = SolidRoutineProfile.monitorSolid(4, false);
 
         assertEquals(SolidRoutineKind.FULL_SOLID, full.kind());
         assertFalse(full.monitorSolidity());
         assertFalse(full.stickyContactBuffer());
         assertTrue(full.forceAirOnRideExit());
+        assertEquals(SolidRoutineKind.FULL_SOLID, horizontalSpring.kind());
+        assertTrue(horizontalSpring.inclusiveRightEdge());
+        assertTrue(horizontalSpring.bypassesOffscreenSolidGate());
         assertEquals(SolidRoutineKind.MONITOR_SOLID, monitor.kind());
         assertTrue(monitor.monitorSolidity());
         assertEquals(4, monitor.monitorVerticalOffset());

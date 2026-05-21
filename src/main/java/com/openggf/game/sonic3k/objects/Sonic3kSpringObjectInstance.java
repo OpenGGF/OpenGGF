@@ -17,6 +17,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.GroundMode;
 import com.openggf.physics.Direction;
@@ -590,6 +591,14 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
     @Override
     public boolean bypassesOffscreenSolidGate() {
         return true;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(
+                usesStickyContactBuffer(),
+                usesInclusiveRightEdge(),
+                bypassesOffscreenSolidGate());
     }
 
     @Override

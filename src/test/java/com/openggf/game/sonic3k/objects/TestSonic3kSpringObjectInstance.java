@@ -12,6 +12,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidRoutineKind;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.game.GroundMode;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -23,6 +25,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kSpringObjectInstance {
 
@@ -57,6 +60,24 @@ class TestSonic3kSpringObjectInstance {
         SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
+    }
+
+    @Test
+    void exposesFullSolidRoutineProfileForVerticalAndHorizontalSprings() {
+        Sonic3kSpringObjectInstance vertical = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
+        Sonic3kSpringObjectInstance horizontal = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
+
+        SolidRoutineProfile verticalProfile = vertical.getSolidRoutineProfile();
+        SolidRoutineProfile horizontalProfile = horizontal.getSolidRoutineProfile();
+
+        assertEquals(SolidRoutineKind.FULL_SOLID, verticalProfile.kind());
+        assertFalse(verticalProfile.inclusiveRightEdge());
+        assertTrue(verticalProfile.bypassesOffscreenSolidGate());
+        assertEquals(SolidRoutineKind.FULL_SOLID, horizontalProfile.kind());
+        assertTrue(horizontalProfile.inclusiveRightEdge());
+        assertTrue(horizontalProfile.bypassesOffscreenSolidGate());
     }
 
     @Test

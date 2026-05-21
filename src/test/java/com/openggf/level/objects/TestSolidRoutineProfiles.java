@@ -62,6 +62,17 @@ class TestSolidRoutineProfiles {
     }
 
     @Test
+    void namedFullSolidFactoryCanCarrySpringEdgeAndOffscreenPolicy() {
+        SolidRoutineProfile profile = SolidRoutineProfile.fullSolid(true, true, true);
+
+        assertEquals(SolidRoutineKind.FULL_SOLID, profile.kind());
+        assertTrue(profile.stickyContactBuffer());
+        assertTrue(profile.inclusiveRightEdge());
+        assertTrue(profile.bypassesOffscreenSolidGate());
+        assertTrue(profile.forceAirOnRideExit());
+    }
+
+    @Test
     void namedMonitorSolidFactoryCarriesMonitorOffsetAndStickyPolicy() {
         SolidRoutineProfile profile = SolidRoutineProfile.monitorSolid(4, false);
 
