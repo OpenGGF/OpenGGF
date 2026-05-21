@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.PlayableEntity;
+import com.openggf.camera.Camera;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
@@ -14,6 +15,7 @@ import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
@@ -21,11 +23,16 @@ import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TestSonic2TriggerParticipation {
 
@@ -164,11 +171,141 @@ class TestSonic2TriggerParticipation {
         assertEquals(1, intField(vineSwitch, "mappingFrame"));
     }
 
+    @Test
+    void flipperAppliesCheckpointContactToQueryOnlySidekick() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1010, 0x1000);
+        FlipperObjectInstance flipper = new FlipperObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x86, 0x01, 0, false, 0),
+                "Flipper");
+        flipper.setServices(new QueryOnlyPlayerServices(main, List.of(tails))
+                .withCheckpointBatch(new SolidCheckpointBatch(
+                        flipper,
+                        Map.of(tails, pushingContact()))));
+
+        flipper.update(0, main);
+
+        assertEquals(0x1000, tails.getXSpeed() & 0xFFFF,
+                "Flipper should consume ObjectPlayerQuery participants for manual checkpoint contact");
+        assertEquals(0x1000, tails.getGSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void springboardLaunchesQueryOnlySidekick() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        SpringboardObjectInstance springboard = new SpringboardObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x40, 0, 0, false, 0),
+                "Springboard");
+        springboard.setServices(new QueryOnlyPlayerServices(main, List.of(tails))
+                .withCheckpointBatch(new SolidCheckpointBatch(
+                        springboard,
+                        Map.of(tails, standingContact()))));
+
+        springboard.update(0, main);
+        springboard.update(1, main);
+
+        assertTrue(tails.getAir(),
+                "Springboard should launch sidekick participants from ObjectPlayerQuery");
+        assertEquals(0xFB00, tails.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void lateralCannonDropsQueryOnlyRidingSidekickOnRetract() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, new TestObjectServices());
+        LateralCannonObjectInstance cannon = new LateralCannonObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0xBE, 0, 0, false, 0),
+                "LateralCannon");
+        cannon.setServices(new QueryOnlyPlayerServices(main, List.of(tails)).withObjectManager(objectManager));
+        objectManager.forceRidingObjectForBootstrap(tails, cannon);
+        tails.setOnObject(true);
+        tails.setAir(false);
+
+        for (int frame = 0; frame < 190; frame++) {
+            cannon.update(frame, main);
+        }
+
+        assertFalse(objectManager.isRidingObject(tails, cannon),
+                "Lateral cannon should drop sidekick riders from ObjectPlayerQuery on retract");
+        assertFalse(tails.isOnObject());
+        assertTrue(tails.getAir());
+    }
+
+    @Test
+    void seesawAssignsQueryOnlySidekickToNativeP2StandingSlot() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        SeesawObjectInstance seesaw = new SeesawObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x14, 0xFF, 0, false, 0),
+                "Seesaw");
+        seesaw.setServices(new QueryOnlyPlayerServices(main, List.of(tails))
+                .withCheckpointBatch(new SolidCheckpointBatch(
+                        seesaw,
+                        Map.of(tails, standingContact()))));
+
+        seesaw.update(0, main);
+
+        assertSame(tails, seesaw.getStandingPlayer2(),
+                "Seesaw has native P1/P2 standing bits, so P2 must come from ObjectPlayerQuery NATIVE_P1_P2");
+    }
+
+    @Test
+    void tiltingPlatformOrientationUsesQueryPlayersWhenRawSidekickListIsEmpty() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1200, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x0FF0, 0x1000);
+        TiltingPlatformObjectInstance platform = new TiltingPlatformObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0xB6, 0x04, 0, false, 0));
+        platform.setServices(new QueryOnlyPlayerServices(main, List.of(tails))
+                .withCamera(focusedCamera(main)));
+
+        Method isPlayerToLeft = TiltingPlatformObjectInstance.class
+                .getDeclaredMethod("isPlayerToLeft", com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        isPlayerToLeft.setAccessible(true);
+
+        assertTrue((boolean) isPlayerToLeft.invoke(platform, main),
+                "ObjB6 orientation already uses every engine sidekick, but participants must come from ObjectPlayerQuery");
+    }
+
+    @Test
+    void tiltingPlatformDropsQueryOnlyRidingSidekick() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1200, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, new TestObjectServices());
+        TiltingPlatformObjectInstance platform = new TiltingPlatformObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0xB6, 0, 0, false, 0));
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of(tails))
+                .withObjectManager(objectManager);
+        services.withCamera(focusedCamera(main));
+        platform.setServices(services);
+        objectManager.forceRidingObjectForBootstrap(tails, platform);
+        tails.setOnObject(true);
+        tails.setAir(false);
+
+        Method dropRidingPlayers = TiltingPlatformObjectInstance.class.getDeclaredMethod("dropRidingPlayers");
+        dropRidingPlayers.setAccessible(true);
+        dropRidingPlayers.invoke(platform);
+
+        assertFalse(objectManager.isRidingObject(tails, platform),
+                "ObjB6 drop already applies to engine sidekicks, but participants must come from ObjectPlayerQuery");
+        assertFalse(tails.isOnObject());
+        assertTrue(tails.getAir());
+    }
+
     private static TestablePlayableSprite player(String code, int x, int y) {
         TestablePlayableSprite player = new TestablePlayableSprite(code, (short) x, (short) y);
         player.setCentreX((short) x);
         player.setCentreY((short) y);
         return player;
+    }
+
+    private static Camera focusedCamera(TestablePlayableSprite player) {
+        Camera camera = mock(Camera.class);
+        when(camera.getFocusedSprite()).thenReturn(player);
+        return camera;
     }
 
     private static int intField(Object target, String fieldName) throws Exception {
@@ -189,10 +326,23 @@ class TestSonic2TriggerParticipation {
                 0);
     }
 
+    private static PlayerSolidContactResult standingContact() {
+        return new PlayerSolidContactResult(
+                ContactKind.TOP,
+                true,
+                false,
+                false,
+                false,
+                PreContactState.ZERO,
+                new PostContactState((short) 0, (short) 0, false, true, false),
+                0);
+    }
+
     private static final class QueryOnlyPlayerServices extends TestObjectServices {
         private final PlayableEntity main;
         private final List<? extends PlayableEntity> queriedSidekicks;
         private SolidExecutionRegistry solidExecution = SolidExecutionRegistry.inert();
+        private ObjectManager objectManager;
 
         private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
             this.main = main;
@@ -207,6 +357,16 @@ class TestSonic2TriggerParticipation {
         @Override
         public List<PlayableEntity> sidekicks() {
             return List.of();
+        }
+
+        @Override
+        public ObjectManager objectManager() {
+            return objectManager;
+        }
+
+        QueryOnlyPlayerServices withObjectManager(ObjectManager objectManager) {
+            this.objectManager = objectManager;
+            return this;
         }
 
         QueryOnlyPlayerServices withCheckpointBatch(SolidCheckpointBatch batch) {

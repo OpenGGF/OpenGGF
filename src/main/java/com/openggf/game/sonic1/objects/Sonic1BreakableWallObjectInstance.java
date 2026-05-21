@@ -12,6 +12,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -25,6 +26,7 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -118,13 +120,20 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
             return;
         }
         SolidCheckpointBatch batch = checkpointAll();
-        applyCheckpointContact(player, batch.perPlayer().get(player));
-        for (PlayableEntity sidekick : services().sidekicks()) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        if (!participants.contains(player)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(player);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
+        }
+        for (PlayableEntity participant : participants) {
             if (broken) {
                 break;
             }
-            if (sidekick instanceof AbstractPlayableSprite sidekickSprite) {
-                applyCheckpointContact(sidekickSprite, batch.perPlayer().get(sidekick));
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                applyCheckpointContact(sprite, batch.perPlayer().get(participant));
             }
         }
     }
