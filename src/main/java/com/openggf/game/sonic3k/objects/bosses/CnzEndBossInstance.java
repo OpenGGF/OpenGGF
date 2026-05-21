@@ -14,6 +14,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -164,7 +165,7 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
 
     private void releaseSprite(AbstractPlayableSprite sprite) {
         sprite.setControlLocked(false);
-        sprite.setObjectControlled(false);
+        ObjectControlState.none().applyTo(sprite);
         sprite.setHidden(false);
         sprite.setRolling(false);
     }
