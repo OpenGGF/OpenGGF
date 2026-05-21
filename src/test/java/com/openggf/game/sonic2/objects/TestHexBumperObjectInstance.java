@@ -1,8 +1,11 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchResponseProfile;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,5 +31,19 @@ class TestHexBumperObjectInstance {
                 "HexBumper");
 
         assertFalse(bumper.usesCustomOutOfRangeCheck());
+    }
+
+    @Test
+    void touchProfileNamesSpecialLatchPolicy() {
+        HexBumperObjectInstance bumper = new HexBumperObjectInstance(
+                new ObjectSpawn(0x2034, 0x04F2, 0xD7, 0x00, 0, false, 0x84F2),
+                "HexBumper");
+
+        TouchResponseProfile profile = bumper.getTouchResponseProfile();
+
+        assertEquals(TouchCategoryDecodeMode.NORMAL, profile.categoryDecodeMode());
+        assertTrue(profile.continuousCallbacks());
+        assertFalse(profile.requiresRenderFlagForTouch());
+        assertTrue(bumper.enablesPostSpecialTouchAirborneSideVelocityPreservation());
     }
 }

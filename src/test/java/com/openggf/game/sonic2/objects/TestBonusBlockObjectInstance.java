@@ -2,6 +2,8 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -12,6 +14,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestBonusBlockObjectInstance {
+
+    @Test
+    void touchProfileNamesSonic2SpecialLatchPolicy() {
+        BonusBlockObjectInstance block = new BonusBlockObjectInstance(
+                new ObjectSpawn(0x1820, 0x0168, Sonic2ObjectIds.BONUS_BLOCK, 0, 0, false, 0),
+                "BonusBlock");
+
+        TouchResponseProfile profile = block.getTouchResponseProfile();
+
+        assertEquals(TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY, profile.categoryDecodeMode());
+        assertTrue(profile.continuousCallbacks());
+        assertFalse(profile.requiresRenderFlagForTouch());
+    }
 
     @Test
     void bonusBlockUsesRomTouchSizeRadii() {
