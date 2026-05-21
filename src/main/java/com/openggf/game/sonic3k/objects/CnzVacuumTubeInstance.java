@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Tails;
@@ -73,9 +74,10 @@ public final class CnzVacuumTubeInstance extends AbstractObjectInstance {
         }
 
         processPlayer(player);
-        for (AbstractPlayableSprite sidekick : services().spriteManager().getSidekicks()) {
-            if (sidekick != player) {
-                processPlayer(sidekick);
+        for (PlayableEntity participant : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (participant instanceof AbstractPlayableSprite participantSprite && participantSprite != player) {
+                processPlayer(participantSprite);
             }
         }
     }
