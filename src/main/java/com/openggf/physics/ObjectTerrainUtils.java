@@ -124,7 +124,7 @@ public final class ObjectTerrainUtils {
 
         if (metric == FULL_TILE) {
             // Full tile - check previous tile up for edge detection
-            TerrainCheckResult edgeResult = checkFloorEdge(lm, x, y, flipAwareAngle);
+            TerrainCheckResult edgeResult = checkFloorEdge(lm, tile, desc, x, y, flipAwareAngle);
             if (edgeResult != null) return edgeResult;
         }
 
@@ -162,32 +162,38 @@ public final class ObjectTerrainUtils {
         SolidTile tile = getSolidTile(lm, desc, SOLIDITY_TOP);
         byte metric = getHeightMetric(tile, desc, x);
 
-        if (metric != 0) {
-            // ROM: FindFloor2 result with subi.w #$10,d1
-            if (metric < 0) {
-                int yInTile = y & 0x0F;
-                int dist = ~yInTile - 16;
-                return new TerrainCheckResult(dist, getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
-            }
-            TerrainCheckResult result = createFloorResult(tile, desc, metric, y, prevY, flipAwareAngle);
-            return new TerrainCheckResult(result.distance() - 16, result.angle(), result.tileIndex());
-        }
-        // Empty previous tile - use yInTile-based distance
-        int yInTile = y & 0x0F;
-        int dist = ~yInTile - 16;
-        return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
+        return createPreviousFloorResult(tile, desc, origTile, origDesc, metric, x, y, prevY, flipAwareAngle);
     }
 
-    private static TerrainCheckResult checkFloorEdge(LevelManager lm, int x, int y, boolean flipAwareAngle) {
+    private static TerrainCheckResult checkFloorEdge(LevelManager lm, SolidTile origTile, ChunkDesc origDesc,
+                                                     int x, int y, boolean flipAwareAngle) {
         int prevY = y - 16;
         ChunkDesc desc = lm.getChunkDescAt((byte) 0, x, prevY);
         SolidTile tile = getSolidTile(lm, desc, SOLIDITY_TOP);
         byte metric = getHeightMetric(tile, desc, x);
 
-        if (metric > 0 && metric < FULL_TILE) {
-            return createFloorResult(tile, desc, metric, y, prevY, flipAwareAngle);
+        return createPreviousFloorResult(tile, desc, origTile, origDesc, metric, x, y, prevY, flipAwareAngle);
+    }
+
+    private static TerrainCheckResult createPreviousFloorResult(SolidTile tile, ChunkDesc desc,
+                                                                SolidTile origTile, ChunkDesc origDesc,
+                                                                byte metric, int x, int y, int prevY,
+                                                                boolean flipAwareAngle) {
+        int yInTile = y & 0x0F;
+        if (metric == 0) {
+            int dist = 15 - yInTile - 16;
+            return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
         }
-        return null;
+        if (metric < 0) {
+            int adjusted = metric + yInTile;
+            if (adjusted >= 0) {
+                int dist = 15 - yInTile - 16;
+                return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
+            }
+            int dist = ~yInTile - 16;
+            return new TerrainCheckResult(dist, getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
+        }
+        return createFloorResult(tile, desc, metric, y, prevY, flipAwareAngle);
     }
 
     private static TerrainCheckResult createFloorResult(SolidTile tile, ChunkDesc desc,
@@ -277,7 +283,7 @@ public final class ObjectTerrainUtils {
         }
 
         if (metric == FULL_TILE) {
-            TerrainCheckResult edgeResult = checkWallEdge(lm, x, y, checkingLeft, flipAwareAngle);
+            TerrainCheckResult edgeResult = checkWallEdge(lm, tile, desc, x, y, checkingLeft, flipAwareAngle);
             if (edgeResult != null) return edgeResult;
         }
 
@@ -298,18 +304,36 @@ public final class ObjectTerrainUtils {
         return TerrainCheckResult.noCollision();
     }
 
-    private static TerrainCheckResult checkWallEdge(LevelManager lm, int x, int y, boolean checkingLeft,
-                                                    boolean flipAwareAngle) {
+    private static TerrainCheckResult checkWallEdge(LevelManager lm, SolidTile origTile, ChunkDesc origDesc,
+                                                    int x, int y, boolean checkingLeft, boolean flipAwareAngle) {
         // ROM subtracts 16 from distance when checking previous (s2.asm:43264)
         int prevX = checkingLeft ? (x + 16) : (x - 16);
         ChunkDesc desc = lm.getChunkDescAt((byte) 0, prevX, y);
         SolidTile tile = getSolidTile(lm, desc, SOLIDITY_ALL);
         byte metric = getWallMetric(tile, desc, y, checkingLeft);
 
-        if (metric > 0 && metric < FULL_TILE) {
-            return createWallResult(tile, desc, metric, x, checkingLeft, -16, flipAwareAngle);
+        return createPreviousWallResult(tile, desc, origTile, origDesc, metric, x, checkingLeft, flipAwareAngle);
+    }
+
+    private static TerrainCheckResult createPreviousWallResult(SolidTile tile, ChunkDesc desc,
+                                                               SolidTile origTile, ChunkDesc origDesc,
+                                                               byte metric, int x, boolean checkingLeft,
+                                                               boolean flipAwareAngle) {
+        int xInTile = x & 0x0F;
+        if (metric == 0) {
+            int dist = 15 - xInTile - 16;
+            return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
         }
-        return null;
+        if (metric < 0) {
+            int adjusted = metric + xInTile;
+            if (adjusted >= 0) {
+                int dist = 15 - xInTile - 16;
+                return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
+            }
+            int dist = ~xInTile - 16;
+            return new TerrainCheckResult(dist, getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
+        }
+        return createWallResult(tile, desc, metric, x, checkingLeft, -16, flipAwareAngle);
     }
 
     private static TerrainCheckResult createWallResult(SolidTile tile, ChunkDesc desc,

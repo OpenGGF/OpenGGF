@@ -2429,3 +2429,45 @@ management — Springboard has one animation and serializes launches naturally.
 `tails_x mismatch (expected=0x4000, actual=0x0990)` — Tails teleportation/despawn coordinate
 mismatch (0x4000 is the ROM's off-screen park position for the sidekick slot). Unrelated to
 Springboard; likely a Tails CPU despawn/respawn parity issue.
+
+## 2026-05-20 - S2 ceiling extension scan missing +16 correction (ARZ1 frame 1102 -> 1106)
+
+- Branch: `develop` worktree `agent-a973005177d2ea125`
+- Command: `mvn test "-Dtest=com.openggf.tests.trace.s2.TestS2ArzLevelSelectTraceReplay" -q`
+- Result: ARZ1 frontier advanced from frame 1102 (648 errors) to frame 1106 (624 errors).
+
+### Root cause
+
+`GroundSensor.scanTileVertical` with `isExtension=true` and `metric<0, adjusted<0` returned
+`(byte)~yInTile` directly from the FindFloor2 result, but the ROM's FindFloor routine
+(`loc_1E7E2`, s2.asm:42989) adds `addi.w #$10,d1` (+16) after the FindFloor2 call.
+
+At ARZ1 frame 1102, Sonic is rolling upward with ceiling sensors at y=0x038F. The first tile
+at y=0x038F has no solid ceiling (tile=null); the extension tile one tile above at y=0x037F has
+a partial ceiling with `yInTile=0` (from `(origY ^ 0x0F) & 0x0F = (0x38F ^ 0xF) & 0xF = 0`).
+
+Without the +16:
+- FindFloor2 `loc_1E900` raw result: `~yInTile = ~0 = -1`
+- Engine returns `distance = -1` → spurious ceiling hit → `shiftY(+1)` + `ySpeed = 0`
+- Result: Sonic at y=039E (1px too low), ySpeed=0
+
+With the +16:
+- ROM result: `~yInTile + 16 = -1 + 16 = 15` → positive distance → no ceiling collision
+- ROM: Sonic continues at y=039D with ySpeed=FA9E (correct)
+
+ROM refs: `FindFloor2` `loc_1E900` (`not.w d1`, s2.asm:43064); `FindFloor` `loc_1E7E2`
+(`addi.w #$10,d1`, s2.asm:42989).
+
+Fix: in `GroundSensor.scanTileVertical`, changed `(byte)~yInTile` to `(byte)(~yInTile + 16)`
+in the `isExtension=true, metric<0, adjusted<0` branch.
+
+### New ARZ1 frontier (frame 1106)
+
+`y mismatch (expected=0x038E, actual=0x038A)` — Sonic is 4px too high at the first ceiling
+hit. Root cause: first tile at y=0x037C has `metric=-5`, `yInTile=3`, `adjusted=-2<0`. The
+extension tile at prevCheckY=0x038C has no solid, so `scanTileVertical` for the extension pass
+returns `null`. ROM path: FindFloor `loc_1E86A` calls FindFloor2 at d2=0x383, no solid →
+`d1 = 15-3=12`, then `subi.w #$10 → d1=-4`, so ROM places ceiling at y=038A+4=038E. Engine
+returns `null` → no ceiling hit → Sonic passes through 4px too far. This is the `prevResult==null`
+case in the `metric<0, adjusted<0` first-pass branch; a fix of `return ~yInTile` is ROM-accurate
+but causes a downstream regression at frame 1208 that requires separate investigation.
