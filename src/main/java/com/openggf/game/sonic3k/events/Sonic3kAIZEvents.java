@@ -5,6 +5,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -31,6 +32,8 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
@@ -40,6 +43,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -1599,20 +1603,17 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             cam.setMinX((short) (newCameraX - wrapDelta));
             cam.setMaxX((short) (newCameraX - wrapDelta));
 
-            // Wrap the player position
-            if (cam.getFocusedSprite() instanceof AbstractPlayableSprite player) {
-                if (useCentreCoordinates) {
-                    player.setCentreXPreserveSubpixel((short) (player.getCentreX() - wrapDelta));
-                } else {
-                    player.setX((short) (player.getX() - wrapDelta));
-                }
-            }
-            // Wrap sidekick positions
-            for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
-                if (useCentreCoordinates) {
-                    sidekick.setCentreXPreserveSubpixel((short) (sidekick.getCentreX() - wrapDelta));
-                } else {
-                    sidekick.setX((short) (sidekick.getX() - wrapDelta));
+            ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(
+                    () -> cam.getFocusedSprite() instanceof AbstractPlayableSprite player ? player : null,
+                    this::eventSidekicks);
+            for (PlayableEntity participant : playerQuery.playersFor(
+                    ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (participant instanceof AbstractPlayableSprite player) {
+                    if (useCentreCoordinates) {
+                        player.setCentreXPreserveSubpixel((short) (player.getCentreX() - wrapDelta));
+                    } else {
+                        player.setX((short) (player.getX() - wrapDelta));
+                    }
                 }
             }
 
@@ -1641,13 +1642,21 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // ROM: sub_50318 — clamp X within camera margins for BOTH players.
         // Called for Player_1 then Player_2 in AIZ2_DoShipLoop.
         int camX = cam.getX();
-        if (cam.getFocusedSprite() instanceof AbstractPlayableSprite player) {
-            clampPlayerDuringAutoScroll(player, camX, useCentreCoordinates);
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
-            clampPlayerDuringAutoScroll(sidekick, camX, useCentreCoordinates);
+        ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(
+                () -> cam.getFocusedSprite() instanceof AbstractPlayableSprite player ? player : null,
+                this::eventSidekicks);
+        for (PlayableEntity participant : playerQuery.playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                clampPlayerDuringAutoScroll(player, camX, useCentreCoordinates);
+            }
         }
         syncSidekickBoundsToLiveCamera(cam);
+    }
+
+    private List<AbstractPlayableSprite> eventSidekicks() {
+        SpriteManager sm = spriteManager();
+        return sm != null ? sm.getSidekicks() : List.of();
     }
 
     private void syncSidekickBoundsToLiveCamera(Camera cam) {
@@ -2104,11 +2113,14 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (!hasRuntime()) {
             return;
         }
-        if (camera().getFocusedSprite() instanceof AbstractPlayableSprite player) {
-            player.setControlLocked(locked);
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
-            sidekick.setControlLocked(locked);
+        ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(
+                () -> camera().getFocusedSprite() instanceof AbstractPlayableSprite player ? player : null,
+                this::eventSidekicks);
+        for (PlayableEntity participant : playerQuery.playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                player.setControlLocked(locked);
+            }
         }
     }
 

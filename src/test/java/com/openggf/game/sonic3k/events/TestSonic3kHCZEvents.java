@@ -143,12 +143,17 @@ class TestSonic3kHCZEvents {
     }
 
     @Test
-    void postTransitionCutsceneUsesFullObjectControlThenPlainRelease() {
-        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x07F8);
+    void postTransitionCutsceneUsesAllEnginePlayersOnceThenPlainRelease() {
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x07F0);
         GameServices.camera().setFocusedSprite(player);
+        player.setCpuControlled(true);
+        GameServices.sprites().addSprite(player, "sonic");
         TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x07F8);
         sidekick.setCpuControlled(true);
         GameServices.sprites().addSprite(sidekick, "tails");
+        TestablePlayableSprite secondSidekick = new TestablePlayableSprite("knuckles", (short) 0x0100, (short) 0x07F8);
+        secondSidekick.setCpuControlled(true);
+        GameServices.sprites().addSprite(secondSidekick, "knuckles");
 
         Sonic3kHCZEvents events = new Sonic3kHCZEvents();
         events.init(1);
@@ -157,12 +162,22 @@ class TestSonic3kHCZEvents {
 
         assertFullObjectControlCutsceneLock(player);
         assertFullObjectControlCutsceneLock(sidekick);
+        assertFullObjectControlCutsceneLock(secondSidekick);
 
         events.update(1, 0);
+
+        assertEquals((short) 0x07F4, player.getY(),
+                "focused player should not be mutated again through duplicate sidekick traversal");
+        assertEquals((short) 0x0804, sidekick.getY());
+        assertEquals((short) 0x0804, secondSidekick.getY());
+
         events.update(1, 1);
+        events.update(1, 2);
+        events.update(1, 3);
 
         assertPlainCutsceneRelease(player);
         assertPlainCutsceneRelease(sidekick);
+        assertPlainCutsceneRelease(secondSidekick);
     }
 
     private static void tickAct2(Sonic3kHCZEvents events, int frame) {
