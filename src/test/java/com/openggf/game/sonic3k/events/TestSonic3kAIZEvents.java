@@ -26,6 +26,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.LogCaptureHandler;
 import com.openggf.tests.rules.RequiresRom;
@@ -795,10 +796,19 @@ public class TestSonic3kAIZEvents {
 
         AbstractPlayableSprite sonic = fixture.sprite();
         camera.setFocusedSprite(sonic);
+        List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getSidekicks();
+        assertFalse(sidekicks.isEmpty(), "test precondition: AIZ fixture should include a sidekick");
+        AbstractPlayableSprite tails = sidekicks.getFirst();
+        Tails extraSidekick = new Tails("extra_tails", (short) 0x4700, (short) 0x0200);
+        extraSidekick.setCpuControlled(true);
+        GameServices.sprites().addSprite(extraSidekick, "tails");
+
         camera.setX((short) 0x46BC);
         camera.setMinX((short) 0x46BC);
         camera.setMaxX((short) 0x46BC);
         sonic.setCentreXPreserveSubpixel((short) 0x4762);
+        tails.setCentreXPreserveSubpixel((short) 0x46C8);
+        extraSidekick.setCentreXPreserveSubpixel((short) 0x4700);
 
         events.updatePrePhysics(1);
 
@@ -806,8 +816,21 @@ public class TestSonic3kAIZEvents {
                 "AIZ2_DoShipLoop subtracts $200 from Camera_X_pos when Events_bg+$02=$46C0");
         assertEquals(0x4560, sonic.getCentreX() & 0xFFFF,
                 "sub_50318 clamps the $200-wrapped player to Camera_X_pos+$A0 before movement");
+        assertEquals(0x44D8, tails.getCentreX() & 0xFFFF,
+                "AIZ2_DoShipLoop should wrap native P2, then clamp it to Camera_X_pos+$18");
+        assertEquals(0x4500, extraSidekick.getCentreX() & 0xFFFF,
+                "AIZ2_DoShipLoop should preserve all-engine sidekick participation for extra sidekicks");
         assertEquals(0x200, events.getLevelRepeatOffset(),
                 "ROM Level_repeat_offset remains $200 on post-bombing AIZ2 ship-loop wraps");
+    }
+
+    @Test
+    public void lowRiskAizEventPlayerLoopsUseExplicitAllEnginePlayerQuery() throws IOException {
+        String source = Files.readString(Path.of(
+                "src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java"));
+
+        assertAizMethodUsesAllEnginePlayers(source, "updateBattleshipAutoScroll");
+        assertAizMethodUsesAllEnginePlayers(source, "setTransitionControlLock");
     }
 
     @Test
@@ -1032,5 +1055,39 @@ public class TestSonic3kAIZEvents {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.setBoolean(target, value);
+    }
+
+    private static void assertAizMethodUsesAllEnginePlayers(String source, String methodName) {
+        String body = methodBody(source, methodName);
+        assertTrue(body.contains("ObjectPlayerQuery"),
+                methodName + " should route player participation through ObjectPlayerQuery");
+        assertTrue(body.contains("ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS"),
+                methodName + " should declare ALL_ENGINE_PLAYERS participation explicitly");
+        assertFalse(body.contains("getSidekicks()"),
+                methodName + " should not directly traverse raw SpriteManager sidekicks");
+    }
+
+    private static String methodBody(String source, String methodName) {
+        int methodStart = source.indexOf("private void " + methodName + "(");
+        if (methodStart < 0) {
+            throw new AssertionError("Missing method " + methodName);
+        }
+        int bodyStart = source.indexOf('{', methodStart);
+        if (bodyStart < 0) {
+            throw new AssertionError("Missing method body for " + methodName);
+        }
+        int depth = 0;
+        for (int i = bodyStart; i < source.length(); i++) {
+            char c = source.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return source.substring(bodyStart, i + 1);
+                }
+            }
+        }
+        throw new AssertionError("Unterminated method body for " + methodName);
     }
 }
