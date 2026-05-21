@@ -36,6 +36,10 @@ public record SolidRoutineProfile(
                 bypassesOffscreenSolidGate));
     }
 
+    public static SolidRoutineProfile topSolid(boolean stickyContactBuffer) {
+        return fromCanonical(com.openggf.game.profiles.solidroutine.SolidRoutineProfile.topSolid(stickyContactBuffer));
+    }
+
     public static SolidRoutineProfile monitorSolid(int verticalOffset, boolean stickyContactBuffer) {
         return fromCanonical(com.openggf.game.profiles.solidroutine.SolidRoutineProfile.monitorSolid(
                 verticalOffset,

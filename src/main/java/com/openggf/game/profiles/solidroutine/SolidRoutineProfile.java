@@ -70,6 +70,24 @@ public record SolidRoutineProfile(
                 false);
     }
 
+    public static SolidRoutineProfile topSolid(boolean stickyContactBuffer) {
+        return new SolidRoutineProfile(
+                SolidRoutineKind.TOP_SOLID_ONLY,
+                true,
+                false,
+                0,
+                false,
+                stickyContactBuffer,
+                true,
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false);
+    }
+
     public static SolidRoutineProfile monitorSolid(int verticalOffset, boolean stickyContactBuffer) {
         return new SolidRoutineProfile(
                 SolidRoutineKind.MONITOR_SOLID,

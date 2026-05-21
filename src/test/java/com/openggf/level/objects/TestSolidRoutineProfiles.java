@@ -73,6 +73,18 @@ class TestSolidRoutineProfiles {
     }
 
     @Test
+    void namedTopSolidFactoryCarriesTopOnlyAndStickyPolicy() {
+        SolidRoutineProfile profile = SolidRoutineProfile.topSolid(false);
+
+        assertEquals(SolidRoutineKind.TOP_SOLID_ONLY, profile.kind());
+        assertTrue(profile.topSolidOnly());
+        assertFalse(profile.monitorSolidity());
+        assertFalse(profile.stickyContactBuffer());
+        assertTrue(profile.usesPlatformLandingSnap());
+        assertTrue(profile.forceAirOnRideExit());
+    }
+
+    @Test
     void namedMonitorSolidFactoryCarriesMonitorOffsetAndStickyPolicy() {
         SolidRoutineProfile profile = SolidRoutineProfile.monitorSolid(4, false);
 
