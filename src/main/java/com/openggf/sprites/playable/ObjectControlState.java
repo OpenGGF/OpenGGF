@@ -7,23 +7,27 @@ import java.util.Objects;
  * engine-only scripted handoffs.
  */
 public enum ObjectControlState {
-    NONE(false, false, false),
-    NATIVE_BIT_7_FULL_CONTROL(true, false, true),
-    NATIVE_BITS_0_TO_6_CPU_ALLOWED_MOVEMENT_SUPPRESSED(true, true, true),
-    NATIVE_BITS_0_TO_6_CPU_ALLOWED_MOVEMENT_ACTIVE(true, true, false),
-    MOVEMENT_SUPPRESSED_ONLY(false, false, true),
-    ENGINE_SCRIPTED_TOUCH_SUPPRESSED_MOVEMENT_ACTIVE(true, false, false);
+    NONE(false, false, false, true),
+    NATIVE_BIT_7_FULL_CONTROL(true, false, true, true),
+    NATIVE_BITS_0_TO_6_CPU_ALLOWED_MOVEMENT_SUPPRESSED(true, true, true, true),
+    NATIVE_BITS_0_TO_6_CPU_ALLOWED_MOVEMENT_ACTIVE(true, true, false, true),
+    MOVEMENT_SUPPRESSED_ONLY(false, false, true, true),
+    ENGINE_SCRIPTED_TOUCH_SUPPRESSED_MOVEMENT_ACTIVE(true, false, false, true),
+    ENGINE_SCRIPTED_PRESERVE_CPU_MOVEMENT_SUPPRESSED(true, false, true, false);
 
     private final boolean objectControlled;
     private final boolean objectControlAllowsCpu;
     private final boolean objectControlSuppressesMovement;
+    private final boolean writesObjectControlAllowsCpu;
 
     ObjectControlState(boolean objectControlled,
                        boolean objectControlAllowsCpu,
-                       boolean objectControlSuppressesMovement) {
+                       boolean objectControlSuppressesMovement,
+                       boolean writesObjectControlAllowsCpu) {
         this.objectControlled = objectControlled;
         this.objectControlAllowsCpu = objectControlAllowsCpu;
         this.objectControlSuppressesMovement = objectControlSuppressesMovement;
+        this.writesObjectControlAllowsCpu = writesObjectControlAllowsCpu;
     }
 
     public static ObjectControlState none() {
@@ -50,6 +54,10 @@ public enum ObjectControlState {
         return ENGINE_SCRIPTED_TOUCH_SUPPRESSED_MOVEMENT_ACTIVE;
     }
 
+    public static ObjectControlState engineScriptedPreserveCpuMovementSuppressed() {
+        return ENGINE_SCRIPTED_PRESERVE_CPU_MOVEMENT_SUPPRESSED;
+    }
+
     public boolean objectControlled() {
         return objectControlled;
     }
@@ -60,6 +68,10 @@ public enum ObjectControlState {
 
     public boolean objectControlSuppressesMovement() {
         return objectControlSuppressesMovement;
+    }
+
+    public boolean writesObjectControlAllowsCpu() {
+        return writesObjectControlAllowsCpu;
     }
 
     public boolean touchResponseSuppressed() {

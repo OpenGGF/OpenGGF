@@ -2689,7 +2689,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void applyObjectControlState(ObjectControlState state) {
                 Objects.requireNonNull(state, "state");
                 setObjectControlled(state.objectControlled());
-                if (state.objectControlled()) {
+                if (state.objectControlled() && state.writesObjectControlAllowsCpu()) {
                         setObjectControlAllowsCpu(state.objectControlAllowsCpu());
                 }
                 setObjectControlSuppressesMovement(state.objectControlSuppressesMovement());

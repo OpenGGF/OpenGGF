@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.util.ArrayList;
@@ -381,7 +382,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
                 var focusedSprite = services().camera().getFocusedSprite();
                 if (focusedSprite instanceof AbstractPlayableSprite ps) {
                     ps.setControlLocked(false);
-                    ps.setObjectControlled(false);
+                    ObjectControlState.none().applyTo(ps);
                     ps.setHidden(false);
                 }
             } catch (Exception e) {
@@ -664,7 +665,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
             player.setSubpixelRaw(0, 0);
             player.setAir(false);
             player.setControlLocked(true);
-            player.setObjectControlled(true);
+            ObjectControlState.engineScriptedPreserveCpuMovementSuppressed().applyTo(player);
             player.setHidden(true);
             ownsPlayerControl = true;
         }
@@ -1025,7 +1026,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
             // shows hurt routine/air/velocity on the release frame.
             if (player != null) {
                 player.setHidden(false);
-                player.setObjectControlled(false);
+                ObjectControlState.none().applyTo(player);
                 ownsPlayerControl = false;
                 player.setYSpeed((short) -0x400);
                 player.setXSpeed((short) -0x200);

@@ -40,6 +40,28 @@ class TestObjectControlState {
     }
 
     @Test
+    void engineScriptedPreserveCpuMovementSuppressedKeepsPriorCpuAllowedState() {
+        TestablePlayableSprite cpuAllowed = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        cpuAllowed.setObjectControlAllowsCpu(true);
+        cpuAllowed.applyObjectControlState(ObjectControlState.engineScriptedPreserveCpuMovementSuppressed());
+
+        TestablePlayableSprite cpuSuppressed = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        cpuSuppressed.setObjectControlAllowsCpu(false);
+        cpuSuppressed.applyObjectControlState(ObjectControlState.engineScriptedPreserveCpuMovementSuppressed());
+
+        assertAll(
+                () -> assertTrue(cpuAllowed.isObjectControlled(), "cpuAllowed objectControlled"),
+                () -> assertTrue(cpuAllowed.isObjectControlAllowsCpu(), "cpuAllowed objectControlAllowsCpu"),
+                () -> assertTrue(cpuAllowed.isObjectControlSuppressesMovement(), "cpuAllowed movement suppressed"),
+                () -> assertFalse(cpuAllowed.isTouchResponseSuppressedByObjectControl(), "cpuAllowed touch suppressed"),
+                () -> assertTrue(cpuSuppressed.isObjectControlled(), "cpuSuppressed objectControlled"),
+                () -> assertFalse(cpuSuppressed.isObjectControlAllowsCpu(), "cpuSuppressed objectControlAllowsCpu"),
+                () -> assertTrue(cpuSuppressed.isObjectControlSuppressesMovement(), "cpuSuppressed movement suppressed"),
+                () -> assertTrue(cpuSuppressed.isTouchResponseSuppressedByObjectControl(), "cpuSuppressed touch suppressed")
+        );
+    }
+
+    @Test
     void noneClearsCpuAllowedAndMovementSuppressionFromPriorNativeControl() {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
 
