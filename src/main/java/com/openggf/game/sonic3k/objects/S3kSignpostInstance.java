@@ -13,6 +13,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -341,7 +342,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         // ROM: Set_PlayerEndingPose (sonic3k.asm lines 181977-181988)
         // object_control = $81: bit 7 = under object control (freeze physics),
         //                       bit 0 = don't update routine
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
@@ -352,7 +353,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         // Also apply Set_PlayerEndingPose equivalent so Tails does a victory pose
         for (PlayableEntity sidekickEntity : services().sidekicks()) {
             AbstractPlayableSprite sidekick = (AbstractPlayableSprite) sidekickEntity;
-            sidekick.setObjectControlled(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
             sidekick.setControlLocked(true);
             sidekick.setXSpeed((short) 0);
             sidekick.setYSpeed((short) 0);
