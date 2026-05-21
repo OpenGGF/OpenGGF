@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
@@ -48,10 +49,9 @@ public class CnzTriangleBumperObjectInstance extends AbstractObjectInstance {
         if (svc == null) {
             return;
         }
-        for (PlayableEntity sidekick : svc.sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sprite && sidekick != playerEntity) {
+        for (PlayableEntity candidate : svc.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate instanceof AbstractPlayableSprite sprite && candidate != playerEntity) {
                 checkPlayer(sprite);
-                break;
             }
         }
     }

@@ -20,6 +20,9 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.junit.jupiter.api.AfterEach;
@@ -67,6 +70,25 @@ class TestS3kIczFreezerObject {
 
         assertInstanceOf(IczFreezerObjectInstance.class, instance);
         assertTrue(new Sonic3kObjectProfile().getImplementedIds().contains(Sonic3kObjectIds.ICZ_FREEZER));
+    }
+
+    @Test
+    void touchResponseProfilePreservesOneRegionMultiTouchAtCurrentObjectPosition() {
+        IczFreezerObjectInstance freezer = createFreezer(new RecordingServices(),
+                new ObjectSpawn(0x02C0, 0x0180, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+
+        TouchResponseProfile profile = freezer.getTouchResponseProfile();
+
+        assertEquals(TouchCategoryDecodeMode.NORMAL, profile.categoryDecodeMode());
+        assertTrue(profile.multiRegionSource());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY,
+                profile.stopAfterFirstOverlapPolicy());
+        assertEquals(0x9A, freezer.getCollisionFlags());
+        assertEquals(0, freezer.getCollisionProperty());
+        assertEquals(1, freezer.getMultiTouchRegions().length);
+        assertEquals(0x02C0, freezer.getMultiTouchRegions()[0].x());
+        assertEquals(0x0180, freezer.getMultiTouchRegions()[0].y());
+        assertEquals(0x9A, freezer.getMultiTouchRegions()[0].collisionFlags());
     }
 
     @Test
