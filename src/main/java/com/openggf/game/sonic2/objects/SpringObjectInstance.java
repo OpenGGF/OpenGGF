@@ -470,6 +470,14 @@ public class SpringObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(
+                usesStickyContactBuffer(),
+                usesInclusiveRightEdge(),
+                bypassesOffscreenSolidGate());
+    }
+
+    @Override
     public byte[] getSlopeData() {
         int type = getType();
         if (type == TYPE_DIAGONAL_UP) {

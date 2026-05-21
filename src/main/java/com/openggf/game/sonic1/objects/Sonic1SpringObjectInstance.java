@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpringBounceHelper;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -269,6 +270,11 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         }
         // Spring_Up / Spring_Dwn: d1=$1B (27), d2=8, d3=$10 (16)
         return new SolidObjectParams(27, 8, 16);
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(usesStickyContactBuffer());
     }
 
     @Override
