@@ -5,7 +5,9 @@ import com.openggf.tests.TestEnvironment;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -108,6 +111,59 @@ class TestHCZConveyorBeltObjectInstance {
         assertEquals(0x0216, player.getCentreY() & 0xFFFF);
     }
 
+    @Test
+    void nativeP2CaptureUsesObjectPlayerQueryWhenRawSidekickListIsEmpty() throws Exception {
+        camera.setX((short) 0x0C00);
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0200);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0C00, (short) 0x0221);
+        nativeP2.setYSpeed((short) 0);
+        ObjectServices services = new QueryOnlyPlayerServices(camera, main, List.of(nativeP2), List.of());
+        HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
+
+        belt.update(10, main);
+
+        assertTrue(nativeP2.isObjectControlled(),
+                "HCZ conveyor has native P1/P2 slots, so P2 must be resolved through ObjectPlayerQuery");
+        assertEquals(0x63, nativeP2.getMappingFrame());
+        assertEquals(0x0214, nativeP2.getCentreY() & 0xFFFF);
+    }
+
+    @Test
+    void updatePlayerRemainsNativeP1WhenQueryOnlyReturnsNativeP2() throws Exception {
+        camera.setX((short) 0x0C00);
+        TestablePlayableSprite updatePlayer = new TestablePlayableSprite("sonic", (short) 0x0C00, (short) 0x0221);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0C00, (short) 0x0221);
+        updatePlayer.setYSpeed((short) 0);
+        nativeP2.setYSpeed((short) 0);
+        ObjectServices services = new QueryOnlyPlayerServices(camera, null, List.of(nativeP2), List.of());
+        HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
+
+        belt.update(10, updatePlayer);
+
+        assertTrue(updatePlayer.isObjectControlled(),
+                "The update player is the observable native P1 fallback when ObjectPlayerQuery has no main");
+        assertTrue(nativeP2.isObjectControlled(),
+                "The query-only sidekick should still occupy the native P2 conveyor slot");
+    }
+
+    @Test
+    void extendedSidekickDoesNotShareNativeP2ConveyorState() throws Exception {
+        camera.setX((short) 0x0C00);
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0200);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0800, (short) 0x0221);
+        TestablePlayableSprite extendedSidekick = new TestablePlayableSprite("knuckles", (short) 0x0C00, (short) 0x0221);
+        nativeP2.setYSpeed((short) 0);
+        extendedSidekick.setYSpeed((short) 0);
+        List<PlayableEntity> sidekicks = List.of(nativeP2, extendedSidekick);
+        ObjectServices services = new QueryOnlyPlayerServices(camera, main, sidekicks, sidekicks);
+        HCZConveyorBeltObjectInstance belt = buildBelt(services, 0x0B28, 0x0200, 0x00, 0);
+
+        belt.update(10, main);
+
+        assertFalse(extendedSidekick.isObjectControlled(),
+                "Additional engine sidekicks need separate state before they can participate in the conveyor");
+    }
+
     private static HCZConveyorBeltObjectInstance buildBelt(
             ObjectServices services, int x, int y, int subtype, int renderFlags) throws Exception {
         ThreadLocal<ObjectServices> context = constructionContext();
@@ -127,6 +183,37 @@ class TestHCZConveyorBeltObjectInstance {
         Field field = AbstractObjectInstance.class.getDeclaredField("CONSTRUCTION_CONTEXT");
         field.setAccessible(true);
         return (ThreadLocal<ObjectServices>) field.get(null);
+    }
+
+    private static final class QueryOnlyPlayerServices extends TestObjectServices {
+        private final Camera camera;
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+        private final List<PlayableEntity> rawSidekicks;
+
+        private QueryOnlyPlayerServices(Camera camera, PlayableEntity main,
+                                        List<? extends PlayableEntity> queriedSidekicks,
+                                        List<PlayableEntity> rawSidekicks) {
+            this.camera = camera;
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+            this.rawSidekicks = List.copyOf(rawSidekicks);
+        }
+
+        @Override
+        public Camera camera() {
+            return camera;
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return rawSidekicks;
+        }
     }
 }
 

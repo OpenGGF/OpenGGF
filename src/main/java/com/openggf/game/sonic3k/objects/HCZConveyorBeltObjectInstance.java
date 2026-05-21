@@ -5,6 +5,8 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -194,20 +196,18 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
             loadArray[rawSubtype] = true;
         }
 
-        AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite)
-                ? (AbstractPlayableSprite) playerEntity : null;
+        NativePlayerSlots slots = nativePlayerSlots(playerEntity);
 
         // ROM: loc_311C4 (sonic3k.asm:66344-66365)
         // Process Player 1
-        if (player != null) {
-            processPlayer(player, p1State, frameCounter);
+        if (slots.p1 != null) {
+            processPlayer(slots.p1, p1State, frameCounter);
         }
 
-        // Process sidekicks (Player 2)
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sk) {
-                processPlayer(sk, p2State, frameCounter);
-            }
+        // Process native Player 2 only. Extended engine sidekicks need their own
+        // per-sidekick state before they can safely participate in this object.
+        if (slots.p2 != null) {
+            processPlayer(slots.p2, p2State, frameCounter);
         }
 
         // Camera culling (sonic3k.asm:66355-66364)
@@ -222,6 +222,31 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         if (cameraX > rightCheck) {
             unloadBelt();
         }
+    }
+
+    private NativePlayerSlots nativePlayerSlots(PlayableEntity updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        PlayableEntity main = query.mainPlayerOrNull();
+        if (!(main instanceof AbstractPlayableSprite) && updatePlayer instanceof AbstractPlayableSprite) {
+            main = updatePlayer;
+        }
+
+        AbstractPlayableSprite p1 = (main instanceof AbstractPlayableSprite sprite) ? sprite : null;
+        AbstractPlayableSprite p2 = null;
+        for (PlayableEntity candidate : query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate == main || !(candidate instanceof AbstractPlayableSprite sprite)) {
+                continue;
+            }
+            p2 = sprite;
+            break;
+        }
+        if (p2 == p1) {
+            p2 = null;
+        }
+        return new NativePlayerSlots(p1, p2);
+    }
+
+    private record NativePlayerSlots(AbstractPlayableSprite p1, AbstractPlayableSprite p2) {
     }
 
     /**

@@ -39,8 +39,24 @@ class TestObjectPhysicsStandardizationGuard {
             Pattern.compile("\\bTouchResponseProvider\\s+touchProfile\\b"),
             Pattern.compile("\\bvar\\s+touchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider(?!\\s*\\.)\\b"),
             Pattern.compile("\\btouchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider(?!\\s*\\.)\\b"));
+    private static final String[] PHYSICS_STANDARDIZATION_SCAN_PACKAGE_PATHS = {
+            "com/openggf/game/sonic1/events",
+            "com/openggf/game/sonic1/features",
+            "com/openggf/game/sonic1/objects",
+            "com/openggf/game/sonic2/events",
+            "com/openggf/game/sonic2/features",
+            "com/openggf/game/sonic2/objects",
+            "com/openggf/game/sonic3k/events",
+            "com/openggf/game/sonic3k/features",
+            "com/openggf/game/sonic3k/objects",
+            "com/openggf/level/objects",
+    };
 
     private static final List<BaselineViolation> BASELINE = List.of(
+            baseline("com/openggf/game/sonic3k/features/HCZWaterSkimHandler.java",
+                    "AbstractPlayableSprite p2 = sidekicks.getFirst();",
+                    ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS,
+                    ReasonCode.PENDING_NATIVE_P2_QUERY_MIGRATION, 2),
             baseline("com/openggf/game/sonic1/objects/Sonic1ChainedStomperObjectInstance.java",
                     "public TouchRegion[] getMultiTouchRegions() {",
                     ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
@@ -480,7 +496,7 @@ class TestObjectPhysicsStandardizationGuard {
         }
         List<SourceViolation> violations = new ArrayList<>();
         for (Path sourceFile : ObjectGuardSourceScanner.javaFilesUnderPackages(
-                srcMain, ObjectGuardSourceScanner.OBJECT_PACKAGE_PATHS)) {
+                srcMain, PHYSICS_STANDARDIZATION_SCAN_PACKAGE_PATHS)) {
             String path = srcMain.relativize(sourceFile).toString().replace('\\', '/');
             SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(
                     Files.readAllLines(sourceFile));
@@ -494,6 +510,7 @@ class TestObjectPhysicsStandardizationGuard {
             return List.of();
         }
         boolean gameObjectPath = isGameObjectPath(path);
+        boolean physicsStandardizationPath = isPhysicsStandardizationPath(path);
         boolean hasTouchResponseProfile = hasTouchResponseProfile(source);
         List<SourceViolation> violations = new ArrayList<>();
         for (String line : source.lines()) {
@@ -505,7 +522,7 @@ class TestObjectPhysicsStandardizationGuard {
                 violations.add(new SourceViolation(path, trimmed,
                         ViolationKind.DIRECT_OBJECT_CONTROL_SETTER));
             }
-            if (gameObjectPath && isRawNativeP2SidekickAccess(trimmed)) {
+            if (physicsStandardizationPath && isRawNativeP2SidekickAccess(trimmed)) {
                 violations.add(new SourceViolation(path, trimmed,
                         ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS));
             }
@@ -530,6 +547,15 @@ class TestObjectPhysicsStandardizationGuard {
 
     private static boolean isGameObjectPath(String path) {
         for (String packagePath : ObjectGuardSourceScanner.GAME_OBJECT_PACKAGE_PATHS) {
+            if (path.startsWith(packagePath + "/")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isPhysicsStandardizationPath(String path) {
+        for (String packagePath : PHYSICS_STANDARDIZATION_SCAN_PACKAGE_PATHS) {
             if (path.startsWith(packagePath + "/")) {
                 return true;
             }
@@ -587,6 +613,7 @@ class TestObjectPhysicsStandardizationGuard {
     private enum ReasonCode {
         BOSS_OR_CUTSCENE_ESCAPE_HATCH,
         CUTSCENE_SCRIPT,
+        PENDING_NATIVE_P2_QUERY_MIGRATION,
         PENDING_PARITY_TRIAGE,
         PENDING_PROFILE_MIGRATION
     }
