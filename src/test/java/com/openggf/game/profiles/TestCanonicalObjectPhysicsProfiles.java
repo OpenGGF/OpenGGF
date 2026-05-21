@@ -79,6 +79,22 @@ class TestCanonicalObjectPhysicsProfiles {
     }
 
     @Test
+    void canonicalSolidFactoriesNameFullAndMonitorPolicies() {
+        SolidRoutineProfile full = SolidRoutineProfile.fullSolid(false);
+        SolidRoutineProfile monitor = SolidRoutineProfile.monitorSolid(4, false);
+
+        assertEquals(SolidRoutineKind.FULL_SOLID, full.kind());
+        assertFalse(full.monitorSolidity());
+        assertFalse(full.stickyContactBuffer());
+        assertTrue(full.forceAirOnRideExit());
+        assertEquals(SolidRoutineKind.MONITOR_SOLID, monitor.kind());
+        assertTrue(monitor.monitorSolidity());
+        assertEquals(4, monitor.monitorVerticalOffset());
+        assertFalse(monitor.stickyContactBuffer());
+        assertTrue(monitor.forceAirOnRideExit());
+    }
+
+    @Test
     void canonicalSlopedProfileMapsCurrentProviderDefaultsAndDelegatesSlopeData() {
         byte[] slopeData = {1, 2, 3};
         SlopedSolidProvider provider = new MinimalSlopedProvider(slopeData, true);

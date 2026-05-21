@@ -10,6 +10,8 @@ import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.SolidRoutineKind;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
@@ -125,6 +127,18 @@ class TestSonic3kMonitorObjectInstance {
         assertEquals(0, player.getYSpeed());
         assertFalse(player.getAir());
         assertTrue(player.isOnObject());
+    }
+
+    @Test
+    void exposesSonic3kMonitorSolidRoutineProfile() {
+        Sonic3kMonitorObjectInstance monitor = monitor();
+
+        SolidRoutineProfile profile = monitor.getSolidRoutineProfile();
+
+        assertEquals(SolidRoutineKind.MONITOR_SOLID, profile.kind());
+        assertTrue(profile.monitorSolidity());
+        assertEquals(4, profile.monitorVerticalOffset());
+        assertFalse(profile.stickyContactBuffer());
     }
 
     @Test

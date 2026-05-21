@@ -17,6 +17,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -368,6 +369,11 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         // wrapper gates roll-animation hits, then branches to SolidObject_cont
         // for normal solid classification (docs/s2disasm/s2.asm:25448-25452).
         return false;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(false);
     }
 
     @Override

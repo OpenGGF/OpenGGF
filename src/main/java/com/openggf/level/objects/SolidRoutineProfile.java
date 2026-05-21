@@ -22,6 +22,16 @@ public record SolidRoutineProfile(
         return fromCanonical(com.openggf.game.profiles.solidroutine.SolidRoutineProfile.fromProvider(provider));
     }
 
+    public static SolidRoutineProfile fullSolid(boolean stickyContactBuffer) {
+        return fromCanonical(com.openggf.game.profiles.solidroutine.SolidRoutineProfile.fullSolid(stickyContactBuffer));
+    }
+
+    public static SolidRoutineProfile monitorSolid(int verticalOffset, boolean stickyContactBuffer) {
+        return fromCanonical(com.openggf.game.profiles.solidroutine.SolidRoutineProfile.monitorSolid(
+                verticalOffset,
+                stickyContactBuffer));
+    }
+
     public static SolidRoutineAdapter adapt(SolidObjectProvider provider) {
         return new SolidRoutineAdapter(
                 Objects.requireNonNull(provider, "provider"),
