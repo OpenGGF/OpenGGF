@@ -13,6 +13,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectControlledSolidContactController;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -1441,8 +1442,11 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     private AbstractPlayableSprite resolveSidekick() {
         ObjectServices svc = tryServices();
         if (svc == null) return null;
-        List<PlayableEntity> sks = svc.sidekicks();
-        for (PlayableEntity sk : sks) {
+        PlayableEntity main = svc.playerQuery().mainPlayerOrNull();
+        for (PlayableEntity sk : svc.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (sk == main) {
+                continue;
+            }
             if (sk instanceof AbstractPlayableSprite p) {
                 return p;
             }

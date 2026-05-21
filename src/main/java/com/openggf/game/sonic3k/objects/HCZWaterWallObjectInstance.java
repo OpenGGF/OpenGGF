@@ -7,6 +7,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -436,7 +438,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
             player.setAir(true);
 
             // Apply to sidekicks
-            for (PlayableEntity sidekickEntity : services().sidekicks()) {
+            for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
                 if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
                     sidekick.setXSpeed((short) 0);
                     sidekick.setYSpeed((short) VERT_ERUPTION_PLAYER_Y_VEL);
@@ -511,7 +513,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+        for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
                 ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
                 sidekick.setControlLocked(true);
@@ -526,7 +528,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
         ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+        for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
                 ObjectControlState.none().applyTo(sidekick);
                 sidekick.setControlLocked(false);
@@ -537,7 +539,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
     private void pullPlayersUp(AbstractPlayableSprite player, int pixels) {
         player.setY((short) (player.getY() - pixels));
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+        for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
                 sidekick.setY((short) (sidekick.getY() - pixels));
             }
@@ -547,11 +549,20 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
     private void setPlayerAnim(AbstractPlayableSprite player, Sonic3kAnimationIds animId) {
         player.setAnimationId(animId);
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+        for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
                 sidekick.setAnimationId(animId);
             }
         }
+    }
+
+    private List<PlayableEntity> sidekickParticipants(AbstractPlayableSprite player) {
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> player,
+                () -> services().playerQuery().sidekicks());
+        return query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS).stream()
+                .filter(candidate -> candidate != player)
+                .toList();
     }
 
     // ===== Rendering =====

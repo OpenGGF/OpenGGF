@@ -8,10 +8,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,6 +26,17 @@ class TestObjectPhysicsStandardizationGuard {
             "(?:getFirst\\s*\\(\\s*\\)|\\.get\\s*\\(\\s*0\\s*\\)|\\.stream\\s*\\(\\s*\\)\\.findFirst\\s*\\()");
     private static final Pattern NATIVE_P2_SIDEKICK_ITERATION = Pattern.compile(
             "\\bfor\\s*\\([^:]+:\\s*[^;{}]*\\.sidekicks\\s*\\(\\s*\\)\\s*\\)");
+    private static final Pattern NATIVE_P2_SIDEKICK_ALIAS_ASSIGNMENT = Pattern.compile(
+            "\\b([A-Za-z_$][\\w$]*)\\s*=\\s*(?:(?:[A-Za-z_$][\\w$]*|services\\s*\\(\\s*\\))"
+                    + "\\s*\\.\\s*sidekicks\\s*\\(\\s*\\)|getSidekicks\\s*\\(\\s*\\))");
+    private static final Pattern RAW_OBJECT_SERVICES_SIDEKICKS = Pattern.compile(
+            "(?:\\b(?:services|svc|objectServices)\\b\\s*|\\bservices\\s*\\(\\s*\\)\\s*)"
+                    + "\\.\\s*sidekicks\\s*\\(");
+    private static final Pattern RAW_OBJECT_SERVICES_SIDEKICK_METHOD_REFERENCE = Pattern.compile(
+            "(?:\\b(?:services|svc|objectServices)\\b\\s*|\\bservices\\s*\\(\\s*\\)\\s*)"
+                    + "::\\s*sidekicks\\b");
+    private static final Pattern RAW_GET_SIDEKICKS_SUPPLIER = Pattern.compile(
+            "(?:->\\s*[^;]*\\.\\s*getSidekicks\\s*\\(|::\\s*getSidekicks\\b)");
     private static final Pattern DIRECT_LIFECYCLE_OPERATION = Pattern.compile(
             "(?:setSlotIndex\\s*\\(\\s*-\\s*1\\s*\\)|\\.markRemembered\\s*\\(|"
                     + "\\.removeFromActiveSpawns\\s*\\(|\\.addDynamicObjectAtSlot\\s*\\(|"
@@ -54,23 +68,7 @@ class TestObjectPhysicsStandardizationGuard {
             "com/openggf/level/objects",
     };
 
-    private static final List<BaselineViolation> BASELINE = List.of(
-            baseline("com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceController.java",
-                    "for (PlayableEntity sidekick : services().sidekicks()) {",
-                    ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS,
-                    ReasonCode.PENDING_NATIVE_P2_QUERY_MIGRATION, 1),
-            baseline("com/openggf/game/sonic3k/objects/HCZWaterWallObjectInstance.java",
-                    "for (PlayableEntity sidekickEntity : services().sidekicks()) {",
-                    ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS,
-                    ReasonCode.PENDING_NATIVE_P2_QUERY_MIGRATION, 5),
-            baseline("com/openggf/game/sonic3k/objects/Mgz2EndEggCapsuleInstance.java",
-                    "for (var sidekickEntity : services().sidekicks()) {",
-                    ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS,
-                    ReasonCode.PENDING_NATIVE_P2_QUERY_MIGRATION, 1),
-            baseline("com/openggf/game/sonic3k/objects/MgzDrillingRobotnikInstance.java",
-                    "public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {",
-                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
-                    ReasonCode.PENDING_PROFILE_MIGRATION, 1));
+    private static final List<BaselineViolation> BASELINE = List.of();
 
     @Test
     void objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites() throws IOException {
@@ -223,6 +221,8 @@ class TestObjectPhysicsStandardizationGuard {
                 "    for (PlayableEntity p2d : services().sidekicks()) {",
                 "      applyNativeP2Effect(p2d);",
                 "    }",
+                "    ObjectPlayerQuery query = new ObjectPlayerQuery(() -> player,",
+                "        () -> services != null ? services.sidekicks() : List.of());",
                 "  }",
                 "}"));
 
@@ -244,8 +244,123 @@ class TestObjectPhysicsStandardizationGuard {
                         new SourceViolation(
                                 path,
                                 "for (PlayableEntity p2d : services().sidekicks()) {",
+                        ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "() -> services != null ? services.sidekicks() : List.of());",
                                 ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS)),
                 scanSource(path, source));
+    }
+
+    @Test
+    void guardDetectsRawSidekickServiceAliasBeforeIterationOrIndexAccessInSampleSource() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  void update(ObjectServices svc) {",
+                "    List<PlayableEntity> sks = svc.sidekicks();",
+                "    for (PlayableEntity sk : sks) {",
+                "      apply(sk);",
+                "    }",
+                "    var serviceSidekicks = services().sidekicks();",
+                "    PlayableEntity nativeP2 = serviceSidekicks.get(0);",
+                "    List<PlayableEntity> reassigned;",
+                "    reassigned = services().sidekicks();",
+                "    PlayableEntity nativeP2b = reassigned.stream().findFirst().orElse(null);",
+                "  }",
+                "}"));
+
+        String path = "com/openggf/game/sonic3k/objects/Sample.java";
+
+        assertEquals(List.of(
+                        new SourceViolation(
+                                path,
+                                "List<PlayableEntity> sks = svc.sidekicks();",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "for (PlayableEntity sk : sks) {",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "var serviceSidekicks = services().sidekicks();",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "PlayableEntity nativeP2 = serviceSidekicks.get(0);",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "reassigned = services().sidekicks();",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "PlayableEntity nativeP2b = reassigned.stream().findFirst().orElse(null);",
+                        ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS)),
+                scanSource(path, source));
+    }
+
+    @Test
+    void guardDetectsRawSidekickMethodReferenceSuppliersInSampleSource() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  void update(ObjectServices svc) {",
+                "    ObjectPlayerQuery query = new ObjectPlayerQuery(() -> player, services()::sidekicks);",
+                "    Supplier<List<PlayableEntity>> supplier = svc::sidekicks;",
+                "  }",
+                "}"));
+
+        String path = "com/openggf/game/sonic1/objects/Sample.java";
+
+        assertEquals(List.of(
+                        new SourceViolation(
+                                path,
+                                "ObjectPlayerQuery query = new ObjectPlayerQuery(() -> player, services()::sidekicks);",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "Supplier<List<PlayableEntity>> supplier = svc::sidekicks;",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS)),
+                scanSource(path, source));
+    }
+
+    @Test
+    void guardDetectsRawGetSidekicksSuppliersInSampleSource() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  void update() {",
+                "    ObjectPlayerQuery query = new ObjectPlayerQuery(",
+                "        () -> GameServices.camera().getFocusedSprite(),",
+                "        () -> GameServices.sprites().getSidekicks());",
+                "    Supplier<List<AbstractPlayableSprite>> supplier = GameServices.sprites()::getSidekicks;",
+                "  }",
+                "}"));
+
+        String path = "com/openggf/game/sonic3k/features/Sample.java";
+
+        assertEquals(List.of(
+                        new SourceViolation(
+                                path,
+                                "() -> GameServices.sprites().getSidekicks());",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "Supplier<List<AbstractPlayableSprite>> supplier = GameServices.sprites()::getSidekicks;",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS)),
+                scanSource(path, source));
+    }
+
+    @Test
+    void guardAllowsPlayerQuerySidekickSuppliersInSampleSource() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  void update(ObjectServices services) {",
+                "    ObjectPlayerQuery query = new ObjectPlayerQuery(",
+                "        () -> player,",
+                "        () -> services.playerQuery().sidekicks());",
+                "  }",
+                "}"));
+
+        assertEquals(List.of(), scanSource("com/openggf/game/sonic3k/objects/Sample.java", source));
     }
 
     @Test
@@ -377,6 +492,7 @@ class TestObjectPhysicsStandardizationGuard {
         boolean gameObjectPath = isGameObjectPath(path);
         boolean physicsStandardizationPath = isPhysicsStandardizationPath(path);
         boolean hasTouchResponseProfile = hasTouchResponseProfile(source);
+        Set<String> nativeP2SidekickAliases = new HashSet<>();
         List<SourceViolation> violations = new ArrayList<>();
         for (String line : source.lines()) {
             String trimmed = line.trim();
@@ -387,9 +503,12 @@ class TestObjectPhysicsStandardizationGuard {
                 violations.add(new SourceViolation(path, trimmed,
                         ViolationKind.DIRECT_OBJECT_CONTROL_SETTER));
             }
-            if (physicsStandardizationPath && isRawNativeP2SidekickAccess(trimmed)) {
+            if (physicsStandardizationPath && isRawNativeP2SidekickAccess(trimmed, nativeP2SidekickAliases)) {
                 violations.add(new SourceViolation(path, trimmed,
                         ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS));
+            }
+            if (physicsStandardizationPath) {
+                recordNativeP2SidekickAlias(trimmed, nativeP2SidekickAliases);
             }
             if (isDirectLifecycleOperation(trimmed)) {
                 violations.add(new SourceViolation(path, trimmed,
@@ -428,11 +547,38 @@ class TestObjectPhysicsStandardizationGuard {
         return false;
     }
 
-    private static boolean isRawNativeP2SidekickAccess(String trimmed) {
+    private static boolean isRawNativeP2SidekickAccess(String trimmed, Set<String> nativeP2SidekickAliases) {
         String lower = trimmed.toLowerCase(Locale.ROOT);
         return (NATIVE_P2_SIDEKICK_ACCESS.matcher(trimmed).find()
                 && (lower.contains("sidekick") || trimmed.contains("getSidekicks()")))
-                || NATIVE_P2_SIDEKICK_ITERATION.matcher(trimmed).find();
+                || RAW_OBJECT_SERVICES_SIDEKICKS.matcher(trimmed).find()
+                || RAW_OBJECT_SERVICES_SIDEKICK_METHOD_REFERENCE.matcher(trimmed).find()
+                || RAW_GET_SIDEKICKS_SUPPLIER.matcher(trimmed).find()
+                || NATIVE_P2_SIDEKICK_ITERATION.matcher(trimmed).find()
+                || isRawNativeP2SidekickAliasAccess(trimmed, nativeP2SidekickAliases);
+    }
+
+    private static boolean isRawNativeP2SidekickAliasAccess(String trimmed, Set<String> nativeP2SidekickAliases) {
+        for (String alias : nativeP2SidekickAliases) {
+            String quotedAlias = Pattern.quote(alias);
+            if (Pattern.compile("\\bfor\\s*\\([^:]+:\\s*" + quotedAlias + "\\s*\\)").matcher(trimmed).find()
+                    || Pattern.compile("\\b" + quotedAlias + "\\s*\\.\\s*get\\s*\\(\\s*0\\s*\\)")
+                    .matcher(trimmed).find()
+                    || Pattern.compile("\\b" + quotedAlias + "\\s*\\.\\s*getFirst\\s*\\(\\s*\\)")
+                    .matcher(trimmed).find()
+                    || Pattern.compile("\\b" + quotedAlias + "\\s*\\.\\s*stream\\s*\\(\\s*\\)\\s*\\.\\s*findFirst\\s*\\(")
+                    .matcher(trimmed).find()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void recordNativeP2SidekickAlias(String trimmed, Set<String> nativeP2SidekickAliases) {
+        Matcher matcher = NATIVE_P2_SIDEKICK_ALIAS_ASSIGNMENT.matcher(trimmed);
+        while (matcher.find()) {
+            nativeP2SidekickAliases.add(matcher.group(1));
+        }
     }
 
     private static boolean isDirectLifecycleOperation(String trimmed) {

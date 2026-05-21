@@ -146,9 +146,10 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
 
     private int nearestPlayerXDistance(PlayableEntity mainPlayer) {
         ObjectServices services = tryServices();
+        ObjectPlayerQuery serviceQuery = services != null ? services.playerQuery() : null;
         ObjectPlayerQuery query = new ObjectPlayerQuery(
                 () -> livePlayerOrNull(mainPlayer),
-                () -> livePlayers(services != null ? services.sidekicks() : List.of()));
+                () -> livePlayers(serviceQuery != null ? serviceQuery.sidekicks() : List.of()));
         return query.nearestByRomX(PLAYER_PARTICIPATION, motion.x).distance();
     }
 

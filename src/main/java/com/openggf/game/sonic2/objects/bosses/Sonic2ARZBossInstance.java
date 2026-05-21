@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.Sonic2Rng;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -188,18 +189,12 @@ public class Sonic2ARZBossInstance extends AbstractBossInstance {
     }
 
     private boolean checkInitConditions(AbstractPlayableSprite player) {
-        var sidekicks = services().sidekicks();
-        if (!sidekicks.isEmpty()) {
-            AbstractPlayableSprite mainPlayer = services().camera().getFocusedSprite();
-            if (mainPlayer != null) {
-                int mainX = mainPlayer.getCentreX();
-                if (mainX < PLAYER_CHECK_LEFT_X || mainX > PLAYER_CHECK_RIGHT_X) {
-                    return false;
-                }
-            }
-            for (PlayableEntity sidekick : sidekicks) {
-                int sidekickX = sidekick.getCentreX();
-                if (sidekickX < PLAYER_CHECK_LEFT_X || sidekickX > PLAYER_CHECK_RIGHT_X) {
+        var participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (participants.size() > 1) {
+            for (PlayableEntity participant : participants) {
+                int x = participant.getCentreX();
+                if (x < PLAYER_CHECK_LEFT_X || x > PLAYER_CHECK_RIGHT_X) {
                     return false;
                 }
             }

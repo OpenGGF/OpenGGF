@@ -4,6 +4,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 
 /**
@@ -39,7 +41,10 @@ public class Mgz2EndEggCapsuleInstance extends AbstractS3kFloatingEndEggCapsuleI
     }
 
     private boolean isSonicActivelyCarriedByTails() {
-        for (var sidekickEntity : services().sidekicks()) {
+        ObjectPlayerQuery sidekickQuery = new ObjectPlayerQuery(
+                () -> null,
+                () -> services().playerQuery().sidekicks());
+        for (var sidekickEntity : sidekickQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick && isTails(sidekick)) {
                 SidekickCpuController controller = sidekick.getCpuController();
                 if (controller != null && controller.isFlyingCarrying()) {

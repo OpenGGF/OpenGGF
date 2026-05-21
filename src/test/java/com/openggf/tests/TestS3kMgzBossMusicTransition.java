@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import org.junit.jupiter.api.Test;
@@ -129,6 +130,20 @@ class TestS3kMgzBossMusicTransition {
                 "ROM loc_6CF62 skips first thruster flame touch when V_int_run_count bit 0 is set");
         assertEquals(0, regions[3].collisionFlags(),
                 "ROM loc_6CF62 skips second thruster flame touch when V_int_run_count bit 0 is set");
+    }
+
+    @Test
+    void endBossTouchProfileExposesMultiRegionDispatch() {
+        MgzEndBossInstance boss = new MgzEndBossInstance(
+                new ObjectSpawn(0x3D20, 0x0668, Sonic3kObjectIds.MGZ_END_BOSS, 0, 0, false, 0));
+        boss.setServices(new RecordingServices());
+
+        updateThroughFrame(boss, 120);
+
+        assertTrue(boss.getTouchResponseProfile().multiRegionSource(),
+                "MGZ boss profile should advertise its body, drill, and flame regions to the dispatcher");
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY,
+                boss.getTouchResponseProfile().stopAfterFirstOverlapPolicy());
     }
 
     @Test

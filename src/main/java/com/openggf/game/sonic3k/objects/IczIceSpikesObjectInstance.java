@@ -112,9 +112,10 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
 
     private int nearestPlayerXDistance(PlayableEntity player) {
         ObjectServices services = tryServices();
+        ObjectPlayerQuery serviceQuery = services != null ? services.playerQuery() : null;
         ObjectPlayerQuery query = new ObjectPlayerQuery(
                 () -> player,
-                () -> services != null ? services.sidekicks() : List.of());
+                () -> serviceQuery != null ? serviceQuery.sidekicks() : List.of());
         return query.nearestByRomX(PLAYER_PARTICIPATION, x).distance();
     }
 

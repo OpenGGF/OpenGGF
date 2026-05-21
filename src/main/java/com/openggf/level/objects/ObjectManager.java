@@ -4725,7 +4725,8 @@ public class ObjectManager {
                         || touchProfile.continuousCallbacks()
                         || !overlappingSet.contains(instance);
                 if (shouldTrigger) {
-                    TouchResponseResult result = new TouchResponseResult(sizeIndex, width, height, category);
+                    TouchResponseResult result = new TouchResponseResult(
+                            sizeIndex, width, height, category, touchProfile.shieldReactionFlags());
                     TouchResponseListener listener = instance instanceof TouchResponseListener casted ? casted : null;
                     if (isSidekick) {
                         handleTouchResponseSidekick(player, instance, listener, result);
@@ -4776,7 +4777,8 @@ public class ObjectManager {
                         || profile.continuousCallbacks()
                         || !overlappingSet.contains(instance);
                 if (shouldTrigger) {
-                    TouchResponseResult result = new TouchResponseResult(sizeIndex, width, height, category);
+                    TouchResponseResult result = new TouchResponseResult(
+                            sizeIndex, width, height, category, region.shieldReactionFlags());
                     TouchResponseListener listener = instance instanceof TouchResponseListener casted ? casted : null;
                     if (isSidekick) {
                         handleTouchResponseSidekick(player, instance, listener, result);
@@ -5025,7 +5027,7 @@ public class ObjectManager {
             }
 
             switch (result.category()) {
-                case HURT -> applyHurt(player, instance);
+                case HURT -> applyHurt(player, instance, result);
                 case ENEMY -> {
                     if (isPlayerAttacking(player, instance)) {
                         // ROM: Touch_Enemy_Part2 checks collision_property BEFORE decrementing HP.
@@ -5062,7 +5064,7 @@ public class ObjectManager {
                             }
                         }
                     } else {
-                        applyHurt(player, instance);
+                        applyHurt(player, instance, result);
                     }
                 }
                 case SPECIAL -> {
@@ -5075,7 +5077,7 @@ public class ObjectManager {
                         }
                         applyBossBounce(player);
                     } else {
-                        applyHurt(player, instance);
+                        applyHurt(player, instance, result);
                     }
                 }
             }
@@ -5171,7 +5173,7 @@ public class ObjectManager {
             }
         }
 
-        private void applyHurt(PlayableEntity player, ObjectInstance instance) {
+        private void applyHurt(PlayableEntity player, ObjectInstance instance, TouchResponseResult result) {
             if (player.getInvulnerable()) {
                 return;
             }
@@ -5186,8 +5188,8 @@ public class ObjectManager {
             boolean spikeHit = instance != null && instance.getSpawn().objectId() == 0x36;
 
             // S3K shield_reaction bit 4: fire shield blocks fire damage
-            boolean fireHit = !spikeHit && instance instanceof TouchResponseProvider trp
-                    && (trp.getShieldReactionFlags() & 0x10) != 0;
+            boolean fireHit = !spikeHit && result != null
+                    && (result.shieldReactionFlags() & 0x10) != 0;
 
             DamageCause cause = spikeHit
                     ? DamageCause.SPIKE

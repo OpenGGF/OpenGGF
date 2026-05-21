@@ -7,6 +7,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -96,7 +98,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance {
                 player.setControlLocked(true);
                 player.clearForcedInputMask();
                 player.setForceInputRight(true);
-                setSidekickControlLocked(true);
+                setSidekickControlLocked(player, true);
                 return;
             }
 
@@ -109,7 +111,7 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance {
             player.setGSpeed((short) 0);
             // ROM: force look-up input while waiting for Knuckles
             player.setForcedInputMask(AbstractPlayableSprite.INPUT_UP);
-            setSidekickControlLocked(true);
+            setSidekickControlLocked(player, true);
             spawnDynamicObject(CutsceneKnucklesAiz2Instance.createDefault());
         }
 
@@ -149,15 +151,22 @@ public class Aiz2BossEndSequenceController extends AbstractObjectInstance {
         player.setControlLocked(true);
         player.clearForcedInputMask();
         player.setForceInputRight(true);
-        setSidekickControlLocked(true);
+        setSidekickControlLocked(player, true);
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
     }
 
-    private void setSidekickControlLocked(boolean locked) {
-        for (PlayableEntity sidekick : services().sidekicks()) {
+    private void setSidekickControlLocked(AbstractPlayableSprite player, boolean locked) {
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> player,
+                () -> services().playerQuery().sidekicks());
+        for (PlayableEntity sidekick : query.playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (sidekick == player) {
+                continue;
+            }
             if (sidekick instanceof AbstractPlayableSprite sprite) {
                 sprite.setControlLocked(locked);
                 if (!locked) {

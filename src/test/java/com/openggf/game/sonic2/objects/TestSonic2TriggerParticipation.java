@@ -14,6 +14,7 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.objects.badniks.SpinyBadnikInstance;
+import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -265,6 +266,23 @@ class TestSonic2TriggerParticipation {
 
         assertEquals("ATTACKING", field(spiny, "state").toString(),
                 "Spiny should resolve closest P2 candidates through ObjectPlayerQuery");
+    }
+
+    @Test
+    void arzBossInitWaitsForQueryOnlyExtendedSidekick() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x2A80, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x2AA0, 0x1000);
+        TestablePlayableSprite extraSidekick = player("knuckles", 0x2B80, 0x1000);
+        Sonic2ARZBossInstance boss = new Sonic2ARZBossInstance(
+                new ObjectSpawn(0x2AE0, 0x0388, 0x89, 0, 0, false, 0));
+        boss.setServices(new QueryOnlyPlayerServices(main, List.of(tails, extraSidekick)));
+
+        Method checkInitConditions = Sonic2ARZBossInstance.class
+                .getDeclaredMethod("checkInitConditions", com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        checkInitConditions.setAccessible(true);
+
+        assertFalse((boolean) checkInitConditions.invoke(boss, main),
+                "ARZ boss intro should wait for every engine sidekick exposed through ObjectPlayerQuery");
     }
 
     @Test

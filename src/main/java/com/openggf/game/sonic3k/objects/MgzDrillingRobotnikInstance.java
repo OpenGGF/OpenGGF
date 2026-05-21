@@ -20,6 +20,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -1251,6 +1252,11 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance {
                         flameFlags,
                         THRUSTER_FLAME_SHIELD_REACTION),
         };
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TouchResponseProfile.fromProvider(this, multiRegionSource);
     }
 
     @Override

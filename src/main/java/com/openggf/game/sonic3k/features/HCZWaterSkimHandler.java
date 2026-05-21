@@ -468,9 +468,11 @@ public final class HCZWaterSkimHandler {
     }
 
     private static ObjectPlayerQuery playerQueryFromGameServices() {
+        AbstractPlayableSprite mainPlayer = GameServices.camera().getFocusedSprite();
+        List<? extends PlayableEntity> sidekicks = List.copyOf(GameServices.sprites().getSidekicks());
         return new ObjectPlayerQuery(
-                () -> GameServices.camera().getFocusedSprite(),
-                () -> GameServices.sprites().getSidekicks());
+                () -> mainPlayer,
+                () -> sidekicks);
     }
 
     private static AbstractPlayableSprite nativeP2From(ObjectPlayerQuery query) {

@@ -42,14 +42,17 @@ public record TouchResponseProfile(
         TouchCategoryDecodeMode decodeMode = sonic2
                 ? TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY
                 : s3k ? TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY : TouchCategoryDecodeMode.NORMAL;
+        int shieldFlags = provider.getShieldReactionFlags();
 
         return new TouchResponseProfile(
                 decodeMode,
                 provider.requiresContinuousTouchCallbacks(),
                 provider.requiresRenderFlagForTouch(),
                 multiRegionSource,
-                TouchShieldDeflectCapability.NONE,
-                0,
+                (shieldFlags & SHIELD_REACTION_BOUNCE_BIT) != 0
+                        ? TouchShieldDeflectCapability.SHIELD_DEFLECT
+                        : TouchShieldDeflectCapability.NONE,
+                shieldFlags,
                 TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
                 TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
                 multiRegionSource
