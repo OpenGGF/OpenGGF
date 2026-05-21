@@ -51,6 +51,28 @@ class TestSolidRoutineProfiles {
     }
 
     @Test
+    void namedFullSolidFactoryUsesDefaultFullSolidPolicy() {
+        SolidRoutineProfile profile = SolidRoutineProfile.fullSolid(false);
+
+        assertEquals(SolidRoutineKind.FULL_SOLID, profile.kind());
+        assertFalse(profile.monitorSolidity());
+        assertFalse(profile.stickyContactBuffer());
+        assertTrue(profile.usesPlatformLandingSnap());
+        assertTrue(profile.forceAirOnRideExit());
+    }
+
+    @Test
+    void namedMonitorSolidFactoryCarriesMonitorOffsetAndStickyPolicy() {
+        SolidRoutineProfile profile = SolidRoutineProfile.monitorSolid(4, false);
+
+        assertEquals(SolidRoutineKind.MONITOR_SOLID, profile.kind());
+        assertTrue(profile.monitorSolidity());
+        assertEquals(4, profile.monitorVerticalOffset());
+        assertFalse(profile.stickyContactBuffer());
+        assertTrue(profile.forceAirOnRideExit());
+    }
+
+    @Test
     void topOnlyPlatformLikeProviderMapsStablePlatformFlags() {
         SolidObjectProvider provider = new MinimalSolidProvider(new SolidObjectParams(24, 8, 4)) {
             @Override

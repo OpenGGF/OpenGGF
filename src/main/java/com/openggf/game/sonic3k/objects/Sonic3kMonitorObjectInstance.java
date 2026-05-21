@@ -20,6 +20,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -464,6 +465,11 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         // (docs/skdisasm/sonic3k.asm:40559-40576), whose normal-gravity path
         // adds +4 before the d2/y_radius overlap check (lines 41429-41432).
         return 4;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.monitorSolid(4, false);
     }
 
     @Override

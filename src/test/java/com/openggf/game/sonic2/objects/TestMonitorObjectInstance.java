@@ -10,6 +10,8 @@ import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidRoutineKind;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
@@ -109,6 +111,20 @@ class TestMonitorObjectInstance {
 
         assertFalse(monitor.hasMonitorSolidity(),
                 "S2 Obj26 branches to SolidObject_cont after the roll-animation gate");
+    }
+
+    @Test
+    void exposesSonic2MonitorSolidRoutineProfile() {
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x1E10, 0x0291, 0x26, 0x00, 0, false, 0),
+                "Monitor");
+
+        SolidRoutineProfile profile = monitor.getSolidRoutineProfile();
+
+        assertEquals(SolidRoutineKind.FULL_SOLID, profile.kind());
+        assertFalse(profile.monitorSolidity());
+        assertEquals(0, profile.monitorVerticalOffset());
+        assertFalse(profile.stickyContactBuffer());
     }
 
     private static boolean isBroken(MonitorObjectInstance monitor) {

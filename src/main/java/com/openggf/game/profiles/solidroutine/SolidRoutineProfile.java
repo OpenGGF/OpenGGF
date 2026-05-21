@@ -45,6 +45,42 @@ public record SolidRoutineProfile(
                 provider.carriesAirborneRiderAfterExitPlatform());
     }
 
+    public static SolidRoutineProfile fullSolid(boolean stickyContactBuffer) {
+        return new SolidRoutineProfile(
+                SolidRoutineKind.FULL_SOLID,
+                false,
+                false,
+                0,
+                false,
+                stickyContactBuffer,
+                true,
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false);
+    }
+
+    public static SolidRoutineProfile monitorSolid(int verticalOffset, boolean stickyContactBuffer) {
+        return new SolidRoutineProfile(
+                SolidRoutineKind.MONITOR_SOLID,
+                false,
+                true,
+                verticalOffset,
+                false,
+                stickyContactBuffer,
+                true,
+                false,
+                false,
+                false,
+                false,
+                true,
+                false,
+                false);
+    }
+
     public static SolidRoutineAdapter adapt(SolidObjectProvider provider) {
         return new SolidRoutineAdapter(
                 Objects.requireNonNull(provider, "provider"),
