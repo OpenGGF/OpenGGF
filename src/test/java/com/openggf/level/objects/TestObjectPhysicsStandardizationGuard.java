@@ -39,7 +39,6 @@ class TestObjectPhysicsStandardizationGuard {
             baseline("com/openggf/game/sonic3k/objects/bosses/HczEndBossGeyserCutscene.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
             baseline("com/openggf/game/sonic3k/objects/bosses/HczEndBossWaterColumn.java", "sprite.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 3),
             baseline("com/openggf/game/sonic3k/objects/bosses/HczEndBossWaterColumn.java", "sprite.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
-            baseline("com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java", "ps.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 2),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 4),
             baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlSuppressesMovement(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 3),
@@ -125,6 +124,13 @@ class TestObjectPhysicsStandardizationGuard {
     void aizPlaneIntroUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
                 .filter(baseline -> baseline.path().endsWith("AizPlaneIntroInstance.java"))
+                .toList());
+    }
+
+    @Test
+    void cutsceneKnucklesAiz1UsesObjectControlStatePolicyInsteadOfBaseline() {
+        assertEquals(List.of(), BASELINE.stream()
+                .filter(baseline -> baseline.path().endsWith("CutsceneKnucklesAiz1Instance.java"))
                 .toList());
     }
 
