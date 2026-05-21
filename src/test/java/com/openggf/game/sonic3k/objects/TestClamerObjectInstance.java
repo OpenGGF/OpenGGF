@@ -1,17 +1,25 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
+import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -174,5 +182,104 @@ class TestClamerObjectInstance {
         }
         // After the close timer expires, loc_89056 resets routine to 0x02.
         assertEquals(0x02, clamer.testRoutine());
+    }
+
+    @Test
+    void playerParticipationUsesObjectPlayerQueryForAutoCloseAndCpropTarget() {
+        ClamerObjectInstance clamer =
+                new ClamerObjectInstance(new ObjectSpawn(0x0C98, 0x0470, 0xA3, 0, 1, false, 0));
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        nativeP2.setCpuControlled(true);
+        main.setCentreX((short) (0x0C98 - 0x80));
+        nativeP2.setCentreX((short) (0x0C98 + 0x40));
+        clamer.setServices(new QueryOnlyServices(main, nativeP2));
+
+        clamer.testStepIdle(main);
+
+        assertEquals(0x06, clamer.testRoutine());
+
+        clamer.onTouchResponse(main, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0);
+        clamer.update(0, main);
+        clamer.update(1, main);
+        main.setYSpeed((short) 0);
+        clamer.onTouchResponse(nativeP2, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 2);
+        clamer.update(2, main);
+
+        assertEquals((short) -0x0800, nativeP2.getYSpeed());
+        assertEquals((short) 0, main.getYSpeed());
+    }
+
+    @Test
+    void autoCloseUsesUpdatePrimaryAsNativeP1WhenQueryMainDiffers() {
+        ClamerObjectInstance clamer =
+                new ClamerObjectInstance(new ObjectSpawn(0x0C98, 0x0470, 0xA3, 0, 1, false, 0));
+        TestablePlayableSprite updatePrimary = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite queriedMain = new TestablePlayableSprite("knuckles", (short) 0, (short) 0);
+        updatePrimary.setCentreX((short) (0x0C98 + 0x40));
+        queriedMain.setCentreX((short) (0x0C98 - 0x40));
+        clamer.setServices(new QueryOnlyServices(queriedMain, List.of()));
+
+        clamer.testStepIdle(updatePrimary);
+
+        assertEquals(0x06, clamer.testRoutine());
+    }
+
+    @Test
+    void cpropNativeP2UsesQueriedSidekickWhenQueryMainDiffersFromPrimary() {
+        ClamerObjectInstance clamer =
+                new ClamerObjectInstance(new ObjectSpawn(0x0578, 0x0690, 0xA3, 0, 0, false, 0));
+        TestablePlayableSprite updatePrimary = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        TestablePlayableSprite queriedMain = new TestablePlayableSprite("knuckles", (short) 0, (short) 0);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        nativeP2.setCpuControlled(true);
+        clamer.setServices(new QueryOnlyServices(queriedMain, List.of(nativeP2)));
+
+        clamer.onTouchResponse(updatePrimary, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0);
+        clamer.update(0, updatePrimary);
+        clamer.update(1, updatePrimary);
+        updatePrimary.setYSpeed((short) 0);
+        clamer.onTouchResponse(nativeP2, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 2);
+        clamer.update(2, updatePrimary);
+
+        assertEquals((short) -0x0800, nativeP2.getYSpeed());
+        assertEquals((short) 0, queriedMain.getYSpeed());
+        assertEquals((short) 0, updatePrimary.getYSpeed());
+    }
+
+    @Test
+    void touchResponseProfileDeclaresClamerSpecialMultiRegionContract() {
+        ClamerObjectInstance clamer =
+                new ClamerObjectInstance(new ObjectSpawn(0x0578, 0x0690, 0xA3, 0, 0, false, 0));
+
+        TouchResponseProfile profile = clamer.getTouchResponseProfile();
+
+        assertEquals(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY, profile.categoryDecodeMode());
+        assertTrue(profile.continuousCallbacks());
+        assertTrue(profile.multiRegionSource());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY,
+                profile.stopAfterFirstOverlapPolicy());
+    }
+
+    private static final class QueryOnlyServices extends TestObjectServices {
+        private final ObjectPlayerQuery playerQuery;
+
+        private QueryOnlyServices(PlayableEntity main, PlayableEntity nativeP2) {
+            this(main, List.of(nativeP2));
+        }
+
+        private QueryOnlyServices(PlayableEntity main, List<? extends PlayableEntity> sidekicks) {
+            this.playerQuery = new ObjectPlayerQuery(() -> main, () -> sidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return playerQuery;
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            throw new AssertionError("Clamer must query participants through ObjectPlayerQuery");
+        }
     }
 }

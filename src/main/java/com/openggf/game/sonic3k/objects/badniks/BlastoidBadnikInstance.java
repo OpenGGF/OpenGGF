@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -257,16 +259,18 @@ public final class BlastoidBadnikInstance extends AbstractS3kBadnikInstance {
      * returns d2 = absolute X distance to the closer one.
      */
     private int findNearestPlayerXDistance(AbstractPlayableSprite mainPlayer) {
-        int nearest = mainPlayer != null && !mainPlayer.getDead()
-                ? Math.abs(currentX - mainPlayer.getCentreX()) : Integer.MAX_VALUE;
         ObjectServices svc = tryServices();
-        if (svc == null) return nearest;
-        for (PlayableEntity sidekick : svc.sidekicks()) {
-            if (!(sidekick instanceof AbstractPlayableSprite s) || s.getDead()) continue;
-            int dist = Math.abs(currentX - s.getCentreX());
-            if (dist < nearest) nearest = dist;
-        }
-        return nearest;
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> svc != null ? svc.playerQuery().sidekicks() : List.of());
+        return query.nearestByRomX(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS,
+                currentX,
+                BlastoidBadnikInstance::isLivePlayable).distance();
+    }
+
+    private static boolean isLivePlayable(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite && !sprite.getDead();
     }
 
     // ── Defeat + trigger ─────────────────────────────────────────────────

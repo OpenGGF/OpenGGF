@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -113,6 +114,21 @@ class TestObjectPlayerQuery {
     }
 
     @Test
+    void nearestRomXPlayerCanFilterDeadPlayersBeforeSelectingTarget() {
+        FakePlayer deadMain = player("main", 0x0100, 0, true);
+        FakePlayer liveSidekick = player("tails", 0x0180, 0);
+        ObjectPlayerQuery query = query(deadMain, liveSidekick);
+
+        ObjectPlayerQuery.NearestPlayerX nearest = query.nearestByRomX(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS,
+                0x0100,
+                livePlayers());
+
+        assertSame(liveSidekick, nearest.player());
+        assertEquals(0x80, nearest.distance());
+    }
+
+    @Test
     void policyMappingExposesNativeAndEngineParticipationSemantics() {
         assertEquals(ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE,
                 ObjectPlayerParticipationPolicy.nativePlayers(false));
@@ -202,10 +218,18 @@ class TestObjectPlayerQuery {
     }
 
     private static FakePlayer player(String name, int x, int y) {
-        return new FakePlayer(name, (short) x, (short) y);
+        return player(name, x, y, false);
     }
 
-    private record FakePlayer(String name, short centreX, short centreY) implements PlayableEntity {
+    private static FakePlayer player(String name, int x, int y, boolean dead) {
+        return new FakePlayer(name, (short) x, (short) y, dead);
+    }
+
+    private static Predicate<PlayableEntity> livePlayers() {
+        return player -> !player.getDead();
+    }
+
+    private record FakePlayer(String name, short centreX, short centreY, boolean dead) implements PlayableEntity {
         @Override public short getCentreX() { return centreX; }
         @Override public short getCentreY() { return centreY; }
         @Override public void setCentreX(short x) {}
@@ -249,7 +273,7 @@ class TestObjectPlayerQuery {
         @Override public void setLayer(byte layer) {}
         @Override public boolean isHighPriority() { return false; }
         @Override public void setHighPriority(boolean highPriority) {}
-        @Override public boolean getDead() { return false; }
+        @Override public boolean getDead() { return dead; }
         @Override public boolean isDebugMode() { return false; }
         @Override public boolean getInvulnerable() { return false; }
         @Override public boolean hasShield() { return false; }

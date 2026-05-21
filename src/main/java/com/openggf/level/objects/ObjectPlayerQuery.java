@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -73,11 +74,21 @@ public final class ObjectPlayerQuery {
     }
 
     public NearestPlayerX nearestByRomX(ObjectPlayerParticipationPolicy policy, int referenceX) {
+        return nearestByRomX(policy, referenceX, player -> true);
+    }
+
+    public NearestPlayerX nearestByRomX(ObjectPlayerParticipationPolicy policy,
+                                        int referenceX,
+                                        Predicate<? super PlayableEntity> playerFilter) {
         Objects.requireNonNull(policy, "policy");
+        Objects.requireNonNull(playerFilter, "playerFilter");
         List<PlayableEntity> players = participantsForRomX(policy);
         PlayableEntity nearest = null;
         int nearestDistance = Integer.MAX_VALUE;
         for (PlayableEntity player : players) {
+            if (!playerFilter.test(player)) {
+                continue;
+            }
             int distance = romSignedXDistance(referenceX, player.getCentreX());
             if (distance < nearestDistance) {
                 nearest = player;

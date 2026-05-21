@@ -15,6 +15,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -46,6 +48,8 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
     private static final int GLIDE_ACTIVE = 1;
     private static final int GLIDE_FALLING = 2;
     private static final int KNUCKLES_FALL_FROM_GLIDE_ANIM = 0x21;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private static final int[][] VEL_RIGHT_12 = {
             {0x400, -0x500}, {0x600, -0x600}, {0x600, -0x100}, {0x800, -0x200},
@@ -157,19 +161,17 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (broken) {
             return;
         }
 
         SolidCheckpointBatch batch = checkpointAll();
-        applyCheckpointContact(player, player != null ? batch.perPlayer().get(player) : null);
-        for (PlayableEntity sidekick : services().sidekicks()) {
+        for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
             if (broken) {
                 break;
             }
-            if (sidekick instanceof AbstractPlayableSprite sidekickSprite) {
-                applyCheckpointContact(sidekickSprite, batch.perPlayer().get(sidekick));
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                applyCheckpointContact(sprite, batch.perPlayer().get(participant));
             }
         }
         if (broken) {
@@ -179,6 +181,11 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         if (triggerControlled && isTriggerActive()) {
             setDestroyed(true);
         }
+    }
+
+    private ObjectPlayerQuery playerQuery(PlayableEntity primary) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> primary, query::sidekicks);
     }
 
     private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {

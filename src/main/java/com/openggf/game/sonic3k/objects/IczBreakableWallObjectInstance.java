@@ -16,6 +16,8 @@ import com.openggf.level.objects.GravityDebrisChild;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -55,6 +57,8 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
     private static final int PLATFORM_TRIGGER_WIDTH = 0x60;
     private static final int PLATFORM_TRIGGER_TOP = -0x40;
     private static final int PLATFORM_TRIGGER_HEIGHT = 0x80;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private final int x;
     private final int y;
@@ -75,12 +79,11 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
         }
 
         SolidCheckpointBatch batch = checkpointAll();
-        applyKnucklesContact(playerEntity, playerEntity != null ? batch.perPlayer().get(playerEntity) : null);
-        for (PlayableEntity sidekick : services().sidekicks()) {
+        for (PlayableEntity participant : playerQuery(playerEntity).playersFor(PLAYER_PARTICIPATION)) {
             if (broken) {
                 return;
             }
-            applyKnucklesContact(sidekick, batch.perPlayer().get(sidekick));
+            applyKnucklesContact(participant, batch.perPlayer().get(participant));
         }
 
         if (!broken && isPathFollowPlatformInBreakBox()) {
@@ -125,6 +128,11 @@ public class IczBreakableWallObjectInstance extends AbstractObjectInstance
             }
         }
         return false;
+    }
+
+    private ObjectPlayerQuery playerQuery(PlayableEntity primary) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> primary, query::sidekicks);
     }
 
     private static boolean isIczPathFollowPlatform(ObjectInstance object) {
