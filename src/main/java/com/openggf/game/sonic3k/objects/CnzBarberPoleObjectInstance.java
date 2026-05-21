@@ -4,10 +4,12 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,18 +39,20 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (playerEntity instanceof AbstractPlayableSprite player) {
-            updatePlayer(player);
+        AbstractPlayableSprite updatePlayer = playerEntity instanceof AbstractPlayableSprite player ? player : null;
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
         }
 
-        try {
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                if (sidekick instanceof AbstractPlayableSprite sprite) {
-                    updatePlayer(sprite);
-                }
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                updatePlayer(sprite);
             }
-        } catch (Exception ignored) {
-            // Some tests provide only the main player.
         }
     }
 

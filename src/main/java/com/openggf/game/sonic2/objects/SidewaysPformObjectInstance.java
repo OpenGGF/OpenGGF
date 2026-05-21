@@ -16,6 +16,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpritePieceRenderer;
@@ -125,6 +126,11 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return true;  // PlatformObject - only solid from top
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
     }
 
     @Override

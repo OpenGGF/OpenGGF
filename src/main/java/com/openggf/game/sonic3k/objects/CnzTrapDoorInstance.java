@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -62,8 +63,9 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
         if (state == FRAME_CLOSED) {
             checkPlayable(playerEntity);
 
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                checkPlayable(sidekick);
+            for (PlayableEntity participant : services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+                checkPlayable(participant);
                 if (state != FRAME_CLOSED) {
                     break;
                 }

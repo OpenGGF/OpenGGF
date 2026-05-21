@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -264,12 +265,7 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance 
                         geyserSpawn, Sonic1LavaGeyserObjectInstance.Role.HEAD,
                         null, this, false);
                 // ROM: FindNextFreeObj allocates slot after maker
-                if (mySlot >= 0) {
-                    int childSlot = services().objectManager().allocateSlotAfter(mySlot);
-                    if (childSlot >= 0) {
-                        geyser.setSlotIndex(childSlot);
-                    }
-                }
+                ObjectLifetimeOps.assignFindNextFreeChildSlot(services().objectManager(), geyser, mySlot);
                 return geyser;
             });
         }

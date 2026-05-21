@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -273,12 +274,7 @@ public class Sonic1GrassFireObjectInstance extends AbstractObjectInstance
             Sonic1GrassFireObjectInstance c = new Sonic1GrassFireObjectInstance(
                     currentX, fChildBaseY, sinkOffset, slopeData, parentPlatform, false);
             // ROM: FindNextFreeObj allocates a slot AFTER the current fire's slot.
-            if (mySlot >= 0) {
-                int childSlot = services().objectManager().allocateSlotAfter(mySlot);
-                if (childSlot >= 0) {
-                    c.setSlotIndex(childSlot);
-                }
-            }
+            ObjectLifetimeOps.assignFindNextFreeChildSlot(services().objectManager(), c, mySlot);
             return c;
         });
         children.add(child);

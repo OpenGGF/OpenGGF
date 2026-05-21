@@ -51,7 +51,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setSpindashCounter((short) 0);
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         return true;
     }
 
@@ -60,7 +60,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
                                      int frameCounter) {
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
 
         if (handleS2FlyingOffscreenTimeout(sidekick)) {
             return false;
@@ -179,7 +179,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setCentreYPreserveSubpixel((short) 0);
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         controller.returnApproachToSpawningAfterFlyingTimeout();
         return true;
     }

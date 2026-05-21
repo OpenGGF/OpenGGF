@@ -709,6 +709,45 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void aizIntroNormalRefreshBridgeOverridesOneCpuSlotWithoutMutatingLevelCounter() throws Exception {
+        GameModule previous = GameModuleRegistry.getBootstrapDefault();
+        try {
+            GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+
+            TestableSprite sonic = new TestableSprite("sonic");
+            TestableSprite tails = new TestableSprite("tails_p2");
+            tails.setCpuControlled(true);
+            tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+            tails.setAir(false);
+            tails.setCentreX((short) 0x1964);
+            tails.setCentreY((short) 0x041E);
+
+            short[] xHistory = new short[64];
+            short[] yHistory = new short[64];
+            short[] inputHistory = new short[64];
+            byte[] statusHistory = new byte[64];
+            Arrays.fill(xHistory, (short) 0x1964);
+            Arrays.fill(yHistory, (short) 0x03ED);
+            sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
+
+            SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+            controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+            setLevelFrameCounter(0x06BF);
+            controller.overrideNextCpuFrameCounter(0x06C0);
+            controller.update(0x06C0);
+
+            assertTrue(controller.getInputJumpPress(),
+                    "AIZ intro normal-refresh bridge should expose ROM-visible Level_frame_counter=$06C0 "
+                            + "to exactly one sidekick CPU slot");
+            assertEquals(0x06BF, GameServices.level().getFrameCounter(),
+                    "The bridge must not persistently advance LevelManager's stored frame counter");
+        } finally {
+            GameModuleRegistry.setCurrent(previous);
+        }
+    }
+
+    @Test
     void s3kCatchUpFlightOnlyBlocksOnLeaderObjectControlSignBit() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

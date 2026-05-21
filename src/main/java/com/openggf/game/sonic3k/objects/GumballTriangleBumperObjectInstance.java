@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -16,6 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -67,12 +69,19 @@ public class GumballTriangleBumperObjectInstance extends AbstractObjectInstance
         if (consumed) {
             return;
         }
-        if (playerEntity instanceof AbstractPlayableSprite player) {
-            tryFallbackBounce(player);
+        AbstractPlayableSprite updatePlayer = playerEntity instanceof AbstractPlayableSprite player ? player : null;
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
         }
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                tryFallbackBounce(sidekick);
+
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                tryFallbackBounce(sprite);
             }
         }
     }

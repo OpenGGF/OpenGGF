@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -242,12 +243,10 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
                 b.columnAnimTimer = 7; // start with timer at 7 for immediate frame select
                 b.columnAnimFrame = 0;
                 // ROM: FindNextFreeObj allocates slot after head
-                if (prevSlotHolder[0] >= 0) {
-                    int childSlot = services().objectManager().allocateSlotAfter(prevSlotHolder[0]);
-                    if (childSlot >= 0) {
-                        b.setSlotIndex(childSlot);
-                        prevSlotHolder[0] = childSlot;
-                    }
+                int childSlot = ObjectLifetimeOps.assignFindNextFreeChildSlot(
+                        services().objectManager(), b, prevSlotHolder[0]);
+                if (childSlot >= 0) {
+                    prevSlotHolder[0] = childSlot;
                 }
                 return b;
             });
@@ -273,12 +272,8 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
                     // which would cascade-spawn infinite children.
                     third.initialized = true;
                     // ROM: FindNextFreeObj allocates slot after body
-                    if (prevSlotHolder[0] >= 0) {
-                        int thirdSlot = services().objectManager().allocateSlotAfter(prevSlotHolder[0]);
-                        if (thirdSlot >= 0) {
-                            third.setSlotIndex(thirdSlot);
-                        }
-                    }
+                    ObjectLifetimeOps.assignFindNextFreeChildSlot(
+                            services().objectManager(), third, prevSlotHolder[0]);
                     return third;
                 });
 

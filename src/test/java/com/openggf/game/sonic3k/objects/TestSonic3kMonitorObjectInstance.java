@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.audio.AudioManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.tests.TestEnvironment;
 
@@ -15,7 +16,10 @@ import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.physics.Direction;
 import com.openggf.physics.Sensor;
+import com.openggf.physics.SensorResult;
+import com.openggf.sprites.managers.PlayableSpriteMovement;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class TestSonic3kMonitorObjectInstance {
 
@@ -80,6 +85,36 @@ class TestSonic3kMonitorObjectInstance {
         assertEquals(0xFA60, player.getYSpeed() & 0xFFFF,
                 "Breaking the monitor should negate the player's downward Y speed");
         assertFalse(monitor.isSolidFor(player));
+    }
+
+    @Test
+    void speedShoesEffectFeedsSameFrameAirAccelerationAfterContentUpdate() {
+        Sonic3kMonitorObjectInstance monitor = new Sonic3kMonitorObjectInstance(
+                new ObjectSpawn(0x0100, 0x0050, 0x01, 0x04, 0, false, 0));
+        monitor.setServices(new TestObjectServices().withAudioManager(mock(AudioManager.class)));
+        DummyPlayer player = new DummyPlayer();
+        player.setCentreX((short) 0x0100);
+        player.setCentreY((short) 0x0050);
+        player.setRolling(true);
+        player.setRollingJump(false);
+        player.setAir(true);
+        player.setAnimationId(Sonic3kAnimationIds.ROLL);
+        player.setYSpeed((short) 0x05A0);
+        player.setXSpeed((short) 0x02D2);
+
+        monitor.update(0, player);
+        monitor.onTouchResponse(player, TOUCH_RESULT, 1);
+        for (int i = 0; i < 33; i++) {
+            monitor.update(i, player);
+        }
+
+        new PlayableSpriteMovement(player).handleMovement(false, false, false, true,
+                false, false, false, false);
+
+        assertEquals(0x0302, player.getXSpeed() & 0xFFFF,
+                "Airborne ChgJumpDir must use boosted same-frame run acceleration after monitor contents");
+        assertTrue(player.hasSpeedShoes(),
+                "Monitor_Give_SpeedShoes sets status before the next player acceleration read");
     }
 
     @Test
@@ -162,10 +197,10 @@ class TestSonic3kMonitorObjectInstance {
 
         @Override
         protected void defineSpeeds() {
-            runAccel = 0;
+            runAccel = 0x0C;
             runDecel = 0;
             friction = 0;
-            max = 0;
+            max = 0x0C00;
             jump = 0;
             angle = 0;
             slopeRunning = 0;
@@ -181,13 +216,33 @@ class TestSonic3kMonitorObjectInstance {
 
         @Override
         protected void createSensorLines() {
-            groundSensors = new Sensor[0];
-            ceilingSensors = new Sensor[0];
-            pushSensors = new Sensor[0];
+            groundSensors = new Sensor[] {
+                    new EmptySensor(this, Direction.DOWN),
+                    new EmptySensor(this, Direction.DOWN)
+            };
+            ceilingSensors = new Sensor[] {
+                    new EmptySensor(this, Direction.UP),
+                    new EmptySensor(this, Direction.UP)
+            };
+            pushSensors = new Sensor[] {
+                    new EmptySensor(this, Direction.LEFT),
+                    new EmptySensor(this, Direction.RIGHT)
+            };
         }
 
         @Override
         public void draw() {
+        }
+    }
+
+    private static final class EmptySensor extends Sensor {
+        private EmptySensor(AbstractPlayableSprite sprite, Direction direction) {
+            super(sprite, direction, (byte) 0, (byte) 0, true);
+        }
+
+        @Override
+        protected SensorResult doScan(short dx, short dy) {
+            return new SensorResult((byte) 0, (byte) 0x7F, 0, getDirection());
         }
     }
 }

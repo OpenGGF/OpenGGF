@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -324,12 +325,9 @@ public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance {
         BuggernautBabyInstance baby =
                 new BuggernautBabyInstance(spawn, babyX, babyY, this);
         int parentSlot = getSlotIndex();
-        if (parentSlot >= 0) {
-            int childSlot = objectManager.allocateSlotAfter(parentSlot);
-            if (childSlot < 0) {
-                return;
-            }
-            baby.setSlotIndex(childSlot);
+        if (parentSlot >= 0
+                && ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, baby, parentSlot) < 0) {
+            return;
         }
         objectManager.addDynamicObject(baby);
         childCount++;

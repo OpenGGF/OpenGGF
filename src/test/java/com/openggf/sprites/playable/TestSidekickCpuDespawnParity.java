@@ -343,6 +343,34 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2DestroyedRideSlotDoesNotUseS3kFreedSlotDespawnPath() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x12BE);
+        tails.setCentreY((short) 0x08A9);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setLatchedSolidObject(0x4E, new DestroyedRideObject(0x4E));
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x4E, false, 0, 0);
+        tails.setLatchedSolidObject(0x4E, new DestroyedRideObject(0x4E));
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(2262);
+
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                "S2 uses the 8-bit object-id mismatch path; the S3K freed-slot "
+                        + "ObjectInstance-loss analog must not fire for matching IDs");
+        assertEquals((short) 0x12BE, tails.getCentreX());
+        assertEquals((short) 0x08A9, tails.getCentreY());
+    }
+
+    @Test
     void offscreenObjectSwitchDespawnsUsingLatchedInteractObjectId() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");

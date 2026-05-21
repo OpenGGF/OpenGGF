@@ -220,21 +220,17 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * The legacy S3K AIZ end-to-end trace includes the title/intro prefix, so
-     * frame 289 must still execute a native gameplay tick to keep Sonic and
-     * sidekick cadence aligned. Its sampled oscillator-dependent object state,
-     * however, is still the state read during Process_Sprites before the first
-     * LevelLoop OscillateNumDo pass: see docs/skdisasm/sonic3k.asm:7884-7909.
-     * Obj_FloatingPlatform reads Oscillating_table+$0A before SolidObjectTop
-     * carries the rider (docs/skdisasm/sonic3k.asm:50244-50248,
-     * docs/skdisasm/sonic3k.asm:50826-50841), so suppress exactly the first
-     * replay-local oscillator advance rather than hydrating trace data.
+     * The legacy S3K AIZ end-to-end trace now drives its intro prefix from
+     * trace frame 0, including the first native LevelLoop oscillator tick.
+     * Applying an additional replay-local suppression would leave
+     * Obj_FloatingPlatform one oscillator frame behind the ROM by the first
+     * carry window.
      */
     public static int initialOscillationSuppressionFramesForTraceReplay(TraceData trace) {
         if (trace == null || trace.frameCount() == 0) {
             return 0;
         }
-        return isLegacyS3kAizIntroTrace(trace) ? 1 : 0;
+        return 0;
     }
 
     /**

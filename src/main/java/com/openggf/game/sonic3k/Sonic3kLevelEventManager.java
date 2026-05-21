@@ -799,7 +799,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // Layout:
         //   5 bytes   manager-level (bootstrap mode ordinal + 4 booleans)
         //   1 byte    aiz handler present flag
-        //   83 bytes  aiz state (19 booleans + 15 ints + 1 ordinal int = 19+60+4 = 83)
+        //   84 bytes  aiz state (20 booleans + 15 ints + 1 ordinal int = 20+60+4 = 84)
         //   1 byte    hcz handler present flag
         //   43 bytes  hcz state (7 booleans + 9 ints = 7+36 = 43)
         //   1 byte    cnz handler present flag
@@ -808,7 +808,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   228 bytes mgz state (16 booleans + 23 ints + 30 ints = 16+92+120 = 228)
         //   1 byte    icz handler present flag
         //   24 bytes  icz state (4 booleans + 5 ints; see Sonic3kICZEvents.rewindStateBytes())
-        int aizSize = 19 + 15 * 4 + 4; // 83
+        int aizSize = 20 + 15 * 4 + 4; // 84
         int hczSize = 7 + 9 * 4; // 43
         int cnzSize = 4 * 2 + 10 + 15 * 4 + 4; // 82
         int mgzSize = 16 + 23 * 4 + 3 * 10 * 4; // 228
@@ -880,7 +880,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         hczPendingPostTransitionCutscene  = buf.get() != 0;
         mgzPendingPostTransitionRelease   = buf.get() != 0;
         // Size constants must match the write methods
-        final int aizBytes = 19 + 15 * 4 + 4; // 83
+        final int aizBytes = 20 + 15 * 4 + 4; // 84
         final int hczBytes = 7 + 9 * 4;        // 43
         final int cnzBytes = 4 * 2 + 10 + 15 * 4 + 4; // 82
         final int mgzBytes = 16 + 23 * 4 + 3 * 10 * 4; // 228
@@ -932,12 +932,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
-    // --- AIZ write/read (87 bytes) ---
+    // --- AIZ write/read (84 bytes) ---
 
     private static void writeAizState(java.nio.ByteBuffer buf, Sonic3kAIZEvents a) {
-        // 19 booleans (1 byte each) = 19
+        // 20 booleans (1 byte each) = 20
         buf.put((byte)(a.isIntroSpawned()                    ? 1 : 0));
         buf.put((byte)(a.isIntroMinXLocked()                 ? 1 : 0));
+        buf.put((byte)(a.isIntroSidekickMarkerReleased()     ? 1 : 0));
         buf.put((byte)(a.isIntroNormalRefreshPending()       ? 1 : 0));
         buf.put((byte)(a.isPaletteSwapped()                  ? 1 : 0));
         buf.put((byte)(a.isBoundariesUnlocked()              ? 1 : 0));
@@ -955,7 +956,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         buf.put((byte)(a.isPostFireHazeActiveRaw()           ? 1 : 0));
         buf.put((byte)(a.isFireOverlayTilesLoaded()          ? 1 : 0));
         buf.put((byte)(a.isAct2WaitFireDrawActive()          ? 1 : 0));
-        // 16 ints = 64 bytes
+        // 15 ints = 60 bytes
         buf.putInt(a.getAppliedTreeRevealChunkCopiesMask());
         buf.putInt(a.getAiz2ResizeRoutine());
         buf.putInt(a.getBattleshipWrapX());
@@ -978,6 +979,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private static void readAizState(java.nio.ByteBuffer buf, Sonic3kAIZEvents a) {
         a.setIntroSpawned(buf.get() != 0);
         a.setIntroMinXLocked(buf.get() != 0);
+        a.setIntroSidekickMarkerReleased(buf.get() != 0);
         a.setIntroNormalRefreshPending(buf.get() != 0);
         a.setPaletteSwapped(buf.get() != 0);
         a.setBoundariesUnlocked(buf.get() != 0);
@@ -1074,7 +1076,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         buf.put((byte)(c.isTeleporterBeamSpawned()            ? 1 : 0));
         buf.put((byte)(c.isAct2TransitionRequested()          ? 1 : 0));
         buf.put((byte)(c.isArenaChunkDestructionQueued()      ? 1 : 0));
-        // 16 ints = 64 bytes
+        // 15 ints = 60 bytes
         buf.putInt(c.getForegroundRoutine());
         buf.putInt(c.getBackgroundRoutine());
         buf.putInt(c.getDeformPhaseBgX());

@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
@@ -487,12 +488,7 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
             // ROM: FindNextFreeObj allocates a slot AFTER the platform's slot.
             // This ensures the fire runs its first update in the same frame
             // (its slot hasn't been processed yet in the ExecuteObjects loop).
-            if (parentSlot >= 0) {
-                int fireSlot = services().objectManager().allocateSlotAfter(parentSlot);
-                if (fireSlot >= 0) {
-                    fire.setSlotIndex(fireSlot);
-                }
-            }
+            ObjectLifetimeOps.assignFindNextFreeChildSlot(services().objectManager(), fire, parentSlot);
             return fire;
         });
 

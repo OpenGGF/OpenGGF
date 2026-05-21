@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.objects.CnzTrapDoorInstance;
 import com.openggf.game.sonic3k.objects.CnzRisingPlatformInstance;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
@@ -252,22 +253,25 @@ class TestS3kCnzLocalTraversalHeadless {
     }
 
     @Test
-    void trapDoorChecksSidekicksWhenPrimaryPlayerMissesTheWindow() {
+    void trapDoorChecksExtraEngineSidekickFromParticipationQuery() {
         CnzTrapDoorInstance trapDoor = new CnzTrapDoorInstance(
                 new ObjectSpawn(0x2600, 0x0780, Sonic3kObjectIds.CNZ_TRAP_DOOR, 0x00, 0, false, 0));
-        Tails sidekick = new Tails("tails", (short) 0x2600, (short) 0x0788);
-        sidekick.setCentreX((short) 0x2600);
-        sidekick.setCentreY((short) 0x0788);
-        trapDoor.setServices(new TestObjectServices().withSidekicks(List.of(sidekick)));
 
         Sonic player = new Sonic("sonic", (short) 0x1200, (short) 0x0770);
         player.setCentreX((short) 0x1200);
         player.setCentreY((short) 0x0770);
+        Tails nativeP2 = new Tails("tails", (short) 0x1200, (short) 0x0770);
+        nativeP2.setCentreX((short) 0x1200);
+        nativeP2.setCentreY((short) 0x0770);
+        Tails extraSidekick = new Tails("tails-extra", (short) 0x2600, (short) 0x0788);
+        extraSidekick.setCentreX((short) 0x2600);
+        extraSidekick.setCentreY((short) 0x0788);
+        trapDoor.setServices(new QueryOnlyPlayerServices(player, List.of(nativeP2, extraSidekick)));
 
         trapDoor.update(0, player);
 
         assertTrue(invokeBooleanHook(trapDoor, "isOpenForTest"),
-                "The trap door should open when a sidekick enters the ROM trigger box");
+                "The trap door should preserve engine-extended sidekick participation beyond native P2");
         assertEquals(1, invokeIntHook(trapDoor, "getRenderFrameForTest"),
                 "The opening frame should still be the ROM opening frame");
     }
@@ -543,6 +547,26 @@ class TestS3kCnzLocalTraversalHeadless {
             return (int) method.invoke(target);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to read hook " + methodName, e);
+        }
+    }
+
+    private static final class QueryOnlyPlayerServices extends TestObjectServices {
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+
+        private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return List.of();
         }
     }
 }
