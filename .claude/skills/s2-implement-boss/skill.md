@@ -207,7 +207,7 @@ Override these in subclasses for boss-specific behavior:
 
 **Implementation checklist:**
 - [ ] Create child classes extending `AbstractBossChild`
-- [ ] Add children to `ObjectManager` via `addDynamicObject()`
+- [ ] Spawn children via `spawnChild(...)`, `spawnFreeChild(...)`, or an existing `level.objects` lifecycle helper
 - [ ] Store children in parent's `childComponents` list
 - [ ] Implement position synchronization
 - [ ] Handle destruction when parent defeated
