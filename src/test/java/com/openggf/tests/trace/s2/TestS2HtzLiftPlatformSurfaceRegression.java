@@ -4,6 +4,8 @@ import com.openggf.game.sonic2.objects.HTZLiftObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidRoutineKind;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -23,11 +25,15 @@ class TestS2HtzLiftPlatformSurfaceRegression {
                 "HTZLift");
 
         SolidObjectParams params = lift.getSolidParams();
+        SolidRoutineProfile profile = lift.getSolidRoutineProfile();
 
         // S2 Obj16 passes d3 = -$28 before JmpTo3_PlatformObject
         // (docs/s2disasm/s2.asm:47384-47388). Platform riding and landing
         // therefore use surfaceY = y_pos - d3 = y_pos + $28.
         assertEquals(objectY + 0x28, objectY + params.offsetY() - params.groundHalfHeight());
+        assertEquals(SolidRoutineKind.TOP_SOLID_ONLY, profile.kind());
+        assertEquals(lift.isTopSolidOnly(), profile.topSolidOnly());
+        assertEquals(lift.usesStickyContactBuffer(), profile.stickyContactBuffer());
     }
 
     @Test
