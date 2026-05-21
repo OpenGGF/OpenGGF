@@ -4,6 +4,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -213,16 +215,14 @@ public class HczEndBossBladeWaterChute extends AbstractBossChild {
             return;
         }
 
-        // Check main player
-        tryLaunchPlayer(player);
-
-        // Check sidekick(s) — ROM checks Player_2 too
         try {
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                tryLaunchPlayer(sidekick);
+            ObjectPlayerQuery query = services().playerQuery();
+            ObjectPlayerQuery participants = new ObjectPlayerQuery(() -> player, query::sidekicks);
+            for (PlayableEntity candidate : participants.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                tryLaunchPlayer(candidate);
             }
         } catch (Exception e) {
-            // Sidekick access may fail in some contexts
+            tryLaunchPlayer(player);
         }
     }
 

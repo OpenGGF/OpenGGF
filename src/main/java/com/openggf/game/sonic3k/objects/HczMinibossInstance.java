@@ -11,6 +11,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.SplashObjectInstance;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -635,14 +637,10 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
     private void releaseVortexPlayers() {
         PlayableEntity focused = services().camera().getFocusedSprite();
-        if (focused instanceof AbstractPlayableSprite player && player.isObjectControlled()) {
-            ObjectControlState.none().applyTo(player);
-            player.setForcedAnimationId(-1);
-        }
-        for (PlayableEntity entity : services().sidekicks()) {
-            if (entity instanceof AbstractPlayableSprite sidekick && sidekick.isObjectControlled()) {
-                ObjectControlState.none().applyTo(sidekick);
-                sidekick.setForcedAnimationId(-1);
+        for (PlayableEntity entity : nativeParticipants(focused)) {
+            if (entity instanceof AbstractPlayableSprite sprite && sprite.isObjectControlled()) {
+                ObjectControlState.none().applyTo(sprite);
+                sprite.setForcedAnimationId(-1);
             }
         }
     }
@@ -876,14 +874,17 @@ public class HczMinibossInstance extends AbstractBossInstance {
     }
 
     private void applyVortexPull(AbstractPlayableSprite player) {
-        if (player != null) {
-            applyVortexPullTo(player);
-        }
-        for (PlayableEntity entity : services().sidekicks()) {
-            if (entity instanceof AbstractPlayableSprite sidekick) {
-                applyVortexPullTo(sidekick);
+        for (PlayableEntity entity : nativeParticipants(player)) {
+            if (entity instanceof AbstractPlayableSprite sprite) {
+                applyVortexPullTo(sprite);
             }
         }
+    }
+
+    private List<PlayableEntity> nativeParticipants(PlayableEntity player) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> player, query::sidekicks)
+                .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
     }
 
     /**
