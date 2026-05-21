@@ -25,6 +25,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Sonic;
@@ -1163,7 +1164,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         tails.setGSpeed((short) 0);
         tails.setSpindash(false);
         tails.setControlLocked(false);
-        tails.setObjectControlled(false);
+        ObjectControlState.none().applyTo(tails);
         tails.setCpuControlled(true);
         SidekickCpuController controller = new SidekickCpuController(tails, player);
         controller.setInitialState(SidekickCpuController.State.MGZ_RESCUE_WAIT);
@@ -1284,7 +1285,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             player.setGSpeed((short) 0);
             player.setSpindash(false);
             player.setAir(true);
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             restoreBossTransitionPlayerRoutine(player);
             applyTailsAlonePostTransitionCpuRoutine(player);
         }
@@ -1323,7 +1324,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         restoreBossTransitionPlayerRoutine(player);
         tails.setCentreX((short) bossTransitionX);
         tails.setCentreY((short) bossTransitionY);
-        tails.setObjectControlled(false);
+        ObjectControlState.none().applyTo(tails);
         tails.setSpindash(false);
         tails.setAir(true);
         // Obj_MGZ2_BossTransition writes Player_2 routine=2 before CPU routine $14,
