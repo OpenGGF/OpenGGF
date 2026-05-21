@@ -1,5 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayableEntity;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
@@ -55,6 +57,32 @@ class TestHCZBreakableBarObjectInstance {
         assertNoObjectControl(sidekick);
     }
 
+    @Test
+    void nativeP2CaptureUsesObjectPlayerQueryWhenRawSidekickListIsEmpty() {
+        TestablePlayableSprite main = positionedAwayFromBar("sonic");
+        TestablePlayableSprite nativeP2 = positionedPlayer("tails");
+        HCZBreakableBarObjectInstance bar = verticalBar(0x40);
+        bar.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2), List.of()));
+
+        bar.update(0, main);
+
+        assertNativeBitZeroControl(nativeP2);
+    }
+
+    @Test
+    void extraSidekickDoesNotShareNativeP2CaptureSlot() {
+        TestablePlayableSprite main = positionedAwayFromBar("sonic");
+        TestablePlayableSprite nativeP2 = positionedAwayFromBar("tails");
+        TestablePlayableSprite extraSidekick = positionedPlayer("knuckles");
+        List<PlayableEntity> sidekicks = List.of(nativeP2, extraSidekick);
+        HCZBreakableBarObjectInstance bar = verticalBar(0x40);
+        bar.setServices(new QueryOnlyPlayerServices(main, sidekicks, sidekicks));
+
+        bar.update(0, main);
+
+        assertNoObjectControl(extraSidekick);
+    }
+
     private static HCZBreakableBarObjectInstance verticalBar(int subtype) {
         return new HCZBreakableBarObjectInstance(
                 new ObjectSpawn(0x0200, 0x0200, 0x36, subtype, 0, false, 0));
@@ -64,6 +92,13 @@ class TestHCZBreakableBarObjectInstance {
         TestablePlayableSprite player = new TestablePlayableSprite(character, (short) 0, (short) 0);
         player.setCentreX((short) 0x0214);
         player.setCentreY((short) 0x0200);
+        return player;
+    }
+
+    private static TestablePlayableSprite positionedAwayFromBar(String character) {
+        TestablePlayableSprite player = new TestablePlayableSprite(character, (short) 0, (short) 0);
+        player.setCentreX((short) 0x0100);
+        player.setCentreY((short) 0x0100);
         return player;
     }
 
@@ -79,5 +114,29 @@ class TestHCZBreakableBarObjectInstance {
         assertFalse(player.isObjectControlAllowsCpu());
         assertFalse(player.isObjectControlSuppressesMovement());
         assertFalse(player.isTouchResponseSuppressedByObjectControl());
+    }
+
+    private static final class QueryOnlyPlayerServices extends TestObjectServices {
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+        private final List<PlayableEntity> rawSidekicks;
+
+        private QueryOnlyPlayerServices(PlayableEntity main,
+                                        List<? extends PlayableEntity> queriedSidekicks,
+                                        List<PlayableEntity> rawSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+            this.rawSidekicks = List.copyOf(rawSidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return rawSidekicks;
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.openggf.tests;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
@@ -11,6 +12,7 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.objects.badniks.MantisBadnikInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
@@ -91,6 +93,44 @@ class TestS3kMgzPulleyAndMantis {
         assertEquals(-0x600, player.getYSpeed());
         assertTrue(player.getRolling());
         assertEquals(Sonic3kAnimationIds.ROLL.id(), player.getAnimationId());
+    }
+
+    @Test
+    void mgzPulleyCapturesNativeP2FromPlayerQueryWhenRawSidekickListIsEmpty() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x01DA, (short) 0x012E);
+        nativeP2.setXSpeed((short) -0x100);
+
+        RecordingServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2));
+        MGZPulleyObjectInstance pulley = createPulley(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MGZ_PULLEY, 0x00, 0x00, false, 0));
+        pulley.setServices(services);
+
+        pulley.update(0, main);
+
+        assertFalse(main.isObjectControlled(), "Main/update player should remain native P1 and stay outside the handle");
+        assertTrue(nativeP2.isObjectControlled(),
+                "MGZ pulley has only native P1/P2 grab slots, so P2 must come from ObjectPlayerQuery NATIVE_P1_P2");
+        assertEquals(0x01DA, nativeP2.getCentreX());
+        assertEquals(0x012E, nativeP2.getCentreY());
+    }
+
+    @Test
+    void mgzPulleyExcludesExtraSidekicksBeyondNativeP2() throws Exception {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x0100);
+        TestablePlayableSprite extraSidekick = new TestablePlayableSprite("knuckles", (short) 0x01DA, (short) 0x012E);
+        extraSidekick.setXSpeed((short) -0x100);
+
+        RecordingServices services = new QueryOnlyPlayerServices(main, List.of(nativeP2, extraSidekick));
+        MGZPulleyObjectInstance pulley = createPulley(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.MGZ_PULLEY, 0x00, 0x00, false, 0));
+        pulley.setServices(services);
+
+        pulley.update(0, main);
+
+        assertFalse(extraSidekick.isObjectControlled(),
+                "Additional engine sidekicks must not consume the pulley's native P2 slot");
     }
 
     @Test
@@ -287,12 +327,32 @@ class TestS3kMgzPulleyAndMantis {
         }
     }
 
-    private static final class RecordingServices extends StubObjectServices {
+    private static class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
 
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);
+        }
+    }
+
+    private static final class QueryOnlyPlayerServices extends RecordingServices {
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+
+        private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return List.of();
         }
     }
 }
