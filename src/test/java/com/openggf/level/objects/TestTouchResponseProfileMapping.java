@@ -26,6 +26,16 @@ class TestTouchResponseProfileMapping {
     }
 
     @Test
+    void providerExposesTouchResponseProfileForDispatcherConsumption() {
+        TouchResponseProvider provider = new MultiRegionProvider();
+
+        assertEquals(TouchResponseProfile.fromProvider(provider), provider.getTouchResponseProfile());
+        assertEquals(TouchResponseProfile.fromProvider(provider, true), provider.getTouchResponseProfile(true));
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY,
+                provider.getTouchResponseProfile().stopAfterFirstOverlapPolicy());
+    }
+
+    @Test
     void sonic2SpecialPropertyProviderMapsToSonic2DecodeMode() {
         TouchResponseProfile profile = TouchResponseProfile.fromProvider(new Sonic2SpecialProvider());
 

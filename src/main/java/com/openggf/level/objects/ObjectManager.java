@@ -4616,7 +4616,7 @@ public class ObjectManager {
 
                 // Multi-region providers (e.g., spiked pole helix) check each region independently
                 TouchResponseProvider.TouchRegion[] regions = provider.getMultiTouchRegions();
-                TouchResponseProfile touchProfile = TouchResponseProfile.fromProvider(provider, regions != null);
+                TouchResponseProfile touchProfile = provider.getTouchResponseProfile(regions != null);
                 if (regions != null) {
                     boolean hit = processMultiRegionTouch(player, playerX, playerY, playerHeight,
                             instance, provider, touchProfile, regions, playerWidth,
@@ -5951,7 +5951,7 @@ public class ObjectManager {
                 return result.aggregateContact();
             }
 
-            SolidRoutineProfile solidProfile = SolidRoutineProfile.fromProvider(provider);
+            SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
             SolidObjectParams params = provider.getSolidParams();
             int anchorX = instance.getX() + params.offsetX();
             int anchorY = instance.getY() + params.offsetY();
@@ -6752,7 +6752,7 @@ public class ObjectManager {
                     continue;
                 }
 
-                SolidRoutineProfile solidProfile = SolidRoutineProfile.fromProvider(provider);
+                SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
                 SolidObjectParams params = provider.getSolidParams();
                 int anchorX = instance.getX() + params.offsetX();
                 int anchorY = instance.getY() + params.offsetY();
