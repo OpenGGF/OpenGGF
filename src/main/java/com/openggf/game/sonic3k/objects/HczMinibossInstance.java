@@ -12,8 +12,14 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SplashObjectInstance;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -57,6 +63,18 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private static final int ENGINE_COLLISION_FLAGS = 0x92;
     private static final int ROCKET_COLLISION_FLAGS = 0x8B;
     private static final int INVULN_TIME = 0x20;
+    private static final TouchResponseProfile SINGLE_REGION_TOUCH_PROFILE =
+            TouchResponseProfile.standardEnemy();
+    private static final TouchResponseProfile MULTI_REGION_TOUCH_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            false,
+            true,
+            true,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
 
     private static final int TRIGGER_MIN_Y = 0x300;
     private static final int TRIGGER_MAX_Y = 0x400;
@@ -353,6 +371,16 @@ public class HczMinibossInstance extends AbstractBossInstance {
             regions.add(new TouchResponseProvider.TouchRegion(rocket.x, rocket.y, getRocketCollisionFlags()));
         }
         return regions.toArray(new TouchResponseProvider.TouchRegion[0]);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(getMultiTouchRegions() != null);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return multiRegionSource ? MULTI_REGION_TOUCH_PROFILE : SINGLE_REGION_TOUCH_PROFILE;
     }
 
     @Override
