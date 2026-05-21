@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects.badniks;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -69,6 +70,15 @@ class TestMasherBadnikInstance {
 
         assertEquals(0x02CB, masher.getY(),
                 "Obj5C hydration must restore y_sub, y_vel, and initial y position for trace replay");
+    }
+
+    @Test
+    void exposesStandardEnemyTouchResponseProfile() {
+        MasherBadnikInstance masher = newMasher();
+
+        assertEquals(TouchResponseProfile.standardEnemy(), masher.getTouchResponseProfile());
+        assertEquals(0x09, masher.getCollisionFlags(),
+                "Profile adoption must not replace dynamic collision flag ownership");
     }
 
     private static MasherBadnikInstance newMasher() {

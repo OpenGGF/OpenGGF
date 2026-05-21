@@ -126,6 +126,7 @@ class TestCanonicalObjectPhysicsProfiles {
     void canonicalTouchProfileMapsCurrentProviderDefaultsAndMultiRegionPolicy() {
         TouchResponseProfile defaults = TouchResponseProfile.fromProvider(new MinimalTouchProvider());
         TouchResponseProfile multiRegion = TouchResponseProfile.fromProvider(new MultiRegionTouchProvider());
+        TouchResponseProfile standardEnemy = TouchResponseProfile.standardEnemy();
 
         assertEquals(TouchCategoryDecodeMode.NORMAL, defaults.categoryDecodeMode());
         assertEquals(TouchShieldDeflectCapability.NONE, defaults.shieldDeflectCapability());
@@ -134,6 +135,7 @@ class TestCanonicalObjectPhysicsProfiles {
         assertTrue(multiRegion.multiRegionSource());
         assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY,
                 multiRegion.stopAfterFirstOverlapPolicy());
+        assertEquals(defaults, standardEnemy);
     }
 
     @Test

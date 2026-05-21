@@ -27,6 +27,10 @@ public record TouchResponseProfile(
         return fromCanonical(com.openggf.game.profiles.touchresponse.TouchResponseProfile.fromProvider(provider));
     }
 
+    public static TouchResponseProfile standardEnemy() {
+        return fromCanonical(com.openggf.game.profiles.touchresponse.TouchResponseProfile.standardEnemy());
+    }
+
     public static TouchResponseProfile fromProvider(TouchResponseProvider provider, boolean multiRegionSource) {
         Objects.requireNonNull(provider, "provider");
         boolean sonic2 = provider.usesSonic2TouchSpecialPropertyResponse();
