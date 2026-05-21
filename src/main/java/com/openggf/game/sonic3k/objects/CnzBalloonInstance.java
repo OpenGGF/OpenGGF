@@ -8,9 +8,15 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.RomObjectSnapshot;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -46,7 +52,6 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     private static final int[] FRAME_BY_COLOR = {0, 5, 10, 15, 20};
     private static final int SNAPSHOT_BASE_Y_OFFSET = 0x32;
     private static final int SNAPSHOT_COLLISION_FLAGS_OFFSET = 0x28;
-
     private final int subtype;
     private int baseY;
     private int angle;
@@ -121,13 +126,22 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean requiresContinuousTouchCallbacks() {
-        return !movedOffscreen;
+    public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(false);
     }
 
     @Override
-    public boolean usesS3kTouchSpecialPropertyResponse() {
-        return true;
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
+                !movedOffscreen,
+                true,
+                false,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
     }
 
     @Override

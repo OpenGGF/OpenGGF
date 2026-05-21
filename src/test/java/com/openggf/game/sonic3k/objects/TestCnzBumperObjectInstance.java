@@ -3,6 +3,9 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.TrigLookupTable;
@@ -15,10 +18,32 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCnzBumperObjectInstance {
+
+    @Test
+    void touchResponseProfileUsesDynamicMultiRegionStopPolicy() {
+        CnzBumperObjectInstance bumper =
+                new CnzBumperObjectInstance(new ObjectSpawn(0x0340, 0x06BC, 0x4A, 0x40, 0, false, 0));
+
+        TouchResponseProfile singleRegion = bumper.getTouchResponseProfile(false);
+        TouchResponseProfile multiRegion = bumper.getTouchResponseProfile(true);
+
+        assertEquals(TouchCategoryDecodeMode.NORMAL, singleRegion.categoryDecodeMode());
+        assertTrue(singleRegion.continuousCallbacks());
+        assertTrue(singleRegion.requiresRenderFlagForTouch());
+        assertFalse(singleRegion.multiRegionSource());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
+                singleRegion.stopAfterFirstOverlapPolicy());
+        assertTrue(multiRegion.continuousCallbacks());
+        assertTrue(multiRegion.requiresRenderFlagForTouch());
+        assertTrue(multiRegion.multiRegionSource());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY,
+                multiRegion.stopAfterFirstOverlapPolicy());
+    }
 
     @Test
     void nonzeroSubtypeMovesOnSixtyFourPixelCircleFromSpawnOrigin() {
