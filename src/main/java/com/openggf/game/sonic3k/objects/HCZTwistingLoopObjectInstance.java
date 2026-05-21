@@ -178,15 +178,19 @@ public class HCZTwistingLoopObjectInstance extends AbstractObjectInstance {
         if (isDestroyed()) return;
 
         // Process Player 1
-        AbstractPlayableSprite player1 = services().camera().getFocusedSprite();
+        PlayableEntity queriedMainPlayer = services().playerQuery().mainPlayerOrNull();
+        AbstractPlayableSprite player1 = queriedMainPlayer instanceof AbstractPlayableSprite sprite ? sprite : null;
+        if (player1 == null && playerEntity instanceof AbstractPlayableSprite sprite) {
+            player1 = sprite;
+        }
         if (player1 != null) {
             processPlayer(player1, p1State);
         }
 
         // Process Player 2 (sidekick)
-        for (AbstractPlayableSprite sidekick : services().spriteManager().getSidekicks()) {
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        if (nativeP2 instanceof AbstractPlayableSprite sidekick && sidekick != player1) {
             processPlayer(sidekick, p2State);
-            break; // Only first sidekick (matches ROM's single Player_2)
         }
 
         // ROM: loc_3909C — if both players are in phase 0 (not captured),
