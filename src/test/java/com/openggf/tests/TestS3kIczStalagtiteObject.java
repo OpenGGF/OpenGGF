@@ -12,6 +12,12 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +52,7 @@ class TestS3kIczStalagtiteObject {
         assertEquals(7, stalagtite.getMappingFrameForTesting());
         assertEquals(Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN, stalagtite.getArtKeyForTesting());
         assertEquals(0, stalagtite.getCollisionFlags());
+        assertEquals(0, stalagtite.getMultiTouchRegions().length);
         assertTrue(stalagtite.isSolidFor(null));
     }
 
@@ -98,6 +105,32 @@ class TestS3kIczStalagtiteObject {
         assertEquals(0x82, stalagtite.getCollisionFlags());
         assertEquals(0x3200, stalagtite.getMultiTouchRegions()[0].x());
         assertEquals(0x05C0, stalagtite.getMultiTouchRegions()[0].y());
+    }
+
+    @Test
+    void declaresExplicitMultiRegionTouchProfileWhileRegionsRemainPhaseDependent() throws Exception {
+        IczStalagtiteObjectInstance stalagtite = createStalagtite(0x3200, 0x05C0);
+
+        assertEquals(new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                true,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY),
+                stalagtite.getTouchResponseProfile());
+        assertEquals(0, stalagtite.getMultiTouchRegions().length);
+
+        stalagtite.forceFallingForTesting();
+
+        assertEquals(1, stalagtite.getMultiTouchRegions().length);
+        assertEquals(0x82, stalagtite.getMultiTouchRegions()[0].collisionFlags());
+        assertEquals(stalagtite.getTouchResponseProfile(), stalagtite.getTouchResponseProfile(false));
+        assertEquals(TouchResponseProfile.class,
+                IczStalagtiteObjectInstance.class.getDeclaredMethod("getTouchResponseProfile").getReturnType());
     }
 
     @Test

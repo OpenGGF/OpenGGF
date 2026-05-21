@@ -2,6 +2,8 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.PlayableEntity;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.physics.Direction;
@@ -509,6 +511,67 @@ class TestCnzWireCageObjectInstance {
     }
 
     @Test
+    void nativeP2QuerySidekickCanLatchWhenRawSidekickListIsEmpty() {
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
+        AbstractPlayableSprite leader = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+        Tails nativeP2 = new Tails("tails", (short) 0, (short) 0);
+        cage.setServices(new QueryOnlyPlayerServices(leader, List.of(nativeP2)));
+
+        leader.setCentreX((short) 0x1200);
+        leader.setCentreY((short) 0x07C0);
+        leader.setAir(false);
+        leader.setGSpeed((short) 0x0800);
+        nativeP2.setCentreX((short) 0x1300);
+        nativeP2.setCentreY((short) 0x07C0);
+        nativeP2.setAir(false);
+        nativeP2.setGSpeed((short) 0x0800);
+
+        cage.update(0, leader);
+
+        assertEquals(Sonic3kObjectIds.CNZ_WIRE_CAGE, nativeP2.getLatchedSolidObjectId(),
+                "CNZ wire cage has only native P1/P2 standing bits, so P2 must come from ObjectPlayerQuery");
+        assertTrue(nativeP2.isOnObject());
+        assertTrue(nativeP2.isObjectControlled());
+    }
+
+    @Test
+    void extraEngineSidekickDoesNotShareNativeP2CageLatchState() {
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
+        AbstractPlayableSprite leader = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+        Tails nativeP2 = new Tails("tails", (short) 0, (short) 0);
+        Tails extraSidekick = new Tails("tails-extra", (short) 0, (short) 0);
+        cage.setServices(new TestObjectServices().withSidekicks(List.of(nativeP2, extraSidekick)));
+
+        leader.setCentreX((short) 0x1200);
+        leader.setCentreY((short) 0x07C0);
+        leader.setAir(false);
+        leader.setGSpeed((short) 0x0800);
+        nativeP2.setCentreX((short) 0x1200);
+        nativeP2.setCentreY((short) 0x07C0);
+        nativeP2.setAir(false);
+        nativeP2.setGSpeed((short) 0x0800);
+        extraSidekick.setCentreX((short) 0x1300);
+        extraSidekick.setCentreY((short) 0x07C0);
+        extraSidekick.setAir(false);
+        extraSidekick.setGSpeed((short) 0x0800);
+
+        cage.update(0, leader);
+
+        assertFalse(extraSidekick.isOnObject(),
+                "Additional engine sidekicks must not consume or share the native P2 cage standing bit");
+        assertFalse(extraSidekick.isObjectControlled());
+        assertNotEquals(Sonic3kObjectIds.CNZ_WIRE_CAGE, extraSidekick.getLatchedSolidObjectId());
+    }
+
+    @Test
     void leaderReleasedNormalSidekickLatchDoesNotSetObjectControlBitZero() {
         CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
                 0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
@@ -585,4 +648,24 @@ class TestCnzWireCageObjectInstance {
     }
 
     private static final int JUMP_RELEASE_Y_SPEED_FOR_TEST = -0x200;
+
+    private static final class QueryOnlyPlayerServices extends TestObjectServices {
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+
+        private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return List.of();
+        }
+    }
 }
