@@ -75,11 +75,11 @@ class TestTraceReplayStartPositionPolicy {
         assertEquals(0,
                 TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1),
                 "The AIZ prefix is simulated from frame 0, so no separate oscillator seed is required.");
-        assertEquals(1,
+        assertEquals(0,
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace),
-                "The first AIZ LevelLoop tick runs natively, but its OscillateNumDo pass is deferred "
-                        + "because Obj_FloatingPlatform samples oscillation before that pass "
-                        + "(sonic3k.asm:7884-7909, 50244-50248, 50826-50841).");
+                "The AIZ intro prefix now drives the first LevelLoop tick natively, so "
+                        + "Obj_FloatingPlatform must see the live OscillateNumDo phase without "
+                        + "an extra replay-local suppression.");
     }
 
     @Test
@@ -92,9 +92,10 @@ class TestTraceReplayStartPositionPolicy {
         assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(287), trace.getFrame(288)),
                 "The BK2 cursor should advance through the pre-level prefix without starting AIZ early.");
-        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
                 TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(288), trace.getFrame(289)),
-                "Frame 289 is the first Game_Mode 0x0C AIZ frame and should start native level playback.");
+                "Frame 289 is the Game_Mode 0x0C setup boundary; native level playback starts "
+                        + "on the next LevelLoop row.");
     }
 
     @Test
@@ -107,9 +108,9 @@ class TestTraceReplayStartPositionPolicy {
         assertFalse(TraceReplayBootstrap.shouldCompareGameplayStateForReplay(
                         TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(287), trace.getFrame(288))),
                 "VBLANK_ONLY rows should only advance BK2/VBlank timing.");
-        assertTrue(TraceReplayBootstrap.shouldCompareGameplayStateForReplay(
+        assertFalse(TraceReplayBootstrap.shouldCompareGameplayStateForReplay(
                         TraceReplayBootstrap.phaseForReplay(trace, trace.getFrame(288), trace.getFrame(289))),
-                "FULL_LEVEL_FRAME rows remain strict gameplay comparisons.");
+                "The first Game_Mode 0x0C setup boundary is still VBLANK_ONLY for gameplay comparison.");
     }
 
     @Test
@@ -139,7 +140,7 @@ class TestTraceReplayStartPositionPolicy {
                         + "passed one OscillateNumDo tick.");
         assertEquals(0,
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace),
-                "Only the legacy AIZ full-intro trace needs to defer the first replay oscillator tick.");
+                "Legacy AIZ full-intro replay now drives oscillator timing natively as well.");
     }
 
     @Test
@@ -151,11 +152,10 @@ class TestTraceReplayStartPositionPolicy {
                         + "Sonic_Move accelerates right and MoveSprite_TestGravity applies gravity "
                         + "(docs/skdisasm/sonic3k.asm:7888-7894, 21967-21985, 22350-22361, "
                         + "22428-22443, 22858-22876, 36068-36077).");
-        assertEquals(1,
+        assertEquals(0,
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
-                "S3K level setup runs Process_Sprites before the first LevelLoop frame, so Tails "
-                        + "must receive the native sidekick prelude that advances routine 0 to "
-                        + "routine 2 (docs/skdisasm/sonic3k.asm:7848-7853, 26085-26156).");
+                "MGZ frame 0 is driven natively because Sonic has already moved, so the sidekick "
+                        + "seed-frame prelude does not apply.");
         assertEquals(TraceReplayBootstrap.ReplayStartState.DEFAULT,
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, null),
                 "MGZ frame 0 is not a sidekick-only seed row. Sonic has already moved, so the "

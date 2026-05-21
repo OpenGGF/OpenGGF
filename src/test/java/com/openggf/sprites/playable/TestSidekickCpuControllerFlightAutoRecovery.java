@@ -125,6 +125,8 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         tails.setAir(true);
         tails.setDoubleJumpFlag(1);         // Flight gravity active during catch-up
         tails.setControlLocked(true);       // routine 4 carries object_control=$81 until NORMAL transition
+        tails.setObjectControlAllowsCpu(true);
+        tails.setObjectControlSuppressesMovement(true);
         // On-screen so the off-screen timer doesn't fire.
         tails.setRenderFlagOnScreen(true);
 
@@ -137,6 +139,10 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "Tails aligned with Sonic + Sonic alive = transition to NORMAL (routine 0x06)");
         assertFalse(tails.isObjectControlled(),
                 "Transition clears Tails's object_control");
+        assertFalse(tails.isObjectControlAllowsCpu(),
+                "Transition clears the object-control CPU allowance mirror");
+        assertFalse(tails.isObjectControlSuppressesMovement(),
+                "Transition clears the object-control movement suppression mirror");
         assertFalse(tails.isControlLocked(),
                 "Transition clears the engine control-lock mirror so NORMAL CPU input reaches movement");
         assertEquals(0, tails.getDoubleJumpFlag(),
@@ -235,6 +241,8 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0F00);
         tails.setCentreY((short) 0x0400);
+        tails.setObjectControlAllowsCpu(true);
+        tails.setObjectControlSuppressesMovement(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
@@ -246,5 +254,10 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         assertEquals(1, tails.getDoubleJumpFlag(),
                 "Flight transition sets double_jump_flag=1 so flight gravity applies");
         assertTrue(tails.getAir(), "Flight transition sets air bit");
+        assertTrue(tails.isObjectControlled(), "Dead Sonic recovery writes object_control=$81");
+        assertFalse(tails.isObjectControlAllowsCpu(),
+                "object_control=$81 must clear stale bits-0-to-6 CPU allowance");
+        assertTrue(tails.isObjectControlSuppressesMovement(),
+                "object_control=$81 must suppress normal movement");
     }
 }

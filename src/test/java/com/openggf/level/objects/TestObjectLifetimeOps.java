@@ -110,6 +110,30 @@ class TestObjectLifetimeOps {
     }
 
     @Test
+    void assignFindNextFreeChildSlotAllocatesAfterPredecessorAndAssignsChildSlot() {
+        TestObject predecessor = testObject();
+        TestObject child = testObject();
+        objectManager.addDynamicObjectAtSlot(predecessor, 40);
+
+        int slot = ObjectLifetimeOps.assignFindNextFreeChildSlot(
+                objectManager, child, predecessor.getSlotIndex());
+
+        assertEquals(41, slot);
+        assertEquals(41, child.getSlotIndex());
+    }
+
+    @Test
+    void assignFindNextFreeChildSlotWithMissingPredecessorLeavesChildSlotUnchanged() {
+        TestObject child = testObject();
+        child.setSlotIndex(42);
+
+        int slot = ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, child, -1);
+
+        assertEquals(-1, slot);
+        assertEquals(42, child.getSlotIndex());
+    }
+
+    @Test
     void transferredReplacementWithoutSlotUsesNormalDynamicAllocation() {
         TestObject replacement = testObject();
 

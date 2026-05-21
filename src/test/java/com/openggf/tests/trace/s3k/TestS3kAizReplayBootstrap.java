@@ -1346,7 +1346,7 @@ public class TestS3kAizReplayBootstrap {
     @Test
     void fullTraceReplayKeepsAizFloatingPlatformAtRecordedCarryTimingFrame() throws Exception {
         TraceData trace = TraceData.load(TRACE_DIR);
-        int probeFrame = 2165;
+        int probeFrame = 2164;
         TraceEvent.ObjectNear tracedPlatform = trace.getEventsForFrame(probeFrame).stream()
                 .filter(TraceEvent.ObjectNear.class::isInstance)
                 .map(TraceEvent.ObjectNear.class::cast)

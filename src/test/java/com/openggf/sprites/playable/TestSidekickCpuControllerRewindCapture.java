@@ -103,6 +103,8 @@ class TestSidekickCpuControllerRewindCapture {
         values.put("suppressNextAizIntroNormalMovement", true);
         values.put("skipPhysicsThisFrame", true);
         values.put("cpuFrameCounterFromStoredLevelFrame", true);
+        values.put("nextCpuFrameCounterOverride", 0x4567);
+        values.put("catchUpFrameCounterOverride", 0x89AB);
         values.put("latestNormalStepDiagnostics", diagnosticsSentinel());
         values.put("carryLatchX", (short) 0x0123);
         values.put("carryLatchY", (short) -0x0456);

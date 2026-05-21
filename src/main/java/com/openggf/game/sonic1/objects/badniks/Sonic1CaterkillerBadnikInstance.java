@@ -301,12 +301,7 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
                         this, parentStateFinal, segXFinal, currentY, facingLeft,
                         animated, segmentIndex, ringBufIdxFinal);
                 // Allocate slot after previous segment (FindNextFreeObj parity)
-                if (prevSlotFinal >= 0) {
-                    int localSlot = objectManager.allocateSlotAfter(prevSlotFinal);
-                    if (localSlot >= 0) {
-                        segment.setSlotIndex(localSlot);
-                    }
-                }
+                ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, segment, prevSlotFinal);
                 return segment;
             });
             bodySegments.add(body);

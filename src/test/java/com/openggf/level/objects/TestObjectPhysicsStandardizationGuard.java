@@ -23,7 +23,8 @@ class TestObjectPhysicsStandardizationGuard {
             "(?:getFirst\\s*\\(\\s*\\)|\\.get\\s*\\(\\s*0\\s*\\)|\\.stream\\s*\\(\\s*\\)\\.findFirst\\s*\\()");
     private static final Pattern DIRECT_LIFECYCLE_OPERATION = Pattern.compile(
             "(?:setSlotIndex\\s*\\(\\s*-\\s*1\\s*\\)|\\.markRemembered\\s*\\(|"
-                    + "\\.removeFromActiveSpawns\\s*\\(|\\.addDynamicObjectAtSlot\\s*\\()");
+                    + "\\.removeFromActiveSpawns\\s*\\(|\\.addDynamicObjectAtSlot\\s*\\(|"
+                    + "\\.allocateSlotAfter\\s*\\()");
     private static final List<Pattern> DIRECT_TOUCH_POLICY_CALLS = List.of(
             Pattern.compile("(?<!\\btouchProfile)\\.requiresRenderFlagForTouch\\s*\\("),
             Pattern.compile("(?<!\\btouchProfile)\\.requiresContinuousTouchCallbacks\\s*\\("),
@@ -201,6 +202,7 @@ class TestObjectPhysicsStandardizationGuard {
                 "  void update(ObjectManager objectManager, Spawn spawn) {",
                 "    objectManager.markRemembered (spawn);",
                 "    objectManager.addDynamicObjectAtSlot (null, 0);",
+                "    objectManager.allocateSlotAfter (0);",
                 "    setSlotIndex(- 1);",
                 "  }",
                 "}"));
@@ -213,6 +215,10 @@ class TestObjectPhysicsStandardizationGuard {
                         new SourceViolation(
                                 "Sample.java",
                                 "objectManager.addDynamicObjectAtSlot (null, 0);",
+                                ViolationKind.DIRECT_LIFECYCLE_OPERATION),
+                        new SourceViolation(
+                                "Sample.java",
+                                "objectManager.allocateSlotAfter (0);",
                                 ViolationKind.DIRECT_LIFECYCLE_OPERATION),
                         new SourceViolation(
                                 "Sample.java",

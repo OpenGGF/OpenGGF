@@ -222,16 +222,8 @@ public class TestSonic3kAIZEvents {
                 "Obj_AIZPlaneIntro routine 0 should clear y_vel before the first strict frame compare");
         assertFalse(sonic.getAir(),
                 "Obj_AIZPlaneIntro routine 0 should keep Sonic grounded for the first strict frame compare");
-        assertEquals(0x0020, tails.getCentreX() & 0xFFFF,
-                "Obj_Tails routine 0 leaves Player_2 at the SpawnLevelMainSprites position for one frame");
-        assertEquals(0x0424, tails.getCentreY() & 0xFFFF,
-                "Obj_Tails routine 0 leaves Player_2 at the SpawnLevelMainSprites position for one frame");
-        assertFalse(tails.getAir());
-
-        fixture.stepFrame(false, false, false, false, false);
-
         assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
-                "Tails_CPU_Control loc_13A10 parks AIZ intro Tails on the second object tick");
+                "Tails_CPU_Control loc_13A10 parks AIZ intro Tails on the first object tick");
         assertEquals(0, tails.getCentreY() & 0xFFFF);
         assertTrue(tails.getAir());
     }

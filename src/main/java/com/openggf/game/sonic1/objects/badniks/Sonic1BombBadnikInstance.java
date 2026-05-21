@@ -400,12 +400,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         spawnFreeChild(() -> {
             Sonic1BombFuseInstance fuse = new Sonic1BombFuseInstance(
                     currentX, currentY, facingLeft, ceilingBomb, FUSE_TIME, fuseYSpeed, this);
-            if (mySlot >= 0) {
-                int childSlot = objectManager.allocateSlotAfter(mySlot);
-                if (childSlot >= 0) {
-                    fuse.setSlotIndex(childSlot);
-                }
-            }
+            ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, fuse, mySlot);
             return fuse;
         });
     }

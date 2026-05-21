@@ -1,4 +1,4 @@
-package com.openggf.game.sonic2.objects;
+package com.openggf.game.sonic2.objects.badniks;
 
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchActorContextPolicy;
@@ -14,19 +14,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class TestBumperObjectInstance {
+class TestCrawlBadnikInstance {
 
     @Test
-    void touchProfileNamesSonic2SpecialLatchPolicy() {
-        BumperObjectInstance bumper = new BumperObjectInstance(
-                new ObjectSpawn(0x0F00, 0x0400, 0x44, 0, 0, false, 0),
-                "Bumper");
+    void touchProfileNamesSonic2AttackSpecialPolicyWhileKeepingBadnikDefaults() {
+        CrawlBadnikInstance crawl = new CrawlBadnikInstance(
+                new ObjectSpawn(0x0F00, 0x0400, 0xC8, 0, 0, false, 0));
 
-        TouchResponseProfile profile = bumper.getTouchResponseProfile();
+        TouchResponseProfile profile = crawl.getTouchResponseProfile();
 
         assertEquals(TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY, profile.categoryDecodeMode());
-        assertTrue(profile.continuousCallbacks());
-        assertFalse(profile.requiresRenderFlagForTouch());
+        assertFalse(profile.continuousCallbacks());
+        assertTrue(profile.requiresRenderFlagForTouch());
         assertFalse(profile.multiRegionSource());
         assertEquals(TouchShieldDeflectCapability.NONE, profile.shieldDeflectCapability());
         assertEquals(0, profile.shieldReactionFlags());
@@ -35,13 +34,13 @@ class TestBumperObjectInstance {
         assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
                 profile.stopAfterFirstOverlapPolicy());
 
-        assertTrue(bumper.usesSonic2TouchSpecialPropertyResponse());
-        assertTrue(bumper.requiresContinuousTouchCallbacks());
-        assertFalse(bumper.requiresRenderFlagForTouch());
-        assertEquals(0xD7, bumper.getCollisionFlags());
-        assertEquals(0, bumper.getCollisionProperty());
-        assertDoesNotThrow(() -> BumperObjectInstance.class.getDeclaredMethod("getTouchResponseProfile"));
-        assertEquals(profile, bumper.getTouchResponseProfile(false));
-        assertDoesNotThrow(() -> BumperObjectInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class));
+        assertTrue(crawl.usesSonic2TouchSpecialPropertyResponse());
+        assertFalse(crawl.requiresContinuousTouchCallbacks());
+        assertTrue(crawl.requiresRenderFlagForTouch());
+        assertEquals(0x17, crawl.getCollisionFlags());
+        assertEquals(0, crawl.getCollisionProperty());
+        assertDoesNotThrow(() -> CrawlBadnikInstance.class.getDeclaredMethod("getTouchResponseProfile"));
+        assertEquals(profile, crawl.getTouchResponseProfile(false));
+        assertDoesNotThrow(() -> CrawlBadnikInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class));
     }
 }

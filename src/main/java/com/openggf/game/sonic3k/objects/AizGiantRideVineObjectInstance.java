@@ -264,6 +264,9 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance imple
         AizVineHandleLogic.positionFromParent(handle, parentX, parentY, parentAngle);
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
         AizVineHandleLogic.updatePlayers(handle, services(), player, sidekick, parentAngle);
+        if (!activatedSwingStarted && AizVineHandleLogic.anyGrabbed(handle)) {
+            activatedSwingStarted = true;
+        }
         if (services().levelManager() != null && services().levelManager().objectsExecuteAfterPlayerPhysics()) {
             AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
         }

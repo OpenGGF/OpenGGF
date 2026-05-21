@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -11,6 +12,8 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -79,8 +82,52 @@ class TestSinkingMudObjectInstance {
     }
 
     @Test
+    void updateAdvancesUniqueQueryParticipantsOnlyOnce() {
+        SinkingMudObjectInstance mud = new SinkingMudObjectInstance(
+                new ObjectSpawn(0x100, 0x200, Sonic3kObjectIds.SINKING_MUD, 0x04, 0x00, false, 0));
+        PlayableEntity main = playable();
+        PlayableEntity sidekick = playable();
+        mud.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick, sidekick)));
+        mud.onSolidContact(sidekick, new SolidContact(true, false, false, true, false), 0);
+
+        mud.update(1, main);
+
+        assertEquals(0x2F, mud.rawSurfaceForTest(sidekick),
+                "Query sidekicks should participate, but duplicate entries must not advance twice");
+    }
+
+    @Test
     void profileMarksSinkingMudImplemented() {
         Sonic3kObjectProfile profile = new Sonic3kObjectProfile();
         assertTrue(profile.getImplementedIds().contains(Sonic3kObjectIds.SINKING_MUD));
+    }
+
+    private static PlayableEntity playable() {
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getDead()).thenReturn(false);
+        when(player.isOnObject()).thenReturn(false);
+        when(player.getYRadius()).thenReturn((short) 19);
+        when(player.getHeight()).thenReturn(38);
+        return player;
+    }
+
+    private static final class QueryOnlyPlayerServices extends TestObjectServices {
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+
+        private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return List.of();
+        }
     }
 }

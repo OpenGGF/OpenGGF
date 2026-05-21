@@ -719,8 +719,12 @@ public class CollisionSystem {
         int frameCounter = levelManager.getObjectManager().getFrameCounter();
         int centreX = sprite.getCentreX() & 0xFFFF;
         int centreY = sprite.getCentreY() & 0xFFFF;
-        boolean inS3kCnzWindow = centreX >= 0x1200 && centreX <= 0x1300
-                && centreY >= 0x0680 && centreY <= 0x0780;
+        boolean inS3kCnzWindow = frameCounter >= Integer.getInteger("s3k.cnz.collisionprobe.minFrame", 0)
+                && frameCounter <= Integer.getInteger("s3k.cnz.collisionprobe.maxFrame", Integer.MAX_VALUE)
+                && centreX >= Integer.getInteger("s3k.cnz.collisionprobe.minX", 0x1200)
+                && centreX <= Integer.getInteger("s3k.cnz.collisionprobe.maxX", 0x1300)
+                && centreY >= Integer.getInteger("s3k.cnz.collisionprobe.minY", 0x0680)
+                && centreY <= Integer.getInteger("s3k.cnz.collisionprobe.maxY", 0x0780);
         boolean inS2WfzWindow = s2WfzProbe
                 && centreX >= 0x0A80 && centreX <= 0x0C00
                 && centreY >= 0x0440 && centreY <= 0x0560;
@@ -1009,6 +1013,8 @@ public class CollisionSystem {
 
         for (int i = 0; i < 2; i++) {
             SensorResult result = pushSensors[i].scan((short) 0, (short) 0);
+            traceS3kCnzCollisionProbe(sprite, i == 0 ? "wall-left-both" : "wall-right-both",
+                    0x80, new SensorResult[]{result}, null, result != null && result.distance() < 0);
 
             if (result != null && result.distance() < 0) {
                 moveForSensorResult(sprite, result);

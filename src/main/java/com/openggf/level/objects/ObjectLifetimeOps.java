@@ -56,6 +56,21 @@ public final class ObjectLifetimeOps {
         }
     }
 
+    public static int assignFindNextFreeChildSlot(ObjectManager objectManager,
+                                                  AbstractObjectInstance child,
+                                                  int predecessorSlot) {
+        Objects.requireNonNull(objectManager, "objectManager");
+        Objects.requireNonNull(child, "child");
+        if (predecessorSlot < 0) {
+            return -1;
+        }
+        int slot = objectManager.allocateSlotAfter(predecessorSlot);
+        if (slot >= 0) {
+            child.setSlotIndex(slot);
+        }
+        return slot;
+    }
+
     public static void markSpawnRemembered(ObjectManager objectManager, ObjectSpawn spawn) {
         if (objectManager != null && spawn != null) {
             objectManager.markRemembered(spawn);
