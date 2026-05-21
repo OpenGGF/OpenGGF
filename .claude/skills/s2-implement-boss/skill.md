@@ -283,7 +283,7 @@ Bosses and boss children may need bespoke state, but still prefer shared contrac
 
 - Use `ObjectControlState` for forced-control and cutscene-control predicates instead of raw boolean combinations.
 - Use `ObjectPlayerQuery` and `ObjectPlayerParticipationPolicy` for hit, contact, and targeting decisions. Native S2 boss logic generally knows P1/Tails; OpenGGF multi-sidekick behavior must be explicit when extended.
-- Use `ObjectLifetimeOps` for child deletion, despawn, and dynamic-expire semantics once available.
+- Use `ObjectLifetimeOps` for child deletion, despawn, and dynamic-expire semantics.
 - Reuse canonical `TouchResponseProfile` / `ObjectLifecycleProfile` compatibility wrappers where they preserve existing boss behavior.
 - Ratchet guard baselines when adding source guards; do not let historical direct-control or lifecycle calls block new hard-fail enforcement.
 

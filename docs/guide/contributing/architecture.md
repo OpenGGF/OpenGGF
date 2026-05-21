@@ -140,13 +140,15 @@ but managers, event handlers, HUD code, and render orchestration commonly use
 **ObjectServices** is the contextual tier for object instances. It provides access to
 things that are specific to the current gameplay context:
 - Current level and camera
-- Object manager (for spawning dynamic objects)
+- Object lifecycle helpers and object-manager-backed operations
 - Sound effect playback
 - Game state (rings, lives, score)
 
 Every object instance receives an `ObjectServices` reference via `services()`. This is
-how objects interact with the world: `services().playSfx(id)`,
-`services().objectManager().addDynamicObject(obj)`, etc.
+how objects interact with the world: `services().playSfx(id)`, camera queries,
+game-state updates, and object-manager-backed helpers. New runtime child objects
+should be spawned through `spawnChild(...)`, `spawnFreeChild(...)`, or an existing
+`level.objects` lifecycle wrapper rather than direct manager calls.
 
 The separation exists because the planned level editor will have multiple simultaneous
 level contexts. Process services stay shared; object services are backed by the active
@@ -317,10 +319,11 @@ to copy. Common reasons:
 ### Dynamic Objects
 
 Objects created at runtime (projectiles, explosions, debris) are not part of the
-placement list. New object code should prefer `spawnChild(...)`, `spawnFreeChild(...)`,
+placement list. New object code should use `spawnChild(...)`, `spawnFreeChild(...)`,
 or another `level.objects` compatibility wrapper so construction context and lifecycle
-semantics stay centralized. Direct `ObjectManager.addDynamicObject(obj)` remains a
-legacy bridge for unusual allocation paths. Dynamic objects follow the same
+semantics stay centralized. Direct `ObjectManager.addDynamicObject(obj)` is reserved
+for documented bridge code and unusual allocation paths that cannot use the standard
+helpers. Dynamic objects follow the same
 update/render/destroy lifecycle but are not subject to camera-based spawn/despawn.
 
 ## Rendering Pipeline

@@ -91,9 +91,9 @@ SomeProjectile projectile = spawnChild(() -> new SomeProjectile(spawn, direction
 
 Use `spawnChild(...)`, `spawnFreeChild(...)`, or another `level.objects` compatibility
 wrapper when the child needs services during construction or has parent/slot lifetime
-coupling. Direct `ObjectManager.addDynamicObject(...)` is still available for legacy
-paths, but new boss work should use the wrapper that preserves construction context and
-future `ObjectLifetimeOps` migration points.
+coupling. Direct `ObjectManager.addDynamicObject(...)` is reserved for documented
+legacy or bridge paths; new boss work should use the wrapper that preserves construction
+context and `ObjectLifetimeOps` migration points.
 
 Common child objects for bosses:
 - **Projectiles** (fireballs, hammers, energy balls)
