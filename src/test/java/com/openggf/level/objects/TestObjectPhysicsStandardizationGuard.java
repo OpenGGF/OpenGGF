@@ -38,7 +38,6 @@ class TestObjectPhysicsStandardizationGuard {
             baseline("com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
             baseline("com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
             baseline("com/openggf/game/sonic3k/objects/AizPlaneIntroInstance.java", "ps.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 1),
-            baseline("com/openggf/game/sonic3k/objects/bosses/CnzEndBossInstance.java", "sprite.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
             baseline("com/openggf/game/sonic3k/objects/bosses/HczEndBossEggCapsuleInstance.java", "sprite.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
             baseline("com/openggf/game/sonic3k/objects/bosses/HczEndBossGeyserCutscene.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 1),
             baseline("com/openggf/game/sonic3k/objects/bosses/HczEndBossWaterColumn.java", "sprite.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.BOSS_OR_CUTSCENE_ESCAPE_HATCH, 3),
@@ -111,6 +110,13 @@ class TestObjectPhysicsStandardizationGuard {
     void sonic3kSsEntryRingUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
                 .filter(baseline -> baseline.path().endsWith("Sonic3kSSEntryRingObjectInstance.java"))
+                .toList());
+    }
+
+    @Test
+    void cnzEndBossUsesObjectControlStatePolicyInsteadOfBaseline() {
+        assertEquals(List.of(), BASELINE.stream()
+                .filter(baseline -> baseline.path().endsWith("bosses/CnzEndBossInstance.java"))
                 .toList());
     }
 
