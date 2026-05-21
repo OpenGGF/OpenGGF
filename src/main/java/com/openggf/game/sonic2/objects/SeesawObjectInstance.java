@@ -151,14 +151,6 @@ public class SeesawObjectInstance extends BoxObjectInstance
     }
 
     /**
-     * Determines if the given player is the main character (player 1).
-     */
-    private boolean isMainCharacter(AbstractPlayableSprite player) {
-        // If player is not any sidekick, they're the main character
-        return !services().sidekicks().contains(player);
-    }
-
-    /**
      * Calculates combined target angle when both players are standing.
      * ROM: loc_21A28 through loc_21A4C
      */
@@ -270,15 +262,8 @@ public class SeesawObjectInstance extends BoxObjectInstance
         PlayerSolidContactResult mainResult = player != null ? batch.perPlayer().get(player) : null;
         standingPlayer1 = mainResult != null && mainResult.standingNow() ? player : null;
 
-        AbstractPlayableSprite sidekickSprite = null;
-        PlayerSolidContactResult sidekickResult = null;
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sp) {
-                sidekickSprite = sp;
-                sidekickResult = batch.perPlayer().get(sidekick);
-                break;
-            }
-        }
+        AbstractPlayableSprite sidekickSprite = nativeP2SpriteOrNull();
+        PlayerSolidContactResult sidekickResult = sidekickSprite != null ? batch.perPlayer().get(sidekickSprite) : null;
         standingPlayer2 = sidekickResult != null && sidekickResult.standingNow() ? sidekickSprite : null;
 
         // ROM: SlopedPlatform_SingleCharacter runs every frame to validate standing players.
@@ -297,6 +282,11 @@ public class SeesawObjectInstance extends BoxObjectInstance
             // ROM: cmp.w d0,d2 / blt.s + / move.w d2,d0 then move.w d0,objoff_38(a1)
             storedPlayerYVel = Math.max(p1Vel, p2Vel);
         }
+    }
+
+    private AbstractPlayableSprite nativeP2SpriteOrNull() {
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        return nativeP2 instanceof AbstractPlayableSprite sprite ? sprite : null;
     }
 
     /**

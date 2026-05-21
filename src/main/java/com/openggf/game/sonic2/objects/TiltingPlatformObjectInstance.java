@@ -6,6 +6,8 @@ import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -611,20 +613,12 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         }
         ObjectManager objectManager = services().objectManager();
 
-        // Get main character (ROM: MainCharacter)
-        AbstractPlayableSprite main = services().camera().getFocusedSprite();
-        if (main != null && objectManager.isRidingObject(main, this)) {
-            objectManager.clearRidingObject(main);
-            main.setOnObject(false);
-            main.setAir(true);
-        }
-
-        // Get sidekick(s) (ROM: Sidekick)
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (objectManager.isRidingObject(sidekick, this)) {
-                objectManager.clearRidingObject(sidekick);
-                sidekick.setOnObject(false);
-                sidekick.setAir(true);
+        for (PlayableEntity candidate : services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (objectManager.isRidingObject(candidate, this)) {
+                objectManager.clearRidingObject(candidate);
+                candidate.setOnObject(false);
+                candidate.setAir(true);
             }
         }
     }
@@ -668,29 +662,9 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
      * -> x_flip is SET when d0 == 0 (player to the LEFT)
      */
     private boolean isPlayerToLeft(AbstractPlayableSprite player) {
-        AbstractPlayableSprite main = services().camera().getFocusedSprite();
-
-        // Determine the closest player by absolute horizontal distance
-        AbstractPlayableSprite closest = null;
-        int closestAbsDist = Integer.MAX_VALUE;
-
-        if (main != null) {
-            int diff = spawn.x() - main.getCentreX();
-            int absDiff = Math.abs(diff);
-            if (absDiff < closestAbsDist) {
-                closestAbsDist = absDiff;
-                closest = main;
-            }
-        }
-
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            int diff = spawn.x() - sidekick.getCentreX();
-            int absDiff = Math.abs(diff);
-            if (absDiff < closestAbsDist) {
-                closestAbsDist = absDiff;
-                closest = (AbstractPlayableSprite) sidekick;
-            }
-        }
+        ObjectPlayerQuery.NearestPlayerX nearest = services().playerQuery()
+                .nearestByRomX(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS, spawn.x());
+        AbstractPlayableSprite closest = nearest.player() instanceof AbstractPlayableSprite sprite ? sprite : null;
 
         if (closest == null) {
             // Fallback to passed-in player if no main/sidekick found
