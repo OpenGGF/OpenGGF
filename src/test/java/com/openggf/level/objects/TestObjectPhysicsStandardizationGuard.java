@@ -30,8 +30,8 @@ class TestObjectPhysicsStandardizationGuard {
             Pattern.compile("\\.usesS3kTouchSpecialPropertyResponse\\s*\\("),
             Pattern.compile("\\.usesSonic2TouchSpecialPropertyResponse\\s*\\("),
             Pattern.compile("\\bTouchResponseProvider\\s+touchProfile\\b"),
-            Pattern.compile("\\bvar\\s+touchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider\\b"),
-            Pattern.compile("\\btouchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider\\b"));
+            Pattern.compile("\\bvar\\s+touchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider(?!\\s*\\.)\\b"),
+            Pattern.compile("\\btouchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider(?!\\s*\\.)\\b"));
 
     private static final List<BaselineViolation> BASELINE = List.of();
 

@@ -38,6 +38,19 @@ class TestSolidRoutineProfiles {
     }
 
     @Test
+    void providerExposesSolidRoutineProfileForDispatcherConsumption() {
+        SolidObjectProvider provider = new MinimalSolidProvider(new SolidObjectParams(14, 14, 14)) {
+            @Override
+            public boolean hasMonitorSolidity() {
+                return true;
+            }
+        };
+
+        assertEquals(SolidRoutineProfile.fromProvider(provider), provider.getSolidRoutineProfile());
+        assertEquals(SolidRoutineKind.MONITOR_SOLID, provider.getSolidRoutineProfile().kind());
+    }
+
+    @Test
     void topOnlyPlatformLikeProviderMapsStablePlatformFlags() {
         SolidObjectProvider provider = new MinimalSolidProvider(new SolidObjectParams(24, 8, 4)) {
             @Override
