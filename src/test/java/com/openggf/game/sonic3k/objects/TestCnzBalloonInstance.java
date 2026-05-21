@@ -5,6 +5,9 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -21,6 +24,43 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCnzBalloonInstance {
+
+    @Test
+    void touchResponseProfileUsesS3kSpecialContinuousRenderFlagPolicy() {
+        CnzBalloonInstance balloon =
+                new CnzBalloonInstance(new ObjectSpawn(0x1990, 0x012C, 0x41, 0, 0, false, 0));
+
+        TouchResponseProfile profile = balloon.getTouchResponseProfile(false);
+
+        assertEquals(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY, profile.categoryDecodeMode());
+        assertTrue(profile.continuousCallbacks());
+        assertTrue(profile.requiresRenderFlagForTouch());
+        assertFalse(profile.multiRegionSource());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
+                profile.stopAfterFirstOverlapPolicy());
+    }
+
+    @Test
+    void touchResponseProfileStopsContinuousCallbacksAfterMovingOffscreen() {
+        CnzBalloonInstance balloon =
+                new CnzBalloonInstance(new ObjectSpawn(0x17C0, 0x860, 0x41, 0, 0, false, 0));
+        balloon.setServices(new TestObjectServices());
+        AbstractPlayableSprite player = HeadlessTestFixture.builder()
+                .withZoneAndAct(com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+
+        balloon.onTouchResponse(player, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0);
+        for (int i = 0; i < 7; i++) {
+            balloon.update(i, player);
+        }
+
+        TouchResponseProfile profile = balloon.getTouchResponseProfile(false);
+
+        assertFalse(profile.continuousCallbacks(),
+                "CNZ balloon continuous touch callbacks mirror the old movedOffscreen hook gate");
+        assertEquals(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY, profile.categoryDecodeMode());
+    }
 
     @Test
     void constructorDoesNotConsumeRngBeforeRomInitRoutineRuns() {
