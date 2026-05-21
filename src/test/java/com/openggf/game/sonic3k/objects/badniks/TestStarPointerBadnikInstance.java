@@ -9,11 +9,18 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tools.ObjectDiscoveryTool.LevelConfig;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -92,5 +99,31 @@ class TestStarPointerBadnikInstance {
 
         verify(objectManager, times(4)).addDynamicObjectAfterCurrent(
                 org.mockito.ArgumentMatchers.any(StarPointerBadnikInstance.OrbitingPointInstance.class));
+    }
+
+    @Test
+    void orbitingPointDeclaresShieldDeflectTouchResponseProfile() {
+        StarPointerBadnikInstance starPointer = new StarPointerBadnikInstance(
+                new ObjectSpawn(160, 100, Sonic3kObjectIds.STAR_POINTER, 0, 0, false, 0));
+        StarPointerBadnikInstance.OrbitingPointInstance point =
+                new StarPointerBadnikInstance.OrbitingPointInstance(starPointer.getSpawn(), starPointer, 0);
+
+        TouchResponseProfile expected = new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                false,
+                TouchShieldDeflectCapability.SHIELD_DEFLECT,
+                0x08,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+
+        assertEquals(expected, point.getTouchResponseProfile());
+        assertEquals(expected, point.getTouchResponseProfile(false));
+        assertDoesNotThrow(() -> StarPointerBadnikInstance.OrbitingPointInstance.class
+                .getDeclaredMethod("getTouchResponseProfile"));
+        assertDoesNotThrow(() -> StarPointerBadnikInstance.OrbitingPointInstance.class
+                .getDeclaredMethod("getTouchResponseProfile", boolean.class));
     }
 }
