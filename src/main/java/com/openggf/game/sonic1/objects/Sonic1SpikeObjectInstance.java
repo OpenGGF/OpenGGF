@@ -11,6 +11,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -58,6 +59,8 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
     private static final int RETRACT_DELAY = 60;       // move.w #60,objoff_38(a0)
     // From disassembly: move.b #4,obPriority(a0)
     private static final int PRIORITY = 4;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     private final int baseX;
     private final int baseY;
@@ -92,14 +95,16 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         updateMovement();
         updateDynamicSpawn(currentX, currentY);
         SolidCheckpointBatch batch = checkpointAll();
-        applyCheckpointContact(player, batch.perPlayer().get(player), frameCounter);
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sidekickSprite) {
-                applyCheckpointContact(sidekickSprite, batch.perPlayer().get(sidekick), frameCounter);
+        List<PlayableEntity> players = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (players.isEmpty() && playerEntity != null) {
+            players = List.of(playerEntity);
+        }
+        for (PlayableEntity candidate : players) {
+            if (candidate instanceof AbstractPlayableSprite player) {
+                applyCheckpointContact(player, batch.perPlayer().get(candidate), frameCounter);
             }
         }
     }

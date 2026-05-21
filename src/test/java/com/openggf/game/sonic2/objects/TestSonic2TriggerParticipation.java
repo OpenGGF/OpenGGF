@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.GameStateManager;
+import com.openggf.game.OscillationManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.ContactKind;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
@@ -10,6 +11,7 @@ import com.openggf.game.solid.PostContactState;
 import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -110,6 +112,56 @@ class TestSonic2TriggerParticipation {
         assertEquals(0x0FF4, launcher.getX(),
                 "Speed Launcher should use ObjectPlayerQuery participants when selecting standing riders");
         assertEquals(0x0FF4, tails.getCentreX() & 0xFFFF);
+    }
+
+    @Test
+    void hPropellerPushesQueryOnlySidekick() {
+        OscillationManager.reset();
+        TestablePlayableSprite main = player("sonic", 0x1800, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x0FB0);
+        HPropellerObjectInstance propeller = new HPropellerObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0xB5, 0x66, 0, false, 0));
+        propeller.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        propeller.update(0, main);
+
+        assertTrue(tails.getAir(),
+                "Horizontal propeller should use ObjectPlayerQuery participants for push checks");
+        assertEquals(Sonic2AnimationIds.FLOAT2.id(), tails.getAnimationId());
+        assertEquals(0, tails.getYSpeed());
+    }
+
+    @Test
+    void slidingSpikesTriggerForQueryOnlySidekick() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x0F60, 0x1000);
+        SlidingSpikesObjectInstance spikes = new SlidingSpikesObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x76, 0, 0, false, 0),
+                "SlidingSpikes");
+        spikes.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        spikes.update(0, main);
+        spikes.update(1, main);
+
+        assertEquals(0x0FFF, spikes.getX(),
+                "Sliding Spikes should use ObjectPlayerQuery participants for approach detection");
+    }
+
+    @Test
+    void vineSwitchGrabsQueryOnlySidekick() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1028);
+        VineSwitchObjectInstance vineSwitch = new VineSwitchObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x7F, 0, 0, false, 0),
+                "VineSwitch");
+        vineSwitch.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        vineSwitch.update(0, main);
+
+        assertTrue(tails.isObjectControlled(),
+                "Vine Switch should use ObjectPlayerQuery participants for grab checks");
+        assertEquals(Sonic2AnimationIds.HANG2.id(), tails.getAnimationId());
+        assertEquals(1, intField(vineSwitch, "mappingFrame"));
     }
 
     private static TestablePlayableSprite player(String code, int x, int y) {

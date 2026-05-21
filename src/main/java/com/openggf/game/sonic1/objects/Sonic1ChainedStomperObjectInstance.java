@@ -13,7 +13,13 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -141,8 +147,27 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     // Spike active width: move.b #$38,obActWid(a1)
     private static final int SPIKE_ACTIVE_WIDTH = 0x38;
 
+    private static final TouchResponseProfile MULTI_REGION_HURT_PROFILE = hurtProfile(
+            true, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
+    private static final TouchResponseProfile SINGLE_REGION_HURT_PROFILE = hurtProfile(
+            false, TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+
     // Sound effect play interval: andi.b #$F,d0 / bne.s (skip sound)
     private static final int SOUND_INTERVAL_MASK = 0x0F;
+
+    private static TouchResponseProfile hurtProfile(boolean multiRegionSource,
+            TouchOverlapStopPolicy stopPolicy) {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                multiRegionSource,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                stopPolicy);
+    }
 
     // ---- Instance state ----
 
@@ -631,6 +656,16 @@ public class Sonic1ChainedStomperObjectInstance extends AbstractObjectInstance
     }
 
     // ---- Touch Response (spikes hurt the player) ----
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(getMultiTouchRegions() != null);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return multiRegionSource ? MULTI_REGION_HURT_PROFILE : SINGLE_REGION_HURT_PROFILE;
+    }
 
     @Override
     public int getCollisionFlags() {
