@@ -178,7 +178,7 @@ private void updateAizAct1Events() {
 | `SwingMotion.update()` | `com.openggf.physics.SwingMotion` | Boss oscillates/bobs/swings (ROM's `Swing_UpAndDown`). Returns velocity, direction, and peak-reached flag. |
 | `ObjectTerrainUtils.checkFloorDist()` | `com.openggf.physics` | Floor/ceiling/wall detection for boss projectiles or ground-following bosses. |
 | `TrigLookupTable.calcAngle()` / `sinHex()` / `cosHex()` | `com.openggf.physics` | Circular motion, aimed projectiles, angle-based velocity. ROM-accurate 256-step trig. |
-| `S3kBadnikProjectileInstance` | `game.sonic3k.objects.badniks` | Reusable projectile with gravity, HURT collision (0x80), and shield deflection. Spawn via `ObjectManager.addDynamicObject()`. |
+| `S3kBadnikProjectileInstance` | `game.sonic3k.objects.badniks` | Reusable projectile with gravity, HURT collision (0x80), and shield deflection. Spawn via `spawnChild(...)`, `spawnFreeChild(...)`, or an existing `level.objects` lifecycle helper. |
 | `BoxObjectInstance` | `game.sonic2.objects` | Invisible trigger zones with debug visualization. |
 
 **Collision patterns:**
@@ -270,15 +270,12 @@ For visual-only children that share the parent's object slot:
 For children with separate behavior/collision:
 ```java
 private void spawnChildComponents() {
-    ObjectManager manager = services().objectManager();
-
-    BossChildInstance child = new BossChildInstance(this, xOffset, yOffset);
-    manager.addDynamicObject(child);
+    BossChildInstance child = spawnChild(() -> new BossChildInstance(this, xOffset, yOffset));
     childComponents.add(child);
 }
 ```
 
-Children can extend `AbstractBossChild` (shared with S2) or be independent objects.
+Children can extend `AbstractBossChild` (shared with S2) or be independent objects. Avoid direct `ObjectManager.addDynamicObject(...)` unless the boss has a documented lifecycle reason that cannot use the standard helpers.
 
 ### Phase 5: Hit Handling
 

@@ -185,17 +185,14 @@ S1 bosses use `ObjData` tables to define child objects. Parse these tables and s
 ```java
 // S1 pattern: sub-objects defined as data table entries
 private void spawnChildComponents() {
-    ObjectManager manager = services().objectManager();
-
     // From BossName_ObjData table in disassembly
     // Each entry typically: x_offset, y_offset, mapping_frame, subtype
-    BossChildInstance child = new BossChildInstance(this, xOffset, yOffset);
-    manager.addDynamicObject(child);
+    BossChildInstance child = spawnChild(() -> new BossChildInstance(this, xOffset, yOffset));
     childComponents.add(child);
 }
 ```
 
-Children can extend `AbstractBossChild` (shared with S2) or be simple independent objects depending on the boss pattern.
+Children can extend `AbstractBossChild` (shared with S2) or be simple independent objects depending on the boss pattern. Prefer `spawnChild(...)`, `spawnFreeChild(...)`, or an existing `level.objects` lifecycle helper instead of direct `ObjectManager.addDynamicObject(...)`.
 
 ### Phase 5: Hit Handling
 
