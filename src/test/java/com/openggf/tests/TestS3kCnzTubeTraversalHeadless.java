@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.objects.CnzSpiralTubeInstance;
 import com.openggf.game.sonic3k.objects.CnzVacuumTubeInstance;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -116,6 +118,25 @@ class TestS3kCnzTubeTraversalHeadless {
                 "sub_31F62 changes x_pos with word arithmetic and must not clear x_sub");
         assertEquals(0x3200, player.getYSubpixelRaw(),
                 "Horizontal vacuum drag should leave y_sub untouched");
+    }
+
+    @Test
+    void vacuumTubeProcessesEngineSidekicksThroughParticipationPolicy() {
+        CnzVacuumTubeInstance tube = new CnzVacuumTubeInstance(
+                new ObjectSpawn(0x3EC0, 0x07F0, Sonic3kObjectIds.CNZ_VACUUM_TUBE, 0x00, 0x01, false, 0));
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x3EA0, (short) 0x07D0);
+        TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x3EA0, (short) 0x07D0);
+        TestablePlayableSprite extraSidekick = new TestablePlayableSprite("knuckles", (short) 0x3EA0, (short) 0x07D0);
+        tube.setServices(new TestObjectServices().withSidekicks(List.of(sidekick, extraSidekick)));
+
+        tube.update(0, main);
+
+        assertEquals(0x1000, main.getXSpeed(),
+                "The direct update player remains the main participant when services cannot resolve main");
+        assertEquals(0x1000, sidekick.getXSpeed(),
+                "Vacuum Tube intentionally extends ROM P2 participation to engine sidekicks");
+        assertEquals(0x1000, extraSidekick.getXSpeed(),
+                "Extra engine sidekicks should keep the existing multi-sidekick extension");
     }
 
     @Test
