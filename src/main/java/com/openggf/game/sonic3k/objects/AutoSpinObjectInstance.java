@@ -8,6 +8,7 @@ import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
@@ -109,8 +110,9 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
 
         checkPlayerCrossing(player, true);
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            checkPlayerCrossing((AbstractPlayableSprite) sidekickEntity, false);
+        AbstractPlayableSprite nativeP2 = nativeP2OrNull(player);
+        if (nativeP2 != null) {
+            checkPlayerCrossing(nativeP2, false);
         }
     }
 
@@ -128,14 +130,23 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
             sonicPastTrigger = player.getCentreX() > objX;
         }
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            AbstractPlayableSprite sidekick = (AbstractPlayableSprite) sidekickEntity;
+        AbstractPlayableSprite sidekick = nativeP2OrNull(player);
+        if (sidekick != null) {
             if (verticalMode) {
                 sidekickPastTrigger = sidekick.getCentreY() > objY;
             } else {
                 sidekickPastTrigger = sidekick.getCentreX() > objX;
             }
         }
+    }
+
+    private AbstractPlayableSprite nativeP2OrNull(AbstractPlayableSprite nativeP1) {
+        for (PlayableEntity candidate : services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate != nativeP1 && candidate instanceof AbstractPlayableSprite sprite) {
+                return sprite;
+            }
+        }
+        return null;
     }
 
     /**
