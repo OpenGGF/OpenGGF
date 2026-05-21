@@ -8,6 +8,7 @@ import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -24,6 +25,7 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     // Engine-special category equivalent of the ROM's $D7 Touch_Special route.
     private static final int SPECIAL_COLLISION_FLAGS = 0x40 | COLLISION_SIZE_INDEX;
     private static final int PRIORITY_BUCKET = 5;           // ObjDat_MegaChopper priority $280
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = continuousStandardEnemyProfile();
 
     private static final int CHASE_SPEED = 0x200;
     private static final int CHASE_ACCEL = 0x08;
@@ -71,6 +73,20 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     private int remainingShakeChanges;
     private int lastDirectionBits;
 
+    private static TouchResponseProfile continuousStandardEnemyProfile() {
+        TouchResponseProfile standard = TouchResponseProfile.standardEnemy();
+        return new TouchResponseProfile(
+                standard.categoryDecodeMode(),
+                true,
+                standard.requiresRenderFlagForTouch(),
+                standard.multiRegionSource(),
+                standard.shieldDeflectCapability(),
+                standard.shieldReactionFlags(),
+                standard.attackBouncePolicy(),
+                standard.actorContextPolicy(),
+                standard.stopAfterFirstOverlapPolicy());
+    }
+
     public MegaChopperBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "MegaChopper",
                 Sonic3kObjectArtKeys.HCZ_MEGA_CHOPPER, COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
@@ -102,8 +118,13 @@ public final class MegaChopperBadnikInstance extends AbstractS3kBadnikInstance
     }
 
     @Override
-    public boolean requiresContinuousTouchCallbacks() {
-        return true;
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override
