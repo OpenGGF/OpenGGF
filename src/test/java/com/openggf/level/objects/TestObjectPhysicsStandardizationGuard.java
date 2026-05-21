@@ -33,12 +33,7 @@ class TestObjectPhysicsStandardizationGuard {
             Pattern.compile("\\bvar\\s+touchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider\\b"),
             Pattern.compile("\\btouchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider\\b"));
 
-    private static final List<BaselineViolation> BASELINE = List.of(
-            baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlled(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 2),
-            baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlled(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 4),
-            baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlSuppressesMovement(false);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 3),
-            baseline("com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java", "player.setObjectControlSuppressesMovement(true);", ViolationKind.DIRECT_OBJECT_CONTROL_SETTER, ReasonCode.CUTSCENE_SCRIPT, 2)
-    );
+    private static final List<BaselineViolation> BASELINE = List.of();
 
     @Test
     void objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites() throws IOException {
@@ -142,6 +137,13 @@ class TestObjectPhysicsStandardizationGuard {
     void hczEndBossWaterColumnUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
                 .filter(baseline -> baseline.path().endsWith("bosses/HczEndBossWaterColumn.java"))
+                .toList());
+    }
+
+    @Test
+    void iczSnowboardIntroUsesObjectControlStatePolicyInsteadOfBaseline() {
+        assertEquals(List.of(), BASELINE.stream()
+                .filter(baseline -> baseline.path().endsWith("IczSnowboardIntroInstance.java"))
                 .toList());
     }
 
