@@ -9,6 +9,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
@@ -47,6 +49,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
     private static final int JET_PHASE_FRAMES = 0x40;
     private static final int FROST_PUFF_INTERVAL = 1;
     private static final int CAPTURE_CLOUD_OFFSET = 0x30;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
     private final int x;
     private final int y;
@@ -71,15 +75,14 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite nearest = nearestPlayer(playerEntity);
         if (!frostCycleActive) {
-            if (isWithinActivationRange(nearest)) {
+            if (nearestPlayerXDistance(playerEntity) < ACTIVATE_X_RANGE) {
                 startFrostCycle();
             }
             return;
         }
 
-        if (!isWithinActivationRange(nearest)) {
+        if (nearestPlayerXDistance(playerEntity) >= ACTIVATE_X_RANGE) {
             stopFrostCycle();
             return;
         }
@@ -140,26 +143,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         frostPuffsSpawned++;
     }
 
-    private boolean isWithinActivationRange(AbstractPlayableSprite player) {
-        return player != null && Math.abs(x - player.getCentreX()) < ACTIVATE_X_RANGE;
-    }
-
-    private AbstractPlayableSprite nearestPlayer(PlayableEntity playerEntity) {
-        AbstractPlayableSprite nearest = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
-        int nearestDx = nearest == null ? Integer.MAX_VALUE : Math.abs(x - nearest.getCentreX());
+    private int nearestPlayerXDistance(PlayableEntity playerEntity) {
         ObjectServices services = tryServices();
-        if (services != null) {
-            for (PlayableEntity sidekick : services.sidekicks()) {
-                if (sidekick instanceof AbstractPlayableSprite sprite) {
-                    int dx = Math.abs(x - sprite.getCentreX());
-                    if (dx < nearestDx) {
-                        nearest = sprite;
-                        nearestDx = dx;
-                    }
-                }
-            }
-        }
-        return nearest;
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> playerEntity,
+                () -> services != null ? services.sidekicks() : List.of());
+        return query.nearestByRomX(PLAYER_PARTICIPATION, x).distance();
     }
 
     private void playSfx(int sfxId) {

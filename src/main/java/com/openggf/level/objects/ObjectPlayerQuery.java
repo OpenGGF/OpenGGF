@@ -22,6 +22,9 @@ public final class ObjectPlayerQuery {
     private final Supplier<? extends PlayableEntity> mainPlayerSource;
     private final Supplier<? extends List<? extends PlayableEntity>> sidekickSource;
 
+    public record NearestPlayerX(PlayableEntity player, int distance) {
+    }
+
     public ObjectPlayerQuery(Supplier<? extends PlayableEntity> mainPlayerSource,
                              Supplier<? extends List<? extends PlayableEntity>> sidekickSource) {
         this.mainPlayerSource = Objects.requireNonNull(mainPlayerSource, "mainPlayerSource");
@@ -69,6 +72,21 @@ public final class ObjectPlayerQuery {
         return List.copyOf(ordered);
     }
 
+    public NearestPlayerX nearestByRomX(ObjectPlayerParticipationPolicy policy, int referenceX) {
+        Objects.requireNonNull(policy, "policy");
+        List<PlayableEntity> players = participantsForRomX(policy);
+        PlayableEntity nearest = null;
+        int nearestDistance = Integer.MAX_VALUE;
+        for (PlayableEntity player : players) {
+            int distance = romSignedXDistance(referenceX, player.getCentreX());
+            if (distance < nearestDistance) {
+                nearest = player;
+                nearestDistance = distance;
+            }
+        }
+        return new NearestPlayerX(nearest, nearestDistance);
+    }
+
     private List<PlayableEntity> nearestEnginePlayer(int referenceX, int referenceY) {
         List<PlayableEntity> players = uniquePlayers(mainPlayerOrNull(), rawSidekicks(), Integer.MAX_VALUE);
         PlayableEntity nearest = null;
@@ -83,6 +101,20 @@ public final class ObjectPlayerQuery {
             }
         }
         return nearest == null ? List.of() : List.of(nearest);
+    }
+
+    private List<PlayableEntity> participantsForRomX(ObjectPlayerParticipationPolicy policy) {
+        return switch (policy) {
+            case MAIN_ONLY_NATIVE -> uniquePlayers(mainPlayerOrNull(), List.of(), 0);
+            case NATIVE_P1_P2 -> uniquePlayers(mainPlayerOrNull(), rawSidekicks(), 1);
+            case MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED, ALL_ENGINE_PLAYERS, NEAREST_ENGINE_PLAYER ->
+                    uniquePlayers(mainPlayerOrNull(), rawSidekicks(), Integer.MAX_VALUE);
+        };
+    }
+
+    private static int romSignedXDistance(int referenceX, int playerX) {
+        int delta = (short) ((referenceX - playerX) & 0xFFFF);
+        return Math.abs(delta);
     }
 
     private List<? extends PlayableEntity> rawSidekicks() {

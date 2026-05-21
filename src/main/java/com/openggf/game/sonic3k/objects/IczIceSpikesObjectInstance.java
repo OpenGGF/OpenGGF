@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
@@ -46,6 +48,8 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
 
     private static final int ARM_DISTANCE_X = 0x40;
     private static final int SHAKE_TIMER_INITIAL = 0x0F;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
     private final boolean subtypeZero;
     private final boolean hFlip;
@@ -102,22 +106,16 @@ public class IczIceSpikesObjectInstance extends AbstractObjectInstance
     }
 
     private boolean nearestPlayerWithinArmDistance(PlayableEntity player) {
-        int nearest = playerXDistance(player);
-        ObjectServices services = tryServices();
-        if (services != null) {
-            for (PlayableEntity sidekick : services.sidekicks()) {
-                nearest = Math.min(nearest, playerXDistance(sidekick));
-            }
-        }
+        int nearest = nearestPlayerXDistance(player);
         return nearest < ARM_DISTANCE_X;
     }
 
-    private int playerXDistance(PlayableEntity player) {
-        if (player == null) {
-            return Integer.MAX_VALUE;
-        }
-        int delta = (short) ((x - player.getCentreX()) & 0xFFFF);
-        return Math.abs(delta);
+    private int nearestPlayerXDistance(PlayableEntity player) {
+        ObjectServices services = tryServices();
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> player,
+                () -> services != null ? services.sidekicks() : List.of());
+        return query.nearestByRomX(PLAYER_PARTICIPATION, x).distance();
     }
 
     private void spawnHurtChildOnce() {

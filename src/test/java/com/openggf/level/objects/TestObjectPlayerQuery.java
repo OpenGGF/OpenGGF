@@ -81,6 +81,38 @@ class TestObjectPlayerQuery {
     }
 
     @Test
+    void nearestRomXPlayerUsesSignedWordXDistanceOnlyAndKeepsMainOnTie() {
+        FakePlayer main = player("main", 0x00C0, 0x7000);
+        FakePlayer firstSidekick = player("tails", 0x0140, 0);
+        FakePlayer secondSidekick = player("knuckles", 0x0180, 100);
+        ObjectPlayerQuery query = query(main, firstSidekick, secondSidekick);
+
+        ObjectPlayerQuery.NearestPlayerX nearest = query.nearestByRomX(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS, 0x0100);
+
+        assertSame(main, nearest.player());
+        assertEquals(0x40, nearest.distance());
+    }
+
+    @Test
+    void nearestRomXPlayerUsesParticipationPolicyAndSignedSixteenBitWrapping() {
+        FakePlayer main = player("main", 0x0100, 0);
+        FakePlayer nativeP2 = player("tails", 0x0020, 0);
+        FakePlayer extendedSidekick = player("knuckles", 0xFFE0, 0);
+        ObjectPlayerQuery query = query(main, nativeP2, extendedSidekick);
+
+        ObjectPlayerQuery.NearestPlayerX nearestNative = query.nearestByRomX(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2, 0xFFE0);
+        ObjectPlayerQuery.NearestPlayerX nearestExtended = query.nearestByRomX(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS, 0xFFE0);
+
+        assertSame(nativeP2, nearestNative.player());
+        assertEquals(0x40, nearestNative.distance());
+        assertSame(extendedSidekick, nearestExtended.player());
+        assertEquals(0, nearestExtended.distance());
+    }
+
+    @Test
     void policyMappingExposesNativeAndEngineParticipationSemantics() {
         assertEquals(ObjectPlayerParticipationPolicy.MAIN_ONLY_NATIVE,
                 ObjectPlayerParticipationPolicy.nativePlayers(false));
