@@ -270,10 +270,11 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance {
             processCharacter(player1, p1State);
         }
 
-        // Process sidekick (Player 2)
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            processCharacter((AbstractPlayableSprite) sidekickEntity, p2State);
-            break; // Only first sidekick (matches ROM's single Player_2)
+        // Process native Player 2 only. Extra engine sidekicks are intentionally
+        // outside the ROM tunnel state block.
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        if (nativeP2 instanceof AbstractPlayableSprite sidekick) {
+            processCharacter(sidekick, p2State);
         }
     }
 

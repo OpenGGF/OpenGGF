@@ -23,6 +23,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestCnzWireCageObjectInstance {
 
     @Test
+    void unloadUsesLatchedLifecycleDestructionPolicy() {
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1D80, 0x0540, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x18, 0, false, 0));
+
+        cage.onUnload();
+
+        assertTrue(cage.isDestroyed());
+    }
+
+    @Test
     void activeCageSetsObjectControlBitSixWallCollisionSuppression() {
         CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
                 0x1D80, 0x0540, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x18, 0, false, 0));
