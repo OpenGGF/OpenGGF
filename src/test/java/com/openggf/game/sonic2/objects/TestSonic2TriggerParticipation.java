@@ -2,14 +2,25 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.ObjectSolidExecutionContext;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.PlayerStandingState;
+import com.openggf.game.solid.PostContactState;
+import com.openggf.game.solid.PreContactState;
+import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -64,6 +75,43 @@ class TestSonic2TriggerParticipation {
                 "WFZ palette switcher should route sidekick crossing through ObjectPlayerQuery");
     }
 
+    @Test
+    void springAppliesCheckpointContactToQueryOnlySidekick() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        SpringObjectInstance spring = new SpringObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x41, 0x10, 0, false, 0),
+                "Spring");
+        spring.setServices(new QueryOnlyPlayerServices(main, List.of(tails))
+                .withCheckpointBatch(new SolidCheckpointBatch(
+                        spring,
+                        Map.of(tails, pushingContact()))));
+
+        spring.update(0, main);
+
+        assertEquals(0x1000, tails.getXSpeed() & 0xFFFF,
+                "Spring should consume ObjectPlayerQuery participants for manual checkpoint contact");
+        assertEquals(0x1000, tails.getGSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void speedLauncherStartsForQueryOnlyStandingSidekick() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        tails.setOnObject(true);
+        SpeedLauncherObjectInstance launcher = new SpeedLauncherObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0xC0, 0x01, 0, false, 0),
+                "SpeedLauncher");
+        launcher.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+        launcher.onSolidContact(tails, new SolidContact(true, false, false, true, false), 0);
+
+        launcher.update(0, main);
+
+        assertEquals(0x0FF4, launcher.getX(),
+                "Speed Launcher should use ObjectPlayerQuery participants when selecting standing riders");
+        assertEquals(0x0FF4, tails.getCentreX() & 0xFFFF);
+    }
+
     private static TestablePlayableSprite player(String code, int x, int y) {
         TestablePlayableSprite player = new TestablePlayableSprite(code, (short) x, (short) y);
         player.setCentreX((short) x);
@@ -77,9 +125,22 @@ class TestSonic2TriggerParticipation {
         return field.getInt(target);
     }
 
+    private static PlayerSolidContactResult pushingContact() {
+        return new PlayerSolidContactResult(
+                ContactKind.SIDE,
+                false,
+                false,
+                true,
+                false,
+                PreContactState.ZERO,
+                new PostContactState((short) 0, (short) 0, false, false, true),
+                0);
+    }
+
     private static final class QueryOnlyPlayerServices extends TestObjectServices {
         private final PlayableEntity main;
         private final List<? extends PlayableEntity> queriedSidekicks;
+        private SolidExecutionRegistry solidExecution = SolidExecutionRegistry.inert();
 
         private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
             this.main = main;
@@ -94,6 +155,58 @@ class TestSonic2TriggerParticipation {
         @Override
         public List<PlayableEntity> sidekicks() {
             return List.of();
+        }
+
+        QueryOnlyPlayerServices withCheckpointBatch(SolidCheckpointBatch batch) {
+            this.solidExecution = new FixedSolidExecutionRegistry(batch);
+            return this;
+        }
+
+        @Override
+        public SolidExecutionRegistry solidExecutionRegistry() {
+            return solidExecution;
+        }
+    }
+
+    private static final class FixedSolidExecutionRegistry implements SolidExecutionRegistry {
+        private final SolidCheckpointBatch batch;
+
+        private FixedSolidExecutionRegistry(SolidCheckpointBatch batch) {
+            this.batch = batch;
+        }
+
+        @Override
+        public void beginFrame(int frameCounter, List<? extends PlayableEntity> players) {
+        }
+
+        @Override
+        public void beginObject(ObjectInstance object, ObjectSolidExecutionContext.Resolver resolver) {
+        }
+
+        @Override
+        public ObjectSolidExecutionContext currentObject() {
+            return new ObjectSolidExecutionContext(this, batch.object(), () -> batch);
+        }
+
+        @Override
+        public PlayerStandingState previousStanding(ObjectInstance object, PlayableEntity player) {
+            return PlayerStandingState.NONE;
+        }
+
+        @Override
+        public void publishCheckpoint(SolidCheckpointBatch batch) {
+        }
+
+        @Override
+        public void endObject(ObjectInstance object) {
+        }
+
+        @Override
+        public void finishFrame() {
+        }
+
+        @Override
+        public void clearTransientState() {
         }
     }
 }

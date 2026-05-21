@@ -25,6 +25,12 @@ class TestObjectPhysicsStandardizationGuard {
             "(?:setSlotIndex\\s*\\(\\s*-\\s*1\\s*\\)|\\.markRemembered\\s*\\(|"
                     + "\\.removeFromActiveSpawns\\s*\\(|\\.addDynamicObjectAtSlot\\s*\\(|"
                     + "\\.allocateSlotAfter\\s*\\()");
+    private static final Pattern TOUCH_PROFILE_HOOK_WITHOUT_PROFILE = Pattern.compile(
+            "\\bpublic\\s+(?:boolean|int|TouchRegion\\[\\]|TouchResponseProvider\\.TouchRegion\\[\\])\\s+"
+                    + "(?:requiresContinuousTouchCallbacks|usesS3kTouchSpecialPropertyResponse|"
+                    + "usesSonic2TouchSpecialPropertyResponse|"
+                    + "enablesPostSpecialTouchAirborneSideVelocityPreservation|requiresRenderFlagForTouch|"
+                    + "getMultiTouchRegions|getShieldReactionFlags|onShieldDeflect)\\s*\\(");
     private static final List<Pattern> DIRECT_TOUCH_POLICY_CALLS = List.of(
             Pattern.compile("(?<!\\btouchProfile)\\.requiresRenderFlagForTouch\\s*\\("),
             Pattern.compile("(?<!\\btouchProfile)\\.requiresContinuousTouchCallbacks\\s*\\("),
@@ -34,7 +40,163 @@ class TestObjectPhysicsStandardizationGuard {
             Pattern.compile("\\bvar\\s+touchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider(?!\\s*\\.)\\b"),
             Pattern.compile("\\btouchProfile\\s*=\\s*(?:\\(\\s*TouchResponseProvider\\s*\\)\\s*)?provider(?!\\s*\\.)\\b"));
 
-    private static final List<BaselineViolation> BASELINE = List.of();
+    private static final List<BaselineViolation> BASELINE = List.of(
+            baseline("com/openggf/game/sonic1/objects/Sonic1ChainedStomperObjectInstance.java",
+                    "public TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic1/objects/Sonic1PoleThatBreaksObjectInstance.java",
+                    "public boolean requiresContinuousTouchCallbacks() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic1/objects/Sonic1SpikedBallChainObjectInstance.java",
+                    "public TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic1/objects/Sonic1SpikedPoleHelixObjectInstance.java",
+                    "public TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic2/objects/badniks/TurtloidRiderInstance.java",
+                    "public boolean requiresRenderFlagForTouch() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/AizEndBossBombChild.java",
+                    "public int getShieldReactionFlags() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/AizEndBossFlameChild.java",
+                    "public int getShieldReactionFlags() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/AizMinibossBarrelShotChild.java",
+                    "public int getShieldReactionFlags() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/AizMinibossBarrelShotChild.java",
+                    "public boolean onShieldDeflect(PlayableEntity playerEntity) {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/AizMinibossBodyChild.java",
+                    "public int getShieldReactionFlags() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/AizMinibossFlameChild.java",
+                    "public int getShieldReactionFlags() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/AizMinibossFlameChild.java",
+                    "public boolean onShieldDeflect(PlayableEntity playerEntity) {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/ClamerObjectInstance.java",
+                    "public boolean requiresContinuousTouchCallbacks() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/ClamerObjectInstance.java",
+                    "public boolean usesS3kTouchSpecialPropertyResponse() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/ClamerObjectInstance.java",
+                    "public TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/CnzBalloonInstance.java",
+                    "public boolean requiresContinuousTouchCallbacks() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/CnzBalloonInstance.java",
+                    "public boolean usesS3kTouchSpecialPropertyResponse() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/CnzBumperObjectInstance.java",
+                    "public boolean requiresContinuousTouchCallbacks() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/CnzBumperObjectInstance.java",
+                    "public TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/GumballItemObjectInstance.java",
+                    "public boolean requiresContinuousTouchCallbacks() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/HczMinibossInstance.java",
+                    "public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/HCZWaterDropObjectInstance.java",
+                    "public boolean requiresContinuousTouchCallbacks() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/IczFreezerObjectInstance.java",
+                    "public TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/IczHarmfulIceObjectInstance.java",
+                    "public boolean usesS3kTouchSpecialPropertyResponse() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/IczHarmfulIceObjectInstance.java",
+                    "public TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/IczStalagtiteObjectInstance.java",
+                    "public TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/MgzDrillingRobotnikInstance.java",
+                    "public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/MGZSwingingSpikeBallObjectInstance.java",
+                    "public TouchRegion[] getMultiTouchRegions() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/PachinkoItemOrbObjectInstance.java",
+                    "public boolean requiresContinuousTouchCallbacks() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/badniks/BlastoidBadnikInstance.java",
+                    "public int getShieldReactionFlags() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/badniks/BlastoidBadnikInstance.java",
+                    "public boolean onShieldDeflect(PlayableEntity playerEntity) {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/badniks/CaterkillerJrBodyInstance.java",
+                    "public boolean requiresRenderFlagForTouch() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/badniks/MegaChopperBadnikInstance.java",
+                    "public boolean requiresContinuousTouchCallbacks() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/badniks/S3kBadnikProjectileInstance.java",
+                    "public int getShieldReactionFlags() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/badniks/S3kBadnikProjectileInstance.java",
+                    "public boolean onShieldDeflect(PlayableEntity playerEntity) {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/badniks/SpikerBadnikInstance.java",
+                    "public int getShieldReactionFlags() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/badniks/SpikerBadnikInstance.java",
+                    "public boolean onShieldDeflect(PlayableEntity playerEntity) {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java",
+                    "public int getShieldReactionFlags() {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1),
+            baseline("com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java",
+                    "public boolean onShieldDeflect(PlayableEntity player) {",
+                    ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE,
+                    ReasonCode.PENDING_PROFILE_MIGRATION, 1));
 
     @Test
     void objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites() throws IOException {
@@ -79,6 +241,7 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void s3kResultsScreenUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
+                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
                 .filter(baseline -> baseline.path().endsWith("S3kResultsScreenObjectInstance.java"))
                 .toList());
     }
@@ -86,6 +249,7 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void s3kSignpostUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
+                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
                 .filter(baseline -> baseline.path().endsWith("S3kSignpostInstance.java"))
                 .toList());
     }
@@ -93,6 +257,7 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void sonic3kSsEntryRingUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
+                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
                 .filter(baseline -> baseline.path().endsWith("Sonic3kSSEntryRingObjectInstance.java"))
                 .toList());
     }
@@ -100,6 +265,7 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void cnzEndBossUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
+                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
                 .filter(baseline -> baseline.path().endsWith("bosses/CnzEndBossInstance.java"))
                 .toList());
     }
@@ -107,6 +273,7 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void hczMinibossUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
+                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
                 .filter(baseline -> baseline.path().endsWith("HczMinibossInstance.java"))
                 .toList());
     }
@@ -114,6 +281,7 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void aizPlaneIntroUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
+                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
                 .filter(baseline -> baseline.path().endsWith("AizPlaneIntroInstance.java"))
                 .toList());
     }
@@ -121,6 +289,7 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void cutsceneKnucklesAiz1UsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
+                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
                 .filter(baseline -> baseline.path().endsWith("CutsceneKnucklesAiz1Instance.java"))
                 .toList());
     }
@@ -128,6 +297,7 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void capsuleAndGeyserBossCutscenesUseObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
+                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
                 .filter(baseline -> baseline.path().endsWith("AbstractS3kFloatingEndEggCapsuleInstance.java")
                         || baseline.path().endsWith("bosses/HczEndBossEggCapsuleInstance.java")
                         || baseline.path().endsWith("bosses/HczEndBossGeyserCutscene.java"))
@@ -137,6 +307,7 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void hczEndBossWaterColumnUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
+                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
                 .filter(baseline -> baseline.path().endsWith("bosses/HczEndBossWaterColumn.java"))
                 .toList());
     }
@@ -144,6 +315,7 @@ class TestObjectPhysicsStandardizationGuard {
     @Test
     void iczSnowboardIntroUsesObjectControlStatePolicyInsteadOfBaseline() {
         assertEquals(List.of(), BASELINE.stream()
+                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
                 .filter(baseline -> baseline.path().endsWith("IczSnowboardIntroInstance.java"))
                 .toList());
     }
@@ -227,6 +399,39 @@ class TestObjectPhysicsStandardizationGuard {
                 scanSource("Sample.java", source));
     }
 
+    @Test
+    void guardDetectsTouchProfileHookWithoutProfileInSampleSource() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  public boolean requiresContinuousTouchCallbacks() {",
+                "    return true;",
+                "  }",
+                "}"));
+
+        String path = "com/openggf/game/sonic3k/objects/Sample.java";
+
+        assertEquals(List.of(new SourceViolation(
+                        path,
+                        "public boolean requiresContinuousTouchCallbacks() {",
+                        ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE)),
+                scanSource(path, source));
+    }
+
+    @Test
+    void guardAllowsTouchProfileHookWhenProfileIsDeclaredInSampleSource() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  public TouchResponseProfile getTouchResponseProfile() {",
+                "    return TouchResponseProfile.standardEnemy();",
+                "  }",
+                "  public boolean requiresContinuousTouchCallbacks() {",
+                "    return true;",
+                "  }",
+                "}"));
+
+        assertEquals(List.of(), scanSource("com/openggf/game/sonic3k/objects/Sample.java", source));
+    }
+
     private static SourceText source(String relativePath) throws IOException {
         Path srcMain = ObjectGuardSourceScanner.findSourceRoot();
         if (srcMain == null) {
@@ -289,6 +494,7 @@ class TestObjectPhysicsStandardizationGuard {
             return List.of();
         }
         boolean gameObjectPath = isGameObjectPath(path);
+        boolean hasTouchResponseProfile = hasTouchResponseProfile(source);
         List<SourceViolation> violations = new ArrayList<>();
         for (String line : source.lines()) {
             String trimmed = line.trim();
@@ -306,6 +512,11 @@ class TestObjectPhysicsStandardizationGuard {
             if (isDirectLifecycleOperation(trimmed)) {
                 violations.add(new SourceViolation(path, trimmed,
                         ViolationKind.DIRECT_LIFECYCLE_OPERATION));
+            }
+            if (gameObjectPath && !hasTouchResponseProfile
+                    && TOUCH_PROFILE_HOOK_WITHOUT_PROFILE.matcher(trimmed).find()) {
+                violations.add(new SourceViolation(path, trimmed,
+                        ViolationKind.TOUCH_PROFILE_HOOK_WITHOUT_PROFILE));
             }
         }
         return violations;
@@ -336,6 +547,15 @@ class TestObjectPhysicsStandardizationGuard {
         return DIRECT_LIFECYCLE_OPERATION.matcher(trimmed).find();
     }
 
+    private static boolean hasTouchResponseProfile(SourceText source) {
+        return source.lines().stream()
+                .anyMatch(line -> line.contains("getTouchResponseProfile("));
+    }
+
+    private static boolean isObjectControlBaseline(BaselineViolation baseline) {
+        return baseline.kind() == ViolationKind.DIRECT_OBJECT_CONTROL_SETTER;
+    }
+
     private static Map<ViolationKey, Integer> baselineCounts() {
         Map<ViolationKey, Integer> counts = new TreeMap<>();
         for (BaselineViolation baseline : BASELINE) {
@@ -360,13 +580,15 @@ class TestObjectPhysicsStandardizationGuard {
     private enum ViolationKind {
         DIRECT_OBJECT_CONTROL_SETTER,
         RAW_NATIVE_P2_SIDEKICK_ACCESS,
-        DIRECT_LIFECYCLE_OPERATION
+        DIRECT_LIFECYCLE_OPERATION,
+        TOUCH_PROFILE_HOOK_WITHOUT_PROFILE
     }
 
     private enum ReasonCode {
         BOSS_OR_CUTSCENE_ESCAPE_HATCH,
         CUTSCENE_SCRIPT,
-        PENDING_PARITY_TRIAGE
+        PENDING_PARITY_TRIAGE,
+        PENDING_PROFILE_MIGRATION
     }
 
     private record SourceViolation(String path, String lineFragment, ViolationKind kind) {
