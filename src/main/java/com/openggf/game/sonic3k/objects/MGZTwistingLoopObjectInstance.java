@@ -4,6 +4,7 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
@@ -76,21 +77,29 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance {
         if (svc == null) {
             return;
         }
-        boolean handledSidekick = false;
-        for (PlayableEntity sidekickEntity : svc.sidekicks()) {
-            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                processPlayer(frameCounter, sidekick, player2);
-                handledSidekick = true;
-                break;
-            }
-        }
-        if (!handledSidekick) {
+        AbstractPlayableSprite nativeP2 = nativeP2FromQuery(svc, playerEntity);
+        if (nativeP2 != null) {
+            processPlayer(frameCounter, nativeP2, player2);
+        } else {
             player2.active = false;
             player2.releaseFrames = 0;
             player2.cooldownFrames = 0;
             player2.convexReleaseFrames = 0;
             player2.compensateReleaseHandoff = false;
         }
+    }
+
+    private AbstractPlayableSprite nativeP2FromQuery(ObjectServices svc, PlayableEntity updatePlayer) {
+        PlayableEntity queryMain = svc.playerQuery().mainPlayerOrNull();
+        for (PlayableEntity candidate : svc.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate == updatePlayer || candidate == queryMain && !candidate.isCpuControlled()) {
+                continue;
+            }
+            if (candidate instanceof AbstractPlayableSprite sidekick) {
+                return sidekick;
+            }
+        }
+        return null;
     }
 
     private void processPlayer(int frameCounter, AbstractPlayableSprite player, PlayerState state) {

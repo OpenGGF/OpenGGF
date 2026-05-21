@@ -8,8 +8,14 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -21,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,6 +49,30 @@ public class TestMegaChopperBadnikInstance {
     public void tearDown() {
         SessionManager.clear();
         SessionManager.clear();
+    }
+
+    @Test
+    public void declaresContinuousTouchResponseProfile() {
+        MegaChopperBadnikInstance megaChopper = new MegaChopperBadnikInstance(
+                new ObjectSpawn(0x208, 0x180, Sonic3kObjectIds.MEGA_CHOPPER, 0, 0, false, 0));
+
+        TouchResponseProfile expected = new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                true,
+                true,
+                false,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+
+        assertEquals(expected, megaChopper.getTouchResponseProfile());
+        assertEquals(expected, megaChopper.getTouchResponseProfile(false));
+        assertDoesNotThrow(() -> MegaChopperBadnikInstance.class
+                .getDeclaredMethod("getTouchResponseProfile"));
+        assertDoesNotThrow(() -> MegaChopperBadnikInstance.class
+                .getDeclaredMethod("getTouchResponseProfile", boolean.class));
     }
 
     @Test

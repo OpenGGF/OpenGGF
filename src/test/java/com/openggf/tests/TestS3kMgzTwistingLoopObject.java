@@ -6,10 +6,14 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.MGZTwistingLoopObjectInstance;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -162,9 +166,31 @@ class TestS3kMgzTwistingLoopObject {
                 "Jump release should unlock player control even while temporary object control remains");
     }
 
+    @Test
+    void mgzTwistingLoopUsesNativeP2QueryWithoutPromotingExtraSidekicks() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite main = createDirectEntryPlayer();
+        TestablePlayableSprite nativeP2 = createDirectEntryPlayer("tails", LOOP_X - 1);
+        TestablePlayableSprite extraSidekick = createDirectEntryPlayer("knuckles", LOOP_X + 2);
+        loop.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extraSidekick)));
+
+        loop.update(0, main);
+        loop.update(1, main);
+
+        assertTrue(nativeP2.isObjectControlled(),
+                "MGZ loop player2 slot should use only the first native sidekick from ObjectPlayerQuery");
+        assertFalse(extraSidekick.isObjectControlled(),
+                "MGZ loop must not promote extra engine sidekicks into the native player2 slot");
+    }
+
     private static TestablePlayableSprite createDirectEntryPlayer() {
-        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
-        player.setCentreX((short) (LOOP_X + 1));
+        return createDirectEntryPlayer("sonic", LOOP_X + 1);
+    }
+
+    private static TestablePlayableSprite createDirectEntryPlayer(String characterCode, int centreX) {
+        TestablePlayableSprite player = new TestablePlayableSprite(characterCode, (short) 0, (short) 0);
+        player.setCentreX((short) centreX);
         player.setCentreY((short) LOOP_Y);
         player.setAir(false);
         player.setAngle((byte) 0x40);
@@ -177,5 +203,23 @@ class TestS3kMgzTwistingLoopObject {
         player.setRolling(false);
         player.setJumping(false);
         return player;
+    }
+
+    private static final class QueryOnlyPlayerServices extends TestObjectServices {
+        private final ObjectPlayerQuery playerQuery;
+
+        private QueryOnlyPlayerServices(TestablePlayableSprite main, List<TestablePlayableSprite> sidekicks) {
+            this.playerQuery = new ObjectPlayerQuery(() -> main, () -> sidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return playerQuery;
+        }
+
+        @Override
+        public List<com.openggf.game.PlayableEntity> sidekicks() {
+            throw new AssertionError("MGZ twisting loop should use ObjectPlayerQuery for native P2 selection");
+        }
     }
 }

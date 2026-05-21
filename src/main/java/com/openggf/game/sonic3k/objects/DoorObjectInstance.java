@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -149,16 +150,14 @@ public class DoorObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite mainPlayer = (AbstractPlayableSprite) playerEntity;
-
         if (horizontal) {
-            updateHorizontalDoor(mainPlayer);
+            updateHorizontalDoor(playerEntity);
         } else {
-            updateVerticalDoor(mainPlayer);
+            updateVerticalDoor(playerEntity);
         }
     }
 
-    private void updateVerticalDoor(AbstractPlayableSprite mainPlayer) {
+    private void updateVerticalDoor(PlayableEntity updatePlayer) {
         int left = xFlipped
                 ? (playerInTriggerPreviousFrame ? triggerMin : getX())
                 : triggerMin;
@@ -169,14 +168,13 @@ public class DoorObjectInstance extends AbstractObjectInstance
         int top = baseY - VERTICAL_TRIGGER_HALF_HEIGHT;
         int bottom = baseY + VERTICAL_TRIGGER_HALF_HEIGHT;
 
-        boolean playerInTrigger = isPlayerInTrigger(mainPlayer, left, right, top, bottom)
-                || isAnySidekickInTrigger(left, right, top, bottom);
+        boolean playerInTrigger = isNativePlayerInTrigger(updatePlayer, left, right, top, bottom);
 
         playerInTriggerPreviousFrame = playerInTrigger;
         updateSlideOffset(playerInTrigger);
     }
 
-    private void updateHorizontalDoor(AbstractPlayableSprite mainPlayer) {
+    private void updateHorizontalDoor(PlayableEntity updatePlayer) {
         int top = yFlipped
                 ? (playerInTriggerPreviousFrame ? triggerMin : getY())
                 : triggerMin;
@@ -187,39 +185,36 @@ public class DoorObjectInstance extends AbstractObjectInstance
         int left = baseX - HORIZONTAL_TRIGGER_HALF_WIDTH;
         int right = baseX + HORIZONTAL_TRIGGER_HALF_WIDTH;
 
-        boolean playerInTrigger = isPlayerInTrigger(mainPlayer, left, right, top, bottom)
-                || isAnySidekickInTrigger(left, right, top, bottom);
+        boolean playerInTrigger = isNativePlayerInTrigger(updatePlayer, left, right, top, bottom);
 
         playerInTriggerPreviousFrame = playerInTrigger;
         updateSlideOffset(playerInTrigger);
     }
 
-    private boolean isPlayerInTrigger(AbstractPlayableSprite player, int left, int right, int top, int bottom) {
-        if (player == null || player.isObjectControlled()) {
-            return false;
-        }
-
-        int px = player.getCentreX();
-        int py = player.getCentreY();
-        return px >= left && px < right && py >= top && py < bottom;
-    }
-
-    private boolean isAnySidekickInTrigger(int left, int right, int top, int bottom) {
+    private boolean isNativePlayerInTrigger(PlayableEntity updatePlayer, int left, int right, int top, int bottom) {
+        boolean sawQueryParticipant = false;
         try {
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                if (!(sidekick instanceof AbstractPlayableSprite sprite) || sprite.isObjectControlled()) {
-                    continue;
-                }
-                int px = sprite.getCentreX();
-                int py = sprite.getCentreY();
-                if (px >= left && px < right && py >= top && py < bottom) {
+            for (PlayableEntity candidate : services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                sawQueryParticipant = true;
+                if (isPlayerInTrigger(candidate, left, right, top, bottom)) {
                     return true;
                 }
             }
         } catch (RuntimeException ignored) {
             // Unit tests may instantiate this object without injected services.
         }
-        return false;
+        return !sawQueryParticipant && isPlayerInTrigger(updatePlayer, left, right, top, bottom);
+    }
+
+    private boolean isPlayerInTrigger(PlayableEntity player, int left, int right, int top, int bottom) {
+        if (!(player instanceof AbstractPlayableSprite sprite) || sprite.isObjectControlled()) {
+            return false;
+        }
+
+        int px = sprite.getCentreX();
+        int py = sprite.getCentreY();
+        return px >= left && px < right && py >= top && py < bottom;
     }
 
     private void updateSlideOffset(boolean playerInZone) {
