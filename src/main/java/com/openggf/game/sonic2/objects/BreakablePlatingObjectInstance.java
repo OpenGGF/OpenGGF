@@ -322,7 +322,7 @@ public class BreakablePlatingObjectInstance extends AbstractObjectInstance
         player.setAnimationId(Sonic2AnimationIds.HANG);
 
         // ROM: move.b #1,(MainCharacter+obj_control).w
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // ROM: move.b #1,(WindTunnel_holding_flag).w
         // This prevents wind tunnel from interfering - handled by objectControlled in our engine

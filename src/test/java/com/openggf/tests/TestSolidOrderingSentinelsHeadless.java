@@ -153,25 +153,32 @@ class TestSolidOrderingSentinelsHeadless {
     }
 
     @Test
-    void springboardLaunchesFromCurrentFrameStandingState() throws Exception {
+    void springboardLaunchesNativeP2FromCurrentFrameStandingStateAfterP1ArmsAnimation() throws Exception {
         HeadlessTestFixture localFixture = HeadlessTestFixture.builder()
                 .withSharedLevel(sharedLevel)
                 .build();
 
         AbstractPlayableSprite localPlayer = localFixture.sprite();
+        AbstractPlayableSprite localSidekick = createSidekick();
         SpringboardObjectInstance springboard = spawnSpringboard(0x0120, 0x0100);
         localPlayer.setCentreX((short) 0x0140);
         localPlayer.setCentreY((short) 0x00F5);
         localPlayer.setAir(true);
         localPlayer.setYSpeed((short) 0x0180);
+        localSidekick.setCentreX((short) 0x0140);
+        localSidekick.setCentreY((short) 0x00F5);
+        localSidekick.setAir(true);
+        localSidekick.setYSpeed((short) 0x0180);
         localFixture.camera().updatePosition(true);
 
         localFixture.stepFrame(false, false, false, false, false);
 
         assertTrue((boolean) getField(springboard, "launchSequenceActive"),
                 "Springboard should start the launch sequence from the current-frame standing checkpoint");
-        assertTrue(localPlayer.getYSpeed() < 0,
-                "Springboard should launch off the current-frame standing state instead of waiting a frame");
+        assertFalse(localPlayer.getYSpeed() < 0,
+                "P1 should arm the springboard animation before any same-frame launch");
+        assertTrue(localSidekick.getYSpeed() < 0,
+                "Native P2 should launch after P1 arms the springboard animation in ROM order");
     }
 
     private AbstractPlayableSprite createSidekick() {

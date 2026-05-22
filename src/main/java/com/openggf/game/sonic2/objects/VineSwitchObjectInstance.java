@@ -264,7 +264,7 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
 
         // Lock player control
         // ROM: move.b #1,obj_control(a1)
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // Mark as grabbed
         // ROM: move.b #1,(a2)

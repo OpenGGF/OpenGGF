@@ -27,6 +27,11 @@ class TestObjectPhysicsStandardizationGuard {
     private static final Pattern NATIVE_P2_SIDEKICK_ALIAS_ASSIGNMENT = Pattern.compile(
             "\\b([A-Za-z_$][\\w$]*)\\s*=\\s*(?:(?:[A-Za-z_$][\\w$]*|services\\s*\\(\\s*\\))"
                     + "\\s*\\.\\s*sidekicks\\s*\\(\\s*\\)|getSidekicks\\s*\\(\\s*\\))");
+    private static final Pattern NATIVE_P2_SIDEKICK_SNAPSHOT_ALIAS_ASSIGNMENT = Pattern.compile(
+            "\\b([A-Za-z_$][\\w$]*)\\s*=\\s*(?:List\\.copyOf\\s*\\(|new\\s+ArrayList\\s*(?:<[^>]*>)?\\s*\\()"
+                    + "[^;]*getSidekicks\\s*\\(");
+    private static final Pattern NATIVE_P2_SIDEKICK_SNAPSHOT_ALIAS_START = Pattern.compile(
+            "\\b([A-Za-z_$][\\w$]*)\\s*=\\s*(?:List\\.copyOf\\s*\\(|new\\s+ArrayList\\s*(?:<[^>]*>)?\\s*\\()");
     private static final Pattern RAW_OBJECT_SERVICES_SIDEKICKS = Pattern.compile(
             "(?:\\b(?:services|svc|objectServices)\\b\\s*|\\bservices\\s*\\(\\s*\\)\\s*)"
                     + "\\.\\s*sidekicks\\s*\\(");
@@ -363,6 +368,15 @@ class TestObjectPhysicsStandardizationGuard {
                 "    List<PlayableEntity> reassigned;",
                 "    reassigned = services().sidekicks();",
                 "    PlayableEntity nativeP2b = reassigned.stream().findFirst().orElse(null);",
+                "    List<PlayableEntity> snapshot = List.copyOf(GameServices.sprites().getSidekicks());",
+                "    PlayableEntity nativeP2c = snapshot.getFirst();",
+                "    var copied = new ArrayList<>(spriteManager().getSidekicks());",
+                "    for (PlayableEntity sk : copied) {",
+                "      apply(sk);",
+                "    }",
+                "    List<PlayableEntity> multiline = List.copyOf(",
+                "        GameServices.sprites().getSidekicks());",
+                "    PlayableEntity nativeP2d = multiline.getFirst();",
                 "  }",
                 "}"));
 
@@ -392,7 +406,19 @@ class TestObjectPhysicsStandardizationGuard {
                         new SourceViolation(
                                 path,
                                 "PlayableEntity nativeP2b = reassigned.stream().findFirst().orElse(null);",
-                        ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS)),
+                        ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "PlayableEntity nativeP2c = snapshot.getFirst();",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "for (PlayableEntity sk : copied) {",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS),
+                        new SourceViolation(
+                                path,
+                                "PlayableEntity nativeP2d = multiline.getFirst();",
+                                ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS)),
                 scanSource(path, source));
     }
 
@@ -636,6 +662,7 @@ class TestObjectPhysicsStandardizationGuard {
         boolean physicsStandardizationPath = isPhysicsStandardizationPath(path);
         boolean hasTouchResponseProfile = hasTouchResponseProfile(source);
         Set<String> nativeP2SidekickAliases = new HashSet<>();
+        Set<String> pendingNativeP2SidekickSnapshotAliases = new HashSet<>();
         List<SourceViolation> violations = new ArrayList<>();
         for (String line : source.lines()) {
             String trimmed = line.trim();
@@ -651,7 +678,10 @@ class TestObjectPhysicsStandardizationGuard {
                         ViolationKind.RAW_NATIVE_P2_SIDEKICK_ACCESS));
             }
             if (physicsStandardizationPath) {
-                recordNativeP2SidekickAlias(trimmed, nativeP2SidekickAliases);
+                recordNativeP2SidekickAlias(
+                        trimmed,
+                        nativeP2SidekickAliases,
+                        pendingNativeP2SidekickSnapshotAliases);
             }
             if (isDirectLifecycleOperation(trimmed)) {
                 violations.add(new SourceViolation(path, trimmed,
@@ -722,10 +752,27 @@ class TestObjectPhysicsStandardizationGuard {
         return false;
     }
 
-    private static void recordNativeP2SidekickAlias(String trimmed, Set<String> nativeP2SidekickAliases) {
+    private static void recordNativeP2SidekickAlias(
+            String trimmed,
+            Set<String> nativeP2SidekickAliases,
+            Set<String> pendingNativeP2SidekickSnapshotAliases) {
         Matcher matcher = NATIVE_P2_SIDEKICK_ALIAS_ASSIGNMENT.matcher(trimmed);
         while (matcher.find()) {
             nativeP2SidekickAliases.add(matcher.group(1));
+        }
+        matcher = NATIVE_P2_SIDEKICK_SNAPSHOT_ALIAS_ASSIGNMENT.matcher(trimmed);
+        while (matcher.find()) {
+            nativeP2SidekickAliases.add(matcher.group(1));
+        }
+        matcher = NATIVE_P2_SIDEKICK_SNAPSHOT_ALIAS_START.matcher(trimmed);
+        while (matcher.find()) {
+            pendingNativeP2SidekickSnapshotAliases.add(matcher.group(1));
+        }
+        if (!pendingNativeP2SidekickSnapshotAliases.isEmpty() && trimmed.contains("getSidekicks(")) {
+            nativeP2SidekickAliases.addAll(pendingNativeP2SidekickSnapshotAliases);
+        }
+        if (trimmed.contains(";")) {
+            pendingNativeP2SidekickSnapshotAliases.clear();
         }
     }
 
