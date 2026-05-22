@@ -13,6 +13,9 @@ All notable changes to the OpenGGF project are documented in this file.
   canonical touch-response profile declarations to a small projectile sample. Agent-facing
   docs and mirrored object-implementation skills now direct playable native position writes
   through `NativePositionOps` instead of raw preserve-subpixel setters.
+  A follow-up review fix preserves S2 springboard sidekick-first launch sequencing for its
+  shared animation state while still using the query/policy layer, and mirrors the
+  object-behavior contract guidance into `AGENTS_S3K.md` plus boss implementation skills.
 
 - **Object physics standardization review fixes.**
   Tightened post-standardization object physics behavior after external review: restored the

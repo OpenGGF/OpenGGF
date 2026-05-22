@@ -332,14 +332,28 @@ public class SpringboardObjectInstance extends BoxObjectInstance
     }
 
     private List<PlayableEntity> playerParticipants(PlayableEntity updatePlayer) {
-        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
-        if (updatePlayer != null && !participants.contains(updatePlayer)) {
-            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-            withUpdatePlayer.add(updatePlayer);
-            withUpdatePlayer.addAll(participants);
-            return withUpdatePlayer;
+        ObjectPlayerQuery query = services().playerQuery();
+        ArrayList<PlayableEntity> ordered = new ArrayList<>();
+        ordered.addAll(query.sidekicks());
+        if (updatePlayer != null && !containsIdentity(ordered, updatePlayer)) {
+            ordered.add(updatePlayer);
         }
-        return participants;
+        for (PlayableEntity participant : query.playersFor(PLAYER_PARTICIPATION)) {
+            if (!containsIdentity(ordered, participant)) {
+                ordered.add(participant);
+            }
+        }
+        return ordered;
+    }
+
+    private static boolean containsIdentity(List<? extends PlayableEntity> participants,
+                                            PlayableEntity updatePlayer) {
+        for (PlayableEntity participant : participants) {
+            if (participant == updatePlayer) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
