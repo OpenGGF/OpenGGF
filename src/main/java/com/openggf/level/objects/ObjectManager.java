@@ -6037,18 +6037,18 @@ public class ObjectManager {
             }
 
             SolidContact contact;
+            SlopedSolidRoutineAdapter slopedAdapter = null;
             byte[] slopeData = null;
             if (instance instanceof SlopedSolidProvider sloped) {
-                slopeData = sloped.getSlopeData();
+                slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                slopeData = slopedAdapter.getSlopeData();
             }
 
             if (slopeData != null
-                    && instance instanceof SlopedSolidProvider sloped
-                    && shouldUseSlopeForContact(instance, sloped)) {
+                    && shouldUseSlopeForContact(instance, slopedAdapter)) {
                 int slopeHalfHeight = params.groundHalfHeight();
                 contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(), slopeHalfHeight,
-                        slopeData, sloped.isSlopeFlipped(), solidProfile.topSolidOnly(),
-                        useStickyBuffer, instance, true, sloped);
+                        solidProfile.topSolidOnly(), useStickyBuffer, instance, true, slopedAdapter);
             } else {
                 contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
                         solidProfile, useStickyBuffer, instance, true);
@@ -6305,18 +6305,18 @@ public class ObjectManager {
                     // overwritten by playerYRadius before it is read.
                     int halfHeight = params.airHalfHeight();
                     boolean useStickyBuffer = solidProfile.stickyContactBuffer();
+                    SlopedSolidRoutineAdapter slopedAdapter = null;
                     byte[] slopeData = null;
                     if (instance instanceof SlopedSolidProvider sloped) {
-                        slopeData = sloped.getSlopeData();
+                        slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                        slopeData = slopedAdapter.getSlopeData();
                     }
                     SolidContact contact;
                     if (slopeData != null
-                            && instance instanceof SlopedSolidProvider sloped
-                            && shouldUseSlopeForContact(instance, sloped)) {
+                            && shouldUseSlopeForContact(instance, slopedAdapter)) {
                         int slopeHalfHeight = params.groundHalfHeight();
                         contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(), slopeHalfHeight,
-                                slopeData, sloped.isSlopeFlipped(), solidProfile.topSolidOnly(),
-                                useStickyBuffer, instance, false, sloped);
+                                solidProfile.topSolidOnly(), useStickyBuffer, instance, false, slopedAdapter);
                     } else {
                         contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
                                 solidProfile, useStickyBuffer, instance, false);
@@ -6771,14 +6771,15 @@ public class ObjectManager {
                 boolean wasRidingObject = useStickyBuffer && isRidingCurrentPlayerObject(instance);
 
                 SolidContact contact;
+                SlopedSolidRoutineAdapter slopedAdapter = null;
                 byte[] slopeData = null;
                 if (instance instanceof SlopedSolidProvider sloped) {
-                    slopeData = sloped.getSlopeData();
+                    slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                    slopeData = slopedAdapter.getSlopeData();
                 }
 
                 if (slopeData != null
-                        && instance instanceof SlopedSolidProvider sloped
-                        && shouldUseSlopeForContact(instance, sloped)) {
+                        && shouldUseSlopeForContact(instance, slopedAdapter)) {
                     // ROM parity: when already riding a sloped object, the ROM does NOT
                     // re-run SolidObject2F. It only runs ExitPlatform + SlopeObject2,
                     // which is handled by the riding update above. Re-running the full
@@ -6797,8 +6798,7 @@ public class ObjectManager {
                     }
                     int slopeHalfHeight = params.groundHalfHeight();
                     contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(), slopeHalfHeight,
-                            slopeData, sloped.isSlopeFlipped(), solidProfile.topSolidOnly(),
-                            useStickyBuffer, instance, true, sloped);
+                            solidProfile.topSolidOnly(), useStickyBuffer, instance, true, slopedAdapter);
                 } else {
                     contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
                             solidProfile, useStickyBuffer, instance, true);
@@ -6949,8 +6949,8 @@ public class ObjectManager {
                     useStickyBuffer, instance, -1, apply);
         }
 
-        private boolean shouldUseSlopeForContact(ObjectInstance instance, SlopedSolidProvider sloped) {
-            return sloped.usesSlopeForNewLanding() || isRidingCurrentPlayerObject(instance);
+        private boolean shouldUseSlopeForContact(ObjectInstance instance, SlopedSolidRoutineAdapter adapter) {
+            return adapter.profile().usesSlopeForNewLanding() || isRidingCurrentPlayerObject(instance);
         }
 
         /**
@@ -7194,11 +7194,13 @@ public class ObjectManager {
         }
 
         private SolidContact resolveSlopedContact(PlayableEntity player, int anchorX, int anchorY, int halfWidth,
-                int halfHeight, byte[] slopeData, boolean xFlip, boolean topSolidOnly, boolean useStickyBuffer,
-                ObjectInstance instance, boolean apply, SlopedSolidProvider slopedProvider) {
+                int halfHeight, boolean topSolidOnly, boolean useStickyBuffer,
+                ObjectInstance instance, boolean apply, SlopedSolidRoutineAdapter slopedAdapter) {
+            byte[] slopeData = slopedAdapter.getSlopeData();
             if (slopeData == null || slopeData.length == 0) {
                 return null;
             }
+            SlopedSolidRoutineProfile slopedProfile = slopedAdapter.profile();
             int playerCenterX = player.getCentreX();
             int playerCenterY = player.getCentreY();
 
@@ -7209,7 +7211,7 @@ public class ObjectManager {
             }
 
             int sampleX = relX;
-            if (xFlip) {
+            if (slopedAdapter.isSlopeFlipped()) {
                 // ROM: move.w d0,d5 / not.w d5 / add.w d3,d5 / lsr.w #1,d5
                 // where d0=relX and d3=halfWidth*2. For in-range relX this is
                 // equivalent to (width2 - relX - 1) >> 1.
@@ -7221,7 +7223,7 @@ public class ObjectManager {
             }
 
             int slopeSample = (byte) slopeData[sampleX];
-            int slopeBase = slopedProvider.getSlopeBaseline();
+            int slopeBase = slopedProfile.slopeBaseline();
             boolean riding = useStickyBuffer && isRidingCurrentPlayerObject(instance);
             int minRelY = riding ? -16 : 0;
 
@@ -7238,7 +7240,7 @@ public class ObjectManager {
             // S1 SolidObject2F is an explicit exception: it adds the slope catch
             // range into d2 before adding d2 to the vertical overlap value.
             int verticalOverlapCompensation = playerYRadius;
-            if (slopedProvider.addsSlopeCatchRangeToVerticalOverlap()) {
+            if (slopedProfile.addsSlopeCatchRangeToVerticalOverlap()) {
                 verticalOverlapCompensation += halfHeight;
             }
             int relY = playerCenterY - baseY + 4 + verticalOverlapCompensation;
@@ -7258,7 +7260,7 @@ public class ObjectManager {
             // occurs when horizontal penetration < vertical penetration on slopes.
             if (riding && !player.getAir()) {
                 if (apply) {
-                    int rawSample = sampleSlopeY(player, anchorX, halfWidth, slopedProvider);
+                    int rawSample = sampleSlopeY(player, anchorX, halfWidth, slopedAdapter.provider());
                     if (rawSample != Integer.MIN_VALUE) {
                         int targetCentreY = anchorY - (rawSample & 0xFF) - playerYRadius;
                         int newY = targetCentreY - (player.getHeight() / 2);
@@ -7270,7 +7272,7 @@ public class ObjectManager {
 
             if (!riding
                     && !player.getAir()
-                    && slopedProvider.usesGroundedStandingCatchWindow()
+                    && slopedProfile.usesGroundedStandingCatchWindow()
                     && relY >= 0
                     && relY <= maxTop
                     && isWithinTopLandingWidth(instance, player, relX, halfWidth)) {
@@ -7299,7 +7301,7 @@ public class ObjectManager {
             // Player_TouchFloor has cleared rolling would use the new standing
             // radius and push roll landings down by 5 px.
             if (result == SolidContact.STANDING && apply && riding) {
-                int rawSample = sampleSlopeY(player, anchorX, halfWidth, slopedProvider);
+                int rawSample = sampleSlopeY(player, anchorX, halfWidth, slopedAdapter.provider());
                 if (rawSample != Integer.MIN_VALUE) {
                     int targetCentreY = anchorY - (rawSample & 0xFF) - playerYRadius;
                     int newY = targetCentreY - (player.getHeight() / 2);

@@ -250,6 +250,43 @@ class TestSolidRoutineProfiles {
         assertArrayEquals(slopeData, SlopedSolidRoutineProfile.adapt(provider).getSlopeData());
     }
 
+    @Test
+    void slopedAdapterSnapshotsProviderRoutineProfileAndStillDelegatesShape() {
+        byte[] slopeData = new byte[] {2, 4, 6};
+        SlopedSolidProvider provider = new MinimalSlopedProvider(slopeData, true) {
+            @Override
+            public boolean usesSlopeForNewLanding() {
+                return true;
+            }
+
+            @Override
+            public boolean usesGroundedStandingCatchWindow() {
+                return false;
+            }
+
+            @Override
+            public boolean addsSlopeCatchRangeToVerticalOverlap() {
+                return false;
+            }
+
+            @Override
+            public int getSlopeBaseline() {
+                return 2;
+            }
+
+            @Override
+            public SlopedSolidRoutineProfile getSlopedSolidRoutineProfile() {
+                return new SlopedSolidRoutineProfile(false, true, true, 11);
+            }
+        };
+
+        SlopedSolidRoutineAdapter adapter = SlopedSolidRoutineProfile.adapt(provider);
+
+        assertEquals(new SlopedSolidRoutineProfile(false, true, true, 11), adapter.profile());
+        assertArrayEquals(slopeData, adapter.getSlopeData());
+        assertTrue(adapter.isSlopeFlipped());
+    }
+
     private static class MinimalSolidProvider implements SolidObjectProvider {
         private final SolidObjectParams params;
 
