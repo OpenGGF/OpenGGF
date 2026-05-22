@@ -184,6 +184,25 @@ class TestS3kMgzTwistingLoopObject {
                 "MGZ loop must not promote extra engine sidekicks into the native player2 slot");
     }
 
+    @Test
+    void mgzTwistingLoopDoesNotPromoteCpuControlledMainIntoNativeP2Slot() {
+        MGZTwistingLoopObjectInstance loop = new MGZTwistingLoopObjectInstance(
+                new ObjectSpawn(LOOP_X, LOOP_Y, Sonic3kObjectIds.MGZ_TWISTING_LOOP, 0x10, 0, false, 0));
+        TestablePlayableSprite updatePlayer = createDirectEntryPlayer("sonic", LOOP_X + 1);
+        TestablePlayableSprite cpuMain = createDirectEntryPlayer("tails-main", LOOP_X - 1);
+        TestablePlayableSprite nativeP2 = createDirectEntryPlayer("tails", LOOP_X + 2);
+        cpuMain.setCpuControlled(true);
+        nativeP2.setCpuControlled(true);
+        loop.setServices(new QueryOnlyPlayerServices(cpuMain, List.of(nativeP2)));
+
+        loop.update(0, updatePlayer);
+
+        assertFalse(cpuMain.isObjectControlled(),
+                "The query's main player must never be consumed as MGZ's native P2 slot, even if CPU-controlled");
+        assertTrue(nativeP2.isObjectControlled(),
+                "MGZ loop should skip the queried main and use the first queried sidekick as native P2");
+    }
+
     private static TestablePlayableSprite createDirectEntryPlayer() {
         return createDirectEntryPlayer("sonic", LOOP_X + 1);
     }

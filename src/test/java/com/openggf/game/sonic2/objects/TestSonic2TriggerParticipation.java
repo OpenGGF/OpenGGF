@@ -22,6 +22,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -190,6 +191,31 @@ class TestSonic2TriggerParticipation {
         assertEquals(0x1000, tails.getXSpeed() & 0xFFFF,
                 "Flipper should consume ObjectPlayerQuery participants for manual checkpoint contact");
         assertEquals(0x1000, tails.getGSpeed() & 0xFFFF);
+    }
+
+    @Test
+    void verticalFlipperMovementSuppressionPreservesExistingObjectControlBits() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        tails.applyObjectControlState(ObjectControlState.nativeBits0To6CpuAllowedMovementActive());
+        FlipperObjectInstance flipper = new FlipperObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x86, 0x00, 0, false, 0),
+                "Flipper");
+        flipper.setServices(new QueryOnlyPlayerServices(main, List.of(tails))
+                .withCheckpointBatch(new SolidCheckpointBatch(
+                        flipper,
+                        Map.of(tails, standingContact()))));
+
+        flipper.update(0, main);
+
+        assertTrue(tails.isObjectControlled(),
+                "Obj86's local movement suppression must not clear unrelated object-control ownership");
+        assertTrue(tails.isObjectControlAllowsCpu(),
+                "Obj86 must preserve bit-0-to-6 CPU allowance from the owning object");
+        assertTrue(tails.isObjectControlSuppressesMovement(),
+                "Obj86 still suppresses movement while standing on the vertical flipper");
+        assertFalse(tails.isTouchResponseSuppressedByObjectControl(),
+                "Preserved bit-0-to-6 control must keep touch response active");
     }
 
     @Test

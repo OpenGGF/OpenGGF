@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -23,7 +24,10 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -104,15 +108,8 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private boolean broken = false;
     private boolean launcherActive = false;
 
-    // Invisible launcher states per player (ROM routine 6 states)
-    private int sonicLauncherState = 0;   // 0 = proximity detection, 2 = tracking movement
-    private int tailsLauncherState = 0;
-
-    // Saved player state before solid collision (ROM: objoff_32-36)
-    private int savedSonicAnim;
-    private int savedTailsAnim;
-    private int savedSonicYVel;
-    private int savedTailsYVel;
+    // Invisible launcher states per player (ROM routine 6 states).
+    private final Map<AbstractPlayableSprite, LauncherPlayerState> playerStates = new IdentityHashMap<>();
 
     private final SolidObjectParams solidParams;
 
@@ -147,15 +144,11 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         }
 
         // Save player state before solid collision (ROM: Obj3D_Main)
-        AbstractPlayableSprite nativeP1 = nativeP1OrUpdatePlayer(player);
-        if (nativeP1 != null) {
-            savedSonicAnim = nativeP1.getAnimationId();
-            savedSonicYVel = nativeP1.getYSpeed();
-        }
-
-        if (nativeP2OrNull() instanceof AbstractPlayableSprite nativeP2) {
-            savedTailsAnim = nativeP2.getAnimationId();
-            savedTailsYVel = nativeP2.getYSpeed();
+        for (AbstractPlayableSprite participant : playerParticipants(player)) {
+            LauncherPlayerState state = stateFor(participant);
+            state.savedAnim = participant.getAnimationId();
+            state.savedYVel = participant.getYSpeed();
+            state.hasSavedState = true;
         }
 
         // Solid collision is handled by SolidObjectProvider/SolidObjectListener
@@ -169,16 +162,14 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Determine which player is contacting
-        PlayableEntity nativeP1 = services().playerQuery().mainPlayerOrNull();
-        boolean isSidekick = nativeP2OrNull() == player;
-        if (!isSidekick && nativeP1 != null && nativeP1 != player) {
+        if (!playerParticipants(player).contains(player)) {
             return;
         }
 
         // Check if standing player is rolling (ROM: cmpi.b #AniIDSonAni_Roll,objoff_32)
-        int savedAnim = isSidekick ? savedTailsAnim : savedSonicAnim;
-        int savedYVel = isSidekick ? savedTailsYVel : savedSonicYVel;
+        LauncherPlayerState state = stateFor(player);
+        int savedAnim = state.hasSavedState ? state.savedAnim : player.getAnimationId();
+        int savedYVel = state.hasSavedState ? state.savedYVel : player.getYSpeed();
 
         if (savedAnim == Sonic2AnimationIds.ROLL.id()) {
             launchPlayer(player, savedYVel, frameCounter);
@@ -211,8 +202,9 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private void breakBlock(int frameCounter) {
         broken = true;
         launcherActive = true;
-        sonicLauncherState = 0;
-        tailsLauncherState = 0;
+        for (LauncherPlayerState state : playerStates.values()) {
+            state.launcherState = 0;
+        }
 
         spawnFragments();
 
@@ -273,19 +265,15 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Process main character (Sonic)
-        AbstractPlayableSprite nativeP1 = nativeP1OrUpdatePlayer(player);
-        if (nativeP1 != null) {
-            sonicLauncherState = processLauncherState(nativeP1, sonicLauncherState);
+        boolean anyActive = false;
+        for (AbstractPlayableSprite participant : playerParticipants(player)) {
+            LauncherPlayerState state = stateFor(participant);
+            state.launcherState = processLauncherState(participant, state.launcherState);
+            anyActive |= state.launcherState != 0;
         }
 
-        // Process Tails
-        if (nativeP2OrNull() instanceof AbstractPlayableSprite nativeP2 && nativeP2 != nativeP1) {
-            tailsLauncherState = processLauncherState(nativeP2, tailsLauncherState);
-        }
-
-        // Delete when both states are 0 (ROM: beq.w JmpTo3_MarkObjGone3)
-        if (sonicLauncherState == 0 && tailsLauncherState == 0) {
+        // Delete when all tracked player states are 0 (ROM: beq.w JmpTo3_MarkObjGone3)
+        if (!anyActive) {
             launcherActive = false;
         }
     }
@@ -327,7 +315,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         // ROM: Skip Tails if flying (CPU routine 4)
         // The engine doesn't expose Tails CPU routine directly, but this check
         // prevents capturing Tails while they're in flight mode
-        if (nativeP2OrNull() == player
+        if (player.isCpuControlled()
                 && player.getAir() && !player.getRolling()) {
             return 0;
         }
@@ -402,16 +390,22 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         return 2; // Stay in tracking state
     }
 
-    private AbstractPlayableSprite nativeP1OrUpdatePlayer(AbstractPlayableSprite updatePlayer) {
-        PlayableEntity nativeP1 = services().playerQuery().mainPlayerOrNull();
-        if (nativeP1 instanceof AbstractPlayableSprite sprite) {
-            return sprite;
+    private List<AbstractPlayableSprite> playerParticipants(AbstractPlayableSprite updatePlayer) {
+        List<PlayableEntity> queried = services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        ArrayList<AbstractPlayableSprite> players = new ArrayList<>(queried.size() + 1);
+        for (PlayableEntity participant : queried) {
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                players.add(sprite);
+            }
         }
-        return updatePlayer;
+        if (updatePlayer != null && !players.contains(updatePlayer)) {
+            players.add(updatePlayer);
+        }
+        return players;
     }
 
-    private PlayableEntity nativeP2OrNull() {
-        return services().playerQuery().nativeP2OrNull();
+    private LauncherPlayerState stateFor(AbstractPlayableSprite player) {
+        return playerStates.computeIfAbsent(player, ignored -> new LauncherPlayerState());
     }
 
     private boolean isPlayerOnScreen(AbstractPlayableSprite player) {
@@ -574,6 +568,13 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         public int getPriorityBucket() {
             return RenderPriority.clamp(4);
         }
+    }
+
+    private static final class LauncherPlayerState {
+        private int launcherState;
+        private int savedAnim;
+        private int savedYVel;
+        private boolean hasSavedState;
     }
 
 }

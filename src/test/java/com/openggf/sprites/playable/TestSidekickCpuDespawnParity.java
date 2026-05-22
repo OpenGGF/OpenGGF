@@ -343,7 +343,7 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void s2DestroyedRideSlotDoesNotUseS3kFreedSlotDespawnPath() {
+    void s2DestroyedRideSlotDespawnsThroughFreedObjectIdMismatch() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
@@ -363,11 +363,11 @@ class TestSidekickCpuDespawnParity {
 
         controller.update(2262);
 
-        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
-                "S2 uses the 8-bit object-id mismatch path; the S3K freed-slot "
-                        + "ObjectInstance-loss analog must not fire for matching IDs");
-        assertEquals((short) 0x12BE, tails.getCentreX());
-        assertEquals((short) 0x08A9, tails.getCentreY());
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState(),
+                "S2 TailsCPU_CheckDespawn compares the cached interact ID against the freed slot's id byte");
+        assertEquals((short) 0x4000, tails.getCentreX());
+        assertEquals((short) 0x0000, tails.getCentreY());
+        assertTrue(tails.getAir());
     }
 
     @Test

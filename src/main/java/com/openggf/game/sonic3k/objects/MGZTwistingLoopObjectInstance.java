@@ -92,7 +92,7 @@ public class MGZTwistingLoopObjectInstance extends AbstractObjectInstance {
     private AbstractPlayableSprite nativeP2FromQuery(ObjectServices svc, PlayableEntity updatePlayer) {
         PlayableEntity queryMain = svc.playerQuery().mainPlayerOrNull();
         for (PlayableEntity candidate : svc.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
-            if (candidate == updatePlayer || candidate == queryMain && !candidate.isCpuControlled()) {
+            if (candidate == updatePlayer || candidate == queryMain) {
                 continue;
             }
             if (candidate instanceof AbstractPlayableSprite sidekick) {

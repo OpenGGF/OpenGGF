@@ -6,6 +6,19 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Object physics standardization review fixes.**
+  Tightened post-standardization object physics behavior after external review: restored the
+  left-wall previous-tile fall-through distance in `ObjectTerrainUtils`, fixed MGZ twisting-loop
+  native-P2 selection, preserved multi-sidekick participation for OOZ launcher behavior, kept CNZ
+  wire cage native-P2 intent while preventing non-sprite update fallbacks from selecting the main
+  player, and repaired lifecycle/query/control edge cases around no-respawn deletion, test
+  `ObjectServices` defaults, S2 flipper object-control preservation, and S2 sidekick destroyed-ride
+  despawn timing. The HCZ breakable bar and conveyor object-control migrations intentionally expose
+  ROM-style touch vulnerability while captured; this is an acknowledged gameplay-observable change
+  from the previous engine behavior. `ObjectPlayerQuery`'s extended native-P2 policy remains a
+  semantic caller-intent distinction from `ALL_ENGINE_PLAYERS`; current participant sets are
+  equivalent until per-sidekick latch semantics are added.
+
 - **S2 ceiling extension scan missing `+16` correction fixed (ARZ1 f1102 -> f1106).**
   `GroundSensor.scanTileVertical` with `isExtension=true` and `metric<0, adjusted<0` returned
   `(byte)~yInTile` directly from FindFloor2's `not.w d1`, but the ROM's FindFloor

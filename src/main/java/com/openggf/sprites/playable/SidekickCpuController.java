@@ -2331,7 +2331,12 @@ public class SidekickCpuController {
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         boolean useRidingInstanceLossDespawn = fs != null
                 && fs.sidekickDespawnUsesRidingInstanceLoss();
-        if (useRidingInstanceLossDespawn
+        boolean useObjectIdMismatchDespawn = fs == null
+                || fs.sidekickDespawnUsesObjectIdMismatch();
+        // S2's id-byte mismatch path also sees a deleted ride slot as id 0.
+        // The engine keeps the latched id sticky, so use the destroyed instance
+        // reference to surface that same freed-slot frame.
+        if ((useRidingInstanceLossDespawn || useObjectIdMismatchDespawn)
                 && sidekick.isOnObject()
                 && currentInteractObjectId != 0
                 && currentRidingInstance != null
@@ -2363,8 +2368,6 @@ public class SidekickCpuController {
         // Gate the path via PhysicsFeatureSet so S2 keeps its existing semantics
         // and S3K stops despawning Tails on legitimate same-region object
         // transitions (CNZ1 trace F1685 barber-pole → wire-cage divergence).
-        boolean useObjectIdMismatchDespawn = fs == null
-                || fs.sidekickDespawnUsesObjectIdMismatch();
         if (useObjectIdMismatchDespawn
                 && sidekick.isOnObject()
                 && currentInteractObjectId != 0

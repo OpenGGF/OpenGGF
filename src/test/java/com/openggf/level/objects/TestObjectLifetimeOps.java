@@ -75,6 +75,18 @@ class TestObjectLifetimeOps {
     }
 
     @Test
+    void deleteNoRespawnClearsPriorRespawnableDestroyFlag() {
+        TestObject object = testObject();
+        ObjectLifetimeOps.destroyRespawnableOffscreen(object);
+
+        ObjectLifetimeOps.deleteNoRespawn(object);
+
+        assertTrue(object.isDestroyed());
+        assertFalse(object.isDestroyedRespawnable(),
+                "deleteNoRespawn is a permanent delete and must not leave a stale off-screen respawn flag");
+    }
+
+    @Test
     void slotTransferDetachesSourceAndAddsReplacementAtSameSlot() {
         TestObject source = testObject();
         TestObject replacement = testObject();

@@ -11,9 +11,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -72,8 +70,6 @@ class TestObjectPhysicsStandardizationGuard {
     private static final String[] PHYSICS_STANDARDIZATION_SCAN_FILE_PATHS = {
             "com/openggf/game/sonic3k/Sonic3kLevelEventManager.java",
     };
-
-    private static final List<BaselineViolation> BASELINE = List.of();
 
     @Test
     void objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites() throws IOException {
@@ -144,8 +140,8 @@ class TestObjectPhysicsStandardizationGuard {
     }
 
     @Test
-    void productionObjectPhysicsStandardizationBaselinesDoNotGrow() throws IOException {
-        assertEquals(baselineCounts(), violationCounts(scanProductionSources()));
+    void productionObjectPhysicsStandardizationHasNoUnapprovedViolations() throws IOException {
+        assertEquals(List.of(), scanProductionSources());
     }
 
     @Test
@@ -158,85 +154,75 @@ class TestObjectPhysicsStandardizationGuard {
     }
 
     @Test
-    void s3kResultsScreenUsesObjectControlStatePolicyInsteadOfBaseline() {
-        assertEquals(List.of(), BASELINE.stream()
-                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
-                .filter(baseline -> baseline.path().endsWith("S3kResultsScreenObjectInstance.java"))
-                .toList());
+    void s3kResultsScreenUsesObjectControlStatePolicyInsteadOfBaseline() throws IOException {
+        assertNoProductionViolationsEndingWith(
+                ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
+                "S3kResultsScreenObjectInstance.java");
     }
 
     @Test
-    void s3kSignpostUsesObjectControlStatePolicyInsteadOfBaseline() {
-        assertEquals(List.of(), BASELINE.stream()
-                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
-                .filter(baseline -> baseline.path().endsWith("S3kSignpostInstance.java"))
-                .toList());
+    void s3kSignpostUsesObjectControlStatePolicyInsteadOfBaseline() throws IOException {
+        assertNoProductionViolationsEndingWith(
+                ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
+                "S3kSignpostInstance.java");
     }
 
     @Test
-    void sonic3kSsEntryRingUsesObjectControlStatePolicyInsteadOfBaseline() {
-        assertEquals(List.of(), BASELINE.stream()
-                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
-                .filter(baseline -> baseline.path().endsWith("Sonic3kSSEntryRingObjectInstance.java"))
-                .toList());
+    void sonic3kSsEntryRingUsesObjectControlStatePolicyInsteadOfBaseline() throws IOException {
+        assertNoProductionViolationsEndingWith(
+                ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
+                "Sonic3kSSEntryRingObjectInstance.java");
     }
 
     @Test
-    void cnzEndBossUsesObjectControlStatePolicyInsteadOfBaseline() {
-        assertEquals(List.of(), BASELINE.stream()
-                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
-                .filter(baseline -> baseline.path().endsWith("bosses/CnzEndBossInstance.java"))
-                .toList());
+    void cnzEndBossUsesObjectControlStatePolicyInsteadOfBaseline() throws IOException {
+        assertNoProductionViolationsEndingWith(
+                ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
+                "bosses/CnzEndBossInstance.java");
     }
 
     @Test
-    void hczMinibossUsesObjectControlStatePolicyInsteadOfBaseline() {
-        assertEquals(List.of(), BASELINE.stream()
-                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
-                .filter(baseline -> baseline.path().endsWith("HczMinibossInstance.java"))
-                .toList());
+    void hczMinibossUsesObjectControlStatePolicyInsteadOfBaseline() throws IOException {
+        assertNoProductionViolationsEndingWith(
+                ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
+                "HczMinibossInstance.java");
     }
 
     @Test
-    void aizPlaneIntroUsesObjectControlStatePolicyInsteadOfBaseline() {
-        assertEquals(List.of(), BASELINE.stream()
-                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
-                .filter(baseline -> baseline.path().endsWith("AizPlaneIntroInstance.java"))
-                .toList());
+    void aizPlaneIntroUsesObjectControlStatePolicyInsteadOfBaseline() throws IOException {
+        assertNoProductionViolationsEndingWith(
+                ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
+                "AizPlaneIntroInstance.java");
     }
 
     @Test
-    void cutsceneKnucklesAiz1UsesObjectControlStatePolicyInsteadOfBaseline() {
-        assertEquals(List.of(), BASELINE.stream()
-                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
-                .filter(baseline -> baseline.path().endsWith("CutsceneKnucklesAiz1Instance.java"))
-                .toList());
+    void cutsceneKnucklesAiz1UsesObjectControlStatePolicyInsteadOfBaseline() throws IOException {
+        assertNoProductionViolationsEndingWith(
+                ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
+                "CutsceneKnucklesAiz1Instance.java");
     }
 
     @Test
-    void capsuleAndGeyserBossCutscenesUseObjectControlStatePolicyInsteadOfBaseline() {
-        assertEquals(List.of(), BASELINE.stream()
-                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
-                .filter(baseline -> baseline.path().endsWith("AbstractS3kFloatingEndEggCapsuleInstance.java")
-                        || baseline.path().endsWith("bosses/HczEndBossEggCapsuleInstance.java")
-                        || baseline.path().endsWith("bosses/HczEndBossGeyserCutscene.java"))
-                .toList());
+    void capsuleAndGeyserBossCutscenesUseObjectControlStatePolicyInsteadOfBaseline() throws IOException {
+        assertNoProductionViolationsEndingWith(
+                ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
+                "AbstractS3kFloatingEndEggCapsuleInstance.java",
+                "bosses/HczEndBossEggCapsuleInstance.java",
+                "bosses/HczEndBossGeyserCutscene.java");
     }
 
     @Test
-    void hczEndBossWaterColumnUsesObjectControlStatePolicyInsteadOfBaseline() {
-        assertEquals(List.of(), BASELINE.stream()
-                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
-                .filter(baseline -> baseline.path().endsWith("bosses/HczEndBossWaterColumn.java"))
-                .toList());
+    void hczEndBossWaterColumnUsesObjectControlStatePolicyInsteadOfBaseline() throws IOException {
+        assertNoProductionViolationsEndingWith(
+                ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
+                "bosses/HczEndBossWaterColumn.java");
     }
 
     @Test
-    void iczSnowboardIntroUsesObjectControlStatePolicyInsteadOfBaseline() {
-        assertEquals(List.of(), BASELINE.stream()
-                .filter(TestObjectPhysicsStandardizationGuard::isObjectControlBaseline)
-                .filter(baseline -> baseline.path().endsWith("IczSnowboardIntroInstance.java"))
-                .toList());
+    void iczSnowboardIntroUsesObjectControlStatePolicyInsteadOfBaseline() throws IOException {
+        assertNoProductionViolationsEndingWith(
+                ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
+                "IczSnowboardIntroInstance.java");
     }
 
     @Test
@@ -664,29 +650,21 @@ class TestObjectPhysicsStandardizationGuard {
                 .anyMatch(line -> line.contains("getTouchResponseProfile("));
     }
 
-    private static boolean isObjectControlBaseline(BaselineViolation baseline) {
-        return baseline.kind() == ViolationKind.DIRECT_OBJECT_CONTROL_SETTER;
+    private static void assertNoProductionViolationsEndingWith(
+            ViolationKind kind, String... pathSuffixes) throws IOException {
+        assertEquals(List.of(), scanProductionSources().stream()
+                .filter(violation -> violation.kind() == kind)
+                .filter(violation -> endsWithAny(violation.path(), pathSuffixes))
+                .toList());
     }
 
-    private static Map<ViolationKey, Integer> baselineCounts() {
-        Map<ViolationKey, Integer> counts = new TreeMap<>();
-        for (BaselineViolation baseline : BASELINE) {
-            counts.merge(baseline.key(), baseline.count(), Integer::sum);
+    private static boolean endsWithAny(String path, String... suffixes) {
+        for (String suffix : suffixes) {
+            if (path.endsWith(suffix)) {
+                return true;
+            }
         }
-        return counts;
-    }
-
-    private static Map<ViolationKey, Integer> violationCounts(List<SourceViolation> violations) {
-        Map<ViolationKey, Integer> counts = new TreeMap<>();
-        for (SourceViolation violation : violations) {
-            counts.merge(violation.key(), 1, Integer::sum);
-        }
-        return counts;
-    }
-
-    private static BaselineViolation baseline(String path, String lineFragment, ViolationKind kind,
-                                              ReasonCode reasonCode, int count) {
-        return new BaselineViolation(path, lineFragment, kind, reasonCode, count);
+        return false;
     }
 
     private enum ViolationKind {
@@ -696,46 +674,6 @@ class TestObjectPhysicsStandardizationGuard {
         TOUCH_PROFILE_HOOK_WITHOUT_PROFILE
     }
 
-    private enum ReasonCode {
-        BOSS_OR_CUTSCENE_ESCAPE_HATCH,
-        CUTSCENE_SCRIPT,
-        PENDING_NATIVE_P2_QUERY_MIGRATION,
-        PENDING_PARITY_TRIAGE,
-        PENDING_PROFILE_MIGRATION
-    }
-
     private record SourceViolation(String path, String lineFragment, ViolationKind kind) {
-        ViolationKey key() {
-            return new ViolationKey(path, lineFragment, kind);
-        }
-    }
-
-    private record BaselineViolation(String path, String lineFragment, ViolationKind kind,
-                                     ReasonCode reasonCode, int count) {
-        BaselineViolation {
-            if (count < 1) {
-                throw new IllegalArgumentException("baseline count must be positive");
-            }
-        }
-
-        ViolationKey key() {
-            return new ViolationKey(path, lineFragment, kind);
-        }
-    }
-
-    private record ViolationKey(String path, String lineFragment, ViolationKind kind)
-            implements Comparable<ViolationKey> {
-        @Override
-        public int compareTo(ViolationKey other) {
-            int pathCompare = path.compareTo(other.path);
-            if (pathCompare != 0) {
-                return pathCompare;
-            }
-            int kindCompare = kind.compareTo(other.kind);
-            if (kindCompare != 0) {
-                return kindCompare;
-            }
-            return lineFragment.compareTo(other.lineFragment);
-        }
     }
 }

@@ -10,7 +10,7 @@ public final class ObjectLifetimeOps {
     }
 
     public static void destroyLatched(AbstractObjectInstance instance) {
-        Objects.requireNonNull(instance, "instance").setDestroyed(true);
+        markDestroyedNoRespawn(instance);
     }
 
     public static void destroyRespawnableOffscreen(AbstractObjectInstance instance) {
@@ -18,11 +18,11 @@ public final class ObjectLifetimeOps {
     }
 
     public static void deleteNoRespawn(AbstractObjectInstance instance) {
-        Objects.requireNonNull(instance, "instance").setDestroyed(true);
+        markDestroyedNoRespawn(instance);
     }
 
     public static void expireDynamic(AbstractObjectInstance instance) {
-        Objects.requireNonNull(instance, "instance").setDestroyed(true);
+        markDestroyedNoRespawn(instance);
     }
 
     public static int detachSlotForTransfer(AbstractObjectInstance instance) {
@@ -94,5 +94,11 @@ public final class ObjectLifetimeOps {
         if (objectManager != null && parentSpawn != null) {
             objectManager.freeReservedChildSlot(parentSpawn, childIndex);
         }
+    }
+
+    private static void markDestroyedNoRespawn(AbstractObjectInstance instance) {
+        AbstractObjectInstance checked = Objects.requireNonNull(instance, "instance");
+        checked.setDestroyed(false);
+        checked.setDestroyed(true);
     }
 }
