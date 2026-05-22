@@ -19,6 +19,7 @@ class TestTouchResponseProfileMapping {
         assertFalse(profile.multiRegionSource());
         assertEquals(TouchShieldDeflectCapability.NONE, profile.shieldDeflectCapability());
         assertEquals(0, profile.shieldReactionFlags());
+        assertFalse(profile.enablesPostSpecialTouchAirborneSideVelocityPreservation());
         assertEquals(TouchAttackBouncePolicy.STANDARD_ENEMY_KILL, profile.attackBouncePolicy());
         assertEquals(TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY, profile.actorContextPolicy());
         assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
@@ -45,6 +46,7 @@ class TestTouchResponseProfileMapping {
         assertFalse(profile.multiRegionSource());
         assertEquals(TouchShieldDeflectCapability.NONE, profile.shieldDeflectCapability());
         assertEquals(0, profile.shieldReactionFlags());
+        assertFalse(profile.enablesPostSpecialTouchAirborneSideVelocityPreservation());
         assertEquals(TouchAttackBouncePolicy.STANDARD_ENEMY_KILL, profile.attackBouncePolicy());
         assertEquals(TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY, profile.actorContextPolicy());
         assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
@@ -117,6 +119,20 @@ class TestTouchResponseProfileMapping {
 
         assertEquals(TouchShieldDeflectCapability.NONE, profile.shieldDeflectCapability());
         assertEquals(0x02, profile.shieldReactionFlags());
+    }
+
+    @Test
+    void postSpecialAirborneSideVelocityPreservationMapsAsProfileValue() {
+        TouchResponseProfile profile = TouchResponseProfile.fromProvider(new PostSpecialPreservationProvider());
+
+        assertTrue(profile.enablesPostSpecialTouchAirborneSideVelocityPreservation());
+    }
+
+    @Test
+    void canonicalRoundTripPreservesProfilePolicyValues() {
+        TouchResponseProfile profile = TouchResponseProfile.fromProvider(new FullPolicyProvider());
+
+        assertEquals(profile, TouchResponseProfile.fromCanonical(profile.toCanonical()));
     }
 
     @Test
@@ -214,6 +230,40 @@ class TestTouchResponseProfileMapping {
         @Override
         public int getShieldReactionFlags() {
             return flags;
+        }
+    }
+
+    private static final class PostSpecialPreservationProvider extends DefaultProvider {
+        @Override
+        public boolean enablesPostSpecialTouchAirborneSideVelocityPreservation() {
+            return true;
+        }
+    }
+
+    private static final class FullPolicyProvider extends DefaultProvider {
+        @Override
+        public boolean requiresContinuousTouchCallbacks() {
+            return true;
+        }
+
+        @Override
+        public boolean usesSonic2TouchSpecialPropertyResponse() {
+            return true;
+        }
+
+        @Override
+        public boolean enablesPostSpecialTouchAirborneSideVelocityPreservation() {
+            return true;
+        }
+
+        @Override
+        public boolean requiresRenderFlagForTouch() {
+            return false;
+        }
+
+        @Override
+        public int getShieldReactionFlags() {
+            return 0x08;
         }
     }
 

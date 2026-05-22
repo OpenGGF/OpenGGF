@@ -4,6 +4,7 @@ import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.CheckpointRuntimeStateProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
@@ -22,6 +23,8 @@ import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
 import com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
@@ -30,9 +33,12 @@ import com.openggf.game.sonic3k.objects.HCZConveyorBeltObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.camera.Camera;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -240,7 +246,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         int minX = camera.getMinX();
         int maxX = camera.getMaxX();
         int maxY = Math.max(camera.getMaxY(), camera.getMaxYTarget());
-        for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
+        for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (sidekick.getCpuController() != null) {
                 sidekick.getCpuController().setLevelBounds(minX, maxX, maxY);
             }
@@ -277,7 +283,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (introFallActiveOnSidekick) {
             boolean anySidekickStillFalling = false;
-            for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
+            for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
                 if (sidekick.getAir()) {
                     anySidekickStillFalling = true;
                 } else if (sidekick.getForcedAnimationId() >= 0) {
@@ -363,7 +369,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
         // Sidekick (Player 2): anim $1B, airborne, jumping=1
         // ROM: sonic3k.asm:8153–8158
-        for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
+        for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             sidekick.setForcedAnimationId(Sonic3kAnimationIds.HURT_FALL);
             sidekick.setAir(true);
             sidekick.setJumping(true);
@@ -390,7 +396,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         player.setAir(true);
         introFallActiveOnPlayer = true;
 
-        for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
+        for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             sidekick.setForcedAnimationId(Sonic3kAnimationIds.HURT_FALL);
             sidekick.setAir(true);
             introFallActiveOnSidekick = true;
@@ -635,7 +641,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             player.setControlLocked(false);
             player.setForcedAnimationId(-1);
         }
-        for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
+        for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             ObjectControlState.none().applyTo(sidekick);
             sidekick.setControlLocked(false);
             sidekick.setForcedAnimationId(-1);
@@ -643,6 +649,30 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         LOG.info("MGZ: released player from victory pose after Act 1 → Act 2 reload");
     }
 
+
+    private List<AbstractPlayableSprite> sidekickSpritesFor(ObjectPlayerParticipationPolicy policy) {
+        ObjectPlayerQuery query = playerQueryFromGameServices();
+        PlayableEntity mainPlayer = query.mainPlayerOrNull();
+        List<AbstractPlayableSprite> sidekicks = new ArrayList<>();
+        for (PlayableEntity participant : query.playersFor(policy)) {
+            if (participant != mainPlayer && participant instanceof AbstractPlayableSprite sidekick) {
+                sidekicks.add(sidekick);
+            }
+        }
+        return sidekicks;
+    }
+
+    private ObjectPlayerQuery playerQueryFromGameServices() {
+        Camera camera = GameServices.cameraOrNull();
+        AbstractPlayableSprite mainPlayer = camera != null ? camera.getFocusedSprite() : null;
+        SpriteManager sprites = GameServices.spritesOrNull();
+        List<? extends PlayableEntity> sidekicks = sprites != null
+                ? List.copyOf(sprites.getSidekicks())
+                : List.of();
+        return new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> sidekicks);
+    }
 
     /**
      * Returns the current Dynamic_resize_routine value from the active zone
