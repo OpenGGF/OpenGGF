@@ -104,8 +104,10 @@ amount after a rolling launch or hurt — usually 1-5 px.
 (constant for all characters).
 
 **What to check.** When ROM source shows `addq.w #<literal>, y_pos(a1)`,
-port that as a literal `setCentreYPreserveSubpixel((short)(preCentreY +
-<literal>))`. Don't substitute a character-aware helper.
+port that as a literal `NativePositionOps.addYPosPreserveSubpixel(player,
+<literal>)`. Don't substitute a character-aware helper. Reserve raw
+`setCentreYPreserveSubpixel(...)` calls for lower-level sprite internals or
+non-playable/object-local state.
 
 **Originating commit (S2).** `3cb72b6af` (secondary).
 
@@ -215,8 +217,8 @@ overflowed low byte still lands in `y_sub` (because `setCentreY*`
 preserves it), but `y_pos` is short by 1.
 
 **What to check.** Any code path that:
-1. Calls `setCentreXPreserveSubpixel(...)` / `setCentreYPreserveSubpixel(...)`
-   (ROM word-write equivalents to `x_pos` / `y_pos`),
+1. Writes playable-sprite native `x_pos` / `y_pos` with `NativePositionOps`
+   (or lower-level/raw preserve-subpixel setters in sprite internals),
 2. THEN integrates by a velocity stored in subpixel units (`x_vel` / `y_vel`),
 must use `AbstractSprite.move(xSpeed, ySpeed)` — which mirrors ROM's
 `add.l d0, x_pos(a0)` / `add.l d0, y_pos(a0)` — rather than manual

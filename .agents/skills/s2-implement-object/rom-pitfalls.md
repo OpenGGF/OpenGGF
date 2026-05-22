@@ -113,8 +113,10 @@ differs per character: Sonic 10, Tails 2) when ROM has a literal `addq.w
 
 **What to check.** When the ROM source code has `addq.w #<literal>,
 y_pos(a1)` or `subq.w #<literal>, y_pos(a1)`, port that as a literal
-`setCentreYPreserveSubpixel((short)(preCentreY + 5))`. Do not substitute a
-character-aware helper "because Tails is shorter".
+`NativePositionOps.addYPosPreserveSubpixel(player, 5)`. Do not substitute a
+character-aware helper "because Tails is shorter". Reserve raw
+`setCentreYPreserveSubpixel(...)` calls for lower-level sprite internals or
+non-playable/object-local state.
 
 **ROM citation.** `docs/s2disasm/s2.asm:58042` (Flipper rolling entry:
 `addq.w #5, y_pos(a1)`).
@@ -246,8 +248,8 @@ overflowed low byte still lands in `y_sub` (because `setCentreY*` preserves
 it), but `y_pos` is short by 1.
 
 **What to check.** Any code path that:
-1. Calls `setCentreXPreserveSubpixel(...)` / `setCentreYPreserveSubpixel(...)`
-   (ROM word-write equivalents to `x_pos` / `y_pos`),
+1. Writes playable-sprite native `x_pos` / `y_pos` with `NativePositionOps`
+   (or lower-level/raw preserve-subpixel setters in sprite internals),
 2. THEN integrates by a velocity stored in subpixel units (`x_vel` / `y_vel`),
 must use `AbstractSprite.move(xSpeed, ySpeed)` — which mirrors ROM's
 `add.l d0, x_pos(a0)` / `add.l d0, y_pos(a0)` — rather than manual

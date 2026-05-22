@@ -334,6 +334,7 @@ When the current branch provides shared object contracts, prefer them over new o
 
 - Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. Distinguish bit-0, bit-6, and bit-7 style gates instead of treating every controlled player as the same state.
 - Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, all engine players, or engine sidekicks extended from native P2 logic. This is required for S2 Tails parity and OpenGGF multi-sidekick coherence.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
 - Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
 - Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
 - When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
@@ -360,7 +361,7 @@ When extending the engine:
 private static final int X_VELOCITY = 0x180;
 ```
 
-**Coordinate semantics**: ROM `x_pos` / `y_pos` map to `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()`. `getX()` / `getY()` are top-left sprite bounds and should only be used for render extents or explicit bounds checks. If a solid, camera trigger, or trace drifts by the sprite radius, audit for centre/top-left mixing first.
+**Coordinate semantics**: ROM `x_pos` / `y_pos` map to `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()`. For playable-sprite native writes, prefer `NativePositionOps`; reserve raw preserve-subpixel centre setters for lower-level sprite internals or non-playable/object-local state. `getX()` / `getY()` are top-left sprite bounds and should only be used for render extents or explicit bounds checks. If a solid, camera trigger, or trace drifts by the sprite radius, audit for centre/top-left mixing first.
 
 **Subtypes**: Implement ALL subtypes from the subtype byte interpretation:
 ```java
