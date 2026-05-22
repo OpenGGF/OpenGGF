@@ -13,9 +13,10 @@ public record SlopedSolidRoutineProfile(
     }
 
     public static SlopedSolidRoutineAdapter adapt(SlopedSolidProvider provider) {
+        Objects.requireNonNull(provider, "provider");
         return new SlopedSolidRoutineAdapter(
-                Objects.requireNonNull(provider, "provider"),
-                fromProvider(provider));
+                provider,
+                Objects.requireNonNull(provider.getSlopedSolidRoutineProfile(), "slopedSolidRoutineProfile"));
     }
 
     public com.openggf.game.profiles.solidroutine.SlopedSolidRoutineProfile toCanonical() {
