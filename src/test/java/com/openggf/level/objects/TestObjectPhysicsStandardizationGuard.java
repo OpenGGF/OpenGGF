@@ -35,6 +35,8 @@ class TestObjectPhysicsStandardizationGuard {
                     + "::\\s*sidekicks\\b");
     private static final Pattern RAW_GET_SIDEKICKS_SUPPLIER = Pattern.compile(
             "(?:->\\s*[^;]*\\.\\s*getSidekicks\\s*\\(|::\\s*getSidekicks\\b)");
+    private static final Pattern RAW_NATIVE_POSITION_PRESERVE_SUBPIXEL_WRITE = Pattern.compile(
+            "\\.setCentre[XY]PreserveSubpixel\\s*\\(");
     private static final Pattern DIRECT_LIFECYCLE_OPERATION = Pattern.compile(
             "(?:setSlotIndex\\s*\\(\\s*-\\s*1\\s*\\)|\\.markRemembered\\s*\\(|"
                     + "\\.removeFromActiveSpawns\\s*\\(|\\.addDynamicObjectAtSlot\\s*\\(|"
@@ -70,6 +72,41 @@ class TestObjectPhysicsStandardizationGuard {
     private static final String[] PHYSICS_STANDARDIZATION_SCAN_FILE_PATHS = {
             "com/openggf/game/sonic3k/Sonic3kLevelEventManager.java",
     };
+    private static final Set<String> LEGACY_RAW_NATIVE_POSITION_WRITE_FILES = Set.of(
+            "com/openggf/game/sonic1/events/Sonic1LZWaterEvents.java",
+            "com/openggf/game/sonic1/objects/Sonic1JunctionObjectInstance.java",
+            "com/openggf/game/sonic2/OilSurfaceManager.java",
+            "com/openggf/game/sonic2/objects/BreakableBlockObjectInstance.java",
+            "com/openggf/game/sonic2/objects/FlipperObjectInstance.java",
+            "com/openggf/game/sonic2/objects/ForcedSpinObjectInstance.java",
+            "com/openggf/game/sonic2/objects/LauncherSpringObjectInstance.java",
+            "com/openggf/game/sonic2/objects/MovingVineObjectInstance.java",
+            "com/openggf/game/sonic2/objects/PointPokeyObjectInstance.java",
+            "com/openggf/game/sonic2/objects/RisingPillarObjectInstance.java",
+            "com/openggf/game/sonic2/objects/SmashableGroundObjectInstance.java",
+            "com/openggf/game/sonic2/objects/SpeedLauncherObjectInstance.java",
+            "com/openggf/game/sonic2/objects/SpiralObjectInstance.java",
+            "com/openggf/game/sonic2/objects/SpringObjectInstance.java",
+            "com/openggf/game/sonic2/objects/TornadoObjectInstance.java",
+            "com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java",
+            "com/openggf/game/sonic3k/events/Sonic3kCNZEvents.java",
+            "com/openggf/game/sonic3k/events/Sonic3kMGZEvents.java",
+            "com/openggf/game/sonic3k/objects/AizHollowTreeObjectInstance.java",
+            "com/openggf/game/sonic3k/objects/AizLrzRockObjectInstance.java",
+            "com/openggf/game/sonic3k/objects/AizVineHandleLogic.java",
+            "com/openggf/game/sonic3k/objects/AutoSpinObjectInstance.java",
+            "com/openggf/game/sonic3k/objects/ClamerObjectInstance.java",
+            "com/openggf/game/sonic3k/objects/CnzBarberPoleObjectInstance.java",
+            "com/openggf/game/sonic3k/objects/CnzCannonInstance.java",
+            "com/openggf/game/sonic3k/objects/CnzCylinderInstance.java",
+            "com/openggf/game/sonic3k/objects/CnzHoverFanInstance.java",
+            "com/openggf/game/sonic3k/objects/CnzSpiralTubeInstance.java",
+            "com/openggf/game/sonic3k/objects/CnzVacuumTubeInstance.java",
+            "com/openggf/game/sonic3k/objects/CnzWireCageObjectInstance.java",
+            "com/openggf/game/sonic3k/objects/IczSnowboardIntroInstance.java",
+            "com/openggf/game/sonic3k/objects/Sonic3kSpringObjectInstance.java",
+            "com/openggf/game/sonic3k/sidekick/Sonic3kCnzCarryTrigger.java"
+    );
 
     @Test
     void objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites() throws IOException {
@@ -78,6 +115,11 @@ class TestObjectPhysicsStandardizationGuard {
         assertEquals(List.of(), forbiddenLines(source,
                 "setCentreXPreserveSubpixel(",
                 "setCentreYPreserveSubpixel("));
+    }
+
+    @Test
+    void productionPlayableNativePositionRawPreserveSubpixelWriteFilesDoNotGrow() throws IOException {
+        assertEquals(List.of(), rawNativePositionWriteViolationsOutsideLegacyFiles());
     }
 
     @Test
@@ -158,12 +200,21 @@ class TestObjectPhysicsStandardizationGuard {
         assertOwnedSourceUsesAllEnginePlayers(
                 "com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java",
                 "processInitialAizTransitionFloorContact");
+        assertOwnedQueryHelperSuppliesSidekicks(
+                "com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java",
+                "playerQueryFromGameServices");
         assertOwnedSourceUsesAllEnginePlayers(
                 "com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java",
                 "update");
+        assertOwnedQueryHelperSuppliesSidekicks(
+                "com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java",
+                "playerQueryFromRuntime");
         assertOwnedSourceUsesAllEnginePlayers(
                 "com/openggf/game/sonic2/events/Sonic2OOZEvents.java",
                 "update");
+        assertOwnedQueryHelperSuppliesSidekicks(
+                "com/openggf/game/sonic2/events/Sonic2OOZEvents.java",
+                "playerQueryFromRuntime");
     }
 
     @Test
@@ -497,6 +548,30 @@ class TestObjectPhysicsStandardizationGuard {
                 .toList();
     }
 
+    private static List<String> rawNativePositionWriteViolationsOutsideLegacyFiles() throws IOException {
+        Path srcMain = ObjectGuardSourceScanner.findSourceRoot();
+        if (srcMain == null) {
+            throw new IOException("Could not locate src/main/java");
+        }
+        List<String> violations = new ArrayList<>();
+        for (Path sourceFile : ObjectGuardSourceScanner.javaFilesUnderPackages(
+                srcMain, new String[] {"com/openggf/game", "com/openggf/level/objects"})) {
+            String path = srcMain.relativize(sourceFile).toString().replace('\\', '/');
+            if (isObjectPhysicsStandardizationOwner(path)
+                    || LEGACY_RAW_NATIVE_POSITION_WRITE_FILES.contains(path)) {
+                continue;
+            }
+            SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(
+                    Files.readAllLines(sourceFile));
+            source.lines().stream()
+                    .map(String::trim)
+                    .filter(line -> RAW_NATIVE_POSITION_PRESERVE_SUBPIXEL_WRITE.matcher(line).find())
+                    .map(line -> path + ": " + line)
+                    .forEach(violations::add);
+        }
+        return violations;
+    }
+
     private static boolean containsAny(String line, String... fragments) {
         for (String fragment : fragments) {
             if (line.contains(fragment)) {
@@ -687,13 +762,30 @@ class TestObjectPhysicsStandardizationGuard {
                 methodName + " should not use raw sidekick shortcuts in guarded participation logic");
     }
 
+    private static void assertOwnedQueryHelperSuppliesSidekicks(String relativePath,
+                                                               String methodName) throws IOException {
+        SourceText source = source(relativePath);
+        String body = methodBody(source, methodName);
+        String compactBody = body.replaceAll("\\s+", "");
+        assertEquals(true, body.contains("new ObjectPlayerQuery"),
+                methodName + " should construct the local ObjectPlayerQuery adapter");
+        assertEquals(true, compactBody.contains("List.copyOf(")
+                        && compactBody.contains(".getSidekicks())"),
+                methodName + " should snapshot runtime sidekicks into the query adapter");
+        assertEquals(true, compactBody.contains("()->sidekicks"),
+                methodName + " should pass the sidekick snapshot to ObjectPlayerQuery");
+    }
+
     private static String methodBody(SourceText source, String methodName) {
         String text = String.join("\n", source.lines());
-        int nameOffset = text.indexOf(methodName + "(");
-        if (nameOffset < 0) {
+        Matcher declaration = Pattern.compile(
+                "\\b(?:public|private|protected)\\b[^\\n;{}]*\\b"
+                        + Pattern.quote(methodName) + "\\s*\\(")
+                .matcher(text);
+        if (!declaration.find()) {
             throw new AssertionError("Missing method " + methodName);
         }
-        int bodyStart = text.indexOf('{', nameOffset);
+        int bodyStart = text.indexOf('{', declaration.end());
         if (bodyStart < 0) {
             throw new AssertionError("Missing method body for " + methodName);
         }
