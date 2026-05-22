@@ -504,8 +504,9 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
     }
 
     private AbstractPlayableSprite nativeP2From(ObjectServices services, AbstractPlayableSprite leader) {
+        PlayableEntity queryMain = services.playerQuery().mainPlayerOrNull();
         for (PlayableEntity candidate : services.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
-            if (candidate instanceof AbstractPlayableSprite sprite && sprite != leader) {
+            if (candidate instanceof AbstractPlayableSprite sprite && sprite != leader && sprite != queryMain) {
                 return sprite;
             }
         }

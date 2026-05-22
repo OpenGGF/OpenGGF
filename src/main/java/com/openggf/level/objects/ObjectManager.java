@@ -4610,9 +4610,6 @@ public class ObjectManager {
                 if (instance.isSkipTouchThisFrame()) {
                     continue;
                 }
-                if (instance.isSkipSolidContactThisFrame()) {
-                    continue;
-                }
 
                 // Multi-region providers (e.g., spiked pole helix) check each region independently
                 TouchResponseProvider.TouchRegion[] regions = provider.getMultiTouchRegions();

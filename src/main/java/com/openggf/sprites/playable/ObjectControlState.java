@@ -81,4 +81,9 @@ public enum ObjectControlState {
     public void applyTo(AbstractPlayableSprite player) {
         Objects.requireNonNull(player, "player").applyObjectControlState(this);
     }
+
+    public static void setMovementSuppressionPreservingOwnership(
+            AbstractPlayableSprite player, boolean suppressesMovement) {
+        Objects.requireNonNull(player, "player").setObjectControlSuppressesMovement(suppressesMovement);
+    }
 }

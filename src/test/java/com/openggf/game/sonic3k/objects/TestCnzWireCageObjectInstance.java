@@ -1,8 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
-import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCnzWireCageObjectInstance {
@@ -536,6 +537,33 @@ class TestCnzWireCageObjectInstance {
                 "CNZ wire cage has only native P1/P2 standing bits, so P2 must come from ObjectPlayerQuery");
         assertTrue(nativeP2.isOnObject());
         assertTrue(nativeP2.isObjectControlled());
+    }
+
+    @Test
+    void nonSpriteUpdateDoesNotPromoteQueriedMainIntoNativeP2CageSlot() {
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
+        Tails main = new Tails("tails-main", (short) 0, (short) 0);
+        Tails nativeP2 = new Tails("tails", (short) 0, (short) 0);
+        main.setCpuControlled(true);
+        nativeP2.setCpuControlled(true);
+        cage.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2)));
+
+        main.setCentreX((short) 0x1300);
+        main.setCentreY((short) 0x07C0);
+        main.setAir(false);
+        main.setGSpeed((short) 0x0800);
+        nativeP2.setCentreX((short) 0x1300);
+        nativeP2.setCentreY((short) 0x07C0);
+        nativeP2.setAir(false);
+        nativeP2.setGSpeed((short) 0x0800);
+
+        cage.update(0, mock(PlayableEntity.class));
+
+        assertFalse(main.isOnObject(),
+                "The queried main player must not be consumed as CNZ's native P2 slot when update input is non-sprite");
+        assertEquals(Sonic3kObjectIds.CNZ_WIRE_CAGE, nativeP2.getLatchedSolidObjectId(),
+                "CNZ wire cage should still use the first queried sidekick as native P2");
     }
 
     @Test

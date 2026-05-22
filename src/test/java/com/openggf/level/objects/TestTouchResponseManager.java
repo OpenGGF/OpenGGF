@@ -540,6 +540,19 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void skipSolidContactDoesNotSuppressMultiRegionTouch() {
+        MockMultiRegionSkipSolidTouchObject spikes = new MockMultiRegionSkipSolidTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 112, 0x88, 0));
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(spikes);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertTrue(spikes.wasTouched,
+                "skipSolidContactThisFrame is a solid-contact gate and must not suppress multi-region touch");
+    }
+
+    @Test
     public void testRunTouchResponsesForPlayerUsesLiveCurrentObjectPosition() {
         // Current position barely overlaps; pre-update position does not.
         MockTrackedTouchObject obj = new MockTrackedTouchObject(174, 112, 176, 112, 0x48);
@@ -732,6 +745,25 @@ public class TestTouchResponseManager {
         private MockMultiRegionTouchObject(TouchResponseProvider.TouchRegion... regions) {
             super(0, 0, 0);
             this.regions = regions;
+        }
+
+        @Override
+        public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+            return regions;
+        }
+    }
+
+    private static final class MockMultiRegionSkipSolidTouchObject extends MockTouchObject {
+        private final TouchResponseProvider.TouchRegion[] regions;
+
+        private MockMultiRegionSkipSolidTouchObject(TouchResponseProvider.TouchRegion... regions) {
+            super(0, 0, 0);
+            this.regions = regions;
+        }
+
+        @Override
+        public boolean isSkipSolidContactThisFrame() {
+            return true;
         }
 
         @Override

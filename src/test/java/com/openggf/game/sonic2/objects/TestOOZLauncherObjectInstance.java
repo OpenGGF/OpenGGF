@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestOOZLauncherObjectInstance {
 
     @Test
-    void nativeP2QuerySidekickCanBreakLauncherWhenRawSidekickListIsEmpty() {
+    void queriedEngineSidekicksEachUseIndependentLauncherParticipation() {
         OOZLauncherObjectInstance launcher = newLauncher();
         TestablePlayableSprite main = player("sonic");
         TestablePlayableSprite nativeP2 = player("tails");
@@ -36,8 +36,12 @@ class TestOOZLauncherObjectInstance {
                 "Obj3D has only native P1/P2 state slots, so queried native P2 must use the Tails slot");
         assertTrue(nativeP2.getRolling());
         assertFalse(launcher.isSolidFor(main), "Rolling native P2 should break the launcher block");
-        assertFalse(extraSidekick.getAir(),
-                "Additional engine sidekicks must not inherit the single native P2 launcher state");
+
+        launcher.update(1, main);
+
+        assertTrue(extraSidekick.isObjectControlled(),
+                "OOZ launcher has per-player launch state and should explicitly include engine sidekicks");
+        assertTrue(extraSidekick.getAir());
     }
 
     private static OOZLauncherObjectInstance newLauncher() {

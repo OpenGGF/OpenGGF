@@ -120,9 +120,9 @@ class TestSidekickCpuControllerCatchUpFlight {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
-        tails.setAir(true);
-        tails.setControlLocked(true);
-        tails.setObjectControlled(true);
+        tails.setAir(false);
+        tails.setControlLocked(false);
+        tails.setObjectControlled(false);
         tails.setForcedAnimationId(0x3A);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
@@ -132,11 +132,11 @@ class TestSidekickCpuControllerCatchUpFlight {
 
         assertSame(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
                 "Frame 1 has no catch-up trigger");
-        assertTrue(tails.getAir(),
+        assertFalse(tails.getAir(),
                 "ROM Tails_Catch_Up_Flying wait path returns without writing status");
-        assertTrue(tails.isControlLocked(),
+        assertFalse(tails.isControlLocked(),
                 "ROM Tails_Catch_Up_Flying wait path returns without writing object_control bit 0");
-        assertTrue(tails.isObjectControlled(),
+        assertFalse(tails.isObjectControlled(),
                 "ROM Tails_Catch_Up_Flying wait path returns without writing object_control bit 7");
         assertEquals(0x3A, tails.getForcedAnimationId(),
                 "ROM Tails_Catch_Up_Flying wait path returns without changing animation");

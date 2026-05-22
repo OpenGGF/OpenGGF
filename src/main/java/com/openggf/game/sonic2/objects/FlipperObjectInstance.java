@@ -90,6 +90,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
     // has moved away. Our onSolidContact callback only fires when there IS a contact,
     // so we must check in update() whether the player has left and release the lock.
     private AbstractPlayableSprite lockedPlayer = null;
+    private boolean lockedPlayerPreviousMovementSuppressed;
 
     public FlipperObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, 8, 8, 0.8f, 0.4f, 0.2f, false);
@@ -141,8 +142,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 // Obj01_Control skips the player movement dispatch while
                 // obj_control bit 0 is set, then still runs display/record/
                 // animation/TouchResponse (s2.asm:35937-35962).
-                ObjectControlState.movementSuppressedOnly().applyTo(player);
-                lockedPlayer = player;
+                suppressMovementForLockedPlayer(player);
 
                 if (playerFlipperState == 0) {
                     // First frame standing: enter rolling state (loc_2B20A)
@@ -169,9 +169,6 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 // ROM: move.b #0,obj_control(a1)
                 if (playerFlipperState != 0 && (lockedPlayer == null || lockedPlayer == player)) {
                     releaseLockedPlayer();
-                    player.setControlLocked(false);
-                    ObjectControlState.none().applyTo(player);
-                    player.setPinballMode(false);
                     playerFlipperState = 0;
                 }
             }
@@ -235,10 +232,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
         // (s2.asm:57982-57988).
 
         // ROM: move.b #0,obj_control(a1) at loc_2B2E2 - release control lock
-        player.setControlLocked(false);
-        ObjectControlState.none().applyTo(player);
-        player.setPinballMode(false);
-        lockedPlayer = null;
+        releaseLockedPlayer();
 
         // Clear solid object riding state to prevent the object system from
         // continuing to track the player's position relative to the flipper.
@@ -454,10 +448,23 @@ public class FlipperObjectInstance extends BoxObjectInstance
     private void releaseLockedPlayer() {
         if (lockedPlayer != null) {
             lockedPlayer.setControlLocked(false);
-            ObjectControlState.none().applyTo(lockedPlayer);
+            ObjectControlState.setMovementSuppressionPreservingOwnership(
+                    lockedPlayer, lockedPlayerPreviousMovementSuppressed);
             lockedPlayer.setPinballMode(false);
             lockedPlayer = null;
+            lockedPlayerPreviousMovementSuppressed = false;
         }
+    }
+
+    private void suppressMovementForLockedPlayer(AbstractPlayableSprite player) {
+        if (lockedPlayer != player) {
+            if (lockedPlayer != null) {
+                releaseLockedPlayer();
+            }
+            lockedPlayer = player;
+            lockedPlayerPreviousMovementSuppressed = player.isObjectControlSuppressesMovement();
+        }
+        ObjectControlState.setMovementSuppressionPreservingOwnership(player, true);
     }
 
     @Override
