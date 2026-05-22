@@ -95,6 +95,9 @@ public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance {
     // sub_87B72: cmpi.b #4,d1 — maximum children per parent
     static final int MAX_CHILDREN = 4;
 
+    private static final ObjectPlayerParticipationPolicy TARGET_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+
     // --- State ---
 
     private enum State { HOVER, CHASE }
@@ -339,7 +342,7 @@ public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance {
     // ── Player proximity (Find_SonicTails) ───────────────────────────────
 
     /**
-     * Find nearest player (Sonic or Tails) by combined distance.
+     * Find nearest native player (Player_1 or Player_2) by horizontal distance.
      */
     private AbstractPlayableSprite findNearestPlayer(AbstractPlayableSprite mainPlayer) {
         ObjectServices svc = tryServices();
@@ -347,7 +350,7 @@ public final class BuggernautBadnikInstance extends AbstractS3kBadnikInstance {
                 () -> mainPlayer,
                 () -> svc != null ? svc.playerQuery().sidekicks() : List.of());
         PlayableEntity nearest = query.nearestByRomX(
-                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS,
+                TARGET_PARTICIPATION,
                 currentX,
                 BuggernautBadnikInstance::isLivePlayable).player();
         return nearest instanceof AbstractPlayableSprite sprite ? sprite : null;

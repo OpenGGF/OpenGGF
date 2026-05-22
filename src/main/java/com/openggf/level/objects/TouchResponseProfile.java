@@ -9,6 +9,7 @@ public record TouchResponseProfile(
         boolean multiRegionSource,
         TouchShieldDeflectCapability shieldDeflectCapability,
         int shieldReactionFlags,
+        boolean enablesPostSpecialTouchAirborneSideVelocityPreservation,
         TouchAttackBouncePolicy attackBouncePolicy,
         TouchActorContextPolicy actorContextPolicy,
         TouchOverlapStopPolicy stopAfterFirstOverlapPolicy) {
@@ -21,6 +22,28 @@ public record TouchResponseProfile(
         Objects.requireNonNull(attackBouncePolicy, "attackBouncePolicy");
         Objects.requireNonNull(actorContextPolicy, "actorContextPolicy");
         Objects.requireNonNull(stopAfterFirstOverlapPolicy, "stopAfterFirstOverlapPolicy");
+    }
+
+    public TouchResponseProfile(
+            TouchCategoryDecodeMode categoryDecodeMode,
+            boolean continuousCallbacks,
+            boolean requiresRenderFlagForTouch,
+            boolean multiRegionSource,
+            TouchShieldDeflectCapability shieldDeflectCapability,
+            int shieldReactionFlags,
+            TouchAttackBouncePolicy attackBouncePolicy,
+            TouchActorContextPolicy actorContextPolicy,
+            TouchOverlapStopPolicy stopAfterFirstOverlapPolicy) {
+        this(categoryDecodeMode,
+                continuousCallbacks,
+                requiresRenderFlagForTouch,
+                multiRegionSource,
+                shieldDeflectCapability,
+                shieldReactionFlags,
+                false,
+                attackBouncePolicy,
+                actorContextPolicy,
+                stopAfterFirstOverlapPolicy);
     }
 
     public static TouchResponseProfile fromProvider(TouchResponseProvider provider) {
@@ -53,6 +76,7 @@ public record TouchResponseProfile(
                         ? TouchShieldDeflectCapability.SHIELD_DEFLECT
                         : TouchShieldDeflectCapability.NONE,
                 shieldFlags,
+                provider.enablesPostSpecialTouchAirborneSideVelocityPreservation(),
                 TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
                 TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
                 multiRegionSource
@@ -68,6 +92,7 @@ public record TouchResponseProfile(
                 multiRegionSource,
                 shieldDeflectCapability.toCanonical(),
                 shieldReactionFlags,
+                enablesPostSpecialTouchAirborneSideVelocityPreservation,
                 attackBouncePolicy.toCanonical(),
                 actorContextPolicy.toCanonical(),
                 stopAfterFirstOverlapPolicy.toCanonical());
@@ -83,6 +108,7 @@ public record TouchResponseProfile(
                 canonical.multiRegionSource(),
                 TouchShieldDeflectCapability.fromCanonical(canonical.shieldDeflectCapability()),
                 canonical.shieldReactionFlags(),
+                canonical.enablesPostSpecialTouchAirborneSideVelocityPreservation(),
                 TouchAttackBouncePolicy.fromCanonical(canonical.attackBouncePolicy()),
                 TouchActorContextPolicy.fromCanonical(canonical.actorContextPolicy()),
                 TouchOverlapStopPolicy.fromCanonical(canonical.stopAfterFirstOverlapPolicy()));

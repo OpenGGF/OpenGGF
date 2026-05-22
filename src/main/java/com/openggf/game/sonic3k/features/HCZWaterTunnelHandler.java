@@ -4,8 +4,8 @@ import com.openggf.game.GameServices;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
-import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -341,15 +341,17 @@ public final class HCZWaterTunnelHandler {
 
     private static ObjectPlayerQuery playerQueryFromGameServices() {
         AbstractPlayableSprite mainPlayer = GameServices.camera().getFocusedSprite();
-        List<? extends PlayableEntity> sidekicks = List.copyOf(GameServices.sprites().getSidekicks());
+        SpriteManager sprites = GameServices.spritesOrNull();
+        List<? extends PlayableEntity> sidekicks = sprites != null
+                ? List.copyOf(sprites.getSidekicks())
+                : List.of();
         return new ObjectPlayerQuery(
                 () -> mainPlayer,
                 () -> sidekicks);
     }
 
     private static AbstractPlayableSprite nativeP2From(ObjectPlayerQuery query) {
-        List<PlayableEntity> players = query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
-        return players.size() > 1 ? asPlayableSprite(players.get(1)) : null;
+        return asPlayableSprite(query.nativeP2OrNull());
     }
 
     private static AbstractPlayableSprite asPlayableSprite(PlayableEntity player) {

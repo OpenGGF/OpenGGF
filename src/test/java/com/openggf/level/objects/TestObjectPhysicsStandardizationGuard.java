@@ -50,6 +50,8 @@ class TestObjectPhysicsStandardizationGuard {
     private static final List<Pattern> DIRECT_TOUCH_POLICY_CALLS = List.of(
             Pattern.compile("(?<!\\btouchProfile)\\.requiresRenderFlagForTouch\\s*\\("),
             Pattern.compile("(?<!\\btouchProfile)\\.requiresContinuousTouchCallbacks\\s*\\("),
+            Pattern.compile("\\bprovider\\s*\\.\\s*enablesPostSpecialTouchAirborneSideVelocityPreservation\\s*\\("),
+            Pattern.compile("\\bprovider\\s*\\.\\s*getShieldReactionFlags\\s*\\("),
             Pattern.compile("\\.usesS3kTouchSpecialPropertyResponse\\s*\\("),
             Pattern.compile("\\.usesSonic2TouchSpecialPropertyResponse\\s*\\("),
             Pattern.compile("\\bTouchResponseProvider\\s+touchProfile\\b"),
@@ -106,6 +108,39 @@ class TestObjectPhysicsStandardizationGuard {
         SourceText source = source("com/openggf/level/objects/ObjectManager.java");
 
         assertEquals(List.of(), forbiddenLines(source, DIRECT_TOUCH_POLICY_CALLS));
+    }
+
+    @Test
+    void touchPolicyGuardAllowsProfilePolicyReadsInDispatcherSampleSource() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  void dispatch(TouchResponseProfile profile) {",
+                "    if (profile.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {",
+                "      preserveSideVelocity();",
+                "    }",
+                "    int flags = profile.getShieldReactionFlags();",
+                "  }",
+                "}"));
+
+        assertEquals(List.of(), forbiddenLines(source, DIRECT_TOUCH_POLICY_CALLS));
+    }
+
+    @Test
+    void touchPolicyGuardDetectsRawProviderPolicyReadsInDispatcherSampleSource() {
+        SourceText source = ObjectGuardSourceScanner.sourceWithoutCommentOnlyLines(List.of(
+                "class Sample {",
+                "  void dispatch(TouchResponseProvider provider) {",
+                "    if (provider.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {",
+                "      preserveSideVelocity();",
+                "    }",
+                "    int flags = provider.getShieldReactionFlags();",
+                "  }",
+                "}"));
+
+        assertEquals(List.of(
+                        "if (provider.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {",
+                        "int flags = provider.getShieldReactionFlags();"),
+                forbiddenLines(source, DIRECT_TOUCH_POLICY_CALLS));
     }
 
     @Test
