@@ -334,10 +334,10 @@ public class SpringboardObjectInstance extends BoxObjectInstance
     private List<PlayableEntity> playerParticipants(PlayableEntity updatePlayer) {
         ObjectPlayerQuery query = services().playerQuery();
         ArrayList<PlayableEntity> ordered = new ArrayList<>();
-        ordered.addAll(query.sidekicks());
         if (updatePlayer != null && !containsIdentity(ordered, updatePlayer)) {
             ordered.add(updatePlayer);
         }
+        ordered.addAll(query.sidekicks());
         for (PlayableEntity participant : query.playersFor(PLAYER_PARTICIPATION)) {
             if (!containsIdentity(ordered, participant)) {
                 ordered.add(participant);

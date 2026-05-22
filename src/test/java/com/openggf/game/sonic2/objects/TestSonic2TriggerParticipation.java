@@ -170,8 +170,44 @@ class TestSonic2TriggerParticipation {
 
         assertTrue(tails.isObjectControlled(),
                 "Vine Switch should use ObjectPlayerQuery participants for grab checks");
+        assertRomObjControlBitOneState(tails, "Vine Switch obj_control=1");
         assertEquals(Sonic2AnimationIds.HANG2.id(), tails.getAnimationId());
         assertEquals(1, intField(vineSwitch, "mappingFrame"));
+    }
+
+    @Test
+    void breakablePlatingGrabUsesRomObjControlBitOneState() throws Exception {
+        TestablePlayableSprite player = player("sonic", 0x1000, 0x1000);
+        BreakablePlatingObjectInstance plating = new BreakablePlatingObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0xC1, 0, 0, false, 0),
+                "BreakablePlating");
+
+        Method grabPlayer = BreakablePlatingObjectInstance.class
+                .getDeclaredMethod("grabPlayer", com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        grabPlayer.setAccessible(true);
+        grabPlayer.invoke(plating, player);
+
+        assertRomObjControlBitOneState(player, "Breakable Plating obj_control=1");
+    }
+
+    @Test
+    void oozPoppingPlatformLockUsesRomObjControlBitOneState() throws Exception {
+        TestablePlayableSprite player = player("sonic", 0x1000, 0x1000);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(player, List.of());
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        OOZPoppingPlatformObjectInstance platform = objectManager.createDynamicObject(
+                () -> new OOZPoppingPlatformObjectInstance(
+                        new ObjectSpawn(0x1000, 0x1000, 0x33, 1, 0, false, 0),
+                        "OOZPoppingPlatform"));
+
+        Method lockPlayer = OOZPoppingPlatformObjectInstance.class
+                .getDeclaredMethod("lockPlayer", com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        lockPlayer.setAccessible(true);
+        lockPlayer.invoke(platform, player);
+
+        assertRomObjControlBitOneState(player, "OOZ Popping Platform obj_control=1");
     }
 
     @Test
@@ -377,6 +413,14 @@ class TestSonic2TriggerParticipation {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(target);
+    }
+
+    private static void assertRomObjControlBitOneState(TestablePlayableSprite player, String context) {
+        assertTrue(player.isObjectControlled(), context + " should set object control");
+        assertTrue(player.isObjectControlAllowsCpu(), context + " should allow sidekick CPU dispatch");
+        assertTrue(player.isObjectControlSuppressesMovement(), context + " should suppress normal movement");
+        assertFalse(player.isTouchResponseSuppressedByObjectControl(),
+                context + " should not suppress touch responses");
     }
 
     private static PlayerSolidContactResult pushingContact() {
