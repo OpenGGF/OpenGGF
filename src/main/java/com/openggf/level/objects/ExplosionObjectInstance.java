@@ -62,7 +62,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance {
             animTimer = 0;
             animFrame++;
             if (animFrame > MAX_FRAME) {
-                setDestroyed(true);
+                ObjectLifetimeOps.expireDynamic(this);
             }
         }
     }

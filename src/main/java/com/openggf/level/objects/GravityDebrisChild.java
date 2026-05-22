@@ -36,7 +36,7 @@ public abstract class GravityDebrisChild extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity player) {
         SubpixelMotion.moveSprite(motionState, gravity);
         if (!isOnScreen()) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         }
     }
 

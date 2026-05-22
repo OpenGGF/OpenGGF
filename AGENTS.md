@@ -136,6 +136,7 @@ This is a frequent source of bugs and parity regressions.
 - In this engine, ROM `y_pos` maps to `getCentreY()` / `setCentreY(...)`.
 - `getX()` / `getY()` are top-left sprite bounds, not ROM object position fields.
 - When porting disassembly that reads or writes `x_pos` / `y_pos`, default to centre-coordinate APIs unless the code is explicitly working with sprite bounds, render extents, or collision box edges.
+- For playable sprites, route native `x_pos` / `y_pos` writes through `NativePositionOps`; use raw preserve-subpixel setters only in lower-level sprite internals or non-playable/object-local cases.
 - If camera, collision, object anchoring, or scripted movement starts drifting relative to the player, check for accidental mixing of `getX()` / `getY()` with ROM `x_pos` / `y_pos` semantics first.
 - **Debug overlay caveat:** The in-engine debug HUD `Pos:` line (from `DebugRenderer`) prints `sprite.getX()` / `sprite.getY()` — the **top-left corner**, not the centre. It is NOT the ROM `x_pos` / `y_pos`. Do not quote those numbers directly against disassembly traces; convert to centre coordinates first (or read `getCentreX()` / `getCentreY()` in code).
 
@@ -432,6 +433,7 @@ Future object, badnik, boss, and trace work should use the shared object-control
 
 - Use `ObjectControlState` for object-control intent instead of raw `setObjectControlled(...)`, `setObjectControlAllowsCpu(...)`, or `setObjectControlSuppressesMovement(...)` combinations. Keep compatibility setters only as migration bridges.
 - Use `ObjectPlayerQuery` plus an explicit `ObjectPlayerParticipationPolicy` for object/player selection. Avoid directly grabbing the focused player or the first sidekick unless the code has a native-P1-only or native-P2-only reason documented by test or guard baseline.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
 - Use `ObjectLifetimeOps` for destruction, offscreen expiry, respawn-latch updates, and slot transfer semantics. Direct `setDestroyed(true)` or remembered-spawn mutation should remain legacy or explicitly justified code.
 - Put canonical object behavior profiles under `com.openggf.game.profiles.*`; keep `level.objects` as the execution/compatibility layer that adapts old provider methods to those profiles while migration is partial.
 - When adding or tightening source guards, ratchet baselines downward. A baseline may preserve known legacy violations, but new object/boss/badnik work should not grow it.

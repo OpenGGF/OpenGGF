@@ -66,7 +66,7 @@ public abstract class AbstractProjectileInstance extends AbstractObjectInstance
         currentY = motionState.y;
 
         if (!isOnScreen(offScreenMargin)) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
 

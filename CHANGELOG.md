@@ -6,6 +6,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **Object physics standardization final cleanup pass.**
+  Follow-up cleanup moved additional object-control call sites onto `ObjectControlState`,
+  routed event/feature player selection through `ObjectPlayerQuery` participation policies,
+  converted transient helper-object expiry to `ObjectLifetimeOps.expireDynamic`, and added
+  canonical touch-response profile declarations to a small projectile sample. Agent-facing
+  docs and mirrored object-implementation skills now direct playable native position writes
+  through `NativePositionOps` instead of raw preserve-subpixel setters.
+
 - **Object physics standardization review fixes.**
   Tightened post-standardization object physics behavior after external review: restored the
   left-wall previous-tile fall-through distance in `ObjectTerrainUtils`, fixed MGZ twisting-loop

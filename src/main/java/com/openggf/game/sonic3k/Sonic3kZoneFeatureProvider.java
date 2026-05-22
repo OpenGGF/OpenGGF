@@ -6,6 +6,7 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.render.AdvancedRenderFrameState;
@@ -30,6 +31,8 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.physics.Direction;
 import com.openggf.physics.SensorResult;
 import com.openggf.level.scroll.M68KMath;
@@ -37,6 +40,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -157,6 +161,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void update(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        ObjectPlayerQuery playerQuery = playerQueryFromRuntime(player);
         if (zoneIndex == Sonic3kZoneIds.ZONE_AIZ
                 && GameServices.module().getLevelEventProvider()
                 instanceof Sonic3kLevelEventManager mgr) {
@@ -165,14 +170,22 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
                 events.releaseBattleshipScrollLockCamera();
             }
         }
-        updateAizForestFrontPriority(player, zoneIndex);
+        for (PlayableEntity participant :
+                playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant instanceof AbstractPlayableSprite playable) {
+                updateAizForestFrontPriority(playable, zoneIndex);
+            }
+        }
+    }
+
+    private ObjectPlayerQuery playerQueryFromRuntime(AbstractPlayableSprite player) {
         var spriteManager = GameServices.spritesOrNull();
-        if (spriteManager == null) {
-            return;
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
-            updateAizForestFrontPriority(sidekick, zoneIndex);
-        }
+        List<AbstractPlayableSprite> sidekicks = spriteManager != null
+                ? List.copyOf(spriteManager.getSidekicks())
+                : List.of();
+        return new ObjectPlayerQuery(
+                () -> player,
+                () -> sidekicks);
     }
 
     /**

@@ -18,6 +18,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -654,7 +655,7 @@ public final class S3kSlotBonusStageRuntime {
         target.setAir(source.getAir());
         target.setRolling(source.getRolling());
         target.setControlLocked(false);
-        target.setObjectControlled(false);
+        ObjectControlState.none().applyTo(target);
         target.setOnObject(source.isOnObject());
     }
 

@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.events;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LayoutMutationIntent;
 import com.openggf.game.mutation.LevelMutationSurface;
@@ -14,6 +15,8 @@ import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
 import com.openggf.sprites.Sprite;
@@ -133,16 +136,33 @@ public final class S3kSeamlessMutationExecutor {
 
     private static void processInitialAizTransitionFloorContact(LevelManager levelManager,
             AizTransitionFloorObjectInstance floor) {
+        if (GameServices.spritesOrNull() == null) {
+            return;
+        }
+        ObjectPlayerQuery playerQuery = playerQueryFromGameServices();
+        PlayableEntity mainPlayer = playerQuery.mainPlayerOrNull();
+        List<PlayableEntity> participants =
+                playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        List<PlayableEntity> sidekickParticipants = participants.stream()
+                .filter(player -> player != mainPlayer)
+                .toList();
+        levelManager.getObjectManager().processImmediateInlineSolidCheckpoint(
+                floor, mainPlayer, sidekickParticipants);
+    }
+
+    private static ObjectPlayerQuery playerQueryFromGameServices() {
         var spriteManager = GameServices.spritesOrNull();
         if (spriteManager == null) {
-            return;
+            return new ObjectPlayerQuery(() -> null, List::of);
         }
         String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
         Sprite mainSprite = spriteManager.getSprite(mainCode);
         AbstractPlayableSprite mainPlayer =
                 mainSprite instanceof AbstractPlayableSprite playable ? playable : null;
-        levelManager.getObjectManager().processImmediateInlineSolidCheckpoint(
-                floor, mainPlayer, spriteManager.getSidekicks());
+        List<AbstractPlayableSprite> sidekicks = List.copyOf(spriteManager.getSidekicks());
+        return new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> sidekicks);
     }
 
     private static void applyAiz1PostReloadAct2(LevelManager levelManager) {

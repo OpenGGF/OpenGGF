@@ -154,6 +154,19 @@ class TestObjectPhysicsStandardizationGuard {
     }
 
     @Test
+    void c2EventAndFeaturePlayerQueriesDeclareAllEnginePlayerParticipation() throws IOException {
+        assertOwnedSourceUsesAllEnginePlayers(
+                "com/openggf/game/sonic3k/events/S3kSeamlessMutationExecutor.java",
+                "processInitialAizTransitionFloorContact");
+        assertOwnedSourceUsesAllEnginePlayers(
+                "com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java",
+                "update");
+        assertOwnedSourceUsesAllEnginePlayers(
+                "com/openggf/game/sonic2/events/Sonic2OOZEvents.java",
+                "update");
+    }
+
+    @Test
     void s3kResultsScreenUsesObjectControlStatePolicyInsteadOfBaseline() throws IOException {
         assertNoProductionViolationsEndingWith(
                 ViolationKind.DIRECT_OBJECT_CONTROL_SETTER,
@@ -656,6 +669,47 @@ class TestObjectPhysicsStandardizationGuard {
                 .filter(violation -> violation.kind() == kind)
                 .filter(violation -> endsWithAny(violation.path(), pathSuffixes))
                 .toList());
+    }
+
+    private static void assertOwnedSourceUsesAllEnginePlayers(String relativePath,
+                                                             String methodName) throws IOException {
+        SourceText source = source(relativePath);
+        String body = methodBody(source, methodName);
+        String compactBody = body.replaceAll("\\s+", "");
+        assertEquals(true, body.contains("ObjectPlayerQuery"),
+                methodName + " should route player participation through ObjectPlayerQuery");
+        assertEquals(true, compactBody.contains(
+                        "playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)"),
+                methodName + " should obtain participants via playersFor(ALL_ENGINE_PLAYERS)");
+        assertEquals(false, body.contains("getFocusedSprite("),
+                methodName + " should not use focused-player shortcuts in guarded participation logic");
+        assertEquals(false, body.contains("getSidekicks("),
+                methodName + " should not use raw sidekick shortcuts in guarded participation logic");
+    }
+
+    private static String methodBody(SourceText source, String methodName) {
+        String text = String.join("\n", source.lines());
+        int nameOffset = text.indexOf(methodName + "(");
+        if (nameOffset < 0) {
+            throw new AssertionError("Missing method " + methodName);
+        }
+        int bodyStart = text.indexOf('{', nameOffset);
+        if (bodyStart < 0) {
+            throw new AssertionError("Missing method body for " + methodName);
+        }
+        int depth = 0;
+        for (int i = bodyStart; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return text.substring(bodyStart, i + 1);
+                }
+            }
+        }
+        throw new AssertionError("Unterminated method body for " + methodName);
     }
 
     private static boolean endsWithAny(String path, String... suffixes) {
