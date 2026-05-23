@@ -1,11 +1,8 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.session.EngineContext;
-import com.openggf.game.session.EngineServices;
+import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
@@ -13,6 +10,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,10 +23,7 @@ class TestLauncherSpringObjectInstance {
 
     @BeforeEach
     void setUp() {
-        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        GameModuleRegistry.setCurrent(new Sonic2GameModule());
-        SessionManager.clear();
-        TestEnvironment.activeGameplayMode();
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
     }
 
     @AfterEach

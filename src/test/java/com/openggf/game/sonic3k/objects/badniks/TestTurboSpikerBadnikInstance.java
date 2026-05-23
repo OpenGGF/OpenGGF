@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -176,6 +177,7 @@ public class TestTurboSpikerBadnikInstance {
 
         private RecordingServices() {
             objectManager = mock(ObjectManager.class);
+            withPlayerQuery(new ObjectPlayerQuery(() -> null, this::sidekicks));
             doAnswer(invocation -> {
                 ObjectInstance child = invocation.getArgument(0);
                 if (child instanceof AbstractObjectInstance instance) {

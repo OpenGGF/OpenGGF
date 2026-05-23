@@ -76,6 +76,7 @@ class TestSpikerBadnikInstance {
         spiker.setServices(services);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x100, (short) 0x100);
+        services.withMain(player);
 
         spiker.update(0, player);
         assertEquals(3, services.spawnedChildren.size(), "Spiker should create two launchers and the top spike");
@@ -112,6 +113,7 @@ class TestSpikerBadnikInstance {
         spiker.setServices(services);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x100, (short) 0x100);
+        services.withMain(player);
 
         spiker.update(0, player);
         for (int frame = 1; frame <= 10; frame++) {
@@ -149,6 +151,7 @@ class TestSpikerBadnikInstance {
         spiker.setServices(services);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x100, (short) 0x100);
+        services.withMain(player);
 
         spiker.update(0, player);
         assertEquals(3, services.spawnedChildren.size(), "Expected launcher and top-spike children");
@@ -189,6 +192,7 @@ class TestSpikerBadnikInstance {
         spiker.setServices(services);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x100, (short) 0x100);
+        services.withMain(player);
 
         spiker.update(0, player);
         for (int frame = 1; frame <= 10; frame++) {
@@ -256,6 +260,7 @@ class TestSpikerBadnikInstance {
         private final List<Integer> playedSfx = new ArrayList<>();
         private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
         private final ObjectManager objectManager;
+        private PlayableEntity main;
 
         private RecordingServices() {
             objectManager = mock(ObjectManager.class);
@@ -277,6 +282,15 @@ class TestSpikerBadnikInstance {
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);
+        }
+
+        private void withMain(PlayableEntity main) {
+            this.main = main;
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, List::of);
         }
     }
 

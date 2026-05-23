@@ -254,21 +254,7 @@ public final class TraceReplayBootstrap {
      * {@code object_state_snapshot}.
      */
     public static int sidekickTitleCardPreludeFramesForTraceReplay(TraceData trace) {
-        int s2Frames = resolveS2TitleCardPreludeFrames(trace);
-        if (s2Frames > 0) {
-            return s2Frames;
-        }
-        // S3K Sonic+Tails CNZ Act 1 seed-frame mode: trace frame 0 has
-        // Level_frame_counter=1, i.e. the row was sampled AFTER ROM's first
-        // LevelLoop iteration (sonic3k.asm:7884-7910). Tails_CPU_Control's
-        // loc_13A5A (sonic3k.asm:26405-26415) repositions Tails to
-        // (0x18, 0x600) with status_InAir set during that iteration, and
-        // Tails_Modes' in-air gravity (MoveSprite_TestGravity) then writes
-        // y_vel = 0x38 before the LevelLoop ends. Run one sidekick-only
-        // prelude tick during bootstrap so the seed-frame compare sees the
-        // post-loc_13A5A + post-gravity state instead of the raw post-spawn
-        // state ((tails_x ~0x0A clamped, air=false, y_vel=0)).
-        return resolveS3kSidekickSeedFramePreludeFrames(trace);
+        return 0;
     }
 
     /**
@@ -284,7 +270,7 @@ public final class TraceReplayBootstrap {
      * least one sidekick. Returns 0 otherwise.
      */
     public static int levelObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
-        return resolveS2TitleCardPreludeFrames(trace);
+        return 0;
     }
 
     /**

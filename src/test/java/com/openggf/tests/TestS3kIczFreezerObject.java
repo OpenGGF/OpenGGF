@@ -16,6 +16,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.SolidTile;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -374,6 +375,10 @@ class TestS3kIczFreezerObject {
     private static final class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
 
+        private RecordingServices() {
+            withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        }
+
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);
@@ -385,6 +390,7 @@ class TestS3kIczFreezerObject {
 
         private RenderingServices(ObjectRenderManager renderManager) {
             this.renderManager = renderManager;
+            withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
         }
 
         @Override
