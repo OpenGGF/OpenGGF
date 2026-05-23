@@ -138,6 +138,24 @@ class TestRespawnStrategies {
     }
 
     @Test
+    void tailsRespawnBeginWritesNativeBit7FullControl() {
+        TestableSprite sk = new TestableSprite("tails_p2");
+        sk.setObjectControlAllowsCpu(true);
+        sk.setObjectControlSuppressesMovement(false);
+        TestableSprite main = new TestableSprite("sonic");
+        SidekickCpuController ctrl = new SidekickCpuController(sk, main);
+        TailsRespawnStrategy strategy = new TailsRespawnStrategy(ctrl);
+
+        assertTrue(strategy.beginApproach(sk, main));
+
+        assertTrue(sk.isObjectControlled(), "Tails fly-in begins with object_control=$81");
+        assertFalse(sk.isObjectControlAllowsCpu(),
+                "object_control=$81 must clear stale bits-0-to-6 CPU allowance");
+        assertTrue(sk.isObjectControlSuppressesMovement(),
+                "object_control=$81 must suppress normal movement");
+    }
+
+    @Test
     void sonic3kTailsCatchUpRespawnClearsVelocity() {
         TestableSprite sk = new TestableSprite("tails_p2");
         sk.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
@@ -207,6 +225,8 @@ class TestRespawnStrategies {
         sk.setLrbSolidBit((byte) 0x0D);
         sk.setHighPriority(false);
         sk.setMoveLockTimer(13);
+        sk.setObjectControlAllowsCpu(true);
+        sk.setObjectControlSuppressesMovement(true);
 
         ctrl.setInitialState(SidekickCpuController.State.APPROACHING);
         ctrl.update(0);
@@ -217,6 +237,12 @@ class TestRespawnStrategies {
         assertTrue(sk.isHighPriority());
         assertEquals(0, sk.getMoveLockTimer(),
                 "Tails_Catch_Up_Flying exit clears move_lock before normal CPU control resumes");
+        assertFalse(sk.isObjectControlled(),
+                "Tails_Catch_Up_Flying exit clears object_control before normal CPU control resumes");
+        assertFalse(sk.isObjectControlAllowsCpu(),
+                "Tails_Catch_Up_Flying exit clears the object-control CPU allowance mirror");
+        assertFalse(sk.isObjectControlSuppressesMovement(),
+                "Tails_Catch_Up_Flying exit clears the object-control movement suppression mirror");
     }
 
     @Test

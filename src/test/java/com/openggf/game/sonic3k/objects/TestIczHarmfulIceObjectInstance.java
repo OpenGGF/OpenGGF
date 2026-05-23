@@ -11,6 +11,9 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -24,6 +27,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -64,7 +68,26 @@ class TestIczHarmfulIceObjectInstance {
                 new ObjectSpawn(0x1200, 0x0680, Sonic3kObjectIds.ICZ_HARMFUL_ICE, 1, 0, false, 0));
 
         assertEquals(0xD7, ice.getCollisionFlags());
-        assertTrue(((TouchResponseProvider) ice).usesS3kTouchSpecialPropertyResponse());
+        assertEquals(1, ((TouchResponseProvider) ice).getMultiTouchRegions().length);
+        TouchResponseProfile profile = ((TouchResponseProvider) ice).getTouchResponseProfile(true);
+        assertEquals(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY, profile.categoryDecodeMode());
+        assertTrue(profile.multiRegionSource());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY,
+                profile.stopAfterFirstOverlapPolicy());
+    }
+
+    @Test
+    void subtypeZeroUsesNormalSingleRegionTouchProfile() {
+        IczHarmfulIceObjectInstance ice = new IczHarmfulIceObjectInstance(
+                new ObjectSpawn(0x1200, 0x0680, Sonic3kObjectIds.ICZ_HARMFUL_ICE, 0, 0, false, 0));
+
+        TouchResponseProfile profile = ((TouchResponseProvider) ice).getTouchResponseProfile(false);
+
+        assertEquals(TouchCategoryDecodeMode.NORMAL, profile.categoryDecodeMode());
+        assertNull(((TouchResponseProvider) ice).getMultiTouchRegions());
+        assertFalse(profile.multiRegionSource());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
+                profile.stopAfterFirstOverlapPolicy());
     }
 
     @Test

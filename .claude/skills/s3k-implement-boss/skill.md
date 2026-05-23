@@ -134,6 +134,8 @@ Delegate multiple agents to explore the disassembly. **Include this instruction 
 - `character_id` checks for Knuckles-specific behavior
 - Child sprite setup via `mainspr_childsprites` (inline children at offset +$16)
 
+When porting boss object positions, ROM `x_pos` / `y_pos` are centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
+
 ### Phase 2: Arena & Level Event Setup
 
 S3K bosses use `Sonic3kLevelEventManager` (at `game/sonic3k/Sonic3kLevelEventManager.java`) for arena setup and boss spawning. This manager extends `AbstractLevelEventManager`, though per-zone event handlers are still pending implementation.
@@ -177,7 +179,7 @@ private void updateAizAct1Events() {
 | `SwingMotion.update()` | `com.openggf.physics.SwingMotion` | Boss oscillates/bobs/swings (ROM's `Swing_UpAndDown`). Returns velocity, direction, and peak-reached flag. |
 | `ObjectTerrainUtils.checkFloorDist()` | `com.openggf.physics` | Floor/ceiling/wall detection for boss projectiles or ground-following bosses. |
 | `TrigLookupTable.calcAngle()` / `sinHex()` / `cosHex()` | `com.openggf.physics` | Circular motion, aimed projectiles, angle-based velocity. ROM-accurate 256-step trig. |
-| `S3kBadnikProjectileInstance` | `game.sonic3k.objects.badniks` | Reusable projectile with gravity, HURT collision (0x80), and shield deflection. Spawn via `ObjectManager.addDynamicObject()`. |
+| `S3kBadnikProjectileInstance` | `game.sonic3k.objects.badniks` | Reusable projectile with gravity, HURT collision (0x80), and shield deflection. Spawn via `spawnChild(...)`, `spawnFreeChild(...)`, or an existing `level.objects` lifecycle helper. |
 | `BoxObjectInstance` | `game.sonic2.objects` | Invisible trigger zones with debug visualization. |
 
 **Collision patterns:**
@@ -269,15 +271,12 @@ For visual-only children that share the parent's object slot:
 For children with separate behavior/collision:
 ```java
 private void spawnChildComponents() {
-    ObjectManager manager = services().objectManager();
-
-    BossChildInstance child = new BossChildInstance(this, xOffset, yOffset);
-    manager.addDynamicObject(child);
+    BossChildInstance child = spawnChild(() -> new BossChildInstance(this, xOffset, yOffset));
     childComponents.add(child);
 }
 ```
 
-Children can extend `AbstractBossChild` (shared with S2) or be independent objects.
+Children can extend `AbstractBossChild` (shared with S2) or be independent objects. Avoid direct `ObjectManager.addDynamicObject(...)` unless the boss has a documented lifecycle reason that cannot use the standard helpers.
 
 ### Phase 5: Hit Handling
 
@@ -390,6 +389,19 @@ Before finalizing a boss or boss child, classify every instance field for rewind
 Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable spawn identity, parent/child graph references, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Boss `dynamicSpawn` references are not structural by default; capture coordinates explicitly or defer generic migration.
 
 Prefer standard value forms before boss-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+Bosses participate in player/object lifecycle beyond hit counts. Cross-check Sonic/Tails/Knuckles contacts, sidekick carry/release, shield reactions, invulnerability/hurt timing, child despawn, and arena-lock latches against the ROM, especially across defeat and transition frames.
+
+### Phase 9.5: Shared Object Contracts
+
+Bosses and boss children may need bespoke state, but still prefer shared contracts when they fit:
+
+- Use `ObjectControlState` for forced-control, cutscene-control, and sidekick suppression predicates instead of raw boolean combinations.
+- Use `ObjectPlayerQuery` and `ObjectPlayerParticipationPolicy` for hit, contact, targeting, and Knuckles/Tails variant decisions. Native S3K slot behavior and OpenGGF multi-sidekick behavior must be distinguished deliberately.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes; reserve raw preserve-subpixel setters for lower-level sprite internals or non-playable boss-local state.
+- Use `ObjectLifetimeOps` for child deletion, despawn, and dynamic-expire semantics.
+- Reuse canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` compatibility wrappers where they preserve existing boss behavior.
+- Ratchet guard baselines when adding source guards; do not let historical direct-control or lifecycle calls block new hard-fail enforcement.
 
 ### Phase 10: Code Quality
 

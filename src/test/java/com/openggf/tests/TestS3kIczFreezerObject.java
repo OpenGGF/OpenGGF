@@ -16,10 +16,14 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.SolidTile;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.junit.jupiter.api.AfterEach;
@@ -70,6 +74,25 @@ class TestS3kIczFreezerObject {
     }
 
     @Test
+    void touchResponseProfilePreservesOneRegionMultiTouchAtCurrentObjectPosition() {
+        IczFreezerObjectInstance freezer = createFreezer(new RecordingServices(),
+                new ObjectSpawn(0x02C0, 0x0180, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+
+        TouchResponseProfile profile = freezer.getTouchResponseProfile();
+
+        assertEquals(TouchCategoryDecodeMode.NORMAL, profile.categoryDecodeMode());
+        assertTrue(profile.multiRegionSource());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY,
+                profile.stopAfterFirstOverlapPolicy());
+        assertEquals(0x9A, freezer.getCollisionFlags());
+        assertEquals(0, freezer.getCollisionProperty());
+        assertEquals(1, freezer.getMultiTouchRegions().length);
+        assertEquals(0x02C0, freezer.getMultiTouchRegions()[0].x());
+        assertEquals(0x0180, freezer.getMultiTouchRegions()[0].y());
+        assertEquals(0x9A, freezer.getMultiTouchRegions()[0].collisionFlags());
+    }
+
+    @Test
     void nearbyPlayerStartsFrostCycleAndSpawnsCaptureCloudEveryOtherPhase() {
         RecordingServices services = new RecordingServices();
         IczFreezerObjectInstance freezer = createFreezer(services,
@@ -110,6 +133,8 @@ class TestS3kIczFreezerObject {
 
         IczFreezerObjectInstance.FrozenPlayerBlock block = cloud.frozenBlockForTesting();
         assertTrue(player.isObjectControlled(), "Freezer child should take over player control");
+        assertTrue(player.isObjectControlSuppressesMovement(), "Freezer capture should suppress player movement");
+        assertFalse(player.isObjectControlAllowsCpu(), "Freezer capture should not leave CPU movement enabled");
         assertEquals(0x1A, player.getAnimationId());
         assertSame(player, block.capturedPlayerForTesting());
 
@@ -119,6 +144,8 @@ class TestS3kIczFreezerObject {
         }
 
         assertFalse(player.isObjectControlled(), "Frozen block should release control when it breaks");
+        assertFalse(player.isObjectControlSuppressesMovement(), "Frozen block should clear movement suppression on release");
+        assertFalse(player.isObjectControlAllowsCpu(), "Frozen block should clear CPU movement allowance on release");
         assertEquals(120, player.getInvulnerableFrames());
         assertTrue(block.isDestroyed());
         assertEquals(12, block.debrisSpawnedForTesting());
@@ -348,6 +375,10 @@ class TestS3kIczFreezerObject {
     private static final class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
 
+        private RecordingServices() {
+            withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        }
+
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);
@@ -359,6 +390,7 @@ class TestS3kIczFreezerObject {
 
         private RenderingServices(ObjectRenderManager renderManager) {
             this.renderManager = renderManager;
+            withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
         }
 
         @Override

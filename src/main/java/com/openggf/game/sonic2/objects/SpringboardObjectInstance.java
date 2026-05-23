@@ -16,6 +16,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -89,6 +90,8 @@ public class SpringboardObjectInstance extends BoxObjectInstance
     // d1 = $27 (39) half-width, d2 = 8 height
     private static final int COLLISION_HALF_WIDTH = 0x27;
     private static final int COLLISION_HEIGHT = 8;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     // Position threshold for launch trigger (0x10 pixels from center)
     // ROM: loc_2641E checks player.x vs springboard.x ± 0x10
@@ -309,7 +312,6 @@ public class SpringboardObjectInstance extends BoxObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ROM: Obj40_Main calls AnimateSprite before collision check
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
@@ -322,15 +324,36 @@ public class SpringboardObjectInstance extends BoxObjectInstance
         //                      / btst #p2_standing_bit / bsr loc_2641E
         SolidCheckpointBatch batch = checkpointAll();
 
-        if (player != null) {
-            updateLaunchSequence(player, resultFromBatch(player, batch));
-        }
-
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                updateLaunchSequence(sidekick, resultFromBatch(sidekick, batch));
+        for (PlayableEntity participant : playerParticipants(playerEntity)) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                updateLaunchSequence(player, resultFromBatch(player, batch));
             }
         }
+    }
+
+    private List<PlayableEntity> playerParticipants(PlayableEntity updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        ArrayList<PlayableEntity> ordered = new ArrayList<>();
+        if (updatePlayer != null && !containsIdentity(ordered, updatePlayer)) {
+            ordered.add(updatePlayer);
+        }
+        ordered.addAll(query.sidekicks());
+        for (PlayableEntity participant : query.playersFor(PLAYER_PARTICIPATION)) {
+            if (!containsIdentity(ordered, participant)) {
+                ordered.add(participant);
+            }
+        }
+        return ordered;
+    }
+
+    private static boolean containsIdentity(List<? extends PlayableEntity> participants,
+                                            PlayableEntity updatePlayer) {
+        for (PlayableEntity participant : participants) {
+            if (participant == updatePlayer) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

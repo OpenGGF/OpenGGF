@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -65,6 +66,8 @@ public class BubblerObjectInstance extends AbstractObjectInstance {
     private static final int COLLISION_X_RANGE = 0x10;
     private static final int COLLISION_Y_RANGE = 0x10;
     private static final int ON_SCREEN_MARGIN = 0x10;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private int routine = ROUTINE_INIT;
     private final boolean maker;
@@ -160,8 +163,10 @@ public class BubblerObjectInstance extends AbstractObjectInstance {
                 startBurst();
                 return;
             }
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                if (sidekick instanceof AbstractPlayableSprite sprite && tryCollect(sprite)) {
+            for (PlayableEntity participant : services().playerQuery().playersFor(PLAYER_PARTICIPATION)) {
+                if (participant != player
+                        && participant instanceof AbstractPlayableSprite sprite
+                        && tryCollect(sprite)) {
                     startBurst();
                     return;
                 }

@@ -9,14 +9,23 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +55,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
     private static final int JET_PHASE_FRAMES = 0x40;
     private static final int FROST_PUFF_INTERVAL = 1;
     private static final int CAPTURE_CLOUD_OFFSET = 0x30;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
     private final int x;
     private final int y;
@@ -70,15 +81,14 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite nearest = nearestPlayer(playerEntity);
         if (!frostCycleActive) {
-            if (isWithinActivationRange(nearest)) {
+            if (nearestPlayerXDistance(playerEntity) < ACTIVATE_X_RANGE) {
                 startFrostCycle();
             }
             return;
         }
 
-        if (!isWithinActivationRange(nearest)) {
+        if (nearestPlayerXDistance(playerEntity) >= ACTIVATE_X_RANGE) {
             stopFrostCycle();
             return;
         }
@@ -139,26 +149,13 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         frostPuffsSpawned++;
     }
 
-    private boolean isWithinActivationRange(AbstractPlayableSprite player) {
-        return player != null && Math.abs(x - player.getCentreX()) < ACTIVATE_X_RANGE;
-    }
-
-    private AbstractPlayableSprite nearestPlayer(PlayableEntity playerEntity) {
-        AbstractPlayableSprite nearest = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
-        int nearestDx = nearest == null ? Integer.MAX_VALUE : Math.abs(x - nearest.getCentreX());
+    private int nearestPlayerXDistance(PlayableEntity playerEntity) {
         ObjectServices services = tryServices();
-        if (services != null) {
-            for (PlayableEntity sidekick : services.sidekicks()) {
-                if (sidekick instanceof AbstractPlayableSprite sprite) {
-                    int dx = Math.abs(x - sprite.getCentreX());
-                    if (dx < nearestDx) {
-                        nearest = sprite;
-                        nearestDx = dx;
-                    }
-                }
-            }
-        }
-        return nearest;
+        ObjectPlayerQuery serviceQuery = services != null ? services.playerQuery() : null;
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> playerEntity,
+                () -> serviceQuery != null ? serviceQuery.sidekicks() : List.of());
+        return query.nearestByRomX(PLAYER_PARTICIPATION, x).distance();
     }
 
     private void playSfx(int sfxId) {
@@ -176,6 +173,27 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(true);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                multiRegionSource,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                multiRegionSource
+                        ? TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
+                        : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
     }
 
     @Override
@@ -325,8 +343,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         }
 
         private void capture(AbstractPlayableSprite player) {
-            player.setObjectControlled(true);
-            player.setObjectControlSuppressesMovement(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setAir(true);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) 0);
@@ -416,8 +433,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
             if (capturedPlayer == null) {
                 return;
             }
-            capturedPlayer.setObjectControlled(true);
-            capturedPlayer.setObjectControlSuppressesMovement(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(capturedPlayer);
             capturedPlayer.setCentreX((short) motion.x);
             capturedPlayer.setCentreY((short) motion.y);
             capturedPlayer.setXSpeed((short) 0);

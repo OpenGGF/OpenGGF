@@ -7,6 +7,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidRoutineKind;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
@@ -78,6 +80,27 @@ class TestSonic2ObjectBugFixes {
                 "MTZ Act 3 subtype-5 conveyor must stop at the first MTZ3 stop point");
         assertEquals(0x1CC0, platform.getX(),
                 "Regression setup should land exactly on the first MTZ3 stop point");
+    }
+
+    @Test
+    void mtzPlatformsExposeFullSolidRoutineProfiles() {
+        MTZPlatformObjectInstance platform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x1000, 0x0300, Sonic2ObjectIds.MTZ_PLATFORM, 0x00, 0, false, 0),
+                "MTZPlatform");
+        MTZLongPlatformObjectInstance longPlatform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x1400, 0x0300, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x00, 0, false, 0));
+
+        SolidRoutineProfile profile = platform.getSolidRoutineProfile();
+        SolidRoutineProfile longProfile = longPlatform.getSolidRoutineProfile();
+
+        assertEquals(SolidRoutineKind.FULL_SOLID, profile.kind());
+        assertEquals(platform.isTopSolidOnly(), profile.topSolidOnly());
+        assertEquals(platform.usesStickyContactBuffer(), profile.stickyContactBuffer());
+        assertEquals(SolidRoutineKind.FULL_SOLID, longProfile.kind());
+        assertEquals(longPlatform.isTopSolidOnly(), longProfile.topSolidOnly());
+        assertEquals(longPlatform.usesStickyContactBuffer(), longProfile.stickyContactBuffer());
+        assertEquals(longPlatform.carriesRiderOnHorizontalMove(null),
+                longProfile.carriesAirborneRiderAfterExitPlatform());
     }
 
     private static int intField(Object target, String fieldName) throws Exception {

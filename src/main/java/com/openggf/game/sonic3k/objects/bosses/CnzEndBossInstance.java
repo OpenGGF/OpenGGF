@@ -11,9 +11,11 @@ import com.openggf.game.sonic3k.objects.CnzEggCapsuleInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -152,19 +154,22 @@ public final class CnzEndBossInstance extends AbstractObjectInstance {
      * leaves the player in a normal controllable state.
      */
     private void restorePlayerControl() {
-        if (services().camera().getFocusedSprite() instanceof AbstractPlayableSprite player) {
-            releaseSprite(player);
-        }
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                releaseSprite(sidekick);
+        PlayableEntity focused = services().camera().getFocusedSprite();
+        List<PlayableEntity> players = services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        for (PlayableEntity candidate : players) {
+            if (candidate instanceof AbstractPlayableSprite sprite) {
+                releaseSprite(sprite);
             }
+        }
+        if (focused instanceof AbstractPlayableSprite focusedPlayer && !players.contains(focusedPlayer)) {
+            releaseSprite(focusedPlayer);
         }
     }
 
     private void releaseSprite(AbstractPlayableSprite sprite) {
         sprite.setControlLocked(false);
-        sprite.setObjectControlled(false);
+        ObjectControlState.none().applyTo(sprite);
         sprite.setHidden(false);
         sprite.setRolling(false);
     }

@@ -6,9 +6,11 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -101,12 +103,17 @@ public class SpiralObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (playerEntity instanceof AbstractPlayableSprite player) {
-            processPlayer(frameCounter, player);
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (playerEntity instanceof AbstractPlayableSprite player && !participants.contains(player)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(player);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
         }
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                processPlayer(frameCounter, sidekick);
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                processPlayer(frameCounter, player);
             }
         }
     }

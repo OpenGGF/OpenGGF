@@ -456,6 +456,44 @@ public class TestTouchResponseManager {
                 any(DamageCause.class), anyBoolean());
     }
 
+    @Test
+    public void singleRegionTouchResultIncludesProfileShieldReactionFlags() {
+        MockShieldTouchObject flame = new MockShieldTouchObject(160, 112, 0x88, 0x10);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(flame);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertEquals(0x10, flame.lastResult.shieldReactionFlags(),
+                "Single-region dispatch should copy profile shield flags into the touch result");
+    }
+
+    @Test
+    public void multiRegionTouchResultIncludesTouchedRegionShieldReactionFlags() {
+        MockMultiRegionTouchObject flame = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(500, 112, 0x88, 0),
+                new TouchResponseProvider.TouchRegion(160, 112, 0x88, 0x10));
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(flame);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertEquals(0x10, flame.lastResult.shieldReactionFlags(),
+                "Multi-region dispatch should copy the overlapping region shield flags into the touch result");
+    }
+
+    @Test
+    public void hurtDamageCauseUsesTouchedResultShieldReactionFlags() {
+        MockMultiRegionTouchObject flame = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 112, 0x88, 0x10));
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(flame);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        verify(player).applyHurtOrDeath(anyInt(), eq(DamageCause.FIRE), anyBoolean());
+    }
+
     // ==================== Overlap Persistence Tests ====================
 
     @Test
@@ -499,6 +537,19 @@ public class TestTouchResponseManager {
         objectManager.update(0, player, List.of(), 1);
 
         assertFalse(obj.wasTouched, "Objects flagged skipTouchThisFrame should not trigger touch callbacks");
+    }
+
+    @Test
+    public void skipSolidContactDoesNotSuppressMultiRegionTouch() {
+        MockMultiRegionSkipSolidTouchObject spikes = new MockMultiRegionSkipSolidTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 112, 0x88, 0));
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(spikes);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertTrue(spikes.wasTouched,
+                "skipSolidContactThisFrame is a solid-contact gate and must not suppress multi-region touch");
     }
 
     @Test
@@ -671,6 +722,53 @@ public class TestTouchResponseManager {
         @Override
         public boolean requiresContinuousTouchCallbacks() {
             return true;
+        }
+    }
+
+    private static final class MockShieldTouchObject extends MockTouchObject {
+        private final int shieldReactionFlags;
+
+        private MockShieldTouchObject(int x, int y, int flags, int shieldReactionFlags) {
+            super(x, y, flags);
+            this.shieldReactionFlags = shieldReactionFlags;
+        }
+
+        @Override
+        public int getShieldReactionFlags() {
+            return shieldReactionFlags;
+        }
+    }
+
+    private static final class MockMultiRegionTouchObject extends MockTouchObject {
+        private final TouchResponseProvider.TouchRegion[] regions;
+
+        private MockMultiRegionTouchObject(TouchResponseProvider.TouchRegion... regions) {
+            super(0, 0, 0);
+            this.regions = regions;
+        }
+
+        @Override
+        public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+            return regions;
+        }
+    }
+
+    private static final class MockMultiRegionSkipSolidTouchObject extends MockTouchObject {
+        private final TouchResponseProvider.TouchRegion[] regions;
+
+        private MockMultiRegionSkipSolidTouchObject(TouchResponseProvider.TouchRegion... regions) {
+            super(0, 0, 0);
+            this.regions = regions;
+        }
+
+        @Override
+        public boolean isSkipSolidContactThisFrame() {
+            return true;
+        }
+
+        @Override
+        public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+            return regions;
         }
     }
 

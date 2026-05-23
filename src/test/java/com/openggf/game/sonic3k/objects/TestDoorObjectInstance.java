@@ -1,11 +1,16 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic1.objects.TestPlayableSprite;
+import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -80,6 +85,36 @@ public class TestDoorObjectInstance {
     }
 
     @Test
+    public void verticalDoorOpensForQueryNativeP2() {
+        DoorObjectInstance door = new DoorObjectInstance(
+                new ObjectSpawn(0x200, 0x180, 0x3C, 0x00, 0, false, 0));
+        TestPlayableSprite main = createPlayerAtCentre(0x200, 0x100);
+        TestPlayableSprite nativeP2 = createPlayerAtCentre(0x100, 0x180);
+        door.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2), List.of()));
+
+        door.update(0, main);
+
+        assertEquals(0x178, door.getY(),
+                "Door trigger must resolve native P2 through ObjectPlayerQuery NATIVE_P1_P2");
+    }
+
+    @Test
+    public void verticalDoorIgnoresExtraEngineSidekickForNativeP1P2Trigger() {
+        DoorObjectInstance door = new DoorObjectInstance(
+                new ObjectSpawn(0x200, 0x180, 0x3C, 0x00, 0, false, 0));
+        TestPlayableSprite main = createPlayerAtCentre(0x200, 0x100);
+        TestPlayableSprite nativeP2 = createPlayerAtCentre(0x200, 0x100);
+        TestPlayableSprite extraSidekick = createPlayerAtCentre(0x100, 0x180);
+        List<PlayableEntity> rawSidekicks = List.of(extraSidekick);
+        door.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2, extraSidekick), rawSidekicks));
+
+        door.update(0, main);
+
+        assertEquals(0x180, door.getY(),
+                "Additional engine sidekicks must not open native P1/P2 doors");
+    }
+
+    @Test
     public void horizontalDoorReportsRomWidthPixelsAsOnScreenHalfWidth() {
         // ROM byte_30FCE (sonic3k.asm:66167) sets width_pixels = $20 for the
         // horizontal CNZ door. The engine's solid-contact gate must use that
@@ -137,6 +172,30 @@ public class TestDoorObjectInstance {
         player.setCentreX((short) centreX);
         player.setCentreY((short) centreY);
         return player;
+    }
+
+    private static final class QueryOnlyPlayerServices extends TestObjectServices {
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+        private final List<PlayableEntity> rawSidekicks;
+
+        private QueryOnlyPlayerServices(PlayableEntity main,
+                                        List<? extends PlayableEntity> queriedSidekicks,
+                                        List<PlayableEntity> rawSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+            this.rawSidekicks = List.copyOf(rawSidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return rawSidekicks;
+        }
     }
 }
 

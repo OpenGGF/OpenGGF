@@ -39,6 +39,9 @@ class TestCnzCylinderInstance {
         cylinder.update(4311, player);
 
         assertTrue(player.isObjectControlled());
+        assertTrue(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
+        assertFalse(player.isTouchResponseSuppressedByObjectControl());
         assertTrue(player.isControlLocked());
         assertFalse(player.getRolling());
         assertFalse(player.getAir());

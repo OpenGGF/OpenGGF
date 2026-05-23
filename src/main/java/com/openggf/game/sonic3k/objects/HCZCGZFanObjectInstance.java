@@ -13,6 +13,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -21,6 +22,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -262,13 +264,17 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
      * ROM: loc_306C2 (sonic3k.asm:65394-65447).
      */
     private void updatePlayerInteraction(int frameCounter, AbstractPlayableSprite player) {
-        // Process both Player 1 and sidekicks (ROM: Player_1 + Player_2)
-        if (player != null) {
-            applyFanPush(player, frameCounter);
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (player != null && !participants.contains(player)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(player);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
         }
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sk) {
-                applyFanPush(sk, frameCounter);
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                applyFanPush(sprite, frameCounter);
             }
         }
 

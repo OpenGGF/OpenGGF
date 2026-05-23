@@ -6,12 +6,16 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidRoutineKind;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.game.GroundMode;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -20,9 +24,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonic3kSpringObjectInstance {
 
@@ -44,6 +50,26 @@ class TestSonic3kSpringObjectInstance {
         }
     }
 
+    private static final class QueryBackedServices extends TestObjectServices {
+        private final PlayableEntity main;
+        private final List<PlayableEntity> queriedSidekicks;
+
+        QueryBackedServices(PlayableEntity main, List<PlayableEntity> queriedSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return List.of();
+        }
+    }
+
     @BeforeEach
     void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
@@ -57,6 +83,24 @@ class TestSonic3kSpringObjectInstance {
         SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
+    }
+
+    @Test
+    void exposesFullSolidRoutineProfileForVerticalAndHorizontalSprings() {
+        Sonic3kSpringObjectInstance vertical = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x00, 0, false, 0));
+        Sonic3kSpringObjectInstance horizontal = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
+
+        SolidRoutineProfile verticalProfile = vertical.getSolidRoutineProfile();
+        SolidRoutineProfile horizontalProfile = horizontal.getSolidRoutineProfile();
+
+        assertEquals(SolidRoutineKind.FULL_SOLID, verticalProfile.kind());
+        assertFalse(verticalProfile.inclusiveRightEdge());
+        assertTrue(verticalProfile.bypassesOffscreenSolidGate());
+        assertEquals(SolidRoutineKind.FULL_SOLID, horizontalProfile.kind());
+        assertTrue(horizontalProfile.inclusiveRightEdge());
+        assertTrue(horizontalProfile.bypassesOffscreenSolidGate());
     }
 
     @Test
@@ -212,6 +256,39 @@ class TestSonic3kSpringObjectInstance {
                 "The same-frame landing handoff must mirror ROM's grounded mode before sub_2326C fires");
         assertFalse(player.getAir(),
                 "The handoff mirrors ROM's same-frame air->ground transition before the horizontal spring launch");
+    }
+
+    @Test
+    void horizontalApproachUsesNativeP2FromPlayerQueryWithoutPromotingExtraSidekicks() {
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.SPRING, 0x10, 0, false, 0));
+
+        TestableSprite main = new TestableSprite("sonic");
+        main.setCentreX((short) 0x0100);
+        main.setCentreY((short) 0x0100);
+        main.setGSpeed((short) 0x0400);
+
+        TestableSprite nativeP2 = new TestableSprite("tails");
+        nativeP2.setCentreX((short) 0x0220);
+        nativeP2.setCentreY((short) 0x0100);
+        nativeP2.setGSpeed((short) 0x0400);
+
+        TestableSprite extraSidekick = new TestableSprite("knuckles");
+        extraSidekick.setCentreX((short) 0x0218);
+        extraSidekick.setCentreY((short) 0x0100);
+        extraSidekick.setGSpeed((short) 0x0400);
+
+        spring.setServices(new QueryBackedServices(main, List.of(nativeP2, extraSidekick))
+                .withGameState(new GameStateManager()));
+
+        spring.update(0, main);
+
+        assertEquals(0x0218, nativeP2.getCentreX() & 0xFFFF,
+                "ROM Player_2 approach block should resolve native P2 through ObjectPlayerQuery");
+        assertEquals(0x1000, nativeP2.getXSpeed() & 0xFFFF);
+        assertEquals(0x0218, extraSidekick.getCentreX() & 0xFFFF,
+                "Extra engine sidekicks must not be promoted into the native Player_2 approach block");
+        assertEquals(0, extraSidekick.getXSpeed());
     }
 
     @Test

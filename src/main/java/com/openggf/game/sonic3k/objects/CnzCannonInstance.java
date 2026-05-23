@@ -11,10 +11,12 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -179,7 +181,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         short captureY = player.getCentreY();
 
         // ROM: move.w #$81,object_control(a1) / bset #Status_Roll,status(a1)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setRolling(true);
         player.applyCustomRadii(ROLL_X_RADIUS, ROLL_Y_RADIUS);
@@ -248,6 +250,11 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return true;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.topSolid(true);
     }
 
     @Override

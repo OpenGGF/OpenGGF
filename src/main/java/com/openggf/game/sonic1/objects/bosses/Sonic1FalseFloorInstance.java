@@ -8,6 +8,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -75,6 +77,8 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
     private static final int ROUTINE_SOLID_WAITING = 2;
     private static final int ROUTINE_DISINTEGRATING = 4;
     private static final int ROUTINE_CLEANUP = 6;
+    private static final ObjectPlayerParticipationPolicy CLEANUP_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     // ---- Instance state ----
     private int routine = ROUTINE_INIT;
@@ -223,10 +227,11 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
     private void updateCleanup(AbstractPlayableSprite player) {
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
-            objectManager.clearRidingObject(player);
-
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                objectManager.clearRidingObject(sidekick);
+            ObjectPlayerQuery query = new ObjectPlayerQuery(
+                    () -> player,
+                    () -> services().playerQuery().sidekicks());
+            for (PlayableEntity participant : query.playersFor(CLEANUP_PARTICIPATION)) {
+                objectManager.clearRidingObject(participant);
             }
         }
 

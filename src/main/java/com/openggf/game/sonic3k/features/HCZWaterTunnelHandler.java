@@ -1,9 +1,14 @@
 package com.openggf.game.sonic3k.features;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+import java.util.List;
 
 /**
  * HCZ Water Tunnel physics — a global per-frame subroutine that pushes the
@@ -115,10 +120,14 @@ public final class HCZWaterTunnelHandler {
      * @param act current act index (0 = HCZ1, 1 = HCZ2)
      */
     public static void update(int act) {
+        update(playerQueryFromGameServices(), act);
+    }
+
+    static void update(ObjectPlayerQuery query, int act) {
         // ROM: tst.w (Debug_placement_mode).w / bne locret_705A
         // Checked per-player below.
 
-        AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
+        AbstractPlayableSprite player = asPlayableSprite(query.mainPlayerOrNull());
         if (player == null) {
             return;
         }
@@ -140,14 +149,15 @@ public final class HCZWaterTunnelHandler {
             }
         }
 
-        for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
-            if (!sidekick.isDebugMode()) {
-                windTunnelFlagP2 = processPlayer(sidekick, tunnels, windTunnelFlagP2, 1);
+        AbstractPlayableSprite p2 = nativeP2From(query);
+        if (p2 != null) {
+            if (!p2.isDebugMode()) {
+                windTunnelFlagP2 = processPlayer(p2, tunnels, windTunnelFlagP2, 1);
             }
             if (exitAnimTimerP2 > 0) {
-                if (!sidekick.getAir()) {
+                if (!p2.getAir()) {
                     exitAnimTimerP2 = 0;
-                    sidekick.setForcedAnimationId(-1);
+                    p2.setForcedAnimationId(-1);
                 }
             }
         }
@@ -327,5 +337,24 @@ public final class HCZWaterTunnelHandler {
         }
 
         return false;
+    }
+
+    private static ObjectPlayerQuery playerQueryFromGameServices() {
+        AbstractPlayableSprite mainPlayer = GameServices.camera().getFocusedSprite();
+        SpriteManager sprites = GameServices.spritesOrNull();
+        List<? extends PlayableEntity> sidekicks = sprites != null
+                ? List.copyOf(sprites.getSidekicks())
+                : List.of();
+        return new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> sidekicks);
+    }
+
+    private static AbstractPlayableSprite nativeP2From(ObjectPlayerQuery query) {
+        return asPlayableSprite(query.nativeP2OrNull());
+    }
+
+    private static AbstractPlayableSprite asPlayableSprite(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite ? sprite : null;
     }
 }

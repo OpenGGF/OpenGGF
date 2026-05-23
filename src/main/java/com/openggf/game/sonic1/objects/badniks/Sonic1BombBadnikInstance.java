@@ -10,6 +10,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseAttackable;
@@ -301,9 +302,9 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
             var objectManager = services().objectManager();
             if (objectManager != null) {
                 if (spawn.respawnTracked()) {
-                    objectManager.markRemembered(spawn);
+                    ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
                 } else {
-                    objectManager.removeFromActiveSpawns(spawn);
+                    ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
                 }
             }
         }
@@ -399,12 +400,7 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         spawnFreeChild(() -> {
             Sonic1BombFuseInstance fuse = new Sonic1BombFuseInstance(
                     currentX, currentY, facingLeft, ceilingBomb, FUSE_TIME, fuseYSpeed, this);
-            if (mySlot >= 0) {
-                int childSlot = objectManager.allocateSlotAfter(mySlot);
-                if (childSlot >= 0) {
-                    fuse.setSlotIndex(childSlot);
-                }
-            }
+            ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, fuse, mySlot);
             return fuse;
         });
     }

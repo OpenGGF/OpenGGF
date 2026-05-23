@@ -1,5 +1,67 @@
 # Trace Frontier Log
 
+## 2026-05-21 - S3K AIZ/CNZ integrated object-physics verification refresh
+
+- Branch: object physics standardization worktree
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kAizIntroEventsHeadless,com.openggf.sprites.playable.TestSidekickCpuFollowParity#normalAutoJumpCadenceUsesLevelFrameCounterWithoutInlinePlusOne,com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance#speedShoesEffectFeedsSameFrameAirAccelerationAfterContentUpdate,com.openggf.sprites.managers.TestPlayableSpriteMovement#s3kSpeedShoesDoubleAirAccelerationAfterWallZeroing,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+- Result: focused guards pass for S3K speed-shoes air acceleration after wall zeroing,
+  sidekick NORMAL auto-jump cadence using the ROM-visible level-frame counter without
+  an inline `+1`, S3K monitor same-frame speed-shoes content update timing, and the
+  AIZ headless intro/event coverage. AIZ and CNZ trace replays remain open failures.
+
+Current integrated verification facts:
+
+| Trace | Errors | Warnings | Frontier / first error | Owner hypothesis |
+| --- | ---: | ---: | --- | --- |
+| `TestS3kAizTraceReplay#replayMatchesTrace` | 1730 | 23 | frame 2465, `tails_x_speed` expected `0x0000`, actual `-01F9` | sidekick despawn/respawn marker release state, not terrain/object collision |
+| `TestS3kCnzTraceReplay#replayMatchesTrace` | 4080 | 17 | frame 6568, `x_speed` expected `0x0320`, actual `0x0308` | latest CNZ frontier after S3K monitor timing; no collision fix landed for this movement |
+
+### AIZ frontier state (frame 2465)
+
+The engine sidekick is in the despawn marker state at `7F00,0000` with
+`object_control=81` and stale velocities `FE07,022D`. The ROM has the sidekick
+visible/parked around `1B0D,031C` with `status=02` and zero speed. The current
+owner remains sidekick CPU marker release / respawn state handling.
+
+### CNZ frontier state (frame 6568)
+
+The CNZ frontier movement to frame 6568 came from S3K monitor timing, not a
+collision fix. The first error remains `x_speed` (`expected=0x0320`,
+`actual=0x0308`) with 4080 errors and 17 warnings.
+
+## 2026-05-21 - S3K AIZ intro refresh NORMAL auto-jump cadence bridge
+
+- Branch: object physics standardization worktree
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kAizIntroEventsHeadless,com.openggf.sprites.playable.TestSidekickCpuFollowParity#normalAutoJumpCadenceUsesLevelFrameCounterWithoutInlinePlusOne,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+- Result: focused AIZ intro event tests and the global S3K normal-cadence guard passed; AIZ trace replay still fails later.
+- Frontier moved: frame 2081 `tails_air` expected `1`, actual `0` -> frame 2465 `tails_x_speed` expected `0x0000`, actual `-01F9`.
+- Fix note: AIZ intro normal-refresh frame-counter bridge now publishes per ROM-visible counter at the pre-physics terrain-refresh threshold, so stored `Level_frame_counter=$06FF` exposes ROM-visible `$0700` to the NORMAL auto-jump gate without changing global NORMAL cadence.
+
+### New AIZ frontier (frame 2465)
+
+`tails_x_speed mismatch (expected=0x0000, actual=-01F9)` after Tails has parked at the AIZ intro marker (`x=0x7F00,y=0`) and the ROM sidekick slot resumes at Sonic's position. Next owner likely remains sidekick despawn/respawn marker release state, not terrain/object collision.
+
+## 2026-05-21 - S3K AIZ/CNZ integrated trace smoke verification
+
+- Branch: object physics standardization worktree
+- Command: `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance#speedShoesEffectFeedsSameFrameAirAccelerationAfterContentUpdate,com.openggf.sprites.managers.TestPlayableSpriteMovement#s3kSpeedShoesDoubleAirAccelerationAfterWallZeroing,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+- Result: focused guards passed for monitor timing and S3K speed-shoes air
+  acceleration after wall zeroing. Both trace replays still fail.
+- AIZ update: non-diagnostic replay now fails first at frame 2081 on
+  `tails_air` (`expected=1`, `actual=0`) with 1809 errors and 25 warnings.
+  This verifies the frame-2017 sidekick CPU counter bridge blocker moved; the
+  bridge consumed the intended ROM-visible counter 1728. The current owner
+  hypothesis is `SidekickCpuController.updateNormal` auto-jump cadence /
+  ROM-visible level counter edge for Tails normal-follow, not terrain/object
+  collision.
+
+Current integrated verification facts:
+
+| Trace | Errors | Warnings | Frontier / first error | Owner hypothesis |
+| --- | ---: | ---: | --- | --- |
+| `TestS3kAizTraceReplay#replayMatchesTrace` | 1809 | 25 | frame 2081, `tails_air` expected `1`, actual `0` | `SidekickCpuController.updateNormal` auto-jump cadence / ROM-visible level counter edge for Tails normal-follow |
+| `TestS3kCnzTraceReplay#replayMatchesTrace` | 4080 | 17 | frame 6568, `x_speed` expected `0x0320`, actual `0x0308` | latest CNZ frontier after integrated verification |
+
 ## 2026-05-20 - S2 MCZ Drawbridge (Obj81) landing position, zero-dist gate, half-width (MCZ2 frame 1774 -> 2226)
 
 - Branch: `develop` worktree `agent-a1d6ae52d5b453e92`

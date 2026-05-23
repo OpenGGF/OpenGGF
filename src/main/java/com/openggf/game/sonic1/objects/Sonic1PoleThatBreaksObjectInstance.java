@@ -11,12 +11,19 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
 import java.util.List;
@@ -38,6 +45,17 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
 
     // move.w obX(a0),d0 / addi.w #$14,d0
     private static final int GRAB_X_OFFSET = 0x14;
+
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            true,
+            true,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     // subi.w #$18,d0
     private static final int CLIMB_MIN_Y_OFFSET = 0x18;
@@ -120,7 +138,7 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
         player.setAnimationId(Sonic1AnimationIds.HANG);
 
         // move.b #1,(f_playerctrl).w
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
 
         // move.b #1,(f_wtunnelallow).w
         setWindTunnelDisabled(true);
@@ -178,7 +196,7 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
 
         // clr.b (f_playerctrl).w / clr.b (f_wtunnelallow).w
         if (player != null) {
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
         }
         setWindTunnelDisabled(false);
 
@@ -198,8 +216,13 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean requiresContinuousTouchCallbacks() {
-        return true;
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

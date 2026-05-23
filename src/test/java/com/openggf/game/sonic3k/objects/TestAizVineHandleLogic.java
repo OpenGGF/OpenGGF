@@ -47,8 +47,14 @@ class TestAizVineHandleLogic {
 
         assertFalse(sonic.isControlLocked(),
                 "Sonic_Control still records Ctrl_1_Logical while held by object_control=3");
+        assertTrue(sonic.isObjectControlled());
+        assertTrue(sonic.isObjectControlAllowsCpu());
+        assertTrue(sonic.isObjectControlSuppressesMovement());
         assertTrue(tails.isControlLocked(),
                 "Tails CPU follow nudge must see object_control bit 0 set while held by the vine");
+        assertTrue(tails.isObjectControlled());
+        assertTrue(tails.isObjectControlAllowsCpu());
+        assertTrue(tails.isObjectControlSuppressesMovement());
     }
 
     @Test

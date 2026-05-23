@@ -4,6 +4,8 @@ import com.openggf.game.sonic1.objects.TestPlayableSprite;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidRoutineKind;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +24,18 @@ class TestCnzCannonInstance {
         assertEquals(0x10, params.halfWidth());
         assertEquals(0x29, params.airHalfHeight());
         assertEquals(0x29, params.groundHalfHeight());
+    }
+
+    @Test
+    void solidProfileNamesTopSolidTraversalPolicy() {
+        CnzCannonInstance cannon = new CnzCannonInstance(spawn());
+
+        SolidRoutineProfile profile = cannon.getSolidRoutineProfile();
+
+        assertEquals(SolidRoutineKind.TOP_SOLID_ONLY, profile.kind());
+        assertTrue(profile.topSolidOnly());
+        assertTrue(profile.stickyContactBuffer());
+        assertFalse(profile.allowsObjectControlledSolidContacts());
     }
 
     @Test
@@ -58,6 +72,8 @@ class TestCnzCannonInstance {
         cannon.onSolidContact(player, new SolidContact(true, false, false, true, false), 3898);
 
         assertTrue(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertTrue(player.isObjectControlSuppressesMovement());
         assertTrue(player.isControlLocked());
         assertTrue(player.getRolling());
         assertTrue(player.getAir());

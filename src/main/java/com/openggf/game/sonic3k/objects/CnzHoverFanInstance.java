@@ -7,11 +7,13 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -79,20 +81,20 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance {
         currentX = resolveCurrentX();
         updateDynamicSpawn(currentX, baseY);
 
-        boolean captured = false;
-        AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite
-                ? (AbstractPlayableSprite) playerEntity
-                : null;
-        captured |= tryCapture(player);
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (playerEntity instanceof AbstractPlayableSprite player && !participants.contains(player)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(player);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
+        }
 
-        try {
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                if (sidekick instanceof AbstractPlayableSprite sprite) {
-                    captured |= tryCapture(sprite);
-                }
+        boolean captured = false;
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                captured |= tryCapture(sprite);
             }
-        } catch (Exception ignored) {
-            // Test fixtures may not expose sidekicks.
         }
 
         if (captured && ((frameCounter + 1) & 0x1F) == 0) {

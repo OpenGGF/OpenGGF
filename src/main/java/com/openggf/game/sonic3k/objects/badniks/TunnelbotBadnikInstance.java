@@ -11,6 +11,8 @@ import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -514,16 +516,18 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
      * ROM: {@code Find_SonicTails} — returns abs X distance to closest player.
      */
     private int findNearestPlayerXDistance(AbstractPlayableSprite mainPlayer) {
-        int nearest = mainPlayer != null && !mainPlayer.getDead()
-                ? Math.abs(currentX - mainPlayer.getCentreX()) : Integer.MAX_VALUE;
         ObjectServices svc = tryServices();
-        if (svc == null) return nearest;
-        for (PlayableEntity sidekick : svc.sidekicks()) {
-            if (!(sidekick instanceof AbstractPlayableSprite s) || s.getDead()) continue;
-            int dist = Math.abs(currentX - s.getCentreX());
-            if (dist < nearest) nearest = dist;
-        }
-        return nearest;
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> svc != null ? svc.playerQuery().sidekicks() : List.of());
+        return query.nearestByRomX(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS,
+                currentX,
+                TunnelbotBadnikInstance::isLivePlayable).distance();
+    }
+
+    private static boolean isLivePlayable(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite && !sprite.getDead();
     }
 
     // ── Screen shake ────────────────────────────────────────────────────

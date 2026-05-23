@@ -35,6 +35,7 @@ import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Minimal stub implementation of {@link ObjectServices} for unit tests.
@@ -44,6 +45,12 @@ public class StubObjectServices implements ObjectServices {
     private final GameRng rng = new GameRng(GameRng.Flavour.S3K);
     private final ZoneRuntimeRegistry zoneRuntimeRegistry = new ZoneRuntimeRegistry();
     private final ZoneLayoutMutationPipeline zoneLayoutMutationPipeline = new ZoneLayoutMutationPipeline();
+    private ObjectPlayerQuery playerQuery;
+
+    public StubObjectServices withPlayerQuery(ObjectPlayerQuery playerQuery) {
+        this.playerQuery = Objects.requireNonNull(playerQuery, "playerQuery");
+        return this;
+    }
 
     @Override public ObjectManager objectManager() { return null; }
     @Override public ObjectRenderManager renderManager() { return null; }
@@ -72,6 +79,13 @@ public class StubObjectServices implements ObjectServices {
     @Override public WorldSession worldSession() { return null; }
     @Override public GameModule gameModule() { return null; }
     @Override public List<PlayableEntity> sidekicks() { return List.of(); }
+    @Override public ObjectPlayerQuery playerQuery() {
+        if (playerQuery == null) {
+            throw new UnsupportedOperationException(
+                    "StubObjectServices.playerQuery() must be stubbed explicitly for player-participation tests");
+        }
+        return playerQuery;
+    }
     @Override public SpriteManager spriteManager() { return null; }
     @Override public GraphicsManager graphicsManager() { return null; }
     @Override public FadeManager fadeManager() { return null; }

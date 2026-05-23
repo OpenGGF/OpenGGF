@@ -1,7 +1,9 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.physics.Direction;
@@ -18,9 +20,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCnzWireCageObjectInstance {
+
+    @Test
+    void unloadUsesLatchedLifecycleDestructionPolicy() {
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1D80, 0x0540, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x18, 0, false, 0));
+
+        cage.onUnload();
+
+        assertTrue(cage.isDestroyed());
+    }
 
     @Test
     void activeCageSetsObjectControlBitSixWallCollisionSuppression() {
@@ -236,6 +249,9 @@ class TestCnzWireCageObjectInstance {
         assertTrue(player.getAir());
         assertEquals((short) 0x0800, player.getXSpeed());
         assertEquals((short) JUMP_RELEASE_Y_SPEED_FOR_TEST, player.getYSpeed());
+        assertFalse(player.isObjectControlled());
+        assertFalse(player.isObjectControlAllowsCpu());
+        assertFalse(player.isObjectControlSuppressesMovement());
         assertEquals(0x6500, player.getXSubpixelRaw(),
                 "loc_33B62 clears the cage latch without touching x_sub");
         assertEquals(0xD800, player.getYSubpixelRaw(),
@@ -496,6 +512,94 @@ class TestCnzWireCageObjectInstance {
     }
 
     @Test
+    void nativeP2QuerySidekickCanLatchWhenRawSidekickListIsEmpty() {
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
+        AbstractPlayableSprite leader = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+        Tails nativeP2 = new Tails("tails", (short) 0, (short) 0);
+        cage.setServices(new QueryOnlyPlayerServices(leader, List.of(nativeP2)));
+
+        leader.setCentreX((short) 0x1200);
+        leader.setCentreY((short) 0x07C0);
+        leader.setAir(false);
+        leader.setGSpeed((short) 0x0800);
+        nativeP2.setCentreX((short) 0x1300);
+        nativeP2.setCentreY((short) 0x07C0);
+        nativeP2.setAir(false);
+        nativeP2.setGSpeed((short) 0x0800);
+
+        cage.update(0, leader);
+
+        assertEquals(Sonic3kObjectIds.CNZ_WIRE_CAGE, nativeP2.getLatchedSolidObjectId(),
+                "CNZ wire cage has only native P1/P2 standing bits, so P2 must come from ObjectPlayerQuery");
+        assertTrue(nativeP2.isOnObject());
+        assertTrue(nativeP2.isObjectControlled());
+    }
+
+    @Test
+    void nonSpriteUpdateDoesNotPromoteQueriedMainIntoNativeP2CageSlot() {
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
+        Tails main = new Tails("tails-main", (short) 0, (short) 0);
+        Tails nativeP2 = new Tails("tails", (short) 0, (short) 0);
+        main.setCpuControlled(true);
+        nativeP2.setCpuControlled(true);
+        cage.setServices(new QueryOnlyPlayerServices(main, List.of(nativeP2)));
+
+        main.setCentreX((short) 0x1300);
+        main.setCentreY((short) 0x07C0);
+        main.setAir(false);
+        main.setGSpeed((short) 0x0800);
+        nativeP2.setCentreX((short) 0x1300);
+        nativeP2.setCentreY((short) 0x07C0);
+        nativeP2.setAir(false);
+        nativeP2.setGSpeed((short) 0x0800);
+
+        cage.update(0, mock(PlayableEntity.class));
+
+        assertFalse(main.isOnObject(),
+                "The queried main player must not be consumed as CNZ's native P2 slot when update input is non-sprite");
+        assertEquals(Sonic3kObjectIds.CNZ_WIRE_CAGE, nativeP2.getLatchedSolidObjectId(),
+                "CNZ wire cage should still use the first queried sidekick as native P2");
+    }
+
+    @Test
+    void extraEngineSidekickDoesNotShareNativeP2CageLatchState() {
+        CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
+                0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
+        AbstractPlayableSprite leader = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+        Tails nativeP2 = new Tails("tails", (short) 0, (short) 0);
+        Tails extraSidekick = new Tails("tails-extra", (short) 0, (short) 0);
+        cage.setServices(new TestObjectServices().withSidekicks(List.of(nativeP2, extraSidekick)));
+
+        leader.setCentreX((short) 0x1200);
+        leader.setCentreY((short) 0x07C0);
+        leader.setAir(false);
+        leader.setGSpeed((short) 0x0800);
+        nativeP2.setCentreX((short) 0x1200);
+        nativeP2.setCentreY((short) 0x07C0);
+        nativeP2.setAir(false);
+        nativeP2.setGSpeed((short) 0x0800);
+        extraSidekick.setCentreX((short) 0x1300);
+        extraSidekick.setCentreY((short) 0x07C0);
+        extraSidekick.setAir(false);
+        extraSidekick.setGSpeed((short) 0x0800);
+
+        cage.update(0, leader);
+
+        assertFalse(extraSidekick.isOnObject(),
+                "Additional engine sidekicks must not consume or share the native P2 cage standing bit");
+        assertFalse(extraSidekick.isObjectControlled());
+        assertNotEquals(Sonic3kObjectIds.CNZ_WIRE_CAGE, extraSidekick.getLatchedSolidObjectId());
+    }
+
+    @Test
     void leaderReleasedNormalSidekickLatchDoesNotSetObjectControlBitZero() {
         CnzWireCageObjectInstance cage = new CnzWireCageObjectInstance(new ObjectSpawn(
                 0x1300, 0x07C0, Sonic3kObjectIds.CNZ_WIRE_CAGE, 0x1E, 0, false, 0));
@@ -572,4 +676,24 @@ class TestCnzWireCageObjectInstance {
     }
 
     private static final int JUMP_RELEASE_Y_SPEED_FOR_TEST = -0x200;
+
+    private static final class QueryOnlyPlayerServices extends TestObjectServices {
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+
+        private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return List.of();
+        }
+    }
 }

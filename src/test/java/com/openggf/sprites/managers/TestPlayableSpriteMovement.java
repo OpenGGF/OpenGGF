@@ -134,6 +134,27 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s3kSpeedShoesDoubleAirAccelerationAfterWallZeroing() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                mockSprite.giveSpeedShoes();
+                mockSprite.setAir(true);
+                mockSprite.setRolling(true);
+                mockSprite.setRollingJump(false);
+                mockSprite.setXSpeed((short) 0);
+                mockSprite.setYSpeed((short) -0x0410);
+
+                setInputState(false, true, false, false, false);
+
+                Method changeJumpDirection = PlayableSpriteMovement.class.getDeclaredMethod("doChgJumpDir");
+                changeJumpDirection.setAccessible(true);
+                changeJumpDirection.invoke(manager);
+
+                assertEquals((short) 0x0030, mockSprite.getXSpeed(),
+                                "S3K Sonic_ChgJumpDir doubles speed-shoes Acceleration=$18 before adding right air control (sonic3k.asm:23088-23121)");
+        }
+
+        @Test
         public void s3kVerticalWrapMasksYAfterControlEvenWhenObjectControlsMovement() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);

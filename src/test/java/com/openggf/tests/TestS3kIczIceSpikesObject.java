@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.StubObjectServices;
@@ -140,6 +141,7 @@ class TestS3kIczIceSpikesObject {
 
         private SidekickServices(List<PlayableEntity> sidekicks) {
             this.sidekicks = sidekicks;
+            withPlayerQuery(new ObjectPlayerQuery(() -> null, this::sidekicks));
         }
 
         @Override

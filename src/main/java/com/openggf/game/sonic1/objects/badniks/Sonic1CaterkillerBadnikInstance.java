@@ -9,6 +9,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SubpixelMotion;
@@ -300,12 +301,7 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
                         this, parentStateFinal, segXFinal, currentY, facingLeft,
                         animated, segmentIndex, ringBufIdxFinal);
                 // Allocate slot after previous segment (FindNextFreeObj parity)
-                if (prevSlotFinal >= 0) {
-                    int localSlot = objectManager.allocateSlotAfter(prevSlotFinal);
-                    if (localSlot >= 0) {
-                        segment.setSlotIndex(localSlot);
-                    }
-                }
+                ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, segment, prevSlotFinal);
                 return segment;
             });
             bodySegments.add(body);
@@ -553,8 +549,7 @@ public class Sonic1CaterkillerBadnikInstance extends AbstractBadnikInstance
                 : 0;
         bodyDeletionEarliestFrame = currentFrame + 2;
         // ROM parity: explosion inherits our slot (in-place obID change).
-        int mySlot = getSlotIndex();
-        setSlotIndex(-1);
+        int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
         setDestroyed(true);
         DestructionEffects.destroyBadnik(currentX, currentY, spawn, mySlot,
                 player, services(), getDestructionConfig());

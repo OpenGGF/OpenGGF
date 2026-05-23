@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.StubObjectServices;
@@ -83,12 +84,13 @@ class TestS3kIczBreakableWallObject {
         ObjectSpawn wallSpawn = new ObjectSpawn(
                 0x3200, 0x0700, Sonic3kObjectIds.ICZ_BREAKABLE_WALL, 0, 0, false, 0);
         IczBreakableWallObjectInstance wall = new IczBreakableWallObjectInstance(wallSpawn);
-        wall.setServices(new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return objectManager;
             }
-        });
+        }.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        wall.setServices(services);
         when(objectManager.getActiveObjects()).thenReturn(List.of(
                 new IczPathFollowPlatformTestInstance(0x3200, 0x06F0)));
 

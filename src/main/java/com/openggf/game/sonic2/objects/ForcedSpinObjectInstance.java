@@ -8,6 +8,7 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
@@ -105,9 +106,9 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance {
         // Check for Sonic (main player)
         checkPlayerCrossing(player, true);
 
-        // Check for sidekick(s) if present
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            checkPlayerCrossing((AbstractPlayableSprite) sidekick, false);
+        AbstractPlayableSprite nativeP2 = nativeP2OrNull(player);
+        if (nativeP2 != null) {
+            checkPlayerCrossing(nativeP2, false);
         }
     }
 
@@ -132,16 +133,25 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance {
             sonicPastTrigger = playerX > objX;
         }
 
-        // Initialize sidekick state similarly if present
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            int sidekickX = sidekick.getCentreX();
-            int sidekickY = sidekick.getCentreY();
+        AbstractPlayableSprite nativeP2 = nativeP2OrNull(player);
+        if (nativeP2 != null) {
+            int sidekickX = nativeP2.getCentreX();
+            int sidekickY = nativeP2.getCentreY();
             if (verticalMode) {
                 tailsPastTrigger = sidekickY > objY;
             } else {
                 tailsPastTrigger = sidekickX > objX;
             }
         }
+    }
+
+    private AbstractPlayableSprite nativeP2OrNull(AbstractPlayableSprite nativeP1) {
+        for (PlayableEntity candidate : services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate != nativeP1 && candidate instanceof AbstractPlayableSprite sprite) {
+                return sprite;
+            }
+        }
+        return null;
     }
 
     /**

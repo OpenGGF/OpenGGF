@@ -9,12 +9,20 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 
@@ -51,6 +59,18 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     private static final int SHAKE_TIMER_START = 0x0F;
     private static final int SHAKE_STEP = 2;
     private static final int FALL_COLLISION_FLAGS = 0x82;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            false,
+            true,
+            true,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
 
     private enum Phase {
         WAITING,
@@ -125,23 +145,27 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     }
 
     private int nearestPlayerXDistance(PlayableEntity mainPlayer) {
-        int nearest = livePlayerDistance(mainPlayer);
         ObjectServices services = tryServices();
-        if (services == null) {
-            return nearest;
-        }
-        for (PlayableEntity sidekick : services.sidekicks()) {
-            nearest = Math.min(nearest, livePlayerDistance(sidekick));
-        }
-        return nearest;
+        ObjectPlayerQuery serviceQuery = services != null ? services.playerQuery() : null;
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> livePlayerOrNull(mainPlayer),
+                () -> livePlayers(serviceQuery != null ? serviceQuery.sidekicks() : List.of()));
+        return query.nearestByRomX(PLAYER_PARTICIPATION, motion.x).distance();
     }
 
-    private int livePlayerDistance(PlayableEntity player) {
-        if (player == null || player.getDead()) {
-            return Integer.MAX_VALUE;
+    private static PlayableEntity livePlayerOrNull(PlayableEntity player) {
+        return player == null || player.getDead() ? null : player;
+    }
+
+    private static List<PlayableEntity> livePlayers(List<PlayableEntity> players) {
+        List<PlayableEntity> live = new ArrayList<>(players.size());
+        for (PlayableEntity player : players) {
+            PlayableEntity candidate = livePlayerOrNull(player);
+            if (candidate != null) {
+                live.add(candidate);
+            }
         }
-        int delta = (short) ((motion.x - player.getCentreX()) & 0xFFFF);
-        return Math.abs(delta);
+        return live;
     }
 
     @Override
@@ -182,6 +206,16 @@ public class IczStalagtiteObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

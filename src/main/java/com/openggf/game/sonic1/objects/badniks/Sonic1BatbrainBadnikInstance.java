@@ -10,6 +10,7 @@ import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -400,9 +401,7 @@ public class Sonic1BatbrainBadnikInstance extends AbstractBadnikInstance {
             setDestroyed(true);
             ObjectServices svc = tryServices();
             var objectManager = svc != null ? svc.objectManager() : null;
-            if (objectManager != null) {
-                objectManager.markRemembered(spawn);
-            }
+            ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
         }
     }
 

@@ -320,17 +320,18 @@ public final class ObjectTerrainUtils {
                                                                byte metric, int x, boolean checkingLeft,
                                                                boolean flipAwareAngle) {
         int xInTile = x & 0x0F;
+        int xAdjusted = checkingLeft ? (15 - xInTile) : xInTile;
         if (metric == 0) {
-            int dist = 15 - xInTile - 16;
+            int dist = 15 - xAdjusted - 16;
             return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
         }
         if (metric < 0) {
-            int adjusted = metric + xInTile;
+            int adjusted = metric + xAdjusted;
             if (adjusted >= 0) {
-                int dist = 15 - xInTile - 16;
+                int dist = 15 - xAdjusted - 16;
                 return new TerrainCheckResult(dist, getAngle(origTile, origDesc, flipAwareAngle), getTileIndex(origDesc));
             }
-            int dist = ~xInTile - 16;
+            int dist = ~xAdjusted - 16;
             return new TerrainCheckResult(dist, getAngle(tile, desc, flipAwareAngle), getTileIndex(desc));
         }
         return createWallResult(tile, desc, metric, x, checkingLeft, -16, flipAwareAngle);

@@ -100,6 +100,12 @@ class TestS3kMgzTopPlatformParityHeadless {
         assertNotNull(platform, "Expected Sonic to grab the MGZ top platform");
         assertTrue(sprite.isObjectControlled(),
                 "MGZ top platform should own the player via objectControlled while grabbed");
+        assertFalse(sprite.isObjectControlAllowsCpu(),
+                "MGZ top platform carry uses bit-7-style full object control");
+        assertTrue(sprite.isObjectControlSuppressesMovement(),
+                "MGZ top platform carry should suppress normal movement while grabbed");
+        assertTrue(sprite.isTouchResponseSuppressedByObjectControl(),
+                "MGZ top platform full object control should suppress touch responses");
         assertTrue(sprite.isWallCling(),
                 "MGZ top platform should keep the ROM wall-cling/status-tertiary state while grabbed");
         assertFalse(sprite.isOnObject(),
@@ -126,6 +132,10 @@ class TestS3kMgzTopPlatformParityHeadless {
 
         assertTrue(released, "Expected jump input to release Sonic from the MGZ top platform");
         assertFalse(sprite.isObjectControlled(), "Jump release should clear object-controlled ownership");
+        assertFalse(sprite.isObjectControlAllowsCpu(), "Jump release should clear object-control CPU allowance");
+        assertFalse(sprite.isObjectControlSuppressesMovement(), "Jump release should clear movement suppression");
+        assertFalse(sprite.isTouchResponseSuppressedByObjectControl(),
+                "Jump release should clear touch-response suppression");
         assertFalse(sprite.isWallCling(), "Jump release should clear MGZ wall-cling bits");
         assertTrue(sprite.getAir(), "Released player should return to airborne movement");
     }
@@ -375,6 +385,31 @@ class TestS3kMgzTopPlatformParityHeadless {
                 "Released-flight handoff should clear main-player entry bias");
         assertEquals(0, getIntField(sidekickState, "entrySideBias"),
                 "Released-flight handoff should clear secondary-rider entry bias");
+    }
+
+    @Test
+    void destroyedPlatform_clearsMgzCarryOwnershipSeam() throws Exception {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(0, 0, 0x5B, 0, 0, false, 0));
+        Sonic carriedPlayer = new Sonic("sonic", (short) 0, (short) 0);
+        carriedPlayer.setObjectControlled(true);
+        carriedPlayer.setMgzTopPlatformCarrySolidContactObject(platform);
+        carriedPlayer.setWallCling(true);
+
+        Object carriedState = newPlayerGrabState();
+        setIntField(carriedState, "routine", 4);
+        setBooleanField(carriedState, "grabbed", true);
+        setIntField(carriedState, "entrySideBias", 0x0F);
+        playerStates(platform).put(carriedPlayer, carriedState);
+
+        platform.setDestroyed(true);
+
+        assertFalse(carriedPlayer.isObjectControlled(),
+                "Destroy cleanup should clear object-control ownership");
+        assertFalse(carriedPlayer.isMgzTopPlatformCarryOwnedBy(platform),
+                "Destroy cleanup should clear the explicit MGZ carry solid-contact owner");
+        assertFalse(carriedPlayer.isWallCling(),
+                "Destroy cleanup should clear MGZ wall-cling state");
     }
 
     private MGZTopPlatformObjectInstance runUntilGrabbedHoldingLeft() {

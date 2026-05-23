@@ -5,6 +5,7 @@ import com.openggf.data.Rom;
 import com.openggf.game.CheckpointState;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -31,14 +32,18 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.resources.LoadOp;
 import com.openggf.level.resources.ResourceLoader;
 import com.openggf.level.WaterSystem;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -204,8 +209,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private boolean introSpawned;
     /** One-shot guard: once AIZ intro minX is locked at $1308, stop rewriting minX each frame. */
     private boolean introMinXLocked;
+    /** True once the AIZ intro has successfully released dormant CPU Tails. */
+    private boolean introSidekickMarkerReleased;
     /** True while the intro->main-level refresh is holding raw Events_fg_5 high. */
     private boolean introNormalRefreshPending;
+    /** Last ROM-visible counter published through the AIZ intro normal-refresh bridge. */
+    private int lastIntroNormalRefreshFrameCounterBridge = -1;
     private boolean paletteSwapped;
     private boolean boundariesUnlocked;
     private boolean fireMinXLockReached;
@@ -419,7 +428,9 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         super.init(act);
         introSpawned = false;
         introMinXLocked = false;
+        introSidekickMarkerReleased = false;
         introNormalRefreshPending = false;
+        lastIntroNormalRefreshFrameCounterBridge = -1;
         paletteSwapped = false;
         boundariesUnlocked = false;
         fireMinXLockReached = false;
@@ -500,6 +511,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * (docs/skdisasm/sonic3k.asm:104082-104091, 105200-105253).
      */
     public void updatePrePhysics(int act) {
+        if (act == 0) {
+            releaseAizIntroSidekickMarkerPrePhysics();
+            publishIntroNormalRefreshFrameCounterBridgePrePhysics();
+            return;
+        }
         if (act != 1 || !battleshipAutoScrollActive) {
             battleshipAutoScrollRanPrePhysics = false;
             return;
@@ -512,6 +528,26 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         cam.setFrozen(true);
         battleshipAutoScrollRanPrePhysics = true;
+    }
+
+    private void releaseAizIntroSidekickMarkerPrePhysics() {
+        int thresholdX = Math.max(camera().getX() & 0xFFFF, camera().previewNextX() & 0xFFFF);
+        if (introSidekickMarkerReleased || thresholdX < PALETTE_SWAP_X) {
+            return;
+        }
+        // AIZ1_Resize writes Tails_CPU_routine after Process_Sprites during the
+        // prior ROM frame (sonic3k.asm:38873-38900). The engine's full resize
+        // update still runs later in the frame; this pre-physics bridge exposes
+        // that already-published ROM write before the next sidekick CPU slot.
+        releaseAizIntroSidekickMarker();
+    }
+
+    private void publishIntroNormalRefreshFrameCounterBridgePrePhysics() {
+        int thresholdX = Math.max(camera().getX() & 0xFFFF, camera().previewNextX() & 0xFFFF);
+        if (thresholdX < TERRAIN_SWAP_X) {
+            return;
+        }
+        publishIntroNormalRefreshFrameCounterBridge();
     }
 
     /**
@@ -558,12 +594,16 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
 
         // --- Routine 0: Palette swap at camera X >= $1308 ---
-        if (!paletteSwapped && cameraX >= PALETTE_SWAP_X) {
+        // ROM runs Do_ResizeEvents after MoveCameraX has committed the frame's
+        // camera position. The engine event step runs before the camera step, so
+        // use the predicted end-of-frame X for this threshold just like the
+        // later AIZ1 resize and terrain-swap thresholds below.
+        if (!paletteSwapped && frameEndCameraX >= PALETTE_SWAP_X) {
             loadPaletteFromPalPointers(PAL_AIZ_INDEX);
             releaseAizIntroSidekickMarker();
             paletteSwapped = true;
             LOG.info("AIZ1: loaded main palette (PalPointers #0x2A) at cameraX=0x"
-                    + Integer.toHexString(cameraX));
+                    + Integer.toHexString(frameEndCameraX));
         }
 
         // --- Routine 2: Terrain swap at camera X >= $1400 ---
@@ -625,11 +665,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (sm == null) {
             return;
         }
-        for (AbstractPlayableSprite sidekick : sm.getSidekicks()) {
+        boolean released = false;
+        for (AbstractPlayableSprite sidekick : sm.getRegisteredSidekicks()) {
             if (sidekick.getCpuController() != null) {
-                sidekick.getCpuController().releaseAizIntroDormantMarker();
+                released |= sidekick.getCpuController().releaseAizIntroDormantMarker();
             }
         }
+        introSidekickMarkerReleased |= released;
     }
 
     /**
@@ -1561,20 +1603,17 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             cam.setMinX((short) (newCameraX - wrapDelta));
             cam.setMaxX((short) (newCameraX - wrapDelta));
 
-            // Wrap the player position
-            if (cam.getFocusedSprite() instanceof AbstractPlayableSprite player) {
-                if (useCentreCoordinates) {
-                    player.setCentreXPreserveSubpixel((short) (player.getCentreX() - wrapDelta));
-                } else {
-                    player.setX((short) (player.getX() - wrapDelta));
-                }
-            }
-            // Wrap sidekick positions
-            for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
-                if (useCentreCoordinates) {
-                    sidekick.setCentreXPreserveSubpixel((short) (sidekick.getCentreX() - wrapDelta));
-                } else {
-                    sidekick.setX((short) (sidekick.getX() - wrapDelta));
+            ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(
+                    () -> cam.getFocusedSprite() instanceof AbstractPlayableSprite player ? player : null,
+                    this::eventSidekicks);
+            for (PlayableEntity participant : playerQuery.playersFor(
+                    ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (participant instanceof AbstractPlayableSprite player) {
+                    if (useCentreCoordinates) {
+                        player.setCentreXPreserveSubpixel((short) (player.getCentreX() - wrapDelta));
+                    } else {
+                        player.setX((short) (player.getX() - wrapDelta));
+                    }
                 }
             }
 
@@ -1603,13 +1642,21 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // ROM: sub_50318 — clamp X within camera margins for BOTH players.
         // Called for Player_1 then Player_2 in AIZ2_DoShipLoop.
         int camX = cam.getX();
-        if (cam.getFocusedSprite() instanceof AbstractPlayableSprite player) {
-            clampPlayerDuringAutoScroll(player, camX, useCentreCoordinates);
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
-            clampPlayerDuringAutoScroll(sidekick, camX, useCentreCoordinates);
+        ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(
+                () -> cam.getFocusedSprite() instanceof AbstractPlayableSprite player ? player : null,
+                this::eventSidekicks);
+        for (PlayableEntity participant : playerQuery.playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                clampPlayerDuringAutoScroll(player, camX, useCentreCoordinates);
+            }
         }
         syncSidekickBoundsToLiveCamera(cam);
+    }
+
+    private List<AbstractPlayableSprite> eventSidekicks() {
+        SpriteManager sm = spriteManager();
+        return sm != null ? sm.getSidekicks() : List.of();
     }
 
     private void syncSidekickBoundsToLiveCamera(Camera cam) {
@@ -1905,6 +1952,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (!introNormalRefreshPending && !AizPlaneIntroInstance.isMainLevelPhaseActive() && cameraX >= TERRAIN_SWAP_X) {
             eventsFg5 = true;
             introNormalRefreshPending = true;
+            publishIntroNormalRefreshFrameCounterBridge();
             LOG.info("AIZ1 intro: Events_fg_5 set for main-level refresh at cameraX=0x"
                     + Integer.toHexString(cameraX));
         }
@@ -1913,6 +1961,36 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             introNormalRefreshPending = false;
             LOG.info("AIZ1 intro: Events_fg_5 cleared after main-level refresh");
         }
+    }
+
+    private void publishIntroNormalRefreshFrameCounterBridge() {
+        LevelManager levelManager = levelManager();
+        SpriteManager spriteManager = spriteManager();
+        if (levelManager == null || spriteManager == null) {
+            return;
+        }
+        int levelFrameCounter = levelManager.getFrameCounter();
+        int romVisibleFrameCounter = levelFrameCounter + 1;
+        if (lastIntroNormalRefreshFrameCounterBridge == romVisibleFrameCounter) {
+            return;
+        }
+        if ((romVisibleFrameCounter & 0x3F) != 0) {
+            return;
+        }
+        boolean published = false;
+        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
+            SidekickCpuController controller = sidekick.getCpuController();
+            boolean canSpend = controller != null
+                    && controller.canSpendAizIntroNormalRefreshFrameBridge(romVisibleFrameCounter);
+            if (canSpend) {
+                controller.overrideNextCpuFrameCounter(romVisibleFrameCounter);
+                published = true;
+            }
+        }
+        if (!published) {
+            return;
+        }
+        lastIntroNormalRefreshFrameCounterBridge = romVisibleFrameCounter;
     }
 
     private void beginFireTransition() {
@@ -2035,11 +2113,14 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (!hasRuntime()) {
             return;
         }
-        if (camera().getFocusedSprite() instanceof AbstractPlayableSprite player) {
-            player.setControlLocked(locked);
-        }
-        for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
-            sidekick.setControlLocked(locked);
+        ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(
+                () -> camera().getFocusedSprite() instanceof AbstractPlayableSprite player ? player : null,
+                this::eventSidekicks);
+        for (PlayableEntity participant : playerQuery.playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                player.setControlLocked(locked);
+            }
         }
     }
 
@@ -2191,6 +2272,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     public void    setIntroSpawned(boolean v)               { introSpawned = v; }
     public boolean isIntroMinXLocked()                      { return introMinXLocked; }
     public void    setIntroMinXLocked(boolean v)            { introMinXLocked = v; }
+    public boolean isIntroSidekickMarkerReleased()          { return introSidekickMarkerReleased; }
+    public void    setIntroSidekickMarkerReleased(boolean v){ introSidekickMarkerReleased = v; }
     public boolean isIntroNormalRefreshPending()             { return introNormalRefreshPending; }
     public void    setIntroNormalRefreshPending(boolean v)  { introNormalRefreshPending = v; }
     public boolean isPaletteSwapped()                       { return paletteSwapped; }

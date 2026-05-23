@@ -18,6 +18,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -317,6 +319,27 @@ class TestSonic3kMgz2BgRiseEvents {
     }
 
     @Test
+    void sonicRise_liftsEachEnginePlayerOnlyOnceWhenSidekickListContainsDuplicateInstances() {
+        AbstractPlayableSprite player = placePlayer(0x3500, 0x0850);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x3500, (short) 0x0A81);
+        tails.setCpuControlled(true);
+        GameServices.sprites().addSprite(tails, "tails");
+        addDuplicateSidekickForTest(tails);
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+
+        int playerStartY = player.getCentreY();
+        int tailsStartY = tails.getCentreY();
+
+        invokeLiftBgRisePassengers(events, player, 1);
+
+        assertEquals(playerStartY - 1, player.getCentreY(),
+                "MGZ2 floor rise should lift the focused main player exactly once");
+        assertEquals(tailsStartY - 1, tails.getCentreY(),
+                "MGZ2 floor rise should dedupe engine-player participation before lifting sidekicks");
+    }
+
+    @Test
     void finalTimedShake_expiresAfterTheRomCountdown() {
         AbstractPlayableSprite player = placePlayer(0x3500, 0x0850);
         Sonic3kMGZEvents events = new Sonic3kMGZEvents();
@@ -365,6 +388,30 @@ class TestSonic3kMgz2BgRiseEvents {
             field.set(target, value);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Unable to set Sonic3kMGZEvents." + fieldName, e);
+        }
+    }
+
+    private static void invokeLiftBgRisePassengers(Sonic3kMGZEvents events,
+                                                   AbstractPlayableSprite player,
+                                                   int delta) {
+        try {
+            var method = Sonic3kMGZEvents.class.getDeclaredMethod(
+                    "liftBgRisePassengers", AbstractPlayableSprite.class, int.class);
+            method.setAccessible(true);
+            method.invoke(events, player, delta);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to invoke Sonic3kMGZEvents.liftBgRisePassengers", e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void addDuplicateSidekickForTest(AbstractPlayableSprite sidekick) {
+        try {
+            var field = GameServices.sprites().getClass().getDeclaredField("sidekicks");
+            field.setAccessible(true);
+            ((List<AbstractPlayableSprite>) field.get(GameServices.sprites())).add(sidekick);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Unable to duplicate SpriteManager sidekick list entry", e);
         }
     }
 

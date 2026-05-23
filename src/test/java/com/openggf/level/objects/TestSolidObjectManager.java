@@ -338,6 +338,144 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void solidRoutineProfileSnapshotsInclusiveRightEdgeBeforeDelegatedHooks() {
+        SolidObjectParams params = new SolidObjectParams(19, 14, 15);
+        TestSolidObject object = new MutatingInclusiveRightEdgeSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setAir(false);
+        player.setXSpeed((short) -0x100);
+        player.setGSpeed((short) -0x100);
+        player.setCentreX((short) (100 + params.halfWidth()));
+        player.setCentreY((short) 100);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getPushing(),
+                "Solid routine profile should capture inclusive-right-edge policy before provider hooks mutate");
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getGSpeed());
+    }
+
+    @Test
+    public void solidRoutineProfileControlsMonitorSolidityInContactResolution() {
+        SolidObjectParams params = new SolidObjectParams(14, 14, 14);
+        TestSolidObject object = new ProfileBackedSolidObject(
+                100, 100, params, solidProfile(
+                        SolidRoutineKind.MONITOR_SOLID,
+                        false,
+                        true,
+                        0,
+                        false,
+                        false,
+                        true,
+                        false,
+                        false,
+                        false,
+                        false,
+                        true,
+                        false,
+                        false));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(28);
+        player.setHeight(38);
+        player.setAir(true);
+        player.setRolling(true);
+        player.setYSpeed((short) 0x100);
+        player.setCentreX((short) 100);
+        int maxTop = params.airHalfHeight() + player.getYRadius();
+        player.setCentreY((short) (100 - 4 - maxTop + 8));
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getAir(),
+                "Rolling downward monitor contact is delegated to touch response, not full-solid landing");
+        assertFalse(player.isOnObject());
+    }
+
+    @Test
+    public void solidRoutineProfileControlsTopOnlySideClassification() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestSolidObject object = new ProfileBackedSolidObject(
+                100, 100, params, solidProfile(
+                        SolidRoutineKind.TOP_SOLID_ONLY,
+                        true,
+                        false,
+                        0,
+                        false,
+                        true,
+                        true,
+                        false,
+                        false,
+                        false,
+                        false,
+                        true,
+                        false,
+                        false));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+
+        manager.updateSolidContacts(player);
+
+        assertFalse(player.getPushing(),
+                "Profile top-only policy must suppress full-solid side pushing even if provider hook disagrees");
+    }
+
+    @Test
+    public void solidRoutineProfileControlsForceAirOnRideExit() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestSolidObject object = new ProfileBackedSolidObject(
+                100, 100, params, solidProfile(
+                        SolidRoutineKind.FULL_SOLID,
+                        false,
+                        false,
+                        0,
+                        false,
+                        true,
+                        true,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false,
+                        false));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - params.groundHalfHeight() - player.getYRadius()));
+        player.setYSpeed((short) 0);
+        player.setAir(true);
+
+        manager.updateSolidContacts(player);
+        assertTrue(player.isOnObject());
+        assertFalse(player.getAir());
+
+        player.setCentreX((short) (100 + params.halfWidth()));
+
+        manager.updateSolidContacts(player);
+
+        assertFalse(player.isOnObject());
+        assertFalse(player.getAir(),
+                "Profile forceAirOnRideExit=false should win over the provider hook default");
+    }
+
+    @Test
     public void upwardBottomCollisionPreservesGroundSpeed() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestSolidObject object = new TestSolidObject(100, 100, params);
@@ -905,6 +1043,71 @@ public class TestSolidObjectManager {
         public boolean usesInclusiveRightEdge() {
             return true;
         }
+    }
+
+    private static final class MutatingInclusiveRightEdgeSolidObject extends TestSolidObject {
+        private boolean inclusiveRightEdge = true;
+
+        private MutatingInclusiveRightEdgeSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public SolidObjectParams getSolidParams() {
+            inclusiveRightEdge = false;
+            return super.getSolidParams();
+        }
+
+        @Override
+        public boolean usesInclusiveRightEdge() {
+            return inclusiveRightEdge;
+        }
+    }
+
+    private static final class ProfileBackedSolidObject extends TestSolidObject {
+        private final SolidRoutineProfile profile;
+
+        private ProfileBackedSolidObject(int x, int y, SolidObjectParams params, SolidRoutineProfile profile) {
+            super(x, y, params);
+            this.profile = profile;
+        }
+
+        @Override
+        public SolidRoutineProfile getSolidRoutineProfile() {
+            return profile;
+        }
+    }
+
+    private static SolidRoutineProfile solidProfile(
+            SolidRoutineKind kind,
+            boolean topSolidOnly,
+            boolean monitorSolidity,
+            int monitorVerticalOffset,
+            boolean inclusiveRightEdge,
+            boolean stickyContactBuffer,
+            boolean usesPlatformLandingSnap,
+            boolean usesCollisionHalfWidthForTopLanding,
+            boolean usesGroundHalfHeightForTopSolidContact,
+            boolean bypassesOffscreenSolidGate,
+            boolean allowsObjectControlledSolidContacts,
+            boolean forceAirOnRideExit,
+            boolean dropOnFloor,
+            boolean carriesAirborneRiderAfterExitPlatform) {
+        return new SolidRoutineProfile(
+                kind,
+                topSolidOnly,
+                monitorSolidity,
+                monitorVerticalOffset,
+                inclusiveRightEdge,
+                stickyContactBuffer,
+                usesPlatformLandingSnap,
+                usesCollisionHalfWidthForTopLanding,
+                usesGroundHalfHeightForTopSolidContact,
+                bypassesOffscreenSolidGate,
+                allowsObjectControlledSolidContacts,
+                forceAirOnRideExit,
+                dropOnFloor,
+                carriesAirborneRiderAfterExitPlatform);
     }
 
     private static final class HistoryTopSolidObject extends TestSolidObject {

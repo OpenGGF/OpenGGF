@@ -14,6 +14,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -644,7 +645,7 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance {
             var sprite = services().camera().getFocusedSprite();
             if (sprite instanceof AbstractPlayableSprite ps) {
                 ps.setControlLocked(false);
-                ps.setObjectControlled(false);
+                ObjectControlState.none().applyTo(ps);
                 ps.setHidden(false);
             }
         } catch (Exception e) {

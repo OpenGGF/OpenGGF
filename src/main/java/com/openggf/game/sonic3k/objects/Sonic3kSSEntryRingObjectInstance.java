@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -350,7 +351,7 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
         // ROM: move.b #$53,object_control(a2) — disables input
         // ROM: move.b #-1,(Player_prev_frame).w — makes player invisible
         player.setHidden(true);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // Freeze camera at player's last position
         camera.setFrozen(true);

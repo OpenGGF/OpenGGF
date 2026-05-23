@@ -93,7 +93,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
                 // registerObject() is used for persistent visuals that survive an
                 // ObjectManager rebuild. Their old slot belongs to the previous
                 // manager and must be dropped before the new manager allocates one.
-                aoi.setSlotIndex(-1);
+                ObjectLifetimeOps.clearPreviousManagerSlot(aoi);
             }
             addPowerUpObject(oi);
         }
@@ -168,7 +168,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         }
         int fixedSlot = shieldFixedSlotIndex(object);
         if (fixedSlot >= 0) {
-            objectManager.addDynamicObjectAtSlot(object, fixedSlot);
+            ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, object, fixedSlot);
             return;
         }
         // Rewind: if a captured entry is pending for this dynamic class (Shield/Stars),
@@ -178,7 +178,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry restored =
                 consumePendingRestoredEntry(object);
         if (restored != null) {
-            objectManager.addDynamicObjectAtSlot(object, restored.slotIndex());
+            ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, object, restored.slotIndex());
             if (object instanceof AbstractObjectInstance aoi) {
                 aoi.restoreRewindState(restored.state());
             }

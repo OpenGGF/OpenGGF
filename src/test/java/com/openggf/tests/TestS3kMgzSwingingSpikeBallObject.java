@@ -9,7 +9,13 @@ import com.openggf.game.sonic3k.objects.MGZSwingingSpikeBallObjectInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.junit.jupiter.api.Test;
 
@@ -52,6 +58,42 @@ class TestS3kMgzSwingingSpikeBallObject {
 
         assertEquals(0x1200, instance.getX());
         assertEquals(0x05A0, instance.getY());
+    }
+
+    @Test
+    void touchProfileNamesMultiRegionHurtPolicy() throws NoSuchMethodException {
+        MGZSwingingSpikeBallObjectInstance instance = new MGZSwingingSpikeBallObjectInstance(
+                new ObjectSpawn(0x1200, 0x0600, Sonic3kObjectIds.MGZ_SWINGING_SPIKE_BALL, 0x00, 0x00, false, 0));
+
+        TouchResponseProfile expectedMultiRegion = new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                true,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
+        TouchResponseProfile expectedSingleRegion = new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                false,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+
+        assertEquals(expectedMultiRegion, instance.getTouchResponseProfile());
+        assertEquals(expectedMultiRegion, instance.getTouchResponseProfile(true));
+        assertEquals(expectedSingleRegion, instance.getTouchResponseProfile(false));
+        assertEquals(0x1260, instance.getMultiTouchRegions()[0].x());
+        assertEquals(0x0600, instance.getMultiTouchRegions()[0].y());
+        assertEquals(0x8F, instance.getMultiTouchRegions()[0].collisionFlags());
+        MGZSwingingSpikeBallObjectInstance.class.getDeclaredMethod("getTouchResponseProfile");
+        MGZSwingingSpikeBallObjectInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class);
     }
 
     @Test

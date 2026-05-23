@@ -4,8 +4,14 @@ import org.junit.jupiter.api.Test;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.lang.reflect.Field;
@@ -18,6 +24,26 @@ public class TestSonic1PoleThatBreaksObjectInstance {
 
     private static final TouchResponseResult TOUCH_RESULT =
             new TouchResponseResult(0x21, 0x20, 0x20, TouchCategory.SPECIAL);
+
+    @Test
+    public void touchResponseProfilePreservesContinuousSingleRegionSpecialTouch() {
+        Sonic1PoleThatBreaksObjectInstance pole = createPole(200, 320, 4);
+
+        TouchResponseProfile profile = pole.getTouchResponseProfile(false);
+
+        assertEquals(profile, pole.getTouchResponseProfile());
+        assertEquals(profile, pole.getTouchResponseProfile(true));
+        assertEquals(TouchCategoryDecodeMode.NORMAL, profile.categoryDecodeMode());
+        assertTrue(profile.continuousCallbacks());
+        assertTrue(profile.requiresRenderFlagForTouch());
+        assertFalse(profile.multiRegionSource());
+        assertEquals(TouchShieldDeflectCapability.NONE, profile.shieldDeflectCapability());
+        assertEquals(0, profile.shieldReactionFlags());
+        assertEquals(TouchAttackBouncePolicy.STANDARD_ENEMY_KILL, profile.attackBouncePolicy());
+        assertEquals(TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY, profile.actorContextPolicy());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
+                profile.stopAfterFirstOverlapPolicy());
+    }
 
     @Test
     public void grabsPlayerFromRightAndLocksToHangState() {

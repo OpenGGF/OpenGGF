@@ -154,8 +154,7 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance imple
     @Override
     public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        var sidekicks = services().sidekicks();
-        AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
         AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
     }
 
@@ -263,9 +262,11 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance imple
         }
 
         AizVineHandleLogic.positionFromParent(handle, parentX, parentY, parentAngle);
-        var sidekicks = services().sidekicks();
-        AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
         AizVineHandleLogic.updatePlayers(handle, services(), player, sidekick, parentAngle);
+        if (!activatedSwingStarted && AizVineHandleLogic.anyGrabbed(handle)) {
+            activatedSwingStarted = true;
+        }
         if (services().levelManager() != null && services().levelManager().objectsExecuteAfterPlayerPhysics()) {
             AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
         }
@@ -295,12 +296,17 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance imple
 
     private void clearGrabbedPlayers() {
         AbstractPlayableSprite player = resolveMainPlayer();
-        var sidekicks = services().sidekicks();
-        AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
         clearControlFor(player, handle.p1.grabFlag != 0);
         clearControlFor(sidekick, handle.p2.grabFlag != 0);
         handle.p1.grabFlag = 0;
         handle.p2.grabFlag = 0;
+    }
+
+    private AbstractPlayableSprite firstTrackedSidekick() {
+        return services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                ? sidekick
+                : null;
     }
 
     private AbstractPlayableSprite resolveMainPlayer() {

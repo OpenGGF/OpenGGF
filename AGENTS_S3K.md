@@ -154,6 +154,16 @@ at runtime. Both must be implemented for visual accuracy.
 
 When implementing S3K objects, bosses, or badniks, **always check for existing utilities before writing new code**. The following patterns have been reimplemented multiple times and should be reused:
 
+### Object Behavior Contracts
+
+New S3K object, boss, badnik, and trace work should use the shared object-physics contracts when they fit:
+
+- Use `ObjectControlState` for native object-control bit intent and derived movement, touch, solid, and CPU predicates. Do not add raw object-control setter combinations unless they are compatibility bridges with tests.
+- Use `ObjectPlayerQuery` plus an explicit `ObjectPlayerParticipationPolicy` for player selection. Distinguish native P1/P2 slot behavior from OpenGGF's extended multi-sidekick behavior deliberately.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
+- Use `ObjectLifetimeOps` for destruction, offscreen expiry, respawn-latch updates, dynamic expiry, and slot transfer semantics.
+- Declare canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` values when they preserve current behavior. Leave bespoke boss or multi-part object behavior explicit and covered by focused tests.
+
 ### Physics & Movement
 
 | Utility | Package | ROM Equivalent | API |

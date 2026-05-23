@@ -236,9 +236,9 @@ spawned, body vs. detached part), plan to split them into separate classes.
 | `anim(a0)` values 0/1/2 | `currentAnim` field: IDLE, DETECTING, FIRING |
 | `x_vel(a0)` = $400 | `xVelocity` field with fixed-point math |
 | `collision_flags(a0)` = $9B | `getCollisionFlags()` returns 0x9B |
-| `AllocateObject` + copy | `new ArrowProjectileInstance(...)` + `addDynamicObject()` |
+| `AllocateObject` + copy | `spawnChild(...)` / `spawnFreeChild(...)`; reserve direct manager allocation for documented bridge code |
 | `MarkObjGone` | `isOnScreen()` check |
-| `DeleteObject` | `setDestroyed(true)` |
+| `DeleteObject` | `ObjectLifetimeOps` / compatibility deletion helper; legacy code may still use `setDestroyed(true)` |
 | `PlaySound` | `services().playSfx(id)` |
 | `AnimateSprite` | Manual timer + frame update (or engine animation system) |
 
@@ -381,17 +381,16 @@ detecting; when player leaves during detection, switch to firing.
 private void fireArrow() {
     services().playSfx(Sonic2Sfx.PRE_ARROW_FIRING.id);  // SndID_PreArrowFiring
 
-    ObjectManager objectManager = services().objectManager();
-    if (objectManager == null) return;
-
-    ArrowProjectileInstance arrow = new ArrowProjectileInstance(
-            spawn, currentX, currentY, hFlip);
-    objectManager.addDynamicObject(arrow);  // equivalent of AllocateObject
+    spawnChild(() -> new ArrowProjectileInstance(
+            spawn, currentX, currentY, hFlip));  // equivalent of AllocateObject
 }
 ```
 
 In the ASM, `AllocateObject` finds a free slot and the code copies properties manually.
-In the engine, we create a new instance and add it to the object manager.
+In the engine, prefer the `level.objects` child-spawn helpers so construction context,
+parentage, and lifecycle policies stay centralized. Direct `addDynamicObject(...)`
+calls are compatibility bridges for legacy code or unusual allocation paths that cannot
+use the standard helpers.
 
 ### Rendering
 
@@ -480,13 +479,13 @@ public void update(int frameCounter, PlayableEntity playerEntity) {
 
     // Wall collision check (ObjCheckLeftWallDist / ObjCheckRightWallDist)
     if (checkWallCollision()) {
-        setDestroyed(true);  // DeleteObject
+        ObjectLifetimeOps.deleteNoRespawn(this);  // DeleteObject
         return;
     }
 
     // MarkObjGone equivalent
     if (!isOnScreen(480)) {
-        setDestroyed(true);
+        ObjectLifetimeOps.deleteNoRespawn(this);
     }
 }
 ```
@@ -636,14 +635,30 @@ When implementing a new object:
    every constant.
 2. **Decide on class structure.** One class per logical entity. If the ASM uses different
    routines for a parent and child, split into separate classes.
-3. **Register it.** Name in `RegistryData`, factory in `Registry`.
-4. **Implement init from the constructor.** Everything in routine 0 becomes constructor
+3. **Choose shared contracts.** Use canonical profiles under
+   `com.openggf.game.profiles.*` for solid, touch-response, and lifecycle semantics when
+   the object fits an existing family. If an old provider method is still the source of
+   truth, go through the `level.objects` compatibility adapter instead of adding another
+   game-local profile shape.
+4. **Declare player participation.** Use `ObjectPlayerQuery` and
+   `ObjectPlayerParticipationPolicy` for main-player, native P1/P2, all-player, nearest,
+   or extended-sidekick behavior. Direct first-sidekick or focused-player checks need a
+   native-only reason backed by a test or guard baseline.
+5. **Register it.** Name in `RegistryData`, factory in `Registry`.
+6. **Implement init from the constructor.** Everything in routine 0 becomes constructor
    logic.
-5. **Implement the main loop in `update()`.** This is the code that runs every frame.
-6. **Implement rendering.** Use `getRenderer(artKey)` and `drawFrameIndex()`.
-7. **Wire collision if needed.** Implement `TouchResponseProvider` for harmful objects,
+7. **Implement the main loop in `update()`.** This is the code that runs every frame.
+   Use `ObjectControlState` for object-control intent instead of adding raw
+   object-control setter combinations.
+8. **Implement rendering.** Use `getRenderer(artKey)` and `drawFrameIndex()`.
+9. **Wire collision if needed.** Implement `TouchResponseProvider` for harmful objects,
    or implement `SolidObjectProvider` for solid platforms.
-8. **Test manually, then write automated tests.**
+10. **Wire lifetime behaviour.** Use `ObjectLifetimeOps` or the existing
+    `level.objects` wrapper for destruction, offscreen expiry, respawn latches, and slot
+    transfer. Treat direct `setDestroyed(true)` as legacy unless there is a documented
+    compatibility reason.
+11. **Test manually, then write automated tests.** If a source guard needs a baseline for
+    existing legacy code, ratchet it down when your object migrates instead of growing it.
 
 The [Object Checklists](../../OBJECT_CHECKLIST.md) show which objects are implemented and
 which are still needed.

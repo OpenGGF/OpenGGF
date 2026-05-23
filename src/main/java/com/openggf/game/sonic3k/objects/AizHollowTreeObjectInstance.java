@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -73,9 +74,9 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         updatePlayer(player, PLAYER_SLOT_MAIN, true);
-        var sidekicks = services().sidekicks();
-        if (!sidekicks.isEmpty()) {
-            updatePlayer((AbstractPlayableSprite) sidekicks.getFirst(), PLAYER_SLOT_SIDEKICK, false);
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
+        if (sidekick != null) {
+            updatePlayer(sidekick, PLAYER_SLOT_SIDEKICK, false);
         }
         updateCameraLock(player);
     }
@@ -83,6 +84,12 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // Object is logic-only in ROM (no mappings/art configured in Obj_AIZHollowTree init).
+    }
+
+    private AbstractPlayableSprite firstTrackedSidekick() {
+        return services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                ? sidekick
+                : null;
     }
 
     private void updatePlayer(AbstractPlayableSprite player,
@@ -95,7 +102,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
 
         if (releaseObjectControlPending[slot]) {
             releaseObjectControlPending[slot] = false;
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             lastDecision[slot] = "release-control";
         }
 
@@ -180,9 +187,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         // The tree owns the player's vertical path and animation while riding.
         // setPlayerOnTree applies the preserved horizontal inertia before the
         // ROM path formula so the path delta still uses the moved x_pos.
-        player.setObjectControlled(true);
-        player.setObjectControlSuppressesMovement(false);
-        player.setObjectControlAllowsCpu(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
         player.setSuppressGroundWallCollision(true);
         player.setControlLocked(false);
         player.setAir(false);
@@ -286,7 +291,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         player.setForcedAnimationId(-1);
         player.setObjectMappingFrameControl(false);
         player.setControlLocked(false);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setSuppressGroundWallCollision(false);
         releaseObjectControlPending[slot] = false;
         player.setXSpeed((short) (player.getXSpeed() >> 1));

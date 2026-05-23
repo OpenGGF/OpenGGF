@@ -24,6 +24,7 @@ import com.openggf.timer.TimerManager;
 
 import com.openggf.audio.GameAudioProfile;
 
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import com.openggf.audio.AudioManager;
@@ -2683,6 +2684,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setObjectControlSuppressesMovement(boolean objectControlSuppressesMovement) {
                 this.objectControlSuppressesMovement = objectControlSuppressesMovement;
+        }
+
+        public void applyObjectControlState(ObjectControlState state) {
+                Objects.requireNonNull(state, "state");
+                setObjectControlled(state.objectControlled());
+                if (state.objectControlled() && state.writesObjectControlAllowsCpu()) {
+                        setObjectControlAllowsCpu(state.objectControlAllowsCpu());
+                }
+                setObjectControlSuppressesMovement(state.objectControlSuppressesMovement());
         }
 
         /**

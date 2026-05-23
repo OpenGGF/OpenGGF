@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
@@ -472,6 +473,11 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return true;  // Platform is only solid from the top
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
     }
 
     @Override

@@ -2,7 +2,6 @@ package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.rings.RingManager;
 import com.openggf.game.PlayableEntity;
 
@@ -48,7 +47,7 @@ public class SignpostSparkleObjectInstance extends AbstractObjectInstance {
             animTimer = 0;
             animFrame++;
             if (animFrame >= totalFrames) {
-                setDestroyed(true);
+                ObjectLifetimeOps.expireDynamic(this);
             }
         }
     }

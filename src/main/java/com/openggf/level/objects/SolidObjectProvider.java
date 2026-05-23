@@ -5,6 +5,10 @@ import com.openggf.game.PlayableEntity;
 public interface SolidObjectProvider {
     SolidObjectParams getSolidParams();
 
+    default SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fromProvider(this);
+    }
+
     default SolidExecutionMode solidExecutionMode() {
         return SolidExecutionMode.AUTO_AFTER_UPDATE;
     }

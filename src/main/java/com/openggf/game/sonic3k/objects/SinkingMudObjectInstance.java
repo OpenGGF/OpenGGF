@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -89,7 +90,17 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity player) {
         killedThisFrame.clear();
-        trackedPlayers = collectPlayers(player);
+        ObjectServices svc = tryServices();
+        List<PlayableEntity> participants = svc != null
+                ? svc.playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)
+                : List.of();
+        if (player != null && !participants.contains(player)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(player);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
+        }
+        trackedPlayers = participants;
         for (PlayableEntity entity : trackedPlayers) {
             advancePlayerSurface(entity);
         }
@@ -195,23 +206,6 @@ public class SinkingMudObjectInstance extends AbstractObjectInstance
         }
         int zoneId = svc.romZoneId();
         return zoneId >= Sonic3kZoneIds.ZONE_ALZ && zoneId <= Sonic3kZoneIds.ZONE_EMZ;
-    }
-
-    private List<PlayableEntity> collectPlayers(PlayableEntity mainPlayer) {
-        List<PlayableEntity> players = new ArrayList<>(4);
-        if (mainPlayer != null) {
-            players.add(mainPlayer);
-        }
-
-        ObjectServices svc = tryServices();
-        if (svc != null) {
-            for (PlayableEntity sidekick : svc.sidekicks()) {
-                if (sidekick != null && sidekick != mainPlayer) {
-                    players.add(sidekick);
-                }
-            }
-        }
-        return players;
     }
 
     private boolean isDebugViewEnabled() {

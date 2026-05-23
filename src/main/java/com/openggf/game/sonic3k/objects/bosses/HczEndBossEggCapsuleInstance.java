@@ -14,11 +14,14 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -132,10 +135,11 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (!opened) {
             // Check if player is standing on the button (on top of capsule)
-            checkButtonPress(playerEntity);
-            for (PlayableEntity sidekickEntity : services().sidekicks()) {
-                if (!opened) {
-                    checkButtonPress(sidekickEntity);
+            for (PlayableEntity candidate : playerQuery(playerEntity)
+                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                checkButtonPress(candidate);
+                if (opened) {
+                    break;
                 }
             }
         } else if (!resultsStarted) {
@@ -269,17 +273,17 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         if (resultsStarted) return;
         resultsStarted = true;
         services().gameState().setEndOfLevelActive(true);
-        lockForResults(player);
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                lockForResults(sidekick);
+        for (PlayableEntity candidate : playerQuery(player)
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (candidate instanceof AbstractPlayableSprite sprite) {
+                lockForResults(sprite);
             }
         }
         spawnChild(() -> new S3kResultsScreenObjectInstance(getPlayerCharacter(), services().currentAct()));
     }
 
     private void lockForResults(AbstractPlayableSprite sprite) {
-        sprite.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setControlLocked(true);
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);
@@ -291,6 +295,11 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
         return S3kRuntimeStates.resolvePlayerCharacter(
                 services().zoneRuntimeRegistry(),
                 services().configuration());
+    }
+
+    private ObjectPlayerQuery playerQuery(PlayableEntity updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> updatePlayer, query::sidekicks);
     }
 
     // ===== Geyser cutscene (delegated from HczEndBossInstance) =====

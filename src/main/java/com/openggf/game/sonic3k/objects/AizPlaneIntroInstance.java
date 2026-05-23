@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.physics.SwingMotion;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.util.ArrayList;
@@ -233,6 +234,9 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
     public static int getIntroScrollOffset() { return introScrollOffset; }
     public static boolean isMainLevelPhaseActive() { return mainLevelPhaseActive; }
     public static void setMainLevelPhaseActive(boolean active) { mainLevelPhaseActive = active; }
+    public static boolean isIntroNormalRefreshCounterBridgeActive() {
+        return activeIntroInstance != null;
+    }
     public static AizPlaneIntroInstance getActiveIntroInstance() { return activeIntroInstance; }
     public static void adoptActiveIntroInstance(AizPlaneIntroInstance instance) { activeIntroInstance = instance; }
     public static void resetIntroPhaseState() {
@@ -381,7 +385,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
                 var focusedSprite = services().camera().getFocusedSprite();
                 if (focusedSprite instanceof AbstractPlayableSprite ps) {
                     ps.setControlLocked(false);
-                    ps.setObjectControlled(false);
+                    ObjectControlState.none().applyTo(ps);
                     ps.setHidden(false);
                 }
             } catch (Exception e) {
@@ -664,7 +668,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
             player.setSubpixelRaw(0, 0);
             player.setAir(false);
             player.setControlLocked(true);
-            player.setObjectControlled(true);
+            ObjectControlState.engineScriptedPreserveCpuMovementSuppressed().applyTo(player);
             player.setHidden(true);
             ownsPlayerControl = true;
         }
@@ -1025,7 +1029,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
             // shows hurt routine/air/velocity on the release frame.
             if (player != null) {
                 player.setHidden(false);
-                player.setObjectControlled(false);
+                ObjectControlState.none().applyTo(player);
                 ownsPlayerControl = false;
                 player.setYSpeed((short) -0x400);
                 player.setXSpeed((short) -0x200);

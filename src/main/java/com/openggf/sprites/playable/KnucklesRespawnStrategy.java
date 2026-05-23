@@ -69,7 +69,7 @@ public class KnucklesRespawnStrategy implements SidekickRespawnStrategy {
         }
 
         sidekick.setControlLocked(true);
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setXSpeed((short) 0);
         sidekick.setYSpeed((short) 0);
         sidekick.setGSpeed((short) 0);
@@ -85,7 +85,7 @@ public class KnucklesRespawnStrategy implements SidekickRespawnStrategy {
 
         if (!dropping) {
             sidekick.setControlLocked(true);
-            sidekick.setObjectControlled(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
             sidekick.setForcedAnimationId(glideAnimId);
 
             // Horizontal movement toward leader
@@ -111,7 +111,7 @@ public class KnucklesRespawnStrategy implements SidekickRespawnStrategy {
             if (xAligned || timedOut) {
                 dropping = true;
                 sidekick.setControlLocked(false);
-                sidekick.setObjectControlled(false);
+                ObjectControlState.none().applyTo(sidekick);
                 sidekick.setForcedAnimationId(-1);
                 sidekick.setXSpeed((short) 0);
             }

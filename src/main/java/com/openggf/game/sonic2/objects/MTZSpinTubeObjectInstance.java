@@ -16,6 +16,7 @@ import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
 import java.util.List;
@@ -222,7 +223,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance {
         mainState = 2;
 
         // ROM: move.b #$81,obj_control(a1)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
 
         // ROM: move.b #AniIDSonAni_Roll,anim(a1)
@@ -419,7 +420,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance {
         mainPath = null;
 
         // ROM: clr.b obj_control(a1)
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
 
         // Restore normal render priority

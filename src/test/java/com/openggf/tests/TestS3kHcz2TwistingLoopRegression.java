@@ -114,6 +114,10 @@ public class TestS3kHcz2TwistingLoopRegression {
             if (!captured && objCtrl) {
                 captured = true;
                 captureFrame = frame;
+                assertTrue(sprite.isObjectControlAllowsCpu(),
+                        "HCZ twisting loop writes object_control bit 0, so sidekick CPU/touch remain allowed");
+                assertTrue(sprite.isObjectControlSuppressesMovement(),
+                        "HCZ twisting loop bit 0 should suppress normal movement while captured");
             }
 
             if (captured && objCtrl) {
@@ -122,6 +126,11 @@ public class TestS3kHcz2TwistingLoopRegression {
 
             // Detect successful top exit: was captured, now released, Y near top
             if (captured && !objCtrl && cy < 400) {
+                assertTrue(captureFrame >= 0);
+                assertTrue(sustainedFrames >= 20);
+                assertTrue(!sprite.isObjectControlAllowsCpu()
+                                && !sprite.isObjectControlSuppressesMovement(),
+                        "HCZ twisting loop release should clear all object-control policy flags");
                 exitedAtTop = true;
                 break;
             }

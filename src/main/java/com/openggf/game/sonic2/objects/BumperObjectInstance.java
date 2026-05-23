@@ -7,9 +7,15 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -101,6 +107,17 @@ public class BumperObjectInstance extends AbstractObjectInstance
      */
     private static final int COLLISION_HALF_HEIGHT = 8;
 
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY,
+            true,
+            false,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+
     // ========================================================================
     // Animation Constants
     // ========================================================================
@@ -150,9 +167,7 @@ public class BumperObjectInstance extends AbstractObjectInstance
             applyBounce(player, frameCounter);
         }
         if ((pending & 0x02) != 0) {
-            List<PlayableEntity> sidekicks = services().sidekicks();
-            if (sidekicks != null && !sidekicks.isEmpty()
-                    && sidekicks.getFirst() instanceof AbstractPlayableSprite sidekick) {
+            if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
                 applyBounce(sidekick, frameCounter);
             }
         }
@@ -237,6 +252,16 @@ public class BumperObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return collisionProperty;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

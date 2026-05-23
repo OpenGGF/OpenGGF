@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -13,10 +14,15 @@ import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.scroll.ZoneScrollHandler;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -318,24 +324,14 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         cutsceneCenterX = player.getX();
         cutsceneCurrentY = player.getY();
 
-        // Keep player locked in float animation during descent
-        player.setObjectControlled(true);
-        player.setControlLocked(true);
-        player.setAir(true);
-        player.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
-        player.setGSpeed((short) 0);
-
-        // Do the same for sidekick
-        for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
-            sidekick.setObjectControlled(true);
-            sidekick.setControlLocked(true);
-            sidekick.setAir(true);
-            sidekick.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
-            sidekick.setXSpeed((short) 0);
-            sidekick.setYSpeed((short) 0);
-            sidekick.setGSpeed((short) 0);
+        for (AbstractPlayableSprite participant : cutsceneParticipants()) {
+            ObjectControlState.nativeBit7FullControl().applyTo(participant);
+            participant.setControlLocked(true);
+            participant.setAir(true);
+            participant.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
+            participant.setXSpeed((short) 0);
+            participant.setYSpeed((short) 0);
+            participant.setGSpeed((short) 0);
         }
 
         LOG.info("HCZ: started whirlpool descent cutscene from Y=" + cutsceneCurrentY
@@ -363,21 +359,19 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
         int sineAngle = (cutsceneFrame * CUTSCENE_OSCILLATION_SPEED) & 0xFF;
         int xOffset = (TrigLookupTable.sinHex(sineAngle) * CUTSCENE_X_AMPLITUDE) >> 8;
 
-        // Position player — all using top-left coordinates
-        player.setX((short) (cutsceneCenterX + xOffset));
-        player.setY((short) cutsceneCurrentY);
-        // Zero velocities so physics don't interfere
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
-
-        // Move sidekick along the same path (slight delay)
-        for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
-            int sidekickAngle = ((cutsceneFrame - 8) * CUTSCENE_OSCILLATION_SPEED) & 0xFF;
-            int sidekickXOffset = (TrigLookupTable.sinHex(sidekickAngle) * CUTSCENE_X_AMPLITUDE) >> 8;
-            sidekick.setX((short) (cutsceneCenterX + sidekickXOffset));
-            sidekick.setY((short) (cutsceneCurrentY + 16));
-            sidekick.setXSpeed((short) 0);
-            sidekick.setYSpeed((short) 0);
+        for (AbstractPlayableSprite participant : cutsceneParticipants()) {
+            if (participant == player) {
+                participant.setX((short) (cutsceneCenterX + xOffset));
+                participant.setY((short) cutsceneCurrentY);
+            } else {
+                int sidekickAngle = ((cutsceneFrame - 8) * CUTSCENE_OSCILLATION_SPEED) & 0xFF;
+                int sidekickXOffset = (TrigLookupTable.sinHex(sidekickAngle) * CUTSCENE_X_AMPLITUDE) >> 8;
+                participant.setX((short) (cutsceneCenterX + sidekickXOffset));
+                participant.setY((short) (cutsceneCurrentY + 16));
+            }
+            // Zero velocities so physics don't interfere
+            participant.setXSpeed((short) 0);
+            participant.setYSpeed((short) 0);
         }
 
         // Check if we've reached the target depth
@@ -392,25 +386,30 @@ public class Sonic3kHCZEvents extends Sonic3kZoneEvents {
     private void endCutscene(AbstractPlayableSprite player) {
         cutsceneActive = false;
 
-        // Release player
-        player.setControlLocked(false);
-        player.setObjectControlled(false);
-        player.setForcedAnimationId(-1);
-        player.setAir(true);
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
-
-        // Release sidekick
-        for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
-            sidekick.setControlLocked(false);
-            sidekick.setObjectControlled(false);
-            sidekick.setForcedAnimationId(-1);
-            sidekick.setAir(true);
-            sidekick.setXSpeed((short) 0);
-            sidekick.setYSpeed((short) 0);
+        for (AbstractPlayableSprite participant : cutsceneParticipants()) {
+            participant.setControlLocked(false);
+            ObjectControlState.none().applyTo(participant);
+            participant.setForcedAnimationId(-1);
+            participant.setAir(true);
+            participant.setXSpeed((short) 0);
+            participant.setYSpeed((short) 0);
         }
 
         LOG.info("HCZ: whirlpool descent cutscene ended at Y=" + player.getCentreY());
+    }
+
+    private List<AbstractPlayableSprite> cutsceneParticipants() {
+        List<AbstractPlayableSprite> sidekicks = List.copyOf(spriteManager().getSidekicks());
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> camera().getFocusedSprite(),
+                () -> sidekicks);
+        List<AbstractPlayableSprite> participants = new ArrayList<>();
+        for (PlayableEntity player : query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (player instanceof AbstractPlayableSprite playable) {
+                participants.add(playable);
+            }
+        }
+        return participants;
     }
 
     // =========================================================================

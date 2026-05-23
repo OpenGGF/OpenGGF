@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -269,10 +270,11 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance {
             processCharacter(player1, p1State);
         }
 
-        // Process sidekick (Player 2)
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            processCharacter((AbstractPlayableSprite) sidekickEntity, p2State);
-            break; // Only first sidekick (matches ROM's single Player_2)
+        // Process native Player 2 only. Extra engine sidekicks are intentionally
+        // outside the ROM tunnel state block.
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        if (nativeP2 instanceof AbstractPlayableSprite sidekick) {
+            processCharacter(sidekick, p2State);
         }
     }
 
@@ -312,7 +314,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance {
         state.phase = 2;
 
         // ROM: move.b #$81,object_control(a1)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
 
         // ROM: move.b #2,anim(a1)
@@ -613,7 +615,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance {
     // =========================================================================
 
     private void releasePlayer(AbstractPlayableSprite player, CharState state) {
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
         state.phase = 0;
         state.path = null;

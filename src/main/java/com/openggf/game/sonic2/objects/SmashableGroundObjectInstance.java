@@ -226,9 +226,7 @@ public class SmashableGroundObjectInstance extends BoxObjectInstance
 
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         // The original object is destroyed and becomes fragments
         setDestroyed(true);

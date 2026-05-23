@@ -12,6 +12,7 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.util.AnimationTimer;
@@ -213,6 +214,11 @@ public class NebulaBadnikInstance extends AbstractBadnikInstance {
     @Override
     protected int getCollisionSizeIndex() {
         return COLLISION_SIZE_INDEX;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.standardEnemy();
     }
 
     @Override

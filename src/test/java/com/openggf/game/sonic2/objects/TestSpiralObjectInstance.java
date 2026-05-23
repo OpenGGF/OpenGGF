@@ -93,6 +93,29 @@ class TestSpiralObjectInstance {
     }
 
     @Test
+    void duplicateSidekickEntryIsProcessedOnlyOnce() {
+        TestablePlayableSprite tails = playerAt("tails_p2", 0x0200 - 0x00C8, 0x0100 + 0x0020);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setXSpeed((short) 0x0600);
+        tails.setGSpeed((short) 0x0500);
+
+        SpiralObjectInstance spiral = newSpiral(new TestObjectServices()
+                .withSidekicks(List.of(tails, tails)));
+        tails.setLatchedSolidObject(Sonic2ObjectIds.SPIRAL, spiral);
+        markRiding(spiral, tails);
+
+        TestablePlayableSprite sonic = playerAt("sonic", 0x0200, 0x0100);
+        sonic.setAir(false);
+        sonic.setOnObject(false);
+
+        spiral.update(220, sonic);
+
+        assertFalse(tails.isOnObject(),
+                "Duplicate sidekick entries should not let Obj06 fall off and re-capture the same player in one frame");
+    }
+
+    @Test
     void latchSurvivesInlineObjectCleanupWhenDrivenThroughObjectManager() {
         ObjectSpawn spawn = new ObjectSpawn(0x0200, 0x0100, Sonic2ObjectIds.SPIRAL, 0x00, 0, false, 0);
         ObjectManager objectManager = newSpiralManager(List.of(spawn));

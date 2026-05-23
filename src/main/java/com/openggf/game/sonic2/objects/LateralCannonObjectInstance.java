@@ -8,6 +8,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -18,6 +19,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import com.openggf.debug.DebugColor;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -83,6 +85,8 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
 
     // Width pixels from SubObjData: $18
     private static final int WIDTH_PIXELS = 0x18;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     // ========================================================================
     // State Machine
@@ -135,7 +139,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
         switch (routine) {
             case WAIT_FOR_PHASE -> updateWaitForPhase(frameCounter);
             case EXTEND_ANIM -> updateAnimation(EXTEND_FRAMES, Routine.EXTENDED_HOLD);
@@ -241,22 +245,26 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
     private void dropStandingPlayers(AbstractPlayableSprite mainChar) {
         ObjectManager objectManager = services().objectManager();
 
-        // bclr #p1_standing_bit,status(a0) / bclr #status.player.on_object,status(a1)
+        // bclr #p1/p2_standing_bit,status(a0) / bclr #status.player.on_object,status(a1)
         // bset #status.player.in_air,status(a1)
-        if (mainChar != null && objectManager.isRidingObject(mainChar, this)) {
-            objectManager.clearRidingObject(mainChar);
-            mainChar.setOnObject(false);
-            mainChar.setAir(true);
-        }
-
-        // bclr #p2_standing_bit,status(a0) - same for sidekick
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (objectManager.isRidingObject(sidekick, this)) {
-                objectManager.clearRidingObject(sidekick);
-                sidekick.setOnObject(false);
-                sidekick.setAir(true);
+        for (PlayableEntity participant : playerParticipants(mainChar)) {
+            if (objectManager.isRidingObject(participant, this)) {
+                objectManager.clearRidingObject(participant);
+                participant.setOnObject(false);
+                participant.setAir(true);
             }
         }
+    }
+
+    private List<PlayableEntity> playerParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
     }
 
     // ========================================================================

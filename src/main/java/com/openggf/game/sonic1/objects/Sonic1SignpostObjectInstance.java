@@ -7,6 +7,7 @@ import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -132,9 +133,7 @@ public class Sonic1SignpostObjectInstance extends AbstractObjectInstance {
         int currentAct = services().currentAct();
         if (currentAct >= BOSS_ACT_INDEX) {
             ObjectManager objMgr = services().objectManager();
-            if (objMgr != null) {
-                objMgr.markRemembered(spawn);
-            }
+            ObjectLifetimeOps.markSpawnRemembered(objMgr, spawn);
             setDestroyed(true);
         }
     }
