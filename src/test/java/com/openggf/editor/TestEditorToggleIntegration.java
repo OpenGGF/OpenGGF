@@ -54,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -69,6 +70,8 @@ import static org.lwjgl.glfw.GLFW.GLFW_PRESS;
 import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 
 class TestEditorToggleIntegration {
+    private static final Path S2_ROM = Path.of("Sonic The Hedgehog 2 (W) (REV01) [!].gen");
+
     private static final ParallaxManager SINGLE_CHUNK_BG_PERIOD = new ParallaxManager() {
         @Override
         public int getBgPeriodWidth() {
@@ -211,6 +214,7 @@ class TestEditorToggleIntegration {
 
     @Test
     void editorRoundTrip_preservesMutableLevelMutations() throws Exception {
+        assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
         GameplayModeContext gameplayMode = createGameplayMode(engine);
@@ -245,6 +249,7 @@ class TestEditorToggleIntegration {
 
     @Test
     void resumePlaytestFromEditor_savesEditorControllerMutableLevelAfterRuntimeTeardown() throws Exception {
+        assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
         GameplayModeContext gameplayMode = createGameplayMode(engine);
@@ -589,6 +594,7 @@ class TestEditorToggleIntegration {
 
     @Test
     void resumePlaytestFromEditor_repairsProgrammaticOutOfBoundsCursorBeforeApplyingSpawn() throws Exception {
+        assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
         createGameplayMode(engine, (short) 100, (short) 180);
@@ -661,6 +667,7 @@ class TestEditorToggleIntegration {
 
     @Test
     void outOfBoundsEditorMovement_resumesFromClampedCursorPosition() {
+        assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
         createGameplayMode(engine, (short) 100, (short) 180);
@@ -799,6 +806,7 @@ class TestEditorToggleIntegration {
 
     @Test
     void editorMvpFlow_shiftTabMoveEyedropApplyResumeAndFreshStartRemainConnected() {
+        assumeS2RomAvailableForResumeReload();
         enableEditor();
         Engine engine = new Engine();
         GameplayModeContext gameplayMode = createGameplayMode(engine, (short) 0, (short) 0);
@@ -898,6 +906,10 @@ class TestEditorToggleIntegration {
         gameplayMode.getCamera().setFocusedSprite(player);
         engine.getGameLoop().setGameplayMode(gameplayMode);
         return gameplayMode;
+    }
+
+    private static void assumeS2RomAvailableForResumeReload() {
+        assumeTrue(Files.exists(S2_ROM), "S2 ROM is not available in this environment");
     }
 
     private static void injectLeakedGarbageRom() throws IOException {

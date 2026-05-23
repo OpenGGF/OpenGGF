@@ -65,6 +65,7 @@ public class TestHTZBossTouchResponse {
         when(player.getYRadius()).thenReturn((short) 20);
         when(player.getCrouching()).thenReturn(false);
         when(player.getRolling()).thenReturn(true);
+        when(player.getAnimationId()).thenReturn(2);
         when(player.getSpindash()).thenReturn(false);
         when(player.getInvincibleFrames()).thenReturn(0);
         when(player.getInvulnerable()).thenReturn(false);
@@ -109,6 +110,7 @@ public class TestHTZBossTouchResponse {
         when(dynamicPlayer.getYRadius()).thenReturn((short) 20);
         when(dynamicPlayer.getCrouching()).thenReturn(false);
         when(dynamicPlayer.getRolling()).thenAnswer(invocation -> rolling.get());
+        when(dynamicPlayer.getAnimationId()).thenAnswer(invocation -> rolling.get() ? 2 : 0);
         when(dynamicPlayer.getSpindash()).thenReturn(false);
         when(dynamicPlayer.getInvincibleFrames()).thenReturn(0);
         when(dynamicPlayer.getInvulnerable()).thenReturn(false);

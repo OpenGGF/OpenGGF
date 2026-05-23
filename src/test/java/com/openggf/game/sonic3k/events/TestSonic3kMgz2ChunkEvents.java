@@ -36,6 +36,7 @@ import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Tests the MGZ Act 2 chunk-event terrain swaps.
@@ -66,6 +67,7 @@ class TestSonic3kMgz2ChunkEvents {
 
     @Test
     void firstChunkTrigger_armsOnlyAfterQuakeStartsContinuousShake() throws IOException {
+        assumeTrue(Files.exists(QUAKE_CHUNK_DATA), "S3K disassembly quake chunk fixture is not available");
         AbstractPlayableSprite player = placePlayer(0x790, 0x590);
         Sonic3kMGZEvents events = eventsWithQuakeChunkData();
         events.init(1);
@@ -88,6 +90,7 @@ class TestSonic3kMgz2ChunkEvents {
 
     @Test
     void firstChunkEvent_appliesRealBlockStates_onRomCadence() throws IOException {
+        assumeTrue(Files.exists(QUAKE_CHUNK_DATA), "S3K disassembly quake chunk fixture is not available");
         AbstractPlayableSprite player = placePlayer(0x790, 0x590);
         Sonic3kMGZEvents events = eventsWithQuakeChunkData();
         events.init(1);
