@@ -8,7 +8,13 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -141,6 +147,16 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
         private static final int WALL_SENSOR_OFFSET = 8; // $44(a0) = +/-8 before ObjHitWall*_DoRoutine.
         private static final int BREAK_DELAY = 3;
         private static final int[] BREAK_FRAMES = {1, 2, 3};
+        private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                false,
+                TouchShieldDeflectCapability.SHIELD_DEFLECT,
+                SHIELD_REACTION_BOUNCE,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
         @RewindTransient(reason = "structural parent link; child captures its own motion state")
         private final StarPointerBadnikInstance parent;
@@ -200,6 +216,16 @@ public final class StarPointerBadnikInstance extends AbstractS3kBadnikInstance {
         @Override
         public int getCollisionProperty() {
             return 0;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return TOUCH_RESPONSE_PROFILE;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return TOUCH_RESPONSE_PROFILE;
         }
 
         @Override

@@ -9,6 +9,12 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import org.mockito.ArgumentCaptor;
 
@@ -17,6 +23,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -123,8 +130,23 @@ public class TestTurtloidBadnikInstance {
         TurtloidRiderInstance rider = (TurtloidRiderInstance) getField(base, "rider");
 
         assertNotNull(rider, "Turtloid should spawn a rider child");
+        TouchResponseProfile expectedProfile = new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                false,
+                false,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+        assertEquals(expectedProfile, rider.getTouchResponseProfile(),
+                "The rider should preserve the S2 render-flag opt-out through its touch-response profile");
         assertFalse(rider.requiresRenderFlagForTouch(),
                 "S2 TouchResponse scans collision_flags directly; SCZ Turtloid rider must remain hittable before the engine on-screen touch gate catches up");
+        assertDoesNotThrow(() -> TurtloidRiderInstance.class.getDeclaredMethod("getTouchResponseProfile"));
+        assertEquals(expectedProfile, rider.getTouchResponseProfile(false));
+        assertDoesNotThrow(() -> TurtloidRiderInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class));
     }
 
     @Test

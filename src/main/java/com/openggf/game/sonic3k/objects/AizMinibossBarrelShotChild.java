@@ -7,7 +7,13 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -27,10 +33,21 @@ import java.util.List;
 public class AizMinibossBarrelShotChild extends AbstractObjectInstance implements TouchResponseProvider {
     private static final int COLLISION_FLAGS_HAZARD = 0x98;
     private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
+    private static final int SHIELD_REACTION_FLAGS = SHIELD_REACTION_BOUNCE | (1 << 4);
     private static final int FRAME_RISE_A = 0x0C;
     private static final int FRAME_RISE_B = 0x0D;
     private static final int PROJECTILE_PALETTE = 0;
     private static final int Y_RADIUS = 8; // ROM loc_68CE4: y_radius
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            false,
+            true,
+            false,
+            TouchShieldDeflectCapability.SHIELD_DEFLECT,
+            SHIELD_REACTION_FLAGS,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     private static final int[] SELECT_TABLE_NORMAL = {
             2, 3, 4, 0, 0, 2, 4, 0, 1, 3, 4, 0, 0, 1, 4, 0
@@ -273,7 +290,17 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
     @Override
     public int getShieldReactionFlags() {
         // Bit 3: bounce shield deflection. Bit 4: fire shield immunity.
-        return SHIELD_REACTION_BOUNCE | (1 << 4);
+        return SHIELD_REACTION_FLAGS;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

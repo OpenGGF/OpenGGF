@@ -9,10 +9,13 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Pattern;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.PlayableEntity;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -111,7 +114,11 @@ public final class HCZWaterSkimHandler {
      */
     public static void update() {
         frameCounter++;
-        AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
+        update(playerQueryFromGameServices(), getWaterLevel(), frameCounter);
+    }
+
+    static void update(ObjectPlayerQuery query, int waterLevel, int frameCounter) {
+        AbstractPlayableSprite player = asPlayableSprite(query.mainPlayerOrNull());
         if (player == null || player.getDead() || player.isDebugMode()) {
             if (skimActiveP1) {
                 skimActiveP1 = false;
@@ -120,19 +127,16 @@ public final class HCZWaterSkimHandler {
             return;
         }
 
-        int waterLevel = getWaterLevel();
         if (waterLevel == 0) {
             return;
         }
 
-        skimActiveP1 = processSkimPhysics(player, skimActiveP1, waterLevel, frameCounter);
+        skimActiveP1 = processSkimPhysics(player, skimActiveP1, waterLevel, frameCounter, true);
 
-        // Process sidekick (P2) if present
-        List<? extends AbstractPlayableSprite> sidekicks = GameServices.sprites().getSidekicks();
-        if (sidekicks != null && !sidekicks.isEmpty()) {
-            AbstractPlayableSprite p2 = sidekicks.getFirst();
-            if (p2 != null && !p2.getDead()) {
-                skimActiveP2 = processSkimPhysics(p2, skimActiveP2, waterLevel, frameCounter);
+        AbstractPlayableSprite p2 = nativeP2From(query);
+        if (p2 != null) {
+            if (!p2.getDead()) {
+                skimActiveP2 = processSkimPhysics(p2, skimActiveP2, waterLevel, frameCounter, false);
             } else if (skimActiveP2) {
                 skimActiveP2 = false;
                 splashAnimFrameP2 = SPLASH_EXIT_FRAME;
@@ -152,7 +156,8 @@ public final class HCZWaterSkimHandler {
     private static boolean processSkimPhysics(AbstractPlayableSprite player,
                                                boolean wasActive,
                                                int waterLevel,
-                                               int frameCounter) {
+                                               int frameCounter,
+                                               boolean isP1) {
         if (!wasActive) {
             // === Activation check (sonic3k.asm:75393-75421) ===
             // Condition 1: y_vel must be zero
@@ -183,7 +188,7 @@ public final class HCZWaterSkimHandler {
             }
 
             // Start splash animation
-            if (player == GameServices.camera().getFocusedSprite()) {
+            if (isP1) {
                 splashAnimFrameP1 = 0;
                 splashAnimTimerP1 = SPLASH_ANIM_DELAY;
             } else {
@@ -201,7 +206,7 @@ public final class HCZWaterSkimHandler {
         // Check jump exit (A/B/C pressed)
         // ROM: andi.w #button_A_mask|button_B_mask|button_C_mask,d0
         if (player.isJumpPressed()) {
-            return exitWithJump(player);
+            return exitWithJump(player, isP1);
         }
 
         // Calculate pin position BEFORE checking/applying it
@@ -214,14 +219,14 @@ public final class HCZWaterSkimHandler {
         // i.e. terrain raised the player above the water surface (e.g. running into a curve).
         // Using unsigned comparison to match ROM's bhi (branch if higher, unsigned).
         if (Integer.compareUnsigned(pinnedY, player.getCentreY()) > 0) {
-            return exitBySpeedLoss(player);
+            return exitBySpeedLoss(player, isP1);
         }
 
         // Check speed threshold — exit if too slow
         // ROM: cmpi.w #$700,d1 / blo.s loc_38646 (sonic3k.asm:75440-75441)
         int absXSpeed = Math.abs(player.getXSpeed());
         if (absXSpeed < SPEED_THRESHOLD) {
-            return exitBySpeedLoss(player);
+            return exitBySpeedLoss(player, isP1);
         }
 
         // NOW pin player Y to water surface (only if still skimming)
@@ -236,7 +241,7 @@ public final class HCZWaterSkimHandler {
             // ROM: move.w x_vel(a1),d0 / beq.s loc_38646 (sonic3k.asm:75452)
             // If friction reduced x_vel to zero, exit skim immediately
             if (player.getXSpeed() == 0) {
-                return exitBySpeedLoss(player);
+                return exitBySpeedLoss(player, isP1);
             }
         }
 
@@ -247,7 +252,6 @@ public final class HCZWaterSkimHandler {
         }
 
         // Advance splash animation
-        boolean isP1 = (player == GameServices.camera().getFocusedSprite());
         if (isP1) {
             advanceSplashAnim(true);
         } else {
@@ -277,7 +281,7 @@ public final class HCZWaterSkimHandler {
      * Exit skim by jumping (A/B/C pressed).
      * ROM: loc_38652 (sonic3k.asm:75481-75491).
      */
-    private static boolean exitWithJump(AbstractPlayableSprite player) {
+    private static boolean exitWithJump(AbstractPlayableSprite player, boolean isP1) {
         player.setYSpeed(JUMP_EXIT_Y_VEL);
         player.setAir(true);
         player.setJumping(true);
@@ -286,7 +290,6 @@ public final class HCZWaterSkimHandler {
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
         player.setRolling(true);
 
-        boolean isP1 = (player == GameServices.camera().getFocusedSprite());
         if (isP1) {
             splashAnimFrameP1 = SPLASH_EXIT_FRAME;
         } else {
@@ -301,8 +304,7 @@ public final class HCZWaterSkimHandler {
      * Exit skim by speed dropping below threshold.
      * ROM: loc_38646 (sonic3k.asm:75473-75476).
      */
-    private static boolean exitBySpeedLoss(AbstractPlayableSprite player) {
-        boolean isP1 = (player == GameServices.camera().getFocusedSprite());
+    private static boolean exitBySpeedLoss(AbstractPlayableSprite player, boolean isP1) {
         if (isP1) {
             splashAnimFrameP1 = SPLASH_EXIT_FRAME;
         } else {
@@ -359,7 +361,7 @@ public final class HCZWaterSkimHandler {
 
         // P1 splash
         if (skimActiveP1 && splashAnimFrameP1 < SPLASH_EXIT_FRAME) {
-            AbstractPlayableSprite p1 = GameServices.camera().getFocusedSprite();
+            AbstractPlayableSprite p1 = asPlayableSprite(playerQueryFromGameServices().mainPlayerOrNull());
             if (p1 != null) {
                 boolean hFlip = p1.getDirection() == Direction.LEFT;
                 splashRenderer.drawFrameIndex(splashAnimFrameP1,
@@ -369,14 +371,11 @@ public final class HCZWaterSkimHandler {
 
         // P2 splash
         if (skimActiveP2 && splashAnimFrameP2 < SPLASH_EXIT_FRAME) {
-            List<? extends AbstractPlayableSprite> sidekicks = GameServices.sprites().getSidekicks();
-            if (sidekicks != null && !sidekicks.isEmpty()) {
-                AbstractPlayableSprite p2 = sidekicks.getFirst();
-                if (p2 != null) {
-                    boolean hFlip = p2.getDirection() == Direction.LEFT;
-                    splashRenderer.drawFrameIndex(splashAnimFrameP2,
-                            p2.getCentreX(), waterLevel, hFlip, false);
-                }
+            AbstractPlayableSprite p2 = nativeP2From(playerQueryFromGameServices());
+            if (p2 != null) {
+                boolean hFlip = p2.getDirection() == Direction.LEFT;
+                splashRenderer.drawFrameIndex(splashAnimFrameP2,
+                        p2.getCentreX(), waterLevel, hFlip, false);
             }
         }
     }
@@ -466,5 +465,22 @@ public final class HCZWaterSkimHandler {
         WaterSystem ws = GameServices.water();
         return ws != null ? ws.getWaterLevelY(
                 com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_HCZ, actId) : 0;
+    }
+
+    private static ObjectPlayerQuery playerQueryFromGameServices() {
+        AbstractPlayableSprite mainPlayer = GameServices.camera().getFocusedSprite();
+        List<? extends PlayableEntity> sidekicks = List.copyOf(GameServices.sprites().getSidekicks());
+        return new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> sidekicks);
+    }
+
+    private static AbstractPlayableSprite nativeP2From(ObjectPlayerQuery query) {
+        List<PlayableEntity> players = query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+        return players.size() > 1 ? asPlayableSprite(players.get(1)) : null;
+    }
+
+    private static AbstractPlayableSprite asPlayableSprite(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite ? sprite : null;
     }
 }

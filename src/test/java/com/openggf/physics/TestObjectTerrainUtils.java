@@ -115,6 +115,42 @@ class TestObjectTerrainUtils {
         assertEquals(-21, result.distance());
     }
 
+    @Test
+    void leftWallFullTileEdgeUsesMirroredDefaultDistanceForEmptyPreviousTile() throws Exception {
+        LevelManager level = mock(LevelManager.class);
+        ChunkDesc emptyDesc = new ChunkDesc(0);
+        SolidTile originalTile = createFlatWidthTile(3, (byte) 16, (byte) 0x10);
+        ChunkDesc originalDesc = new ChunkDesc(3 | 0x2000);
+        int x = 0x2344;
+        int y = 0x1235;
+
+        when(level.getChunkDescAt((byte) 0, x + 16, y)).thenReturn(emptyDesc);
+
+        TerrainCheckResult result = invokeWallEdge(level, originalTile, originalDesc, x, y, true, false);
+
+        // Left-wall probes mirror x before FindWall, so sub_F584 empty default is xInTile, then loc_F576 subtracts $10.
+        assertEquals(-12, result.distance());
+    }
+
+    @Test
+    void leftWallFullTileEdgeUsesMirroredNegativeDistanceForPreviousTile() throws Exception {
+        LevelManager level = mock(LevelManager.class);
+        ChunkDesc previousDesc = new ChunkDesc(7 | 0x2000 | 0x0400);
+        SolidTile previousTile = createFlatWidthTile(7, (byte) -12, (byte) 0x20);
+        SolidTile originalTile = createFlatWidthTile(3, (byte) 16, (byte) 0x10);
+        ChunkDesc originalDesc = new ChunkDesc(3 | 0x2000);
+        int x = 0x2344;
+        int y = 0x1235;
+
+        when(level.getChunkDescAt((byte) 0, x + 16, y)).thenReturn(previousDesc);
+        when(level.getSolidTileForChunkDesc(previousDesc, 0x0D)).thenReturn(previousTile);
+
+        TerrainCheckResult result = invokeWallEdge(level, originalTile, originalDesc, x, y, true, false);
+
+        // sub_F584 negative path uses ~(mirrored xInTile), then loc_F576 subtracts $10.
+        assertEquals(-28, result.distance());
+    }
+
     private static SolidTile createMirroredTile() {
         SolidTile tile = new SolidTile(
                 7,

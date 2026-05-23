@@ -6,6 +6,14 @@ public interface TouchResponseProvider {
     int getCollisionFlags();
     int getCollisionProperty();
 
+    default TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(getMultiTouchRegions() != null);
+    }
+
+    default TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TouchResponseProfile.fromProvider(this, multiRegionSource);
+    }
+
     /**
      * Returns whether touch callbacks should fire every frame while overlapping.
      * <p>

@@ -12,6 +12,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -19,6 +20,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
@@ -147,12 +149,12 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
     @Override
     protected boolean delayFirstIconUpdateAfterBreak() {
-        // ROM Obj_MonitorBreak spawns separate Obj_MonitorContents with
-        // Create_New_Sprite; the child owns the init+rise routine
-        // (sonic3k.asm:40645, 40673-40765). This embedded implementation skips
-        // the shell's same-frame post-break update so the content routine starts
-        // on the next object pass.
-        return true;
+        // ROM Obj_MonitorBreak allocates Obj_MonitorContents after the current
+        // slot, then Obj_MonitorContents init falls through into sub_1D820 on
+        // its first execution (docs/skdisasm/sonic3k.asm:40645-40718). Engine
+        // touch responses break the shell before the post-physics object pass,
+        // so this embedded content must consume that pass rather than skipping it.
+        return false;
     }
 
     private void ensureInitialized() {
@@ -262,9 +264,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         mappingFrame = BROKEN_FRAME;
 
@@ -465,6 +465,11 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         // (docs/skdisasm/sonic3k.asm:40559-40576), whose normal-gravity path
         // adds +4 before the d2/y_radius overlap check (lines 41429-41432).
         return 4;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.monitorSolid(4, false);
     }
 
     @Override

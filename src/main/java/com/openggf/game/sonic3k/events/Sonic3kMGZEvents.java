@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.camera.Camera;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameServices;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LayoutMutationIntent;
@@ -23,8 +24,11 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Sonic;
@@ -32,6 +36,7 @@ import com.openggf.sprites.playable.Tails;
 
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -1079,16 +1084,13 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     }
 
     private void liftBgRisePassengers(AbstractPlayableSprite player, int delta) {
-        player.setCentreY((short) (player.getCentreY() - delta));
-
-        var sidekicks = GameServices.sprites().getSidekicks();
-        if (sidekicks.isEmpty()) {
-            return;
-        }
-
-        for (AbstractPlayableSprite sidekick : sidekicks) {
-            if (sidekick != null && sidekick != player) {
-                sidekick.setCentreY((short) (sidekick.getCentreY() - delta));
+        List<AbstractPlayableSprite> sidekicks = List.copyOf(GameServices.sprites().getSidekicks());
+        ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(
+                () -> player,
+                () -> sidekicks);
+        for (PlayableEntity passenger : playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (passenger instanceof AbstractPlayableSprite playable) {
+                playable.setCentreY((short) (playable.getCentreY() - delta));
             }
         }
     }
@@ -1163,7 +1165,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         tails.setGSpeed((short) 0);
         tails.setSpindash(false);
         tails.setControlLocked(false);
-        tails.setObjectControlled(false);
+        ObjectControlState.none().applyTo(tails);
         tails.setCpuControlled(true);
         SidekickCpuController controller = new SidekickCpuController(tails, player);
         controller.setInitialState(SidekickCpuController.State.MGZ_RESCUE_WAIT);
@@ -1284,7 +1286,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
             player.setGSpeed((short) 0);
             player.setSpindash(false);
             player.setAir(true);
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             restoreBossTransitionPlayerRoutine(player);
             applyTailsAlonePostTransitionCpuRoutine(player);
         }
@@ -1323,7 +1325,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         restoreBossTransitionPlayerRoutine(player);
         tails.setCentreX((short) bossTransitionX);
         tails.setCentreY((short) bossTransitionY);
-        tails.setObjectControlled(false);
+        ObjectControlState.none().applyTo(tails);
         tails.setSpindash(false);
         tails.setAir(true);
         // Obj_MGZ2_BossTransition writes Player_2 routine=2 before CPU routine $14,

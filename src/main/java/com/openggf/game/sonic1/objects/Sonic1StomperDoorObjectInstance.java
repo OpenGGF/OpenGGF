@@ -7,6 +7,7 @@ import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -513,9 +514,7 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
                     // reappear at its original position if the player leaves and
                     // returns. Equivalent to ROM v_objstate respawn bit.
                     ObjectManager objectManager = services().objectManager();
-                    if (objectManager != null) {
-                        objectManager.markRemembered(getSpawn());
-                    }
+                    ObjectLifetimeOps.markSpawnRemembered(objectManager, getSpawn());
                 }
             }
             if (!active) {

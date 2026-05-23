@@ -15,7 +15,9 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 
@@ -60,6 +62,8 @@ public class FlipperObjectInstance extends BoxObjectInstance
     private static final int ANIM_HORIZONTAL_IDLE = 2;
     private static final int ANIM_HORIZONTAL_TRIGGER_LEFT = 3;
     private static final int ANIM_HORIZONTAL_TRIGGER_RIGHT = 4;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private ObjectAnimationState animationState;
     private boolean animInitialized;
@@ -86,6 +90,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
     // has moved away. Our onSolidContact callback only fires when there IS a contact,
     // so we must check in update() whether the player has left and release the lock.
     private AbstractPlayableSprite lockedPlayer = null;
+    private boolean lockedPlayerPreviousMovementSuppressed;
 
     public FlipperObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, 8, 8, 0.8f, 0.4f, 0.2f, false);
@@ -137,8 +142,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 // Obj01_Control skips the player movement dispatch while
                 // obj_control bit 0 is set, then still runs display/record/
                 // animation/TouchResponse (s2.asm:35937-35962).
-                player.setObjectControlSuppressesMovement(true);
-                lockedPlayer = player;
+                suppressMovementForLockedPlayer(player);
 
                 if (playerFlipperState == 0) {
                     // First frame standing: enter rolling state (loc_2B20A)
@@ -165,9 +169,6 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 // ROM: move.b #0,obj_control(a1)
                 if (playerFlipperState != 0 && (lockedPlayer == null || lockedPlayer == player)) {
                     releaseLockedPlayer();
-                    player.setControlLocked(false);
-                    player.setObjectControlSuppressesMovement(false);
-                    player.setPinballMode(false);
                     playerFlipperState = 0;
                 }
             }
@@ -231,10 +232,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
         // (s2.asm:57982-57988).
 
         // ROM: move.b #0,obj_control(a1) at loc_2B2E2 - release control lock
-        player.setControlLocked(false);
-        player.setObjectControlSuppressesMovement(false);
-        player.setPinballMode(false);
-        lockedPlayer = null;
+        releaseLockedPlayer();
 
         // Clear solid object riding state to prevent the object system from
         // continuing to track the player's position relative to the flipper.
@@ -417,19 +415,26 @@ public class FlipperObjectInstance extends BoxObjectInstance
         }
 
         SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
-        if (playerEntity instanceof AbstractPlayableSprite player) {
-            PlayerSolidContactResult result = batch.perPlayer().get(player);
-            applyCheckpointContact(player, result != null ? result : checkpoint(player));
-        }
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sidekickSprite) {
-                PlayerSolidContactResult result = batch.perPlayer().get(sidekick);
-                applyCheckpointContact(sidekickSprite, result != null ? result : checkpoint(sidekickSprite));
+        for (PlayableEntity participant : playerParticipants(playerEntity)) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                PlayerSolidContactResult result = batch.perPlayer().get(participant);
+                applyCheckpointContact(player, result != null ? result : checkpoint(player));
             }
         }
 
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
+    }
+
+    private List<PlayableEntity> playerParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
     }
 
     private PlayerSolidContactResult checkpoint(AbstractPlayableSprite player) {
@@ -443,10 +448,23 @@ public class FlipperObjectInstance extends BoxObjectInstance
     private void releaseLockedPlayer() {
         if (lockedPlayer != null) {
             lockedPlayer.setControlLocked(false);
-            lockedPlayer.setObjectControlSuppressesMovement(false);
+            ObjectControlState.setMovementSuppressionPreservingOwnership(
+                    lockedPlayer, lockedPlayerPreviousMovementSuppressed);
             lockedPlayer.setPinballMode(false);
             lockedPlayer = null;
+            lockedPlayerPreviousMovementSuppressed = false;
         }
+    }
+
+    private void suppressMovementForLockedPlayer(AbstractPlayableSprite player) {
+        if (lockedPlayer != player) {
+            if (lockedPlayer != null) {
+                releaseLockedPlayer();
+            }
+            lockedPlayer = player;
+            lockedPlayerPreviousMovementSuppressed = player.isObjectControlSuppressesMovement();
+        }
+        ObjectControlState.setMovementSuppressionPreservingOwnership(player, true);
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SolidContact;
@@ -15,6 +16,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -491,12 +493,9 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         if (svc == null) {
             return null;
         }
-        var sidekicks = svc.sidekicks();
-        if (sidekicks.isEmpty()) {
-            return null;
-        }
-        PlayableEntity first = sidekicks.getFirst();
-        return first instanceof AbstractPlayableSprite sprite ? sprite : null;
+        return svc.playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sprite
+                ? sprite
+                : null;
     }
 
     private void captureSlot(RiderSlot slot, AbstractPlayableSprite player) {
@@ -524,7 +523,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             svc.objectManager().clearRidingObject(player);
         }
 
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setControlLocked(true);
         player.setObjectMappingFrameControl(true);
         // ROM sub_324C0 restores default_y_radius/default_x_radius and clears
@@ -776,8 +775,7 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
         if (svc == null) {
             return false;
         }
-        var sidekicks = svc.sidekicks();
-        return !sidekicks.isEmpty() && sidekicks.getFirst() == sprite;
+        return svc.playerQuery().nativeP2OrNull() == sprite;
     }
 
     private int slotMask(RiderSlot slot) {
@@ -797,8 +795,10 @@ public final class CnzCylinderInstance extends AbstractObjectInstance
             return 0x02;
         }
         if (svc != null) {
-            for (PlayableEntity sidekick : svc.sidekicks()) {
-                if (sidekick == sprite) {
+            PlayableEntity main = svc.playerQuery().mainPlayerOrNull();
+            for (PlayableEntity candidate : svc.playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+                if (candidate != main && candidate == sprite) {
                     return 0x02;
                 }
             }

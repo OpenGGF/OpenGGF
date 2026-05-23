@@ -1,8 +1,6 @@
 package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.game.PlayableEntity;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -61,7 +59,7 @@ public class SplashObjectInstance extends AbstractObjectInstance {
 
             // Check if animation is complete
             if (frameIndex >= SPLASH_FRAMES.length) {
-                setDestroyed(true);
+                ObjectLifetimeOps.expireDynamic(this);
             }
         }
     }

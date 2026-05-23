@@ -4,6 +4,7 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.objects.TouchResponseProfile;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
@@ -122,6 +123,11 @@ public class MasherBadnikInstance extends AbstractBadnikInstance {
     @Override
     protected int getCollisionSizeIndex() {
         return COLLISION_SIZE_INDEX;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.standardEnemy();
     }
 
     @Override

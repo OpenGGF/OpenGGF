@@ -389,8 +389,7 @@ public class GroundSensor extends Sensor {
         }
         int xi = x & 0xFFFF;
         int yi = y & 0xFFFF;
-        // Only fire near F1815 region (Tails foot probe)
-        if (xi < 0x1230 || xi > 0x1280 || yi < 0x0720 || yi > 0x0760) {
+        if (!inCnzProbeWindow(xi, yi)) {
             return;
         }
         ChunkDesc desc = getLevelManager().getChunkDescAt((byte) 0, x, y, sprite.isLoopLowPlane());
@@ -574,6 +573,7 @@ public class GroundSensor extends Sensor {
     // ========================================
 
     private SensorResult scanHorizontal(short x, short y, int solidityBit, Direction direction) {
+        traceCnzHorizontalScan(x, y, solidityBit, direction, "first");
         WallScanResult result = evaluateWallTile(x, y, solidityBit, direction);
 
         switch (result.state) {
@@ -584,6 +584,7 @@ public class GroundSensor extends Sensor {
                 // Check previous tile (opposite direction)
                 // ROM behavior: if adjacent tile has no collision, preserve angle from current tile
                 int prevX = x + (direction == Direction.LEFT ? 16 : -16);
+                traceCnzHorizontalScan((short) prevX, y, solidityBit, direction, "regress");
                 WallScanResult prev = scanWallTileSimple(prevX, y, solidityBit, direction);
                 // Use current tile's angle if adjacent tile has no collision (ROM: angle buffer not modified)
                 SolidTile prevTile = prev.tile != null ? prev.tile : result.tile;
@@ -595,12 +596,55 @@ public class GroundSensor extends Sensor {
                 // Check next tile (same direction)
                 // ROM behavior: if adjacent tile has no collision, preserve angle from current tile
                 int nextX = x + (direction == Direction.LEFT ? -16 : 16);
+                traceCnzHorizontalScan((short) nextX, y, solidityBit, direction, "ext");
                 WallScanResult next = scanWallTileSimple(nextX, y, solidityBit, direction);
                 // Use current tile's angle if adjacent tile has no collision (ROM: angle buffer not modified)
                 SolidTile nextTile = next.tile != null ? next.tile : result.tile;
                 ChunkDesc nextDesc = next.tile != null ? next.desc : result.desc;
                 return createResultWithDistance(nextTile, nextDesc, (byte) (next.distance + 16), direction);
         }
+    }
+
+    private void traceCnzHorizontalScan(short x, short y, int solidityBit, Direction direction, String pass) {
+        if (!Boolean.getBoolean("cnz.collisionprobe") && !Boolean.getBoolean("s3k.cnz.collisionprobe")) {
+            return;
+        }
+        int xi = x & 0xFFFF;
+        int yi = y & 0xFFFF;
+        if (!inCnzProbeWindow(xi, yi)) {
+            return;
+        }
+        ChunkDesc desc = getLevelManager().getChunkDescAt((byte) 0, x, y, sprite.isLoopLowPlane());
+        SolidTile tile = getSolidTile(desc, solidityBit);
+        int chunkId = desc != null ? desc.getChunkIndex() & 0xFFFF : -1;
+        int blockIdx = -1;
+        try {
+            byte v = getLevelManager().getCurrentLevel().getMap().getValue((byte)0, (xi >> 7) & 0xFF, (yi >> 7) & 0xFF);
+            blockIdx = v & 0xFF;
+        } catch (Exception e) { blockIdx = -2; }
+        int rawDescIndex = desc != null ? desc.get() & 0xFFFF : -1;
+        boolean hFlip = desc != null && desc.getHFlip();
+        boolean vFlip = desc != null && desc.getVFlip();
+        int tileIdx = tile != null ? tile.getIndex() : -1;
+        int metric = tile != null ? getWallMetric(tile, desc, y, direction) : 0;
+        byte tileAngle = tile != null ? tile.getAngle(hFlip, vFlip) : 0;
+        int chunkX = (xi >> 7) & 0xFF;
+        int chunkY = (yi >> 7) & 0xFF;
+        int tileX = (xi >> 4) & 0x07;
+        int tileY = (yi >> 4) & 0x07;
+        int yInTile = yi & 0x0F;
+        int xInTile = xi & 0x0F;
+        System.out.printf("cnz-hScan pass=%s probe=(%04X,%04X) blockIdx=%d chunk=(%d,%d)t=(%d,%d) p=(%d,%d) chunkId=%04X rawDesc=%04X primMode=%s secMode=%s hFlip=%b vFlip=%b solidBit=%d solid?=%b tile=%d metric=%d tileAngle=%02X dir=%s%n",
+                pass, xi, yi, blockIdx, chunkX, chunkY, tileX, tileY, xInTile, yInTile,
+                chunkId, rawDescIndex, desc != null ? desc.getPrimaryCollisionMode() : null, desc != null ? desc.getSecondaryCollisionMode() : null, hFlip, vFlip, solidityBit, desc != null && desc.isSolidityBitSet(solidityBit), tileIdx, metric, tileAngle & 0xFF, direction);
+    }
+
+    private static boolean inCnzProbeWindow(int x, int y) {
+        int minX = Integer.getInteger("s3k.cnz.collisionprobe.minX", 0x1230);
+        int maxX = Integer.getInteger("s3k.cnz.collisionprobe.maxX", 0x1280);
+        int minY = Integer.getInteger("s3k.cnz.collisionprobe.minY", 0x0720);
+        int maxY = Integer.getInteger("s3k.cnz.collisionprobe.maxY", 0x0760);
+        return x >= minX && x <= maxX && y >= minY && y <= maxY;
     }
 
     private WallScanResult evaluateWallTile(int x, int y, int solidityBit, Direction direction) {

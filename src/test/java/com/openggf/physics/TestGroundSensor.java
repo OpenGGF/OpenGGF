@@ -448,11 +448,10 @@ public class TestGroundSensor {
         // If solid, distance = 4.
 
         SensorResult upResult = upSensor.scan();
-        // Should be 20 (distance to empty tile at 80), not 4 (distance to solid tile at
-        // 80).
-        // 100 - (80 + 0) = 20.
+        // Should use the empty-tile extension path, not 4 (distance to the ignored
+        // top-solid tile at 80).
         assertNotNull(upResult);
-        assertEquals(20, upResult.distance(), "UP sensor should ignore TOP_SOLID");
+        assertEquals(27, upResult.distance(), "UP sensor should ignore TOP_SOLID");
     }
 
     @Test

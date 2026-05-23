@@ -11,10 +11,13 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.level.objects.MultiPieceSolidProvider;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -137,11 +140,9 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         }
 
         if (!opened) {
-            if (playerEntity instanceof AbstractPlayableSprite player && shouldHitButton(player)) {
-                openCapsule();
-            }
-            for (PlayableEntity sidekickEntity : services().sidekicks()) {
-                if (sidekickEntity instanceof AbstractPlayableSprite sidekick && shouldHitButton(sidekick)) {
+            for (PlayableEntity candidate : playerQuery(playerEntity)
+                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (candidate instanceof AbstractPlayableSprite player && shouldHitButton(player)) {
                     openCapsule();
                     break;
                 }
@@ -273,10 +274,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         resultsStarted = true;
         services().gameState().setEndOfLevelActive(true);
         if (shouldLockPlayersForResults()) {
-            lockForResults(player);
-            for (PlayableEntity sidekickEntity : services().sidekicks()) {
-                if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                    lockForResults(sidekick);
+            for (PlayableEntity candidate : playerQuery(player)
+                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (candidate instanceof AbstractPlayableSprite sprite) {
+                    lockForResults(sprite);
                 }
             }
         }
@@ -292,7 +293,7 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     }
 
     protected void lockForResults(AbstractPlayableSprite sprite) {
-        sprite.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setControlLocked(true);
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);
@@ -308,6 +309,11 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     protected void onResultsComplete() {
         // Zone-specific post-results handoff.
+    }
+
+    private ObjectPlayerQuery playerQuery(PlayableEntity updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> updatePlayer, query::sidekicks);
     }
 
     @Override

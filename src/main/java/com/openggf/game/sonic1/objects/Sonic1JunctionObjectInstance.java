@@ -25,6 +25,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
 import java.util.List;
@@ -285,7 +286,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
             }
 
             // clr.b (f_playerctrl).w — unlock controls
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setControlLocked(false);
             player.setForcedAnimationId(-1);
 
@@ -444,7 +445,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
     private void beginGrab(AbstractPlayableSprite player, int gapFrame) {
         grabFrame = gapFrame;
         routine = Routine.RELEASE;
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setRolling(false);
         player.setAnimationId(Sonic1AnimationIds.ROLL);
@@ -509,7 +510,7 @@ public class Sonic1JunctionObjectInstance extends AbstractObjectInstance
         if (routine == Routine.RELEASE) {
             AbstractPlayableSprite player = getPlayer();
             if (player != null) {
-                player.setObjectControlled(false);
+                ObjectControlState.none().applyTo(player);
                 player.setControlLocked(false);
             }
             routine = Routine.ACTION;

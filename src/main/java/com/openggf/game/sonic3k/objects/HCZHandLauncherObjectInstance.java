@@ -12,6 +12,8 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
@@ -20,6 +22,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
 
 import java.util.List;
@@ -127,30 +130,23 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
     }
 
     private void repositionGrabbedPlayers(AbstractPlayableSprite player, int deltaY) {
-        if (player != null && playerGrabbed[0]) {
-            player.setY((short) (player.getY() + deltaY));
-        }
-        int pi = 1;
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (pi < playerGrabbed.length && playerGrabbed[pi]
-                    && sidekick instanceof AbstractPlayableSprite sp) {
-                sp.setY((short) (sp.getY() + deltaY));
+        NativePlayerSlots slots = nativePlayerSlots(player);
+        for (int pi = 0; pi < playerGrabbed.length; pi++) {
+            AbstractPlayableSprite grabbedPlayer = slots.player(pi);
+            if (playerGrabbed[pi] && grabbedPlayer != null) {
+                grabbedPlayer.setY((short) (grabbedPlayer.getY() + deltaY));
             }
-            pi++;
         }
     }
 
     private void updateIdle(AbstractPlayableSprite player) {
         boolean playerInRange = false;
-        if (player != null) {
-            playerInRange = isPlayerInHorizontalRange(player);
-        }
-        if (!playerInRange) {
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                if (sidekick instanceof AbstractPlayableSprite sp && isPlayerInHorizontalRange(sp)) {
-                    playerInRange = true;
-                    break;
-                }
+        NativePlayerSlots slots = nativePlayerSlots(player);
+        for (int pi = 0; pi < playerGrabbed.length; pi++) {
+            AbstractPlayableSprite candidate = slots.player(pi);
+            if (candidate != null && isPlayerInHorizontalRange(candidate)) {
+                playerInRange = true;
+                break;
             }
         }
 
@@ -210,15 +206,12 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
     private void processButtonCheckAllPlayers(AbstractPlayableSprite player) {
         SolidCheckpointBatch batch = checkpointAll();
-        if (player != null) {
-            processButtonCheckForPlayer(player, 0, batch.perPlayer().get(player));
-        }
-        int pi = 1;
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sp) {
-                processButtonCheckForPlayer(sp, pi, batch.perPlayer().get(sidekick));
+        NativePlayerSlots slots = nativePlayerSlots(player);
+        for (int pi = 0; pi < playerGrabbed.length; pi++) {
+            AbstractPlayableSprite candidate = slots.player(pi);
+            if (candidate != null) {
+                processButtonCheckForPlayer(candidate, pi, batch.perPlayer().get(candidate));
             }
-            pi++;
         }
     }
 
@@ -267,7 +260,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
         int yRadius = (player instanceof Tails) ? GRAB_Y_RADIUS_TAILS : GRAB_Y_RADIUS_DEFAULT;
         player.applyCustomRadii(GRAB_X_RADIUS, yRadius);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setPushing(false);
 
         int snapX = facingLeft ? baseX + GRAB_X_SNAP_OFFSET : baseX - GRAB_X_SNAP_OFFSET;
@@ -285,7 +278,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         player.setGSpeed((short) (ESCAPE_GROUND_VEL * xDir));
         player.setXSpeed((short) (ESCAPE_X_VEL * xDir));
         player.setYSpeed((short) ESCAPE_Y_VEL);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setOnObject(false);
         player.setAir(true);
 
@@ -296,15 +289,12 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
 
     private void launchReleaseAllPlayers(AbstractPlayableSprite player) {
         SolidCheckpointBatch batch = checkpointAll();
-        if (player != null) {
-            launchReleasePlayer(player, 0, batch.perPlayer().get(player));
-        }
-        int pi = 1;
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sp) {
-                launchReleasePlayer(sp, pi, batch.perPlayer().get(sidekick));
+        NativePlayerSlots slots = nativePlayerSlots(player);
+        for (int pi = 0; pi < playerGrabbed.length; pi++) {
+            AbstractPlayableSprite candidate = slots.player(pi);
+            if (candidate != null) {
+                launchReleasePlayer(candidate, pi, batch.perPlayer().get(candidate));
             }
-            pi++;
         }
     }
 
@@ -324,7 +314,7 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
             player.setXSpeed((short) (LAUNCH_X_VEL * xDir));
             player.setYSpeed((short) 0);
             player.setAnimationId(0);
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setOnObject(false);
             return;
         }
@@ -339,6 +329,35 @@ public class HCZHandLauncherObjectInstance extends AbstractObjectInstance
         int leftEdge = baseX - DETECT_HALF_WIDTH;
         int dx = (player.getCentreX() - leftEdge) & 0xFFFF;
         return dx < (DETECT_HALF_WIDTH * 2);
+    }
+
+    private NativePlayerSlots nativePlayerSlots(AbstractPlayableSprite updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        PlayableEntity main = query.mainPlayerOrNull();
+        if (!(main instanceof AbstractPlayableSprite) && updatePlayer != null) {
+            main = updatePlayer;
+        }
+
+        PlayableEntity nativeP2 = null;
+        for (PlayableEntity candidate : query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate != main && candidate instanceof AbstractPlayableSprite) {
+                nativeP2 = candidate;
+                break;
+            }
+        }
+        AbstractPlayableSprite p1 = (main instanceof AbstractPlayableSprite sp) ? sp : null;
+        AbstractPlayableSprite p2 = (nativeP2 instanceof AbstractPlayableSprite sp && sp != p1) ? sp : null;
+        return new NativePlayerSlots(p1, p2);
+    }
+
+    private record NativePlayerSlots(AbstractPlayableSprite p1, AbstractPlayableSprite p2) {
+        private AbstractPlayableSprite player(int slot) {
+            return switch (slot) {
+                case 0 -> p1;
+                case 1 -> p2;
+                default -> null;
+            };
+        }
     }
 
     private void playSfx(int sfxId) {

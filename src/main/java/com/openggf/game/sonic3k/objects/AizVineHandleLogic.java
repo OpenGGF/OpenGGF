@@ -6,6 +6,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 /**
  * Shared handle/ride logic for AIZ ride-vine objects (Obj06/Obj0C).
@@ -139,7 +140,7 @@ final class AizVineHandleLogic {
         player.setForcedAnimationId(Sonic3kAnimationIds.HANG2);
         player.setObjectMappingFrameControl(true);
         player.setSpindash(false);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         // ROM grab path (sonic3k.asm:46739-46743 loc_22302) writes only:
         //   move.b #3, object_control(a1)
         //   andi.b #$FD, render_flags(a1)
@@ -151,7 +152,6 @@ final class AizVineHandleLogic {
         // is set), and the per-frame TouchResponse pass is not suppressed.
         // Engine analog: keep objectControlAllowsCpu=true so the SidekickCpuController
         // NORMAL/CATCH_UP_FLIGHT bit-7 gates evaluate the same way ROM's bmi.w does.
-        player.setObjectControlAllowsCpu(true);
         // No Ctrl_1_locked write. ROM Sonic_Control still runs the input
         // mirror (sonic3k.asm:21970 loc_10BF0 → move.w (Ctrl_1).w,
         // (Ctrl_1_logical).w), so Sonic_RecordPos at sonic3k.asm:22132
@@ -351,7 +351,7 @@ final class AizVineHandleLogic {
         player.setObjectMappingFrameControl(false);
         player.setForcedAnimationId(-1);
         player.setControlLocked(false);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.suppressNextJumpPress();
     }
 

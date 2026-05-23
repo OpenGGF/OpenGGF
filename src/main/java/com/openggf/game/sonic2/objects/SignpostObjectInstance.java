@@ -12,6 +12,7 @@ import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectAnimationState;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -107,9 +108,7 @@ public class SignpostObjectInstance extends BoxObjectInstance implements PostPla
                 // Mark as remembered to prevent respawning, then destroy
                 // This prevents the spawn-destroy cycle every frame
                 ObjectManager objMgr = services().objectManager();
-                if (objMgr != null) {
-                    objMgr.markRemembered(spawn);
-                }
+                ObjectLifetimeOps.markSpawnRemembered(objMgr, spawn);
                 setDestroyed(true);
             }
         }

@@ -20,6 +20,8 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -30,6 +32,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
 import java.util.List;
@@ -438,7 +441,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 }
 
                 routineSecondary = 6;
-                releasePlayersFromPlatform();
+                releasePlayersFromPlatform(player);
             }
             case 6 -> {
                 // ObjB2_Main_WFZ_Start_fall_down
@@ -685,7 +688,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
                 player.setAnimationId(Sonic2AnimationIds.HANG);
                 player.setAnimationFrameIndex(0);
                 player.setAnimationTick(0);
-                player.setObjectControlled(true);
+                ObjectControlState.nativeBit7FullControl().applyTo(player);
                 player.setControlLocked(true);
                 ownsPlayerControl = true;
             }
@@ -858,7 +861,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
             player.clearForcedInputMask();
             player.setControlLocked(false);
             if (player.isObjectControlled()) {
-                player.setObjectControlled(false);
+                ObjectControlState.none().applyTo(player);
             }
         }
         ownsPlayerControl = false;
@@ -1132,46 +1135,63 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         return services().solidExecution().resolveSolidNow(player);
     }
 
-    private void releasePlayersFromPlatform() {
+    private void releasePlayersFromPlatform(AbstractPlayableSprite updatePlayer) {
         ObjectManager objectManager = services().objectManager();
         if (objectManager == null) {
             return;
         }
 
-        AbstractPlayableSprite main = getMainPlayer();
-        if (main != null && objectManager.isRidingObject(main, this)) {
-            objectManager.clearRidingObject(main);
-            main.setOnObject(false);
-            main.setAir(true);
+        for (PlayableEntity player : playerQuery(updatePlayer)
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            releasePlayerFromPlatform(objectManager, player);
         }
+    }
 
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (objectManager.isRidingObject(sidekick, this)) {
-                objectManager.clearRidingObject(sidekick);
-                sidekick.setOnObject(false);
-                sidekick.setAir(true);
-            }
+    private void releasePlayerFromPlatform(ObjectManager objectManager, PlayableEntity player) {
+        if (objectManager.isRidingObject(player, this)) {
+            objectManager.clearRidingObject(player);
+            player.setOnObject(false);
+            player.setAir(true);
         }
     }
 
     private Orientation getOrientationToClosestPlayer(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite closest = mainPlayer;
-        int signedMain = currentX - mainPlayer.getCentreX();
-        int absMain = Math.abs(signedMain);
+        AbstractPlayableSprite closest = null;
+        int closestSignedDistance = 0;
+        int closestAbsDistance = Integer.MAX_VALUE;
 
-        // The sidekick list already reflects zone-specific suppression (for example SCZ),
-        // so this helper just picks the closest available player from that filtered set.
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (!sidekick.getDead()) {
-                int signedSidekick = currentX - sidekick.getCentreX();
-                int absSidekick = Math.abs(signedSidekick);
-                if (absSidekick < absMain) {
-                    return new Orientation((AbstractPlayableSprite) sidekick, signedSidekick);
-                }
+        for (PlayableEntity player : playerQuery(mainPlayer)
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (!(player instanceof AbstractPlayableSprite sprite)) {
+                continue;
+            }
+            if (player != mainPlayer && player.getDead()) {
+                continue;
+            }
+            int signedDistance = currentX - sprite.getCentreX();
+            int absDistance = Math.abs(signedDistance);
+            if (absDistance < closestAbsDistance) {
+                closest = sprite;
+                closestSignedDistance = signedDistance;
+                closestAbsDistance = absDistance;
             }
         }
 
-        return new Orientation(closest, signedMain);
+        if (closest != null) {
+            return new Orientation(closest, closestSignedDistance);
+        }
+
+        return new Orientation(mainPlayer, currentX - mainPlayer.getCentreX());
+    }
+
+    private ObjectPlayerQuery playerQuery(AbstractPlayableSprite updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(
+                () -> {
+                    PlayableEntity main = query.mainPlayerOrNull();
+                    return main != null ? main : updatePlayer;
+                },
+                query::sidekicks);
     }
 
     private void spawnSmokeObject() {

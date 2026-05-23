@@ -359,9 +359,19 @@ Objects use a factory pattern with game-specific registries. `ObjectRegistry` cr
 
 **Service injection:** All objects receive `ObjectServices` at construction via `ObjectManager`. Inside any object, call `services()` to access camera, audio, level, game state, and zone features. **Never use `getInstance()` in object code.**
 
-**Child spawning:** Use `spawnChild(() -> new ChildObject(spawn, params))` instead of manually calling `ObjectManager.addDynamicObject()`.
+**Child spawning:** Use `spawnChild(() -> new ChildObject(spawn, params))` instead of manually calling `ObjectManager.addDynamicObject()`. Direct manager insertion is reserved for manager/framework bridge code with focused tests.
 
 Badniks extend `AbstractBadnikInstance` (`com.openggf.level.objects` — game-agnostic) which provides touch response collision, destruction behavior via `DestructionEffects`, and movement/animation framework. Subclasses implement `updateMovement()` and `getCollisionSizeIndex()`.
+
+**Object behavior contracts:** New object, boss, badnik, and trace work should prefer the shared contracts being introduced for object physics standardization:
+
+- `ObjectControlState` for native object-control bit intent and derived movement/touch/solid/CPU predicates. Do not add new raw object-control setter combinations unless they are compatibility bridges with tests.
+- `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` for deciding whether a routine uses the main player, native P1/P2, all engine players, nearest player, or extended sidekick participation. Direct focused-player or first-sidekick access needs an explicit native-only reason.
+- `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
+- `ObjectLifetimeOps` for destruction, offscreen expiry, respawn-latch behavior, and slot transfer semantics. Keep direct `setDestroyed(true)` / remembered-spawn mutations as legacy exceptions or short compatibility wrappers.
+- Canonical behavior profiles belong under `com.openggf.game.profiles.*`; `level.objects` should host execution code and compatibility adapters over existing provider methods while migrations are partial.
+
+When a guard baseline is needed for existing violations, ratchet it downward as migrations land. Do not grow baselines for new object implementations without documenting the exact legacy reason.
 
 ### Reusable Object Utilities
 
@@ -465,6 +475,8 @@ When working on trace replay test bugs, use the **`trace-replay-bug-fixing`** sk
 ### Player Sprite Coordinates
 
 **Critical:** The ROM uses **center coordinates** for player position. Always use `getCentreX()`/`getCentreY()` for object interactions, NOT `getX()`/`getY()` (which return top-left corner for rendering). Using top-left creates a ~19px vertical offset causing incorrect collision detection.
+
+For playable-sprite native `x_pos` / `y_pos` writes, prefer `NativePositionOps`. Use raw preserve-subpixel centre setters only in lower-level sprite internals or non-playable/object-local cases.
 
 **Debug overlay note:** The on-screen debug HUD `Pos:` field (rendered by `DebugRenderer`) intentionally shows `sprite.getX()` / `sprite.getY()` — the **top-left** corner, NOT the ROM-centre `x_pos`/`y_pos`. Do not treat the overlay's X/Y as ROM `x_pos`/`y_pos` when diagnosing parity issues or comparing against disassembly traces — add the sprite's half-width/half-height (or call `getCentreX()`/`getCentreY()` in code) to get the ROM-equivalent values. (Camera `Cam:` and sensor probe coordinates in the overlay are world-space and unaffected.)
 

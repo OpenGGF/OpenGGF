@@ -2,16 +2,52 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestBonusBlockObjectInstance {
+
+    @Test
+    void touchProfileNamesSonic2SpecialLatchPolicy() {
+        BonusBlockObjectInstance block = new BonusBlockObjectInstance(
+                new ObjectSpawn(0x1820, 0x0168, Sonic2ObjectIds.BONUS_BLOCK, 0, 0, false, 0),
+                "BonusBlock");
+
+        TouchResponseProfile profile = block.getTouchResponseProfile();
+
+        assertEquals(TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY, profile.categoryDecodeMode());
+        assertTrue(profile.continuousCallbacks());
+        assertFalse(profile.requiresRenderFlagForTouch());
+        assertFalse(profile.multiRegionSource());
+        assertEquals(TouchShieldDeflectCapability.NONE, profile.shieldDeflectCapability());
+        assertEquals(0, profile.shieldReactionFlags());
+        assertEquals(TouchAttackBouncePolicy.STANDARD_ENEMY_KILL, profile.attackBouncePolicy());
+        assertEquals(TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY, profile.actorContextPolicy());
+        assertEquals(TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS,
+                profile.stopAfterFirstOverlapPolicy());
+
+        assertTrue(block.usesSonic2TouchSpecialPropertyResponse());
+        assertTrue(block.requiresContinuousTouchCallbacks());
+        assertFalse(block.requiresRenderFlagForTouch());
+        assertEquals(0xD7, block.getCollisionFlags());
+        assertEquals(0, block.getCollisionProperty());
+        assertDoesNotThrow(() -> BonusBlockObjectInstance.class.getDeclaredMethod("getTouchResponseProfile"));
+        assertEquals(profile, block.getTouchResponseProfile(false));
+        assertDoesNotThrow(() -> BonusBlockObjectInstance.class.getDeclaredMethod("getTouchResponseProfile", boolean.class));
+    }
 
     @Test
     void bonusBlockUsesRomTouchSizeRadii() {

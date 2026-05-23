@@ -8,11 +8,13 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * OOZ Fan (Object 0x3F).
@@ -87,19 +89,20 @@ public class FanObjectInstance extends AbstractObjectInstance {
             updateSpinUpAnimation();
         } else {
             // Blowing phase (objoff_32 == 0): push players, fast animation
-            if (player != null) {
-                if (isVertical) {
-                    applyVerticalPush(player);
-                } else {
-                    applyHorizontalPush(player);
-                }
+            List<PlayableEntity> participants = services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+            if (player != null && !participants.contains(player)) {
+                ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+                withUpdatePlayer.add(player);
+                withUpdatePlayer.addAll(participants);
+                participants = withUpdatePlayer;
             }
-
-            for (PlayableEntity sidekick : services().sidekicks()) {
+            for (PlayableEntity participant : participants) {
+                AbstractPlayableSprite playable = (AbstractPlayableSprite) participant;
                 if (isVertical) {
-                    applyVerticalPush((AbstractPlayableSprite) sidekick);
+                    applyVerticalPush(playable);
                 } else {
-                    applyHorizontalPush((AbstractPlayableSprite) sidekick);
+                    applyHorizontalPush(playable);
                 }
             }
             updateBlowingAnimation();

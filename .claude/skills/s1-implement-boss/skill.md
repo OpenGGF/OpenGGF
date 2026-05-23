@@ -81,6 +81,8 @@ Delegate multiple agents to explore the disassembly. **Include this instruction 
 - Camera boundary manipulation for arena lock
 - Sub-object data tables: `BossName_ObjData` defines children with offsets and IDs
 
+When porting boss object positions, ROM `obX` / `obY` are centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
+
 ### Phase 2: Arena & Level Event Setup
 
 S1 bosses use `Sonic1LevelEventManager` (at `game/sonic1/events/Sonic1LevelEventManager.java`) for arena setup and boss spawning. This manager extends `AbstractLevelEventManager` and delegates to per-zone handler classes.
@@ -184,17 +186,14 @@ S1 bosses use `ObjData` tables to define child objects. Parse these tables and s
 ```java
 // S1 pattern: sub-objects defined as data table entries
 private void spawnChildComponents() {
-    ObjectManager manager = services().objectManager();
-
     // From BossName_ObjData table in disassembly
     // Each entry typically: x_offset, y_offset, mapping_frame, subtype
-    BossChildInstance child = new BossChildInstance(this, xOffset, yOffset);
-    manager.addDynamicObject(child);
+    BossChildInstance child = spawnChild(() -> new BossChildInstance(this, xOffset, yOffset));
     childComponents.add(child);
 }
 ```
 
-Children can extend `AbstractBossChild` (shared with S2) or be simple independent objects depending on the boss pattern.
+Children can extend `AbstractBossChild` (shared with S2) or be simple independent objects depending on the boss pattern. Prefer `spawnChild(...)`, `spawnFreeChild(...)`, or an existing `level.objects` lifecycle helper instead of direct `ObjectManager.addDynamicObject(...)`.
 
 ### Phase 5: Hit Handling
 
@@ -269,6 +268,19 @@ Before finalizing a boss or boss child, classify every instance field for rewind
 Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable spawn identity, parent/child graph references, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Boss `dynamicSpawn` references are not structural by default; capture coordinates explicitly or defer generic migration.
 
 Prefer standard value forms before boss-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+Bosses participate in player/object lifecycle beyond hit counts. Cross-check player and sidekick contacts, carried state, invulnerability/hurt timing, child despawn, and arena-lock latches against the ROM, especially across defeat and transition frames.
+
+### Phase 8.5: Shared Object Contracts
+
+Bosses and boss children may need bespoke state, but still prefer shared contracts when they fit:
+
+- Use `ObjectControlState` for forced-control and cutscene-control predicates instead of raw boolean combinations.
+- Use `ObjectPlayerQuery` and `ObjectPlayerParticipationPolicy` for hit, contact, and targeting decisions. S1 native boss logic is main-player focused; OpenGGF sidekick participation must be explicit when extended.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes; reserve raw preserve-subpixel setters for lower-level sprite internals or non-playable boss-local state.
+- Use `ObjectLifetimeOps` for child deletion, despawn, and dynamic-expire semantics.
+- Reuse canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` compatibility wrappers where they preserve existing boss behavior.
+- Ratchet guard baselines when adding source guards; do not let historical direct-control or lifecycle calls block new hard-fail enforcement.
 
 ### Phase 9: Code Quality
 

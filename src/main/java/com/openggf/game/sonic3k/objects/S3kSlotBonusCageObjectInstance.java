@@ -10,6 +10,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -108,7 +109,7 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         player.setControlLocked(true);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setAir(true);
         player.setOnObject(false);
         if (controller.isOptionCycleResolved()) {
@@ -186,7 +187,7 @@ public final class S3kSlotBonusCageObjectInstance extends AbstractObjectInstance
         short vy = (short) (TrigLookupTable.sinHex(angle) * 4);
         player.setXSpeed(vx);
         player.setYSpeed(vy);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
         player.setAir(true);
         controller.negateScalar();

@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidExecutionMode;
@@ -478,12 +479,7 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
             Sonic1GlassReflectionInstance child = new Sonic1GlassReflectionInstance(
                     spawn, this, reflectSubtype, isTall);
             // ROM: FindNextFreeObj allocates slot after glass block
-            if (mySlot >= 0) {
-                int childSlot = services().objectManager().allocateSlotAfter(mySlot);
-                if (childSlot >= 0) {
-                    child.setSlotIndex(childSlot);
-                }
-            }
+            ObjectLifetimeOps.assignFindNextFreeChildSlot(services().objectManager(), child, mySlot);
             return child;
         });
     }

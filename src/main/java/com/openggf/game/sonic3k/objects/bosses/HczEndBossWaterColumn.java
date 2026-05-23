@@ -5,11 +5,14 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -612,8 +615,8 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             applyGrabAndCarry(sprite, true, sprayY);
             applySuctionTo(sprite);
         }
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sprite) {
+        for (PlayableEntity candidate : nativeParticipants(player)) {
+            if (candidate != player && candidate instanceof AbstractPlayableSprite sprite) {
                 applyGrabAndCarry(sprite, false, sprayY);
                 applySuctionTo(sprite);
             }
@@ -682,7 +685,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         if (sprite.getDead()) {
             if (isGrabbed) {
                 clearGrabFlag(isPlayer1);
-                sprite.setObjectControlled(false);
+                ObjectControlState.none().applyTo(sprite);
             }
             return;
         }
@@ -691,7 +694,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
         if (sprite.getInvulnerable()) {
             if (isGrabbed) {
                 clearGrabFlag(isPlayer1);
-                sprite.setObjectControlled(false);
+                ObjectControlState.none().applyTo(sprite);
             }
             return;
         }
@@ -759,7 +762,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             player2Grabbed = true;
         }
         sprite.setAir(true);
-        sprite.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
         // ROM: move.b #$18,anim(a2) — animation $18 = tumbling/death sprite pose.
         // In the vortex context this shows the player spinning in the water column.
         sprite.setForcedAnimationId(Sonic3kAnimationIds.DEATH.id());
@@ -841,7 +844,7 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     private void releasePlayer(AbstractPlayableSprite sprite, boolean isPlayer1) {
         clearGrabFlag(isPlayer1);
         sprite.setAir(true);
-        sprite.setObjectControlled(false);
+        ObjectControlState.none().applyTo(sprite);
         // ROM: move.b #2,anim(a2) — roll animation
         sprite.setForcedAnimationId(Sonic3kAnimationIds.ROLL.id());
         sprite.setYSpeed((short) -0x200);
@@ -864,11 +867,9 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             releasePlayer(sprite, true);
         }
         if (player2Grabbed) {
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                if (sidekick instanceof AbstractPlayableSprite sprite) {
-                    releasePlayer(sprite, false);
-                    break;
-                }
+            PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+            if (nativeP2 instanceof AbstractPlayableSprite sprite) {
+                releasePlayer(sprite, false);
             }
         }
     }
@@ -886,14 +887,21 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
             sprite.setAir(true);
         }
 
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sprite
-                    && objectManager.isRidingObject(sidekick, this)) {
-                objectManager.clearRidingObject(sidekick);
+        for (PlayableEntity candidate : nativeParticipants(player)) {
+            if (candidate != player
+                    && candidate instanceof AbstractPlayableSprite sprite
+                    && objectManager.isRidingObject(candidate, this)) {
+                objectManager.clearRidingObject(candidate);
                 sprite.setOnObject(false);
                 sprite.setAir(true);
             }
         }
+    }
+
+    private List<PlayableEntity> nativeParticipants(PlayableEntity player) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> player, query::sidekicks)
+                .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
     }
 
     /** Compute the spray child's Y position for this frame. */

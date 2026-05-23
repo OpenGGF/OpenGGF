@@ -158,9 +158,7 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
 
         // Mark as broken in persistence table (stays broken on respawn/revisit)
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         short preservedCentreY = player.getCentreY();
         // Force player into rolling state with proper hitbox (disassembly lines 48916-48919)

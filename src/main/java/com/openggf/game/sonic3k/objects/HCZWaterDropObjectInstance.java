@@ -7,9 +7,15 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
@@ -144,6 +150,16 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance {
         private static final int STATE_FALLING = 2;    // routine = 2: movement + gravity active
         private static final int STATE_SPLASHING = 3;  // code pointer = loc_38336: animate only
         private static final int STATE_DELETE = 4;      // routine = 4: delete
+        private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                true,
+                true,
+                false,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
         private int x;
         private int y;
@@ -267,8 +283,13 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance {
         }
 
         @Override
-        public boolean requiresContinuousTouchCallbacks() {
-            return true; // ROM polls collision_property each frame
+        public TouchResponseProfile getTouchResponseProfile() {
+            return TOUCH_RESPONSE_PROFILE;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return TOUCH_RESPONSE_PROFILE;
         }
 
         @Override

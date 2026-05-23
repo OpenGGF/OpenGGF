@@ -7,6 +7,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -181,18 +183,21 @@ public class SpinyBadnikInstance extends AbstractBadnikInstance {
         if (mainPlayer == null) {
             return null;
         }
-        int mainDx = Math.abs(currentX - mainPlayer.getCentreX());
-        AbstractPlayableSprite closest = mainPlayer;
-        for (PlayableEntity sk : services().sidekicks()) {
-            if (sk instanceof AbstractPlayableSprite sprite) {
-                int skDx = Math.abs(currentX - sprite.getCentreX());
-                if (skDx < mainDx) {
-                    mainDx = skDx;
-                    closest = sprite;
-                }
-            }
-        }
-        return closest;
+        ObjectPlayerQuery.NearestPlayerX nearest = playerQuery(mainPlayer)
+                .nearestByRomX(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS,
+                        currentX,
+                        candidate -> candidate instanceof AbstractPlayableSprite);
+        return nearest.player() instanceof AbstractPlayableSprite sprite ? sprite : mainPlayer;
+    }
+
+    private ObjectPlayerQuery playerQuery(AbstractPlayableSprite updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(
+                () -> {
+                    PlayableEntity main = query.mainPlayerOrNull();
+                    return main instanceof AbstractPlayableSprite ? main : updatePlayer;
+                },
+                query::sidekicks);
     }
 
     /**

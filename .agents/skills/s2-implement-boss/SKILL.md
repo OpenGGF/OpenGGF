@@ -62,6 +62,7 @@ Bosses are spawned dynamically by zone-specific event handlers in `Sonic2LevelEv
 
 **Implementation checklist:**
 - [ ] Add zone constant if not present
+- [ ] Treat ROM `x_pos` / `y_pos` as centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
 - [ ] Add boss reference field (e.g., `private Sonic2XXXBossInstance xxxBoss`)
 - [ ] Implement `updateXXX()` method with 4-6 event routines
 - [ ] Implement `spawnXXXBoss()` method
@@ -205,7 +206,7 @@ Override these in subclasses for boss-specific behavior:
 
 **Implementation checklist:**
 - [ ] Create child classes extending `AbstractBossChild`
-- [ ] Add children to `ObjectManager` via `addDynamicObject()`
+- [ ] Spawn children via `spawnChild(...)`, `spawnFreeChild(...)`, or an existing `level.objects` lifecycle helper
 - [ ] Store children in parent's `childComponents` list
 - [ ] Implement position synchronization
 - [ ] Handle destruction when parent defeated
@@ -272,6 +273,19 @@ Before finalizing a boss or boss child, classify every instance field for rewind
 Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable spawn identity, parent/child graph references, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Boss `dynamicSpawn` references are not structural by default; capture coordinates explicitly or defer generic migration.
 
 Prefer standard value forms before boss-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+Bosses participate in player/object lifecycle beyond hit counts. Cross-check player and sidekick contacts, carried state, invulnerability/hurt timing, child despawn, and arena-lock latches against the ROM, especially across defeat and transition frames.
+
+### Phase 7.5: Shared Object Contracts
+
+Bosses and boss children may need bespoke state, but still prefer shared contracts when they fit:
+
+- Use `ObjectControlState` for forced-control and cutscene-control predicates instead of raw boolean combinations.
+- Use `ObjectPlayerQuery` and `ObjectPlayerParticipationPolicy` for hit, contact, and targeting decisions. Native S2 boss logic generally knows P1/Tails; OpenGGF multi-sidekick behavior must be explicit when extended.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes; reserve raw preserve-subpixel setters for lower-level sprite internals or non-playable boss-local state.
+- Use `ObjectLifetimeOps` for child deletion, despawn, and dynamic-expire semantics.
+- Reuse canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` compatibility wrappers where they preserve existing boss behavior.
+- Ratchet guard baselines when adding source guards; do not let historical direct-control or lifecycle calls block new hard-fail enforcement.
 
 ### Phase 8: Code Quality
 

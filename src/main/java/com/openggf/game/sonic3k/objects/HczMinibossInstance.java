@@ -11,14 +11,23 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.SplashObjectInstance;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,6 +65,18 @@ public class HczMinibossInstance extends AbstractBossInstance {
     private static final int ENGINE_COLLISION_FLAGS = 0x92;
     private static final int ROCKET_COLLISION_FLAGS = 0x8B;
     private static final int INVULN_TIME = 0x20;
+    private static final TouchResponseProfile SINGLE_REGION_TOUCH_PROFILE =
+            TouchResponseProfile.standardEnemy();
+    private static final TouchResponseProfile MULTI_REGION_TOUCH_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            false,
+            true,
+            true,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY);
 
     private static final int TRIGGER_MIN_Y = 0x300;
     private static final int TRIGGER_MAX_Y = 0x400;
@@ -355,6 +376,16 @@ public class HczMinibossInstance extends AbstractBossInstance {
     }
 
     @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(getMultiTouchRegions() != null);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return multiRegionSource ? MULTI_REGION_TOUCH_PROFILE : SINGLE_REGION_TOUCH_PROFILE;
+    }
+
+    @Override
     public void onPlayerAttack(PlayableEntity playerEntity, TouchResponseResult result) {
         if (getCoreCollisionFlags() == 0 || state.invulnerable || state.defeated) {
             return;
@@ -606,14 +637,10 @@ public class HczMinibossInstance extends AbstractBossInstance {
 
     private void releaseVortexPlayers() {
         PlayableEntity focused = services().camera().getFocusedSprite();
-        if (focused instanceof AbstractPlayableSprite player && player.isObjectControlled()) {
-            player.setObjectControlled(false);
-            player.setForcedAnimationId(-1);
-        }
-        for (PlayableEntity entity : services().sidekicks()) {
-            if (entity instanceof AbstractPlayableSprite sidekick && sidekick.isObjectControlled()) {
-                sidekick.setObjectControlled(false);
-                sidekick.setForcedAnimationId(-1);
+        for (PlayableEntity entity : nativeParticipants(focused)) {
+            if (entity instanceof AbstractPlayableSprite sprite && sprite.isObjectControlled()) {
+                ObjectControlState.none().applyTo(sprite);
+                sprite.setForcedAnimationId(-1);
             }
         }
     }
@@ -847,14 +874,17 @@ public class HczMinibossInstance extends AbstractBossInstance {
     }
 
     private void applyVortexPull(AbstractPlayableSprite player) {
-        if (player != null) {
-            applyVortexPullTo(player);
-        }
-        for (PlayableEntity entity : services().sidekicks()) {
-            if (entity instanceof AbstractPlayableSprite sidekick) {
-                applyVortexPullTo(sidekick);
+        for (PlayableEntity entity : nativeParticipants(player)) {
+            if (entity instanceof AbstractPlayableSprite sprite) {
+                applyVortexPullTo(sprite);
             }
         }
+    }
+
+    private List<PlayableEntity> nativeParticipants(PlayableEntity player) {
+        ObjectPlayerQuery query = services().playerQuery();
+        return new ObjectPlayerQuery(() -> player, query::sidekicks)
+                .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
     }
 
     /**
@@ -873,7 +903,7 @@ public class HczMinibossInstance extends AbstractBossInstance {
         }
 
         if (!sprite.isObjectControlled()) {
-            sprite.setObjectControlled(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sprite);
             sprite.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2.id());
             sprite.setXSpeed((short) 0);
             sprite.setYSpeed((short) 0);

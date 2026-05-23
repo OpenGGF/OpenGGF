@@ -59,6 +59,7 @@ Create or update these artifacts during the run. They may be sections in a singl
 3. Decide architecture.
    - Produce an architecture decision record covering boundaries, ownership, lifecycle, data flow, failure modes, migration strategy, and rollback implications.
    - Prefer existing project patterns and runtime-owned frameworks over new local machinery.
+   - For object/physics standardization blueprints, decide how `ObjectControlState`, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy`, `ObjectLifetimeOps`, canonical solid/touch/lifecycle profiles, compatibility wrappers, guard-baseline ratcheting, coordinate semantics, object ownership, participant state, rewind capture, and trace diagnostics fit before assigning implementation workers.
    - Output: Architecture Decision.
    - Self-review until green: decisions satisfy extracted requirements, avoid needless abstractions, and identify tests needed to prove behavior.
 
@@ -71,6 +72,7 @@ Create or update these artifacts during the run. They may be sections in a singl
 5. Write the implementation plan.
    - Split work into independently implementable tasks with disjoint file ownership where possible.
    - For each task, specify tests first, implementation scope, verification command, reviewer checklist, and integration dependencies.
+   - For compatibility-wrapper, guard, object, or trace work, require inventory/baseline tasks before behavior migrations. Baselines should allow historical violations with reasons and hard-fail new direct shortcuts; assign ownership for shared helpers, per-game object code, trace recorder/comparator changes, and docs/skill updates so workers do not overwrite each other.
    - Output: Implementation Plan.
    - Self-review until green: tasks can run in parallel without unclear ownership or hidden sequencing.
 

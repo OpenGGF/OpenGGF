@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.objects.CnzSpiralTubeInstance;
 import com.openggf.game.sonic3k.objects.CnzVacuumTubeInstance;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -116,6 +118,25 @@ class TestS3kCnzTubeTraversalHeadless {
                 "sub_31F62 changes x_pos with word arithmetic and must not clear x_sub");
         assertEquals(0x3200, player.getYSubpixelRaw(),
                 "Horizontal vacuum drag should leave y_sub untouched");
+    }
+
+    @Test
+    void vacuumTubeProcessesEngineSidekicksThroughParticipationPolicy() {
+        CnzVacuumTubeInstance tube = new CnzVacuumTubeInstance(
+                new ObjectSpawn(0x3EC0, 0x07F0, Sonic3kObjectIds.CNZ_VACUUM_TUBE, 0x00, 0x01, false, 0));
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x3EA0, (short) 0x07D0);
+        TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x3EA0, (short) 0x07D0);
+        TestablePlayableSprite extraSidekick = new TestablePlayableSprite("knuckles", (short) 0x3EA0, (short) 0x07D0);
+        tube.setServices(new TestObjectServices().withSidekicks(List.of(sidekick, extraSidekick)));
+
+        tube.update(0, main);
+
+        assertEquals(0x1000, main.getXSpeed(),
+                "The direct update player remains the main participant when services cannot resolve main");
+        assertEquals(0x1000, sidekick.getXSpeed(),
+                "Vacuum Tube intentionally extends ROM P2 participation to engine sidekicks");
+        assertEquals(0x1000, extraSidekick.getXSpeed(),
+                "Extra engine sidekicks should keep the existing multi-sidekick extension");
     }
 
     @Test
@@ -234,6 +255,12 @@ class TestS3kCnzTubeTraversalHeadless {
 
         assertTrue(player.isObjectControlled(),
                 "Spiral Tube capture should set object_control=$81 via the engine's object-control flag");
+        assertFalse(player.isObjectControlAllowsCpu(),
+                "object_control=$81 should not leave CPU movement enabled");
+        assertTrue(player.isObjectControlSuppressesMovement(),
+                "object_control=$81 should suppress normal movement while the tube owns traversal");
+        assertTrue(player.isTouchResponseSuppressedByObjectControl(),
+                "object_control=$81 should suppress normal touch responses while the tube owns traversal");
         assertTrue(tube.isPersistent(),
                 "An active Spiral Tube must survive object-window unloading while it controls the player");
         assertTrue(player.isControlLocked(),
@@ -284,6 +311,12 @@ class TestS3kCnzTubeTraversalHeadless {
                 "Spiral Tube should release control lock at the final route point");
         assertFalse(player.isObjectControlled(),
                 "Spiral Tube should release object control at the final route point");
+        assertFalse(player.isObjectControlAllowsCpu(),
+                "Spiral Tube release should clear the CPU movement allowance bit with object control");
+        assertFalse(player.isObjectControlSuppressesMovement(),
+                "Spiral Tube release should clear movement suppression with object control");
+        assertFalse(player.isTouchResponseSuppressedByObjectControl(),
+                "Spiral Tube release should clear touch-response suppression with object control");
         assertFalse(tube.isPersistent(),
                 "After release the controller can return to the normal out-of-range unload path");
         assertFalse(player.isJumping(),
@@ -296,6 +329,26 @@ class TestS3kCnzTubeTraversalHeadless {
                 "word_33328 exits vertically, so the preserved x_vel should stay zero");
         assertEquals(0x0C00, player.getYSpeed(),
                 "Release should preserve the last segment's dominant-axis y_vel");
+    }
+
+    @Test
+    void spiralTubeProcessesOnlyNativeP2ThroughPlayerQuery() {
+        CnzSpiralTubeInstance tube = new CnzSpiralTubeInstance(
+                new ObjectSpawn(0x13C0, 0x02D0, Sonic3kObjectIds.CNZ_SPIRAL_TUBE, 0x00, 0, false, 0));
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x13D0, (short) 0x02D0);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x13D0, (short) 0x02D0);
+        TestablePlayableSprite extraSidekick =
+                new TestablePlayableSprite("knuckles", (short) 0x13D0, (short) 0x02D0);
+        tube.setServices(new TestObjectServices().withSidekicks(List.of(nativeP2, extraSidekick)));
+
+        tube.update(0, main);
+
+        assertTrue(main.isObjectControlled(),
+                "The direct update player should remain the P1 fallback when services cannot resolve main");
+        assertTrue(nativeP2.isObjectControlled(),
+                "CNZ Spiral Tube has one ROM Player_2 state block and should process the native sidekick");
+        assertFalse(extraSidekick.isObjectControlled(),
+                "Route carrier state must not be extended to extra engine sidekicks without dedicated state blocks");
     }
 
     private static CnzVacuumTubeInstance spawnVacuumTube(int x, int y, int subtype, int renderFlags) {

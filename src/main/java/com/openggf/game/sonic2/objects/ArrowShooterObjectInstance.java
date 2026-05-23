@@ -8,10 +8,12 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -40,6 +42,8 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance {
 
     private static final int DETECTION_DISTANCE = 0x40; // 64 pixels
     private static final int PRIORITY = 3;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     // Animation IDs
     private static final int ANIM_IDLE = 0;
@@ -83,23 +87,20 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (currentAnim != ANIM_FIRING) {
-            updateDetection(player);
+            updateDetection(playerEntity);
         }
         updateAnimation();
     }
 
-    private void updateDetection(AbstractPlayableSprite player) {
+    private void updateDetection(PlayableEntity updatePlayer) {
         // ROM Obj22_DetectPlayer: checks both MainCharacter and Sidekick.
         // If either is within DETECTION_DISTANCE of the shooter, the shooter detects.
-        boolean playerDetected = isWithinDetectionRange(player);
-        if (!playerDetected) {
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                if (isWithinDetectionRange(sidekick)) {
-                    playerDetected = true;
-                    break;
-                }
+        boolean playerDetected = false;
+        for (PlayableEntity participant : detectionParticipants(updatePlayer)) {
+            if (isWithinDetectionRange(participant)) {
+                playerDetected = true;
+                break;
             }
         }
 
@@ -124,6 +125,17 @@ public class ArrowShooterObjectInstance extends AbstractObjectInstance {
                 // Stay idle
             }
         }
+    }
+
+    private List<PlayableEntity> detectionParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
     }
 
     private boolean isWithinDetectionRange(PlayableEntity entity) {

@@ -23,6 +23,7 @@ import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.objects.ObjectSpawn;
@@ -709,6 +710,38 @@ class TestMgzDrillingRobotnikInstance {
     }
 
     @Test
+    void mgzFloatingCapsuleUsesPlayerQueryForTailsCarryFlyOffTrigger() throws Exception {
+        RecordingServices services = new RecordingServices(camera);
+        GameStateManager gameState = new GameStateManager();
+        services.withGameState(gameState);
+        services.withZoneAct(2, 1);
+        SonicConfigurationService config = mock(SonicConfigurationService.class);
+        when(config.getString(SonicConfiguration.MAIN_CHARACTER_CODE)).thenReturn("sonic");
+        when(config.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE)).thenReturn("tails");
+        services.withConfiguration(config);
+        Mgz2EndEggCapsuleInstance capsule = Mgz2EndEggCapsuleInstance.createForCamera(0x3C80, 0x0600);
+        capsule.setServices(services);
+        setPrivateBoolean(capsule, "opened", true);
+        setPrivateInt(capsule, "postOpenTimer", 0);
+        Sonic player = new Sonic("sonic", (short) 0x3D00, (short) 0x0660);
+        player.setAir(true);
+        player.setRenderFlagOnScreen(true);
+        player.setAnimationId(4);
+        Tails tails = new Tails("tails", (short) 0x3D00, (short) 0x0630);
+        SidekickCpuController controller = new SidekickCpuController(tails, player);
+        tails.setCpuController(controller);
+        setPrivateBoolean(controller, "flyingCarryingFlag", true);
+        services.withQueryOnlyPlayers(player, List.of(tails));
+
+        capsule.update(1, player);
+
+        assertTrue(gameState.isEndOfLevelActive(),
+                "MGZ capsule Tails-carry trigger should resolve all engine sidekicks through ObjectPlayerQuery");
+        assertTrue(services.objectManager().getActiveObjects().stream()
+                .anyMatch(Mgz2ResultsScreenObjectInstance.class::isInstance));
+    }
+
+    @Test
     void mgzFloatingCapsuleStartsResultsForTailsEvenWhileAirborne() throws Exception {
         RecordingServices services = new RecordingServices(camera);
         GameStateManager gameState = new GameStateManager();
@@ -1251,6 +1284,8 @@ class TestMgzDrillingRobotnikInstance {
         private boolean deactivatedForTransition;
         private int romZoneId = 2;
         private int currentAct = 1;
+        private ObjectPlayerQuery playerQueryOverride;
+        private boolean failRawSidekickAccess;
         private final List<Integer> playedSfxIds = new ArrayList<>();
 
         RecordingServices(Camera camera) throws Exception {
@@ -1318,6 +1353,25 @@ class TestMgzDrillingRobotnikInstance {
             this.romZoneId = romZoneId;
             this.currentAct = currentAct;
             return this;
+        }
+
+        RecordingServices withQueryOnlyPlayers(PlayableEntity main, List<? extends PlayableEntity> sidekicks) {
+            this.playerQueryOverride = new ObjectPlayerQuery(() -> main, () -> sidekicks);
+            this.failRawSidekickAccess = true;
+            return this;
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return playerQueryOverride != null ? playerQueryOverride : super.playerQuery();
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            if (failRawSidekickAccess) {
+                throw new AssertionError("MGZ capsule should use ObjectPlayerQuery for Tails-carry sidekick checks");
+            }
+            return super.sidekicks();
         }
 
         @Override

@@ -11,6 +11,7 @@ import com.openggf.game.solid.PlayerStandingState;
 import com.openggf.game.solid.PostContactState;
 import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.session.EngineContext;
@@ -31,6 +32,8 @@ import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.managers.SpriteManager;
@@ -124,6 +127,46 @@ public class TestTornadoObjectInstance {
                 new Class<?>[]{AbstractPlayableSprite.class, boolean.class}, main, false);
 
         assertEquals(151, tornado.getX(), "SCZ Tornado anchors to main when sidekick is suppressed");
+    }
+
+    @Test
+    public void moveWithPlayerTransitionUsesQueryOnlyClosestPlayerAsAnchor() throws Exception {
+        TornadoObjectInstance tornado = createTornado(150, 0x100, 0x50);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 300, (short) 100);
+        TestPlayableSprite sidekick = new TestPlayableSprite("sidekick", (short) 140, (short) 100);
+        sidekick.setCpuControlled(true);
+
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick)));
+        setField(tornado, "standingTransition", true);
+
+        invokePrivate(tornado, "moveWithPlayer",
+                new Class<?>[]{AbstractPlayableSprite.class, boolean.class}, main, false);
+
+        assertEquals(149, tornado.getX(),
+                "Tornado closest-player orientation should resolve participants through ObjectPlayerQuery");
+    }
+
+    @Test
+    public void wfzStartReleaseDropsQueryOnlyRidingSidekick() throws Exception {
+        TornadoObjectInstance tornado = createTornado(100, 0x100, 0x52);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 100, (short) 100);
+        TestPlayableSprite sidekick = new TestPlayableSprite("sidekick", (short) 100, (short) 100);
+        sidekick.setCpuControlled(true);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, new TestObjectServices());
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick)).withObjectManager(objectManager));
+        objectManager.forceRidingObjectForBootstrap(sidekick, tornado);
+        sidekick.setOnObject(true);
+        sidekick.setAir(false);
+        setField(tornado, "routineSecondary", 4);
+        setField(tornado, "scriptTimer", 0);
+
+        tornado.update(0, main);
+
+        assertFalse(objectManager.isRidingObject(sidekick, tornado),
+                "WFZ start release should use ObjectPlayerQuery participants instead of raw sidekicks");
+        assertFalse(sidekick.isOnObject());
+        assertTrue(sidekick.getAir());
     }
 
     @Test
@@ -398,6 +441,40 @@ public class TestTornadoObjectInstance {
         @Override
         public void requestSessionSave(SaveReason reason) {
             lastSaveReason = reason;
+        }
+    }
+
+    private static final class QueryOnlyPlayerServices extends TestObjectServices {
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+        private ObjectManager objectManager;
+
+        private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+            withCamera(GameServices.camera());
+            withParallaxManager(GameServices.parallax());
+            withSpriteManager(GameServices.sprites());
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return List.of();
+        }
+
+        @Override
+        public ObjectManager objectManager() {
+            return objectManager;
+        }
+
+        private QueryOnlyPlayerServices withObjectManager(ObjectManager objectManager) {
+            this.objectManager = objectManager;
+            return this;
         }
     }
 

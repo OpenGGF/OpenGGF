@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
 import java.util.List;
@@ -260,7 +261,7 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance {
 
         // move.b #$81,(f_playerctrl).w
         // Bit 0 = control lock, bit 7 = disable object interaction
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
 
         // move.b #id_Roll,obAnim(a1)
@@ -432,7 +433,7 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance {
         targetY = signExtend16(waypointData[1]);
 
         // clr.b (f_playerctrl).w
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
         player.setForcedAnimationId(-1);
         controlledPlayer = null;
@@ -599,7 +600,7 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance {
         // prevents this during active transport. This is a safety net.
         if (routine != Routine.WAIT) {
             if (controlledPlayer != null) {
-                controlledPlayer.setObjectControlled(false);
+                ObjectControlState.none().applyTo(controlledPlayer);
                 controlledPlayer.setControlLocked(false);
                 controlledPlayer.setForcedAnimationId(-1);
             }

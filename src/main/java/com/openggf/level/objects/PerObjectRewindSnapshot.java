@@ -293,6 +293,8 @@ public record PerObjectRewindSnapshot(
             boolean suppressNextAizIntroNormalMovement,
             boolean skipPhysicsThisFrame,
             boolean cpuFrameCounterFromStoredLevelFrame,
+            int nextCpuFrameCounterOverride,
+            int catchUpFrameCounterOverride,
             com.openggf.sprites.playable.SidekickCpuController.NormalStepDiagnostics latestNormalStepDiagnostics,
             short carryLatchX,
             short carryLatchY,

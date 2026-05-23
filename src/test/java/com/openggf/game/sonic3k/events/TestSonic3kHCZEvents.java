@@ -15,6 +15,7 @@ import com.openggf.game.save.SelectedTeam;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.scroll.SwScrlHcz;
 import com.openggf.level.ParallaxManager;
@@ -141,6 +142,44 @@ class TestSonic3kHCZEvents {
                 "BG should consume Events_fg_5 in the same frame and clear background collision");
     }
 
+    @Test
+    void postTransitionCutsceneUsesAllEnginePlayersOnceThenPlainRelease() {
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0100, (short) 0x07F0);
+        GameServices.camera().setFocusedSprite(player);
+        player.setCpuControlled(true);
+        GameServices.sprites().addSprite(player, "sonic");
+        TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x0100, (short) 0x07F8);
+        sidekick.setCpuControlled(true);
+        GameServices.sprites().addSprite(sidekick, "tails");
+        TestablePlayableSprite secondSidekick = new TestablePlayableSprite("knuckles", (short) 0x0100, (short) 0x07F8);
+        secondSidekick.setCpuControlled(true);
+        GameServices.sprites().addSprite(secondSidekick, "knuckles");
+
+        Sonic3kHCZEvents events = new Sonic3kHCZEvents();
+        events.init(1);
+
+        events.startPostTransitionCutscene();
+
+        assertFullObjectControlCutsceneLock(player);
+        assertFullObjectControlCutsceneLock(sidekick);
+        assertFullObjectControlCutsceneLock(secondSidekick);
+
+        events.update(1, 0);
+
+        assertEquals((short) 0x07F4, player.getY(),
+                "focused player should not be mutated again through duplicate sidekick traversal");
+        assertEquals((short) 0x0804, sidekick.getY());
+        assertEquals((short) 0x0804, secondSidekick.getY());
+
+        events.update(1, 1);
+        events.update(1, 2);
+        events.update(1, 3);
+
+        assertPlainCutsceneRelease(player);
+        assertPlainCutsceneRelease(sidekick);
+        assertPlainCutsceneRelease(secondSidekick);
+    }
+
     private static void tickAct2(Sonic3kHCZEvents events, int frame) {
         events.updatePrePhysics(1, frame);
         events.update(1, frame);
@@ -150,6 +189,29 @@ class TestSonic3kHCZEvents {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) x, (short) y);
         GameServices.camera().setFocusedSprite(player);
         return player;
+    }
+
+    private static void assertFullObjectControlCutsceneLock(AbstractPlayableSprite sprite) {
+        assertTrue(sprite.isObjectControlled());
+        assertFalse(sprite.isObjectControlAllowsCpu());
+        assertTrue(sprite.isObjectControlSuppressesMovement());
+        assertTrue(sprite.isControlLocked());
+        assertTrue(sprite.getAir());
+        assertEquals(Sonic3kAnimationIds.FLOAT2.id(), sprite.getForcedAnimationId());
+        assertEquals((short) 0, sprite.getXSpeed());
+        assertEquals((short) 0, sprite.getYSpeed());
+        assertEquals((short) 0, sprite.getGSpeed());
+    }
+
+    private static void assertPlainCutsceneRelease(AbstractPlayableSprite sprite) {
+        assertFalse(sprite.isObjectControlled());
+        assertFalse(sprite.isObjectControlAllowsCpu());
+        assertFalse(sprite.isObjectControlSuppressesMovement());
+        assertFalse(sprite.isControlLocked());
+        assertTrue(sprite.getAir());
+        assertEquals(-1, sprite.getForcedAnimationId());
+        assertEquals((short) 0, sprite.getXSpeed());
+        assertEquals((short) 0, sprite.getYSpeed());
     }
 
     private static void installParallaxHandler(int zoneId, ZoneScrollHandler handler) throws Exception {

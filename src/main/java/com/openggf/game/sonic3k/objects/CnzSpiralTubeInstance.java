@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -57,7 +58,8 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite mainPlayer = services().camera().getFocusedSprite();
+        PlayableEntity queriedMainPlayer = services().playerQuery().mainPlayerOrNull();
+        AbstractPlayableSprite mainPlayer = queriedMainPlayer instanceof AbstractPlayableSprite sprite ? sprite : null;
         if (mainPlayer == null && playerEntity instanceof AbstractPlayableSprite sprite) {
             mainPlayer = sprite;
         }
@@ -65,12 +67,8 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance {
             processPlayer(mainPlayer, p1State);
         }
 
-        AbstractPlayableSprite sidekick = null;
-        for (AbstractPlayableSprite candidate : services().spriteManager().getSidekicks()) {
-            sidekick = candidate;
-            break;
-        }
-        if (sidekick != null && sidekick != mainPlayer) {
+        PlayableEntity nativeP2 = services().playerQuery().nativeP2OrNull();
+        if (nativeP2 instanceof AbstractPlayableSprite sidekick && sidekick != mainPlayer) {
             processPlayer(sidekick, p2State);
         }
     }
@@ -133,7 +131,7 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance {
         boolean capturedFromRight = player.getCentreX() >= spawn.x();
         state.phaseAngle = capturedFromRight ? 0x00 : 0x80;
 
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
         player.setGSpeed((short) CAPTURE_GROUND_SPEED);
@@ -239,7 +237,7 @@ public final class CnzSpiralTubeInstance extends AbstractObjectInstance {
      */
     private void releaseAtLastPoint(AbstractPlayableSprite player, PlayerState state) {
         writePositionWordY(player, player.getCentreY() & 0x0FFF);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
         player.setJumping(false);
         state.reset();

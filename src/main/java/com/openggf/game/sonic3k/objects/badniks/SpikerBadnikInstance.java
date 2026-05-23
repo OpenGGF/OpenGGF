@@ -6,11 +6,19 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -216,8 +224,9 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
         if (svc == null) {
             return nearest;
         }
-        for (PlayableEntity sidekick : svc.sidekicks()) {
-            if (!(sidekick instanceof AbstractPlayableSprite sprite) || sprite.getDead()) {
+        ObjectPlayerQuery query = svc.playerQuery();
+        for (PlayableEntity candidate : query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (!(candidate instanceof AbstractPlayableSprite sprite) || sprite.getDead()) {
                 continue;
             }
             int distance = Math.abs(currentX - sprite.getCentreX());
@@ -498,6 +507,16 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
         private static final int ANIM_DELAY = 1;
         private static final int[] ANIM_FRAMES = {5, 6};
         private static final int GRAVITY = 0x20;
+        private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                false,
+                TouchShieldDeflectCapability.SHIELD_DEFLECT,
+                SHIELD_REACTION_BOUNCE,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
         private int currentX;
         private int currentY;
@@ -553,6 +572,16 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
         @Override
         public int getCollisionProperty() {
             return 0;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return TOUCH_RESPONSE_PROFILE;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return TOUCH_RESPONSE_PROFILE;
         }
 
         @Override

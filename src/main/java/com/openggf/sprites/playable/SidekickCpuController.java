@@ -22,7 +22,6 @@ import com.openggf.physics.Direction;
  * CPU-controlled sidekick follower with daisy-chain support.
  */
 public class SidekickCpuController {
-
     // ROM subtracts $44 bytes from Sonic_Pos_Record_Index in TailsCPU_Normal/Flying.
     // That index points at the next free 4-byte slot, while engine historyPos points
     // at the latest written slot, so the equivalent engine lookback is 16 frames.
@@ -141,6 +140,8 @@ public class SidekickCpuController {
     private boolean deferredDespawnDeadFallContinuingThisFrame;
     private boolean bootstrapPreludePlacementApplied;
     private boolean cpuFrameCounterFromStoredLevelFrame;
+    private int nextCpuFrameCounterOverride = -1;
+    private int catchUpFrameCounterOverride = -1;
     private NormalStepDiagnostics latestNormalStepDiagnostics;
 
     // =====================================================================
@@ -224,6 +225,12 @@ public class SidekickCpuController {
     }
 
     private int resolveCpuFrameCounter(int fallbackFrameCount) {
+        if (nextCpuFrameCounterOverride >= 0 && state == State.NORMAL) {
+            int override = nextCpuFrameCounterOverride;
+            nextCpuFrameCounterOverride = -1;
+            cpuFrameCounterFromStoredLevelFrame = false;
+            return override;
+        }
         LevelManager levelManager = sidekick.currentLevelManager();
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         if (fs != null && fs.sidekickCpuUsesLevelFrameCounter()
@@ -255,6 +262,46 @@ public class SidekickCpuController {
             return levelManager.getObjectManager().getFrameCounter();
         }
         return fallbackFrameCount;
+    }
+
+    /**
+     * Exposes a ROM-visible {@code Level_frame_counter} to the next NORMAL
+     * sidekick CPU slot without advancing global manager counters.
+     */
+    public void overrideNextCpuFrameCounter(int frameCounter) {
+        nextCpuFrameCounterOverride = frameCounter;
+    }
+
+    /**
+     * Returns true when the next NORMAL CPU slot has the same cadence and
+     * follow-target shape that can spend AIZ1's intro refresh frame bridge.
+     */
+    public boolean canSpendAizIntroNormalRefreshFrameBridge(int romVisibleFrameCounter) {
+        if (state != State.NORMAL || (romVisibleFrameCounter & 0x3F) != 0
+                || sidekick.getAnimationId() == duckAnimId) {
+            return false;
+        }
+        AbstractPlayableSprite effectiveLeader = getEffectiveLeader();
+        if (effectiveLeader == null) {
+            return false;
+        }
+        int targetX = effectiveLeader.getCentreX(ROM_FOLLOW_DELAY_FRAMES);
+        int targetY = effectiveLeader.getCentreY(ROM_FOLLOW_DELAY_FRAMES);
+        int leadOffset = sidekick.getPhysicsFeatureSet() != null
+                ? sidekick.getPhysicsFeatureSet().sidekickFollowLeadOffset()
+                : 0;
+        boolean leaderStatusOnObject = effectiveLeader.getOnObjectAtFrameStart();
+        if (leadOffset > 0
+                && !leaderStatusOnObject
+                && effectiveLeader.getGSpeed() < 0x400) {
+            targetX -= leadOffset;
+        }
+        int dx = targetX - sidekick.getCentreX();
+        int dy = targetY - sidekick.getCentreY();
+        boolean passesDistanceGate = (romVisibleFrameCounter & 0xFF) == 0
+                || Math.abs(dx) < JUMP_DISTANCE_TRIGGER;
+        boolean passesHeightGate = dy <= -JUMP_HEIGHT_THRESHOLD;
+        return passesDistanceGate && passesHeightGate;
     }
 
     private int resolvePanicPhaseCounter() {
@@ -621,7 +668,7 @@ public class SidekickCpuController {
         lastInteractObjectId = 0;
         sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
-        sidekick.setObjectControlled(false);
+        ObjectControlState.none().applyTo(sidekick);
         sidekick.setXSpeed((short) 0);
         sidekick.setYSpeed((short) 0);
         sidekick.setGSpeed((short) 0);
@@ -679,7 +726,7 @@ public class SidekickCpuController {
         lastInteractObjectId = 0;
         sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
-        sidekick.setObjectControlled(false);
+        ObjectControlState.none().applyTo(sidekick);
         sidekick.setXSpeed((short) 0);
         sidekick.setYSpeed((short) 0);
         sidekick.setGSpeed((short) 0);
@@ -737,7 +784,7 @@ public class SidekickCpuController {
         sidekick.setCentreYPreserveSubpixel((short) 0);
         sidekick.setDoubleJumpFlag(0);
         sidekick.setControlLocked(true);
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setForcedAnimationId(flyAnimId);
         lastInteractObjectId = 0;
     }
@@ -925,7 +972,7 @@ public class SidekickCpuController {
             respawnStrategy.onApproachComplete(sidekick, effectiveLeader);
             sidekick.setForcedAnimationId(-1);
             sidekick.setControlLocked(false);
-            sidekick.setObjectControlled(false);
+            ObjectControlState.none().applyTo(sidekick);
             sidekick.setXSpeed((short) 0);
             sidekick.setYSpeed((short) 0);
             sidekick.setGSpeed((short) 0);
@@ -964,7 +1011,7 @@ public class SidekickCpuController {
             // S2 TailsCPU_Normal writes obj_control=$81 on dead-Sonic
             // recovery (s2.asm:38910-38915); S3K loc_13D4A does the same
             // before entering Tails_FlySwim_Unknown (sonic3k.asm:26656-26665).
-            sidekick.setObjectControlled(true);
+            ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
             sidekick.setAir(true);
             sidekick.setDoubleJumpFlag(1);
             sidekick.setForcedAnimationId(flyAnimId);
@@ -1772,7 +1819,7 @@ public class SidekickCpuController {
     private void releaseCarryForCarrierDisabled() {
         boolean mgzBossTransitionCarry = carryTrigger != null && carryTrigger.usesMgzBossTransitionControl();
         if (leader != null && flyingCarryingFlag) {
-            leader.setObjectControlled(false);
+            ObjectControlState.none().applyTo(leader);
             leader.setForcedAnimationId(-1);
             leader.setAir(true);
         }
@@ -1861,7 +1908,7 @@ public class SidekickCpuController {
         // ROM sub_1459E (sonic3k.asm:27399): clear Sonic's velocities/angle,
         // parent him to Tails, then copy Tails's current x/y velocity into both
         // Sonic and the latch globals used by Tails_Carry_Sonic.
-        leader.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(leader);
         leader.setAir(true);
         leader.setRolling(false);
         leader.setRollingJump(false);
@@ -1896,6 +1943,12 @@ public class SidekickCpuController {
     private void updateCatchUpFlight() {
         // ROM Tails_Catch_Up_Flying (sonic3k.asm:26474-26531)
         boolean trigger = false;
+        int catchUpFrameCounter = catchUpFrameCounterOverride >= 0
+                ? catchUpFrameCounterOverride
+                : (suppressNextAizIntroNormalMovement && cpuFrameCounterFromStoredLevelFrame
+                        ? frameCounter + 1
+                        : frameCounter);
+        catchUpFrameCounterOverride = -1;
 
         // Ctrl_2_logical A/B/C/START press → immediate trigger
         if ((controller2Logical & (AbstractPlayableSprite.INPUT_JUMP | INPUT_START)) != 0) {
@@ -1903,7 +1956,7 @@ public class SidekickCpuController {
         } else {
             // ROM checks Sonic's object_control with `bmi`, so only bit 7 suppresses
             // the 64-frame catch-up warp (sonic3k.asm:26478-26488).
-            if ((frameCounter & 0x3F) == 0
+            if ((catchUpFrameCounter & 0x3F) == 0
                     && (!leader.isObjectControlled() || leader.isObjectControlAllowsCpu())
                     && !leader.isSuperSonic()) {
                 trigger = true;
@@ -1917,10 +1970,6 @@ public class SidekickCpuController {
             // the current object-control state so CNZ cylinder releases
             // (sonic3k.asm:68071-68077) can expose the marker to the same
             // screen-boundary/movement writes recorded at CNZ1 F4790.
-            sidekick.setAir(true);
-            sidekick.setControlLocked(true);
-            sidekick.setObjectControlled(true);
-            sidekick.setForcedAnimationId(flyAnimId);
             return;
         }
 
@@ -1944,7 +1993,7 @@ public class SidekickCpuController {
         sidekick.setMoveLockTimer(0);
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         // ROM loc_13B50 (sonic3k.asm:26502-26508) writes double_jump_flag=0,
         // status=2, and object_control=$81. Movement remains owned by the CPU
         // flight routine; normal air physics must not be used to carry Tails.
@@ -1994,7 +2043,7 @@ public class SidekickCpuController {
                 flightTimer = 0;
                 sidekick.setCentreXPreserveSubpixel((short) 0);
                 sidekick.setCentreYPreserveSubpixel((short) 0);
-                sidekick.setObjectControlled(true);
+                ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
                 sidekick.setAir(true);
                 sidekick.setDoubleJumpFlag(1);
                 sidekick.setDoubleJumpProperty((byte) FLIGHT_FUEL);
@@ -2077,7 +2126,7 @@ public class SidekickCpuController {
 
         if (closeEnough && sonicAlive && sonicFreeOfLock) {
             // ROM sonic3k.asm:26631-26648 — return to NORMAL (routine 0x06).
-            sidekick.setObjectControlled(false);
+            ObjectControlState.none().applyTo(sidekick);
             sidekick.setControlLocked(false);
             sidekick.setXSpeed((short) 0);
             sidekick.setYSpeed((short) 0);
@@ -2108,7 +2157,7 @@ public class SidekickCpuController {
         }
 
         // 7. Otherwise keep object_control locked to keep flight AI active.
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
     }
 
     /**
@@ -2205,7 +2254,7 @@ public class SidekickCpuController {
 
     private void releaseCarry(int cooldownFrames) {
         boolean mgzBossTransitionCarry = carryTrigger != null && carryTrigger.usesMgzBossTransitionControl();
-        leader.setObjectControlled(false);
+        ObjectControlState.none().applyTo(leader);
         leader.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
         sidekick.setForcedAnimationId(mgzBossTransitionCarry ? flyAnimId : -1);
@@ -2279,7 +2328,16 @@ public class SidekickCpuController {
         }
 
         ObjectInstance currentRidingInstance = sidekick.getLatchedSolidObjectInstance();
-        if (sidekick.isOnObject()
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        boolean useRidingInstanceLossDespawn = fs != null
+                && fs.sidekickDespawnUsesRidingInstanceLoss();
+        boolean useObjectIdMismatchDespawn = fs == null
+                || fs.sidekickDespawnUsesObjectIdMismatch();
+        // S2's id-byte mismatch path also sees a deleted ride slot as id 0.
+        // The engine keeps the latched id sticky, so use the destroyed instance
+        // reference to surface that same freed-slot frame.
+        if ((useRidingInstanceLossDespawn || useObjectIdMismatchDespawn)
+                && sidekick.isOnObject()
                 && currentInteractObjectId != 0
                 && currentRidingInstance != null
                 && currentRidingInstance.isDestroyed()) {
@@ -2310,9 +2368,6 @@ public class SidekickCpuController {
         // Gate the path via PhysicsFeatureSet so S2 keeps its existing semantics
         // and S3K stops despawning Tails on legitimate same-region object
         // transitions (CNZ1 trace F1685 barber-pole → wire-cage divergence).
-        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
-        boolean useObjectIdMismatchDespawn = fs == null
-                || fs.sidekickDespawnUsesObjectIdMismatch();
         if (useObjectIdMismatchDespawn
                 && sidekick.isOnObject()
                 && currentInteractObjectId != 0
@@ -2674,7 +2729,7 @@ public class SidekickCpuController {
         sidekick.setSpindashCounter((short) 0);
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         // ROM sub_13ECA (sonic3k.asm:26800-26809) only writes x_pos,
         // y_pos, Tails_CPU_routine, object_control, status, and
         // double_jump_flag - it does NOT touch x_vel/y_vel/ground_vel.
@@ -2695,9 +2750,18 @@ public class SidekickCpuController {
      * object-control byte remain intact until routine 2 performs its own
      * catch-up warp.
      */
-    public void releaseAizIntroDormantMarker() {
+    public boolean releaseAizIntroDormantMarker() {
         if (state != State.DORMANT_MARKER) {
-            return;
+            return false;
+        }
+        LevelManager levelManager = sidekick.currentLevelManager();
+        if (levelManager != null) {
+            // ROM LevelLoop increments Level_frame_counter before Process_Sprites
+            // (sonic3k.asm:7888-7894). Engine zone pre-physics runs before the
+            // stored LevelManager counter advances, so expose the ROM-visible
+            // cadence to the first routine-2 tick without changing S3K's normal
+            // stored-counter rule.
+            catchUpFrameCounterOverride = levelManager.getFrameCounter() + 1;
         }
         state = State.CATCH_UP_FLIGHT;
         despawnCounter = 0;
@@ -2707,8 +2771,9 @@ public class SidekickCpuController {
         suppressNextAizIntroNormalMovement = true;
         sidekick.setAir(true);
         sidekick.setControlLocked(true);
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setForcedAnimationId(flyAnimId);
+        return true;
     }
 
     private void clearInputs() {
@@ -2989,6 +3054,8 @@ public class SidekickCpuController {
                 suppressNextAizIntroNormalMovement,
                 skipPhysicsThisFrame,
                 cpuFrameCounterFromStoredLevelFrame,
+                nextCpuFrameCounterOverride,
+                catchUpFrameCounterOverride,
                 latestNormalStepDiagnostics,
                 carryLatchX,
                 carryLatchY,
@@ -3034,6 +3101,8 @@ public class SidekickCpuController {
         suppressNextAizIntroNormalMovement = snapshot.suppressNextAizIntroNormalMovement();
         skipPhysicsThisFrame = snapshot.skipPhysicsThisFrame();
         cpuFrameCounterFromStoredLevelFrame = snapshot.cpuFrameCounterFromStoredLevelFrame();
+        nextCpuFrameCounterOverride = snapshot.nextCpuFrameCounterOverride();
+        catchUpFrameCounterOverride = snapshot.catchUpFrameCounterOverride();
         latestNormalStepDiagnostics = snapshot.latestNormalStepDiagnostics();
         carryLatchX = snapshot.carryLatchX();
         carryLatchY = snapshot.carryLatchY();
@@ -3112,6 +3181,8 @@ public class SidekickCpuController {
         aizIntroDormantMarkerPrimed = false;
         suppressNextAizIntroNormalMovement = false;
         skipPhysicsThisFrame = false;
+        nextCpuFrameCounterOverride = -1;
+        catchUpFrameCounterOverride = -1;
         // Note: leader is NOT cleared — it's a structural chain relationship set at
         // construction time, not per-level state. Clearing it would break the sidekick
         // permanently since findLeader() scanning was removed in favor of explicit assignment.
@@ -3122,7 +3193,7 @@ public class SidekickCpuController {
         clearInputs();
         sidekick.setForcedAnimationId(-1);
         sidekick.setControlLocked(false);
-        sidekick.setObjectControlled(false);
+        ObjectControlState.none().applyTo(sidekick);
         // Carry state (carryTrigger is intentionally NOT cleared — level-load-scoped)
         carryLatchX = 0;
         carryLatchY = 0;

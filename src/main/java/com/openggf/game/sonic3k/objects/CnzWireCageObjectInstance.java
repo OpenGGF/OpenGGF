@@ -4,11 +4,14 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -99,7 +102,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
      */
     @Override
     public void onUnload() {
-        setDestroyed(true);
+        ObjectLifetimeOps.destroyLatched(this);
     }
 
     @Override
@@ -131,10 +134,9 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
         if (services == null) {
             return;
         }
-        for (PlayableEntity sidekick : services.sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sprite && sprite != leader) {
-                processPlayer(frameCounter, sprite, true, leaderDplcClobberedD6);
-            }
+        AbstractPlayableSprite nativeP2 = nativeP2From(services, leader);
+        if (nativeP2 != null) {
+            processPlayer(frameCounter, nativeP2, true, leaderDplcClobberedD6);
         }
     }
 
@@ -269,14 +271,12 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
     private void beginLatchedCooldown(AbstractPlayableSprite player, CageState state) {
         state.cooldown = 1;
         player.setControlLocked(true);
-        player.setObjectControlled(true);
         // ROM Obj_CNZWireCage sets bits 6 and 1 of object_control (sonic3k.asm:69937-69938),
         // and bit 0 in the air-recapture branch (sonic3k.asm:69921 loc_3394C). None of
         // those is bit 7, so ROM keeps Tails_CPU_Control running each frame — that is
         // what lets the auto-jump trigger fire at the cage and feed Ctrl_2_logical=$78
         // to loc_33ADE for the cage's launch-with-A/B/C path. (CNZ1 trace F1791.)
-        player.setObjectControlAllowsCpu(true);
-        player.setObjectControlSuppressesMovement(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
     }
 
     private void latch(AbstractPlayableSprite player, CageState state, boolean touchFloorDuringLatch,
@@ -370,11 +370,9 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
             if (tryJumpRelease(frameCounter, player, state)) {
                 return;
             }
-            player.setObjectControlled(true);
             // See beginLatchedCooldown: ROM cage uses bits 1+6 (and 0 on
             // air-recapture), never bit 7, so the sidekick CPU keeps running.
-            player.setObjectControlAllowsCpu(true);
-            player.setObjectControlSuppressesMovement(true);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
             restoreObjectLatchIfTerrainClearedIt(player);
             updateReleaseRide(player, state);
             return;
@@ -391,11 +389,9 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
         if (Math.abs(player.getGSpeed()) < MIN_SPEED_TO_CONTINUE) {
             state.cooldown = 1;
             player.setControlLocked(true);
-            player.setObjectControlled(true);
             // See beginLatchedCooldown: ROM cage uses bits 1+6 (and 0 on
             // air-recapture), never bit 7, so the sidekick CPU keeps running.
-            player.setObjectControlAllowsCpu(true);
-            player.setObjectControlSuppressesMovement(true);
+            ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
             updateReleaseRide(player, state);
             return;
         }
@@ -497,9 +493,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
     }
 
     private void markNormalLatchObjectControl(AbstractPlayableSprite player) {
-        player.setObjectControlled(true);
-        player.setObjectControlAllowsCpu(true);
-        player.setObjectControlSuppressesMovement(false);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
     }
 
     private int currentStandingBit(boolean isSidekick, boolean leaderDplcClobberedD6) {
@@ -507,6 +501,16 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
             return P1_STANDING_BIT;
         }
         return leaderDplcClobberedD6 ? DIRTY_P2_STANDING_BIT : P2_STANDING_BIT;
+    }
+
+    private AbstractPlayableSprite nativeP2From(ObjectServices services, AbstractPlayableSprite leader) {
+        PlayableEntity queryMain = services.playerQuery().mainPlayerOrNull();
+        for (PlayableEntity candidate : services.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate instanceof AbstractPlayableSprite sprite && sprite != leader && sprite != queryMain) {
+                return sprite;
+            }
+        }
+        return null;
     }
 
     private void updateReleaseRide(AbstractPlayableSprite player, CageState state) {
@@ -614,7 +618,7 @@ public final class CnzWireCageObjectInstance extends AbstractObjectInstance {
         if (services != null && services.objectManager() != null) {
             services.objectManager().clearRidingObject(player);
         }
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
     }
 
     private static final class CageState {

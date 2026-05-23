@@ -167,7 +167,7 @@ public abstract class SuperStateController {
         state = SuperState.TRANSFORMING;
         player.setSuperSonic(true);
         // ROM: move.b #$81,obj_control(a0) - freeze physics during transformation
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         // ROM: move.b #$1F,anim(a0) - play transformation sparkle animation
         player.setForcedAnimationId(getTransformationAnimationId());
         onTransformationStarted();
@@ -181,7 +181,7 @@ public abstract class SuperStateController {
             ringDrainCounter = getRingDrainInterval();
             onSuperActivated();
             // ROM: clr.b obj_control(a0) - unfreeze after transformation complete
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setForcedAnimationId(-1);
         }
     }
@@ -211,7 +211,7 @@ public abstract class SuperStateController {
     private void revertToNormal() {
         player.setSuperSonic(false);
         // Clear transformation freeze in case revert happens during transformation
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setForcedAnimationId(-1);
         player.applyExternalPhysicsProfile(getNormalProfile());
         restoreNormalAnimProfile();

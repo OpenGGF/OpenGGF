@@ -10,6 +10,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -222,8 +223,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         player.setRolling(true);
         player.setCentreYPreserveSubpixel((short) centreY);
         player.setControlLocked(true);
-        player.setObjectControlled(true);
-        player.setObjectControlSuppressesMovement(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setObjectMappingFrameControl(true);
         player.clearForcedInputMask();
     }
@@ -324,8 +324,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         slopeIndex = 0;
         sonicSnowboardOverlayActive = true;
         player.setHidden(true);
-        player.setObjectControlled(true);
-        player.setObjectControlSuppressesMovement(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         state = State.SCRIPTED_SLOPE;
     }
 
@@ -334,8 +333,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         if (slopeIndex >= table.length) {
             player.setTopSolidBit((byte) 0x0E);
             player.setLrbSolidBit((byte) 0x0F);
-            player.setObjectControlled(true);
-            player.setObjectControlSuppressesMovement(false);
+            ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(player);
             state = State.SNOWBOARDING;
             return;
         }
@@ -407,15 +405,14 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
         sonicSnowboardTouchedGround = false;
         player.setMappingFrame(0);
         player.setHidden(true);
-        player.setObjectControlled(true);
-        player.setObjectControlSuppressesMovement(false);
+        ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(player);
         player.setObjectMappingFrameControl(true);
         state = State.SNOWBOARDING;
     }
 
     private void releaseStartupObjectControl(AbstractPlayableSprite player) {
         player.setObjectMappingFrameControl(false);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
     }
 
     private void animateFreeBoard() {
@@ -516,8 +513,7 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance {
 
     private void releasePlayerLocks(AbstractPlayableSprite player) {
         player.setControlLocked(false);
-        player.setObjectControlled(false);
-        player.setObjectControlSuppressesMovement(false);
+        ObjectControlState.none().applyTo(player);
         player.setObjectMappingFrameControl(false);
         player.setHidden(false);
         player.clearForcedInputMask();

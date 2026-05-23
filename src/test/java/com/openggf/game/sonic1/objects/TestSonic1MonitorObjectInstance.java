@@ -11,6 +11,8 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidRoutineKind;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseResult;
@@ -24,6 +26,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -94,6 +97,19 @@ class TestSonic1MonitorObjectInstance {
         assertEquals(35, explosion.getSlotIndex(), "ExplosionItem should allocate after the PowerUp child");
         assertTrue(explosion.getSlotIndex() > powerUp.getSlotIndex(),
                 "ExplosionItem must allocate after PowerUp to preserve ROM child ordering");
+    }
+
+    @Test
+    void exposesSonic1MonitorSolidRoutineProfile() {
+        Sonic1MonitorObjectInstance monitor =
+                new Sonic1MonitorObjectInstance(new ObjectSpawn(0x0248, 0x034E, 0x26, 0x06, 0, false, 0));
+
+        SolidRoutineProfile profile = monitor.getSolidRoutineProfile();
+
+        assertEquals(SolidRoutineKind.MONITOR_SOLID, profile.kind());
+        assertTrue(profile.monitorSolidity());
+        assertEquals(0, profile.monitorVerticalOffset());
+        assertFalse(profile.stickyContactBuffer());
     }
 
     private static AbstractObjectInstance findByObjectId(Collection<ObjectInstance> activeObjects, int objectId) {

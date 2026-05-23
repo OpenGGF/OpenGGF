@@ -8,6 +8,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DestructionEffects;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SubpixelMotion;
@@ -320,8 +321,7 @@ public class Sonic1BallHogBadnikInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         destroyed = true;
         // ROM parity: explosion inherits our slot (in-place obID change).
-        int mySlot = getSlotIndex();
-        setSlotIndex(-1);
+        int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
         setDestroyed(true);
         DestructionEffects.destroyBadnik(currentX, currentY, spawn, mySlot,
                 player, services(), Sonic1DestructionConfig.S1_DESTRUCTION_CONFIG);

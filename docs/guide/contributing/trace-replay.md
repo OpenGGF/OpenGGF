@@ -501,7 +501,10 @@ Typical debugging pattern:
    open the JSONL/JSONL.gz directly with `gzip -d -c | grep '"frame":K'`).
 4. Trace the divergence **backward** to the earliest divergent frame — that's the real bug, not
    necessarily the first-error frame.
-5. Only after the first error is understood should you trust later divergences.
+5. If the divergence involves object control, participant selection, or object lifetime, map it
+   to `ObjectControlState`, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy`, or
+   `ObjectLifetimeOps` before adding local trace-specific logic.
+6. Only after the first error is understood should you trust later divergences.
 
 The `trace-replay-bug-fixing` skill contains a full diagnose-fix-regen-loop workflow with
 ROM-citation requirements and per-game parity rules.
@@ -523,6 +526,16 @@ ROM-citation requirements and per-game parity rules.
   recorded values mid-replay violates the comparison-only invariant and masks engine bugs. If
   you find yourself wanting to "preserve" or "set" engine fields each frame from the trace,
   the engine probably has a real bug — fix it instead.
+- **Fixing object trace failures with one-off local control/lifetime logic.** Prefer
+  `ObjectControlState` for native object-control bits, `ObjectPlayerQuery` plus
+  `ObjectPlayerParticipationPolicy` for player/sidekick participation, and
+  `ObjectLifetimeOps` for destruction, respawn-latch, offscreen-expiry, and slot-transfer
+  semantics. If the current engine path still needs a `level.objects` compatibility wrapper,
+  use that wrapper and keep the trace fix behavior-neutral outside the diagnosed divergence.
+- **Growing guard baselines to land a trace fix.** Baselines are for known legacy violations
+  and should ratchet downward as object/boss/badnik code migrates. A new trace fix should not
+  add raw focused-player access, first-sidekick access, object-control setters, or direct
+  lifecycle mutation unless the native-only reason is documented and covered by the guard.
 - **Branching on game id in shared physics/AI code.** Per-game divergences must be gated via
   `PhysicsFeatureSet` flags, never `if (gameId == GameId.S3K)`. When ROM uses a different
   semantic on a value that exists across games (e.g. `cmp.w y_pos(a0),d0` in

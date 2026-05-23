@@ -125,6 +125,16 @@ class TestS3kCnzTeleporterRouteHeadless {
                 "The CNZ event bridge should record the explicit beam-handoff seam");
         assertFalse(isObjectPresent(CnzEggCapsuleInstance.class),
                 "The teleporter route must not spawn the capsule; that belongs to Obj_CNZEndBoss");
+
+        fixture.stepIdleFrames(CnzTeleporterBeamInstance.PLAYER_CAPTURE_COUNTER);
+        assertTrue(fixture.sprite().isObjectControlled(),
+                "At beam counter 8, Obj_CNZTeleporterMain should take full player object control");
+        assertFalse(fixture.sprite().isObjectControlAllowsCpu(),
+                "Full bit-7 teleporter control should not leave CPU movement enabled");
+        assertTrue(fixture.sprite().isObjectControlSuppressesMovement(),
+                "Full bit-7 teleporter control should suppress player movement");
+        assertTrue(fixture.sprite().isTouchResponseSuppressedByObjectControl(),
+                "Full bit-7 teleporter control should suppress normal touch responses");
     }
 
     /**

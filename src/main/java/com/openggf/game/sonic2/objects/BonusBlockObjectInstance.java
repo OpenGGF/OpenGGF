@@ -6,11 +6,18 @@ import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -114,6 +121,17 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
      * ROM Reference: s2.asm line 59681
      */
     private static final int MAX_HITS = 3;
+
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY,
+            true,
+            false,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     // ========================================================================
     // Group Tracking (Static State)
@@ -265,9 +283,7 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
         if (sidekickHitCooldown > 0) {
             sidekickHitCooldown--;
         } else if ((pending & 0x02) != 0) {
-            List<PlayableEntity> sidekicks = services().sidekicks();
-            if (sidekicks != null && !sidekicks.isEmpty()
-                    && sidekicks.getFirst() instanceof AbstractPlayableSprite sidekick
+            if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
                     && !sidekick.isHurt()
                     && !sidekick.getDead()) {
                 handleHit(sidekick);
@@ -373,9 +389,7 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
 
             // Mark as destroyed in persistence table to prevent respawning
             ObjectManager objectManager = services().objectManager();
-            if (objectManager != null) {
-                objectManager.markRemembered(spawn);
-            }
+            ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
             // ROM: Increment group destroy counter (lines 59676-59680)
             int groupIndex = getSaucerDataIndex();
@@ -412,6 +426,16 @@ public class BonusBlockObjectInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return collisionProperty;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

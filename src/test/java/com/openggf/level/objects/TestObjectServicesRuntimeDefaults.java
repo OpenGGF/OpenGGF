@@ -8,6 +8,7 @@ import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,6 +24,13 @@ class TestObjectServicesRuntimeDefaults {
         assertInstanceOf(InertSolidExecutionRegistry.class, registry);
         assertSame(registry.currentObject(), execution);
         assertTrue(execution.isInert());
+    }
+
+    @Test
+    void stubObjectServicesRequiresExplicitPlayerQueryStub() {
+        StubObjectServices services = new StubObjectServices();
+
+        assertThrows(UnsupportedOperationException.class, services::playerQuery);
     }
 
     @Test

@@ -35,6 +35,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.game.GroundMode;
 
@@ -4612,9 +4613,10 @@ public class ObjectManager {
 
                 // Multi-region providers (e.g., spiked pole helix) check each region independently
                 TouchResponseProvider.TouchRegion[] regions = provider.getMultiTouchRegions();
+                TouchResponseProfile touchProfile = provider.getTouchResponseProfile(regions != null);
                 if (regions != null) {
                     boolean hit = processMultiRegionTouch(player, playerX, playerY, playerHeight,
-                            instance, provider, regions, playerWidth,
+                            instance, provider, touchProfile, regions, playerWidth,
                             buildingSet, overlappingSet, isSidekick);
                     if (hit) {
                         break;
@@ -4646,10 +4648,7 @@ public class ObjectManager {
                 // future S2/S3K-specific object needs to skip the render-flag gate.
                 // Use isOnScreenForTouch() as the engine's equivalent of obRender
                 // bit 7.
-                if (instance.isSkipSolidContactThisFrame()) {
-                    continue;
-                }
-                if (provider.requiresRenderFlagForTouch()
+                if (touchProfile.requiresRenderFlagForTouch()
                         && instance instanceof AbstractObjectInstance aoi
                         && !aoi.isOnScreenForTouch()) {
                     continue;
@@ -4667,9 +4666,9 @@ public class ObjectManager {
                 int sizeIndex = flags & 0x3F;
                 int width = table.getWidthRadius(sizeIndex);
                 int height = table.getHeightRadius(sizeIndex);
-                TouchCategory category = decodeCategory(flags, provider);
+                TouchCategory category = decodeCategory(flags, touchProfile);
                 if (category == TouchCategory.HURT
-                        && tryShieldDeflect(player, instance, provider, width, height)) {
+                        && tryShieldDeflect(player, instance, provider, touchProfile, width, height)) {
                     continue;
                 }
 
@@ -4720,15 +4719,16 @@ public class ObjectManager {
                 boolean shouldTrigger = category == TouchCategory.BOSS
                         || category == TouchCategory.HURT
                         || category == TouchCategory.ENEMY
-                        || provider.requiresContinuousTouchCallbacks()
+                        || touchProfile.continuousCallbacks()
                         || !overlappingSet.contains(instance);
                 if (shouldTrigger) {
-                    TouchResponseResult result = new TouchResponseResult(sizeIndex, width, height, category);
+                    TouchResponseResult result = new TouchResponseResult(
+                            sizeIndex, width, height, category, touchProfile.shieldReactionFlags());
                     TouchResponseListener listener = instance instanceof TouchResponseListener casted ? casted : null;
                     if (isSidekick) {
-                        handleTouchResponseSidekick(player, instance, listener, result);
+                        handleTouchResponseSidekick(player, instance, listener, result, touchProfile);
                     } else {
-                        handleTouchResponse(player, instance, listener, result);
+                        handleTouchResponse(player, instance, listener, result, touchProfile);
                     }
                 }
                 // ROM parity: ReactToItem ALWAYS exits after the first overlapping
@@ -4747,7 +4747,7 @@ public class ObjectManager {
          */
         private boolean processMultiRegionTouch(PlayableEntity player,
                 int playerX, int playerY, int playerHeight,
-                ObjectInstance instance, TouchResponseProvider provider,
+                ObjectInstance instance, TouchResponseProvider provider, TouchResponseProfile profile,
                 TouchResponseProvider.TouchRegion[] regions, int playerWidth,
                 Set<ObjectInstance> buildingSet, Set<ObjectInstance> overlappingSet,
                 boolean isSidekick) {
@@ -4759,7 +4759,7 @@ public class ObjectManager {
                 int sizeIndex = flags & 0x3F;
                 int width = table.getWidthRadius(sizeIndex);
                 int height = table.getHeightRadius(sizeIndex);
-                TouchCategory category = decodeCategory(flags, provider);
+                TouchCategory category = decodeCategory(flags, profile);
 
                 boolean overlap = isOverlappingXY(playerX, playerY, playerHeight,
                         region.x(), region.y(), width, height, playerWidth);
@@ -4771,15 +4771,16 @@ public class ObjectManager {
                 // ROM: HURT is continuous (same as BOSS) — see processCollisionLoop comment
                 boolean shouldTrigger = category == TouchCategory.BOSS
                         || category == TouchCategory.HURT
-                        || provider.requiresContinuousTouchCallbacks()
+                        || profile.continuousCallbacks()
                         || !overlappingSet.contains(instance);
                 if (shouldTrigger) {
-                    TouchResponseResult result = new TouchResponseResult(sizeIndex, width, height, category);
+                    TouchResponseResult result = new TouchResponseResult(
+                            sizeIndex, width, height, category, region.shieldReactionFlags());
                     TouchResponseListener listener = instance instanceof TouchResponseListener casted ? casted : null;
                     if (isSidekick) {
-                        handleTouchResponseSidekick(player, instance, listener, result);
+                        handleTouchResponseSidekick(player, instance, listener, result, profile);
                     } else {
-                        handleTouchResponse(player, instance, listener, result);
+                        handleTouchResponse(player, instance, listener, result, profile);
                     }
                 }
                 // ROM parity: ReactToItem ALWAYS exits on first overlap, even
@@ -4791,11 +4792,12 @@ public class ObjectManager {
         }
 
         private boolean tryShieldDeflect(PlayableEntity player, ObjectInstance instance,
-                TouchResponseProvider provider, int objectWidth, int objectHeight) {
+                TouchResponseProvider provider, TouchResponseProfile profile, int objectWidth, int objectHeight) {
             if (player == null || !player.hasShield()) {
                 return false;
             }
-            if ((provider.getShieldReactionFlags() & SHIELD_REACTION_BOUNCE_BIT) == 0) {
+            if (profile.shieldDeflectCapability() != TouchShieldDeflectCapability.SHIELD_DEFLECT
+                    || (profile.shieldReactionFlags() & SHIELD_REACTION_BOUNCE_BIT) == 0) {
                 return false;
             }
 
@@ -4816,7 +4818,7 @@ public class ObjectManager {
          * - Special category objects still interact normally
          */
         private void handleTouchResponseSidekick(PlayableEntity sidekick, ObjectInstance instance,
-                TouchResponseListener listener, TouchResponseResult result) {
+                TouchResponseListener listener, TouchResponseResult result, TouchResponseProfile profile) {
             if (sidekick == null) {
                 return;
             }
@@ -4824,8 +4826,7 @@ public class ObjectManager {
                 listener.onTouchResponse(sidekick, result, currentFrameCounter);
             }
             if (result.category() == TouchCategory.SPECIAL
-                    && instance instanceof TouchResponseProvider provider
-                    && provider.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {
+                    && profile.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {
                 lastSpecialTouchFrame.put(sidekick, currentFrameCounter);
             }
 
@@ -4972,16 +4973,18 @@ public class ObjectManager {
             return true;
         }
 
-        private TouchCategory decodeCategory(int flags, TouchResponseProvider provider) {
+        private TouchCategory decodeCategory(int flags, TouchResponseProfile profile) {
             int categoryBits = flags & 0xC0;
             int sizeIndex = flags & 0x3F;
-            if (categoryBits == 0xC0
-                    && provider != null
-                    && ((provider.usesS3kTouchSpecialPropertyResponse()
-                            && isS3kTouchSpecialPropertyIndex(sizeIndex))
-                            || (provider.usesSonic2TouchSpecialPropertyResponse()
-                                    && isSonic2TouchSpecialPropertyIndex(sizeIndex)))) {
-                return TouchCategory.SPECIAL;
+            if (categoryBits == 0xC0 && profile != null) {
+                boolean propertySpecial = switch (profile.categoryDecodeMode()) {
+                    case S3K_SPECIAL_PROPERTY -> isS3kTouchSpecialPropertyIndex(sizeIndex);
+                    case SONIC2_SPECIAL_PROPERTY -> isSonic2TouchSpecialPropertyIndex(sizeIndex);
+                    case NORMAL -> false;
+                };
+                if (propertySpecial) {
+                    return TouchCategory.SPECIAL;
+                }
             }
             return switch (categoryBits) {
                 case 0x00 -> TouchCategory.ENEMY;
@@ -5007,7 +5010,7 @@ public class ObjectManager {
         }
 
         private void handleTouchResponse(PlayableEntity player, ObjectInstance instance,
-                TouchResponseListener listener, TouchResponseResult result) {
+                TouchResponseListener listener, TouchResponseResult result, TouchResponseProfile profile) {
             if (player == null) {
                 return;
             }
@@ -5015,13 +5018,12 @@ public class ObjectManager {
                 listener.onTouchResponse(player, result, currentFrameCounter);
             }
             if (result.category() == TouchCategory.SPECIAL
-                    && instance instanceof TouchResponseProvider provider
-                    && provider.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {
+                    && profile.enablesPostSpecialTouchAirborneSideVelocityPreservation()) {
                 lastSpecialTouchFrame.put(player, currentFrameCounter);
             }
 
             switch (result.category()) {
-                case HURT -> applyHurt(player, instance);
+                case HURT -> applyHurt(player, instance, result);
                 case ENEMY -> {
                     if (isPlayerAttacking(player, instance)) {
                         // ROM: Touch_Enemy_Part2 checks collision_property BEFORE decrementing HP.
@@ -5058,7 +5060,7 @@ public class ObjectManager {
                             }
                         }
                     } else {
-                        applyHurt(player, instance);
+                        applyHurt(player, instance, result);
                     }
                 }
                 case SPECIAL -> {
@@ -5071,7 +5073,7 @@ public class ObjectManager {
                         }
                         applyBossBounce(player);
                     } else {
-                        applyHurt(player, instance);
+                        applyHurt(player, instance, result);
                     }
                 }
             }
@@ -5167,7 +5169,7 @@ public class ObjectManager {
             }
         }
 
-        private void applyHurt(PlayableEntity player, ObjectInstance instance) {
+        private void applyHurt(PlayableEntity player, ObjectInstance instance, TouchResponseResult result) {
             if (player.getInvulnerable()) {
                 return;
             }
@@ -5182,8 +5184,8 @@ public class ObjectManager {
             boolean spikeHit = instance != null && instance.getSpawn().objectId() == 0x36;
 
             // S3K shield_reaction bit 4: fire shield blocks fire damage
-            boolean fireHit = !spikeHit && instance instanceof TouchResponseProvider trp
-                    && (trp.getShieldReactionFlags() & 0x10) != 0;
+            boolean fireHit = !spikeHit && result != null
+                    && (result.shieldReactionFlags() & 0x10) != 0;
 
             DamageCause cause = spikeHit
                     ? DamageCause.SPIKE
@@ -5631,7 +5633,7 @@ public class ObjectManager {
                 return false;
             }
             if (candidate instanceof SolidObjectProvider provider
-                    && provider.allowsObjectControlledSolidContacts()) {
+                    && provider.getSolidRoutineProfile().allowsObjectControlledSolidContacts()) {
                 return false;
             }
             // Most object-controlled states skip SolidObject entirely. MGZ top-platform
@@ -5926,13 +5928,14 @@ public class ObjectManager {
             if (instance.isSkipSolidContactThisFrame()) {
                 return null;
             }
-            if (shouldSkipOffscreenSidekickFullSolid(player, instance, provider)) {
+            SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+            if (shouldSkipOffscreenSidekickFullSolid(player, instance, solidProfile)) {
                 return null;
             }
 
             if (provider instanceof MultiPieceSolidProvider multiPiece) {
                 MultiPieceContactResult result = processMultiPieceCollision(
-                        player, multiPiece, instance, frameCounter, provider.usesStickyContactBuffer());
+                        player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
                 if (result.pushing()) {
                     player.setPushing(true);
                     setObjectPushingBit(player, instance);
@@ -5950,11 +5953,11 @@ public class ObjectManager {
             SolidObjectParams params = provider.getSolidParams();
             int anchorX = instance.getX() + params.offsetX();
             int anchorY = instance.getY() + params.offsetY();
-            int halfHeight = provider.isTopSolidOnly()
-                    && provider.usesGroundHalfHeightForTopSolidContact()
+            int halfHeight = solidProfile.topSolidOnly()
+                    && solidProfile.usesGroundHalfHeightForTopSolidContact()
                             ? params.groundHalfHeight()
                             : params.airHalfHeight();
-            boolean useStickyBuffer = provider.usesStickyContactBuffer();
+            boolean useStickyBuffer = solidProfile.stickyContactBuffer();
             boolean wasAirborne = player.getAir();
             boolean wasRidingObject = useStickyBuffer && isRidingCurrentPlayerObject(instance);
 
@@ -6014,9 +6017,9 @@ public class ObjectManager {
             // camera left edge (0x985) when Tails should land on it -- never
             // gets a STANDING contact for Tails, so setLatchedSolidObject for
             // slot 16 never fires and the freed-slot despawn cannot trigger.
-            boolean topOnlyBypassesOffscreenGate = provider.isTopSolidOnly();
+            boolean topOnlyBypassesOffscreenGate = solidProfile.topSolidOnly();
             if (isSolidObjectOffscreenGateEnabled(player)
-                    && !provider.bypassesOffscreenSolidGate()
+                    && !solidProfile.bypassesOffscreenSolidGate()
                     && !topOnlyBypassesOffscreenGate
                     && !instance.isWithinSolidContactBounds()) {
                 // ROM sub_1E0C2 (sonic3k.asm:41528-41532): off-screen / no-contact
@@ -6031,23 +6034,21 @@ public class ObjectManager {
             }
 
             SolidContact contact;
+            SlopedSolidRoutineAdapter slopedAdapter = null;
             byte[] slopeData = null;
             if (instance instanceof SlopedSolidProvider sloped) {
-                slopeData = sloped.getSlopeData();
+                slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                slopeData = slopedAdapter.getSlopeData();
             }
 
             if (slopeData != null
-                    && instance instanceof SlopedSolidProvider sloped
-                    && shouldUseSlopeForContact(instance, sloped)) {
+                    && shouldUseSlopeForContact(instance, slopedAdapter)) {
                 int slopeHalfHeight = params.groundHalfHeight();
                 contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(), slopeHalfHeight,
-                        slopeData, sloped.isSlopeFlipped(), provider.isTopSolidOnly(),
-                        useStickyBuffer, instance, true, sloped);
+                        solidProfile.topSolidOnly(), useStickyBuffer, instance, true, slopedAdapter);
             } else {
                 contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
-                        provider.isTopSolidOnly(), provider.hasMonitorSolidity(),
-                        provider.getMonitorSolidObjectVerticalOffset(),
-                        useStickyBuffer, instance, true);
+                        solidProfile, useStickyBuffer, instance, true);
             }
 
             if (contact == null) {
@@ -6058,7 +6059,7 @@ public class ObjectManager {
                 return null;
             }
             applyNonUnifiedTopSolidLandingHeightOverride(
-                    player, contact, instance, provider.isTopSolidOnly(), wasAirborne, wasRidingObject, anchorY, params);
+                    player, contact, instance, solidProfile, wasAirborne, wasRidingObject, anchorY, params);
             if ((contact.standing() || contact.touchTop())
                     && instance.getSpawn() != null
                     && player instanceof AbstractPlayableSprite sprite) {
@@ -6082,6 +6083,7 @@ public class ObjectManager {
 
         private SolidContact processInlineRidingObject(PlayableEntity player, ObjectInstance instance,
                 SolidObjectProvider provider, int ridingX, int ridingY, int ridingPieceIndex) {
+            SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
             int currentX;
             int currentY;
             SolidObjectParams params;
@@ -6097,7 +6099,7 @@ public class ObjectManager {
             }
 
             if (player.getAir()) {
-                if (provider.carriesAirborneRiderAfterExitPlatform()) {
+                if (solidProfile.carriesAirborneRiderAfterExitPlatform()) {
                     // Sonic 1 Obj52 MBlock_StandOn is not a normal PlatformObject
                     // continued-riding path: it calls ExitPlatform, moves the block,
                     // then still calls MvSonicOnPtfm2. That preserves the platform
@@ -6129,7 +6131,7 @@ public class ObjectManager {
                 Integer managedCentreY = provider.getObjectManagedRideCentreY(player, currentY, params);
                 if (managedCentreY != null) {
                     if (player instanceof AbstractPlayableSprite sprite) {
-                        sprite.setCentreYPreserveSubpixel((short) (managedCentreY & 0xFFFF));
+                        NativePositionOps.writeYPosPreserveSubpixel(sprite, managedCentreY);
                     } else {
                         int newY = managedCentreY - (player.getHeight() / 2);
                         player.setY((short) newY);
@@ -6175,7 +6177,7 @@ public class ObjectManager {
                 ridingStates.put(player, new RidingState(instance, currentX, currentY, ridingPieceIndex));
                 setObjectStandingBit(player, instance);
 
-                if (provider.dropOnFloor()) {
+                if (solidProfile.dropOnFloor()) {
                     TerrainCheckResult floorCheck = ObjectTerrainUtils.checkFloorDist(
                             player.getCentreX(), player.getCentreY(), player.getYRadius());
                     if (floorCheck.distance() <= 0) {
@@ -6203,7 +6205,7 @@ public class ObjectManager {
                 }
             }
             player.setOnObject(false);
-            if (provider.forceAirOnRideExit() && !usesUnifiedCollisionModel(player)) {
+            if (solidProfile.forceAirOnRideExit() && !usesUnifiedCollisionModel(player)) {
                 // ROM PlatformObject_SingleCharacter exit path (s2.asm:35506-35511):
                 //   bclr #status.player.on_object,status(a1)
                 //   bset #status.player.in_air,status(a1)
@@ -6218,7 +6220,7 @@ public class ObjectManager {
 
         private boolean carriesAirborneRiderAfterExitPlatform(ObjectInstance object) {
             return object instanceof SolidObjectProvider provider
-                    && provider.carriesAirborneRiderAfterExitPlatform();
+                    && provider.getSolidRoutineProfile().carriesAirborneRiderAfterExitPlatform();
         }
 
         private void applyRidingCarry(PlayableEntity player, ObjectInstance instance,
@@ -6284,6 +6286,7 @@ public class ObjectManager {
                     if (!provider.isSolidFor(player)) {
                         continue;
                     }
+                    SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
 
                     if (provider instanceof MultiPieceSolidProvider multiPiece) {
                         if (hasStandingContactMultiPiece(player, multiPiece, instance)) {
@@ -6298,24 +6301,22 @@ public class ObjectManager {
                     // ROM always uses airHalfHeight (d2) for the overlap test — d3 is
                     // overwritten by playerYRadius before it is read.
                     int halfHeight = params.airHalfHeight();
-                    boolean useStickyBuffer = provider.usesStickyContactBuffer();
+                    boolean useStickyBuffer = solidProfile.stickyContactBuffer();
+                    SlopedSolidRoutineAdapter slopedAdapter = null;
                     byte[] slopeData = null;
                     if (instance instanceof SlopedSolidProvider sloped) {
-                        slopeData = sloped.getSlopeData();
+                        slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                        slopeData = slopedAdapter.getSlopeData();
                     }
                     SolidContact contact;
                     if (slopeData != null
-                            && instance instanceof SlopedSolidProvider sloped
-                            && shouldUseSlopeForContact(instance, sloped)) {
+                            && shouldUseSlopeForContact(instance, slopedAdapter)) {
                         int slopeHalfHeight = params.groundHalfHeight();
                         contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(), slopeHalfHeight,
-                                slopeData, sloped.isSlopeFlipped(), provider.isTopSolidOnly(),
-                                useStickyBuffer, instance, false, sloped);
+                                solidProfile.topSolidOnly(), useStickyBuffer, instance, false, slopedAdapter);
                     } else {
                         contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
-                                provider.isTopSolidOnly(), provider.hasMonitorSolidity(),
-                                provider.getMonitorSolidObjectVerticalOffset(),
-                                useStickyBuffer, instance, false);
+                                solidProfile, useStickyBuffer, instance, false);
                     }
                     if (contact != null && contact.standing()) {
                         return true;
@@ -6344,8 +6345,11 @@ public class ObjectManager {
                 if (!(instance instanceof SolidObjectProvider provider)
                         || !provider.providesPreMovementGroundAttachmentSupport()
                         || !provider.isSolidFor(player)
-                        || !provider.isTopSolidOnly()
                         || blocksSolidContacts(player, instance)) {
+                    continue;
+                }
+                SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+                if (!solidProfile.topSolidOnly()) {
                     continue;
                 }
                 SolidObjectParams params = provider.getSolidParams();
@@ -6373,11 +6377,12 @@ public class ObjectManager {
                 int anchorX = multiPiece.getPieceX(i) + params.offsetX();
                 int anchorY = multiPiece.getPieceY(i) + params.offsetY();
                 int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();
-                boolean useStickyBuffer = multiPiece.usesStickyContactBuffer();
+                SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
+                boolean useStickyBuffer = solidProfile.stickyContactBuffer();
 
                 // Multi-piece solids don't use monitor solidity
                 SolidContact contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
-                        multiPiece.isTopSolidOnly(), false, 0, useStickyBuffer, instance, false);
+                        solidProfile, useStickyBuffer, instance, false);
                 if (contact != null && contact.standing()) {
                     return true;
                 }
@@ -6425,7 +6430,8 @@ public class ObjectManager {
                 if (!provider.isSolidFor(player)) {
                     continue;
                 }
-                if (provider.isTopSolidOnly()) {
+                SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
+                if (solidProfile.topSolidOnly()) {
                     continue;
                 }
                 SolidObjectParams params = provider.getSolidParams();
@@ -6560,6 +6566,7 @@ public class ObjectManager {
                 player.setOnObject(false);
             }
             if (ridingObject != null && ridingObject instanceof SolidObjectProvider provider) {
+                SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
                 int currentX;
                 int currentY;
                 SolidObjectParams params;
@@ -6626,7 +6633,7 @@ public class ObjectManager {
                     // ROM: DropOnFloor (s2.asm:35810) — after repositioning the player
                     // on a platform, check if terrain is at or above the player's feet.
                     // If so, detach the player so terrain collision takes over next frame.
-                    if (provider.dropOnFloor()) {
+                    if (solidProfile.dropOnFloor()) {
                         TerrainCheckResult floorCheck = ObjectTerrainUtils.checkFloorDist(
                                 player.getCentreX(), player.getCentreY(), player.getYRadius());
                         if (floorCheck.distance() <= 0) {
@@ -6657,7 +6664,9 @@ public class ObjectManager {
                         // loc_1E2E0 (sonic3k.asm:41807-41812). The interact
                         // latch can remain non-zero; it is not itself support.
                         player.setOnObject(false);
-                        player.setAir(true);
+                        if (solidProfile.forceAirOnRideExit()) {
+                            player.setAir(true);
+                        }
                     }
                     ridingStates.remove(player);
                     ridingObject = null;
@@ -6708,6 +6717,7 @@ public class ObjectManager {
                 if (!provider.isSolidFor(player)) {
                     continue;
                 }
+                SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
 
                 // ROM: SolidObject_ChkBounds (s2.asm:35175-35176) — when obj_control bit 7
                 // is set, SolidObject returns "no collision". This prevents captured/spring-locked
@@ -6728,7 +6738,7 @@ public class ObjectManager {
 
                 if (provider instanceof MultiPieceSolidProvider multiPiece) {
                     MultiPieceContactResult result = processMultiPieceCollision(
-                            player, multiPiece, instance, frameCounter, provider.usesStickyContactBuffer());
+                            player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
                     if (result.pushing()) {
                         player.setPushing(true);
                         // ROM: s2.asm:35220-35226 — also set pushing bit on the object
@@ -6753,19 +6763,20 @@ public class ObjectManager {
                 // ROM always uses airHalfHeight (d2) for the overlap test — d3 is
                 // overwritten by playerYRadius before it is read.
                 int halfHeight = params.airHalfHeight();
-                boolean useStickyBuffer = provider.usesStickyContactBuffer();
+                boolean useStickyBuffer = solidProfile.stickyContactBuffer();
                 boolean wasAirborne = player.getAir();
                 boolean wasRidingObject = useStickyBuffer && isRidingCurrentPlayerObject(instance);
 
                 SolidContact contact;
+                SlopedSolidRoutineAdapter slopedAdapter = null;
                 byte[] slopeData = null;
                 if (instance instanceof SlopedSolidProvider sloped) {
-                    slopeData = sloped.getSlopeData();
+                    slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                    slopeData = slopedAdapter.getSlopeData();
                 }
 
                 if (slopeData != null
-                        && instance instanceof SlopedSolidProvider sloped
-                        && shouldUseSlopeForContact(instance, sloped)) {
+                        && shouldUseSlopeForContact(instance, slopedAdapter)) {
                     // ROM parity: when already riding a sloped object, the ROM does NOT
                     // re-run SolidObject2F. It only runs ExitPlatform + SlopeObject2,
                     // which is handled by the riding update above. Re-running the full
@@ -6784,13 +6795,10 @@ public class ObjectManager {
                     }
                     int slopeHalfHeight = params.groundHalfHeight();
                     contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(), slopeHalfHeight,
-                            slopeData, sloped.isSlopeFlipped(), provider.isTopSolidOnly(),
-                            useStickyBuffer, instance, true, sloped);
+                            solidProfile.topSolidOnly(), useStickyBuffer, instance, true, slopedAdapter);
                 } else {
                     contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
-                            provider.isTopSolidOnly(), provider.hasMonitorSolidity(),
-                            provider.getMonitorSolidObjectVerticalOffset(),
-                            useStickyBuffer, instance, true);
+                            solidProfile, useStickyBuffer, instance, true);
                 }
 
                 if (contact == null) {
@@ -6800,7 +6808,7 @@ public class ObjectManager {
                     continue;
                 }
                 applyNonUnifiedTopSolidLandingHeightOverride(
-                        player, contact, instance, provider.isTopSolidOnly(), wasAirborne, wasRidingObject, anchorY, params);
+                        player, contact, instance, solidProfile, wasAirborne, wasRidingObject, anchorY, params);
                 if ((contact.standing() || contact.touchTop())
                         && instance.getSpawn() != null
                         && player instanceof AbstractPlayableSprite sprite) {
@@ -6869,6 +6877,7 @@ public class ObjectManager {
             int standingPieceIndex = -1;
             int standingPieceX = 0;
             int standingPieceY = 0;
+            SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
 
             for (int i = 0; i < pieceCount; i++) {
                 SolidObjectParams params = multiPiece.getPieceParams(i);
@@ -6881,7 +6890,7 @@ public class ObjectManager {
                 // Multi-piece solids don't use monitor solidity
                 // Pass piece index so sticky buffer only applies to the piece being ridden
                 SolidContact contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
-                        multiPiece.isTopSolidOnly(), false, 0, useStickyBuffer, instance, i, true);
+                        solidProfile, useStickyBuffer, instance, i, true);
 
                 if (contact == null) {
                     continue;
@@ -6931,15 +6940,14 @@ public class ObjectManager {
          * Resolve contact for single-piece objects (backwards compatibility).
          */
         private SolidContact resolveContact(PlayableEntity player,
-                int anchorX, int anchorY, int halfWidth, int halfHeight, boolean topSolidOnly,
-                boolean monitorSolidity, int monitorVerticalOffset,
+                int anchorX, int anchorY, int halfWidth, int halfHeight, SolidRoutineProfile profile,
                 boolean useStickyBuffer, ObjectInstance instance, boolean apply) {
-            return resolveContact(player, anchorX, anchorY, halfWidth, halfHeight, topSolidOnly,
-                    monitorSolidity, monitorVerticalOffset, useStickyBuffer, instance, -1, apply);
+            return resolveContact(player, anchorX, anchorY, halfWidth, halfHeight, profile,
+                    useStickyBuffer, instance, -1, apply);
         }
 
-        private boolean shouldUseSlopeForContact(ObjectInstance instance, SlopedSolidProvider sloped) {
-            return sloped.usesSlopeForNewLanding() || isRidingCurrentPlayerObject(instance);
+        private boolean shouldUseSlopeForContact(ObjectInstance instance, SlopedSolidRoutineAdapter adapter) {
+            return adapter.profile().usesSlopeForNewLanding() || isRidingCurrentPlayerObject(instance);
         }
 
         /**
@@ -6947,9 +6955,12 @@ public class ObjectManager {
          * @param pieceIndex The piece index being checked, or -1 for single-piece objects
          */
         private SolidContact resolveContact(PlayableEntity player,
-                int anchorX, int anchorY, int halfWidth, int halfHeight, boolean topSolidOnly,
-                boolean monitorSolidity, int monitorVerticalOffset,
+                int anchorX, int anchorY, int halfWidth, int halfHeight, SolidRoutineProfile profile,
                 boolean useStickyBuffer, ObjectInstance instance, int pieceIndex, boolean apply) {
+            boolean topSolidOnly = profile.topSolidOnly();
+            boolean monitorSolidity = profile.monitorSolidity();
+            int monitorVerticalOffset = profile.monitorVerticalOffset();
+            boolean inclusiveRightEdge = profile.inclusiveRightEdge();
             int playerCenterX = player.getCentreX();
             int playerCenterY = player.getCentreY();
             if (topSolidOnly && instance instanceof SolidObjectProvider provider) {
@@ -7004,8 +7015,6 @@ public class ObjectManager {
             // ridden piece. Without this, fast moving platforms (ObjB2 Tornado, etc.)
             // can drop contact for one frame at edges.
             int stickyX = ridingThisPiece ? 16 : 0;
-            boolean inclusiveRightEdge = instance instanceof SolidObjectProvider provider
-                    && provider.usesInclusiveRightEdge();
             int rightLimit = width2 + stickyX;
             if (relXRaw < -stickyX || (inclusiveRightEdge ? relXRaw > rightLimit : relXRaw >= rightLimit)) {
                 return null;
@@ -7051,10 +7060,10 @@ public class ObjectManager {
         }
 
         private void applyNonUnifiedTopSolidLandingHeightOverride(PlayableEntity player,
-                SolidContact contact, ObjectInstance instance, boolean topSolidOnly,
+                SolidContact contact, ObjectInstance instance, SolidRoutineProfile solidProfile,
                 boolean wasAirborne, boolean wasRidingObject, int anchorY, SolidObjectParams params) {
             if (contact != SolidContact.STANDING
-                    || !topSolidOnly
+                    || !solidProfile.topSolidOnly()
                     || !wasAirborne
                     || wasRidingObject
                     || instance instanceof SlopedSolidProvider
@@ -7066,13 +7075,12 @@ public class ObjectManager {
             // anchorY-groundHalfHeight formula below only matches PlatformObject_ChkYRange
             // (s2.asm:35696-35712). Skip the snap for SolidObject-based objects so
             // resolveContactInternal's result is preserved.
-            if (instance instanceof SolidObjectProvider provider
-                    && !provider.usesPlatformObjectLandingSnap()) {
+            if (!solidProfile.usesPlatformLandingSnap()) {
                 return;
             }
             int targetCentreY = anchorY - params.groundHalfHeight() - player.getYRadius() - 1;
             if (player instanceof AbstractPlayableSprite sprite) {
-                sprite.setCentreYPreserveSubpixel((short) targetCentreY);
+                NativePositionOps.writeYPosPreserveSubpixel(sprite, targetCentreY);
                 return;
             }
             int newY = targetCentreY - (player.getHeight() / 2);
@@ -7183,11 +7191,13 @@ public class ObjectManager {
         }
 
         private SolidContact resolveSlopedContact(PlayableEntity player, int anchorX, int anchorY, int halfWidth,
-                int halfHeight, byte[] slopeData, boolean xFlip, boolean topSolidOnly, boolean useStickyBuffer,
-                ObjectInstance instance, boolean apply, SlopedSolidProvider slopedProvider) {
+                int halfHeight, boolean topSolidOnly, boolean useStickyBuffer,
+                ObjectInstance instance, boolean apply, SlopedSolidRoutineAdapter slopedAdapter) {
+            byte[] slopeData = slopedAdapter.getSlopeData();
             if (slopeData == null || slopeData.length == 0) {
                 return null;
             }
+            SlopedSolidRoutineProfile slopedProfile = slopedAdapter.profile();
             int playerCenterX = player.getCentreX();
             int playerCenterY = player.getCentreY();
 
@@ -7198,7 +7208,7 @@ public class ObjectManager {
             }
 
             int sampleX = relX;
-            if (xFlip) {
+            if (slopedAdapter.isSlopeFlipped()) {
                 // ROM: move.w d0,d5 / not.w d5 / add.w d3,d5 / lsr.w #1,d5
                 // where d0=relX and d3=halfWidth*2. For in-range relX this is
                 // equivalent to (width2 - relX - 1) >> 1.
@@ -7210,7 +7220,7 @@ public class ObjectManager {
             }
 
             int slopeSample = (byte) slopeData[sampleX];
-            int slopeBase = slopedProvider.getSlopeBaseline();
+            int slopeBase = slopedProfile.slopeBaseline();
             boolean riding = useStickyBuffer && isRidingCurrentPlayerObject(instance);
             int minRelY = riding ? -16 : 0;
 
@@ -7227,7 +7237,7 @@ public class ObjectManager {
             // S1 SolidObject2F is an explicit exception: it adds the slope catch
             // range into d2 before adding d2 to the vertical overlap value.
             int verticalOverlapCompensation = playerYRadius;
-            if (slopedProvider.addsSlopeCatchRangeToVerticalOverlap()) {
+            if (slopedProfile.addsSlopeCatchRangeToVerticalOverlap()) {
                 verticalOverlapCompensation += halfHeight;
             }
             int relY = playerCenterY - baseY + 4 + verticalOverlapCompensation;
@@ -7247,7 +7257,7 @@ public class ObjectManager {
             // occurs when horizontal penetration < vertical penetration on slopes.
             if (riding && !player.getAir()) {
                 if (apply) {
-                    int rawSample = sampleSlopeY(player, anchorX, halfWidth, slopedProvider);
+                    int rawSample = sampleSlopeY(player, anchorX, halfWidth, slopedAdapter.provider());
                     if (rawSample != Integer.MIN_VALUE) {
                         int targetCentreY = anchorY - (rawSample & 0xFF) - playerYRadius;
                         int newY = targetCentreY - (player.getHeight() / 2);
@@ -7259,7 +7269,7 @@ public class ObjectManager {
 
             if (!riding
                     && !player.getAir()
-                    && slopedProvider.usesGroundedStandingCatchWindow()
+                    && slopedProfile.usesGroundedStandingCatchWindow()
                     && relY >= 0
                     && relY <= maxTop
                     && isWithinTopLandingWidth(instance, player, relX, halfWidth)) {
@@ -7288,7 +7298,7 @@ public class ObjectManager {
             // Player_TouchFloor has cleared rolling would use the new standing
             // radius and push roll landings down by 5 px.
             if (result == SolidContact.STANDING && apply && riding) {
-                int rawSample = sampleSlopeY(player, anchorX, halfWidth, slopedProvider);
+                int rawSample = sampleSlopeY(player, anchorX, halfWidth, slopedAdapter.provider());
                 if (rawSample != Integer.MIN_VALUE) {
                     int targetCentreY = anchorY - (rawSample & 0xFF) - playerYRadius;
                     int newY = targetCentreY - (player.getHeight() / 2);
@@ -7784,7 +7794,7 @@ public class ObjectManager {
 
             int configuredHalfWidth = provider.getTopLandingHalfWidth(player, collisionHalfWidth);
             int allowedHalfWidth;
-            if (provider.usesCollisionHalfWidthForTopLanding()) {
+            if (provider.getSolidRoutineProfile().usesCollisionHalfWidthForTopLanding()) {
                 allowedHalfWidth = collisionHalfWidth;
             } else if (configuredHalfWidth < collisionHalfWidth) {
                 // Provider explicitly set a narrower landing width
@@ -7869,7 +7879,7 @@ public class ObjectManager {
 
         private boolean shouldSkipOffscreenSidekickFullSolid(PlayableEntity player,
                                                              ObjectInstance instance,
-                                                             SolidObjectProvider provider) {
+                                                             SolidRoutineProfile solidProfile) {
             if (!(player instanceof AbstractPlayableSprite sidekick) || !sidekick.isCpuControlled()) {
                 return false;
             }
@@ -7877,8 +7887,8 @@ public class ObjectManager {
             if (featureSet == null || !featureSet.solidObjectRequiresSidekickOnScreen()) {
                 return false;
             }
-            if (provider.bypassesOffscreenSolidGate()
-                    || provider.isTopSolidOnly()
+            if (solidProfile.bypassesOffscreenSolidGate()
+                    || solidProfile.topSolidOnly()
                     || instance instanceof SlopedSolidProvider) {
                 return false;
             }

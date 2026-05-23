@@ -220,21 +220,17 @@ public final class TraceReplayBootstrap {
     }
 
     /**
-     * The legacy S3K AIZ end-to-end trace includes the title/intro prefix, so
-     * frame 289 must still execute a native gameplay tick to keep Sonic and
-     * sidekick cadence aligned. Its sampled oscillator-dependent object state,
-     * however, is still the state read during Process_Sprites before the first
-     * LevelLoop OscillateNumDo pass: see docs/skdisasm/sonic3k.asm:7884-7909.
-     * Obj_FloatingPlatform reads Oscillating_table+$0A before SolidObjectTop
-     * carries the rider (docs/skdisasm/sonic3k.asm:50244-50248,
-     * docs/skdisasm/sonic3k.asm:50826-50841), so suppress exactly the first
-     * replay-local oscillator advance rather than hydrating trace data.
+     * The legacy S3K AIZ end-to-end trace now drives its intro prefix from
+     * trace frame 0, including the first native LevelLoop oscillator tick.
+     * Applying an additional replay-local suppression would leave
+     * Obj_FloatingPlatform one oscillator frame behind the ROM by the first
+     * carry window.
      */
     public static int initialOscillationSuppressionFramesForTraceReplay(TraceData trace) {
         if (trace == null || trace.frameCount() == 0) {
             return 0;
         }
-        return isLegacyS3kAizIntroTrace(trace) ? 1 : 0;
+        return 0;
     }
 
     /**
@@ -258,21 +254,7 @@ public final class TraceReplayBootstrap {
      * {@code object_state_snapshot}.
      */
     public static int sidekickTitleCardPreludeFramesForTraceReplay(TraceData trace) {
-        int s2Frames = resolveS2TitleCardPreludeFrames(trace);
-        if (s2Frames > 0) {
-            return s2Frames;
-        }
-        // S3K Sonic+Tails CNZ Act 1 seed-frame mode: trace frame 0 has
-        // Level_frame_counter=1, i.e. the row was sampled AFTER ROM's first
-        // LevelLoop iteration (sonic3k.asm:7884-7910). Tails_CPU_Control's
-        // loc_13A5A (sonic3k.asm:26405-26415) repositions Tails to
-        // (0x18, 0x600) with status_InAir set during that iteration, and
-        // Tails_Modes' in-air gravity (MoveSprite_TestGravity) then writes
-        // y_vel = 0x38 before the LevelLoop ends. Run one sidekick-only
-        // prelude tick during bootstrap so the seed-frame compare sees the
-        // post-loc_13A5A + post-gravity state instead of the raw post-spawn
-        // state ((tails_x ~0x0A clamped, air=false, y_vel=0)).
-        return resolveS3kSidekickSeedFramePreludeFrames(trace);
+        return 0;
     }
 
     /**
@@ -288,7 +270,7 @@ public final class TraceReplayBootstrap {
      * least one sidekick. Returns 0 otherwise.
      */
     public static int levelObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
-        return resolveS2TitleCardPreludeFrames(trace);
+        return 0;
     }
 
     /**

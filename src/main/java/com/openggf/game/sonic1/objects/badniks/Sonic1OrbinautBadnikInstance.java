@@ -8,6 +8,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DestructionEffects.DestructionConfig;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -157,12 +158,7 @@ public class Sonic1OrbinautBadnikInstance extends AbstractBadnikInstance {
             final int prevSlotFinal = prevSlot;
             OrbSpikeObjectInstance spike = spawnFreeChild(() -> {
                 OrbSpikeObjectInstance s = new OrbSpikeObjectInstance(this, angle);
-                if (prevSlotFinal >= 0) {
-                    int spikeSlot = services().objectManager().allocateSlotAfter(prevSlotFinal);
-                    if (spikeSlot >= 0) {
-                        s.setSlotIndex(spikeSlot);
-                    }
-                }
+                ObjectLifetimeOps.assignFindNextFreeChildSlot(services().objectManager(), s, prevSlotFinal);
                 return s;
             });
             spikes.add(spike);

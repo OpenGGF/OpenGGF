@@ -103,6 +103,7 @@ Git hooks in `.githooks/` and CI enforce the branch policy below. Configure the 
     *   `data` – ROM loading (`Rom`, `RomManager`, `RomByteReader`), game interface, art providers
     *   `debug` – debug overlay (`DebugRenderer`), enabled via the `DEBUG_VIEW_ENABLED` configuration flag
     *   `game` – core game-agnostic interfaces, providers, `GameServices` façade, `PlayableEntity`, `DamageCause`, `AbstractZoneRegistry`
+    *   `game.profiles.*` – canonical cross-game object behavior profiles. New solid, touch-response, and object-lifecycle vocabulary should live here and be adapted by `level.objects` execution code instead of creating game-local profile types.
     *   `game.dataselect` – shared data select framework: `AbstractDataSelectProvider`, `DataSelectSessionController`, `DataSelectHostProfile`, `DataSelectAction`. The `DataSelectProvider` interface itself lives in `com.openggf.game`.
     *   `game.rewind` – gameplay-scoped rewind framework: keyframes, deterministic seek/replay, playback state, generic field capture, rewind field annotations, identity ids, policy registry, and compact schema capture foundation
     *   `game.save` – save system: `SaveManager` (JSON + SHA256), `SaveSessionContext`, `SaveSlotSummary`, `SelectedTeam`
@@ -116,7 +117,7 @@ Git hooks in `.githooks/` and CI enforce the branch policy below. Configure the 
     *   `game.sonic3k.dataselect` – S3K data select: `S3kDataSelectManager`, `S3kDataSelectPresentation`, `S3kDataSelectRenderer`, `S3kDataSelectDataLoader`, save payloads
     *   `graphics` – GL wrappers and render managers
     *   `level` – level structures (patterns, blocks, chunks, collision), `MutableLevel`, `AbstractLevel`, `LevelTilemapManager`, `LevelTransitionCoordinator`, `LevelDebugRenderer`
-    *   `level.objects` – unified `ObjectManager` with placement, collision, touch response; `ObjectServices` interface and `DefaultObjectServices`; shared base classes (`AbstractBadnikInstance`, `AbstractSpikeObjectInstance`, `AbstractMonitorObjectInstance`, `AbstractProjectileInstance`, etc.); utility helpers (`SubpixelMotion`, `PatrolMovementHelper`, `PlatformBobHelper`, `DestructionEffects`, etc.)
+    *   `level.objects` – unified `ObjectManager` with placement, collision, touch response; `ObjectServices` interface and `DefaultObjectServices`; shared base classes (`AbstractBadnikInstance`, `AbstractSpikeObjectInstance`, `AbstractMonitorObjectInstance`, `AbstractProjectileInstance`, etc.); compatibility wrappers/adapters that execute canonical `com.openggf.game.profiles.*` behavior; utility helpers (`SubpixelMotion`, `PatrolMovementHelper`, `PlatformBobHelper`, `DestructionEffects`, etc.)
     *   `level.scroll` – `AbstractZoneScrollHandler` and per-zone scroll handlers
     *   `level.rings` – unified `RingManager` with placement, rendering, lost rings
     *   `level.bumpers` – unified `CNZBumperManager` for Casino Night Zone
@@ -135,6 +136,7 @@ This is a frequent source of bugs and parity regressions.
 - In this engine, ROM `y_pos` maps to `getCentreY()` / `setCentreY(...)`.
 - `getX()` / `getY()` are top-left sprite bounds, not ROM object position fields.
 - When porting disassembly that reads or writes `x_pos` / `y_pos`, default to centre-coordinate APIs unless the code is explicitly working with sprite bounds, render extents, or collision box edges.
+- For playable sprites, route native `x_pos` / `y_pos` writes through `NativePositionOps`; use raw preserve-subpixel setters only in lower-level sprite internals or non-playable/object-local cases.
 - If camera, collision, object anchoring, or scripted movement starts drifting relative to the player, check for accidental mixing of `getX()` / `getY()` with ROM `x_pos` / `y_pos` semantics first.
 - **Debug overlay caveat:** The in-engine debug HUD `Pos:` line (from `DebugRenderer`) prints `sprite.getX()` / `sprite.getY()` — the **top-left corner**, not the centre. It is NOT the ROM `x_pos` / `y_pos`. Do not quote those numbers directly against disassembly traces; convert to centre coordinates first (or read `getCentreX()` / `getCentreY()` in code).
 
@@ -425,15 +427,28 @@ PatternSpriteRenderer renderer = getRenderer(artKey);  // static method on Abstr
 AudioManager.getInstance().playSfx(sfxId);  // PROHIBITED
 ```
 
+### Object Behavior Contracts
+
+Future object, badnik, boss, and trace work should use the shared object-control and profile vocabulary rather than adding one-off flags:
+
+- Use `ObjectControlState` for object-control intent instead of raw `setObjectControlled(...)`, `setObjectControlAllowsCpu(...)`, or `setObjectControlSuppressesMovement(...)` combinations. Keep compatibility setters only as migration bridges.
+- Use `ObjectPlayerQuery` plus an explicit `ObjectPlayerParticipationPolicy` for object/player selection. Avoid directly grabbing the focused player or the first sidekick unless the code has a native-P1-only or native-P2-only reason documented by test or guard baseline.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
+- Use `ObjectLifetimeOps` for destruction, offscreen expiry, respawn-latch updates, and slot transfer semantics. Direct `setDestroyed(true)` or remembered-spawn mutation should remain legacy or explicitly justified code.
+- Put canonical object behavior profiles under `com.openggf.game.profiles.*`; keep `level.objects` as the execution/compatibility layer that adapts old provider methods to those profiles while migration is partial.
+- When adding or tightening source guards, ratchet baselines downward. A baseline may preserve known legacy violations, but new object/boss/badnik work should not grow it.
+
 ### Child Object Spawning
 ```java
 // CORRECT — use spawnChild() helper:
 ChildObject child = spawnChild(() -> new ChildObject(spawn, params));
-
-// Legacy pattern (still works but prefer spawnChild):
-ObjectManager om = services().objectManager();
-om.addDynamicObject(childInstance);
 ```
+
+Do not add new manual `ObjectManager.addDynamicObject(...)` child-spawn call
+sites. Use `spawnChild(...)` so slot ownership, parent/child lifecycle, and
+remembered-spawn behavior stay on the shared object-lifetime path. Direct
+manager insertion is reserved for manager/framework bridge code with focused
+tests.
 
 ### Adding New Objects
 1. Add object ID to `Sonic2ObjectIds.java`

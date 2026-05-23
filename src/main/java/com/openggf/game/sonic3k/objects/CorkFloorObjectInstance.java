@@ -11,7 +11,9 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -24,6 +26,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -38,6 +41,8 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     private static final int FRAGMENT_GRAVITY = 0x18;
     private static final int PRIORITY = 5;
     private static final int ROLL_BREAK_LAUNCH_YVEL = -0x300;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     private static final int[][] VEL_TABLE_SMALL = {
             {-0x200, -0x200}, {0x200, -0x200},
@@ -163,13 +168,12 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         rollingBreakPlayer = null;
 
         SolidCheckpointBatch batch = checkpointAll();
-        applyCheckpointContact(player, player != null ? batch.perPlayer().get(player) : null);
-        for (PlayableEntity sidekick : services().sidekicks()) {
+        for (PlayableEntity participant : participatingPlayers(player)) {
             if (broken) {
                 break;
             }
-            if (sidekick instanceof AbstractPlayableSprite sidekickSprite) {
-                applyCheckpointContact(sidekickSprite, batch.perPlayer().get(sidekick));
+            if (participant instanceof AbstractPlayableSprite playable) {
+                applyCheckpointContact(playable, batch.perPlayer().get(participant));
             }
         }
         if (broken) {
@@ -197,6 +201,17 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         }
 
         playerStanding = false;
+    }
+
+    private List<PlayableEntity> participatingPlayers(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer == null || participants.contains(updatePlayer)) {
+            return participants;
+        }
+        ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+        withUpdatePlayer.add(updatePlayer);
+        withUpdatePlayer.addAll(participants);
+        return withUpdatePlayer;
     }
 
     private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {
@@ -295,9 +310,7 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
     private void markRemembered() {
         try {
             ObjectManager om = getObjectManager();
-            if (om != null) {
-                om.markRemembered(spawn);
-            }
+            ObjectLifetimeOps.markSpawnRemembered(om, spawn);
         } catch (Exception e) {
             // Safe fallback for tests.
         }

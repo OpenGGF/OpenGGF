@@ -9,11 +9,15 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -175,8 +179,10 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity playerEntity) {
         if (broken) return;
 
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (player == null) return;
+        AbstractPlayableSprite updatePlayer =
+                playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
+        NativePlayerSlots players = nativePlayerSlots(updatePlayer);
+        if (players.p1() == null && players.p2() == null) return;
 
         // ROM: loc_1EDB0 / loc_1EF64 — timer countdown while ANY player is captured.
         // tst.w (a2) tests the word at $32, which is nonzero if $32 or $33 is set.
@@ -184,26 +190,51 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
         if (hasTimer && anyCaptured) {
             breakTimer--;
             if (breakTimer <= 0) {
-                performBreak(player);
+                performBreak(players);
                 return;
             }
         }
 
         // ROM: calls sub_1EDEC/sub_1EFA0 for Player 1 (d2=0), then Player 2 (d2=1)
-        processPlayerCapture(player, 0);
+        if (players.p1() != null) {
+            processPlayerCapture(players.p1(), 0);
+        }
 
         // Process sidekick (Player 2)
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                processPlayerCapture(sidekick, 1);
-            }
+        if (players.p2() != null) {
+            processPlayerCapture(players.p2(), 1);
         }
 
         // ROM: tst.b $3A(a0) / bne loc_1EEEC — break flag from ABC release
         if (triggerBreak) {
-            performBreak(player);
+            performBreak(players);
             return;
         }
+    }
+
+    private NativePlayerSlots nativePlayerSlots(AbstractPlayableSprite updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        PlayableEntity main = query.mainPlayerOrNull();
+        if (!(main instanceof AbstractPlayableSprite) && updatePlayer != null) {
+            main = updatePlayer;
+        }
+
+        AbstractPlayableSprite p1 = (main instanceof AbstractPlayableSprite sprite) ? sprite : null;
+        AbstractPlayableSprite p2 = null;
+        for (PlayableEntity candidate : query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate == main || !(candidate instanceof AbstractPlayableSprite sprite)) {
+                continue;
+            }
+            p2 = sprite;
+            break;
+        }
+        if (p2 == p1) {
+            p2 = null;
+        }
+        return new NativePlayerSlots(p1, p2);
+    }
+
+    private record NativePlayerSlots(AbstractPlayableSprite p1, AbstractPlayableSprite p2) {
     }
 
     /**
@@ -336,7 +367,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
         // ROM: move.b #1,object_control(a1)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         // ROM: move.b #$11,anim(a1) (or #$14 for horizontal)
         player.setAnimationId(hangAnim);
         player.setForcedAnimationId(hangAnim);
@@ -355,7 +386,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
         captured[pi] = false;
         releaseCooldown[pi] = RELEASE_COOLDOWN;
         // ROM: andi.b #$FE,object_control(a1)
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setForcedAnimationId(-1);
         // ROM: bclr d2,(_unkF7C7).w — re-enables water tunnel capture
         HCZWaterRushObjectInstance.HCZBreakableBarState.clearBit(pi);
@@ -385,23 +416,19 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
 
     // ===== Break / Destruction logic =====
 
-    private void performBreak(AbstractPlayableSprite player) {
+    private void performBreak(NativePlayerSlots players) {
         if (broken) return;
         broken = true;
 
         // ROM: loc_1EEEC / loc_1F09A — release both players if captured
-        if (captured[0]) {
-            player.setObjectControlled(false);
-            player.setForcedAnimationId(-1);
+        if (captured[0] && players.p1() != null) {
+            ObjectControlState.none().applyTo(players.p1());
+            players.p1().setForcedAnimationId(-1);
         }
         // Release P2 (sidekick)
-        if (captured[1]) {
-            for (PlayableEntity sidekickEntity : services().sidekicks()) {
-                if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                    sidekick.setObjectControlled(false);
-                    sidekick.setForcedAnimationId(-1);
-                }
-            }
+        if (captured[1] && players.p2() != null) {
+            ObjectControlState.none().applyTo(players.p2());
+            players.p2().setForcedAnimationId(-1);
         }
         captured[0] = false;
         captured[1] = false;
@@ -478,9 +505,7 @@ public class HCZBreakableBarObjectInstance extends AbstractObjectInstance {
     private void markRemembered() {
         try {
             var om = services().objectManager();
-            if (om != null) {
-                om.markRemembered(spawn);
-            }
+            ObjectLifetimeOps.markSpawnRemembered(om, spawn);
         } catch (Exception e) {
             // Safe fallback
         }

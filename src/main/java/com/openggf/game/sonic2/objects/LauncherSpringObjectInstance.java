@@ -12,6 +12,7 @@ import com.openggf.level.objects.*;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
 
 import java.util.HashMap;
@@ -227,7 +228,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // - Bit 0 (0x01): Blocks input (controlLocked)
         // - Bit 7 (0x80): Skips ALL movement/physics (objectControlled)
         player.setControlLocked(true);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         ps.pinballBeforeCapture = player.getPinballMode();
         player.setPinballMode(true);
 
@@ -511,7 +512,7 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     private void releasePlayer(AbstractPlayableSprite player, PlayerState ps, boolean preservePinball) {
         // ROM: move.b #0,obj_control(a1) clears all control bits
         player.setControlLocked(false);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         boolean keepPinball = preservePinball || ps.pinballBeforeCapture;
         player.setPinballMode(keepPinball);
         if (!isDiagonal() && isTails(player)) {
@@ -663,13 +664,9 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
     public String traceDebugDetails() {
         AbstractPlayableSprite sidekick = null;
         ObjectServices currentServices = tryServices();
-        if (currentServices != null) {
-            for (PlayableEntity candidate : currentServices.sidekicks()) {
-                if (candidate instanceof AbstractPlayableSprite sprite) {
-                    sidekick = sprite;
-                    break;
-                }
-            }
+        if (currentServices != null
+                && currentServices.playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sprite) {
+            sidekick = sprite;
         }
         PlayerState sidekickState = sidekick != null ? playerStates.get(sidekick) : null;
         int sidekickDx = sidekick != null ? sidekick.getCentreX() - currentSpriteX : 0;
@@ -705,14 +702,13 @@ public class LauncherSpringObjectInstance extends BoxObjectInstance
         // frame, not the current frame (s2.asm:57490-57530, 57630-57686).
         updateSpringPosition();
 
-        // Process all tracked players (supports two-player mode)
-        // ROM uses objoff_36 for P1 and objoff_37 for P2
+        // Process all tracked native players (ROM objoff_36 for P1, objoff_37 for P2).
         processPlayer(player, camera);
 
-        // Also process sidekick(s) if present (two-player support)
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick != player) {
-                processPlayer((AbstractPlayableSprite) sidekick, camera);
+        for (PlayableEntity candidate : services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate != player && candidate instanceof AbstractPlayableSprite sprite) {
+                processPlayer(sprite, camera);
             }
         }
 

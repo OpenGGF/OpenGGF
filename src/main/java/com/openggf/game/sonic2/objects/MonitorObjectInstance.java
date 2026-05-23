@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -16,6 +17,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -240,8 +242,8 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
         if (objectManager != null) {
-            objectManager.markRemembered(spawn);
             objectManager.clearRidingObject(player);
         }
 
@@ -367,6 +369,11 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         // wrapper gates roll-animation hits, then branches to SolidObject_cont
         // for normal solid classification (docs/s2disasm/s2.asm:25448-25452).
         return false;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(false);
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.level.objects.SpringHelper;
 import com.openggf.level.objects.BoxObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.level.objects.*;
@@ -16,6 +17,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class SpringObjectInstance extends BoxObjectInstance
@@ -50,6 +52,8 @@ public class SpringObjectInstance extends BoxObjectInstance
     private static final int ANIM_HORIZONTAL_TRIGGER = 3;
     private static final int ANIM_DIAGONAL_IDLE = 4;
     private static final int ANIM_DIAGONAL_TRIGGER = 5;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private final boolean redSpring;
     private ObjectAnimationState animationState;
@@ -470,6 +474,14 @@ public class SpringObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(
+                usesStickyContactBuffer(),
+                usesInclusiveRightEdge(),
+                bypassesOffscreenSolidGate());
+    }
+
+    @Override
     public byte[] getSlopeData() {
         int type = getType();
         if (type == TYPE_DIAGONAL_UP) {
@@ -508,14 +520,22 @@ public class SpringObjectInstance extends BoxObjectInstance
         mappingFrame = animationState.getMappingFrame();
 
         SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
-        if (playerEntity instanceof AbstractPlayableSprite player) {
-            applyCheckpointContact(player, batch.perPlayer().get(player));
-        }
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sidekickSprite) {
-                applyCheckpointContact(sidekickSprite, batch.perPlayer().get(sidekick));
+        for (PlayableEntity participant : playerParticipants(playerEntity)) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                applyCheckpointContact(player, batch.perPlayer().get(participant));
             }
         }
+    }
+
+    private List<PlayableEntity> playerParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
     }
 
     @Override

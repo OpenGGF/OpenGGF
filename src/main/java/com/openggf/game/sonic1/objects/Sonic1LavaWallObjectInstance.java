@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -258,12 +259,7 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
                             0x4E, spawn.subtype(), 0, false, 0);
                     Sonic1LavaWallObjectInstance trail = new Sonic1LavaWallObjectInstance(trailSpawn, this);
                     // ROM: FindNextFreeObj allocates slot after parent
-                    if (mySlot >= 0) {
-                        int childSlot = services().objectManager().allocateSlotAfter(mySlot);
-                        if (childSlot >= 0) {
-                            trail.setSlotIndex(childSlot);
-                        }
-                    }
+                    ObjectLifetimeOps.assignFindNextFreeChildSlot(services().objectManager(), trail, mySlot);
                     return trail;
                 });
             }

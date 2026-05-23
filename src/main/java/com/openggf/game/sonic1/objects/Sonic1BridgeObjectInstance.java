@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -46,6 +47,9 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
 
     // From disassembly: obPriority = 3
     private static final int PRIORITY = 3;
+
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     // ghzbend1.bin - Maximum depression depth per bridge length and player position
     // 17 rows x 16 columns. Row = segment count (0-16), column = player position.
@@ -186,9 +190,8 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (playerOnBridge) {
-            AbstractPlayableSprite currentRider = currentRidingPlayer(player);
+            AbstractPlayableSprite currentRider = currentRidingPlayer();
             if (currentRider != null) {
                 updatePlayerLogIndex(currentRider);
             }
@@ -227,28 +230,23 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
         // players update the log index before bending above; new contacts latch here
         // for the next frame's Bri_WalkOff-equivalent bend.
         SolidCheckpointBatch batch = checkpointAll();
-        updateStandingState(player, batch);
+        updateStandingState(batch);
     }
 
-    private AbstractPlayableSprite firstStandingPlayer(AbstractPlayableSprite player,
-                                                       SolidCheckpointBatch batch) {
-        PlayerSolidContactResult mainResult = player != null ? batch.perPlayer().get(player) : null;
-        if (mainResult != null && mainResult.standingNow()) {
-            return player;
-        }
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sidekickSprite) {
-                PlayerSolidContactResult result = batch.perPlayer().get(sidekick);
+    private AbstractPlayableSprite firstStandingPlayer(SolidCheckpointBatch batch) {
+        for (PlayableEntity candidate : services().playerQuery().playersFor(PLAYER_PARTICIPATION)) {
+            if (candidate instanceof AbstractPlayableSprite sprite) {
+                PlayerSolidContactResult result = batch.perPlayer().get(candidate);
                 if (result != null && result.standingNow()) {
-                    return sidekickSprite;
+                    return sprite;
                 }
             }
         }
         return null;
     }
 
-    private void updateStandingState(AbstractPlayableSprite player, SolidCheckpointBatch batch) {
-        AbstractPlayableSprite standingPlayer = firstStandingPlayer(player, batch);
+    private void updateStandingState(SolidCheckpointBatch batch) {
+        AbstractPlayableSprite standingPlayer = firstStandingPlayer(batch);
         playerOnBridge = standingPlayer != null;
         if (standingPlayer == null) {
             return;
@@ -257,18 +255,15 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
         updatePlayerLogIndex(standingPlayer);
     }
 
-    private AbstractPlayableSprite currentRidingPlayer(AbstractPlayableSprite player) {
+    private AbstractPlayableSprite currentRidingPlayer() {
         ObjectManager objectManager = services().objectManager();
         if (objectManager == null) {
             return null;
         }
-        if (player != null && objectManager.getRidingObject(player) == this) {
-            return player;
-        }
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sidekickSprite
-                    && objectManager.getRidingObject(sidekickSprite) == this) {
-                return sidekickSprite;
+        for (PlayableEntity candidate : services().playerQuery().playersFor(PLAYER_PARTICIPATION)) {
+            if (candidate instanceof AbstractPlayableSprite sprite
+                    && objectManager.getRidingObject(sprite) == this) {
+                return sprite;
             }
         }
         return null;

@@ -15,6 +15,8 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidRoutineKind;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -61,6 +63,26 @@ class TestSpringObjectInstance {
         SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
+    }
+
+    @Test
+    void exposesFullSolidRoutineProfileForVerticalAndHorizontalSprings() {
+        SpringObjectInstance vertical = new SpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0x41, 0x00, 0, false, 0),
+                "TestSpring");
+        SpringObjectInstance horizontal = new SpringObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0x41, 0x10, 0, false, 0),
+                "TestSpring");
+
+        SolidRoutineProfile verticalProfile = vertical.getSolidRoutineProfile();
+        SolidRoutineProfile horizontalProfile = horizontal.getSolidRoutineProfile();
+
+        assertEquals(SolidRoutineKind.FULL_SOLID, verticalProfile.kind());
+        assertFalse(verticalProfile.inclusiveRightEdge());
+        assertTrue(verticalProfile.bypassesOffscreenSolidGate());
+        assertEquals(SolidRoutineKind.FULL_SOLID, horizontalProfile.kind());
+        assertTrue(horizontalProfile.inclusiveRightEdge());
+        assertTrue(horizontalProfile.bypassesOffscreenSolidGate());
     }
 
     @Test

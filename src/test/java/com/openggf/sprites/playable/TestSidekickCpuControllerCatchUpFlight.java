@@ -1,7 +1,10 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.game.GameServices;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
+import java.lang.reflect.Field;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +28,7 @@ class TestSidekickCpuControllerCatchUpFlight {
 
     static class TestableSprite extends AbstractPlayableSprite {
         TestableSprite(String code) { super(code, (short) 0, (short) 0); }
+        void setPhysicsFeatureSetForTest(PhysicsFeatureSet featureSet) { setPhysicsFeatureSet(featureSet); }
         @Override public void draw() {}
         @Override public void defineSpeeds() {}
         @Override protected void createSensorLines() {}
@@ -39,6 +43,8 @@ class TestSidekickCpuControllerCatchUpFlight {
         sonic.setCentreY((short) 0x0400);
         tails.setCentreX((short) 0x0200);  // Far away
         tails.setCentreY((short) 0x0500);
+        tails.setObjectControlAllowsCpu(true);
+        tails.setObjectControlSuppressesMovement(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.forceStateForTest(SidekickCpuController.State.CATCH_UP_FLIGHT, 0);
@@ -57,6 +63,10 @@ class TestSidekickCpuControllerCatchUpFlight {
                 "ROM loc_13B50 clears double_jump_flag; catch-up flight is CPU/object-control driven");
         assertTrue(tails.getAir(), "status air bit set");
         assertTrue(tails.isObjectControlled(), "ROM loc_13B50 writes object_control=$81");
+        assertFalse(tails.isObjectControlAllowsCpu(),
+                "object_control=$81 must clear stale bits-0-to-6 CPU allowance");
+        assertTrue(tails.isObjectControlSuppressesMovement(),
+                "object_control=$81 must keep normal movement suppressed");
         assertSame(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState(),
                 "Transitions to routine 0x04 (FLIGHT_AUTO_RECOVERY) on trigger");
     }
@@ -106,14 +116,14 @@ class TestSidekickCpuControllerCatchUpFlight {
     }
 
     @Test
-    void catchUpWaitPreservesMarkerObjectControlAndAirState() {
+    void catchUpWaitDoesNotRewriteObjectControlOrAirState() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
         tails.setAir(false);
         tails.setControlLocked(false);
         tails.setObjectControlled(false);
-        tails.setForcedAnimationId(-1);
+        tails.setForcedAnimationId(0x3A);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.forceStateForTest(SidekickCpuController.State.CATCH_UP_FLIGHT, 0);
@@ -122,9 +132,76 @@ class TestSidekickCpuControllerCatchUpFlight {
 
         assertSame(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
                 "Frame 1 has no catch-up trigger");
-        assertTrue(tails.getAir(), "ROM routine 2 wait preserves status.in_air from the marker");
-        assertTrue(tails.isControlLocked(), "ROM routine 2 wait preserves object_control bit 0");
-        assertTrue(tails.isObjectControlled(), "ROM routine 2 wait preserves object_control bit 7");
-        assertTrue(tails.getForcedAnimationId() >= 0, "Wait remains in the fly animation state");
+        assertFalse(tails.getAir(),
+                "ROM Tails_Catch_Up_Flying wait path returns without writing status");
+        assertFalse(tails.isControlLocked(),
+                "ROM Tails_Catch_Up_Flying wait path returns without writing object_control bit 0");
+        assertFalse(tails.isObjectControlled(),
+                "ROM Tails_Catch_Up_Flying wait path returns without writing object_control bit 7");
+        assertEquals(0x3A, tails.getForcedAnimationId(),
+                "ROM Tails_Catch_Up_Flying wait path returns without changing animation");
+    }
+
+    @Test
+    void resetClearsPendingCatchUpCounterOverride() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        sonic.setCentreX((short) 0x1000);
+        sonic.setCentreY((short) 0x0400);
+        tails.setCentreX((short) 0x7F00);
+        tails.setCentreY((short) 0);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.DORMANT_MARKER, 0);
+        controller.releaseAizIntroDormantMarker();
+
+        controller.reset();
+        controller.forceStateForTest(SidekickCpuController.State.CATCH_UP_FLIGHT, 0);
+        controller.update(1);
+
+        assertSame(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
+                "reset must discard the one-shot AIZ catch-up counter override");
+        assertEquals(0x7F00, tails.getCentreX() & 0xFFFF,
+                "post-reset catch-up uses the supplied frame counter, not stale AIZ cadence");
+    }
+
+    @Test
+    void aizDormantReleaseBridgePersistsUntilCatchUpGate() throws Exception {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+        sonic.setCentreX((short) 0x13CC);
+        sonic.setCentreY((short) 0x0400);
+        sonic.setObjectControlled(false);
+        tails.setCentreX((short) 0x7F00);
+        tails.setCentreY((short) 0);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.DORMANT_MARKER, 0);
+
+        setLevelFrameCounter(0x02F3);
+        controller.releaseAizIntroDormantMarker();
+        for (int storedCounter = 0x02F4; storedCounter < 0x02FF; storedCounter++) {
+            setLevelFrameCounter(storedCounter);
+            controller.update(storedCounter + 1);
+            assertSame(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
+                    "AIZ bridge must not force non-gate catch-up frames to warp");
+        }
+
+        setLevelFrameCounter(0x02FF);
+        controller.update(0x0300);
+
+        assertSame(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState(),
+                "AIZ bridge must keep the ROM-visible post-increment counter through the catch-up gate");
+        assertEquals(0x13CC, tails.getCentreX() & 0xFFFF);
+        assertEquals(0x0340, tails.getCentreY() & 0xFFFF);
+    }
+
+    private static void setLevelFrameCounter(int value) throws Exception {
+        Field frameCounter = GameServices.level().getClass().getDeclaredField("frameCounter");
+        frameCounter.setAccessible(true);
+        frameCounter.setInt(GameServices.level(), value);
     }
 }

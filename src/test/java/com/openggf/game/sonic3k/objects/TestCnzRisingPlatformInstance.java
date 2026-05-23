@@ -1,12 +1,15 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidRoutineKind;
+import com.openggf.level.objects.SolidRoutineProfile;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestCnzRisingPlatformInstance {
 
@@ -27,6 +30,19 @@ class TestCnzRisingPlatformInstance {
 
         assertFalse(platform.usesStickyContactBuffer(),
                 "ROM SolidObjectTop_1P exits at the exact d1*2 ride bounds");
+    }
+
+    @Test
+    void exposesTopSolidRoutineProfileWithoutStickyBuffer() {
+        CnzRisingPlatformInstance platform = new CnzRisingPlatformInstance(
+                new ObjectSpawn(0x1A40, 0x0790, 0x43, 0, 0, false, 0));
+
+        SolidRoutineProfile profile = platform.getSolidRoutineProfile();
+
+        assertEquals(SolidRoutineKind.TOP_SOLID_ONLY, profile.kind());
+        assertTrue(profile.topSolidOnly());
+        assertFalse(profile.stickyContactBuffer(),
+                "CNZ rising platform keeps ROM exact d1*2 ride bounds through its profile");
     }
 
     @Test

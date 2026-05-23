@@ -343,6 +343,34 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s2DestroyedRideSlotDespawnsThroughFreedObjectIdMismatch() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_2);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x12BE);
+        tails.setCentreY((short) 0x08A9);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setLatchedSolidObject(0x4E, new DestroyedRideObject(0x4E));
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x4E, false, 0, 0);
+        tails.setLatchedSolidObject(0x4E, new DestroyedRideObject(0x4E));
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(2262);
+
+        assertEquals(SidekickCpuController.State.SPAWNING, controller.getState(),
+                "S2 TailsCPU_CheckDespawn compares the cached interact ID against the freed slot's id byte");
+        assertEquals((short) 0x4000, tails.getCentreX());
+        assertEquals((short) 0x0000, tails.getCentreY());
+        assertTrue(tails.getAir());
+    }
+
+    @Test
     void offscreenObjectSwitchDespawnsUsingLatchedInteractObjectId() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
