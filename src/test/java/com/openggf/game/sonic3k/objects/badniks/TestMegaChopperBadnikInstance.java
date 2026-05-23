@@ -176,6 +176,10 @@ public class TestMegaChopperBadnikInstance {
     private static class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
 
+        private RecordingServices() {
+            withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
+        }
+
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);

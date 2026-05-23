@@ -5,6 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
@@ -37,12 +38,12 @@ class TestAizGiantRideVineObjectInstance {
     @Test
     void reservesRomChildSlotsAfterParentSlot() {
         ObjectManager[] holder = new ObjectManager[1];
-        ObjectServices services = new StubObjectServices() {
+        StubObjectServices services = new StubObjectServices() {
             @Override
             public ObjectManager objectManager() {
                 return holder[0];
             }
-        };
+        }.withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
         Camera camera = mock(Camera.class);
         when(camera.getX()).thenReturn((short) 0x1D00);
         when(camera.getY()).thenReturn((short) 0x0300);
@@ -129,7 +130,8 @@ class TestAizGiantRideVineObjectInstance {
     private static AizGiantRideVineObjectInstance newVine() {
         ObjectSpawn spawn = new ObjectSpawn(0x1E00, 0x0300, 0x0C, 0x01, 0, false, 0);
         AizGiantRideVineObjectInstance vine = new AizGiantRideVineObjectInstance(spawn);
-        vine.setServices(new StubObjectServices());
+        vine.setServices(new StubObjectServices()
+                .withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of)));
         return vine;
     }
 

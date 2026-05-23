@@ -122,10 +122,9 @@ class TestTraceReplayStartPositionPolicy {
         assertFalse(TraceReplayBootstrap.shouldUseLegacyS3kAizIntroWarmup(trace));
         assertEquals(0, TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace));
         assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace));
-        assertEquals(1,
+        assertEquals(0,
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
-                "S3K Sonic+Tails level-select traces observe one Tails object tick "
-                        + "before Sonic's first full LevelLoop tick.");
+                "The old S3K sidekick title-card prelude knob is now an unconditional no-op.");
         assertEquals(new TraceReplayBootstrap.ReplayStartState(1, 0),
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, null),
                 "Frame 0 is a strict seed comparison after the Tails-only prelude; "

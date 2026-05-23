@@ -137,6 +137,12 @@ A follow-up S2 trace-frontier merge closes the Casino Night level-select
 replay to green by tightening CNZ object streaming, slot machine, bumper,
 bonus-block, forced-spin, monitor/solid-object, Hex Bumper, and Tails CPU
 off-screen respawn parity.
+The object physics standardization branch adds typed solid routine, touch
+response, player-participation, object-control, native-position, and object
+lifecycle contracts, migrates the highest-risk object paths onto those APIs,
+updates agent-facing implementation guidance, and installs static guard tests
+so future object work declares these physics contracts explicitly instead of
+reintroducing ad hoc state mutations.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?
