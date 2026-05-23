@@ -21,8 +21,11 @@ import org.mockito.MockedStatic;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -33,6 +36,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 class TestSonic1LivesHudDonation {
+    private static final Path S2_ROM = Path.of("Sonic The Hedgehog 2 (W) (REV01) [!].gen");
 
     @BeforeEach
     void setUp() {
@@ -48,6 +52,7 @@ class TestSonic1LivesHudDonation {
 
     @Test
     void loadArtForZone_exposesNativeHudStaticArtWithPalette0LivesFrame() throws Exception {
+        assumeTrue(Files.exists(S2_ROM), "S2 donor ROM is not available in this environment");
         SessionManager.openGameplaySession(new Sonic1GameModule(),
                 SaveSessionContext.noSave("s1", new SelectedTeam("sonic", List.of()), 0, 0));
 
@@ -78,6 +83,7 @@ class TestSonic1LivesHudDonation {
 
     @Test
     void loadArtForZone_rebuildsDonorHudStaticArtThroughProviderPath() throws Exception {
+        assumeTrue(Files.exists(S2_ROM), "S2 donor ROM is not available in this environment");
         SessionManager.openGameplaySession(new Sonic1GameModule(),
                 SaveSessionContext.noSave("s1", new SelectedTeam("knuckles", List.of()), 0, 0));
 
