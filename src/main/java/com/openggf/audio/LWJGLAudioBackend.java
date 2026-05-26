@@ -775,6 +775,16 @@ public class LWJGLAudioBackend implements AudioBackend {
         return deterministicAudioRuntime != null && deterministicAudioRuntime.providesPresentationPcm();
     }
 
+    private DeterministicAudioRuntime requirePresentationRuntime() {
+        DeterministicAudioRuntime runtime = deterministicAudioRuntime;
+        if (!runtime.providesPresentationPcm()) {
+            throw new IllegalStateException(
+                    "Presentation runtime required but attached runtime is "
+                            + runtime.getClass().getName());
+        }
+        return runtime;
+    }
+
     private void bindRuntimePresentationStreams() {
         if (!runtimeProvidesPresentationPcm()) {
             return;
@@ -957,6 +967,14 @@ public class LWJGLAudioBackend implements AudioBackend {
     @Override
     public void attachDeterministicAudioRuntime(DeterministicAudioRuntime runtime) {
         synchronized (streamLock) {
+            if (supportsDeterministicRuntimePresentation()
+                    && !runtime.providesPresentationPcm()) {
+                throw new IllegalStateException(
+                        "LWJGLAudioBackend declares deterministic runtime presentation"
+                                + " support but was attached a runtime that does not"
+                                + " provide presentation PCM: "
+                                + runtime.getClass().getName());
+            }
             deterministicAudioRuntime = runtime;
             bindRuntimePresentationStreams();
         }
