@@ -105,4 +105,28 @@ class TestLegalDisclaimerState {
         state.tick(false);
         assertEquals(3, state.getReadingFrameCounter());
     }
+
+    @Test
+    void dismissibleFrameCounterStartsAtZeroOnTransition() {
+        LegalDisclaimerState state = new LegalDisclaimerState();
+        state.onFadeInComplete();
+        for (int i = 0; i < LegalDisclaimerState.READING_FRAMES; i++) {
+            state.tick(false);
+        }
+        assertEquals(LegalDisclaimerState.Phase.DISMISSIBLE, state.getPhase());
+        assertEquals(0, state.getDismissibleFrameCounter());
+    }
+
+    @Test
+    void dismissibleFrameCounterAdvancesEachTickInDismissible() {
+        LegalDisclaimerState state = new LegalDisclaimerState();
+        state.onFadeInComplete();
+        for (int i = 0; i < LegalDisclaimerState.READING_FRAMES; i++) {
+            state.tick(false);
+        }
+        state.tick(false);
+        state.tick(false);
+        state.tick(false);
+        assertEquals(3, state.getDismissibleFrameCounter());
+    }
 }

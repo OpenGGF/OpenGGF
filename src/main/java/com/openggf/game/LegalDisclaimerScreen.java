@@ -70,6 +70,13 @@ public class LegalDisclaimerScreen {
     /** Dismiss prompt baseline Y. Body must not extend past this. */
     static final int PROMPT_Y = 210;
 
+    /**
+     * Frames over which the dismiss prompt ramps from invisible to fully
+     * visible after entering {@link LegalDisclaimerState.Phase#DISMISSIBLE},
+     * before the pulse cycle drives brightness. 30 frames = 0.5 s at 60 fps.
+     */
+    static final int PROMPT_FADE_IN_FRAMES = 30;
+
     private static final String HEADER = "LEGAL NOTICE";
 
     /**
@@ -175,10 +182,15 @@ public class LegalDisclaimerScreen {
             bodyY += BODY_LINE_HEIGHT;
         }
 
-        // Dismiss prompt (pulses when visible, full scale)
+        // Dismiss prompt — fades in over PROMPT_FADE_IN_FRAMES, then pulses.
         if (state.isDismissPromptVisible()) {
+            int dismissibleFrames = state.getDismissibleFrameCounter();
+            float fadeIn = dismissibleFrames >= PROMPT_FADE_IN_FRAMES
+                    ? 1.0f
+                    : dismissibleFrames / (float) PROMPT_FADE_IN_FRAMES;
             float pulse = 0.6f + 0.4f * (float) Math.sin(frameCounter * 0.05);
-            font.drawTextCentered(PROMPT, SCREEN_W, PROMPT_Y, pulse, pulse, pulse, 1f);
+            float brightness = pulse * fadeIn;
+            font.drawTextCentered(PROMPT, SCREEN_W, PROMPT_Y, brightness, brightness, brightness, 1f);
         }
     }
 

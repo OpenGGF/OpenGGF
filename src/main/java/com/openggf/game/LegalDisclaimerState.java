@@ -33,6 +33,7 @@ public final class LegalDisclaimerState {
 
     private Phase phase = Phase.FADE_IN;
     private int readingFrameCounter;
+    private int dismissibleFrameCounter;
     private boolean dismissed;
 
     public Phase getPhase() {
@@ -41,6 +42,15 @@ public final class LegalDisclaimerState {
 
     public int getReadingFrameCounter() {
         return readingFrameCounter;
+    }
+
+    /**
+     * Frames elapsed since {@link Phase#DISMISSIBLE} began, used by the
+     * screen to ramp the dismiss prompt from invisible to fully visible
+     * before its pulse cycle takes over.
+     */
+    public int getDismissibleFrameCounter() {
+        return dismissibleFrameCounter;
     }
 
     public boolean isDismissed() {
@@ -80,9 +90,11 @@ public final class LegalDisclaimerState {
                 readingFrameCounter++;
                 if (readingFrameCounter >= READING_FRAMES) {
                     phase = Phase.DISMISSIBLE;
+                    dismissibleFrameCounter = 0;
                 }
             }
             case DISMISSIBLE -> {
+                dismissibleFrameCounter++;
                 if (anyKeyJustPressed) {
                     phase = Phase.EXITING;
                     return true;
