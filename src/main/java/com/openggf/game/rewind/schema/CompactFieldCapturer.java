@@ -7,6 +7,18 @@ import java.util.List;
 import java.util.Objects;
 
 public final class CompactFieldCapturer {
+    private static final class Scratch {
+        final RewindStateBuffer scalarData = new RewindStateBuffer();
+        final ArrayList<Object> opaqueValues = new ArrayList<>();
+
+        void reset() {
+            scalarData.reset();
+            opaqueValues.clear();
+        }
+    }
+
+    private static final ThreadLocal<Scratch> SCRATCH = ThreadLocal.withInitial(Scratch::new);
+
     public static RewindObjectStateBlob capture(Object target) {
         return capture(target, RewindCaptureContext.none());
     }
@@ -45,12 +57,18 @@ public final class CompactFieldCapturer {
             RewindClassSchema schema,
             RewindCaptureContext context) {
 
-        RewindStateBuffer scalarData = new RewindStateBuffer();
-        List<Object> opaqueValues = new ArrayList<>();
-        for (RewindFieldPlan field : schema.capturedFields()) {
-            field.codec().capture(field.field(), target, scalarData, opaqueValues, context);
+        Scratch scratch = SCRATCH.get();
+        scratch.reset();
+        try {
+            for (RewindFieldPlan field : schema.capturedFields()) {
+                field.codec().capture(field.field(), target, scratch.scalarData, scratch.opaqueValues, context);
+            }
+            return new RewindObjectStateBlob(
+                    schema.schemaId(), schema.type(),
+                    scratch.scalarData.toByteArray(), scratch.opaqueValues.toArray());
+        } finally {
+            scratch.reset();
         }
-        return new RewindObjectStateBlob(schema.schemaId(), schema.type(), scalarData.toByteArray(), opaqueValues.toArray());
     }
 
     public static void restore(Object target, RewindObjectStateBlob blob) {
