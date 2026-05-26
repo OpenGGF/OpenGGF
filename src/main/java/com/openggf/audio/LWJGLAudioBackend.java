@@ -329,7 +329,6 @@ public class LWJGLAudioBackend implements AudioBackend {
             }
             currentStream = smpsDriver;
         }
-        startStream();
     }
 
     @Override
@@ -420,7 +419,6 @@ public class LWJGLAudioBackend implements AudioBackend {
             }
             currentStream = smpsDriver;
         }
-        startStream();
     }
 
     @Override
@@ -520,14 +518,6 @@ public class LWJGLAudioBackend implements AudioBackend {
                     deterministicAudioRuntime.setSfxStream(sfxDriver);
                 }
             }
-        }
-
-        // Ensure stream is running
-        int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
-        if (queued == 0) {
-            alSourceStop(musicSource);
-            alSourcei(musicSource, AL_BUFFER, 0);
-            startStream();
         }
     }
 
