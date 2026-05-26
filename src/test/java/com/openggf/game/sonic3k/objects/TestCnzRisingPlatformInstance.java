@@ -24,6 +24,24 @@ class TestCnzRisingPlatformInstance {
     }
 
     @Test
+    void risingPlatformUsesRomWidthPixelsForObjectBalance() {
+        CnzRisingPlatformInstance platform = new CnzRisingPlatformInstance(
+                new ObjectSpawn(0x1180, 0x0848, 0x43, 0, 0, false, 0));
+
+        assertEquals(0x30, platform.getOnScreenHalfWidth(),
+                "Obj_CNZRisingPlatform writes width_pixels=$30; Sonic_Move reads width_pixels(a1) "
+                        + "for object balance (sonic3k.asm:67132,22462-22473).");
+
+        int sonicX = 0x1166;
+        int d1 = sonicX + platform.getOnScreenHalfWidth() - platform.getX();
+        int d2 = platform.getOnScreenHalfWidth() * 2 - 2;
+
+        assertFalse(d1 < 2 || d1 >= d2,
+                "CNZ2 f21107 geometry must not enter Sonic_BalanceOnObjLeft/Right; "
+                        + "using the default $10 sprite width would produce d1=$FFF6 and flip Sonic left.");
+    }
+
+    @Test
     void ridingBoundsDoNotUseEngineStickyBuffer() {
         CnzRisingPlatformInstance platform = new CnzRisingPlatformInstance(
                 new ObjectSpawn(0x1A40, 0x0790, 0x43, 0, 0, false, 0));

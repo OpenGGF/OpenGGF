@@ -81,4 +81,41 @@ class TestS3kCnzBossScrollHandler {
         assertEquals(0x0240, handler.getVscrollFactorBG() & 0xFFFF,
                 "CNZ miniboss BG Y formula is Camera_Y_pos - $100 + Events_bg+$08");
     }
+
+    @Test
+    void minibossBossScrollPublishesBackgroundCameraXForCollision() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        Sonic3kCNZEvents events = manager.getCnzEvents();
+        events.forceBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_MINIBOSS_PATH);
+        events.setBossScrollState(0x01C0, 0);
+
+        SwScrlCnz handler = new SwScrlCnz();
+        int[] hscroll = new int[224];
+
+        handler.update(hscroll, 0x323B, 0x028C, 0, 0);
+
+        assertEquals(0x02BB, handler.getBgCameraX(),
+                "CNZ1_BossLevelScroll2 must expose Camera_X_pos_BG_copy = Camera_X_pos_copy - $2F80 "
+                        + "for dual-path background collision (docs/skdisasm/sonic3k.asm:107721-107725)");
+    }
+
+    @Test
+    void minibossBossScrollPrimesLiveBackgroundCameraXBeforeParallaxUpdate() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(Sonic3kZoneIds.ZONE_CNZ, 0);
+        Sonic3kCNZEvents events = manager.getCnzEvents();
+        events.forceBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_MINIBOSS_PATH);
+        GameServices.camera().setX((short) 0x323B);
+        GameServices.gameState().setBackgroundCollisionFlag(true);
+
+        SwScrlCnz handler = new SwScrlCnz();
+
+        assertEquals(0x02BB, handler.getBgCameraX(),
+                "S3K player physics can query background collision before the render parallax update; "
+                        + "CNZ boss mode must still expose the ROM Camera_X_pos_BG_copy "
+                        + "(docs/skdisasm/sonic3k.asm:107721-107725)");
+    }
 }

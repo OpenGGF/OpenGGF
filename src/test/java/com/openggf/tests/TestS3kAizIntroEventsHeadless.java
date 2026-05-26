@@ -153,6 +153,43 @@ public class TestS3kAizIntroEventsHeadless {
     }
 
     @Test
+    void prePhysicsBridgeWaitsForCommittedAizResizeCameraPosition() {
+        assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
+                "Sonic+Tails AIZ intro should register Player_2");
+        AbstractPlayableSprite tails = GameServices.sprites().getSidekicks().get(0);
+        SidekickCpuController controller = tails.getCpuController();
+        assertNotNull(controller, "CPU Tails should have a controller");
+
+        Sonic3kLevelEventManager levelEvents =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        Sonic3kAIZEvents aizEvents = levelEvents.getAizEvents();
+
+        tails.setCentreX((short) 0x7F00);
+        tails.setCentreY((short) 0);
+        tails.setAir(true);
+        tails.setControlLocked(true);
+        tails.setObjectControlled(true);
+        controller.setInitialState(SidekickCpuController.State.DORMANT_MARKER);
+
+        fixture.camera().setX((short) 0x1307);
+        sonic.setCentreX((short) 0x13A8);
+        assertEquals(0x1308, fixture.camera().previewNextX() & 0xFFFF,
+                "test setup should make the next camera step cross the AIZ palette threshold");
+
+        aizEvents.updatePrePhysics(ACT_1);
+
+        assertEquals(SidekickCpuController.State.DORMANT_MARKER, controller.getState(),
+                "AIZ1_Resize's Tails_CPU_routine=2 write happens after the current Process_Sprites slot; "
+                        + "a preview-only threshold crossing must not release Tails yet");
+
+        fixture.camera().setX((short) 0x1308);
+        aizEvents.updatePrePhysics(ACT_1);
+
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
+                "the prior-frame AIZ1_Resize write is visible once the committed camera X has reached $1308");
+    }
+
+    @Test
     void releasedAizIntroSidekickWaitsForRomLevelFrameCounterBeforeCatchUpWarp() throws Exception {
         assertFalse(GameServices.sprites().getSidekicks().isEmpty(),
                 "Sonic+Tails AIZ intro should register Player_2");
@@ -170,7 +207,7 @@ public class TestS3kAizIntroEventsHeadless {
         tails.setObjectControlled(true);
         controller.setInitialState(SidekickCpuController.State.DORMANT_MARKER);
         setLevelFrameCounter(0x02FF);
-        controller.releaseAizIntroDormantMarker();
+        controller.releaseDormantMarkerForLevelEvent();
 
         controller.update(0x0300);
 
@@ -201,7 +238,7 @@ public class TestS3kAizIntroEventsHeadless {
         controller.setInitialState(SidekickCpuController.State.DORMANT_MARKER);
 
         setLevelFrameCounter(0x02F3);
-        controller.releaseAizIntroDormantMarker();
+        controller.releaseDormantMarkerForLevelEvent();
         for (int storedCounter = 0x02F4; storedCounter < 0x02FF; storedCounter++) {
             setLevelFrameCounter(storedCounter);
             controller.update(storedCounter + 1);
@@ -299,9 +336,9 @@ public class TestS3kAizIntroEventsHeadless {
             fixture.stepFrame(false, false, false, holdRight, false);
 
             assertEquals(levelFrameBefore + 1, GameServices.level().getFrameCounter(),
-                    "AIZ intro normal-refresh bridge must not add a second LevelManager tick at frame " + frame);
+                    "AIZ intro normal refresh must not add a second LevelManager tick at frame " + frame);
             assertEquals(spriteFrameBefore + 1, GameServices.sprites().getFrameCounter(),
-                    "AIZ intro normal-refresh bridge must not add a second SpriteManager tick at frame " + frame);
+                    "AIZ intro normal refresh must not add a second SpriteManager tick at frame " + frame);
 
             if (aizEvents.isEventsFg5()) {
                 sawEventsPulse = true;
@@ -313,7 +350,7 @@ public class TestS3kAizIntroEventsHeadless {
     }
 
     @Test
-    void introNormalRefreshBridgeSurvivesNonNormalCpuSlotUntilNormalTick() throws Exception {
+    void introNormalRefreshDoesNotPublishHiddenCadenceAfterNonNormalCpuSlot() throws Exception {
         Sonic3kLevelEventManager levelEvents =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
         assertNotNull(levelEvents, "Sonic3kLevelEventManager should exist");
@@ -353,32 +390,32 @@ public class TestS3kAizIntroEventsHeadless {
         assertNotNull(controller.getLatestNormalStepDiagnostics(),
                 "NORMAL sidekick tick should record diagnostics");
         assertEquals(0x06BE, controller.getLatestNormalStepDiagnostics().frameCounter(),
-                "AIZ bridge must wait for the ROM-visible (Level_frame_counter + 1) $40 cadence");
+                "NORMAL sidekick cadence should use the caller-provided ROM-visible frame counter");
         assertFalse(controller.getInputJumpPress(),
-                "AIZ bridge must not publish one frame early through a pre-physics +2 lookahead");
+                "NORMAL sidekick cadence must not publish one frame early through a hidden +1 lookahead");
 
         setLevelFrameCounter(0x06BF);
         aizEvents.updatePrePhysics(ACT_1);
         controller.setInitialState(SidekickCpuController.State.CATCH_UP_FLIGHT);
         controller.update(0x06BF);
         assertEquals(0x06BF, GameServices.level().getFrameCounter(),
-                "AIZ bridge must not persistently advance Level_frame_counter");
+                "AIZ intro refresh must not persistently advance Level_frame_counter");
 
         controller.setInitialState(SidekickCpuController.State.NORMAL);
         controller.update(0x06BF);
 
         assertNotNull(controller.getLatestNormalStepDiagnostics(),
                 "NORMAL sidekick tick should record diagnostics");
-        assertEquals(0x06C0, controller.getLatestNormalStepDiagnostics().frameCounter(),
-                "AIZ intro normal-refresh bridge must survive earlier non-NORMAL sidekick slots");
-        assertTrue(controller.getInputJumpPress(),
-                "AIZ intro normal-refresh bridge must take the NORMAL $40 auto-jump path");
+        assertEquals(0x06BF, controller.getLatestNormalStepDiagnostics().frameCounter(),
+                "Earlier non-NORMAL sidekick slots must not arm a hidden NORMAL cadence");
+        assertFalse(controller.getInputJumpPress(),
+                "NORMAL sidekick auto-jump should wait for an actual $40 caller cadence");
         assertEquals(0x06BF, GameServices.level().getFrameCounter(),
-                "AIZ bridge must leave the stored Level_frame_counter unchanged after NORMAL consumes it");
+                "AIZ intro refresh must leave the stored Level_frame_counter unchanged after NORMAL runs");
     }
 
     @Test
-    void introNormalRefreshBridgeSurvivesEarlierHarmlessCadencesUntilJumpFrontier() throws Exception {
+    void introNormalRefreshDoesNotSpendEarlierCadencesOrAddHiddenTick() throws Exception {
         Sonic3kLevelEventManager levelEvents =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
         assertNotNull(levelEvents, "Sonic3kLevelEventManager should exist");
@@ -436,12 +473,12 @@ public class TestS3kAizIntroEventsHeadless {
 
         assertNotNull(controller.getLatestNormalStepDiagnostics(),
                 "NORMAL sidekick tick should record diagnostics");
-        assertEquals(0x06C0, controller.getLatestNormalStepDiagnostics().frameCounter(),
-                "Earlier harmless AIZ intro refresh cadences must not spend the one-shot bridge");
-        assertTrue(controller.getInputJumpPress(),
-                "The bridge must still expose the ROM-visible $06C0 auto-jump cadence");
+        assertEquals(0x06BF, controller.getLatestNormalStepDiagnostics().frameCounter(),
+                "Earlier AIZ intro refresh cadences must not arm a later hidden +1 NORMAL tick");
+        assertFalse(controller.getInputJumpPress(),
+                "NORMAL sidekick auto-jump should wait for an actual $40 caller cadence");
         assertEquals(0x06BF, GameServices.level().getFrameCounter(),
-                "AIZ bridge must leave the stored Level_frame_counter unchanged after NORMAL consumes it");
+                "AIZ intro refresh must leave the stored Level_frame_counter unchanged after NORMAL runs");
     }
 
     @Test
@@ -485,12 +522,11 @@ public class TestS3kAizIntroEventsHeadless {
 
         assertNotNull(controller.getLatestNormalStepDiagnostics(),
                 "NORMAL sidekick tick should record diagnostics");
-        assertEquals(0x0700, controller.getLatestNormalStepDiagnostics().frameCounter(),
-                "AIZ intro refresh-begin frame must expose the ROM-visible Level_frame_counter before "
-                        + "the end-of-frame Events_fg_5 arm runs");
-        assertTrue(controller.getInputJumpPress(),
-                "Frame 2081 shape must take the NORMAL auto-jump path on the ROM-visible $0700 cadence");
+        assertEquals(0x06FF, controller.getLatestNormalStepDiagnostics().frameCounter(),
+                "AIZ intro refresh-begin frame must use the caller-provided ROM-visible frame counter");
+        assertFalse(controller.getInputJumpPress(),
+                "Frame 2081 shape must not synthesize the next $40 cadence before the caller provides it");
         assertEquals(0x06FF, GameServices.level().getFrameCounter(),
-                "AIZ bridge must not persistently advance Level_frame_counter");
+                "AIZ intro refresh must not persistently advance Level_frame_counter");
     }
 }

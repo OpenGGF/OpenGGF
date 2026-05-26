@@ -173,18 +173,19 @@ public class TestS3kIcz1SnowboardIntroHeadless {
         assertTrue(sawCrashRelease, "Sonic should reach the ICZ1 wall crash handoff");
 
         boolean sawBigSnowPile = false;
-        boolean sawLockedOnPile = false;
+        boolean sawLockedOnLandedPile = false;
         for (int frame = 0; frame < 360; frame++) {
             fixture.stepFrame(false, false, false, false, false);
-            sawBigSnowPile |= hasObjectSimpleName("IczBigSnowPileInstance");
-            if (sawBigSnowPile && sonic.isControlLocked() && !sonic.getAir()) {
-                sawLockedOnPile = true;
+            ObjectInstance pile = findObjectSimpleName("IczBigSnowPileInstance");
+            sawBigSnowPile |= pile != null;
+            if (pile != null && pile.getY() == 0x070E && sonic.isControlLocked() && !sonic.getAir()) {
+                sawLockedOnLandedPile = true;
                 break;
             }
         }
 
         assertTrue(sawBigSnowPile, "ICZ1 background event should spawn Obj_ICZ1BigSnowPile");
-        assertTrue(sawLockedOnPile, "Sonic should remain locked while standing under the fallen pile");
+        assertTrue(sawLockedOnLandedPile, "Sonic should remain locked while standing under the fallen pile");
 
         fixture.stepFrame(false, false, false, false, true);
 

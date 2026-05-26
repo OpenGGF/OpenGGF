@@ -77,6 +77,18 @@ class TestS3kBossTouchResponseProfiles {
         assertEquals(multiRegion, boss.getTouchResponseProfile());
     }
 
+    @Test
+    void cnzMinibossClosedBodyUsesRomObjDatCollisionByte() {
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x32C0, 0x0292, 0xA6, 0, 0, false, 0));
+
+        assertEquals(0x0C, boss.getCollisionFlags(),
+                "ObjDat_CNZMiniboss stores collision_flags byte $0C after width/height/frame");
+        assertEquals(6, boss.getCollisionProperty());
+        assertEquals(TouchCategoryDecodeMode.NORMAL,
+                boss.getTouchResponseProfile().categoryDecodeMode());
+    }
+
     private static void assertFireShieldSingleRegionEnemy(TouchResponseProfile profile) {
         assertStandardEnemy(profile);
         assertTrue(profile.requiresRenderFlagForTouch());

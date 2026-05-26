@@ -234,9 +234,6 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
     public static int getIntroScrollOffset() { return introScrollOffset; }
     public static boolean isMainLevelPhaseActive() { return mainLevelPhaseActive; }
     public static void setMainLevelPhaseActive(boolean active) { mainLevelPhaseActive = active; }
-    public static boolean isIntroNormalRefreshCounterBridgeActive() {
-        return activeIntroInstance != null;
-    }
     public static AizPlaneIntroInstance getActiveIntroInstance() { return activeIntroInstance; }
     public static void adoptActiveIntroInstance(AizPlaneIntroInstance instance) { activeIntroInstance = instance; }
     public static void resetIntroPhaseState() {

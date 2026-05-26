@@ -29,6 +29,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
+import com.openggf.sprites.NativePositionOps;
 
 import java.io.IOException;
 import java.util.IdentityHashMap;
@@ -198,6 +199,14 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         // ROM loc_34F04: d1 = width+$B; d2 = height; d3 = height+1.
         return new SolidObjectParams(WIDTH_PIXELS + 0x0B, HEIGHT_PIXELS, HEIGHT_PIXELS + 1);
+    }
+
+    @Override
+    public boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
+        // ROM loc_34C54 calls sub_34EEC for P1/P2 before the platform body moves
+        // (sonic3k.asm:71508-71525); the post-motion player snap happens later
+        // at loc_34D62/sub_35202 (sonic3k.asm:71576-71584,72045-72064).
+        return true;
     }
 
     @Override
@@ -559,12 +568,13 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
      *   <li>{@code bset #Status_InAir(a1) / bclr #Status_OnObj(a1)}.</li>
      *   <li>{@code bclr d6, status(a0)} — platform clears its own standing bit.</li>
      *   <li>{@code addq.b #2, (a4)} — state -> 4.</li>
+     *   <li>No x_vel/y_vel write; the player's pre-grab velocity is preserved.</li>
      * </ul>
      *
      * <p>ROM does NOT modify player Y here — sub_35202 will snap it at end of frame.
      */
     private void grabPlayer(AbstractPlayableSprite player, PlayerGrabState state) {
-        player.setCentreX((short) posX);
+        NativePositionOps.writeXPosPreserveSubpixel(player, posX);
         // ROM sets object_control bit 7 during MGZ carry, so normal movement/collision
         // paths stop entirely while the platform owns the player.
         ObjectControlState.nativeBit7FullControl().applyTo(player);
@@ -572,8 +582,8 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         player.setControlLocked(false);
         player.setOnObject(false);
         player.setAir(true);
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
+        // ROM loc_34F84 (sonic3k.asm:71804-71817) arms object_control and
+        // Status_InAir, but does not touch x_vel/y_vel.
         player.applyCustomRadii(player.getXRadius(), player.getStandYRadius() + 0x18);
         ObjectServices svc = tryServices();
         if (svc != null && svc.objectManager() != null) {
@@ -585,8 +595,9 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         state.jumpHeldAtGrab = player.isJumpPressed();
         state.grabbed = true;
         state.routine = 4;
-        state.xSub = 0;
-        state.ySub = 0;
+        // ROM loc_34F84 writes only x_pos(a1), preserving x_sub/y_sub. The
+        // following loc_35070 MoveSprite2 path must continue from those fractions.
+        syncGrabStateSubpixelsFromPlayer(player, state);
     }
 
     /** ROM loc_34FBC: state 4. Jump / ride / centering. */
@@ -752,12 +763,11 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             if (xVel >= 0) {
                 yVel -= LATERAL_Y_KICK;
                 if (yVel > LATERAL_Y_MIN) {
-                    // ROM: neg x_vel; asr.w #4; add -> y_vel += -xVel/16.
-                    int sub = xVel >> 4;
-                    yVel -= sub;
-                    if (yVel < LATERAL_Y_MIN) {
-                        yVel = LATERAL_Y_MIN;
-                    }
+                    // ROM loc_35148 (sonic3k.asm:71966-71974): neg.w before
+                    // asr.w #4, then add after the -$100 compare. There is no
+                    // post-add clamp, so the result can overshoot below -$100.
+                    int add = (-xVel) >> 4;
+                    yVel += add;
                 }
             }
         } else {
@@ -770,12 +780,10 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             if (xVel < 0) {
                 yVel -= LATERAL_Y_KICK;
                 if (yVel > LATERAL_Y_MIN) {
-                    // ROM: asr.w #4 on negative xVel -> still negative. y_vel += xVel/16.
+                    // ROM loc_3510A (sonic3k.asm:71943-71951): asr.w #4 on
+                    // negative xVel, then add after the -$100 compare.
                     int add = xVel >> 4; // negative
                     yVel += add;
-                    if (yVel < LATERAL_Y_MIN) {
-                        yVel = LATERAL_Y_MIN;
-                    }
                 }
             }
         }
@@ -904,7 +912,7 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
             //   x_pos(a1) = x_pos(a0)                 ; player X follows platform X
             //   y_pos(a0) = y_pos(a1) + default_y_radius + $D
             int defaultYR = player.getStandYRadius();
-            player.setCentreX((short) posX);
+            NativePositionOps.writeXPosPreserveSubpixel(player, posX);
             posY = player.getCentreY() + defaultYR + 0x0D;
             nextCarryLatched = true;
             return;
@@ -913,13 +921,11 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         int defaultYR = player.getStandYRadius();
         short snapY = (short) (platformTop - defaultYR);
         short snapX = (short) posX;
-        player.setCentreX(snapX);
-        player.setCentreY(snapY);
-        // ROM obj_control bit 0 skips Sonic_Modes, so speeds never drive the
-        // grabbed player. Engine-side, modeAirborne still runs each frame;
-        // zeroing speeds here prevents a frame of drift before the next snap.
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
+        NativePositionOps.writeXPosPreserveSubpixel(player, snapX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, snapY);
+        // ROM sub_35202 (sonic3k.asm:72051-72058) only snaps x_pos/y_pos and
+        // clears the carry latch. It deliberately preserves the x_vel written by
+        // sub_35504/loc_3554E (sonic3k.asm:72352-72354) earlier in the frame.
         nextCarryLatched = false;
     }
 
@@ -1484,22 +1490,23 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
     private void moveGrabbedPlayer(AbstractPlayableSprite player,
                                    PlayerGrabState state,
                                    boolean resolveTerrainAfterMove) {
-        SubpixelMotion.State playerMotion = new SubpixelMotion.State(
-                player.getCentreX(),
-                player.getCentreY(),
-                state.xSub,
-                state.ySub,
-                player.getXSpeed(),
-                player.getYSpeed());
-        SubpixelMotion.moveSprite2(playerMotion);
-        state.xSub = playerMotion.xSub;
-        state.ySub = playerMotion.ySub;
-        player.setCentreX((short) playerMotion.x);
-        player.setCentreY((short) playerMotion.y);
+        // ROM loc_35070 calls MoveSprite2 on Player_1, adding x_vel/y_vel<<8 to
+        // the full x_pos:x_sub/y_pos:y_sub longs. Keep the visible sprite
+        // subpixel words in lockstep; otherwise the next centering step is a
+        // frame late when x_sub/y_sub were nonzero at grab entry.
+        player.move(player.getXSpeed(), player.getYSpeed());
+        syncGrabStateSubpixelsFromPlayer(player, state);
         if (resolveTerrainAfterMove) {
             resolveGrabbedPlayerTerrain(player);
         }
         clampGrabbedPlayerToLevel(player);
+        syncGrabStateSubpixelsFromPlayer(player, state);
+    }
+
+    private static void syncGrabStateSubpixelsFromPlayer(AbstractPlayableSprite player,
+                                                         PlayerGrabState state) {
+        state.xSub = (player.getXSubpixelRaw() >> 8) & 0xFF;
+        state.ySub = (player.getYSubpixelRaw() >> 8) & 0xFF;
     }
 
     private void resolveGrabbedPlayerTerrain(AbstractPlayableSprite player) {
@@ -1608,7 +1615,11 @@ public class MGZTopPlatformObjectInstance extends AbstractObjectInstance
         int maxY = player.currentLevelManager().getCurrentLevel().getMaxY() - player.getYRadius();
         int clampedX = Math.max(minX, Math.min(maxX, player.getCentreX()));
         int clampedY = Math.max(minY, Math.min(maxY, player.getCentreY()));
-        player.setCentreX((short) clampedX);
-        player.setCentreY((short) clampedY);
+        if (clampedX != player.getCentreX()) {
+            NativePositionOps.writeXPosPreserveSubpixel(player, clampedX);
+        }
+        if (clampedY != player.getCentreY()) {
+            NativePositionOps.writeYPosPreserveSubpixel(player, clampedY);
+        }
     }
 }

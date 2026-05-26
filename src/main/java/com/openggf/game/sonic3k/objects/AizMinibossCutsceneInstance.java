@@ -136,6 +136,15 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance {
     }
 
     @Override
+    public boolean isPersistent() {
+        // ROM Obj_AIZMinibossCutscene dispatches directly through its active
+        // routines and exit timer without a normal out-of-range deletion path
+        // (sonic3k.asm:136734-136896), so the subtype-2 special explosion
+        // controller can exhaust all 39 Random_Number draws.
+        return true;
+    }
+
+    @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         switch (state.routine) {

@@ -86,7 +86,6 @@ public class AizEndBossInstance extends AbstractBossInstance {
     private static final int REPOSITION_TIME = 0x7F;      // ROM: move.w #$7F,$2E
     private static final int POST_DEFEAT_SONIC = 0xBF;    // ROM: move.w #$BF
     private static final int POST_DEFEAT_KNUX = 0xFF;     // ROM: move.w #$FF
-
     // ===== Swing parameters (ROM: loc_6933A) =====
     private static final int SWING_AMPLITUDE = 0xC0;     // ROM: move.w #$C0,$3E(a0)
     private static final int SWING_INITIAL_VEL = 0xC0;   // ROM: move.w #$C0,y_vel(a0)
@@ -167,6 +166,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
     // Defeat sequence
     private S3kBossExplosionController defeatExplosionController;
     private boolean defeatRenderComplete;
+    private int defeatPhaseTimer;
 
     // Children references
     private AizEndBossShipChild shipChild;
@@ -186,6 +186,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
         state.hitCount = HIT_COUNT;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
+        defeatPhaseTimer = 0;
         defeatRenderComplete = false;
         defeatExplosionController = null;
         fireSignalActive = false;
@@ -474,23 +475,26 @@ public class AizEndBossInstance extends AbstractBossInstance {
     }
 
     private int revealedAnimTimer;
-    // ROM: byte_69DB3 — multi-delay animation frames $1B(0), $1B(4), $1C(5), $1D(6), 0(0)
-    private static final int REVEALED_ANIM_DURATION = 16; // sum of delays: 1+5+6+7+1 = 20
+    // ROM byte_69DB3 is consumed by Animate_RawNoSSTMultiDelay: $1B/$00,
+    // $1B/$04, $1C/$05, $1D/$06, $00/$00, then $F4 callback
+    // (docs/skdisasm/sonic3k.asm:138120-138122,139104-139110,177558-177587).
+    private static final int REVEALED_FRAME_1B_END = 6;
+    private static final int REVEALED_FRAME_1C_END = 12;
+    private static final int REVEALED_FRAME_1D_END = 19;
+    private static final int REVEALED_FRAME_VISIBLE_END = 20;
 
     /** ROM: loc_6932C — Revealed animation. */
     private void updateRevealed() {
         revealedAnimTimer++;
-        // Animate through reveal frames
-        if (revealedAnimTimer < 1) {
+        if (revealedAnimTimer <= REVEALED_FRAME_1B_END) {
             mappingFrame = 0x1B;
-        } else if (revealedAnimTimer < 6) {
-            mappingFrame = 0x1B;
-        } else if (revealedAnimTimer < 12) {
+        } else if (revealedAnimTimer <= REVEALED_FRAME_1C_END) {
             mappingFrame = 0x1C;
-        } else if (revealedAnimTimer < 19) {
+        } else if (revealedAnimTimer <= REVEALED_FRAME_1D_END) {
             mappingFrame = 0x1D;
-        } else {
+        } else if (revealedAnimTimer <= REVEALED_FRAME_VISIBLE_END) {
             mappingFrame = 0;
+        } else {
             runWaitCallback();
         }
     }
@@ -681,7 +685,6 @@ public class AizEndBossInstance extends AbstractBossInstance {
 
         // ROM: BossDefeated_StopTimer — timer stop handled by gameState
 
-        // ROM: loc_47360 — fade music, wait $7F frames, then spawn egg capsule
         services().fadeOutMusic();
 
         // ROM: The ship child (Obj_RobotnikShip) creates its own explosion controller
@@ -689,17 +692,17 @@ public class AizEndBossInstance extends AbstractBossInstance {
         // this on the boss for simplicity — subtype 0 produces the same visual effect.
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
 
-        // ROM: ChildObjDat_47BBC — spawn 6 debris pieces that flicker and fly outward
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
             AizEndBossDebrisChild.spawnAll(state.x, state.y, objectManager);
         }
 
-        // ROM: move.w #$7F,$2E(a0) — 127 frame wait before egg capsule
+        // Existing AIZ handoff wait; updateDefeated applies Obj_Wait's
+        // pre-decrement callback semantics so $2E=$7F expires after the
+        // negative transition, not when it first reaches zero
+        // (sonic3k.asm:177944-177952).
         defeatPhaseTimer = 0x7F;
     }
-
-    private int defeatPhaseTimer;
 
     private void updateDefeated() {
         if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
@@ -707,15 +710,15 @@ public class AizEndBossInstance extends AbstractBossInstance {
             spawnPendingExplosions();
         }
 
-        if (defeatPhaseTimer > 0) {
+        if (defeatPhaseTimer >= 0) {
             defeatPhaseTimer--;
-            if (defeatPhaseTimer == 0) {
+            if (defeatPhaseTimer < 0) {
                 spawnEggCapsuleAndFinish();
             }
         }
     }
 
-    /** ROM: loc_694A4 — Spawn Egg Capsule, clear Boss_flag, restore level music. */
+    /** ROM: loc_694A4/loc_694AA — Spawn Egg Capsule and clear Boss_flag. */
     private void spawnEggCapsuleAndFinish() {
         eggCapsuleSignal = true;
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
@@ -743,7 +746,10 @@ public class AizEndBossInstance extends AbstractBossInstance {
             if (getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
                 Aiz2BossEndSequenceState.reset();
                 Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
-                objectManager.addDynamicObject(Aiz2EndEggCapsuleInstance.createForCamera(
+                // ROM loc_694AA creates the route-8 capsule through
+                // CreateChild6_Simple, which allocates after the current boss
+                // slot (sonic3k.asm:138247-138255, 177114-177129).
+                objectManager.addDynamicObjectAfterCurrent(Aiz2EndEggCapsuleInstance.createForCamera(
                         services().camera().getX(), services().camera().getY()));
                 objectManager.addDynamicObject(AizDrawBridgeObjectInstance.createCutsceneOverride());
                 objectManager.addDynamicObject(S3kCutsceneButtonObjectInstance.createCutsceneOverride());
@@ -767,7 +773,9 @@ public class AizEndBossInstance extends AbstractBossInstance {
         int newAngle;
         var rng = services().rng();
         do {
-            newAngle = rng.nextInt(4) * 4; // 0, 4, 8, or $C
+            // ROM loc_69A66 calls Random_Number and masks the raw word with #$C,
+            // then rejects repeats (sonic3k.asm:138748-138756).
+            newAngle = rng.nextBits(0x0C); // 0, 4, 8, or $C
         } while (newAngle == angle);
         angle = newAngle;
 
@@ -775,10 +783,12 @@ public class AizEndBossInstance extends AbstractBossInstance {
         int targetX = targetMaxX + REPOSITION_TARGETS[targetIndex][0];
         int targetY = yBase + REPOSITION_TARGETS[targetIndex][1];
 
-        // Calculate velocity to reach target in REPOSITION_TIME+1 frames (ROM: 128 frames)
-        int frames = REPOSITION_TIME + 1;
-        state.xVel = ((targetX - state.x) << 8) / frames;
-        state.yVel = ((targetY - state.y) << 8) / frames;
+        // ROM loc_69A66 subtracts the full longword x_pos/y_pos, doubles the
+        // 16.16 delta, then takes the high word as velocity
+        // (sonic3k.asm:138756-138771). This preserves subpixel phase from the
+        // prior hover when the boss dives and repositions.
+        state.xVel = velocityTowardTargetLongword(targetX, state.xFixed);
+        state.yVel = velocityTowardTargetLongword(targetY, state.yFixed);
 
         waitTimer = REPOSITION_TIME;
 
@@ -789,16 +799,18 @@ public class AizEndBossInstance extends AbstractBossInstance {
     // ===== Velocity & position helpers =====
 
     private void applyVelocity() {
-        // 16:8 fixed-point position update (ROM: MoveSprite2)
-        int xPos24 = (state.x << 8) | (state.xFixed & 0xFF);
-        xPos24 += state.xVel;
-        state.x = xPos24 >> 8;
-        state.xFixed = xPos24 & 0xFF;
+        // ROM MoveSprite2 adds signed velocity << 8 to the full longword
+        // position, not just an 8-bit fractional byte (sonic3k.asm:36053-36061).
+        state.xFixed += state.xVel << 8;
+        state.yFixed += state.yVel << 8;
+        state.x = state.xFixed >> 16;
+        state.y = state.yFixed >> 16;
+    }
 
-        int yPos24 = (state.y << 8) | (state.yFixed & 0xFF);
-        yPos24 += state.yVel;
-        state.y = yPos24 >> 8;
-        state.yFixed = yPos24 & 0xFF;
+    private static int velocityTowardTargetLongword(int target, int currentLongword) {
+        long targetLongword = (long) target << 16;
+        long delta = targetLongword - currentLongword;
+        return (int) ((delta << 1) >> 16);
     }
 
     // ===== Custom palette flash (ROM: sub_69C5C + sub_69BE2) =====

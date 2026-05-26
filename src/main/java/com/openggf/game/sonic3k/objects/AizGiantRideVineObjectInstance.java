@@ -264,9 +264,10 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance imple
         AizVineHandleLogic.positionFromParent(handle, parentX, parentY, parentAngle);
         AbstractPlayableSprite sidekick = firstTrackedSidekick();
         AizVineHandleLogic.updatePlayers(handle, services(), player, sidekick, parentAngle);
-        if (!activatedSwingStarted && AizVineHandleLogic.anyGrabbed(handle)) {
-            activatedSwingStarted = true;
-        }
+        // sub_220C2's giant-vine grab path only writes the handle's per-player
+        // grab byte at $32/$33 and player fields (docs/skdisasm/sonic3k.asm:
+        // 46731-46743). It does not alter the first child; loc_2248A continues
+        // to read AIZ_vine_angle on subsequent frames (sonic3k.asm:46840-46854).
         if (services().levelManager() != null && services().levelManager().objectsExecuteAfterPlayerPhysics()) {
             AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
         }
@@ -328,8 +329,10 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance imple
         // increments AIZ_vine_angle by $180 (docs/skdisasm/sonic3k.asm:9693).
         // Obj_AIZGiantRideVine's loc_2248A reads the word during Process_Sprites
         // (docs/skdisasm/sonic3k.asm:46843), so object code sees the angle value
-        // accumulated through the previous gameplay frame.
-        int word = (Math.max(0, frameCounter - 1) * 0x180) & 0xFFFF;
+        // accumulated through the previous gameplay frame. Engine object updates
+        // run before LevelManager.update() increments its stored counter, so the
+        // stored value already represents that previous completed frame.
+        int word = (Math.max(0, frameCounter) * 0x180) & 0xFFFF;
         // move.b (AIZ_vine_angle).w,d0 reads the high byte.
         return (word >> 8) & 0xFF;
     }

@@ -14,6 +14,7 @@ import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -50,27 +51,40 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     private static final int TRIGGER_X_RIGHT = -0x1A + 0x34;
     private static final int TRIGGER_Y_TOP = -0x1C;
     private static final int TRIGGER_Y_BOTTOM = -0x1C + 0x38;
-    private static final int POST_OPEN_DELAY = 60;
+    private static final int POST_OPEN_DELAY = 0x41;
     private static final int ANIMAL_COUNT = 9;
+    private static final int SWING_MAX_SPEED = 0xC0;
+    private static final int SWING_ACCELERATION = 0x10;
 
     private int currentX;
     private int currentY;
-    private int verticalAccumulator;
-    private int bobAngle;
-    private int bobOffset;
+    private int ySubpixel;
+    private int yVelocity = SWING_MAX_SPEED;
+    private boolean swingDescending;
     private int xDirection = 1;
     private int mappingFrame;
     private boolean opened;
+    private boolean buttonTriggered;
     private boolean resultsStarted;
     private boolean releaseTriggered;
     private int postOpenTimer;
     private int buttonRecess;
+    private int buttonTriggerSource;
+    private int buttonTriggerFrame = -1;
+    private int openFrame = -1;
+    private boolean routeInitPending;
     private S3kBossExplosionController explosionController;
 
     protected AbstractS3kFloatingEndEggCapsuleInstance(int initialX, int initialY, String debugName) {
+        this(initialX, initialY, debugName, false);
+    }
+
+    protected AbstractS3kFloatingEndEggCapsuleInstance(int initialX, int initialY, String debugName,
+            boolean routeInitPending) {
         super(new ObjectSpawn(initialX, initialY, OBJECT_ID, 0, 0, false, 0), debugName);
         this.currentX = initialX;
         this.currentY = initialY;
+        this.routeInitPending = routeInitPending;
     }
 
     @Override
@@ -99,8 +113,32 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
     }
 
     @Override
+    public String traceDebugDetails() {
+        return String.format("cap=%s/%04X t=%s o=%s r=%s mf=%02X btn=%02X src=%s tf=%04X of=%04X",
+                opened ? (resultsStarted ? "results" : "open") : "float",
+                postOpenTimer & 0xFFFF,
+                buttonTriggered ? "1" : "0",
+                opened ? "1" : "0",
+                resultsStarted ? "1" : "0",
+                mappingFrame & 0xFF,
+                buttonRecess & 0xFF,
+                switch (buttonTriggerSource) {
+                    case 1 -> "p1";
+                    case 2 -> "p2";
+                    default -> "--";
+                },
+                buttonTriggerFrame & 0xFFFF,
+                openFrame & 0xFFFF);
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(SOLID_HALF_WIDTH, SOLID_HALF_HEIGHT, SOLID_HALF_HEIGHT);
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -115,11 +153,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     @Override
     public int getPieceY(int pieceIndex) {
-        int bobY = currentY + bobOffset;
         if (pieceIndex == PIECE_BUTTON) {
-            return bobY + BUTTON_Y_OFFSET - buttonRecess;
+            return currentY + BUTTON_Y_OFFSET - buttonRecess;
         }
-        return bobY;
+        return currentY;
     }
 
     @Override
@@ -133,19 +170,32 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        bobOffset = (int) Math.round(Math.sin((bobAngle * Math.PI * 2.0) / 256.0) * 3.0);
-
         if (!opened) {
-            updateMovement();
-        }
-
-        if (!opened) {
-            for (PlayableEntity candidate : playerQuery(playerEntity)
-                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
-                if (candidate instanceof AbstractPlayableSprite player && shouldHitButton(player)) {
-                    openCapsule();
-                    break;
-                }
+            if (routeInitPending) {
+                // ROM Obj_EggCapsule first executes loc_8657A for route-8
+                // capsule setup, creates the button/sprite children, then
+                // returns through SolidObjectFull/Draw_Sprite. loc_8662A
+                // motion and loc_86770 button checks begin on later object
+                // routine entries (sonic3k.asm:181496-181545,181588-181647).
+                routeInitPending = false;
+                initializeRoute8FromCamera();
+                checkpointAll();
+                return;
+            }
+            updateRoute8BeforeTrigger();
+            if (buttonTriggered) {
+                openCapsule();
+            }
+            updateSwingAndMove();
+            if (!opened) {
+                // ROM loc_86770 is a separate button child: Refresh_ChildPosition,
+                // sub_86A54, then Check_PlayerInRange/y_vel. Run the collapsed
+                // child solid checkpoint before testing the trigger bit
+                // (sonic3k.asm:181739-181767,182049-182054).
+                checkpointAll();
+                scanButtonTrigger(frameCounter, playerEntity);
+            } else {
+                checkpointAll();
             }
         } else if (!resultsStarted) {
             if (explosionController != null && !explosionController.isFinished()) {
@@ -161,50 +211,139 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
                     && shouldStartResults(player)) {
                 startResults(player);
             }
+            updateSwingAndMove();
+            checkpointAll();
         } else if (resultsStarted && !releaseTriggered && services().gameState().isEndOfLevelFlag()) {
             releaseTriggered = true;
+            onEndingPoseLockClear();
             onResultsComplete();
+            updateSwingAndMove();
+            checkpointAll();
+        } else {
+            updateSwingAndMove();
+            checkpointAll();
         }
-
-        bobAngle = (bobAngle + 3) & 0xFF;
     }
 
-    private void updateMovement() {
+    private void initializeRoute8FromCamera() {
         int cameraX = services().camera().getX();
         int cameraY = services().camera().getY();
 
-        int leftBound = cameraX + LEFT_BOUND_OFFSET;
-        int rightBound = cameraX + RIGHT_BOUND_OFFSET;
-        currentX += xDirection;
-        if (currentX <= leftBound || currentX >= rightBound) {
-            currentX = Math.max(leftBound, Math.min(rightBound, currentX));
-            xDirection = -xDirection;
-        }
+        currentX = (cameraX + X_OFFSET) & 0xFFFF;
+        currentY = (cameraY + Y_START_OFFSET) & 0xFFFF;
+        ySubpixel = 0;
+        xDirection = 1;
+        yVelocity = SWING_MAX_SPEED;
+        swingDescending = false;
+    }
 
-        int targetY = cameraY + Y_TARGET_OFFSET;
-        if (currentY != targetY) {
-            verticalAccumulator += 0x4000;
-            int step = verticalAccumulator >> 16;
-            verticalAccumulator &= 0xFFFF;
-            if (step > 0) {
-                if (currentY < targetY) {
-                    currentY = Math.min(targetY, currentY + step);
-                } else {
-                    currentY = Math.max(targetY, currentY - step);
-                }
+    private void updateRoute8BeforeTrigger() {
+        int cameraX = services().camera().getX();
+        int cameraY = services().camera().getY();
+
+        // ROM loc_8662A compares the current x_pos against the current
+        // camera-relative edge, possibly negates $3A, then adds $3A. It does
+        // not clamp overshoot (sonic3k.asm:181604-181625).
+        if (xDirection >= 0) {
+            int rightBound = (cameraX + RIGHT_BOUND_OFFSET) & 0xFFFF;
+            if (Integer.compareUnsigned(rightBound, currentX & 0xFFFF) < 0) {
+                xDirection = -xDirection;
+            }
+        } else {
+            int leftBound = (cameraX + LEFT_BOUND_OFFSET) & 0xFFFF;
+            if (Integer.compareUnsigned(leftBound, currentX & 0xFFFF) >= 0) {
+                xDirection = -xDirection;
+            }
+        }
+        currentX = (currentX + xDirection) & 0xFFFF;
+
+        int targetY = (cameraY + Y_TARGET_OFFSET) & 0xFFFF;
+        int yStep = Integer.compareUnsigned(targetY, currentY & 0xFFFF) > 0 ? 0x4000 : -0x4000;
+        addYLongword(yStep);
+    }
+
+    private void updateSwingAndMove() {
+        updateSwingVelocity();
+        addYLongword(yVelocity << 8);
+    }
+
+    private void updateSwingVelocity() {
+        int velocity;
+        if (!swingDescending) {
+            velocity = yVelocity - SWING_ACCELERATION;
+            if (velocity <= -SWING_MAX_SPEED) {
+                swingDescending = true;
+                velocity += SWING_ACCELERATION;
+            }
+        } else {
+            velocity = yVelocity + SWING_ACCELERATION;
+            if (velocity >= SWING_MAX_SPEED) {
+                swingDescending = false;
+                velocity -= SWING_ACCELERATION;
+            }
+        }
+        yVelocity = velocity;
+    }
+
+    private void addYLongword(int delta) {
+        int full = ((currentY & 0xFFFF) << 16) | (ySubpixel & 0xFFFF);
+        full += delta;
+        currentY = (full >>> 16) & 0xFFFF;
+        ySubpixel = full & 0xFFFF;
+    }
+
+    private void scanButtonTrigger(int frameCounter, PlayableEntity playerEntity) {
+        ObjectPlayerQuery query = playerQuery(playerEntity);
+        PlayableEntity nativeP1 = query.mainPlayerOrNull();
+        for (PlayableEntity candidate : query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate instanceof AbstractPlayableSprite player
+                    && shouldTriggerButton(player, candidate == nativeP1)) {
+                // ROM loc_86770 only switches the button child to loc_867CA
+                // and sets parent $38 bit 1. The parent Obj_EggCapsule
+                // routine sees that bit on its next object slot and then
+                // runs sub_865DE (sonic3k.asm:181739-181767,181556-181570).
+                buttonTriggered = true;
+                buttonRecess = BUTTON_RECESS;
+                buttonTriggerSource = candidate == nativeP1 ? 1 : 2;
+                buttonTriggerFrame = frameCounter;
+                break;
             }
         }
     }
 
-    private boolean shouldHitButton(AbstractPlayableSprite player) {
-        int buttonY = currentY + bobOffset + BUTTON_Y_OFFSET - buttonRecess;
+    private boolean shouldTriggerButton(AbstractPlayableSprite player, boolean nativeP1) {
+        // ROM loc_86770 refreshes the button child from parent x/y, runs
+        // sub_86A54, then calls Check_PlayerInRange before the parent routine's
+        // Swing_UpAndDown render motion (sonic3k.asm:181739-181767,181604-181647).
+        int buttonY = currentY + BUTTON_Y_OFFSET;
         int dx = player.getCentreX() - currentX;
         int dy = player.getCentreY() - buttonY;
         return player.getYSpeed() < 0
+                && isAllowedButtonTriggerCharacterState(player, nativeP1)
                 && dx >= TRIGGER_X_LEFT
                 && dx < TRIGGER_X_RIGHT
                 && dy >= TRIGGER_Y_TOP
                 && dy < TRIGGER_Y_BOTTOM;
+    }
+
+    private boolean isAllowedButtonTriggerCharacterState(AbstractPlayableSprite player, boolean nativeP1) {
+        if (!nativeP1) {
+            // ROM loc_86770 checks Player_2 only after Player_1 is absent or
+            // rejected, then branches to the trigger immediately after the
+            // upward-y-velocity test (sonic3k.asm:181777-181800).
+            return true;
+        }
+        if (isTailsCharacter(player)) {
+            return true;
+        }
+        // ROM loc_86770 accepts native Player_1 Sonic/Knuckles only when
+        // anim(a1) is #2 before setting the parent trigger bit
+        // (sonic3k.asm:181777-181800).
+        return player.getAnimationId() == Sonic3kAnimationIds.ROLL.id();
+    }
+
+    private boolean isTailsCharacter(AbstractPlayableSprite player) {
+        return player.getCode().toLowerCase(java.util.Locale.ROOT).contains("tails");
     }
 
     private void openCapsule() {
@@ -212,8 +351,13 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
             return;
         }
         opened = true;
+        openFrame = buttonTriggerFrame + 1;
         mappingFrame = 1;
         buttonRecess = BUTTON_RECESS;
+        // ROM sub_865DE stores $2E=$40, then sub_868F8 pre-decrements and
+        // branches while the result is non-negative; this yields 65 routine
+        // entries before Obj_LevelResults can spawn (sonic3k.asm:181556-181570,
+        // 181900-181918).
         postOpenTimer = POST_OPEN_DELAY;
 
         try {
@@ -224,6 +368,11 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
 
         explosionController = new S3kBossExplosionController(currentX, currentY, 3, services().rng());
         spawnAnimals();
+        onParentOpen();
+    }
+
+    protected void onParentOpen() {
+        // Zone-specific sub_865DE side effects.
     }
 
     private void spawnPendingExplosions() {
@@ -311,6 +460,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         // Zone-specific post-results handoff.
     }
 
+    protected void onEndingPoseLockClear() {
+        // Zone-specific Check_TailsEndPose side effects.
+    }
+
     private ObjectPlayerQuery playerQuery(PlayableEntity updatePlayer) {
         ObjectPlayerQuery query = services().playerQuery();
         return new ObjectPlayerQuery(() -> updatePlayer, query::sidekicks);
@@ -322,12 +475,10 @@ public abstract class AbstractS3kFloatingEndEggCapsuleInstance extends AbstractO
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        int bobY = currentY + bobOffset;
+        renderer.drawFrameIndex(mappingFrame, currentX, currentY, false, true);
 
-        renderer.drawFrameIndex(mappingFrame, currentX, bobY, false, true);
-
-        int buttonFrame = opened ? 0xC : 0x5;
-        int buttonY = bobY + BUTTON_Y_OFFSET - buttonRecess;
+        int buttonFrame = buttonTriggered ? 0xC : 0x5;
+        int buttonY = currentY + BUTTON_Y_OFFSET - buttonRecess;
         renderer.drawFrameIndex(buttonFrame, currentX, buttonY, false, true);
     }
 }

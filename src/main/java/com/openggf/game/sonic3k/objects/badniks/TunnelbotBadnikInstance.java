@@ -1,7 +1,5 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
-import java.util.logging.Logger;
-
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -67,8 +65,6 @@ import java.util.List;
 public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         implements TouchResponseProvider, TouchResponseAttackable {
 
-    private static final Logger LOG = Logger.getLogger(TunnelbotBadnikInstance.class.getName());
-
     // ── Constants from ObjDat_Tunnelbot ──────────────────────────────────
 
     // collision_flags = $10: non-enemy collision, size index 16
@@ -119,6 +115,10 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
 
     // Level_trigger_array+8 index
     private static final int LEVEL_TRIGGER_INDEX = 8;
+
+    // Obj_WaitOffscreen installs Map_Offscreen with width/height $20 while it
+    // waits for Render_Sprites to set render_flags bit 7 (sonic3k.asm:180266-180298).
+    private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
 
     // ── Hit flash (sub_88A62) ───────────────────────────────────────────
 
@@ -192,6 +192,7 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     private TunnelbotArm leftArm;
     private TunnelbotArm rightArm;
 
+    private boolean waitingForOnscreen = true;
 
     // Frame counter from update (for vibration)
     private int globalFrameCounter;
@@ -204,7 +205,6 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         // Swing_Setup1: y_vel = $C0, direction = up (bit 0 clear)
         this.yVelocity = SWING_MAX_VELOCITY;
         this.swingDirectionDown = false;
-        LOG.warning("Tunnelbot SPAWNED at X=" + currentX + " Y=" + currentY + " subtype=0x" + Integer.toHexString(spawn.subtype()));
     }
 
     /**
@@ -226,6 +226,23 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         this.globalFrameCounter = frameCounter;
+
+        // ROM: Obj_Tunnelbot begins with jsr (Obj_WaitOffscreen).l
+        // (sonic3k.asm:184710-184717). Obj_WaitOffscreen keeps the SST slot
+        // alive as loc_85AD2 and suppresses the object's routine, hit-flash
+        // helper, and child allocation until render_flags bit 7 is set
+        // (sonic3k.asm:180266-180298). This preserves the ROM's delayed
+        // Tunnelbot activation after the placement loader has reserved a slot.
+        if (waitingForOnscreen) {
+            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+                return;
+            }
+            // loc_85B02 restores the saved operation pointer and immediately
+            // returns; the restored Tunnelbot routine runs on the next object
+            // pass, so child allocation is one frame after the visible wrapper.
+            waitingForOnscreen = false;
+            return;
+        }
 
         // Y bounds check matching Sprite_CheckDeleteTouchXY (sonic3k.asm:178982).
         // Prevents Tunnelbots at a vertically distant path from running their logic.
@@ -285,10 +302,6 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
 
         int distance = findNearestPlayerXDistance(player);
         if (distance < DETECT_RANGE) {
-            int playerX = player != null ? player.getCentreX() : -1;
-            int playerY = player != null ? player.getCentreY() : -1;
-            LOG.warning("Tunnelbot DETECTED player! tunnelbotX=" + currentX + " tunnelbotY=" + currentY
-                    + " playerX=" + playerX + " playerY=" + playerY + " xDist=" + distance);
             // Transition to DRILLING (routine 4)
             // ROM: Animate_RawGetFaster initializes $2E from byte_88B73[0] = 5,
             // but anim_frame_timer is 0 from init — first subq wraps to $FF,
@@ -426,7 +439,6 @@ public final class TunnelbotBadnikInstance extends AbstractObjectInstance
         state = State.SHAKING;
         shakeTimer = SHAKE_DURATION;
         setScreenShake(true);
-        LOG.warning("Tunnelbot SHAKING at X=" + currentX + " Y=" + currentY);
     }
 
     // ── Routine 8: Shaking — vibrate and spawn debris ───────────────────

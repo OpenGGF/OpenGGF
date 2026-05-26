@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import org.junit.jupiter.api.AfterEach;
@@ -80,6 +81,40 @@ class TestMGZSwingingPlatformObjectInstance {
                         + "offscreen bucket must not unload the whole platform");
     }
 
+    @Test
+    void reservesRomVisualChildSlotAfterParentExecutes() {
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x037F, 0x0600, Sonic3kObjectIds.MGZ_SWINGING_PLATFORM, 0x00, 0x00, false, 0);
+        TrackingRegistry registry = new TrackingRegistry();
+        ObjectManager[] managerRef = new ObjectManager[1];
+        ObjectServices objectServices = new StubObjectServices() {
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+
+            @Override
+            public ObjectManager objectManager() {
+                return managerRef[0];
+            }
+        };
+        ObjectManager objectManager = new ObjectManager(List.of(spawn), registry, 0, null, null,
+                null, camera, objectServices);
+        managerRef[0] = objectManager;
+        objectManager.reset(0x0100);
+
+        assertNotNull(registry.instance, "Sanity check: platform should load into the initial window");
+        assertEquals(4, registry.instance.getSlotIndex(),
+                "S3K AllocateObject pre-increments from Dynamic_object_RAM, so normal dynamic SST allocation starts at slot 4");
+
+        objectManager.update(0x0100, null, List.of(), 1, false);
+
+        assertEquals(6, objectManager.allocateSlotAfter(registry.instance.getSlotIndex()),
+                "ROM Obj_MGZSwingingPlatform allocates one loc_3406E child after the parent "
+                        + "(docs/skdisasm/sonic3k.asm:70468-70499), so the next free slot after "
+                        + "the parent must skip that reserved child SST entry");
+    }
+
     private ObjectServices services() {
         return new StubObjectServices() {
             @Override
@@ -96,6 +131,11 @@ class TestMGZSwingingPlatformObjectInstance {
         public ObjectInstance create(ObjectSpawn spawn) {
             instance = new MGZSwingingPlatformObjectInstance(spawn);
             return instance;
+        }
+
+        @Override
+        public ObjectSlotLayout objectSlotLayout() {
+            return ObjectSlotLayout.SONIC_3K;
         }
 
         @Override

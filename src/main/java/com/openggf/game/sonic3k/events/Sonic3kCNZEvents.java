@@ -1,16 +1,28 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.mutation.LayoutMutationContext;
+import com.openggf.game.mutation.LevelMutationSurface;
+import com.openggf.game.save.SaveReason;
+import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance;
+import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
+import com.openggf.level.AbstractLevel;
+import com.openggf.level.Block;
+import com.openggf.level.ChunkDesc;
 import com.openggf.level.Level;
+import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 /**
@@ -49,6 +61,8 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /** CNZ2_ScreenEvent stage 8. */
     public static final int FG_ACT2_NORMAL = 0x08;
 
+    static final int ACT1_POST_TRANSITION_CONTROL_RELEASE_FRAMES = 608;
+
     /**
      * Camera X threshold that arms the miniboss arena gate.
      *
@@ -65,12 +79,32 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * {@code SwScrlCnz} boss scroll path covers.
      */
     private static final int MINIBOSS_EARLY_TUNNEL_X_THRESHOLD = 0x3000;
-    private static final int MINIBOSS_START_RELEASE_DELAY = 2 * 60;
+    /*
+     * ROM writes #2*60 into the original Obj_Wait object (sonic3k.asm:144838-144840).
+     * This event handler arms and ticks the engine-side mirror in the same update,
+     * so the stored value is one larger to leave the first visible release frame
+     * aligned with Obj_CNZMinibossGo installing Obj_CNZMinibossStart.
+     */
+    private static final int MINIBOSS_START_RELEASE_DELAY = (2 * 60) + 1;
     private static final int MINIBOSS_LOWER_ROUTE_Y_THRESHOLD = 0x054C;
     private static final int MINIBOSS_LOWER_ROUTE_Y_REMAP = 0x0700;
     private static final int MINIBOSS_BOSS_BG_SCROLL_THRESHOLD = 0x01E0;
+    private static final int POST_BOSS_END_SIGN_X = 0x32C0;
     private static final int KNUCKLES_ROUTE_MIN_X = 0x4750;
     private static final int KNUCKLES_ROUTE_MAX_X = 0x48E0;
+    private static final int ARENA_CHUNK_CELL_SIZE = 0x20;
+    private static final int CHUNK_PIXEL_SIZE = 0x10;
+    private static final int POST_BOSS_COPY_SOURCE_LAYER = 1;
+    private static final int POST_BOSS_COPY_DEST_LAYER = 0;
+    private static final int POST_BOSS_COPY_SOURCE_X = 0x0200 / 0x80;
+    private static final int POST_BOSS_COPY_SOURCE_Y = 0x0180 / 0x80;
+    private static final int POST_BOSS_COPY_DEST_X = 0x3180 / 0x80;
+    private static final int POST_BOSS_COPY_DEST_Y = 0x0280 / 0x80;
+    private static final int POST_BOSS_COPY_COLUMNS = 5;
+    private static final int POST_BOSS_COPY_ROWS = 6;
+    private static final int POST_BOSS_REFRESH_INITIAL_ROWCOUNT = 0x0F;
+    private static final int POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER = POST_BOSS_REFRESH_INITIAL_ROWCOUNT;
+    private static final int POST_BOSS_VERTICAL_REMAP = 0x01C0;
 
     /**
      * Saved {@code Camera_max_X_pos} captured when the arena lock fires.
@@ -164,6 +198,16 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private int arenaChunkWorldX;
     private int arenaChunkWorldY;
     private boolean arenaChunkDestructionQueued;
+    private int lastArenaChunkClearX;
+    private int lastArenaChunkClearY;
+    private static final int ARENA_CLEAR_HISTORY_SIZE = 8;
+    private final int[] arenaClearHistoryX = new int[ARENA_CLEAR_HISTORY_SIZE];
+    private final int[] arenaClearHistoryY = new int[ARENA_CLEAR_HISTORY_SIZE];
+    private final int[] arenaClearHistoryFrame = new int[ARENA_CLEAR_HISTORY_SIZE];
+    private int arenaClearHistoryCursor;
+    private int arenaClearHistoryCount;
+    private int postBossFgRefreshRowsRemaining;
+    private int postBossFgRefresh2RowsRemaining;
     /**
      * Accumulated destroyed arena height in pixels.
      *
@@ -226,6 +270,15 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         arenaChunkWorldX = 0;
         arenaChunkWorldY = 0;
         arenaChunkDestructionQueued = false;
+        lastArenaChunkClearX = 0;
+        lastArenaChunkClearY = 0;
+        Arrays.fill(arenaClearHistoryX, 0);
+        Arrays.fill(arenaClearHistoryY, 0);
+        Arrays.fill(arenaClearHistoryFrame, -1);
+        arenaClearHistoryCursor = 0;
+        arenaClearHistoryCount = 0;
+        postBossFgRefreshRowsRemaining = -1;
+        postBossFgRefresh2RowsRemaining = -1;
         destroyedArenaRows = 0;
         bossBackgroundMode = BossBackgroundMode.NORMAL;
     }
@@ -233,23 +286,26 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     @Override
     public void update(int act, int frameCounter) {
         if (act == 0) {
-            updateAct1Bg();
+            updateAct1Bg(frameCounter);
             updateMinibossStartRelease();
         } else {
             updateAct2Fg();
         }
         // Falling-edge: when the boss object clears Boss_flag (via
-        // CnzMinibossInstance.onEndGo, ROM sonic3k.asm:144998), release the
-        // arena camera clamp and wall-grab suppression so the post-boss
-        // refresh chain can pan the camera forward toward the signpost.
+        // CnzMinibossInstance.onEndGo, ROM sonic3k.asm:144998), only release
+        // wall-grab suppression. ROM Obj_CNZMinibossEndGo calls
+        // AfterBoss_Cleanup, and AfterBoss_CNZ is an rts; it does not restore
+        // the stored horizontal camera bounds here (sonic3k.asm:144996-145001,
+        // 176489-176557). The arena X clamp remains in force until the later
+        // CNZ1BGE_DoTransition offset/reload path consumes it.
         if (bossFlagPrev && !bossFlag) {
-            releaseArenaCameraClamps();
             wallGrabSuppressed = false;
         }
         bossFlagPrev = bossFlag;
     }
 
-    private void updateAct1Bg() {
+    private void updateAct1Bg(int frameCounter) {
+        processQueuedArenaChunkDestruction(frameCounter);
         switch (bgRoutine) {
             case BG_BOSS_START -> handleBossScrollStartStage();
             case BG_BOSS -> handleAct1Entry();
@@ -302,12 +358,13 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                 if (!minibossArenaLocked && camX >= Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X) {
                     enterMinibossArena();
                 }
-                if (eventsFg5) {
-                    eventsFg5 = false;
-                    bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
-                    bgRoutine = BG_FG_REFRESH;
-                    LOG.info("CNZ: post-boss handoff entered");
-                }
+        if (eventsFg5) {
+            eventsFg5 = false;
+            bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
+            bgRoutine = BG_FG_REFRESH;
+            postBossFgRefreshRowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
+            LOG.info("CNZ: post-boss handoff entered");
+        }
             }
             case ACT1_POST_BOSS -> handleAfterBossStage();
             case ACT2_KNUCKLES_TELEPORTER -> updateAct2Fg();
@@ -487,8 +544,8 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /**
      * ROM: CNZ1BGE_AfterBoss.
      *
-     * <p>The first Events_fg_5 only advances the refresh chain. It does not
-     * request the act reload.
+     * <p>The first Events_fg_5 enters the refresh chain and immediately falls
+     * through into {@code CNZ1BGE_FGRefresh}; it does not request the act reload.
      */
     private void handleAfterBossStage() {
         if (!eventsFg5) {
@@ -496,29 +553,78 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         }
         eventsFg5 = false;
         bgRoutine = BG_FG_REFRESH;
+        // ROM loc_51D6E primes Draw_delayed_rowcount=$F and falls through to
+        // CNZ1BGE_FGRefresh. The engine observes this handoff after object
+        // updates, so keep the post-first-draw remainder before the completion
+        // copy can take the bmi branch (sonic3k.asm:107510-107534).
+        postBossFgRefreshRowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
+        advanceRefreshStageToSecondPass();
     }
 
     /**
      * ROM: CNZ1BGE_FGRefresh.
      *
-     * <p>The real game copies arena data back into the foreground before the
-     * signpost phase. This bring-up keeps the same sequencing contract by
-     * advancing to the second refresh pass on the next update while leaving
-     * the actual layout mutation to later slices.
+     * <p>The real game copies arena data back into the foreground only after
+     * {@code Draw_PlaneVertSingleBottomUp} has decremented
+     * {@code Draw_delayed_rowcount} below zero. Until then it keeps the
+     * background collision plane live (sonic3k.asm:103436-103452,
+     * 107527-107539).
      */
     private void advanceRefreshStageToSecondPass() {
+        if (!consumePostBossRefreshRow(BG_FG_REFRESH)) {
+            return;
+        }
+        copyPostBossBackgroundLayoutToForeground();
+        remapPostBossTunnelToForeground();
+        postBossFgRefresh2RowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
         bgRoutine = BG_FG_REFRESH_2;
     }
 
     /**
      * ROM: CNZ1BGE_FGRefresh2.
      *
-     * <p>The real game finishes the foreground handoff here. For the current
-     * scope we only need the stage to become reachable and to progress to the
-     * reload gate without an external test forcing BG_DO_TRANSITION.
+     * <p>The real game finishes the foreground handoff here after the second
+     * delayed draw finishes (sonic3k.asm:107576-107601).
      */
     private void advanceRefreshStageToTransitionGate() {
+        if (!consumePostBossRefreshRow(BG_FG_REFRESH_2)) {
+            return;
+        }
+        // ROM CNZ1BGE_FGRefresh2 allocates Obj_EndSign and writes x_pos=$32C0
+        // immediately before advancing to CNZ1BGE_DoTransition
+        // (docs/skdisasm/sonic3k.asm:107590-107601).
+        spawnObject(() -> new S3kSignpostInstance(POST_BOSS_END_SIGN_X, 0));
         bgRoutine = BG_DO_TRANSITION;
+    }
+
+    private boolean consumePostBossRefreshRow(int routine) {
+        if (routine == BG_FG_REFRESH) {
+            if (postBossFgRefreshRowsRemaining < 0) {
+                postBossFgRefreshRowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
+            }
+            postBossFgRefreshRowsRemaining--;
+            return postBossFgRefreshRowsRemaining < 0;
+        }
+        if (postBossFgRefresh2RowsRemaining < 0) {
+            postBossFgRefresh2RowsRemaining = POST_BOSS_REFRESH_INITIAL_ROWCOUNT;
+        }
+        postBossFgRefresh2RowsRemaining--;
+        return postBossFgRefresh2RowsRemaining < 0;
+    }
+
+    private void remapPostBossTunnelToForeground() {
+        // ROM loc_51DAE clears Events_bg+$08 and adds $1C0 to both players
+        // and Camera_Y_pos/Camera_Y_pos_copy after the BG->FG copy
+        // (sonic3k.asm:107562-107568).
+        bossScrollOffsetY = 0;
+        bossScrollVelocityY = 0;
+        for (Sprite sprite : spriteManager().getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.setCentreYPreserveSubpixel(
+                        (short) (playable.getCentreY() + POST_BOSS_VERTICAL_REMAP));
+            }
+        }
+        camera().setY((short) (camera().getY() + POST_BOSS_VERTICAL_REMAP));
     }
 
     /**
@@ -543,6 +649,67 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         bgRoutine = BG_NORMAL;
         bossBackgroundMode = BossBackgroundMode.ACT2_KNUCKLES_TELEPORTER;
         wallGrabSuppressed = false;
+
+        // ROM CNZ1BGE_DoTransition sets Current_zone_and_act=$301, reloads
+        // level/solids/water, then offsets both players/camera by d0=$3000
+        // and d1=-$200 without recentering the camera
+        // (docs/skdisasm/sonic3k.asm:107603-107653).
+        //
+        // The current Obj_LevelResults / Obj_EndSignControl objects survive
+        // that ROM reload: loc_2DD06 later clears _unkFAA8, and
+        // Obj_EndSignControlAwaitStart restores P1/P2 control
+        // (docs/skdisasm/sonic3k.asm:62708-62720,180407-180412).
+        // The engine rebuilds the object manager for the reload, so keep that
+        // delayed handoff in the CNZ event bridge instead of preserving stale
+        // act-1 object instances.
+        S3kTransitionWriteSupport.requestCnzPostTransitionRelease(
+                module().getLevelEventProvider(),
+                ACT1_POST_TRANSITION_CONTROL_RELEASE_FRAMES);
+        Camera camera = camera();
+        int postTransitionMinX = offsetCameraBoundWord(camera.getMinX(), transitionWorldOffsetX);
+        int postTransitionMaxX = offsetCameraBoundWord(camera.getMaxX(), transitionWorldOffsetX);
+        int postTransitionMinY = offsetCameraBoundWord(camera.getMinY(), transitionWorldOffsetY);
+        int postTransitionMaxY = offsetCameraBoundWord(camera.getMaxY(), transitionWorldOffsetY);
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
+                        SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .deactivateLevelNow(false)
+                .preserveMusic(true)
+                .preserveLevelGamestate(true)
+                .showInLevelTitleCard(false)
+                .preserveOffsetCameraPosition(true)
+                // CNZ1BGE_DoTransition offsets the live camera bounds after
+                // Load_Level, and copies the offset max Y into the target max
+                // (docs/skdisasm/sonic3k.asm:107638-107646).
+                .postTransitionMinX(postTransitionMinX)
+                .postTransitionMaxX(postTransitionMaxX)
+                .postTransitionMinY(postTransitionMinY)
+                .postTransitionMaxY(postTransitionMaxY)
+                .postTransitionMaxYTarget(postTransitionMaxY)
+                .playerOffset(transitionWorldOffsetX, transitionWorldOffsetY)
+                .cameraOffset(transitionWorldOffsetX, transitionWorldOffsetY)
+                .build();
+        applyOrRequestCnzActTransition(request);
+    }
+
+    private static int offsetCameraBoundWord(short value, int offset) {
+        return ((value & 0xFFFF) + offset) & 0xFFFF;
+    }
+
+    private void applyOrRequestCnzActTransition(SeamlessLevelTransitionRequest request) {
+        SessionSaveRequests.requestCurrentSessionSave(SaveReason.PROGRESSION_SAVE);
+        if (levelManager().getCurrentLevel() == null) {
+            levelManager().requestSeamlessTransition(request);
+            return;
+        }
+        try {
+            // ROM CNZ1BGE_DoTransition performs Load_Level and the coordinate
+            // offsets inside the BG event routine, not on the next frame
+            // (docs/skdisasm/sonic3k.asm:107603-107653).
+            levelManager().executeActTransition(request);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to apply CNZ act transition", e);
+        }
     }
 
     /**
@@ -603,11 +770,22 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /** Test hook for the background routine. */
     public void forceBackgroundRoutine(int routine) {
         this.bgRoutine = routine;
+        if (routine == BG_FG_REFRESH) {
+            this.postBossFgRefreshRowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
+        } else if (routine == BG_FG_REFRESH_2) {
+            this.postBossFgRefresh2RowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
+        }
     }
 
     /** Test hook for the boss background mode. */
     public void forceBossBackgroundMode(BossBackgroundMode mode) {
         this.bossBackgroundMode = mode;
+    }
+
+    /** Test hook for the CNZ miniboss Obj_Wait -> Start release gate. */
+    public void forceMinibossStartGateForTest(boolean arenaLocked, boolean startReleased) {
+        this.minibossArenaLocked = arenaLocked;
+        this.minibossStartReleased = startReleased;
     }
 
     /** Publishes the deform inputs consumed by later CNZ systems. */
@@ -638,6 +816,17 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         boolean signal = minibossDefeatSignalForScrollControl;
         minibossDefeatSignalForScrollControl = false;
         return signal;
+    }
+
+    public boolean isMinibossDefeatSignalForScrollControlPending() {
+        return minibossDefeatSignalForScrollControl;
+    }
+
+    public void advanceMinibossBackgroundRoutineAfterScrollSnap() {
+        // ROM Obj_CNZMinibossScrollWait2 advances Events_routine_bg when it
+        // snaps Events_bg+$08, restores Camera_target_max_Y_pos, and enables
+        // Background_collision_flag (sonic3k.asm:107814-107828).
+        bgRoutine += 4;
     }
 
     public int getBossScrollOffsetY() {
@@ -807,6 +996,145 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         destroyedArenaRows += 0x20;
     }
 
+    private void processQueuedArenaChunkDestruction(int frameCounter) {
+        if (!arenaChunkDestructionQueued) {
+            return;
+        }
+        // Obj_CNZMinibossTop only stores Events_bg+$00/$02 and spawns the
+        // explosion child; CNZ1_ScreenEvent performs the chunk-descriptor clear
+        // on the next screen-event pass (sonic3k.asm:145182-145184,
+        // 145204-145216, 107340-107365). Keeping the terrain mutation here
+        // prevents same-frame object updates from erasing landing collision
+        // before player/sidekick terrain collision observes it.
+        int chunkWorldX = arenaChunkWorldX;
+        int chunkWorldY = arenaChunkWorldY;
+        arenaChunkDestructionQueued = false;
+        lastArenaChunkClearX = chunkWorldX;
+        lastArenaChunkClearY = chunkWorldY;
+        recordArenaClearHistory(frameCounter, chunkWorldX, chunkWorldY);
+        mutateArenaBlockCollision(chunkWorldX, chunkWorldY);
+    }
+
+    private void recordArenaClearHistory(int frameCounter, int chunkWorldX, int chunkWorldY) {
+        arenaClearHistoryFrame[arenaClearHistoryCursor] = frameCounter;
+        arenaClearHistoryX[arenaClearHistoryCursor] = chunkWorldX;
+        arenaClearHistoryY[arenaClearHistoryCursor] = chunkWorldY;
+        arenaClearHistoryCursor = (arenaClearHistoryCursor + 1) % ARENA_CLEAR_HISTORY_SIZE;
+        if (arenaClearHistoryCount < ARENA_CLEAR_HISTORY_SIZE) {
+            arenaClearHistoryCount++;
+        }
+    }
+
+    private void mutateArenaBlockCollision(int snappedWorldX, int snappedWorldY) {
+        if (!isWithinMinibossArenaMutationBounds(snappedWorldX, snappedWorldY)) {
+            return;
+        }
+        Level level = levelManager() != null ? levelManager().getCurrentLevel() : null;
+        if (level == null || level.getMap() == null || zoneLayoutMutationPipelineOrNull() == null) {
+            return;
+        }
+
+        LevelMutationSurface surface = LevelMutationSurface.forLevel(level);
+        LayoutMutationContext context = new LayoutMutationContext(surface, ignored -> {
+            // The affected cells are collision-only block descriptors. CNZ's
+            // explosion child owns the visible effect; no tile redraw is needed here.
+        });
+        zoneLayoutMutationPipeline().applyImmediatelyWithoutRedraw(ctx -> {
+            clearArenaCollisionCell(level, snappedWorldX, snappedWorldY);
+            return null;
+        }, context);
+    }
+
+    private boolean isWithinMinibossArenaMutationBounds(int snappedWorldX, int snappedWorldY) {
+        return snappedWorldX >= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_LEFT
+                && snappedWorldX < Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_RIGHT
+                && snappedWorldY >= 0x0300
+                && snappedWorldY < Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_BOTTOM;
+    }
+
+    private void clearArenaCollisionCell(Level level, int snappedWorldX, int snappedWorldY) {
+        int rawWorldX = snappedWorldX - (ARENA_CHUNK_CELL_SIZE / 2);
+        int rawWorldY = snappedWorldY - (ARENA_CHUNK_CELL_SIZE / 2);
+        int blockPixelSize = level.getBlockPixelSize();
+        int blockX = Math.floorDiv(rawWorldX, blockPixelSize);
+        int blockY = Math.floorDiv(rawWorldY, blockPixelSize);
+        if (blockX < 0 || blockY < 0
+                || blockX >= level.getLayerWidthBlocks(0)
+                || blockY >= level.getLayerHeightBlocks(0)) {
+            return;
+        }
+
+        int blockIndex = level.getMap().getValue(0, blockX, blockY) & 0xFF;
+        if (blockIndex <= 0 || blockIndex >= level.getBlockCount()) {
+            return;
+        }
+
+        Block block = level.getBlock(blockIndex);
+        if (level instanceof AbstractLevel abstractLevel) {
+            block.cowEnsureWritable(abstractLevel.currentEpoch());
+        }
+
+        int chunkMask = blockPixelSize - 1;
+        int chunkX = ((rawWorldX & chunkMask) / CHUNK_PIXEL_SIZE) & ~1;
+        int chunkY = ((rawWorldY & chunkMask) / CHUNK_PIXEL_SIZE) & ~1;
+        int gridSide = block.getGridSide();
+        for (int y = 0; y < 2; y++) {
+            for (int x = 0; x < 2; x++) {
+                int targetX = chunkX + x;
+                int targetY = chunkY + y;
+                if (targetX < gridSide && targetY < gridSide) {
+                    block.setChunkDesc(targetX, targetY, ChunkDesc.EMPTY);
+                }
+            }
+        }
+    }
+
+    private void copyPostBossBackgroundLayoutToForeground() {
+        Level level = levelManager() != null ? levelManager().getCurrentLevel() : null;
+        if (level == null || level.getMap() == null
+                || level.getMap().getLayerCount() <= POST_BOSS_COPY_SOURCE_LAYER
+                || zoneLayoutMutationPipelineOrNull() == null) {
+            return;
+        }
+
+        LevelMutationSurface surface = LevelMutationSurface.forLevel(level);
+        LayoutMutationContext context = new LayoutMutationContext(surface, ignored -> {
+            // CNZ1BGE_FGRefresh refreshes visible tiles separately; this is the
+            // collision/layout copy from BG into FG (sonic3k.asm:107527-107576).
+        });
+        zoneLayoutMutationPipeline().applyImmediatelyWithoutRedraw(ctx -> {
+            copyPostBossBackgroundLayoutToForeground(ctx.surface(), level);
+            return null;
+        }, context);
+        if (gameStateOrNull() != null) {
+            // ROM clears Background_collision_flag after copying BG layout bytes
+            // into FG collision (sonic3k.asm:107556-107563).
+            gameState().setBackgroundCollisionFlag(false);
+        }
+    }
+
+    private void copyPostBossBackgroundLayoutToForeground(LevelMutationSurface surface, Level level) {
+        for (int row = 0; row < POST_BOSS_COPY_ROWS; row++) {
+            int sourceY = POST_BOSS_COPY_SOURCE_Y + row;
+            int destY = POST_BOSS_COPY_DEST_Y + row;
+            if (sourceY >= level.getLayerHeightBlocks(POST_BOSS_COPY_SOURCE_LAYER)
+                    || destY >= level.getLayerHeightBlocks(POST_BOSS_COPY_DEST_LAYER)) {
+                continue;
+            }
+            for (int column = 0; column < POST_BOSS_COPY_COLUMNS; column++) {
+                int sourceX = POST_BOSS_COPY_SOURCE_X + column;
+                int destX = POST_BOSS_COPY_DEST_X + column;
+                if (sourceX >= level.getLayerWidthBlocks(POST_BOSS_COPY_SOURCE_LAYER)
+                        || destX >= level.getLayerWidthBlocks(POST_BOSS_COPY_DEST_LAYER)) {
+                    continue;
+                }
+                int blockIndex = level.getMap()
+                        .getValue(POST_BOSS_COPY_SOURCE_LAYER, sourceX, sourceY) & 0xFF;
+                surface.setBlockInMapWithoutRedraw(POST_BOSS_COPY_DEST_LAYER, destX, destY, blockIndex);
+            }
+        }
+    }
+
     public boolean isArenaChunkDestructionQueued() {
         return arenaChunkDestructionQueued;
     }
@@ -835,6 +1163,26 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      */
     public int getPendingArenaChunkY() {
         return arenaChunkWorldY;
+    }
+
+    public int getLastArenaChunkClearX() {
+        return lastArenaChunkClearX;
+    }
+
+    public int getLastArenaChunkClearY() {
+        return lastArenaChunkClearY;
+    }
+
+    public int[] getArenaClearHistorySnapshot() {
+        int[] snapshot = new int[arenaClearHistoryCount * 3];
+        for (int i = 0; i < arenaClearHistoryCount; i++) {
+            int source = Math.floorMod(arenaClearHistoryCursor - arenaClearHistoryCount + i,
+                    ARENA_CLEAR_HISTORY_SIZE);
+            snapshot[i * 3] = arenaClearHistoryFrame[source];
+            snapshot[i * 3 + 1] = arenaClearHistoryX[source];
+            snapshot[i * 3 + 2] = arenaClearHistoryY[source];
+        }
+        return snapshot;
     }
 
     /**

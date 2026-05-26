@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -98,6 +99,7 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
     private int solidStatusBits;
     private PlayableEntity p1SolidContact;
     private PlayableEntity p2SolidContact;
+    private MonitorContentsSlot monitorContentsSlot;
 
     // (Icon rising state is managed by AbstractMonitorObjectInstance)
 
@@ -270,16 +272,33 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
         // Initialize icon rising
         startIconRise(posY(), player);
+        spawnMonitorContentsSlot(objectManager);
 
         // Spawn explosion
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager != null && objectManager != null
                 && renderManager.getExplosionRenderer() != null) {
-            objectManager.addDynamicObject(
-                    new ExplosionObjectInstance(0x27, posX(), posY(), renderManager));
+            // ROM Obj_MonitorSpawnIcon creates Obj_MonitorContents, then
+            // Obj_Explosion, with AllocateObjectAfterCurrent both times
+            // (docs/skdisasm/sonic3k.asm:40640-40659; allocator at 37911-37925).
+            objectManager.addDynamicObjectAfterSlot(
+                    new ExplosionObjectInstance(0x27, posX(), posY(), renderManager),
+                    getSlotIndex());
         }
         // ROM: Obj_Explosion loc_1E61A plays sfx_Break ($3D)
         services().playSfx(Sonic3kSfx.BREAK.id);
+    }
+
+    private void spawnMonitorContentsSlot(ObjectManager objectManager) {
+        if (objectManager == null || monitorContentsSlot != null) {
+            return;
+        }
+        monitorContentsSlot = new MonitorContentsSlot(this, buildSpawnAt(posX(), posY()));
+        // The parent shell can be broken by TouchResponse before ObjectManager
+        // is executing the monitor slot. Anchor AllocateObjectAfterCurrent to
+        // this monitor's SST slot so the content object still lands after the
+        // shell, matching Obj_MonitorSpawnIcon (sonic3k.asm:40640-40652).
+        objectManager.addDynamicObjectAfterSlot(monitorContentsSlot, getSlotIndex());
     }
 
     /**
@@ -341,6 +360,27 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 player.addRings(SUPER_RING_REWARD);
                 LOGGER.info("Super monitor collected — 50 rings awarded (super transformation TODO)");
             }
+        }
+    }
+
+    @Override
+    protected void onIconDeactivated() {
+        destroyMonitorContentsSlot();
+    }
+
+    @Override
+    public void onUnload() {
+        destroyMonitorContentsSlot();
+    }
+
+    private boolean isMonitorContentsSlotActive() {
+        return iconActive;
+    }
+
+    private void destroyMonitorContentsSlot() {
+        if (monitorContentsSlot != null) {
+            monitorContentsSlot.setDestroyed(true);
+            monitorContentsSlot = null;
         }
     }
 
@@ -449,14 +489,20 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         if (player == null) {
             return true;
         }
-        // ROM: SolidObject_Monitor_SonicKnux also tests anim(a1) == AniIDSonAni_Roll,
-        // not the rolling status bit.
+        if (player.isCpuControlled()) {
+            // ROM: SolidObject_Monitor_Tails branches directly to SolidObject_cont
+            // outside competition mode before testing the roll anim
+            // (docs/skdisasm/sonic3k.asm:40583-40590).
+            return true;
+        }
+        // ROM: SolidObject_Monitor_SonicKnux tests anim(a1) == AniIDSonAni_Roll,
+        // not the broader rolling status bit (docs/skdisasm/sonic3k.asm:40559-40572).
         return player.getAnimationId() != Sonic3kAnimationIds.ROLL.id();
     }
 
     @Override
     public boolean hasMonitorSolidity() {
-        return true;
+        return false;
     }
 
     @Override
@@ -469,7 +515,12 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.monitorSolid(4, false);
+        // S3K monitor wrappers gate roll-animation hits, then branch into the
+        // shared SolidObject_cont side/top classifier (docs/skdisasm/sonic3k.asm:
+        // 40559-40590, 41394-41632). That normal classifier is required for
+        // P2 side contact to win over top landing when horizontal penetration is
+        // smaller, e.g. CNZ f11061 against the monitor at $1A50,$00D0.
+        return SolidRoutineProfile.fullSolid(false);
     }
 
     @Override
@@ -567,6 +618,48 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         player.setOnObject(false);
         player.setPushing(false);
         player.setAir(true);
+    }
+
+    private static final class MonitorContentsSlot extends AbstractObjectInstance {
+        private final Sonic3kMonitorObjectInstance parent;
+
+        private MonitorContentsSlot(Sonic3kMonitorObjectInstance parent, ObjectSpawn spawn) {
+            super(spawn, "MonitorContents");
+            this.parent = parent;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            if (!parent.isMonitorContentsSlotActive()) {
+                setDestroyed(true);
+            }
+        }
+
+        @Override
+        public int getX() {
+            return parent.posX();
+        }
+
+        @Override
+        public int getY() {
+            return parent.iconSubY >> 8;
+        }
+
+        @Override
+        public ObjectSpawn getSpawn() {
+            return parent.buildSpawnAt(getX(), getY());
+        }
+
+        @Override
+        public boolean isDestroyed() {
+            return super.isDestroyed() || parent.isDestroyed();
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // Slot-only mirror of ROM Obj_MonitorContents. The parent shell
+            // still owns the existing embedded icon render/update state.
+        }
     }
 
     /**

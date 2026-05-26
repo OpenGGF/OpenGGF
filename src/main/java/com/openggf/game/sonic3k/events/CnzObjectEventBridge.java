@@ -19,6 +19,7 @@ public interface CnzObjectEventBridge {
     void setBossScrollState(int offsetY, int velocityY);
     void signalMinibossDefeatedForScrollControl();
     boolean consumeMinibossDefeatSignalForScrollControl();
+    void advanceMinibossBackgroundRoutineAfterScrollSnap();
     void setBossFlag(boolean value);
     void setEventsFg5(boolean value);
     void setWallGrabSuppressed(boolean value);

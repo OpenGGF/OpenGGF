@@ -7,6 +7,7 @@ import com.openggf.level.objects.TouchCategoryDecodeMode;
 import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.camera.Camera;
 import com.openggf.level.LevelManager;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -99,6 +100,23 @@ class TestCnzBumperObjectInstance {
 
         assertTrue(bumper.getX() != 0x03E8);
         assertEquals(0x03E8, bumper.getOutOfRangeReferenceX());
+    }
+
+    @Test
+    void touchVisibilityUsesRomCollisionListWindowFromAnchor() {
+        CnzBumperObjectInstance bumper =
+                new CnzBumperObjectInstance(new ObjectSpawn(0x0F00, 0x0488, 0x4A, 0x00, 0, false, 0));
+        Camera camera = new Camera();
+        camera.setX((short) 0x0D55);
+        bumper.setServices(new TestObjectServices().withCamera(camera));
+
+        assertTrue(bumper.isOnScreenForTouch(),
+                "Obj_Bumper accepts (origin_x & $FF80) - Camera_X_pos_coarse_back == $280");
+
+        camera.setX((short) 0x0CC0);
+
+        assertFalse(bumper.isOnScreenForTouch(),
+                "Obj_Bumper skips when the unsigned coarse-back delta exceeds $280");
     }
 
     @Test

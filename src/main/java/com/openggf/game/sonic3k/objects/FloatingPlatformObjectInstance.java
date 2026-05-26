@@ -120,6 +120,8 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     private int y;
     private final int baseX;  // objoff_30: saved X position
     private final int baseY;  // objoff_34: saved Y position
+    private final int outOfRangeReferenceX; // objoff_44: saved deletion anchor
+    private final int outOfRangeLimit;      // objoff_42: deletion range
     // Stationary bob state (type 0) — sine-based vertical nudge when player stands
     private final PlatformBobHelper bobHelper = new PlatformBobHelper();
 
@@ -163,6 +165,11 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
         this.baseY = spawn.y();
         this.x = baseX;
         this.y = baseY;
+        // ROM Obj_FloatingPlatform saves x_pos to $44 and checks that anchor
+        // at loc_25628, not the moving platform's live x_pos. Types 12+ widen
+        // the delete range and bias $44 by +$100 (sonic3k.asm:50810-50835).
+        this.outOfRangeReferenceX = moveType >= 12 ? baseX + 0x100 : baseX;
+        this.outOfRangeLimit = moveType >= 12 ? 0x380 : 0x280;
 
         // Initialize SubpixelMotion state for Rising platform (type 7)
         this.risingState = new SubpixelMotion.State(baseX, baseY, 0, 0, 0, 0);
@@ -230,6 +237,25 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     public int getY() {
         return y;
     }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return outOfRangeReferenceX;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return outOfRangeLimit != 0x280;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        int objRounded = outOfRangeReferenceX & 0xFF80;
+        int cameraBack = (cameraX - 0x80) & 0xFF80;
+        int distance = (objRounded - cameraBack) & 0xFFFF;
+        return distance > outOfRangeLimit;
+    }
+
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);

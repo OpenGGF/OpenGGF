@@ -5,6 +5,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchCategoryDecodeMode;
@@ -19,20 +21,48 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestClamerObjectInstance {
+
+    @Test
+    void updateAllocatesRomSpringChildSlotAtChildObjDat89148Offset() {
+        ClamerObjectInstance clamer =
+                new ClamerObjectInstance(new ObjectSpawn(0x0578, 0x0690, 0xA3, 0, 0, false, 0));
+        RecordingServices services = new RecordingServices();
+        clamer.setServices(services);
+        AbstractPlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+
+        clamer.testReleaseWaitOffscreen();
+
+        assertEquals(1, services.spawnedChildren.size(),
+                "Obj_Clamer loc_88FDC creates one ChildObjDat_89148 child slot");
+        ObjectInstance child = services.spawnedChildren.get(0);
+        assertEquals(0x0578, child.getX());
+        assertEquals(0x0688, child.getY());
+
+        clamer.update(0x021D, player);
+        assertEquals(1, services.spawnedChildren.size(), "Clamer must not respawn its child every update");
+
+        clamer.onUnload();
+        assertTrue(child.isDestroyed(), "Parent unload should release the slot-only spring child");
+    }
 
     @Test
     void springChildUsesRomOffsetAndLaunchesPlayer() {
         ClamerObjectInstance clamer =
                 new ClamerObjectInstance(new ObjectSpawn(0x0578, 0x0690, 0xA3, 0, 0, false, 0));
         clamer.setServices(new TestObjectServices());
+        clamer.testReleaseWaitOffscreen();
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
@@ -87,6 +117,7 @@ class TestClamerObjectInstance {
         ClamerObjectInstance clamer =
                 new ClamerObjectInstance(new ObjectSpawn(0x0578, 0x0690, 0xA3, 0, 1, false, 0));
         clamer.setServices(new TestObjectServices());
+        clamer.testReleaseWaitOffscreen();
         AbstractPlayableSprite player = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build()
@@ -120,6 +151,7 @@ class TestClamerObjectInstance {
         player.setCentreX((short) (0x0C98 + 0x40));
         player.setCentreY((short) 0x0470);
 
+        clamer.testReleaseWaitOffscreen();
         assertEquals(0x02, clamer.testRoutine());
         clamer.update(0x1000, player);
         // Facing right, player on the right (d0=2, then -=2 = 0): close.
@@ -139,6 +171,7 @@ class TestClamerObjectInstance {
         player.setCentreX((short) (0x0C98 - 0x40));
         player.setCentreY((short) 0x0470);
 
+        clamer.testReleaseWaitOffscreen();
         clamer.update(0x1000, player);
         assertEquals(0x02, clamer.testRoutine());
     }
@@ -156,6 +189,7 @@ class TestClamerObjectInstance {
         player.setCentreX((short) (0x0C98 + 0x60));
         player.setCentreY((short) 0x0470);
 
+        clamer.testReleaseWaitOffscreen();
         clamer.update(0x1000, player);
         assertEquals(0x02, clamer.testRoutine());
     }
@@ -172,16 +206,81 @@ class TestClamerObjectInstance {
         player.setCentreX((short) (0x0C98 + 0x40));
         player.setCentreY((short) 0x0470);
 
+        clamer.testReleaseWaitOffscreen();
         clamer.update(0x1000, player);
         assertEquals(0x06, clamer.testRoutine());
 
         // Move the player out of range so the gate would not re-trigger.
         player.setCentreX((short) (0x0C98 + 0x80));
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 160; i++) {
             clamer.update(0x1001 + i, player);
         }
         // After the close timer expires, loc_89056 resets routine to 0x02.
         assertEquals(0x02, clamer.testRoutine());
+    }
+
+    @Test
+    void autoCloseFrameEightSpawnsRomProjectileChildSlot() {
+        ClamerObjectInstance clamer =
+                new ClamerObjectInstance(new ObjectSpawn(0x0100, 0x0070, 0xA3, 0, 1, false, 0));
+        RecordingServices services = new RecordingServices();
+        clamer.setServices(services);
+        AbstractPlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) (0x0100 + 0x40));
+        player.setCentreY((short) 0x0070);
+
+        clamer.testReleaseWaitOffscreen();
+        clamer.update(0x1000, player);
+        assertEquals(0x06, clamer.testRoutine());
+
+        for (int i = 0; i < 54; i++) {
+            clamer.update(0x1001 + i, player);
+        }
+        assertEquals(1, services.spawnedChildren.size(),
+                "ROM byte_89185 reaches mapping_frame 8 on the 55th routine-6 tick, not earlier");
+        clamer.update(0x1001 + 54, player);
+
+        assertEquals(2, services.spawnedChildren.size(),
+                "Clamer should allocate the spring child and ChildObjDat_89150 projectile");
+        ObjectInstance projectile = services.spawnedChildren.get(1);
+        assertEquals(0x0110, projectile.getX(),
+                "CreateChild5_ComplexAdjusted flips the -$10 X offset when render_flags bit 0 is set");
+        assertEquals(0x0072, projectile.getY());
+
+        projectile.update(0x1100, player);
+        assertEquals(0x0112, projectile.getX(), "MoveSprite2 applies +$200 X velocity with no gravity");
+        assertEquals(0x0072, projectile.getY());
+    }
+
+    @Test
+    void springFireDuringAutoCloseDoesNotAbortProjectilePath() {
+        ClamerObjectInstance clamer =
+                new ClamerObjectInstance(new ObjectSpawn(0x0100, 0x0070, 0xA3, 0, 0, false, 0));
+        RecordingServices services = new RecordingServices();
+        clamer.setServices(services);
+        AbstractPlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) (0x0100 - 0x40));
+        player.setCentreY((short) 0x0070);
+
+        clamer.testReleaseWaitOffscreen();
+        clamer.update(0x0260, player);
+        assertEquals(0x06, clamer.testRoutine());
+
+        clamer.onTouchResponse(player, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0x0261);
+        clamer.update(0x0261, player);
+
+        assertEquals(0x06, clamer.testRoutine(),
+                "ROM loc_890AA only sets parent $38 bit 0; loc_89064 continues the auto-close path");
+
+        for (int i = 0; i < 70; i++) {
+            clamer.update(0x0262 + i, player);
+        }
+
+        assertEquals(2, services.spawnedChildren.size(),
+                "Routine 6 must still reach mapping_frame 8 and spawn ChildObjDat_89150");
+        ObjectInstance projectile = services.spawnedChildren.get(1);
+        assertEquals(0x00F0, projectile.getX());
+        assertEquals(0x0072, projectile.getY());
     }
 
     @Test
@@ -194,6 +293,7 @@ class TestClamerObjectInstance {
         main.setCentreX((short) (0x0C98 - 0x80));
         nativeP2.setCentreX((short) (0x0C98 + 0x40));
         clamer.setServices(new QueryOnlyServices(main, nativeP2));
+        clamer.testReleaseWaitOffscreen();
 
         clamer.testStepIdle(main);
 
@@ -234,6 +334,7 @@ class TestClamerObjectInstance {
         TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0, (short) 0);
         nativeP2.setCpuControlled(true);
         clamer.setServices(new QueryOnlyServices(queriedMain, List.of(nativeP2)));
+        clamer.testReleaseWaitOffscreen();
 
         clamer.onTouchResponse(updatePrimary, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0);
         clamer.update(0, updatePrimary);
@@ -280,6 +381,25 @@ class TestClamerObjectInstance {
         @Override
         public List<PlayableEntity> sidekicks() {
             throw new AssertionError("Clamer must query participants through ObjectPlayerQuery");
+        }
+    }
+
+    private static final class RecordingServices extends TestObjectServices {
+        private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
+        private final ObjectManager objectManager;
+
+        private RecordingServices() {
+            objectManager = mock(ObjectManager.class);
+            doAnswer(invocation -> {
+                ObjectInstance child = invocation.getArgument(0);
+                spawnedChildren.add(child);
+                return null;
+            }).when(objectManager).addDynamicObjectAfterCurrent(any());
+        }
+
+        @Override
+        public ObjectManager objectManager() {
+            return objectManager;
         }
     }
 }

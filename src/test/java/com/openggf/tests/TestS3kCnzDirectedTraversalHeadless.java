@@ -12,11 +12,14 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -255,7 +258,10 @@ public class TestS3kCnzDirectedTraversalHeadless {
         }
 
         assertTrue(captured, "CNZ cylinder should capture the player before traversal");
-        assertTrue(player.isControlLocked(), "CNZ cylinder should lock player control while captured");
+        assertTrue(player.isObjectControlSuppressesMovement(),
+                "CNZ cylinder should suppress movement through object_control while captured");
+        assertFalse(player.isControlLocked(),
+                "CNZ cylinder object_control=$03 capture does not set Ctrl_locked");
         // ROM sub_324C0 (sonic3k.asm:67985) at capture explicitly does
         // bclr #Status_Roll, status(a1) (line 68005) and writes
         // default_y_radius / default_x_radius to y_radius / x_radius
@@ -466,7 +472,6 @@ public class TestS3kCnzDirectedTraversalHeadless {
 
         assertTrue(captured, "CNZ cylinder should capture the player before testing the jump release");
 
-        player.setJumpInputPressed(true);
         boolean released = false;
         for (int frame = 0; frame < 3; frame++) {
             fixture.stepFrame(false, false, false, false, true);
@@ -481,6 +486,133 @@ public class TestS3kCnzDirectedTraversalHeadless {
         assertTrue(player.isJumping(), "CNZ cylinder should mark the rider as jumping when they jump out");
         assertTrue(player.getAir(), "CNZ cylinder should release the rider into the air");
         assertTrue(player.getYSpeed() != 0, "CNZ cylinder should impart the ROM release Y speed");
+    }
+
+    @Test
+    void cnzCylinderUsesRomRenderHeightForBottomEdgeSidekickSolidPass() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+
+        AbstractPlayableSprite player = fixture.sprite();
+        player.setCentreX((short) 0x1674);
+        player.setCentreY((short) 0x01D4);
+
+        AbstractPlayableSprite sidekick = ensureCnzSidekick();
+        sidekick.setCentreX((short) 0x1643);
+        sidekick.setCentreY((short) 0x0250);
+        sidekick.setXSpeed((short) 0x0240);
+        sidekick.setGSpeed((short) 0x0240);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setAir(false);
+        sidekick.setObjectControlled(false);
+        sidekick.setRenderFlagOnScreen(true);
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(new ObjectSpawn(
+                0x1660, 0x0280, Sonic3kObjectIds.CNZ_CYLINDER, 0x20, 0, false, 0));
+        objectManager.addDynamicObject(cylinder);
+
+        // ROM Obj_CNZCylinder init stores height_pixels=$20 before loc_32188
+        // calls SolidObjectFull (sonic3k.asm:67634-67641, 67656-67672).
+        // At this CNZ trace edge (camera_y=$187), centerY=$280 is visible for
+        // a $20 render-height object but not for the engine's default $10
+        // margin, so the P2 standing bit must still be fed this frame.
+        fixture.camera().setX((short) 0x15D6);
+        fixture.camera().setY((short) 0x0187);
+        objectManager.snapshotTouchResponseState();
+
+        objectManager.processImmediateInlineSolidCheckpoint(cylinder, player, List.of(sidekick));
+        assertEquals(0x02, getCylinderInt(cylinder, "nextStandingMask") & 0x02,
+                "CNZ cylinder should run the ROM-visible P2 SolidObjectFull pass at the bottom screen edge");
+
+        cylinder.update(9952, player);
+
+        assertTrue(sidekick.isObjectControlled(),
+                "sub_324C0 should capture Tails from the P2 standing bit");
+        assertEquals(0x0254, sidekick.getCentreY() & 0xFFFF,
+                "SolidObjectFull should snap captured Tails to the current cylinder top after default radius restore");
+        assertEquals(0, sidekick.getXSpeed(),
+                "sub_324C0 capture clears x_vel for the sidekick");
+        assertEquals(0, sidekick.getGSpeed(),
+                "sub_324C0 capture clears ground_vel for the sidekick");
+    }
+
+    @Test
+    void cnzCylinderSolidPassSkipsBit7ControlledSidekickFlightMarker() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+
+        AbstractPlayableSprite player = fixture.sprite();
+        AbstractPlayableSprite sidekick = ensureCnzSidekick();
+        sidekick.setCentreX((short) 0x1F38);
+        sidekick.setCentreY((short) 0x0105);
+        sidekick.setXSpeed((short) 0);
+        sidekick.setGSpeed((short) 0);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setAir(true);
+        sidekick.setRenderFlagOnScreen(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(new ObjectSpawn(
+                0x1F60, 0x0120, Sonic3kObjectIds.CNZ_CYLINDER, 0x42, 0, false, 0));
+        objectManager.addDynamicObject(cylinder);
+        fixture.camera().setX((short) 0x1ED4);
+        fixture.camera().setY((short) 0x0049);
+        objectManager.snapshotTouchResponseState();
+
+        objectManager.processImmediateInlineSolidCheckpoint(cylinder, player, List.of(sidekick));
+
+        assertEquals(0x1F38, sidekick.getCentreX() & 0xFFFF,
+                "S3K SolidObject_cont must skip signed object_control=$81 before side separation "
+                        + "(sonic3k.asm:41438-41440)");
+        assertEquals(0x0105, sidekick.getCentreY() & 0xFFFF,
+                "S3K SolidObject_cont must also skip signed object_control=$81 before top landing "
+                        + "(sonic3k.asm:41438-41440)");
+        assertTrue(sidekick.getAir(),
+                "The bit-7 Tails flight marker should remain airborne when SolidObject_cont rejects contact");
+        assertFalse(sidekick.isOnObject(),
+                "The bit-7 Tails flight marker should not gain a synthetic cylinder standing state");
+    }
+
+    @Test
+    void cnzCylinderTopLandingSkipsBit7ControlledSidekickFlightMarker() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+
+        AbstractPlayableSprite player = fixture.sprite();
+        AbstractPlayableSprite sidekick = ensureCnzSidekick();
+        sidekick.setCentreX((short) 0x1F45);
+        sidekick.setCentreY((short) 0x00FC);
+        sidekick.setXSpeed((short) 0);
+        sidekick.setGSpeed((short) 0);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setAir(true);
+        sidekick.setRenderFlagOnScreen(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(new ObjectSpawn(
+                0x1F60, 0x0120, Sonic3kObjectIds.CNZ_CYLINDER, 0x42, 0, false, 0));
+        objectManager.addDynamicObject(cylinder);
+        fixture.camera().setX((short) 0x1ED5);
+        fixture.camera().setY((short) 0x0049);
+        objectManager.snapshotTouchResponseState();
+
+        objectManager.processImmediateInlineSolidCheckpoint(cylinder, player, List.of(sidekick));
+
+        assertEquals(0x00FC, sidekick.getCentreY() & 0xFFFF,
+                "S3K SolidObject_cont must reject signed object_control=$81 before top landing "
+                        + "(sonic3k.asm:41438-41440)");
+        assertTrue(sidekick.getAir(),
+                "The bit-7 Tails flight marker should remain airborne at the cylinder top check");
+        assertFalse(sidekick.isOnObject(),
+                "The bit-7 Tails flight marker should not gain a synthetic cylinder standing state");
+        assertEquals(0, getCylinderInt(cylinder, "nextStandingMask") & 0x02,
+                "The rejected P2 contact must not feed CNZCylinder's next standing mask");
     }
 
     @Test
@@ -509,6 +641,57 @@ public class TestS3kCnzDirectedTraversalHeadless {
                 "The rider should still be captured while testing the hold-slot velocity handoff");
         assertEquals(0x0800, player.getGSpeed() & 0xFFFF,
                 "ROM sub_324C0:68045-68056 sets ground_vel=$800 when abs(y_vel(a0)) >= $480 and the rider is grounded");
+    }
+
+    @Test
+    void cnzCylinderDoesNotReboostMode0WhenActiveGroundedSidekickSolidFeedbackDrops() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+
+        AbstractPlayableSprite player = fixture.sprite();
+        player.setCentreX((short) 0x1674);
+        player.setCentreY((short) 0x01D4);
+
+        AbstractPlayableSprite sidekick = ensureCnzSidekick();
+        sidekick.setCentreX((short) 0x1643);
+        sidekick.setCentreY((short) 0x0254);
+        sidekick.setAir(false);
+        sidekick.setObjectControlled(false);
+        sidekick.setRenderFlagOnScreen(true);
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        CnzCylinderInstance cylinder = new CnzCylinderInstance(new ObjectSpawn(
+                0x1660, 0x0284, Sonic3kObjectIds.CNZ_CYLINDER, 0x20, 0, false, 0));
+        objectManager.addDynamicObject(cylinder);
+        fixture.camera().setX((short) 0x15D6);
+        fixture.camera().setY((short) 0x0187);
+
+        objectManager.snapshotTouchResponseState();
+        objectManager.processImmediateInlineSolidCheckpoint(cylinder, player, List.of(sidekick));
+        cylinder.update(9952, player);
+        assertTrue(sidekick.isObjectControlled(), "CNZ cylinder should capture the sidekick before the reboost check");
+
+        setCylinderInt(cylinder, "centerY", 0x0284);
+        setCylinderInt(cylinder, "mode0Velocity", 0);
+        setCylinderInt(cylinder, "mode0YSubpixel", 0);
+        setCylinderInt(cylinder, "standingMask", 0x02);
+        setCylinderInt(cylinder, "standingMaskCache", 0x02);
+        setCylinderInt(cylinder, "nextStandingMask", 0);
+
+        cylinder.update(9965, player);
+
+        setCylinderInt(cylinder, "centerY", 0x0284);
+        setCylinderInt(cylinder, "mode0Velocity", 0x0100);
+        setCylinderInt(cylinder, "mode0YSubpixel", 0);
+        setCylinderInt(cylinder, "nextStandingMask", 0x02);
+
+        cylinder.update(9966, player);
+
+        assertEquals(0, sidekick.getGSpeed() & 0xFFFF,
+                "ROM loc_32208 only boosts on a real status(a0)&standing_mask transition; a grounded active P2 hold must not manufacture a second loc_32594 launch");
+        assertTrue(Math.abs((short) getCylinderInt(cylinder, "currentYVelocity")) < 0x480,
+                "The false reboost would push y_vel(a0) across sub_324C0 loc_32594's $480 launch threshold");
     }
 
     @Test
@@ -582,6 +765,8 @@ public class TestS3kCnzDirectedTraversalHeadless {
         assertEquals(0, sidekick.getXSpeed());
         assertEquals(0, sidekick.getYSpeed());
         assertEquals(0, sidekick.getGSpeed());
+        assertEquals(0, sidekick.getCentreY() & 0xFFFF,
+                "offscreen P2 recapture skips SolidObjectFull_1P and must preserve the CPU marker Y");
     }
 
     @Test
@@ -613,8 +798,14 @@ public class TestS3kCnzDirectedTraversalHeadless {
         }
 
         assertTrue(captured, "CNZ cylinder should capture both riders before testing rider-state parity");
-        assertTrue(player.isControlLocked(), "CNZ cylinder should lock player control while captured");
-        assertTrue(sidekick.isControlLocked(), "CNZ cylinder should lock sidekick control while captured");
+        assertTrue(player.isObjectControlSuppressesMovement(),
+                "CNZ cylinder should suppress player movement through object_control while captured");
+        assertTrue(sidekick.isObjectControlSuppressesMovement(),
+                "CNZ cylinder should suppress sidekick movement through object_control while captured");
+        assertFalse(player.isControlLocked(),
+                "CNZ cylinder object_control=$03 capture does not set player Ctrl_locked");
+        assertFalse(sidekick.isControlLocked(),
+                "CNZ cylinder object_control=$03 capture does not set sidekick Ctrl_locked");
         // ROM sub_324C0 (sonic3k.asm:67985) at capture explicitly does
         // bclr #Status_Roll, status(a1) (line 68005) and writes
         // default_y_radius / default_x_radius (lines 68003-68004).
@@ -758,7 +949,7 @@ public class TestS3kCnzDirectedTraversalHeadless {
         cylinder.update(4788, player);
 
         assertTrue(sidekick.isObjectControlled());
-        assertTrue(sidekick.isControlLocked());
+        assertFalse(sidekick.isControlLocked());
         assertFalse(sidekick.getAir());
         assertEquals(0, sidekick.getXSpeed());
         assertEquals(0, sidekick.getYSpeed());
@@ -782,7 +973,6 @@ public class TestS3kCnzDirectedTraversalHeadless {
 
         waitForCylinderCapture(fixture, player);
 
-        player.setJumpInputPressed(true);
         fixture.stepFrame(false, false, false, false, true);
 
         assertTrue(player.isJumping());

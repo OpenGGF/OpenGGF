@@ -166,6 +166,40 @@ class TestCnzBalloonInstance {
     }
 
     @Test
+    void underwaterNegativeSubtypeLaunchesWithoutPlayerPositionSnap() {
+        CnzBalloonInstance balloon =
+                new CnzBalloonInstance(new ObjectSpawn(0x15C0, 0x0B60, 0x41, 0x80, 0, false, 0));
+        balloon.setServices(new TestObjectServices());
+        AbstractPlayableSprite player = HeadlessTestFixture.builder()
+                .withZoneAndAct(com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+        player.setInWater(true);
+        player.setCentreX((short) 0x15B5);
+        player.setCentreY((short) 0x0B6C);
+
+        balloon.update(0, null);
+        balloon.onTouchResponse(player, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 0);
+
+        assertEquals(0x15B5, player.getCentreX(),
+                "sub_317AE's four sub_3181E calls clobber a1 with Obj_Bubbler before the later x_pos write");
+        assertEquals(0x0B6C, player.getCentreY(),
+                "Retail S3K launches the player but does not apply the intended underwater snap");
+        assertEquals((short) -0x380, player.getYSpeed());
+
+        player.setCentreX((short) 0x15B5);
+        player.setCentreY((short) 0x0B6C);
+        player.setYSpeed((short) 0);
+        balloon.onTouchResponse(player, new TouchResponseResult(0x17, 8, 8, TouchCategory.SPECIAL), 1);
+
+        assertEquals(0x15B5, player.getCentreX(),
+                "sub_317AE repeats y_vel while $34 suppresses effects, still without a player position snap");
+        assertEquals(0x0B6C, player.getCentreY(),
+                "Repeated popped-balloon contacts still launch but do not repeat the first-touch snap/effects block");
+        assertEquals((short) -0x380, player.getYSpeed());
+    }
+
+    @Test
     void poppedBalloonAnimationMovesOffscreenForNormalDeletePath() {
         CnzBalloonInstance balloon =
                 new CnzBalloonInstance(new ObjectSpawn(0x17C0, 0x860, 0x41, 0, 0, false, 0));

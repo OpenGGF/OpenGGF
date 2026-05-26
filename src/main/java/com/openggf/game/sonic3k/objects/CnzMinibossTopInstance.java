@@ -7,12 +7,17 @@ import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidObjectListener;
+import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -44,7 +49,8 @@ import java.util.List;
  * {@link S3kCnzEventWriteSupport#queueArenaChunkDestruction} bridge to
  * keep the object -&gt; events dependency testable.
  */
-public final class CnzMinibossTopInstance extends AbstractObjectInstance implements TouchResponseProvider {
+public final class CnzMinibossTopInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, SolidObjectProvider, SolidObjectListener {
 
     // ---- Routine indices (CNZMinibossTop_Index, sonic3k.asm:145011) ----
     /** Routine 0 — Obj_CNZMinibossTopInit (sonic3k.asm:145018). */
@@ -56,28 +62,24 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
     /** Routine 6 — Obj_CNZMinibossTopMain (sonic3k.asm:145053). */
     private static final int ROUTINE_MAIN = 6;
 
-    /**
-     * Number of frames the routine-4 {@code Wait2} body waits before the
-     * post-wait callback ({@link #onTopGo()}) advances to {@code Main}.
-     *
-     * <p>The ROM body runs {@code Animate_RawGetFaster} against the
-     * {@code AniRaw_CNZMinibossTop} script; the engine has no script
-     * pipeline here, so a conservative short wait drives the state
-     * machine into routine 6 within the 240-frame test window and keeps
-     * the skeleton state transitions explicit.
-     */
-    private static final int WAIT2_FRAMES = 0x20;
     private static final int FRAME_TOP_WAIT = 7;
     private static final int FRAME_TOP_MAIN = 9;
-    /** ROM: {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145709). */
-    private static final int TOP_SPINUP_INITIAL_DELAY = 7;
-    private static final int TOP_SPINUP_LOOP_COUNT = 8;
-    private static final int[] TOP_SPINUP_FRAMES = {7, 8, 9};
+    /**
+     * ROM: {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145709).
+     * Byte 0 seeds {@code $2E(a0)}, byte 1 is the terminal {@code $2F(a0)}
+     * loop count, and bytes from offset 2 are mapping frames until {@code $FC}.
+     */
+    private static final int TOP_SPINUP_INITIAL_DELAY = 0x07;
+    private static final int TOP_SPINUP_TERMINAL_LOOPS = 0x08;
+    private static final int[] TOP_SPINUP_MAPPING_FRAMES = {7, 8, 9};
     /** ROM: {@code AniRaw_CNZMinibossTop2} (sonic3k.asm:145711). */
     private static final int TOP_MAIN_DELAY = 0;
     private static final int[] TOP_MAIN_FRAMES = {7, 8, 9};
     private static final int TOP_COLLISION_FLAGS = 0xAA;
     private static final int TOP_Y_RADIUS = 8;
+    // Obj_CNZMinibossTopMain passes d1=$13,d2=$C,d3=8 to SolidObjectFull
+    // after MoveSprite2 (sonic3k.asm:145057-145063).
+    private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x13, 0x0C, 0x08);
     private static final int PLAYER_BOUNCE_Y_OFFSET = 0x0C;
     private static final int PLAYER_BOUNCE_HALF_SIZE = 0x10;
 
@@ -92,16 +94,38 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
     /** Current routine byte (ROM {@code routine(a0)} at offset 0x05). */
     private int routine;
 
-    /** Routine-4 post-wait countdown. When it underflows, {@link #onTopGo()} fires. */
-    private int wait2Counter;
     /** ROM: {@code mapping_frame(a0)}. */
     private int mappingFrame;
-    private int spinupFrameIndex;
-    private int spinupFrameTimer;
-    private int spinupDelay;
-    private int spinupLoopCounter;
+    /** ROM: status bit 5, set while Animate_RawGetFaster owns the raw script. */
+    private boolean wait2RawActive;
+    /** ROM: {@code $2E(a0)} for Animate_RawGetFaster. */
+    private int wait2RawDelay;
+    /** ROM: {@code $2F(a0)} for Animate_RawGetFaster. */
+    private int wait2RawLoopCounter;
+    /** ROM: {@code anim_frame(a0)}. */
+    private int rawAnimFrame;
+    /** ROM: {@code anim_frame_timer(a0)}. */
+    private int rawAnimFrameTimer;
     private int mainFrameIndex;
     private int mainFrameTimer;
+    private String diagnosticLastMainBranch = "none";
+    private boolean diagnosticHitBaseThisFrame;
+    private boolean diagnosticPlayerBounceThisFrame;
+    private boolean diagnosticArenaImpactThisFrame;
+    private int diagnosticArenaImpactX;
+    private int diagnosticArenaImpactY;
+    private String diagnosticLastP1Solid = "none";
+    private String diagnosticLastP2Solid = "none";
+    private static final int DIAGNOSTIC_BRANCH_HISTORY_SIZE = 16;
+    private final int[] diagnosticBranchHistoryFrame = new int[DIAGNOSTIC_BRANCH_HISTORY_SIZE];
+    private final int[] diagnosticBranchHistoryX = new int[DIAGNOSTIC_BRANCH_HISTORY_SIZE];
+    private final int[] diagnosticBranchHistoryY = new int[DIAGNOSTIC_BRANCH_HISTORY_SIZE];
+    private final int[] diagnosticBranchHistoryXVel = new int[DIAGNOSTIC_BRANCH_HISTORY_SIZE];
+    private final int[] diagnosticBranchHistoryYVel = new int[DIAGNOSTIC_BRANCH_HISTORY_SIZE];
+    private final String[] diagnosticBranchHistoryBranch = new String[DIAGNOSTIC_BRANCH_HISTORY_SIZE];
+    private int diagnosticBranchHistoryCursor;
+    private int diagnosticBranchHistoryCount;
+    private int diagnosticCurrentFrameCounter;
 
     // ---- Arena collision seam preserved from Task 7 scaffold ----
     private boolean arenaCollisionPending;
@@ -112,8 +136,9 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
         super(spawn, "CNZMinibossTop");
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
         this.routine = ROUTINE_INIT;
-        this.wait2Counter = -1;
         this.mappingFrame = FRAME_TOP_WAIT;
+        Arrays.fill(diagnosticBranchHistoryFrame, -1);
+        Arrays.fill(diagnosticBranchHistoryBranch, "none");
     }
 
     /**
@@ -168,6 +193,18 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
         startMainAnimation();
     }
 
+    void forceTopMainForTest(int x, int y, int xVel, int yVel) {
+        routine = ROUTINE_MAIN;
+        motion.x = x;
+        motion.y = y;
+        motion.xSub = 0;
+        motion.ySub = 0;
+        motion.xVel = xVel;
+        motion.yVel = yVel;
+        startMainAnimation();
+        updateDynamicSpawn(motion.x, motion.y);
+    }
+
     /**
      * Test seam: returns the current routine byte. Package-private — only
      * consumed by within-package physics tests.
@@ -178,6 +215,8 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
+        diagnosticCurrentFrameCounter = frameCounter;
+        resetTraceFrameFlags();
         // Arena collision seam is still driven by forceArenaCollisionForTest —
         // run it before the state machine so the Task-7 contract (attachBossForTest
         // + forceArenaCollisionForTest + update → bridge + base lowering) stays
@@ -199,7 +238,6 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
                 // the happy path.
             }
         }
-
         // ROM parity note: Obj_CNZMinibossTop writes its position through
         // Events_bg+$00/$02 on every frame, but those words are only read
         // by CNZMiniboss_BlockExplosion when an impact actually fires.
@@ -256,6 +294,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
      */
     private void updateWait() {
         if (boss != null && !boss.isParentSignalBit1Set()) {
+            diagnosticLastMainBranch = "wait_refresh";
             refreshChildPosition();
             // Still waiting — ROM tail is Refresh_ChildPosition which we model
             // via publishCentrePosition() in the caller.
@@ -263,11 +302,9 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
         }
         // ROM sonic3k.asm:145034 — move.b #4,routine(a0).
         routine = ROUTINE_WAIT2;
-        // ROM sonic3k.asm:145035-145036 — AniRaw_CNZMinibossTop script +
-        // Obj_CNZMinibossTopGo callback. The engine has no AniRaw engine,
-        // so the Wait2 body counts down a fixed WAIT2_FRAMES and fires
-        // onTopGo() directly instead of routing through a $34 slot.
-        wait2Counter = WAIT2_FRAMES;
+        // ROM sonic3k.asm:145035-145036 — install AniRaw_CNZMinibossTop in
+        // $30(a0) and Obj_CNZMinibossTopGo in $34(a0). Animate_RawGetFaster
+        // claims and initializes the script on the next Wait2 update.
         startSpinupAnimation();
     }
 
@@ -280,12 +317,12 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
      *
      * <p>The ROM body is a pair of tail calls. {@code Animate_RawGetFaster}
      * advances {@code $30(a0)} against the {@code AniRaw_CNZMinibossTop}
-     * script; when that script's terminator hits,
-     * {@code Obj_CNZMinibossTopGo} fires via {@code $34(a0)} and installs
-     * routine 6. Without the script engine the engine counts down
-     * {@link #wait2Counter} and fires {@link #onTopGo()} directly.
+     * script; when that script's {@code $FC} terminator hits,
+     * {@code Obj_CNZMinibossTopGo} fires via {@code $34(a0)} in the same
+     * raw-animation update.
      */
     private void updateWait2() {
+        diagnosticLastMainBranch = "wait2";
         refreshChildPosition();
         animateRawGetFasterTop();
     }
@@ -306,50 +343,84 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
      * fixed point).
      */
     private void onTopGo() {
+        diagnosticLastMainBranch = "top_go";
         routine = ROUTINE_MAIN;
         motion.xVel = Sonic3kConstants.CNZ_MINIBOSS_TOP_INIT_X_VEL;
         motion.yVel = Sonic3kConstants.CNZ_MINIBOSS_TOP_INIT_Y_VEL;
         startMainAnimation();
     }
 
+    private void resetTraceFrameFlags() {
+        diagnosticLastMainBranch = "none";
+        diagnosticHitBaseThisFrame = false;
+        diagnosticPlayerBounceThisFrame = false;
+        diagnosticArenaImpactThisFrame = false;
+        diagnosticArenaImpactX = 0;
+        diagnosticArenaImpactY = 0;
+    }
+
     private void startSpinupAnimation() {
-        mappingFrame = TOP_SPINUP_FRAMES[0];
-        spinupFrameIndex = 0;
-        spinupFrameTimer = 0;
-        spinupDelay = TOP_SPINUP_INITIAL_DELAY;
-        spinupLoopCounter = 0;
+        wait2RawActive = false;
+        wait2RawDelay = 0;
+        wait2RawLoopCounter = 0;
+        // ROM does not clear anim_frame or anim_frame_timer when Wait installs
+        // $30/$34; the fresh object reaches Wait2 with both bytes still zero.
+        rawAnimFrame = 0;
+        rawAnimFrameTimer = 0;
     }
 
     /**
      * ROM: {@code Animate_RawGetFaster} (sonic3k.asm:177749) over
-     * {@code AniRaw_CNZMinibossTop}. Fresh scripts advance before reading,
-     * so frame 8 is the first visible Wait2 mapping frame after frame 7.
+     * {@code AniRaw_CNZMinibossTop} (sonic3k.asm:145709). Fresh scripts
+     * {@code bset #5,$38(a0)}, copy byte 0 to {@code $2E}, clear
+     * {@code $2F}, and advance {@code anim_frame} before reading from
+     * {@code 2(a1,d0)}, so frame 8 is the first visible Wait2 mapping frame.
      */
     private void animateRawGetFasterTop() {
-        spinupFrameTimer--;
-        if (spinupFrameTimer >= 0) {
+        if (!wait2RawActive) {
+            wait2RawActive = true;
+            wait2RawDelay = TOP_SPINUP_INITIAL_DELAY;
+            wait2RawLoopCounter = 0;
+        }
+
+        rawAnimFrameTimer--;
+        if (rawAnimFrameTimer >= 0) {
             return;
         }
 
-        spinupFrameIndex++;
-        if (spinupFrameIndex >= TOP_SPINUP_FRAMES.length) {
-            spinupFrameIndex = 0;
-            if (spinupDelay > 0) {
-                spinupDelay--;
-            } else if (++spinupLoopCounter >= TOP_SPINUP_LOOP_COUNT) {
-                onTopGo();
+        int delay = wait2RawDelay & 0xFF;
+        int nextFrame = (rawAnimFrame + 1) & 0xFF;
+        if (nextFrame >= TOP_SPINUP_MAPPING_FRAMES.length) {
+            rawAnimFrame = 0;
+            mappingFrame = TOP_SPINUP_MAPPING_FRAMES[0];
+            rawAnimFrameTimer = delay;
+            if (delay == 0) {
+                wait2RawLoopCounter = (wait2RawLoopCounter + 1) & 0xFF;
+                if (wait2RawLoopCounter >= TOP_SPINUP_TERMINAL_LOOPS) {
+                    wait2RawActive = false;
+                    wait2RawLoopCounter = 0;
+                    // ROM clears status bit 5 and $2F before jsr $34(a0).
+                    // Obj_CNZMinibossTopGo changes routine/$30/x_vel/y_vel
+                    // only; it does not rewrite mapping_frame.
+                    onTopGo();
+                }
                 return;
             }
+
+            delay = (delay - 1) & 0xFF;
+            wait2RawDelay = delay;
+            rawAnimFrameTimer = delay;
+            return;
         }
 
-        mappingFrame = TOP_SPINUP_FRAMES[spinupFrameIndex];
-        spinupFrameTimer = spinupDelay;
+        rawAnimFrame = nextFrame;
+        mappingFrame = TOP_SPINUP_MAPPING_FRAMES[nextFrame];
+        rawAnimFrameTimer = delay;
     }
 
     private void startMainAnimation() {
-        mappingFrame = FRAME_TOP_MAIN;
-        mainFrameIndex = 2;
-        mainFrameTimer = TOP_MAIN_DELAY;
+        mainFrameIndex = rawAnimFrame;
+        mainFrameTimer = rawAnimFrameTimer;
     }
 
     private void animateMainTop() {
@@ -363,6 +434,38 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
         }
         mappingFrame = TOP_MAIN_FRAMES[mainFrameIndex];
         mainFrameTimer = TOP_MAIN_DELAY;
+    }
+
+    boolean isWait2RawActiveForTest() {
+        return wait2RawActive;
+    }
+
+    int getWait2RawDelayForTest() {
+        return wait2RawDelay & 0xFF;
+    }
+
+    int getWait2RawLoopCounterForTest() {
+        return wait2RawLoopCounter & 0xFF;
+    }
+
+    int getWait2RawAnimFrameForTest() {
+        return rawAnimFrame & 0xFF;
+    }
+
+    int getWait2RawFrameTimerForTest() {
+        return rawAnimFrameTimer & 0xFF;
+    }
+
+    int getMappingFrameForTest() {
+        return mappingFrame & 0xFF;
+    }
+
+    short getCurrentXVelForTest() {
+        return (short) motion.xVel;
+    }
+
+    short getCurrentYVelForTest() {
+        return (short) motion.yVel;
     }
 
     /**
@@ -409,7 +512,21 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
      * without inventing side effects the ROM doesn't emit.
      */
     private void updateMain(PlayableEntity player) {
+        if (boss != null && boss.isDefeatedForChild()) {
+            destroyAfterParentDefeat();
+            return;
+        }
         updateMainRom(player);
+    }
+
+    private void destroyAfterParentDefeat() {
+        // ROM: Obj_CNZMinibossTopMain checks parent status bit 7 before
+        // MoveSprite2/SolidObjectFull/terrain probes and jumps to loc_6DDD2
+        // when the parent has entered CNZMiniboss_BossDefeated
+        // (sonic3k.asm:145053-145057, 145190-145199).
+        diagnosticLastMainBranch = "parent_destroyed";
+        setDestroyed(true);
+        recordTraceBranchIfNotable();
     }
 
     private void updateMainRom(PlayableEntity player) {
@@ -420,13 +537,15 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
             TerrainCheckResult wall = ObjectTerrainUtils.checkRightWallDist(
                     motion.x + Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX, motion.y);
             if (isTerrainHit(wall)) {
+                diagnosticLastMainBranch = "right_wall";
                 handleWallTerrainHit();
                 finishMainUpdate();
                 return;
             }
-            if (motion.x + Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX
-                    >= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_RIGHT
-                    || checkHitBase(motion.x, motion.y)) {
+            int baseProbeX = motion.x + Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX;
+            if (baseProbeX >= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_RIGHT
+                    || checkHitBase(baseProbeX, motion.y)) {
+                diagnosticLastMainBranch = "right_edge_base";
                 motion.xVel = (short) -motion.xVel;
                 finishMainUpdate();
                 return;
@@ -435,13 +554,15 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
             TerrainCheckResult wall = ObjectTerrainUtils.checkLeftWallDist(
                     motion.x - Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX, motion.y);
             if (isTerrainHit(wall)) {
+                diagnosticLastMainBranch = "left_wall";
                 handleWallTerrainHit();
                 finishMainUpdate();
                 return;
             }
-            if (motion.x - Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX
-                    < Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_LEFT
-                    || checkHitBase(motion.x, motion.y)) {
+            int baseProbeX = motion.x - Sonic3kConstants.CNZ_MINIBOSS_TOP_WALL_PROBE_DX;
+            if (baseProbeX < Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_LEFT
+                    || checkHitBase(baseProbeX, motion.y)) {
+                diagnosticLastMainBranch = "left_edge_base";
                 motion.xVel = (short) -motion.xVel;
                 finishMainUpdate();
                 return;
@@ -449,6 +570,8 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
         }
 
         if (checkPlayerBounce(player)) {
+            diagnosticLastMainBranch = "player_bounce";
+            diagnosticPlayerBounceThisFrame = true;
             motion.yVel = (short) -motion.yVel;
             finishMainUpdate();
             return;
@@ -457,13 +580,19 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
         if (motion.yVel >= 0) {
             TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(motion.x, motion.y, TOP_Y_RADIUS);
             if (isTerrainHit(floor)) {
+                diagnosticLastMainBranch = "floor";
                 handleVerticalTerrainHit();
                 finishMainUpdate();
                 return;
             }
             int d1 = motion.y + Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY;
-            if (d1 > Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_BOTTOM
+            // ROM: Obj_CNZMinibossTopMain checks Camera_Y_pos+$E0 before the
+            // fixed $380 lower arena bound (sonic3k.asm:145101-145110).
+            int cameraBottom = getCameraY() + 0xE0;
+            if (d1 >= cameraBottom
+                    || d1 > Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_BOTTOM
                     || checkHitBase(motion.x, d1)) {
+                diagnosticLastMainBranch = "floor_edge_base";
                 motion.yVel = (short) -motion.yVel;
                 finishMainUpdate();
                 return;
@@ -471,24 +600,74 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
         } else {
             TerrainCheckResult ceiling = ObjectTerrainUtils.checkCeilingDist(motion.x, motion.y, TOP_Y_RADIUS);
             if (isTerrainHit(ceiling)) {
+                diagnosticLastMainBranch = "ceiling";
                 handleVerticalTerrainHit();
                 finishMainUpdate();
                 return;
             }
             int d1 = motion.y - Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY;
-            if (d1 <= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_TOP
+            // ROM: upward motion checks Camera_Y_pos before the fixed $240
+            // upper arena bound (sonic3k.asm:145119-145126).
+            if (d1 <= getCameraY()
+                    || d1 <= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_TOP
                     || checkHitBase(motion.x, d1)) {
+                diagnosticLastMainBranch = "ceiling_edge_base";
                 motion.yVel = (short) -motion.yVel;
                 finishMainUpdate();
                 return;
             }
         }
 
+        diagnosticLastMainBranch = "main_free";
         finishMainUpdate();
+    }
+
+    private int getCameraY() {
+        return services().camera() != null ? services().camera().getY() & 0xFFFF : 0;
     }
 
     private void finishMainUpdate() {
         updateDynamicSpawn(motion.x, motion.y);
+        recordTraceBranchIfNotable();
+    }
+
+    private void recordTraceBranchIfNotable() {
+        if ("none".equals(diagnosticLastMainBranch) || "main_free".equals(diagnosticLastMainBranch)) {
+            return;
+        }
+        diagnosticBranchHistoryFrame[diagnosticBranchHistoryCursor] = diagnosticCurrentFrameCounter;
+        diagnosticBranchHistoryX[diagnosticBranchHistoryCursor] = motion.x;
+        diagnosticBranchHistoryY[diagnosticBranchHistoryCursor] = motion.y;
+        diagnosticBranchHistoryXVel[diagnosticBranchHistoryCursor] = motion.xVel;
+        diagnosticBranchHistoryYVel[diagnosticBranchHistoryCursor] = motion.yVel;
+        diagnosticBranchHistoryBranch[diagnosticBranchHistoryCursor] = diagnosticLastMainBranch;
+        diagnosticBranchHistoryCursor = (diagnosticBranchHistoryCursor + 1) % DIAGNOSTIC_BRANCH_HISTORY_SIZE;
+        if (diagnosticBranchHistoryCount < DIAGNOSTIC_BRANCH_HISTORY_SIZE) {
+            diagnosticBranchHistoryCount++;
+        }
+    }
+
+    private String formatTraceBranchHistory() {
+        if (diagnosticBranchHistoryCount == 0) {
+            return "none";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < diagnosticBranchHistoryCount; i++) {
+            int source = Math.floorMod(diagnosticBranchHistoryCursor - diagnosticBranchHistoryCount + i,
+                    DIAGNOSTIC_BRANCH_HISTORY_SIZE);
+            if (i > 0) {
+                builder.append(';');
+            }
+            builder.append('f').append(diagnosticBranchHistoryFrame[source])
+                    .append(':').append(diagnosticBranchHistoryBranch[source])
+                    .append('@').append(String.format("%04X,%04X",
+                            diagnosticBranchHistoryX[source] & 0xFFFF,
+                            diagnosticBranchHistoryY[source] & 0xFFFF))
+                    .append('/').append(String.format("%04X,%04X",
+                            diagnosticBranchHistoryXVel[source] & 0xFFFF,
+                            diagnosticBranchHistoryYVel[source] & 0xFFFF));
+        }
+        return builder.toString();
     }
 
     private boolean checkPlayerBounce(PlayableEntity player) {
@@ -526,10 +705,13 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
     }
 
     private void handleVerticalTerrainHit() {
+        int oldYVel = motion.yVel;
         motion.yVel = (short) -motion.yVel;
-        int impactY = motion.y + (motion.yVel < 0
-                ? -Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY
-                : Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY);
+        // ROM loc_6DD94 negates y_vel, then uses y_pos+8 for floor hits
+        // and y_pos-8 for ceiling hits before CNZMiniboss_BlockExplosion.
+        int impactY = motion.y + (oldYVel >= 0
+                ? Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY
+                : -Sonic3kConstants.CNZ_MINIBOSS_TOP_FLOOR_PROBE_DY);
         if (motion.x <= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_LEFT
                 || motion.x >= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_RIGHT
                 || impactY >= Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_BOTTOM) {
@@ -543,20 +725,23 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
     }
 
     /**
-     * Publishes one ROM-shaped arena-chunk destruction through the CNZ
-     * event bridge and notifies the base so it can consume the lowering
-     * row.
+     * Publishes one ROM-shaped arena-chunk destruction through the CNZ event
+     * bridge.
      *
-     * <p>Shared by the Task-7 {@link #forceArenaCollisionForTest(int, int)}
-     * seam and the new routine-6 floor-impact path so both produce
-     * byte-for-byte identical bridge writes.
+     * <p>ROM {@code loc_6DD94} calls {@code CNZMiniboss_BlockExplosion},
+     * which writes the impact coordinates and creates the visual child
+     * (sonic3k.asm:145165-145185, 145204-145224). Base lowering is driven
+     * later when CNZ's arena row scanner advances {@code Events_bg+$04}, then
+     * {@code CNZMiniboss_MoveDown} arms {@code Obj_CNZMinibossLower2}
+     * (sonic3k.asm:107388-107414, 145508-145515); a single top impact must
+     * not directly move or arm the parent.
      */
     private void publishArenaChunkImpact(int worldX, int worldY) {
+        diagnosticArenaImpactThisFrame = true;
+        diagnosticArenaImpactX = worldX;
+        diagnosticArenaImpactY = worldY;
         S3kCnzEventWriteSupport.queueArenaChunkDestruction(
                 services(), worldX, worldY);
-        if (boss != null) {
-            boss.onArenaChunkDestroyed();
-        }
     }
 
     private void refreshChildPosition() {
@@ -582,6 +767,7 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
             return false;
         }
         boss.onTopPieceHitBase();
+        diagnosticHitBaseThisFrame = true;
         return true;
     }
 
@@ -602,6 +788,90 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
     }
 
     @Override
+    public SolidObjectParams getSolidParams() {
+        return SOLID_PARAMS;
+    }
+
+    @Override
+    public boolean isSolidFor(PlayableEntity player) {
+        return routine == ROUTINE_MAIN && !isDestroyed();
+    }
+
+    @Override
+    public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
+        // Obj_CNZMinibossTopMain calls SolidObjectFull (sonic3k.asm:145057-145063),
+        // whose wrapper skips Player_2 when render_flags bit 7 is clear
+        // (sonic3k.asm:41003-41008).
+        return true;
+    }
+
+    @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // SolidObjectFull_1P consumes this object's stale standing bit with
+        // Status_InAir by clearing support and returning before SolidObject_cont
+        // can reland the player (sonic3k.asm:41016-41035).
+        return true;
+    }
+
+    @Override
+    public boolean seedsNewRideCarryFromPreUpdateX() {
+        // Obj_CNZMinibossTopMain saves x_pos before MoveSprite2 and passes the
+        // saved value in d4 to SolidObjectFull (sonic3k.asm:145057-145063).
+        return true;
+    }
+
+    @Override
+    public boolean groundedSquashEdgeSideContactSetsPush() {
+        // Obj_CNZMinibossTopMain calls SolidObjectFull (sonic3k.asm:145057-145063).
+        // Its lower-half squash escape branches to loc_1E042 when |d0| < $10,
+        // then loc_1E06E sets Status_Push for grounded side contact regardless
+        // of movingInto (sonic3k.asm:41564-41568, 41473-41495).
+        return true;
+    }
+
+    @Override
+    public boolean usesInstanceSolidStateLatchKey() {
+        // SolidObjectFull stores P1/P2 standing and pushing bits in this top's
+        // SST status byte (sonic3k.asm:41001-41010, 41492-41495, 41528-41532).
+        // The engine rebuilds the top's dynamic spawn as it moves; key the
+        // latch to the instance so the following no-contact frame clears the
+        // same ROM-equivalent status bits.
+        return true;
+    }
+
+    @Override
+    public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
+        if (player == null || contact == null) {
+            return;
+        }
+        String summary = String.format("%s/push=%s/air=%s/yv=%04X",
+                contact.touchSide() ? "side"
+                        : contact.standing() || contact.touchTop() ? "top"
+                        : contact.touchBottom() ? "bottom"
+                        : "none",
+                contact.pushing(),
+                player.getAir(),
+                player.getYSpeed() & 0xFFFF);
+        if (player.isCpuControlled()) {
+            diagnosticLastP2Solid = summary;
+        } else {
+            diagnosticLastP1Solid = summary;
+        }
+    }
+
+    @Override
+    public void onSolidContactCleared(PlayableEntity player, int frameCounter) {
+        if (player == null) {
+            return;
+        }
+        if (player.isCpuControlled()) {
+            diagnosticLastP2Solid = "clear";
+        } else {
+            diagnosticLastP1Solid = "clear";
+        }
+    }
+
+    @Override
     public int getX() {
         return motion.x;
     }
@@ -618,5 +888,35 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance impleme
             return;
         }
         renderer.drawFrameIndex(mappingFrame, motion.x, motion.y, false, false);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format(
+                "r=%02X v=%04X,%04X sub=%02X,%02X map=%02X raw=%s d=%02X l=%02X af=%02X ft=%02X main=%d/%d br=%s base=%s pb=%s impact=%s@%04X,%04X parentOff=%04X,%04X solid=%s/%s hist=%s",
+                routine & 0xFF,
+                motion.xVel & 0xFFFF,
+                motion.yVel & 0xFFFF,
+                motion.xSub & 0xFF,
+                motion.ySub & 0xFF,
+                mappingFrame & 0xFF,
+                wait2RawActive,
+                wait2RawDelay & 0xFF,
+                wait2RawLoopCounter & 0xFF,
+                rawAnimFrame & 0xFF,
+                rawAnimFrameTimer & 0xFF,
+                mainFrameIndex,
+                mainFrameTimer,
+                diagnosticLastMainBranch,
+                diagnosticHitBaseThisFrame,
+                diagnosticPlayerBounceThisFrame,
+                diagnosticArenaImpactThisFrame,
+                diagnosticArenaImpactX & 0xFFFF,
+                diagnosticArenaImpactY & 0xFFFF,
+                parentOffsetX & 0xFFFF,
+                parentOffsetY & 0xFFFF,
+                diagnosticLastP1Solid,
+                diagnosticLastP2Solid,
+                formatTraceBranchHistory());
     }
 }

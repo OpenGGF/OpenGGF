@@ -23,6 +23,7 @@ public final class AizZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return events.getDynamicResizeRoutine(); }
     @Override public boolean isActTransitionFlagActive() { return events.isEventsFg5(); }
+    public boolean isBackedBy(Sonic3kAIZEvents candidate) { return events == candidate; }
 
     public boolean isBossFlagActive() { return events.isBossFlag(); }
     public boolean isPostFireHazeActive() { return events.isPostFireHazeActive(); }

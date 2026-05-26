@@ -7,9 +7,13 @@ import com.openggf.game.rewind.snapshot.LevelEventSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.sprites.playable.Sonic;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -245,5 +249,106 @@ class TestSonic3kLevelEventRewindSnapshot {
         // Switch to HCZ and restore — should not throw or corrupt
         mgr.initLevel(Sonic3kZoneIds.ZONE_HCZ, 0);
         assertDoesNotThrow(() -> mgr.restore(snap));
+    }
+
+    @Test
+    void roundTripFixedAirCountdownSidecarRam() throws Exception {
+        Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
+        mgr.initLevel(Sonic3kZoneIds.ZONE_CNZ, 1);
+
+        Object fixed = fixedAirCountdownManager(mgr);
+        Object p1 = fixedController(fixed, "p1");
+        setFixedControllerState(p1, true, 0x0A, 0x81, 0x1234, 0x02, 0x01, 0xFF, 0x8040, 0x0032, 0x0016);
+
+        LevelEventSnapshot snap = mgr.capture();
+
+        setFixedControllerState(p1, false, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        mgr.restore(snap);
+
+        assertEquals("true,10,129,4660,2,1,255,32832,50,22", fixedControllerState(p1),
+                "fixed Breathing_bubbles sidecar RAM must rewind with S3K event-manager snapshots");
+    }
+
+    @Test
+    void fixedAirCountdownSelectsCountdownNumberSubtypeAndDisplayTimer() throws Exception {
+        Sonic3kLevelEventManager mgr = new Sonic3kLevelEventManager();
+        mgr.initLevel(Sonic3kZoneIds.ZONE_CNZ, 1);
+
+        Object fixed = fixedAirCountdownManager(mgr);
+        Object p1 = fixedController(fixed, "p1");
+        set(p1, "obj3a", 0x80);
+        set(p1, "obj38", 0);
+
+        Sonic sonic = new Sonic("test", (short) 0, (short) 0);
+        sonic.getDrowningController().setRemainingAirFromFixedCountdown(10);
+
+        Method method = p1.getClass().getDeclaredMethod("countdownChildFor", com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        method.setAccessible(true);
+        Object child = method.invoke(p1, sonic);
+
+        assertEquals(5, get(child, "subtype"),
+                "ROM AirCountdown_MakeItem uses air_left >> 1 as countdown-number subtype");
+        assertEquals(0x1C, get(child, "displayTimer"),
+                "countdown number children start with $3C=$1C before AirCountdown_ShowNumber");
+    }
+
+    private static Object fixedAirCountdownManager(Sonic3kLevelEventManager mgr) throws Exception {
+        Field field = Sonic3kLevelEventManager.class.getDeclaredField("fixedAirCountdownManager");
+        field.setAccessible(true);
+        return field.get(mgr);
+    }
+
+    private static Object fixedController(Object fixed, String name) throws Exception {
+        Field field = fixed.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(fixed);
+    }
+
+    private static void setFixedControllerState(Object controller,
+                                               boolean installed,
+                                               int routine,
+                                               int subtype,
+                                               int obj30,
+                                               int obj36,
+                                               int obj37,
+                                               int obj38,
+                                               int obj3a,
+                                               int obj3c,
+                                               int obj3e) throws Exception {
+        set(controller, "installed", installed);
+        set(controller, "routine", routine);
+        set(controller, "subtype", subtype);
+        set(controller, "obj30", obj30);
+        set(controller, "obj36", obj36);
+        set(controller, "obj37", obj37);
+        set(controller, "obj38", obj38);
+        set(controller, "obj3a", obj3a);
+        set(controller, "obj3c", obj3c);
+        set(controller, "obj3e", obj3e);
+    }
+
+    private static String fixedControllerState(Object controller) throws Exception {
+        return get(controller, "installed") + ","
+                + get(controller, "routine") + ","
+                + get(controller, "subtype") + ","
+                + get(controller, "obj30") + ","
+                + get(controller, "obj36") + ","
+                + get(controller, "obj37") + ","
+                + get(controller, "obj38") + ","
+                + get(controller, "obj3a") + ","
+                + get(controller, "obj3c") + ","
+                + get(controller, "obj3e");
+    }
+
+    private static void set(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    private static Object get(Object target, String name) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
     }
 }

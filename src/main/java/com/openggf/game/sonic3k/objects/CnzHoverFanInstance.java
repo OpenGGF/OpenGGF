@@ -194,7 +194,30 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance {
         return RenderPriority.clamp(PRIORITY);
     }
 
+    @Override
+    public int getOutOfRangeReferenceX() {
+        // Active moving hover fans end loc_31E36 by feeding the saved spawn X
+        // from $30(a0) to Sprite_OnScreen_Test2 after writing the live
+        // oscillating x_pos (docs/skdisasm/sonic3k.asm:67291,67327-67332,
+        // 67349-67350). Static fans have currentX == baseX and use the same
+        // Delete_Sprite_If_Not_In_Range result.
+        return baseX;
+    }
+
     int getRenderFrameForTest() {
         return renderFrame;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("sub=%02X active=%s flip=%s base=%04X,%04X curX=%04X frame=%02X ref=%04X",
+                subtype & 0xFF,
+                activeVariant,
+                xFlipped,
+                baseX & 0xFFFF,
+                baseY & 0xFFFF,
+                currentX & 0xFFFF,
+                renderFrame & 0xFF,
+                getOutOfRangeReferenceX() & 0xFFFF);
     }
 }

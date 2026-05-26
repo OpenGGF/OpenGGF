@@ -38,8 +38,9 @@ class TestCnzMinibossInstanceBase {
         CnzMinibossInstance boss = new CnzMinibossInstance(spawn());
         int originalY = boss.getCentreY();
         boss.onArenaChunkDestroyed();
-        assertEquals(originalY + 0x20, boss.getCentreY(),
-                "onArenaChunkDestroyed must advance centreY by one arena row (0x20 px)");
+        assertEquals(originalY, boss.getCentreY(),
+                "CNZMiniboss_MoveDown arms Lower2 from the Events_bg+$04 row signal; "
+                        + "it must not jump centreY by a full row immediately");
     }
 
     @Test

@@ -22,9 +22,12 @@ import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
+import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
 import com.openggf.game.sonic3k.objects.AizHollowTreeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
@@ -66,6 +69,11 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         S3kTransitionEventBridge {
     private static final Logger LOG = Logger.getLogger(Sonic3kLevelEventManager.class.getName());
     private static final int PACHINKO_TOP_EXIT_Y = -0x20;
+    private static final int CNZ_POST_TRANSITION_ACT2_SIZE_CHANGE_FRAMES = 751;
+    private static final int CNZ2_CAMERA_MIN_X = 0x0000;
+    private static final int CNZ2_CAMERA_MAX_X = 0x6000;
+    private static final int CNZ2_CAMERA_MIN_Y = 0x0580;
+    private static final int CNZ2_CAMERA_MAX_Y = 0x1000;
 
     private Sonic3kLoadBootstrap bootstrap = Sonic3kLoadBootstrap.NORMAL;
     private Sonic3kAIZEvents aizEvents;
@@ -73,6 +81,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kHCZEvents hczEvents;
     private Sonic3kICZEvents iczEvents;
     private Sonic3kMGZEvents mgzEvents;
+    private final S3kFixedAirCountdownManager fixedAirCountdownManager =
+            new S3kFixedAirCountdownManager();
 
     // Tracks whether the intro-fall forced animation is active on each player.
     // Cleared per-player when they land (air → ground transition).
@@ -89,6 +99,17 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     // resume playing. Consumed on the first onUpdate() in MGZ Act 2.
     private boolean mgzPendingPostTransitionRelease;
 
+    // Set by CNZ Act 1 transition: after the seamless reload to Act 2, the
+    // ROM's surviving results/end-sign-control object chain later clears
+    // _unkFAA8 and restores player control. The engine reload rebuild removes
+    // that object chain, so the event manager carries the delayed handoff.
+    private int cnzPendingPostTransitionReleaseFrames;
+    private int cnzPendingPostTransitionAct2SizeFrames;
+    private boolean cnzPostTransitionAct2SizeActive;
+    private int cnzAct2MinXAccumulator;
+    private int cnzAct2MaxXAccumulator;
+    private int cnzAct2MinYAccumulator;
+    private int cnzAct2MaxYAccumulator;
 
     public Sonic3kLevelEventManager() {
         super();
@@ -123,6 +144,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         bootstrap = Sonic3kBootstrapResolver.resolve(zone, act);
         introFallActiveOnPlayer = false;
         introFallActiveOnSidekick = false;
+        fixedAirCountdownManager.reset();
 
         // ROM: Level_FromSavedGame skips intro when Last_star_post_hit != 0.
         // This covers both special stage return (big ring) and bonus stage return.
@@ -178,6 +200,52 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         installZoneRuntimeState(zone, act);
     }
 
+    @Override
+    public void updateFixedInLevelObjects() {
+        fixedAirCountdownManager.update();
+    }
+
+    @Override
+    public boolean ownsFixedDrowningBubbleCadence() {
+        return true;
+    }
+
+    @Override
+    public boolean ownsFixedDrowningBubbleCadence(AbstractPlayableSprite player) {
+        return fixedAirCountdownManager.ownsCadenceFor(player);
+    }
+
+    @Override
+    public boolean isSidekickObjectOrderFollowSteeringContext(
+            AbstractPlayableSprite sidekick,
+            AbstractPlayableSprite effectiveLeader) {
+        return Sonic3kSidekickFollowContext.isObjectOrderFollowSteeringContext(sidekick, effectiveLeader);
+    }
+
+    @Override
+    public boolean isSidekickObjectOrderFollowNudgeContext(
+            AbstractPlayableSprite sidekick,
+            AbstractPlayableSprite effectiveLeader) {
+        return Sonic3kSidekickFollowContext.isObjectOrderFollowNudgeContext(sidekick, effectiveLeader);
+    }
+
+    @Override
+    public boolean isSidekickDoorSupportGraceFollowSteeringContext(
+            AbstractPlayableSprite sidekick,
+            ObjectInstance ridingObject) {
+        return Sonic3kSidekickFollowContext.isDoorSupportGraceFollowSteeringContext(sidekick, ridingObject);
+    }
+
+    @Override
+    public boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(AbstractPlayableSprite sidekick) {
+        return Sonic3kSidekickFollowContext.usesRomVisibleCatchUpMarkerFrameCounterBridge(sidekick);
+    }
+
+    @Override
+    public boolean shouldEnterSidekickDormantMarker(AbstractPlayableSprite sidekick) {
+        return aizEvents != null && aizEvents.shouldEnterIntroSidekickDormantMarker(sidekick);
+    }
+
     private void installZoneRuntimeState(int zone, int act) {
         if (!GameServices.hasRuntime()) {
             LOG.fine("Skipping S3K zone runtime registration because no active runtime is installed");
@@ -229,6 +297,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             mgzEvents.update(currentAct, frameCounter);
         }
         releasePendingMgzPostTransition();
+        releasePendingCnzPostTransition();
+        updatePendingCnzAct2LevelSizeChange();
         syncSidekickBoundsToCamera();
     }
 
@@ -514,6 +584,41 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void advanceMinibossBackgroundRoutineAfterScrollSnap() {
+        if (cnzEvents != null) {
+            cnzEvents.advanceMinibossBackgroundRoutineAfterScrollSnap();
+        }
+    }
+
+    public void ensureZoneRuntimeStateInstalled() {
+        if (!GameServices.hasRuntime()) {
+            return;
+        }
+        var current = GameServices.zoneRuntimeRegistry().current();
+        if (current instanceof S3kZoneRuntimeState s3kState
+                && s3kState.zoneIndex() == currentZone
+                && s3kState.actIndex() == currentAct
+                && currentRuntimeStateUsesThisEventInstance(s3kState)) {
+            return;
+        }
+        installZoneRuntimeState(currentZone, currentAct);
+    }
+
+    private boolean currentRuntimeStateUsesThisEventInstance(S3kZoneRuntimeState state) {
+        return switch (currentZone) {
+            case Sonic3kZoneIds.ZONE_AIZ ->
+                    state instanceof AizZoneRuntimeState aizState && aizState.isBackedBy(aizEvents);
+            case Sonic3kZoneIds.ZONE_CNZ ->
+                    state instanceof CnzZoneRuntimeState cnzState && cnzState.isBackedBy(cnzEvents);
+            case Sonic3kZoneIds.ZONE_HCZ ->
+                    state instanceof HczZoneRuntimeState hczState && hczState.isBackedBy(hczEvents);
+            case Sonic3kZoneIds.ZONE_MGZ ->
+                    state instanceof MgzZoneRuntimeState mgzState && mgzState.isBackedBy(mgzEvents);
+            default -> false;
+        };
+    }
+
+    @Override
     public void setWallGrabSuppressed(boolean value) {
         if (cnzEvents != null) {
             cnzEvents.setWallGrabSuppressed(value);
@@ -620,6 +725,17 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         this.mgzPendingPostTransitionRelease = true;
     }
 
+    @Override
+    public void requestCnzPostTransitionRelease(int framesUntilRelease) {
+        this.cnzPendingPostTransitionReleaseFrames = Math.max(0, framesUntilRelease);
+        this.cnzPendingPostTransitionAct2SizeFrames = CNZ_POST_TRANSITION_ACT2_SIZE_CHANGE_FRAMES;
+        this.cnzPostTransitionAct2SizeActive = false;
+        this.cnzAct2MinXAccumulator = 0;
+        this.cnzAct2MaxXAccumulator = 0;
+        this.cnzAct2MinYAccumulator = 0;
+        this.cnzAct2MaxYAccumulator = 0;
+    }
+
     /**
      * After the MGZ1 → MGZ2 seamless reload, release the player (and sidekicks)
      * from the signpost victory pose so normal play resumes. The ROM's
@@ -649,6 +765,138 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         LOG.info("MGZ: released player from victory pose after Act 1 → Act 2 reload");
     }
 
+    /**
+     * CNZ1's act reload happens while Obj_LevelResults and Obj_EndSignControl
+     * are still alive in ROM. Later, LevelResults loc_2DD06 clears _unkFAA8 and
+     * EndSignControlAwaitStart calls Restore_PlayerControl for P1/P2
+     * (docs/skdisasm/sonic3k.asm:62708-62720,180407-180412,180359-180367).
+     * The engine reload rebuilds the object manager, so this local handoff
+     * preserves the ROM release timing without retaining act-1 objects.
+     */
+    private void releasePendingCnzPostTransition() {
+        if (cnzPendingPostTransitionReleaseFrames <= 0) {
+            return;
+        }
+        if (currentZone != Sonic3kZoneIds.ZONE_CNZ || currentAct != 1) {
+            return;
+        }
+
+        cnzPendingPostTransitionReleaseFrames--;
+        if (cnzPendingPostTransitionReleaseFrames > 0) {
+            return;
+        }
+
+        AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
+        if (player != null) {
+            restoreControlAfterCnzActTransition(player);
+        }
+        for (AbstractPlayableSprite sidekick : sidekickSpritesFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            restoreControlAfterCnzActTransition(sidekick);
+        }
+        LOG.info("CNZ: released player control after Act 1 → Act 2 results handoff");
+    }
+
+    private void restoreControlAfterCnzActTransition(AbstractPlayableSprite sprite) {
+        ObjectControlState.none().applyTo(sprite);
+        sprite.setControlLocked(false);
+        sprite.setForcedAnimationId(-1);
+        sprite.setAir(false);
+    }
+
+    /**
+     * ROM: after the surviving EndSignControl object has restored control, its
+     * DoStart phase waits for the in-level title-card End_of_level_flag, calls
+     * Change_Act2Sizes, and spawns the gradual level-size children. CNZ's
+     * seamless reload removes that object chain in the engine, so this bridge
+     * mirrors the later Change_Act2Sizes/Obj_*Gradual sequence locally
+     * (docs/skdisasm/sonic3k.asm:180415-180419,180575-180632,
+     * 178154-178168,178192-178224,197460-197468).
+     */
+    private void updatePendingCnzAct2LevelSizeChange() {
+        if (currentZone != Sonic3kZoneIds.ZONE_CNZ || currentAct != 1) {
+            return;
+        }
+        if (cnzPendingPostTransitionAct2SizeFrames > 0) {
+            cnzPendingPostTransitionAct2SizeFrames--;
+            if (cnzPendingPostTransitionAct2SizeFrames > 0) {
+                return;
+            }
+            cnzPostTransitionAct2SizeActive = true;
+            cnzAct2MinXAccumulator = 0;
+            cnzAct2MaxXAccumulator = 0;
+            cnzAct2MinYAccumulator = 0;
+            cnzAct2MaxYAccumulator = 0;
+        }
+        if (!cnzPostTransitionAct2SizeActive) {
+            return;
+        }
+
+        Camera camera = GameServices.cameraOrNull();
+        if (camera == null) {
+            return;
+        }
+
+        boolean minXDone = decrementCameraMinXGradual(camera);
+        boolean maxXDone = incrementCameraMaxXGradual(camera);
+        boolean minYDone = decrementCameraMinYGradual(camera);
+        boolean maxYDone = incrementCameraMaxYGradual(camera);
+        camera.setMaxYTarget((short) CNZ2_CAMERA_MAX_Y);
+        if (minXDone && maxXDone && minYDone && maxYDone) {
+            cnzPostTransitionAct2SizeActive = false;
+        }
+    }
+
+    private boolean decrementCameraMinXGradual(Camera camera) {
+        int current = camera.getMinX() & 0xFFFF;
+        cnzAct2MinXAccumulator += 0x4000;
+        int delta = cnzAct2MinXAccumulator >> 16;
+        int next = current - delta;
+        if (next <= CNZ2_CAMERA_MIN_X) {
+            camera.setMinX((short) CNZ2_CAMERA_MIN_X);
+            return true;
+        }
+        camera.setMinX((short) next);
+        return false;
+    }
+
+    private boolean incrementCameraMaxXGradual(Camera camera) {
+        int current = camera.getMaxX() & 0xFFFF;
+        cnzAct2MaxXAccumulator += 0x4000;
+        int delta = cnzAct2MaxXAccumulator >> 16;
+        int next = current + delta;
+        if (next >= CNZ2_CAMERA_MAX_X) {
+            camera.setMaxX((short) CNZ2_CAMERA_MAX_X);
+            return true;
+        }
+        camera.setMaxX((short) next);
+        return false;
+    }
+
+    private boolean decrementCameraMinYGradual(Camera camera) {
+        int current = camera.getMinY() & 0xFFFF;
+        cnzAct2MinYAccumulator += 0x4000;
+        int delta = cnzAct2MinYAccumulator >> 16;
+        int next = current - delta;
+        if (next <= CNZ2_CAMERA_MIN_Y) {
+            camera.setMinY((short) CNZ2_CAMERA_MIN_Y);
+            return true;
+        }
+        camera.setMinY((short) next);
+        return false;
+    }
+
+    private boolean incrementCameraMaxYGradual(Camera camera) {
+        int current = camera.getMaxY() & 0xFFFF;
+        cnzAct2MaxYAccumulator += 0x8000;
+        int delta = cnzAct2MaxYAccumulator >> 16;
+        int next = current + delta;
+        if (next >= CNZ2_CAMERA_MAX_Y) {
+            camera.setMaxY((short) CNZ2_CAMERA_MAX_Y);
+            return true;
+        }
+        camera.setMaxY((short) next);
+        return false;
+    }
 
     private List<AbstractPlayableSprite> sidekickSpritesFor(ObjectPlayerParticipationPolicy policy) {
         ObjectPlayerQuery query = playerQueryFromGameServices();
@@ -828,7 +1076,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     @Override
     protected byte[] captureExtra() {
         // Layout:
-        //   5 bytes   manager-level (bootstrap mode ordinal + 4 booleans)
+        //   30 bytes  manager-level (bootstrap mode ordinal + 4 booleans + CNZ release/size counters + size-change state)
         //   1 byte    aiz handler present flag
         //   84 bytes  aiz state (20 booleans + 15 ints + 1 ordinal int = 20+60+4 = 84)
         //   1 byte    hcz handler present flag
@@ -839,17 +1087,19 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   228 bytes mgz state (16 booleans + 23 ints + 30 ints = 16+92+120 = 228)
         //   1 byte    icz handler present flag
         //   24 bytes  icz state (4 booleans + 5 ints; see Sonic3kICZEvents.rewindStateBytes())
+        //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
         int aizSize = 20 + 15 * 4 + 4; // 84
         int hczSize = 7 + 9 * 4; // 43
         int cnzSize = 4 * 2 + 10 + 15 * 4 + 4; // 82
         int mgzSize = 16 + 23 * 4 + 3 * 10 * 4; // 228
         int iczSize = Sonic3kICZEvents.rewindStateBytes(); // 24
-        int size = 5;
+        int size = 30;
         size += 1 + (aizEvents != null ? aizSize : 0);
         size += 1 + (hczEvents != null ? hczSize : 0);
         size += 1 + (cnzEvents != null ? cnzSize : 0);
         size += 1 + (mgzEvents != null ? mgzSize : 0);
         size += 1 + (iczEvents != null ? iczSize : 0);
+        size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES;
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(size);
         // Manager-level
         buf.put((byte) bootstrap.mode().ordinal());
@@ -857,6 +1107,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         buf.put((byte) (introFallActiveOnSidekick ? 1 : 0));
         buf.put((byte) (hczPendingPostTransitionCutscene ? 1 : 0));
         buf.put((byte) (mgzPendingPostTransitionRelease  ? 1 : 0));
+        buf.putInt(cnzPendingPostTransitionReleaseFrames);
+        buf.putInt(cnzPendingPostTransitionAct2SizeFrames);
+        buf.put((byte) (cnzPostTransitionAct2SizeActive ? 1 : 0));
+        buf.putInt(cnzAct2MinXAccumulator);
+        buf.putInt(cnzAct2MaxXAccumulator);
+        buf.putInt(cnzAct2MinYAccumulator);
+        buf.putInt(cnzAct2MaxYAccumulator);
         // AIZ
         if (aizEvents != null) {
             buf.put((byte) 1);
@@ -892,6 +1149,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else {
             buf.put((byte) 0);
         }
+        fixedAirCountdownManager.writeRewindState(buf);
         return buf.array();
     }
 
@@ -910,6 +1168,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         introFallActiveOnSidekick         = buf.get() != 0;
         hczPendingPostTransitionCutscene  = buf.get() != 0;
         mgzPendingPostTransitionRelease   = buf.get() != 0;
+        cnzPendingPostTransitionReleaseFrames = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
+        cnzPendingPostTransitionAct2SizeFrames = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
+        cnzPostTransitionAct2SizeActive = buf.remaining() >= 1 && buf.get() != 0;
+        cnzAct2MinXAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
+        cnzAct2MaxXAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
+        cnzAct2MinYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
+        cnzAct2MaxYAccumulator = buf.remaining() >= Integer.BYTES ? buf.getInt() : 0;
         // Size constants must match the write methods
         final int aizBytes = 20 + 15 * 4 + 4; // 84
         final int hczBytes = 7 + 9 * 4;        // 43
@@ -960,6 +1225,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             } else if (iczPresent && buf.remaining() >= iczBytes) {
                 buf.position(buf.position() + iczBytes);
             }
+        }
+        if (buf.remaining() >= S3kFixedAirCountdownManager.REWIND_STATE_BYTES) {
+            fixedAirCountdownManager.readRewindState(buf);
         }
     }
 

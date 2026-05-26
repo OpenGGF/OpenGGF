@@ -77,6 +77,10 @@ public abstract class Sonic3kZoneEvents {
         return GameServices.gameState();
     }
 
+    protected GameStateManager gameStateOrNull() {
+        return GameServices.gameStateOrNull();
+    }
+
     protected WaterSystem waterSystem() {
         return GameServices.water();
     }
@@ -107,6 +111,10 @@ public abstract class Sonic3kZoneEvents {
 
     protected ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() {
         return GameServices.zoneLayoutMutationPipeline();
+    }
+
+    protected ZoneLayoutMutationPipeline zoneLayoutMutationPipelineOrNull() {
+        return GameServices.zoneLayoutMutationPipelineOrNull();
     }
 
     protected static GraphicsManager graphicsStatic() {

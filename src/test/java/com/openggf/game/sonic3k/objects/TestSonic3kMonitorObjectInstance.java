@@ -165,14 +165,27 @@ class TestSonic3kMonitorObjectInstance {
     }
 
     @Test
-    void exposesSonic3kMonitorSolidRoutineProfile() {
+    void cpuTailsRollAnimationStillSolidInOnePlayerMode() {
+        Sonic3kMonitorObjectInstance monitor = monitor();
+        DummyPlayer tails = new DummyPlayer();
+        tails.setCpuControlled(true);
+        tails.setRolling(true);
+        tails.setAnimationId(Sonic3kAnimationIds.ROLL);
+
+        assertTrue(monitor.isSolidFor(tails),
+                "S3K SolidObject_Monitor_Tails reaches SolidObject_cont in one-player mode before the roll gate");
+    }
+
+    @Test
+    void exposesSonic3kMonitorWrapperAsSolidObjectContProfile() {
         Sonic3kMonitorObjectInstance monitor = monitor();
 
         SolidRoutineProfile profile = monitor.getSolidRoutineProfile();
 
-        assertEquals(SolidRoutineKind.MONITOR_SOLID, profile.kind());
-        assertTrue(profile.monitorSolidity());
-        assertEquals(4, profile.monitorVerticalOffset());
+        assertEquals(SolidRoutineKind.FULL_SOLID, profile.kind());
+        assertFalse(profile.monitorSolidity());
+        assertEquals(0, profile.monitorVerticalOffset(),
+                "S3K monitor wrappers branch into SolidObject_cont; the +4 normal-gravity overlap offset is applied by the shared full-solid path");
         assertFalse(profile.stickyContactBuffer());
     }
 
@@ -233,6 +246,7 @@ class TestSonic3kMonitorObjectInstance {
         @Override
         public void draw() {
         }
+
     }
 
     private static final class EmptySensor extends Sensor {

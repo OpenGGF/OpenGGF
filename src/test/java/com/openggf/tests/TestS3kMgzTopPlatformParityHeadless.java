@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.Sonic;
@@ -110,6 +111,43 @@ class TestS3kMgzTopPlatformParityHeadless {
                 "MGZ top platform should keep the ROM wall-cling/status-tertiary state while grabbed");
         assertFalse(sprite.isOnObject(),
                 "Grabbed player should not remain in ordinary on-object standing state");
+    }
+
+    @Test
+    void grabInitiation_preservesPlayerVelocity() throws Exception {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(0x0B88, 0x0AC3, 0x5B, 0, 0, false, 0));
+        Object grabState = newPlayerGrabState();
+        short expectedXVel = (short) 0x00DA;
+        short expectedYVel = (short) 0xFFE8;
+        int expectedXSub = 0xBE00;
+        int expectedYSub = 0xB900;
+        sprite.setXSpeed(expectedXVel);
+        sprite.setYSpeed(expectedYVel);
+        sprite.setSubpixelRaw(expectedXSub, expectedYSub);
+        sprite.setOnObject(true);
+        sprite.setAir(false);
+
+        invokeGrabPlayer(platform, sprite, grabState);
+
+        assertTrue(sprite.isObjectControlled(),
+                "ROM loc_34F84 should arm object control during grab initiation");
+        assertFalse(sprite.isOnObject(),
+                "ROM loc_34F84 should clear Status_OnObj during grab initiation");
+        assertTrue(sprite.getAir(),
+                "ROM loc_34F84 should set Status_InAir during grab initiation");
+        assertEquals(expectedXVel, sprite.getXSpeed(),
+                "ROM loc_34F84 should preserve x_vel while entering MGZ top-platform carry");
+        assertEquals(expectedYVel, sprite.getYSpeed(),
+                "ROM loc_34F84 should preserve y_vel while entering MGZ top-platform carry");
+        assertEquals(expectedXSub, sprite.getXSubpixelRaw(),
+                "ROM loc_34F84 move.w x_pos should preserve x_sub during grab initiation");
+        assertEquals(expectedYSub, sprite.getYSubpixelRaw(),
+                "ROM loc_34F84 should not touch y_sub during grab initiation");
+        assertEquals((expectedXSub >> 8) & 0xFF, getIntField(grabState, "xSub"),
+                "MGZ carry MoveSprite2 state should inherit the preserved x_sub high byte");
+        assertEquals((expectedYSub >> 8) & 0xFF, getIntField(grabState, "ySub"),
+                "MGZ carry MoveSprite2 state should inherit the preserved y_sub high byte");
     }
 
     @Test
@@ -336,6 +374,104 @@ class TestS3kMgzTopPlatformParityHeadless {
     }
 
     @Test
+    void postMotionSnap_preservesPlayerVelocityWhenNotStandingOnObject() throws Exception {
+        int platformX = 0x0B88;
+        int platformY = 0x0AC3;
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(platformX, platformY, 0x5B, 0, 0, false, 0));
+        Object grabState = newPlayerGrabState();
+        setIntField(grabState, "routine", 4);
+        setBooleanField(grabState, "grabbed", true);
+        playerStates(platform).put(sprite, grabState);
+
+        short expectedXVel = (short) 0x00DA;
+        short expectedYVel = (short) 0xFFE8;
+        sprite.setOnObject(false);
+        sprite.setAir(true);
+        sprite.setXSpeed(expectedXVel);
+        sprite.setYSpeed(expectedYVel);
+        sprite.setSubpixelRaw(0xBE00, 0xB900);
+
+        invokeSnapGrabbedPlayer(platform, sprite);
+
+        assertEquals(platformX, sprite.getCentreX(),
+                "ROM sub_35202 should snap carried player X to platform X");
+        assertEquals(platformY - 0x0C - sprite.getStandYRadius(), sprite.getCentreY(),
+                "ROM sub_35202 should snap carried player Y from platform top and default radius");
+        assertEquals(expectedXVel, sprite.getXSpeed(),
+                "ROM sub_35202 should not clear x_vel after sub_35504 loc_3554E writes it from ground_vel");
+        assertEquals(expectedYVel, sprite.getYSpeed(),
+                "ROM sub_35202 should not clear y_vel in the non-standing snap branch");
+        assertEquals(0xBE00, sprite.getXSubpixelRaw(),
+                "ROM sub_35202 move.w x_pos should preserve x_sub");
+        assertEquals(0xB900, sprite.getYSubpixelRaw(),
+                "ROM sub_35202 move.w y_pos should preserve y_sub");
+    }
+
+    @Test
+    void grabbedPlayerMove_updatesVisibleSpriteSubpixels() throws Exception {
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(0x0B88, 0x0AC3, 0x5B, 0, 0, false, 0));
+        Object grabState = newPlayerGrabState();
+        setIntField(grabState, "xSub", 0xFF);
+        setIntField(grabState, "ySub", 0xFE);
+        int startX = 0x0B88;
+        int startY = 0x0AA4;
+        sprite.setCentreX((short) startX);
+        sprite.setCentreY((short) startY);
+        sprite.setSubpixelRaw(0xFF00, 0xFE00);
+        sprite.setXSpeed((short) 0x0002);
+        sprite.setYSpeed((short) 0x0004);
+
+        invokeMoveGrabbedPlayer(platform, sprite, grabState, false);
+
+        assertEquals(startX + 1, sprite.getCentreX(),
+                "ROM MoveSprite2 should carry x_sub overflow into x_pos");
+        assertEquals(startY + 1, sprite.getCentreY(),
+                "ROM MoveSprite2 should carry y_sub overflow into y_pos");
+        assertEquals(0x0100, sprite.getXSubpixelRaw(),
+                "MGZ carry should publish MoveSprite2 x_sub back to the sprite state");
+        assertEquals(0x0200, sprite.getYSubpixelRaw(),
+                "MGZ carry should publish MoveSprite2 y_sub back to the sprite state");
+    }
+
+    @Test
+    void positiveCenteringKickUsesRomNegThenArithmeticShift() throws Exception {
+        int platformX = 0x0B88;
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(platformX, 0x0AC3, 0x5B, 0, 0, false, 0));
+        setIntField(platform, "xVel", 0);
+        setIntField(platform, "yVel", 0);
+        sprite.setCentreX((short) (platformX + 1));
+
+        invokeApplyCenteringOrLateralLaunch(platform, sprite);
+
+        assertEquals(4, getIntField(platform, "xVel"),
+                "ROM loc_35130 should add dx*4 to platform x_vel");
+        assertEquals(-9, getIntField(platform, "yVel"),
+                "ROM loc_35148 neg.w/asr.w should make x_vel=4 contribute -1 to y_vel");
+        assertTrue(getBooleanField(platform, "airborne"),
+                "ROM loc_35168 should set the airborne status bit after the centering kick");
+    }
+
+    @Test
+    void positiveCenteringKickAllowsRomOvershootPastMinus100Band() throws Exception {
+        int platformX = 0x0B88;
+        MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
+                new ObjectSpawn(platformX, 0x0AC3, 0x5B, 0, 0, false, 0));
+        setIntField(platform, "xVel", 0x00F0);
+        setIntField(platform, "yVel", -0x00F0);
+        sprite.setCentreX((short) (platformX + 2));
+
+        invokeApplyCenteringOrLateralLaunch(platform, sprite);
+
+        assertEquals(0x00F8, getIntField(platform, "xVel"),
+                "ROM loc_35130 should update x_vel before calculating the vertical kick");
+        assertEquals(-0x0108, getIntField(platform, "yVel"),
+                "ROM loc_35148 compares against -$100 before add.w d0,y_vel and does not clamp after it");
+    }
+
+    @Test
     void releasedFlight_clearsOccupiedSecondaryRiderStandingState() throws Exception {
         MGZTopPlatformObjectInstance platform = new MGZTopPlatformObjectInstance(
                 new ObjectSpawn(0, 0, 0x5B, 0, 0, false, 0));
@@ -541,12 +677,49 @@ class TestS3kMgzTopPlatformParityHeadless {
     private static void invokeMoveGrabbedPlayer(MGZTopPlatformObjectInstance platform,
                                                 Sonic player,
                                                 Object playerState) throws Exception {
+        invokeMoveGrabbedPlayer(platform, player, playerState, true);
+    }
+
+    private static void invokeMoveGrabbedPlayer(MGZTopPlatformObjectInstance platform,
+                                                Sonic player,
+                                                Object playerState,
+                                                boolean resolveTerrainAfterMove) throws Exception {
         Method moveGrabbedPlayer = MGZTopPlatformObjectInstance.class.getDeclaredMethod(
                 "moveGrabbedPlayer",
                 com.openggf.sprites.playable.AbstractPlayableSprite.class,
-                Class.forName("com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance$PlayerGrabState"));
+                Class.forName("com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance$PlayerGrabState"),
+                boolean.class);
         moveGrabbedPlayer.setAccessible(true);
-        moveGrabbedPlayer.invoke(platform, player, playerState);
+        moveGrabbedPlayer.invoke(platform, player, playerState, resolveTerrainAfterMove);
+    }
+
+    private static void invokeGrabPlayer(MGZTopPlatformObjectInstance platform,
+                                         Sonic player,
+                                         Object playerState) throws Exception {
+        Method grabPlayer = MGZTopPlatformObjectInstance.class.getDeclaredMethod(
+                "grabPlayer",
+                com.openggf.sprites.playable.AbstractPlayableSprite.class,
+                Class.forName("com.openggf.game.sonic3k.objects.MGZTopPlatformObjectInstance$PlayerGrabState"));
+        grabPlayer.setAccessible(true);
+        grabPlayer.invoke(platform, player, playerState);
+    }
+
+    private static void invokeSnapGrabbedPlayer(MGZTopPlatformObjectInstance platform,
+                                                Sonic player) throws Exception {
+        Method snapGrabbedPlayer = MGZTopPlatformObjectInstance.class.getDeclaredMethod(
+                "snapGrabbedPlayer",
+                com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        snapGrabbedPlayer.setAccessible(true);
+        snapGrabbedPlayer.invoke(platform, player);
+    }
+
+    private static void invokeApplyCenteringOrLateralLaunch(MGZTopPlatformObjectInstance platform,
+                                                            Sonic player) throws Exception {
+        Method applyCenteringOrLateralLaunch = MGZTopPlatformObjectInstance.class.getDeclaredMethod(
+                "applyCenteringOrLateralLaunch",
+                com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        applyCenteringOrLateralLaunch.setAccessible(true);
+        applyCenteringOrLateralLaunch.invoke(platform, player);
     }
 
     private void invokeSharedTouchHurt(ObjectInstance source) throws Exception {
@@ -559,9 +732,10 @@ class TestS3kMgzTopPlatformParityHeadless {
         Method applyHurt = touchResponses.getClass()
                 .getDeclaredMethod("applyHurt",
                         com.openggf.game.PlayableEntity.class,
-                        ObjectInstance.class);
+                        ObjectInstance.class,
+                        TouchResponseResult.class);
         applyHurt.setAccessible(true);
-        applyHurt.invoke(touchResponses, sprite, source);
+        applyHurt.invoke(touchResponses, sprite, source, null);
     }
 
     private int activeLostRingCount() throws Exception {

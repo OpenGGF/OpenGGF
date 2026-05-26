@@ -61,8 +61,7 @@ public class AizMinibossInstance extends AbstractBossInstance {
     private static final int HORIZONTAL_CYCLE_COUNT = 4;    // ROM: move.b #4,$39(a0)
     private static final int INVULN_TIME = 0x20;
     private static final int FATAL_HIT_DEFEAT_DELAY = 13;
-    private static final int TITLE_EXIT_CAMERA_RELEASE_FRAME = 8;
-
+    private static final int DEFEAT_WAIT_FADE_TIMER = 0x3F;
     private static final int FLAG_PARENT_BITS = 0x38;
     private static final int FLAG_PARENT_COUNTER = 0x39;
     private static final int PARENT_BIT_BARREL_ACTIVATE = 1 << 1;
@@ -90,7 +89,11 @@ public class AizMinibossInstance extends AbstractBossInstance {
     private HorizontalCallback horizontalCallback = HorizontalCallback.NONE;
     private boolean defeatRenderComplete;
     private int pendingDefeatTimer = -1;
+    private int defeatHandoffTimer = -1;
     private boolean levelEndUnlockStarted;
+    private boolean levelEndSizeChangeStarted;
+    private int levelEndMaxXAccumulator;
+    private int levelEndMaxYAccumulator;
 
     /** Stagger explosion controller for boss defeat (ROM: Child6_CreateBossExplosion subtype 0). */
     private S3kBossExplosionController defeatExplosionController;
@@ -125,7 +128,11 @@ public class AizMinibossInstance extends AbstractBossInstance {
         horizontalCallback = HorizontalCallback.NONE;
         defeatRenderComplete = false;
         pendingDefeatTimer = -1;
+        defeatHandoffTimer = -1;
         levelEndUnlockStarted = false;
+        levelEndSizeChangeStarted = false;
+        levelEndMaxXAccumulator = 0;
+        levelEndMaxYAccumulator = 0;
         defeatExplosionController = null;
     }
 
@@ -208,6 +215,12 @@ public class AizMinibossInstance extends AbstractBossInstance {
         // CreateBossExp00: timer=$20 (33 explosions), xRange=$20, yRange=$20.
         // sub_52850 plays sfx_Explode each time it spawns an explosion child (every 3 frames).
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
+        // ROM loc_68FB6 switches the boss object to Wait_FadeToLevelMusic
+        // and creates Child6_CreateBossExplosion; the later loc_68C02
+        // Obj_EndSignControl callback is timed by the boss object's $2E,
+        // not by the explosion controller finishing (sonic3k.asm:137793-137806,
+        // 179651-179668,137381-137393).
+        defeatHandoffTimer = DEFEAT_WAIT_FADE_TIMER;
 
         services().fadeOutMusic();
 
@@ -321,24 +334,50 @@ public class AizMinibossInstance extends AbstractBossInstance {
         if (!state.defeated || !defeatRenderComplete) {
             return false;
         }
-        if (services().titleCardProvider() instanceof Sonic3kTitleCardManager titleCard) {
-            return titleCard.isInLevelExitPhaseFor(0, 1)
-                    && titleCard.getExitPhaseCounter() >= TITLE_EXIT_CAMERA_RELEASE_FRAME;
-        }
-        return false;
+        // ROM Obj_LevelResults changes into the in-level title-card object for
+        // Act 1 results. Obj_TitleCardWait2 sets End_of_level_flag only after
+        // the title-card children have disappeared, then Obj_EndSignControlDoStart
+        // runs Change_Act2Sizes (sonic3k.asm:62708-62720,62276-62279,
+        // 180415-180419). Do not widen the miniboss arena during the child
+        // slide-out phase before that flag exists.
+        Sonic3kTitleCardManager titleCardManager =
+                services().gameService(Sonic3kTitleCardManager.class);
+        return services().gameState().isEndOfLevelFlag()
+                || (titleCardManager != null
+                        && titleCardManager.willSetInLevelEndOfLevelFlagThisUpdate());
     }
 
     private void updateLevelEndCameraUnlock(int triggerX) {
         var camera = services().camera();
-        int storedMax = services().currentLevel() != null
-                ? services().currentLevel().getMaxX()
-                : triggerX;
+        var level = services().currentLevel();
+        int storedMax = level != null ? level.getMaxX() : triggerX;
+
+        if (!levelEndSizeChangeStarted) {
+            levelEndSizeChangeStarted = true;
+            // ROM Change_Act2Sizes copies Act 2 size words into the stored
+            // camera-boundary memory and Camera_target_max_Y_pos, then creates
+            // gradual level-size objects (sonic3k.asm:180575-180609). Keep
+            // X/Y under the ROM gradual objects below; use the engine's target
+            // max-Y path for the copied Camera_target_max_Y_pos word. This
+            // proxy starts from the first frame where the ROM-created children
+            // are already eligible to run, so seed their 16.16 accumulators by
+            // one creation/update tick.
+            levelEndMaxXAccumulator = 0x4000;
+            levelEndMaxYAccumulator = 0x8000;
+            if (level != null) {
+                camera.setMinY((short) level.getMinY());
+                camera.setMaxYTarget((short) level.getMaxY());
+            }
+        }
 
         // ROM Obj_IncLevEndXGradual (sonic3k.asm:178154-178169) widens
-        // Camera_max_X_pos during the post-results title-card exit. Keep the
-        // AIZ left wall fixed, but stop clamping the right side once that
-        // control object begins advancing the max boundary.
+        // Camera_max_X_pos with a 16.16 accumulator, adding $4000 per frame.
+        // The first three updates add zero integer pixels, so the arena remains
+        // locked on the first End_of_level_flag frame.
         camera.setMinX((short) triggerX);
+        levelEndMaxXAccumulator += 0x4000;
+        int delta = levelEndMaxXAccumulator >>> 16;
+        int nextMax = (camera.getMaxX() & 0xFFFF) + delta;
         if ((camera.getMaxX() & 0xFFFF) > storedMax) {
             // ROM loc_84A6A stores Camera_stored_max_X_pos, then deletes the
             // gradual level-end object (docs/skdisasm/sonic3k.asm:178165-178169).
@@ -348,7 +387,38 @@ public class AizMinibossInstance extends AbstractBossInstance {
             setDestroyed(true);
             return;
         }
-        camera.setMaxX((short) storedMax);
+        if (nextMax >= storedMax) {
+            camera.setMaxX((short) storedMax);
+            setDestroyed(true);
+        } else {
+            camera.setMaxX((short) nextMax);
+        }
+
+        int storedMaxY = level != null ? level.getMaxY() : (camera.getMaxYTarget() & 0xFFFF);
+        levelEndMaxYAccumulator += 0x8000;
+        int yDelta = levelEndMaxYAccumulator >>> 16;
+        var player = camera.getFocusedSprite();
+        boolean playerAirborne = player != null && player.getAir();
+        if (player != null && !playerAirborne) {
+            // ROM DeformBgLayer runs MoveCameraY before Do_ResizeEvents, so
+            // each grounded frame's +2 max-Y resize is a carry into the next
+            // camera frame. The engine's generic camera step eases max-Y before
+            // the camera move; carry this AIZ results proxy by that ROM
+            // post-camera resize tick once the title-exit jump has landed
+            // (sonic3k.asm:38313-38316,38761-38789,178210-178225).
+            yDelta += 2;
+        }
+        int nextMaxY = (camera.getMaxY() & 0xFFFF) + yDelta;
+        if (nextMaxY >= storedMaxY) {
+            camera.setMaxY((short) storedMaxY);
+        } else {
+            // ROM Obj_IncLevEndYGradual adds $8000 to its 16.16 accumulator and
+            // writes Camera_max_Y_pos until Camera_stored_max_Y_pos is reached
+            // (sonic3k.asm:178210-178225). Preserve the target word copied by
+            // Change_Act2Sizes after updating the current bound.
+            camera.setMaxY((short) nextMaxY);
+            camera.setMaxYTarget((short) storedMaxY);
+        }
     }
 
     private void lockArenaCamera(int triggerX) {
@@ -536,7 +606,7 @@ public class AizMinibossInstance extends AbstractBossInstance {
     private void updateDefeated(int frameCounter) {
         // Tick the stagger explosion controller each frame.
         // ROM: Obj_CreateBossExplosion (sub_52850) spawns one explosion every 3 frames
-        // at random offsets within ±$20 pixels. Total: 33 explosions over ~102 frames.
+        // at random offsets within +/-$20 pixels. Total: 33 explosions over ~102 frames.
         if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
             defeatExplosionController.tick();
             var objectManager = services().objectManager();
@@ -549,11 +619,19 @@ public class AizMinibossInstance extends AbstractBossInstance {
                             new S3kBossExplosionChild(pending.x(), pending.y()));
                 }
             }
-            return;
         }
 
-        // Explosions finished — spawn music fade-to-level transition, then signpost flow.
-        // ROM: Wait_FadeToLevelMusic → Obj_Song_Fade_ToLevelMusic → Restore_LevelMusic
+        if (defeatHandoffTimer >= 0) {
+            defeatHandoffTimer--;
+            if (defeatHandoffTimer < 0) {
+                startDefeatHandoff();
+            }
+        }
+    }
+
+    private void startDefeatHandoff() {
+        // ROM: Wait_FadeToLevelMusic -> Obj_Song_Fade_ToLevelMusic ->
+        // loc_68C02 -> Obj_EndSignControl.
         // The fire transition swaps tileset/palette to AIZ2's look, but the zone is still
         // technically AIZ1 and the level music is AIZ1.
         if (!defeatRenderComplete) {

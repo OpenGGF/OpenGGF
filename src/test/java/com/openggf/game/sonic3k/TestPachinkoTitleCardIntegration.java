@@ -11,12 +11,12 @@ import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.DefaultPowerUpSpawner;
 import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
@@ -103,8 +103,8 @@ public class TestPachinkoTitleCardIntegration {
         spawner.registerObject(player.getInstaShieldObject());
 
         int instaShieldSlot = ((AbstractObjectInstance) player.getInstaShieldObject()).getSlotIndex();
-        assertTrue(ObjectSlotLayout.SONIC_3K.isDynamicSlot(instaShieldSlot),
-                "Insta-shield should be registered in a live S3K dynamic slot before bonus entry");
+        assertEquals(PhysicsFeatureSet.SONIC_3K.shieldObjectFixedSlotIndex(), instaShieldSlot,
+                "S3K insta-shield reuses the ROM shield fixed Level_object_RAM slot before bonus entry");
 
         BonusStageProvider provider = GameModuleRegistry.getCurrent().getBonusStageProvider();
         BonusStageState savedState = captureSavedState(player, fixture.camera());

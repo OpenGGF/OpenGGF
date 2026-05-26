@@ -51,6 +51,7 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
     private int angleStep;
     private boolean dropStarted;
     private boolean settled;
+    private boolean settledAngleReached;
     private boolean collapseStarted;
     private int collapseTimer;
 
@@ -109,11 +110,21 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(HALF_WIDTH, HEIGHT, HEIGHT + 1);
+        return new SolidObjectParams(HALF_WIDTH, HEIGHT, HEIGHT);
     }
 
     @Override
     public boolean isTopSolidOnly() {
+        // Obj_AIZDrawBridge calls SolidObjectFull2, not SolidObjectTop
+        // (sonic3k.asm:59625-59643). New top landings therefore narrow
+        // d1=$6B back to width_pixels=$60 before RideObject_SetRide.
+        return false;
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // SolidObjectFull2_1P falls through to SolidObject_cont without the
+        // SolidObject_OnScreenTest used by SolidObjectFull_1P.
         return true;
     }
 
@@ -144,13 +155,20 @@ public class AizDrawBridgeObjectInstance extends AbstractObjectInstance
         }
 
         if (dropStarted && !settled) {
-            angle += angleStep;
-            if ((angleStep > 0 && angle >= settledAngle) || (angleStep < 0 && angle <= settledAngle)) {
-                angle = settledAngle;
+            if (settledAngleReached) {
+                // Obj_AIZDrawBridge checks $38 for $80/0 before adding $34; the
+                // flat/full SolidObjectFull2 phase starts on the next routine
+                // entry after the angle reaches its target (sonic3k.asm:59591-59613, 59625-59643).
                 settled = true;
                 services().playSfx(Sonic3kSfx.FLIP_BRIDGE.id);
+            } else {
+                angle += angleStep;
+                if ((angleStep > 0 && angle >= settledAngle) || (angleStep < 0 && angle <= settledAngle)) {
+                    angle = settledAngle;
+                    settledAngleReached = true;
+                }
+                updateBridgePieces();
             }
-            updateBridgePieces();
         }
 
         if (settled && !collapseStarted && Aiz2BossEndSequenceState.isButtonPressed()) {

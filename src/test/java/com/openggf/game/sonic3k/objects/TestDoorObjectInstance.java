@@ -129,6 +129,18 @@ public class TestDoorObjectInstance {
     }
 
     @Test
+    public void horizontalDoorDoesNotCarryRiderOnSlideFrame() {
+        DoorObjectInstance horizontal = new DoorObjectInstance(
+                new ObjectSpawn(0x24C0, 0x0109, 0x3C, 0x80, 0, false, 0));
+        TestPlayableSprite player = createPlayerAtCentre(0x24C0, 0x00ED);
+
+        assertFalse(horizontal.carriesRiderOnHorizontalMove(player),
+                "Obj_Door passes current x_pos in d4 immediately before SolidObjectFull, "
+                        + "so MvSonicOnPtfm sees zero horizontal delta "
+                        + "(sonic3k.asm:66239-66258, 41642-41680).");
+    }
+
+    @Test
     public void horizontalDoorIsOnScreenAtCnzF6304BoundaryWhenCameraIsRomAccurate() {
         // CNZ trace replay frame 6304 boundary: camera at 0x17E8 (per
         // s3k_cnz1_context.txt F6303 ROM cam=(17E8,04EA)). The door is at

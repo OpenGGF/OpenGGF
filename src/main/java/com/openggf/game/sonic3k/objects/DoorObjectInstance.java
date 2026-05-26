@@ -145,6 +145,25 @@ public class DoorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity playerEntity) {
+        // Obj_Door calls SolidObjectFull for both horizontal and vertical doors
+        // after preparing d1/d2/d3/d4 (docs/skdisasm/sonic3k.asm:66136-66137,
+        // 66249-66258). SolidObjectFull_1P consumes a stale standing bit with
+        // Status_InAir by clearing support and returning d4=0 before
+        // SolidObject_cont can reland the player (sonic3k.asm:41017-41035).
+        return true;
+    }
+
+    @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity playerEntity) {
+        // Obj_Door stores the post-slide x_pos in d4 immediately before
+        // SolidObjectFull (docs/skdisasm/sonic3k.asm:66123-66137,
+        // 66239-66258). MvSonicOnPtfm subtracts current x_pos from d4, so the
+        // horizontal carry delta is zero even when the horizontal CNZ door moves.
+        return false;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
     }
 

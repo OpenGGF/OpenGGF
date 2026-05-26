@@ -247,6 +247,22 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
                 && state == Sonic3kTitleCardState.EXIT;
     }
 
+    public boolean willSetInLevelEndOfLevelFlagThisUpdate() {
+        if (!inLevelMode || state != Sonic3kTitleCardState.EXIT) {
+            return false;
+        }
+        int count = bonusMode ? BONUS_ELEMENT_COUNT : ELEMENT_COUNT;
+        for (int i = 0; i < count; i++) {
+            if (!bonusMode && !actNumberVisible && i == ELEM_ACT_NUM) {
+                continue;
+            }
+            if (!willElementBeExitedAfterThisUpdate(i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public int getExitPhaseCounter() {
         return phaseCounter;
     }
@@ -418,8 +434,45 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
         if (allExited) {
             state = Sonic3kTitleCardState.COMPLETE;
+            if (inLevelMode) {
+                // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
+                // in-level title-card timer has elapsed and its child objects
+                // have disappeared (sonic3k.asm:62244-62279).
+                GameServices.gameState().setEndOfLevelFlag(true);
+            }
             LOG.fine("S3K title card: COMPLETE");
         }
+    }
+
+    private boolean willElementBeExitedAfterThisUpdate(int idx) {
+        if (elemExited[idx]) {
+            return true;
+        }
+        int[] priorities = bonusMode ? BONUS_EXIT_PRIORITY : EXIT_PRIORITY;
+        if (phaseCounter + 1 < priorities[idx]) {
+            return false;
+        }
+        int speed = SLIDE_SPEED_OUT;
+        int start = isElementVertical(idx) ? elementStartY(idx) : elementStartX(idx);
+        int current = isElementVertical(idx) ? elemY[idx] : elemX[idx];
+        int dir = Integer.compare(start, current);
+        if (dir == 0) {
+            return true;
+        }
+        int next = current + dir * speed;
+        return (dir > 0 && next >= start) || (dir < 0 && next <= start);
+    }
+
+    private boolean isElementVertical(int idx) {
+        return !bonusMode && IS_VERTICAL[idx];
+    }
+
+    private int elementStartX(int idx) {
+        return bonusMode ? BONUS_START_X[idx] : START_X[idx];
+    }
+
+    private int elementStartY(int idx) {
+        return bonusMode ? BONUS_Y : START_Y[idx];
     }
 
     /**

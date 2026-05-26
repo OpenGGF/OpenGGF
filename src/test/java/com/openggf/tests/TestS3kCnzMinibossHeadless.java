@@ -53,7 +53,8 @@ class TestS3kCnzMinibossHeadless {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
         GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
-        for (int i = 0; i < 121; i++) fixture.stepFrame(false, false, false, false, false);
+        GameServices.camera().setY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
+        for (int i = 0; i < 123; i++) fixture.stepFrame(false, false, false, false, false);
 
         Optional<CnzMinibossInstance> boss = findBoss();
         assertTrue(boss.isPresent(), "CNZ miniboss instance must exist after the ROM two-second release wait");
@@ -67,6 +68,7 @@ class TestS3kCnzMinibossHeadless {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
         GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        GameServices.camera().setY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
 
         // Stub four top-to-coil hits across the fight window by nudging the boss's simulateHitForTest
         // at roughly the ROM's expected hit cadence. This is a headless smoke test, not a
@@ -86,17 +88,13 @@ class TestS3kCnzMinibossHeadless {
     }
 
     /**
-     * Carry-forward from T8 reviewer (Minor 5): after Boss_flag falls, the arena
-     * camera clamps must be released so the camera can pan naturally past the
-     * arena boundaries.
-     *
-     * <p>The falling-edge release is driven by {@code Sonic3kCNZEvents.update()},
-     * which detects the 1->0 transition of {@code bossFlag} and calls
-     * {@code releaseArenaCameraClamps()}, restoring the camera bounds that were
-     * snapshotted in {@code enterMinibossArena()}.
+     * ROM anchor: {@code Obj_CNZMinibossEndGo} clears {@code Boss_flag}, calls
+     * {@code AfterBoss_Cleanup}, and CNZ's after-boss cleanup entry returns
+     * without restoring {@code Camera_stored_max_X_pos}
+     * ({@code docs/skdisasm/sonic3k.asm:144996-145001,176489-176557}).
      */
     @Test
-    void minibossDefeatRestoresCameraClampsOnFallingEdge() {
+    void minibossDefeatKeepsArenaXClampOnBossFlagFallingEdge() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
@@ -120,20 +118,17 @@ class TestS3kCnzMinibossHeadless {
         // Simulate defeat: clear the boss flag directly (mirrors CnzMinibossInstance.onEndGo).
         getCnzEvents().setBossFlag(false);
 
-        // Step one frame so Sonic3kCNZEvents.update() detects the falling edge and
-        // calls releaseArenaCameraClamps().
+        // Step one frame so Sonic3kCNZEvents.update() observes the Boss_flag
+        // falling edge. Wall-grab suppression is released, but the camera X
+        // clamp itself must still be the arena clamp.
         fixture.stepFrame(false, false, false, false, false);
 
-        // After release the camera max X must differ from the locked (arena) value.
-        // Anchoring against the captured lockedMaxX (rather than re-deriving the
-        // constant) makes the assertion read as "the value moved" and keeps the
-        // intent explicit: release-watchdog must mutate the bound away from where
-        // it was during the fight.
-        short releasedMaxX = GameServices.camera().getMaxX();
-        assertNotEquals(
+        assertEquals(
                 (int) lockedMaxX,
-                (int) releasedMaxX,
-                "Camera maxX must be restored to the pre-arena level bound after Boss_flag falls");
+                (int) GameServices.camera().getMaxX(),
+                "Camera maxX must remain at the CNZ miniboss arena clamp after Boss_flag falls");
+        assertFalse(getCnzEvents().isWallGrabSuppressed(),
+                "Boss_flag falling edge still releases wall-grab suppression for the post-boss route");
     }
 
     private static Sonic3kCNZEvents getCnzEvents() {

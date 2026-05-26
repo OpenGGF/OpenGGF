@@ -50,6 +50,7 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
     private static final int[] NORMAL_FRAME_SEQUENCE = {0, 1, 2, 1};
     private static final int[] POP_FRAME_SEQUENCE = {3, 4};
     private static final int[] FRAME_BY_COLOR = {0, 5, 10, 15, 20};
+    private static final int[] UNDERWATER_BUBBLER_CHILD_SUBTYPES = {0, 0, 1, 3};
     private static final int SNAPSHOT_BASE_Y_OFFSET = 0x32;
     private static final int SNAPSHOT_COLLISION_FLAGS_OFFSET = 0x28;
     private final int subtype;
@@ -179,9 +180,11 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
         lastLaunchFrame = frameCounter;
 
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        boolean shouldSnapToCentre = (subtype & 0x80) != 0 && player.isInWater();
         if ((subtype & 0x80) != 0) {
             player.setYSpeed((short) -0x380);
+            if (!popped && levelHasWater()) {
+                spawnUnderwaterBubblerChildren();
+            }
         } else {
             player.setYSpeed((short) -ROM_BOUNCE_Y_SPEED);
         }
@@ -195,10 +198,11 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
             objectManager.clearRidingObject(player);
         }
         player.setOnObject(false);
-        if (shouldSnapToCentre) {
-            player.setCentreX((short) getX());
-            player.setCentreY((short) getY());
-        }
+        // Retail sub_317AE appears to intend an underwater subtype-$80 snap,
+        // but the four sub_3181E calls clobber a1 with Obj_Bubbler children
+        // before the x_pos/y_pos writes. In normal play the player keeps their
+        // position while only y_vel/status/control are changed (sonic3k.asm:
+        // 66797-66808, 66842-66856).
         popped = true;
         animationTimer = 0;
         popAnimationIndex = 0;
@@ -208,6 +212,27 @@ public final class CnzBalloonInstance extends AbstractObjectInstance
             services().playSfx(Sonic3kSfx.BALLOON.id);
         } catch (Exception ignored) {
             // Headless tests can omit the audio backend; launch state is still valid.
+        }
+    }
+
+    private boolean levelHasWater() {
+        if (services().waterSystem() == null) {
+            return false;
+        }
+        return services().waterSystem().hasWater(services().featureZoneId(), services().featureActId());
+    }
+
+    private void spawnUnderwaterBubblerChildren() {
+        for (int childSubtype : UNDERWATER_BUBBLER_CHILD_SUBTYPES) {
+            int random = services().rng().nextWord();
+            int offset = (random & 0x0F) - 8;
+            int childX = getX() + offset;
+            int childY = getY() + offset;
+            // sub_3181E uses AllocateObject for each Obj_Bubbler child, so these
+            // effects consume the lowest free SST slots before later placement
+            // loads (docs/skdisasm/sonic3k.asm:66829-66841).
+            spawnFreeChild(() -> new BubblerObjectInstance(
+                    new ObjectSpawn(childX, childY, 0x54, childSubtype, 0, false, 0)));
         }
     }
 

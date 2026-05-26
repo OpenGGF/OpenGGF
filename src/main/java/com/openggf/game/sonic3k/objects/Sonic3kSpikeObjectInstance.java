@@ -34,6 +34,8 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance {
     private boolean contactPushingActive;   // Set by onSolidContact, consumed by next update()
     private int pushRateTimer;              // $3A: frames until next push allowed
     private int pushDistanceRemaining = PUSH_MAX_DISTANCE; // $3C: remaining 1px pushes
+    private boolean mainRoutineReached;
+    private boolean suppressSolidThisFrame = true;
 
     public Sonic3kSpikeObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Spikes");
@@ -56,6 +58,18 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance {
 
     @Override
     protected void moveSpikes(PlayableEntity playerEntity) {
+        if (!mainRoutineReached) {
+            // Obj_Spikes initialization stores loc_2413E/loc_24090/etc. in (a0)
+            // and returns before the movement + SolidObjectFull body can run
+            // (sonic3k.asm:48925-49012).  The first main-routine frame starts
+            // on the next object execution.
+            mainRoutineReached = true;
+            suppressSolidThisFrame = true;
+            currentX = baseX;
+            currentY = baseY;
+            return;
+        }
+        suppressSolidThisFrame = false;
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         int behavior = spawn.subtype() & 0xF;
         switch (behavior) {
@@ -67,6 +81,11 @@ public class Sonic3kSpikeObjectInstance extends AbstractSpikeObjectInstance {
                 currentY = baseY;
             }
         }
+    }
+
+    @Override
+    public boolean isSolidFor(PlayableEntity player) {
+        return !suppressSolidThisFrame;
     }
 
     @Override

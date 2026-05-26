@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -43,6 +44,7 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
 
     // ROM: mainspr_childsprites = 4
     private static final int LINK_COUNT = 4;
+    private static final int ROM_CHILD_SLOT_COUNT = 1;
 
     // ROM: move.b #$18,width_pixels(a0)
     private static final int SOLID_HALF_WIDTH = 0x18;
@@ -60,6 +62,7 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
     private int platformX;
     private int platformY;
     private int angleByte;
+    private boolean childSlotReserved;
 
     public MGZSwingingPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "MGZSwingingPlatform");
@@ -87,10 +90,33 @@ public class MGZSwingingPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        reserveRomChildSlot();
         updateChainPositions();
 
         // ROM: move.b $36(a0),d0; add.b d0,$34(a0) -- constant angular velocity
         angleByte = (angleByte + angleStep) & 0xFF;
+    }
+
+    @Override
+    public int getReservedChildSlotCount() {
+        return ROM_CHILD_SLOT_COUNT;
+    }
+
+    private void reserveRomChildSlot() {
+        if (childSlotReserved || getSlotIndex() < 0) {
+            return;
+        }
+        childSlotReserved = true;
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.objectManager() == null) {
+            return;
+        }
+        // ROM Obj_MGZSwingingPlatform allocates a visual child immediately
+        // after the parent with AllocateObjectAfterCurrent before entering
+        // loc_3403A (docs/skdisasm/sonic3k.asm:70468-70499). The engine draws
+        // that child inline, but its SST slot must remain reserved so later
+        // ObjPosLoad/AllocateObject calls see the same low-slot pressure.
+        svc.objectManager().allocateChildSlotsAfter(spawn, ROM_CHILD_SLOT_COUNT, getSlotIndex());
     }
 
     /**

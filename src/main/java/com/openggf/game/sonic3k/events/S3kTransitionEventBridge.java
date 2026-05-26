@@ -6,4 +6,6 @@ public interface S3kTransitionEventBridge {
     void requestHczPostTransitionCutscene();
 
     void requestMgzPostTransitionRelease();
+
+    void requestCnzPostTransitionRelease(int framesUntilRelease);
 }

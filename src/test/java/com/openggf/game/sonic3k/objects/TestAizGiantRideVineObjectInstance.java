@@ -9,6 +9,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,7 +68,7 @@ class TestAizGiantRideVineObjectInstance {
     }
 
     @Test
-    void activatedSwingStartsOnlyAfterPlayerGrabsHandle() throws Exception {
+    void grabLeavesFirstChildOnPassiveGlobalAnglePath() throws Exception {
         AizGiantRideVineObjectInstance vine = newVine();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setCentreX((short) 0x1E40);
@@ -83,28 +84,30 @@ class TestAizGiantRideVineObjectInstance {
 
         vine.update(2, player);
 
-        assertTrue(activatedSwingStarted(vine),
-                "Obj0C first child should transition to loc_224BC after updatePlayers grabs the handle");
+        assertFalse(activatedSwingStarted(vine),
+                "sub_220C2's grab path writes the handle grab byte at $32/$33, but does not switch "
+                        + "Obj0C's first child away from loc_2248A");
     }
 
     @Test
-    void frameAfterGrabUpdatesFirstSegmentWithActivatedIntegrator() throws Exception {
+    void frameAfterGrabContinuesPassiveGlobalAngleSine() throws Exception {
         AizGiantRideVineObjectInstance vine = newVine();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setCentreX((short) 0x1E00);
         player.setCentreY((short) 0x0310);
 
         vine.update(1, player);
-        assertTrue(activatedSwingStarted(vine));
+        assertFalse(activatedSwingStarted(vine));
 
         vine.update(2, player);
 
-        assertEquals((short) -0x1A8, firstSegmentAngle(vine),
-                "The next segment pass should use loc_224BC velocity integration, not passive global-angle sine");
+        int expectedAngle = (short) (TrigLookupTable.sinHex(0x03) * 0x2C);
+        assertEquals(expectedAngle, firstSegmentAngle(vine),
+                "The next segment pass should still use loc_2248A's AIZ_vine_angle sine path");
     }
 
     @Test
-    void jumpReleaseDoesNotResetActivatedSwingOrHandleMode() throws Exception {
+    void jumpReleaseDoesNotRewriteHandleModeOrActivateFirstChild() throws Exception {
         AizGiantRideVineObjectInstance vine = newVine();
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
         player.setCentreX((short) 0x1E00);
@@ -112,7 +115,7 @@ class TestAizGiantRideVineObjectInstance {
 
         vine.update(1, player);
 
-        assertTrue(activatedSwingStarted(vine));
+        assertFalse(activatedSwingStarted(vine));
         int modeAfterGrab = handleMode(vine);
 
         player.setJumpInputPressed(true);
@@ -121,8 +124,8 @@ class TestAizGiantRideVineObjectInstance {
         player.setJumpInputPressed(false);
         vine.update(3, player);
 
-        assertTrue(activatedSwingStarted(vine),
-                "Once loc_224BC activation is latched, releasing the handle should not return to passive loc_2248A");
+        assertFalse(activatedSwingStarted(vine),
+                "Jump release should not synthesize a first-child loc_224BC transition");
         assertEquals(modeAfterGrab, handleMode(vine),
                 "Jump release should not rewrite the handle routine mode");
     }
