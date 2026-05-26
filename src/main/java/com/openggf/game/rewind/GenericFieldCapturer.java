@@ -643,20 +643,13 @@ public final class GenericFieldCapturer {
                 new RewindCodec.OpaqueIndex());
     }
 
+    // Constructor clones isolate the snapshot from caller-side mutation of the scratch
+    // arrays that produced it. Accessors return the stored arrays directly; callers
+    // (restoreCodecField) treat them as read-only.
     private record CodecFieldSnapshot(byte[] scalarData, Object[] opaqueValues) {
         private CodecFieldSnapshot {
             scalarData = scalarData.clone();
             opaqueValues = opaqueValues.clone();
-        }
-
-        @Override
-        public byte[] scalarData() {
-            return scalarData.clone();
-        }
-
-        @Override
-        public Object[] opaqueValues() {
-            return opaqueValues.clone();
         }
     }
 
