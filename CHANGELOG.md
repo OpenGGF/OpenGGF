@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- perf(rewind): pool capture scratch buffers and add CompositeSnapshot.owned() ownership path for the registry hot path; reduces per-frame allocations in rewind.capture / rewind.step / rewind.restore without weakening the public CompositeSnapshot immutability contract.
+
 - **`RewindController.stepBackward` keyframe-restore primer work now credits to `rewind.step` instead of falling into an unattributed gap before `rewind.tick` opens.**
 
 - **Performance overview and rewind contributor guide updated for new profiler sections.**

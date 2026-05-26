@@ -70,7 +70,7 @@ public final class RewindRegistry {
                         e.getValue().capture(),
                         "Rewind snapshot must not be null for key: " + e.getKey()));
             }
-            return new CompositeSnapshot(bundle);
+            return CompositeSnapshot.owned(bundle);
         } finally {
             if (profiler != null) {
                 profiler.endSection("rewind.capture");
