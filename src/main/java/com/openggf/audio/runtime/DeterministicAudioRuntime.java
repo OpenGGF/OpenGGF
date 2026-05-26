@@ -64,4 +64,11 @@ public interface DeterministicAudioRuntime {
     default boolean hasActivePresentation() {
         return false;
     }
+
+    default AudioFrameClock.Snapshot captureClockSnapshot() {
+        return null;
+    }
+
+    default void restoreClockSnapshot(AudioFrameClock.Snapshot snapshot) {
+    }
 }

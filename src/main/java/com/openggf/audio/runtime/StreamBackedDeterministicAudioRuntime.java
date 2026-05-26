@@ -179,6 +179,18 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     }
 
     @Override
+    public AudioFrameClock.Snapshot captureClockSnapshot() {
+        return frameClock.captureSnapshot();
+    }
+
+    @Override
+    public void restoreClockSnapshot(AudioFrameClock.Snapshot snapshot) {
+        if (snapshot != null) {
+            frameClock.restoreSnapshot(snapshot);
+        }
+    }
+
+    @Override
     public void clearPcmHistory() {
         reverseCursor = null;
         cancelReleaseCrossfade();

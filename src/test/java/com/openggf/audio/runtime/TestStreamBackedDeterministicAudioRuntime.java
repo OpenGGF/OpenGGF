@@ -12,6 +12,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestStreamBackedDeterministicAudioRuntime {
@@ -337,6 +338,42 @@ class TestStreamBackedDeterministicAudioRuntime {
         runtime.endReversePresentation();
 
         assertTrue(runtime.hasActivePresentation());
+    }
+
+    @Test
+    void captureClockSnapshotReturnsCurrentClockState() {
+        AudioFrameClock clock = new AudioFrameClock(120, 60);
+        AudioOutputFifo fifo = new AudioOutputFifo(120);
+        StreamBackedDeterministicAudioRuntime runtime =
+                new StreamBackedDeterministicAudioRuntime(clock, fifo);
+        runtime.setMusicStream(new SequenceStream(0, 0));
+        runtime.advanceFrame(1, FrameAudioMode.NORMAL);
+        runtime.advanceFrame(2, FrameAudioMode.NORMAL);
+
+        AudioFrameClock.Snapshot snap = runtime.captureClockSnapshot();
+        assertEquals(clock.totalSamplesProduced(), snap.totalSamplesProduced());
+        assertEquals(clock.remainder(), snap.remainder());
+    }
+
+    @Test
+    void restoreClockSnapshotRewindsTheClock() {
+        AudioFrameClock clock = new AudioFrameClock(120, 60);
+        AudioOutputFifo fifo = new AudioOutputFifo(120);
+        StreamBackedDeterministicAudioRuntime runtime =
+                new StreamBackedDeterministicAudioRuntime(clock, fifo);
+        runtime.setMusicStream(new SequenceStream(0, 0));
+        runtime.advanceFrame(1, FrameAudioMode.NORMAL);
+        AudioFrameClock.Snapshot atOne = runtime.captureClockSnapshot();
+        runtime.advanceFrame(2, FrameAudioMode.NORMAL);
+        runtime.advanceFrame(3, FrameAudioMode.NORMAL);
+
+        runtime.restoreClockSnapshot(atOne);
+        assertEquals(atOne.totalSamplesProduced(), runtime.captureClockSnapshot().totalSamplesProduced());
+    }
+
+    @Test
+    void noOpRuntimeClockSnapshotIsNull() {
+        assertNull(NoOpDeterministicAudioRuntime.INSTANCE.captureClockSnapshot());
     }
 
     private static final class SilentStream implements AudioStream {
