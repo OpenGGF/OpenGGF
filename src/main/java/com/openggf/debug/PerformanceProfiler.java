@@ -12,7 +12,7 @@ import java.util.Map;
  * claims the owner thread; later calls from any other thread fail fast instead
  * of corrupting section maps or reusable snapshots.
  */
-public class PerformanceProfiler {
+public class PerformanceProfiler implements SectionProfiler {
     private static PerformanceProfiler instance;
 
     /** Number of frames to average over for smoothing */
