@@ -1,5 +1,42 @@
 # Trace Frontier Log
 
+## 2026-05-26 - Restore S2 non-Tornado title-card object prelude (EHZ1 regression fix)
+
+- Bisected a `TestS2Ehz1TraceReplay` regression that appeared at the
+  `feature/ai-object-physics-standardization` PR merge to the bad commit
+  `d476dd132 Resolve PR merge-readiness failures` (2026-05-23). That commit
+  neutered `TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay`
+  and `levelObjectTitleCardPreludeFramesForTraceReplay` to unconditional
+  `return 0`. `96c71496f Tighten trace replay diagnostics and bootstraps`
+  partially restored the sidekick method via a tighter resolver
+  (`resolveS2SidekickTitleCardPreludeFrames` requires
+  `gameplayFrameCounter() == 1` at the first frame, which doesn't apply to
+  most S2 native-prelude traces), but the level-object prelude was left
+  dormant. Result: every S2 v9.2-s2 non-Tornado trace started with objects
+  out of step with what ROM had at the BK2 cursor, and divergences
+  accumulated.
+- Fix routes the generic S2 object prelude through `TraceReplaySessionBootstrap`
+  for all non-Tornado S2 native-prelude routes, matching ROM `Level_MainLoop`
+  ticks during the title card (`docs/s2disasm/s2.asm:5004-5092`). Tornado
+  routes are unchanged — they still go through `s2TornadoObjectPreludeFrames`
+  plus `applyS2TornadoTitleCardScrollPrelude` / `applyS2TornadoRideStart`.
+- New public method `TraceReplayBootstrap.s2GenericObjectTitleCardPreludeFramesForTraceReplay`
+  returns the generic prelude count (26 frames) for S2 native-prelude traces
+  that are not Tornado-route. `TraceReplaySessionBootstrap.applyBootstrap`
+  uses it as a fallback when `s2TornadoObjectPreludeFrames` returns 0.
+- Trace results after fix (full `*TraceReplay` sweep with `-Dmse=off`):
+  - `TestS2Ehz1TraceReplay`: PASS (was failing at frame 153, y_speed mismatch
+    expected=-0290 actual=-0390).
+  - `TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`: still PASS.
+  - `TestPreludeFramesKnobsZero`, `TestTraceReplayStartPositionPolicy`,
+    `TestSonic2TornadoRidePrelude`: still PASS.
+  - Pre-existing S2 frontiers unchanged: ARZ f1106 (581 errors), CPZ f844,
+    CNZ f3906, MCZ1 f1085, HTZ f5511. Other failing S2 level-select traces
+    (ARZ2 f225, CNZ2 f1490, DEZ f536, CPZ2 f1515, HTZ2 f795, MCZ2 f264,
+    MTZ f375, MTZ2 f305) are pre-existing frontiers — they failed at the
+    same first-error frames before and after the fix.
+  - Pre-existing S3K frontiers unchanged: AIZ f19714, CNZ f22036.
+
 ## 2026-05-26 - Trace cleanup audit: no zone carve-outs for new sidekick fixes
 
 - Policy update:
