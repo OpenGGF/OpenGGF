@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **`RewindRegistry.restore` now wrapped in a `rewind.restore` profiler section; registry field narrowed to `SectionProfiler` interface.**
+
 - **Legal disclaimer screen shown on engine startup before the master title screen.**
   White text on black, 5-second readability gate, any-key dismiss, fade-in/out/master-title-fade-in
   transitions. Toggle with the new `SHOW_LEGAL_DISCLAIMER_ON_STARTUP` config key (default `true`).
