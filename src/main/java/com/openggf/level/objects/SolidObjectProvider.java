@@ -105,6 +105,33 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether this object's side-separation path should reject players whose
+     * object-control state has bit 7 set.
+     * <p>
+     * Keep this object-local: some captured/riding states still need normal
+     * solid support while object-controlled, and only concrete ROM routines
+     * that prove a signed {@code object_control} side-contact reject should opt
+     * in here.
+     */
+    default boolean rejectsBit7ObjectControlSideContact(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether this object's new {@code SolidObject_cont} contact path rejects
+     * players whose object-control state has bit 7 set before side/top
+     * classification.
+     * <p>
+     * Keep this object-local: existing standing-bit/riding branches may still
+     * need to run for captured object-control states, while concrete ROM
+     * routines can opt in when they prove the signed {@code object_control}
+     * test belongs to the new-contact helper path.
+     */
+    default boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) {
+        return false;
+    }
+
+    /**
      * Whether this object keeps the player attached while object-local code,
      * rather than the generic solid routine, owns player positioning.
      * <p>
@@ -118,6 +145,21 @@ public interface SolidObjectProvider {
      * release or launch (docs/s2disasm/s2.asm:57520-57545, 57684-57711).
      */
     default boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        return false;
+    }
+
+    /**
+     * Whether this object's own stale standing bit should consume an airborne
+     * player by clearing support and returning no contact before new-contact
+     * resolution.
+     * <p>
+     * This is the {@code SolidObjectFull_1P} entry contract: when a0.d6 is set
+     * and {@code Status_InAir} is set, the helper branches to the stale-rider
+     * return instead of reaching {@code SolidObject_cont}. Keep this opt-in so
+     * custom objects whose standing bits gate object-local capture paths, such
+     * as CNZ cylinders, are not forced through plain full-solid semantics.
+     */
+    default boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
         return false;
     }
 
@@ -207,6 +249,33 @@ public interface SolidObjectProvider {
     }
 
     /**
+     * Whether a grounded lower-half edge escape from the squash path should
+     * set the player/object push bits even when the player is not moving into
+     * the object.
+     * <p>
+     * Most callers keep the established engine behavior. Concrete ports of
+     * S2/S3K {@code SolidObjectFull} can opt in when their ROM path proves the
+     * edge escape branches back into the same side-contact helper that sets
+     * push for any grounded side separation.
+     */
+    default boolean groundedSquashEdgeSideContactSetsPush() {
+        return false;
+    }
+
+    /**
+     * Whether this object's standing/pushing latch key should be the live
+     * object instance rather than {@link ObjectInstance#getSpawn()}.
+     * <p>
+     * ROM {@code SolidObjectFull} stores standing and pushing bits in the
+     * object's SST {@code status(a0)} byte. Objects that rebuild a dynamic
+     * engine spawn as they move still need those bits to survive from the
+     * contact frame into the next no-contact clear path for the same SST slot.
+     */
+    default boolean usesInstanceSolidStateLatchKey() {
+        return false;
+    }
+
+    /**
      * Whether the right edge of the full solid X window is inclusive.
      * <p>
      * Most engine objects keep the established exclusive bound. S3K horizontal
@@ -279,6 +348,19 @@ public interface SolidObjectProvider {
      * riding frame carries by {@code current_x - d4}.
      */
     default boolean seedsNewRideCarryFromPreUpdateX() {
+        return false;
+    }
+
+    /**
+     * Whether new solid-contact geometry should use the object's pre-update
+     * position instead of its current post-update position.
+     * <p>
+     * Most inline solid providers run their ROM-equivalent solid helper after
+     * object motion, so the current position is correct. Object-local routines
+     * that call {@code SolidObject*} before moving their body can opt in here
+     * without changing the shared contact model for unrelated solids.
+     */
+    default boolean usesPreUpdatePositionForSolidContact(PlayableEntity player) {
         return false;
     }
 

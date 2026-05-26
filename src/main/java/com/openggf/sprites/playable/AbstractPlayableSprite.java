@@ -1370,6 +1370,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return GameServices.rngOrNull();
         }
 
+        public final DrowningController getDrowningController() {
+                return controller != null ? controller.getDrowning() : null;
+        }
+
         public final WaterSystem currentWaterSystem() {
                 return GameServices.water();
         }
@@ -2863,14 +2867,35 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
+         * Returns the ROM-visible logical jump press bit published for this
+         * playable's current update. Unlike {@link #isJumpPressed()}, this does
+         * not read the live held/forced latch; objects that receive
+         * Ctrl_1_logical/Ctrl_2_logical from ROM routines should use this edge
+         * bit.
+         */
+        public boolean isLogicalJumpPressActive() {
+                return logicalJumpPressState;
+        }
+
+        /**
          * Sets the jump input state for this frame.
          * Called by movement manager each frame with the current jump button state.
          */
         public void setJumpInputPressed(boolean pressed) {
+                setJumpInputPressed(pressed,
+                        (pressed || isForcedInputActive(INPUT_JUMP)) && !jumpInputPressedPreviousFrame);
+        }
+
+        /**
+         * Sets the jump input state with an explicit raw press edge.
+         * ROM object routines read Ctrl_1_pressed before movement has consumed
+         * the controller state, even while movement control is locked.
+         */
+        public void setJumpInputPressed(boolean pressed, boolean justPressed) {
                 this.jumpInputPressed = pressed;
                 boolean combinedJumpPressed = pressed || isForcedInputActive(INPUT_JUMP);
-                this.jumpInputJustPressed =
-                        combinedJumpPressed && !jumpInputPressedPreviousFrame;
+                this.jumpInputJustPressed = justPressed
+                        || (isForcedInputActive(INPUT_JUMP) && !jumpInputPressedPreviousFrame);
                 this.jumpInputPressedPreviousFrame = combinedJumpPressed;
         }
 
@@ -2974,6 +2999,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (isControlLocked()
                                 && physicsFeatureSet != null
                                 && physicsFeatureSet.controlLockLatchesLogicalInput()) {
+                        return;
+                }
+                if (hurt
+                                && physicsFeatureSet != null
+                                && physicsFeatureSet.hurtRoutineLatchesLogicalInput()) {
                         return;
                 }
                 short input = 0;
@@ -4375,6 +4405,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         if (wfs != null && wfs.elementalShieldsEnabled()
                                         && shield && shieldType == ShieldType.BUBBLE) {
                                 controller.getDrowning().replenishAir();
+                        } else if (fixedLevelObjectOwnsDrowningBubbleCadence()) {
+                                // S3K installs Breathing_bubbles/Breathing_bubbles_P2
+                                // in fixed object RAM. Their Obj_AirCountdown cadence
+                                // owns Random_Number/AllocateObject timing; keep the
+                                // generic controller from double-consuming RNG.
                         } else {
                                 boolean shouldDrown = controller.getDrowning().update();
                                 if (shouldDrown) {
@@ -4414,6 +4449,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         waterPhysicsActive = false;
                 }
                 inWater = nowInWater;
+        }
+
+        private boolean fixedLevelObjectOwnsDrowningBubbleCadence() {
+                try {
+                        return GameServices.module().getLevelEventProvider()
+                                        .ownsFixedDrowningBubbleCadence(this);
+                } catch (IllegalStateException ex) {
+                        return false;
+                }
         }
 
         /**

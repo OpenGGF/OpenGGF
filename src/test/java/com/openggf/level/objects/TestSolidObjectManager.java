@@ -175,6 +175,143 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void offscreenS3kCpuSidekickSkipsFullSolidBeforeRidingBoundsUnseat() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestSolidObject object = new TestSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
+        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sidekick.setCpuControlled(true);
+        sidekick.setRenderFlagOnScreen(true);
+        sidekick.setWidth(20);
+        sidekick.setHeight(20);
+        sidekick.setCentreX((short) 100);
+        int centreY = 100 - params.groundHalfHeight() - sidekick.getYRadius();
+        sidekick.setCentreY((short) centreY);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setAir(true);
+
+        manager.updateSolidContacts(sidekick);
+        assertTrue(sidekick.isOnObject());
+        assertFalse(sidekick.getAir());
+
+        sidekick.setRenderFlagOnScreen(false);
+        sidekick.setCentreX((short) (100 - params.halfWidth() - 1));
+
+        manager.updateSolidContacts(sidekick);
+
+        assertTrue(sidekick.isOnObject(),
+                "S3K SolidObjectFull gates offscreen Player_2 before the standing bounds branch");
+        assertFalse(sidekick.getAir(),
+                "Skipping the offscreen Player_2 pass preserves the existing ROM standing state");
+    }
+
+    @Test
+    public void offscreenS3kCpuSidekickSkipsFullSolidBeforeAirUnseat() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestSolidObject object = new TestSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
+        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sidekick.setCpuControlled(true);
+        sidekick.setRenderFlagOnScreen(true);
+        sidekick.setWidth(20);
+        sidekick.setHeight(20);
+        sidekick.setCentreX((short) 100);
+        int centreY = 100 - params.groundHalfHeight() - sidekick.getYRadius();
+        sidekick.setCentreY((short) centreY);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setAir(true);
+
+        manager.updateSolidContacts(sidekick);
+        assertTrue(sidekick.isOnObject());
+        assertFalse(sidekick.getAir());
+        assertTrue(manager.isRidingObject(sidekick));
+
+        sidekick.setRenderFlagOnScreen(false);
+        sidekick.setOnObject(true);
+        sidekick.setAir(true);
+
+        manager.updateSolidContacts(sidekick);
+
+        assertTrue(sidekick.isOnObject(),
+                "S3K SolidObjectFull gates offscreen Player_2 before the in-air riding unseat branch");
+        assertTrue(sidekick.getAir(),
+                "Skipping the offscreen Player_2 pass preserves the current ROM Status_InAir bit");
+        assertTrue(manager.isRidingObject(sidekick),
+                "The latched ride persists when ROM skips the offscreen Player_2 solid pass");
+    }
+
+    @Test
+    public void inlineOffscreenS3kCpuSidekickSkipsFullSolidBeforeAirUnseat() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestSolidObject object = new TestSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+        TestPlayableSprite main = new TestPlayableSprite((short) 0, (short) 0);
+        main.setCentreX((short) 0);
+        main.setCentreY((short) 0);
+
+        TestPlayableSprite sidekick = new TestPlayableSprite((short) 0, (short) 0);
+        sidekick.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        sidekick.setCpuControlled(true);
+        sidekick.setRenderFlagOnScreen(true);
+        sidekick.setWidth(20);
+        sidekick.setHeight(20);
+        sidekick.setCentreX((short) 100);
+        int centreY = 100 - params.groundHalfHeight() - sidekick.getYRadius();
+        sidekick.setCentreY((short) centreY);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setAir(true);
+
+        manager.update(0, main, List.of(sidekick), 0, false, true, false);
+        assertTrue(sidekick.isOnObject());
+        assertFalse(sidekick.getAir());
+        assertTrue(manager.isRidingObject(sidekick));
+
+        sidekick.setRenderFlagOnScreen(false);
+        sidekick.setOnObject(true);
+        sidekick.setAir(true);
+
+        manager.update(1, main, List.of(sidekick), 0, false, true, false);
+
+        assertTrue(sidekick.isOnObject(),
+                "Inline object updates must mirror the S3K offscreen Player_2 gate before air unseat");
+        assertTrue(sidekick.getAir(),
+                "Skipping the inline offscreen Player_2 pass preserves Status_InAir");
+        assertTrue(manager.isRidingObject(sidekick),
+                "Inline processing keeps the ride latched when ROM skips the offscreen Player_2 solid pass");
+    }
+
+    @Test
+    public void s3kNormalSolidSupportClearsStaleObjectControlBitSixWallSuppression() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestSolidObject object = new TestSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setCentreX((short) 100);
+        int centreY = 100 - params.groundHalfHeight() - player.getYRadius();
+        player.setCentreY((short) centreY);
+        player.setYSpeed((short) 0);
+        player.setAir(true);
+        player.setSuppressGroundWallCollision(true);
+        player.setObjectControlled(false);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.isOnObject());
+        assertFalse(player.getAir());
+        assertFalse(player.isObjectControlled());
+        assertFalse(player.isSuppressGroundWallCollision(),
+                "Normal S3K SolidObject support must not preserve stale object_control bit-6 wall suppression");
+    }
+
+    @Test
     public void walkingToExactRightRidingBoundaryClearsOnObjectWithoutStickyExtension() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestSolidObject object = new TestSolidObject(100, 100, params);
@@ -669,6 +806,7 @@ public class TestSolidObjectManager {
         exactBoundary.setCentreX((short) 100);
         int maxTop = params.groundHalfHeight() + exactBoundary.getYRadius();
         exactBoundary.setCentreY((short) (100 - 4 - maxTop));
+        exactBoundary.resetPositionHistory();
 
         manager.updateSolidContacts(exactBoundary);
 
@@ -687,6 +825,7 @@ public class TestSolidObjectManager {
         insideBoundary.setYSpeed((short) 0x100);
         insideBoundary.setCentreX((short) 100);
         insideBoundary.setCentreY((short) (100 - 4 - maxTop + 1));
+        insideBoundary.resetPositionHistory();
 
         manager.updateSolidContacts(insideBoundary);
 
@@ -695,6 +834,35 @@ public class TestSolidObjectManager {
         assertEquals(0, insideBoundary.getYSpeed());
         assertEquals(100 - params.groundHalfHeight() - insideBoundary.getYRadius() - 1,
                 insideBoundary.getCentreY());
+    }
+
+    @Test
+    public void cnzTrapDoorUsesPreviousPlayerPositionForNewTopSolidLanding() {
+        ObjectSpawn spawn = new ObjectSpawn(0x1560, 0x0284, 0x44, 0, 0, false, 0);
+        CnzTrapDoorInstance object = new CnzTrapDoorInstance(spawn);
+        ObjectManager manager = buildManager(object);
+        object.snapshotPreUpdatePosition();
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setAir(true);
+        player.setYSpeed((short) 0x07A8);
+        player.setCentreX((short) 0x1566);
+        player.setCentreY((short) 0x025D);
+        player.resetPositionHistory();
+        player.setCentreY((short) 0x0264);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getAir(),
+                "Obj_CNZTrapDoor calls SolidObjectTop before Sonic's current-frame movement; "
+                        + "the previous y_pos is still above the top boundary "
+                        + "(sonic3k.asm:67217-67225,41982-42008)");
+        assertFalse(player.isOnObject());
+        assertEquals(0x07A8, player.getYSpeed() & 0xFFFF);
+        assertEquals(0x0264, player.getCentreY() & 0xFFFF);
     }
 
     @Test
@@ -838,6 +1006,37 @@ public class TestSolidObjectManager {
         manager.updateSolidContacts(player);
 
         assertTrue(manager.isRidingObject(player));
+    }
+
+    @Test
+    public void inlineCheckpointAirborneStaleStandingBitDoesNotRelandSameObject() {
+        SolidObjectParams params = new SolidObjectParams(0x2B, 8, 9);
+        TestSolidObject object = new StaleStandingBitFullSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(20);
+        int maxTop = params.airHalfHeight() + player.getYRadius();
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - 4 - maxTop + 8));
+
+        manager.forceRidingObjectForBootstrap(player, object);
+        manager.clearRidingObject(player);
+        player.setAir(true);
+        player.setOnObject(false);
+        player.setYSpeed((short) 0x0038);
+
+        manager.processImmediateInlineSolidCheckpoint(object, player, List.of());
+
+        assertTrue(player.getAir(),
+                "SolidObjectFull_1P loc_1DC98 clears stale support and returns d4=0 "
+                        + "when the object's standing bit is set and the player is airborne "
+                        + "(sonic3k.asm:41017-41035)");
+        assertFalse(player.isOnObject());
+        assertFalse(manager.isRidingObject(player));
+        assertEquals(0x0038, player.getYSpeed() & 0xFFFF);
     }
 
     @Test
@@ -1075,6 +1274,17 @@ public class TestSolidObjectManager {
         @Override
         public SolidRoutineProfile getSolidRoutineProfile() {
             return profile;
+        }
+    }
+
+    private static final class StaleStandingBitFullSolidObject extends TestSolidObject {
+        private StaleStandingBitFullSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+            return true;
         }
     }
 

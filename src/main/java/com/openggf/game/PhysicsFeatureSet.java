@@ -569,6 +569,20 @@ public record PhysicsFeatureSet(
          * variable (s1disasm/_incObj/01 Sonic.asm); preserve baseline.
          */
         boolean controlLockLatchesLogicalInput,
+        /**
+         * Whether routine-4 hurt/knockback keeps the previous logical pad
+         * state when Sonic_RecordPos writes follower history.
+         *
+         * <p>S2/S3K: {@code true}. Obj01_Hurt is a separate routine that calls
+         * Sonic_RecordPos directly, without entering Obj01_Control/Sonic_Control
+         * and without refreshing Ctrl_1_logical from the live controller word
+         * first (s2.asm:37810-37835; sonic3k.asm:24439-24467). The existing
+         * logical value is therefore what Tails CPU later reads from Stat_table.
+         *
+         * <p>S1: {@code false}. There is no CPU sidekick consuming Stat_table
+         * input history, so preserve the current baseline.
+         */
+        boolean hurtRoutineLatchesLogicalInput,
         /** Whether Sonic_Water skips the water-exit y_vel doubling when upward
          *  velocity is already faster than -$400.
          *
@@ -640,11 +654,13 @@ public record PhysicsFeatureSet(
          *  s2.asm:36008-36025). S2 CNZ trace F4216 verifies the boosted
          *  acceleration must already be gone for that frame's movement.
          *
-         *  <p>S3K: {@code 1}. ROM stores a byte timer set to {@code (20*60)/8}
-         *  and decrements it from display only on every eighth level frame
-         *  (sonic3k.asm:22067-22078,40818). Until the engine models that
-         *  byte/eighth-frame cadence directly, the extra pre-physics tick
-         *  preserves the existing S3K movement-window approximation. */
+         *  <p>S3K: {@code 0}. ROM stores a byte timer set to {@code (20*60)/8}
+         *  and decrements it from {@code Sonic_Display} only on every eighth
+         *  level frame (sonic3k.asm:22067-22078,40815-40825). When the
+         *  decrement reaches zero, {@code Sonic_Display} clears speed shoes
+         *  and restores {@code Max_speed}/{@code Acceleration}/{@code Deceleration}
+         *  before the next movement step reads them on this control path
+         *  (sonic3k.asm:21540-21561,22079-22081). */
         int speedShoesTimerPrePhysicsExtraTicks,
         /** Fixed object slot index used for shield power-ups, or {@code -1}
          *  when shields are dynamically allocated through the normal slot pool.
@@ -654,9 +670,36 @@ public record PhysicsFeatureSet(
          *  ({@link com.openggf.level.objects.DefaultPowerUpSpawner} routes
          *  shield objects through {@code addDynamicObjectAtSlot}).
          *
-         *  <p>S2/S3K: -1. Shields share the dynamic slot pool with other
-         *  spawned objects; no fixed slot reservation. */
+         *  <p>S2: 134. The level-only object block follows the 112 dynamic
+         *  slots; {@code Obj26} writes Obj38 directly to {@code Sonic_Shield}
+         *  (docs/s2disasm/s2.constants.asm:1139-1164,
+         *  docs/s2disasm/s2.asm:25786-25792).
+         *
+         *  <p>S3K: 100. {@code Shield} is in {@code Level_object_RAM}, after
+         *  the 90-slot {@code Dynamic_object_RAM}; startup and monitors write
+         *  shield objects directly to {@code (Shield).w}, never via
+         *  {@code AllocateObject} (docs/skdisasm/sonic3k.constants.asm:307-321,
+         *  docs/skdisasm/sonic3k.asm:8300-8322,40859-40874). */
         int shieldObjectFixedSlotIndex,
+        /** Fixed object slot index used for invincibility-star power-ups, or
+         *  {@code -1} when stars are dynamically allocated through the normal
+         *  slot pool.
+         *
+         *  <p>S1: 8. ROM Variables.asm hardcodes {@code v_starsobj1 =
+         *  v_objspace + object_size*8}; monitor contents load Obj38 into
+         *  {@code v_starsobj1..4} (docs/s1disasm/_Variables.asm:60-63,
+         *  docs/s1disasm/_incObj/2E Monitor Content Power-Up.asm:98-106).
+         *
+         *  <p>S2: 136. Obj26 writes Obj35 directly to
+         *  {@code Sonic_InvincibilityStars} in the level-only object block
+         *  (docs/s2disasm/s2.constants.asm:1166-1171,
+         *  docs/s2disasm/s2.asm:25814-25820).
+         *
+         *  <p>S3K: 102. Monitors write Obj_Invincibility directly to
+         *  {@code (Invincibility_stars).w}; the object initializes its fixed
+         *  child block in-place (docs/skdisasm/sonic3k.constants.asm:320-321,
+         *  docs/skdisasm/sonic3k.asm:40899-40924,33751-33780). */
+        int invincibilityStarsFixedSlotIndex,
         /** Whether {@link com.openggf.level.objects.AbstractObjectInstance#isOnScreenForTouch()}
          *  must additionally gate on the BuildSprites Y-margin (the
          *  {@code .assumeHeight} 32-px band around the visible 224-line
@@ -718,7 +761,14 @@ public record PhysicsFeatureSet(
          * <p>S1: {@code false}. S1 has no Tails CPU sidekick; value is
          * unreachable.
          */
-        boolean sidekickDeathUsesDeferredDespawn
+        boolean sidekickDeathUsesDeferredDespawn,
+        /** Whether a deep negative terrain probe while grounded on a right wall
+         *  preserves the wall angle briefly instead of detaching immediately.
+         *  S3K: true for Player_AnglePos right-wall continuity around the
+         *  negative-distance early return (docs/skdisasm/sonic3k.asm:
+         *  18782-18842). S1/S2 keep the prior detach baseline until their
+         *  right-wall traces are revalidated against the matching disassembly. */
+        boolean rightWallDeepProbePreservesPenetration
 ) {
     /** S1: no delay - camera pans immediately (s1.asm: Sonic_LookUp directly modifies v_lookshift). */
     public static final short LOOK_SCROLL_DELAY_NONE = 0;
@@ -803,14 +853,17 @@ public record PhysicsFeatureSet(
             false /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S1 Solid_Landed (s1disasm/_incObj/sub SolidObject.asm:278-289) tests y_vel before any lift and returns Solid_Miss when upward */,
             false /* sidekickNormalCpuSkipsHurtRoutine: S1 has no Tails CPU */,
             false /* controlLockLatchesLogicalInput: S1 uses separate Ctrl_Lock_byte; preserve baseline */,
+            false /* hurtRoutineLatchesLogicalInput: S1 has no Tails CPU consuming hurt-routine Stat_table input */,
             false /* waterExitBoostSkipsFastUpwardVelocity: S1 exits water with unconditional asl.w obVelY(a0) */,
             false /* slopeResistAppliesAtZeroInertia: S1 Sonic_SlopeResist (s1disasm/_incObj/01 Sonic.asm:1243-1244) returns unconditionally when inertia=0 */,
             false /* permanentRespawnTableLatch: S1 ObjectsManager_Main only latches remembered spawns; non-remembered spawns re-trigger when cursor passes */,
             true /* objectsExecuteAfterPlayerPhysics: S1 uses post-physics object ordering per 2026-04-18-solid-ordering-rom-accuracy plan */,
             0 /* speedShoesTimerPrePhysicsExtraTicks: S1 word timer clears in display after decrement reaches zero (s1disasm/_incObj/01 Sonic.asm:175-184) */,
             6 /* shieldObjectFixedSlotIndex: S1 Variables.asm v_shieldobj = v_objspace + object_size*6 */,
+            8 /* invincibilityStarsFixedSlotIndex: S1 Variables.asm v_starsobj1 = v_objspace + object_size*8 */,
             true /* touchResponseUsesRenderFlagYGate: S1 ReactToItem (s1disasm/_incObj/sub ReactToItem.asm:26-27) reads obRender bit 7, cleared by BuildSprites (s1disasm/_inc/BuildSprites.asm:71-78) on Y-out-of-band */,
-            false /* sidekickDeathUsesDeferredDespawn: S1 has no Tails CPU sidekick */);
+            false /* sidekickDeathUsesDeferredDespawn: S1 has no Tails CPU sidekick */,
+            false /* rightWallDeepProbePreservesPenetration: preserve S1 baseline until right-wall traces are revalidated */);
 
     /** Sonic 2: spindash with standard speed table (s2.asm:37294), dual collision paths, delayed look scroll,
      *  preserves high ground speed on input (s2.asm:36610-36616),
@@ -841,14 +894,17 @@ public record PhysicsFeatureSet(
             false /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S2 SolidObject_Landed (s2.asm:35379-35380) tests y_vel before lift and branches to SolidObject_Miss when upward */,
             false /* sidekickNormalCpuSkipsHurtRoutine: keep S2's separate Tails_respawn_counter baseline until dispatcher parity is revalidated */,
             false /* controlLockLatchesLogicalInput: ROM Obj01_Control (s2.asm:35933-35935) has the short-circuit, but engine S2 setControlLocked sites (FlipperObjectInstance, CPZSpinTubeObjectInstance, Sonic2DeathEggRobotInstance, SignpostObjectInstance) and EHZ trace baseline expect post-lock zero state for animation gating; universal latch regressed S2 EHZ to F5121 (commit f3347ea89, reverted in 9793e4617); flip after S2 traces are re-validated */,
+            true /* hurtRoutineLatchesLogicalInput: S2 Obj01_Hurt calls Sonic_RecordPos without refreshing Ctrl_1_logical through Obj01_Control (s2.asm:37810-37835) */,
             true /* waterExitBoostSkipsFastUpwardVelocity: S2 Sonic_Water skips asl y_vel when y_vel < -$400 (s2.asm:36120-36124) */,
             false /* slopeResistAppliesAtZeroInertia: S2 Sonic_SlopeResist/Tails_SlopeResist (s2.asm:37394-37395, 40249-40250) return unconditionally on tst.w inertia(a0)/beq when stationary. Required for EHZ trace F3644 Tails-on-loop divergence. */,
             false /* permanentRespawnTableLatch: S2 ObjectsManager_Main only latches remembered spawns (s2.asm:33402 tst.b 2(a0); bpl.s +); non-remembered spawns re-trigger when cursor passes */,
             true /* objectsExecuteAfterPlayerPhysics: S2 DUAL_PATH uses post-physics object ordering with inline solid checkpoints */,
             0 /* speedShoesTimerPrePhysicsExtraTicks: S2 Obj01_ChkShoes clears on the display-time decrement that reaches zero (s2.asm:36008-36025); CNZ F4216 must run at normal acceleration */,
-            -1 /* shieldObjectFixedSlotIndex: S2 shields use the dynamic slot pool, no fixed v_shieldobj slot */,
+            134 /* shieldObjectFixedSlotIndex: S2 Sonic_Shield follows the 112 dynamic slots at object slot 134 (s2.constants.asm:1139-1164; s2.asm:25786) */,
+            136 /* invincibilityStarsFixedSlotIndex: S2 Sonic_InvincibilityStars starts at object slot 136 (s2.constants.asm:1166; s2.asm:25814) */,
             false /* touchResponseUsesRenderFlagYGate: S2 Touch_Loop (s2.asm ~84502-84551) walks active objects without consulting the render flag; preserve pre-Task-3 X-only baseline */,
-            true /* sidekickDeathUsesDeferredDespawn: S2 Obj02_Dead (s2.asm:40736-40759) runs ObjectMoveAndFall each frame and only branches to TailsCPU_Despawn (s2.asm:39043-39052) once y_pos exceeds Tails_Max_Y_pos + $100. Required to unblock HTZ trace f471 and MCZ trace f399 where engine warped Tails to $4000 on Frame N+1 instead of letting the body fall first. */);
+            true /* sidekickDeathUsesDeferredDespawn: S2 Obj02_Dead (s2.asm:40736-40759) runs ObjectMoveAndFall each frame and only branches to TailsCPU_Despawn (s2.asm:39043-39052) once y_pos exceeds Tails_Max_Y_pos + $100. Required to unblock HTZ trace f471 and MCZ trace f399 where engine warped Tails to $4000 on Frame N+1 instead of letting the body fall first. */,
+            false /* rightWallDeepProbePreservesPenetration: preserve S2 baseline until right-wall traces are revalidated */);
 
     /** Sonic 3&K: spindash with same speed table as S2, dual collision paths, delayed look scroll,
      *  preserves high ground speed on input, elemental shields,
@@ -883,17 +939,33 @@ public record PhysicsFeatureSet(
             true /* solidObjectTopBranchAlwaysLiftsOnUpwardVelocity: S3K loc_1E154 (sonic3k.asm:41606-41632) writes subq.w #1, y_pos(a1) and sub.w d3, y_pos(a1) BEFORE tst.w y_vel(a1) / bmi.s loc_1E198 — the lift is unconditional, only the standing/RideObject_SetRide is gated on y_vel >= 0. CNZ F7614 Tails_Jump (y_vel=-0x680) on Obj_Spring_Horizontal at 0x0E38,0x04D0 produces a +2 px lift the engine was missing. */,
             true /* sidekickNormalCpuSkipsHurtRoutine: S3K Tails_Index routine 4 bypasses Tails_Control, so sub_13EFC does not tick during hurt/object frames (sonic3k.asm:26091-26096,26159-26190,26816-26833). MGZ F1910 keeps Tails local instead of despawning. */,
             true /* controlLockLatchesLogicalInput: S3K Sonic_Control (sonic3k.asm:21541-21545 loc_10760) skips move.w (Ctrl_1).w,(Ctrl_1_logical).w when Ctrl_1_locked != 0, latching the previous frame's logical pad state. Required so Sonic_RecordPos (sonic3k.asm:22132) writes the latched value into Stat_table for Tails_CPU_Control's $40-frame-delayed read (sonic3k.asm:26683-26689). */,
+            true /* hurtRoutineLatchesLogicalInput: S3K loc_122BE hurt routine calls Sonic_RecordPos without Sonic_Control's Ctrl_1_logical refresh, so hurt knockback keeps the prior logical word for Stat_table (sonic3k.asm:21967-21975,24449-24467). */,
             true /* waterExitBoostSkipsFastUpwardVelocity: S3K Sonic_Water skips asl y_vel when y_vel < -$400 (sonic3k.asm:22267-22270) */,
             true /* slopeResistAppliesAtZeroInertia: S3K Player_SlopeResist (sonic3k.asm:23830-23856) branches to loc_11DDC on inertia=0 and applies slope force when |force| >= $D, kicking stationary player into motion */,
             true /* permanentRespawnTableLatch: S3K Touch_EnemyNormal (sonic3k.asm:20953 bset #7,status(a1)) sets the destroyed bit on kill; badnik becomes Obj_Explosion which never re-enters Sprite_OnScreen_Test clear path, so bit persists until level reset */,
             true /* objectsExecuteAfterPlayerPhysics: S3K DUAL_PATH uses post-physics object ordering with inline solid checkpoints */,
-            1 /* speedShoesTimerPrePhysicsExtraTicks: S3K byte timer decrements from display only every eighth level frame (sonic3k.asm:22067-22078,40818); preserve current frame-timer approximation */,
-            -1 /* shieldObjectFixedSlotIndex: S3K shields use the dynamic slot pool, no fixed v_shieldobj slot */,
+            0 /* speedShoesTimerPrePhysicsExtraTicks: S3K Sonic_Display clears speed shoes and restores movement constants before the next movement frame reads them (sonic3k.asm:21540-21561,22067-22081,40815-40825) */,
+            100 /* shieldObjectFixedSlotIndex: S3K Shield is a Level_object_RAM slot, not Dynamic_object_RAM (sonic3k.constants.asm:307-321; sonic3k.asm:8300-8322,40859-40874) */,
+            102 /* invincibilityStarsFixedSlotIndex: S3K Invincibility_stars starts at object slot 102 (sonic3k.constants.asm:320; sonic3k.asm:40899-40924) */,
             false /* touchResponseUsesRenderFlagYGate: S3K TouchResponse (sonic3k.asm:20655) consumes a pre-built Collision_response_list; render-flag gating happens upstream during list build, not at touch time. Adding a Y check inside the engine touch loop drops objects ROM had on the response list (MGZ trace replay first-fail moves from f2395 to f1659). */,
-            false /* sidekickDeathUsesDeferredDespawn: S3K sub_13ECA (sonic3k.asm:26800-26809) writes the despawn marker on Frame N+1 immediately; there is no deferred-fall window like S2 Obj02_Dead's Tails_Max_Y_pos + $100 gate */);
+            true /* sidekickDeathUsesDeferredDespawn: S3K dead-fall runs sub_123C2 before sub_13ECA; it waits until y_pos exceeds Camera_Y_pos+$100, then writes the $7F00 marker and returns to MoveSprite_TestGravity (sonic3k.asm:24538-24578,29284-29285,26800-26809). */,
+            true /* rightWallDeepProbePreservesPenetration: Player_AnglePos keeps right-wall angle continuity through deep negative probes before later walk-off checks (sonic3k.asm:18782-18842). */);
 
     /** Returns true when the game supports dual collision paths (primary/secondary). */
     public boolean hasDualCollisionPaths() {
         return collisionModel == CollisionModel.DUAL_PATH;
     }
+
+    /**
+     * S2/S3K water entry/exit splashes reuse the fixed per-player dust object
+     * instead of allocating a normal dynamic SST slot: S2 writes
+     * {@code #(1<<8)} to {@code Sonic_Dust+anim} (docs/s2disasm/s2.asm:36102,
+     * 36132) and S3K writes the same splash animation through {@code anim(a6)}
+     * (docs/skdisasm/sonic3k.asm:22241,22281). S1 lacks this spindash/dust
+     * object path and keeps its object-based LZ splash.
+     */
+    public boolean waterSplashUsesFixedDustObject() {
+        return spindashEnabled;
+    }
+
 }

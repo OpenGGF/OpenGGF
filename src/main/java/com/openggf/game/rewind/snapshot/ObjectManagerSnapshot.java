@@ -176,7 +176,11 @@ public record ObjectManagerSnapshot(
             int fwdCounter,
             int bwdCounter,
             byte[] objState,
-            List<SpawnCounterEntry> spawnCounters
+            List<SpawnCounterEntry> spawnCounters,
+            long[] pendingCursorLoadBits,
+            int[] pendingCursorLoadOrder,
+            long[] deferredVerticalLoadBits,
+            int twoAxisCameraYCoarse
     ) {
         public PlacementSnapshot {
             activeSpawnIndices = activeSpawnIndices == null
@@ -191,6 +195,57 @@ public record ObjectManagerSnapshot(
                     ? new long[0] : Arrays.copyOf(dormantBits, dormantBits.length);
             objState = objState == null ? new byte[0] : Arrays.copyOf(objState, objState.length);
             spawnCounters = List.copyOf(spawnCounters);
+            pendingCursorLoadBits = pendingCursorLoadBits == null
+                    ? new long[0] : Arrays.copyOf(pendingCursorLoadBits, pendingCursorLoadBits.length);
+            pendingCursorLoadOrder = pendingCursorLoadOrder == null
+                    ? new int[0] : Arrays.copyOf(pendingCursorLoadOrder, pendingCursorLoadOrder.length);
+            deferredVerticalLoadBits = deferredVerticalLoadBits == null
+                    ? new long[0] : Arrays.copyOf(deferredVerticalLoadBits, deferredVerticalLoadBits.length);
+        }
+
+        public PlacementSnapshot(
+                int[] activeSpawnIndices,
+                long[] rememberedBits,
+                long[] stayActiveBits,
+                long[] destroyedInWindowBits,
+                long[] dormantBits,
+                int cursorIndex,
+                int lastCameraX,
+                int lastCameraChunk,
+                boolean counterBasedRespawn,
+                boolean execThenLoadPlacement,
+                boolean permanentDestroyLatch,
+                int maxDynamicSlots,
+                boolean lastScrollBackward,
+                int leftCursorIndex,
+                int fwdCounter,
+                int bwdCounter,
+                byte[] objState,
+                List<SpawnCounterEntry> spawnCounters
+        ) {
+            this(
+                    activeSpawnIndices,
+                    rememberedBits,
+                    stayActiveBits,
+                    destroyedInWindowBits,
+                    dormantBits,
+                    cursorIndex,
+                    lastCameraX,
+                    lastCameraChunk,
+                    counterBasedRespawn,
+                    execThenLoadPlacement,
+                    permanentDestroyLatch,
+                    maxDynamicSlots,
+                    lastScrollBackward,
+                    leftCursorIndex,
+                    fwdCounter,
+                    bwdCounter,
+                    objState,
+                    spawnCounters,
+                    new long[0],
+                    new int[0],
+                    new long[0],
+                    Integer.MIN_VALUE);
         }
     }
 

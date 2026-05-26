@@ -109,6 +109,23 @@ public class CollisionSystemTest {
     }
 
     @Test
+    public void testJumpHeadroomUsesTerrainOnly() {
+        TrackingObjectManager objectManager = new TrackingObjectManager(true, 0);
+        collisionSystem.setObjectManager(objectManager);
+
+        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
+        Sensor clearCeiling = new FixedSensor(player, Direction.UP, 10);
+        Mockito.when(player.getCeilingSensors()).thenReturn(new Sensor[]{clearCeiling, clearCeiling});
+        Mockito.when(player.getPushSensors()).thenReturn(new Sensor[]{clearCeiling, clearCeiling});
+
+        assertTrue(collisionSystem.hasEnoughHeadroom(player, 0x00),
+                "Sonic_Jump/Tails_Jump gate on CalcRoomOverHead terrain distance only "
+                        + "(S3K sonic3k.asm:23300-23307,28531-28538)");
+        assertEquals(0, objectManager.latestHeadroomCalls,
+                "Object headroom snapshots must not participate in the ROM jump gate");
+    }
+
+    @Test
     public void testNullSpriteHandledGracefully() {
         collisionSystem.step(null, new Sensor[0], new Sensor[0]);
         assertTrue(trace.getEvents().isEmpty());
@@ -666,6 +683,20 @@ public class CollisionSystemTest {
         public int getHeadroomDistance(PlayableEntity player, int hexAngle) {
             fallbackHeadroomCalls++;
             return Integer.MAX_VALUE;
+        }
+    }
+
+    private static final class FixedSensor extends Sensor {
+        private final int distance;
+
+        private FixedSensor(AbstractPlayableSprite sprite, Direction direction, int distance) {
+            super(sprite, direction, (byte) 0, (byte) 0, true);
+            this.distance = distance;
+        }
+
+        @Override
+        protected SensorResult doScan(short dx, short dy) {
+            return new SensorResult((byte) 0, (byte) distance, 0, direction);
         }
     }
 }

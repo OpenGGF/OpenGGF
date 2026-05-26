@@ -19,7 +19,10 @@ public final class SeamlessLevelTransitionRequest {
     private final boolean showInLevelTitleCard;
     private final boolean forceAirOnStaleObjectSupportLoss;
     private final boolean preserveOffsetCameraPosition;
+    private final Integer postTransitionMinX;
+    private final Integer postTransitionMaxX;
     private final Integer postTransitionMinY;
+    private final Integer postTransitionMaxY;
     private final Integer postTransitionMaxYTarget;
     private final int playerOffsetX;
     private final int playerOffsetY;
@@ -38,7 +41,10 @@ public final class SeamlessLevelTransitionRequest {
         this.showInLevelTitleCard = builder.showInLevelTitleCard;
         this.forceAirOnStaleObjectSupportLoss = builder.forceAirOnStaleObjectSupportLoss;
         this.preserveOffsetCameraPosition = builder.preserveOffsetCameraPosition;
+        this.postTransitionMinX = builder.postTransitionMinX;
+        this.postTransitionMaxX = builder.postTransitionMaxX;
         this.postTransitionMinY = builder.postTransitionMinY;
+        this.postTransitionMaxY = builder.postTransitionMaxY;
         this.postTransitionMaxYTarget = builder.postTransitionMaxYTarget;
         this.playerOffsetX = builder.playerOffsetX;
         this.playerOffsetY = builder.playerOffsetY;
@@ -84,8 +90,20 @@ public final class SeamlessLevelTransitionRequest {
         return preserveOffsetCameraPosition;
     }
 
+    public Integer postTransitionMinX() {
+        return postTransitionMinX;
+    }
+
+    public Integer postTransitionMaxX() {
+        return postTransitionMaxX;
+    }
+
     public Integer postTransitionMinY() {
         return postTransitionMinY;
+    }
+
+    public Integer postTransitionMaxY() {
+        return postTransitionMaxY;
     }
 
     public Integer postTransitionMaxYTarget() {
@@ -130,7 +148,10 @@ public final class SeamlessLevelTransitionRequest {
         private boolean showInLevelTitleCard;
         private boolean forceAirOnStaleObjectSupportLoss;
         private boolean preserveOffsetCameraPosition;
+        private Integer postTransitionMinX;
+        private Integer postTransitionMaxX;
         private Integer postTransitionMinY;
+        private Integer postTransitionMaxY;
         private Integer postTransitionMaxYTarget;
         private int playerOffsetX;
         private int playerOffsetY;
@@ -179,6 +200,26 @@ public final class SeamlessLevelTransitionRequest {
             return this;
         }
 
+        public Builder postTransitionMinX(int minX) {
+            this.postTransitionMinX = minX;
+            return this;
+        }
+
+        public Builder postTransitionMinXIfPresent(Integer minX) {
+            this.postTransitionMinX = minX;
+            return this;
+        }
+
+        public Builder postTransitionMaxX(int maxX) {
+            this.postTransitionMaxX = maxX;
+            return this;
+        }
+
+        public Builder postTransitionMaxXIfPresent(Integer maxX) {
+            this.postTransitionMaxX = maxX;
+            return this;
+        }
+
         public Builder postTransitionMinY(int minY) {
             this.postTransitionMinY = minY;
             return this;
@@ -186,6 +227,16 @@ public final class SeamlessLevelTransitionRequest {
 
         public Builder postTransitionMinYIfPresent(Integer minY) {
             this.postTransitionMinY = minY;
+            return this;
+        }
+
+        public Builder postTransitionMaxY(int maxY) {
+            this.postTransitionMaxY = maxY;
+            return this;
+        }
+
+        public Builder postTransitionMaxYIfPresent(Integer maxY) {
+            this.postTransitionMaxY = maxY;
             return this;
         }
 

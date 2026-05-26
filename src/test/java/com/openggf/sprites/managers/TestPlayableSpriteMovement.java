@@ -5,6 +5,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.ShieldType;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.session.GameplayModeContext;
@@ -992,6 +993,44 @@ public class TestPlayableSpriteMovement {
                 assertTrue(mockSprite.getYSpeed() < 0, "Jump should have upward ySpeed");
         }
 
+        @Test
+        public void jumpPreservesStatusOnObjectUntilSolidObjectPass() throws Exception {
+                mockSprite.setAir(false);
+                mockSprite.setOnObject(true);
+                mockSprite.setPushing(true);
+                mockSprite.setAngle((byte) 0x00);
+                mockSprite.setXSpeed((short) 0);
+                mockSprite.setYSpeed((short) 0);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doJump");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertTrue(mockSprite.getAir(), "Jump sets Status_InAir");
+                assertFalse(mockSprite.getPushing(), "Jump clears Status_Push");
+                assertTrue(mockSprite.isOnObject(),
+                                "S1/S2/S3K jump routines leave Status_OnObj for the next SolidObject pass");
+        }
+
+        @Test
+        public void jumpFromWallModeEnteringRollPreservesRomXPos() throws Exception {
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setGroundMode(GroundMode.RIGHTWALL);
+                mockSprite.setAngle((byte) 0xC0);
+                mockSprite.setWidth(mockSprite.getStandYRadius() * 2);
+                mockSprite.setHeight(mockSprite.getStandYRadius() * 2);
+                mockSprite.setCentreX((short) 0x167B);
+                mockSprite.setCentreY((short) 0x0200);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doJump");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals((short) 0x167B, mockSprite.getCentreX(),
+                                "Sonic_Jump/Tails_Jump writes x_radius/y_radius but never adjusts x_pos when entering roll");
+        }
+
         /**
          * Test that jumping on an uphill slope has negative X component.
          */
@@ -1343,10 +1382,35 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
-        public void cpuSidekickMoveLockSuppressesGeneratedDownRoll() throws Exception {
-                // S3K Tails_InputAcceleration_Path skips duck/direction input when move_lock
-                // is active (sonic3k.asm:27797-27815). S1/S2 have no move_lock gate on
-                // Sonic_RollStart (s2.asm:36954-36963, 39939-39942), so the guard is S3K-only.
+        public void rollStartFromWallModePreservesRomXPos() throws Exception {
+                mockSprite.setAir(false);
+                mockSprite.setRolling(false);
+                mockSprite.setCrouching(false);
+                mockSprite.setGroundMode(GroundMode.RIGHTWALL);
+                mockSprite.setAngle((byte) 0xB8);
+                mockSprite.setWidth(mockSprite.getStandYRadius() * 2);
+                mockSprite.setHeight(mockSprite.getStandYRadius() * 2);
+                mockSprite.setCentreX((short) 0x167B);
+                mockSprite.setCentreY((short) 0x01F9);
+                mockSprite.setGSpeed((short) 0x024C);
+
+                setInputState(false, false, true, false, false);
+
+                Method rollMethod = PlayableSpriteMovement.class.getDeclaredMethod("doCheckStartRoll");
+                rollMethod.setAccessible(true);
+                rollMethod.invoke(manager);
+
+                assertTrue(mockSprite.getRolling(), "DOWN at roll speed should enter rolling");
+                assertEquals((short) 0x167B, mockSprite.getCentreX(),
+                                "ROM roll entry writes radii and y_pos only, never x_pos");
+        }
+
+        @Test
+        public void s3kCpuSidekickMoveLockDoesNotSuppressDownOnlyRoll() throws Exception {
+                // S3K Tails_InputAcceleration_Path skips acceleration when move_lock is
+                // active (sonic3k.asm:27796-27797), but Tails_Stand_Path still calls
+                // Tails_Roll afterward (sonic3k.asm:27523-27524), and Tails_Roll has
+                // no move_lock gate before entering roll (sonic3k.asm:28461-28472).
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
                 mockSprite.setCpuControlled(true);
                 mockSprite.setAir(false);
@@ -1360,8 +1424,8 @@ public class TestPlayableSpriteMovement {
                 rollMethod.setAccessible(true);
                 rollMethod.invoke(manager);
 
-                assertFalse(mockSprite.getRolling(),
-                                "S3K CPU follow DOWN must not start a sidekick roll while move_lock is active");
+                assertTrue(mockSprite.getRolling(),
+                                "S3K Tails_Roll still consumes DOWN-only logical input while move_lock is active");
         }
 
         @Test
@@ -1602,6 +1666,35 @@ public class TestPlayableSpriteMovement {
 
                 // xSpeed should be cleared on steep slopes
                 assertEquals((short) 0, mockSprite.getXSpeed(), "Steep slope should clear xSpeed");
+        }
+
+        @Test
+        public void s3kBubbleShieldSteepLandingCopiesPostBounceYSpeedToGroundSpeed() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
+                mockSprite.setInWater(true);
+                mockSprite.giveShield(ShieldType.BUBBLE);
+                mockSprite.setDoubleJumpFlag(1);
+                mockSprite.setAir(true);
+                mockSprite.setRolling(true);
+                mockSprite.setAngle((byte) 0x20);
+                mockSprite.setXSpeed((short) 0);
+                mockSprite.setYSpeed((short) 0x04BA);
+                mockSprite.setGSpeed((short) 0);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("calculateLanding",
+                                AbstractPlayableSprite.class);
+                method.setAccessible(true);
+                method.invoke(manager, mockSprite);
+
+                assertEquals((short) 0x02D4, mockSprite.getXSpeed(),
+                                "BubbleShield_Bounce adds underwater normal X velocity on the steep landing frame");
+                assertEquals((short) 0x01E6, mockSprite.getYSpeed(),
+                                "BubbleShield_Bounce rewrites y_vel before loc_11FC2 copies it to ground_vel");
+                assertEquals((short) 0x01E6, mockSprite.getGSpeed(),
+                                "S3K loc_11FC2 writes ground_vel after Player_TouchFloor_Check_Spindash (sonic3k.asm:24112-24117)");
+                assertTrue(mockSprite.getAir(), "BubbleShield_Bounce relaunches Sonic into air");
+                assertTrue(mockSprite.getRolling(), "BubbleShield_Bounce leaves Sonic rolling");
         }
 
         /**

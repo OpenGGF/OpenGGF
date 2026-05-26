@@ -13,7 +13,6 @@ import com.openggf.game.rewind.RewindTransient;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectInstance;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
@@ -26,11 +25,11 @@ public class SidekickCpuController {
     // That index points at the next free 4-byte slot, while engine historyPos points
     // at the latest written slot, so the equivalent engine lookback is 16 frames.
     static final int ROM_FOLLOW_DELAY_FRAMES = 16;
-    // loc_13DD0's push bypass uses the same Stat_table entry fetched after
-    // ROM's raw $44-byte displacement (sonic3k.asm:26683-26705). In the
-    // engine's per-sprite update order this bypassed control/status word is
-    // one slot older than the normal follow target slot.
-    private static final int ROM_PUSH_BYPASS_STAT_DELAY_FRAMES = 17;
+    // Provider-approved object-order bridges may need the adjacent older sample
+    // when the engine has already cleared transient push state before ROM would
+    // have consumed it. ROM loc_13DD0 itself uses the same Stat_table entry as
+    // the normal delayed control word (sonic3k.asm:26696-26705).
+    private static final int OBJECT_ORDER_INPUT_DELAY_FRAMES = 17;
     /** Fallback used when the sidekick sprite has no PhysicsFeatureSet resolved yet
      *  (e.g. unit tests that bypass the full game-module bootstrap). Matches the S2
      *  value so existing S2 behaviour is preserved. */
@@ -45,10 +44,6 @@ public class SidekickCpuController {
     private static final int JUMP_HEIGHT_THRESHOLD = 32;
     private static final int PUSH_STATUS_GRACE_FRAMES = 16;
     private static final int PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y = 0x80;
-    private static final int S3K_ZONE_AIZ = 0;
-    private static final int S3K_AIZ_HOLLOW_TREE_OBJECT_ID = 0x03;
-    private static final int AIZ_HOLLOW_TREE_CONTEXT_RADIUS_X = 0x80;
-    private static final int AIZ_HOLLOW_TREE_CONTEXT_RADIUS_Y = 0x100;
     private static final int LEVEL_START_X_OFFSET = -0x20;
     private static final int LEVEL_START_Y_OFFSET = 4;
     private static final int DESPAWN_TIMEOUT = 300;
@@ -125,11 +120,13 @@ public class SidekickCpuController {
     private int sidekickCount = 1;
     private int normalPushingGraceFrames;
     private boolean suppressNextAirbornePushFollowSteering;
-    private boolean aizObjectOrderGracePushBypassThisFrame;
+    private boolean objectOrderGracePushBypassThisFrame;
     private int pendingGroundedFollowNudge;
     private int pendingGroundedFollowNudgeFrame = -1;
     private boolean aizIntroDormantMarkerPrimed;
-    private boolean suppressNextAizIntroNormalMovement;
+    private boolean suppressNextLevelEventNormalMovement;
+    private boolean catchUpUsesRomVisibleLevelFrameCounter;
+    private boolean levelEventDormantMarkerReleasePending;
     private boolean skipPhysicsThisFrame;
     // Set by updateDeadFallingDeferredS2 when running the per-frame Obj02_Dead
     // ObjectMoveAndFall continuation (frame N+1+ of the deferred death-fall,
@@ -142,6 +139,13 @@ public class SidekickCpuController {
     private boolean cpuFrameCounterFromStoredLevelFrame;
     private int nextCpuFrameCounterOverride = -1;
     private int catchUpFrameCounterOverride = -1;
+    private int lastNormalAutoJumpPressFrameCounter = -1;
+    /**
+     * Models S3K's negative Ctrl_2_locked byte. Tails_Control skips
+     * Tails_CPU_Control only when the byte is negative; positive locks still
+     * call the CPU routine (sonic3k.asm:26196-26205).
+     */
+    private boolean controller2SignedLocked;
     private NormalStepDiagnostics latestNormalStepDiagnostics;
 
     // =====================================================================
@@ -174,6 +178,9 @@ public class SidekickCpuController {
     public SidekickCpuController(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
         this.sidekick = sidekick;
         this.leader = leader;
+        if (sidekick.getCpuController() == null) {
+            sidekick.setCpuController(this);
+        }
         this.respawnStrategy = new TailsRespawnStrategy(this);
         this.flyAnimId = sidekick.resolveAnimationId(CanonicalAnimation.FLY);
         this.duckAnimId = sidekick.resolveAnimationId(CanonicalAnimation.DUCK);
@@ -182,6 +189,13 @@ public class SidekickCpuController {
     public void update(int frameCount) {
         this.frameCounter = resolveCpuFrameCounter(frameCount);
         deferredDespawnDeadFallContinuingThisFrame = false;
+
+        if (controller2SignedLocked) {
+            clearInputs();
+            carryParentagePending = false;
+            beginNormalStepDiagnostics("ctrl2_signed_lock_skip");
+            return;
+        }
 
         boolean mgzReleasedCarryCooldown =
                 state == State.CARRYING
@@ -233,14 +247,22 @@ public class SidekickCpuController {
         }
         LevelManager levelManager = sidekick.currentLevelManager();
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs != null && fs.sidekickCpuUsesLevelFrameCounter() && fallbackFrameCount > 0) {
+            // ROM increments Level_frame_counter before object/player CPU slots
+            // (s2.asm:5092, sonic3k.asm:7889). SpriteManager passes that
+            // already-incremented cadence into the normal sprite CPU path; the
+            // LevelManager copy is stored later in the engine frame and can be
+            // one tick stale for Tails' $3F jump gate.
+            cpuFrameCounterFromStoredLevelFrame = false;
+            return fallbackFrameCount;
+        }
         if (fs != null && fs.sidekickCpuUsesLevelFrameCounter()
                 && levelManager != null && levelManager.getFrameCounter() > 0) {
             // S3K Tails CPU reads (Level_frame_counter).w inside sprite CPU
             // handlers such as Tails_Catch_Up_Flying (sonic3k.asm:26474-26531).
-            // LevelLoop increments the RAM counter before Process_Sprites
-            // (sonic3k.asm:7884-7894), while some engine inline sidekick calls
-            // receive a caller fallback that is one tick ahead of the stored
-            // counter. Use the stored counter for the ROM-visible S3K gates.
+            // Bootstrap paths that do not pass a sprite-frame cadence preload
+            // LevelManager with the already visible ROM counter for the current
+            // frame.
             cpuFrameCounterFromStoredLevelFrame = true;
             return levelManager.getFrameCounter();
         }
@@ -264,53 +286,26 @@ public class SidekickCpuController {
         return fallbackFrameCount;
     }
 
-    /**
-     * Exposes a ROM-visible {@code Level_frame_counter} to the next NORMAL
-     * sidekick CPU slot without advancing global manager counters.
-     */
-    public void overrideNextCpuFrameCounter(int frameCounter) {
-        nextCpuFrameCounterOverride = frameCounter;
-    }
-
-    /**
-     * Returns true when the next NORMAL CPU slot has the same cadence and
-     * follow-target shape that can spend AIZ1's intro refresh frame bridge.
-     */
-    public boolean canSpendAizIntroNormalRefreshFrameBridge(int romVisibleFrameCounter) {
-        if (state != State.NORMAL || (romVisibleFrameCounter & 0x3F) != 0
-                || sidekick.getAnimationId() == duckAnimId) {
-            return false;
-        }
-        AbstractPlayableSprite effectiveLeader = getEffectiveLeader();
-        if (effectiveLeader == null) {
-            return false;
-        }
-        int targetX = effectiveLeader.getCentreX(ROM_FOLLOW_DELAY_FRAMES);
-        int targetY = effectiveLeader.getCentreY(ROM_FOLLOW_DELAY_FRAMES);
-        int leadOffset = sidekick.getPhysicsFeatureSet() != null
-                ? sidekick.getPhysicsFeatureSet().sidekickFollowLeadOffset()
-                : 0;
-        boolean leaderStatusOnObject = effectiveLeader.getOnObjectAtFrameStart();
-        if (leadOffset > 0
-                && !leaderStatusOnObject
-                && effectiveLeader.getGSpeed() < 0x400) {
-            targetX -= leadOffset;
-        }
-        int dx = targetX - sidekick.getCentreX();
-        int dy = targetY - sidekick.getCentreY();
-        boolean passesDistanceGate = (romVisibleFrameCounter & 0xFF) == 0
-                || Math.abs(dx) < JUMP_DISTANCE_TRIGGER;
-        boolean passesHeightGate = dy <= -JUMP_HEIGHT_THRESHOLD;
-        return passesDistanceGate && passesHeightGate;
-    }
-
     private int resolvePanicPhaseCounter() {
+        // ROM TailsCPU_Panic reads the low byte at Level_frame_counter+1; the
+        // "+1" is the 68000 byte address within the word, not a frame increment
+        // (S3K sonic3k.asm:26869-26884; S2 s2.asm:39122-39139). At CNZ f8958
+        // the ROM-visible word is $22FF, so loc_13F94 keeps DOWN held for one
+        // more frame and releases at $2300.
         return frameCounter;
     }
 
     public void setController2Input(int held, int logical) {
         controller2Held = held;
         controller2Logical = logical;
+    }
+
+    public void setController2SignedLocked(boolean locked) {
+        controller2SignedLocked = locked;
+    }
+
+    public boolean isController2SignedLocked() {
+        return controller2SignedLocked;
     }
 
     /**
@@ -321,6 +316,10 @@ public class SidekickCpuController {
         return latestNormalStepDiagnostics;
     }
 
+    public int getCurrentCpuFrameCounter() {
+        return frameCounter;
+    }
+
     public String formatLatestNormalStepDiagnostics() {
         if (latestNormalStepDiagnostics == null) {
             return "eng-tails-cpu none";
@@ -328,9 +327,10 @@ public class SidekickCpuController {
         NormalStepDiagnostics d = latestNormalStepDiagnostics;
         return String.format(
                 "eng-tails-cpu f=%d state=%s branch=%s hist=%d/%02d in=%04X stat=%02X push=%02X "
-                        + "pre=obj%02X st%02X xv%04X gv%04X "
-                        + "gen=%04X jp=%s postCpu=obj%02X st%02X xv%04X gv%04X "
-                        + "postPhys=%s obj%02X st%02X xv%04X gv%04X dx=%04X dy=%04X skip=%s",
+                        + "pre=obj%02X st%02X x=%04X.%04X xv%04X yv%04X gv%04X a=%02X "
+                        + "gen=%04X jp=%s postCpu=obj%02X st%02X xv%04X yv%04X gv%04X "
+                        + "x=%04X.%04X a=%02X nudge=%d postPhys=%s obj%02X st%02X "
+                        + "xv%04X yv%04X gv%04X x=%04X.%04X a=%02X dx=%04X dy=%04X skip=%s",
                 d.frameCounter(),
                 d.state(),
                 d.followBranch(),
@@ -341,19 +341,32 @@ public class SidekickCpuController {
                 d.pushBypassStatus() & 0xFF,
                 d.preObjectControl() & 0xFF,
                 d.preStatus() & 0xFF,
+                d.preCpuX() & 0xFFFF,
+                d.preCpuXSubpixel() & 0xFFFF,
                 d.preXVel() & 0xFFFF,
+                d.preYVel() & 0xFFFF,
                 d.preGroundVel() & 0xFFFF,
+                d.preAngle() & 0xFF,
                 d.generatedInput() & 0xFFFF,
                 d.inputJumpPress(),
                 d.postCpuObjectControl() & 0xFF,
                 d.postCpuStatus() & 0xFF,
                 d.postCpuXVel() & 0xFFFF,
+                d.postCpuYVel() & 0xFFFF,
                 d.postCpuGroundVel() & 0xFFFF,
+                d.postCpuX() & 0xFFFF,
+                d.postCpuXSubpixel() & 0xFFFF,
+                d.postCpuAngle() & 0xFF,
+                d.appliedFollowNudge(),
                 d.postPhysicsRecorded() ? "seen" : "missing",
                 d.postPhysicsObjectControl() & 0xFF,
                 d.postPhysicsStatus() & 0xFF,
                 d.postPhysicsXVel() & 0xFFFF,
+                d.postPhysicsYVel() & 0xFFFF,
                 d.postPhysicsGroundVel() & 0xFFFF,
+                d.postPhysicsX() & 0xFFFF,
+                d.postPhysicsXSubpixel() & 0xFFFF,
+                d.postPhysicsAngle() & 0xFF,
                 d.dx() & 0xFFFF,
                 d.dy() & 0xFFFF,
                 d.skipFollowSteering());
@@ -368,19 +381,23 @@ public class SidekickCpuController {
                 diagnosticStatusByte(),
                 diagnosticObjectControlByte(),
                 sidekick.getXSpeed(),
-                sidekick.getGSpeed());
+                sidekick.getYSpeed(),
+                sidekick.getGSpeed(),
+                sidekick.getCentreX(),
+                (short) sidekick.getXSubpixelRaw(),
+                sidekick.getAngle());
     }
 
     /**
-     * Returns true only for the AIZ object-order bridge that extends S3K's
-     * Status_Push handoff after the live push bit has already cleared locally.
+     * Returns true only for a provider-approved object-order bridge that extends
+     * S3K's Status_Push handoff after the live push bit has already cleared locally.
      * ROM loc_13DD0 branches from the current Status_Push bit and preserves the
      * already-loaded Ctrl_2 sample (sonic3k.asm:26702-26705,26775-26785); MGZ
      * F1466-F1470 uses that same no-input deceleration path, so this flag is
-     * limited to the AIZ hollow-tree/collapsing-platform ordering bridge.
+     * limited to bridge contexts exposed by the owning level-event provider.
      */
-    public boolean usedAizObjectOrderGracePushBypassThisFrame() {
-        return aizObjectOrderGracePushBypassThisFrame;
+    public boolean usedObjectOrderGracePushBypassThisFrame() {
+        return objectOrderGracePushBypassThisFrame;
     }
 
     private NormalStepDiagnostics beginNormalStepDiagnostics(String branch) {
@@ -391,7 +408,11 @@ public class SidekickCpuController {
                 diagnosticStatusByte(),
                 diagnosticObjectControlByte(),
                 sidekick.getXSpeed(),
+                sidekick.getYSpeed(),
                 sidekick.getGSpeed(),
+                sidekick.getCentreX(),
+                (short) sidekick.getXSubpixelRaw(),
+                sidekick.getAngle(),
                 -1,
                 -1,
                 0,
@@ -403,12 +424,21 @@ public class SidekickCpuController {
                 diagnosticStatusByte(),
                 diagnosticObjectControlByte(),
                 sidekick.getXSpeed(),
+                sidekick.getYSpeed(),
                 sidekick.getGSpeed(),
+                sidekick.getCentreX(),
+                (short) sidekick.getXSubpixelRaw(),
+                sidekick.getAngle(),
+                0,
                 false,
                 0,
                 0,
                 (short) 0,
                 (short) 0,
+                (short) 0,
+                (short) 0,
+                (short) 0,
+                (byte) 0,
                 false,
                 false);
         return latestNormalStepDiagnostics;
@@ -423,7 +453,8 @@ public class SidekickCpuController {
                                              int pushBypassStatus,
                                              int dx,
                                              int dy,
-                                             boolean skipFollowSteering) {
+                                             boolean skipFollowSteering,
+                                             int appliedFollowNudge) {
         latestNormalStepDiagnostics = base.withCpuResult(
                 branch,
                 followDelayFrames,
@@ -437,7 +468,12 @@ public class SidekickCpuController {
                 diagnosticStatusByte(),
                 diagnosticObjectControlByte(),
                 sidekick.getXSpeed(),
+                sidekick.getYSpeed(),
                 sidekick.getGSpeed(),
+                sidekick.getCentreX(),
+                (short) sidekick.getXSubpixelRaw(),
+                sidekick.getAngle(),
+                appliedFollowNudge,
                 inputJumpPress,
                 skipFollowSteering);
     }
@@ -478,7 +514,11 @@ public class SidekickCpuController {
             int preStatus,
             int preObjectControl,
             short preXVel,
+            short preYVel,
             short preGroundVel,
+            short preCpuX,
+            short preCpuXSubpixel,
+            byte preAngle,
             int followDelayFrames,
             int followHistorySlot,
             int recordedInput,
@@ -490,12 +530,21 @@ public class SidekickCpuController {
             int postCpuStatus,
             int postCpuObjectControl,
             short postCpuXVel,
+            short postCpuYVel,
             short postCpuGroundVel,
+            short postCpuX,
+            short postCpuXSubpixel,
+            byte postCpuAngle,
+            int appliedFollowNudge,
             boolean inputJumpPress,
             int postPhysicsStatus,
             int postPhysicsObjectControl,
             short postPhysicsXVel,
+            short postPhysicsYVel,
             short postPhysicsGroundVel,
+            short postPhysicsX,
+            short postPhysicsXSubpixel,
+            byte postPhysicsAngle,
             boolean skipFollowSteering,
             boolean postPhysicsRecorded) {
 
@@ -511,32 +560,47 @@ public class SidekickCpuController {
                                             int postCpuStatus,
                                             int postCpuObjectControl,
                                             short postCpuXVel,
+                                            short postCpuYVel,
                                             short postCpuGroundVel,
+                                            short postCpuX,
+                                            short postCpuXSubpixel,
+                                            byte postCpuAngle,
+                                            int appliedFollowNudge,
                                             boolean inputJumpPress,
                                             boolean skipFollowSteering) {
             return new NormalStepDiagnostics(frameCounter, state, branch,
-                    preStatus, preObjectControl, preXVel, preGroundVel,
+                    preStatus, preObjectControl, preXVel, preYVel, preGroundVel,
+                    preCpuX, preCpuXSubpixel, preAngle,
                     followDelayFrames, followHistorySlot,
                     recordedInput, recordedStatus, pushBypassStatus,
                     dx, dy, generatedInput,
-                    postCpuStatus, postCpuObjectControl, postCpuXVel, postCpuGroundVel,
+                    postCpuStatus, postCpuObjectControl, postCpuXVel, postCpuYVel, postCpuGroundVel,
+                    postCpuX, postCpuXSubpixel, postCpuAngle, appliedFollowNudge,
                     inputJumpPress,
-                    postPhysicsStatus, postPhysicsObjectControl, postPhysicsXVel, postPhysicsGroundVel,
+                    postPhysicsStatus, postPhysicsObjectControl, postPhysicsXVel, postPhysicsYVel,
+                    postPhysicsGroundVel, postPhysicsX, postPhysicsXSubpixel, postPhysicsAngle,
                     skipFollowSteering, postPhysicsRecorded);
         }
 
         NormalStepDiagnostics withPostPhysics(int postPhysicsStatus,
                                               int postPhysicsObjectControl,
                                               short postPhysicsXVel,
-                                              short postPhysicsGroundVel) {
+                                              short postPhysicsYVel,
+                                              short postPhysicsGroundVel,
+                                              short postPhysicsX,
+                                              short postPhysicsXSubpixel,
+                                              byte postPhysicsAngle) {
             return new NormalStepDiagnostics(frameCounter, state, followBranch,
-                    preStatus, preObjectControl, preXVel, preGroundVel,
+                    preStatus, preObjectControl, preXVel, preYVel, preGroundVel,
+                    preCpuX, preCpuXSubpixel, preAngle,
                     followDelayFrames, followHistorySlot,
                     recordedInput, recordedStatus, pushBypassStatus,
                     dx, dy, generatedInput,
-                    postCpuStatus, postCpuObjectControl, postCpuXVel, postCpuGroundVel,
+                    postCpuStatus, postCpuObjectControl, postCpuXVel, postCpuYVel, postCpuGroundVel,
+                    postCpuX, postCpuXSubpixel, postCpuAngle, appliedFollowNudge,
                     inputJumpPress,
-                    postPhysicsStatus, postPhysicsObjectControl, postPhysicsXVel, postPhysicsGroundVel,
+                    postPhysicsStatus, postPhysicsObjectControl, postPhysicsXVel, postPhysicsYVel,
+                    postPhysicsGroundVel, postPhysicsX, postPhysicsXSubpixel, postPhysicsAngle,
                     skipFollowSteering, true);
         }
     }
@@ -577,7 +641,7 @@ public class SidekickCpuController {
             }
         }
 
-        if (shouldEnterAizIntroDormantMarker()) {
+        if (shouldEnterLevelEventDormantMarker()) {
             // ROM Tails_Init (sonic3k.asm:26101-26156) plus the loc_13A10
             // dormant-marker block (sonic3k.asm:26389-26397) run inside one
             // ROM tick: SpawnLevelMainSprites installs the Tails object,
@@ -595,7 +659,7 @@ public class SidekickCpuController {
             // while ROM had her at the dormant sentinel). Combine the two
             // phases so the marker lands on the same engine tick.
             initializeLevelStartSidekickPlacementIfNeeded();
-            applyAizIntroDormantMarker();
+            applyLevelEventDormantMarker();
             aizIntroDormantMarkerPrimed = false;
             return;
         }
@@ -614,23 +678,20 @@ public class SidekickCpuController {
 
     private void initializeLevelStartSidekickPlacement() {
         // Default updateInit path: keep the legacy "fill with current Sonic
-        // centre" behaviour. Trace replay bootstraps that need the ROM-
-        // accurate pre-fill go through
-        // {@link #applyLevelStartSidekickPlacementForBootstrap()} first.
+        // centre" behaviour. Native title-card prelude paths that have already
+        // reproduced the ROM Pos_table pre-fill go through
+        // applyLevelStartSidekickPlacementForBootstrap() first.
         applyLevelStartSidekickPlacement(false);
     }
 
     /**
-     * Trace-replay-aware variant of
-     * {@link #initializeLevelStartSidekickPlacement()}: when the prelude
-     * bootstrap has already established the ROM-accurate Pos_table pre-fill
-     * (S2 only today, via
-     * {@link #applyLevelStartSidekickPlacementForBootstrap()}),
+     * Native-prelude-aware variant of
+     * {@link #initializeLevelStartSidekickPlacement()}: when level startup has
+     * already established the ROM-accurate Pos_table pre-fill (S2 only today,
+     * via {@link #applyLevelStartSidekickPlacementForBootstrap()}),
      * {@code updateInit} must NOT re-pre-fill the ring or it would obliterate
-     * the rows that the prelude leader-record path has already written for
-     * the first ~16 sidekick-only frames. Falls back to the legacy reset
-     * for non-bootstrap paths (S1, S3K) so already-tuned sidekick CPU traces
-     * keep their existing pre-fill behaviour.
+     * the rows that the native leader-record path has already written. Falls
+     * back to the legacy reset for non-bootstrap paths.
      */
     private void initializeLevelStartSidekickPlacementIfNeeded() {
         if (bootstrapPreludePlacementApplied) {
@@ -733,13 +794,11 @@ public class SidekickCpuController {
         sidekick.setAir(false);
     }
 
-    private boolean shouldEnterAizIntroDormantMarker() {
+    private boolean shouldEnterLevelEventDormantMarker() {
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         if (fs == null || !fs.sidekickRespawnEntersCatchUpFlight()) {
             return false;
         }
-        LevelManager lm = sidekick.currentLevelManager();
-        Camera camera = sidekick.currentCamera();
         // ROM loc_13A10 (sonic3k.asm:26389-26397): when Tails_CPU_Control runs
         // with routine=0 (uninitialized Tails) and Current_zone_and_act=0
         // (AIZ Act 1), the special AIZ1 dormant-marker branch fires
@@ -762,14 +821,11 @@ public class SidekickCpuController {
         // leave Tails alive at the level-start offset instead of the
         // {@code (0x7F00, 0x0000)} sentinel ROM writes — drives the first
         // divergence at trace frame 290.
-        return lm != null
-                && camera != null
-                && lm.getCurrentZone() == 0
-                && lm.getCurrentAct() == 0
-                && resolvePlayerCharacter() == PlayerCharacter.SONIC_AND_TAILS;
+        LevelEventProvider provider = levelEventProvider();
+        return provider != null && provider.shouldEnterSidekickDormantMarker(sidekick);
     }
 
-    private void applyAizIntroDormantMarker() {
+    private void applyLevelEventDormantMarker() {
         // ROM loc_13A10 (sonic3k.asm:26389-26397) special-cases
         // Current_zone_and_act=0: call sub_13ECA, then overwrite
         // Tails_CPU_routine with $0A and object_control with $83.
@@ -873,10 +929,10 @@ public class SidekickCpuController {
 
     /**
      * Whether the sidekick CPU post-kill flow defers the despawn warp until
-     * the body falls below the bottom kill plane.
+     * the body falls below the death-routine marker threshold.
      *
      * <p>Read from the sidekick's physics feature set (ROM parity). Falls
-     * back to {@code false} (immediate-warp / S3K semantics) when no feature
+     * back to {@code false} (legacy immediate-warp semantics) when no feature
      * set is resolved. This matches the historical engine behaviour and
      * the existing unit-test assertions in
      * {@code TestSidekickCpuDespawnParity}, which were calibrated against
@@ -1017,14 +1073,14 @@ public class SidekickCpuController {
             sidekick.setForcedAnimationId(flyAnimId);
             state = State.FLIGHT_AUTO_RECOVERY;
             finishNormalStepDiagnostics(diagnostics, "leader_dead", -1, -1,
-                    0, 0, 0, 0, 0, false);
+                    0, 0, 0, 0, 0, false, 0);
             return;
         }
         if (sidekick.getDead()) {
             normalPushingGraceFrames = 0;
             suppressNextAirbornePushFollowSteering = false;
             finishNormalStepDiagnostics(diagnostics, "sidekick_dead", -1, -1,
-                    0, 0, 0, 0, 0, false);
+                    0, 0, 0, 0, 0, false, 0);
             return;
         }
         PhysicsFeatureSet featureSet = sidekick.getPhysicsFeatureSet();
@@ -1038,19 +1094,19 @@ public class SidekickCpuController {
             // 26816-26833), so routine-4 frames must not tick despawnCounter.
             updateNormalPushingGrace(currentPushing);
             finishNormalStepDiagnostics(diagnostics, "sidekick_hurt_object_routine", -1, -1,
-                    0, 0, 0, 0, 0, false);
+                    0, 0, 0, 0, 0, false, 0);
             return;
         }
         if (checkDespawn()) {
             finishNormalStepDiagnostics(diagnostics, "despawn", -1, -1,
-                    0, 0, 0, 0, 0, false);
+                    0, 0, 0, 0, 0, false, 0);
             return;
         }
         if (controlCounter != 0) {
             applyManualControl();
             updateNormalPushingGrace(currentPushing);
             finishNormalStepDiagnostics(diagnostics, "manual_control", -1, -1,
-                    controller2Held, 0, 0, 0, 0, false);
+                    controller2Held, 0, 0, 0, 0, false, 0);
             return;
         }
         // ROM Tails_Normal Part 2 entry sonic3k.asm:26672:
@@ -1071,7 +1127,18 @@ public class SidekickCpuController {
         if (sidekick.isObjectControlled() && !sidekick.isObjectControlAllowsCpu()) {
             updateNormalPushingGrace(currentPushing);
             finishNormalStepDiagnostics(diagnostics, "object_control_bit7", -1, -1,
-                    0, 0, 0, 0, 0, false);
+                    0, 0, 0, 0, 0, false, 0);
+            return;
+        }
+        if (leader.isWallCling()) {
+            // S3K loc_13D78 tests Player_1 status_tertiary with BMI before
+            // loading Pos_table/Stat_table for Tails normal CPU control
+            // (sonic3k.asm:26672-26675). MGZ top platform sets bit 7 while
+            // Sonic is grabbed (sonic3k.asm:71831-71835), so P2 must not start
+            // follow steering until the platform release clears it.
+            updateNormalPushingGrace(currentPushing);
+            finishNormalStepDiagnostics(diagnostics, "leader_status_tertiary_bit7", -1, -1,
+                    0, 0, 0, 0, 0, false, 0);
             return;
         }
 
@@ -1084,7 +1151,7 @@ public class SidekickCpuController {
         if (effectiveLeader == null) {
             updateNormalPushingGrace(currentPushing);
             finishNormalStepDiagnostics(diagnostics, "no_effective_leader", -1, -1,
-                    0, 0, 0, 0, 0, false);
+                    0, 0, 0, 0, 0, false, 0);
             return;
         }
         int followStatDelayFrames = resolveFollowStatDelayFrames();
@@ -1155,7 +1222,7 @@ public class SidekickCpuController {
         // inputHistory; the low-byte jump press bit is tracked separately.
         inputJumpPress = recordedJumpPress;
 
-        byte pushBypassStatus = effectiveLeader.getStatusHistory(ROM_PUSH_BYPASS_STAT_DELAY_FRAMES);
+        byte pushBypassStatus = effectiveLeader.getStatusHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
         // ROM loc_13DD0 tests Tails' current Status_Push byte before loc_13E9C
         // (sonic3k.asm:26702-26705), before the follow-left/right steering
         // blocks that can write Ctrl_2 left/right or nudge x_pos
@@ -1174,17 +1241,26 @@ public class SidekickCpuController {
         // context and the current Ctrl_2 RIGHT pulse remains live. Grounded
         // Tails_InputAcceleration_Path converts that into +$000C ground_vel/x_vel
         // (sonic3k.asm:27798-27805,28103-28122).
-        boolean currentPushBypass = !sidekick.getAir()
-                && currentPushing
-                && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0;
+        boolean delayedObjectOrPushContext =
+                (pushBypassStatus
+                        & (AbstractPlayableSprite.STATUS_ON_OBJECT
+                        | AbstractPlayableSprite.STATUS_PUSHING)) != 0;
+        boolean currentPushBypass = currentPushing
+                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0;
+        boolean liveAndDelayedPushAirborneHandoff = currentPushing
+                && sidekick.getAir()
+                && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) != 0;
         PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
         boolean pushBypassGraceEnabled = fs != null && fs.sidekickPushBypassUsesGraceStatus();
         boolean gracePushBypass = !sidekick.getAir()
                 && pushBypassGraceEnabled
                 && normalPushingGraceFrames > 0
+                && (recordedStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0
                 && (pushBypassStatus & AbstractPlayableSprite.STATUS_PUSHING) == 0;
         boolean localGracePushBypass = gracePushBypass
                 && Math.abs(dy) < PUSH_BRIDGE_LOCAL_OBJECT_BAND_Y;
+        boolean supportGraceKeepsFollowSteering =
+                localGracePushBypass && isDoorSupportGraceFollowSteeringContext();
         boolean airbornePushHandoff = false;
         if (suppressNextAirbornePushFollowSteering) {
             // After loc_13DD0 branches to loc_13E9C, Tails_Spin_Freespace runs
@@ -1195,11 +1271,22 @@ public class SidekickCpuController {
             airbornePushHandoff = sidekick.getAir();
             suppressNextAirbornePushFollowSteering = false;
         }
+        // Engine-side push grace is only a ROM-visible loc_13DD0 push bypass
+        // where provider-approved object order can clear transient Status_Push
+        // before Tails' CPU slot. In ordinary local grace cases, ROM sees
+        // current Status_Push clear and falls through to FollowLeft/FollowRight
+        // (sonic3k.asm:26702-26729).
+        boolean objectOrderGrace = localGracePushBypass
+                && isObjectOrderFollowSteeringContext(effectiveLeader)
+                && (leaderStatusOnObject
+                || (recordedStatus & AbstractPlayableSprite.STATUS_ON_OBJECT) != 0);
+        objectOrderGracePushBypassThisFrame = objectOrderGrace;
         boolean skipFollowSteering = currentPushBypass
-                || localGracePushBypass
+                || liveAndDelayedPushAirborneHandoff
+                || (objectOrderGrace && !supportGraceKeepsFollowSteering)
                 || airbornePushHandoff;
         String followBranch = currentPushBypass ? "current_push_bypass"
-                : localGracePushBypass ? "grace_push_bypass"
+                : (objectOrderGrace && !supportGraceKeepsFollowSteering) ? "grace_push_bypass"
                 : airbornePushHandoff ? "airborne_push_handoff"
                 : leaderStatusOnObject ? "leader_on_object"
                 : effectiveLeader.getGSpeed() >= 0x400 ? "leader_fast"
@@ -1213,28 +1300,25 @@ public class SidekickCpuController {
         // Tails_InputAcceleration_Path consumes it for +$000C ground speed
         // (sonic3k.asm:27798-27805,28103-28122).
         //
-        // The S3K-only AIZ grace/airborne handoff is not a direct ROM branch;
-        // it is an engine object-order bridge for AIZ's transient push clear.
-        // Keep its older input sample only in the AIZ hollow-tree/collapsing-
-        // platform context where object order can leave the engine one sample
-        // behind the ROM handoff (sonic3k.asm:26690-26705,41668-41679,
-        // 41793-41818,43649-43810). MGZ F1466 has the same delayed
+        // The object-order grace/airborne handoff is not a direct ROM branch;
+        // it is a provider-owned bridge for zones where object ordering can
+        // clear transient push before Tails' CPU slot. Keep its older input
+        // sample only in those provider-approved contexts (for the current S3K
+        // implementation, the S3K hollow-tree/collapsing-platform/vine object
+        // ordering routes: sonic3k.asm:26690-26705,41668-41679,41793-41818,
+        // 43649-43810).
+        // MGZ F1466 has the same delayed
         // Status_OnObj bit but ROM keeps the already-loaded d1 sample
         // (input=0000/stat=08) through loc_13DD0; re-reading the older sample
         // manufactures a right input and over-accelerates Tails.
-        // Grounded grace with no AIZ object-order status is the CNZ cylinder
+        // Grounded grace with no provider-approved object-order status is the CNZ cylinder
         // release shape instead; it preserves the already-loaded d1 Ctrl_2 word
         // after Tails_CPU_Control, and the cylinder/P2 and path-acceleration
         // paths consume that same sample (sonic3k.asm:26195-26208,
         // 67656-67672,27798-27805,28103-28122).
-        boolean aizObjectOrderGrace = localGracePushBypass
-                && isAizHollowTreeFollowSteeringContext(effectiveLeader)
-                && (leaderStatusOnObject
-                || (recordedStatus & AbstractPlayableSprite.STATUS_ON_OBJECT) != 0);
-        aizObjectOrderGracePushBypassThisFrame = aizObjectOrderGrace;
-        if (airbornePushHandoff || aizObjectOrderGrace) {
-            recordedInput = effectiveLeader.getInputHistory(ROM_PUSH_BYPASS_STAT_DELAY_FRAMES);
-            recordedJumpPress = effectiveLeader.getJumpPressHistory(ROM_PUSH_BYPASS_STAT_DELAY_FRAMES);
+        if (airbornePushHandoff || objectOrderGrace) {
+            recordedInput = effectiveLeader.getInputHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
+            recordedJumpPress = effectiveLeader.getJumpPressHistory(OBJECT_ORDER_INPUT_DELAY_FRAMES);
             inputLeft = (recordedInput & AbstractPlayableSprite.INPUT_LEFT) != 0;
             inputRight = (recordedInput & AbstractPlayableSprite.INPUT_RIGHT) != 0;
             inputUp = (recordedInput & AbstractPlayableSprite.INPUT_UP) != 0;
@@ -1242,6 +1326,7 @@ public class SidekickCpuController {
             inputJump = (recordedInput & AbstractPlayableSprite.INPUT_JUMP) != 0;
             inputJumpPress = recordedJumpPress;
         }
+        int appliedFollowNudge = 0;
         if (!skipFollowSteering) {
             // ROM enters FollowLeft/FollowRight for any nonzero dx; the per-game
             // snap threshold only decides whether Tails overrides left/right input,
@@ -1279,6 +1364,14 @@ public class SidekickCpuController {
                     && !sidekick.isObjectControlSuppressesMovement()) {
                 if (sidekick.getGSpeed() != 0) {
                     sidekick.shiftX(-1);
+                    appliedFollowNudge = -1;
+                    // ROM loc_13E0A applies this nudge immediately and has no
+                    // deferred queue (sonic3k.asm:26717-26724). If the engine
+                    // had queued a late solid-contact bridge while airborne,
+                    // the current grounded CPU pass has now consumed the ROM
+                    // effect and the queued bridge must not also run.
+                    pendingGroundedFollowNudge = 0;
+                    pendingGroundedFollowNudgeFrame = -1;
                 } else if (sidekick.getAir()) {
                     pendingGroundedFollowNudge = -1;
                     pendingGroundedFollowNudgeFrame = frameCounter;
@@ -1291,6 +1384,11 @@ public class SidekickCpuController {
                     && !sidekick.isObjectControlSuppressesMovement()) {
                 if (sidekick.getGSpeed() != 0) {
                     sidekick.shiftX(1);
+                    appliedFollowNudge = 1;
+                    // ROM loc_13E34 applies this nudge immediately and has no
+                    // deferred queue (sonic3k.asm:26734-26741).
+                    pendingGroundedFollowNudge = 0;
+                    pendingGroundedFollowNudgeFrame = -1;
                 } else if (sidekick.getAir()) {
                     pendingGroundedFollowNudge = 1;
                     pendingGroundedFollowNudgeFrame = frameCounter;
@@ -1325,15 +1423,13 @@ public class SidekickCpuController {
             // would fail, but ROM auto-jumps via the bypass and y_speed becomes
             // -0x680 (Tails_Jump initial velocity).
             //
-            // Auto-jump still needs the short engine-side push continuity bridge,
-            // but only in the same local object band used for follow steering.
-            // AIZ F2721 has Tails object_control=$20/status=$20 next to the
-            // delayed platform target, so ROM still reaches loc_13E9C through
-            // the push bypass. AIZ F3169 has the same stale engine-side grace
-            // while Tails is far below the delayed leader target; ROM falls
-            // through the normal loc_13E7C distance/height gates instead and
-            // leaves Ctrl_2_logical as RIGHT (sonic3k.asm:26702-26705,
-            // 26760-26783, 27798-27805, 28103-28122).
+            // Live Status_Push is the direct ROM loc_13DD0 branch and always
+            // bypasses the distance/height gates before loc_13E9C. Provider
+            // approval is only for the engine-side object-order grace path,
+            // where transient push may have cleared locally before ROM would
+            // read status(a0) in Tails' sprite slot (sonic3k.asm:26702-26705).
+            // Ordinary stale grace still falls through loc_13E7C and must pass
+            // the normal distance/height gates.
             // Vertical S2 Obj85 can hand Tails into a curled, zero-speed push
             // state after release. That object-owned state preserves rolling
             // without ROM's pinball-mode auto-push, and the CNZ trace shows it
@@ -1342,22 +1438,26 @@ public class SidekickCpuController {
             // s2.asm:57611-57625).
             boolean suppressObjectPreservedPushJump =
                     sidekick.getRolling() && sidekick.shouldPreserveRollingOnNextRollStop();
-            boolean pushingBypass = (currentPushBypass || localGracePushBypass)
+            boolean pushingBypass = (currentPushBypass || objectOrderGrace)
                     && !suppressObjectPreservedPushJump;
+            int autoJumpFrameCounter = frameCounter;
+            boolean freshAutoJumpFrame = autoJumpFrameCounter != lastNormalAutoJumpPressFrameCounter;
             boolean passesDistanceGate = pushingBypass
-                    || (frameCounter & 0xFF) == 0
+                    || (autoJumpFrameCounter & 0xFF) == 0
                     || Math.abs(dx) < JUMP_DISTANCE_TRIGGER;
             boolean passesHeightGate = pushingBypass
                     || dy <= -JUMP_HEIGHT_THRESHOLD;
             if (passesDistanceGate
                     && passesHeightGate
-                    && (frameCounter & 0x3F) == 0
+                    && freshAutoJumpFrame
+                    && (autoJumpFrameCounter & 0x3F) == 0
                     && sidekick.getAnimationId() != duckAnimId) {
                 inputJump = true;
                 inputJumpPress = true;
+                lastNormalAutoJumpPressFrameCounter = autoJumpFrameCounter;
                 jumpingFlag = true;
-                if (aizObjectOrderGrace && pushBypassGraceEnabled) {
-                    // The first airborne tick after the engine-side AIZ bridge
+                if (objectOrderGrace && pushBypassGraceEnabled) {
+                    // The first airborne tick after an engine-side object-order bridge
                     // may still be one object-order sample ahead of ROM. Do not
                     // apply this suppression to MGZ's normal push-jump handoff:
                     // Tails_Stand_Freespace/Tails_InputAcceleration_Freespace
@@ -1394,18 +1494,18 @@ public class SidekickCpuController {
             jumpingFlag = false;
         }
 
-        if (suppressNextAizIntroNormalMovement) {
-            // AIZ1 intro releases the dormant marker before Tails' first
+        if (suppressNextLevelEventNormalMovement) {
+            // Level events can release a dormant marker before Tails' first
             // visible follow pulse. Consume this on the first post-release CPU
-            // tick regardless of generated input: ROM's resize write occurs
+            // tick regardless of generated input: the ROM event write occurs
             // outside Tails normal movement, so the release-side object frame is
             // suppressed but the following frame's fresh Ctrl_2 state is usable.
-            suppressNextAizIntroNormalMovement = false;
+            suppressNextLevelEventNormalMovement = false;
             skipPhysicsThisFrame = true;
         }
         updateNormalPushingGrace(currentPushing);
-        int reportedDelayFrames = (airbornePushHandoff || aizObjectOrderGrace)
-                ? ROM_PUSH_BYPASS_STAT_DELAY_FRAMES
+        int reportedDelayFrames = (airbornePushHandoff || objectOrderGrace)
+                ? OBJECT_ORDER_INPUT_DELAY_FRAMES
                 : followStatDelayFrames;
         finishNormalStepDiagnostics(diagnostics, followBranch,
                 reportedDelayFrames,
@@ -1415,7 +1515,8 @@ public class SidekickCpuController {
                 pushBypassStatus & 0xFF,
                 dx,
                 dy,
-                skipFollowSteering);
+                skipFollowSteering,
+                appliedFollowNudge);
     }
 
     private int resolveFollowStatDelayFrames() {
@@ -1436,7 +1537,7 @@ public class SidekickCpuController {
                 || !sidekick.getRolling()
                 || effectiveLeader.getOnObjectAtFrameStart()
                 || effectiveLeader.getGSpeed() >= 0x400
-                || !isAizHollowTreeFollowSteeringContext(effectiveLeader)) {
+                || !isObjectOrderNudgeSteeringContext(effectiveLeader)) {
             return dx;
         }
 
@@ -1474,13 +1575,13 @@ public class SidekickCpuController {
                 // ROM loc_13DA6 branches at Status_OnObj before applying the
                 // S3K follow bias (sonic3k.asm:26690-26694). While that bit is
                 // set, keep the same delayed position sample for the +/-1 nudge
-                // instead of substituting an adjacent AIZ object-order sample.
+                // instead of substituting an adjacent object-order bridge sample.
                 && !effectiveLeader.getOnObjectAtFrameStart()
                 // The fast-leader branch uses the same unadjusted delayed d2 for
                 // both steering and the loc_13E0A/loc_13E34 +/-1 x_pos nudge
                 // (sonic3k.asm:26692-26694,26707-26741).
                 && effectiveLeader.getGSpeed() < 0x400
-                && isAizHollowTreeFollowSteeringContext(effectiveLeader)) {
+                && isObjectOrderNudgeSteeringContext(effectiveLeader)) {
             // S3K reads Pos_table_index-$44 for the positional follow target
             // (sonic3k.asm:26683-26689), then applies the +1 x_pos nudge in
             // FollowRight when Tails faces right and object_control bit 0 is
@@ -1528,57 +1629,54 @@ public class SidekickCpuController {
         return targetX - sidekickX;
     }
 
-    private boolean isAizHollowTreeFollowSteeringContext(AbstractPlayableSprite effectiveLeader) {
-        return isAizHollowTreeZone()
-                && (isAizHollowTreeNear(sidekick.getCentreX(), sidekick.getCentreY())
-                    || isAizHollowTreeFollowNudgeContext(effectiveLeader));
+    private boolean isObjectOrderFollowSteeringContext(AbstractPlayableSprite effectiveLeader) {
+        LevelEventProvider provider = levelEventProvider();
+        return provider != null
+                && provider.isSidekickObjectOrderFollowSteeringContext(sidekick, effectiveLeader);
     }
 
-    private boolean isAizHollowTreeFollowNudgeContext(AbstractPlayableSprite effectiveLeader) {
-        if (!isAizHollowTreeZone()) {
+    private boolean isObjectOrderNudgeSteeringContext(AbstractPlayableSprite effectiveLeader) {
+        LevelEventProvider provider = levelEventProvider();
+        return provider != null
+                && provider.isSidekickObjectOrderFollowNudgeContext(sidekick, effectiveLeader);
+    }
+
+    private boolean isDoorSupportGraceFollowSteeringContext() {
+        if (!sidekick.isOnObject() || sidekick.getAir()) {
             return false;
         }
-        if (effectiveLeader.getLatchedSolidObjectId() == S3K_AIZ_HOLLOW_TREE_OBJECT_ID) {
-            return true;
+        LevelEventProvider provider = levelEventProvider();
+        if (provider == null) {
+            return false;
         }
-        ObjectInstance latched = effectiveLeader.getLatchedSolidObjectInstance();
-        if (latched != null && latched.getSpawn() != null
-                && latched.getSpawn().objectId() == S3K_AIZ_HOLLOW_TREE_OBJECT_ID) {
-            return true;
-        }
-
-        return isAizHollowTreeNear(effectiveLeader.getCentreX(), effectiveLeader.getCentreY());
+        return provider.isSidekickDoorSupportGraceFollowSteeringContext(sidekick, currentRidingObject());
     }
 
-    private boolean isAizHollowTreeZone() {
+    private ObjectInstance currentRidingObject() {
         LevelManager levelManager = sidekick.currentLevelManager();
-        return levelManager != null
-                && levelManager.getFeatureZoneId() == S3K_ZONE_AIZ
-                && levelManager.getFeatureActId() == 0;
+        if (levelManager != null && levelManager.getObjectManager() != null) {
+            return levelManager.getObjectManager().getRidingObject(sidekick);
+        }
+        return sidekick.getLatchedSolidObjectInstance();
     }
 
-    private boolean isAizHollowTreeNear(int x, int y) {
-        LevelManager levelManager = sidekick.currentLevelManager();
-        if (levelManager == null) {
-            return false;
-        }
-        ObjectManager objectManager = levelManager.getObjectManager();
-        if (objectManager == null) {
-            return false;
-        }
-        for (ObjectInstance object : objectManager.getActiveObjects()) {
-            if (object == null || object.isDestroyed() || object.getSpawn() == null) {
-                continue;
-            }
-            if (object.getSpawn().objectId() != S3K_AIZ_HOLLOW_TREE_OBJECT_ID) {
-                continue;
-            }
-            if (Math.abs(object.getX() - x) <= AIZ_HOLLOW_TREE_CONTEXT_RADIUS_X
-                    && Math.abs(object.getY() - y) <= AIZ_HOLLOW_TREE_CONTEXT_RADIUS_Y) {
-                return true;
-            }
-        }
-        return false;
+    private boolean usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge() {
+        LevelEventProvider provider = levelEventProvider();
+        return provider != null
+                && provider.usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge(sidekick);
+    }
+
+    public boolean hasLevelEventDormantMarkerReleasePending() {
+        return levelEventDormantMarkerReleasePending;
+    }
+
+    public void clearLevelEventDormantMarkerReleasePending() {
+        levelEventDormantMarkerReleasePending = false;
+    }
+
+    private LevelEventProvider levelEventProvider() {
+        GameModule module = sidekick.currentGameModule();
+        return module != null ? module.getLevelEventProvider() : null;
     }
 
     private void updateNormalPushingGrace(boolean currentPushing) {
@@ -1945,7 +2043,7 @@ public class SidekickCpuController {
         boolean trigger = false;
         int catchUpFrameCounter = catchUpFrameCounterOverride >= 0
                 ? catchUpFrameCounterOverride
-                : (suppressNextAizIntroNormalMovement && cpuFrameCounterFromStoredLevelFrame
+                : (catchUpUsesRomVisibleLevelFrameCounter && cpuFrameCounterFromStoredLevelFrame
                         ? frameCounter + 1
                         : frameCounter);
         catchUpFrameCounterOverride = -1;
@@ -2000,6 +2098,7 @@ public class SidekickCpuController {
         sidekick.setDoubleJumpFlag(0);
 
         flightTimer = 0;
+        catchUpUsesRomVisibleLevelFrameCounter = false;
         state = State.FLIGHT_AUTO_RECOVERY;
     }
 
@@ -2105,8 +2204,11 @@ public class SidekickCpuController {
             sidekick.setCentreXPreserveSubpixel((short) newX);
         }
 
-        // 5. Y steer: +/-1 per frame. Same post-step residual tracking.
-        int dy = (sidekick.getCentreY() & 0xFFFF) - targetY;
+        // 5. Y steer: +/-1 per frame. ROM branches on the signed word result
+        // of y_pos - Tails_CPU_target_Y (`sub.w` followed by `bmi`;
+        // sonic3k.asm:26614-26622). This matters when catch-up starts above
+        // the level top: $FFD9 is a negative Y, not a huge unsigned value.
+        int dy = signedWord((sidekick.getCentreY() & 0xFFFF) - targetY);
         int residualY = dy;
         if (dy != 0) {
             int newY = (dy > 0)
@@ -2115,16 +2217,25 @@ public class SidekickCpuController {
             sidekick.setCentreYPreserveSubpixel((short) newY);
         }
 
-        // 6. Transition to NORMAL when close enough AND Sonic alive AND
-        //    Sonic not in an uninterruptible state. Close-enough uses the
-        //    post-step residuals (see residualX/residualY above).
+        // 6. Transition to NORMAL when close enough AND the delayed Stat_table
+        //    sample allows it. ROM reads byte 2 from the same delayed
+        //    Stat_table slot as the target position (S3K sonic3k.asm:26623-26630;
+        //    S2 s2.asm:38871-38876), not live Sonic object_control. This matters
+        //    while Sonic is riding ROM object-controlled carriers such as MGZ's
+        //    top platform: the delayed status byte can be clear while live
+        //    object_control is still nonzero.
         boolean closeEnough = residualX == 0 && residualY == 0;
-        boolean sonicAlive = !leader.isHurt() && !leader.getDead();
-        // ROM sonic3k.asm:26624-26630: also checks a stat_table flag bit 7.
-        // Engine approximation: isObjectControlled.
-        boolean sonicFreeOfLock = !leader.isObjectControlled();
+        byte delayedStatus = leader.getStatusHistory(ROM_FOLLOW_DELAY_FRAMES);
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        int statusBlockerMask = fs != null
+                ? fs.sidekickFlyLandStatusBlockerMask()
+                : PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2;
+        boolean delayedStatusAllowsLand = (delayedStatus & statusBlockerMask) == 0;
+        boolean leaderRoutineAllowsLand = fs == null
+                || !fs.sidekickFlyLandRequiresLeaderAlive()
+                || !leader.getDead();
 
-        if (closeEnough && sonicAlive && sonicFreeOfLock) {
+        if (closeEnough && delayedStatusAllowsLand && leaderRoutineAllowsLand) {
             // ROM sonic3k.asm:26631-26648 — return to NORMAL (routine 0x06).
             ObjectControlState.none().applyTo(sidekick);
             sidekick.setControlLocked(false);
@@ -2145,13 +2256,13 @@ public class SidekickCpuController {
             sidekick.setDoubleJumpFlag(0);
             state = State.NORMAL;
             normalFrameCount = 0;
-            if (suppressNextAizIntroNormalMovement) {
-                // AIZ1's intro marker release reaches NORMAL through this
+            if (suppressNextLevelEventNormalMovement) {
+                // A level-event marker release reaches NORMAL through this
                 // handoff tick, which does not run normal follow AI yet. Clear
                 // the release-side suppression here so the next object tick can
                 // use fresh Ctrl_2 state; do not suppress handoff physics,
                 // because ROM still applies the airborne +$38 gravity step.
-                suppressNextAizIntroNormalMovement = false;
+                suppressNextLevelEventNormalMovement = false;
             }
             return;
         }
@@ -2334,13 +2445,17 @@ public class SidekickCpuController {
         boolean useObjectIdMismatchDespawn = fs == null
                 || fs.sidekickDespawnUsesObjectIdMismatch();
         // S2's id-byte mismatch path also sees a deleted ride slot as id 0.
-        // The engine keeps the latched id sticky, so use the destroyed instance
-        // reference to surface that same freed-slot frame.
+        // S3K sub_13EFC reads the first word of the cached interact slot; when
+        // Delete_Referenced_Sprite has freed the slot, that word is zero and
+        // the compare falls through to sub_13ECA (sonic3k.asm:26816-26833,
+        // 36116-36124). Counter-window unloads remove the engine instance from
+        // ObjectManager without necessarily marking it destroyed, so treat a
+        // latched instance that is no longer active as the same freed slot.
         if ((useRidingInstanceLossDespawn || useObjectIdMismatchDespawn)
                 && sidekick.isOnObject()
                 && currentInteractObjectId != 0
                 && currentRidingInstance != null
-                && currentRidingInstance.isDestroyed()) {
+                && isLatchedRideSlotFreed(currentRidingInstance)) {
             lastInteractObjectId = currentInteractObjectId;
             triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
             return true;
@@ -2385,6 +2500,17 @@ public class SidekickCpuController {
             return true;
         }
         return false;
+    }
+
+    private boolean isLatchedRideSlotFreed(ObjectInstance instance) {
+        if (instance.isDestroyed()) {
+            return true;
+        }
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        if (levelManager == null || levelManager.getObjectManager() == null) {
+            return false;
+        }
+        return !levelManager.getObjectManager().getActiveObjects().contains(instance);
     }
 
     private boolean isCurrentlyVisible() {
@@ -2546,20 +2672,17 @@ public class SidekickCpuController {
     }
 
     /**
-     * One-frame death-routine equivalent of ROM loc_1578E ->
-     * loc_157C8 -> sub_123C2 -> sub_13ECA. Runs the frame after
-     * beginLevelBoundaryKill.  Mirrors ROM where the dispatcher enters
-     * the death routine; sub_123C2 (sonic3k.asm:24538-24578) sees Tails
-     * fell below Camera_Y_pos+0x100, sets Tails_CPU_routine=2 and
-     * branches to sub_13ECA (sonic3k.asm:26800-26809) which warps
-     * x_pos=0x7F00, y_pos=0 (and clears double_jump_flag, sets
-     * object_control=$81, Status_InAir).  Control then unwinds via the
-     * <code>bsr</code> at sonic3k.asm:29284 back to {@code loc_157C8}, where
-     * <code>jsr (MoveSprite_TestGravity).l</code> at line 29285 falls through to
-     * {@code MoveSprite} (sonic3k.asm:36032-36042) and applies the still-
-     * preserved {@code y_vel = -$700} (Kill_Character at sonic3k.asm:21149)
-     * to {@code y_pos} <em>before</em> the +$38 gravity write, shifting Tails
-     * 7 px up to {@code y_pos = -7} and leaving {@code y_vel = -$6C8}.
+     * Death-routine equivalent of ROM loc_1578E -> loc_157C8 -> sub_123C2.
+     * Runs after beginLevelBoundaryKill.  sub_123C2 first checks whether Tails
+     * has fallen below the marker threshold; while he is still above it, the
+     * routine returns to loc_157C8 and only MoveSprite_TestGravity runs
+     * (sonic3k.asm:24538-24578,29284-29285).  Once the threshold is crossed,
+     * sub_123C2 writes Tails_CPU_routine=2 and branches to sub_13ECA
+     * (sonic3k.asm:26800-26809), which warps x_pos=0x7F00, y_pos=0 and sets
+     * object_control=$81/Status_InAir.  Control then unwinds via the bsr at
+     * sonic3k.asm:29284 back to loc_157C8, where MoveSprite applies the still-
+     * preserved y_vel before the +$38 gravity write
+     * (sonic3k.asm:36032-36042).
      * Trace AIZ F7172 records exactly that: {@code y = -0x0007},
      * {@code y_vel = -0x06C8}.
      *
@@ -2592,11 +2715,11 @@ public class SidekickCpuController {
     }
 
     /**
-     * Per-frame death-routine equivalent of ROM {@code Obj02_Dead}
-     * (docs/s2disasm/s2.asm:40736-40759). Unlike S3K's {@code sub_13ECA},
-     * S2 keeps the dead Tails at his death position and only warps to the
-     * despawn marker once his body has fallen below
-     * {@code Tails_Max_Y_pos + $100}. Each frame ROM runs:
+     * Per-frame death-routine equivalent for games whose dead sidekick waits
+     * before the off-screen marker. S2 uses Tails_Max_Y_pos+$100
+     * (docs/s2disasm/s2.asm:40736-40759); S3K uses Camera_Y_pos+$100 in
+     * sub_123C2 (sonic3k.asm:24538-24578) before branching to sub_13ECA.
+     * Each frame ROM runs:
      *
      * <pre>
      *   Obj02_Dead:
@@ -2634,8 +2757,8 @@ public class SidekickCpuController {
         // each frame (s2.asm:40747-40759). Use the current centre-Y, which
         // matches y_pos for a CPU sidekick.
         int currentY = sidekick.getCentreY();
-        int killPlane = getMaxYBound(Integer.MIN_VALUE);
-        if (killPlane != Integer.MIN_VALUE && currentY > killPlane + 0x100) {
+        int markerThreshold = resolveDeadFallMarkerThresholdY();
+        if (markerThreshold != Integer.MIN_VALUE && currentY > markerThreshold) {
             // Crossed below Tails_Max_Y_pos + $100: ROM sets routine=2 and
             // branches to TailsCPU_Despawn (s2.asm:40756-40759, 39043-39052)
             // which writes x_pos=$4000, y_pos=0 via `move.w` (word-sized)
@@ -2688,6 +2811,24 @@ public class SidekickCpuController {
         deferredDespawnDeadFallContinuingThisFrame = true;
     }
 
+    private int resolveDeadFallMarkerThresholdY() {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        boolean s3kCatchUpMarker = fs != null && fs.sidekickRespawnEntersCatchUpFlight();
+        if (s3kCatchUpMarker) {
+            Camera camera = sidekick.currentCamera();
+            if (camera != null) {
+                // S3K sub_123C2 reads Camera_Y_pos, then adds $100 before
+                // comparing against y_pos(a0) (sonic3k.asm:24549-24565).
+                return (camera.getY() & 0xFFFF) + 0x100;
+            }
+        }
+        int killPlane = getMaxYBound(Integer.MIN_VALUE);
+        if (killPlane == Integer.MIN_VALUE) {
+            return Integer.MIN_VALUE;
+        }
+        return killPlane + 0x100;
+    }
+
     /**
      * ROM sub_13ECA (sonic3k.asm:26800-26809) marker warp body. Writes
      * despawn marker x/y, sets Tails_CPU_routine=2, and leaves the next
@@ -2705,6 +2846,17 @@ public class SidekickCpuController {
         if (s3kCatchUpMarker) {
             flightTimer = 0;
             sidekick.setDoubleJumpFlag(0);
+            // sub_13ECA changes Tails_CPU_routine during Tails' current
+            // Process_Sprites slot without clearing velocity (sonic3k.asm:
+            // 26800-26809). The later routine-2 wait reads Level_frame_counter
+            // directly and masks the low 6 bits before loc_13B50 snaps Tails
+            // to Sonic and clears x/y/ground velocity (sonic3k.asm:
+            // 26478-26511). Some level-event/reload marker paths expose that
+            // ROM-visible counter one tick ahead of the stored engine counter;
+            // use the provider-owned marker predicate so ordinary sub_13ECA
+            // marker cadence is not shifted.
+            catchUpUsesRomVisibleLevelFrameCounter =
+                    usesSidekickRomVisibleCatchUpMarkerFrameCounterBridge();
         }
         normalFrameCount = 0;
         jumpingFlag = false;
@@ -2744,13 +2896,11 @@ public class SidekickCpuController {
     }
 
     /**
-     * ROM AIZ1_Resize loc_1C4C4 (sonic3k.asm:38898-38900) releases
-     * intro-dormant Tails by writing {@code Tails_CPU_routine=2} when the
-     * camera reaches the main palette handoff. The marker position and
-     * object-control byte remain intact until routine 2 performs its own
-     * catch-up warp.
+     * Level-event owned marker release used when ROM writes
+     * {@code Tails_CPU_routine=2} while leaving the marker position and
+     * object-control byte intact until routine 2 performs its own catch-up warp.
      */
-    public boolean releaseAizIntroDormantMarker() {
+    public boolean releaseDormantMarkerForLevelEvent() {
         if (state != State.DORMANT_MARKER) {
             return false;
         }
@@ -2768,7 +2918,9 @@ public class SidekickCpuController {
         controlCounter = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
-        suppressNextAizIntroNormalMovement = true;
+        suppressNextLevelEventNormalMovement = true;
+        catchUpUsesRomVisibleLevelFrameCounter = true;
+        levelEventDormantMarkerReleasePending = true;
         sidekick.setAir(true);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
@@ -2783,7 +2935,7 @@ public class SidekickCpuController {
         inputRight = false;
         inputJump = false;
         inputJumpPress = false;
-        aizObjectOrderGracePushBypassThisFrame = false;
+        objectOrderGracePushBypassThisFrame = false;
     }
 
     public void setRespawnStrategy(SidekickRespawnStrategy strategy) {
@@ -2857,12 +3009,15 @@ public class SidekickCpuController {
     public void setInitialState(State state) {
         this.state = state;
         aizIntroDormantMarkerPrimed = false;
-        suppressNextAizIntroNormalMovement = false;
+        suppressNextLevelEventNormalMovement = false;
+        catchUpUsesRomVisibleLevelFrameCounter = false;
+        levelEventDormantMarkerReleasePending = false;
         skipPhysicsThisFrame = false;
+        lastNormalAutoJumpPressFrameCounter = -1;
         normalFrameCount = state == State.NORMAL ? SETTLED_FRAME_THRESHOLD : 0;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
-        aizObjectOrderGracePushBypassThisFrame = false;
+        objectOrderGracePushBypassThisFrame = false;
         if (state != State.CARRYING && state != State.CARRY_INIT) {
             mgzCarryIntroAscend = false;
             mgzCarryFlapTimer = 0;
@@ -2871,17 +3026,20 @@ public class SidekickCpuController {
     }
 
     /**
-     * Restores the ROM Tails CPU globals captured by the trace recorder.
-     * Used by trace replay bootstrap so sidekick AI decisions continue from the
-     * exact pre-trace state instead of restarting from a generic NORMAL state.
+     * Seeds ROM Tails CPU globals for focused routine tests. Production replay
+     * must reach these values by executing the native startup/object paths, not
+     * by copying comparison snapshots into engine state.
      */
-    public void hydrateFromRomCpuState(int cpuRoutine, int controlCounter,
-                                       int respawnCounter, int interactId,
-                                       boolean jumping, int targetX, int targetY) {
+    void hydrateFromRomCpuState(int cpuRoutine, int controlCounter,
+                                int respawnCounter, int interactId,
+                                boolean jumping, int targetX, int targetY) {
         state = mapRomCpuRoutine(cpuRoutine);
         aizIntroDormantMarkerPrimed = false;
-        suppressNextAizIntroNormalMovement = false;
+        suppressNextLevelEventNormalMovement = false;
+        catchUpUsesRomVisibleLevelFrameCounter = false;
+        levelEventDormantMarkerReleasePending = false;
         skipPhysicsThisFrame = false;
+        lastNormalAutoJumpPressFrameCounter = -1;
         this.controlCounter = Math.max(0, controlCounter);
         this.despawnCounter = Math.max(0, respawnCounter);
         this.lastInteractObjectId = interactId & 0xFF;
@@ -2890,10 +3048,10 @@ public class SidekickCpuController {
         this.normalFrameCount = state == State.NORMAL ? SETTLED_FRAME_THRESHOLD : 0;
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
-        aizObjectOrderGracePushBypassThisFrame = false;
+        objectOrderGracePushBypassThisFrame = false;
         // ROM Tails_CPU_target_X / Tails_CPU_target_Y (sonic3k.asm $F70A/$F70C).
-        // The trace recorder surfaces these as target_x / target_y; the engine stores
-        // them in the existing catch-up steering fields, which mirror that ROM word pair.
+        // The engine stores them in the existing catch-up steering fields,
+        // which mirror that ROM word pair.
         this.catchUpTargetX = targetX & 0xFFFF;
         this.catchUpTargetY = targetY & 0xFFFF;
         clearInputs();
@@ -2905,11 +3063,14 @@ public class SidekickCpuController {
     void forceStateForTest(State state, int normalFrames) {
         this.state = state;
         aizIntroDormantMarkerPrimed = false;
-        suppressNextAizIntroNormalMovement = false;
+        suppressNextLevelEventNormalMovement = false;
+        catchUpUsesRomVisibleLevelFrameCounter = false;
+        levelEventDormantMarkerReleasePending = false;
         skipPhysicsThisFrame = false;
+        lastNormalAutoJumpPressFrameCounter = -1;
         this.normalFrameCount = normalFrames;
         suppressNextAirbornePushFollowSteering = false;
-        aizObjectOrderGracePushBypassThisFrame = false;
+        objectOrderGracePushBypassThisFrame = false;
     }
 
     /**
@@ -3047,15 +3208,21 @@ public class SidekickCpuController {
                 sidekickCount,
                 normalPushingGraceFrames,
                 suppressNextAirbornePushFollowSteering,
-                aizObjectOrderGracePushBypassThisFrame,
+                objectOrderGracePushBypassThisFrame,
                 pendingGroundedFollowNudge,
                 pendingGroundedFollowNudgeFrame,
                 aizIntroDormantMarkerPrimed,
-                suppressNextAizIntroNormalMovement,
+                suppressNextLevelEventNormalMovement,
+                catchUpUsesRomVisibleLevelFrameCounter,
+                levelEventDormantMarkerReleasePending,
                 skipPhysicsThisFrame,
+                deferredDespawnDeadFallContinuingThisFrame,
+                bootstrapPreludePlacementApplied,
                 cpuFrameCounterFromStoredLevelFrame,
                 nextCpuFrameCounterOverride,
                 catchUpFrameCounterOverride,
+                lastNormalAutoJumpPressFrameCounter,
+                controller2SignedLocked,
                 latestNormalStepDiagnostics,
                 carryLatchX,
                 carryLatchY,
@@ -3094,15 +3261,21 @@ public class SidekickCpuController {
         sidekickCount = snapshot.sidekickCount();
         normalPushingGraceFrames = snapshot.normalPushingGraceFrames();
         suppressNextAirbornePushFollowSteering = snapshot.suppressNextAirbornePushFollowSteering();
-        aizObjectOrderGracePushBypassThisFrame = snapshot.aizObjectOrderGracePushBypassThisFrame();
+        objectOrderGracePushBypassThisFrame = snapshot.objectOrderGracePushBypassThisFrame();
         pendingGroundedFollowNudge = snapshot.pendingGroundedFollowNudge();
         pendingGroundedFollowNudgeFrame = snapshot.pendingGroundedFollowNudgeFrame();
         aizIntroDormantMarkerPrimed = snapshot.aizIntroDormantMarkerPrimed();
-        suppressNextAizIntroNormalMovement = snapshot.suppressNextAizIntroNormalMovement();
+        suppressNextLevelEventNormalMovement = snapshot.suppressNextLevelEventNormalMovement();
+        catchUpUsesRomVisibleLevelFrameCounter = snapshot.catchUpUsesRomVisibleLevelFrameCounter();
+        levelEventDormantMarkerReleasePending = snapshot.levelEventDormantMarkerReleasePending();
         skipPhysicsThisFrame = snapshot.skipPhysicsThisFrame();
+        deferredDespawnDeadFallContinuingThisFrame = snapshot.deferredDespawnDeadFallContinuingThisFrame();
+        bootstrapPreludePlacementApplied = snapshot.bootstrapPreludePlacementApplied();
         cpuFrameCounterFromStoredLevelFrame = snapshot.cpuFrameCounterFromStoredLevelFrame();
         nextCpuFrameCounterOverride = snapshot.nextCpuFrameCounterOverride();
         catchUpFrameCounterOverride = snapshot.catchUpFrameCounterOverride();
+        lastNormalAutoJumpPressFrameCounter = snapshot.lastNormalAutoJumpPressFrameCounter();
+        controller2SignedLocked = snapshot.controller2SignedLocked();
         latestNormalStepDiagnostics = snapshot.latestNormalStepDiagnostics();
         carryLatchX = snapshot.carryLatchX();
         carryLatchY = snapshot.carryLatchY();
@@ -3179,8 +3352,11 @@ public class SidekickCpuController {
         normalPushingGraceFrames = 0;
         suppressNextAirbornePushFollowSteering = false;
         aizIntroDormantMarkerPrimed = false;
-        suppressNextAizIntroNormalMovement = false;
+        suppressNextLevelEventNormalMovement = false;
+        catchUpUsesRomVisibleLevelFrameCounter = false;
+        levelEventDormantMarkerReleasePending = false;
         skipPhysicsThisFrame = false;
+        controller2SignedLocked = false;
         nextCpuFrameCounterOverride = -1;
         catchUpFrameCounterOverride = -1;
         // Note: leader is NOT cleared — it's a structural chain relationship set at

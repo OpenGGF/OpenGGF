@@ -110,6 +110,7 @@ public final class LevelFrameStep {
         // 4. Dynamic level events — boss arenas, boundary changes, zone transitions.
         LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
         if (levelEvents != null) {
+            wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
             levelEvents.update();
         }
         boolean cameraDrivenScroll = levelManager.advanceCameraDrivenScrollForFrame();
@@ -150,5 +151,6 @@ public final class LevelFrameStep {
         if (spriteManager != null) {
             spriteManager.refreshPlayableRenderFlags(camera);
         }
+        levelManager.clearSidekickRomVisibleReloadFrameCounterBridge();
     }
 }

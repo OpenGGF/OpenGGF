@@ -103,6 +103,9 @@ public class DrowningController {
     /** Whether bubble config has been resolved */
     private boolean bubbleConfigResolved;
 
+    public record FixedCountdownAirEvent(int airBefore, int airAfter, int countdownNumber, boolean drowned) {
+    }
+
     public DrowningController(AbstractPlayableSprite player) {
         this.player = player;
         this.audioManager = player.currentAudioManager();
@@ -379,6 +382,42 @@ public class DrowningController {
 
     public int getRemainingAir() {
         return remainingAir;
+    }
+
+    /**
+     * A fixed level-event air-countdown object may own bubble allocation and
+     * RNG cadence, but the air-left side effects are the shared ROM path:
+     * warning ding at 25/20/15, drowning music at 12, then decrement air_left.
+     */
+    public FixedCountdownAirEvent performFixedCountdownAirEvent(boolean allowAudio) {
+        frameTimer = FRAMES_PER_SECOND;
+        int airBefore = remainingAir;
+        if (allowAudio && WARNING_CHIME_LEVELS.contains(airBefore)) {
+            audioManager.playSfx(GameSound.AIR_DING);
+        }
+        if (allowAudio && airBefore == DROWNING_MUSIC_LEVEL && !drowningMusicStarted) {
+            GameAudioProfile audioProfile = audioManager.getAudioProfile();
+            if (audioProfile != null) {
+                audioManager.playMusic(audioProfile.getDrowningMusicId());
+                drowningMusicStarted = true;
+            }
+        }
+        int countdownNumber = getCountdownNumber(airBefore);
+        remainingAir--;
+        return new FixedCountdownAirEvent(airBefore, remainingAir, countdownNumber, remainingAir < 0);
+    }
+
+    public void setRemainingAirFromFixedCountdown(int remainingAir) {
+        this.remainingAir = remainingAir;
+    }
+
+    public void resetAirTimerFromFixedCountdownDeath() {
+        remainingAir = INITIAL_AIR;
+        frameTimer = FRAMES_PER_SECOND;
+    }
+
+    public int countdownNumberForFixedCountdown(int airLevel) {
+        return getCountdownNumber(airLevel);
     }
 
     public boolean isDrowningMusicPlaying() {

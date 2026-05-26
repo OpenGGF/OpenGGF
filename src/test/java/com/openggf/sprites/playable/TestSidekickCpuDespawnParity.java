@@ -8,6 +8,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.Direction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,6 +74,22 @@ class TestSidekickCpuDespawnParity {
         private DestroyedRideObject(int objectId) {
             super(new ObjectSpawn(0x1200, 0x0800, objectId, 0, 0, false, 0), "DestroyedRideObject");
             setDestroyed(true);
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            // Test sentinel only.
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // No rendering needed for this test sentinel.
+        }
+    }
+
+    private static final class UnloadedRideObject extends AbstractObjectInstance {
+        private UnloadedRideObject(int objectId) {
+            super(new ObjectSpawn(0x1200, 0x0800, objectId, 0, 0, false, 0), "UnloadedRideObject");
         }
 
         @Override
@@ -315,6 +332,68 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kDeadFallWaitsForCameraYPlus100BeforeDespawnMarker() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x493F);
+        tails.setCentreY((short) 0x022F);
+        tails.setSubpixelRaw(0xBA00, 0xB400);
+        tails.setAir(true);
+        tails.setXSpeed((short) 0);
+        tails.setYSpeed((short) -0x0648);
+        tails.setGSpeed((short) 0);
+        GameServices.camera().setY((short) 0x015A);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.DEAD_FALLING, 0);
+        controller.setLevelBounds(null, null, 0x015A);
+
+        controller.update(0x47A2);
+
+        assertEquals(SidekickCpuController.State.DEAD_FALLING, controller.getState(),
+                "S3K sub_123C2 returns while y_pos <= Camera_Y_pos+$100; it does not call "
+                        + "sub_13ECA yet (sonic3k.asm:24549-24565,24578)");
+        assertEquals((short) 0x493F, tails.getCentreX());
+        assertEquals((short) 0x022F, tails.getCentreY());
+        assertEquals((short) -0x0648, tails.getYSpeed());
+        assertTrue(controller.isDeferredDespawnDeadFallContinuingThisFrame(),
+                "The subsequent movement phase owns the dead-fall MoveSprite_TestGravity step");
+    }
+
+    @Test
+    void s3kDeadFallAppliesDespawnMarkerAfterCameraYPlus100Threshold() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x493F);
+        tails.setCentreY((short) 0x0260);
+        tails.setSubpixelRaw(0xBA00, 0xB400);
+        tails.setAir(true);
+        tails.setXSpeed((short) 0);
+        tails.setYSpeed((short) -0x0700);
+        tails.setGSpeed((short) 0);
+        GameServices.camera().setY((short) 0x015A);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.DEAD_FALLING, 0);
+        controller.setLevelBounds(null, null, 0x015A);
+
+        controller.update(0x47A3);
+
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
+                "Once y_pos exceeds Camera_Y_pos+$100, sub_123C2 branches to sub_13ECA "
+                        + "(sonic3k.asm:24565-24578,26800-26809)");
+        assertEquals((short) 0x7F00, tails.getCentreX());
+        assertEquals((short) -0x0007, tails.getCentreY(),
+                "After sub_13ECA writes y_pos=0, loc_157C8 still runs MoveSprite_TestGravity "
+                        + "with the old y_vel (sonic3k.asm:29284-29285,36032-36042)");
+        assertEquals((short) -0x06C8, tails.getYSpeed());
+    }
+
+    @Test
     void s3kOffscreenDestroyedRideSlotDespawnsEvenWhenInteractIdIsUnchanged() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -328,7 +407,7 @@ class TestSidekickCpuDespawnParity {
         tails.setRenderFlagOnScreen(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 0, 0x4E, false, 0, 0); // TODO T7
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x4E, false, 0, 0);
         tails.setLatchedSolidObject(0x4E, new DestroyedRideObject(0x4E));
         tails.setOnObject(true);
         tails.setRenderFlagOnScreen(false);
@@ -340,6 +419,44 @@ class TestSidekickCpuDespawnParity {
         assertEquals((short) 0x7F00, tails.getCentreX());
         assertEquals((short) 0x0000, tails.getCentreY());
         assertTrue(tails.getAir());
+    }
+
+    @Test
+    void s3kOffscreenUnloadedRideSlotDespawnsEvenWhenInstanceWasNotDestroyed() throws Exception {
+        installEmptyObjectManager();
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x142C);
+        tails.setCentreY((short) 0x0AB0);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setLatchedSolidObject(0x47, new UnloadedRideObject(0x47));
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x47, false, 0, 0);
+        tails.setLatchedSolidObject(0x47, new UnloadedRideObject(0x47));
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(18917);
+
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
+                "S3K sub_13EFC compares the cached interact word with a freed slot; "
+                        + "counter-window unload leaves the engine instance inactive rather than destroyed "
+                        + "(sonic3k.asm:26816-26833,36116-36124)");
+        assertEquals((short) 0x7F00, tails.getCentreX());
+        assertEquals((short) 0x0000, tails.getCentreY());
+        assertEquals((short) 0x0000, tails.getYSpeed());
+        assertTrue(tails.getAir());
+    }
+
+    private static void installEmptyObjectManager() throws Exception {
+        var field = GameServices.level().getClass().getDeclaredField("objectManager");
+        field.setAccessible(true);
+        field.set(GameServices.level(), new ObjectManager(List.of(), null, 0, null, null));
     }
 
     @Test
@@ -385,7 +502,7 @@ class TestSidekickCpuDespawnParity {
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 90, 0x01, false, 0, 0); // TODO T7
+        controller.hydrateFromRomCpuState(6, 0, 90, 0x01, false, 0, 0);
         tails.setLatchedSolidObjectId(0x11);
         tails.setOnObject(true);
         tails.setRenderFlagOnScreen(false);
@@ -413,7 +530,7 @@ class TestSidekickCpuDespawnParity {
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false, 0, 0); // TODO T7
+        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false, 0, 0);
         tails.setRenderFlagOnScreen(true);
 
         controller.update(3532);
@@ -436,7 +553,7 @@ class TestSidekickCpuDespawnParity {
         tails.setRenderFlagOnScreen(false);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 299, 0, false, 0, 0); // TODO T7
+        controller.hydrateFromRomCpuState(6, 0, 299, 0, false, 0, 0);
         tails.setHurt(true);
         tails.setRenderFlagOnScreen(false);
 
@@ -465,7 +582,7 @@ class TestSidekickCpuDespawnParity {
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false, 0, 0); // TODO T7
+        controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false, 0, 0);
 
         tails.setRenderFlagOnScreen(true);
         controller.update(1);
