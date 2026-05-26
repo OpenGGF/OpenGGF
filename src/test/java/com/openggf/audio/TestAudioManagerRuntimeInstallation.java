@@ -35,6 +35,18 @@ class TestAudioManagerRuntimeInstallation {
         assertInstanceOf(StreamBackedDeterministicAudioRuntime.class, backend.attachedRuntime);
     }
 
+    @Test
+    void presentationBackendReceivesRuntimeThatProvidesPresentationPcm() {
+        CapturingPresentationBackend backend = new CapturingPresentationBackend();
+
+        AudioManager.getInstance().setBackend(backend);
+
+        org.junit.jupiter.api.Assertions.assertTrue(
+                backend.attachedRuntime.providesPresentationPcm(),
+                "Backends that claim presentation support must receive a runtime"
+                        + " whose providesPresentationPcm() == true");
+    }
+
     private static class CapturingNullBackend extends NullAudioBackend {
         DeterministicAudioRuntime attachedRuntime;
 

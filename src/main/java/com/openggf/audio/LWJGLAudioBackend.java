@@ -975,7 +975,7 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     @Override
     public boolean supportsDeterministicRuntimePresentation() {
-        return false;
+        return true;
     }
 
     @Override
