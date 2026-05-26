@@ -237,6 +237,16 @@ public record TraceMetadata(
     }
 
     /**
+     * Whether the trace emits hook-driven {@code sonic_record_pos} events
+     * showing the Player_1 Stat_table source writes used by delayed Tails CPU
+     * reads.
+     */
+    public boolean hasPerFrameSonicRecordPos() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("sonic_record_pos_per_frame");
+    }
+
+    /**
      * Whether the trace emits per-frame {@code tails_cpu_normal_step} events,
      * the focused S3K Tails CPU normal-follow diagnostic for CNZ/AIZ frontiers.
      */
@@ -271,6 +281,45 @@ public record TraceMetadata(
     public boolean hasPerFrameCnzCylinderExecution() {
         return auxSchemaExtras != null
                 && auxSchemaExtras.contains("cnz_cylinder_execution_per_frame");
+    }
+
+    /**
+     * Whether the trace emits focused CNZ post-boss event RAM snapshots for
+     * {@code Events_bg+$08/$0C}, {@code Events_routine_bg}, and
+     * {@code Background_collision_flag}.
+     */
+    public boolean hasPerFrameCnzEventRam() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("cnz_event_ram_per_frame");
+    }
+
+    /**
+     * Whether the trace emits per-frame S2 SlotMachine state snapshots. This
+     * identifies traces whose title-card replay needs the native slot-machine
+     * short init window before comparison begins.
+     */
+    public boolean hasPerFrameCnzSlotMachineState() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("cnz_slot_machine_state_per_frame");
+    }
+
+    /**
+     * Whether the trace emits S3K fixed Breathing_bubbles /
+     * Breathing_bubbles_P2 controller diagnostics and their visible dynamic
+     * {@code Obj_AirCountdown} children.
+     */
+    public boolean hasPerFrameAirCountdownState() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("air_countdown_state_per_frame");
+    }
+
+    /**
+     * Whether the trace emits focused S3K {@code Random_Number} call-order
+     * diagnostics with ROM seed/result and object register context.
+     */
+    public boolean hasPerFrameRngCall() {
+        return auxSchemaExtras != null
+                && auxSchemaExtras.contains("rng_call_per_frame");
     }
 
     /**

@@ -8,13 +8,8 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * Verifies that {@link TraceReplayBootstrap#sidekickTitleCardPreludeFramesForTraceReplay(TraceData)}
- * and {@link TraceReplayBootstrap#levelObjectTitleCardPreludeFramesForTraceReplay(TraceData)} return
- * {@code 0} unconditionally for every previously-special case.
- *
- * <p>These knobs were workarounds for an engine title-card freeze (worker T1's fix removes the
- * freeze entirely, making the title-card object prelude execute natively). After the fix the
- * knobs are unconditional no-ops and slated for removal.
+ * Verifies title-card workaround knobs stay inactive except for the S3K
+ * Sonic+Tails seed-row setup tick.
  */
 class TestPreludeFramesKnobsZero {
 
@@ -38,10 +33,9 @@ class TestPreludeFramesKnobsZero {
     }
 
     @Test
-    void s3kSonicAndTailsTitleCardPreludeReturnsZero() {
-        // Mirrors the S3K CNZ Sonic+Tails level-select trace: zone != 0 (so not AIZ intro trace),
-        // first frame gameplay_frame_counter == 1, primary movement still zero, sidekicks recorded.
-        // Old behaviour was to return 1 from sidekickTitleCardPreludeFramesForTraceReplay.
+    void s3kSonicAndTailsSeedFrameReturnsOneSidekickSetupTick() {
+        // Mirrors the S3K CNZ Sonic+Tails level-select trace. Frame 0 remains
+        // a seed comparison row after one native sidekick setup tick.
         TraceFrame seed = buildFrame(0, /* gfc */ 1,
                 /* xSpeed */ (short) 0, /* ySpeed */ (short) 0, /* gSpeed */ (short) 0,
                 /* xSub */ 0, /* ySub */ 0);
@@ -51,8 +45,7 @@ class TestPreludeFramesKnobsZero {
                 metadata("s3k", "cnz", 5, 0, List.of("sonic", "tails")),
                 List.of(seed, next));
 
-        assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
-                "S3K Sonic+Tails title-card prelude knob must now return 0 unconditionally.");
+        assertEquals(1, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace));
         assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace));
     }
 
@@ -72,10 +65,9 @@ class TestPreludeFramesKnobsZero {
     }
 
     @Test
-    void s2FirstFrameGameplayCounterOneReturnsZero() {
-        // Mirrors the S2 title-card path with gfc==1 on frame 0. Old behaviour returned
-        // 10 from sidekickTitleCardPreludeFramesForTraceReplay and 25 from
-        // levelObjectTitleCardPreludeFramesForTraceReplay. Both must now be 0.
+    void s2FirstFrameGameplayCounterOneRunsNativeSidekickPrelude() {
+        // Mirrors S2 native-prelude traces whose first compared row has already
+        // seen the title-card Obj01/Obj02 sidekick timing.
         TraceFrame seed = buildFrame(0, /* gfc */ 1,
                 (short) 0, (short) 0, (short) 0, 0, 0);
         TraceFrame next = buildFrame(1, /* gfc */ 2,
@@ -84,15 +76,15 @@ class TestPreludeFramesKnobsZero {
                 metadata("s2", "ehz", 0, 0, List.of("sonic", "tails")),
                 List.of(seed, next));
 
-        assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
-                "S2 sidekick title-card prelude knob must now return 0 unconditionally.");
+        assertEquals(26, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
+                "S2 native-prelude sidekick timing is a game-level title-card execution rule.");
         assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
-                "S2 level-object title-card prelude knob must now return 0 unconditionally.");
+                "S2 level-object metadata knob stays zero; Tornado object preludes need live ObjB2 shape.");
     }
 
     @Test
     void s2FirstFrameGameplayCounterNotOneReturnsZero() {
-        // S2 trace whose first frame already saw multiple LevelLoop ticks — old code also
+        // S2 trace whose first frame already saw multiple LevelLoop ticks - old code also
         // returned 0 here; verify the knob still returns 0.
         TraceFrame seed = buildFrame(0, /* gfc */ 5,
                 (short) 0, (short) 0, (short) 0, 0, 0);
@@ -135,8 +127,7 @@ class TestPreludeFramesKnobsZero {
 
     @Test
     void s3kAizIntroTraceStillReturnsZero() {
-        // Legacy AIZ intro trace path used to short-circuit to 0; verify the new
-        // unconditional return preserves that.
+        // Legacy AIZ intro trace path used to short-circuit to 0; verify that remains true.
         TraceFrame seed = buildFrame(0, /* gfc */ 0,
                 (short) 0, (short) 0, (short) 0, 0, 0);
         TraceData trace = TraceFixtures.trace(
@@ -187,7 +178,7 @@ class TestPreludeFramesKnobsZero {
                 /* startXHex */ "0x0000",
                 /* startYHex */ "0x0000",
                 /* recordingDate */ null,
-                /* luaScriptVersion */ null,
+                /* luaScriptVersion */ "9.2-s2",
                 /* traceSchema */ 3,
                 /* csvVersion */ null,
                 /* traceProfile */ null,

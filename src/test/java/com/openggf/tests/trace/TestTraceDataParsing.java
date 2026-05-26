@@ -341,17 +341,25 @@ public class TestTraceDataParsing {
     }
 
     @Test
-    void suppressedS2RouteFixturesDoNotAdvertiseRecordedSidekicks() throws IOException {
+    void s2RouteFixturesReplayRecordedSidekickTeam() throws IOException {
         for (String route : List.of("scz", "wfz")) {
             TraceData data = TraceData.load(Path.of("src/test/resources/traces/s2", route));
             TraceMetadata meta = data.metadata();
 
-            assertEquals(List.of("sonic"), meta.recordedCharacters(), route + " recorded characters");
-            assertTrue(meta.recordedSidekicks().isEmpty(), route + " recorded sidekicks");
-            assertNull(data.characterState(0, "tails"), route + " should not expose tails by metadata");
+            assertEquals(List.of("sonic", "tails"), meta.recordedCharacters(), route + " recorded characters");
+            assertEquals(List.of("tails"), meta.recordedSidekicks(), route + " recorded sidekicks");
+            assertNotNull(data.characterState(0, "tails"), route + " should preserve tails metadata");
             assertNotNull(data.getFrame(0).sidekick(), route + " CSV still carries the diagnostic Tails block");
             assertFalse(data.getFrame(0).sidekick().present(), route + " frame 0 Tails block should be absent");
         }
+    }
+
+    @Test
+    void activeS2RouteFixturesKeepSidekickBootstrapPolicy() throws IOException {
+        TraceData data = TraceData.load(Path.of("src/test/resources/traces/s2/ehz1_fullrun"));
+
+        assertEquals(List.of("tails"), data.metadata().recordedSidekicks());
+        assertTrue(data.getFrame(0).sidekick().present());
     }
 
     @Test
@@ -687,7 +695,7 @@ public class TestTraceDataParsing {
               "lua_script_version": "test",
               "trace_schema": 5,
               "csv_version": 5,
-              "aux_schema_extras": ["tails_cpu_normal_step_per_frame", "sidekick_interact_object_per_frame"],
+              "aux_schema_extras": ["tails_cpu_normal_step_per_frame", "sidekick_interact_object_per_frame", "sonic_record_pos_per_frame"],
               "rom_checksum": "test"
             }
             """);
@@ -698,12 +706,14 @@ public class TestTraceDataParsing {
         Files.writeString(dir.resolve("aux_state.jsonl"), """
             {"frame":0,"vfc":1,"event":"tails_cpu_normal_step","character":"tails","status":"0x00","object_control":"0x00","ground_vel":"0x000C","x_vel":"0x0000","delayed_stat":"0x08","delayed_input":"0x0800","loc_13dd0_branch":"leader_on_object","ctrl2_logical":"0x0808","ctrl2_held_logical":"0x08","path_pre_ground_vel":"0x000C","path_pre_x_vel":"0x0000","path_pre_status":"0x00","path_post_ground_vel":"0x000C","path_post_x_vel":"0x000C","path_post_status":"0x00"}
             {"frame":0,"vfc":1,"event":"sidekick_interact_object","character":"tails","interact":"0xB128","interact_slot":4,"tails_render_flags":"0x80","tails_object_control":"0x03","tails_status":"0x08","tails_on_object":true,"object_code":"0x000220C2","object_routine":"0x02","object_status":"0x10","object_x":"0x2D95","object_y":"0x0420","object_subtype":"0x40","object_render_flags":"0x80","object_object_control":"0x00","object_active":true,"object_destroyed":false,"object_p1_standing":false,"object_p2_standing":true}
+            {"frame":0,"vfc":1,"event":"sonic_record_pos","hits":[{"pc":"0x10D80","pos_table_index":"0x3C","ctrl1_logical":"0x4000","ctrl1_locked":0,"ctrl1_raw":"0x0404","object_control":"0x00","status":"0x07","status_secondary":"0x11","x":"0x49EE","y":"0x01A7"}]}
             """);
 
         TraceData data = TraceData.load(dir);
 
         assertTrue(data.metadata().hasPerFrameTailsCpuNormalStep());
         assertTrue(data.metadata().hasPerFrameSidekickInteractObject());
+        assertTrue(data.metadata().hasPerFrameSonicRecordPos());
         TraceEvent.TailsCpuNormalStep cpu = data.tailsCpuNormalStepForFrame(0, "tails");
         assertNotNull(cpu);
         assertEquals(0x000C, cpu.pathPostGroundVel());
@@ -713,6 +723,10 @@ public class TestTraceDataParsing {
         assertEquals(4, interact.interactSlot());
         assertEquals(0x000220C2, interact.objectCode());
         assertTrue(interact.objectP2Standing());
+        TraceEvent.SonicRecordPos recordPos = data.sonicRecordPosForFrame(0);
+        assertNotNull(recordPos);
+        assertEquals(0x3C, recordPos.hits().getFirst().posTableIndex());
+        assertEquals(0x4000, recordPos.hits().getFirst().ctrl1Logical());
     }
 
     @Test
@@ -1019,6 +1033,139 @@ public class TestTraceDataParsing {
         TraceData data = TraceData.load(dir);
 
         assertEquals(List.of("aiz_handoff_terrain_state_per_frame"),
+                data.missingAdvertisedAuxSchemas());
+    }
+
+    @Test
+    void parsesS3kFixedAirCountdownDiagnosticsAndMetadataFlag() throws IOException {
+        Path dir = Files.createTempDirectory("s3k-air-countdown-diag");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s3k",
+              "zone": "cnz",
+              "zone_id": 3,
+              "act": 2,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": 1,
+              "start_x": "0x0080",
+              "start_y": "0x03A0",
+              "recording_date": "2026-05-25",
+              "lua_script_version": "test",
+              "trace_schema": 5,
+              "csv_version": 5,
+              "aux_schema_extras": ["air_countdown_state_per_frame"],
+              "rom_checksum": "test"
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,sidekick_status_byte,sidekick_stand_on_obj
+            0000,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0001,00,0001,0000,1,0050,0288,0010,FFF0,000C,08,1,0,0,8000,4000,02,0A,03
+            """);
+        Files.writeString(dir.resolve("aux_state.jsonl"), """
+            {"frame":0,"vfc":1,"event":"air_countdown_state","owner":"p2","fixed_slot":95,"object_code":"0x00018164","routine":"0x0A","subtype":"0x81","obj30":"0x0000","obj36":"0x00","obj37":"0x01","obj38":"0xFF","obj3a":"0x0000","obj3c":"0x0032","obj3e":"0x0016","owner_ptr":"0xFFFFB04A","owner_resolved":"p2","owner_air_left":"0x18","owner_status":"0x40","owner_status_secondary":"0x00","owner_facing_left":true,"owner_underwater":true,"rng_seed":"0x89ABCDEF","visible_children":[{"slot":6,"object_code":"0x00018164","routine":"0x02","subtype":"0x06","x":"0x17A2","y":"0x0A94","x_sub":"0x0000","y_sub":"0x0000","y_vel":"0xFF00","render_flags":"0x84","anim":"0x06","mapping_frame":"0x01","anim_frame":"0x02","anim_frame_timer":"0x0E","angle":"0x40","obj34":"0x17A8","obj3c":"0x0000","parent_ptr":"0xFFFFB04A"}]}
+            """);
+
+        TraceData data = TraceData.load(dir);
+
+        assertTrue(data.metadata().hasPerFrameAirCountdownState());
+        List<TraceEvent.AirCountdownState> states = data.airCountdownStatesForFrame(0);
+        assertEquals(1, states.size());
+        TraceEvent.AirCountdownState state = states.getFirst();
+        assertEquals("p2", state.owner());
+        assertEquals(95, state.fixedSlot());
+        assertEquals(0x00018164, state.objectCode());
+        assertEquals(0x0032, state.obj3c());
+        assertEquals(0x89ABCDEF, state.rngSeed());
+        assertTrue(state.ownerUnderwater());
+        assertEquals(1, state.visibleChildren().size());
+        assertEquals(6, state.visibleChildren().getFirst().slot());
+        assertEquals(0x17A2, state.visibleChildren().getFirst().x());
+        assertEquals(0xFF00, state.visibleChildren().getFirst().yVel());
+        assertEquals(0x84, state.visibleChildren().getFirst().renderFlags());
+        assertEquals(0x06, state.visibleChildren().getFirst().anim());
+        assertEquals(0x17A8, state.visibleChildren().getFirst().obj34());
+        assertTrue(data.missingAdvertisedAuxSchemas().isEmpty());
+    }
+
+    @Test
+    void parsesS3kRngCallDiagnosticsAndMetadataFlag() throws IOException {
+        Path dir = Files.createTempDirectory("s3k-rng-call-diag");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s3k",
+              "zone": "cnz",
+              "zone_id": 3,
+              "act": 2,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": 1,
+              "start_x": "0x0080",
+              "start_y": "0x03A0",
+              "recording_date": "2026-05-25",
+              "lua_script_version": "test",
+              "trace_schema": 5,
+              "csv_version": 5,
+              "aux_schema_extras": ["rng_call_per_frame"],
+              "rom_checksum": "test"
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,sidekick_status_byte,sidekick_stand_on_obj
+            0000,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0001,00,0001,0000,1,0050,0288,0010,FFF0,000C,08,1,0,0,8000,4000,02,0A,03
+            """);
+        Files.writeString(dir.resolve("aux_state.jsonl"), """
+            {"frame":0,"vfc":1,"event":"rng_call","hits":[{"pc":"0x01D24","caller_pc":"0x031754","source":"CNZBalloon.init","seed_before":"0x12345678","seed_after":"0x89ABCDEF","result":"0x12340099","result_byte":"0x99","a0_ptr":"0xB2C0","a0_slot":9,"a0_object_code":"0x00031754","a0_routine":"0x00","a0_subtype":"0x02","a0_x":"0x10E8","a0_y":"0x06B0","a1_ptr":"0x0000","a1_slot":-1,"a1_object_code":"0x00000000","a1_routine":"0x00","a1_subtype":"0x00","a1_x":"0x0000","a1_y":"0x0000"}]}
+            """);
+
+        TraceData data = TraceData.load(dir);
+
+        assertTrue(data.metadata().hasPerFrameRngCall());
+        TraceEvent.RngCall rngCall = data.rngCallForFrame(0);
+        assertNotNull(rngCall);
+        assertEquals(1, rngCall.hits().size());
+        TraceEvent.RngCall.Hit hit = rngCall.hits().getFirst();
+        assertEquals(0x1D24, hit.pc());
+        assertEquals(0x31754, hit.callerPc());
+        assertEquals("CNZBalloon.init", hit.source());
+        assertEquals(0x12345678, hit.seedBefore());
+        assertEquals(0x89ABCDEF, hit.seedAfter());
+        assertEquals(0x12340099, hit.result());
+        assertEquals(0x99, hit.resultByte());
+        assertEquals(9, hit.a0().slot());
+        assertEquals(0x00031754, hit.a0().objectCode());
+        assertEquals(0x10E8, hit.a0().x());
+        assertTrue(data.missingAdvertisedAuxSchemas().isEmpty());
+    }
+
+    @Test
+    void reportsAdvertisedAirCountdownDiagnosticsMissingFromAuxStream() throws IOException {
+        Path dir = Files.createTempDirectory("s3k-missing-air-countdown-diag");
+        Files.writeString(dir.resolve("metadata.json"), """
+            {
+              "game": "s3k",
+              "zone": "cnz",
+              "zone_id": 3,
+              "act": 2,
+              "bk2_frame_offset": 0,
+              "trace_frame_count": 1,
+              "start_x": "0x0080",
+              "start_y": "0x03A0",
+              "recording_date": "2026-05-25",
+              "lua_script_version": "test",
+              "trace_schema": 5,
+              "csv_version": 5,
+              "aux_schema_extras": ["air_countdown_state_per_frame"],
+              "rom_checksum": "test"
+            }
+            """);
+        Files.writeString(dir.resolve("physics.csv"), """
+            frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,vblank_counter,lag_counter,sidekick_present,sidekick_x,sidekick_y,sidekick_x_speed,sidekick_y_speed,sidekick_g_speed,sidekick_angle,sidekick_air,sidekick_rolling,sidekick_ground_mode,sidekick_x_sub,sidekick_y_sub,sidekick_routine,sidekick_status_byte,sidekick_stand_on_obj
+            0000,0000,0080,03A0,0000,0000,0000,00,0,0,0,0000,0000,02,0000,0000,0000,00,0001,00,0001,0000,1,0050,0288,0010,FFF0,000C,08,1,0,0,8000,4000,02,0A,03
+            """);
+        Files.writeString(dir.resolve("aux_state.jsonl"), "");
+
+        TraceData data = TraceData.load(dir);
+
+        assertEquals(List.of("air_countdown_state_per_frame"),
                 data.missingAdvertisedAuxSchemas());
     }
 

@@ -1,5 +1,7 @@
 package com.openggf.game.sonic2.trace;
 
+import com.openggf.game.sonic2.objects.TornadoObjectInstance;
+
 /**
  * Derives the small native pre-gameplay seeds needed by S2 SCZ/WFZ
  * level-select traces before the first compared Level_MainLoop frame.
@@ -28,16 +30,21 @@ public final class Sonic2TornadoRidePrelude {
     private Sonic2TornadoRidePrelude() {
     }
 
-    public static Seed forZone(String zone) {
-        return switch (zone) {
-            case "scz" -> new Seed(
+    public static Seed forTornado(TornadoObjectInstance tornado) {
+        if (tornado == null) {
+            return new Seed(0, 0);
+        }
+        if (tornado.isSczRideStartPreludeObject()) {
+            return new Seed(
                     playerFallSubpixel(SCZ_PLAYER_FALL_TICKS),
                     tornadoBobSubpixel8(SCZ_TORNADO_BOB_TICKS));
-            case "wfz" -> new Seed(
+        }
+        if (tornado.isWfzStartRideStartPreludeObject()) {
+            return new Seed(
                     playerFallSubpixel(WFZ_PLAYER_FALL_TICKS),
                     0);
-            default -> new Seed(0, 0);
-        };
+        }
+        return new Seed(0, 0);
     }
 
     static int playerFallSubpixel(int fallTicks) {

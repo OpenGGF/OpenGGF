@@ -67,9 +67,6 @@ import static org.junit.jupiter.api.Assertions.*;
 public abstract class AbstractTraceReplayTest {
     private static final Logger LOGGER = Logger.getLogger(AbstractTraceReplayTest.class.getName());
 
-    private static final boolean S3K_TRACE_PROBES =
-            Boolean.getBoolean("openggf.trace.s3k.probes");
-
     /** Which game ROM this test requires. */
     protected abstract SonicGame game();
 
@@ -321,9 +318,6 @@ public abstract class AbstractTraceReplayTest {
                 : driveTraceIndex > 0 ? trace.getFrame(driveTraceIndex - 1) : null;
         S3kReplayCheckpointDetector detector = new S3kReplayCheckpointDetector();
         S3kRequiredCheckpointGuard checkpointGuard = new S3kRequiredCheckpointGuard();
-        int firstOscDivFrame = -1;
-        Boolean lastEventsFg5 = null;
-        boolean hasPerFrameOsc = meta.hasPerFrameOscillationState();
 
         if (replayStart.hasSeededTraceState()) {
             TraceFrame seededFrame = trace.getFrame(replayStart.seededTraceIndex());
@@ -407,65 +401,7 @@ public abstract class AbstractTraceReplayTest {
                     : fixture.stepFrameFromRecording();
 
             S3kCheckpointProbe probe = captureS3kProbe(driveFrame.frame(), fixture.sprite());
-            var titleCardProvider = GameServices.module().getTitleCardProvider();
-            boolean titleCardOverlayActive = titleCardProvider != null && titleCardProvider.isOverlayActive();
-            boolean titleCardReleaseControl = titleCardProvider != null && titleCardProvider.shouldReleaseControl();
-            if (S3K_TRACE_PROBES && (lastEventsFg5 == null || lastEventsFg5 != probe.eventsFg5())) {
-                System.out.printf("S3K probe frame=%d levelStarted=%b eventsFg5=%b fire=%b zone=%s act=%s apparent=%s moveLock=%d ctrlLocked=%b objCtrl=%b hidden=%b tcOverlay=%b tcRelease=%b%n",
-                        driveFrame.frame(),
-                        probe.levelStarted(),
-                        probe.eventsFg5(),
-                        probe.fireTransitionActive(),
-                        probe.actualZoneId(),
-                        probe.actualAct(),
-                        probe.apparentAct(),
-                        probe.moveLock(),
-                        probe.ctrlLocked(),
-                        probe.objectControlled(),
-                        probe.hidden(),
-                        titleCardOverlayActive,
-                        titleCardReleaseControl);
-                lastEventsFg5 = probe.eventsFg5();
-            }
             TraceEvent.Checkpoint engineCheckpoint = detector.observe(probe);
-            if (S3K_TRACE_PROBES && engineCheckpoint != null) {
-                System.out.printf("S3K engine checkpoint frame=%d name=%s zone=%s act=%s apparent=%s levelStarted=%b moveLock=%d ctrlLocked=%b objCtrl=%b hidden=%b eventsFg5=%b tcOverlay=%b tcRelease=%b%n",
-                        driveFrame.frame(),
-                        engineCheckpoint.name(),
-                        probe.actualZoneId(),
-                        probe.actualAct(),
-                        probe.apparentAct(),
-                        probe.levelStarted(),
-                        probe.moveLock(),
-                        probe.ctrlLocked(),
-                        probe.objectControlled(),
-                        probe.hidden(),
-                        probe.eventsFg5(),
-                        titleCardOverlayActive,
-                        titleCardReleaseControl);
-            }
-            // Diagnostic-only: when the trace carries per-frame oscillation
-            // snapshots (v6.1+ S3K recorder), compare engine OscillationManager
-            // state to ROM Oscillating_table state at this frame when probes
-            // are enabled. Engine must produce the correct phase
-            // natively — never hydrate from these values.
-            if (S3K_TRACE_PROBES && hasPerFrameOsc && firstOscDivFrame < 0) {
-                TraceEvent.OscillationState romOsc = trace.oscillationStateForFrame(driveFrame.frame());
-                if (romOsc != null && romOsc.oscTable() != null && romOsc.oscTable().length == 0x42) {
-                    byte[] eng = com.openggf.game.OscillationManager.snapshotRomFormatBytes();
-                    byte[] rom = romOsc.oscTable();
-                    if (eng.length == rom.length) {
-                        for (int b = 0; b < eng.length; b++) {
-                            if (eng[b] != rom[b]) {
-                                firstOscDivFrame = driveFrame.frame();
-                                System.out.printf("FIRST OSC DIVERGENCE at frame %d (idx=%d): byte %d ROM=0x%02X ENG=0x%02X%n",
-                                        driveFrame.frame(), b, b, rom[b] & 0xFF, eng[b] & 0xFF);
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
 
             if (TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                 TraceReplayBootstrap.ReplayPrimaryState actualPrimary =
@@ -705,11 +641,12 @@ public abstract class AbstractTraceReplayTest {
 
         String solidEvent = "";
         solidEvent = combineDiagnostics(solidEvent, String.format(
-                "eng-player vel=(%04X,%04X) g=%04X dir=%s rj=%s jump=%s shoes=%s accel=%04X max=%04X lock=%s moveLock=%d objCtrl=%s objSup=%s in=(%s,%s,%s)",
+                "eng-player vel=(%04X,%04X) g=%04X dir=%s bal=%d rj=%s jump=%s shoes=%s accel=%04X max=%04X lock=%s moveLock=%d objCtrl=%s objSup=%s in=(%s,%s,%s,%s) look=%04X bias=%04X",
                 sprite.getXSpeed() & 0xFFFF,
                 sprite.getYSpeed() & 0xFFFF,
                 sprite.getGSpeed() & 0xFFFF,
                 sprite.getDirection(),
+                sprite.getBalanceState(),
                 sprite.getRollingJump(),
                 sprite.isJumping(),
                 sprite.hasSpeedShoes(),
@@ -719,9 +656,12 @@ public abstract class AbstractTraceReplayTest {
                 sprite.getMoveLockTimer(),
                 sprite.isObjectControlled(),
                 sprite.isObjectControlSuppressesMovement(),
+                sprite.isDownPressed(),
                 sprite.isLeftPressed(),
                 sprite.isRightPressed(),
-                sprite.isJumpPressed()));
+                sprite.isJumpPressed(),
+                sprite.getLookDelayCounter() & 0xFFFF,
+                GameServices.camera() != null ? GameServices.camera().getYPosBias() & 0xFFFF : -1));
         if (om != null) {
             TouchResponseDebugState touchState = om.getTouchResponseDebugState();
             if (touchState != null) {
@@ -787,6 +727,7 @@ public abstract class AbstractTraceReplayTest {
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickNearbyObjects(om));
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickCpuDiagnostics());
             solidEvent = combineDiagnostics(solidEvent, summariseSidekickCylinderDiagnostics(om));
+            solidEvent = combineDiagnostics(solidEvent, additionalEngineObjectDiagnostics(om));
         }
 
         return new EngineDiagnostics(routine, standOnSlot, standOnType, rings, statusByte,
@@ -953,6 +894,10 @@ public abstract class AbstractTraceReplayTest {
         return String.join(" | ", parts);
     }
 
+    protected String additionalEngineObjectDiagnostics(ObjectManager om) {
+        return "";
+    }
+
     private String summariseSidekickCpuDiagnostics() {
         SpriteManager spriteManager = GameServices.sprites();
         if (spriteManager == null || spriteManager.getSidekicks().isEmpty()) {
@@ -990,8 +935,9 @@ public abstract class AbstractTraceReplayTest {
             if (report.hasErrors()) {
                 DivergenceGroup firstError = report.errors().get(0);
                 Path contextPath = outDir.resolve(prefix + "_context.txt");
+                int contextRadius = Integer.getInteger("trace.context.radius", 20);
                 Files.writeString(contextPath,
-                    report.getContextWindow(firstError.startFrame(), 20));
+                    report.getContextWindow(firstError.startFrame(), contextRadius));
             }
         } catch (IOException e) {
             System.err.println("Warning: failed to write report: " + e.getMessage());

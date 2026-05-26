@@ -221,4 +221,30 @@ public class TestTraceEventFormatting {
         assertEquals("aizHandoff bg=0010 draw=00A0/0004 kos=00 za=0000 dyn=00 objLoad=00 rings=00 p1=2FCD,0379 st=00 yr=13 top=0C floor=seen d=0000 a=00 probe=2FE0,038C solid=seen preY=0379 surf=0390 d=0000",
                 TraceEventFormatter.summariseFrameEvents(List.of(event)));
     }
+
+    @Test
+    void summarisesS3kFixedAirCountdownDiagnostics() {
+        TraceEvent event = TraceEvent.parseJsonLine(
+                """
+                {"frame":20358,"vfc":20359,"event":"air_countdown_state","owner":"p2","fixed_slot":95,"object_code":"0x00018164","routine":"0x0A","subtype":"0x81","obj30":"0x0000","obj36":"0x00","obj37":"0x01","obj38":"0xFF","obj3a":"0x0000","obj3c":"0x0032","obj3e":"0x0016","owner_ptr":"0xFFFFB04A","owner_resolved":"p2","owner_air_left":"0x18","owner_status":"0x41","owner_status_secondary":"0x00","owner_facing_left":true,"owner_underwater":true,"rng_seed":"0x89ABCDEF","visible_children":[{"slot":6,"object_code":"0x00018164","routine":"0x02","subtype":"0x06","x":"0x17A2","y":"0x0A94","x_sub":"0x0000","y_sub":"0x0000","y_vel":"0xFF00","render_flags":"0x84","anim":"0x06","mapping_frame":"0x01","anim_frame":"0x02","anim_frame_timer":"0x0E","angle":"0x40","obj34":"0x17A8","obj3c":"0x0000","parent_ptr":"0xFFFFB04A"}]}
+                """.trim(),
+                mapper);
+
+        assertTrue(event instanceof TraceEvent.AirCountdownState);
+        assertEquals("airCnt p2 fixed=s95 code=00018164 rtn=0A sub=81 30=0000 36=00 37=01 38=FF 3A=0000 3C=0032 3E=0016 owner=p2 ptr=FFFFB04A air=18 st=41/00 face=L water=true rng=89ABCDEF child=s6 @17A2,0A94 sub=06 rtn=02 yv=FF00 rf=84 anim=06 map=01 af=02/0E ang=40 org=17A8 3C=0000 parent=FFFFB04A",
+                TraceEventFormatter.summariseFrameEvents(List.of(event)));
+    }
+
+    @Test
+    void summarisesS3kRngCallDiagnostics() {
+        TraceEvent event = TraceEvent.parseJsonLine(
+                """
+                {"frame":21620,"vfc":21621,"event":"rng_call","hits":[{"pc":"0x01D24","caller_pc":"0x031754","source":"CNZBalloon.init","seed_before":"0x12345678","seed_after":"0x89ABCDEF","result":"0x12340099","result_byte":"0x99","a0_ptr":"0xB2C0","a0_slot":9,"a0_object_code":"0x00031754","a0_routine":"0x00","a0_subtype":"0x02","a0_x":"0x10E8","a0_y":"0x06B0","a1_ptr":"0x0000","a1_slot":-1,"a1_object_code":"0x00000000","a1_routine":"0x00","a1_subtype":"0x00","a1_x":"0x0000","a1_y":"0x0000"}]}
+                """.trim(),
+                mapper);
+
+        assertTrue(event instanceof TraceEvent.RngCall);
+        assertEquals("rng pc=01D24 ret=031754 CNZBalloon.init seed=12345678->89ABCDEF res=12340099/99 a0=s9 00031754 @10E8,06B0 r=00 sub=02",
+                TraceEventFormatter.summariseFrameEvents(List.of(event)));
+    }
 }

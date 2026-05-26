@@ -175,6 +175,10 @@ public class TraceData {
                 && !hasEventOfType(TraceEvent.AizShipLoop.class)) {
             missing.add("aiz_ship_loop_per_frame");
         }
+        if (metadata.hasPerFrameSonicRecordPos()
+                && !hasEventOfType(TraceEvent.SonicRecordPos.class)) {
+            missing.add("sonic_record_pos_per_frame");
+        }
         if (metadata.hasPerFrameTailsCpuNormalStep()
                 && !hasEventOfType(TraceEvent.TailsCpuNormalStep.class)) {
             missing.add("tails_cpu_normal_step_per_frame");
@@ -190,6 +194,18 @@ public class TraceData {
         if (metadata.hasPerFrameCnzCylinderExecution()
                 && !hasEventOfType(TraceEvent.CnzCylinderExecution.class)) {
             missing.add("cnz_cylinder_execution_per_frame");
+        }
+        if (metadata.hasPerFrameCnzEventRam()
+                && !hasEventOfType(TraceEvent.CnzEventRamState.class)) {
+            missing.add("cnz_event_ram_per_frame");
+        }
+        if (metadata.hasPerFrameAirCountdownState()
+                && !hasEventOfType(TraceEvent.AirCountdownState.class)) {
+            missing.add("air_countdown_state_per_frame");
+        }
+        if (metadata.hasPerFrameRngCall()
+                && !hasEventOfType(TraceEvent.RngCall.class)) {
+            missing.add("rng_call_per_frame");
         }
         if (metadata.hasPerFrameAizBoundaryState()
                 && !hasEventOfType(TraceEvent.AizBoundaryState.class)) {
@@ -437,6 +453,24 @@ public class TraceData {
     }
 
     /**
+     * Returns the focused Player_1 Sonic_RecordPos diagnostic for the
+     * requested frame, or {@code null} when absent.
+     *
+     * <p><strong>Diagnostic only.</strong> This maps delayed sidekick
+     * Stat_table reads back to the ROM write source; replay code must not
+     * hydrate state from it.
+     */
+    public TraceEvent.SonicRecordPos sonicRecordPosForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.SonicRecordPos recordPos) {
+                return recordPos;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Returns the focused S3K Tails CPU normal-step diagnostic for the
      * requested frame and character, or {@code null} when absent.
      *
@@ -494,6 +528,46 @@ public class TraceData {
         for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
             if (event instanceof TraceEvent.CnzCylinderExecution execution) {
                 return execution;
+            }
+        }
+        return null;
+    }
+
+    public TraceEvent.CnzEventRamState cnzEventRamStateForFrame(int frame) {
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.CnzEventRamState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns S3K fixed Breathing_bubbles / Breathing_bubbles_P2 diagnostics
+     * for the requested frame.
+     *
+     * <p><strong>Diagnostic only.</strong> This is report context for ROM-side
+     * AirCountdown controller cadence and visible child lifetime; replay code
+     * must not hydrate state from it.
+     */
+    public List<TraceEvent.AirCountdownState> airCountdownStatesForFrame(int frame) {
+        List<TraceEvent.AirCountdownState> states = new ArrayList<>();
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.AirCountdownState state) {
+                states.add(state);
+            }
+        }
+        return states;
+    }
+
+    /**
+     * Returns focused S3K Random_Number call-order diagnostics for a frame.
+     * Diagnostic-only; callers must not hydrate engine RNG state from it.
+     */
+    public TraceEvent.RngCall rngCallForFrame(int frame) {
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.RngCall call) {
+                return call;
             }
         }
         return null;

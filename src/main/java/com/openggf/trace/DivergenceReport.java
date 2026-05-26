@@ -373,10 +373,20 @@ public class DivergenceReport {
         if (aizShipLoop != null) {
             diagnostics.add(aizShipLoop);
         }
+        TraceEvent.SonicRecordPos sonicRecordPos = traceData.sonicRecordPosForFrame(frame);
+        if (sonicRecordPos != null) {
+            diagnostics.add(sonicRecordPos);
+        }
         TraceEvent.TailsCpuNormalStep cpuNormalStep =
                 traceData.tailsCpuNormalStepForFrame(frame, "tails");
         if (cpuNormalStep != null) {
             diagnostics.add(cpuNormalStep);
+            TraceEvent.SonicRecordPos sourceRecord =
+                    latestSonicRecordPosForStatIndex(frame,
+                            (cpuNormalStep.posTableIndex() - 0x44) & 0xFF);
+            if (sourceRecord != null && sourceRecord != sonicRecordPos) {
+                diagnostics.add(sourceRecord);
+            }
         }
         TraceEvent.SidekickInteractObjectState interactObject =
                 traceData.sidekickInteractObjectStateForFrame(frame, "tails");
@@ -388,6 +398,16 @@ public class DivergenceReport {
                 traceData.cnzCylinderExecutionForFrame(frame);
         if (cnzCylinderExecution != null) {
             diagnostics.add(cnzCylinderExecution);
+        }
+        TraceEvent.CnzEventRamState cnzEventRam =
+                traceData.cnzEventRamStateForFrame(frame);
+        if (cnzEventRam != null) {
+            diagnostics.add(cnzEventRam);
+        }
+        diagnostics.addAll(traceData.airCountdownStatesForFrame(frame));
+        TraceEvent.RngCall rngCall = traceData.rngCallForFrame(frame);
+        if (rngCall != null) {
+            diagnostics.add(rngCall);
         }
         TraceEvent.AizBoundaryState aizBoundary =
                 traceData.aizBoundaryStateForFrame(frame, "tails");
@@ -411,6 +431,25 @@ public class DivergenceReport {
                 .append(TraceEventFormatter.summariseFrameEvents(diagnostics))
                 .append("\n");
         }
+    }
+
+    private TraceEvent.SonicRecordPos latestSonicRecordPosForStatIndex(int frame, int statIndex) {
+        if (traceData == null || frame < 0) {
+            return null;
+        }
+        int start = Math.max(0, frame - 80);
+        for (int f = frame; f >= start; f--) {
+            TraceEvent.SonicRecordPos record = traceData.sonicRecordPosForFrame(f);
+            if (record == null) {
+                continue;
+            }
+            for (TraceEvent.SonicRecordPos.Hit hit : record.hits()) {
+                if ((hit.posTableIndex() & 0xFF) == statIndex) {
+                    return record;
+                }
+            }
+        }
+        return null;
     }
 
     private static List<DivergenceGroup> buildGroups(List<FrameComparison> comparisons) {
