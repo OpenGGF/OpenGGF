@@ -84,6 +84,21 @@ public class InputHandler {
 		return false;
 	}
 
+	/**
+	 * Returns true when at least one key transitioned from not-pressed to
+	 * pressed during the current frame. Mirrors {@link #isKeyPressed(int)}
+	 * but checks all keys at once. Used by full-screen prompts that
+	 * accept any input to dismiss.
+	 */
+	public boolean isAnyKeyJustPressed() {
+		for (int i = 0; i < MAX_KEYS; i++) {
+			if (keys[i] && !previousKeys[i]) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public boolean isShiftDown() {
 		return isKeyDown(GLFW_KEY_LEFT_SHIFT) || isKeyDown(GLFW_KEY_RIGHT_SHIFT);
 	}

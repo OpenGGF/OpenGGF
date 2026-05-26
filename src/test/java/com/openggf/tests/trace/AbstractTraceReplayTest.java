@@ -489,7 +489,7 @@ public abstract class AbstractTraceReplayTest {
             case TITLE_SCREEN, MASTER_TITLE_SCREEN -> 0x00;
             case LEVEL_SELECT -> 0x08;
             case DATA_SELECT -> 0x18;
-            case CREDITS_TEXT, CREDITS_DEMO, TRY_AGAIN_END, ENDING_CUTSCENE, EDITOR, BONUS_STAGE -> null;
+            case CREDITS_TEXT, CREDITS_DEMO, TRY_AGAIN_END, ENDING_CUTSCENE, EDITOR, BONUS_STAGE, LEGAL_DISCLAIMER -> null;
         };
     }
 
