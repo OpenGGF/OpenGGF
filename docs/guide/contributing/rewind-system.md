@@ -423,3 +423,26 @@ mvn -Dmse=off "-Dtest=com.openggf.TestTraceSessionLauncherRewindPresentation,com
 
 If the benchmark reports a divergent key, treat it as a real coverage gap unless the
 diff comparator itself is demonstrably wrong.
+
+### Performance attribution
+
+When the debug performance overlay is enabled, the rewind hot path
+appears under five sections:
+
+- `rewind.capture` — `RewindRegistry.capture()` (snapshot bundle build).
+- `rewind.restore` — `RewindRegistry.restore()` (snapshot apply).
+- `rewind.step` — `RewindController.stepBackward()` outer body
+  (audio bookkeeping, segment-cache array alloc, primer calls).
+- `rewind.seek` — `RewindController.seekTo()` outer body.
+- `rewind.replay` — each `engineStepper.step(...)` call replayed during
+  segment-cache cold expansion or seek forward-stepping.
+
+The profiler does not nest sections (`PerformanceProfiler.beginSection`
+implicitly ends the active one), so `rewind.step` / `rewind.seek` are
+re-opened explicitly after each inner section closes. Every `beginSection`
+is paired with `endSection` in a `try/finally` so exceptions cannot leave
+a dangling active section.
+
+Production rewind code depends on the `SectionProfiler` interface
+(`com.openggf.debug.SectionProfiler`), not the `PerformanceProfiler`
+singleton directly — keeps tests cheap and avoids singleton coupling.

@@ -32,6 +32,10 @@ Enabled in `Engine.display()` only when `debugViewEnabled && !isNativeImage() &&
 | `render.atlas_upload` | `PatternAtlas.java:414-438` | GPU atlas upload (`glTexSubImage2D` per dirty page). Recorded via `recordSectionTime` so DPLC bursts mid-`render.sprites` don't truncate the outer section. |
 | `audio.music_stream`, `audio.sfx_stream`, `audio.upload` | `LWJGLAudioBackend.java:686, 703, 734` | Music stream `read()` (SMPS sequencer + FM synth + resampler interleaved at sample granularity inside `SmpsDriver.read()`), separate-SFX stream + mix loop, DirectBuffer fill + OpenAL upload. Names describe the wrap windows; a clean SMPS/synth/resample phase split is *not* available at this seam. |
 | `rewind.capture` | `RewindRegistry.java:54` | Snapshot cost on capture-interval frames. Called from `LiveRewindManager` after the level tick; `activeSection` is null at that point, so no truncation. |
+| `rewind.restore` | `RewindRegistry.restore()` | Restore cost. Mirrors `rewind.capture`. Dominant on hot-segment held rewind. |
+| `rewind.step` | `RewindController.stepBackward()` | Outer wrapper. Catches audio bookkeeping + segment-cache array alloc + post-restore work. Re-opens itself after inner `rewind.replay`/`rewind.capture`/`rewind.restore` sections implicitly close it. |
+| `rewind.seek` | `RewindController.seekTo()` | Outer wrapper for the seek path. Same re-open pattern as `rewind.step`. Used by debug/Bk2 seek paths. |
+| `rewind.replay` | `RewindController.stepBackward()` segment-expansion lambda + `RewindController.seekTo()` forward loop | Wraps each `engineStepper.step(...)` inside segment-cache cold expansion and `seekTo` forward-stepping. Surfaces the "60× game frames replayed in one visual frame" cost at backward keyframe crossings. |
 
 ### Offline harness (rewind)
 
@@ -103,6 +107,17 @@ Audio dwarfs game logic in raw ops/sec.
 - `audio/rewind/SmpsTrackSnapshot.java:80-88` — **8 × `Arrays.copyOf`** per track snapshot (voiceData, voiceScratch, loopCounters, returnStack, modEnvData, envData, fmVolEnvData, ssgEg).
 
 Storage is bounded by phase 6's 128 KB/keyframe budget; capture interval is 60 frames (`RewindController.java:92-95`), so per-runtime-frame *amortized* cost is small, but **on capture frames the GC spike is real** and worth measuring with a live `MemoryStats` section.
+
+**Attribution note (2026-05-26):** Held rewind no longer leaks into the
+`update` umbrella section. The cold-segment expansion path is now broken
+out into `rewind.replay` (the 60× `engineStepper.step` calls) plus
+`rewind.capture` (the 60× `RewindRegistry.capture` calls), with
+`rewind.restore` and `rewind.step`/`rewind.seek` covering the rest of
+the path. Every `beginSection` has a paired `endSection` in `try/finally`,
+so a thrown exception inside `engineStepper.step` or `registry.capture`
+cannot leave the profiler with a dangling active section. `update` now
+reports its normal prologue-only allocation during held rewind, the same
+as during normal play.
 
 ### 2.5 Engine-wide per-frame allocation pressure
 
