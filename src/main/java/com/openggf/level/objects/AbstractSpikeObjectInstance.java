@@ -105,6 +105,15 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        // S2 Obj36 and S3K Obj_Spikes store the placement X in objoff_30/$30
+        // and feed that saved origin to MarkObjGone2/Sprite_OnScreen_Test2
+        // after live spike movement (docs/s2disasm/s2.asm:29221-29226;
+        // docs/skdisasm/sonic3k.asm:49038-49039,49071-49072,49102-49103).
+        return baseX;
+    }
+
+    @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(4);
     }

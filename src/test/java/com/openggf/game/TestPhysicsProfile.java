@@ -268,8 +268,8 @@ public class TestPhysicsProfile {
                 "S1 word timer clears on the display-time decrement that reaches zero");
         assertEquals(0, PhysicsFeatureSet.SONIC_2.speedShoesTimerPrePhysicsExtraTicks(),
                 "S2 word timer clears on the display-time decrement that reaches zero");
-        assertEquals(1, PhysicsFeatureSet.SONIC_3K.speedShoesTimerPrePhysicsExtraTicks(),
-                "S3K keeps the existing byte/eighth-frame timer approximation");
+        assertEquals(0, PhysicsFeatureSet.SONIC_3K.speedShoesTimerPrePhysicsExtraTicks(),
+                "S3K clears speed shoes from Sonic_Display before the next movement frame consumes acceleration");
     }
 
     // ========================================

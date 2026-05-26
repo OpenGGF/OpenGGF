@@ -24,6 +24,7 @@ public record CameraSnapshot(
         boolean maxYChanging,
         int horizScrollDelayFrames,
         boolean frozen,
+        boolean deferHorizontalBoundaryClampOnce,
         boolean levelStarted,
         boolean verticalWrapEnabled,
         int verticalWrapRange,

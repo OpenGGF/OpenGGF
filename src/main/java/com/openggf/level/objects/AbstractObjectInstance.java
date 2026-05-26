@@ -573,7 +573,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         // cached camera bounds already represent the prior Render_Sprites pass
         // that set render_flags bit 7. The extra previous-frame snapshot lags
         // the ROM gate by two frames in inline object order.
-        return cameraBounds.contains(
+        return cameraBounds.containsRenderSpriteBounds(
                 getX(), getY(), getOnScreenHalfWidth(), getOnScreenHalfHeight());
     }
 

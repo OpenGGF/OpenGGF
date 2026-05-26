@@ -225,9 +225,12 @@ public class CollisionSystem {
     }
 
     public boolean hasEnoughHeadroom(AbstractPlayableSprite player, int hexAngle) {
-        int terrainDistance = getTerrainHeadroomDistance(player, hexAngle);
-        int objectDistance = getHeadroomDistance(player, hexAngle);
-        return Math.min(terrainDistance, objectDistance) >= 6;
+        // ROM jump routines only call terrain headroom probes before applying
+        // jump velocity: S1 Sonic_CalcHeadroom, S2/S3K CalcRoomOverHead
+        // (S1 01 Sonic.asm:1123-1128; S2 s2.asm:37031-37037,40010-40016;
+        // S3K sonic3k.asm:23300-23307,28531-28538). Solid-object headroom is
+        // handled by object collision/crush logic, not by Sonic_Jump/Tails_Jump.
+        return getTerrainHeadroomDistance(player, hexAngle) >= 6;
     }
 
     public void resolveGroundWallCollision(AbstractPlayableSprite sprite) {
@@ -381,7 +384,6 @@ public class CollisionSystem {
         SensorResult rightSensor = groundResult[1];
 
         SensorResult selectedResult = selectSensorWithAngle(sprite, rightSensor, leftSensor);
-        traceS2WfzGroundAttachmentProbe(sprite, "after-select", selectedResult, leftSensor, rightSensor, positiveThreshold);
         // Refresh ground mode after the angle has been updated by selectSensorWithAngle.
         // The initial updateGroundMode (line 292) uses the PREVIOUS frame's end-angle for
         // sensor configuration. This second call uses the NEW angle from terrain probes,
@@ -389,7 +391,6 @@ public class CollisionSystem {
         updateGroundMode(sprite);
 
         if (selectedResult == null) {
-            traceS2WfzGroundAttachmentProbe(sprite, "air-null", null, leftSensor, rightSensor, positiveThreshold);
             if (sprite.isStickToConvex()) {
                 return;
             }
@@ -406,7 +407,7 @@ public class CollisionSystem {
         if (distance < 0) {
             if (sprite.getGroundMode() == GroundMode.RIGHTWALL) {
                 if (distance < -14) {
-                    if (isZoneActZero(sprite)) {
+                    if (preservesRightWallPenetrationOnDeepProbe(sprite)) {
                         sprite.setAngle((byte) 0xC0);
                         sprite.setRightWallPenetrationTimer(3);
                     }
@@ -425,7 +426,6 @@ public class CollisionSystem {
         }
 
         if (distance > positiveThreshold) {
-            traceS2WfzGroundAttachmentProbe(sprite, "air-threshold", selectedResult, leftSensor, rightSensor, positiveThreshold);
             if (sprite.isStickToConvex()) {
                 moveForSensorResult(sprite, selectedResult);
                 return;
@@ -436,92 +436,6 @@ public class CollisionSystem {
         }
 
         moveForSensorResult(sprite, selectedResult);
-    }
-
-    private void traceS2WfzGroundAttachmentProbe(AbstractPlayableSprite sprite,
-                                                String stage,
-                                                SensorResult selected,
-                                                SensorResult leftSensor,
-                                                SensorResult rightSensor,
-                                                int positiveThreshold) {
-        if (!Boolean.getBoolean("s2.wfz.collisionprobe")) {
-            return;
-        }
-        if (sprite.isCpuControlled()) {
-            return;
-        }
-        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.levelOrNull();
-        if (levelManager == null || levelManager.getObjectManager() == null) {
-            return;
-        }
-        int frameCounter = levelManager.getObjectManager().getFrameCounter();
-        int centreX = sprite.getCentreX() & 0xFFFF;
-        int centreY = sprite.getCentreY() & 0xFFFF;
-        boolean inWfz4626Window = centreX >= 0x0D90 && centreX <= 0x0DF0
-                && centreY >= 0x03C0 && centreY <= 0x0400;
-        boolean inWfz7065Window = centreX >= 0x1AD0 && centreX <= 0x1B20
-                && centreY >= 0x0490 && centreY <= 0x04C0;
-        if (!inWfz4626Window && !inWfz7065Window) {
-            return;
-        }
-        int xRadius = sprite.getXRadius();
-        int yRadius = sprite.getYRadius();
-        System.out.printf(
-                "s2-wfz-groundprobe frame=%d stage=%s pos=(%04X,%04X) sub=(%04X,%04X) " +
-                        "spd=(xs=%04X ys=%04X gs=%04X) air=%d ang=%02X gm=%s thresh=%d foot=(L=%04X,R=%04X,Y=%04X) " +
-                        "left=%s right=%s selected=%s tileL=%s tileR=%s tileLext=%s tileRext=%s path1R=%s%n",
-                frameCounter, stage, centreX, centreY,
-                sprite.getXSubpixelRaw() & 0xFFFF, sprite.getYSubpixelRaw() & 0xFFFF,
-                sprite.getXSpeed() & 0xFFFF, sprite.getYSpeed() & 0xFFFF, sprite.getGSpeed() & 0xFFFF,
-                sprite.getAir() ? 1 : 0, sprite.getAngle() & 0xFF, sprite.getGroundMode(), positiveThreshold,
-                (centreX - xRadius) & 0xFFFF, (centreX + xRadius) & 0xFFFF, (centreY + yRadius) & 0xFFFF,
-                formatProbeResult(leftSensor), formatProbeResult(rightSensor), formatProbeResult(selected),
-                formatS2WfzTerrainAt(sprite, centreX - xRadius, centreY + yRadius),
-                formatS2WfzTerrainAt(sprite, centreX + xRadius, centreY + yRadius),
-                formatS2WfzTerrainAt(sprite, centreX - xRadius, centreY + yRadius + 16),
-                formatS2WfzTerrainAt(sprite, centreX + xRadius, centreY + yRadius + 16),
-                formatS2WfzTerrainAt(sprite, centreX + xRadius, centreY + yRadius, 0x0E));
-    }
-
-    private String formatProbeResult(SensorResult result) {
-        if (result == null) {
-            return "<null>";
-        }
-        return String.format("{dir=%s dist=%d angle=%02X tile=%d}",
-                result.direction(), result.distance(), result.angle() & 0xFF, result.tileId());
-    }
-
-    private String formatS2WfzTerrainAt(AbstractPlayableSprite sprite, int x, int y) {
-        return formatS2WfzTerrainAt(sprite, x, y, sprite.getTopSolidBit());
-    }
-
-    private String formatS2WfzTerrainAt(AbstractPlayableSprite sprite, int x, int y, int topSolidBit) {
-        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.levelOrNull();
-        if (levelManager == null) {
-            return "<no-lm>";
-        }
-        com.openggf.level.ChunkDesc desc = levelManager.getChunkDescAt((byte) 0, (short) x, (short) y, sprite.isLoopLowPlane());
-        if (desc == null) {
-            return "<no-desc>";
-        }
-        com.openggf.level.SolidTile tile = levelManager.getSolidTileForChunkDesc(desc, topSolidBit);
-        int collisionIndex = -1;
-        byte metric = 0;
-        byte angle = 0;
-        if (tile != null) {
-            collisionIndex = tile.getIndex();
-            int idx = desc.getHFlip() ? 15 - (x & 0x0F) : (x & 0x0F);
-            metric = tile.getHeightAt((byte) idx);
-            if (metric != 0 && metric != 16 && desc.getVFlip()) {
-                metric = (byte) -metric;
-            }
-            angle = tile.getAngle(desc.getHFlip(), desc.getVFlip());
-        }
-        return String.format("{desc=%04X chunk=%03X topBit=%d topSet=%b pri=%s sec=%s hf=%b vf=%b col=%d metric=%d angle=%02X}",
-                desc.get() & 0xFFFF, desc.getChunkIndex() & 0x3FF, topSolidBit,
-                desc.isSolidityBitSet(topSolidBit),
-                desc.getPrimaryCollisionMode(), desc.getSecondaryCollisionMode(),
-                desc.getHFlip(), desc.getVFlip(), collisionIndex, metric, angle & 0xFF);
     }
 
     private boolean hasPendingStaleObjectSupportLoss(AbstractPlayableSprite sprite) {
@@ -538,14 +452,12 @@ public class CollisionSystem {
         return objectManager != null && objectManager.hasPendingStaleObjectSupportLoss(sprite);
     }
 
-    private boolean isZoneActZero(AbstractPlayableSprite sprite) {
+    private boolean preservesRightWallPenetrationOnDeepProbe(AbstractPlayableSprite sprite) {
         if (sprite == null) {
             return false;
         }
-        var levelManager = sprite.currentLevelManager();
-        return levelManager != null
-                && levelManager.getCurrentZone() == 0
-                && levelManager.getCurrentAct() == 0;
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        return featureSet != null && featureSet.rightWallDeepProbePreservesPenetration();
     }
 
     private int getTerrainHeadroomDistance(AbstractPlayableSprite sprite, int hexAngle) {
@@ -595,51 +507,41 @@ public class CollisionSystem {
                                     Consumer<AbstractPlayableSprite> landingHandler,
                                     boolean forceFloorCheck) {
         int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
-        traceS3kCnzCollisionProbe(sprite, "start", quadrant, null, null, false);
         switch (quadrant) {
             case 0x00 -> {
                 doWallCheckBoth(sprite);
                 SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                traceS3kCnzCollisionProbe(sprite, "ground-00", quadrant, groundResult, null, false);
                 doTerrainCollisionAir(sprite, groundResult, landingHandler);
             }
             case 0x40 -> {
                 boolean wallHit = doWallCheck(sprite, 0);
                 if (wallHit) {
-                    traceS3kAizAirCollisionProbe(sprite, "wall-40", quadrant, null, null, true);
-                    traceS3kCnzCollisionProbe(sprite, "wall-40", quadrant, null, null, true);
                     if (!airLeftWallHitContinuesIntoCeilingSeparation(sprite)) {
                         return;
                     }
                 }
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
-                traceS3kCnzCollisionProbe(sprite, "ceiling-40", quadrant, null, ceilingResult, ceilingHit);
                 if (!ceilingHit) {
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                    traceS3kCnzCollisionProbe(sprite, "ground-40", quadrant, groundResult, null, false);
                     doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
                 }
             }
             case 0x80 -> {
                 doWallCheckBoth(sprite);
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
-                traceS3kCnzCollisionProbe(sprite, "ceiling-80", quadrant, null, ceilingResult, false);
                 doCeilingCollision(sprite, ceilingResult);
             }
             case 0xC0 -> {
                 if (doWallCheck(sprite, 1)) {
-                    traceS3kCnzCollisionProbe(sprite, "wall-C0", quadrant, null, null, true);
                     if (!airRightWallHitContinuesIntoCeilingSeparation(sprite)) {
                         return;
                     }
                 }
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
-                traceS3kCnzCollisionProbe(sprite, "ceiling-C0", quadrant, null, ceilingResult, ceilingHit);
                 if (!ceilingHit) {
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                    traceS3kCnzCollisionProbe(sprite, "ground-C0", quadrant, groundResult, null, false);
                     doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
                 }
             }
@@ -656,128 +558,6 @@ public class CollisionSystem {
     private boolean airLeftWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
         PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
         return featureSet != null && featureSet.airLeftWallHitContinuesIntoCeilingSeparation();
-    }
-
-    private void traceS3kAizAirCollisionProbe(AbstractPlayableSprite sprite,
-                                              String stage,
-                                              int quadrant,
-                                              SensorResult[] groundResult,
-                                              SensorResult[] ceilingResult,
-                                              boolean collisionResolved) {
-        if (!Boolean.getBoolean("s3k.aiz.aircollisionprobe")) {
-            return;
-        }
-        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.level();
-        if (levelManager == null || levelManager.getObjectManager() == null) {
-            return;
-        }
-        int frameCounter = levelManager.getObjectManager().getFrameCounter();
-        int centreX = sprite.getCentreX() & 0xFFFF;
-        int centreY = sprite.getCentreY() & 0xFFFF;
-        if (centreX < 0x1930 || centreX > 0x1960 || centreY < 0x0380 || centreY > 0x03E0) {
-            return;
-        }
-        System.out.printf(
-                "s3k-aiz-aircollisionprobe frame=%d stage=%s quad=%02X pos=(%04X,%04X) spd=(%04X,%04X,%04X) ground=[%s] ceiling=[%s] resolved=%s%n",
-                frameCounter,
-                stage,
-                quadrant & 0xFF,
-                sprite.getCentreX() & 0xFFFF,
-                sprite.getCentreY() & 0xFFFF,
-                sprite.getXSpeed() & 0xFFFF,
-                sprite.getYSpeed() & 0xFFFF,
-                sprite.getGSpeed() & 0xFFFF,
-                formatProbeResults(groundResult),
-                formatProbeResults(ceilingResult),
-                collisionResolved);
-    }
-
-    /**
-     * CNZ collision probe.
-     * Logs every air-collision sensor result + landing decision when the player is in
-     * the F1815 region (X in [0x1200..0x1300], Y in [0x0680..0x0780]).
-     *
-     * Enable via system property {@code -Ds3k.cnz.collisionprobe=true} or
-     * {@code -Dcnz.collisionprobe=true}.
-     */
-    private void traceS3kCnzCollisionProbe(AbstractPlayableSprite sprite,
-                                           String stage,
-                                           int quadrant,
-                                           SensorResult[] groundResult,
-                                           SensorResult[] ceilingResult,
-                                           boolean collisionResolved) {
-        boolean s2WfzProbe = Boolean.getBoolean("s2.wfz.collisionprobe");
-        if (!Boolean.getBoolean("s3k.cnz.collisionprobe")
-                && !Boolean.getBoolean("cnz.collisionprobe")
-                && !s2WfzProbe) {
-            return;
-        }
-        com.openggf.level.LevelManager levelManager = com.openggf.game.GameServices.level();
-        if (levelManager == null || levelManager.getObjectManager() == null) {
-            return;
-        }
-        int frameCounter = levelManager.getObjectManager().getFrameCounter();
-        int centreX = sprite.getCentreX() & 0xFFFF;
-        int centreY = sprite.getCentreY() & 0xFFFF;
-        boolean inS3kCnzWindow = frameCounter >= Integer.getInteger("s3k.cnz.collisionprobe.minFrame", 0)
-                && frameCounter <= Integer.getInteger("s3k.cnz.collisionprobe.maxFrame", Integer.MAX_VALUE)
-                && centreX >= Integer.getInteger("s3k.cnz.collisionprobe.minX", 0x1200)
-                && centreX <= Integer.getInteger("s3k.cnz.collisionprobe.maxX", 0x1300)
-                && centreY >= Integer.getInteger("s3k.cnz.collisionprobe.minY", 0x0680)
-                && centreY <= Integer.getInteger("s3k.cnz.collisionprobe.maxY", 0x0780);
-        boolean inS2WfzWindow = s2WfzProbe
-                && centreX >= 0x0A80 && centreX <= 0x0C00
-                && centreY >= 0x0440 && centreY <= 0x0560;
-        if (!inS3kCnzWindow && !inS2WfzWindow) {
-            return;
-        }
-        int xRadius = sprite.getXRadius();
-        int yRadius = sprite.getYRadius();
-        int footL_x = (centreX - xRadius) & 0xFFFF;
-        int footR_x = (centreX + xRadius) & 0xFFFF;
-        int foot_y  = (centreY + yRadius) & 0xFFFF;
-        int xSub = sprite.getXSubpixelRaw() & 0xFFFF;
-        int ySub = sprite.getYSubpixelRaw() & 0xFFFF;
-        String who = sprite.isCpuControlled() ? "tails" : "sonic";
-        String label = inS2WfzWindow ? "s2-wfz-probe" : "s3k-cnz-probe";
-        System.out.printf(
-                "%s frame=%d who=%s stage=%s quad=%02X pos=(%04X,%04X) sub=(%04X,%04X) " +
-                "spd=(xs=%04X ys=%04X gs=%04X) air=%d ang=%02X gm=%s rolling=%b objCtrl=%b latchSolid=%d " +
-                "topBit=%d lrbBit=%d xRad=%d yRad=%d foot=(L=%04X,R=%04X,Y=%04X) " +
-                "ground=[%s] ceiling=[%s] resolved=%s%n",
-                label, frameCounter, who, stage, quadrant & 0xFF,
-                centreX, centreY, xSub, ySub,
-                sprite.getXSpeed() & 0xFFFF, sprite.getYSpeed() & 0xFFFF, sprite.getGSpeed() & 0xFFFF,
-                sprite.getAir() ? 1 : 0, sprite.getAngle() & 0xFF,
-                sprite.getGroundMode(), sprite.getRolling(),
-                sprite.isObjectControlled(), sprite.getLatchedSolidObjectId(),
-                sprite.getTopSolidBit(), sprite.getLrbSolidBit(),
-                xRadius, yRadius, footL_x, footR_x, foot_y,
-                formatProbeResults(groundResult), formatProbeResults(ceilingResult),
-                collisionResolved);
-    }
-
-    private String formatProbeResults(SensorResult[] results) {
-        if (results == null) {
-            return "<none>";
-        }
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < results.length; i++) {
-            if (i > 0) {
-                builder.append(", ");
-            }
-            SensorResult result = results[i];
-            if (result == null) {
-                builder.append(i).append("=<null>");
-                continue;
-            }
-            builder.append(i)
-                    .append("={dir=").append(result.direction())
-                    .append(" dist=").append(result.distance())
-                    .append(" angle=").append(String.format("%02X", result.angle() & 0xFF))
-                    .append("}");
-        }
-        return builder.toString();
     }
 
     /**
@@ -797,7 +577,6 @@ public class CollisionSystem {
             return;
         }
         boolean zeroDistanceLanding = shouldTreatZeroDistanceAsGround(sprite, lowestResult);
-        traceS1LzAirLandingProbe(sprite, "threshold", lowestResult, zeroDistanceLanding);
         if (lowestResult.distance() > 0 || (lowestResult.distance() == 0 && !zeroDistanceLanding)) {
             return;
         }
@@ -837,7 +616,6 @@ public class CollisionSystem {
             return;
         }
         boolean zeroDistanceLanding = shouldTreatZeroDistanceAsGround(sprite, lowestResult);
-        traceS1LzAirLandingProbe(sprite, "direct", lowestResult, zeroDistanceLanding);
         if (lowestResult.distance() > 0 || (lowestResult.distance() == 0 && !zeroDistanceLanding)) {
             return;
         }
@@ -859,42 +637,9 @@ public class CollisionSystem {
                 && zoneFeatures.shouldTreatZeroDistanceAirLandingAsGround(sprite, support);
     }
 
-    private void traceS1LzAirLandingProbe(AbstractPlayableSprite sprite,
-                                          String mode,
-                                          SensorResult support,
-                                          boolean zeroDistanceLanding) {
-        if (!Boolean.getBoolean("s1.lz.airlandingprobe")) {
-            return;
-        }
-        com.openggf.level.LevelManager levelManager = GameServices.levelOrNull();
-        if (levelManager == null) {
-            return;
-        }
-        int x = sprite.getCentreX() & 0xFFFF;
-        int y = sprite.getCentreY() & 0xFFFF;
-        if (x < 0x0AE0 || x > 0x0B60 || y < 0x0640 || y > 0x0670) {
-            return;
-        }
-        System.out.printf(
-                "s1-lz-airlanding frame=%d mode=%s pos=(%04X,%04X) spd=(%04X,%04X,%04X) air=%s support={dist=%d ang=%02X dir=%s} zero=%s%n",
-                levelManager.getFrameCounter(),
-                mode,
-                x,
-                y,
-                sprite.getXSpeed() & 0xFFFF,
-                sprite.getYSpeed() & 0xFFFF,
-                sprite.getGSpeed() & 0xFFFF,
-                sprite.getAir(),
-                support.distance(),
-                support.angle() & 0xFF,
-                support.direction(),
-                zeroDistanceLanding);
-    }
-
     /** Shared landing logic: snap to floor surface, set angle, invoke landing handler. */
     private void landOnFloor(AbstractPlayableSprite sprite, SensorResult result,
                              Consumer<AbstractPlayableSprite> landingHandler) {
-        traceS3kCnzCollisionProbe(sprite, "land-pre", 0, new SensorResult[]{result}, null, false);
         moveForSensorResult(sprite, result);
         if ((result.angle() & 0x01) != 0) {
             sprite.setAngle((byte) 0x00);
@@ -1013,8 +758,6 @@ public class CollisionSystem {
 
         for (int i = 0; i < 2; i++) {
             SensorResult result = pushSensors[i].scan((short) 0, (short) 0);
-            traceS3kCnzCollisionProbe(sprite, i == 0 ? "wall-left-both" : "wall-right-both",
-                    0x80, new SensorResult[]{result}, null, result != null && result.distance() < 0);
 
             if (result != null && result.distance() < 0) {
                 moveForSensorResult(sprite, result);

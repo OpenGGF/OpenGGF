@@ -133,7 +133,6 @@ public class RomManager implements AutoCloseable {
         }
 
         initialized = true;
-        LOGGER.info("ROM opened successfully: " + rom.readDomesticName());
 
         // Auto-detect game type and set appropriate module
         GameModuleRegistry.detectAndSetModule(rom);
@@ -161,7 +160,7 @@ public class RomManager implements AutoCloseable {
     @Override
     public synchronized void close() {
         if (rom != null) {
-            LOGGER.info("Closing ROM via RomManager");
+            LOGGER.fine("Closing ROM via RomManager");
             rom.close();
             rom = null;
         }

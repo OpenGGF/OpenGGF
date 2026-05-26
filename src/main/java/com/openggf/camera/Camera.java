@@ -44,6 +44,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// Full camera freeze (both X and Y) - used for death, cutscenes, etc.
 	// This is separate from horizScrollDelayFrames which only affects horizontal scroll.
 	private boolean frozen = false;
+	private boolean deferHorizontalBoundaryClampOnce = false;
 
 	// ROM: Level_started_flag.
 	// Used by HUD/start-state flow and intro/cutscene sequencing.
@@ -147,7 +148,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// See s2.asm ScrollHoriz (line ~18009) vs ScrollVerti (line ~18112).
 
 		// Horizontal scroll - may use position history if delay is active
-		x = computeNextHorizontalCameraX(true);
+		boolean deferHorizontalClampThisFrame = deferHorizontalBoundaryClampOnce;
+		deferHorizontalBoundaryClampOnce = false;
+		x = computeNextHorizontalCameraX(true, !deferHorizontalClampThisFrame);
 
 		// Vertical scroll - always uses current position (ROM: ScrollVerti has no delay)
 		// ROM: d0 = (v_player+obY).w - (v_screenposy).w
@@ -270,7 +273,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		}
 
 		// Clamp to boundaries (ROM: ScrollHoriz lines 18077-18092, ScrollVerti similar)
-		x = clampAxisWithWrap(x, minX, maxX);
+		if (!deferHorizontalClampThisFrame) {
+			x = clampAxisWithWrap(x, minX, maxX);
+		}
 		// ROM: After a vertical wrap, DeformLayers.asm branches directly to loc_6724
 		// (the store), skipping the normal boundary clamp. This is critical because
 		// after wrapping from e.g. -260 to 1788, clamping to maxY could force the
@@ -303,10 +308,10 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		if (focusedSprite == null || frozen) {
 			return x;
 		}
-		return computeNextHorizontalCameraX(false);
+		return computeNextHorizontalCameraX(false, true);
 	}
 
-	private short computeNextHorizontalCameraX(boolean consumeDelayState) {
+	private short computeNextHorizontalCameraX(boolean consumeDelayState, boolean applyBoundaryClamp) {
 		short nextX = x;
 		short focusedSpriteRealX;
 		if (horizScrollDelayFrames > 0) {
@@ -342,7 +347,15 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			}
 		}
 
-		return clampAxisWithWrap(nextX, minX, maxX);
+		return applyBoundaryClamp ? clampAxisWithWrap(nextX, minX, maxX) : nextX;
+	}
+
+	/**
+	 * Keeps newly written horizontal bounds available to object/player logic while
+	 * delaying the visible camera clamp until the following camera step.
+	 */
+	public void deferHorizontalBoundaryClampOnce() {
+		deferHorizontalBoundaryClampOnce = true;
 	}
 
 	private short clampAxisWithWrap(short value, short min, short max) {
@@ -959,6 +972,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		maxYChanging = false;
 		horizScrollDelayFrames = 0;
 		frozen = false;
+		deferHorizontalBoundaryClampOnce = false;
 		levelStarted = true;
 		focusedSprite = null;
 		yPosBias = DEFAULT_Y_BIAS;
@@ -1006,7 +1020,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				x, y, minX, minY, maxX, maxY,
 				shakeOffsetX, shakeOffsetY,
 				minXTarget, minYTarget, maxXTarget, maxYTarget,
-				maxYChanging, horizScrollDelayFrames, frozen, levelStarted,
+				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce, levelStarted,
 				verticalWrapEnabled, verticalWrapRange, verticalWrapMask,
 				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap);
 	}
@@ -1028,6 +1042,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		maxYChanging = snapshot.maxYChanging();
 		horizScrollDelayFrames = snapshot.horizScrollDelayFrames();
 		frozen = snapshot.frozen();
+		deferHorizontalBoundaryClampOnce = snapshot.deferHorizontalBoundaryClampOnce();
 		levelStarted = snapshot.levelStarted();
 		verticalWrapEnabled = snapshot.verticalWrapEnabled();
 		verticalWrapRange = snapshot.verticalWrapRange();

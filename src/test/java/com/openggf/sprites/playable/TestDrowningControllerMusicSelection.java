@@ -4,6 +4,7 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.session.EngineServices;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -72,6 +73,28 @@ class TestDrowningControllerMusicSelection {
                 "Incorrect drowning music ID selected");
         assertTrue(controller.isDrowningMusicPlaying(),
                 "Controller should flag drowning music as active");
+    }
+
+    @Test
+    void s3kFixedCountdownAirEventTriggersDrowningMusicWithoutGenericBubbleUpdate() {
+        AudioManager audioManager = AudioManager.getInstance();
+        CapturingBackend backend = new CapturingBackend();
+        audioManager.setBackend(backend);
+        audioManager.setAudioProfile(new Sonic3kAudioProfile());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
+        GameServices.level().resetState();
+
+        DrowningController controller = new DrowningController(new Sonic("test", (short) 0, (short) 0));
+
+        for (int i = 0; i < 19; i++) {
+            controller.performFixedCountdownAirEvent(true);
+        }
+
+        assertEquals(1, backend.musicPlayCalls,
+                "fixed Obj_AirCountdown should still trigger drowning music at air_left=12");
+        assertEquals(Sonic3kMusic.DROWNING.id, backend.lastMusicId);
+        assertTrue(controller.isDrowningMusicPlaying());
     }
 
     private static final class CapturingBackend implements AudioBackend {

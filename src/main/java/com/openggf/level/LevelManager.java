@@ -153,6 +153,8 @@ public class LevelManager {
     int currentAct = 0;
     private int apparentAct = 0;
     int currentZone = 0;
+    private boolean sidekickRomVisibleReloadFrameCounterBridgeActive;
+    private boolean sidekickRomVisibleReloadFrameCounterBridgePrimed;
 
     private void writeCurrentZone(int zone) {
         this.currentZone = zone;
@@ -2859,6 +2861,13 @@ public class LevelManager {
             }
             verticalWrapEnabled = camera.isVerticalWrapEnabled();
             camera.updatePosition(true);
+            if (objectManager != null && objectManager.usesTwoAxisCursorPlacement()) {
+                // S3K Load_Sprites has a separate Y-camera pass. The object
+                // manager is constructed before the level-start camera snap, so
+                // rebuild its initial cursor state once Camera_Y_pos matches
+                // the actual start band.
+                objectManager.reset(camera.getX());
+            }
             // ROM parity: only when Get_LevelSizeStart had to clamp the camera
             // Y down to Camera_max_Y_pos does the immediately-following
             // DeformBgLayer call advance Camera_Y_pos past maxY. Levels whose
@@ -3012,6 +3021,8 @@ public class LevelManager {
             restoreCheckpointRuntimeState(ctx);
 
             frameCounter = 0;
+            sidekickRomVisibleReloadFrameCounterBridgeActive = false;
+            sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
 
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -3294,9 +3305,21 @@ public class LevelManager {
         if (request == null) {
             return;
         }
+        Integer minX = request.postTransitionMinX();
+        if (minX != null) {
+            cam.setMinX((short) (int) minX);
+        }
+        Integer maxX = request.postTransitionMaxX();
+        if (maxX != null) {
+            cam.setMaxX((short) (int) maxX);
+        }
         Integer minY = request.postTransitionMinY();
         if (minY != null) {
             cam.setMinY((short) (int) minY);
+        }
+        Integer maxY = request.postTransitionMaxY();
+        if (maxY != null) {
+            cam.setMaxY((short) (int) maxY);
         }
         Integer maxYTarget = request.postTransitionMaxYTarget();
         if (maxYTarget != null) {
@@ -3580,6 +3603,8 @@ public class LevelManager {
         currentAct = 0;
         apparentAct = 0;
         frameCounter = 0;
+        sidekickRomVisibleReloadFrameCounterBridgeActive = false;
+        sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
         transitions.resetState();
         verticalWrapEnabled = false;
         touchResponseTable = null;
@@ -3607,6 +3632,8 @@ public class LevelManager {
      */
     public void resetFrameCounter() {
         this.frameCounter = 0;
+        sidekickRomVisibleReloadFrameCounterBridgeActive = false;
+        sidekickRomVisibleReloadFrameCounterBridgePrimed = false;
     }
 
     public void setClearColor() {
@@ -3717,7 +3744,10 @@ public class LevelManager {
                             .showInLevelTitleCard(request.showInLevelTitleCard())
                             .forceAirOnStaleObjectSupportLoss(request.forceAirOnStaleObjectSupportLoss())
                             .preserveOffsetCameraPosition(request.preserveOffsetCameraPosition())
+                            .postTransitionMinXIfPresent(request.postTransitionMinX())
+                            .postTransitionMaxXIfPresent(request.postTransitionMaxX())
                             .postTransitionMinYIfPresent(request.postTransitionMinY())
+                            .postTransitionMaxYIfPresent(request.postTransitionMaxY())
                             .postTransitionMaxYTargetIfPresent(request.postTransitionMaxYTarget())
                             .playerOffset(request.playerOffsetX(), request.playerOffsetY())
                             .cameraOffset(request.cameraOffsetX(), request.cameraOffsetY())
@@ -3764,10 +3794,32 @@ public class LevelManager {
         // (docs/skdisasm/sonic3k.asm:7884-7894); S3K Tails CPU reads it for
         // loc_13E9C's 64-frame auto-jump gate (docs/skdisasm/sonic3k.asm:26775-26782).
         frameCounter++;
+        sidekickRomVisibleReloadFrameCounterBridgeActive = true;
+        sidekickRomVisibleReloadFrameCounterBridgePrimed = true;
         SpriteManager spriteManager = GameServices.spritesOrNull();
         if (spriteManager != null) {
             spriteManager.setFrameCounter(spriteManager.getFrameCounter() + 1);
         }
+    }
+
+    public boolean isSidekickRomVisibleReloadFrameCounterBridgeActive() {
+        return sidekickRomVisibleReloadFrameCounterBridgeActive;
+    }
+
+    public boolean isSidekickRomVisibleReloadResumeFrameCounterBridgeActive() {
+        return currentAct != apparentAct || isPostReloadFrameCounterBridgeStillVisible();
+    }
+
+    public void clearSidekickRomVisibleReloadFrameCounterBridge() {
+        sidekickRomVisibleReloadFrameCounterBridgeActive = false;
+    }
+
+    private boolean isPostReloadFrameCounterBridgeStillVisible() {
+        if (!sidekickRomVisibleReloadFrameCounterBridgePrimed) {
+            return false;
+        }
+        SpriteManager spriteManager = GameServices.spritesOrNull();
+        return spriteManager != null && spriteManager.getFrameCounter() == frameCounter + 1;
     }
 
     private void applySeamlessMutation(String mutationKey) {

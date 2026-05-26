@@ -18,6 +18,10 @@ public interface ObjectInstance {
         return getSpawn().y();
     }
 
+    default String getName() {
+        return getClass().getSimpleName();
+    }
+
     /**
      * Returns the object's X position as it was before the current frame's update loop.
      * Used by touch response collision checks to match ROM ordering, where ReactToItem

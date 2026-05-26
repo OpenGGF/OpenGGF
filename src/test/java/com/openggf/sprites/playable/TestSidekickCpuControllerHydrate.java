@@ -6,8 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests for {@link SidekickCpuController#hydrateFromRomCpuState} widened signature
  * that accepts ROM {@code Tails_CPU_target_X} and {@code Tails_CPU_target_Y}
- * (ROM addresses 0xF70A / 0xF70C, surfaced by the trace recorder as
- * {@code target_x} / {@code target_y}).
+ * (ROM addresses 0xF70A / 0xF70C).
  *
  * Follows the lightweight {@code TestableSprite} pattern from {@link TestSidekickChainHealing}
  * so the test does not require ROM/OpenGL bootstrap.

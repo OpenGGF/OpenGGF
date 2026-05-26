@@ -223,6 +223,23 @@ public class TestTouchResponseManager {
     }
 
     @Test
+    public void testS3kTouchSpecialUnlistedC0FlagDoesNotDecodeAsBoss() {
+        // ROM Touch_ChkValue routes all $C0 flags to Touch_Special
+        // (sonic3k.asm:20773-20778). Touch_Special only mutates
+        // collision_property for listed sizes; unlisted size $0F returns
+        // without boss handling (sonic3k.asm:21162-21183).
+        MockS3kTouchSpecialObject obj = new MockS3kTouchSpecialObject(160, 112, 0xCF);
+        setupTableSize(0x0F, 24, 24);
+        objectManager.addDynamicObject(obj);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertEquals(TouchCategory.SPECIAL, obj.lastResult.category(),
+                "S3K $C0 unlisted touch flags must be Touch_Special no-op, not generic boss bounce");
+        assertEquals(0x0F, obj.lastResult.sizeIndex());
+    }
+
+    @Test
     public void testCnzBalloonDoesNotFireFromDistantPlayer() {
         // Reproduce the latent CNZ-balloon false-positive from the AIZ F6313 round-16
         // diagnostic: ROM-accurate Tails at (0x09E1, 0x0658) vs balloon at

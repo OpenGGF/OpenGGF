@@ -547,14 +547,17 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
                 baseFeatureSet.sidekickPushBypassUsesGraceStatus(), // sidekickPushBypassUsesGraceStatus (from base game)
                 baseFeatureSet.sidekickNormalCpuSkipsHurtRoutine(), // sidekickNormalCpuSkipsHurtRoutine (from base game)
                 baseFeatureSet.controlLockLatchesLogicalInput(), // controlLockLatchesLogicalInput (from base game)
+                baseFeatureSet.hurtRoutineLatchesLogicalInput(), // hurtRoutineLatchesLogicalInput (from base game)
                 baseFeatureSet.waterExitBoostSkipsFastUpwardVelocity(), // waterExitBoostSkipsFastUpwardVelocity (from base game)
                 baseFeatureSet.slopeResistAppliesAtZeroInertia(), // slopeResistAppliesAtZeroInertia (from base game)
                 baseFeatureSet.permanentRespawnTableLatch(), // permanentRespawnTableLatch (from base game)
                 baseFeatureSet.objectsExecuteAfterPlayerPhysics(), // objectsExecuteAfterPlayerPhysics (from base game)
                 baseFeatureSet.speedShoesTimerPrePhysicsExtraTicks(), // speedShoesTimerPrePhysicsExtraTicks (from base game)
                 baseFeatureSet.shieldObjectFixedSlotIndex(), // shieldObjectFixedSlotIndex (from base game)
+                baseFeatureSet.invincibilityStarsFixedSlotIndex(), // invincibilityStarsFixedSlotIndex (from base game)
                 baseFeatureSet.touchResponseUsesRenderFlagYGate(), // touchResponseUsesRenderFlagYGate (from base game)
-                baseFeatureSet.sidekickDeathUsesDeferredDespawn() // sidekickDeathUsesDeferredDespawn (from base game)
+                baseFeatureSet.sidekickDeathUsesDeferredDespawn(), // sidekickDeathUsesDeferredDespawn (from base game)
+                baseFeatureSet.rightWallDeepProbePreservesPenetration() // rightWallDeepProbePreservesPenetration (from base game)
         );
     }
 

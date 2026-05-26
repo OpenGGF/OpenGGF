@@ -5,6 +5,8 @@ import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.ShieldType;
+import com.openggf.game.rewind.snapshot.RingSnapshot;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -228,6 +230,124 @@ public class TestRingManager {
 
         assertEquals(0, objectManager.getAllocatedSlotCount(),
                 "Expired lost rings should release their reserved dynamic slots");
+    }
+
+    @Test
+    public void testS3kLightningAttractedRingReservesSlotThroughSparkle() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(List.of(), levelManager);
+        setField(levelManager, "ringManager", ringManager);
+        RingSnapshot base = ringManager.capture();
+        int reservedSlot = objectManager.allocateDynamicSlot();
+        objectManager.releaseDynamicSlot(reservedSlot);
+        ringManager.restore(new RingSnapshot(
+                base.collected(),
+                base.sparkleTimers(),
+                base.placementCursorIndex(),
+                base.placementLastCameraX(),
+                base.lostRingActiveCount(),
+                base.spillAnimCounter(),
+                base.spillAnimAccum(),
+                base.spillAnimFrame(),
+                base.lostRingFrameCounter(),
+                base.lostRings(),
+                new RingSnapshot.AttractedRingEntry[] {
+                        new RingSnapshot.AttractedRingEntry(
+                                true, 0, 100, 100, 0, 0, 0, 0,
+                                0, reservedSlot, false, -1)
+                }));
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 100, (short) 100);
+        player.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.giveShield(ShieldType.LIGHTNING);
+
+        ringManager.update(0, player, 0);
+
+        assertEquals(1, player.getRingCount());
+        assertEquals(1, objectManager.getAllocatedSlotCount(),
+                "S3K Obj_Attracted_Ring keeps its SST slot for loc_1A920 sparkle after collection");
+
+        ringManager.update(0, player, 1);
+        assertEquals(1, objectManager.getAllocatedSlotCount(),
+                "Attracted-ring sparkle should keep occupying the dynamic slot before Ani_RingSparkle finishes");
+
+        ringManager.update(0, player, 2);
+        assertEquals(0, objectManager.getAllocatedSlotCount(),
+                "Attracted-ring sparkle should release its dynamic slot when the sparkle routine deletes");
+    }
+
+    @Test
+    public void testAttractedRingRestoreRereservesObjectSlot() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        ObjectManager objectManager = new ObjectManager(List.of(), new NoOpObjectRegistry(), 0, null, null);
+        setField(levelManager, "objectManager", objectManager);
+
+        RingManager ringManager = buildRingManagerWithLevelManager(List.of(), levelManager);
+        setField(levelManager, "ringManager", ringManager);
+        RingSnapshot base = ringManager.capture();
+
+        int reservedSlot = objectManager.allocateDynamicSlot();
+        objectManager.releaseDynamicSlot(reservedSlot);
+
+        RingSnapshot snapshot = new RingSnapshot(
+                base.collected(),
+                base.sparkleTimers(),
+                base.placementCursorIndex(),
+                base.placementLastCameraX(),
+                base.lostRingActiveCount(),
+                base.spillAnimCounter(),
+                base.spillAnimAccum(),
+                base.spillAnimFrame(),
+                base.lostRingFrameCounter(),
+                base.lostRings(),
+                new RingSnapshot.AttractedRingEntry[] {
+                        new RingSnapshot.AttractedRingEntry(
+                                true, 0, 0x200, 0x180, 0, 0, 0, 0,
+                                0, reservedSlot, false, -1)
+                });
+
+        ringManager.restore(snapshot);
+
+        assertEquals(1, objectManager.getAllocatedSlotCount(),
+                "Restoring an active Obj_Attracted_Ring snapshot must also restore its SST slot reservation");
+        assertFalse(reservedSlot == objectManager.allocateDynamicSlot(),
+                "The restored attracted-ring slot must not be reallocated to the next dynamic object");
+    }
+
+    @Test
+    public void testS3kAttractedRingUsesTouchResponseBoundsForCollection() {
+        RingManager ringManager = buildRingManager(List.of());
+        RingSnapshot base = ringManager.capture();
+        RingSnapshot snapshot = new RingSnapshot(
+                base.collected(),
+                base.sparkleTimers(),
+                base.placementCursorIndex(),
+                base.placementLastCameraX(),
+                base.lostRingActiveCount(),
+                base.spillAnimCounter(),
+                base.spillAnimAccum(),
+                base.spillAnimFrame(),
+                base.lostRingFrameCounter(),
+                base.lostRings(),
+                new RingSnapshot.AttractedRingEntry[] {
+                        new RingSnapshot.AttractedRingEntry(
+                                true, 0, 0x0A4F, 0x0C5D, 0, 0, 0, 0,
+                                0, -1, false, -1)
+                });
+        ringManager.restore(snapshot);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0x0A4A, (short) 0x0C4B);
+        player.setRolling(true);
+
+        ringManager.update(0, player, 2388);
+
+        assertEquals(0, player.getRingCount(),
+                "S3K collision_flags $47 uses TouchResponse bounds; this frame-2388 geometry is near but not overlapping");
+        assertTrue(ringManager.capture().attractedRings()[0].active(),
+                "The attracted ring should remain active until the ROM touch box overlaps");
     }
 
     private RingManager buildRingManager(List<RingSpawn> spawns) {

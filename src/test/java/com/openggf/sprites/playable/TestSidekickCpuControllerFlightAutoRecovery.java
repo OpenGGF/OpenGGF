@@ -1,6 +1,7 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.tests.TestEnvironment;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.session.SessionManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,9 +30,20 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         @Override public void draw() {}
         @Override public void defineSpeeds() {}
         @Override protected void createSensorLines() {}
+        void usePhysicsFeatureSet(PhysicsFeatureSet featureSet) {
+            setPhysicsFeatureSet(featureSet);
+        }
     }
 
     private TestableSprite sonicAt(int x, int y) {
+        return sonicAtWithStatus(x, y, (byte) 0);
+    }
+
+    private TestableSprite sonicAtWithStatus(int x, int y, byte status) {
+        return sonicAtWithHistory(x, y, (short) 0, status);
+    }
+
+    private TestableSprite sonicAtWithHistory(int x, int y, short input, byte status) {
         TestableSprite sonic = new TestableSprite("sonic");
         short[] xHistory = new short[64];
         short[] yHistory = new short[64];
@@ -39,6 +51,8 @@ class TestSidekickCpuControllerFlightAutoRecovery {
         byte[] statusHistory = new byte[64];
         Arrays.fill(xHistory, (short) x);
         Arrays.fill(yHistory, (short) y);
+        Arrays.fill(inputHistory, input);
+        Arrays.fill(statusHistory, status);
         sonic.hydrateRecordedHistory(xHistory, yHistory, inputHistory, statusHistory, 16);
         sonic.setCentreX((short) x);
         sonic.setCentreY((short) y);
@@ -154,6 +168,78 @@ class TestSidekickCpuControllerFlightAutoRecovery {
     }
 
     @Test
+    void flightTransitionUsesDelayedStatTableInsteadOfLiveObjectControl() {
+        TestableSprite sonic = sonicAt(0x1000, 0x0400);
+        sonic.setObjectControlled(true);
+        sonic.setObjectControlSuppressesMovement(true);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1000);
+        tails.setCentreY((short) 0x0400);
+        tails.setAir(true);
+        tails.setControlLocked(true);
+        tails.setRenderFlagOnScreen(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertSame(SidekickCpuController.State.NORMAL, controller.getState(),
+                "S3K Tails_FlySwim_Unknown gates landing on delayed Stat_table bit 7 "
+                        + "(sonic3k.asm:26623-26631), not live Sonic object_control.");
+        assertFalse(tails.isObjectControlled(), "Routine 4 to 6 handoff clears Tails object_control");
+    }
+
+    @Test
+    void flightTransitionIsBlockedByDelayedS3kStatusBit7() {
+        TestableSprite sonic = sonicAtWithStatus(0x1000, 0x0400,
+                AbstractPlayableSprite.STATUS_PREVENT_TAILS_RESPAWN);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.usePhysicsFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x1000);
+        tails.setCentreY((short) 0x0400);
+        tails.setAir(true);
+        tails.setControlLocked(true);
+        tails.setObjectControlled(true);
+        tails.setRenderFlagOnScreen(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertSame(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, controller.getState(),
+                "S3K routine 4 tests delayed Stat_table bit 7 before returning to NORMAL "
+                        + "(sonic3k.asm:26623-26630).");
+        assertTrue(tails.isObjectControlled(), "Blocked handoff keeps object_control=$81");
+    }
+
+    @Test
+    void normalCpuSkipsFollowSteeringWhileLeaderStatusTertiaryBit7Set() {
+        TestableSprite sonic = sonicAtWithHistory(0x1000, 0x0400,
+                (short) AbstractPlayableSprite.INPUT_RIGHT, (byte) 0);
+        sonic.setWallCling(true);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0F00);
+        tails.setCentreY((short) 0x0400);
+        tails.setAir(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+
+        controller.update(3778);
+
+        assertEquals("leader_status_tertiary_bit7",
+                controller.getLatestNormalStepDiagnostics().followBranch(),
+                "S3K loc_13D78 skips Tails normal CPU control while Player_1 "
+                        + "status_tertiary bit 7 is set (sonic3k.asm:26672-26675).");
+    }
+
+    @Test
     void flightTransitionPreservesWaterSpeedConstantsAfterDirectStatusMask() {
         TestableSprite sonic = sonicAt(0x1000, 0x0400);
         sonic.setInWater(false);
@@ -231,6 +317,27 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "ROM loc_13CBE leaves d1 non-zero when Y only became aligned after the +/-1 step");
         assertTrue(tails.isObjectControlled(), "object_control=$81 remains set until the following aligned frame");
         assertTrue(tails.getAir(), "flight recovery remains airborne while object-controlled");
+    }
+
+    @Test
+    void flightSteersNegativeYWordDownTowardPositiveTarget() {
+        TestableSprite sonic = sonicAt(0x116C, 0x0080);
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x116C);
+        tails.setCentreY((short) 0xFFD9);
+        tails.setAir(true);
+        tails.setControlLocked(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+
+        controller.update(10);
+
+        assertEquals(0xFFDA, tails.getCentreY() & 0xFFFF,
+                "Tails_FlySwim_Unknown uses signed word flags after y_pos-target_Y; "
+                        + "0xFFD9 is above the positive target and moves down by +1 "
+                        + "(sonic3k.asm:26614-26622)");
     }
 
     @Test

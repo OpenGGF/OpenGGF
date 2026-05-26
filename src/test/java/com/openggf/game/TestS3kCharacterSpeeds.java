@@ -145,21 +145,25 @@ class TestS3kCharacterSpeeds {
     }
 
     @Test
-    void speedShoesTimerStaysActiveForRomMovementFrames() {
+    void speedShoesTimerExpiresBeforeNextMovementFrameAfterRomWindow() {
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
         sprite.giveSpeedShoes();
 
-        for (int i = 0; i < 0x4B0; i++) {
+        for (int i = 0; i < 0x4B0 - 1; i++) {
             GameServices.timers().update();
         }
 
         assertTrue(sprite.hasSpeedShoes(),
-                "ROM decrements speedshoes_time from Sonic_Display after movement");
+                "S3K speedshoes_time remains active until the display-time decrement reaches zero "
+                        + "(docs/skdisasm/sonic3k.asm:22067-22078,40815-40825).");
 
         GameServices.timers().update();
 
         assertFalse(sprite.hasSpeedShoes(),
-                "Engine pre-physics timer expires immediately after the ROM movement window");
+                "S3K Sonic_Display clears speed shoes and restores movement constants before the "
+                        + "next movement frame uses them (docs/skdisasm/sonic3k.asm:21540-21561,22067-22081).");
+        assertEquals(0x0C, sprite.getRunAccel(), "After shoes expire: canonical accel");
+        assertEquals(0x600, sprite.getMax(), "After shoes expire: canonical max");
     }
 
     // --- S2 Comparison ---

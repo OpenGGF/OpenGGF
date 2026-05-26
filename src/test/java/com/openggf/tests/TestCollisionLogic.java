@@ -21,7 +21,7 @@ public class TestCollisionLogic {
 
         if (path.toFile().exists()) {
             try (FileChannel fileChannel = FileChannel.open(path, StandardOpenOption.READ)) {
-                collisionBuffer = KosinskiReader.decompress(fileChannel, true);
+                collisionBuffer = KosinskiReader.decompress(fileChannel);
             }
         } else {
             // Fallback: Try to read from ROM
@@ -30,7 +30,7 @@ public class TestCollisionLogic {
 
             try (FileChannel romChannel = FileChannel.open(romPath, StandardOpenOption.READ)) {
                 romChannel.position(0x44E50); // Offset for EHZ and HTZ primary from collisionindexes.txt
-                collisionBuffer = KosinskiReader.decompress(romChannel, true);
+                collisionBuffer = KosinskiReader.decompress(romChannel);
             }
         }
 

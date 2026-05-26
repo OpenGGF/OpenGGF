@@ -154,7 +154,7 @@ class TestSidekickCpuControllerCatchUpFlight {
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.forceStateForTest(SidekickCpuController.State.DORMANT_MARKER, 0);
-        controller.releaseAizIntroDormantMarker();
+        controller.releaseDormantMarkerForLevelEvent();
 
         controller.reset();
         controller.forceStateForTest(SidekickCpuController.State.CATCH_UP_FLIGHT, 0);
@@ -182,7 +182,7 @@ class TestSidekickCpuControllerCatchUpFlight {
         controller.forceStateForTest(SidekickCpuController.State.DORMANT_MARKER, 0);
 
         setLevelFrameCounter(0x02F3);
-        controller.releaseAizIntroDormantMarker();
+        controller.releaseDormantMarkerForLevelEvent();
         for (int storedCounter = 0x02F4; storedCounter < 0x02FF; storedCounter++) {
             setLevelFrameCounter(storedCounter);
             controller.update(storedCounter + 1);

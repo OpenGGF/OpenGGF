@@ -96,12 +96,15 @@ class TestSidekickCpuControllerRewindCapture {
         values.put("sidekickCount", 3);
         values.put("normalPushingGraceFrames", 8);
         values.put("suppressNextAirbornePushFollowSteering", true);
-        values.put("aizObjectOrderGracePushBypassThisFrame", true);
+        values.put("objectOrderGracePushBypassThisFrame", true);
         values.put("pendingGroundedFollowNudge", -1);
         values.put("pendingGroundedFollowNudgeFrame", 321);
         values.put("aizIntroDormantMarkerPrimed", true);
-        values.put("suppressNextAizIntroNormalMovement", true);
+        values.put("suppressNextLevelEventNormalMovement", true);
+        values.put("catchUpUsesRomVisibleLevelFrameCounter", true);
         values.put("skipPhysicsThisFrame", true);
+        values.put("deferredDespawnDeadFallContinuingThisFrame", true);
+        values.put("bootstrapPreludePlacementApplied", true);
         values.put("cpuFrameCounterFromStoredLevelFrame", true);
         values.put("nextCpuFrameCounterOverride", 0x4567);
         values.put("catchUpFrameCounterOverride", 0x89AB);
@@ -125,12 +128,15 @@ class TestSidekickCpuControllerRewindCapture {
     private static SidekickCpuController.NormalStepDiagnostics diagnosticsSentinel() {
         return new SidekickCpuController.NormalStepDiagnostics(
                 1234, SidekickCpuController.State.NORMAL, "sentinel",
-                1, 2, (short) 3, (short) 4,
+                1, 2, (short) 3, (short) 0x0303, (short) 4,
+                (short) 0x1111, (short) 0x2222, (byte) 0x12,
                 5, 6, 7, 8, 9,
                 10, 11, 12, 13, 14,
-                (short) 15, (short) 16,
+                (short) 15, (short) 0x1515, (short) 16,
+                (short) 0x3333, (short) 0x4444, (byte) 0x34, -1,
                 true,
-                17, 18, (short) 19, (short) 20,
+                17, 18, (short) 19, (short) 0x1919, (short) 20,
+                (short) 0x5555, (short) 0x6666, (byte) 0x56,
                 true, true);
     }
 

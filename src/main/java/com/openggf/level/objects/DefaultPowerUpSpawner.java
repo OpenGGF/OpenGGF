@@ -73,7 +73,7 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         } else {
             stars = constructWithServices(() -> new InvincibilityStarsObjectInstance(player));
         }
-        objectManager.addDynamicObject(stars);
+        addPowerUpObject(stars);
         return (PowerUpObject) stars;
     }
 
@@ -125,6 +125,15 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
 
         // S2/S3K: use dust/splash renderer from SpindashDustController
         if (player instanceof AbstractPlayableSprite aps) {
+            var featureSet = aps.getPhysicsFeatureSet();
+            if (featureSet != null && featureSet.waterSplashUsesFixedDustObject()) {
+                // S2/S3K write the water splash animation into the existing
+                // Sonic_Dust/Dust object, not a FindFreeObj slot. Consuming a
+                // normal ObjectManager slot here changes S3K CNZ Load_Sprites
+                // pressure (docs/s2disasm/s2.asm:36102,36132;
+                // docs/skdisasm/sonic3k.asm:22241,22281).
+                return;
+            }
             SpindashDustController dustController = aps.getSpindashDustController();
             if (dustController != null && dustController.getRenderer() != null) {
                 PlayerSpriteRenderer renderer = dustController.getRenderer();
@@ -166,11 +175,6 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         if (objectManager == null || object == null) {
             return;
         }
-        int fixedSlot = shieldFixedSlotIndex(object);
-        if (fixedSlot >= 0) {
-            ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, object, fixedSlot);
-            return;
-        }
         // Rewind: if a captured entry is pending for this dynamic class (Shield/Stars),
         // honour both the captured slot and the captured per-object field surface
         // so the post-restore re-spawn lands on the same slot the reference run had
@@ -182,6 +186,11 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
             if (object instanceof AbstractObjectInstance aoi) {
                 aoi.restoreRewindState(restored.state());
             }
+            return;
+        }
+        int fixedSlot = fixedPowerUpSlotIndex(object);
+        if (fixedSlot >= 0) {
+            ObjectLifetimeOps.addDynamicAtReservedSlot(objectManager, object, fixedSlot);
             return;
         }
         objectManager.addDynamicObject(object);
@@ -199,21 +208,31 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
         return null;
     }
 
-    private int shieldFixedSlotIndex(ObjectInstance object) {
-        if (!(object instanceof ShieldObjectInstance)) {
+    private int fixedPowerUpSlotIndex(ObjectInstance object) {
+        PhysicsFeatureSet featureSet = fixedSlotFeatureSet();
+        if (featureSet == null) {
             return -1;
         }
+        if (object instanceof ShieldObjectInstance) {
+            return featureSet.shieldObjectFixedSlotIndex();
+        }
+        if (object instanceof InvincibilityStarsObjectInstance) {
+            return featureSet.invincibilityStarsFixedSlotIndex();
+        }
+        return -1;
+    }
+
+    private PhysicsFeatureSet fixedSlotFeatureSet() {
         ObjectServices services = objectServices();
         if (services == null) {
-            return -1;
+            return null;
         }
         GameModule module = services.gameModule();
         if (module == null) {
-            return -1;
+            return null;
         }
-        PhysicsFeatureSet featureSet = module.getPhysicsProvider() != null
+        return module.getPhysicsProvider() != null
                 ? module.getPhysicsProvider().getFeatureSet()
                 : null;
-        return featureSet != null ? featureSet.shieldObjectFixedSlotIndex() : -1;
     }
 }

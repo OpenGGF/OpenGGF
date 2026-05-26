@@ -197,8 +197,25 @@ public record RingSnapshot(
             int ySub,
             int xVel,
             int yVel,
-            int slotIndex
+            int slotIndex,
+            int objectSlotIndex,
+            boolean collected,
+            int sparkleStartFrame
     ) {
+        public AttractedRingEntry(
+                boolean active,
+                int sourceIndex,
+                int x,
+                int y,
+                int xSub,
+                int ySub,
+                int xVel,
+                int yVel,
+                int slotIndex
+        ) {
+            this(active, sourceIndex, x, y, xSub, ySub, xVel, yVel, slotIndex, -1, false, -1);
+        }
+
         public AttractedRingEntry(
                 boolean active,
                 int sourceIndex,
@@ -209,7 +226,7 @@ public record RingSnapshot(
                 int xVel,
                 int yVel
         ) {
-            this(active, sourceIndex, x, y, xSub, ySub, xVel, yVel, 0);
+            this(active, sourceIndex, x, y, xSub, ySub, xVel, yVel, 0, -1, false, -1);
         }
     }
 }

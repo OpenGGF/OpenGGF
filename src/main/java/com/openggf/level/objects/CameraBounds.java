@@ -92,6 +92,24 @@ public final class CameraBounds {
     }
 
     /**
+     * Checks the bounds used by the ROM sprite renderer when setting
+     * {@code render_flags} bit 7.
+     * <p>
+     * S1 {@code BuildSprites}, S2 {@code BuildSprites}, and S3K
+     * {@code Render_Sprites} reject the right/bottom edges with
+     * {@code bge}/{@code bhs} after subtracting/adding object half-extents
+     * (S1 BuildSprites.asm:44-60; S2 s2.asm:30372-30395; S3K
+     * sonic3k.asm:36347-36365), so those upper edges are exclusive.
+     * SolidObjectFull's on-screen gate reads that bit on the next object update;
+     * using an inclusive upper bound keeps exact edge objects solid one frame
+     * longer than the ROM.
+     */
+    public boolean containsRenderSpriteBounds(int x, int y, int xMargin, int yMargin) {
+        if (x < left - xMargin || x >= right + xMargin) return false;
+        return containsRenderSpriteY(y, yMargin);
+    }
+
+    /**
      * Checks if a Y coordinate is within the vertical bounds, optionally with margin.
      * When vertical wrapping is active, uses modular arithmetic: computes the shortest
      * distance in the wrapped space and checks if it falls within the screen height.
@@ -105,5 +123,16 @@ public final class CameraBounds {
             return diff <= height;
         }
         return y >= top - margin && y <= bottom + margin;
+    }
+
+    private boolean containsRenderSpriteY(int y, int margin) {
+        if (verticalWrapRange > 0) {
+            int adjustedTop = top - margin;
+            int height = (bottom - top) + 2 * margin;
+            int diff = y - adjustedTop;
+            diff = ((diff % verticalWrapRange) + verticalWrapRange) % verticalWrapRange;
+            return diff < height;
+        }
+        return y >= top - margin && y < bottom + margin;
     }
 }

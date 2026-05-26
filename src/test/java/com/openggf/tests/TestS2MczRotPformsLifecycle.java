@@ -64,14 +64,10 @@ class TestS2MczRotPformsLifecycle {
         boolean xFlip = (parentSpawn.renderFlags() & 0x01) != 0;
         int rightChildSubtype = xFlip ? 0x0C : 0x06;
         int leftChildSubtype = xFlip ? 0x06 : 0x0C;
-        int[] rightChildPosition = expectedPositionAfterFirstManagedUpdate(
-                parentSpawn.x() + 0x40, parentSpawn.y() + 0x40, rightChildSubtype, xFlip);
-        int[] leftChildPosition = expectedPositionAfterFirstManagedUpdate(
-                parentSpawn.x() - 0x40, parentSpawn.y() + 0x40, leftChildSubtype, xFlip);
-        assertTrue(hasLiveRotPformAt(activeObjects, rightChildPosition[0], rightChildPosition[1], rightChildSubtype),
+        assertTrue(hasLiveRotPformAt(activeObjects, parentSpawn.x() + 0x40, parentSpawn.y() + 0x40, rightChildSubtype),
                 () -> "Subtype 0x18 should spawn child 1 at +64,+64 with the ROM subtype selected by x-flip. "
                         + describeRotPforms(activeObjects));
-        assertTrue(hasLiveRotPformAt(activeObjects, leftChildPosition[0], leftChildPosition[1], leftChildSubtype),
+        assertTrue(hasLiveRotPformAt(activeObjects, parentSpawn.x() - 0x40, parentSpawn.y() + 0x40, leftChildSubtype),
                 () -> "Subtype 0x18 should spawn child 2 at -64,+64 with the ROM subtype selected by x-flip. "
                         + describeRotPforms(activeObjects));
     }
@@ -96,13 +92,5 @@ class TestS2MczRotPformsLifecycle {
                 })
                 .toList()
                 .toString();
-    }
-
-    private static int[] expectedPositionAfterFirstManagedUpdate(int x, int y, int subtype, boolean xFlip) {
-        int phase = (subtype & 0x0F) / 6;
-        int[][] table = xFlip
-                ? new int[][]{{0, 1}, {1, 0}, {0, -1}, {-1, 0}}
-                : new int[][]{{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
-        return new int[] {x + table[phase][0], y + table[phase][1]};
     }
 }
