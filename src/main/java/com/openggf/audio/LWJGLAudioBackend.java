@@ -967,6 +967,7 @@ public class LWJGLAudioBackend implements AudioBackend {
     @Override
     public void attachDeterministicAudioRuntime(DeterministicAudioRuntime runtime) {
         synchronized (streamLock) {
+            Objects.requireNonNull(runtime, "runtime");
             if (supportsDeterministicRuntimePresentation()
                     && !runtime.providesPresentationPcm()) {
                 throw new IllegalStateException(
