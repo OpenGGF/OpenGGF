@@ -6,6 +6,21 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ### v0.6.prerelease (Current development snapshot)
 
+- **S3K route parity, object physics, and trace replay preparation.**
+  The latest development pass expands S3K route coverage across AIZ, CNZ, MGZ, and
+  related object/event paths: fixed-air countdown state, sidekick-follow context,
+  CNZ miniboss/top/cylinder/bumper/barber-pole behavior, AIZ boss/end-sequence
+  behavior, signposts/results flow, object rewind snapshots, and additional object
+  physics contracts now have focused regression coverage. Shared solid/touch/object
+  control code gained tighter participation, riding, camera-bound, ring, collision,
+  and rewind handling to support those route slices without game-specific engine
+  hacks. Trace replay tooling now records richer per-frame diagnostics, keeps trace
+  comparison read-only, removes S2 bootstrap zone carve-outs in favour of recorder
+  capabilities or live object semantics, restores S2 native-prelude sidekick timing
+  from ROM-visible title-card history, and documents the no-zone-carveout rule in
+  agent docs and mirrored trace-replay skills. Full non-trace test suite passes;
+  current trace frontier state is recorded in `docs/TRACE_FRONTIER_LOG.md`.
+
 - **Object physics standardization final cleanup pass.**
   Follow-up cleanup moved additional object-control call sites onto `ObjectControlState`,
   routed event/feature player selection through `ObjectPlayerQuery` participation policies,
