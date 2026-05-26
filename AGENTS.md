@@ -57,6 +57,8 @@ Git hooks in `.githooks/` and CI enforce the branch policy below. Configure the 
     *   `physics` – sensors, terrain collision, unified `CollisionSystem`.
     *   `configuration` – `SonicConfiguration` / `SonicConfigurationService`. Dev-only: `TEST_MODE_ENABLED` (replaces master-title game-select with a trace picker, needs `TRACE_CATALOG_DIR`), `TRACE_CATALOG_DIR` (default `src/test/resources/traces`).
     *   `LevelFrameStep` lives at the `com.openggf` package root, not under `level`.
+
+**Startup order:** `Engine.init()` now boots through `GameMode.LEGAL_DISCLAIMER` first when `SHOW_LEGAL_DISCLAIMER_ON_STARTUP=true` (the default). The disclaimer screen owns a `FadeManager` reveal, a 5-second readability gate, and a fade-to-black on dismiss; control then chains into the existing `MASTER_TITLE_SCREEN` or direct-gameplay path inside `Engine.exitLegalDisclaimer()`. Set the flag `false` in tests that boot the full `Engine`.
 *   **Tests:** Live under `src/test/java/com/openggf/tests` and cover ROM loading, decompression, collision, singleton lifecycle, and services migration. New or updated tests must use JUnit 5 / Jupiter only; do not add JUnit 4 tests, rules, runners, or `org.junit.*` imports.
 
 ## Coordinate Semantics

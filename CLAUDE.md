@@ -177,8 +177,11 @@ Package names are generally self-describing; a few with non-obvious facts:
 ### Configuration
 `SonicConfigurationService` loads from `config.json`. Key bindings are stored as GLFW key-name strings (e.g. `"D"` / `"GLFW_KEY_D"`) and resolved to integer key codes at lookup. See [CONFIGURATION.md](CONFIGURATION.md) for the full key list. Two flags worth flagging:
 
+- `SHOW_LEGAL_DISCLAIMER_ON_STARTUP` — boot through `GameMode.LEGAL_DISCLAIMER` first (default `true`). Set `false` in tests that boot the full `Engine`.
 - `TEST_MODE_ENABLED` — replaces the master-title game-select with a trace picker (dev-only; requires `TRACE_CATALOG_DIR`).
 - `TRACE_CATALOG_DIR` — directory scanned by `TraceCatalog` (default `src/test/resources/traces`).
+
+**Startup order:** `Engine.init()` now boots through `GameMode.LEGAL_DISCLAIMER` first when `SHOW_LEGAL_DISCLAIMER_ON_STARTUP=true` (the default). The disclaimer screen owns a `FadeManager` reveal, a 5-second readability gate, and a fade-to-black on dismiss; control then chains into the existing `MASTER_TITLE_SCREEN` or direct-gameplay path inside `Engine.exitLegalDisclaimer()`. Set the flag `false` in tests that boot the full `Engine`.
 
 ## Level Resource Overlay System
 
