@@ -70,6 +70,7 @@ public final class GameplayModeContext implements ModeContext {
     private BonusStageProvider activeBonusStageProvider = NoOpBonusStageProvider.INSTANCE;
     private boolean managersTornDown;
 
+    private PerformanceProfiler profiler;
     private RewindRegistry rewindRegistry;
     private RewindController rewindController;
     private PlaybackController playbackController;
@@ -177,6 +178,7 @@ public final class GameplayModeContext implements ModeContext {
         this.audioManager = audioManager;
         this.rng = Objects.requireNonNull(rng, "rng");
         this.solidExecutionRegistry = Objects.requireNonNull(solidExecutionRegistry, "solidExecutionRegistry");
+        this.profiler = profiler;
         this.managersTornDown = false;
 
         this.rewindRegistry = new RewindRegistry(profiler);
@@ -464,7 +466,8 @@ public final class GameplayModeContext implements ModeContext {
                 inputs,
                 stepper,
                 keyframeInterval,
-                audioManager);
+                audioManager,
+                profiler);
         this.playbackController = new PlaybackController(rewindController);
         return playbackController;
     }

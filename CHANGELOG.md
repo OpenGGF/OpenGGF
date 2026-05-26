@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **Rewind profiler sections (`rewind.restore` / `rewind.step` / `rewind.seek` / `rewind.replay`) are now wired in production via `GameplayModeContext`.**
+
 - **`RewindController.seekTo` now attributes work to `rewind.seek` / `rewind.replay` profiler sections (exception-safe).**
 
 - **`RewindController.stepBackward` now attributes work to `rewind.step` / `rewind.replay` profiler sections (exception-safe).**
