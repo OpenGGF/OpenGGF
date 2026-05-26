@@ -145,23 +145,36 @@ public final class RewindController {
                 () -> new IllegalStateException(
                         "no keyframe at or before " + clampedTarget));
         int originalFrame = currentFrame;
+        if (profiler != null) profiler.beginSection("rewind.seek");
         try (AudioReplayScope ignored = beginAudioReplay(
                 originalFrame, clampedTarget, AudioReplayReason.SEEK)) {
             segmentCache.invalidate();
             registry.restore(floor.snapshot());
+            // registry.restore closed rewind.restore in its finally; re-open rewind.seek.
+            if (profiler != null) profiler.beginSection("rewind.seek");
             currentFrame = floor.frame();
             primeStepperAtFrame(currentFrame);
             while (currentFrame < clampedTarget) {
-                Bk2FrameInput in = inputs.read(currentFrame + 1);
-                engineStepper.step(in);
-                currentFrame++;
+                if (profiler != null) profiler.beginSection("rewind.replay");
+                try {
+                    Bk2FrameInput in = inputs.read(currentFrame + 1);
+                    engineStepper.step(in);
+                    currentFrame++;
+                } finally {
+                    if (profiler != null) profiler.endSection("rewind.replay");
+                }
             }
+            // After the loop, the last endSection("rewind.replay") cleared the
+            // active section. Re-open rewind.seek for the audio bookkeeping tail.
+            if (profiler != null) profiler.beginSection("rewind.seek");
             keyframes.discardAfter(currentFrame);
             discardAudioAfter(currentFrame);
             restoreAudioLogicalState(currentFrame);
             beginAudioFrame(currentFrame);
             primeStepperAtFrame(currentFrame);
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
+        } finally {
+            if (profiler != null) profiler.endSection("rewind.seek");
         }
     }
 
