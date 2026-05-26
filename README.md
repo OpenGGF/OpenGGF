@@ -309,6 +309,24 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   object-reference collections as structural state instead of compact scalar sidecar payload. The
   contributor and player docs now describe those rewind audio/fade presentation paths, trace-mode
   controls, and focused validation commands.
+- **Audio presentation migration (2026-05-26).** `LWJGLAudioBackend` now drains all
+  production PCM through `StreamBackedDeterministicAudioRuntime`; the backend-private
+  `pcmHistory`/`reverseCursor` duplicate is retired. `DeterministicAudioRuntime` gains a
+  `hasActivePresentation()` predicate (default false; overridden to track bound streams,
+  FIFO data, reverse cursor, and release crossfade) so `updateStream` idles when there's
+  nothing to drain. Embedded `startStream()` calls in `playMusicSmps` / `playSmps` /
+  `playSfxSmps` are removed to eliminate a reentrancy hazard where runtime command
+  replay could drain the FIFO before the current frame's PCM was produced — startup is
+  driven exclusively from `updateStream` now. `LWJGLAudioBackend.attachDeterministicAudioRuntime`
+  asserts the attached runtime's `providesPresentationPcm()` and `AudioManager.setBackend`'s
+  catch-block resets the runtime to NoOp on backend-init failure so attach assertion
+  failures leave the manager in a clean Null/NoOp state. Covered by new
+  `TestLwjglRuntimePresentationRoundTrip` and `TestDeterministicAudioRuntimeDefaults`,
+  extended `TestStreamBackedDeterministicAudioRuntime` and
+  `TestAudioManagerRuntimeInstallation`. Unblocks the parked reverse audio re-synthesis
+  spec at `docs/superpowers/specs/2026-05-26-reverse-resynth-design.md` which extends
+  held-rewind audio past the historical 10-second silence wall. See
+  `docs/superpowers/specs/2026-05-26-lwjgl-runtime-presentation-migration-design.md`.
 - **Trace recorder:** S3K v6.6 AIZ diagnostics expose tree/boundary pre/post state at the F4679
   sidekick boundary frame, transition-floor SolidObjectTop decisions at the F5415 frame, and
   fire-handoff terrain/SolidObjectTop state around F5435 while keeping trace data comparison-only;

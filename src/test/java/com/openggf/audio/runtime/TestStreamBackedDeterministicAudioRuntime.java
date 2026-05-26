@@ -11,6 +11,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestStreamBackedDeterministicAudioRuntime {
     @Test
@@ -230,6 +232,94 @@ class TestStreamBackedDeterministicAudioRuntime {
         short[] forward = new short[4];
         assertEquals(2, runtime.drainPcm(forward, 2));
         assertArrayEquals(new short[] {0, 0, 1000, 1000}, forward);
+    }
+
+    @Test
+    void hasActivePresentation_falseWhenIdle() {
+        AudioFrameClock clock = new AudioFrameClock(120, 60);
+        AudioOutputFifo fifo = new AudioOutputFifo(120);
+        PcmHistoryRing history = new PcmHistoryRing(120);
+        StreamBackedDeterministicAudioRuntime runtime =
+                new StreamBackedDeterministicAudioRuntime(clock, fifo, history, 4);
+
+        assertFalse(runtime.hasActivePresentation());
+    }
+
+    @Test
+    void hasActivePresentation_trueWhenMusicStreamBound() {
+        AudioFrameClock clock = new AudioFrameClock(120, 60);
+        AudioOutputFifo fifo = new AudioOutputFifo(120);
+        StreamBackedDeterministicAudioRuntime runtime =
+                new StreamBackedDeterministicAudioRuntime(clock, fifo);
+
+        runtime.setMusicStream(new SilentStream());
+
+        assertTrue(runtime.hasActivePresentation());
+    }
+
+    @Test
+    void hasActivePresentation_trueWhenSfxStreamBound() {
+        AudioFrameClock clock = new AudioFrameClock(120, 60);
+        AudioOutputFifo fifo = new AudioOutputFifo(120);
+        StreamBackedDeterministicAudioRuntime runtime =
+                new StreamBackedDeterministicAudioRuntime(clock, fifo);
+
+        runtime.setSfxStream(new SilentStream());
+
+        assertTrue(runtime.hasActivePresentation());
+    }
+
+    @Test
+    void hasActivePresentation_trueWhenFifoHasData() {
+        AudioFrameClock clock = new AudioFrameClock(120, 60);
+        AudioOutputFifo fifo = new AudioOutputFifo(120);
+        StreamBackedDeterministicAudioRuntime runtime =
+                new StreamBackedDeterministicAudioRuntime(clock, fifo);
+
+        fifo.write(new short[]{1, 2, 3, 4}, 2);
+
+        assertTrue(runtime.hasActivePresentation());
+    }
+
+    @Test
+    void hasActivePresentation_trueWhileReverseCursorActive() {
+        AudioFrameClock clock = new AudioFrameClock(120, 60);
+        AudioOutputFifo fifo = new AudioOutputFifo(120);
+        PcmHistoryRing history = new PcmHistoryRing(8);
+        StreamBackedDeterministicAudioRuntime runtime =
+                new StreamBackedDeterministicAudioRuntime(clock, fifo, history);
+        history.write(new short[]{1, 2, 3, 4}, 2);
+
+        runtime.beginReversePresentation();
+
+        assertTrue(runtime.hasActivePresentation());
+
+        runtime.endReversePresentation();
+        assertFalse(runtime.hasActivePresentation());
+    }
+
+    @Test
+    void hasActivePresentation_trueDuringReleaseCrossfade() {
+        AudioFrameClock clock = new AudioFrameClock(120, 60);
+        AudioOutputFifo fifo = new AudioOutputFifo(120);
+        PcmHistoryRing history = new PcmHistoryRing(8);
+        StreamBackedDeterministicAudioRuntime runtime =
+                new StreamBackedDeterministicAudioRuntime(clock, fifo, history, 4);
+        history.write(new short[]{10, 20, 30, 40}, 2);
+
+        runtime.beginReversePresentation();
+        runtime.drainPcm(new short[4], 2);
+        runtime.endReversePresentation();
+
+        assertTrue(runtime.hasActivePresentation());
+    }
+
+    private static final class SilentStream implements AudioStream {
+        @Override
+        public int read(short[] buffer) {
+            Arrays.fill(buffer, (short) 0);
+            return buffer.length;
+        }
     }
 
     private static final class SequenceStream implements AudioStream {

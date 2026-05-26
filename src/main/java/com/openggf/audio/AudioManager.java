@@ -151,6 +151,7 @@ public class AudioManager {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to initialize AudioBackend", e);
             this.backend = new NullAudioBackend();
+            applyDeterministicAudioRuntime(NoOpDeterministicAudioRuntime.INSTANCE);
         }
     }
 

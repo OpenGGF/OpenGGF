@@ -7,7 +7,7 @@ import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
-import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -56,15 +56,12 @@ public class LWJGLAudioBackend implements AudioBackend {
     private static final int STREAM_BUFFER_SIZE = 1024;
     // Pre-allocated buffers for fillBuffer() to avoid per-call allocations (~43 times/sec)
     private final short[] streamData = new short[STREAM_BUFFER_SIZE * 2];
-    private final short[] sfxStreamData = new short[STREAM_BUFFER_SIZE * 2];
     private int deviceSampleRate = 48000;  // Default fallback, updated in init()
     // Reusable DirectBuffer to avoid allocation in fillBuffer() hot path
     private ShortBuffer directShortBuffer;
     private SmpsSequencer currentSmps;
     private SmpsDriver smpsDriver;
-    private DeterministicAudioRuntime deterministicAudioRuntime;
-    private PcmHistoryRing pcmHistory;
-    private PcmHistoryRing.ReverseCursor reverseCursor;
+    private DeterministicAudioRuntime deterministicAudioRuntime = NoOpDeterministicAudioRuntime.INSTANCE;
 
     private static class MusicState {
         final AudioStream stream;
@@ -191,7 +188,6 @@ public class LWJGLAudioBackend implements AudioBackend {
             LOGGER.info("Mono sources: " + monoSources + ", Stereo sources: " + stereoSources);
 
             LOGGER.info("LWJGL OpenAL Initialized. Device sample rate: " + deviceSampleRate + " Hz, Buffer Size: " + STREAM_BUFFER_SIZE);
-            pcmHistory = new PcmHistoryRing(Math.max(STREAM_BUFFER_SIZE, deviceSampleRate * 10));
 
             // Preload SFX
             for (String sfxPath : sfxFallback.values()) {
@@ -250,9 +246,7 @@ public class LWJGLAudioBackend implements AudioBackend {
                         sfxDriver.stopAll();
                     }
                     sfxStream = null;
-                    if (runtimeProvidesPresentationPcm()) {
-                        deterministicAudioRuntime.clearSfxStream();
-                    }
+                    deterministicAudioRuntime.clearSfxStream();
                 }
                 sfxBlocked = true;
             }
@@ -284,9 +278,7 @@ public class LWJGLAudioBackend implements AudioBackend {
                     sfxDriver.stopAll();
                 }
                 sfxStream = null;
-                if (runtimeProvidesPresentationPcm()) {
-                    deterministicAudioRuntime.clearSfxStream();
-                }
+                deterministicAudioRuntime.clearSfxStream();
             }
         }
 
@@ -323,12 +315,9 @@ public class LWJGLAudioBackend implements AudioBackend {
 
         updateSynthesizerConfig();
         synchronized (streamLock) {
-            if (runtimeProvidesPresentationPcm()) {
-                deterministicAudioRuntime.setMusicStream(smpsDriver);
-            }
+            deterministicAudioRuntime.setMusicStream(smpsDriver);
             currentStream = smpsDriver;
         }
-        startStream();
     }
 
     @Override
@@ -352,9 +341,7 @@ public class LWJGLAudioBackend implements AudioBackend {
                         sfxDriver.stopAll();
                     }
                     sfxStream = null;
-                    if (runtimeProvidesPresentationPcm()) {
-                        deterministicAudioRuntime.clearSfxStream();
-                    }
+                    deterministicAudioRuntime.clearSfxStream();
                 }
                 sfxBlocked = true;
             }
@@ -377,9 +364,7 @@ public class LWJGLAudioBackend implements AudioBackend {
                     sfxDriver.stopAll();
                 }
                 sfxStream = null;
-                if (runtimeProvidesPresentationPcm()) {
-                    deterministicAudioRuntime.clearSfxStream();
-                }
+                deterministicAudioRuntime.clearSfxStream();
             }
         }
 
@@ -414,12 +399,9 @@ public class LWJGLAudioBackend implements AudioBackend {
 
         updateSynthesizerConfig();
         synchronized (streamLock) {
-            if (runtimeProvidesPresentationPcm()) {
-                deterministicAudioRuntime.setMusicStream(smpsDriver);
-            }
+            deterministicAudioRuntime.setMusicStream(smpsDriver);
             currentStream = smpsDriver;
         }
-        startStream();
     }
 
     @Override
@@ -470,7 +452,7 @@ public class LWJGLAudioBackend implements AudioBackend {
             }
         }
 
-        if (smpsDriver != null && (currentStream == smpsDriver || runtimeProvidesPresentationPcm())) {
+        if (smpsDriver != null) {
             // Mix into current driver
             if (isContinuous) {
                 smpsDriver.startContinuousSfx(data.getId(), contTrackCount);
@@ -515,18 +497,8 @@ public class LWJGLAudioBackend implements AudioBackend {
                     seq.setFallbackVoiceData(currentSmps.getSmpsData());
                 }
                 sfxDriver.addSequencer(seq, true);
-                if (runtimeProvidesPresentationPcm()) {
-                    deterministicAudioRuntime.setSfxStream(sfxDriver);
-                }
+                deterministicAudioRuntime.setSfxStream(sfxDriver);
             }
-        }
-
-        // Ensure stream is running
-        int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
-        if (queued == 0) {
-            alSourceStop(musicSource);
-            alSourcei(musicSource, AL_BUFFER, 0);
-            startStream();
         }
     }
 
@@ -565,10 +537,8 @@ public class LWJGLAudioBackend implements AudioBackend {
 
         currentStream = null;
         currentSmps = null;
-        if (runtimeProvidesPresentationPcm()) {
-            deterministicAudioRuntime.clearMusicStream();
-            deterministicAudioRuntime.flushPresentationFifo();
-        }
+        deterministicAudioRuntime.clearMusicStream();
+        deterministicAudioRuntime.flushPresentationFifo();
         if (smpsDriver != null) {
             smpsDriver.stopAll();
             smpsDriver = null;
@@ -587,7 +557,9 @@ public class LWJGLAudioBackend implements AudioBackend {
 
         boolean hasStream;
         synchronized (streamLock) {
-            hasStream = currentStream != null || sfxStream != null || runtimeProvidesPresentationPcm();
+            hasStream = currentStream != null
+                    || sfxStream != null
+                    || deterministicAudioRuntime.hasActivePresentation();
         }
         if (hasStream && streamBuffers == null) {
             startStream();
@@ -676,9 +648,9 @@ public class LWJGLAudioBackend implements AudioBackend {
         // not a clean SMPS/synth/resample split — SmpsDriver.read() interleaves the
         // sequencer, YM2612/PSG synthesis, and the blip resampler at sample granularity,
         // so those three phases cannot be separated at this seam.
-        //   - audio.music_stream: music AudioStream read() (SMPS + synth + resample,
-        //     interleaved).
-        //   - audio.sfx_stream:   separate-SFX stream read() plus the music/SFX mix loop.
+        //   - audio.music_stream: presentation drain via fillPresentationBuffer (SMPS +
+        //     synth + resample, interleaved with SFX mixing inside the deterministic
+        //     runtime's advanceFrame).
         //   - audio.upload:       DirectBuffer fill and OpenAL upload.
         // Sections do not nest (see PerformanceProfiler.beginSection), so starting any of
         // these inside the outer "audio" section in GameLoop will truncate that section
@@ -688,48 +660,10 @@ public class LWJGLAudioBackend implements AudioBackend {
         synchronized (streamLock) {
             beginProfileSection("audio.music_stream");
             try {
-                // Clear and reuse pre-allocated buffer
-                Arrays.fill(streamData, (short) 0);
-                boolean runtimePresentation = runtimeProvidesPresentationPcm();
-                if (reverseCursor != null) {
-                    reverseCursor.readPrevious(streamData, STREAM_BUFFER_SIZE);
-                } else if (runtimePresentation) {
-                    deterministicAudioRuntime.drainPcm(streamData, STREAM_BUFFER_SIZE);
-                    clearCompletedRuntimeSfxIfNeeded();
-                } else if (currentStream != null) {
-                    currentStream.read(streamData);
-                }
-            } finally {
-                endProfileSection("audio.music_stream");
-            }
-
-            beginProfileSection("audio.sfx_stream");
-            try {
-                boolean runtimePresentation = runtimeProvidesPresentationPcm();
-                if (!runtimePresentation && sfxStream != null) {
-                    Arrays.fill(sfxStreamData, (short) 0);
-                    sfxStream.read(sfxStreamData);
-
-                    for (int i = 0; i < streamData.length; i++) {
-                        int mixed = streamData[i] + sfxStreamData[i];
-                        if (mixed > Short.MAX_VALUE)
-                            mixed = Short.MAX_VALUE;
-                        if (mixed < Short.MIN_VALUE)
-                            mixed = Short.MIN_VALUE;
-                        streamData[i] = (short) mixed;
-                    }
-
-                    if (sfxStream.isComplete()) {
-                        sfxStream = null;
-                    }
-                }
-                if (reverseCursor == null && pcmHistory != null) {
-                    pcmHistory.write(streamData, STREAM_BUFFER_SIZE);
-                }
-
+                fillPresentationBuffer(streamData, STREAM_BUFFER_SIZE);
                 sampleRate = (int) Math.round(getStreamSampleRate());
             } finally {
-                endProfileSection("audio.sfx_stream");
+                endProfileSection("audio.music_stream");
             }
         }
 
@@ -745,6 +679,23 @@ public class LWJGLAudioBackend implements AudioBackend {
         }
     }
 
+    /**
+     * Test seam for the music-presentation path. Drains the deterministic
+     * runtime, which is the sole source of presentation PCM post-migration.
+     * Package-private so {@code TestLwjglRuntimePresentationRoundTrip} can
+     * exercise the drain without standing up OpenAL.
+     */
+    void fillPresentationBuffer(short[] target, int frames) {
+        Arrays.fill(target, 0, frames * 2, (short) 0);
+        requirePresentationRuntime().drainPcm(target, frames);
+        clearCompletedRuntimeSfxIfNeeded();
+    }
+
+    /** Test seam: whether the OpenAL streaming buffers have been allocated. */
+    boolean isStreamStarted() {
+        return streamBuffers != null;
+    }
+
     private void beginProfileSection(String section) {
         if (profiler != null) {
             profiler.beginSection(section);
@@ -757,14 +708,17 @@ public class LWJGLAudioBackend implements AudioBackend {
         }
     }
 
-    private boolean runtimeProvidesPresentationPcm() {
-        return deterministicAudioRuntime != null && deterministicAudioRuntime.providesPresentationPcm();
+    private DeterministicAudioRuntime requirePresentationRuntime() {
+        DeterministicAudioRuntime runtime = deterministicAudioRuntime;
+        if (!runtime.providesPresentationPcm()) {
+            throw new IllegalStateException(
+                    "Presentation runtime required but attached runtime is "
+                            + runtime.getClass().getName());
+        }
+        return runtime;
     }
 
     private void bindRuntimePresentationStreams() {
-        if (!runtimeProvidesPresentationPcm()) {
-            return;
-        }
         deterministicAudioRuntime.setMusicStream(smpsDriver);
         if (sfxStream != null) {
             deterministicAudioRuntime.setSfxStream(sfxStream);
@@ -773,16 +727,10 @@ public class LWJGLAudioBackend implements AudioBackend {
         }
     }
 
-    private void clearRuntimeSfxStream() {
-        if (runtimeProvidesPresentationPcm()) {
-            deterministicAudioRuntime.clearSfxStream();
-        }
-    }
-
     private void clearCompletedRuntimeSfxIfNeeded() {
         if (sfxStream != null && sfxStream.isComplete()) {
             sfxStream = null;
-            clearRuntimeSfxStream();
+            deterministicAudioRuntime.clearSfxStream();
         }
     }
 
@@ -903,7 +851,7 @@ public class LWJGLAudioBackend implements AudioBackend {
                 sfxStream = restoredSfxDriver;
             }
             bindRuntimePresentationStreams();
-            if (runtimeProvidesPresentationPcm() && !preservePresentationQueue) {
+            if (!preservePresentationQueue) {
                 deterministicAudioRuntime.flushPresentationFifo();
             }
         }
@@ -943,6 +891,15 @@ public class LWJGLAudioBackend implements AudioBackend {
     @Override
     public void attachDeterministicAudioRuntime(DeterministicAudioRuntime runtime) {
         synchronized (streamLock) {
+            Objects.requireNonNull(runtime, "runtime");
+            if (supportsDeterministicRuntimePresentation()
+                    && !runtime.providesPresentationPcm()) {
+                throw new IllegalStateException(
+                        "LWJGLAudioBackend declares deterministic runtime presentation"
+                                + " support but was attached a runtime that does not"
+                                + " provide presentation PCM: "
+                                + runtime.getClass().getName());
+            }
             deterministicAudioRuntime = runtime;
             bindRuntimePresentationStreams();
         }
@@ -950,7 +907,7 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     @Override
     public boolean supportsDeterministicRuntimePresentation() {
-        return false;
+        return true;
     }
 
     @Override
@@ -960,19 +917,15 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     @Override
     public void beginReversePresentation() {
-        synchronized (streamLock) {
-            reverseCursor = pcmHistory != null ? pcmHistory.createReverseCursor() : null;
-        }
+        // No-op: AudioManager.beginReverseAudioPresentation already invokes
+        // deterministicAudioRuntime.beginReversePresentation independently.
+        // The backend has no reverse-presentation state of its own
+        // post-migration.
     }
 
     @Override
     public void endReversePresentation() {
-        synchronized (streamLock) {
-            if (pcmHistory != null) {
-                pcmHistory.commitReverseCursor(reverseCursor);
-            }
-            reverseCursor = null;
-        }
+        // No-op: symmetric with beginReversePresentation above.
     }
 
     @Override
@@ -1008,7 +961,7 @@ public class LWJGLAudioBackend implements AudioBackend {
                 sfxDriver.stopAll();
             }
             sfxStream = null;
-            clearRuntimeSfxStream();
+            deterministicAudioRuntime.clearSfxStream();
         }
         // Stop and cleanup WAV-based SFX sources
         for (int source : sfxSources) {
@@ -1346,9 +1299,7 @@ public class LWJGLAudioBackend implements AudioBackend {
                 sfxDriver.stopAll();
             }
             sfxStream = null;
-            if (runtimeProvidesPresentationPcm()) {
-                deterministicAudioRuntime.clearSfxStream();
-            }
+            deterministicAudioRuntime.clearSfxStream();
         }
     }
 

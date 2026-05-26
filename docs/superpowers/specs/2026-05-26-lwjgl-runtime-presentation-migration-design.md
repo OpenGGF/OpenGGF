@@ -27,10 +27,12 @@ Migrate production to the runtime path. Delete the backend-private duplicate.
 
 ```java
 private void fillBuffer(int bufferId) {
+    int sampleRate;
     synchronized (streamLock) {
         fillPresentationBuffer(streamData, STREAM_BUFFER_SIZE);
+        sampleRate = (int) Math.round(getStreamSampleRate());
     }
-    // ... DirectBuffer fill and OpenAL upload, unchanged
+    // ... DirectBuffer fill and OpenAL upload using sampleRate, unchanged
 }
 
 // Package-private for test access via TestLwjglRuntimePresentationRoundTrip
@@ -89,7 +91,7 @@ Drops the `currentStream == smpsDriver || runtimeProvidesPresentationPcm()` form
 
 1. **Test fixtures that pin `LWJGLAudioBackend` with a `NoOpDeterministicAudioRuntime`.** Fail at `attachDeterministicAudioRuntime` with a clear message naming what to use instead. Tests that wanted the no-op behavior should use `NullAudioBackend` or a test-only backend that advertises `supportsDeterministicRuntimePresentation() == false`.
 
-2. **Backend init failure path.** `AudioManager.setBackend` calls `backend.init()` first, then `configureDeterministicRuntimeForBackend()` which calls `attachDeterministicAudioRuntime()`. The new attach-time assertion fires during attach, **after** init completes. `setBackend` catches `Exception` and falls back to `NullAudioBackend` at line 153, so a failing assertion at attach time degrades production audio to null rather than crashing the engine — same as today's init-failure handling.
+2. **Backend init failure / attach failure path.** `AudioManager.setBackend` calls `backend.init()` first, then `configureDeterministicRuntimeForBackend()` which calls `applyDeterministicAudioRuntime(...)` — and this assigns `this.deterministicAudioRuntime` BEFORE invoking `backend.attachDeterministicAudioRuntime(...)`. The new attach-time assertion fires during attach, **after** init has completed and after `AudioManager.deterministicAudioRuntime` has already been set. `setBackend` catches `Exception` and falls back to `NullAudioBackend` at line 153. The fallback path does **not** automatically reconfigure the runtime for `NullAudioBackend`. The practical result is silent audio (because `NullAudioBackend` ignores the runtime), but `AudioManager.deterministicAudioRuntime` retains a reference to the `StreamBackedDeterministicAudioRuntime` that was constructed for the failed backend. This is not catastrophic, but the implementation must either: (a) document this residual runtime state, OR (b) have the catch-block call `applyDeterministicAudioRuntime(NoOpDeterministicAudioRuntime.INSTANCE)` as part of the fallback to restore a clean baseline. Pick (b) in the implementation plan.
 
 3. **`stopStream` clearing.** Today it stops `smpsDriver`, clears runtime music, optionally clears runtime SFX based on call site. Post-migration: it clears runtime music unconditionally (was already gated only by `runtimeProvidesPresentationPcm()`), preserves the existing `playSmps`-side standalone-SFX clearing on non-override music start.
 

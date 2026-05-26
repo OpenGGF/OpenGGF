@@ -165,6 +165,20 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     }
 
     @Override
+    public boolean hasActivePresentation() {
+        if (musicStream != null || sfxStream != null) {
+            return true;
+        }
+        if (outputFifo.availableFrames() > 0) {
+            return true;
+        }
+        if (reverseCursor != null) {
+            return true;
+        }
+        return releaseCrossfadeRemaining > 0;
+    }
+
+    @Override
     public void clearPcmHistory() {
         reverseCursor = null;
         cancelReleaseCrossfade();

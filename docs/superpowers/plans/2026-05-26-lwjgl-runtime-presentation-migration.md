@@ -12,6 +12,71 @@
 
 ---
 
+## Plan Addendum (2026-05-26, post-review)
+
+External review surfaced several issues. The corrections below take precedence over the per-task body where they conflict. Read these before starting any task.
+
+### Execution order override
+
+The body below numbers tasks 1–13 sequentially. **Execute in this corrected order:**
+
+1, 2, 3, 4, **6 (remove embedded `startStream`), 7 (tighten `updateStream` hasStream), 8 (reshape `playSfxSmps`), 5 (flip the flag)**, 9, 10, 11, 12, 13.
+
+Rationale: Task 5 (flip `supportsDeterministicRuntimePresentation()` to true) activates the consuming runtime's command-replay path. If Task 5 lands before Task 6 (remove embedded `startStream()` from `playMusicSmps`/`playSmps`/`playSfxSmps`), there is an intermediate commit where command-replay can re-enter `startStream()` and drain the runtime FIFO before the current frame's PCM has been produced. Tasks 6, 7, 8 are individually safe before the flag flip (they tighten or reshape conditions that are already true under the old code paths); landing them first keeps every intermediate commit green.
+
+### Field nullability fix for Task 3 (was missed in original plan)
+
+When extracting seams in Task 3, also initialize the field declaration:
+
+```java
+private DeterministicAudioRuntime deterministicAudioRuntime = NoOpDeterministicAudioRuntime.INSTANCE;
+```
+
+(Not `null`.) Task 7 introduces `deterministicAudioRuntime.hasActivePresentation()` in `updateStream`; without the non-null default, any code path that reaches `updateStream` before `attachDeterministicAudioRuntime` has been called would NPE. Today the equivalent check is guarded by `runtimeProvidesPresentationPcm()`, which null-tests internally. After Task 7 the guard is gone; the field must therefore never be null.
+
+If the field is already initialized to `NoOpDeterministicAudioRuntime.INSTANCE` (verify by reading `LWJGLAudioBackend.java`), skip this step. Note this in the Task 3 commit message either way.
+
+### Task 5 addendum: also reset the runtime on catch-block fallback
+
+Task 5 flips the flag. The `AudioManager.setBackend(...)` catch-block currently falls back to `NullAudioBackend` but does **not** reset `AudioManager.deterministicAudioRuntime` — leaving a `StreamBackedDeterministicAudioRuntime` referenced from the AudioManager while `NullAudioBackend` is installed. Add to the Task 5 implementation (in `AudioManager.java`):
+
+```java
+} catch (Exception e) {
+    LOGGER.log(Level.SEVERE, "Failed to initialize AudioBackend", e);
+    this.backend = new NullAudioBackend();
+    applyDeterministicAudioRuntime(NoOpDeterministicAudioRuntime.INSTANCE);
+}
+```
+
+(Currently lines around 151–154.) Restores a clean null-backend baseline on attach-time assertion failure.
+
+### Task 9 atomicity (was missed in original plan)
+
+The body of Task 9 lists Steps 1–8. **Steps 1 (delete fields) through 3 (rewrite `fillPresentationBuffer`) must land in a single commit** — Step 1 alone leaves dangling references in the `fillPresentationBuffer` body introduced in Task 3, which won't compile. Make Steps 1, 2, 3, 4 all part of one commit, then run Step 5's audit in the same commit before pushing.
+
+Also: Task 9 deletes the `audio.sfx_stream` profile section. The Javadoc-style comment at the top of `fillBuffer` (currently lines 675–686 of `LWJGLAudioBackend.java`) describes the three sections. Update or shorten that comment in the same commit so the documentation matches the new shape.
+
+### Task 11 + 12 feasibility (P1 from review)
+
+`LWJGLAudioBackend.init()` is OpenAL-coupled (calls `alcOpenDevice`, `alcCreateContext`, `alGenSources`, `MemoryUtil.memAllocShort`). Subclassing `LWJGLAudioBackend` to override OpenAL natives ("Path A") would require refactoring `init()` into seams; the plan's original sketch is not implementable as written.
+
+**Revised approach:** Task 11's `HeadlessLwjglBackend` MUST be a sibling test fixture that extends `NullAudioBackend` and advertises `supportsDeterministicRuntimePresentation() == true` (like the existing `CapturingPresentationBackend` in `TestAudioManagerRuntimeInstallation`). It does **not** extend `LWJGLAudioBackend`. The test fixture exposes the orchestration semantics being asserted (routing, ownership, binding) by tracking state in fields the test inspects.
+
+Trade-off: tests don't directly exercise `LWJGLAudioBackend.fillPresentationBuffer`. They exercise the invariants the migration introduces at the `AudioManager` level through a backend that goes through the same `attachDeterministicAudioRuntime` + `applyDeterministicAudioRuntime` path. This is the practical compromise — `LWJGLAudioBackend` itself remains exercised via the existing manual smoke step in CLAUDE.md and the live engine.
+
+**Test #1 rewrite (B1 fix):** since the fixture has no OpenAL prefill, the FIFO-drain-by-prefill problem disappears. The startup-deferral assertion becomes simpler — assert that `playMusicSmps` does not call any "start" hook on the fixture, and that an explicit `update()` invocation does. Sample-pattern assertions happen via direct `fillPresentationBuffer`-equivalent (i.e., a call that drains the runtime's FIFO) without going through `startStream`-equivalents.
+
+### Task 12 disposition (A7/Q3)
+
+The real-SMPS smoke test as written depends on canned SMPS fixtures that don't exist and cannot be checked in per CLAUDE.md's "ROM-only runtime assets" rule. **Drop Task 12 from this plan.** The migration's invariants are covered by Task 11's routing/ownership tests. Real SMPS audio is exercised by:
+
+1. The existing audio test suite (`TestStreamBackedDeterministicAudioRuntime`, snapshot tests, etc.), which continues to pass.
+2. The manual smoke step in CLAUDE.md's expected workflow (boot each game, hold rewind, restore).
+
+If a future change to LWJGLAudioBackend needs end-to-end audio coverage with real SMPS data, it can be added then with a ROM-gated test like `TestRomLogic`.
+
+---
+
 ## Task 1: Add `hasActivePresentation()` to the runtime interface
 
 **Files:**
@@ -181,23 +246,19 @@ Append to `TestStreamBackedDeterministicAudioRuntime.java`:
     }
 ```
 
-If `SilentStream` isn't already defined in the test file, add at the bottom:
+If `SilentStream` isn't already defined in the test file, add at the bottom. **Note:** `AudioStream.read()` returns `int` (the number of samples read), and `isComplete()` is a default method on the interface — overriding it is optional. The existing test fixtures `SequenceStream` and `CallbackStream` in this file already demonstrate the correct shape.
 
 ```java
     private static final class SilentStream implements com.openggf.audio.AudioStream {
         @Override
-        public void read(short[] buffer) {
+        public int read(short[] buffer) {
             java.util.Arrays.fill(buffer, (short) 0);
-        }
-
-        @Override
-        public boolean isComplete() {
-            return false;
+            return buffer.length;
         }
     }
 ```
 
-(Check whether the test file already imports these — adjust if needed.)
+(Check whether the test file already imports `com.openggf.audio.AudioStream` — adjust if needed. If the test file already has a similar silent fixture, reuse it.)
 
 - [ ] **Step 2: Run tests, expect FAIL on the new tests**
 
@@ -925,11 +986,12 @@ public final class ScriptedAudioStream implements AudioStream {
     }
 
     @Override
-    public void read(short[] buffer) {
+    public int read(short[] buffer) {
         for (int i = 0; i < buffer.length; i++) {
             buffer[i] = next;
             next = (short) (next + step);
         }
+        return buffer.length;
     }
 
     @Override

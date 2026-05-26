@@ -60,4 +60,8 @@ public interface DeterministicAudioRuntime {
     default void clearSfxStream() {
         setSfxStream(null);
     }
+
+    default boolean hasActivePresentation() {
+        return false;
+    }
 }
