@@ -578,7 +578,9 @@ public class LWJGLAudioBackend implements AudioBackend {
 
         boolean hasStream;
         synchronized (streamLock) {
-            hasStream = currentStream != null || sfxStream != null || runtimeProvidesPresentationPcm();
+            hasStream = currentStream != null
+                    || sfxStream != null
+                    || deterministicAudioRuntime.hasActivePresentation();
         }
         if (hasStream && streamBuffers == null) {
             startStream();
