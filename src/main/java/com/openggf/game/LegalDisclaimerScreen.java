@@ -96,6 +96,7 @@ public class LegalDisclaimerScreen {
     private PixelFont font;
     private int solidWhiteTextureId;
     private int frameCounter;
+    private List<String> wrappedBodyLines;
 
     public LegalDisclaimerScreen(FadeManager fadeManager) {
         this.fadeManager = Objects.requireNonNull(fadeManager, "fadeManager");
@@ -108,6 +109,15 @@ public class LegalDisclaimerScreen {
             font = new PixelFont();
             font.init("pixel-font.png", renderer);
             solidWhiteTextureId = createSolidWhiteTexture();
+            ToIntFunction<String> measure = s -> font.measureWidth(s, BODY_SCALE);
+            wrappedBodyLines = new ArrayList<>();
+            for (String paragraph : BODY_PARAGRAPHS) {
+                if (paragraph.isEmpty()) {
+                    wrappedBodyLines.add("");
+                } else {
+                    wrappedBodyLines.addAll(wrapParagraph(paragraph, measure, BODY_MAX_WIDTH));
+                }
+            }
             fadeManager.startFadeFromBlack(state::onFadeInComplete);
             LOGGER.info("Legal disclaimer screen initialized");
         } catch (IOException e) {
@@ -152,20 +162,17 @@ public class LegalDisclaimerScreen {
         // Header (full scale)
         font.drawTextCentered(HEADER, SCREEN_W, 22, 1f, 1f, 1f, 1f);
 
-        // Body — wrap each paragraph at draw time, at BODY_SCALE.
+        // Body — iterate cached wrapped lines (computed once at init).
         int bodyY = BODY_START_Y;
         ToIntFunction<String> measure = s -> font.measureWidth(s, BODY_SCALE);
-        for (String paragraph : BODY_PARAGRAPHS) {
-            if (paragraph.isEmpty()) {
+        for (String line : wrappedBodyLines) {
+            if (line.isEmpty()) {
                 bodyY += BODY_PARAGRAPH_GAP;
                 continue;
             }
-            List<String> lines = wrapParagraph(paragraph, measure, BODY_MAX_WIDTH);
-            for (String line : lines) {
-                int x = (SCREEN_W - measure.applyAsInt(line)) / 2;
-                font.drawText(line, x, bodyY, BODY_SCALE, 0.95f, 0.95f, 0.95f, 1f);
-                bodyY += BODY_LINE_HEIGHT;
-            }
+            int x = (SCREEN_W - measure.applyAsInt(line)) / 2;
+            font.drawText(line, x, bodyY, BODY_SCALE, 0.95f, 0.95f, 0.95f, 1f);
+            bodyY += BODY_LINE_HEIGHT;
         }
 
         // Dismiss prompt (pulses when visible, full scale)
