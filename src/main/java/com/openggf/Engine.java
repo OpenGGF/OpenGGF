@@ -455,6 +455,10 @@ public class Engine {
 		return masterTitleScreen;
 	}
 
+	public LegalDisclaimerScreen getLegalDisclaimerScreen() {
+		return legalDisclaimerScreen;
+	}
+
 	/**
 	 * Called by GameLoop when the user selects a game from the master title screen.
 	 * Performs the Phase 2 init for the selected game.
@@ -476,6 +480,33 @@ public class Engine {
 
 		// Phase 2: load ROM, sprites, audio, level
 		initializeGame();
+	}
+
+	/**
+	 * Called by GameLoop when the disclaimer's fade-to-black completes.
+	 * Cleans up the disclaimer GL resources, then either builds the
+	 * MasterTitleScreen (if MASTER_TITLE_SCREEN_ON_STARTUP is true) or
+	 * runs Phase 2 init directly. In both branches the host owns the
+	 * post-disclaimer reveal fade-from-black: none of
+	 * enterConfiguredStartupMode's three sub-paths (title screen,
+	 * level select, default level load) starts its own intro fade.
+	 */
+	public void exitLegalDisclaimer() {
+		if (legalDisclaimerScreen != null) {
+			legalDisclaimerScreen.cleanup();
+			legalDisclaimerScreen = null;
+		}
+
+		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
+		if (masterTitleOnStartup) {
+			masterTitleScreen = new MasterTitleScreen(configService);
+			masterTitleScreen.initialize();
+			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+		} else {
+			initializeGame();
+		}
+
+		graphicsManager.getFadeManager().startFadeFromBlack(null);
 	}
 
 	private void resetForGameplayFromMasterTitle() {
