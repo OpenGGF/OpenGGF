@@ -6,6 +6,7 @@ import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioReplayReason;
 import com.openggf.audio.rewind.AudioReplayScope;
 import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.debug.SectionProfiler;
 
 import java.util.Objects;
 
@@ -19,6 +20,7 @@ public final class RewindController {
     private final int keyframeInterval;
     private final AudioManager audioManager;
     private final AudioKeyframeStore audioKeyframes;
+    private final SectionProfiler profiler;
 
     private int currentFrame;
 
@@ -28,7 +30,7 @@ public final class RewindController {
             InputSource inputs,
             EngineStepper engineStepper,
             int keyframeInterval) {
-        this(registry, keyframes, inputs, engineStepper, keyframeInterval, null);
+        this(registry, keyframes, inputs, engineStepper, keyframeInterval, null, null);
     }
 
     public RewindController(
@@ -38,6 +40,17 @@ public final class RewindController {
             EngineStepper engineStepper,
             int keyframeInterval,
             AudioManager audioManager) {
+        this(registry, keyframes, inputs, engineStepper, keyframeInterval, audioManager, null);
+    }
+
+    public RewindController(
+            RewindRegistry registry,
+            KeyframeStore keyframes,
+            InputSource inputs,
+            EngineStepper engineStepper,
+            int keyframeInterval,
+            AudioManager audioManager,
+            SectionProfiler profiler) {
         this.registry = Objects.requireNonNull(registry);
         this.keyframes = Objects.requireNonNull(keyframes);
         this.inputs = Objects.requireNonNull(inputs);
@@ -51,6 +64,7 @@ public final class RewindController {
         this.audioKeyframes = audioManager != null ? new AudioKeyframeStore() : null;
         this.segmentCache = new SegmentCache(keyframeInterval);
         this.currentFrame = 0;
+        this.profiler = profiler;
         // Capture frame 0 so seekTo(0) always has a base.
         keyframes.put(0, registry.capture());
         captureAudioKeyframe(0);
