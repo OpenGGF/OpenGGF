@@ -7,6 +7,7 @@ import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
+import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -62,7 +63,7 @@ public class LWJGLAudioBackend implements AudioBackend {
     private ShortBuffer directShortBuffer;
     private SmpsSequencer currentSmps;
     private SmpsDriver smpsDriver;
-    private DeterministicAudioRuntime deterministicAudioRuntime;
+    private DeterministicAudioRuntime deterministicAudioRuntime = NoOpDeterministicAudioRuntime.INSTANCE;
     private PcmHistoryRing pcmHistory;
     private PcmHistoryRing.ReverseCursor reverseCursor;
 
@@ -688,17 +689,8 @@ public class LWJGLAudioBackend implements AudioBackend {
         synchronized (streamLock) {
             beginProfileSection("audio.music_stream");
             try {
-                // Clear and reuse pre-allocated buffer
-                Arrays.fill(streamData, (short) 0);
-                boolean runtimePresentation = runtimeProvidesPresentationPcm();
-                if (reverseCursor != null) {
-                    reverseCursor.readPrevious(streamData, STREAM_BUFFER_SIZE);
-                } else if (runtimePresentation) {
-                    deterministicAudioRuntime.drainPcm(streamData, STREAM_BUFFER_SIZE);
-                    clearCompletedRuntimeSfxIfNeeded();
-                } else if (currentStream != null) {
-                    currentStream.read(streamData);
-                }
+                fillPresentationBuffer(streamData, STREAM_BUFFER_SIZE);
+                sampleRate = (int) Math.round(getStreamSampleRate());
             } finally {
                 endProfileSection("audio.music_stream");
             }
@@ -726,8 +718,6 @@ public class LWJGLAudioBackend implements AudioBackend {
                 if (reverseCursor == null && pcmHistory != null) {
                     pcmHistory.write(streamData, STREAM_BUFFER_SIZE);
                 }
-
-                sampleRate = (int) Math.round(getStreamSampleRate());
             } finally {
                 endProfileSection("audio.sfx_stream");
             }
@@ -743,6 +733,30 @@ public class LWJGLAudioBackend implements AudioBackend {
         } finally {
             endProfileSection("audio.upload");
         }
+    }
+
+    /**
+     * Test seam for the music-presentation path. Drains the deterministic runtime
+     * (or the legacy reverse cursor / backend-private stream while migration is
+     * in flight). Package-private so {@code TestLwjglRuntimePresentationRoundTrip}
+     * can exercise the drain without standing up OpenAL.
+     */
+    void fillPresentationBuffer(short[] target, int frames) {
+        Arrays.fill(target, 0, frames * 2, (short) 0);
+        boolean runtimePresentation = runtimeProvidesPresentationPcm();
+        if (reverseCursor != null) {
+            reverseCursor.readPrevious(target, frames);
+        } else if (runtimePresentation) {
+            deterministicAudioRuntime.drainPcm(target, frames);
+            clearCompletedRuntimeSfxIfNeeded();
+        } else if (currentStream != null) {
+            currentStream.read(target);
+        }
+    }
+
+    /** Test seam: whether the OpenAL streaming buffers have been allocated. */
+    boolean isStreamStarted() {
+        return streamBuffers != null;
     }
 
     private void beginProfileSection(String section) {
