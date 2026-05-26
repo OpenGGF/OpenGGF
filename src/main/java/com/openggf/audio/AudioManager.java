@@ -198,7 +198,25 @@ public class AudioManager {
     }
 
     public void beginGameplayAudioFrame(long frame) {
-        beginCommandTimelineFrame(frame);
+        // Clamp forward-only. The GameLoop's gameplayAudioFrame counter only
+        // increments while shouldAdvanceGameplayAudioForCurrentMode() is true
+        // (LEVEL / BONUS_STAGE / TITLE_CARD), but commandTimeline.currentFrame
+        // also advances every tick via audioManager.update() in non-gameplay
+        // modes (MASTER_TITLE_SCREEN, LEVEL_SELECT, DATA_SELECT, etc.). If a
+        // session transitions through a long non-gameplay mode and then enters
+        // a level, currentFrame can be far ahead of gameplayAudioFrame at the
+        // first gameplay tick. Without the clamp, beginCommandTimelineFrame
+        // would set currentFrame BACKWARD to gameplayAudioFrame — and any
+        // command submitted during the non-gameplay window (e.g. playMusic
+        // for the selected level, or fadeOutMusic during exitLevelSelect)
+        // would sit in pendingCommands with a frame number larger than the
+        // new currentFrame, leaving consumeCommands' frame<=current filter
+        // unable to drain it. SFX queued fresh in-level uses the new low
+        // frame and processes immediately, which explains the music-delayed-
+        // but-SFX-works symptom. Rewind seeks go through
+        // beginCommandTimelineFrame directly and remain unaffected.
+        long monotonic = Math.max(frame, commandTimeline.currentFrame() + 1);
+        beginCommandTimelineFrame(monotonic);
     }
 
     public void discardAudioCommandsAfter(long frame) {
