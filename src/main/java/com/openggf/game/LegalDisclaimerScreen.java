@@ -188,7 +188,7 @@ public class LegalDisclaimerScreen {
             float fadeIn = dismissibleFrames >= PROMPT_FADE_IN_FRAMES
                     ? 1.0f
                     : dismissibleFrames / (float) PROMPT_FADE_IN_FRAMES;
-            float pulse = 0.6f + 0.4f * (float) Math.sin(frameCounter * 0.05);
+            float pulse = 0.6f + 0.4f * (float) Math.sin(frameCounter * 0.065);
             float brightness = pulse * fadeIn;
             font.drawTextCentered(PROMPT, SCREEN_W, PROMPT_Y, brightness, brightness, brightness, 1f);
         }
