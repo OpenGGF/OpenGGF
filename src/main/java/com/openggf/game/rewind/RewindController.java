@@ -179,6 +179,7 @@ public final class RewindController {
         final var restoreSnapshot = floor.snapshot();
         // Use int[] wrapper to allow mutation within lambdas
         final int[] pos = { currentFrame };
+        if (profiler != null) profiler.beginSection("rewind.step");
         try (AudioReplayScope ignored = beginAudioReplay(
                 originalFrame, target, AudioReplayReason.STEP_BACKWARD)) {
             CompositeSnapshot snap = segmentCache.snapshotAt(
@@ -191,12 +192,26 @@ public final class RewindController {
                         primeStepperAtFrame(pos[0]);
                     },
                     () -> {
-                        Bk2FrameInput in = inputs.read(pos[0] + 1);
-                        engineStepper.step(in);
-                        pos[0]++;
-                        return registry.capture();
+                        if (profiler != null) profiler.beginSection("rewind.replay");
+                        try {
+                            Bk2FrameInput in = inputs.read(pos[0] + 1);
+                            engineStepper.step(in);
+                            pos[0]++;
+                            // On happy path, registry.capture() opens rewind.capture which
+                            // implicitly ends rewind.replay (recording its delta) before
+                            // the finally fires. The finally then no-ops.
+                            return registry.capture();
+                        } finally {
+                            if (profiler != null) profiler.endSection("rewind.replay");
+                        }
                     });
             registry.restore(snap);
+            // registry.restore closed its rewind.restore in its own finally,
+            // leaving no active section. Re-open rewind.step so the audio
+            // bookkeeping tail credits to it. No re-open is needed between
+            // snapshotAt return and registry.restore: nothing measurable
+            // happens between them (trivial reference assignment).
+            if (profiler != null) profiler.beginSection("rewind.step");
             currentFrame = target;
             keyframes.discardAfter(currentFrame);
             discardAudioAfter(currentFrame);
@@ -204,6 +219,8 @@ public final class RewindController {
             beginAudioFrame(currentFrame);
             primeStepperAtFrame(currentFrame);
             afterAudioRestore(AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE);
+        } finally {
+            if (profiler != null) profiler.endSection("rewind.step");
         }
         return true;
     }

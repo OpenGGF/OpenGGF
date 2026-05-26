@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **`RewindController.stepBackward` now attributes work to `rewind.step` / `rewind.replay` profiler sections (exception-safe).**
+
 - **`RewindRegistry.restore` now wrapped in a `rewind.restore` profiler section; registry field narrowed to `SectionProfiler` interface.**
 
 - **Legal disclaimer screen shown on engine startup before the master title screen.**
