@@ -1,6 +1,6 @@
 package com.openggf.game.rewind;
 
-import com.openggf.debug.PerformanceProfiler;
+import com.openggf.debug.SectionProfiler;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,13 +24,13 @@ public final class RewindRegistry {
 
     private final Map<String, RewindSnapshottable<?>> entries = new LinkedHashMap<>();
     private final Map<String, Runnable> postRestoreCallbacks = new LinkedHashMap<>();
-    private final PerformanceProfiler profiler;
+    private final SectionProfiler profiler;
 
     public RewindRegistry() {
         this.profiler = null;
     }
 
-    public RewindRegistry(PerformanceProfiler profiler) {
+    public RewindRegistry(SectionProfiler profiler) {
         this.profiler = profiler;
     }
 
@@ -80,18 +80,27 @@ public final class RewindRegistry {
 
     public void restore(CompositeSnapshot cs) {
         Objects.requireNonNull(cs, "cs");
-        for (var e : entries.entrySet()) {
-            if (!cs.containsKey(e.getKey())) {
-                e.getValue().resetForMissingSnapshot();
-                continue;
-            }
-            Object snap = cs.get(e.getKey());
-            @SuppressWarnings({"rawtypes", "unchecked"})
-            RewindSnapshottable raw = e.getValue();
-            raw.restore(snap);
+        if (profiler != null) {
+            profiler.beginSection("rewind.restore");
         }
-        for (Runnable callback : postRestoreCallbacks.values()) {
-            callback.run();
+        try {
+            for (var e : entries.entrySet()) {
+                if (!cs.containsKey(e.getKey())) {
+                    e.getValue().resetForMissingSnapshot();
+                    continue;
+                }
+                Object snap = cs.get(e.getKey());
+                @SuppressWarnings({"rawtypes", "unchecked"})
+                RewindSnapshottable raw = e.getValue();
+                raw.restore(snap);
+            }
+            for (Runnable callback : postRestoreCallbacks.values()) {
+                callback.run();
+            }
+        } finally {
+            if (profiler != null) {
+                profiler.endSection("rewind.restore");
+            }
         }
     }
 }
