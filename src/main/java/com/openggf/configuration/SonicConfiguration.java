@@ -345,6 +345,12 @@ public enum SonicConfiguration {
 	MASTER_TITLE_SCREEN_ON_STARTUP,
 
 	/**
+	 * Whether to show the legal disclaimer screen on startup before the
+	 * master title screen. Default true. Test harnesses set this false.
+	 */
+	SHOW_LEGAL_DISCLAIMER_ON_STARTUP,
+
+	/**
 	 * Whether to enable cross-game feature donation (e.g., S2 sprites in S1).
 	 * When false (default), the base game runs unmodified.
 	 */

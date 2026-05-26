@@ -315,6 +315,7 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.SUPER_SONIC_DEBUG_KEY, GLFW_KEY_U);
 		putDefaultKey(SonicConfiguration.GIVE_EMERALDS_KEY, GLFW_KEY_E);
 		putDefault(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP, true);
+		putDefault(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP, true);
 		putDefault(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
 		putDefault(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE, false);
 		putDefault(SonicConfiguration.CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE, false);
