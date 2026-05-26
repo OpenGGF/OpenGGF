@@ -809,7 +809,7 @@ EOF
 
 Open `src/main/java/com/openggf/audio/rewind/AudioKeyframeStore.java`. Note the existing `capture`, `keyframeAtOrBefore(long)`, `replayTo`, `replayToLogicalState` methods. We will add two new public methods that key off audio-frame index.
 
-- [ ] **Step 2: Add `keyframeAtOrBeforeAudioFrame` and `replayLiveTo`**
+- [ ] **Step 2: Add `keyframeAtOrBeforeAudioFrame` and `replayCommandsAtGameFrame`**
 
 Add inside the class (after the existing `replayToLogicalState` method):
 
@@ -840,35 +840,48 @@ Add inside the class (after the existing `replayToLogicalState` method):
     }
 
     /**
-     * Walks the audio command timeline forward from the given keyframe to
-     * (and including) any entries whose game-frame falls at or before
-     * {@code targetGameFrame}, dispatching them via
-     * {@link AudioManager#replayTimelineCommand} under
-     * {@link AudioReplayReason#REVERSE_RESYNTH}. Returns the number of
-     * commands replayed. The caller is responsible for having restored the
-     * driver state from {@code keyframe} via
-     * {@link AudioManager#restoreLogicalSnapshot} before calling this method.
+     * Dispatches any timeline entries whose game-frame equals
+     * {@code atGameFrame}, in submission order, via
+     * {@link AudioManager#replayTimelineCommand} under the
+     * {@link AudioReplayReason#REVERSE_RESYNTH} scope. Returns the number of
+     * commands replayed.
+     *
+     * <p>Caller contract: this method is invoked once per game-frame inside
+     * the burst loop with monotonically increasing {@code atGameFrame}
+     * values. It must not re-dispatch entries at earlier frames — the
+     * burst loop relies on this single-frame semantic to avoid duplicating
+     * SFX commands that already mutated the chip on a prior iteration. The
+     * keyframe state is restored once at burst start; from there, this
+     * method walks forward command-by-command exactly as the live game did.
+     *
+     * <p>Entries are stored in {@code AudioCommandTimeline} sorted by frame
+     * (then by order within a frame). The early-exit on
+     * {@code entry.frame() > atGameFrame} relies on that invariant.
      */
-    public int replayLiveTo(AudioManager audio,
-                            AudioLogicalSnapshot keyframe,
-                            long targetGameFrame) {
+    public int replayCommandsAtGameFrame(AudioManager audio,
+                                          AudioLogicalSnapshot keyframe,
+                                          long atGameFrame) {
         Objects.requireNonNull(audio, "audio");
         Objects.requireNonNull(keyframe, "keyframe");
-        if (keyframe.commandTimelineFrame() > targetGameFrame) {
+        if (keyframe.commandTimelineFrame() > atGameFrame) {
             return 0;
         }
         int replayed = 0;
         try (AudioReplayScope ignored = audio.beginRewindReplay(
                 Math.toIntExact(keyframe.commandTimelineFrame()),
-                Math.toIntExact(targetGameFrame),
+                Math.toIntExact(atGameFrame),
                 AudioReplayReason.REVERSE_RESYNTH)) {
             List<AudioTimelineEntry> entries = audio.commandTimeline().entries();
             for (int i = keyframe.commandEntryCount(); i < entries.size(); i++) {
                 AudioTimelineEntry entry = entries.get(i);
-                if (entry.frame() <= targetGameFrame) {
-                    audio.replayTimelineCommand(entry.command());
-                    replayed++;
+                if (entry.frame() < atGameFrame) {
+                    continue;
                 }
+                if (entry.frame() > atGameFrame) {
+                    break;
+                }
+                audio.replayTimelineCommand(entry.command());
+                replayed++;
             }
         }
         return replayed;
@@ -961,14 +974,19 @@ Expected: PASS.
 git add src/main/java/com/openggf/audio/rewind/AudioKeyframeStore.java \
         src/test/java/com/openggf/audio/rewind/TestAudioKeyframeStoreReverseResynth.java
 git commit -m "$(cat <<'EOF'
-feat(rewind): AudioKeyframeStore audio-frame lookup + replayLiveTo
+feat(rewind): AudioKeyframeStore audio-frame lookup + per-frame replay
 
 keyframeAtOrBeforeAudioFrame scans recorded keyframes for the largest
 audio-frame index not exceeding a requested target, using each
-keyframe's AudioBackendLogicalSnapshot.clockSnapshot. replayLiveTo
-walks the live command timeline forward from a keyframe's
-commandEntryCount, dispatching entries via replayTimelineCommand under
-the REVERSE_RESYNTH scope. Both are inputs to ReverseResynthesizer.
+keyframe's AudioBackendLogicalSnapshot.clockSnapshot.
+replayCommandsAtGameFrame dispatches only the timeline entries whose
+game-frame equals a specific value, in submission order, via
+replayTimelineCommand under the REVERSE_RESYNTH scope. The single-
+frame semantic is critical: ReverseResynthesizer calls this once per
+game-frame as it walks forward through a burst, and re-replaying
+entries from keyframe.commandEntryCount() on every iteration would
+duplicate SFX commands and corrupt chip state. Both methods are
+inputs to ReverseResynthesizer.
 
 Spec: docs/superpowers/specs/2026-05-26-reverse-resynth-design.md
 (Architecture, AudioKeyframeStore row).
@@ -988,15 +1006,22 @@ EOF
 
 ---
 
-## Task 8: REVERSE_RESYNTH branch in AudioManager.replayTimelineCommand
+## Task 8: REVERSE_RESYNTH dispatch in AudioManager.replayTimelineCommand
 
 **Files:**
 - Modify: `src/main/java/com/openggf/audio/AudioManager.java`
 - Create: `src/test/java/com/openggf/audio/TestAudioManagerReverseResynthDispatch.java`
 
-The spec's open point #1 cautions: SFX dispatched under REVERSE_RESYNTH must NOT go through `backend.playSfx*` (which records new timeline entries and may have listener side effects). It must reach only the chip-state mutation path. The cleanest seam is a new `AudioBackend.playSfxSmpsRaw` (no-op default; LWJGL implements it without backend bookkeeping) — but we can do this more surgically by adding a private dispatch helper that bypasses the live backend method.
+The spec requires that SFX timeline entries between a burst's restored keyframe and its target game-frame **mutate the live SMPS chip state** so the synthesized PCM reflects SFX that began after the keyframe was captured. A no-op would drop all SFX inside the synth window — the keyframe's `SmpsDriverSnapshot` only encodes state as of the keyframe.
 
-For this task, take the minimal route: when the scope is REVERSE_RESYNTH and the command is `PlaySfx` going through the SMPS path, **dispatch directly to the chip via the existing standalone SFX driver path on the backend** if such a method is exposed, OR fall back to silently skipping (the SFX driver state already carries enough information in the snapshot to evolve correctly across the burst window without re-firing one-shot SFX). The implementer must read `replayTimelineCommand`, identify the relevant call sites, and decide which option fits the actual backend surface.
+Re-read of `LWJGLAudioBackend.playSfxSmps` confirms the SMPS-route side effects are exactly what we want during a burst:
+- Creates an `SmpsSequencer` for the SFX and adds it to the active `SmpsDriver` (music) or creates / re-uses the standalone SFX driver.
+- Updates continuous-SFX tracking (extend vs. restart).
+- May call `deterministicAudioRuntime.setSfxStream(sfxDriver)` if a fresh standalone driver was created.
+
+All of those mutations get rolled back at rewind end by the Task 9 rewind-bracket `restoreLogicalSnapshot`, so they are safe to perform inside a burst. The only sites that need explicit gating under `REVERSE_RESYNTH` are the **WAV-fallback** routes (`AudioCommand.SfxRoute.FALLBACK_NAME` and `RING_RESOLVED`), which would allocate new persistent OpenAL sources via `alGenSources` and play a `.wav` from disk — neither is reproducible inside a held-rewind synth window. Those are silently skipped per spec edge case 9.
+
+`PlayMusic` commands inside the burst go through `backend.playSmps` unchanged — that's the live behavior the burst is reproducing, and the bracket cleans up. The REVERSE_RESYNTH scope mainly serves as a marker so the WAV-fallback branch can branch off.
 
 - [ ] **Step 1: Read `AudioManager.replayTimelineCommand` and `replaySfx`**
 
@@ -1030,37 +1055,32 @@ Update `beginRewindReplay` to set this field on enter and clear it on close:
 
 (Adjust to match the existing return-shape — preserve any AutoCloseable contract already used; the closure body must restore `currentReplayReason = previous` and decrement the depth.)
 
-- [ ] **Step 3: Branch `replaySfx` for REVERSE_RESYNTH**
+- [ ] **Step 3: Branch `replaySfx` for REVERSE_RESYNTH WAV-fallback only**
 
-In `replaySfx` (or whatever the current method name is — find the `case PlaySfx` arm in `replayTimelineCommand`), branch so REVERSE_RESYNTH dispatches to a new helper that bypasses `backend.playSfxSmps`:
+In `replaySfx` (find the `case PlaySfx` arm in `replayTimelineCommand`), add an early-skip for WAV-fallback routes under REVERSE_RESYNTH. The SMPS routes (`BASE_SMPS_ID`, `BASE_SMPS_NAME`, `DONOR_SMPS`) keep their existing `backend.playSfxSmps` dispatch.
+
+Locate the `switch (command.route())` block in `replaySfx`. Add a guard at the top:
 
 ```java
     private void replaySfx(AudioCommand.PlaySfx command) {
-        if (currentReplayReason == AudioReplayReason.REVERSE_RESYNTH) {
-            dispatchReverseResynthSfx(command);
+        if (currentReplayReason == AudioReplayReason.REVERSE_RESYNTH
+                && (command.route() == AudioCommand.SfxRoute.FALLBACK_NAME
+                    || command.route() == AudioCommand.SfxRoute.RING_RESOLVED)) {
+            // WAV-fallback SFX would allocate new persistent OpenAL sources
+            // and play a .wav from disk. Neither is reproducible inside a
+            // held-rewind synth window. Spec edge case 9: explicitly out of
+            // scope for the faithful tape effect.
             return;
         }
-        // ... existing body unchanged ...
-    }
-
-    private void dispatchReverseResynthSfx(AudioCommand.PlaySfx command) {
-        // ReverseResynthesizer is forward-stepping the chips inside a burst.
-        // SFX timeline entries should mutate the live SMPS driver(s) so the
-        // PCM produced reflects the SFX that was firing at this game frame —
-        // but they must NOT re-enter backend.playSfxSmps (which records new
-        // timeline entries, fires backend listeners, and reallocates AL
-        // sources). For SMPS-backed SFX, the chip state is fully captured in
-        // the keyframe's SmpsDriverSnapshot; re-issuing the SFX command would
-        // duplicate the work the snapshot already encodes. Drop the command
-        // here.
-        //
-        // WAV-fallback SFX (LWJGLAudioBackend.playSfx(String,float)) is
-        // explicitly out of scope per spec edge case 9; silently skipping
-        // them under REVERSE_RESYNTH is the intended behavior.
+        switch (command.route()) {
+            // ...existing switch body unchanged: SMPS routes flow through
+            // backend.playSfxSmps so the chip state evolves to match the
+            // SFX that fired between this game-frame and the keyframe...
+        }
     }
 ```
 
-The body is intentionally empty: the snapshot restore at burst start already encodes the SFX driver state. Forward-stepping the chips from there will reproduce the SFX PCM. Re-issuing the `PlaySfx` command would either double-fire (chip + new sequencer) or pollute the live backend with timeline noise. This matches the spec's open-point #1 disposition: keep SFX out of the live backend path.
+No other branching is required — the SMPS routes' `backend.playSfxSmps` call correctly mutates the live `SmpsDriver` / standalone SFX driver chip state, which is what the burst loop needs. The rewind-bracket save/restore added in Task 9 cleans up any driver-allocation side effects when the rewind session ends.
 
 - [ ] **Step 4: Write a regression test**
 
@@ -1103,28 +1123,49 @@ class TestAudioManagerReverseResynthDispatch {
     }
 
     @Test
-    void seekReasonRoutesSfxThroughBackendAsBefore() {
+    void smpsSfxRouteFiresBackendUnderBothScopes() {
+        // SEEK baseline: SMPS-route SFX dispatches to backend.playSfxSmps.
         try (AudioReplayScope ignored = audio.beginRewindReplay(10, 4, AudioReplayReason.SEEK)) {
             audio.replayTimelineCommand(new AudioCommand.PlaySfx(
                     -1, "JUMP", AudioCommand.SfxRoute.BASE_SMPS_NAME, 1.0f, null));
         }
-        assertEquals(1, backend.playSfxSmpsCalls,
-                "SEEK reason must route PlaySfx through backend.playSfxSmps (existing behavior)");
-    }
+        int seekCalls = backend.playSfxSmpsCalls;
 
-    @Test
-    void reverseResynthReasonDoesNotInvokeBackendPlaySfx() {
+        // REVERSE_RESYNTH: SMPS-route SFX must also dispatch to backend.playSfxSmps
+        // so the chip state evolves to reflect SFX that fired after the keyframe.
         try (AudioReplayScope ignored = audio.beginRewindReplay(10, 4, AudioReplayReason.REVERSE_RESYNTH)) {
             audio.replayTimelineCommand(new AudioCommand.PlaySfx(
                     -1, "JUMP", AudioCommand.SfxRoute.BASE_SMPS_NAME, 1.0f, null));
         }
-        assertEquals(0, backend.playSfxSmpsCalls,
-                "REVERSE_RESYNTH must bypass backend.playSfxSmps (chip state is in the keyframe snapshot)");
+        assertEquals(seekCalls + 1, backend.playSfxSmpsCalls,
+                "REVERSE_RESYNTH SMPS SFX must mutate the chip via backend.playSfxSmps");
+    }
+
+    @Test
+    void wavFallbackSfxIsSilentNoOpUnderReverseResynth() {
+        int playSfxCallsBefore = backend.playSfxCalls;
+        try (AudioReplayScope ignored = audio.beginRewindReplay(10, 4, AudioReplayReason.REVERSE_RESYNTH)) {
+            audio.replayTimelineCommand(new AudioCommand.PlaySfx(
+                    -1, "JUMP", AudioCommand.SfxRoute.FALLBACK_NAME, 1.0f, null));
+        }
+        assertEquals(playSfxCallsBefore, backend.playSfxCalls,
+                "WAV-fallback SFX must be skipped under REVERSE_RESYNTH (spec edge case 9)");
+    }
+
+    @Test
+    void wavFallbackSfxFiresNormallyUnderSeek() {
+        int playSfxCallsBefore = backend.playSfxCalls;
+        try (AudioReplayScope ignored = audio.beginRewindReplay(10, 4, AudioReplayReason.SEEK)) {
+            audio.replayTimelineCommand(new AudioCommand.PlaySfx(
+                    -1, "JUMP", AudioCommand.SfxRoute.FALLBACK_NAME, 1.0f, null));
+        }
+        assertEquals(playSfxCallsBefore + 1, backend.playSfxCalls,
+                "WAV-fallback SFX continues to fire normally under non-resynth replay scopes");
     }
 }
 ```
 
-(If `RecordingAudioBackend` doesn't already track `playSfxSmpsCalls`, add that counter in the fixture or use the closest existing counter and adjust the assertions.)
+(If `RecordingAudioBackend` doesn't already track `playSfxSmpsCalls` / `playSfxCalls`, add those counters in the fixture or use the closest existing counter and adjust the assertions.)
 
 - [ ] **Step 5: Run**
 
@@ -1137,24 +1178,27 @@ Expected: PASS. Existing rewind suppression behavior must remain green.
 git add src/main/java/com/openggf/audio/AudioManager.java \
         src/test/java/com/openggf/audio/TestAudioManagerReverseResynthDispatch.java
 git commit -m "$(cat <<'EOF'
-feat(audio): REVERSE_RESYNTH replay scope bypasses backend.playSfx*
+feat(audio): REVERSE_RESYNTH skips WAV-fallback SFX, mutates SMPS chip
 
 AudioManager tracks the active replay reason on its rewind-replay
-stack. When replayTimelineCommand sees a PlaySfx command under
-REVERSE_RESYNTH, it routes to a new dispatchReverseResynthSfx helper
-that intentionally does nothing — SMPS chip state is fully captured
-in the keyframe's SmpsDriverSnapshot, so forward-stepping the chips
-across the burst already reproduces SFX PCM without re-issuing the
-backend.playSfxSmps call. WAV-fallback SFX (out of scope per spec
-edge case 9) is therefore also a silent no-op under this scope.
+stack. Under REVERSE_RESYNTH:
+- SMPS-route PlaySfx commands flow through backend.playSfxSmps as
+  normal, so the live SmpsDriver / standalone SFX driver chip state
+  evolves to match SFX that fired after the keyframe — the keyframe
+  snapshot only encodes state up to that moment, and the burst loop
+  needs the chips to reflect later SFX as it forward-steps them.
+- WAV-fallback routes (FALLBACK_NAME, RING_RESOLVED) are silent
+  no-ops: replaying them would allocate persistent OpenAL sources and
+  play a .wav from disk, neither reproducible inside a held-rewind
+  synth window. Spec edge case 9.
 
-SEEK and STEP_BACKWARD scopes keep their existing
-backend.playSfxSmps routing, locked by
-TestAudioManagerReverseResynthDispatch.
+The rewind-bracket save/restore in Task 9 rolls back the SmpsDriver
+mutations at endReverseAudioPresentation, so the SMPS dispatch is
+safe to perform without leaking state past the held-rewind session.
 
 Spec: docs/superpowers/specs/2026-05-26-reverse-resynth-design.md
-(Architecture, AudioManager.replayTimelineCommand row; Known Open
-Points #1).
+(Architecture, AudioManager.replayTimelineCommand row; Edge case 9;
+Known Open Points #1).
 
 Changelog: n/a
 Guide: n/a
@@ -1421,7 +1465,7 @@ public final class ReverseResynthesizer {
         AudioStream sfx = runtime.sfxStreamForReverseResynth();
 
         while (audioFrame < burstEnd) {
-            keyframes.replayLiveTo(audioManager, keyframe, gameFrame);
+            keyframes.replayCommandsAtGameFrame(audioManager, keyframe, gameFrame);
             int samplesThisFrame = runtime.samplesForNextFrameForReverseResynth();
             short[] musicScratch = new short[samplesThisFrame * 2];
             short[] sfxScratch = new short[samplesThisFrame * 2];
@@ -1679,46 +1723,70 @@ In `drainPcm`, wrap the existing reverse-cursor branch:
 
 - [ ] **Step 3: Write the integration test**
 
-Append to `TestStreamBackedDeterministicAudioRuntime.java`:
+Append to `TestStreamBackedDeterministicAudioRuntime.java`. This wires a **real** `ReverseResynthesizer` over a real keyframe store and asserts the cursor's floor moves downward when `drainPcm` is invoked. `ReverseResynthesizer` is `final` — do not attempt to subclass it; use cursor state to verify the resynthesizer ran.
 
 ```java
     @Test
-    void drainPcmWithReverseResynthesizerExtendsBeyondHistoryWindow() {
-        PcmHistoryRing ring = new PcmHistoryRing(8);
+    void drainPcmInvokesReverseResynthesizerEnsureHeadroom() {
+        PcmHistoryRing ring = new PcmHistoryRing(16);
         AudioFrameClock clock = new AudioFrameClock(120, 60);
         AudioOutputFifo fifo = new AudioOutputFifo(120);
         StreamBackedDeterministicAudioRuntime runtime =
                 new StreamBackedDeterministicAudioRuntime(clock, fifo, ring);
-        runtime.setMusicStream(new SequenceStream(
-                10, 100, 20, 200, 30, 300, 40, 400,
-                50, 500, 60, 600, 70, 700, 80, 800));
-        // Step 8 audio frames forward to fill the 8-frame ring with samples.
+        runtime.setMusicStream(new com.openggf.audio.ScriptedAudioStream(
+                (short) 1, (short) 1));
+
+        com.openggf.audio.AudioManager audio = com.openggf.audio.AudioManager.getInstance();
+        audio.resetState();
+        audio.setDeterministicAudioRuntime(runtime);
+        audio.setBackend(new com.openggf.audio.NullAudioBackend());
+
+        com.openggf.audio.rewind.AudioKeyframeStore keyframes =
+                new com.openggf.audio.rewind.AudioKeyframeStore();
+        keyframes.capture(0L, audio);
+
+        // Produce a few game-frames of audio to seed the ring.
         for (int i = 0; i < 4; i++) {
-            runtime.advanceFrame(i + 1, FrameAudioMode.NORMAL);
+            audio.advanceGameplayFrameAudio();
         }
 
         runtime.beginReversePresentation();
-        // Stub resynthesizer that fakes "produced 2 older frames" without
-        // running real chip code — we just want to confirm drainPcm calls
-        // ensureHeadroom on the resynthesizer before readPrevious.
-        boolean[] called = {false};
-        runtime.setReverseResynthesizer(new ReverseResynthesizer(ring,
-                new com.openggf.audio.rewind.AudioKeyframeStore(),
-                com.openggf.audio.AudioManager.getInstance(),
-                runtime, 2, 2) {
-            // (Subclass-by-instance hook would be ideal; if the class is final
-            // we instead verify the call indirectly via cursor changes.)
-        }) {
-            // Sanity: target/threshold above 0 ensures the loop runs.
-        };
+        // Attach a real resynthesizer with a small burst so a single
+        // drainPcm call should trigger ensureHeadroom and lower the floor.
+        ReverseResynthesizer resynth = new ReverseResynthesizer(
+                ring, keyframes, audio, runtime, /* burst */ 2, /* threshold */ 16);
+        runtime.setReverseResynthesizer(resynth);
 
-        short[] buf = new short[4];
-        int read = runtime.drainPcm(buf, 2);
-        assertEquals(2, read);
+        // Capture floor before, drain a frame, then assert floor moved down.
+        // Reach the cursor via a probe drain that returns the current state.
+        short[] sink = new short[4];
+        long floorBefore = ringFloorViaProbeDrain(runtime, sink);
+
+        runtime.drainPcm(sink, 2);
+
+        long floorAfter = ringFloorViaProbeDrain(runtime, sink);
+        assertTrue(floorAfter < floorBefore,
+                "drainPcm with attached resynth should call ensureHeadroom and lower"
+                        + " the cursor floor; floorBefore=" + floorBefore
+                        + " floorAfter=" + floorAfter);
+    }
+
+    /**
+     * Best-effort accessor: drain 0 frames to surface the active cursor's
+     * oldestReadableFrame without consuming PCM. If the runtime exposes a
+     * direct cursor accessor at implementation time, prefer that.
+     */
+    private static long ringFloorViaProbeDrain(StreamBackedDeterministicAudioRuntime runtime,
+                                                short[] sink) {
+        runtime.drainPcm(sink, 0);
+        // The runtime should expose the active cursor for testing; if it
+        // doesn't, add a package-private getActiveReverseCursorForTest()
+        // accessor and call it here. Implementer to wire concretely.
+        return runtime.getActiveReverseCursorForTest().oldestReadableFrame();
     }
 ```
 
-(If the test fixture above is awkward because `ReverseResynthesizer` is `final`, drop the subclass attempt and assert via cursor positioning: capture a keyframe at audio-frame 0, attach a real resynthesizer with a small `burstAudioFrames`, exhaust the cursor's window, and assert subsequent `drainPcm` returns non-zero. The integration test in Task 12 will cover the end-to-end path more robustly anyway.)
+**Implementer note:** the test relies on a package-private getter `getActiveReverseCursorForTest()` returning the runtime's `reverseCursor` field. Add it next to the other reverse-resynth named methods on `StreamBackedDeterministicAudioRuntime`, with the same `// Test seam` comment style as `pcmHistoryRingForReverseResynth`. The integration coverage in Task 14 hits the same path end-to-end, so if surfacing the cursor for the test seems heavy-handed, replace this test with a simpler "runtime accepts a resynth without exception" smoke and let Task 14 prove the cursor-floor behavior.
 
 - [ ] **Step 4: Run**
 
@@ -1796,12 +1864,15 @@ In `attachDeterministicAudioRuntime`, when the assertion passes, also wire the r
         // a single source of truth. Note: the runtime owns its own ring inside
         // the AudioManager.configureDeterministicRuntimeForBackend path.
         PcmHistoryRing ring = stream.pcmHistoryRingForReverseResynth();
-        if (ring == null) {
-            return;
-        }
         AudioManager audio = AudioManager.getInstance();
         AudioKeyframeStore keyframes = audio.audioKeyframesForReverseResynth();
-        if (keyframes == null) {
+        if (ring == null || keyframes == null) {
+            // Either we have no ring (NoOp-shaped runtime) or no keyframe store
+            // yet (early boot, between live-rewind sessions, headless trace
+            // mode). Explicitly clear any previously-attached resynthesizer so
+            // a stale instance never lingers with a freed AudioKeyframeStore
+            // after Task 13's teardown re-runs attach with keyframes == null.
+            stream.setReverseResynthesizer(null);
             return;
         }
         int sampleRate = stream.sampleRateForReverseResynth();
@@ -1835,9 +1906,11 @@ attachDeterministicAudioRuntime now constructs a ReverseResynthesizer
 (burst = sampleRate samples, threshold = sampleRate/2 samples) and
 attaches it to the StreamBackedDeterministicAudioRuntime whenever the
 backend is using that runtime variant and an AudioKeyframeStore is
-available. When the keyframe store is not yet installed (early boot,
-trace mode), the resynth is left unattached and the runtime falls
-back to the legacy reverse cursor read.
+available. When the keyframe store is null (early boot, trace mode,
+or after Task 13's teardown re-runs attach), the helper explicitly
+clears any previously-attached resynth via setReverseResynthesizer(null)
+so a stale instance never lingers with a freed keyframe store; the
+runtime then falls back to legacy reverse cursor reads.
 
 Spec: docs/superpowers/specs/2026-05-26-reverse-resynth-design.md
 (Architecture, LWJGLAudioBackend row).
@@ -2245,7 +2318,7 @@ If the smoke passes, update the resynth spec status from "Approved, ready to imp
 - **AudioBackendLogicalSnapshot.clockSnapshot** — Task 2.
 - **DeterministicAudioRuntime.captureClockSnapshot / restoreClockSnapshot defaults + StreamBacked overrides** — Task 3.
 - **AudioManager.captureLogicalSnapshot reads runtime clock; restoreLogicalSnapshot deliberately does NOT** — Task 4.
-- **AudioKeyframeStore.keyframeAtOrBeforeAudioFrame + replayLiveTo** — Task 7.
+- **AudioKeyframeStore.keyframeAtOrBeforeAudioFrame + replayCommandsAtGameFrame** — Task 7. (Single-frame semantic prevents the per-burst-iteration duplicate-dispatch that an unconditional "replay from keyframe.commandEntryCount to target" would cause.)
 - **AudioReplayReason.REVERSE_RESYNTH** — Task 6.
 - **AudioManager.replayTimelineCommand REVERSE_RESYNTH SFX bypass** — Task 8.
 - **ReverseResynthesizer class** — Task 10.
@@ -2259,20 +2332,20 @@ If the smoke passes, update the resynth spec status from "Approved, ready to imp
 
 ### Placeholder scan
 
-- Task 12 acknowledges that the resynth may need to be created lazily once `AudioKeyframeStore` is available. Task 13 implements that lazy hookup. Not a placeholder — the deferred construction is the intended design.
-- Task 11 step 3 acknowledges the test fixture might need adaptation if `ReverseResynthesizer` is `final`. This is a concrete instruction with a fallback assertion.
+- Task 12 acknowledges that the resynth may need to be created lazily once `AudioKeyframeStore` is available. Task 13 implements that lazy hookup. Not a placeholder — the deferred construction is the intended design. The helper now also clears any previously-attached resynth when keyframes go null, preventing a stale instance from lingering after teardown.
+- Task 11 step 3 uses a real `ReverseResynthesizer` (no anonymous subclass — the class is `final`). Asserts via cursor-floor state, which requires adding a small `getActiveReverseCursorForTest()` test seam to `StreamBackedDeterministicAudioRuntime` next to the existing reverse-resynth-named methods.
 
 ### Type consistency
 
 - `burstAudioFrames` and `headroomThresholdFrames` are constructor args throughout (Tasks 10, 11, 12, 14, 15).
 - `keyframeAtOrBeforeAudioFrame(long)` consistent across Tasks 7, 10.
-- `replayLiveTo(AudioManager, AudioLogicalSnapshot, long)` consistent across Tasks 7, 10.
+- `replayCommandsAtGameFrame(AudioManager, AudioLogicalSnapshot, long)` consistent across Tasks 7, 10.
 - `pcmHistoryRingForReverseResynth`, `musicStreamForReverseResynth`, `sfxStreamForReverseResynth`, `samplesForNextFrameForReverseResynth`, `sampleRateForReverseResynth` — used in Tasks 10 and 12 with the same shape.
 - `setReverseResynthesizer` — Tasks 11, 12, 14, 15.
 - `setLiveRewindAudioKeyframes` + `audioKeyframesForReverseResynth` — Tasks 12, 13.
 
 ### Open spec points addressed
 
-- **#1 (REVERSE_RESYNTH ↔ backend.playSfx* seam):** Task 8 routes PlaySfx under REVERSE_RESYNTH to a silent no-op helper because the keyframe's SmpsDriverSnapshot already encodes the SFX driver chip state.
+- **#1 (REVERSE_RESYNTH ↔ backend.playSfx* seam):** Task 8 routes SMPS-route PlaySfx under REVERSE_RESYNTH through the existing `backend.playSfxSmps` path so the chip state evolves to match SFX that fired after the keyframe. WAV-fallback routes are silent no-ops to keep persistent OpenAL source allocation out of the synth window. The rewind-bracket save/restore from Task 9 rolls back the SmpsDriver mutations at rewind end.
 - **#2 (sync vs worker thread):** Task 15's benchmark surfaces the decision data; gating note added.
 - **#3 (WAV SFX reset at rewind end):** Out of scope for v1 (no live code path triggers WAV SFX under REVERSE_RESYNTH); covered by Task 9's bracket restore which already runs `restoreLogicalSnapshot`.
