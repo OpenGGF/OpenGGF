@@ -1,8 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.level.BigRingReturnState;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -326,25 +327,31 @@ public class Sonic3kSSEntryRingObjectInstance extends AbstractObjectInstance {
 
         // ROM: Save_Level_Data2 — save player position and ring count for return from SS.
         // This is separate from checkpoint state (ROM: Saved_ vs Saved2_).
-        // ROM line 52685-52701: saves position, rings, solid bits, camera, and
-        // Dynamic_resize_routine so the resize state machine resumes correctly.
+        // ROM line 52685-52701: saves position, rings, solid bits, camera,
+        // Dynamic_resize_routine, and Mean_water_level for the return.
         var camera = services().camera();
-        int resizeRoutine = 0;
-        var eventProvider = services().levelEventProvider();
-        if (eventProvider instanceof Sonic3kLevelEventManager s3kEvents) {
-            resizeRoutine = s3kEvents.getDynamicResizeRoutine();
+        var zoneRuntimeState = services().zoneRuntimeState();
+        int resizeRoutine = zoneRuntimeState instanceof S3kZoneRuntimeState s3kState
+                ? s3kState.getDynamicResizeRoutine()
+                : 0;
+        int meanWaterLevel = 0;
+        var waterSystem = services().waterSystem();
+        int featureZone = services().currentZone();
+        int featureAct = services().currentAct();
+        if (waterSystem != null && waterSystem.hasWater(featureZone, featureAct)) {
+            meanWaterLevel = waterSystem.getWaterLevelY(featureZone, featureAct);
         }
         services().saveBigRingReturn(new BigRingReturnState(
                 player.getCentreX(), player.getCentreY(),
                 camera.getX(), camera.getY(), player.getRingCount(),
                 player.getTopSolidBit(), player.getLrbSolidBit(),
-                camera.getMaxY(), resizeRoutine));
+                camera.getMaxY(), resizeRoutine, meanWaterLevel));
 
         // Lock player: hidden + object controlled
         // ROM: move.b #$53,object_control(a2) — disables input
         // ROM: move.b #-1,(Player_prev_frame).w — makes player invisible
         player.setHidden(true);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // Freeze camera at player's last position
         camera.setFrozen(true);

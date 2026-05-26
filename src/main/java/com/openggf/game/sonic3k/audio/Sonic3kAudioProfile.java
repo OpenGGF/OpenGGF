@@ -34,7 +34,7 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
         map.put(GameSound.RING_RIGHT, Sonic3kSfx.RING_RIGHT.id);
         map.put(GameSound.RING_SPILL, Sonic3kSfx.RING_LOSS.id);
         map.put(GameSound.SPINDASH_CHARGE, Sonic3kSfx.SPINDASH.id);
-        map.put(GameSound.SPINDASH_RELEASE, Sonic3kSfx.SPINDASH.id);
+        map.put(GameSound.SPINDASH_RELEASE, Sonic3kSfx.DASH.id);
         map.put(GameSound.SKID, Sonic3kSfx.SKID.id);
         map.put(GameSound.HURT, Sonic3kSfx.DEATH.id);
         map.put(GameSound.HURT_SPIKE, Sonic3kSfx.SPIKE_HIT.id);

@@ -99,8 +99,8 @@ public final class PoindexterBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (destroyed) return;
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed()) return;
 
         // Deferred init: Set_VelocityXTrackSonic requires player position,
         // not available during construction (services() not yet injected).

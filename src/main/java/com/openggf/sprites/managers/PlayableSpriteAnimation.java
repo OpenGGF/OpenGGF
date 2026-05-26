@@ -14,9 +14,44 @@ public class PlayableSpriteAnimation {
     private final AbstractPlayableSprite sprite;
     private int lastAnimationId = -1;
 
+    /**
+     * Resets the tracked animation ID so the next update sees a mismatch
+     * and restarts the current animation script.
+     * ROM equivalent: clearing prev_anim to 0 when anim stays the same.
+     */
+    public void resetLastAnimationId() {
+        lastAnimationId = -1;
+    }
+
     public PlayableSpriteAnimation(AbstractPlayableSprite sprite) {
         this.sprite = sprite;
     }
+
+    /**
+     * Captures the previous-animation tracker. {@link #lastAnimationId} gates
+     * {@link #resetScriptState()} on every {@link #update(int)} call: when the
+     * sprite's {@code animationId} differs from {@code lastAnimationId}, the
+     * script's frame index/tick are reset to 0. Without snapshotting it,
+     * a rewound run can have the same {@code animationId} in the sprite
+     * snapshot but a stale {@code lastAnimationId} from the live forward run,
+     * causing a spurious script reset (or skipping a real one) on the first
+     * replay tick. That drift propagates into {@code mappingFrame},
+     * {@code animationFrameIndex}, and {@code animationTick} after long
+     * forward+rewind cycles (surfaced by TestRewindTorture).
+     */
+    public RewindState captureRewindState() {
+        return new RewindState(lastAnimationId);
+    }
+
+    public void restoreRewindState(RewindState state) {
+        if (state == null) {
+            lastAnimationId = -1;
+            return;
+        }
+        lastAnimationId = state.lastAnimationId();
+    }
+
+    public record RewindState(int lastAnimationId) {}
 
     public void update(int frameCounter) {
         if (sprite == null) {
@@ -35,6 +70,9 @@ public class PlayableSpriteAnimation {
         SpriteAnimationProfile profile = sprite.getAnimationProfile();
         if (sprite.getAnimationSet() != null && !sprite.getAnimationSet().getAllScripts().isEmpty()) {
             int forced = sprite.getForcedAnimationId();
+            if (forced < 0 && profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {
+                clearPushForIdleToWalkAnimationChange(velocityProfile);
+            }
             // Both branches must be Integer (not int) so null from resolveAnimationId
             // doesn't trigger auto-unboxing NPE via JLS ternary type inference.
             Integer desiredAnimId = forced >= 0
@@ -404,4 +442,25 @@ public class PlayableSpriteAnimation {
         sprite.setAnimationTick(0);
         lastAnimationId = sprite.getAnimationId();
     }
+
+    private void clearPushForIdleToWalkAnimationChange(ScriptedVelocityAnimationProfile profile) {
+        if (!sprite.getPushing()
+                || sprite.getAir()
+                || sprite.getRolling()
+                || !sprite.isMovementInputActive()
+                || sprite.getAnimationId() != profile.getIdleAnimId()) {
+            return;
+        }
+        if (sprite.getPhysicsFeatureSet() == null
+                || !sprite.getPhysicsFeatureSet().animationChangeClearsPush()) {
+            return;
+        }
+        // S2/S3K Tails/Sonic MoveRight/MoveLeft write anim=Walk after accepting
+        // ground input (S3K Tails right: sonic3k.asm:28103-28122). If the later
+        // wall-probe sets Status_Push in that same tick, Animate_Tails2P still
+        // compares anim=Walk against the previous idle anim and clears Status_Push
+        // before selecting frames (sonic3k.asm:29681-29686; s2.asm:40879-40884).
+        sprite.setPushing(false);
+    }
+
 }

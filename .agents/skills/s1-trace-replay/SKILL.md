@@ -1,5 +1,5 @@
 ---
-title: S1 Trace Replay
+name: s1-trace-replay
 description: Workflow for recording Sonic 1 BizHawk traces, replaying them in tests, and interpreting divergence reports.
 ---
 
@@ -132,6 +132,8 @@ Key fields in each divergence group:
 
 ### Interpreting with auxiliary trace data
 
+Object positions in trace rows and aux events are ROM centre coordinates. Do not compare them directly to debug HUD `Pos:` values or `getX()` / `getY()` top-left bounds; use `getCentreX()` / `getCentreY()` when tracing engine state.
+
 The `aux_state.jsonl` file contains rich event data for debugging divergences. Key event types:
 
 **`slot_dump`** — Full snapshot of all occupied SST slots when any object appears:
@@ -165,6 +167,8 @@ grep '"frame":3193' src/test/resources/traces/s1/mz1_fullrun/aux_state.jsonl | g
 3. **Cascading errors**: Once one divergence occurs, subsequent errors often cascade. Focus on the FIRST error — fixing it may resolve many downstream issues.
 
 4. **Warning-only 1px Y differences**: Often terrain collision rounding. Usually not actionable unless they precede errors.
+
+5. **Object/player participation mismatch**: If the first error involves object contact, standing state, sidekick state, or object removal, classify it with the standard object contracts when present: `ObjectControlState` for controlled-player gates, `ObjectPlayerQuery` / `ObjectPlayerParticipationPolicy` for which player(s) the object should inspect, and `ObjectLifetimeOps` for delete/despawn/remembered-object behavior. Prefer canonical profile compatibility wrappers over object-local fixes when the issue is generic, but prove wrapper equivalence before changing behavior.
 
 ### CSV column reference (v2.2, csv_version=4)
 

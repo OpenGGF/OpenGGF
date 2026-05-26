@@ -51,8 +51,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             new ObjectDiscoveryTool.LevelConfig(LevelData.S3K_DOOMSDAY, "DDZ", "The Doomsday Zone", 1)
     );
 
-    // Shared objects implemented for both zone sets
-    private static final Set<Integer> SHARED_IMPLEMENTED_IDS = Set.of(
+    // Shared objects implemented for both zone sets.
+    // Public so tests (e.g. TestCnzMinibossRegistered) can assert that
+    // zone-set-specific ids (where the same numeric id maps to different
+    // objects in S3KL vs SKL) stay out of the cross-zoneset allowlist.
+    public static final Set<Integer> SHARED_IMPLEMENTED_IDS = Set.of(
             0x01, // Monitor
             0x02, // PathSwap
             0x04, // CollapsingPlatform
@@ -70,6 +73,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x33, // Button
             0x34, // StarPost
             0x3C, // Door
+            0x4F, // SinkingMud
             0x51, // FloatingPlatform
             0x6C, // TensionBridge
             0x6A, // InvisibleHurtBlockH
@@ -102,11 +106,22 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x38, // HCZCGZFan
                 0x3A, // HCZHandLauncher
                 0x3B, // HCZWaterWall
+                0x20, // MGZLBZSmashingPillar (alt slot)
+                0x52, // MGZLBZSmashingPillar
+                0x53, // MGZSwingingPlatform
+                0x55, // MGZHeadTrigger
+                0x56, // MGZMovingSpikePlatform
+                0x57, // MGZTriggerPlatform
+                0x58, // MGZSwingingSpikeBall
+                0x59, // MGZDashTrigger
+                0x5B, // MGZTopPlatform
                 0x3E, // HCZConveyorBelt
                 0x3F, // HCZConveyorSpike
                 0x67, // HCZSnakeBlocks
                 0x68, // HCZSpinningColumn
                 0x69, // HCZTwistingLoop
+                0x6D, // HCZWaterSplash
+                0x6E, // HCZWaterDrop
                 0x8C, // Bloominator
                 0x8D, // Rhinobot
                 0x8E, // MonkeyDude
@@ -115,10 +130,27 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x94, // Blastoid
                 0x95, // Buggernaut
                 0x98, // Poindexter
+                0x9B, // BubblesBadnik
+                0x9C, // Spiker
+                0x9E, // Tunnelbot
                 0x90, // AIZMinibossCutscene
                 0x91, // AIZMiniboss
                 0x92, // AIZEndBoss
-                0x99  // HCZMiniboss
+                0x99, // HCZMiniboss
+                0x9A, // HCZEndBoss
+                0xA6, // CNZMiniboss (S3KL only — same id maps to DEZMiniboss in SKL)
+                0xAD, // Penguinator
+                0xAE, // StarPointer
+                0xAF, // ICZCrushingColumn
+                0xB0, // ICZPathFollowPlatform
+                0xB1, // ICZBreakableWall
+                0xB2, // ICZFreezer
+                0xB3, // ICZSegmentColumn
+                0xB4, // ICZSwingingPlatform
+                0xB5, // ICZStalagtite
+                0xB6, // ICZIceCube
+                0xB7, // ICZIceSpikes
+                0xB8  // ICZHarmfulIce
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
 

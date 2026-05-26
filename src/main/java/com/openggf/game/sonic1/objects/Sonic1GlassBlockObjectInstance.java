@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.SolidCheckpointBatch;
 
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.Sonic1SwitchManager;
@@ -8,8 +9,10 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -161,12 +164,6 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
         this.playerStanding = false;
 
         updateDynamicSpawn(x, y);
-
-        // ROM: Glass_Main .Repeat loop spawns reflection via FindNextFreeObj
-        // during the object's first routine (construction). The pre-allocated
-        // slot mechanism ensures the parent already has its slot assigned,
-        // so allocateSlotAfter() correctly gives the child a HIGHER slot.
-        spawnReflection();
     }
 
     @Override
@@ -180,11 +177,17 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
     }
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        // ROM: the reflection child is allocated in Glass_Main (routine 0),
+        // after ObjPosLoad has already finished loading this frame's parents.
+        // Spawning it during construction lets it steal SST slots from later
+        // ObjPosLoad siblings in the same pass, which does not happen in S1.
+        if (reflectionChild == null) {
+            spawnReflection();
+        }
 
-        playerStanding = isPlayerRiding();
-
-        // Apply subtype movement (modifies glassDist)
+        // ROM order: Glass_Block012/34 runs Glass_Types first using the prior
+        // frame's standing latch (obStatus bit 3), then calls SolidObject at
+        // the updated Y to resolve this frame's contact.
         applyMovement();
 
         // Compute Y from base Y and glass_dist
@@ -192,6 +195,14 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
         y = baseY - glassDist;
 
         updateDynamicSpawn(x, y);
+
+        SolidCheckpointBatch batch = checkpointAll();
+        playerStanding = hasStandingContact(batch);
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -230,8 +241,7 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Standing state is managed via isPlayerRiding() check in update()
+        // Standing state is driven via manual checkpoints in update().
     }
 
     @Override
@@ -457,25 +467,21 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
      * Subtype gets addq.b #8 then andi.b #$F.
      */
     private void spawnReflection() {
-        var objectManager = services().objectManager();
-        if (objectManager == null) {
+        if (services().objectManager() == null) {
             return;
         }
 
         // Reflection subtype: addq.b #8,obSubtype(a1) / andi.b #$F,obSubtype(a1)
-        int reflectSubtype = ((fullSubtype + 8) & 0x0F);
+        final int reflectSubtype = ((fullSubtype + 8) & 0x0F);
+        final int mySlot = getSlotIndex();
 
-        reflectionChild = new Sonic1GlassReflectionInstance(
-                spawn, this, reflectSubtype, isTall);
-        // ROM: FindNextFreeObj allocates slot after glass block
-        int mySlot = getSlotIndex();
-        if (mySlot >= 0) {
-            int childSlot = objectManager.allocateSlotAfter(mySlot);
-            if (childSlot >= 0) {
-                reflectionChild.setSlotIndex(childSlot);
-            }
-        }
-        objectManager.addDynamicObject(reflectionChild);
+        reflectionChild = spawnFreeChild(() -> {
+            Sonic1GlassReflectionInstance child = new Sonic1GlassReflectionInstance(
+                    spawn, this, reflectSubtype, isTall);
+            // ROM: FindNextFreeObj allocates slot after glass block
+            ObjectLifetimeOps.assignFindNextFreeChildSlot(services().objectManager(), child, mySlot);
+            return child;
+        });
     }
 
     /**

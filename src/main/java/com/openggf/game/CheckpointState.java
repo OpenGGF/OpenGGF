@@ -26,6 +26,30 @@ public class CheckpointState implements RespawnState {
     private int savedWaterLevel;
     private int savedWaterRoutine;
     private boolean hasWaterState;
+    private int savedCameraMaxY;
+    private int savedDynamicResizeRoutine;
+    private boolean hasS3kRuntimeState;
+    private byte savedTopSolidBit = 0x0C;
+    private byte savedLrbSolidBit = 0x0D;
+    private boolean hasSolidBits;
+
+    public record RewindState(
+            int lastCheckpointIndex,
+            int savedX,
+            int savedY,
+            int savedCameraX,
+            int savedCameraY,
+            boolean cameraLock,
+            boolean usedForSpecialStage,
+            int savedWaterLevel,
+            int savedWaterRoutine,
+            boolean hasWaterState,
+            int savedCameraMaxY,
+            int savedDynamicResizeRoutine,
+            boolean hasS3kRuntimeState,
+            byte savedTopSolidBit,
+            byte savedLrbSolidBit,
+            boolean hasSolidBits) {}
 
     /**
      * Clear checkpoint state (called on level start/change).
@@ -41,6 +65,12 @@ public class CheckpointState implements RespawnState {
         savedWaterLevel = 0;
         savedWaterRoutine = 0;
         hasWaterState = false;
+        savedCameraMaxY = 0;
+        savedDynamicResizeRoutine = 0;
+        hasS3kRuntimeState = false;
+        savedTopSolidBit = 0x0C;
+        savedLrbSolidBit = 0x0D;
+        hasSolidBits = false;
     }
 
     /**
@@ -56,8 +86,36 @@ public class CheckpointState implements RespawnState {
         Camera camera = GameServices.camera();
         this.savedCameraX = camera.getX();
         this.savedCameraY = camera.getY();
+        saveProviderRuntimeStateIfPresent(camera);
+        savePlayerSolidBitsIfPresent();
 
         LOGGER.fine("Saved checkpoint " + lastCheckpointIndex + " at (" + savedX + ", " + savedY + ")");
+    }
+
+    private void savePlayerSolidBitsIfPresent() {
+        Camera camera = GameServices.cameraOrNull();
+        if (camera == null || !(camera.getFocusedSprite() instanceof AbstractPlayableSprite playable)) {
+            savedTopSolidBit = 0x0C;
+            savedLrbSolidBit = 0x0D;
+            hasSolidBits = false;
+            return;
+        }
+        savedTopSolidBit = playable.getTopSolidBit();
+        savedLrbSolidBit = playable.getLrbSolidBit();
+        hasSolidBits = true;
+    }
+
+    private void saveProviderRuntimeStateIfPresent(Camera camera) {
+        LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
+        if (camera == null || !(eventProvider instanceof CheckpointRuntimeStateProvider provider)) {
+            savedCameraMaxY = 0;
+            savedDynamicResizeRoutine = 0;
+            hasS3kRuntimeState = false;
+            return;
+        }
+        savedCameraMaxY = camera.getMaxY();
+        savedDynamicResizeRoutine = provider.checkpointDynamicResizeRoutine();
+        hasS3kRuntimeState = true;
     }
 
     /**
@@ -88,6 +146,10 @@ public class CheckpointState implements RespawnState {
             camera.setX((short) savedCameraX);
             camera.setY((short) savedCameraY);
             camera.setFocusedSprite(player);
+            if (hasS3kRuntimeState) {
+                camera.setMaxY((short) savedCameraMaxY);
+                camera.setMaxYTarget((short) savedCameraMaxY);
+            }
 
             // Apply camera min X lock if subtype bit 7 was set
             if (cameraLock) {
@@ -149,6 +211,34 @@ public class CheckpointState implements RespawnState {
         return usedForSpecialStage;
     }
 
+    public boolean hasCameraLock() {
+        return cameraLock;
+    }
+
+    public boolean hasS3kRuntimeState() {
+        return hasS3kRuntimeState;
+    }
+
+    public int getSavedCameraMaxY() {
+        return savedCameraMaxY;
+    }
+
+    public int getSavedDynamicResizeRoutine() {
+        return savedDynamicResizeRoutine;
+    }
+
+    public boolean hasSolidBits() {
+        return hasSolidBits;
+    }
+
+    public byte getSavedTopSolidBit() {
+        return savedTopSolidBit;
+    }
+
+    public byte getSavedLrbSolidBit() {
+        return savedLrbSolidBit;
+    }
+
     public void markUsedForSpecialStage() {
         this.usedForSpecialStage = true;
         LOGGER.fine("Checkpoint " + lastCheckpointIndex + " marked as used for special stage entry");
@@ -166,5 +256,60 @@ public class CheckpointState implements RespawnState {
         this.savedCameraX = cameraX;
         this.savedCameraY = cameraY;
         LOGGER.fine("Restored checkpoint " + checkpointIndex + " state at (" + x + ", " + y + ")");
+    }
+
+    public void saveS3kRuntimeState(int cameraMaxY, int dynamicResizeRoutine) {
+        this.savedCameraMaxY = cameraMaxY;
+        this.savedDynamicResizeRoutine = dynamicResizeRoutine;
+        this.hasS3kRuntimeState = true;
+    }
+
+    public void saveSolidBits(byte topSolidBit, byte lrbSolidBit) {
+        this.savedTopSolidBit = topSolidBit;
+        this.savedLrbSolidBit = lrbSolidBit;
+        this.hasSolidBits = true;
+    }
+
+    public RewindState captureRewindState() {
+        return new RewindState(
+                lastCheckpointIndex,
+                savedX,
+                savedY,
+                savedCameraX,
+                savedCameraY,
+                cameraLock,
+                usedForSpecialStage,
+                savedWaterLevel,
+                savedWaterRoutine,
+                hasWaterState,
+                savedCameraMaxY,
+                savedDynamicResizeRoutine,
+                hasS3kRuntimeState,
+                savedTopSolidBit,
+                savedLrbSolidBit,
+                hasSolidBits);
+    }
+
+    public void restoreRewindState(RewindState state) {
+        if (state == null) {
+            clear();
+            return;
+        }
+        this.lastCheckpointIndex = state.lastCheckpointIndex();
+        this.savedX = state.savedX();
+        this.savedY = state.savedY();
+        this.savedCameraX = state.savedCameraX();
+        this.savedCameraY = state.savedCameraY();
+        this.cameraLock = state.cameraLock();
+        this.usedForSpecialStage = state.usedForSpecialStage();
+        this.savedWaterLevel = state.savedWaterLevel();
+        this.savedWaterRoutine = state.savedWaterRoutine();
+        this.hasWaterState = state.hasWaterState();
+        this.savedCameraMaxY = state.savedCameraMaxY();
+        this.savedDynamicResizeRoutine = state.savedDynamicResizeRoutine();
+        this.hasS3kRuntimeState = state.hasS3kRuntimeState();
+        this.savedTopSolidBit = state.savedTopSolidBit();
+        this.savedLrbSolidBit = state.savedLrbSolidBit();
+        this.hasSolidBits = state.hasSolidBits();
     }
 }

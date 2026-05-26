@@ -1,19 +1,39 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.game.session.EngineServices;
+import com.openggf.tests.TestEnvironment;
+
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.DefaultSolidExecutionRegistry;
+import com.openggf.game.solid.ObjectSolidExecutionContext;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.PlayerStandingState;
+import com.openggf.game.solid.PostContactState;
+import com.openggf.game.solid.PreContactState;
+import com.openggf.game.solid.SolidCheckpointBatch;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.save.SaveReason;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.parallel.Isolated;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.managers.SpriteManager;
@@ -21,32 +41,38 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Isolated
+@Execution(ExecutionMode.SAME_THREAD)
 public class TestTornadoObjectInstance {
 
     private GameModule previousModule;
 
-    @Before
+    @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
         previousModule = GameModuleRegistry.getCurrent();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        SessionManager.openGameplaySession(GameModuleRegistry.getCurrent());
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
         GameServices.sprites().resetState();
         GameServices.level().resetState();
         AizPlaneIntroInstance.resetIntroPhaseState();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         GameServices.sprites().resetState();
         GameServices.level().resetState();
         GameModuleRegistry.setCurrent(previousModule);
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -59,8 +85,8 @@ public class TestTornadoObjectInstance {
 
         // ROM: move.w x_pos(a1),d1 / add.w d3,d1 / move.w d1,x_pos(a0)
         // Moves TORNADO to follow PLAYER. Player at 200, tornado follows to 200-16=184.
-        assertEquals("ObjB2_Move_obbey_player should move Tornado to player - 16", 184, tornado.getX());
-        assertEquals("Player should not be moved", 200, main.getCentreX());
+        assertEquals(184, tornado.getX(), "ObjB2_Move_obbey_player should move Tornado to player - 16");
+        assertEquals(200, main.getCentreX(), "Player should not be moved");
     }
 
     @Test
@@ -77,32 +103,186 @@ public class TestTornadoObjectInstance {
         invokePrivate(tornado, "moveWithPlayer",
                 new Class<?>[]{AbstractPlayableSprite.class, boolean.class}, main, false);
 
-        assertEquals("ObjB2_Move_below_player should anchor to closest player on transition",
-                149, tornado.getX());
+        assertEquals(149, tornado.getX(), "ObjB2_Move_below_player should anchor to closest player on transition");
     }
 
     @Test
     public void moveWithPlayerTransitionUsesClosestPlayerInScz() throws Exception {
-        // ROM: Obj_GetOrientationToPlayer always considers both players, even in SCZ.
-        // SpriteManager suppresses CPU sidekick for SCZ, so this tests that the
-        // Tornado correctly uses the main player when sidekick is not available.
+        // SCZ suppression reaches Tornado as an empty sidekick list, so this unit
+        // test exercises the fallback path directly instead of depending on
+        // runtime-global SpriteManager suppression state.
         TornadoObjectInstance tornado = createTornado(150, 0x100, 0x50);
         TestPlayableSprite main = new TestPlayableSprite("main", (short) 300, (short) 100);
         TestPlayableSprite sidekick = new TestPlayableSprite("sidekick", (short) 140, (short) 100);
         sidekick.setCpuControlled(true);
 
-        GameServices.sprites().addSprite(main);
-        GameServices.sprites().addSprite(sidekick);
+        tornado.setServices(new TestObjectServices()
+                .withCamera(GameServices.camera())
+                .withParallaxManager(GameServices.parallax())
+                .withSidekicks(List.of()));
         setField(GameServices.level(), "currentZone", 8);
         setField(tornado, "standingTransition", true);
 
         invokePrivate(tornado, "moveWithPlayer",
                 new Class<?>[]{AbstractPlayableSprite.class, boolean.class}, main, false);
 
-        // SCZ suppresses CPU sidekick (isCpuSidekickSuppressed()), so the Tornado
-        // anchors to main player. Sidekick at 140 would give smoothOffsetX=-10 (closer),
-        // but it's suppressed, so main at 300 gives smoothOffsetX=150.
-        assertEquals("SCZ Tornado anchors to main when sidekick is suppressed", 151, tornado.getX());
+        assertEquals(151, tornado.getX(), "SCZ Tornado anchors to main when sidekick is suppressed");
+    }
+
+    @Test
+    public void moveWithPlayerTransitionUsesQueryOnlyClosestPlayerAsAnchor() throws Exception {
+        TornadoObjectInstance tornado = createTornado(150, 0x100, 0x50);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 300, (short) 100);
+        TestPlayableSprite sidekick = new TestPlayableSprite("sidekick", (short) 140, (short) 100);
+        sidekick.setCpuControlled(true);
+
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick)));
+        setField(tornado, "standingTransition", true);
+
+        invokePrivate(tornado, "moveWithPlayer",
+                new Class<?>[]{AbstractPlayableSprite.class, boolean.class}, main, false);
+
+        assertEquals(149, tornado.getX(),
+                "Tornado closest-player orientation should resolve participants through ObjectPlayerQuery");
+    }
+
+    @Test
+    public void wfzStartReleaseDropsQueryOnlyRidingSidekick() throws Exception {
+        TornadoObjectInstance tornado = createTornado(100, 0x100, 0x52);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 100, (short) 100);
+        TestPlayableSprite sidekick = new TestPlayableSprite("sidekick", (short) 100, (short) 100);
+        sidekick.setCpuControlled(true);
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, new TestObjectServices());
+        tornado.setServices(new QueryOnlyPlayerServices(main, List.of(sidekick)).withObjectManager(objectManager));
+        objectManager.forceRidingObjectForBootstrap(sidekick, tornado);
+        sidekick.setOnObject(true);
+        sidekick.setAir(false);
+        setField(tornado, "routineSecondary", 4);
+        setField(tornado, "scriptTimer", 0);
+
+        tornado.update(0, main);
+
+        assertFalse(objectManager.isRidingObject(sidekick, tornado),
+                "WFZ start release should use ObjectPlayerQuery participants instead of raw sidekicks");
+        assertFalse(sidekick.isOnObject());
+        assertTrue(sidekick.getAir());
+    }
+
+    @Test
+    public void tornadoSczMainReadsStandingStateFromManualCheckpointBeforeFollowMotion() throws Exception {
+        TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
+                100, 0x100, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 100, (short) 100);
+        main.setAir(false);
+
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        registry.beginFrame(1, List.of(main));
+        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+                main, new PlayerSolidContactResult(
+                        ContactKind.TOP,
+                        true,
+                        false,
+                        false,
+                        false,
+                        PreContactState.ZERO,
+                        PostContactState.ZERO,
+                        0))));
+
+        tornado.setServices(new CheckpointServices(registry.currentObject()));
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertTrue((boolean) getField(tornado, "lastMainStanding"),
+                "SCZ Tornado should use the current-frame checkpoint standing state");
+        assertTrue((boolean) getField(tornado, "standingTransition"),
+                "SCZ Tornado should detect the same-frame standing transition before follow motion");
+    }
+
+    @Test
+    public void tornadoSczMainPreservesEntryStandingBitForReleaseFrameBob() throws Exception {
+        TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
+                0x452, 0x97, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x452, (short) 0x70);
+        main.setOnObject(false);
+        main.setAir(true);
+
+        setField(tornado, "xPosFixed8", 0x45200);
+        setField(tornado, "yPosFixed8", 0x9740);
+        setField(tornado, "yVel", 0x120);
+        setField(tornado, "moveVertActive", true);
+        setField(tornado, "moveVertTimer", 0x0D);
+        setField(tornado, "lastMainStanding", true);
+
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        registry.beginFrame(1, List.of(main));
+        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+                main, new PlayerSolidContactResult(
+                        ContactKind.NONE,
+                        false,
+                        false,
+                        false,
+                        false,
+                        PreContactState.ZERO,
+                        PostContactState.ZERO,
+                        0))));
+
+        tornado.setServices(new CheckpointServices(registry.currentObject()));
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0x9A, tornado.getY(),
+                "Release frame should run ObjB2_Move_vert before SolidObject clears standing");
+        assertFalse((boolean) getField(tornado, "lastMainStanding"));
+        assertTrue((boolean) getField(tornado, "moveVert2Active"));
+    }
+
+    @Test
+    public void tornadoSczMainUsesLivePlayerOnObjectBitForMoveWithPlayer() throws Exception {
+        TornadoObjectInstance tornado = new TornadoObjectInstance(new ObjectSpawn(
+                0x739, 0x8F, Sonic2ObjectIds.TORNADO, 0x50, 0, false, 0));
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x73A, (short) 0x63);
+        main.setOnObject(true);
+        main.setAir(false);
+
+        setField(tornado, "xPosFixed8", 0x73900);
+        setField(tornado, "yPosFixed8", 0x8F00);
+        setField(tornado, "lastMainStanding", false);
+
+        DefaultSolidExecutionRegistry registry = new DefaultSolidExecutionRegistry();
+        registry.beginFrame(1, List.of(main));
+        registry.beginObject(tornado, () -> new SolidCheckpointBatch(tornado, Map.of(
+                main, PlayerSolidContactResult.noContact(
+                        PlayerStandingState.NONE,
+                        PreContactState.ZERO,
+                        PostContactState.ZERO))));
+
+        tornado.setServices(new CheckpointServices(registry.currentObject()));
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0x739, tornado.getX(),
+                "ObjB2_Move_with_player branches on Sonic's live Status_OnObj bit, even if ObjB2 itself is not the current standing object");
+        assertFalse((boolean) getField(tornado, "moveVert2Active"),
+                "ObjB2_Move_obbey_player also branches on Sonic's live Status_OnObj bit after SolidObject");
+        assertFalse((boolean) getField(tornado, "lastMainStanding"),
+                "The ObjB2 standing latch should still reflect only Tornado's own SolidObject result");
+    }
+
+    @Test
+    public void sczCameraEdgePushPreservesPlayerXSubpixel() throws Exception {
+        TornadoObjectInstance tornado = createTornado(0x640, 0x99, 0x50);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x63E, (short) 0x3C);
+        main.setSubpixelRaw(0xE900, 0x6000);
+        GameServices.camera().setX((short) 0x62F);
+
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(0x63F, main.getCentreX(),
+                "SCZ edge push should increment x_pos by one pixel");
+        assertEquals(0xE900, main.getXSubpixelRaw(),
+                "SCZ edge push is a ROM word write to x_pos and must preserve x_sub");
     }
 
     @Test
@@ -116,7 +296,7 @@ public class TestTornadoObjectInstance {
         assertEquals(6, tornado.getPriorityBucket());
 
         tornado.update(1, null);
-        assertTrue("Routine C should cull via MarkObjGone", tornado.isDestroyed());
+        assertTrue(tornado.isDestroyed(), "Routine C should cull via MarkObjGone");
     }
 
     @Test
@@ -126,7 +306,7 @@ public class TestTornadoObjectInstance {
         TornadoObjectInstance tornado = createTornado(0x700, 0x100, 0x52);
         tornado.update(1, null);
 
-        assertTrue("WFZ start routine should delete when outside Obj_DeleteOffScreen range", tornado.isDestroyed());
+        assertTrue(tornado.isDestroyed(), "WFZ start routine should delete when outside Obj_DeleteOffScreen range");
     }
 
     @Test
@@ -139,13 +319,47 @@ public class TestTornadoObjectInstance {
         assertFalse(levelManager.isLevelInactiveForTransition());
     }
 
+    @Test
+    public void sczToWfzTransitionRequestsProgressionSave() throws Exception {
+        TrackingServices services = new TrackingServices();
+        TornadoObjectInstance tornado = createTornado(100, 0x100, 0x50, services);
+        TestPlayableSprite main = new TestPlayableSprite("main", (short) 0x35F0, (short) 100);
+        GameServices.camera().setX((short) 0x35E0);
+
+        invokePrivate(tornado, "updateSczMain",
+                new Class<?>[]{AbstractPlayableSprite.class}, main);
+
+        assertEquals(Sonic2ZoneConstants.ZONE_WFZ, services.requestedZone);
+        assertEquals(0, services.requestedAct);
+        assertTrue(services.requestedDeactivateLevelNow);
+        assertEquals(SaveReason.PROGRESSION_SAVE, services.lastSaveReason);
+    }
+
+    @Test
+    public void wfzToDezTransitionRequestsProgressionSave() throws Exception {
+        TrackingServices services = new TrackingServices();
+        TornadoObjectInstance tornado = createTornado(100, 0x100, 0x52, services);
+        setField(tornado, "scriptTimer", 0x9C0);
+
+        invokePrivate(tornado, "wfzDockOnDez", new Class<?>[0]);
+
+        assertEquals(Sonic2ZoneConstants.ZONE_DEZ, services.requestedZone);
+        assertEquals(0, services.requestedAct);
+        assertTrue(services.requestedDeactivateLevelNow);
+        assertEquals(SaveReason.PROGRESSION_SAVE, services.lastSaveReason);
+    }
+
     private static TornadoObjectInstance createTornado(int x, int y, int subtype) {
-        ObjectSpawn spawn = new ObjectSpawn(x, y, Sonic2ObjectIds.TORNADO, subtype, 0, false, 0);
-        TornadoObjectInstance t = new TornadoObjectInstance(spawn);
-        t.setServices(new TestObjectServices()
+        return createTornado(x, y, subtype, new TestObjectServices()
                 .withCamera(GameServices.camera())
                 .withParallaxManager(GameServices.parallax())
                 .withSpriteManager(GameServices.sprites()));
+    }
+
+    private static TornadoObjectInstance createTornado(int x, int y, int subtype, TestObjectServices services) {
+        ObjectSpawn spawn = new ObjectSpawn(x, y, Sonic2ObjectIds.TORNADO, subtype, 0, false, 0);
+        TornadoObjectInstance t = new TornadoObjectInstance(spawn);
+        t.setServices(services);
         return t;
     }
 
@@ -160,6 +374,12 @@ public class TestTornadoObjectInstance {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private static Object getField(Object target, String fieldName) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return field.get(target);
     }
 
     private static final class TestPlayableSprite extends AbstractPlayableSprite {
@@ -198,4 +418,81 @@ public class TestTornadoObjectInstance {
             // No-op for unit tests.
         }
     }
+
+    private static final class TrackingServices extends TestObjectServices {
+        private int requestedZone = -1;
+        private int requestedAct = -1;
+        private boolean requestedDeactivateLevelNow;
+        private SaveReason lastSaveReason;
+
+        private TrackingServices() {
+            withCamera(GameServices.camera());
+            withParallaxManager(GameServices.parallax());
+            withSpriteManager(GameServices.sprites());
+        }
+
+        @Override
+        public void requestZoneAndAct(int zone, int act, boolean deactivateLevelNow) {
+            requestedZone = zone;
+            requestedAct = act;
+            requestedDeactivateLevelNow = deactivateLevelNow;
+        }
+
+        @Override
+        public void requestSessionSave(SaveReason reason) {
+            lastSaveReason = reason;
+        }
+    }
+
+    private static final class QueryOnlyPlayerServices extends TestObjectServices {
+        private final PlayableEntity main;
+        private final List<? extends PlayableEntity> queriedSidekicks;
+        private ObjectManager objectManager;
+
+        private QueryOnlyPlayerServices(PlayableEntity main, List<? extends PlayableEntity> queriedSidekicks) {
+            this.main = main;
+            this.queriedSidekicks = List.copyOf(queriedSidekicks);
+            withCamera(GameServices.camera());
+            withParallaxManager(GameServices.parallax());
+            withSpriteManager(GameServices.sprites());
+        }
+
+        @Override
+        public ObjectPlayerQuery playerQuery() {
+            return new ObjectPlayerQuery(() -> main, () -> queriedSidekicks);
+        }
+
+        @Override
+        public List<PlayableEntity> sidekicks() {
+            return List.of();
+        }
+
+        @Override
+        public ObjectManager objectManager() {
+            return objectManager;
+        }
+
+        private QueryOnlyPlayerServices withObjectManager(ObjectManager objectManager) {
+            this.objectManager = objectManager;
+            return this;
+        }
+    }
+
+    private static final class CheckpointServices extends TestObjectServices {
+        private final ObjectSolidExecutionContext solidExecution;
+
+        private CheckpointServices(ObjectSolidExecutionContext solidExecution) {
+            this.solidExecution = solidExecution;
+            withCamera(GameServices.camera());
+            withParallaxManager(GameServices.parallax());
+            withSpriteManager(GameServices.sprites());
+        }
+
+        @Override
+        public ObjectSolidExecutionContext solidExecution() {
+            return solidExecution;
+        }
+    }
 }
+
+

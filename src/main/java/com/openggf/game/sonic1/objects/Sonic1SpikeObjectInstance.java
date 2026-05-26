@@ -3,13 +3,18 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.audio.AudioManager;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -54,6 +59,8 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
     private static final int RETRACT_DELAY = 60;       // move.w #60,objoff_38(a0)
     // From disassembly: move.b #4,obPriority(a0)
     private static final int PRIORITY = 4;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     private final int baseX;
     private final int baseY;
@@ -88,14 +95,41 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         updateMovement();
         updateDynamicSpawn(currentX, currentY);
+        SolidCheckpointBatch batch = checkpointAll();
+        List<PlayableEntity> players = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (players.isEmpty() && playerEntity != null) {
+            players = List.of(playerEntity);
+        }
+        for (PlayableEntity candidate : players) {
+            if (candidate instanceof AbstractPlayableSprite player) {
+                applyCheckpointContact(player, batch.perPlayer().get(candidate), frameCounter);
+            }
+        }
     }
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        handleSolidContact(player, contact, frameCounter);
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    private void applyCheckpointContact(AbstractPlayableSprite player,
+                                        PlayerSolidContactResult result,
+                                        int frameCounter) {
+        if (player == null || result == null || result.kind() == ContactKind.NONE) {
+            return;
+        }
+        handleSolidContact(player, contactFrom(result), frameCounter);
+    }
+
+    private void handleSolidContact(AbstractPlayableSprite player, SolidContact contact, int frameCounter) {
         if (player == null) {
             return;
         }
@@ -127,7 +161,7 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
         //   move.l d3,obY(a0)
         // ROM rewind: sub.l d0,d3 where d3=obY_full, d0=obVelY<<8
         // This operates on the top-left Y (obY), not centre Y.
-        // The engine stores yPixel (top-left) + ySubpixel separately.
+        // The engine stores yPixel (top-left) + sub-pixel accumulator separately.
         // Combine, subtract, split back. Use move() with negative velocity
         // to replicate sub.l: move(-velX, -velY) reverses SpeedToPos.
         if (player instanceof AbstractPlayableSprite aps) {
@@ -195,6 +229,19 @@ public class Sonic1SpikeObjectInstance extends AbstractObjectInstance
 
     private boolean isSideways() {
         return frameIndex == 1 || frameIndex == 5;
+    }
+
+    protected SolidCheckpointBatch checkpointAll() {
+        return services().solidExecution().resolveSolidNowAll();
+    }
+
+    private SolidContact contactFrom(PlayerSolidContactResult result) {
+        return switch (result.kind()) {
+            case TOP -> new SolidContact(true, false, false, true, false);
+            case SIDE -> new SolidContact(false, true, false, false, result.pushingNow());
+            case BOTTOM -> new SolidContact(false, false, true, false, false);
+            case NONE, CRUSH -> null;
+        };
     }
 
     /**

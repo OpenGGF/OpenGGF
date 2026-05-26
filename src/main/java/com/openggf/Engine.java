@@ -1,5 +1,8 @@
 package com.openggf;
 
+import com.openggf.architecture.CompositionRoot;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.game.*;
 import com.openggf.graphics.*;
 import com.openggf.version.AppVersion;
@@ -8,32 +11,58 @@ import org.lwjgl.opengl.*;
 import org.lwjgl.system.MemoryStack;
 
 import com.openggf.control.InputHandler;
+import com.openggf.editor.EditorInputHandler;
+import com.openggf.editor.EditorHierarchyDepth;
+import com.openggf.editor.LevelEditorController;
+import com.openggf.editor.persistence.EditorSaveManager;
+import com.openggf.editor.render.EditorOverlayRenderer;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.LWJGLAudioBackend;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugOption;
+import com.openggf.debug.DebugOverlayManager;
+import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.debug.DebugRenderer;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.DebugState;
+import com.openggf.game.ShieldType;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Level;
+import com.openggf.level.MutableLevel;
+import com.openggf.game.session.EditorCursorState;
+import com.openggf.game.session.EditorModeContext;
+import com.openggf.game.session.EditorPlaytestStash;
+import com.openggf.game.session.GameplaySessionFactory;
+import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.KnucklesRespawnStrategy;
-import com.openggf.sprites.playable.Knuckles;
-import com.openggf.sprites.playable.Sonic;
-import com.openggf.sprites.playable.SonicRespawnStrategy;
-import com.openggf.sprites.playable.Tails;
-import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.data.RomManager;
 import com.openggf.game.sonic3k.objects.AizIntroArtLoader;
+import com.openggf.game.save.SaveManager;
+import com.openggf.game.save.SaveSlotSummary;
+import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.Sonic2GameModule.S2DataSelectImageWarmup;
+import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
+import com.openggf.game.sonic1.Sonic1GameModule.S1DataSelectImageWarmup;
+import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
+import com.openggf.data.Rom;
+import com.openggf.physics.Direction;
 
 import java.io.IOException;
 import java.nio.IntBuffer;
-import java.util.Arrays;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.Callbacks.*;
@@ -51,20 +80,31 @@ import static org.lwjgl.system.MemoryUtil.*;
  *
  * @author james
  */
+@CompositionRoot
 public class Engine {
 	private static final Logger LOGGER = Logger.getLogger(Engine.class.getName());
 	public static final String RESOURCES_SHADERS_PIXEL_SHADER_GLSL = "shaders/shader_the_hedgehog.glsl";
-	private final SonicConfigurationService configService = SonicConfigurationService.getInstance();
-	private SpriteManager spriteManager = SpriteManager.getInstance();
-	private final GraphicsManager graphicsManager = GraphicsManager.getInstance();
+	private final SonicConfigurationService configService;
+	private SpriteManager spriteManager;
+	private final GraphicsManager graphicsManager;
+	private final AudioManager audioManager;
+	private final RomManager romManager;
+	private final RomDetectionService romDetectionService;
+	private final CrossGameFeatureProvider crossGameFeatureProvider;
+	private final DebugOverlayManager debugOverlayManager;
+	private final PlaybackDebugManager playbackDebugManager;
 
-	private Camera camera = Camera.getInstance();
-	// Lazy-initialized: DebugRenderer.<clinit> references java.awt.Color which
-	// is unavailable in GraalVM native-image builds.
+	private Camera camera;
 	private DebugRenderer debugRenderer;
-	private final PerformanceProfiler profiler = PerformanceProfiler.getInstance();
+	private final PerformanceProfiler profiler;
 
-	private final GameLoop gameLoop = new GameLoop();
+	private final GameLoop gameLoop;
+	private final LevelEditorController levelEditorController = new LevelEditorController();
+	private final EditorInputHandler editorInputHandler;
+	private final EditorOverlayRenderer editorOverlayRenderer;
+	// Match the rest of the debug overlay — no drop shadow.
+	private final PixelFontTextRenderer traceHudTextRenderer =
+		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
 
 	private static volatile DebugState debugState = DebugState.NONE;
 	private static volatile DebugOption debugOption = DebugOption.A;
@@ -73,20 +113,20 @@ public class Engine {
 	public static DebugOption getDebugOption() { return debugOption; }
 	public static void setDebugOption(DebugOption option) { debugOption = option; }
 
-	private double realWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
-	private double realHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+	private double realWidth;
+	private double realHeight;
 
 	// Current projection width - can be changed for H32/H40 mode switching
 	// H40 mode (normal levels): 320 pixels wide
 	// H32 mode (special stages): 256 pixels wide
-	private double projectionWidth = realWidth;
+	private double projectionWidth;
 
-	private boolean debugViewEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+	private boolean debugViewEnabled;
 
-	private LevelManager levelManager = LevelManager.getInstance();
+	private LevelManager levelManager;
 
-	// The gameplay runtime — set during initializeGame()
-	private com.openggf.game.GameRuntime runtime;
+	// The active session-owned gameplay mode set during initializeGame().
+	private GameplayModeContext gameplayMode;
 
 	// Pre-allocated list for results screen rendering
 	private final java.util.List<GLCommand> resultsCommands = new java.util.ArrayList<>(64);
@@ -105,6 +145,9 @@ public class Engine {
 
 	// Master title screen (game selection before ROM loading)
 	private MasterTitleScreen masterTitleScreen;
+
+	// Legal disclaimer screen (pre-ROM disclaimer)
+	private LegalDisclaimerScreen legalDisclaimerScreen;
 
 	// Viewport parameters for aspect-ratio-correct rendering
 	private int viewportX = 0;
@@ -132,26 +175,55 @@ public class Engine {
 
 	private DebugRenderer getDebugRenderer() {
 		if (debugRenderer == null) {
-			debugRenderer = DebugRenderer.getInstance();
+			debugRenderer = new DebugRenderer();
 		}
 		return debugRenderer;
 	}
 
 	public Engine() {
+		this(EngineServices.current());
+	}
+
+	public Engine(EngineContext engineServices) {
+		engineServices = Objects.requireNonNull(engineServices, "engineServices");
+		EngineServices.configure(engineServices);
+		this.configService = engineServices.configuration();
+		this.graphicsManager = engineServices.graphics();
+		this.audioManager = engineServices.audio();
+		this.romManager = engineServices.roms();
+		this.romDetectionService = engineServices.romDetection();
+		this.crossGameFeatureProvider = engineServices.crossGameFeatures();
+		this.debugOverlayManager = engineServices.debugOverlay();
+		this.playbackDebugManager = engineServices.playbackDebug();
+		this.profiler = engineServices.profiler();
+		this.graphicsManager.setPerformanceProfiler(profiler);
+		this.editorOverlayRenderer = new EditorOverlayRenderer(levelEditorController, graphicsManager);
+		this.gameLoop = new GameLoop(engineServices);
+		this.gameLoop.setEditorStateSyncHandler(this::syncEditorState);
+		this.gameLoop.setMasterTitleScreenSupplier(() -> masterTitleScreen);
+		this.gameLoop.setMasterTitleExitHandler(this::exitMasterTitleScreen);
+		this.gameLoop.setLegalDisclaimerScreenSupplier(() -> legalDisclaimerScreen);
+		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
+		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
+		this.gameLoop.setReturnToMasterTitleHandler(this::returnToMasterTitleScreen);
+		this.realWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+		this.realHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		this.projectionWidth = realWidth;
+		this.debugViewEnabled = configService.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
 		this.windowWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH);
 		this.windowHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT);
 		this.targetFps = configService.getInt(SonicConfiguration.FPS);
-
-		// Debug overlay uses Java2D (GlyphAtlas) which is unavailable in native images
-		if (isNativeImage()) {
-			debugViewEnabled = false;
-		}
+		this.editorInputHandler = new EditorInputHandler(
+				levelEditorController, () -> camera, () -> graphicsManager, this::saveCurrentEditorLevel);
 
 		// Set up game mode change listener to update projection width
 		gameLoop.setGameModeChangeListener((oldMode, newMode) -> {
 			// Keep projection at 320 for both modes
 			projectionWidth = realWidth;
 		});
+		gameLoop.setEditorInputHandler(editorInputHandler);
+		gameLoop.setEditorPlaytestToggleHandler(this::toggleEditorPlaytestMode);
+		gameLoop.setEditorFreshStartHandler(this::startGameplayFromBeginning);
 
 		instance = this;
 	}
@@ -176,17 +248,6 @@ public class Engine {
 
 	private void init() {
 		// === PHASE 1: Window, GL context, input (always runs) ===
-
-		// CRITICAL: Initialize AWT BEFORE GLFW on macOS.
-		// Java2D uses Core Graphics which conflicts with GLFW's Cocoa event handling
-		// if AWT initializes after GLFW. Pre-loading AWT fixes the freeze.
-		// Skip in native-image builds where AWT is not available.
-		if (debugViewEnabled && !isNativeImage()) {
-			java.awt.Toolkit.getDefaultToolkit();
-			// Create and dispose a small image to fully initialize Java2D
-			var img = new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_BYTE_GRAY);
-			img.createGraphics().dispose();
-		}
 
 		// Setup an error callback
 		GLFWErrorCallback.createPrint(System.err).set();
@@ -221,6 +282,16 @@ public class Engine {
 				inputHandler.handleKeyEvent(key, action);
 			}
 		});
+		glfwSetCursorPosCallback(window, (windowHandle, x, y) -> {
+			if (inputHandler != null) {
+				inputHandler.handleMouseMove(x, y);
+			}
+		});
+		glfwSetMouseButtonCallback(window, (windowHandle, button, action, mods) -> {
+			if (inputHandler != null) {
+				inputHandler.handleMouseButton(button, action);
+			}
+		});
 
 		// Setup window resize callback
 		glfwSetFramebufferSizeCallback(window, (windowHandle, width, height) -> {
@@ -240,8 +311,10 @@ public class Engine {
 		// Setup window focus callback
 		glfwSetWindowFocusCallback(window, (windowHandle, focused) -> {
 			if (focused) {
+				paused = false;
 				gameLoop.resume();
 			} else {
+				paused = true;
 				gameLoop.pause();
 			}
 		});
@@ -301,7 +374,7 @@ public class Engine {
 		setInputHandler(inputHandler);
 
 		// Set window handle for clipboard operations (GLFW-based, no AWT dependency)
-		GameServices.debugOverlay().setWindowHandle(window);
+		debugOverlayManager.setWindowHandle(window);
 
 		// Initial reshape and snap to integer scale (handles DPI-scaled framebuffer)
 		try (MemoryStack stack = stackPush()) {
@@ -314,10 +387,19 @@ public class Engine {
 		}
 		snapWindowToIntegerScale();
 
-		// === Check master title screen before Phase 2 ===
+		// === Check legal disclaimer / master title screen before Phase 2 ===
+		boolean showLegalDisclaimer = configService.getBoolean(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP);
 		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
-		if (masterTitleOnStartup) {
-			masterTitleScreen = new MasterTitleScreen();
+
+		if (showLegalDisclaimer) {
+			legalDisclaimerScreen = new com.openggf.game.LegalDisclaimerScreen(
+					graphicsManager.getFadeManager());
+			legalDisclaimerScreen.initialize();
+			gameLoop.setGameMode(GameMode.LEGAL_DISCLAIMER);
+			// master title (if enabled) or Phase 2 init is deferred to
+			// exitLegalDisclaimer once the user dismisses the screen.
+		} else if (masterTitleOnStartup) {
+			masterTitleScreen = new MasterTitleScreen(configService);
 			masterTitleScreen.initialize();
 			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
 			// Skip Phase 2 entirely - will be called on game selection
@@ -326,11 +408,8 @@ public class Engine {
 			initializeGame();
 		}
 
-		// Eagerly initialize debug renderer BEFORE the main loop starts.
-		// This is critical on macOS: the GlyphAtlas uses Java2D which conflicts
-		// with GLFW's event loop if initialized lazily during glfwPollEvents().
-		// Skip in native-image builds where AWT/Java2D is not available.
-		if (debugViewEnabled && !isNativeImage()) {
+		// Eagerly initialize debug renderer resources before the main loop starts.
+		if (debugViewEnabled) {
 			getDebugRenderer().updateViewport(viewportWidth, viewportHeight);
 			getDebugRenderer().eagerInit();
 			// Force GL sync and unbind all state
@@ -350,115 +429,34 @@ public class Engine {
 	 * exitMasterTitleScreen() after game selection.
 	 */
 	public void initializeGame() {
-		// Create the gameplay runtime before any manager access.
-		// During this transitional period, createGameplay() wraps existing singletons.
-		runtime = com.openggf.game.RuntimeManager.createGameplay();
-		graphicsManager.rebindRuntimeFadeManager();
-		this.camera = runtime.getCamera();
-		this.spriteManager = runtime.getSpriteManager();
-		this.levelManager = runtime.getLevelManager();
-		gameLoop.setRuntime(runtime);
-
-		// Trigger ROM loading and game module detection early so that
-		// GameModuleRegistry.getCurrent() returns the correct module (S1/S2/S3K)
-		// before the cross-game features and sidekick checks below.
+		GameModule module;
 		try {
-			GameServices.rom().getRom();
+			Rom rom = romManager.getRom();
+			module = romDetectionService
+				.detectAndCreateModule(rom)
+				.orElseGet(() -> {
+					LOGGER.warning("ROM detection failed during game initialization, using default Sonic 2 module");
+					return new Sonic2GameModule();
+				});
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to load ROM during game initialization", e);
 		}
-
-		if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
-			AudioManager.getInstance().setBackend(new LWJGLAudioBackend());
-		}
-
-		// Initialize cross-game feature donation if enabled
-		if (configService.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)) {
-			try {
-				String donorGame = configService.getString(SonicConfiguration.CROSS_GAME_SOURCE);
-				CrossGameFeatureProvider.getInstance().initialize(donorGame);
-			} catch (IOException e) {
-				LOGGER.severe("Cross-game features enabled but initialization failed. "
-					+ "Check that the " + configService.getString(SonicConfiguration.CROSS_GAME_SOURCE)
-					+ " ROM is configured and accessible. Error: " + e.getMessage());
-			}
-		}
-
-		String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-		AbstractPlayableSprite mainSprite;
-		if ("tails".equalsIgnoreCase(mainCode)) {
-			mainSprite = new Tails(mainCode, (short) 100, (short) 624);
-		} else if ("knuckles".equalsIgnoreCase(mainCode)) {
-			mainSprite = new Knuckles(mainCode, (short) 100, (short) 624);
+		GameplayModeContext gameplayMode = SessionManager.openGameplaySession(module);
+		initializeGameplayRuntime(gameplayMode, true);
+		boolean generationRan = maybeGenerateDonatedDataSelectImagesBeforeStartupMode(module);
+		if (generationRan) {
+			// Preview capture loaded full levels into the LevelManager and
+			// GraphicsManager, corrupting the pattern atlas, palette textures,
+			// DPLC banks, sprite art, and other GPU/manager state.
+			// Reset GPU state (pattern atlas + palette textures) and rebuild
+			// the gameplay mode so everything starts from a clean slate.
+			graphicsManager.resetPatternAndPaletteState();
+			gameplayMode = SessionManager.openGameplaySession(module);
+			initializeGameplayRuntime(gameplayMode, false);
 		} else {
-			mainSprite = new Sonic(mainCode, (short) 100, (short) 624);
+			graphicsManager.runPendingRenderThreadTasks();
 		}
-		spriteManager.addSprite(mainSprite);
-
-		// Create CPU-controlled sidekicks if configured (empty string = no sidekick).
-		// Supports comma-separated list for multiple sidekicks chained leader-to-follower.
-		List<String> sidekickNames = parseSidekickConfig(
-			configService.getString(SonicConfiguration.SIDEKICK_CHARACTER_CODE));
-		boolean sidekickAllowed = GameModuleRegistry.getCurrent().supportsSidekick()
-				|| CrossGameFeatureProvider.isActive();
-		if (sidekickAllowed) {
-			AbstractPlayableSprite previousLeader = mainSprite;
-			int cameraLeftBound = 0; // camera not yet positioned, use 0 as minimum
-			for (int i = 0; i < sidekickNames.size(); i++) {
-				String charName = sidekickNames.get(i);
-				String code = charName + "_p" + (i + 2);
-				int spawnX = Math.max(cameraLeftBound, mainSprite.getX() - 0x20 * (i + 1));
-				boolean offScreen = (mainSprite.getX() - 0x20 * (i + 1)) < cameraLeftBound;
-
-				AbstractPlayableSprite sidekick;
-				if ("tails".equalsIgnoreCase(charName)) {
-					sidekick = new Tails(code, (short) spawnX, (short) (mainSprite.getY() + 4));
-				} else if ("knuckles".equalsIgnoreCase(charName)) {
-					sidekick = new Knuckles(code, (short) spawnX, (short) (mainSprite.getY() + 4));
-				} else {
-					sidekick = new Sonic(code, (short) spawnX, (short) (mainSprite.getY() + 4));
-				}
-				sidekick.setCpuControlled(true);
-				SidekickCpuController controller = new SidekickCpuController(sidekick, previousLeader);
-				controller.setSidekickCount(sidekickNames.size());
-				if (offScreen) {
-					controller.setInitialState(SidekickCpuController.State.SPAWNING);
-				}
-				sidekick.setCpuController(controller);
-
-				// Select respawn strategy based on character type
-				if ("knuckles".equalsIgnoreCase(charName)) {
-					controller.setRespawnStrategy(new KnucklesRespawnStrategy(controller));
-				} else if (!"tails".equalsIgnoreCase(charName)) {
-					controller.setRespawnStrategy(new SonicRespawnStrategy(controller));
-				}
-				// Tails is the default — already set in constructor
-
-				spriteManager.addSprite(sidekick, charName);
-				previousLeader = sidekick;
-			}
-		}
-
-		camera.setFocusedSprite(mainSprite);
-		camera.updatePosition(true);
-
-		// Check startup mode: title screen takes priority when enabled
-		boolean titleScreenOnStartup = configService.getBoolean(SonicConfiguration.TITLE_SCREEN_ON_STARTUP);
-		boolean levelSelectOnStartup = configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP);
-		if (titleScreenOnStartup) {
-			// Start in title screen mode
-			gameLoop.initializeTitleScreenMode();
-		} else if (levelSelectOnStartup) {
-			// Start in level select mode - no level loaded initially
-			gameLoop.initializeLevelSelectMode();
-		} else {
-			// Load zone 0 act 0 as the default starting level
-			try {
-				levelManager.loadZoneAndAct(0, 0);
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}
-		}
+		enterConfiguredStartupMode();
 	}
 
 	/**
@@ -466,6 +464,10 @@ public class Engine {
 	 */
 	public MasterTitleScreen getMasterTitleScreen() {
 		return masterTitleScreen;
+	}
+
+	public LegalDisclaimerScreen getLegalDisclaimerScreen() {
+		return legalDisclaimerScreen;
 	}
 
 	/**
@@ -482,24 +484,612 @@ public class Engine {
 			masterTitleScreen = null;
 		}
 
-		// Bootstrap title-screen mode runs before gameplay runtime/module/ROM state is
+		// Bootstrap title-screen mode runs before gameplay mode/module/ROM state is
 		// fully established. Tear down that bootstrap-era state so the selected game
-		// starts from a clean runtime/render/ROM baseline instead of inheriting caches.
+		// starts from a clean gameplay/render/ROM baseline instead of inheriting caches.
 		resetForGameplayFromMasterTitle();
 
 		// Phase 2: load ROM, sprites, audio, level
 		initializeGame();
 	}
 
+	/**
+	 * Called by GameLoop when the disclaimer's fade-to-black completes.
+	 * Cleans up the disclaimer GL resources, then either builds the
+	 * MasterTitleScreen (if MASTER_TITLE_SCREEN_ON_STARTUP is true) or
+	 * runs Phase 2 init directly. In both branches the host owns the
+	 * post-disclaimer reveal fade-from-black: none of
+	 * enterConfiguredStartupMode's three sub-paths (title screen,
+	 * level select, default level load) starts its own intro fade.
+	 */
+	public void exitLegalDisclaimer() {
+		if (legalDisclaimerScreen != null) {
+			legalDisclaimerScreen.cleanup();
+			legalDisclaimerScreen = null;
+		}
+
+		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
+		if (masterTitleOnStartup) {
+			masterTitleScreen = new MasterTitleScreen(configService);
+			masterTitleScreen.initialize();
+			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+		} else {
+			initializeGame();
+		}
+
+		graphicsManager.getFadeManager().startFadeFromBlack(null);
+	}
+
 	private void resetForGameplayFromMasterTitle() {
-		com.openggf.game.RuntimeManager.destroyCurrent();
-		RomManager.getInstance().close();
+		SessionManager.clear();
+		romManager.close();
 		GameModuleRegistry.reset();
-		AudioManager.getInstance().resetState();
-		CrossGameFeatureProvider.getInstance().resetState();
-		GameServices.debugOverlay().resetState();
+		audioManager.resetState();
+		crossGameFeatureProvider.resetState();
+		debugOverlayManager.resetState();
 		RenderContext.reset();
 		AizIntroArtLoader.reset();
+	}
+
+	/**
+	 * Teardown path used by {@link TraceSessionLauncher} after a trace
+	 * playback session completes. Resets gameplay mode state (same
+	 * cleanup as when gameplay first exits the master title) and
+	 * rebuilds the master title screen so the picker can re-enter on
+	 * the next frame.
+	 */
+	void returnToMasterTitleScreen() {
+		resetForGameplayFromMasterTitle();
+		// resetForGameplayFromMasterTitle destroyed the gameplay mode, but GameLoop
+		// still caches the old mode + its FadeManager. Drop the reference
+		// so the next launch's fade-to-black runs on the bootstrap manager
+		// (which the UI pipeline actually ticks) rather than the dead one.
+		gameLoop.setGameplayMode(null);
+		this.gameplayMode = null;
+		if (masterTitleScreen != null) {
+			masterTitleScreen.cleanup();
+		}
+		masterTitleScreen = new MasterTitleScreen(configService);
+		masterTitleScreen.initialize();
+		gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
+		// Counter the teardown's fade-to-black. Without this the screen
+		// stays fully black and the new master title never becomes
+		// visible. Use the graphics-owned fade manager - the gameplay mode
+		// (and its fade manager) was just destroyed above.
+		FadeManager fadeManager = graphicsManager.getFadeManager();
+		if (fadeManager != null) {
+			fadeManager.startFadeFromBlack(null);
+		}
+	}
+
+	public void enterEditorFromCurrentPlayer(EditorPlaytestStash stash, int playerX, int playerY) {
+		if (!isEditorEnabled()) {
+			throw new IllegalStateException("Level editor is disabled by configuration.");
+		}
+		ensureRuntimeBound();
+		prepareMutableEditorLevel();
+		primeEditorSelection(playerX, playerY);
+		levelEditorController.setWorldCursor(new EditorCursorState(playerX, playerY));
+		// Camera bounds are world-derived but stored on the gameplay-mode
+		// camera, which gets reset when the gameplay mode is destroyed.
+		short savedMinX = camera != null ? camera.getMinX() : 0;
+		short savedMaxX = camera != null ? camera.getMaxX() : 0;
+		short savedMinY = camera != null ? camera.getMinY() : 0;
+		short savedMaxY = camera != null ? camera.getMaxY() : 0;
+		Level editorLevel = levelEditorController.currentLevel();
+		SessionManager.enterEditorMode(new EditorCursorState(playerX, playerY), stash);
+		gameplayMode = null;
+		gameLoop.setGameplayMode(null);
+		bindEditorLevelView(editorLevel, savedMinX, savedMaxX, savedMinY, savedMaxY);
+		syncEditorState();
+		gameLoop.setGameMode(GameMode.EDITOR);
+	}
+
+	public void resumePlaytestFromEditor() {
+		editorInputHandler.finishActiveStroke();
+		if (!saveCurrentEditorLevel()) {
+			return;
+		}
+		repairEditorCursorForResume();
+		syncEditorState();
+		GameplayModeContext gameplay = SessionManager.resumeGameplayFromEditor();
+		// Build a fresh gameplay mode over the surviving WorldSession, then
+		// rehydrate the loaded level (preserving any MutableLevel mutations
+		// made in editor) via restoreInheritedLevel.
+		initializeGameplayRuntime(gameplay, false);
+		try {
+			gameplay.getLevelManager().restoreInheritedLevel();
+		} catch (IOException e) {
+			throw new RuntimeException("Failed to restore inherited level on editor exit", e);
+		}
+		// Per the design, editor exit reinitializes gameplay session state as
+		// fresh — score/timer/checkpoint must not carry over from before the
+		// editor detour. (Counters that initializeGameplayRuntime already set —
+		// special-stage progress configuration — stay.)
+		gameplay.initializeFreshGameplayState();
+		applyResumedPlaytestState(gameplay);
+		gameLoop.setGameMode(GameMode.LEVEL);
+	}
+
+	private boolean saveCurrentEditorLevel() {
+		MutableLevel mutableLevel = levelEditorController.currentLevel();
+		if (mutableLevel == null) {
+			return true;
+		}
+		com.openggf.game.session.WorldSession worldSession = SessionManager.getCurrentWorldSession();
+		if (worldSession == null) {
+			return true;
+		}
+		GameModule module = worldSession.getGameModule();
+		try {
+			new EditorSaveManager(Path.of("saves"))
+					.save(module.getGameId(), worldSession.getCurrentZone(), worldSession.getCurrentAct(), mutableLevel);
+			return true;
+		} catch (IOException e) {
+			LOGGER.warning("Failed to save editor edits: " + e.getMessage());
+			return false;
+		}
+	}
+
+	public void startGameplayFromBeginning() {
+		GameplayModeContext gameplay = SessionManager.restartGameplayFromBeginning();
+		initializeGameplayRuntime(gameplay, false);
+		loadDefaultStartingLevel(false);
+		gameLoop.setGameMode(GameMode.LEVEL);
+	}
+
+	private void initializeGameplayRuntime(GameplayModeContext gameplayMode, boolean initializeGlobalGameplayServices) {
+		GameModule module = gameplayMode.getWorldSession().getGameModule();
+		GameModuleRegistry.setCurrent(module);
+		GameplaySessionFactory.attachManagers(gameplayMode, EngineServices.current());
+		bindGameplayMode(gameplayMode);
+		gameplayMode.getGameStateManager().configureSpecialStageProgress(
+				module.getSpecialStageCycleCount(),
+				module.getChaosEmeraldCount());
+
+		if (initializeGlobalGameplayServices) {
+			initializeGlobalGameplayServices();
+		}
+
+		GameplayTeamBootstrap.BootstrappedTeam team = GameplayTeamBootstrap.registerActiveTeam(
+				module, spriteManager, configService);
+		camera.setFocusedSprite(team.mainSprite());
+		camera.updatePosition(true);
+	}
+
+	private void initializeGlobalGameplayServices() {
+		if (configService.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
+			audioManager.setBackend(new LWJGLAudioBackend(configService, profiler));
+		}
+
+		if (configService.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)) {
+			try {
+				String donorGame = configService.getString(SonicConfiguration.CROSS_GAME_SOURCE);
+				crossGameFeatureProvider.initialize(donorGame);
+			} catch (IOException e) {
+				LOGGER.severe("Cross-game features enabled but initialization failed. "
+						+ "Check that the " + configService.getString(SonicConfiguration.CROSS_GAME_SOURCE)
+						+ " ROM is configured and accessible. Error: " + e.getMessage());
+			}
+		}
+	}
+
+	private boolean maybeGenerateDonatedDataSelectImagesBeforeStartupMode(GameModule module) {
+		boolean crossGameEnabled = configService.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED);
+		String donorCode = configService.getString(SonicConfiguration.CROSS_GAME_SOURCE);
+		boolean s3kConfiguredDonor = "s3k".equalsIgnoreCase(donorCode);
+		if (module == null || !crossGameEnabled || !s3kConfiguredDonor || !CrossGameFeatureProvider.isS3kDonorActive()) {
+			return false;
+		}
+		if (module.getGameId() == GameId.S1) {
+			S1DataSelectImageCacheManager manager = module.getGameService(S1DataSelectImageCacheManager.class);
+			if (manager instanceof S1DataSelectImageWarmup warmup) {
+				warmup.ensureGenerationStarted();
+				pumpRenderThreadTasksUntilSettled(manager::isGenerationRunning);
+				return true;
+			}
+			return false;
+		}
+		if (module.getGameId() == GameId.S2) {
+			S2DataSelectImageCacheManager manager = module.getGameService(S2DataSelectImageCacheManager.class);
+			if (manager instanceof S2DataSelectImageWarmup warmup) {
+				warmup.ensureGenerationStarted();
+				pumpRenderThreadTasksUntilSettled(manager::isGenerationRunning);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void pumpRenderThreadTasksUntilSettled(java.util.function.BooleanSupplier generationRunning) {
+		if (generationRunning == null) {
+			return;
+		}
+		while (generationRunning.getAsBoolean()) {
+			graphicsManager.runPendingRenderThreadTasks();
+			Thread.onSpinWait();
+		}
+		graphicsManager.runPendingRenderThreadTasks();
+	}
+
+	private void enterConfiguredStartupMode() {
+		boolean titleScreenOnStartup = configService.getBoolean(SonicConfiguration.TITLE_SCREEN_ON_STARTUP);
+		boolean levelSelectOnStartup = configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP);
+		if (titleScreenOnStartup) {
+			gameLoop.initializeTitleScreenMode();
+		} else if (levelSelectOnStartup) {
+			gameLoop.initializeLevelSelectMode();
+		} else {
+			loadDefaultStartingLevel(true);
+		}
+	}
+
+	private void loadDefaultStartingLevel(boolean requireRom) {
+		if (!requireRom && !romManager.isRomAvailable()) {
+			return;
+		}
+		try {
+			levelManager.loadZoneAndAct(0, 0);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private void launchGameplayFromDataSelect(com.openggf.game.dataselect.DataSelectAction action) {
+		GameModule module = SessionManager.requireCurrentGameModule();
+		SaveManager saveManager = new SaveManager(Path.of("saves"));
+		Map<String, Object> loadedPayload = loadDataSelectPayload(module, action, saveManager);
+		com.openggf.game.save.SaveSessionContext saveContext = createDataSelectSaveContext(module, action, saveManager);
+
+		GameplayModeContext gameplay = SessionManager.openGameplaySession(module, saveContext);
+		initializeGameplayRuntime(gameplay, false);
+		loadLevelFromDataSelect(action.zone(), action.act());
+		restoreGameplayModeFromDataSelectPayload(gameplayMode, loadedPayload);
+		gameLoop.setGameMode(GameMode.LEVEL);
+
+		dataSelectLaunchSaveReason(action.type())
+				.ifPresent(gameLoop::requestSaveForCurrentSession);
+	}
+
+	static Optional<com.openggf.game.save.SaveReason> dataSelectLaunchSaveReason(
+			com.openggf.game.dataselect.DataSelectActionType actionType) {
+		return switch (actionType) {
+			case NEW_SLOT_START -> Optional.of(com.openggf.game.save.SaveReason.NEW_SLOT_START);
+			case LOAD_SLOT -> Optional.of(com.openggf.game.save.SaveReason.EXISTING_SLOT_LOAD);
+			case CLEAR_RESTART -> Optional.of(com.openggf.game.save.SaveReason.CLEAR_RESTART_COMMIT);
+			case NONE, NO_SAVE_START, DELETE_SLOT -> Optional.empty();
+		};
+	}
+
+	private void loadLevelFromDataSelect(int zone, int act) {
+		try {
+			levelManager.loadZoneAndAct(zone, act);
+		} catch (IOException e) {
+			throw new RuntimeException("Failed to load zone " + zone + " act " + act + " from data select", e);
+		}
+	}
+
+	static com.openggf.game.save.SaveSessionContext createDataSelectSaveContext(
+			GameModule module,
+			com.openggf.game.dataselect.DataSelectAction action,
+			SaveManager saveManager) {
+		String gameCode = switch (module.getGameId()) {
+			case S1 -> "s1";
+			case S2 -> "s2";
+			case S3K -> "s3k";
+		};
+		Map<String, Object> payload = loadDataSelectPayload(module, action, saveManager);
+		SelectedTeam team = payload == null ? action.team() : teamFromPayload(payload, action.team());
+		com.openggf.game.save.SaveSessionContext context =
+				action.slot() > 0
+						? com.openggf.game.save.SaveSessionContext.forSlot(
+								gameCode, action.slot(), team, action.zone(), action.act())
+						: com.openggf.game.save.SaveSessionContext.noSave(
+								gameCode, team, action.zone(), action.act());
+		if (payload != null && Boolean.TRUE.equals(payload.get("clear"))) {
+			context.markClear();
+		}
+		return context;
+	}
+
+	private static Map<String, Object> loadDataSelectPayload(
+			GameModule module,
+			com.openggf.game.dataselect.DataSelectAction action,
+			SaveManager saveManager) {
+		if (action.slot() <= 0) {
+			return null;
+		}
+		return switch (action.type()) {
+			case LOAD_SLOT, CLEAR_RESTART -> {
+				try {
+					String gameCode = switch (module.getGameId()) {
+						case S1 -> "s1";
+						case S2 -> "s2";
+						case S3K -> "s3k";
+					};
+					SaveSlotSummary summary = saveManager.readSlotSummary(gameCode, action.slot());
+					yield summary.state() == com.openggf.game.save.SaveSlotState.EMPTY ? null : summary.payload();
+				} catch (IOException e) {
+					throw new RuntimeException("Failed to read save slot " + action.slot() + " for data select launch", e);
+				}
+			}
+			case NONE, NO_SAVE_START, NEW_SLOT_START, DELETE_SLOT -> null;
+		};
+	}
+
+	static void restoreGameplayModeFromDataSelectPayload(GameplayModeContext gameplayMode, Map<String, Object> payload) {
+		if (gameplayMode == null || payload == null) {
+			return;
+		}
+		int lives = readInt(payload, "lives", gameplayMode.getGameStateManager().getLives());
+		int continues = readInt(payload, "continues", gameplayMode.getGameStateManager().getContinues());
+		gameplayMode.getGameStateManager().restoreSaveProgress(
+				lives,
+				continues,
+				readIntList(payload.get("chaosEmeralds")),
+				readIntList(payload.get("superEmeralds")));
+	}
+
+	private static SelectedTeam teamFromPayload(Map<String, Object> payload, SelectedTeam fallback) {
+		Object mainRaw = payload.get("mainCharacter");
+		if (!(mainRaw instanceof String main)) {
+			return fallback;
+		}
+		Object sidekicksRaw = payload.get("sidekicks");
+		List<String> sidekicks = sidekicksRaw instanceof List<?>
+				? ((List<?>) sidekicksRaw).stream().map(String::valueOf).toList()
+				: List.of();
+		return new SelectedTeam(main, sidekicks);
+	}
+
+	private static int readInt(Map<String, Object> payload, String key, int fallback) {
+		Object value = payload.get(key);
+		return value instanceof Number number ? number.intValue() : fallback;
+	}
+
+	private static List<Integer> readIntList(Object raw) {
+		if (!(raw instanceof List<?> list)) {
+			return List.of();
+		}
+		List<Integer> values = new ArrayList<>();
+		for (Object value : list) {
+			if (value instanceof Number number) {
+				values.add(number.intValue());
+			}
+		}
+		return List.copyOf(values);
+	}
+
+	public void toggleEditorPlaytestMode() {
+		if (getCurrentGameMode() == GameMode.EDITOR) {
+			resumePlaytestFromEditor();
+			return;
+		}
+		if (getCurrentGameMode() != GameMode.LEVEL) {
+			return;
+		}
+		if (!isEditorEnabled()) {
+			return;
+		}
+		AbstractPlayableSprite player = resolveMainPlayableSprite();
+		if (player == null) {
+			return;
+		}
+		EditorPlaytestStash stash = capturePlaytestStash(player);
+		enterEditorFromCurrentPlayer(stash, player.getCentreX(), player.getCentreY());
+	}
+
+	private boolean isEditorEnabled() {
+		return configService.getBoolean(SonicConfiguration.EDITOR_ENABLED);
+	}
+
+	private void bindGameplayMode(GameplayModeContext gameplayMode) {
+		this.gameplayMode = gameplayMode;
+		this.camera = gameplayMode.getCamera();
+		this.spriteManager = gameplayMode.getSpriteManager();
+		this.levelManager = gameplayMode.getLevelManager();
+		gameLoop.setGameplayMode(gameplayMode);
+	}
+
+	private void bindEditorLevelView(Level editorLevel,
+	                                 short minX,
+	                                 short maxX,
+	                                 short minY,
+	                                 short maxY) {
+		Camera editorCamera = new Camera();
+		SpriteManager editorSprites = new SpriteManager();
+		com.openggf.level.WaterSystem editorWater = new com.openggf.level.WaterSystem();
+		com.openggf.level.ParallaxManager editorParallax = new com.openggf.level.ParallaxManager();
+		com.openggf.physics.TerrainCollisionManager editorTerrain =
+				new com.openggf.physics.TerrainCollisionManager();
+		com.openggf.physics.CollisionSystem editorCollision =
+				new com.openggf.physics.CollisionSystem(editorTerrain);
+		GameStateManager editorGameState = new GameStateManager();
+		LevelManager editorLevelManager = new LevelManager(
+				editorCamera,
+				editorSprites,
+				editorParallax,
+				editorCollision,
+				editorWater,
+				editorGameState,
+				EngineServices.current(),
+				SessionManager.getCurrentWorldSession());
+		editorLevelManager.restoreEditorLevelView(editorLevel);
+		editorCamera.setMinX(minX);
+		editorCamera.setMaxX(maxX);
+		editorCamera.setMinY(minY);
+		editorCamera.setMaxY(maxY);
+		this.camera = editorCamera;
+		this.spriteManager = editorSprites;
+		this.levelManager = editorLevelManager;
+	}
+
+	private void ensureRuntimeBound() {
+		if (gameplayMode != null) {
+			return;
+		}
+		GameplayModeContext currentGameplayMode = SessionManager.getCurrentGameplayMode();
+		if (currentGameplayMode == null) {
+			throw new IllegalStateException("No active gameplay mode");
+		}
+		bindGameplayMode(currentGameplayMode);
+	}
+
+	private AbstractPlayableSprite resolveMainPlayableSprite() {
+		ensureRuntimeBound();
+		String mainCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
+		var sprite = spriteManager.getSprite(mainCode);
+		if (sprite instanceof AbstractPlayableSprite playable) {
+			return playable;
+		}
+		return null;
+	}
+
+	private EditorPlaytestStash capturePlaytestStash(AbstractPlayableSprite player) {
+		boolean facingRight = player.getDirection() != Direction.LEFT;
+		int shieldState = player.getShieldType() == null ? 0 : player.getShieldType().ordinal() + 1;
+		return new EditorPlaytestStash(
+				player.getCentreX(),
+				player.getCentreY(),
+				player.getXSpeed(),
+				player.getYSpeed(),
+				facingRight,
+				player.getRingCount(),
+				shieldState);
+	}
+
+	private void prepareMutableEditorLevel() {
+		Level currentLevel = levelManager.getCurrentLevel();
+		if (currentLevel == null) {
+			return;
+		}
+
+		MutableLevel mutableLevel = currentLevel instanceof MutableLevel existing
+				? existing
+				: MutableLevel.snapshot(currentLevel);
+		if (mutableLevel != currentLevel) {
+			levelManager.setLevel(mutableLevel);
+		}
+		levelEditorController.attachLevel(mutableLevel);
+	}
+
+	private void primeEditorSelection(int playerX, int playerY) {
+		Level currentLevel = levelManager.getCurrentLevel();
+		if (currentLevel == null) {
+			return;
+		}
+
+		int blockIndex = levelManager.getBlockIdAt(playerX, playerY);
+		if (blockIndex < 0 || blockIndex >= currentLevel.getBlockCount()) {
+			return;
+		}
+
+		levelEditorController.selectBlock(blockIndex);
+		levelEditorController.selectChunk(0);
+	}
+
+	private void synchronizeEditorOverlayDepth() {
+		editorOverlayRenderer.setHierarchyDepth(levelEditorController.depth());
+	}
+
+	public LevelEditorController getLevelEditorController() {
+		return levelEditorController;
+	}
+
+	public void syncEditorState() {
+		EditorModeContext editorMode = SessionManager.getCurrentEditorMode();
+		if (editorMode == null) {
+			return;
+		}
+
+		EditorCursorState cursor = levelEditorController.worldCursor();
+		editorMode.setCursor(cursor);
+		synchronizeEditorOverlayDepth();
+
+		if (levelEditorController.depth() == EditorHierarchyDepth.WORLD && camera != null) {
+			camera.setX(clampCameraAxisWithWrap(cursor.x() - 152, camera.getMinX(), camera.getMaxX()));
+			camera.setY(clampCameraAxisWithWrap(cursor.y() - 96, camera.getMinY(), camera.getMaxY()));
+		}
+	}
+
+	private void repairEditorCursorForResume() {
+		EditorModeContext editorMode = SessionManager.getCurrentEditorMode();
+		if (editorMode == null) {
+			return;
+		}
+
+		EditorCursorState repaired = clampCursorToCurrentLevel(levelEditorController.worldCursor());
+		levelEditorController.setWorldCursor(repaired);
+		editorMode.setCursor(levelEditorController.worldCursor());
+	}
+
+	private EditorCursorState clampCursorToCurrentLevel(EditorCursorState cursor) {
+		if (cursor == null || levelManager == null || levelManager.getCurrentLevel() == null) {
+			return cursor;
+		}
+
+		Level level = levelManager.getCurrentLevel();
+		return new EditorCursorState(
+				clampToBounds(cursor.x(), level.getMinX(), level.getMaxX()),
+				clampToBounds(cursor.y(), level.getMinY(), level.getMaxY()));
+	}
+
+	private int clampToBounds(int value, int min, int max) {
+		if (max < min) {
+			return value < min ? min : value;
+		}
+		return Math.max(min, Math.min(max, value));
+	}
+
+	private short clampCameraAxisWithWrap(int value, short min, short max) {
+		if (max < min) {
+			return (short) (value < min ? min : value);
+		}
+		if (value < min) {
+			return min;
+		}
+		if (value > max) {
+			return max;
+		}
+		return (short) value;
+	}
+
+	private void applyResumedPlaytestState(GameplayModeContext gameplay) {
+		AbstractPlayableSprite player = resolveMainPlayableSprite();
+		if (player == null) {
+			return;
+		}
+
+		player.setCentreX((short) gameplay.getSpawnX());
+		player.setCentreY((short) gameplay.getSpawnY());
+
+		if (gameplay.getResumeStash().isPresent()) {
+			EditorPlaytestStash stash = gameplay.getResumeStash().orElseThrow();
+			player.setXSpeed((short) stash.xVelocity());
+			player.setYSpeed((short) stash.yVelocity());
+			player.setDirection(stash.facingRight() ? Direction.RIGHT : Direction.LEFT);
+			player.setRingCount(stash.rings());
+			player.clearPowerUps();
+			ShieldType shieldType = decodeShieldState(stash.shieldState());
+			if (shieldType != null) {
+				player.giveShield(shieldType);
+			}
+		}
+
+		camera.setFocusedSprite(player);
+		camera.updatePosition(true);
+	}
+
+	private ShieldType decodeShieldState(int shieldState) {
+		if (shieldState <= 0) {
+			return null;
+		}
+		ShieldType[] values = ShieldType.values();
+		int index = shieldState - 1;
+		if (index < 0 || index >= values.length) {
+			return null;
+		}
+		return values[index];
 	}
 
 	private void reshape(int width, int height) {
@@ -605,6 +1195,20 @@ public class Engine {
 			// to properly handle isKeyPressed() edge detection. Do NOT call update()
 			// here or isKeyPressed() will always return false.
 
+			if (paused) {
+				// When unfocused/minimized, sleep longer — no need for frame-precise
+				// timing. Just poll events ~30 times/sec to stay responsive to focus.
+				try {
+					Thread.sleep(33);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+				// Reset accumulator so we don't process a burst of frames on resume
+				accumulator = 0;
+				previousTime = System.nanoTime();
+				continue;
+			}
+
 			// Hybrid sleep: sleep most of the wait time, then spin-wait for precision
 			long remainingTime = frameTimeNanos - accumulator;
 			if (remainingTime > 2_000_000) {
@@ -629,6 +1233,9 @@ public class Engine {
 	 * Called each frame to render the game.
 	 */
 	private void display() {
+		profiler.setEnabled(debugViewEnabled
+				&& !isNativeImage()
+				&& debugOverlayManager.isEnabled(DebugOverlayToggle.PERFORMANCE));
 		profiler.beginFrame();
 
 		// Clear the entire window to black first (for letterbox/pillarbox bars)
@@ -666,6 +1273,14 @@ public class Engine {
 			if (levelSelect != null) {
 				levelSelect.setClearColor();
 			}
+		} else if (getCurrentGameMode() == GameMode.DATA_SELECT) {
+			// Data select backdrop
+			DataSelectProvider dataSelect = gameLoop.getDataSelectProvider();
+			if (dataSelect != null) {
+				dataSelect.setClearColor();
+			} else {
+				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			}
 		} else if (getCurrentGameMode() == GameMode.CREDITS_TEXT
 				|| getCurrentGameMode() == GameMode.ENDING_CUTSCENE) {
 			// Ending: delegate to EndingProvider for phase-dependent background color
@@ -680,6 +1295,10 @@ public class Engine {
 			// TRY AGAIN / END screen: black background
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		} else if (getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN) {
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		} else if (getCurrentGameMode() == GameMode.LEGAL_DISCLAIMER) {
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		} else if (getCurrentGameMode() == GameMode.EDITOR) {
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		} else if (getCurrentGameMode() == GameMode.TITLE_CARD) {
 			levelManager.setClearColor();
@@ -706,6 +1325,7 @@ public class Engine {
 		profiler.endSection("update");
 
 		profiler.beginSection("render");
+		graphicsManager.runPendingRenderThreadTasks();
 		draw();
 		graphicsManager.flush();
 		profiler.endSection("render");
@@ -714,17 +1334,33 @@ public class Engine {
 		if (uiPipeline != null) {
 			uiPipeline.renderFadePass();
 		}
+
+		// Trace Test Mode HUD: drawn AFTER the fade pass so counters and
+		// TRACE COMPLETE remain readable during fade-to-black teardown.
+		TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+		if (traceSession != null) {
+			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+			traceSession.render(traceHudTextRenderer);
+		} else if (gameLoop != null) {
+			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+			gameLoop.renderLiveRewindHud(traceHudTextRenderer);
+		}
 		if (getCurrentGameMode() == GameMode.CREDITS_DEMO) {
 			EndingProvider provider = gameLoop.getEndingProvider();
 			if (provider != null && provider.shouldRenderDemoSpritesOverFade()) {
+				// Reset shader/texture state before the post-fade sprite pass: the fade
+				// shader binds a program and modifies blend/depth state, and even though
+				// FadeManager restores blend on its own, we must not rely on the next pass
+				// inheriting whatever shader/texture bindings the fade pass left active.
+				graphicsManager.resetForFixedFunction();
 				levelManager.renderSpriteObjectPass(spriteManager, true);
 				graphicsManager.flush();
 			}
 		}
 
-		boolean playbackHud = PlaybackDebugManager.getInstance().isHudVisible();
+		boolean playbackHud = playbackDebugManager.isHudVisible();
 		boolean needsOverlay = (getCurrentGameMode() == GameMode.SPECIAL_STAGE) ||
-				((debugViewEnabled || playbackHud) && getCurrentGameMode() != GameMode.SPECIAL_STAGE && !isNativeImage());
+				((debugViewEnabled || playbackHud) && getCurrentGameMode() != GameMode.SPECIAL_STAGE);
 
 		if (needsOverlay) {
 			prepareOverlayState();
@@ -738,7 +1374,7 @@ public class Engine {
 			} else {
 				ssProvider.renderLagCompensationOverlay(windowWidth, windowHeight);
 			}
-		} else if ((debugViewEnabled || playbackHud) && !isNativeImage()) {
+		} else if (debugViewEnabled || playbackHud) {
 			getDebugRenderer().updateViewport(viewportWidth, viewportHeight);
 			getDebugRenderer().renderDebugInfo();
 
@@ -787,13 +1423,47 @@ public class Engine {
 		return gameLoop;
 	}
 
+	/**
+	 * Static accessor used by {@link com.openggf.TraceSessionLauncher} (and
+	 * other {@code com.openggf.*} classes) to reach the singleton game
+	 * loop without going through a tier-1 service.
+	 */
+	public static GameLoop currentGameLoop() {
+		return instance != null ? instance.gameLoop : null;
+	}
+
 	public void draw() {
+		if (getCurrentGameMode() == GameMode.LEGAL_DISCLAIMER) {
+			if (camera != null) {
+				camera.setX((short) 0);
+				camera.setY((short) 0);
+			}
+			if (legalDisclaimerScreen != null) {
+				legalDisclaimerScreen.setProjectionMatrix(getProjectionMatrixBuffer());
+				legalDisclaimerScreen.draw();
+			}
+			return;
+		}
 		if (getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN) {
-			camera.setX((short) 0);
-			camera.setY((short) 0);
+			if (camera != null) {
+				camera.setX((short) 0);
+				camera.setY((short) 0);
+			}
 			if (masterTitleScreen != null) {
+				masterTitleScreen.setProjectionMatrix(getProjectionMatrixBuffer());
 				masterTitleScreen.draw();
 			}
+			return;
+		}
+		if (getCurrentGameMode() == GameMode.EDITOR) {
+			flushEditorDirtyRegionsForRendering();
+			levelManager.drawWithSpritePriority(spriteManager);
+			editorOverlayRenderer.renderWorldSpaceOverlay();
+			graphicsManager.flush();
+			graphicsManager.resetForFixedFunction();
+			prepareOverlayState();
+			editorOverlayRenderer.renderScreenSpaceOverlay();
+			graphicsManager.flushScreenSpace();
 			return;
 		}
 		if (getCurrentGameMode() == GameMode.SPECIAL_STAGE) {
@@ -847,6 +1517,14 @@ public class Engine {
 			LevelSelectProvider levelSelect = gameLoop.getLevelSelectProvider();
 			if (levelSelect != null) {
 				levelSelect.draw();
+			}
+		} else if (getCurrentGameMode() == GameMode.DATA_SELECT) {
+			// Render data select screen
+			camera.setX((short) 0);
+			camera.setY((short) 0);
+			DataSelectProvider dataSelect = gameLoop.getDataSelectProvider();
+			if (dataSelect != null) {
+				dataSelect.draw();
 			}
 		} else if (getCurrentGameMode() == GameMode.ENDING_CUTSCENE) {
 			// Ending cutscene: render DEZ background during sky phases, then cutscene sprites
@@ -927,6 +1605,10 @@ public class Engine {
 		}
 	}
 
+	void flushEditorDirtyRegionsForRendering() {
+		levelManager.processDirtyRegions();
+	}
+
 	private void prepareOverlayState() {
 		if (overlayStateReady) {
 			return;
@@ -952,16 +1634,17 @@ public class Engine {
 	}
 
 	private void cleanup() {
-		com.openggf.game.RuntimeManager.destroyCurrent();
-		AudioManager.getInstance().clearDonorAudio();
-		CrossGameFeatureProvider.getInstance().resetState();
+		SessionManager.clear();
+		audioManager.clearDonorAudio();
+		crossGameFeatureProvider.resetState();
 		RenderContext.reset();
 		if (masterTitleScreen != null) {
 			masterTitleScreen.cleanup();
 			masterTitleScreen = null;
 		}
+		traceHudTextRenderer.cleanup();
 		graphicsManager.cleanup();
-		AudioManager.getInstance().destroy();
+		audioManager.destroy();
 
 		// Free the window callbacks and destroy the window
 		glfwFreeCallbacks(window);
@@ -993,7 +1676,9 @@ public class Engine {
 				System.setProperty("org.lwjgl.librarypath", libPath);
 			}
 		}
-		new Engine().run();
+		EngineContext services = EngineContext.fromLegacySingletonsForBootstrap();
+		services.configuration().ensureConfigFileExists();
+		new Engine(services).run();
 	}
 
 	private static String findNativeLibsDir() {
@@ -1125,12 +1810,6 @@ public class Engine {
 	 * character names. Returns an empty list for null, empty, or blank input.
 	 */
 	public static List<String> parseSidekickConfig(String value) {
-		if (value == null || value.isBlank()) {
-			return List.of();
-		}
-		return Arrays.stream(value.split(","))
-			.map(String::trim)
-			.filter(s -> !s.isEmpty())
-			.toList();
+		return ActiveGameplayTeamResolver.parseConfiguredSidekicks(value);
 	}
 }

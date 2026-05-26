@@ -3,6 +3,9 @@ package com.openggf.game;
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.game.render.AdvancedRenderModeController;
+import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.physics.SensorResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
@@ -103,6 +106,23 @@ public interface ZoneFeatureProvider {
     }
 
     /**
+     * Updates zone features that must observe a playable after its movement
+     * slot, before the next playable's CPU/controller slot runs.
+     *
+     * <p>This is narrower than {@link #updatePrePhysics(AbstractPlayableSprite, int, int)}
+     * and is intended for ROM pseudo-objects that consume the just-moved
+     * player state but also publish velocity/status changes that later player
+     * slots can read in the same object pass.
+     *
+     * @param player the playable sprite whose movement slot just finished
+     * @param cameraX the camera X position
+     * @param zoneIndex the current zone
+     */
+    default void updateAfterPlayablePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+        // Default implementation does nothing
+    }
+
+    /**
      * Queues render commands for zone features that should appear after foreground tiles
      * but before sprites (e.g., slot machine display that covers corrupted tiles).
      * Called after high-priority foreground tilemap pass but before sprite passes.
@@ -125,32 +145,27 @@ public interface ZoneFeatureProvider {
     }
 
     /**
-     * Whether the foreground renderer should apply per-line heat haze deformation.
-     * This is used for zone-specific post-processing effects such as AIZ fire haze.
+     * Registers staged special render effects for the current zone/act.
+     * Default implementation does nothing.
      *
+     * @param registry registry to register effects with
      * @param zoneIndex current feature zone id
      * @param actIndex current feature act id
-     * @param cameraX current camera X position
-     * @return true when per-line foreground haze should be enabled
      */
-    default boolean shouldEnableForegroundHeatHaze(int zoneIndex, int actIndex, int cameraX) {
-        return false;
+    default void registerSpecialRenderEffects(SpecialRenderEffectRegistry registry, int zoneIndex, int actIndex) {
+        // Default implementation does nothing
     }
 
     /**
-     * Whether the foreground tilemap renderer should sample the per-line foreground
-     * h-scroll buffer instead of using a flat camera X origin.
+     * Registers advanced render-mode contributors for the current zone/act.
+     * Default implementation does nothing.
      *
-     * <p>This is used by stages whose Plane A positioning is not camera-locked,
-     * such as the S3K Slots bonus stage.
-     *
+     * @param controller controller to register modes with
      * @param zoneIndex current feature zone id
      * @param actIndex current feature act id
-     * @param cameraX current camera X position
-     * @return true when per-line foreground scroll should be enabled
      */
-    default boolean shouldEnablePerLineForegroundScroll(int zoneIndex, int actIndex, int cameraX) {
-        return false;
+    default void registerAdvancedRenderModes(AdvancedRenderModeController controller, int zoneIndex, int actIndex) {
+        // Default implementation does nothing
     }
 
     /**
@@ -171,6 +186,17 @@ public interface ZoneFeatureProvider {
      * @return true if BG should wrap at VDP plane width
      */
     default boolean bgWrapsHorizontally() {
+        return false;
+    }
+
+    /**
+     * Whether this zone should select a full-width background tilemap window
+     * while still using a per-line scrolled background path.
+     */
+    default boolean useFullWidthBackgroundTilemapWindow(int zoneIndex,
+                                                        int actIndex,
+                                                        int bgCameraX,
+                                                        int cachedBgContiguousWidthPx) {
         return false;
     }
 
@@ -214,6 +240,18 @@ public interface ZoneFeatureProvider {
     }
 
     /**
+     * Whether an airborne terrain probe that is exactly touching the surface
+     * (distance 0) should count as a landing for the current zone feature state.
+     *
+     * <p>Default false to preserve the engine's normal "must penetrate floor"
+     * air-landing rule.
+     */
+    default boolean shouldTreatZeroDistanceAirLandingAsGround(AbstractPlayableSprite player,
+                                                              SensorResult support) {
+        return false;
+    }
+
+    /**
      * Whether the HUD should be hidden for the given zone/act.
      * Used during intro cinematics (e.g. AIZ intro in S3K) where the HUD
      * should not be visible until gameplay begins.
@@ -224,6 +262,23 @@ public interface ZoneFeatureProvider {
      */
     default boolean shouldSuppressHud(int zoneIndex, int actIndex) {
         return false;
+    }
+
+    /**
+     * Whether the shared global oscillation table should advance this frame for
+     * the current zone/act.
+     *
+     * <p>Only override this when the ROM loop for a specific sequence genuinely
+     * skips the oscillation update. Cinematics such as S3K AIZ1 still advance
+     * the table every level frame even while {@code Level_started_flag} is
+     * cleared.
+     *
+     * @param zoneIndex the current feature zone
+     * @param actIndex the current feature act
+     * @return true if the oscillation table should advance
+     */
+    default boolean shouldAdvanceGlobalOscillation(int zoneIndex, int actIndex) {
+        return true;
     }
 
     /**

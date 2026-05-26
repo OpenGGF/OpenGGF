@@ -1,6 +1,7 @@
 package com.openggf.debug;
 
 import com.openggf.control.InputHandler;
+import com.openggf.game.GameServices;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -20,9 +21,11 @@ public class DebugOverlayManager {
 
     /** Reusable list for shortcut lines to avoid per-frame allocations */
     private final List<String> shortcutLines = new ArrayList<>(16);
+    private boolean shortcutLinesDirty = true;
 
     /** Per-frame text entries from object debug rendering, set by LevelManager, read by DebugRenderer */
     private List<DebugRenderContext.DebugTextEntry> pendingObjectDebugText = List.of();
+    private final DebugObjectArtViewer objectArtViewer = new DebugObjectArtViewer();
 
     private DebugOverlayManager() {
         for (DebugOverlayToggle toggle : DebugOverlayToggle.values()) {
@@ -57,7 +60,7 @@ public class DebugOverlayManager {
         StringBuilder sb = new StringBuilder();
 
         // Performance profiler stats
-        ProfileSnapshot snapshot = PerformanceProfiler.getInstance().getSnapshot();
+        ProfileSnapshot snapshot = GameServices.profiler().getSnapshot();
         if (snapshot.hasData()) {
             sb.append("=== Performance Stats ===\n");
             sb.append(String.format("Frame Time: %.2fms (%.1f%% of 16.67ms budget)\n",
@@ -74,7 +77,7 @@ public class DebugOverlayManager {
         }
 
         // Memory stats
-        MemoryStats.Snapshot memSnapshot = MemoryStats.getInstance().snapshot();
+        MemoryStats.Snapshot memSnapshot = GameServices.profiler().memoryStats().snapshot();
         sb.append("=== Memory Stats ===\n");
         sb.append(String.format("Heap: %.0fMB / %.0fMB (%d%%)\n",
                 memSnapshot.heapUsedMB(), memSnapshot.heapMaxMB(), memSnapshot.heapPercentage()));
@@ -112,7 +115,10 @@ public class DebugOverlayManager {
     }
 
     public void setEnabled(DebugOverlayToggle toggle, boolean enabled) {
-        states.put(toggle, enabled);
+        Boolean previous = states.put(toggle, enabled);
+        if (previous == null || previous != enabled) {
+            shortcutLinesDirty = true;
+        }
     }
 
     public void setObjectDebugTextEntries(List<DebugRenderContext.DebugTextEntry> entries) {
@@ -121,6 +127,10 @@ public class DebugOverlayManager {
 
     public List<DebugRenderContext.DebugTextEntry> getObjectDebugTextEntries() {
         return pendingObjectDebugText;
+    }
+
+    public DebugObjectArtViewer getObjectArtViewer() {
+        return objectArtViewer;
     }
 
     public void clearObjectDebugTextEntries() {
@@ -133,13 +143,17 @@ public class DebugOverlayManager {
             states.put(toggle, toggle.defaultEnabled());
         }
         pendingObjectDebugText = List.of();
+        shortcutLinesDirty = true;
     }
 
     public List<String> buildShortcutLines() {
-        shortcutLines.clear();
-        for (DebugOverlayToggle toggle : DebugOverlayToggle.values()) {
-            String state = isEnabled(toggle) ? "On" : "Off";
-            shortcutLines.add(toggle.shortcutLabel() + " " + toggle.label() + ": " + state);
+        if (shortcutLinesDirty) {
+            shortcutLines.clear();
+            for (DebugOverlayToggle toggle : DebugOverlayToggle.values()) {
+                String state = isEnabled(toggle) ? "On" : "Off";
+                shortcutLines.add(toggle.shortcutLabel() + " " + toggle.label() + ": " + state);
+            }
+            shortcutLinesDirty = false;
         }
         return shortcutLines;
     }

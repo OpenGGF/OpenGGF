@@ -1,7 +1,9 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kPhysicsProvider;
+import com.openggf.game.session.SessionManager;
 import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.TestableTailsSprite;
 import org.junit.jupiter.api.AfterEach;
@@ -23,10 +25,14 @@ class TestS3kCharacterSpeeds {
     @BeforeEach
     void setUp() {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
     }
 
     @AfterEach
     void tearDown() {
+        SessionManager.clear();
+        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
@@ -138,14 +144,41 @@ class TestS3kCharacterSpeeds {
         assertEquals(0x80, sprite.getRunDecel(), "After shoes expire: canonical decel");
     }
 
+    @Test
+    void speedShoesTimerExpiresBeforeNextMovementFrameAfterRomWindow() {
+        TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
+        sprite.giveSpeedShoes();
+
+        for (int i = 0; i < 0x4B0 - 1; i++) {
+            GameServices.timers().update();
+        }
+
+        assertTrue(sprite.hasSpeedShoes(),
+                "S3K speedshoes_time remains active until the display-time decrement reaches zero "
+                        + "(docs/skdisasm/sonic3k.asm:22067-22078,40815-40825).");
+
+        GameServices.timers().update();
+
+        assertFalse(sprite.hasSpeedShoes(),
+                "S3K Sonic_Display clears speed shoes and restores movement constants before the "
+                        + "next movement frame uses them (docs/skdisasm/sonic3k.asm:21540-21561,22067-22081).");
+        assertEquals(0x0C, sprite.getRunAccel(), "After shoes expire: canonical accel");
+        assertEquals(0x600, sprite.getMax(), "After shoes expire: canonical max");
+    }
+
     // --- S2 Comparison ---
 
     @Test
     void s2_sonic_matchesS3kSonic() {
         GameModuleRegistry.setCurrent(new com.openggf.game.sonic2.Sonic2GameModule());
+        SessionManager.clear();
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
         assertEquals(0x0C, sprite.getRunAccel(), "S2 Sonic: same accel as S3K");
         assertEquals(0x80, sprite.getRunDecel(), "S2 Sonic: same decel as S3K");
         assertEquals(0x600, sprite.getMax(), "S2 Sonic: same max as S3K");
     }
 }
+
+

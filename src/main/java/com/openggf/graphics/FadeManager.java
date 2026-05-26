@@ -1,6 +1,7 @@
 package com.openggf.graphics;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.FadeManagerSnapshot;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL14.*;
@@ -23,7 +24,7 @@ import static org.lwjgl.opengl.GL20.*;
  * Standard fade-to-black where all RGB channels decrement together.
  * Uses alpha blending with a black overlay quad.
  */
-public class FadeManager {
+public class FadeManager implements RewindSnapshottable<FadeManagerSnapshot> {
 
     /**
      * Fade state enumeration.
@@ -55,8 +56,6 @@ public class FadeManager {
         BLACK
     }
 
-    private static FadeManager bootstrapInstance;
-
     // Current fade state
     private FadeState state = FadeState.NONE;
     private int frameCount = 0;
@@ -86,6 +85,8 @@ public class FadeManager {
 
     // Callback to execute when fade completes
     private Runnable onFadeComplete;
+    private boolean holdRestoredFrameForNextUpdate;
+    private int reversePresentationDepth;
 
     // Hold duration in frames (for optional pause at full white)
     private int holdDuration = 0;
@@ -107,20 +108,6 @@ public class FadeManager {
     private int fadeColorLocation = -1;
 
     public FadeManager() {
-    }
-
-    /**
-     * Get the singleton instance.
-     */
-    public static synchronized FadeManager getInstance() {
-        var runtime = RuntimeManager.getCurrent();
-        if (runtime != null) {
-            return runtime.getFadeManager();
-        }
-        if (bootstrapInstance == null) {
-            bootstrapInstance = new FadeManager();
-        }
-        return bootstrapInstance;
     }
 
     /**
@@ -159,6 +146,7 @@ public class FadeManager {
      * @param holdFrames   Number of frames to hold at full white before completing
      */
     public void startFadeToWhite(Runnable onComplete, int holdFrames) {
+        this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_TO_WHITE;
         this.fadeType = FadeType.WHITE;
         this.frameCount = 0;
@@ -176,6 +164,7 @@ public class FadeManager {
      * @param onComplete Callback to execute when fade completes (can be null)
      */
     public void startFadeFromWhite(Runnable onComplete) {
+        this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_FROM_WHITE;
         this.fadeType = FadeType.WHITE;
         this.frameCount = 0;
@@ -225,6 +214,7 @@ public class FadeManager {
      *                       Must be divisible by 3 for even channel distribution.
      */
     public void startFadeToBlack(Runnable onComplete, int holdFrames, int totalDuration) {
+        this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_TO_BLACK;
         this.fadeType = FadeType.BLACK;
         this.frameCount = 0;
@@ -253,6 +243,7 @@ public class FadeManager {
      * @param onComplete Callback to execute when fade completes (can be null)
      */
     public void startFadeFromBlack(Runnable onComplete) {
+        this.holdRestoredFrameForNextUpdate = false;
         this.state = FadeState.FADING_FROM_BLACK;
         this.fadeType = FadeType.BLACK;
         this.frameCount = 0;
@@ -269,6 +260,13 @@ public class FadeManager {
      * Update the fade state. Call once per frame.
      */
     public void update() {
+        if (reversePresentationDepth > 0) {
+            return;
+        }
+        if (holdRestoredFrameForNextUpdate) {
+            holdRestoredFrameForNextUpdate = false;
+            return;
+        }
         switch (state) {
             case FADING_TO_WHITE:
                 updateFadeToWhite();
@@ -292,6 +290,28 @@ public class FadeManager {
             default:
                 break;
         }
+    }
+
+    /**
+     * Suppresses display-driven fade advancement while rewind restores historical
+     * fade snapshots for rendering.
+     */
+    public void beginReversePresentation() {
+        reversePresentationDepth++;
+        holdRestoredFrameForNextUpdate = false;
+    }
+
+    public void endReversePresentation() {
+        if (reversePresentationDepth > 0) {
+            reversePresentationDepth--;
+        }
+        if (reversePresentationDepth == 0) {
+            holdRestoredFrameForNextUpdate = false;
+        }
+    }
+
+    public boolean isReversePresentationActive() {
+        return reversePresentationDepth > 0;
     }
 
     private void updateFadeToWhite() {
@@ -646,6 +666,8 @@ public class FadeManager {
      * Cancel any active fade and reset to normal.
      */
     public void cancel() {
+        holdRestoredFrameForNextUpdate = false;
+        reversePresentationDepth = 0;
         state = FadeState.NONE;
         fadeType = FadeType.WHITE;
         frameCount = 0;
@@ -674,5 +696,37 @@ public class FadeManager {
      */
     public float getFadeAlpha() {
         return fadeAlpha;
+    }
+
+    @Override
+    public String key() {
+        return "fademanager";
+    }
+
+    @Override
+    public FadeManagerSnapshot capture() {
+        return new FadeManagerSnapshot(
+                state, frameCount, fadeR, fadeG, fadeB, fadeAlpha,
+                fadeType, holdDuration, holdFrameCount,
+                effectiveFPC, effectiveIncrement, effectiveDuration);
+    }
+
+    @Override
+    public void restore(FadeManagerSnapshot snapshot) {
+        this.state = snapshot.state();
+        this.frameCount = snapshot.frameCount();
+        this.fadeR = snapshot.fadeR();
+        this.fadeG = snapshot.fadeG();
+        this.fadeB = snapshot.fadeB();
+        this.fadeAlpha = snapshot.fadeAlpha();
+        this.fadeType = snapshot.fadeType();
+        this.holdDuration = snapshot.holdDuration();
+        this.holdFrameCount = snapshot.holdFrameCount();
+        this.effectiveFPC = snapshot.effectiveFPC();
+        this.effectiveIncrement = snapshot.effectiveIncrement();
+        this.effectiveDuration = snapshot.effectiveDuration();
+        // Note: onFadeComplete callback is NOT restored (transient)
+        this.onFadeComplete = null;
+        this.holdRestoredFrameForNextUpdate = true;
     }
 }

@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.SwingMotion;
@@ -38,6 +39,18 @@ final class CaterkillerJrBodyInstance extends AbstractObjectInstance
     private static final int FAST_MAX_VEL = 0x100;
     private static final int SWING_ACCEL = 8;
     private static final int SLOW_PEAK_COUNT = 3;
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = TouchResponseProfile.fromCanonical(
+            new com.openggf.game.profiles.touchresponse.TouchResponseProfile(
+                    com.openggf.game.profiles.touchresponse.TouchCategoryDecodeMode.NORMAL,
+                    false,
+                    false,
+                    false,
+                    com.openggf.game.profiles.touchresponse.TouchShieldDeflectCapability.NONE,
+                    0,
+                    com.openggf.game.profiles.touchresponse.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                    com.openggf.game.profiles.touchresponse.TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                    com.openggf.game.profiles.touchresponse.TouchOverlapStopPolicy
+                            .STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS));
 
     // Projectile animation from byte_878A8: (delay, frame) pairs, $F4 loop
     private static final int[] PROJ_ANIM_DELAYS = {3, 3, 4, 5};
@@ -236,6 +249,16 @@ final class CaterkillerJrBodyInstance extends AbstractObjectInstance
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override

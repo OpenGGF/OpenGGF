@@ -4,6 +4,8 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.dataselect.DataSelectHostProfile;
+import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
@@ -213,6 +215,36 @@ public interface GameModule {
     }
 
     /**
+     * Returns the data select provider for this game.
+     * Provides the save file selection screen (S3K-style).
+     *
+     * @return the data select provider
+     */
+    default DataSelectProvider getDataSelectProvider() {
+        return getDataSelectPresentationProvider();
+    }
+
+    /** Returns the presentation provider used to render and update data select. */
+    default DataSelectPresentationProvider getDataSelectPresentationProvider() {
+        return new DataSelectPresentationProvider(ignored -> NoOpDataSelectProvider.INSTANCE, null);
+    }
+
+    /** Returns the host-owned data select profile for this game, if supported. */
+    default DataSelectHostProfile getDataSelectHostProfile() {
+        return null;
+    }
+
+    /**
+     * Returns the save snapshot provider for this game.
+     * Captures game-specific state into a map for save file serialization.
+     *
+     * @return the save snapshot provider
+     */
+    default com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider() {
+        return (reason, ctx) -> java.util.Map.of();
+    }
+
+    /**
      * Returns the level select provider for this game.
      * Provides the game-specific level select screen with ROM-accurate
      * menu layout, text, and navigation.
@@ -253,6 +285,17 @@ public interface GameModule {
      */
     default void onLevelLoad() {
         // Default no-op
+    }
+
+    /**
+     * Supplies the sidekick-carry trigger for this game module. Defaults to
+     * {@code null} (no carry mechanic). Only Sonic 3 &amp; Knuckles overrides
+     * this to port the Tails-carry-Sonic CNZ1 intro.
+     *
+     * @see com.openggf.sprites.playable.SidekickCarryTrigger
+     */
+    default com.openggf.sprites.playable.SidekickCarryTrigger getSidekickCarryTrigger() {
+        return null;
     }
 
     /**
@@ -353,6 +396,23 @@ public interface GameModule {
      */
     default boolean hasTrailInvincibilityStars() {
         return false;
+    }
+
+    /**
+     * Returns a factory that constructs the invincibility-stars power-up object
+     * for the player. Games may override to return a game-specific subclass
+     * (e.g. S3K returns {@code Sonic3kInvincibilityStarsObjectInstance}).
+     *
+     * <p>The default returns the game-agnostic
+     * {@link com.openggf.level.objects.InvincibilityStarsObjectInstance} used
+     * by S1/S2.
+     *
+     * @return a factory creating an {@link com.openggf.level.objects.AbstractObjectInstance}
+     *         for the given player
+     */
+    default java.util.function.Function<PlayableEntity, com.openggf.level.objects.AbstractObjectInstance>
+            getInvincibilityStarsFactory() {
+        return com.openggf.level.objects.InvincibilityStarsObjectInstance::new;
     }
 
     /**

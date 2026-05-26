@@ -38,8 +38,6 @@ import java.util.logging.Logger;
 public class Sonic3kTitleCardManager implements TitleCardProvider {
     private static final Logger LOG = Logger.getLogger(Sonic3kTitleCardManager.class.getName());
 
-    private static Sonic3kTitleCardManager instance;
-
     // Animation speeds (pixels per frame, matching disasm $10 / $20)
     private static final int SLIDE_SPEED_IN = 16;
     private static final int SLIDE_SPEED_OUT = 32;
@@ -120,14 +118,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private int lastLoadedZone = -1;
     private int lastLoadedAct = -1;
 
-    private Sonic3kTitleCardManager() {}
-
-    public static synchronized Sonic3kTitleCardManager getInstance() {
-        if (instance == null) {
-            instance = new Sonic3kTitleCardManager();
-        }
-        return instance;
-    }
+    public Sonic3kTitleCardManager() {}
 
     // ---- TitleCardProvider interface ----
 
@@ -249,6 +240,33 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         return state == Sonic3kTitleCardState.COMPLETE;
     }
 
+    public boolean isInLevelExitPhaseFor(int zoneIndex, int actIndex) {
+        return inLevelMode
+                && currentZone == zoneIndex
+                && currentAct == actIndex
+                && state == Sonic3kTitleCardState.EXIT;
+    }
+
+    public boolean willSetInLevelEndOfLevelFlagThisUpdate() {
+        if (!inLevelMode || state != Sonic3kTitleCardState.EXIT) {
+            return false;
+        }
+        int count = bonusMode ? BONUS_ELEMENT_COUNT : ELEMENT_COUNT;
+        for (int i = 0; i < count; i++) {
+            if (!bonusMode && !actNumberVisible && i == ELEM_ACT_NUM) {
+                continue;
+            }
+            if (!willElementBeExitedAfterThisUpdate(i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public int getExitPhaseCounter() {
+        return phaseCounter;
+    }
+
     /**
      * S3K ROM: the pre-level title card completes its blocking setup work before
      * normal gameplay begins, so the player does not keep advancing physics during
@@ -264,7 +282,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     public void draw() {
         ensureArtCached();
 
-        GraphicsManager gm = GraphicsManager.getInstance();
+        GraphicsManager gm = GameServices.graphics();
         if (gm == null) return;
 
         // Black background during SLIDE_IN and DISPLAY (not in-level mode).
@@ -320,6 +338,23 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         state = Sonic3kTitleCardState.COMPLETE;
         stateTimer = 0;
         phaseCounter = 0;
+        inLevelMode = false;
+        bonusMode = false;
+        bonusFadeProgress = 0f;
+        currentZone = 0;
+        currentAct = 0;
+        actNumberVisible = false;
+        artLoaded = false;
+        artCached = false;
+        lastLoadedZone = -1;
+        lastLoadedAct = -1;
+        combinedPatterns = null;
+        Arrays.fill(elemX, 0);
+        Arrays.fill(elemY, 0);
+        Arrays.fill(elemFrame, 0);
+        Arrays.fill(elemAtTarget, false);
+        Arrays.fill(elemExiting, false);
+        Arrays.fill(elemExited, false);
     }
 
     @Override
@@ -399,8 +434,45 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
         if (allExited) {
             state = Sonic3kTitleCardState.COMPLETE;
+            if (inLevelMode) {
+                // ROM Obj_TitleCardWait2 sets End_of_level_flag only after the
+                // in-level title-card timer has elapsed and its child objects
+                // have disappeared (sonic3k.asm:62244-62279).
+                GameServices.gameState().setEndOfLevelFlag(true);
+            }
             LOG.fine("S3K title card: COMPLETE");
         }
+    }
+
+    private boolean willElementBeExitedAfterThisUpdate(int idx) {
+        if (elemExited[idx]) {
+            return true;
+        }
+        int[] priorities = bonusMode ? BONUS_EXIT_PRIORITY : EXIT_PRIORITY;
+        if (phaseCounter + 1 < priorities[idx]) {
+            return false;
+        }
+        int speed = SLIDE_SPEED_OUT;
+        int start = isElementVertical(idx) ? elementStartY(idx) : elementStartX(idx);
+        int current = isElementVertical(idx) ? elemY[idx] : elemX[idx];
+        int dir = Integer.compare(start, current);
+        if (dir == 0) {
+            return true;
+        }
+        int next = current + dir * speed;
+        return (dir > 0 && next >= start) || (dir < 0 && next <= start);
+    }
+
+    private boolean isElementVertical(int idx) {
+        return !bonusMode && IS_VERTICAL[idx];
+    }
+
+    private int elementStartX(int idx) {
+        return bonusMode ? BONUS_START_X[idx] : START_X[idx];
+    }
+
+    private int elementStartY(int idx) {
+        return bonusMode ? BONUS_Y : START_Y[idx];
     }
 
     /**
@@ -578,7 +650,7 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     private void ensureArtCached() {
         if (artCached || !artLoaded || combinedPatterns == null) return;
 
-        GraphicsManager gm = GraphicsManager.getInstance();
+        GraphicsManager gm = GameServices.graphics();
         if (gm == null) return;
 
         for (int i = 0; i < combinedPatterns.length; i++) {

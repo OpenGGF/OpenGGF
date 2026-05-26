@@ -3,14 +3,27 @@ package com.openggf.level.objects;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.data.RomManager;
+import com.openggf.debug.DebugOverlayManager;
+import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameRng;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameModule;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.RespawnState;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.save.SaveReason;
+import com.openggf.game.session.WorldSession;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
+import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
@@ -18,6 +31,7 @@ import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 
 import java.util.List;
@@ -35,12 +49,24 @@ public class TestObjectServices implements ObjectServices {
     private FadeManager fadeManager;
     private WaterSystem waterSystem;
     private ParallaxManager parallaxManager;
+    private CollisionSystem collisionSystem;
     private GraphicsManager graphicsManager;
     private AudioManager audioManager;
     private GameRng rng = new GameRng(GameRng.Flavour.S3K);
+    private ZoneRuntimeRegistry zoneRuntimeRegistry = new ZoneRuntimeRegistry();
+    private PaletteOwnershipRegistry paletteOwnershipRegistry;
+    private ZoneLayoutMutationPipeline zoneLayoutMutationPipeline = new ZoneLayoutMutationPipeline();
+    private SolidExecutionRegistry solidExecutionRegistry = SolidExecutionRegistry.inert();
     private Rom rom;
     private RomByteReader romReader;
     private List<PlayableEntity> sidekicks = List.of();
+    private WorldSession worldSession;
+    private GameModule gameModule;
+    private EngineContext engineServices;
+    private SonicConfigurationService configuration;
+    private DebugOverlayManager debugOverlay;
+    private RomManager romManager;
+    private CrossGameFeatureProvider crossGameFeatures;
 
     public TestObjectServices withLevelManager(LevelManager levelManager) {
         this.levelManager = levelManager;
@@ -77,6 +103,11 @@ public class TestObjectServices implements ObjectServices {
         return this;
     }
 
+    public TestObjectServices withCollisionSystem(CollisionSystem collisionSystem) {
+        this.collisionSystem = collisionSystem;
+        return this;
+    }
+
     public TestObjectServices withGraphicsManager(GraphicsManager graphicsManager) {
         this.graphicsManager = graphicsManager;
         return this;
@@ -92,6 +123,26 @@ public class TestObjectServices implements ObjectServices {
         return this;
     }
 
+    public TestObjectServices withZoneRuntimeRegistry(ZoneRuntimeRegistry zoneRuntimeRegistry) {
+        this.zoneRuntimeRegistry = zoneRuntimeRegistry;
+        return this;
+    }
+
+    public TestObjectServices withPaletteOwnershipRegistry(PaletteOwnershipRegistry paletteOwnershipRegistry) {
+        this.paletteOwnershipRegistry = paletteOwnershipRegistry;
+        return this;
+    }
+
+    public TestObjectServices withZoneLayoutMutationPipeline(ZoneLayoutMutationPipeline zoneLayoutMutationPipeline) {
+        this.zoneLayoutMutationPipeline = zoneLayoutMutationPipeline;
+        return this;
+    }
+
+    public TestObjectServices withSolidExecutionRegistry(SolidExecutionRegistry solidExecutionRegistry) {
+        this.solidExecutionRegistry = solidExecutionRegistry;
+        return this;
+    }
+
     public TestObjectServices withRom(Rom rom) {
         this.rom = rom;
         return this;
@@ -104,6 +155,44 @@ public class TestObjectServices implements ObjectServices {
 
     public TestObjectServices withSidekicks(List<? extends PlayableEntity> sidekicks) {
         this.sidekicks = List.copyOf(sidekicks);
+        return this;
+    }
+
+    public TestObjectServices withWorldSession(WorldSession worldSession) {
+        this.worldSession = worldSession;
+        return this;
+    }
+
+    public TestObjectServices withGameModule(GameModule gameModule) {
+        this.gameModule = gameModule;
+        if (gameModule != null && worldSession == null) {
+            this.worldSession = new WorldSession(gameModule);
+        }
+        return this;
+    }
+
+    public TestObjectServices withEngineServices(EngineContext engineServices) {
+        this.engineServices = engineServices;
+        return this;
+    }
+
+    public TestObjectServices withConfiguration(SonicConfigurationService configuration) {
+        this.configuration = configuration;
+        return this;
+    }
+
+    public TestObjectServices withDebugOverlay(DebugOverlayManager debugOverlay) {
+        this.debugOverlay = debugOverlay;
+        return this;
+    }
+
+    public TestObjectServices withRomManager(RomManager romManager) {
+        this.romManager = romManager;
+        return this;
+    }
+
+    public TestObjectServices withCrossGameFeatures(CrossGameFeatureProvider crossGameFeatures) {
+        this.crossGameFeatures = crossGameFeatures;
         return this;
     }
 
@@ -125,6 +214,11 @@ public class TestObjectServices implements ObjectServices {
     @Override
     public RespawnState checkpointState() {
         return levelManager != null ? levelManager.getCheckpointState() : null;
+    }
+
+    @Override
+    public LevelManager levelManager() {
+        return levelManager;
     }
 
     @Override
@@ -178,6 +272,22 @@ public class TestObjectServices implements ObjectServices {
     }
 
     @Override
+    public WorldSession worldSession() {
+        if (worldSession != null) {
+            return worldSession;
+        }
+        return gameModule != null ? new WorldSession(gameModule) : null;
+    }
+
+    @Override
+    public GameModule gameModule() {
+        if (gameModule != null) {
+            return gameModule;
+        }
+        return worldSession != null ? worldSession.getGameModule() : null;
+    }
+
+    @Override
     public SpriteManager spriteManager() {
         return spriteManager;
     }
@@ -198,6 +308,11 @@ public class TestObjectServices implements ObjectServices {
     }
 
     @Override
+    public CollisionSystem collisionSystem() {
+        return collisionSystem;
+    }
+
+    @Override
     public GraphicsManager graphicsManager() {
         return graphicsManager;
     }
@@ -208,8 +323,58 @@ public class TestObjectServices implements ObjectServices {
     }
 
     @Override
+    public EngineContext engineServices() {
+        return engineServices;
+    }
+
+    @Override
+    public SonicConfigurationService configuration() {
+        return configuration;
+    }
+
+    @Override
+    public DebugOverlayManager debugOverlay() {
+        return debugOverlay;
+    }
+
+    @Override
+    public RomManager romManager() {
+        return romManager;
+    }
+
+    @Override
+    public CrossGameFeatureProvider crossGameFeatures() {
+        return crossGameFeatures;
+    }
+
+    @Override
     public GameRng rng() {
         return rng;
+    }
+
+    @Override
+    public ZoneRuntimeRegistry zoneRuntimeRegistry() {
+        return zoneRuntimeRegistry;
+    }
+
+    @Override
+    public ZoneRuntimeState zoneRuntimeState() {
+        return zoneRuntimeRegistry.current();
+    }
+
+    @Override
+    public PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() {
+        return paletteOwnershipRegistry;
+    }
+
+    @Override
+    public ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() {
+        return zoneLayoutMutationPipeline;
+    }
+
+    @Override
+    public SolidExecutionRegistry solidExecutionRegistry() {
+        return solidExecutionRegistry;
     }
 
     @Override
@@ -326,5 +491,9 @@ public class TestObjectServices implements ObjectServices {
         if (levelManager != null) {
             levelManager.saveBigRingReturn(state);
         }
+    }
+
+    @Override
+    public void requestSessionSave(SaveReason reason) {
     }
 }

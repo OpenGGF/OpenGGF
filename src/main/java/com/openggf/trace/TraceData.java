@@ -1,0 +1,706 @@
+package com.openggf.trace;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Set;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
+
+/**
+ * Reads and holds the contents of a trace directory:
+ * metadata.json, physics.csv, and aux_state.jsonl.
+ *
+ * The primary CSV is loaded entirely into memory (small: ~100 bytes/frame).
+ * Auxiliary events are lazy-loaded and indexed by frame number.
+ */
+public class TraceData {
+
+    private static final Logger LOGGER = Logger.getLogger(TraceData.class.getName());
+    private static final Set<Path> LEGACY_TRACE_WARNINGS = ConcurrentHashMap.newKeySet();
+
+    private final TraceMetadata metadata;
+    private final List<TraceFrame> frames;
+    private final Map<Integer, List<TraceEvent>> eventsByFrame;
+    private final List<Integer> checkpointFramesAscending;
+    private final Map<Integer, TraceEvent.Checkpoint> checkpointsByFrame;
+    private final List<Integer> zoneActStateFramesAscending;
+    private final Map<Integer, TraceEvent.ZoneActState> zoneActStatesByFrame;
+
+    // Package-private so same-package test fixtures in src/test can
+    // construct in-memory instances without going through disk I/O.
+    TraceData(TraceMetadata metadata, List<TraceFrame> frames,
+              Map<Integer, List<TraceEvent>> eventsByFrame) {
+        this.metadata = metadata;
+        this.frames = frames;
+        this.eventsByFrame = eventsByFrame;
+        this.checkpointsByFrame = new HashMap<>();
+        this.checkpointFramesAscending = new ArrayList<>();
+        this.zoneActStatesByFrame = new HashMap<>();
+        this.zoneActStateFramesAscending = new ArrayList<>();
+        buildLatestEventIndexes();
+    }
+
+    public static TraceData load(Path traceDirectory) throws IOException {
+        Path metadataPath = traceDirectory.resolve("metadata.json");
+        Path physicsPath = resolveTraceFile(traceDirectory, "physics.csv");
+        Path auxPath = resolveTraceFile(traceDirectory, "aux_state.jsonl");
+
+        TraceMetadata metadata = TraceMetadata.load(metadataPath);
+        if (physicsPath == null) {
+            throw new NoSuchFileException(traceDirectory.resolve("physics.csv").toString());
+        }
+        List<TraceFrame> frames = loadPhysicsCsv(physicsPath, metadata);
+        Map<Integer, List<TraceEvent>> events = auxPath != null
+            ? loadAuxEvents(auxPath)
+            : Collections.emptyMap();
+
+        warnIfLegacyExecutionCounters(traceDirectory, metadata, frames);
+
+        return new TraceData(metadata, frames, events);
+    }
+
+    public TraceMetadata metadata() { return metadata; }
+    public int frameCount() { return frames.size(); }
+
+    /**
+     * Returns the playable character names recorded in this trace, in order.
+     * The current replay pipeline supports the primary character plus at most one sidekick.
+     */
+    public List<String> recordedCharacters() {
+        return metadata.recordedCharacters();
+    }
+
+    /**
+     * Returns the ROM VBlank counter value that corresponds to trace frame 0.
+     *
+     * <p>Schema v3 traces record the real ROM VBlank counter per frame. Older
+     * traces do not, so fall back to the historical BK2 frame offset metadata.
+     * That fallback preserves legacy replay behaviour until all fixtures carry
+     * explicit execution counters.
+     */
+    public int initialVblankCounter() {
+        if (!frames.isEmpty()) {
+            int recorded = frames.get(0).vblankCounter();
+            if (recorded >= 0) {
+                return recorded;
+            }
+        }
+        return metadata.bk2FrameOffset();
+    }
+
+    public TraceFrame getFrame(int traceFrame) {
+        if (traceFrame < 0 || traceFrame >= frames.size()) {
+            throw new IndexOutOfBoundsException(
+                "Frame " + traceFrame + " out of range [0, " + frames.size() + ")");
+        }
+        return frames.get(traceFrame);
+    }
+
+    /**
+     * Returns the recorded state for a named playable character on the given frame.
+     * The current replay pipeline exposes the primary character plus the first sidekick.
+     */
+    public TraceCharacterState characterState(int traceFrame, String characterCode) {
+        if (characterCode == null || characterCode.isBlank()) {
+            return null;
+        }
+
+        TraceFrame frame = getFrame(traceFrame);
+        List<String> recordedCharacters = metadata.recordedCharacters();
+        if (!recordedCharacters.isEmpty()
+                && recordedCharacters.getFirst().equalsIgnoreCase(characterCode)) {
+            return frame.primaryCharacterState();
+        }
+        if (recordedCharacters.size() > 1
+                && recordedCharacters.get(1).equalsIgnoreCase(characterCode)) {
+            return frame.sidekick();
+        }
+        return null;
+    }
+
+    public List<TraceEvent> getEventsForFrame(int traceFrame) {
+        return eventsByFrame.getOrDefault(traceFrame, Collections.emptyList());
+    }
+
+    public List<TraceEvent> getEventsInRange(int startFrame, int endFrame) {
+        List<TraceEvent> result = new ArrayList<>();
+        for (int f = startFrame; f <= endFrame; f++) {
+            result.addAll(getEventsForFrame(f));
+        }
+        return result;
+    }
+
+    /**
+     * Returns advertised aux schemas that have no matching events in the
+     * loaded aux stream.
+     *
+     * <p><strong>Diagnostic only.</strong> This guards against stale regenerated
+     * fixtures where {@code metadata.json} claims per-frame diagnostics exist
+     * but {@code aux_state.jsonl(.gz)} does not actually contain the records.
+     * The result is used only for reports/tests and never feeds replay state.
+     */
+    public List<String> missingAdvertisedAuxSchemas() {
+        List<String> missing = new ArrayList<>();
+        if (metadata.hasPerFrameCageState()
+                && !hasEventOfType(TraceEvent.CageState.class)) {
+            missing.add("cage_state_per_frame");
+        }
+        if (metadata.hasPerFrameCageExecution()
+                && !hasEventOfType(TraceEvent.CageExecution.class)) {
+            missing.add("cage_execution_per_frame");
+        }
+        if (metadata.hasPerFrameVelocityWrite()
+                && !hasEventOfType(TraceEvent.VelocityWrite.class)) {
+            missing.add("velocity_write_per_frame");
+        }
+        if (metadata.hasPerFramePositionWrite()
+                && !hasEventOfType(TraceEvent.PositionWrite.class)) {
+            missing.add("position_write_per_frame");
+        }
+        if (metadata.hasPerFrameAizShipLoop()
+                && !hasEventOfType(TraceEvent.AizShipLoop.class)) {
+            missing.add("aiz_ship_loop_per_frame");
+        }
+        if (metadata.hasPerFrameSonicRecordPos()
+                && !hasEventOfType(TraceEvent.SonicRecordPos.class)) {
+            missing.add("sonic_record_pos_per_frame");
+        }
+        if (metadata.hasPerFrameTailsCpuNormalStep()
+                && !hasEventOfType(TraceEvent.TailsCpuNormalStep.class)) {
+            missing.add("tails_cpu_normal_step_per_frame");
+        }
+        if (metadata.hasPerFrameSidekickInteractObject()
+                && !hasEventOfType(TraceEvent.SidekickInteractObjectState.class)) {
+            missing.add("sidekick_interact_object_per_frame");
+        }
+        if (metadata.hasPerFrameCnzCylinderState()
+                && !hasEventOfType(TraceEvent.CnzCylinderState.class)) {
+            missing.add("cnz_cylinder_state_per_frame");
+        }
+        if (metadata.hasPerFrameCnzCylinderExecution()
+                && !hasEventOfType(TraceEvent.CnzCylinderExecution.class)) {
+            missing.add("cnz_cylinder_execution_per_frame");
+        }
+        if (metadata.hasPerFrameCnzEventRam()
+                && !hasEventOfType(TraceEvent.CnzEventRamState.class)) {
+            missing.add("cnz_event_ram_per_frame");
+        }
+        if (metadata.hasPerFrameAirCountdownState()
+                && !hasEventOfType(TraceEvent.AirCountdownState.class)) {
+            missing.add("air_countdown_state_per_frame");
+        }
+        if (metadata.hasPerFrameRngCall()
+                && !hasEventOfType(TraceEvent.RngCall.class)) {
+            missing.add("rng_call_per_frame");
+        }
+        if (metadata.hasPerFrameAizBoundaryState()
+                && !hasEventOfType(TraceEvent.AizBoundaryState.class)) {
+            missing.add("aiz_boundary_state_per_frame");
+        }
+        if (metadata.hasPerFrameAizTransitionFloorSolid()
+                && !hasEventOfType(TraceEvent.AizTransitionFloorSolidState.class)) {
+            missing.add("aiz_transition_floor_solid_per_frame");
+        }
+        if (metadata.hasPerFrameAizHandoffTerrainState()
+                && !hasEventOfType(TraceEvent.AizHandoffTerrainState.class)) {
+            missing.add("aiz_handoff_terrain_state_per_frame");
+        }
+        return missing;
+    }
+
+    public List<TraceEvent.CageState> cageStatesForFrame(int frame) {
+        List<TraceEvent.CageState> states = new ArrayList<>();
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.CageState state) {
+                states.add(state);
+            }
+        }
+        return states;
+    }
+
+    public TraceEvent.CageExecution cageExecutionForFrame(int frame) {
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.CageExecution execution) {
+                return execution;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns generic state snapshots for the requested frame. These are
+     * diagnostic-only aux events; replay must never hydrate engine state from
+     * the preserved field map.
+     */
+    public List<TraceEvent.StateSnapshot> stateSnapshotsForFrame(int frame) {
+        List<TraceEvent.StateSnapshot> snapshots = new ArrayList<>();
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.StateSnapshot snapshot) {
+                snapshots.add(snapshot);
+            }
+        }
+        return snapshots;
+    }
+
+    public TraceEvent.Checkpoint latestCheckpointAtOrBefore(int frame) {
+        int index = latestIndexedFrameAtOrBefore(checkpointFramesAscending, frame);
+        return index >= 0 ? checkpointsByFrame.get(checkpointFramesAscending.get(index)) : null;
+    }
+
+    public TraceEvent.ZoneActState latestZoneActStateAtOrBefore(int frame) {
+        int index = latestIndexedFrameAtOrBefore(zoneActStateFramesAscending, frame);
+        return index >= 0 ? zoneActStatesByFrame.get(zoneActStateFramesAscending.get(index)) : null;
+    }
+
+    private void buildLatestEventIndexes() {
+        for (Map.Entry<Integer, List<TraceEvent>> entry : eventsByFrame.entrySet()) {
+            int frame = entry.getKey();
+            for (TraceEvent event : entry.getValue()) {
+                if (event instanceof TraceEvent.Checkpoint checkpoint && !checkpointsByFrame.containsKey(frame)) {
+                    checkpointsByFrame.put(frame, checkpoint);
+                    checkpointFramesAscending.add(frame);
+                } else if (event instanceof TraceEvent.ZoneActState state && !zoneActStatesByFrame.containsKey(frame)) {
+                    zoneActStatesByFrame.put(frame, state);
+                    zoneActStateFramesAscending.add(frame);
+                }
+            }
+        }
+        Collections.sort(checkpointFramesAscending);
+        Collections.sort(zoneActStateFramesAscending);
+    }
+
+    private static int latestIndexedFrameAtOrBefore(List<Integer> sortedFrames, int frame) {
+        int index = Collections.binarySearch(sortedFrames, frame);
+        if (index >= 0) {
+            return index;
+        }
+        return -index - 2;
+    }
+
+    private boolean hasEventOfType(Class<? extends TraceEvent> eventType) {
+        for (List<TraceEvent> events : eventsByFrame.values()) {
+            for (TraceEvent event : events) {
+                if (eventType.isInstance(event)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns the pre-trace ROM object snapshots emitted by the Lua recorder
+     * at the moment gameplay begins but before trace frame 0 is written.
+     *
+     * <p>Schema v4+ aux files include one {@code object_state_snapshot} event
+     * per occupied SST slot, stored at frame {@code -1}. Older schemas return
+     * an empty list.
+     */
+    public List<TraceEvent.ObjectStateSnapshot> preTraceObjectSnapshots() {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(-1, Collections.emptyList());
+        List<TraceEvent.ObjectStateSnapshot> snapshots = new ArrayList<>();
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.ObjectStateSnapshot snapshot) {
+                snapshots.add(snapshot);
+            }
+        }
+        return snapshots;
+    }
+
+    public TraceEvent.PlayerHistorySnapshot preTracePlayerHistorySnapshot() {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(-1, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.PlayerHistorySnapshot snapshot) {
+                return snapshot;
+            }
+        }
+        return null;
+    }
+
+    public TraceEvent.CpuStateSnapshot preTraceCpuStateSnapshot(String characterCode) {
+        if (characterCode == null || characterCode.isBlank()) {
+            return null;
+        }
+        List<TraceEvent> events = eventsByFrame.getOrDefault(-1, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.CpuStateSnapshot snapshot
+                    && characterCode.equalsIgnoreCase(snapshot.character())) {
+                return snapshot;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the per-frame {@link TraceEvent.CpuState} event for the requested
+     * trace frame and character, or {@code null} when the trace was recorded
+     * without v6+ per-frame CPU snapshots or when no event is present for that
+     * frame/character.
+     *
+     * <p><strong>Diagnostic only.</strong> Used by trace replay reports/tests
+     * to compare engine sidekick CPU state against ROM values. It must never
+     * be copied into engine state during the replay loop.
+     */
+    public TraceEvent.CpuState cpuStateForFrame(int frame, String characterCode) {
+        if (characterCode == null || characterCode.isBlank()) {
+            return null;
+        }
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.CpuState state
+                    && characterCode.equalsIgnoreCase(state.character())) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the per-frame {@link TraceEvent.OscillationState} event for the
+     * requested trace frame, or {@code null} when the trace was recorded
+     * without v6.1+ per-frame oscillation snapshots or when no event is
+     * present for that frame.
+     *
+     * <p><strong>Diagnostic only.</strong> Used by trace replay tests to
+     * compare engine {@code OscillationManager} state against authoritative
+     * ROM values per frame. The engine must NOT hydrate its oscillator from
+     * these values; it must produce the correct phase natively.
+     */
+    public TraceEvent.OscillationState oscillationStateForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.OscillationState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the per-frame {@link TraceEvent.VelocityWrite} event for the
+     * requested trace frame and character, or {@code null} when the trace was
+     * recorded without v6.4+ per-frame velocity-write snapshots or when no
+     * event is present for that frame/character.
+     *
+     * <p><strong>Diagnostic only.</strong> Captures every M68K write to the
+     * sidekick's {@code x_vel}/{@code y_vel} during ROM frame processing,
+     * with each writing-instruction PC. Used to root-cause CNZ1 trace F3649
+     * where ROM Tails {@code x_speed} jumps from -$48 to -$0A00 in a single
+     * frame: the PC list pinpoints which ROM routine writes the value.
+     */
+    public TraceEvent.VelocityWrite velocityWriteForFrame(int frame, String characterCode) {
+        if (characterCode == null || characterCode.isBlank()) {
+            return null;
+        }
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.VelocityWrite vw
+                    && characterCode.equalsIgnoreCase(vw.character())) {
+                return vw;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the per-frame {@link TraceEvent.PositionWrite} event for the
+     * requested trace frame and character, or {@code null} when absent.
+     *
+     * <p><strong>Diagnostic only.</strong> Captures M68K writes to the
+     * sidekick's {@code x_pos}/{@code y_pos} during ROM frame processing,
+     * with each writing-instruction PC. Used to root-cause CNZ1 trace F4790.
+     */
+    public TraceEvent.PositionWrite positionWriteForFrame(int frame, String characterCode) {
+        if (characterCode == null || characterCode.isBlank()) {
+            return null;
+        }
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.PositionWrite pw
+                    && characterCode.equalsIgnoreCase(pw.character())) {
+                return pw;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the focused AIZ ship-loop execution diagnostic for the requested
+     * frame, or {@code null} when absent.
+     */
+    public TraceEvent.AizShipLoop aizShipLoopForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.AizShipLoop shipLoop) {
+                return shipLoop;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the focused Player_1 Sonic_RecordPos diagnostic for the
+     * requested frame, or {@code null} when absent.
+     *
+     * <p><strong>Diagnostic only.</strong> This maps delayed sidekick
+     * Stat_table reads back to the ROM write source; replay code must not
+     * hydrate state from it.
+     */
+    public TraceEvent.SonicRecordPos sonicRecordPosForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.SonicRecordPos recordPos) {
+                return recordPos;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the focused S3K Tails CPU normal-step diagnostic for the
+     * requested frame and character, or {@code null} when absent.
+     *
+     * <p><strong>Diagnostic only.</strong> This is report context for the
+     * native engine simulation; replay code must not hydrate state from it.
+     */
+    public TraceEvent.TailsCpuNormalStep tailsCpuNormalStepForFrame(
+            int frame, String characterCode) {
+        if (characterCode == null || characterCode.isBlank()) {
+            return null;
+        }
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.TailsCpuNormalStep state
+                    && characterCode.equalsIgnoreCase(state.character())) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the focused S3K sidekick interact-object diagnostic for the
+     * requested frame and character, or {@code null} when absent.
+     *
+     * <p><strong>Diagnostic only.</strong> This is report context for object
+     * handoff diagnosis; replay code must not hydrate state from it.
+     */
+    public TraceEvent.SidekickInteractObjectState sidekickInteractObjectStateForFrame(
+            int frame, String characterCode) {
+        if (characterCode == null || characterCode.isBlank()) {
+            return null;
+        }
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.SidekickInteractObjectState state
+                    && characterCode.equalsIgnoreCase(state.character())) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    public List<TraceEvent.CnzCylinderState> cnzCylinderStatesForFrame(int frame) {
+        List<TraceEvent.CnzCylinderState> states = new ArrayList<>();
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.CnzCylinderState state) {
+                states.add(state);
+            }
+        }
+        return states;
+    }
+
+    public TraceEvent.CnzCylinderExecution cnzCylinderExecutionForFrame(int frame) {
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.CnzCylinderExecution execution) {
+                return execution;
+            }
+        }
+        return null;
+    }
+
+    public TraceEvent.CnzEventRamState cnzEventRamStateForFrame(int frame) {
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.CnzEventRamState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns S3K fixed Breathing_bubbles / Breathing_bubbles_P2 diagnostics
+     * for the requested frame.
+     *
+     * <p><strong>Diagnostic only.</strong> This is report context for ROM-side
+     * AirCountdown controller cadence and visible child lifetime; replay code
+     * must not hydrate state from it.
+     */
+    public List<TraceEvent.AirCountdownState> airCountdownStatesForFrame(int frame) {
+        List<TraceEvent.AirCountdownState> states = new ArrayList<>();
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.AirCountdownState state) {
+                states.add(state);
+            }
+        }
+        return states;
+    }
+
+    /**
+     * Returns focused S3K Random_Number call-order diagnostics for a frame.
+     * Diagnostic-only; callers must not hydrate engine RNG state from it.
+     */
+    public TraceEvent.RngCall rngCallForFrame(int frame) {
+        for (TraceEvent event : eventsByFrame.getOrDefault(frame, Collections.emptyList())) {
+            if (event instanceof TraceEvent.RngCall call) {
+                return call;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the focused S3K AIZ tree/boundary diagnostic for the requested
+     * frame and character, or {@code null} when absent.
+     *
+     * <p><strong>Diagnostic only.</strong> This is report context for ROM-side
+     * pre/post visibility; replay code must not hydrate state from it.
+     */
+    public TraceEvent.AizBoundaryState aizBoundaryStateForFrame(
+            int frame, String characterCode) {
+        if (characterCode == null || characterCode.isBlank()) {
+            return null;
+        }
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.AizBoundaryState state
+                    && characterCode.equalsIgnoreCase(state.character())) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the focused S3K AIZ transition-floor solid diagnostic for the
+     * requested frame, or {@code null} when absent.
+     *
+     * <p><strong>Diagnostic only.</strong> This exposes ROM-side
+     * {@code SolidObjectTop} path evidence for reports; replay code must not
+     * hydrate state from it.
+     */
+    public TraceEvent.AizTransitionFloorSolidState aizTransitionFloorSolidStateForFrame(
+            int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.AizTransitionFloorSolidState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the focused S3K AIZ fire-handoff terrain diagnostic for the
+     * requested frame, or {@code null} when absent.
+     *
+     * <p><strong>Diagnostic only.</strong> This exposes ROM-side terrain and
+     * delayed-refresh state for reports; replay code must not hydrate state
+     * from it.
+     */
+    public TraceEvent.AizHandoffTerrainState aizHandoffTerrainStateForFrame(int frame) {
+        List<TraceEvent> events = eventsByFrame.getOrDefault(frame, Collections.emptyList());
+        for (TraceEvent event : events) {
+            if (event instanceof TraceEvent.AizHandoffTerrainState state) {
+                return state;
+            }
+        }
+        return null;
+    }
+
+    private static List<TraceFrame> loadPhysicsCsv(Path csvPath, TraceMetadata metadata)
+            throws IOException {
+        List<TraceFrame> frames = new ArrayList<>();
+        try (BufferedReader reader = openTraceReader(csvPath)) {
+            String line = reader.readLine(); // skip header
+            if (line == null) return frames;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    frames.add(TraceFrame.parseCsvRow(trimmed, metadata.traceSchema()));
+                }
+            }
+        }
+        return frames;
+    }
+
+    private static Map<Integer, List<TraceEvent>> loadAuxEvents(Path auxPath)
+            throws IOException {
+        Map<Integer, List<TraceEvent>> map = new HashMap<>();
+        ObjectMapper mapper = new ObjectMapper();
+        try (BufferedReader reader = openTraceReader(auxPath)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    TraceEvent event = TraceEvent.parseJsonLine(trimmed, mapper);
+                    map.computeIfAbsent(event.frame(), k -> new ArrayList<>()).add(event);
+                }
+            }
+        }
+        return map;
+    }
+
+    private static Path resolveTraceFile(Path traceDirectory, String fileName) {
+        Path plainPath = traceDirectory.resolve(fileName);
+        if (Files.exists(plainPath)) {
+            return plainPath;
+        }
+        Path gzipPath = traceDirectory.resolve(fileName + ".gz");
+        return Files.exists(gzipPath) ? gzipPath : null;
+    }
+
+    private static BufferedReader openTraceReader(Path path) throws IOException {
+        if (path.getFileName().toString().endsWith(".gz")) {
+            InputStream input = Files.newInputStream(path);
+            try {
+                return new BufferedReader(new InputStreamReader(
+                        new GZIPInputStream(input), StandardCharsets.UTF_8));
+            } catch (IOException e) {
+                input.close();
+                throw e;
+            }
+        }
+        return Files.newBufferedReader(path);
+    }
+
+    private static void warnIfLegacyExecutionCounters(Path traceDirectory,
+            TraceMetadata metadata, List<TraceFrame> frames) {
+        Integer traceSchema = metadata.traceSchema();
+        if (traceSchema != null && traceSchema >= 3) {
+            return;
+        }
+        if (!frames.isEmpty() && frames.get(0).vblankCounter() >= 0) {
+            return;
+        }
+        Path normalized = traceDirectory.toAbsolutePath().normalize();
+        if (LEGACY_TRACE_WARNINGS.add(normalized)) {
+            LOGGER.info(() -> "Trace " + normalized
+                    + " is pre-v3; replay is using the legacy lag heuristic.");
+        }
+    }
+}

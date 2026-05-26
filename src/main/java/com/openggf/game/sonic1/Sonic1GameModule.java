@@ -6,6 +6,7 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import com.openggf.game.sonic1.events.Sonic1LevelEventManager;
+import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
 import com.openggf.game.sonic1.objects.Sonic1StomperDoorObjectInstance;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.game.sonic1.specialstage.Sonic1SpecialStageProvider;
@@ -27,9 +28,14 @@ import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.WaterDataProvider;
 import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.game.ZoneRegistry;
+import com.openggf.game.dataselect.CrossGameDataSelectPresentations;
+import com.openggf.game.dataselect.DataSelectHostProfile;
+import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.sonic1.credits.Sonic1EndingProvider;
+import com.openggf.game.sonic1.dataselect.S1DataSelectProfile;
+import com.openggf.game.sonic1.dataselect.S1SaveSnapshotProvider;
 import com.openggf.game.sonic1.levelselect.Sonic1LevelSelectManager;
 import com.openggf.game.sonic1.objects.Sonic1ObjectRegistry;
 import com.openggf.game.sonic1.scroll.Sonic1ScrollHandlerProvider;
@@ -41,6 +47,7 @@ import com.openggf.game.GameId;
 import com.openggf.game.LevelGamestate;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.constants.Sonic1AnimationIds;
 import com.openggf.game.sonic1.titlecard.Sonic1TitleCardManager;
 import com.openggf.level.objects.ObjectRegistry;
@@ -48,6 +55,13 @@ import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SuperStateController;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+
+import static java.security.MessageDigest.getInstance;
 
 /**
  * GameModule implementation for Sonic the Hedgehog 1 (Mega Drive/Genesis).
@@ -55,7 +69,20 @@ import com.openggf.sprites.playable.SuperStateController;
 public class Sonic1GameModule implements GameModule {
     private final GameAudioProfile audioProfile = new Sonic1AudioProfile();
     private final SpecialStageProvider specialStageProvider = new Sonic1SpecialStageProvider();
+    private final Sonic1LevelEventManager levelEventManager = new Sonic1LevelEventManager();
+    private final Sonic1ZoneRegistry zoneRegistry = new Sonic1ZoneRegistry();
+    private final Sonic1SwitchManager switchManager = new Sonic1SwitchManager();
+    private final Sonic1ConveyorState conveyorState = new Sonic1ConveyorState();
+    private final Sonic1TitleCardManager titleCardProvider = new Sonic1TitleCardManager();
+    private final Sonic1TitleScreenManager titleScreenProvider = new Sonic1TitleScreenManager();
+    private final Sonic1LevelSelectManager levelSelectProvider = new Sonic1LevelSelectManager();
+    private final S1DataSelectProfile dataSelectHostProfile = new S1DataSelectProfile();
+    private DataSelectPresentationProvider dataSelectPresentationProvider;
+    private S1DataSelectImageCacheManager dataSelectImageCacheManager;
+    private final LevelInitProfile levelInitProfile =
+            new Sonic1LevelInitProfile(levelEventManager, switchManager, conveyorState);
     private PhysicsProvider physicsProvider;
+    private ObjectRegistry objectRegistry;
 
     @Override
     public String getIdentifier() {
@@ -74,7 +101,10 @@ public class Sonic1GameModule implements GameModule {
 
     @Override
     public ObjectRegistry createObjectRegistry() {
-        return new Sonic1ObjectRegistry();
+        if (objectRegistry == null) {
+            objectRegistry = new Sonic1ObjectRegistry();
+        }
+        return objectRegistry;
     }
 
     @Override
@@ -108,7 +138,7 @@ public class Sonic1GameModule implements GameModule {
 
     @Override
     public LevelEventProvider getLevelEventProvider() {
-        return Sonic1LevelEventManager.getInstance();
+        return levelEventManager;
     }
 
     @Override
@@ -123,17 +153,17 @@ public class Sonic1GameModule implements GameModule {
 
     @Override
     public TitleCardProvider getTitleCardProvider() {
-        return Sonic1TitleCardManager.getInstance();
+        return titleCardProvider;
     }
 
     @Override
     public TitleScreenProvider getTitleScreenProvider() {
-        return Sonic1TitleScreenManager.getInstance();
+        return titleScreenProvider;
     }
 
     @Override
     public ZoneRegistry getZoneRegistry() {
-        return Sonic1ZoneRegistry.getInstance();
+        return zoneRegistry;
     }
 
     @Override
@@ -173,7 +203,26 @@ public class Sonic1GameModule implements GameModule {
 
     @Override
     public LevelSelectProvider getLevelSelectProvider() {
-        return Sonic1LevelSelectManager.getInstance();
+        return levelSelectProvider;
+    }
+
+    @Override
+    public com.openggf.game.DataSelectProvider getDataSelectProvider() {
+        return getDataSelectPresentationProvider();
+    }
+
+    @Override
+    public DataSelectPresentationProvider getDataSelectPresentationProvider() {
+        if (dataSelectPresentationProvider == null) {
+            dataSelectPresentationProvider = CrossGameDataSelectPresentations.donated(
+                    CrossGameDataSelectPresentations.DONOR_S3K, dataSelectHostProfile);
+        }
+        return dataSelectPresentationProvider;
+    }
+
+    @Override
+    public DataSelectHostProfile getDataSelectHostProfile() {
+        return dataSelectHostProfile;
     }
 
     @Override
@@ -184,15 +233,17 @@ public class Sonic1GameModule implements GameModule {
 
     @Override
     public void applyPlaneSwitching(AbstractPlayableSprite player) {
-        Sonic1LevelEventManager.getInstance()
-                .getLoopManager().update(player);
+        levelEventManager.getLoopManager().update(player);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
-        if (type == Sonic1SwitchManager.class) return (T) Sonic1SwitchManager.getInstance();
-        if (type == Sonic1ConveyorState.class) return (T) Sonic1ConveyorState.getInstance();
+        if (type == S1DataSelectImageCacheManager.class) return (T) getDataSelectImageCacheManager();
+        if (type == Sonic1LevelEventManager.class) return (T) levelEventManager;
+        if (type == Sonic1ZoneRegistry.class) return (T) zoneRegistry;
+        if (type == Sonic1SwitchManager.class) return (T) switchManager;
+        if (type == Sonic1ConveyorState.class) return (T) conveyorState;
         return null;
     }
 
@@ -203,11 +254,11 @@ public class Sonic1GameModule implements GameModule {
         // Reference: docs/s1disasm/_inc/Oscillatory Routines.asm
         OscillationManager.resetForSonic1();
         // Reset switch state for new level (Sonic 1 f_switch array)
-        Sonic1SwitchManager.getInstance().reset();
+        switchManager.reset();
         // Reset v_obj6B singleton flag for SBZ3 StomperDoor
         Sonic1StomperDoorObjectInstance.resetSbz3Flag();
         // Reset conveyor belt state for new level (Sonic 1 f_conveyrev + v_obj63)
-        Sonic1ConveyorState.getInstance().reset();
+        conveyorState.reset();
     }
 
     @Override
@@ -244,7 +295,10 @@ public class Sonic1GameModule implements GameModule {
         return new Sonic1EndingProvider();
     }
 
-    private final LevelInitProfile levelInitProfile = new Sonic1LevelInitProfile();
+    @Override
+    public com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider() {
+        return new S1SaveSnapshotProvider();
+    }
 
     @Override
     public LevelInitProfile getLevelInitProfile() {
@@ -259,7 +313,7 @@ public class Sonic1GameModule implements GameModule {
     @Override
     public SuperStateController createSuperStateController(AbstractPlayableSprite player) {
         if (CrossGameFeatureProvider.isActive()) {
-            return CrossGameFeatureProvider.getInstance().createSuperStateController(player);
+            return GameServices.crossGameFeatures().createSuperStateController(player);
         }
         return null; // Vanilla S1 has no Super Sonic
     }
@@ -267,6 +321,47 @@ public class Sonic1GameModule implements GameModule {
     @Override
     public DonorCapabilities getDonorCapabilities() {
         return Sonic1DonorCapabilities.INSTANCE;
+    }
+
+    private S1DataSelectImageCacheManager getDataSelectImageCacheManager() {
+        if (dataSelectImageCacheManager == null) {
+            dataSelectImageCacheManager = new WarmupAwareS1DataSelectImageCacheManager(
+                    Path.of("saves", "image-cache", "s1"),
+                    GameServices.configuration(),
+                    this::romSha256,
+                    new ObjectMapper());
+        }
+        return dataSelectImageCacheManager;
+    }
+
+    private String romSha256() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            MessageDigest digest = getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(rom.readAllBytes()));
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to hash Sonic 1 ROM for data select image generation", e);
+        }
+    }
+
+    public interface S1DataSelectImageWarmup {
+        void ensureGenerationStarted();
+    }
+
+    private static final class WarmupAwareS1DataSelectImageCacheManager
+            extends S1DataSelectImageCacheManager implements S1DataSelectImageWarmup {
+
+        private WarmupAwareS1DataSelectImageCacheManager(Path cacheRoot,
+                                                         com.openggf.configuration.SonicConfigurationService config,
+                                                         java.util.function.Supplier<String> romSha256Supplier,
+                                                         ObjectMapper mapper) {
+            super(cacheRoot, config, romSha256Supplier, mapper);
+        }
+
+        @Override
+        public void ensureGenerationStarted() {
+            super.ensureGenerationStarted();
+        }
     }
 
     /** Lazily-constructed singleton holding S1 donation metadata. */

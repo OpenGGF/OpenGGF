@@ -26,9 +26,9 @@ import java.util.logging.Logger;
  *   <li>Wait/retract delay</li>
  * </ol>
  *
- * <p>Extension positions vary by angle (ROM: byte_69B0E):
- * For angles 0/$C: dx=-$18/dy=8 stepping to dx=-$1C/dy=0
- * For angles 4/8: dx varies with vertical stepping
+ * <p>Extension positions vary by angle (ROM: byte_69B0E, sub_69AD8).
+ * ROM XORs angle with $C to select one of two tables:
+ * angles 0/$C share the diagonal table, angles 4/8 share the vertical table.
  */
 public class AizEndBossPropellerChild extends AbstractBossChild {
     private static final Logger LOG = Logger.getLogger(AizEndBossPropellerChild.class.getName());
@@ -47,7 +47,11 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
      * (anim_frame starts at 1 → 2 calls to sub_69AD8 before callback).
      * After firing and the $5F wait, 3 more entries are consumed for retraction.
      */
-    private static final int[][] POS_TABLE_ANGLE_0 = {
+    /**
+     * ROM: byte_69B0E — position table at offset 0 (angles 0 and $C).
+     * ROM sub_69AD8 XORs angle with $C: result 0 or $C → offset 0.
+     */
+    private static final int[][] POS_TABLE_DIAGONAL = {
             {-0x18,    8, 5},  // step 0
             {-0x18,    8, 5},  // step 1
             {-0x1C,    0, 4},  // step 2 (fully extended → fire here)
@@ -55,34 +59,20 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
             {-0x18,    8, 5},  // step 4
             {-0x10, 0x10, 6},  // step 5 (retract end)
     };
-    private static final int[][] POS_TABLE_ANGLE_4 = {
+    /**
+     * ROM: byte_69B0E+$10 — position table at offset $10 (angles 4 and 8).
+     * ROM sub_69AD8 XORs angle with $C: result neither 0 nor $C → offset $10.
+     */
+    private static final int[][] POS_TABLE_VERTICAL = {
             {-0x18,    8, 5},
             {-0x10, 0x10, 6},
             {-0x18,    8, 5},
             {-0x1C,    0, 4},
-            {-0x18,    8, 5},
-            {-0x10, 0x10, 6},
     };
-    private static final int[][] POS_TABLE_ANGLE_8 = {
-            {-0x18,    8, 5},
-            {-0x18,    8, 5},
-            {-0x1C,    0, 4},
-            {-0x1C,    0, 4},
-            {-0x18,    8, 5},
-            {-0x10, 0x10, 6},
-    };
-    private static final int[][] POS_TABLE_ANGLE_C = {
-            {-0x1C,    0, 4},
-            {-0x1C,    0, 4},
-            {-0x18,    8, 5},
-            {-0x18,    8, 5},
-            {-0x1C,    0, 4},
-            {-0x10, 0x10, 6},
-    };
+    /** ROM: sub_69AD8 — angle→table mapping via XOR $C. Angles 0/$C share one table, 4/8 share another. */
     private static final int[][][] POS_TABLES = {
-            POS_TABLE_ANGLE_0, POS_TABLE_ANGLE_4, POS_TABLE_ANGLE_8, POS_TABLE_ANGLE_C
+            POS_TABLE_DIAGONAL, POS_TABLE_VERTICAL, POS_TABLE_VERTICAL, POS_TABLE_DIAGONAL
     };
-
     private final AizEndBossInstance boss;
     private final AizEndBossArmChild arm;
     private final int subtype;
@@ -110,7 +100,14 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
      */
     private int knuxFireCounter;
     /** Current callback to invoke when animStepsRemaining goes below 0. */
-    private Runnable animCallback;
+    private AnimCallback animCallback;
+
+    private enum AnimCallback {
+        NONE,
+        ON_EXTEND_COMPLETE,
+        ON_FIRE_TIMER_COMPLETE,
+        ON_RETRACT_COMPLETE
+    }
 
     public AizEndBossPropellerChild(AizEndBossInstance boss, AizEndBossArmChild arm, int subtype) {
         super(boss, "AIZEndBossPropeller", 3, 0);
@@ -126,7 +123,7 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
         this.childDy = 0;
         this.fireWindowConsumed = false;
         this.knuxFireCounter = 0;
-        this.animCallback = null;
+        this.animCallback = AnimCallback.NONE;
     }
 
     @Override
@@ -168,10 +165,8 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
                 waitTimer = 3; // ROM: move.w #3,$2E(a0)
                 advancePosition();
                 animStepsRemaining--;
-                if (animStepsRemaining < 0 && animCallback != null) {
-                    Runnable cb = animCallback;
-                    animCallback = null;
-                    cb.run();
+                if (animStepsRemaining < 0) {
+                    runAnimCallback();
                 }
             }
             case ROUTINE_WAIT -> {
@@ -179,10 +174,8 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
                 // Unlike ROUTINE_ANIMATE, this does NOT call advancePosition().
                 if (waitTimer >= 0) {
                     waitTimer--;
-                } else if (animCallback != null) {
-                    Runnable cb = animCallback;
-                    animCallback = null;
-                    cb.run();
+                } else {
+                    runAnimCallback();
                 }
             }
         }
@@ -199,7 +192,7 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
         // ROM: initial delay depends on parent ARM's subtype, not character.
         // subtype 0 (left arm) = no delay, subtype != 0 (right arm) = $4F delay.
         waitTimer = (subtype != 0) ? 0x4F : 0;
-        animCallback = this::onExtendComplete;
+        animCallback = AnimCallback.ON_EXTEND_COMPLETE;
     }
 
     /**
@@ -231,7 +224,7 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
             if (knuxFireCounter >= 0) {
                 // $3A still non-negative: fire again after $2F wait
                 waitTimer = 0x2F;               // ROM: move.w #$2F,$2E(a0)
-                animCallback = this::onExtendComplete; // callback stays at loc_697D8
+                animCallback = AnimCallback.ON_EXTEND_COMPLETE; // callback stays at loc_697D8
                 spawnFlameProjectile();          // ROM: bra.w loc_69B5E
                 return;
             }
@@ -241,7 +234,7 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
         // Sonic path / final Knuckles fire (loc_697E6)
         boss.clearPropellerFire();               // ROM: bclr #1,$38(a1)
         waitTimer = 0x5F;                        // ROM: move.w #$5F,$2E(a0)
-        animCallback = this::onFireTimerComplete; // ROM: move.l #loc_69824,$34(a0)
+        animCallback = AnimCallback.ON_FIRE_TIMER_COMPLETE; // ROM: move.l #loc_69824,$34(a0)
         spawnFlameProjectile();                   // ROM: bra.w loc_69B5E
     }
 
@@ -253,7 +246,7 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
         routine = ROUTINE_ANIMATE;
         animStepsRemaining = 1; // ROM: move.b #1,anim_frame(a0)
         waitTimer = 0; // ROM: clr.w $2E(a0)
-        animCallback = this::onRetractComplete;
+        animCallback = AnimCallback.ON_RETRACT_COMPLETE;
     }
 
     /**
@@ -270,6 +263,20 @@ public class AizEndBossPropellerChild extends AbstractBossChild {
         childDx = -0x1C;
         childDy = 0;
         mappingFrame = 4;
+    }
+
+    private void runAnimCallback() {
+        if (animCallback == AnimCallback.NONE) {
+            return;
+        }
+        AnimCallback callback = animCallback;
+        animCallback = AnimCallback.NONE;
+        switch (callback) {
+            case ON_EXTEND_COMPLETE -> onExtendComplete();
+            case ON_FIRE_TIMER_COMPLETE -> onFireTimerComplete();
+            case ON_RETRACT_COMPLETE -> onRetractComplete();
+            case NONE -> {}
+        }
     }
 
     /** ROM: sub_69AD8 — Advance position from the angle-based table. */

@@ -9,19 +9,21 @@ import com.openggf.control.InputHandler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.CollisionModel;
+import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.PhysicsFeatureSet;
-import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.camera.Camera;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.level.LevelManager;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.CustomPlayablePhysics;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.SensorConfiguration;
 import com.openggf.sprites.Sprite;
 import com.openggf.game.GroundMode;
@@ -33,6 +35,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Manages collection of available sprites to be provided to renderer and collision manager.
@@ -43,12 +46,12 @@ import java.util.Map;
 public class SpriteManager {
 	private final SonicConfigurationService configService;
 
-	private static SpriteManager bootstrapInstance;
-
 	private Map<String, Sprite> sprites;
 
 	private final List<AbstractPlayableSprite> sidekicks = new ArrayList<>();
 	private final Map<AbstractPlayableSprite, String> sidekickCharacterNames = new IdentityHashMap<>();
+	private final Set<AbstractPlayableSprite> temporarySidekicks =
+			Collections.newSetFromMap(new IdentityHashMap<>());
 
 	private static final SensorConfiguration[][] MOVEMENT_MAPPING_ARRAY = createMovementMappingArray();
 
@@ -81,9 +84,14 @@ public class SpriteManager {
 	private int frameCounter;
 	private boolean inputSuppressed;
 	private boolean playbackInputSuppressed;
+	private final IdentityHashMap<AbstractPlayableSprite, Integer> playableUpdateOrder = new IdentityHashMap<>();
+	private final IdentityHashMap<AbstractPlayableSprite, List<Runnable>> deferredPostTickMutations =
+			new IdentityHashMap<>();
+	private AbstractPlayableSprite activePlayableUpdate;
+	private boolean playableFrameActive;
 
 	public SpriteManager() {
-		this(SonicConfigurationService.getInstance());
+		this(GameServices.configuration());
 	}
 
 	public SpriteManager(SonicConfigurationService configService) {
@@ -125,8 +133,14 @@ public class SpriteManager {
 	 */
 	public boolean addSprite(Sprite sprite) {
 		bucketsDirty = true;
-		boolean replaced = (sprites.put(sprite.getCode(), sprite) != null);
-		if (!replaced && sprite instanceof AbstractPlayableSprite playable && playable.isCpuControlled()) {
+		Sprite previous = sprites.put(sprite.getCode(), sprite);
+		boolean replaced = previous != null;
+		if (previous instanceof AbstractPlayableSprite previousPlayable) {
+			sidekicks.remove(previousPlayable);
+			sidekickCharacterNames.remove(previousPlayable);
+			temporarySidekicks.remove(previousPlayable);
+		}
+		if (sprite instanceof AbstractPlayableSprite playable && playable.isCpuControlled()) {
 			sidekicks.add(playable);
 			// characterName is null when registered via the untyped overload
 		}
@@ -143,6 +157,22 @@ public class SpriteManager {
 			// addSprite(Sprite) already added the sprite to the sidekicks list on first
 			// insertion. Just record the character name.
 			sidekickCharacterNames.put(sprite, characterName);
+		}
+	}
+
+	public void addTemporarySidekick(AbstractPlayableSprite sprite, String characterName) {
+		addSprite(sprite, characterName);
+		if (sprite.isCpuControlled()) {
+			temporarySidekicks.add(sprite);
+		}
+	}
+
+	public void removeTemporarySidekicks() {
+		if (temporarySidekicks.isEmpty()) {
+			return;
+		}
+		for (AbstractPlayableSprite sidekick : new ArrayList<>(temporarySidekicks)) {
+			removeSprite(sidekick);
 		}
 	}
 
@@ -165,6 +195,7 @@ public class SpriteManager {
 		sprites.clear();
 		sidekicks.clear();
 		sidekickCharacterNames.clear();
+		temporarySidekicks.clear();
 		bucketsDirty = true;
 	}
 
@@ -177,6 +208,11 @@ public class SpriteManager {
 		frameCounter = 0;
 		inputSuppressed = false;
 		playbackInputSuppressed = false;
+		lastSidekickSuppressed = false;
+		playableUpdateOrder.clear();
+		deferredPostTickMutations.clear();
+		activePlayableUpdate = null;
+		playableFrameActive = false;
 	}
 
 	/**
@@ -209,6 +245,15 @@ public class SpriteManager {
 	}
 
 	/**
+	 * Returns registered CPU-controlled sidekicks without applying zone-level
+	 * suppression. Trace comparison uses this to observe hidden/suppressed
+	 * sidekick state without mutating it.
+	 */
+	public List<AbstractPlayableSprite> getRegisteredSidekicks() {
+		return Collections.unmodifiableList(sidekicks);
+	}
+
+	/**
 	 * Returns the character name for a sidekick (e.g. "tails", "sonic", "knuckles").
 	 */
 	public String getSidekickCharacterName(AbstractPlayableSprite sidekick) {
@@ -216,25 +261,64 @@ public class SpriteManager {
 	}
 
 
+	/**
+	 * Returns the current frame counter (gameplay frames since level boot).
+	 * Increments at the start of each {@link #update(InputHandler)} call. Skipped
+	 * when {@code stepFrame} returns early (e.g. for seamless transitions) and
+	 * during {@code skipFrameFromRecording()} lag-frame skips, so this counter is
+	 * <em>not</em> guaranteed to track ROM's {@code Level_frame_counter} unless
+	 * the bootstrap explicitly aligns it.
+	 */
+	public int getFrameCounter() {
+		return frameCounter;
+	}
+
+	/**
+	 * Sets the gameplay frame counter. Used by trace-replay setup to align the
+	 * engine's counter with the ROM's {@code Level_frame_counter} at the start
+	 * of comparison so AI logic that gates on {@code (Level_frame_counter & MASK)}
+	 * fires on the same frames as the ROM.
+	 */
+	public void setFrameCounter(int value) {
+		this.frameCounter = value;
+	}
+
 	public void update(InputHandler handler) {
 		frameCounter++;
 		// Note: bucketsDirty is already marked in addSprite()/removeSprite(),
 		// no need to unconditionally mark dirty every frame
 		Collection<Sprite> sprites = getAllSprites();
+		List<AbstractPlayableSprite> playables =
+				buildPlayableUpdateOrder(sprites, sidekicks, isCpuSidekickSuppressed());
+		beginPlayableFrame(playables);
 		boolean suppressInput = inputSuppressed || playbackInputSuppressed;
 		boolean up = !suppressInput && handler.isKeyDown(upKey);
 		boolean down = !suppressInput && handler.isKeyDown(downKey);
 		boolean left = !suppressInput && handler.isKeyDown(leftKey);
 		boolean right = !suppressInput && handler.isKeyDown(rightKey);
 		boolean space = !suppressInput && handler.isKeyDown(jumpKey);
+		// Controller 2 input (Tails CPU manual override / sidekick respawn).
+		// ROM convention:
+		//   Ctrl_2_held    = bits currently pressed THIS frame
+		//   Ctrl_2_logical = bits that just transitioned from up to down ("just-pressed")
+		// SidekickCpuController treats them differently: e.g. updateCatchUpFlight
+		// uses controller2Logical (edge-detect) to fire the early A/B/C/START
+		// trigger, while the manual-control timer uses controller2Held.
 		int p2Held = 0;
-		if (!suppressInput && handler.isKeyDown(p2UpKey)) p2Held |= AbstractPlayableSprite.INPUT_UP;
-		if (!suppressInput && handler.isKeyDown(p2DownKey)) p2Held |= AbstractPlayableSprite.INPUT_DOWN;
-		if (!suppressInput && handler.isKeyDown(p2LeftKey)) p2Held |= AbstractPlayableSprite.INPUT_LEFT;
-		if (!suppressInput && handler.isKeyDown(p2RightKey)) p2Held |= AbstractPlayableSprite.INPUT_RIGHT;
-		if (!suppressInput && handler.isKeyDown(p2JumpKey)) p2Held |= AbstractPlayableSprite.INPUT_JUMP;
-		int p2Logical = p2Held;
-		if (!suppressInput && handler.isKeyDown(p2StartKey)) p2Logical |= 0x20;
+		int p2Logical = 0;
+		if (!suppressInput) {
+			if (handler.isKeyDown(p2UpKey))    p2Held |= AbstractPlayableSprite.INPUT_UP;
+			if (handler.isKeyDown(p2DownKey))  p2Held |= AbstractPlayableSprite.INPUT_DOWN;
+			if (handler.isKeyDown(p2LeftKey))  p2Held |= AbstractPlayableSprite.INPUT_LEFT;
+			if (handler.isKeyDown(p2RightKey)) p2Held |= AbstractPlayableSprite.INPUT_RIGHT;
+			if (handler.isKeyDown(p2JumpKey))  p2Held |= AbstractPlayableSprite.INPUT_JUMP;
+			if (handler.isKeyPressed(p2UpKey))    p2Logical |= AbstractPlayableSprite.INPUT_UP;
+			if (handler.isKeyPressed(p2DownKey))  p2Logical |= AbstractPlayableSprite.INPUT_DOWN;
+			if (handler.isKeyPressed(p2LeftKey))  p2Logical |= AbstractPlayableSprite.INPUT_LEFT;
+			if (handler.isKeyPressed(p2RightKey)) p2Logical |= AbstractPlayableSprite.INPUT_RIGHT;
+			if (handler.isKeyPressed(p2JumpKey))  p2Logical |= AbstractPlayableSprite.INPUT_JUMP;
+			if (handler.isKeyPressed(p2StartKey)) p2Logical |= 0x20;
+		}
 		boolean testButton = !suppressInput && handler.isKeyDown(testKey);
 		boolean speedUp = isDebugSpeedUpModifierDown(handler);
 		boolean slowDown = isDebugSlowDownModifierDown(handler);
@@ -253,112 +337,342 @@ public class SpriteManager {
 		}
 
 		LevelManager levelManager = getLevelManager();
-		for (Sprite sprite : sprites) {
-			if (sprite instanceof AbstractPlayableSprite playable) {
-				if (playable.isCpuControlled() && isCpuSidekickSuppressed()) {
-					continue;
-				}
-				if (debugModePressed) {
-					playable.toggleDebugMode();
-				}
-				// Super Sonic debug toggle (only for player 1, not CPU sidekicks)
-				if (superSonicDebugPressed && !playable.isCpuControlled()) {
-					var superCtrl = playable.getSuperStateController();
-					if (superCtrl != null) {
-						if (superCtrl.isSuper()) {
-							superCtrl.debugDeactivate();
-						} else {
-							superCtrl.debugActivate();
+		try {
+			for (AbstractPlayableSprite playable : playables) {
+				activePlayableUpdate = playable;
+				try {
+					playable.applyQueuedControlStateForFrameStart();
+					if (debugModePressed) {
+						playable.toggleDebugMode();
+					}
+					// Super Sonic debug toggle (only for player 1, not CPU sidekicks)
+					if (superSonicDebugPressed && !playable.isCpuControlled()) {
+						var superCtrl = playable.getSuperStateController();
+						if (superCtrl != null) {
+							if (superCtrl.isSuper()) {
+								superCtrl.debugDeactivate();
+							} else {
+								superCtrl.debugActivate();
+							}
 						}
 					}
-				}
 
-				boolean effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump, effectiveTest;
+					boolean effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump, effectiveTest;
+					boolean skipCpuPhysicsThisFrame = false;
+					SidekickCpuController cpuControllerForDiagnostics = null;
 
-				if (playable.isCpuControlled() && playable.getCpuController() != null) {
-					// CPU-controlled sprite: run AI to generate virtual input
-					var cpuController = playable.getCpuController();
-					boolean isFirstSidekick = !sidekicks.isEmpty() && sidekicks.getFirst() == playable;
-					if (isFirstSidekick) {
-						cpuController.setController2Input(p2Held, p2Logical);
+					if (playable.isCpuControlled() && playable.getCpuController() != null) {
+						// CPU-controlled sprite: run AI to generate virtual input
+						var cpuController = playable.getCpuController();
+						cpuControllerForDiagnostics = cpuController;
+						boolean isFirstSidekick = !sidekicks.isEmpty() && sidekicks.getFirst() == playable;
+						if (isFirstSidekick) {
+							cpuController.setController2Input(p2Held, p2Logical);
+						}
+						cpuController.update(frameCounter);
+						skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
+
+						boolean aiUp = cpuController.getInputUp();
+						boolean aiDown = cpuController.getInputDown();
+						boolean aiLeft = cpuController.getInputLeft();
+						boolean aiRight = cpuController.getInputRight();
+						boolean aiJump = cpuController.getInputJump();
+						boolean aiJumpPress = cpuController.getInputJumpPress();
+
+						boolean forcedRight = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
+								|| playable.isForceInputRight();
+						boolean forcedLeft = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT);
+						boolean forcedUp = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_UP);
+						boolean forcedDown = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_DOWN);
+						boolean forcedJump = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+						effectiveRight = aiRight || forcedRight;
+						effectiveLeft = (aiLeft || forcedLeft) && !forcedRight;
+						effectiveUp = aiUp || forcedUp;
+						effectiveDown = aiDown || forcedDown;
+						effectiveJump = aiJump || forcedJump;
+						effectiveTest = false;
+
+						publishInputState(playable,
+								aiUp, aiDown, aiLeft, aiRight, aiJump,
+								effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump,
+								true, aiJumpPress);
+
+						// If approaching (respawn in progress) and the strategy handles movement
+						// directly (Tails fly-in, Knuckles glide), skip normal physics.
+						// Strategies that need physics (Sonic walk/spindash) fall through.
+						if (skipCpuPhysicsThisFrame) {
+							applyScreenYWrapValueAfterControl(playable);
+							playable.getAnimationManager().update(frameCounter);
+							playable.tickStatus();
+							playable.endOfTick();
+							continue;
+						}
+						if (cpuController.isApproaching()
+								&& !cpuController.getRespawnStrategy().requiresPhysics()) {
+							applyScreenYWrapValueAfterControl(playable);
+							playable.getAnimationManager().update(frameCounter);
+							playable.tickStatus();
+							playable.endOfTick();
+							continue;
+						}
+						if (aiJumpPress) {
+							playable.setForcedJumpPress(true);
+						}
+					} else {
+						// Player-controlled sprite: use keyboard input
+						boolean controlLocked = playable.isControlLocked();
+						boolean forcedRight = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
+								|| playable.isForceInputRight();
+						boolean forcedLeft = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT);
+						boolean forcedUp = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_UP);
+						boolean forcedDown = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_DOWN);
+						boolean forcedJump = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+						effectiveRight = (!controlLocked && right) || forcedRight;
+						effectiveLeft = ((!controlLocked && left) || forcedLeft) && !forcedRight;
+						effectiveUp = (!controlLocked && up) || forcedUp;
+						effectiveDown = (!controlLocked && down) || forcedDown;
+						effectiveJump = (!controlLocked && space) || forcedJump;
+						effectiveTest = !controlLocked && testButton;
+
+						// Store RAW input state for objects (like flippers) that need to query
+						// button state even when control is locked. This matches ROM behavior
+						// where obj_control locks movement but objects can still read button state.
+						publishInputState(playable,
+								up, down, left, right, space,
+								effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump,
+								false, false);
 					}
-					cpuController.update(frameCounter);
 
-					// If approaching (respawn in progress) and the strategy handles movement
-					// directly (Tails fly-in, Knuckles glide), skip normal physics.
-					// Strategies that need physics (Sonic walk/spindash) fall through.
-					if (cpuController.isApproaching()
-							&& !cpuController.getRespawnStrategy().requiresPhysics()) {
-						playable.getAnimationManager().update(frameCounter);
-						playable.tickStatus();
-						playable.endOfTick();
-						continue;
+					tickPlayablePhysics(playable, effectiveUp, effectiveDown, effectiveLeft,
+							effectiveRight, effectiveJump, effectiveTest, speedUp, slowDown,
+							levelManager, frameCounter);
+					levelManager.updateZoneFeaturesAfterPlayablePhysics(playable);
+					if (cpuControllerForDiagnostics != null) {
+						cpuControllerForDiagnostics.recordDiagnosticPostPhysics();
 					}
-
-					boolean aiUp = cpuController.getInputUp();
-					boolean aiDown = cpuController.getInputDown();
-					boolean aiLeft = cpuController.getInputLeft();
-					boolean aiRight = cpuController.getInputRight();
-					boolean aiJump = cpuController.getInputJump();
-
-					boolean forcedRight = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
-							|| playable.isForceInputRight();
-					boolean forcedLeft = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT);
-					boolean forcedUp = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_UP);
-					boolean forcedDown = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_DOWN);
-					boolean forcedJump = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
-					effectiveRight = aiRight || forcedRight;
-					effectiveLeft = (aiLeft || forcedLeft) && !forcedRight;
-					effectiveUp = aiUp || forcedUp;
-					effectiveDown = aiDown || forcedDown;
-					effectiveJump = aiJump || forcedJump;
-					effectiveTest = false;
-
-					playable.setJumpInputPressed(aiJump);
-					playable.setDirectionalInputPressed(aiUp, aiDown, aiLeft, aiRight);
-				} else {
-					// Player-controlled sprite: use keyboard input
-					boolean controlLocked = playable.isControlLocked();
-					boolean forcedRight = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
-							|| playable.isForceInputRight();
-					boolean forcedLeft = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT);
-					boolean forcedUp = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_UP);
-					boolean forcedDown = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_DOWN);
-					boolean forcedJump = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
-					effectiveRight = (!controlLocked && right) || forcedRight;
-					effectiveLeft = ((!controlLocked && left) || forcedLeft) && !forcedRight;
-					effectiveUp = (!controlLocked && up) || forcedUp;
-					effectiveDown = (!controlLocked && down) || forcedDown;
-					effectiveJump = (!controlLocked && space) || forcedJump;
-					effectiveTest = !controlLocked && testButton;
-
-					// Store RAW input state for objects (like flippers) that need to query
-					// button state even when control is locked. This matches ROM behavior
-					// where obj_control locks movement but objects can still read button state.
-					playable.setJumpInputPressed(space);
-					playable.setDirectionalInputPressed(up, down, left, right);
+				} finally {
+					runDeferredPostTickMutations(playable);
+					activePlayableUpdate = null;
 				}
-
-				tickPlayablePhysics(playable, effectiveUp, effectiveDown, effectiveLeft,
-						effectiveRight, effectiveJump, effectiveTest, speedUp, slowDown,
-						levelManager, frameCounter);
 			}
+		} finally {
+			endPlayableFrame();
 		}
 	}
 
 	public void updateWithoutInput() {
 		frameCounter++;
 		Collection<Sprite> sprites = getAllSprites();
+		List<AbstractPlayableSprite> playables =
+				buildPlayableUpdateOrder(sprites, sidekicks, isCpuSidekickSuppressed());
 		LevelManager levelManager = getLevelManager();
-
-		for (Sprite sprite : sprites) {
-			if (sprite instanceof AbstractPlayableSprite playable) {
-				if (playable.isCpuControlled() && isCpuSidekickSuppressed()) {
-					continue;
+		beginPlayableFrame(playables);
+		try {
+			for (AbstractPlayableSprite playable : playables) {
+				activePlayableUpdate = playable;
+				try {
+					playable.applyQueuedControlStateForFrameStart();
+					publishInputState(playable,
+							false, false, false, false, false,
+							false, false, false, false, false,
+							false, false);
+					tickPlayablePhysics(playable, false, false, false, false, false, false, false, false,
+							levelManager, frameCounter);
+					levelManager.updateZoneFeaturesAfterPlayablePhysics(playable);
+				} finally {
+					runDeferredPostTickMutations(playable);
+					activePlayableUpdate = null;
 				}
-				tickPlayablePhysics(playable, false, false, false, false, false, false, false, false,
-						levelManager, frameCounter);
 			}
+		} finally {
+			endPlayableFrame();
+		}
+	}
+
+	/**
+	 * Runs the CPU-controlled sidekicks through the short object prelude that
+	 * happens while the ROM title card still holds the main player. The main
+	 * player and BK2 cursor are intentionally untouched; callers restore
+	 * {@link #frameCounter} afterwards because ROM's Level_frame_counter has not
+	 * started advancing during this prelude.
+	 *
+	 * <p>ROM runs Obj01_Control before Obj02_Control inside the title-card
+	 * RunObjects loop, so Sonic_RecordPos overwrites the next Pos_table slot
+	 * with Sonic's current centre before Tails_CPU_Normal reads its delayed
+	 * lookup target. Mirror that ordering by ticking the leader's follower
+	 * history once per prelude frame.
+	 */
+	public void warmUpCpuSidekicksOnly(int frames, LevelManager levelManager) {
+		if (frames <= 0 || levelManager == null || sidekicks.isEmpty()) {
+			return;
+		}
+		int savedFrameCounter = frameCounter;
+		try {
+			for (int i = 0; i < frames; i++) {
+				frameCounter++;
+				List<AbstractPlayableSprite> activeSidekicks = new ArrayList<>(getSidekicks());
+				// ROM Obj01_Control calls Sonic_RecordPos before Obj02_Control
+				// runs. Match that ordering so Tails_CPU_Normal's 16-frame
+				// delayed lookup sees the freshly written Pos_table entry.
+				AbstractPlayableSprite leaderToRecord = null;
+				for (AbstractPlayableSprite playable : activeSidekicks) {
+					var cpuController = playable.getCpuController();
+					if (cpuController != null) {
+						leaderToRecord = cpuController.getLeader();
+						break;
+					}
+				}
+				if (leaderToRecord != null) {
+					// The prelude does NOT run the leader's full tick (no
+					// endOfTick() to clear the per-tick gate), so reset the
+					// gate manually after writing so the next prelude frame
+					// can record again.
+					leaderToRecord.recordFollowerHistoryForTick();
+					leaderToRecord.clearFollowerHistoryRecordedFlag();
+				}
+				beginPlayableFrame(activeSidekicks);
+				try {
+					for (AbstractPlayableSprite playable : activeSidekicks) {
+						if (playable.getCpuController() == null) {
+							continue;
+						}
+						activePlayableUpdate = playable;
+						try {
+							playable.applyQueuedControlStateForFrameStart();
+							var cpuController = playable.getCpuController();
+							cpuController.update(frameCounter);
+							boolean skipCpuPhysicsThisFrame = cpuController.consumeSkipPhysicsThisFrame();
+
+							boolean aiUp = cpuController.getInputUp();
+							boolean aiDown = cpuController.getInputDown();
+							boolean aiLeft = cpuController.getInputLeft();
+							boolean aiRight = cpuController.getInputRight();
+							boolean aiJump = cpuController.getInputJump();
+							boolean aiJumpPress = cpuController.getInputJumpPress();
+							boolean forcedRight = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_RIGHT)
+									|| playable.isForceInputRight();
+							boolean forcedLeft = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT);
+							boolean forcedUp = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_UP);
+							boolean forcedDown = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_DOWN);
+							boolean forcedJump = playable.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP);
+							boolean effectiveRight = aiRight || forcedRight;
+							boolean effectiveLeft = (aiLeft || forcedLeft) && !forcedRight;
+							boolean effectiveUp = aiUp || forcedUp;
+							boolean effectiveDown = aiDown || forcedDown;
+							boolean effectiveJump = aiJump || forcedJump;
+
+							publishInputState(playable,
+									aiUp, aiDown, aiLeft, aiRight, aiJump,
+									effectiveUp, effectiveDown, effectiveLeft, effectiveRight, effectiveJump,
+									true, aiJumpPress);
+							if (skipCpuPhysicsThisFrame) {
+								playable.getAnimationManager().update(frameCounter);
+								playable.tickStatus();
+								playable.endOfTick();
+								continue;
+							}
+							if (cpuController.isApproaching()
+									&& !cpuController.getRespawnStrategy().requiresPhysics()) {
+								playable.getAnimationManager().update(frameCounter);
+								playable.tickStatus();
+								playable.endOfTick();
+								continue;
+							}
+							if (cpuController.getInputJumpPress()) {
+								playable.setForcedJumpPress(true);
+							}
+							tickPlayablePhysics(playable, effectiveUp, effectiveDown,
+									effectiveLeft, effectiveRight, effectiveJump, false,
+									false, false, levelManager, frameCounter);
+							levelManager.updateZoneFeaturesAfterPlayablePhysics(playable);
+						} finally {
+							runDeferredPostTickMutations(playable);
+							activePlayableUpdate = null;
+						}
+					}
+				} finally {
+					endPlayableFrame();
+				}
+			}
+		} finally {
+			frameCounter = savedFrameCounter;
+		}
+	}
+
+	/**
+	 * Defers a cross-playable mutation until the target sprite has finished its
+	 * current physics slot in this frame.
+	 * <p>
+	 * ROM touch handlers can mutate another character's status during the current
+	 * player's ReactToItem slot. When the target player's slot still lies ahead in
+	 * the engine's update order, applying that mutation immediately would let the
+	 * later player tick consume it one frame too early.
+	 */
+	public void deferCrossPlayableMutationUntilPostTick(AbstractPlayableSprite target, Runnable mutation) {
+		if (target == null || mutation == null) {
+			return;
+		}
+		if (!playableFrameActive) {
+			mutation.run();
+			return;
+		}
+		Integer targetOrder = playableUpdateOrder.get(target);
+		Integer activeOrder = activePlayableUpdate != null ? playableUpdateOrder.get(activePlayableUpdate) : null;
+		if (targetOrder == null || activeOrder == null || targetOrder <= activeOrder) {
+			mutation.run();
+			return;
+		}
+		deferredPostTickMutations.computeIfAbsent(target, ignored -> new ArrayList<>()).add(mutation);
+	}
+
+	private void beginPlayableFrame(List<AbstractPlayableSprite> playables) {
+		playableFrameActive = true;
+		playableUpdateOrder.clear();
+		deferredPostTickMutations.clear();
+		activePlayableUpdate = null;
+		for (int i = 0; i < playables.size(); i++) {
+			AbstractPlayableSprite playable = playables.get(i);
+			playableUpdateOrder.put(playable, i);
+			// Snapshot Status_OnObj before any player tick runs so cross-playable
+			// reads (e.g. Tails_CPU_Control follow-steering, sonic3k.asm:26688-26700,
+			// s2.asm:38933+) see the leader's bit as it stood mid-frame, before
+			// Sonic_Jump-driven engine clears (PlayableSpriteMovement.doJump and
+			// the air-unseat path in ObjectManager.processInlineObjectForPlayer)
+			// have run. ROM only clears Status_OnObj later in solid-object
+			// processing (sub_1FF1E sonic3k.asm:44306-44319, loc_1FFC4
+			// sonic3k.asm:44369-44381).
+			playable.captureOnObjectAtFrameStart();
+		}
+	}
+
+	private void endPlayableFrame() {
+		playableFrameActive = false;
+		playableUpdateOrder.clear();
+		deferredPostTickMutations.clear();
+		activePlayableUpdate = null;
+	}
+
+	private void runDeferredPostTickMutations(AbstractPlayableSprite playable) {
+		List<Runnable> deferred = deferredPostTickMutations.remove(playable);
+		if (deferred == null) {
+			return;
+		}
+		for (Runnable mutation : deferred) {
+			mutation.run();
+		}
+	}
+
+	private static void publishInputState(AbstractPlayableSprite playable,
+			boolean rawUp, boolean rawDown, boolean rawLeft, boolean rawRight, boolean rawJump,
+			boolean logicalUp, boolean logicalDown, boolean logicalLeft, boolean logicalRight, boolean logicalJump,
+			boolean explicitLogicalJumpPress, boolean logicalJumpPress) {
+		playable.setJumpInputPressed(rawJump);
+		playable.setDirectionalInputPressed(rawUp, rawDown, rawLeft, rawRight);
+		if (explicitLogicalJumpPress) {
+			playable.setLogicalInputState(logicalUp, logicalDown, logicalLeft, logicalRight, logicalJump,
+					logicalJumpPress);
+		} else {
+			playable.setLogicalInputState(logicalUp, logicalDown, logicalLeft, logicalRight, logicalJump);
 		}
 	}
 
@@ -375,6 +689,17 @@ public class SpriteManager {
 					continue;
 				}
 				playable.getAnimationManager().update(frameCounter);
+			}
+		}
+	}
+
+	public void refreshPlayableRenderFlags(Camera camera) {
+		if (camera == null) {
+			return;
+		}
+		for (Sprite sprite : getAllSprites()) {
+			if (sprite instanceof AbstractPlayableSprite playable) {
+				playable.setRenderFlagOnScreen(camera.isVisibleForRenderFlag(playable));
 			}
 		}
 	}
@@ -530,6 +855,17 @@ public class SpriteManager {
 	 * @param gfx    The graphics manager to use for priority state
 	 */
 	public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx) {
+		drawUnifiedBucketWithPriority(bucket, gfx, null, null);
+	}
+
+	/**
+	 * Draw all sprites in a single unified bucket with hooks immediately before each
+	 * tile-priority group. The hooks are used by render-only overlays that need the
+	 * same bucket/priority placement as playable sprites while staying behind them.
+	 */
+	public void drawUnifiedBucketWithPriority(int bucket, GraphicsManager gfx,
+											 Runnable beforeLowPriority,
+											 Runnable beforeHighPriority) {
 		boolean wrapEnabled = enableVerticalWrapIfNeeded();
 		try {
 			bucketSprites();
@@ -542,6 +878,11 @@ public class SpriteManager {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(false);
 				gfx.beginPatternBatch();
+				if (beforeLowPriority != null) {
+					beforeLowPriority.run();
+					gfx.setCurrentSpriteHighPriority(false);
+					gfx.beginPatternBatch();
+				}
 				for (Sprite sprite : lowPriorityBuckets[idx]) {
 					sprite.draw();
 				}
@@ -551,6 +892,11 @@ public class SpriteManager {
 				gfx.flushPatternBatch();
 				gfx.setCurrentSpriteHighPriority(true);
 				gfx.beginPatternBatch();
+				if (beforeHighPriority != null) {
+					beforeHighPriority.run();
+					gfx.setCurrentSpriteHighPriority(true);
+					gfx.beginPatternBatch();
+				}
 				for (Sprite sprite : highPriorityBuckets[idx]) {
 					sprite.draw();
 				}
@@ -576,17 +922,17 @@ public class SpriteManager {
 	 * caller must disable it after drawing).
 	 */
 	private boolean enableVerticalWrapIfNeeded() {
-		Camera camera = currentCamera();
-		if (camera.isVerticalWrapEnabled()) {
-			GraphicsManager.getInstance().enableVerticalWrapAdjust(
-					Camera.VERTICAL_WRAP_RANGE, camera.getY());
+		Camera camera = GameServices.cameraOrNull();
+		if (camera != null && camera.isVerticalWrapEnabled()) {
+			GameServices.graphics().enableVerticalWrapAdjust(
+					camera.getVerticalWrapRange(), camera.getY());
 			return true;
 		}
 		return false;
 	}
 
 	private void disableVerticalWrap() {
-		GraphicsManager.getInstance().disableVerticalWrapAdjust();
+		GameServices.graphics().disableVerticalWrapAdjust();
 	}
 
 	private boolean removeSprite(Sprite sprite) {
@@ -597,6 +943,7 @@ public class SpriteManager {
 		if (sprite instanceof AbstractPlayableSprite playable) {
 			sidekicks.remove(playable);
 			sidekickCharacterNames.remove(playable);
+			temporarySidekicks.remove(playable);
 		}
 		return (sprites.remove(sprite.getCode()) != null);
 	}
@@ -659,21 +1006,15 @@ public class SpriteManager {
 	}
 
 	private LevelManager getLevelManager() {
-		if (levelManager == null) {
-			var runtime = RuntimeManager.getCurrent();
-			levelManager = runtime != null ? runtime.getLevelManager() : LevelManager.getInstance();
+		LevelManager runtimeLevelManager = GameServices.levelOrNull();
+		if (runtimeLevelManager != null && levelManager != runtimeLevelManager) {
+			levelManager = runtimeLevelManager;
 		}
 		return levelManager;
 	}
 
-	private Camera currentCamera() {
-		var runtime = RuntimeManager.getCurrent();
-		return runtime != null ? runtime.getCamera() : Camera.getInstance();
-	}
-
 	private GameStateManager currentGameStateManager() {
-		var runtime = RuntimeManager.getCurrent();
-		return runtime != null ? runtime.getGameState() : GameStateManager.getInstance();
+		return GameServices.gameState();
 	}
 
 	/**
@@ -693,10 +1034,21 @@ public class SpriteManager {
 	}
 
 	private boolean isCpuSidekickSuppressed() {
-		LevelManager lm = getLevelManager();
+		LevelManager lm = GameServices.levelOrNull();
+		GameModule module = null;
+		var session = com.openggf.game.session.SessionManager.getCurrentWorldSession();
+		if (session != null) {
+			module = session.getGameModule();
+		}
+		if (lm == null) {
+			lm = getLevelManager();
+		}
 		if (lm == null) return false;
-		if (GameModuleRegistry.getCurrent().isSidekickSuppressedForZone(lm.getCurrentZone())) return true;
-		if (AizPlaneIntroInstance.isSidekickSuppressed()) return true;
+		if (module == null) {
+			module = lm.getGameModule();
+		}
+		int currentZone = lm.getCurrentZone();
+		if (module != null && module.isSidekickSuppressedForZone(currentZone)) return true;
 		return false;
 	}
 
@@ -704,6 +1056,65 @@ public class SpriteManager {
 		return isCpuSidekickSuppressed()
 				&& sprite instanceof AbstractPlayableSprite playable
 				&& playable.isCpuControlled();
+	}
+
+	public void refreshPowerUpObjectsAfterRewindRestore() {
+		for (Sprite sprite : sprites.values()) {
+			if (sprite instanceof AbstractPlayableSprite playable) {
+				playable.refreshPowerUpObjectsAfterRewindRestore();
+			}
+		}
+	}
+
+	public void refreshLatchedSolidObjectsAfterRewindRestore(ObjectManager objectManager) {
+		if (objectManager == null) {
+			return;
+		}
+		Collection<ObjectInstance> activeObjects = objectManager.getActiveObjects();
+		for (Sprite sprite : sprites.values()) {
+			if (sprite instanceof AbstractPlayableSprite playable) {
+				int objectId = playable.getLatchedSolidObjectId() & 0xFF;
+				if (objectId == 0) {
+					playable.setLatchedSolidObjectInstance(null);
+					continue;
+				}
+				ObjectInstance current = playable.getLatchedSolidObjectInstance();
+				if (isActiveObjectWithId(current, activeObjects, objectId)) {
+					continue;
+				}
+				playable.setLatchedSolidObject(objectId, nearestActiveObjectWithId(playable, activeObjects, objectId));
+			}
+		}
+	}
+
+	private boolean isActiveObjectWithId(ObjectInstance object,
+			Collection<ObjectInstance> activeObjects,
+			int objectId) {
+		return object != null
+				&& object.getSpawn() != null
+				&& (object.getSpawn().objectId() & 0xFF) == objectId
+				&& activeObjects.contains(object);
+	}
+
+	private ObjectInstance nearestActiveObjectWithId(AbstractPlayableSprite playable,
+			Collection<ObjectInstance> activeObjects,
+			int objectId) {
+		ObjectInstance best = null;
+		long bestDistance = Long.MAX_VALUE;
+		for (ObjectInstance object : activeObjects) {
+			ObjectSpawn spawn = object.getSpawn();
+			if (spawn == null || (spawn.objectId() & 0xFF) != objectId) {
+				continue;
+			}
+			long dx = (long) spawn.x() - playable.getCentreX();
+			long dy = (long) spawn.y() - playable.getCentreY();
+			long distance = dx * dx + dy * dy;
+			if (distance < bestDistance) {
+				best = object;
+				bestDistance = distance;
+			}
+		}
+		return best;
 	}
 
 	/**
@@ -731,7 +1142,7 @@ public class SpriteManager {
 										   boolean jump, boolean test, boolean speedUp, boolean slowDown,
 										   LevelManager levelManager, int frameCounter) {
 		boolean isUnified = requiresPostMovementSolidPass(playable);
-		boolean usesInlineSolidResolution = levelManager != null && levelManager.usesInlineObjectSolidResolution();
+		boolean usesInlineSolidResolution = levelManager != null && levelManager.objectsExecuteAfterPlayerPhysics();
 		// For S1 UNIFIED: skip pre-movement solid pass. ROM processes all solid
 		// objects AFTER Sonic's movement (his slot runs first in ExecuteObjects),
 		// so only the post-movement pass is ROM-accurate. Running both creates
@@ -747,19 +1158,33 @@ public class SpriteManager {
 		} else {
 			playable.getMovementManager().handleMovement(up, down, left, right, jump, test, speedUp, slowDown);
 		}
-		// ROM order: ReactToItem runs during each player's slot within ExecuteObjects,
-		// after their physics but before other objects' solid checks.
+		applyScreenYWrapValueAfterControl(playable);
+		SidekickCpuController cpuController = playable.getCpuController();
+		if (cpuController != null) {
+			cpuController.finishCarryAfterCarrierMovement();
+		}
+		playable.recordFollowerHistoryForTick();
+		// ROM Obj01_Control: movement runs first, then Sonic_Animate, then
+		// TouchResponse. Special objects like monitors gate on anim(a0), so
+		// ReactToItem must observe the post-movement animation state from the
+		// current player slot, not the previous frame's mapping state.
+		playable.getAnimationManager().update(frameCounter);
 		levelManager.applyTouchResponses(playable);
 		// S1 (UNIFIED): Post-movement solid pass matches ROM timing — solid objects
 		// check Sonic's position after he has moved in the ROM's ExecuteObjects loop.
 		// postMovement=true disables velocity classification adjustment.
-		if (isUnified) {
+		// Skip this legacy batched pass when the active module resolves solids inline
+		// during the object execution loop (currently S1 trace-parity mode), otherwise
+		// S1 gets double-resolution (inline + post-movement) and the slot layout drifts.
+		if (isUnified && !usesInlineSolidResolution) {
 			applySolidContacts(levelManager, playable, true, false);
 		}
 		levelManager.applyPlaneSwitchers(playable);
-		playable.getAnimationManager().update(frameCounter);
 		playable.tickStatus();
 		playable.endOfTick();
+		if (usesInlineSolidResolution) {
+			levelManager.updatePlayableWaterStateForCurrentLevel(playable);
+		}
 	}
 
 	private static void applySolidContacts(LevelManager levelManager, AbstractPlayableSprite playable,
@@ -770,6 +1195,13 @@ public class SpriteManager {
 		}
 	}
 
+	private static void applyScreenYWrapValueAfterControl(AbstractPlayableSprite playable) {
+		Camera camera = GameServices.cameraOrNull();
+		if (camera != null) {
+			camera.applyScreenYWrapValue(playable);
+		}
+	}
+
 
 	static boolean requiresPostMovementSolidPass(AbstractPlayableSprite playable) {
 		if (playable == null) {
@@ -777,6 +1209,48 @@ public class SpriteManager {
 		}
 		PhysicsFeatureSet featureSet = playable.getPhysicsFeatureSet();
 		return featureSet != null && featureSet.collisionModel() == CollisionModel.UNIFIED;
+	}
+
+	static List<AbstractPlayableSprite> buildPlayableUpdateOrder(Collection<Sprite> sprites,
+			List<AbstractPlayableSprite> sidekicks,
+			boolean suppressCpuSidekicks) {
+		List<AbstractPlayableSprite> ordered = new ArrayList<>();
+		IdentityHashMap<AbstractPlayableSprite, Boolean> scheduled = new IdentityHashMap<>();
+		IdentityHashMap<AbstractPlayableSprite, Boolean> available = new IdentityHashMap<>();
+
+		for (Sprite sprite : sprites) {
+			if (sprite instanceof AbstractPlayableSprite playable) {
+				available.put(playable, Boolean.TRUE);
+				if (!playable.isCpuControlled()) {
+					ordered.add(playable);
+					scheduled.put(playable, Boolean.TRUE);
+				}
+			}
+		}
+
+		if (!suppressCpuSidekicks) {
+			for (AbstractPlayableSprite sidekick : sidekicks) {
+				if (available.containsKey(sidekick) && !scheduled.containsKey(sidekick)) {
+					ordered.add(sidekick);
+					scheduled.put(sidekick, Boolean.TRUE);
+				}
+			}
+		}
+
+		for (Sprite sprite : sprites) {
+			if (!(sprite instanceof AbstractPlayableSprite playable)) {
+				continue;
+			}
+			if (playable.isCpuControlled() && suppressCpuSidekicks) {
+				continue;
+			}
+			if (!scheduled.containsKey(playable)) {
+				ordered.add(playable);
+				scheduled.put(playable, Boolean.TRUE);
+			}
+		}
+
+		return ordered;
 	}
 
 
@@ -816,14 +1290,72 @@ public class SpriteManager {
 		return MOVEMENT_MAPPING_ARRAY[groundMode.ordinal()][direction.ordinal()];
 	}
 
-	public synchronized static SpriteManager getInstance() {
-		var runtime = RuntimeManager.getCurrent();
-		if (runtime != null) {
-			return runtime.getSpriteManager();
-		}
-		if (bootstrapInstance == null) {
-			bootstrapInstance = new SpriteManager();
-		}
-		return bootstrapInstance;
+	/**
+	 * Returns a {@link com.openggf.game.rewind.RewindSnapshottable} adapter for
+	 * all active playable sprites.
+	 *
+	 * <p><strong>Capture</strong> records the full mutable gameplay surface of
+	 * every active playable sprite (main player + sidekicks) keyed by
+	 * {@link Sprite#getCode()} via
+	 * {@link AbstractPlayableSprite#captureRewindState()}.
+	 *
+	 * <p><strong>Restore</strong> applies the captured snapshots back to the
+	 * currently registered sprites by code.  Sprites not present in the
+	 * snapshot (e.g. mid-level sidekick joins) are left untouched; sprites
+	 * in the snapshot but not present in the current manager are skipped.
+	 */
+	public com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot>
+			rewindSnapshottable() {
+		return new com.openggf.game.rewind.RewindSnapshottable<>() {
+			@Override
+			public String key() {
+				return "sprites";
+			}
+
+			@Override
+			public com.openggf.game.rewind.snapshot.SpriteManagerSnapshot capture() {
+				boolean includeFollowHistory = true;
+				java.util.List<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry> snap =
+						new java.util.ArrayList<>();
+				for (Sprite sprite : sprites.values()) {
+					if (sprite instanceof AbstractPlayableSprite aps) {
+						snap.add(new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry(
+								aps.getCode(), aps.captureRewindState(includeFollowHistory)));
+					}
+				}
+				return new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot(
+						frameCounter,
+						snap.toArray(new com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry[0]));
+			}
+
+			@Override
+			public void restore(com.openggf.game.rewind.snapshot.SpriteManagerSnapshot s) {
+				frameCounter = s.frameCounter();
+				java.util.Set<String> snapshotCodes = new java.util.HashSet<>();
+				for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {
+					snapshotCodes.add(entry.code());
+				}
+				for (AbstractPlayableSprite sidekick : new ArrayList<>(temporarySidekicks)) {
+					if (!snapshotCodes.contains(sidekick.getCode())) {
+						removeSprite(sidekick);
+					}
+				}
+				for (Sprite sprite : sprites.values()) {
+					if (sprite instanceof AbstractPlayableSprite aps) {
+						com.openggf.level.objects.PerObjectRewindSnapshot perSprite = null;
+						for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {
+							if (entry.code().equals(aps.getCode())) {
+								perSprite = entry.state();
+								break;
+							}
+						}
+						if (perSprite != null) {
+							aps.restoreRewindState(perSprite);
+						}
+					}
+				}
+			}
+		};
 	}
+
 }

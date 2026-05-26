@@ -27,7 +27,6 @@ public class CheckpointDongleInstance extends AbstractObjectInstance {
     private static final int ANGLE_DECREMENT = 0x10;
     private static final int SWING_RADIUS = 0x0C00;
     private static final int DONGLE_FRAME = 2; // Mapping frame for dongle
-
     private final CheckpointObjectInstance parent;
     private final int centerX;
     private final int centerY;

@@ -1,21 +1,22 @@
 package com.openggf.tests;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import com.openggf.audio.synth.PsgChipGPGX;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestPsgChipGpgxParity {
 
     @Test
     public void defaultsToFastModeForCrisperGenesisParity() {
         PsgChipGPGX chip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
-        assertFalse("GPGX parity should default to fast PSG mode", chip.isHqMode());
+        assertFalse(chip.isHqMode(), "GPGX parity should default to fast PSG mode");
     }
 
     @Test
@@ -33,7 +34,7 @@ public class TestPsgChipGpgxParity {
         for (int i = 0; i < 8; i++) {
             chip.renderStereo(left, right);
             int clocks = readPrivateInt(chip, "clocks");
-            assertTrue("Clock carry should stay within one PSG cycle remainder", clocks >= 0 && clocks < (15 * 16));
+            assertTrue(clocks >= 0 && clocks < (15 * 16), "Clock carry should stay within one PSG cycle remainder");
         }
     }
 
@@ -54,7 +55,7 @@ public class TestPsgChipGpgxParity {
 
         int actualShift = readPrivateInt(chip, "noiseShiftValue");
         int expectedShift = advancePeriodicNoise(initialShift, shiftWidth, 10);
-        assertEquals("Noise LFSR should advance on every polarity toggle", expectedShift, actualShift);
+        assertEquals(expectedShift, actualShift, "Noise LFSR should advance on every polarity toggle");
     }
 
     @Test
@@ -74,7 +75,7 @@ public class TestPsgChipGpgxParity {
 
         int actualShift = readPrivateInt(chip, "noiseShiftValue");
         int expectedShift = advancePeriodicNoise(initialShift, shiftWidth, 5);
-        assertEquals("Positive-edge mode should shift half as often as every-toggle mode", expectedShift, actualShift);
+        assertEquals(expectedShift, actualShift, "Positive-edge mode should shift half as often as every-toggle mode");
     }
 
     @Test
@@ -94,8 +95,65 @@ public class TestPsgChipGpgxParity {
         int factorFpBits = readPrivateStaticInt(blip.getClass(), "FACTOR_FP_BITS");
         long oneSampleFp = 1L << (20 + factorFpBits);
 
-        assertTrue("Blip timebase should stay bounded; large growth indicates sample timing drift",
-                offsetFp >= 0 && offsetFp < (oneSampleFp * 4));
+        assertTrue(offsetFp >= 0 && offsetFp < (oneSampleFp * 4), "Blip timebase should stay bounded; large growth indicates sample timing drift");
+    }
+
+    @Test
+    public void toneRenderOutputStaysExactInFastAndHqModes() {
+        PsgChipGPGX fastChip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        fastChip.write(0x80);
+        fastChip.write(0x20);
+        fastChip.write(0x90);
+
+        int[] fastLeft = new int[16];
+        int[] fastRight = new int[16];
+        fastChip.renderStereo(fastLeft, fastRight, 16);
+
+        assertArrayEquals(new int[] {0, 0, 0, 0, 0, 0, 0, 0, 9165, 7732, 8895, 7941, 8621, 8151, 8346, 0},
+                fastLeft, "Fast mode tone output should remain bit-exact for this deterministic setup");
+        assertArrayEquals(fastLeft, fastRight, "Stereo output should remain symmetric with default panning");
+
+        PsgChipGPGX hqChip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        hqChip.setHqMode(true);
+        hqChip.write(0x80);
+        hqChip.write(0x20);
+        hqChip.write(0x90);
+
+        int[] hqLeft = new int[16];
+        int[] hqRight = new int[16];
+        hqChip.renderStereo(hqLeft, hqRight, 16);
+
+        assertArrayEquals(new int[] {0, 10, -19, 73, -59, 257, -25, 1719, 7105, 8351, 8149, 8399, 8264, 8337, 8289, 0},
+                hqLeft, "HQ mode tone output should remain bit-exact for this deterministic setup");
+        assertArrayEquals(hqLeft, hqRight, "Stereo HQ output should remain symmetric with default panning");
+    }
+
+    @Test
+    public void noiseRenderOutputStaysExactInFastAndHqModes() {
+        PsgChipGPGX fastChip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        fastChip.write(0xE3);
+        fastChip.write(0xF0);
+
+        int[] fastLeft = new int[16];
+        int[] fastRight = new int[16];
+        fastChip.renderStereo(fastLeft, fastRight, 16);
+
+        assertArrayEquals(new int[] {0, 0, 0, 0, 0, 0, 0, 0, 7451, 5311, 7895, 5647, 6679, 6347, 6757, 0},
+                fastLeft, "Fast mode noise output should remain bit-exact for this deterministic setup");
+        assertArrayEquals(fastLeft, fastRight, "Stereo noise output should remain symmetric with default panning");
+
+        PsgChipGPGX hqChip = new PsgChipGPGX(44100.0, PsgChipGPGX.ChipType.INTEGRATED);
+        hqChip.setHqMode(true);
+        hqChip.write(0xE3);
+        hqChip.write(0xF0);
+
+        int[] hqLeft = new int[16];
+        int[] hqRight = new int[16];
+        hqChip.renderStereo(hqLeft, hqRight, 16);
+
+        assertArrayEquals(new int[] {0, 7, -14, 58, -51, 214, -42, 1453, 5516, 6223, 6618, 6678, 6093, 6704, 6677, 0},
+                hqLeft, "HQ mode noise output should remain bit-exact for this deterministic setup");
+        assertArrayEquals(hqLeft, hqRight, "Stereo HQ noise output should remain symmetric with default panning");
     }
 
     private static int readPrivateInt(Object instance, String fieldName) throws Exception {
@@ -144,3 +202,5 @@ public class TestPsgChipGpgxParity {
         return current;
     }
 }
+
+

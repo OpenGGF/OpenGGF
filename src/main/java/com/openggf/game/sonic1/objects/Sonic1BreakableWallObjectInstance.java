@@ -1,5 +1,8 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.SolidCheckpointBatch;
 
 import com.openggf.audio.GameSound;
 import com.openggf.debug.DebugRenderContext;
@@ -7,10 +10,13 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -20,6 +26,7 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -85,9 +92,6 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
     private boolean broken;
     private boolean initialized;
 
-    // Cached Sonic speed for break check (smash_speed = objoff_30)
-    private int cachedSonicSpeed;
-
     public Sonic1BreakableWallObjectInstance(ObjectSpawn spawn) {
         super(spawn, "SmashableWall");
         // From disassembly: move.b obSubtype(a0),obFrame(a0)
@@ -115,9 +119,23 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
         if (broken || player == null) {
             return;
         }
-        // From disassembly: move.w (v_player+obVelX).w,smash_speed(a0)
-        // Cache Sonic's horizontal speed each frame
-        cachedSonicSpeed = player.getXSpeed();
+        SolidCheckpointBatch batch = checkpointAll();
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        if (!participants.contains(player)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(player);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
+        }
+        for (PlayableEntity participant : participants) {
+            if (broken) {
+                break;
+            }
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                applyCheckpointContact(sprite, batch.perPlayer().get(participant));
+            }
+        }
     }
 
     @Override
@@ -137,43 +155,55 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
         if (broken || player == null) {
             return;
         }
+        tryBreak(player, contact.touchSide(), player.getAir(), player.getRolling(), player.getXSpeed());
+    }
 
-        // From disassembly: btst #5,obStatus(a0) - is Sonic pushing against the wall?
-        // In the ROM, SolidObject sets bit 5 for ANY ground side contact (lines 189-194
-        // of sub SolidObject.asm). The engine's contact.pushing() is more restrictive —
-        // it also requires player.getXSpeed() != 0, which can fail if terrain collision
-        // zeroed the speed before solid object resolution runs. Use touchSide() instead,
-        // matching the ROM's unconditional bit 5 set on side collision + ground check.
-        if (!contact.touchSide() || player.getAir()) {
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {
+        if (player == null || result == null || broken) {
             return;
         }
+        tryBreak(player,
+                result.kind() == ContactKind.SIDE,
+                player.getAir(),
+                result.preContact().rolling(),
+                result.preContact().xSpeed());
+    }
 
+    private void tryBreak(AbstractPlayableSprite player, boolean sideContact,
+                          boolean airborne, boolean rolling, int impactSpeed) {
+        // From disassembly: btst #5,obStatus(a0) - is Sonic pushing against the wall?
+        // In the ROM, SolidObject sets bit 5 for ANY ground side contact.
+        if (!sideContact || airborne) {
+            return;
+        }
         // From disassembly: cmpi.b #id_Roll,obAnim(a1) - is Sonic rolling?
-        if (!player.getRolling()) {
+        if (!rolling) {
             return;
         }
 
         // From disassembly: check absolute speed >= $480
-        int absSpeed = Math.abs(cachedSonicSpeed);
+        int absSpeed = Math.abs(impactSpeed);
         if (absSpeed < BREAK_SPEED_THRESHOLD) {
             return;
         }
 
-        smashWall(player);
+        smashWall(player, impactSpeed);
     }
 
-    private void smashWall(AbstractPlayableSprite player) {
+    private void smashWall(AbstractPlayableSprite player, int impactSpeed) {
         broken = true;
 
         // Mark as remembered (RememberState) so it stays broken
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         // From disassembly: move.w smash_speed(a0),obVelX(a1)
-        // Transfer cached speed to Sonic's velocity
-        player.setXSpeed((short) cachedSonicSpeed);
+        player.setXSpeed((short) impactSpeed);
 
         // From disassembly (lines 53-59):
         //   addq.w  #4,obX(a1)              ; always add 4 first
@@ -211,6 +241,10 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
         setDestroyed(true);
     }
 
+    protected SolidCheckpointBatch checkpointAll() {
+        return services().solidExecution().resolveSolidNowAll();
+    }
+
     private void spawnFragments(int[][] fragSpeeds) {
         ObjectManager objectManager = services().objectManager();
         ObjectRenderManager renderManager = services().renderManager();
@@ -219,7 +253,7 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
         }
 
         ObjectSpriteSheet sheet = renderManager.getSheet(ObjectArtKeys.BREAKABLE_WALL);
-        PatternSpriteRenderer renderer = renderManager.getRenderer(ObjectArtKeys.BREAKABLE_WALL);
+        final PatternSpriteRenderer renderer = renderManager.getRenderer(ObjectArtKeys.BREAKABLE_WALL);
         if (sheet == null || renderer == null) {
             return;
         }
@@ -235,17 +269,16 @@ public class Sonic1BreakableWallObjectInstance extends AbstractObjectInstance
         }
 
         List<SpriteMappingPiece> pieces = frame.pieces();
-        int wallX = spawn.x();
-        int wallY = spawn.y();
+        final int wallX = spawn.x();
+        final int wallY = spawn.y();
 
         for (int i = 0; i < FRAGMENT_COUNT; i++) {
-            SpriteMappingPiece piece = pieces.get(i);
-            int velX = fragSpeeds[i][0];
-            int velY = fragSpeeds[i][1];
+            final SpriteMappingPiece piece = pieces.get(i);
+            final int velX = fragSpeeds[i][0];
+            final int velY = fragSpeeds[i][1];
 
-            WallFragmentInstance fragment = new WallFragmentInstance(
-                    wallX, wallY, velX, velY, piece, renderer);
-            objectManager.addDynamicObject(fragment);
+            spawnFreeChild(() -> new WallFragmentInstance(
+                    wallX, wallY, velX, velY, piece, renderer));
         }
 
         // From disassembly: move.w #sfx_WallSmash,d0 / jmp (QueueSound2).l

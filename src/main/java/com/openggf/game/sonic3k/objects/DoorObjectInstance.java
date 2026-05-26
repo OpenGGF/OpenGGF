@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -121,6 +122,19 @@ public class DoorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOnScreenHalfWidth() {
+        // ROM byte_30FCE (sonic3k.asm:66167) sets width_pixels = $20 for the
+        // horizontal CNZ door; byte_30E18 sets width_pixels per vertical-door
+        // variant (HCZ/CNZ/DEZ). The horizontal half-width $20 is wider than
+        // the engine's default 16-px on-screen margin, so the camera+margin
+        // gate must use the ROM rendered half-width to match the ROM
+        // SolidObject_OnScreenTest (sonic3k.asm:36336-36370). Vertical
+        // variants share the same field; using halfWidth here keeps the
+        // engine in sync regardless of variant.
+        return halfWidth;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return false;
     }
@@ -131,21 +145,38 @@ public class DoorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity playerEntity) {
+        // Obj_Door calls SolidObjectFull for both horizontal and vertical doors
+        // after preparing d1/d2/d3/d4 (docs/skdisasm/sonic3k.asm:66136-66137,
+        // 66249-66258). SolidObjectFull_1P consumes a stale standing bit with
+        // Status_InAir by clearing support and returning d4=0 before
+        // SolidObject_cont can reland the player (sonic3k.asm:41017-41035).
+        return true;
+    }
+
+    @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity playerEntity) {
+        // Obj_Door stores the post-slide x_pos in d4 immediately before
+        // SolidObjectFull (docs/skdisasm/sonic3k.asm:66123-66137,
+        // 66239-66258). MvSonicOnPtfm subtracts current x_pos from d4, so the
+        // horizontal carry delta is zero even when the horizontal CNZ door moves.
+        return false;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
     }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite mainPlayer = (AbstractPlayableSprite) playerEntity;
-
         if (horizontal) {
-            updateHorizontalDoor(mainPlayer);
+            updateHorizontalDoor(playerEntity);
         } else {
-            updateVerticalDoor(mainPlayer);
+            updateVerticalDoor(playerEntity);
         }
     }
 
-    private void updateVerticalDoor(AbstractPlayableSprite mainPlayer) {
+    private void updateVerticalDoor(PlayableEntity updatePlayer) {
         int left = xFlipped
                 ? (playerInTriggerPreviousFrame ? triggerMin : getX())
                 : triggerMin;
@@ -156,14 +187,13 @@ public class DoorObjectInstance extends AbstractObjectInstance
         int top = baseY - VERTICAL_TRIGGER_HALF_HEIGHT;
         int bottom = baseY + VERTICAL_TRIGGER_HALF_HEIGHT;
 
-        boolean playerInTrigger = isPlayerInTrigger(mainPlayer, left, right, top, bottom)
-                || isAnySidekickInTrigger(left, right, top, bottom);
+        boolean playerInTrigger = isNativePlayerInTrigger(updatePlayer, left, right, top, bottom);
 
         playerInTriggerPreviousFrame = playerInTrigger;
         updateSlideOffset(playerInTrigger);
     }
 
-    private void updateHorizontalDoor(AbstractPlayableSprite mainPlayer) {
+    private void updateHorizontalDoor(PlayableEntity updatePlayer) {
         int top = yFlipped
                 ? (playerInTriggerPreviousFrame ? triggerMin : getY())
                 : triggerMin;
@@ -174,39 +204,36 @@ public class DoorObjectInstance extends AbstractObjectInstance
         int left = baseX - HORIZONTAL_TRIGGER_HALF_WIDTH;
         int right = baseX + HORIZONTAL_TRIGGER_HALF_WIDTH;
 
-        boolean playerInTrigger = isPlayerInTrigger(mainPlayer, left, right, top, bottom)
-                || isAnySidekickInTrigger(left, right, top, bottom);
+        boolean playerInTrigger = isNativePlayerInTrigger(updatePlayer, left, right, top, bottom);
 
         playerInTriggerPreviousFrame = playerInTrigger;
         updateSlideOffset(playerInTrigger);
     }
 
-    private boolean isPlayerInTrigger(AbstractPlayableSprite player, int left, int right, int top, int bottom) {
-        if (player == null || player.isObjectControlled()) {
-            return false;
-        }
-
-        int px = player.getCentreX();
-        int py = player.getCentreY();
-        return px >= left && px < right && py >= top && py < bottom;
-    }
-
-    private boolean isAnySidekickInTrigger(int left, int right, int top, int bottom) {
+    private boolean isNativePlayerInTrigger(PlayableEntity updatePlayer, int left, int right, int top, int bottom) {
+        boolean sawQueryParticipant = false;
         try {
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                if (!(sidekick instanceof AbstractPlayableSprite sprite) || sprite.isObjectControlled()) {
-                    continue;
-                }
-                int px = sprite.getCentreX();
-                int py = sprite.getCentreY();
-                if (px >= left && px < right && py >= top && py < bottom) {
+            for (PlayableEntity candidate : services().playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+                sawQueryParticipant = true;
+                if (isPlayerInTrigger(candidate, left, right, top, bottom)) {
                     return true;
                 }
             }
         } catch (RuntimeException ignored) {
             // Unit tests may instantiate this object without injected services.
         }
-        return false;
+        return !sawQueryParticipant && isPlayerInTrigger(updatePlayer, left, right, top, bottom);
+    }
+
+    private boolean isPlayerInTrigger(PlayableEntity player, int left, int right, int top, int bottom) {
+        if (!(player instanceof AbstractPlayableSprite sprite) || sprite.isObjectControlled()) {
+            return false;
+        }
+
+        int px = sprite.getCentreX();
+        int py = sprite.getCentreY();
+        return px >= left && px < right && py >= top && py < bottom;
     }
 
     private void updateSlideOffset(boolean playerInZone) {
@@ -234,6 +261,11 @@ public class DoorObjectInstance extends AbstractObjectInstance
     }
 
     private void playDoorSound() {
+        // ROM: horizontal door variant (loc_31034) has no Play_SFX calls;
+        // only vertical doors (loc_30E8C) play sfx_FanLatch at endpoints.
+        if (horizontal) {
+            return;
+        }
         try {
             services().playSfx(Sonic3kSfx.FAN_LATCH.id);
         } catch (Exception e) {

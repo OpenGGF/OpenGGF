@@ -12,9 +12,6 @@ import java.util.logging.Logger;
 
 /**
  * Short-lived sparkle effect spawned by the S3K signpost during its fall.
- *
- * <p>Spawned at the signpost's position, does not move.
- * Plays through 4 animation frames then self-destructs.
  */
 public class S3kSignpostSparkleChild extends AbstractObjectInstance {
 
@@ -23,8 +20,8 @@ public class S3kSignpostSparkleChild extends AbstractObjectInstance {
     private static final int FRAME_DELAY = 4;
     private static final int TOTAL_FRAMES = 4;
 
-    private final int worldX;
-    private final int worldY;
+    private int worldX;
+    private int worldY;
     private int animTimer;
     private int animFrame;
 
@@ -46,7 +43,6 @@ public class S3kSignpostSparkleChild extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         animTimer++;
         if (animTimer >= FRAME_DELAY) {
             animTimer = 0;

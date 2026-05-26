@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.bumpers;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.level.spawn.AbstractPlacementManager;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -454,14 +455,12 @@ public class CNZBumperManager {
      * @param surfaceAngle The target surface/bounce angle (0-255)
      */
     private void applyAngleBounce(AbstractPlayableSprite player, int surfaceAngle) {
-        // Step 1: Calculate incoming angle from player velocity
+        // Step 1: Calculate incoming angle from player velocity.
         // ROM: move.w x_vel(a0),d1 / move.w y_vel(a0),d2 / jsr CalcAngle
         int xVel = player.getXSpeed();
         int yVel = player.getYSpeed();
 
-        // Convert velocity to MD angle (0-255)
-        // CalcAngle returns angle where 0=right, 0x40=down, 0x80=left, 0xC0=up
-        int incomingAngle = calcAngleMD(xVel, yVel);
+        int incomingAngle = TrigLookupTable.calcAngle((short) xVel, (short) yVel);
 
         // Step 2: Calculate delta from surface angle
         // ROM: sub.w d3,d0  (d0 = incomingAngle - surfaceAngle)
@@ -488,46 +487,11 @@ public class CNZBumperManager {
         // Then: muls.w #-$A00,d1 / asr.l #8,d1 / move.w d1,x_vel(a0)
         //       muls.w #-$A00,d0 / asr.l #8,d0 / move.w d0,y_vel(a0)
         // So: x_vel = -cos(angle) * $A00 >> 8, y_vel = -sin(angle) * $A00 >> 8
-        double radians = (outAngle / 256.0) * 2.0 * StrictMath.PI;
-
-        // ROM formula: x_vel = -cos * $A00, y_vel = -sin * $A00
-        int newXVel = (int) (-StrictMath.cos(radians) * BOUNCE_VELOCITY);
-        int newYVel = (int) (-StrictMath.sin(radians) * BOUNCE_VELOCITY);
+        int newXVel = (TrigLookupTable.cosHex(outAngle) * -BOUNCE_VELOCITY) >> 8;
+        int newYVel = (TrigLookupTable.sinHex(outAngle) * -BOUNCE_VELOCITY) >> 8;
 
         player.setXSpeed((short) newXVel);
         player.setYSpeed((short) newYVel);
-    }
-
-    /**
-     * Calculate Mega Drive-style angle from velocity components.
-     * <p>
-     * Approximates ROM CalcAngle behavior:
-     * <ul>
-     *   <li>0x00 = right (+X)</li>
-     *   <li>0x40 = down (+Y)</li>
-     *   <li>0x80 = left (-X)</li>
-     *   <li>0xC0 = up (-Y)</li>
-     * </ul>
-     *
-     * @param dx X component (positive = right)
-     * @param dy Y component (positive = down)
-     * @return Angle in 0-255 range
-     */
-    private int calcAngleMD(int dx, int dy) {
-        if (dx == 0 && dy == 0) {
-            return 0;
-        }
-
-        // atan2 returns radians where 0=right, PI/2=up, PI=left, -PI/2=down
-        // MD convention: 0=right, 0x40=down, 0x80=left, 0xC0=up
-        // So we need to negate Y for the MD y-down coordinate system
-        double radians = StrictMath.atan2(dy, dx);
-
-        // Convert to 0-255 range
-        int angle = (int) ((radians / (2.0 * StrictMath.PI)) * 256.0);
-
-        // Normalize to 0-255
-        return angle & 0xFF;
     }
 
     private static final class Placement extends AbstractPlacementManager<CNZBumperSpawn> {

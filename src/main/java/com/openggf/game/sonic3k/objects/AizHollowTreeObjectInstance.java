@@ -8,6 +8,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -27,11 +28,6 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
     private static final int CAMERA_LOCK_TIMER = 0x3C;
 
     private static final int MIN_CAPTURE_X_SPEED = 0x600;
-    private static final int TOP_EXIT_SOFT_PROGRESS_WORD = 0x3C0;
-    private static final int TOP_EXIT_PROGRESS_WORD = 0x400;
-    private static final int TOP_EXIT_X_NUDGE = 2;
-    private static final int TOP_EXIT_Y_NUDGE = 1;
-    private static final int TOP_EXIT_MIN_X_SPEED = 0x180;
 
     // AIZTree_PlayerFrames table.
     private static final int[] PLAYER_FRAMES = {
@@ -52,6 +48,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
     private final int[] progress = new int[2];
     private final boolean[] riding = new boolean[2];
     private final boolean[] releaseObjectControlPending = new boolean[2];
+    private final String[] lastDecision = {"init", "init"};
 
     private int cameraLockTimer;
 
@@ -77,9 +74,9 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         updatePlayer(player, PLAYER_SLOT_MAIN, true);
-        var sidekicks = services().sidekicks();
-        if (!sidekicks.isEmpty()) {
-            updatePlayer((AbstractPlayableSprite) sidekicks.getFirst(), PLAYER_SLOT_SIDEKICK, false);
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
+        if (sidekick != null) {
+            updatePlayer(sidekick, PLAYER_SLOT_SIDEKICK, false);
         }
         updateCameraLock(player);
     }
@@ -89,19 +86,24 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         // Object is logic-only in ROM (no mappings/art configured in Obj_AIZHollowTree init).
     }
 
+    private AbstractPlayableSprite firstTrackedSidekick() {
+        return services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                ? sidekick
+                : null;
+    }
+
     private void updatePlayer(AbstractPlayableSprite player,
             int slot,
             boolean mainPlayer) {
         if (player == null) {
+            lastDecision[slot] = "missing";
             return;
         }
 
         if (releaseObjectControlPending[slot]) {
-            // Engine update order runs objects before movement. Defer object-control clear
-            // until the next frame so AIZTree_FallOff release velocity applies from the
-            // same frame boundary as the ROM object list ordering.
             releaseObjectControlPending[slot] = false;
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
+            lastDecision[slot] = "release-control";
         }
 
         if (!riding[slot]) {
@@ -109,13 +111,17 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
             return;
         }
 
+        advanceRideInertia(player);
+
         int absGroundSpeed = Math.abs(player.getGSpeed());
         if (absGroundSpeed < MIN_CAPTURE_X_SPEED) {
             if (progressWord(progress[slot]) >= 0x400) {
+                lastDecision[slot] = "fall-low-speed-done";
                 fallOffTree(player, slot);
                 return;
             }
             setPlayerOnTree(player, slot);
+            lastDecision[slot] = "fall-low-speed-early";
             fallOffTree(player, slot);
             return;
         }
@@ -124,10 +130,12 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
             int dy = player.getCentreY() - treeY;
             int check = dy + 0x90;
             if (check < 0 || check > 0x130) {
+                lastDecision[slot] = "fall-y-range";
                 fallOffTree(player, slot);
                 return;
             }
             setPlayerOnTree(player, slot);
+            lastDecision[slot] = "ride-ground";
             return;
         }
 
@@ -139,25 +147,31 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
             player.setCentreX((short) TREE_CAPTURE_MAX_X);
             player.setXSpeed((short) -0x400);
         }
+        lastDecision[slot] = "fall-air";
         fallOffTree(player, slot);
     }
 
     private void tryCapturePlayer(AbstractPlayableSprite player, int slot, boolean mainPlayer) {
         if (player.getAir()) {
+            lastDecision[slot] = "no-capture-air";
             return;
         }
         int dx = (player.getCentreX() + 0x10) - treeX;
         if (dx < 0 || dx >= 0x40) {
+            lastDecision[slot] = "no-capture-x";
             return;
         }
         int dy = player.getCentreY() - treeY;
         if (dy < -0x5A || dy > 0xA0) {
+            lastDecision[slot] = "no-capture-y";
             return;
         }
         if (player.getXSpeed() < MIN_CAPTURE_X_SPEED) {
+            lastDecision[slot] = "no-capture-speed";
             return;
         }
         if (isObjectControlActive(player)) {
+            lastDecision[slot] = "no-capture-control";
             return;
         }
 
@@ -170,19 +184,34 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         player.setYSpeed((short) 0);
         player.setObjectMappingFrameControl(true);
         player.setForcedAnimationId(Sonic3kAnimationIds.WALK);
-        // Engine update order runs objects before player movement; keep movement disabled while
-        // riding so AIZTree_SetPlayerPos writes are not overwritten later in the frame.
-        player.setObjectControlled(true);
+        // The tree owns the player's vertical path and animation while riding.
+        // setPlayerOnTree applies the preserved horizontal inertia before the
+        // ROM path formula so the path delta still uses the moved x_pos.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(player);
+        player.setSuppressGroundWallCollision(true);
         player.setControlLocked(false);
         player.setAir(false);
         // RideObject_SetRide semantics: preserve horizontal inertia as ground speed.
         player.setGSpeed(player.getXSpeed());
         player.setAnimationId(Sonic3kAnimationIds.WALK);
+        lastDecision[slot] = "capture";
+        // Obj_AIZHollowTree sets object_control bits 6 and 1 only
+        // (sonic3k.asm:43688-43693). Bit 6 skips Sonic_WalkSpeed's
+        // CalcRoomInFront wall probe (sonic3k.asm:22713-22714), while the
+        // lack of bit 7 means CPU/touch dispatch is not suppressed.
 
         if (mainPlayer) {
+            // Obj_AIZHollowTree writes Camera_min/max_X_pos=$2C60 and $38=$3C
+            // immediately after Player_1 capture (sonic3k.asm:43702-43704).
+            // Tails_Check_Screen_Boundaries reads Camera_min_X_pos+$10 on the
+            // next Tails physics tick and clamps Tails there when crossed
+            // (sonic3k.asm:28414-28450). The engine camera step runs later in
+            // this frame, so defer only the visible horizontal clamp; keep the
+            // boundary word live for sidekick/player boundary logic.
             Camera camera = services().camera();
             camera.setMinX((short) CAMERA_LOCK_X);
             camera.setMaxX((short) CAMERA_LOCK_X);
+            camera.deferHorizontalBoundaryClampOnce();
             cameraLockTimer = CAMERA_LOCK_TIMER;
             spawnDynamicObject(new AizTreeRevealControlObjectInstance(treeX, treeY));
         }
@@ -199,6 +228,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         progressValue += player.getGSpeed() << 8;
         progress[slot] = progressValue;
         if (progressValue < 0) {
+            lastDecision[slot] = "fall-progress-negative";
             fallOffTree(player, slot);
             return;
         }
@@ -215,13 +245,13 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         int sin = TrigLookupTable.sinHex(angle);
         int xOffset = (sin * 0x7000) >> 16;
         int newX = treeX + xOffset;
-        player.setCentreX((short) newX);
+        player.setCentreXPreserveSubpixel((short) newX);
         player.setXSpeed((short) ((newX - oldX) << 8));
 
         int oldY = player.getCentreY();
         int yOffset = 0x90 - (progressWord >>> 2);
         int newY = treeY + yOffset;
-        player.setCentreY((short) newY);
+        player.setCentreYPreserveSubpixel((short) newY);
         player.setYSpeed((short) ((newY - oldY) << 8));
 
         int frameIndex = ((progressWord >>> 1) / 0x0B);
@@ -229,19 +259,29 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         player.setMappingFrame(PLAYER_FRAMES[frameIndex]);
     }
 
+    @Override
+    public String traceDebugDetails() {
+        return String.format("tree m=%s/%04X s=%s/%04X fg4=%04X cam=%02X",
+                lastDecision[PLAYER_SLOT_MAIN],
+                progressWord(progress[PLAYER_SLOT_MAIN]),
+                lastDecision[PLAYER_SLOT_SIDEKICK],
+                progressWord(progress[PLAYER_SLOT_SIDEKICK]),
+                eventsFg4 & 0xFFFF,
+                cameraLockTimer & 0xFF);
+    }
+
+    private void advanceRideInertia(AbstractPlayableSprite player) {
+        if (!player.isObjectControlSuppressesMovement()) {
+            return;
+        }
+        player.setXSpeed(player.getGSpeed());
+        player.setYSpeed((short) 0);
+        player.move(player.getGSpeed(), (short) 0);
+    }
+
     private void fallOffTree(AbstractPlayableSprite player, int slot) {
-        int exitProgressWord = progressWord(progress[slot]);
-        boolean topExit = exitProgressWord >= TOP_EXIT_PROGRESS_WORD
-                || exitProgressWord >= TOP_EXIT_SOFT_PROGRESS_WORD;
         riding[slot] = false;
         progress[slot] = 0;
-
-        if (topExit) {
-            // Keep top lip clearance on hollow-tree exit to match ROM traversal envelope.
-            int xSign = player.getXSpeed() < 0 ? -1 : 1;
-            player.setCentreX((short) (player.getCentreX() + (xSign * TOP_EXIT_X_NUDGE)));
-            player.setCentreY((short) (player.getCentreY() - TOP_EXIT_Y_NUDGE));
-        }
 
         player.setAir(true);
         // Hollow-tree fall-off in ROM updates collision radius (center-based) directly.
@@ -259,16 +299,11 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         player.setForcedAnimationId(-1);
         player.setObjectMappingFrameControl(false);
         player.setControlLocked(false);
-        // Keep these until next object tick (see updatePlayer deferred clear above).
-        releaseObjectControlPending[slot] = true;
-        if (topExit && Math.abs(player.getXSpeed()) < TOP_EXIT_MIN_X_SPEED) {
-            // Preserve forward momentum when release occurs near the top arc where
-            // geometric delta-X can quantize to near zero in one frame.
-            player.setXSpeed(player.getGSpeed());
-        }
+        ObjectControlState.none().applyTo(player);
+        player.setSuppressGroundWallCollision(false);
+        releaseObjectControlPending[slot] = false;
         player.setXSpeed((short) (player.getXSpeed() >> 1));
         player.setYSpeed((short) (player.getYSpeed() >> 1));
-        player.setGSpeed(player.getXSpeed());
     }
 
     // 68k move.w (a2) over a long reads the upper 16 bits (big-endian layout).

@@ -7,6 +7,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -141,7 +142,12 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance 
         super(new ObjectSpawn(x, y, 0x4C, subtype, 0, false, 0), "GeyserMaker");
         this.subtype = subtype;
         this.timerReload = TIMER_RELOAD;
-        this.timer = 0;
+        // PushB_LoadLava-created makers are inserted during ExecuteObjects.
+        // The ROM slot appears one frame before its proximity-triggered
+        // bubble animation advances, so start with one live tick here while
+        // normal ObjPosLoad-created makers keep the routine-0 fall-through
+        // timer=0 behaviour.
+        this.timer = 1;
         this.routine = 2;
         this.visible = false;
         this.parentBlock = parentBlock;
@@ -250,21 +256,18 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance 
 
         // Spawn LavaGeyser (0x4D)
         if (services().objectManager() != null) {
-            ObjectSpawn geyserSpawn = new ObjectSpawn(
-                    spawn.x(), spawn.y(),
-                    0x4D, subtype, 0, false, 0);
-            Sonic1LavaGeyserObjectInstance geyser = new Sonic1LavaGeyserObjectInstance(
-                    geyserSpawn, Sonic1LavaGeyserObjectInstance.Role.HEAD,
-                    null, this, false);
-            // ROM: FindNextFreeObj allocates slot after maker
-            int mySlot = getSlotIndex();
-            if (mySlot >= 0) {
-                int childSlot = services().objectManager().allocateSlotAfter(mySlot);
-                if (childSlot >= 0) {
-                    geyser.setSlotIndex(childSlot);
-                }
-            }
-            services().objectManager().addDynamicObject(geyser);
+            final int mySlot = getSlotIndex();
+            spawnFreeChild(() -> {
+                ObjectSpawn geyserSpawn = new ObjectSpawn(
+                        spawn.x(), spawn.y(),
+                        0x4D, subtype, 0, false, 0);
+                Sonic1LavaGeyserObjectInstance geyser = new Sonic1LavaGeyserObjectInstance(
+                        geyserSpawn, Sonic1LavaGeyserObjectInstance.Role.HEAD,
+                        null, this, false);
+                // ROM: FindNextFreeObj allocates slot after maker
+                ObjectLifetimeOps.assignFindNextFreeChildSlot(services().objectManager(), geyser, mySlot);
+                return geyser;
+            });
         }
 
         // Set maker animation

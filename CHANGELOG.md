@@ -2,1634 +2,1764 @@
 
 All notable changes to the OpenGGF project are documented in this file.
 
-## v0.5.20260411 (Released 2026-04-11)
-
-Analysis range: `v0.4.20260304..v0.5.20260411` on `develop` (`2479` commits, `2298` non-merge commits,
-`1588` files changed, `477351` insertions, `28266` deletions). Net code growth is ~449,100 lines.
-
-A primarily architectural release. The engine internals have been restructured to prepare for level
-editor support, safe runtime teardown, and future multi-instance play-testing. Sonic 3 & Knuckles
-gameplay coverage has advanced significantly across Angel Island and Hydrocity: the AIZ2 Flying
-Battery bombing sequence, AIZ2 end boss, post-boss capsule/cutscene flow, AIZ-to-HCZ transition,
-HCZ1 miniboss, and HCZ1-to-HCZ2 transition are now represented, alongside all three S3K bonus-stage
-families in active implementation.
-
-### Architectural Overhaul: Two-Tier Service Architecture
-
-The engine's object model has been fundamentally restructured from direct singleton access to a
-two-tier dependency injection pattern.
-
-- **GameServices** (global tier): facade over ROM, graphics, audio, camera, level, fade, and
-  configuration singletons. Accessed anywhere via `GameServices.camera()`, `GameServices.audio()`, etc.
-- **ObjectServices** (context tier): injected into every game object at spawn time via
-  `ObjectManager`. Provides camera, game state, zone features, sidekick access, and level queries
-  scoped to the object's lifecycle. Accessed via `services()` within any `AbstractObjectInstance`.
-- **ThreadLocal construction context**: `ObjectServices` is available during object construction
-  without requiring constructor parameters, via a `ThreadLocal` injection pattern.
-- **Migration scope**: 105 Sonic 2 object files, 50 Sonic 1 object files, 25 Sonic 3K object files,
-  and 6 game-agnostic base classes migrated from `getInstance()` / `LevelManager.getInstance()` to
-  `services()` or `GameServices` as appropriate. All singleton `.getInstance()` calls removed from
-  object classes.
-- **NoOp sentinels**: null-returning provider methods replaced with NoOp sentinel objects across
-  the provider interfaces (zone features, physics, water, scroll handlers), eliminating null checks
-  throughout the object layer.
-- **GameId enum**: replaced string-based game identification with type-safe `GameId` enum throughout
-  `CrossGameFeatureProvider` and module detection.
-
-### Architectural Overhaul: GameRuntime and Singleton Lifecycle
-
-- **GameRuntime**: introduced `GameRuntime` as the explicit owner of all mutable gameplay state.
-  `ObjectServices` is backed by the runtime instance rather than global singletons.
-- **resetState() lifecycle**: all singletons (`Camera`, `RomManager`, `GraphicsManager`,
-  `AudioManager`, `CollisionSystem`, `CrossGameFeatureProvider`, `DebugOverlayManager`,
-  `SonicConfigurationService`, `Sonic1ConveyorState`, `Sonic1SwitchManager`,
-  `TerrainCollisionManager`) now implement `resetState()` for clean teardown without destroying
-  the singleton instance. `resetInstance()` deprecated across the board.
-- **Generation counter**: `GameContext` tracks a generation counter for stale reference detection.
-- **SingletonResetExtension**: JUnit 5 extension with `@FullReset` annotation for automated
-  per-test singleton reset, replacing manual `resetInstance()` boilerplate across 35+ test classes.
-- **GameRuntime lifecycle wired into test harness**: `resetPerTest()` now creates/destroys
-  `GameRuntime` for CI stability.
-
-### Architectural Overhaul: LevelManager Decomposition
-
-`LevelManager` (previously the largest class in the engine) has been broken into focused components:
-
-- **LevelTilemapManager**: extracted ~18 methods and ~22 fields for tilemap rendering, chunk
-  lookup, and tile-level queries.
-- **LevelTransitionCoordinator**: extracted ~43 methods and ~25 fields for act transitions,
-  seamless level mutation, title cards, results screens, and game mode flow.
-- **LevelDebugRenderer**: extracted ~12 methods and ~14 fields for collision overlay, sensor
-  display, camera bounds, and other debug visualizations.
-- **LevelGeometry** and **LevelDebugContext** records introduced as data carriers between the
-  decomposed components.
-- Game-specific art dispatching extracted from `LevelManager` into per-game modules.
-
-### Architectural Overhaul: Cross-Game Abstraction Hardening
-
-Systematic removal of game-specific coupling from the engine core:
-
-- **PlayableEntity interface**: extracted from `AbstractPlayableSprite` to decouple `level.objects`
-  from `sprites.playable`. Includes `isOnObject()`, `getAnimationId()`, and all methods needed
-  by game objects to interact with the player.
-- **PowerUpSpawner interface**: breaks `sprites.playable` dependency on `level.objects` for
-  monitor/power-up spawning.
-- **DamageCause**, **GroundMode**, **ShieldType** relocated from `sprites.playable` to `game`
-  package for cross-game reuse.
-- **SecondaryAbility enum**: replaced `instanceof Tails` checks throughout the codebase.
-- **CanonicalAnimation enum** and **AnimationTranslator**: cross-game animation vocabulary
-  enabling bidirectional sprite donation between any pair of games.
-- **DonorCapabilities interface**: each `GameModule` declares its donation capabilities (S1, S2,
-  S3K all implemented), replacing hardcoded branches in `CrossGameFeatureProvider`.
-- S1 wired as donor for forward donation into S2/S3K games.
-- CNZ slot machine renderer moved to `ZoneFeatureProvider`; seamless mutation moved to
-  `GameModule`; Tails tail art loading moved to `GameModule`; sidekick zone suppression moved
-  from hardcoded S2 IDs to `GameModule`.
-- 11 cross-game classes relocated from `sonic2` to generic packages; 5 cross-game dependency
-  classes decoupled.
-
-### Common Code Extraction (Phase 1-5)
-
-A systematic 5-phase refactoring pass eliminated structural duplication across all three games:
-
-- **Phase 1 — Common utilities**: `SubpixelMotion` (16.16 fixed-point gravity helpers),
-  `AnimationTimer` (cyclic frame animation), `FboHelper` (centralised FBO creation),
-  `PatternDecompressor.nemesis()` (eliminated private Nemesis copies), `refreshDynamicSpawn()`
-  extracted into `AbstractObjectInstance`, `isOnScreen(margin)` guard migrated across all objects,
-  `buildSpawnAt()` helper and `getRenderer()` helper inherited by all object classes.
-- **Phase 2 — Base class extraction**: `AbstractMonitorObjectInstance`, `AbstractSpikeObjectInstance`
-  (S2/S3K), `AbstractProjectileInstance` (S1 missiles), `AbstractPointsObjectInstance`,
-  `AbstractFallingFragment` (collapsing platforms), `AbstractSoundTestCatalog`,
-  `AbstractAudioProfile`, `AbstractObjectRegistry`, `AbstractZoneRegistry`,
-  `AbstractZoneScrollHandler` (~20 scroll handlers migrated), `AbstractLevelInitProfile`
-  (with `buildCoreSteps()`), `AniPlcScriptState` and `AniPlcParser` extracted from pattern
-  animators.
-- **Phase 3 — Behavior helpers**: S1 badnik migration to shared destruction config, shared ring/object
-  placement record parsers, shared title card sprite rendering utility, shared S1 Eggman boss
-  methods extracted into base class.
-- **Phase 4 — Gravity and debris**: `GravityDebrisChild`, `PlatformBobHelper` (3 platform objects
-  migrated), `ObjectFall()` method in `SubpixelMotion`.
-- **Phase 5 — Cleanup**: shared constants, `loadArtTiles` path, shader path standardization,
-  `ParallaxShaderProgram` extends `ShaderProgram` (deleted lifecycle duplication).
-- **Debug render migration**: all S1, S2, and S3K objects migrated from legacy
-  `appendDebug`/`appendLine` API to `DebugRenderContext`.
-
-### MutableLevel (Level Editor Foundation)
-
-- **MutableLevel**: a new level data abstraction supporting snapshot, mutation, and dirty-region
-  tracking. Wraps the read-only level data and provides `setChunkDesc()`, `getGridSide()`,
-  `saveState()`/`restoreState()` for undo/redo support.
-- **Block**: added `saveState()`/`restoreState()` and `setChunkDesc()` for chunk-level mutation.
-- **Dirty-region processing pipeline**: `processDirtyRegions()` wired into `LevelFrameStep` for
-  efficient per-frame GPU updates of only the modified tile regions.
-- MutableLevel preserves game-specific overrides and `ringSpriteSheet` across mutations.
-- Round-trip and integration tests verify snapshot fidelity and mutation correctness.
-
-### Sonic 3 & Knuckles Expansion
-
-#### Knuckles: Playable Character
-
-Knuckles is now a fully playable character with his complete S3K ability set, working natively
-in S3K and via cross-game donation into S1 and S2.
-
-- **Glide state machine**: glide activation on jump re-press with ROM-accurate turn physics
-  (sine/cosine velocity from `doubleJumpProperty` angle, gravity balance). Direct mapping frame
-  control using `RawAni_Knuckles_GlideTurn` table (frames 0xC0–0xC4).
-- **Floor landing and sliding**: flat surfaces enter sliding state with deceleration (0x20/frame
-  while jump held, matching ROM's `.continueSliding` routine). Slide follows terrain via
-  `ObjectTerrainUtils` floor probing, snapping Y position to surface with correct angle. Ledge
-  detection enters fall state when floor distance >= 14.
-- **Wall grab and climbing**: wall grab with climbing animation cycling (frames 0xB7–0xBC every
-  4 frames). Ledge climb using `Knuckles_ClimbLedge_Frames` table (4 keyframes with x/y deltas).
-  Wall jump away with facing flip and normal jump animation.
-- **Fall-from-glide landing**: ROM-accurate crouch pose with 15-frame `move_lock`.
-- **ROM-accurate jump height**: `PhysicsProfile.SONIC_3K_KNUCKLES` with jump velocity 0x600
-  (vs Sonic's 0x680), water jump 0x300 (vs 0x380), matching `Knux_Jump` in disassembly.
-- **Shield ability gating**: fire/lightning/bubble shield abilities gated to Sonic only per ROM;
-  Knuckles gets passive shield protection with glide as his secondary ability. Bubble shield
-  bounce correctly suppressed on glide landing (gates on `SecondaryAbility.INSTA_SHIELD`, not
-  `doubleJumpFlag` value).
-- **Knuckles palette**: `Pal_Knuckles` (0x0A8AFC) loaded for both native S3K and cross-game
-  donation. Cross-game palette fix ensures correct palette is loaded based on character config.
-- **Life icon art**: `ArtNem_KnucklesLifeIcon` (0x190E4C) with character-specific rendering.
-- **Sound effects**: GRAB and GLIDE_LAND SFX registered in S3K audio profile.
-- **Character detection fix**: `Sonic3kLevelEventManager.getPlayerCharacter()` now resolves from
-  config (was hardcoded to `SONIC_AND_TAILS`), enabling all character-gated object behaviour.
-- **AIZ rock breaking**: knucklesOnly rocks (subtype bit 7) now trigger on airborne side contacts
-  (jumping/gliding into them), not just grounded push.
-
-#### S2 Cross-Game Knuckles Support
-
-- **Lock-on palette**: "Knuckles in Sonic 2" palette loaded from S3K ROM at 0x060BEA. Only
-  indices 2–5 differ from S2's `Pal_SonicTails` (Knuckles' reds vs Sonic's blues); title cards,
-  badniks, and rings are unaffected. HUD text index 4 tweaked (green→orange) for readability.
-- **Lives icon**: `ArtNem_KnucklesLifeIcon` decompressed from S3K donor ROM with pixel index
-  remap from S3K palette layout to S2-compatible layout (`S3K_TO_S2_PALETTE_REMAP`).
-- **HUD rendering**: lives name tiles use palette 0 (no flash cycling) when donor art is active,
-  via `livesNameUsesIconPalette` flag in `HudRenderManager`.
-- **Palette utility**: `Palette.mergeColorsFrom()` added for targeted color range copying.
-
-#### Title Screen
-
-- Full S3 title screen implemented with 6-phase state machine: SEGA logo with palette fade,
-  12-frame Sonic morphing animation, white flash transition, and interactive menu with banner
-  bounce physics, sprite animations, and menu selection.
-- ROM data loading for 7 Kosinski art sets, 4 Nemesis sprite sets, 14 Enigma plane mappings.
-- Hardcoded sprite mapping frames for banner, &Knuckles text, menu text, Sonic finger/wink,
-  and Tails plane sprites (`Sonic3kTitleScreenMappings`).
-- FadeManager transition fix: title screen exit now renders fade-to-black internally to avoid
-  `GameLoop`/`UiRenderPipeline` FadeManager instance mismatch after `RuntimeManager` migration.
-
-#### Level Select Screen
-
-- ROM-accurate S3K level select matching the S3 disassembly menu infrastructure.
-- `Sonic3kLevelSelectConstants`: data tables (level order, mark table, switch table, icon table,
-  zone text, mapping offsets) from `s3.asm` with S&K zones replacing disabled/competition entries.
-- `Sonic3kLevelSelectDataLoader`: loads Nemesis art (font, menu box, icons), Enigma mappings
-  (screen layout, background, icons), uncompressed SONICMILES animation art, and palettes from ROM.
-  Builds screen layout in-memory with S3K zone names via the LEVELSELECT codepage.
-- `Sonic3kLevelSelectManager`: two-layer rendering (Plane B SONICMILES background + Plane A
-  foreground), input navigation with disabled-entry skipping, sound test (0x00–0xFF), selection
-  highlight, and zone icons.
-
-#### Special Stage Character Support
-
-- S3K Blue Ball special stages now dynamically resolve `PlayerCharacter` from config: Sonic &
-  Tails (with AI sidekick), Sonic alone, Tails alone (with spinning tails appendage), and
-  Knuckles (with correct palette patch to colors 8–15 per ROM's `Pal_SStage_Knux`).
-
-#### AIZ Object Lifecycle Fixes
-
-- **Vine dismount**: suppressed stale jump press on release to prevent immediate insta-shield
-  (Sonic) or glide (Knuckles) activation. Added edge detection so holding jump from the vine-
-  reaching jump doesn't cause immediate dismount.
-- **Vine respawn**: removed self-destruct cull checks from both vine objects. The vine's coarse
-  range was narrower than the Placement window, causing permanent respawn prevention via the
-  `destroyedInWindow` latch.
-- **Collapsing platform respawn**: removed `markRemembered()` call — ROM uses
-  `Delete_Current_Sprite` (allows respawn), not `Remember_Sprite`. Platforms now correctly
-  respawn when the player scrolls away and returns.
-- **Breakable boulders**: preserved rolling state when smashing AIZ/LRZ rocks from the side,
-  matching `SolidObjectFull` behaviour.
-- **Special stage return**: restored saved centre coordinates correctly on Blue Ball exit,
-  preventing the player from being embedded in the floor after returning from the big ring.
-- **Results screen spawn path**: signpost flow now uses `spawnChild()` for the results object,
-  preserving `ObjectServices` context and fixing the end-of-act bubble monitor crash.
-
-#### AIZ Miniboss Completion
-- AIZ miniboss defeat flow fully implemented: `S3kBossDefeatSignpostFlow` reusable sequence,
-  staggered explosions with `S3kBossExplosionController`, per-explosion `sfx_Explode`.
-- Knuckles napalm attack: `AizMinibossNapalmController` and `AizMinibossNapalmProjectile` with
-  launch/drop/explode lifecycle, gated to Knuckles-only appearance.
-- AIZ2 dynamic resize state machine for correct camera boundaries during miniboss spawn.
-
-#### AIZ2 Boss and Transition Progress
-- AIZ2 Flying Battery bombing sequence implemented with battleship overlay rendering, ship-relative
-  bomb placement, explosion children, background tree spawners, and object-art loading for the
-  bombership / small Robotnik craft frames.
-- AIZ2 end boss implemented with Robotnik ship/head overlays, arm/propeller/flame/bomb/smoke child
-  systems, camera scripting, boss state flow, and regression coverage for ship bomb timing.
-- Post-boss capsule/cutscene flow now includes the AIZ2 egg capsule release path and handoff toward
-  the Hydrocity transition. Follow-up fixes restore AIZ transition zone-feature state and prevent
-  bombership art regressions after act-transition reinitialization.
-
-#### Signpost and Results Screen
-- `S3kSignpostInstance` with 5-state machine (idle/spin/slowdown/sparkle/done), stub and sparkle
-  children, `PLC_EndSignStuff` art loading from ROM.
-- `S3kHiddenMonitorInstance` with signpost interaction.
-- Results screen: full state machine with tally, element system rendering, art loading from ROM,
-  act display via `Apparent_act`, exit timing, control lock, victory pose, and Tails-specific
-  victory animation.
-- End-of-level flag and `endOfLevelActive` state wired through defeat flow.
-
-#### Blue Ball Special Stages (WIP)
-- Blue Ball special stage implemented (work in progress): gameplay, rendering, HUD, banner,
-  ring animation, emerald collection, exit sequence.
-- `SSEntryRing` art, animation, and special stage entry sequence from giant rings.
-- Special stage results screen with art loading.
-- Tails P2 support in special stages with tails sprite and delayed jump.
-- Player returns to big ring location after special stage (not checkpoint).
-
-#### S3K Bonus Stages: Slots, Gumball, and Glowing Sphere (WIP)
-- `Sonic3kBonusStageCoordinator` now implements the S3K ring-threshold selection formula and
-  zone/music routing for the three lock-on bonus stages: Slots, Glowing Sphere (Pachinko), and
-  Gumball. StarPost bonus-star entry and saved-state return are wired into the S3K bonus-stage
-  lifecycle.
-- Bonus-stage title card support added to `Sonic3kTitleCardManager` and mappings, including the
-  dedicated `BONUS STAGE` layout and bonus-specific fade timing.
-- **Gumball stage bring-up:** `GumballMachineObjectInstance`, `GumballItemObjectInstance`, and
-  `GumballTriangleBumperObjectInstance` implemented with ROM-driven machine state, dispenser /
-  container / exit-trigger child chains, machine Y drift and slot tracking, subtype-specific item
-  behavior, spring bounce/crumble parity, shield persistence, sidekick safety, and dedicated
-  `SwScrlGumball` scrolling.
-- **Glowing Sphere / Pachinko bring-up:** `PachinkoFlipperObjectInstance`,
-  `PachinkoTriangleBumperObjectInstance`, `PachinkoBumperObjectInstance`,
-  `PachinkoPlatformObjectInstance`, `PachinkoItemOrbObjectInstance`,
-  `PachinkoMagnetOrbObjectInstance`, and `PachinkoEnergyTrapObjectInstance` implemented, with
-  stage entry/return flow, top-exit handling, and dedicated `SwScrlPachinko` scrolling.
-- **Zone animation support:** `Sonic3kPatternAnimator` and `Sonic3kPaletteCycler` now cover the
-  bonus-stage-specific Gumball direct-DMA tile animation plus Pachinko animated tiles, DMA-driven
-  background strips, and palette cycling.
-- **Render-path parity for the gumball machine:** per-piece VDP priority from ROM mapping data,
-  SAT-style sprite-mask post-processing, and replay-role metadata now preserve the intended glass /
-  shell / interior pile layering for mixed-priority machine frames.
-- Pachinko energy trap bootstrap now stays persistent like the ROM object, keeps its spawned
-  column/beam children alive until scripted teardown, and force-releases players from competing
-  magnet orbs before trap capture. Capture now zeros X/Y/G speed and cleanly holds the player on
-  the beam.
-- Bonus-stage title card exit no longer freezes the pachinko trap update loop. Persistent power-up
-  re-registration now clears stale object slots before `ObjectManager` rebuilds, preventing slot
-  aliasing during bonus-stage entry and post-title-card resume.
-- **Slot Machine stage bring-up:** `S3kSlotRomData`, `S3kSlotStageController`,
-  `S3kSlotStageState`, `S3kSlotCollisionSystem`, `S3kSlotPlayerRuntime`,
-  `S3kSlotOptionCycleSystem`, `S3kSlotPrizeCalculator`, and reward/cage object runtime wiring now
-  cover ROM table loading, rotating-stage movement, projected ground/air physics, grid collision,
-  tile interactions, reel option cycling, match detection, cage capture/release, interpolated ring
-  and spike rewards, exit wind-down/fade, and slot-specific sound effects.
-- **Slot Machine rendering:** `S3kSlotLayoutRenderer`, `S3kSlotLayoutAnimator`,
-  `S3kSlotMachineRenderer`, `S3kSlotMachinePanelAnimator`, `S3kSlotMachineDisplayState`,
-  `SwScrlSlots`, and `shader_s3k_slots.glsl` implement layout animation, palette cycling,
-  goal/peppermint/reel display updates, background row refresh, debug visibility, and FG glass /
-  player priority ordering.
-- **Slot Machine remediation:** state ownership was moved into the slot runtime with `ObjectManager`
-  rendering for cage/reward objects, preserved special collision bits across probes, authoritative
-  follow-up state, persistent wall animation state, capture-cycle restart coverage, and fixes for
-  player swap focus, title-card bootstrap, runtime ownership, launch physics, spike reward ring
-  drain, reel display, and exit fade.
-- Added regression coverage for coordinator lifecycle, bonus title card mappings/flow, gumball
-  machine drift and priority diagnostics, sprite-mask helper consumption and replay ordering,
-  pachinko palette/pattern animation, slot ROM data, slot collision/player/runtime/rendering/reward
-  systems, registry wiring, and live trap/orb/title-card integration.
-
-#### Per-Character Physics
-- Per-character physics profiles for Sonic, Tails, and Knuckles (speed, acceleration, jump height).
-- Super spindash speed table and slope sprite selection fixes.
-- Ducking while moving at slow speeds (S3K-specific behavior).
-
-#### Palette and Visual Systems
-- Palette cycling implemented for all remaining zones: HCZ, CNZ, ICZ, LBZ, LRZ, BPZ, CGZ, EMZ
-  (plus existing AIZ).
-- Per-frame palette mutation system for AIZ1 hollow tree reveal (`palette[2][15]`).
-- AIZ fire curtain overlay with cached BG descriptors and fire palette fixes, looping linger and
-  graceful scroll-off.
-- Heat haze deformation applied to AIZ2 background layer.
-- HUD text loaded from ROM; digit rendering uses mapping frames (not tile indices).
-
-#### New Objects and Badniks
-- `BreakableWall` (0x0D), `CorkFloor`, `FloatingPlatform`, `CaterkillerJr` (with body segment
-  despawn), `AutoSpin`, `Falling Log`, `InvisibleBlock`, `StarPost`, `TwistedRamp`,
-  `AIZCollapsingLogBridge` (0x2C), `AIZSpikedLog` (0x2E), `AIZFlippingBridge` (0x2B), and the
-  zone-specific `Button` object (0x33).
-- HCZ expansion: water surface, water rush sequence (`HCZBreakableBarObjectInstance`,
-  `HCZWaterRushObjectInstance`, `HCZWaterWallObjectInstance`, `HCZWaterTunnelHandler`),
-  `HCZConveyorBeltObjectInstance`, `HCZCGZFanObjectInstance`, `HCZHandLauncherObjectInstance`,
-  `HCZLargeFanObjectInstance`, `HCZBlockObjectInstance`, `HCZConveyorSpikeObjectInstance`,
-  `HCZTwistingLoopObjectInstance`, `HczMinibossInstance`, and `DoorObjectInstance` for HCZ/CNZ/DEZ.
-- Additional S3K objects and badniks: `CollapsingBridgeObjectInstance`, `BubblerObjectInstance`,
-  `Sonic3kInvisibleHurtBlockHObjectInstance`, `MegaChopperBadnikInstance`,
-  `PoindexterBadnikInstance`, `BlastoidBadnikInstance`, `BuggernautBadnikInstance` /
-  `BuggernautBabyInstance`, and `TurboSpikerBadnikInstance`.
-- `Sonic3kLevelTriggerManager` added for AIZ trigger state such as boss-driven burn activation.
-- All zone badnik entries populated in `Sonic3kPlcArtRegistry`.
-- Initial badnik implementations wired into object system.
-- **Badnik destruction effects**: destroying S3K badniks now spawns animals and floating points
-  popups, matching S1/S2 behavior. Zone-specific animal pairs loaded from ROM per
-  `PLCLoad_Animals_Index` (all 13 zones mapped). Enemy score art parsed from `Map_EnemyScore`
-  (shared `ArtNem_EnemyPtsStarPost` blob). `Sonic3kPointsObjectInstance` provides S3K-specific
-  score-to-frame mapping.
-
-#### Spindash Dust
-- **S3K spindash dust**: implemented native `SpindashDustArtProvider` for Sonic 3&K. Art loaded
-  from ROM (`ArtUnc_DashDust` at 0x18A604, `Map_DashDust` at 0x18DF4, `DPLC_DashSplashDrown` at
-  0x18EE2). Uses virtual pattern base 0x34000 to avoid collision with ring tiles in the atlas.
-- **Multi-character dust isolation**: sidekick dust renderers now get isolated DPLC banks
-  (shifted into `SIDEKICK_PATTERN_BASE + 0x2000` range), preventing atlas corruption when
-  multiple characters spindash simultaneously.
-
-#### Invincibility Stars
-- **S3K invincibility stars**: `Sonic3kInvincibilityStarsObjectInstance` implements ROM-accurate
-  Obj_Invincibility (sonic3k.asm:33751) with 1 parent group + 3 trailing child groups.
-  Each group renders 2 sub-sprites at opposite positions on a 32-entry circular orbit table
-  (`byte_189A0`). Children trail via `PlayableEntity.getCentreX/Y(framesAgo)` at 3/6/9 frames
-  behind the player; parent orbits fast (9 entries/frame), children orbit slow (1 entry/frame).
-  Rotation reverses when facing left. Art loaded from ROM (`ArtUnc_Invincibility` at 0x18A204,
-  `Map_Invincibility` at 0x018AEA). `DefaultPowerUpSpawner` branches on `Sonic3kGameModule`
-  to create the S3K variant; S1/S2 `InvincibilityStarsObjectInstance` remains unchanged.
-
-#### Audio
-- Music tempo scaling and all-spheres SFX fix.
-- Ring collection sound alternates left/right channels.
-- Correct SFX: `sfx_Death` for normal hurt (not `sfx_SpikeHit`), jump SFX fix.
-- S3K tumble frame base corrected to `0x31` (not S2's `0x5F`).
-
-#### Miscellaneous S3K Fixes
-- VDP priority bit correctly extracted in S3K sprite mapping loader.
-- Collapsing platforms stay solid during fragment phase (S2/S3K).
-- Shield re-registration after act transition; StarPost bonus stage routing fix.
-- AIZ1 level bounds use normal `LevelSizes` entry.
-- Prevented OOM in S3K DPLC frame loading by parsing only 1P entries (combined mapping table fix).
-- SONIC art address corrected; camera bounds restored after transition.
-- Lightning shield sparks rendered directly instead of via DPLC.
-- Save/restore `Dynamic_resize_routine` across big ring special stage transitions (ROM: `Saved2_dynamic_resize_routine`). Without this, the resize state machine restarted from routine 0 on return, rapidly re-processing boundary thresholds and causing incorrect camera locks in AIZ Act 2.
-- Title card showed wrong act after AIZ mid-act fire transition. Death or special stage return displayed "Act 2" instead of "Act 1" because the engine lacked the ROM's `Apparent_zone_and_act` variable. Added `apparentAct` tracking to `LevelManager`: seamless transitions (fire) only update `currentAct`, normal act changes update both, title card requests read `apparentAct`. Results screen exit sets `apparentAct = 1` matching ROM's `move.b #1,(Apparent_act).w`.
-- AIZ2 water incorrectly enabled for Knuckles on level select load. `LevelManager.initWater()` hardcoded `SONIC_AND_TAILS` instead of resolving the actual player character from the level event manager. ROM `CheckLevelForWater` (sonic3k.asm:9754-9759) gates AIZ2 water on `Player_mode` and `Apparent_zone_and_act`, disabling it for Knuckles on direct load but enabling it during seamless AIZ1→AIZ2 transitions. Both cases now handled correctly via a `seamlessTransition` flag threaded through `WaterDataProvider`.
-
-### Insta-Shield Implementation
-
-Full S3K insta-shield ability implemented with ROM parity:
-- ROM constants, art key, and art loading (including cross-game donation path).
-- Activation via `tryShieldAbility()` with character gating (Sonic only, not Tails/Knuckles).
-- Hitbox expansion in `TouchResponses` for the active insta-shield frames.
-- Persistent `InstaShieldObjectInstance` lifecycle (survives level transitions).
-- DPLC cache invalidation on seamless level transitions.
-- Lazy art initialization to handle sprite-before-level-load ordering.
-- Half-arc animation bug fix (prevented double-update per frame).
-
-### Multi-Sidekick System
-
-- Comma-separated sidekick config enables spawning multiple sidekicks (e.g. `"sonic,tails"`).
-- `SidekickRespawnStrategy` interface extracted with `TailsRespawnStrategy` and per-character
-  `requiresPhysics()` (Sonic walk-in vs Tails fly-in).
-- Parallel sidekick respawn via effective leader reference.
-- Virtual pattern ID range validation in `PatternAtlas` for safe multi-bank allocation.
-- Sidekick DPLC banks placed in dedicated `0x30000+` range, capped at `0x800` limit with bank
-  sharing on overflow.
-- Sidekick rendered behind main player to match VDP sprite priority order.
-- Leader reference preserved across `reset()` — sidekicks no longer become permanently idle.
-- Directional input maintained during approach phase.
-- Slot reclamation added to `PatternAtlas` for efficient VRAM management.
-
-#### S3K Sidekick Knuckles Fixes
-
-- **VRAM isolation**: every sidekick now unconditionally gets its own isolated pattern bank in the
-  `SIDEKICK_PATTERN_BASE` (0x38000) range, eliminating sprite corruption when characters share
-  the same ART_TILE base (Knuckles and Sonic both use 0x0680 in S3K). Removed the name-based
-  `computeVramSlots` optimization that missed this collision.
-- **Palette isolation**: per-sidekick `RenderContext` palette blocks loaded via
-  `PlayerSpriteArtProvider.loadCharacterPalette()`. When a sidekick uses a different palette
-  than the main character (e.g. Knuckles' `Pal_Knuckles` vs Sonic's `Pal_SonicTails`), a
-  dedicated palette context is created so the sidekick renders with correct colors. Propagated
-  to spindash dust and Tails tail appendage sub-renderers.
-- **Knuckles glide-in respawn**: `KnucklesRespawnStrategy.requiresPhysics()` now returns
-  `true` during the drop phase so the physics pipeline applies gravity. Previously Knuckles
-  would hang in mid-air after the glide because `SpriteManager` skipped physics for all
-  `APPROACHING` strategies. `GLIDE_DROP` animation set during the glide approach phase.
-- **Palette texture resize safety**: `GraphicsManager.cachePaletteTexture()` now preserves
-  existing palette data when the texture grows to accommodate new contexts, preventing level
-  palette corruption on resize.
-
-#### S3K Zone Bring-Up Skill System
-
-A 7-skill agentic system for systematic, per-zone implementation of S3K visual and behavioural
-features (events, parallax, animated tiles, palette cycling). Designed for agent-driven analysis
-of the disassembly followed by parallel feature implementation across worktrees.
-
-- **s3k-zone-analysis**: reads the S3K disassembly and produces a structured zone feature spec
-  covering events, parallax, animated tiles, palette cycling, notable objects, and cross-cutting
-  concerns. Includes Phase 4 shared state trace for cross-category dependency detection (VRAM
-  ownership conflicts, palette mutation vs cycling overlaps, event flag gating).
-- **s3k-zone-events**: implements `Sonic3kZoneEvents` subclasses porting `Dynamic_Resize` routines
-  from the disassembly — camera locks, boss arenas, cutscenes, act transitions, palette mutations.
-- **s3k-animated-tiles**: implements AniPLC script triggers in `Sonic3kPatternAnimator` with
-  zone-specific gating conditions and dynamic art overrides.
-- **s3k-palette-cycling**: implements or validates `AnPal` handlers in `Sonic3kPaletteCycler` using
-  the counter/step/limit pattern. Supports both new implementation and validation of existing zones.
-- **s3k-parallax** *(updated)*: now accepts a zone analysis spec as optional input to accelerate
-  deform routine discovery.
-- **s3k-zone-bring-up**: orchestrator that dispatches zone analysis, parallel feature agents in
-  worktrees, merge reconciliation, build verification, and validation.
-- **s3k-zone-validate**: visual validation via stable-retro reference screenshots compared against
-  engine output using agent image recognition (feature presence, not pixel-perfect diffing).
-- All skills published in dual format (`.claude/skills/` + `.agent/skills/`) for agent-agnostic use.
-- YAML frontmatter standardised across all 20 `.claude/skills/` and 8 `.agent/skills/` files.
-- HCZ zone analysis spec produced as smoke test (`docs/s3k-zones/hcz-analysis.md`).
-- AIZ zone analysis cross-validated against engine implementation: events and palette cycling
-  matched byte-for-byte; parallax matched 13/14 checks; animated tiles revealed 3 cross-category
-  gating omissions that motivated the Phase 4 shared state trace addition.
-
-### Tails AI Improvements
-
-- Comprehensive Tails CPU AI rework:
-  - WFZ/DEZ/SCZ now suppress the CPU sidekick in gameplay and rendering.
-  - Tails switches to FLYING when Sonic dies instead of despawning.
-  - Respawn uses ROM's 64-frame gate plus A/B/C/Start bypass, blocking on object-control,
-    air, roll-jump, underwater, and prevent-respawn conditions.
-  - Manual P2 override for gameplay and special stages.
-  - PANIC mode reworked to use `move_lock` + frame-counter timing.
-  - Flying/despawn reworked with on-screen checks, water clamp, exact landing criteria.
-  - Boss/event updates wired for EHZ2, HTZ2, MCZ2, CNZ2, CPZ2, ARZ2, and MTZ3.
-  - Special-stage Tails uses its own replay buffer + P2 takeover path.
-
-### Rendering Pipeline Improvements
-
-- **PatternAtlas slot reclamation**: freed VRAM slots can be reused by new pattern uploads.
-- **Batched DPLC atlas updates**: `DynamicPatternBank` batches multiple pattern updates per frame
-  instead of individual uploads.
-- **Virtual pattern ID validation**: range checks prevent silent VRAM corruption from out-of-bounds
-  pattern references.
-- **FboHelper**: centralised FBO creation utility, migrated 4 renderer files.
-- **writeQuad()** extracted from `BatchedPatternRenderer` for reuse.
-- Fail-fast on shader compilation/linking errors with GL resource cleanup.
-
-### Logging and Error Handling
-
-- 22 `e.printStackTrace()` calls migrated to structured `java.util.logging`.
-- 28 swallowed exceptions in S3K code replaced with `LOG.fine()`.
-- Production `System.out.println` calls replaced with `LOGGER.fine()`.
-- Remaining logging gaps fixed across 6 files.
-
-### Performance
-
-- Batched DPLC atlas updates in `DynamicPatternBank`.
-- Cached `LevelManager` reference in `DefaultObjectServices` (eliminates per-call singleton lookup).
-- Per-frame `ObjectSpawn` allocation eliminated in `AbstractBadnikInstance`.
-- Pre-allocated debug overlay lists, collision/sensor/camera bounds command lists.
-- Reduced per-frame allocations in collision, rendering, and audio hot paths.
-- Batched glyph rendering for debug text.
-
-### BizHawk Trace Replay Testing
-
-A new automated accuracy verification system that records per-frame physics state from the real ROM
-running in BizHawk emulator, then replays the same inputs through the engine and compares every
-field frame-by-frame.
-
-- **Lua trace recorder** (`tools/bizhawk/`): BizHawk Lua script that captures player position,
-  speed, angle, ground mode, air/rolling flags, and controller input every frame during a BK2
-  movie playback. Outputs `metadata.json`, `physics.csv`, and `aux_state.jsonl`.
-- **stable-retro trace recorder** (`tools/retro/`): cross-platform Python equivalent of the
-  BizHawk Lua recorder, using stable-retro (Genesis Plus GX) for headless emulation. Produces
-  byte-identical output format (same CSV, JSONL, and metadata.json) consumed by the same Java
-  test infrastructure. Supports stable-retro BK2 replay, BizHawk BK2 parsing, savestate boot,
-  and credits demo recording. Enables trace generation on macOS and Linux without BizHawk.
-  Verified byte-for-byte output match against BizHawk reference traces for first 2100+ frames
-  of GHZ1 before GPGX version-specific lag frames diverge the runs.
-- **stable-retro BK2 alignment** (`--bk2-offset`): replays BizHawk BK2 movies through
-  stable-retro by shifting BK2 inputs to the emulator's gameplay start frame. Handles GPGX
-  byte-swap, exact-0x0C game_mode detection, and `|system|P1|P2|` BK2 group parsing.
-- **Lag frame handling in credits demo tests**: `AbstractCreditsDemoTraceReplayTest` now
-  detects lag frames (identical physics state on consecutive frames with non-zero speed) and
-  skips both engine physics and demo input advancement on those frames. Reduced MZ2 credits
-  divergences from 28 errors/131 warnings to 10 errors/57 warnings. Remaining errors are
-  genuine engine divergences (missed bounces, slope collision, object timing).
-- **Trace replay test infrastructure** (`tests.trace` package): `TraceData` loader, `TraceFrame`
-  parser, `TraceBinder` per-frame comparator with configurable tolerances, `DivergenceReport`
-  with JSON output and context windows, lag frame detection for VBlank sync.
-- **`AbstractTraceReplayTest`**: base class for trace replay tests with graceful skip when ROM,
-  BK2, or trace data files are absent. Subclasses only specify game/zone/act/path.
-- **First trace: S1 GHZ1** full-run recording (3,905 frames): passes with 0 errors, 6 warnings.
-- **Second trace: S1 MZ1** full-run recording (7,936 frames): baseline added with
-  `TestS1Mz1TraceReplay`, regenerated GHZ1 traces, and ROM-verified zone/act metadata.
-- **Recorder/diagnostics upgrades**: trace format now captures subpixel position, player routine,
-  camera state, ring count, raw status, `v_framecount`, `standOnObj`, slot dumps, routine-change
-  events, and ObjPosLoad cursor state for direct ROM/engine comparison.
-- **Engine-side context windows**: divergence reports now include ROM and engine routine/object
-  diagnostics, riding-object context, and placement cursor counters to narrow parity failures.
-- **Buzz Bomber proximity fix**: removed overcorrecting player position prediction from the
-  proximity detection check. The engine's 1-frame late spawn (pre-camera X vs ROM's post-camera X)
-  and the pre-physics player position naturally cancel, placing the Buzz Bomber at the correct
-  stop position without prediction.
-- **Post-camera object placement sync**: `LevelFrameStep` now runs a post-camera placement
-  catch-up pass after the camera update, closing the spawn timing gap when the camera crosses a
-  chunk boundary between object placement (step 2) and camera update (step 5).
-- **Placement parity narrowing**: S1 `out_of_range` timing, dormant-spawn handling, and
-  ObjPosLoad callback groundwork reduced the remaining MZ1 investigation to a terrain /
-  solid-contact parity problem rather than cursor drift.
-
-#### Physics Accuracy Fixes (discovered via trace replay)
-
-- **16:16 fixed-point subpixel positions**: `AbstractSprite.move()` upgraded from 16:8 to 16:16
-  fixed-point arithmetic, matching the ROM's 32-bit `move.l obX(a0),d2` / `asl.l #8,d0` /
-  `add.l d0,d2` position update. `xSubpixel`/`ySubpixel` widened from `byte` to `short`.
-  `setX()`/`setY()` no longer zero the subpixel fraction (ROM's `move.w` to x_pos doesn't
-  touch x_sub). Collision adjustments use new `shiftX()`/`shiftY()` to preserve subpixel.
-- **GroundMode enum order fix**: `LEFTWALL` and `RIGHTWALL` were swapped; corrected to match
-  ROM's quadrant assignment (0x40 = LEFTWALL, 0xC0 = RIGHTWALL).
-- **CalcRoomInFront probe quadrant**: wall probe now uses `anglePosQuadrant()` (asymmetric
-  rounding matching ROM's AnglePos dispatch) instead of `(angle+0x20)&0xC0`. Fixes false wall
-  detections at steep slope angles (e.g. rotated angle 0xA0).
-- **CalcRoomInFront 32-bit prediction**: probe prediction uses full 16-bit subpixel, matching
-  ROM's 32-bit position arithmetic.
-- **Air collision landing split**: separated `doTerrainCollisionAirDirect()` for movement
-  quadrants 0x40/0xC0 (land immediately when floor detected, no speed threshold) from
-  quadrant 0x00 (speed-dependent threshold). Matches ROM's per-quadrant landing logic.
-- **Double ground mode update**: second `updateGroundMode()` after `selectSensorWithAngle()`
-  uses the new angle from terrain probes, matching ROM's end-of-frame ground mode calculation.
-- **Arithmetic right shift for air drag**: `xSpeed / 32` changed to `xSpeed >> 5` to match
-  68000's `asr.w #5,d1` which rounds toward negative infinity (Java `/` truncates toward zero).
-- **Jump transition defers air physics**: on jump, air physics are deferred to the next frame
-  (ROM's `addq.l #4,sp` pops the return address, skipping the rest of ground movement).
-  `sprite.setOnObject(false)` now called before jump to match `bclr #sta_onObj`.
-- **BCC carry flag parity**: spindash release speed clamp `gSpeed > 0` changed to `gSpeed >= 0`
-  to match 68000's carry flag behavior (carry SET on unsigned overflow, BCC NOT taken for zero).
-- **`groundWallCollisionEnabled` feature flag**: new `PhysicsFeatureSet` field. S1 does not
-  call CalcRoomInFront during ground movement (no equivalent in `Sonic_MdNormal`); S2/S3K do.
-- **Air-control superspeed preservation**: S3K now preserves airborne speeds already above
-  `topSpeed` after ramps and springs, while S1/S2 retain the original hard cap. `TwistedRamp`
-  tumble frames now remain visible while rolling.
-
-#### Object System Fixes (discovered via trace replay)
-
-- **Deterministic object iteration order**: active objects now sorted by spawn X position,
-  matching ROM's slot-order correlation with spawn-window entry order.
-- **Touch response timing**: `runTouchResponsesForPlayer()` extracted and called during the
-  player physics tick (after `handleMovement()`, before solid contacts), matching ROM's
-  ReactToItem timing within Sonic's ExecuteObjects slot.
-- **S1 UNIFIED collision model in SpriteManager**: pre-movement solid pass skipped for S1
-  (ROM processes all solid objects after Sonic's movement); post-movement pass with
-  `postMovement=true` disables velocity classification adjustment.
-- **SolidContacts post-movement parameter**: `updateSolidContacts()` gains `postMovement` and
-  `deferSideToPostMovement` flags to support the S1/S2 collision timing difference.
-- **ROM-accurate `out_of_range` semantics**: `AbstractObjectInstance.isInRange()` now matches the
-  ROM's chunk-aligned X-only range check with 16-bit wraparound, and S1 now performs
-  out-of-range deletion during object execution rather than before it.
-- **Dormant spawn tracking**: objects deleted by S1 `out_of_range` stay dormant between ObjPosLoad
-  cursors until the cursor naturally re-processes them, preventing premature or missing reloads
-  during camera backtracking.
-- **Standing/contact parity fixes**: `MvSonicOnPtfm` now uses `groundHalfHeight` (`d3`) for
-  standing Y, HURT touch responses now remain continuous after invulnerability expires, and
-  staircase / MTZ platform / nut / button / elevator contact state now uses ROM-style boolean
-  latches instead of diverging frame counters.
-
-### Object Lifecycle Safety
-
-- Removed constructor-time `services()` usage from 38 object classes; all affected objects now
-  lazily initialize renderer and service-dependent state after `ObjectServices` injection.
-- `TestNoServicesInObjectConstructors` now hard-fails constructor-time service access, unsafe
-  `addDynamicObject(new X(...))` patterns, and pre-registration method calls that transitively
-  depend on injected services.
-- Sonic 1 lava geysers now defer initialization until first update, preventing pre-registration
-  crashes; the lavafall third piece also no longer cascade-spawns infinite children.
-
-### Sonic 1 Fixes
-
-- Drowning visuals: breathing air bubble animation frames and countdown number positioning corrected.
-- LZ credits demo spike collision fix and frame tick ordering unification.
-- Yadrin top-hit behaviour and underwater palette/animation fixes for LZ.
-- Minor LZ fix for jumping while sliding.
-- GHZ bridge collision fix with corresponding tests.
-- Monitor collision fix (particularly when in a tree).
-- Bubble breathing now uses the fallback animation chain correctly, so grabbing an air bubble shows
-  the intended breathing animation instead of preserving the rolling/spinning pose.
-- SLZ staircase activation now uses ROM-style per-frame contact latches and has dedicated headless
-  regression coverage.
-- Bubble makers, push blocks, and related S1 objects now use ROM-accurate range semantics; spike
-  standing dimensions now match the ROM's `d2`/`d3` values, including sideways spike extension.
-
-### Sonic 2 Fixes
-
-- HTZ water configuration corrected (Hill Top Zone no longer reports water).
-- Collapsing platforms in MCZ stay solid during fragment phase.
-- Special stage results screen decoupled from object system.
-- S2/S3K collapsing platforms remain solid during fragment phase.
-- CPZ staircase, MTZ platforms, nuts, buttons, and elevators now use boolean contact latches
-  instead of frame-counter comparisons, fixing activation regressions during title cards and
-  multi-sprite updates.
-- Invincibility stars (Obj35) rewritten to match s2disasm: star 0 orbits at player's current
-  position with fast rotation ($12/frame), stars 1-3 trail behind via position history buffer
-  (3/6/9 frames behind) with slow rotation ($02/frame). Each star renders 2 sub-sprites at
-  180 degrees apart. Corrected orbit offset table (7 entries had wrong X values), animation
-  tables (parent uses byte_1DB82; trailing stars use per-star primary/secondary tables), and
-  direction-aware rotation (angle negated when facing left).
-- RNG parity paths tightened through shared `GameRng` coverage and `Sonic2Rng` regression tests,
-  including CNZ slot-machine consumers and S2 object/boss call sites.
-
-### Cross-Game Feature Donation Enhancements
-
-- S1 wired as donor for forward donation into S2/S3K (previously only S2/S3K could donate).
-- `DonorCapabilities` interface replaces hardcoded game-specific branches.
-- `CanonicalAnimation` enum provides a game-neutral animation vocabulary for cross-game translation.
-- `AnimationTranslator` handles bidirectional profile translation between any pair of games.
-- Spindash speed table sourced from donor `PhysicsFeatureSet`.
-- Cross-game art keys promoted to `ObjectArtKeys` for game-agnostic constant references.
-- Import leak cleanup: removed cross-game S2 animation ID imports from game-agnostic sidekick code.
-
-### Test and Quality
-
-- `SingletonResetExtension` and `@FullReset` for automated per-test singleton lifecycle.
-- `GameRuntime` lifecycle wired into 35 test classes with optimized Surefire configuration.
-- Multi-sidekick integration smoke tests.
-- Insta-shield test suite: gating, hitbox expansion, and visual frame-by-frame capture.
-- MutableLevel round-trip and integration tests.
-- S3K results screen tally mechanics unit tests.
-- S3K registry coverage tests for all zones.
-- Per-character respawn strategy unit tests.
-- Migration guard scanner for detecting `getInstance()` / `GameServices` violations in object code.
-- Annotated guard tests for services() migration completeness.
-- AudioManager.resetState() field-clearing verification.
-- Added `TestS1Mz1TraceReplay`, `TestSonic1StaircaseActivation`, `TestAbstractObjectInstanceRange`,
-  and expanded lava geyser / constructor-safety guard coverage.
-- Fixed 7 test failures caused by leaked runtime state: updated S3K Knuckles physics assertion
-  to expect `SONIC_3K_KNUCKLES` profile (jump=0x600), saved/restored `RuntimeManager` in render
-  tests, guarded teardown camera calls with null checks, used `destroyForReinit()` for
-  `TestGraphicsManagerHeadless`.
-
-#### Test Suite Cleanup
-
-Systematic audit and remediation of the test suite. Net result: +34 passing tests, 36→0 skipped,
-no new failures.
-
-- **Stale @Ignored stubs replaced with real tests**: `TestTodo14` (PlayerCharacter ordinals),
-  `TestTodo13` (19 SBZ/FZ event routine tests), `TestTodo17` (boss flag gating), `TestTodo19`
-  (rock debris table parity), `TestTodo34` (water slide chunk detection).
-- **Broken live tests fixed**: `TestTodo3` (MonitorType reflection instead of test-local enum copy),
-  `TestTodo37` (ROM-vs-engine constant parity via reflection).
-- **Dead test files deleted**: 8 fully-@Ignored TestTodo stubs for unimplemented features (Yadrin
-  spiky-top, Knuckles monitor, Super transform, rock width, rock push, ChopChop bubbles, control
-  lockout, SBZ2 transition); 8 zero-assertion diagnostic dumps; `TestTodo29` (SCALE no-op).
-- **Low-value tests pruned**: constant-equals-itself assertions (Knuckles cutscene timers, emerald
-  scatter constants), ROM-only checks with no engine cross-reference (angle table size, CNZ
-  romDataPresent), duplicate coverage (edge balance constants, water provider hasWater), test
-  infrastructure self-tests (SharedLevel, InitStep fields).
-- **Test uplifts**: `TestTodo1` cross-references ROM water heights against `Sonic2WaterDataProvider`;
-  `TestTodo31` adds real end-game zone boundary assertions; 7 S3K palette cycling test files (AIZ2,
-  CNZ, EMZ, HCZ, ICZ, LBZ, LRZ) strengthened from "color changed" to specific RGB value assertions
-  using `Sonic3kPaletteCycler` with StubLevel; water data provider tests deduplicated between
-  provider and handler files.
-- **Integration gaps closed**: removed blocked @Ignored stubs from `TestGameLoop` (special stage
-  mode) and `TestTodo4` (MCZ boss collision boxes); removed reference-file-dependent test from
-  `TestSonic3kVoiceData`; removed diagnostic dump stubs from `TestS3kSonicSpriteDiag`.
-
-### Documentation
-
-- Comprehensive user guide for three audiences (players, developers, contributors).
-- OpenSMPSDeck music tracker design spec and implementation plan.
-- Rendering pipeline improvements spec and plan.
-- Unified execution roadmap and Phase 0+1 implementation plan.
-- GameRuntime architecture spec and implementation plan.
-- Two-tier service architecture design spec and implementation plan.
-- MutableLevel (Phase 3) spec and implementation plan.
-- Insta-shield design spec and implementation plan.
-- Multi-sidekick daisy chain design spec and implementation plan.
-- Cross-game bidirectional animation donation design spec and implementation plan.
-- Game-specific leak fixes spec and plan.
-- Services migration cleanup design spec and implementation plan.
-- Architectural fixes design spec, implementation plan, and review passes.
-- Singleton lifecycle documentation.
-- Phase 4 common refactoring design spec (5 phases, 25 patterns) and implementation plan (21 tasks).
-- Virtual pattern IDs and multi-sidekick system documented in AGENTS.md.
-- Known discrepancies documentation for multi-sidekick rendering.
-- Added the `s1-trace-replay` skill and refreshed skill descriptions for the parity-driven
-  object/boss/disassembly workflow docs.
-
-## v0.4.20260304 (Released 2026-03-04)
-
-Analysis range: `v0.3.20260206..v0.4.20260304` on `develop` (`1790` commits, `1589` non-merge commits,
-`2040` files changed, `218141` insertions, `195996` deletions).
-
-> Note: the large deletion count reflects the package rename from `uk.co.jamesj999.sonic` to
-> `com.openggf`, which deleted and recreated most source files. Net code growth is ~22,100 lines.
-
-### Sonic 1 Expansion and Content Completion
-
-- Added full Sonic 1 title screen pipeline and title-screen-to-level-select flow
-  (`Sonic1TitleScreenManager`, loader, mappings, transition handling).
-- Implemented Sonic 1 rings and lamppost/checkpoint behavior.
-- Implemented Sonic 1 special stage gameplay and integration:
-  - Game-agnostic special stage provider refactor.
-  - `Sonic1SpecialStageManager`, renderer/background renderer/data loader, block types, and results screen.
-  - Giant Ring route from normal gameplay into special stage flow.
-- Introduced per-zone event coverage for Sonic 1 with zone-specific managers/events for GHZ, MZ, SYZ,
-  LZ (including water events), SLZ, SBZ, and ending/FZ handling.
-- Major object implementation wave for Sonic 1: `117` new object-related classes
-  (`78` general objects, `23` badnik classes, `16` boss-related classes).
-- Boss coverage expanded to GHZ, MZ, SYZ, LZ, SLZ, and FZ with child objects/projectiles and event integration.
-- Added/finished LZ water behavior and bubble systems, including per-ROM drowning music selection.
-- Added ending/outro flow updates and initial credits sequence implementation.
-- Added SBZ2 post-level-end sequence.
-- Fixed S1 physics regressions with test coverage (multiple passes).
-
-### Sonic 2 Gameplay Additions
-
-- Added Sonic 2 title screen architecture and title-screen audio regression coverage.
-- Added major object coverage passes:
-  - Metropolis Zone object set (`16` objects) and engine crush detection.
-  - Sky Chase/Tornado object set and spawn path integration.
-  - Wing Fortress object set and supporting hazards/platforms.
-  - Oil Ocean object and oil-surface behavior improvements.
-- Added MCZ boss implementation (`Sonic2MCZBossInstance` + falling debris support) with follow-up fixes.
-- Added MTZ Boss (Obj54) with S2 boss event stubs.
-- Added WFZ Boss (ObjC5) with laser platform attack cycle, plus ROM-accuracy pass (17 issues).
-- Added DEZ Mecha Sonic boss (ObjAF) with full state machine, plus ROM-accuracy pass (17 issues).
-- Added DEZ Death Egg Robot (ObjC7) — final S2 boss, plus ROM-accuracy pass (12 issues).
-- Added Robotnik escape sequence between DEZ boss fights (ObjC6).
-- Six passes of DEZ boss ROM-accuracy corrections: Silver Sonic facing direction, LED overlay,
-  animation phase gating, Egg Robo collision/render priorities, Death Egg Robot child systems.
-- Added `61` new Sonic 2 object-related files (`45` general objects, `14` badnik classes, `2` boss files),
-  including additional SCZ/WFZ/MTZ/OOZ badnik/object coverage.
-- Refactored and expanded Sonic 2 zone events (`Sonic2LevelEventManager` + per-zone event classes).
-- Implemented Sonic 2 credits and ending system:
-  - `EndingPhase` enum, `EndingProvider` interface, and `ENDING_CUTSCENE` GameMode.
-  - `Sonic2CreditsTextRenderer`, `Sonic2CreditsMappings`, `Sonic2CreditsData` with timing constants.
-  - `Sonic2EndingCutsceneManager` and `Sonic2EndingArt` with DEZ star field background rendering.
-  - `Sonic2LogoFlashManager` with ROM-accurate palette strobe.
-  - `Sonic2EndingProvider` wired to DEZ boss ending trigger.
-  - Rewritten for ROM parity with ObjCA/ObjCC, DPLC player sprites, tornado visibility.
-  - `Sonic1EndingProvider` refactored to use shared `EndingProvider` interface.
-- Added demo playback functionality with enhancements and routing to objects.
-- Systematic TODO resolution pass: water heights, monitor effects, distortion table, sliding spikes,
-  dual collision, Yadrin spiky-top collision, water slide control lockout, LZ rumbling SFX,
-  boss flag wiring to AIZ pattern animations, plus TODO/FIXME coverage tests with disassembly validation.
-- Various object fixes: PointPokey positioning, MCZRotPlatforms child accumulation, signpost/screen
-  locking, object loading improvements, ROM-accurate bumper/bonus block/rising pillar/diagonal spring physics.
-
-### Super Sonic and Per-Game Physics
-
-- Added cross-game physics abstraction:
-  - `PhysicsProfile`, `PhysicsFeatureSet`, `PhysicsModifiers`, `PhysicsProvider`, and `CollisionModel`.
-  - Validation tests for profile behavior, collision model differences, spindash gating, and speed capping.
-- Implemented Sonic 2 Super Sonic flow:
-  - Base state machine via `SuperState`/`SuperStateController`.
-  - Integration into playable sprite/game loop/module plumbing.
-  - ROM-based animation loading, ROM-exact palette cycling, and S2 constants wiring.
-  - Invulnerability/enemy-destruction behavior and shield/power-up interaction guards.
-  - Debug toggle support and Super Sonic stars object support.
-- Added Sonic 3K Super Sonic controller stub/hook points for future parity work.
-- Added cross-game Super Sonic delegation to S1 and S2 game modules via `CrossGameFeatureProvider`,
-  including palette, audio, and renderer integration, invincibility, and S3K slope animation offset.
-
-### Sonic 3K Bring-Up (AIZ-Focused)
-
-- Extended Sonic 3K bootstrap/audio readiness (voice/sfx index fixes, ROM loading fixes, SoundTestApp support).
-- Implemented Angel Island intro cinematic pipeline:
-  - AIZ event wiring and intro state-machine objects (`AizPlaneIntroInstance`, Knuckles cutscene objects,
-    emerald scatter, wave/plane/glow/booster children).
-  - Intro art loading/caching and terrain swap integration.
-- Added AIZ gameplay object work with parity-focused fixes:
-  - Ride vines and giant ride vines.
-  - Hollow tree traversal and reveal/tilemap support.
-  - Multiple parity fixes (angle bytes, state retention, endianness, momentum, despawn guards) plus regressions.
-- Added AIZ miniboss object set and child components.
-- Added initial S3K badnik framework and first wired badnik implementations.
-- Added S3K shield object implementations and fixed deferred PLC loading after AIZ intro.
-- Added Sonic 3K title card manager/mappings and S3K pattern/palette animation work.
-- Implemented S3K water system:
-  - Game-agnostic `WaterDataProvider` and `DynamicWaterHandler` interfaces.
-  - `ThresholdTableWaterHandler` for table-driven water zones.
-  - `Sonic3kWaterDataProvider` with static heights, dynamic handlers, and underwater palette loading.
-  - `Sonic1WaterDataProvider` migration to the new provider architecture.
-  - Wired into LevelManager and S3K zone features, deprecated game-specific water loading methods.
-  - Correct water threshold tables, `setMeanDirect`, zone scope, and starting heights matching ROM.
-  - S3K water locked flag, shake timer, LBZ2 pipe plug handler.
-  - AIZ2 Knuckles water exclusion, raise speed inheritance, `update()` overshoot fixes.
-- Implemented seamless AIZ fire transition flow (`S3kSeamlessMutationExecutor`).
-- AIZ miniboss cutscene and barrel shot child updates.
-- Expanded AIZ scroll handler work (`SwScrlAiz`).
-
-### PLC, Art Loading, and Tooling
-
-- Major PLC and sprite-pattern refactor across S1/S2/S3K pipelines.
-- Added/expanded PLC systems:
-  - `Sonic2PlcLoader`, `Sonic2PlcArtRegistry`, and broader S3K PLC loading paths.
-  - Shared sprite/mapping loader use (`S1SpriteDataLoader`, `S2SpriteDataLoader`, `S3kSpriteDataLoader`).
-- Expanded ROM/disassembly tooling:
-  - Object profile abstractions per game (`Sonic1ObjectProfile`, `Sonic2ObjectProfile`, `Sonic3kObjectProfile`).
-  - Shared-ID handling in S3K object checklist generation.
-  - PLC cross-referencing in `RomOffsetFinder`/`DisassemblySearchTool` and `ObjectDiscoveryTool`.
-
-### Audio, Stability, and Engine Hardening
-
-- Audio updates:
-  - Music/SFX catalog refactor to enum-driven paths.
-  - PSG GPGX hybrid parity work and tests.
-  - S3K pitch wrapping and SFX index fixes.
-  - YM2612/SMPS fixes (including SSG-EG active-count leak and loop counter bounds).
-  - Thread-safety fixes in SMPS/audio backend paths and output mixing saturation safeguards.
-- Engine hardening and safety:
-  - ROM read synchronization and bounds checks.
-  - Kosinski/resource loading safety limits.
-  - Graphics cleanup fixes (resource leaks, reset-state gaps, allocation reductions).
-  - Additional stability fixes across water/drowning handling, invulnerability timing, and debug movement modifiers.
-- Performance passes across level/render/audio hot paths and internal debug profiling updates.
-- Fixed SFX channel replacement: kill old SFX track on shared channel to prevent priority lock.
-- Synth-core review fixes: resource safety, encapsulation, dead code cleanup.
-- HTZ earthquake fixes: descending through floor, tile display, rising lava subtype 4 hurt behaviour.
-- Consolidated duplicate sine/cosine tables to `TrigLookupTable`.
-- Fixed cross-game features breaking layer switchers.
-- Fixed special stage transition softlocks and S1 results fade type.
-
-### Test and Quality Coverage
-
-- Added `83` new test files across this range, including:
-  - Sonic 1 special stage, object, badnik, boss, and routing regressions.
-  - Sonic 3K AIZ intro/state timeline/hollow tree traversal parity regressions.
-  - Title screen audio regression coverage.
-  - PSG/YM2612 and per-game physics/profile parity checks.
-- Expanded headless and subsystem-focused tests in support of object/event/audio refactors.
-- Added 21 headless bug reproduction tests for 17 reported S1/S2 bugs.
-- JUnit 5 migration: deleted 54 self-verifying tests, replaced with parameterized tests.
-- Parallelized test execution with 8 forked JVMs.
-- Test grouping by level: merged headless tests sharing the same level load into groups
-  (EHZ1: 4→1, ARZ1: 3→1, CNZ1: 3→1, HTZ1: 2→1, AIZ1: 2→1, GHZ1: 6→1), eliminating 14 redundant
-  level loads.
-- Added TODO/FIXME coverage tests with disassembly validation.
-
-### Cross-Game Feature Donation
-
-Implemented cross-game feature donation system: a donor game (S2 or S3K) provides player sprites,
-spindash dust, physics, palettes, and SFX while the base game (e.g. S1) handles levels, collision,
-objects, and music. Enabled via `CROSS_GAME_FEATURES_ENABLED` and `CROSS_GAME_SOURCE` config keys.
-
-- `CrossGameFeatureProvider` singleton: opens donor ROM as secondary ROM (no module detection
-  side-effect), creates game-specific art loaders (`Sonic2PlayerArt`/`Sonic3kPlayerArt`,
-  `Sonic2DustArt`), builds hybrid `PhysicsFeatureSet` (spindash from donor, everything else S1),
-  loads donor character palette, initializes donor audio.
-- `RenderContext` palette isolation: base game occupies palette lines 0-3, each donor gets its own
-  block of 4 lines (4-7, 8-11, etc.) via static registry with `getOrCreateDonor()`.
-  `uploadDonorPalettes()` pushes donor palettes to GPU. `getDonorContexts()` for iteration.
-- `GameId` enum with `fromCode()` for type-safe donor identification.
-- `RomManager.getSecondaryRom()` opens donor ROM without triggering game module detection.
-- `LevelManager` art loading paths (`initPlayerSpriteArt`, `initSpindashDust`, `initTailsTails`)
-  check `CrossGameFeatureProvider.isActive()` and delegate to donor art providers, attaching
-  donor `RenderContext` to each `PlayerSpriteRenderer`.
-- `Engine` initialization gates sidekick spawning on `GameModule.supportsSidekick()` or
-  `CrossGameFeatureProvider.isActive()`, with cleanup on shutdown.
-- GPU palette texture dynamically resized via `RenderContext.getTotalPaletteLines()`. All shaders
-  (`shader_the_hedgehog`, `shader_tilemap`, `shader_water`, `shader_sprite_priority`,
-  `shader_instanced_priority`, `shader_cnz_slots`) updated from hardcoded `/4.0` to
-  `/TotalPaletteLines` uniform.
-- Underwater palette derivation for donor sprites:
-  - `RenderContext.deriveUnderwaterPalette()` synthesizes donor underwater colors using the base
-    game's global average per-channel color shift ratio (not per-index, which would mismatch
-    palette layouts across games).
-  - `GraphicsManager.cacheUnderwaterPaletteTexture()` extended to populate donor palette rows
-    automatically from the base game's normal-to-underwater shift.
-- Donor SMPS driver config for correct SFX playback:
-  - `SmpsSequencerConfig` threaded through `AudioManager.registerDonorLoader()` (4-arg overload),
-    stored per donor game in `donorConfigs` map.
-  - `AudioBackend.playSfxSmps()` 4-arg overload accepting explicit config; `LWJGLAudioBackend`
-    uses donor config when provided, falling back to base game config.
-  - `CrossGameFeatureProvider.initializeDonorAudio()` passes `donorProfile.getSequencerConfig()`.
-- Donor audio overlay in `AudioManager`: `donorLoaders`, `donorDacData`, `donorSoundBindings` maps;
-  `playSfx()` falls through to donor path when base game sound map has no entry.
-- S3K Tails tail appendage support: `CrossGameFeatureProvider.hasSeparateTailsTailArt()` and
-  `loadTailsTailArt()` delegate to donor's `Sonic3kPlayerArt` for separate Obj05 tail art.
-  `LevelManager.initTailsTails()` checks donor game module when cross-game is active, selecting
-  correct art loading path and `ANI_SELECTION_S3K` animation tables.
-- SFX re-trigger fix in `SmpsDriver`: re-triggering the same SFX ID now replaces the old sequencer
-  instead of competing for the same FM/PSG channels (prevents priority lock ping-pong with S1/S2
-  jump SFX priority 0x80).
-- Tests: `TestRenderContext` (9 tests covering palette isolation, line allocation, reset,
-  underwater palette derivation), `TestDonorAudioRouting` (donor SFX routing and sequencer config),
-  `TestGameId`, `TestHybridPhysicsFeatureSet`, `TestSidekickGating`.
-
-### Master Title Screen
-
-- Implemented `MasterTitleScreen` (404 lines): engine-wide title screen displayed on startup before
-  entering game-specific title flow. PNG-based background, animated clouds, title emblem, and game
-  selection text rendered via `TexturedQuadRenderer` and `PixelFont`.
-- New rendering infrastructure: `PngTextureLoader` (85 lines), `TexturedQuadRenderer` (139 lines),
-  `PixelFont` (144 lines), `shader_rgba_texture` vertex/fragment shaders.
-- Configurable via `TITLE_SCREEN_ON_STARTUP` config key (default: enabled).
-
-### Sonic 1 Fixes and Improvements
-
-- Fixed Sonic spawning 5px underneath terrain on level reset by restoring standing radii in
-  `AbstractPlayableSprite` respawn path (ROM: `Obj01_Init` unconditionally sets `y_radius=$13`).
-- Object collision fixes: `ObjectManager` solid overlap test now always uses `airHalfHeight`
-  matching ROM behaviour (d3 is overwritten by playerYRadius before read). Added
-  `Sonic1ButtonObjectInstance` and `Sonic1MzBrickObjectInstance` collision support.
-  `TestHeadlessSonic1ObjectCollision` (291 lines) regression test added.
-- Fixed edge balance mode for S1 (single balance state, force face edge) while preserving S2's
-  4-state extended balance. `PhysicsFeatureSet.extendedEdgeBalance` gates behaviour.
-  `TestEdgeBalance` (91 lines) and `TestHeadlessSonic1EdgeBalance` (369 lines) added.
-- Fixed MZ2 push block: longer blocks no longer get pushed "out of the way" when Sonic pushes them
-  against walls. `SolidContact` improvements. `TestHeadlessMZ2PushBlockGap` (132 lines) added.
-- SBZ fixes: Flamethrower positioning corrected for vflip/hflip variants. StomperDoor objects fixed.
-  Junction now locks the player correctly. SBZ3 water oscillation implemented.
-- LZ fixes: Wind tunnels now play correct player animation. Breakable poles play correct animation.
-  Water splash effect implemented (`Sonic1SplashObjectInstance`).
-- Demo playback now sent to objects (`AbstractPlayableSprite` demo input routing).
-- Push stability fixes for solid objects. `TestHeadlessSonic1PushStability` (220 lines) added.
-- Outro/credits improvements (`Sonic1CreditsManager`, `FadeManager` enhancements).
-- `TestSbz1CreditsDemoBug` (162 lines) and `TestS1FlamethrowerObjectRendering` (58 lines) added.
-- S1 "fast" mode SMPS sequencer support.
-- S1 outro improvements: disable control on outro, change 'back to main menu' key.
-- S1 ending sequence flowers fix.
-- S1 object collision fixes.
-
-### Sonic 2 Fixes
-
-- Fixed badnik palette lines (Spiny now uses palette line 1 matching `make_art_tile`), signpost
-  frame order corrected to match `obj0D_a.asm` ROM mapping order, CPZ stair block / MTZ platform
-  art sheet rebuilt with hand-crafted mappings (ROM mappings reference level art tiles).
-- Swinging platform art loading fix for non-S2 games.
-- S2 ending cutscene parity: DEZ white fade (not black), star field background, pilot visibility,
-  BG scroll compensation, DPLC player sprites, tornado visibility, falling timing.
-- Prevented DEZ Robot despawn during defeat ending sequence.
-- Fixed DEZ boss visual and collision issues (multiple passes).
-- Fixed S2 credits visual accuracy: ROM-correct font, mappings, and player detection.
-- Fixed S2 `Sonic2LevelEventManager` zone constants alignment with `ZoneRegistry`.
-
-### Physics and Collision Fixes
-
-- Fixed solid object edge jitter: `SolidContacts` snaps player to resolved edge on static solids
-  to prevent subpixel accumulation. Push-driven objects opt in to ROM-style subpixel preservation
-  via `SolidObjectProvider.preservesEdgeSubpixelMotion()`.
-- S1 slope crest sensor guard: prefer floor-class probe over wall-class probe at crest transitions,
-  preventing one-frame wall/air mode flips.
-  `TestHeadlessStaticObjectPushStability` (208 lines) and
-  `TestSonic1GhzSlopeTopDiagnostic` (519 lines) added.
-- Sonic no longer jumps if the player holds jump while airborne via a non-jump (spring, slope
-  launch, etc.).
-- Various physics tweaks aimed at S1: physics modifiers cleanup, `FadeManager` fade-to-black
-  transitions no longer flash back to "off" briefly before fade-in begins.
-- Fixed results screen rendering issue for both S1 and S2.
-
-### Package Rename
-
-- Renamed root package from `uk.co.jamesj999.sonic` to `com.openggf` across the entire codebase.
-  All source files, test files, and references updated.
-
-### Profile-Driven Level Loading
-
-- Introduced `LevelInitProfile` abstraction with `InitStep` and `StaticFixup` primitives for
-  declarative, ROM-aligned level loading.
-- Implemented per-game profiles (`Sonic1LevelInitProfile`, `Sonic2LevelInitProfile`,
-  `Sonic3kLevelInitProfile`) with 13 finer-grained ROM-aligned steps each.
-- `LevelLoadContext` provides shared state across load steps.
-- `LevelManager.loadLevel()` routed through profile steps; old fallback path removed.
-- Per-step timing and logging for load diagnostics.
-- Profile-driven teardown and per-test reset replaces `TestEnvironment` and `GameContext.forTesting()`.
-- `CHARACTER_APPEAR` phase uses `Map_Sonic`/`Map_Tails` Float2 animation.
-
-### Testability Refactor
-
-- `GameContext` holder with `production()` and `forTesting()` factories for singleton lifecycle.
-- `SharedLevel` for reusable level loading across test classes.
-- `HeadlessTestFixture` builder pattern for test setup, with 14 test classes converted.
-- `TestEnvironment.resetAll()` delegates to `GameContext.forTesting()` for consistent teardown.
-
-### Docs and Planning
-
-- Added release-planning/implementation docs for unified level events, Super Sonic, and AIZ intro work.
-- Added cross-game donation fixes design doc and implementation plan.
-- Added `docs/CONFIGURATION.md` with full config key reference.
-- Expanded disassembly/reference and skill documentation used for parity-driven object/boss implementation workflows.
-- Added DEZ boss fixes design and implementation plans.
-- Added Sonic 2 credits and ending sequence design and implementation plans.
-- Added cross-game Super Sonic design and implementation plan.
-- Added S3K water system design and implementation plan.
-- Added testability improvement design (GameContext + HeadlessTestFixture) and implementation plan.
-- Added headless test level grouping design and implementation plan.
-- Added profile-driven level loading plans (Phase 3 and Phase 4).
-- Added ending parallax background design and implementation plan.
-- Added level editor design and implementation plan.
-- Added ROM-driven init profiles design and implementation plan.
-
-## v0.3.20260206
-
-366 commits, 541 files changed, ~99,000 lines added.
-
-### Multi-Game Architecture
-
-- Complete engine refactor to support multiple Sonic games through a provider-based abstraction layer
-  - `GameModule` interface defines 15+ provider methods for all game-specific behaviour
-  - `GameModuleRegistry` singleton holds the active game module
-  - `RomDetectionService` auto-detects ROM type via registered `RomDetector` implementations
-- New provider interfaces: `ZoneRegistry`, `ObjectRegistry`, `ObjectArtProvider`, `ZoneArtProvider`,
-  `ScrollHandlerProvider`, `ZoneFeatureProvider`, `RomOffsetProvider`, `SpecialStageProvider`,
-  `BonusStageProvider`, `DebugModeProvider`, `DebugOverlayProvider`, `TitleCardProvider`,
-  `LevelEventProvider`, `ResultsScreen`, `MiniGameProvider`
-- `GameServices` facade for centralised access to `gameState()`, `timers()`, `rom()`, `debugOverlay()`
-- NoOp implementations for optional providers (`NoOpBonusStageProvider`, `NoOpSpecialStageProvider`, etc.)
-- Sonic 2 fully migrated to provider architecture (`Sonic2GameModule` and all provider implementations)
-- `Sonic2Constants.java` expanded by 663+ lines of ROM offset constants
-- `Sonic2ObjectIds.java` expanded with 118 new object type ID constants
-
-### Tails (Miles Prower) - Playable Character
-
-- `Tails.java` playable sprite: shorter height (30px vs Sonic's 32px), adjusted sensor offsets (±15px vs ±19px), otherwise identical physics
-- `TailsCpuController.java` ROM-accurate AI follower with 5-state machine: `INIT`, `NORMAL` (input replay), `FLYING` (helicopter chase), `PANIC` (spindash escape), `SPAWNING` (respawn wait)
-- Input replay system: Tails replays Sonic's recorded inputs from 17 frames ago via position/status history buffer
-- AI overrides: direction correction when >16px off, forced jumps when Sonic is 32+ pixels above, spindash escape every 128 frames when stuck >120 frames
-- Despawn after 300 frames off-screen, respawn 192 pixels above Sonic when safe
-- `TailsTailsController.java` (Obj05): separate rotating tails animation with 10 states (Blank, Swish, Flick, Directional, Spindash, Skidding, Pushing, Hanging)
-- Art loaded from ROM at `0x64320` (uncompressed, `0xB8C0` bytes) with separate mappings and reversed mappings
-- Configurable via `SIDEKICK_CHARACTER_CODE` in config.json: `"tails"` (default), `""` to disable, `"sonic"` for Sonic clone
-- Can be spawned as main player character or as CPU-controlled sidekick
-- Flying mode bypasses normal physics, using direct position updates for aerial chase
-- Per-player riding state: solid object contacts refactored to `IdentityHashMap` so Sonic and Tails can independently ride different platforms (13 files updated)
-- Test: `TestTailsCpuController` covering state transitions, input replay, distance gating, despawn/respawn
-
-### Sonic 1 Initial Support (23 new files, 3,729 lines)
-
-- ROM auto-detection via `Sonic1RomDetector` (header-based)
-- `Sonic1.java` game entry point with level loading and data decompression from S1 ROM
-- `Sonic1Level.java` implementing S1-specific level data format (different structure from S2)
-- `Sonic1ZoneRegistry` covering all 7 zones: Green Hill, Marble, Spring Yard, Labyrinth, Star Light, Scrap Brain, Final
-- `Sonic1Constants.java` with verified ROM addresses for S1 REV01
-- `Sonic1PlayerArt.java` loading player sprites with S1-specific mapping format
-- Parallax scroll handlers for all 7 zones (`SwScrlGhz`, `SwScrlMz`, `SwScrlSyz`, `SwScrlLz`, `SwScrlSlz`, `SwScrlSbz`, `SwScrlFz`)
-- `Sonic1PatternAnimator` for S1 tile animation scripts (waterfall, flowers, lava, conveyors)
-- `Sonic1PaletteCycler` for S1 zone-specific palette cycling
-- `Sonic1AudioProfile` and `Sonic1SmpsData` for S1 ROM audio playback via SMPS driver
-- `Sonic1ObjectRegistry` and `Sonic1ObjectPlacement` stubs for S1 object format parsing
-- `Sonic1LevelSelectManager` (394 lines): 21-item vertical menu with zone/act selection, wrap-around navigation, sound test
-- `Sonic1LevelSelectDataLoader` and `Sonic1LevelSelectConstants` for ROM-based graphics and layout
-- `LevelSelectProvider` interface extracted for game-agnostic level select support
-- `Sonic1TitleCardManager` (468 lines), `Sonic1TitleCardMappings` (306 lines): S1-specific title card rendering
-- `Sonic1ObjectArtProvider` for S1 HUD rendering (life icons, ring display)
-- Tests: `TestGhzChunkDiagnostic` (GHZ chunk loading), `Sonic1PlayerArtTest` (player sprite loading)
-
-### Physics Engine
-
-#### Core Physics Rewrite
-- Complete physics rewrite in `PlayableSpriteMovement` (1,814 lines, replacing 1,134-line predecessor)
-- Movement modes now explicitly mirror ROM state machine: `Obj01_MdNormal` (ground walking), `Obj01_MdRoll` (ground rolling), `Obj01_MdAir`/`MdJump` (airborne)
-- ROM-accurate slope resistance/repulsion formulas with correct angle offset (0x20) and mask (0xC0)
-- Slope repel minimum speed threshold (0x280) matching ROM `Sonic_SlopeRepel`
-- Rolling physics: dedicated roll deceleration (0x20), controlled roll constants, minimum start roll speed gating
-- Spindash fully reimplemented using ROM speed table (`s2.asm:37294`) indexed by `spindash_counter >> 8`
-- Spindash counter charging/decay logic matching ROM `Sonic_UpdateSpindash`
-- Fixed subpixel accuracy: subpixels were not being used correctly in velocity/position calculations
-- Near-apex air drag implemented (when -1024 <= ySpeed < 0), matching ROM `Sonic_MdJump` behaviour
-- Upward velocity cap added at -0xFC0
-- Roll height adjustment fixed (5px to 10px) for all roll-mode transitions, preventing visual "fall" on transition
-- ROM-identical angle/quadrant selection table in `TrigLookupTable` (256 entries from `misc/angles.bin`)
-- `calcAngle()` method exactly matching ROM `CalcAngle` routine (s2.asm:4033-4076)
-- Jump angle calculation and slope angle assist/repel gating adjustments
-
-#### Player Mechanics
-- Pinball mode flag (`pinballMode`) preventing rolling from being cleared on landing; gives boost instead of stopping at speed 0. Used by CNZ tubes, blue balls, launcher springs. Preserved through launcher spring bounces
-- Ledge balance animation with 4 balance states matching ROM (BALANCE through BALANCE4) based on proximity and facing direction (s2.asm:36246-36373)
-- Look up/down delay counter (`lookDelayCounter`) matching ROM `Sonic_Look_delay_counter` timing
-- Spring control lock fixed to only apply when grounded (was incorrectly locking controls in air)
-- Run animation starts the moment left/right are pressed
-- Three distinct control lock types matching ROM: `objectControlled` (blocks all input), `moveLocked` (blocks directional but allows jump), `springing` (blocks grounded directional)
-- Signpost walk-off fix: control lock no longer cancels forced input, allowing Sonic to properly walk off-screen after act end
-- Position history buffer (64 entries) for camera lag and spindash compensation
-
-#### Collision System
-- New unified `CollisionSystem` (214 lines) orchestrating a 3-phase pipeline:
-  1. Terrain probes (ground/ceiling/wall sensors via `TerrainCollisionManager`)
-  2. Solid object resolution (platforms, moving solids via `ObjectManager.SolidContacts`)
-  3. Post-resolution adjustments (ground mode, headroom checks)
-- Supports trace recording via `CollisionTrace` interface for debugging and testing
-- `GroundSensor` rewrite (437 lines): separated vertical scanning (floor/ceiling) from horizontal scanning (walls), ROM-accurate negative metric handling, full-tile edge detection with previous-tile lookback, horizontal wall scanning with regress/extend states
-- Collision order fix: solid objects now processed before terrain, preventing objects from being overridden
-- Sensor adjustment timing changed to earlier in the tick
-- Collision path reset on level switch to prevent falling through levels on wrong layer
-- Ceiling collision improvements: better ceiling sensors on walls/ceilings, angle-based landing detection, ceiling mode (0x80) correctly adjusts only Y velocity
-- Wall pushing fix
-- Solid object landing now resets ground mode and angle (matching solid tile landing)
-- New `ObjectTerrainUtils` (296 lines) for game object terrain collision (floor, ceiling, left wall, right wall), mirroring ROM `ObjCheckFloorDist`
-
-### Camera
-
-- Complete vertical scroll rewrite matching ROM behaviour:
-  - Y position bias system (`Camera_Y_pos_bias`) with default value of 96
-  - Look up bias (200) with gradual 2px/frame increment
-  - Look down bias (8) with gradual 2px/frame decrement
-  - Bias easing back to default at 2px/frame
-  - Grounded scroll speed cap: 2px (looking), 6px (normal), 16px (fast, inertia >= 0x800)
-- Airborne camera uses +/-32px window around current bias matching ROM `ScrollVerti` airborne path
-- Horizontal scroll delay (`horizScrollDelayFrames`) replaces old `framesBehind` system. Matches ROM where `ScrollHoriz` checks `Horiz_scroll_delay_val` but `ScrollVerti` does not
-- Rolling height compensation: camera subtracts 5px from Y delta when rolling (1px for Tails)
-- Spindash camera fixed to use horizontal scroll delay rather than full camera freeze
-- Screen shake system: `shakeOffsetX`/`shakeOffsetY` with `getXWithShake()`/`getYWithShake()` for rendering (used by HTZ earthquake)
-- Boundary clamping to `minX`/`minY` (was only clamping to 0)
-- Full freeze (death/cutscenes) now separate from horizontal scroll delay
-
-### Water System
-
-- Complete `WaterSystem` (462 lines): water level loaded from ROM at correct height, water oscillation in CPZ2 via `OscillationManager`, water surface sprites rendering in front of solid tiles
-- `WaterSurfaceManager` (282 lines) for surface sprite management
-- Water surface sprites appear for CPZ2, ARZ1, and ARZ2
-- Water entry/exit detection based on player centre Y vs water surface
-- Underwater physics: speed halving on water entry (xSpeed/2, ySpeed/4), halved acceleration/deceleration/max speed, corrected jump height, corrected hurt gravity and launch amount
-- `DrowningController` (289 lines): 30-second air timer with frame-accurate countdown, warning chimes at air levels 25/20/15, drowning countdown music at air level 12, countdown number bubbles (5/4/3/2/1/0), breathing bubble spawning, music restart on water exit or air replenishment, air bubble collection with 35-frame control lock
-- Water collision aligned with oscillating visual position in CPZ2
-- HUD text no longer turns red on water levels
-- Special Stage results no longer overwrite water surface sprite
-
-### Boss Fights
-
-#### Boss Framework (game-agnostic)
-- `AbstractBossInstance` (530 lines) base class: hit points, invincibility frames, state machine, defeat sequences, camera locking, explosion cascades
-- `AbstractBossChild` (109 lines) base class for multi-component boss sub-objects
-- `BossChildComponent` interface (45 lines) and `BossStateContext` (72 lines) for shared state
-- `BossExplosionObjectInstance` for shared boss explosion effects
-- `CameraBounds` for boss arena camera locking
-
-#### Implemented Bosses
-- **EHZ Boss** (Drill Car, Obj56) - `Sonic2EHZBossInstance` with 6 child components: ground vehicle, propeller, spike drill, vehicle top, wheels, animations helper
-- **CPZ Boss** (Water Dropper, Obj5D) - `Sonic2CPZBossInstance` with 14 child components: container (extend, floor), dripper, falling parts, flame, gunk hazard, pipes (pump, segment), pump, Robotnik sprite, smoke puffs, animations helper
-- **HTZ Boss** (Lava Flamethrower, Obj52) - `Sonic2HTZBossInstance` with flamethrower, lava ball projectiles, smoke particles. Lava bubble spawned on ground impact
-- **CNZ Boss** (Electricity, Obj51) - `Sonic2CNZBossInstance` with electric ball projectiles, animations helper
-- **ARZ Boss** (Hammer/Arrow, Obj89) - `Sonic2ARZBossInstance` with arrow projectiles, eye tracking component, destructible pillars
-- **Egg Prison** (Obj3E) - End-of-act capsule with button, animal escape sequence, and destruction
-
-### Badniks (15+ New Enemies)
-
-#### CPZ
-- **Spiny** (Obj A5) - Wall-crawling spike enemy
-- **Spiny on Wall** (Obj A6) - Ceiling variant
-- **Grabber** (Obj A7) - Descends to capture player
-
-#### ARZ
-- **ChopChop** (Obj 91) - Piranha fish that lunges at player
-- **Whisp** (Obj 8C) - Floating dragonfly enemy
-- **Grounder** (Obj 8D/8E) - Mole that hides behind breakable wall, throws rock projectiles
-  - GrounderWallInstance (Obj 8F) - Breakable wall
-  - GrounderRockProjectile (Obj 90) - Rock projectiles
-
-#### HTZ
-- **Rexon** (Obj 94/96) - Multi-segment lava-dwelling serpent
-  - RexonHeadObjectInstance (Obj 97) - Shootable head segment
-- **Sol** (Obj 95) - Fireball-shooting enemy with SolFireballObjectInstance
-- **Spiker** (Obj 92) - Drill badnik with SpikerDrillObjectInstance (Obj 93) projectile
-
-#### CNZ
-- **Crawl** (Obj C8) - Bouncing boxing glove enemy
-
-#### MCZ
-- **Crawlton** (Obj 9E) - Snake that lunges with trailing body segments
-- **Flasher** (Obj A3) - Firefly that flashes invulnerability
-
-#### Badnik Framework
-- Enhanced `AbstractBadnikInstance` base class
-- Improved `AnimalObjectInstance` escape behaviour
-- Enhanced `BadnikProjectileInstance` framework
-- `PointsObjectInstance` moved to objects package (score popup display)
-
-### Game Objects (50+ New)
-
-#### Platforms and Moving Objects
-- **SwingingPlatformObjectInstance** (Obj15) - Chain-suspended pendulum platform (OOZ, ARZ, MCZ)
-- **SwingingPformObjectInstance** (Obj82) - ARZ swinging vine platform
-- **CPZPlatformObjectInstance** (Obj19) - CPZ rotating/moving platforms
-- **ARZPlatformObjectInstance** (Obj18) - ARZ-specific platform
-- **MTZPlatformObjectInstance** (Obj6B) - Multi-purpose platform with 12 movement subtypes
-- **SidewaysPformObjectInstance** (Obj7A) - CPZ/MCZ horizontal moving platform
-- **MCZRotPformsObjectInstance** (Obj6A) - MCZ wooden crate / MTZ rotating platforms
-- **ARZRotPformsObjectInstance** (Obj83) - 3 platforms orbiting centre
-- **CollapsingPlatformObjectInstance** (Obj1F) - OOZ/MCZ/ARZ collapsing platform
-- **SeesawObjectInstance** (Obj14) + **SeesawBallObjectInstance** - HTZ catapult seesaw with ball physics
-- **HTZLiftObjectInstance** (Obj16) - HTZ zipline/diagonal lift
-- **ElevatorObjectInstance** (ObjD5) - CNZ vertical moving elevator
-- **CNZBigBlockObjectInstance** (ObjD4) - CNZ 64x64 oscillating platform
-- **CNZRectBlocksObjectInstance** (ObjD2) - CNZ flashing "caterpillar" blocks
-- **InvisibleBlockObjectInstance** (Obj74) - Invisible solid block
-
-#### Hazards and Traps
-- **RisingLavaObjectInstance** (Obj30) - HTZ invisible solid lava platform during earthquakes
-- **LavaMarkerObjectInstance** (Obj31) - HTZ/MTZ invisible lava hazard collision zone
-- **LavaBubbleObjectInstance** (Obj20) - Lava bubble visual effects
-- **SmashableGroundObjectInstance** (Obj2F) - HTZ breakable rock platform
-- **FallingPillarObjectInstance** (Obj23) - ARZ pillar that drops lower section
-- **RisingPillarObjectInstance** (Obj2B) - ARZ pillar that rises and launches player
-- **ArrowShooterObjectInstance** (Obj22) + **ArrowProjectileInstance** - ARZ arrow shooter trap
-- **StomperObjectInstance** (Obj2A) - MCZ ceiling crusher
-- **MCZBrickObjectInstance** (Obj75) - MCZ pushable/breakable brick
-- **SlidingSpikesObjectInstance** (Obj76) - MCZ spike block sliding from wall
-- **TippingFloorObjectInstance** (Obj0B) - CPZ tipping floor
-- **BreakableBlockObjectInstance** (Obj32) - CPZ metal blocks / HTZ breakable rocks
-- **BlueBallsObjectInstance** (Obj1D) - CPZ chemical droplet hazard
-- **BombPrizeObjectInstance** (ObjD3) - CNZ slot machine bomb/spike penalty
-
-#### Interactive Objects
-- **SpringboardObjectInstance** (Obj40) - Pressure/lever spring (CPZ, ARZ, MCZ)
-- **SpringHelper** - Shared spring velocity calculations
-- **SpeedBoosterObjectInstance** (Obj1B) - CPZ/CNZ speed booster pad
-- **ForcedSpinObjectInstance** (Obj84) - CNZ/HTZ forced spin (pinball mode trigger)
-- **LauncherSpringObjectInstance** (Obj85) - CNZ pressure launcher spring
-- **PipeExitSpringObjectInstance** (Obj7B) - CPZ warp tube exit spring
-- **BarrierObjectInstance** (Obj2D) - One-way rising barrier (CPZ/HTZ/MTZ/ARZ/DEZ)
-- **EggPrisonObjectInstance** (Obj3E) - End-of-act capsule with button, animal escape, destruction
-- **SkidDustObjectInstance** - Skid dust particles
-- **SplashObjectInstance** - Water splash effect
-
-#### CPZ-Specific Objects
-- **CPZSpinTubeObjectInstance** (Obj1E, 895 lines) - Full tube transport system
-- **CPZStaircaseObjectInstance** (Obj78) - 4-piece triggered elevator platform
-- **CPZPylonObjectInstance** (Obj7C) - Decorative background pylon
-
-#### CNZ-Specific Objects
-- **BumperObjectInstance** (Obj44) - Standard round bumper
-- **HexBumperObjectInstance** (ObjD7) - Hexagonal bumper
-- **BonusBlockObjectInstance** (ObjD8) - Drop target / bonus block (colour-changing, scoring)
-- **FlipperObjectInstance** (Obj86) - Pinball flipper
-- **CNZConveyorBeltObjectInstance** (Obj72) - Invisible velocity conveyor zone
-- **PointPokeyObjectInstance** (ObjD6) - Cage that captures player and awards points
-- **RingPrizeObjectInstance** (ObjDC) - Slot machine ring reward
-- **CNZBumperManager** (574 lines) - Full bumper system with ROM-accurate bounce physics, 6 bumper types
-- **CNZSlotMachineManager** (608 lines) + **CNZSlotMachineRenderer** (549 lines) - Complete slot machine system
-
-#### ARZ-Specific Objects
-- **BubbleGeneratorObjectInstance** (Obj24) - Spawns breathable bubbles underwater
-- **BubbleObjectInstance** / **BreathingBubbleInstance** - Rising and breathable air bubbles
-- **LeavesGeneratorObjectInstance** (Obj2C) + **LeafParticleObjectInstance** - Falling leaves on contact
-
-#### MCZ-Specific Objects
-- **VineSwitchObjectInstance** (Obj7F) - Pull switch triggering ButtonVine
-- **MovingVineObjectInstance** (Obj80) - Vine pulley transport
-- **MCZDrawbridgeObjectInstance** (Obj81) - Rotatable drawbridge triggered by VineSwitch
-- **ButtonVineTriggerManager** - MCZ-specific vine routing
-
-### Zone Improvements
-
-#### Emerald Hill Zone (EHZ)
-- Full boss fight (Act 2) with multi-component child objects
-- Art used as base for HTZ overlay system
-
-#### Chemical Plant Zone (CPZ)
-- Full water implementation with oscillation in CPZ2
-- Cycling palette implementation (water shimmer, chemical bubbles)
-- Spin tubes, staircase platforms, blue balls, speed boosters, breakable blocks
-- Spiny, Grabber, and Crawl badniks
-- Full boss fight with multi-component gunk dropper
-- Multiple collision and positioning fixes (tubes, staircases, platforms, blue balls)
-
-#### Aquatic Ruin Zone (ARZ)
-- Water surface sprites for ARZ1 and ARZ2
-- Arrow shooters, swinging platforms, rotating platforms, rising/falling pillars
-- ChopChop, Whisp, and Grounder badniks
-- Leaves generator and leaf particle objects
-- Full boss fight with hammer, arrows, and destructible pillars
-- Collision fix: boss no longer attackable from the floor
-
-#### Casino Night Zone (CNZ)
-- Full bumper system with 6 bumper types and ROM-accurate bounce physics
-- Complete slot machine system with shader rendering
-- Flipper system (multiple rounds of fixes)
-- New parallax scroll handler
-- Conveyor belts, elevators, big blocks, rect blocks, point pokey, bonus blocks
-- Crawl badnik
-- Full boss fight with electric balls
-- Physics fix: slopes no longer get stuck
-
-#### Hill Top Zone (HTZ)
-- Level resource overlay system: loads EHZ base data with HTZ-specific pattern overlays at byte offset 0x3F80 and block overlays at 0x0980. Shared chunks and collision indices
-- Full earthquake system: dual architecture with `Camera_BG_Y_offset` (224-320) for BG vertical scroll and `SwScrl_RippleData` (0-3px) for screen jitter
-- Earthquake trigger coordinates: Act 1 camera X >= 0x1800, Y >= 0x400; Act 2 camera X >= 0x14C0
-- Rising lava with invisible solid platform, lava markers, lava bubble effects
-- HTZ dynamic art loaded from ROM instead of disassembly files
-- New parallax scroll handler with correct BG rendering
-- Seesaws with ball physics, smashable ground, lifts, launcher springs, barriers
-- Rexon, Sol, and Spiker badniks
-- Full boss fight with lava flamethrower
-
-#### Mystic Cave Zone (MCZ)
-- Crawlton and Flasher badniks
-- Bricks, drawbridges, vine switches, moving vines, rotating platforms, stompers, sliding spikes
-
-#### Sky Chase Zone (SCZ)
-- `SwScrlScz` (207 lines): ROM-accurate scroll handler with Tornado-driven camera movement
-- BG X advances at 0.5px/frame via 16.16 fixed-point accumulator, BG Y always 0
-- Act 1 phase system: fly right → descend → resume right, triggered by camera position thresholds
-
-#### Oil Ocean Zone (OOZ)
-- Full multi-layer parallax background with oil surface effects (`SwScrlOoz`, 395 lines)
-
-#### Metropolis Zone (MTZ)
-- MTZ platform with 12 movement subtypes
-
-#### General Level System
-- `LevelEventManager` massively expanded (+1,026 lines): dynamic camera boundaries, boss arenas, zone-specific event triggers, HTZ earthquake coordination
-- `OscillationManager` extracted into proper abstraction (drives water oscillation, platform cycles)
-- `ParallaxManager` expanded (+249 lines) with enhanced scroll offset calculations
-- `BackgroundRenderer` reworked (+324 lines)
-- Palette cycling system rewritten: `Sonic2PaletteCycler` (578 lines) with per-zone scripts from ROM
-- Tile animation system rewritten: `Sonic2PatternAnimator` (343 lines) with ROM-based scripts
-- `Sonic2LevelAnimationManager` consolidating both pattern animation and palette cycling
-
-### Level Resource Overlay System (New)
-
-- `LevelResourcePlan` (221 lines) - Declarative resource loading with overlay composition
-- `LoadOp` (49 lines) - Individual load operations with ROM address, compression type, destination offset
-- `ResourceLoader` (175 lines) - Performs loading with copy-on-write overlay pattern
-- `CompressionType` enum - Nemesis, Kosinski, Enigma, Saxman, Uncompressed
-- `Sonic2LevelResourcePlans` (108 lines) - Factory for zone-specific resource plans
-- Overlays never mutate cached data (copy-on-write pattern)
-- Tests: `LevelResourceOverlayTest` (333 lines)
-
-### Graphics and Rendering
-
-#### Backend Migration
-- Complete migration from JOGL to LWJGL for both graphics and audio backends (multiple commits)
-- GLFW window management replaces previous windowing system
-- Initially tried OpenGL 4.1 core profile, settled on OpenGL 2.1 compatibility profile for broader hardware support
-- Fixed shader loading when packaged as JAR
-- DPI-aware window scaling via `GLFW_SCALE_TO_MONITOR`
-
-#### GPU Rendering Pipeline
-- **Pattern atlas system**: all 8x8 tile patterns uploaded to a single GPU texture (`PatternAtlas`, 326 lines) with multi-atlas fallback and buffer pooling
-- **GPU tilemap renderer** (`TilemapGpuRenderer`, 198 lines): dedicated `TilemapShaderProgram` (172 lines) and `TilemapTexture` (78 lines) for GPU-side tile lookup. Covers background, water, and foreground layers. Configurable fallback to CPU rendering
-- **Instanced sprite batching** (`InstancedPatternRenderer`, 696 lines): per-instance attributes with `glDrawArraysInstanced`. Enabled by default when supported, automatic fallback to existing batcher. Includes instanced water shader sync
-- **Shared fullscreen quad VBO** (`QuadRenderer`, 50 lines): replaces all immediate-mode fullscreen quads across tilemap, parallax, fade, and special stage renderers
-- **Priority rendering** (`TilePriorityFBO`, 177 lines): framebuffer object for tile priority bit rendering, enabling correct sprite-behind-tile ordering via GPU
-- **Pattern lookup buffer** (`PatternLookupBuffer`, 70 lines): GPU-side pattern index lookup for tilemap shader
-
-#### New Shaders
-- `shader_tilemap.glsl` (132 lines) - GPU tilemap lookup and rendering
-- `shader_water.glsl` (105 lines) - Water surface effects with palette-based tinting
-- `shader_instanced.vert` (27 lines) - Instanced sprite vertex shader
-- `shader_instanced_priority.glsl` (93 lines) - Instanced rendering with priority bit
-- `shader_sprite_priority.glsl` (91 lines) - Sprite-behind-tile priority rendering
-- `shader_cnz_slots.glsl` (131 lines) - CNZ slot machine display
-- `shader_debug_text.frag`/`shader_debug_text.vert` (69 lines) - Debug text glyph rendering
-- `shader_debug_color.vert`, `shader_basic.vert`, `shader_fullscreen.vert` - Utility shaders
-
-#### UI Render Pipeline
-- `UiRenderPipeline` (104 lines): ordered rendering phases (Scene, HUD Overlay, Fade pass)
-- `RenderPhase` enum, `RenderCommand` interface, `RenderOrderRecorder` for testing
-
-#### Debug Overlay Rendering
-- Batched glyph rendering using GPU-accelerated glyph atlas texture
-- Multi-size fonts with smooth anti-aliased outlines
-- Proper viewport-space projection and DPI scaling
-- Crisp texture filtering, correct Y-flip orientation
-- Glyph atlas size increased to 1024x1024
-- Bold font for SMALL and MEDIUM debug text sizes, capped at 32pt maximum
-- `DebugPrimitiveRenderer` (72 lines) with `DebugColorShaderProgram` for collision/sensor overlays
-- Collision overlay accessible via backtick key
-
-#### Other Rendering Changes
-- `FadeManager` rewritten for LWJGL compatibility
-- `ScreenshotCapture` (231 lines) for visual regression testing
-- Slot machine rendering moved from CPU to shader
-- VBO sprite rendering
-
-### Audio Engine
-
-#### YM2612 FM Synthesis
-- Complete rewrite based on Genesis-Plus-GX (GPGX) reference: SIN_HBITS/ENV_HBITS changed from 12 to 10, LFO changed from 1024-step sine to 128-step inverted triangle, TL table restructured, output clipping changed to asymmetric GPGX-style (+8191/-8192)
-- `ENV_QUIET` threshold: when envelope exceeds threshold, operator output forced to 0, causing feedback buffer to naturally decay (matching real hardware)
-- SSG-EG (SSG envelope generator) support
-- Phase generator detune overflow matching Nemesis-verified real hardware behaviour (DT_BITS = 17)
-- Internal sample rate output: YM2612 can output at CLOCK/144 (~53267 Hz) with proper band-limited resampling via `BlipDeltaBuffer` (330 lines) and `BlipResampler` (200 lines)
-- Fixed operator routing order and TL position in voice format
-- Fixed voice format parsing that was causing corruption and muted instruments
-- Fixed low output volume
-- Multiple rounds of accuracy improvements (5+ commits)
-
-#### PSG (SN76489)
-- New Experimental (Off by Default) PSG implementation with anti-aliasing
-- `PsgChipGPGX` (378 lines) added as alternate implementation based on Genesis-Plus-GX (reference for future noise channel work)
-- Clock divider fixed to 32.0, Noise Mode 3 corrected
-- Clock speed and period calculation fixed
-- Extensive spindash release SFX fixes (PSG modulation, note-off, tone bleed, noise channel)
-- Default to original PSG after noise channel issues, keeping GPGX as reference
-
-#### SMPS Driver
-- Fixed frequency wrapping for high notes
-- Fixed E7 command handling
-- Fixed octave shifts during modulation/detune
-- Fixed fill/gate time logic causing audio desync
-- Fixed missing noise channel
-- Refactored driver locking to prevent concurrent modification between SFX and music
-- `SmpsSequencerConfig` abstraction: configurable per-game (Sonic 1 vs Sonic 2 differences in instrument loading, pitch offsets, noise channel handling)
-- Sonic 1 SMPS driver accuracy fixes:
-  - PSG envelope 1-based indexing: S1 `subq.w #1,d0` before table lookup; VoiceIndex=0 means no envelope
-  - FM voice operator order conversion: S1 (Op4,Op3,Op2,Op1) swapped to engine's S2 format (Op4,Op2,Op3,Op1) on load
-  - PC-relative pointer addressing: S1 F6/F7/F8 commands use `dc.w loc-*-1` offsets vs S2 absolute Z80 addresses
-  - TIMEOUT tempo mode: S1 uses countdown-based tempo (extend durations on wrap) vs S2 accumulator overflow
-  - PSG base note: S1 PSGSetFreq subtracts 0x81 (table starts at C), so `getPsgBaseNoteOffset()` returns 0
-  - SFX tempo bypass: S1 SFX have normalTempo=0; skip duration extension in TIMEOUT mode when sfxMode=true
-  - First-frame tempo processing matching S1 DOTEMPO behaviour
-
-#### Sound Effects and Music
-- Fixed extra life music restore (multiple playbacks no longer break original music)
-- Fixed SFX-over-music priority and channel management
-- Spindash release SFX: extensive multi-commit effort (14+ commits) fixing looping, noise timing, tone bleed, modulation enable, artifact prevention, overlapping playback. Invalid FM transpose value patched
-- Level select: music fade on transitions, ring sound removed, double-fade fixed
-- Gloop sound toggle moved from Z80 driver to `BlueBallsObjectInstance`
-
-#### Audio Backend
-- Migrated from JOAL to LWJGL OpenAL (`LWJGLAudioBackend`, 427 lines). Includes `WavDecoder` for WAV file support
-- Fixed audio quality degradation in LWJGL backend
-- Audio latency reduced to 16ms (one frame)
-- Window minimize/restore handling: pauses audio so music doesn't play in background
-
-#### Audio Performance
-- Eliminated per-sample allocations in VirtualSynthesizer, SmpsSequencer, SmpsDriver scratch buffers
-- Audio engine performance optimisations verified via regression tests
-
-### Manager Consolidation Refactor
-
-#### ObjectManager
-- `ObjectManager.java` grew from ~200 to ~1,917 lines, absorbing 4 removed managers as inner classes:
-  - `ObjectManager.Placement` (was `ObjectPlacementManager`) - Spawn windowing, remembered objects
-  - `ObjectManager.SolidContacts` (was `SolidObjectManager`, -455 lines) - Riding, landing, ceiling, side collision
-  - `ObjectManager.TouchResponses` (was `TouchResponseManager`, -195 lines) - Enemy bounce, hurt, category detection
-  - `ObjectManager.PlaneSwitchers` (was `PlaneSwitcherManager`, -143 lines) - Plane switching logic
-
-#### RingManager
-- Consolidated from 3 separate managers as inner classes:
-  - `RingManager.RingPlacement` (was `RingPlacementManager`, -93 lines) - Collection state, sparkle animation
-  - `RingManager.RingRenderer` (was `RingRenderManager`, -114 lines) - Ring rendering with cached patterns
-  - `RingManager.LostRingPool` (was `LostRingManager`, -304 lines) - Lost ring physics, object pooling
-
-#### PlayableSprite Controller
-- `PlayableSpriteController` (38 lines) coordinator owned by `AbstractPlayableSprite`:
-  - `PlayableSpriteMovement` (1,814 lines, replaces `PlayableSpriteMovementManager`)
-  - `PlayableSpriteAnimation` (renamed from `PlayableSpriteAnimationManager`)
-  - `SpindashDustController` (renamed from `SpindashDustManager`)
-  - `DrowningController` (289 lines, new)
-- Removed `SpriteCollisionManager` (-131 lines)
-
-#### CollisionSystem
-- `CollisionSystem` (214 lines) unifying terrain probes and solid object collision
-- `CollisionTrace` (40 lines), `RecordingCollisionTrace` (121 lines), `NoOpCollisionTrace` (25 lines), `CollisionEvent` (44 lines)
-
-#### Animation System
-- `Sonic2LevelAnimationManager` consolidating `AnimatedPatternManager` and `AnimatedPaletteManager`
-- `Sonic2PatternAnimator` renamed from `Sonic2AnimatedPatternManager`
-- `Sonic2PaletteCycler` (578 lines) replacing `Sonic2PaletteCycleManager` (-143 lines)
-
-### Object System Framework
-
-- `ObjectArtKeys` - Game-agnostic art key constants
-- `MultiPieceSolidProvider` interface for objects with multiple solid collision pieces
-- `SlopedSolidProvider` interface for sloped solid objects
-- Enhanced `AbstractObjectInstance` (+55 lines), `ObjectInstance` interface (+34 lines)
-- `ObjectRenderManager` significantly enhanced rendering pipeline
-- `ObjectArtData` enhanced art loading (+169 lines)
-- `HudRenderManager` enhanced HUD rendering (+155 lines)
-- `SolidObjectProvider` extended interface
-- Game-specific art loading pattern: `Sonic2ObjectArt`, `Sonic2ObjectArtProvider`, `Sonic2ObjectArtKeys`
-- LayerSwitcher (Obj03) handled by PlaneSwitchers subsystem, not as rendered object
-
-### Level Select
-
-- `LevelSelectManager` (762 lines) - Full level select screen with keyboard navigation, zone/act selection, music playback
-- `LevelSelectDataLoader` (485 lines) - Loads graphics, fonts, and preview images from ROM
-- `LevelSelectConstants` (240 lines) - ROM addresses and layout data
-- Palette loaded from ROM
-- Menu background: `MenuBackgroundAnimator`, `MenuBackgroundDataLoader`, `MenuBackgroundRenderer` (292 lines total)
-- Sound test integration via shared `Sonic2SoundTestCatalog`
-- Configurable via `LEVEL_SELECT_ENABLED` config key
-- Palette reset on returning to level select from gameplay
-- Music fade on level select transitions
-
-### Testing Infrastructure
-
-#### HeadlessTestRunner
-- `HeadlessTestRunner` (137 lines): physics/collision integration tests without OpenGL context
-- `stepFrame(up, down, left, right, jump)` to simulate one frame with input
-- `stepIdleFrames(n)` for stepping multiple idle frames
-- Calls `Camera.updatePosition()`, `LevelEventManager.update()`, `ParallaxManager.update()` each frame
-
-#### Physics and Collision Tests
-- `TestHeadlessWallCollision` (133 lines) - Ground collision and walking physics
-- `TestPlayableSpriteMovement` (1,483 lines) - Comprehensive movement physics tests
-- `CollisionSystemTest` (460 lines) - Unified collision pipeline
-- `WaterPhysicsTest` (250 lines) - Underwater physics
-- `WaterSystemTest` (178 lines) - Water level system
-
-#### Zone-Specific Tests
-- `TestCNZCeilingStateExit` (403 lines), `TestCNZFlipperLaunch` (190 lines), `TestCNZForcedSpinTunnel` (193 lines), `SwScrlCnzTest` (454 lines)
-- `TestHTZBossArtPalette`, `TestHTZBossChildObjects` (181 lines), `TestHTZBossEventRoutine9`, `TestHTZBossTouchResponse` (133 lines)
-- `TestHTZInvisibleWallBug` (731 lines), `TestHTZRisingLavaDisassemblyParity` (115 lines), `TestSwScrlHtzEarthquakeMode` (86 lines), `TestHtzSpringLoop` (197 lines)
-- `SwScrlOozTest` (487 lines), `TestOozAnimation` (248 lines), `TestPaletteCycling` (101 lines)
-
-#### Visual Regression Tests
-- `VisualRegressionTest` (393 lines) - Screenshot comparison testing
-- `VisualReferenceGenerator` (265 lines) - Generate reference screenshots
-- `ScreenshotCapture` (231 lines) - Headless screenshot capture
-- Reference images for EHZ, CPZ, CNZ, HTZ, MCZ
-
-#### Audio Regression Tests
-- `AudioRegressionTest` (370 lines) - Audio output comparison
-- `AudioReferenceGenerator` (302 lines) - Generate reference audio
-- `AudioBenchmark` (109 lines) - Audio performance benchmarks
-- Reference WAVs for EHZ/CPZ/HTZ music, jump/ring/spring/spindash SFX
-- `TestSmpsSequencerInstrumentLoading` - SMPS instrument loading verification
-
-#### Other Tests
-- `TestSignpostWalkOff` - Signpost walk-off regression test
-- `TestTailsCpuController` - Tails AI state machine and input replay
-- `TestObjectManagerLifecycle` (108 lines), `TestObjectPlacementManager` (40 lines), `TestSolidObjectManager` (148 lines)
-- `BossStateContextTest` (220 lines), `FadeManagerTest` (535 lines), `RenderOrderTest` (181 lines)
-- `PatternAtlasFallbackTest` (33 lines), `TestSpriteManagerRender` (211 lines)
-- `LevelResourceOverlayTest` (333 lines)
-
-#### Test Annotation Framework
-- `@RequiresRom(SonicGame.SONIC_1)` annotation for tests needing a real ROM file
-- `@RequiresGameModule(SonicGame.SONIC_1)` annotation for tests needing a game module without ROM
-- `RequiresRomRule` JUnit rule with per-game ROM resolution and auto-detection
-- `SonicGame` enum: `SONIC_1`, `SONIC_2`, `SONIC_3K`
-- `RomCache` for shared ROM instances across test classes
-
-### Performance Optimisations
-
-- Pre-allocated command lists in `LevelManager` (collisionCommands, sensorCommands, cameraBoundsCommands) using `.clear()` instead of `new ArrayList<>()` each frame
-- ObjectManager and SpriteManager pre-bucketing with dirty flag to avoid re-sorting every frame
-- `Sonic2SpecialStageRenderer` PatternDesc reuse instead of per-frame allocation
-- Lost ring object pooling to reduce allocations during ring scatter
-- Reduced per-frame allocations in collision, rendering, and audio hot paths
-- Debug overlay buffer reuse
-- Per-sample allocation elimination in audio synthesis pipeline
-- `PerformanceProfiler` with memory stats (GC and allocation timers), Ctrl+P copies all stats to clipboard
-- General memory allocation reduction passes across the engine
-
-### GraalVM Native Build Support
-
-- GraalVM Native Image plugin configuration in `pom.xml`
-- GitHub Actions release workflow (`.github/workflows/release.yml`, 128 lines) and CI workflow
-- GraalVM configuration files: `native-image.properties`, `reflect-config.json`, `resource-config.json`, `jni-config.json`
-- LWJGL migration (both graphics and audio) as prerequisite for GraalVM compatibility
-- `run.cmd` for Windows execution
-
-### Tooling
-
-#### RomOffsetFinder Enhancements
-- `verify <label>` command - Verifies calculated offset against actual ROM data
-- `verify-batch [type]` command - Batch verify all items of a type (shows [OK], [!!] mismatch, [??] not found)
-- `export <type> [prefix]` command - Export verified offsets as Java constants
-- Offset validation for searched items
-- Multi-game support via `--game` flag: `--game s1`, `--game s2` (default), `--game s3k`
-- `GameProfile` with per-game anchor offsets, label prefixes, ROM filenames, and disasm paths
-- Auto-detection from disassembly path (`s1disasm` → S1, `skdisasm` → S3K)
-- Expanded anchor offsets in `RomOffsetCalculator` for improved accuracy
-- `CompressionTestTool` auto-detect compression type at offset
-- Kosinski Moduled (KosM) decompression support in `KosinskiReader.decompressModuled()` — container format wrapping multiple standard Kosinski modules with 16-byte aligned padding, used extensively by Sonic 3&K art assets
-- Palette macro parsing support from disassembly
-
-#### New Tools
-- `WaterHeightFinder` (114 lines) - Finds water height data in ROM
-- `AudioSfxExporter` (261 lines) - Exports SFX audio data
-- `SoundTestApp` refactored to use shared `Sonic2SoundTestCatalog` with channel mute/solo support
-
-#### Claude Skills
-- `.claude/skills/implement-object/SKILL.md` (410 lines) - Guided object implementation workflow
-- `.claude/skills/implement-boss/skill.md` (332 lines) - Boss implementation workflow
-- `.claude/skills/s2disasm-guide/skill.md` (302 lines) - Disassembly reference guide
-
-### Other Changes
-
-- Per-game ROM configuration: `SONIC_1_ROM`, `SONIC_2_ROM`, `SONIC_3K_ROM` config keys with `DEFAULT_ROM` selector; `ROM_FILENAME` removed entirely
-- Pause functionality (default key: Enter) and frame step when paused (default key: Q)
-- `ConfigMigrationService` (95 lines) for evolving configuration format
-- `GameStateManager` (104 lines) for score, lives, emeralds state management
-- Window minimize/restore: pauses audio and rendering to prevent background playback and catch-up
-- `docs/KNOWN_DISCREPANCIES.md` (161 lines) documenting intentional divergences from original ROM
-- Old markdown docs archived to `docs/archive/`
-- `AGENTS.md` and `CLAUDE.md` extensively updated with architecture documentation
-
----
-
-## v0.2.20260117
-
-Improvements and fixes across the board. Special stages are now implemented, feature complete with
-a few known issues. Physics have been improved, parallax backgrounds implemented and complete for
-EHZ, CPZ, ARZ and MCZ. Some sound improvements, title cards, level 'outros' etc.
-
-## v0.1.20260110
-
-Now vaguely resembles the actual Sonic 2 game. Real collision and graphics data is loaded from the
-Sonic 2 ROM and rendered on screen. The majority of the physics are in place, although it is far
-from perfect. A system for loading game objects has been created, along with an implementation for
-most of the objects and Badniks in Emerald Hill Zone. Rings are implemented, life and score tracking
-is implemented. SoundFX and music are implemented. Everything has room for improvement, but this
-now resembles a playable game.
-
-## V0.05 (2015-04-09)
-
-Little more than a tech demo. Sonic is able to run and jump and collide with terrain in a reasonably
-correct way. No graphics have yet been implemented so it's a moving white box on a black background.
-
-## V0.01 (Pre-Alpha) (Unreleased; first documented 2013-05-22)
-
-A moving black box. This version will be complete when we have an unskinned box that can traverse
-terrain in the same way Sonic would in the original game.
+## Unreleased
+
+- **`RewindController.stepBackward` keyframe-restore primer work now credits to `rewind.step` instead of falling into an unattributed gap before `rewind.tick` opens.**
+
+- **Performance overview and rewind contributor guide updated for new profiler sections.**
+
+- **Rewind profiler sections (`rewind.restore` / `rewind.step` / `rewind.seek` / `rewind.tick`) are now wired in production via `GameplayModeContext`.**
+
+- **`RewindController.seekTo` now attributes work to `rewind.seek` / `rewind.tick` profiler sections (exception-safe).**
+
+- **`RewindController.stepBackward` now attributes work to `rewind.step` / `rewind.tick` profiler sections (exception-safe).**
+
+- **`RewindRegistry.restore` now wrapped in a `rewind.restore` profiler section; registry field narrowed to `SectionProfiler` interface.**
+
+- **Legal disclaimer screen shown on engine startup before the master title screen.**
+  White text on black, 5-second readability gate, any-key dismiss, fade-in/out/master-title-fade-in
+  transitions. Toggle with the new `SHOW_LEGAL_DISCLAIMER_ON_STARTUP` config key (default `true`).
+
+### v0.6.prerelease (Current development snapshot)
+
+- **S3K route parity, object physics, and trace replay preparation.**
+  The latest development pass expands S3K route coverage across AIZ, CNZ, MGZ, and
+  related object/event paths: fixed-air countdown state, sidekick-follow context,
+  CNZ miniboss/top/cylinder/bumper/barber-pole behavior, AIZ boss/end-sequence
+  behavior, signposts/results flow, object rewind snapshots, and additional object
+  physics contracts now have focused regression coverage. Shared solid/touch/object
+  control code gained tighter participation, riding, camera-bound, ring, collision,
+  and rewind handling to support those route slices without game-specific engine
+  hacks. Trace replay tooling now records richer per-frame diagnostics, keeps trace
+  comparison read-only, removes S2 bootstrap zone carve-outs in favour of recorder
+  capabilities or live object semantics, restores S2 native-prelude sidekick timing
+  from ROM-visible title-card history, and documents the no-zone-carveout rule in
+  agent docs and mirrored trace-replay skills. Full non-trace test suite passes;
+  current trace frontier state is recorded in `docs/TRACE_FRONTIER_LOG.md`.
+
+- **Object physics standardization final cleanup pass.**
+  Follow-up cleanup moved additional object-control call sites onto `ObjectControlState`,
+  routed event/feature player selection through `ObjectPlayerQuery` participation policies,
+  converted transient helper-object expiry to `ObjectLifetimeOps.expireDynamic`, and added
+  canonical touch-response profile declarations to a small projectile sample. Agent-facing
+  docs and mirrored object-implementation skills now direct playable native position writes
+  through `NativePositionOps` instead of raw preserve-subpixel setters.
+  A follow-up review fix preserves S2 springboard P1-to-native-P2 launch sequencing for its
+  shared animation state while still using the query/policy layer, and mirrors the
+  object-behavior contract guidance into `AGENTS_S3K.md` plus boss implementation skills.
+
+- **Object physics standardization review fixes.**
+  Tightened post-standardization object physics behavior after external review: restored the
+  left-wall previous-tile fall-through distance in `ObjectTerrainUtils`, fixed MGZ twisting-loop
+  native-P2 selection, preserved multi-sidekick participation for OOZ launcher behavior, kept CNZ
+  wire cage native-P2 intent while preventing non-sprite update fallbacks from selecting the main
+  player, and repaired lifecycle/query/control edge cases around no-respawn deletion, test
+  `ObjectServices` defaults, S2 flipper object-control preservation, and S2 sidekick destroyed-ride
+  despawn timing. The HCZ breakable bar and conveyor object-control migrations intentionally expose
+  ROM-style touch vulnerability while captured; this is an acknowledged gameplay-observable change
+  from the previous engine behavior. `ObjectPlayerQuery`'s extended native-P2 policy remains a
+  semantic caller-intent distinction from `ALL_ENGINE_PLAYERS`; current participant sets are
+  equivalent until per-sidekick latch semantics are added.
+
+- **S2 ceiling extension scan missing `+16` correction fixed (ARZ1 f1102 -> f1106).**
+  `GroundSensor.scanTileVertical` with `isExtension=true` and `metric<0, adjusted<0` returned
+  `(byte)~yInTile` directly from FindFloor2's `not.w d1`, but the ROM's FindFloor
+  (`loc_1E7E2`, s2.asm:42989) follows the FindFloor2 call with `addi.w #$10,d1` (+16).
+  Without the +16 the extension tile at y=037F (one tile above the probe at y=038F) in ARZ1
+  produced distance=-1 at frame 1102 — a spurious ceiling hit that zeroed ySpeed and pushed
+  Sonic 1px too low. Fix: changed `(byte)~yInTile` to `(byte)(~yInTile + 16)` in the
+  `isExtension=true, metric<0, adjusted<0` branch. ROM refs: `FindFloor2` `loc_1E900`
+  (`not.w d1`, s2.asm:43064); `FindFloor` `loc_1E7E2` (`addi.w #$10,d1`, s2.asm:42989).
+  Advances ARZ1 frontier from frame 1102 (648 errors) to frame 1106 (624 errors).
+
+- **S2 Springboard (Obj40) sidekick (Tails) contact drives animation switch (MCZ2 f2418 -> f3003).**
+  `SpringboardObjectInstance.update()` previously called `updateLaunchSequence` only for the
+  main character (Sonic). The ROM's `Obj40_Main` calls `SlopedSolid_SingleCharacter` and
+  `loc_2641E` for BOTH `MainCharacter` (p1_standing_bit) and `Sidekick` (p2_standing_bit)
+  (s2.asm:51839-51847). When Tails stands on the high side of the Springboard, loc_2641E
+  checks the threshold and switches the animation from IDLE to COMPRESSED. Without this,
+  the engine kept using `Obj40_SlopeData_DiagUp` (height[sampleX=12]=0x0E=14) instead of
+  `Obj40_SlopeData_Straight` (height[sampleX=12]=0x0C=12), placing Tails 2px too high
+  (actual y=0x02EB, expected y=0x02ED at frame 2418). Fix: resolve the checkpoint batch
+  once via `checkpointAll()` (avoids double-resolution) and call `updateLaunchSequence`
+  for each sidekick using their result from the shared batch.
+  Advances MCZ2 frontier from frame 2418 (571 errors) to frame 3003 (527 errors).
+
+- **S2 MTZ object parity fixes for steam springs, signposts, and long platforms.**
+  `SteamSpringObjectInstance` now clears both `status.player.on_object` and the
+  `ObjectManager` riding latch when Obj42 launches the player, matching ROM `bclr
+  #status.player.on_object` behavior and preventing stale platform support after launch.
+  `SignpostObjectInstance` and `MTZLongPlatformObjectInstance` now compare
+  `services().currentZone()` against `Sonic2ZoneConstants.ROM_ZONE_MTZ` instead of the
+  internal engine zone id, restoring the MTZ Act 2 signpost exception and the MTZ Act 3
+  subtype-5 two-stop conveyor branch. Added focused regressions in
+  `TestSonic2ObjectBugFixes`.
+
+- **S2 Springboard (Obj40) first-contact launch guard and sloped catch range (MCZ2 f2226 -> f2418).**
+  Two ROM-accuracy fixes for `SpringboardObjectInstance`:
+  (1) `addsSlopeCatchRangeToVerticalOverlap()` overridden to return `true`: ROM
+  `SlopedSolid_cont` (s2.asm:35066) adds the object's half-height (d2=8) to the catch range
+  before computing relY: `add.w d3,d2` (d2=halfHeight+yRadius), then `add.w d2,d3`
+  (d3=playerY−baseY+4+halfHeight+yRadius). The default in `SlopedSolidProvider` was `false`,
+  placing Sonic 2px too low on initial contact (frame 2226: actual y=0x0340, expected=0x033E).
+  (2) `updateLaunchSequence` no longer falls through to the `mapping_frame==0` launch check
+  on the same frame the animation switches from idle to compressed. ROM `loc_26446`
+  (s2.asm:51868): `cmpi.b #1,anim(a0) / beq.s loc_26456` — if NOT already compressed, it
+  sets anim=1 and `rts`, returning without checking `mapping_frame`. The engine previously
+  fell through unconditionally; since `mapping_frame==0` at the start of IDLE→COMPRESSED
+  transitions, the launch fired one frame early, producing gSpeed=0x0001 (twirl inertia)
+  instead of gSpeed=0x0100 (xSpeed set by the landing snap). Fix: add `return` after
+  `setAnimId(ANIM_COMPRESSED)` when the animation was not already compressed.
+  Advances MCZ2 frontier from frame 2226 (724 errors) to frame 2418 (571 errors). ARZ1
+  improved as a downstream effect from frame 964 (664 errors) to frame 964 (625 errors).
+  MCZ1 unchanged at frame 1085 (452 errors). EHZ1 still passes full trace.
+
+- **S2 Tails `minStartRollSpeed` corrected from 264 to 128 (ARZ1 f980 -> f1102).**
+  `PhysicsProfile.SONIC_2_TAILS.minStartRollSpeed` was 264 (0x108) — a stale placeholder.
+  ROM `Tails_Roll` (`s2.asm:39962`) uses `cmpi.w #$80,d0`, identical to `Sonic_Roll`
+  (`s2.asm:36983`). With the wrong threshold, Tails's `doCheckStartRoll()` returned early
+  when `|gSpeed|=253 < 264`, so Tails never rolled when starting to be carried on a monitor
+  at frame 980. Root cause: the `minStartRollSpeed` field comment said "Tails-specific" and
+  the value 264 was carried from before ROM verification. Fix: changed threshold to 128 (0x80)
+  and updated the comment with the ROM reference.
+  Advances ARZ1 frontier from frame 980 (675 errors) to frame 1102 (648 errors).
+
+- **S2 Monitor (Obj26) rolling gate bypassed for already-standing player (ARZ1 f964 -> f980).**
+  `MonitorObjectInstance.isSolidFor()` returned `!player.getRolling()` unconditionally for the
+  main character. When Sonic started rolling at frame 964 while standing on a monitor, this
+  returned `false`, causing `SolidContacts` to clear the riding state. The terrain probe then
+  set `air=1` since Sonic was above the terrain surface. Root cause: ROM's
+  `SolidObject_Monitor_Sonic` (s2.asm:25448-25453) gates on rolling only for *new* landings.
+  When the p1_standing_bit is already set in the monitor's status byte it skips the rolling
+  check entirely (`btst d6,status(a0)` / `bne.s Obj26_ChkOverEdge`) and goes straight to the
+  edge/carry path. Fix: added `if (mainCharacterStanding) { return true; }` before the rolling
+  check, matching the ROM's "already standing → bypass" path.
+  Advances ARZ1 frontier from frame 964 (664 errors) to frame 980 (675 errors).
+
+- **S2 MCZ Drawbridge (Obj81) landing position, zero-distance landing gate, and half-width (MCZ2 f1774 -> f2226).**
+  Three ROM-accuracy fixes for `MCZDrawbridgeObjectInstance` (Obj81 / `JmpTo22_SolidObject`):
+  (1) `PARAMS_DOWN.halfWidth` corrected from 64 to 75 (ROM `loc_2A1A8` s2.asm:56578:
+  `move.w #$4B,d1` — `d1` is the halfWidth passed to `JmpTo22_SolidObject`; the narrower
+  `width_pixels=$40=64` in the object header is used only for the secondary
+  `SolidObject_Landed` inner hit-width check, not the primary detection/riding width).
+  (2) `allowsZeroDistanceTopSolidLanding()` overridden to return `true`: ROM
+  `SolidObject_TopBottom` → `SolidObject_Landed` is guarded by `blo.s SolidObject_Landed`
+  (unsigned lower, includes d3=0), so zero-distance landings are valid on SolidObject-based
+  objects. The global `topSolidLandingAllowsZeroDist=false` for S2 was modeled on
+  `PlatformObject_ChkYRange`, which has a different gate.
+  (3) `usesPlatformObjectLandingSnap()` overridden to return `false` in
+  `MCZDrawbridgeObjectInstance` and the new default `true` added to `SolidObjectProvider`:
+  `applyNonUnifiedTopSolidLandingHeightOverride` implements `PlatformObject_ChkYRange`
+  (`anchorY - groundHalfHeight - yRadius - 1`), but Obj81 uses `SolidObject_Landed`
+  (`playerY - relY + 3`), which `resolveContactInternal` already computes correctly. Without
+  this guard the override was overwriting the correct position with a wrong one.
+  Advances MCZ2 frontier from frame 1774 (806 errors) to frame 2226 (724 errors).
+
+- **S2 Arrow Shooter (Obj22) sidekick-detection and animation-timing fixes (ARZ1 f311 -> f964).**
+  Three bugs in `ArrowShooterObjectInstance` caused the fired Arrow to be 28px behind ROM position
+  at frame 311, preventing Tails from being hit. (1) `updateDetection` only checked the main player
+  (Sonic) via `update()`'s `playerEntity` arg; the ROM checks both `MainCharacter` and `Sidekick`
+  (`bsr Obj22_DetectPlayer` called twice). In this trace Tails is the closer character, so the
+  engine never detected via Sonic only and transitioned from idle→detecting 15 frames early when
+  Sonic briefly crossed the 0x40-pixel threshold. (2) On the idle→firing transition, `animTimer`
+  was set to `DELAY_FIRING=7` instead of 0; ROM's `AnimateSprite` processes the first firing-entry
+  immediately on the same call that sets `anim=2` (since `anim_frame_duration` is reset to 0 then
+  immediately decremented to −1), adding 8 extra frames. (3) The engine fired the arrow after all
+  5 `FIRING_SEQUENCE` entries (`FIRING_CALLBACK_INDEX=5`) instead of after entry index 2 (which
+  represents the frame after the ROM's `$FC` callback); ROM's `$FC` fires after showing only
+  frames 3 and 4 (entries 0–1). Fix: `updateDetection` now uses `isWithinDetectionRange(entity)`
+  for both the main player and all sidekicks from `services().sidekicks()`; `animTimer` is
+  initialised to 0 on FIRING entry; `FIRING_CALLBACK_INDEX` changed from 5 to 3 (fires after
+  FIRING_SEQUENCE[2]=4 is set, matching the frame after ROM's `$FC`); `fireArrow()` uses
+  `addDynamicObjectNextFrame` instead of `addDynamicObject` to replicate the 1-frame gap between
+  `$FC` changing `routine` and `Obj22_ShootArrow` actually allocating the arrow on the next frame.
+  Advances ARZ1 frontier from frame 311 (868 errors) to frame 964 (664 errors).
+
+- **S2 Springboard (Obj40) stale launch sequence fires when riding nearby swinging platform (MCZ2 f1487 -> f1774).**
+  `SpringboardObjectInstance.updateLaunchSequence()` used `result.postContact().onObject()` as
+  part of the `launchContactNow` guard. `postContact().onObject()` reflects the player's GLOBAL
+  `isOnObject()` state after the springboard's checkpoint runs — not contact with this specific
+  springboard. In MCZ2 at frame 1487, Sonic is riding a SwingingPlatform within X range of the
+  springboard. The stale `launchSequenceActive` flag combined with `postContact().onObject()=true`
+  kept `launchContactNow=true`, triggering `applyLaunch()` (air=1, ySpeed=FC00, gSpeed=0001)
+  while Sonic was 564 px below the springboard. Root cause: the previous `else if` branch that
+  preserved `launchSequenceActive` within X range also bypassed the `clearLaunchSequence()` call
+  when the player was riding any object nearby, not specifically this springboard.
+  Fix: replaced `launchContactNow` with `result.kind() != ContactKind.NONE` (per-object contact
+  only), and changed `else if` persistence to a plain `else` (always clear when no contact).
+  This matches the ROM's `SlopedSolid_SingleCharacter` fast-path: the standing bit is cleared
+  on any frame where `SolidObject_TestClearPush` or `loc_1980A` determines the player is out
+  of Y range, airborne, or out of X range — there is no separate persistence window. Advances
+  MCZ2 frontier from frame 1487 (773 errors) to frame 1774 (806 errors). ARZ1 error count
+  increases from 813 to 816 (same frontier frame 304, pre-existing tails_x_speed mismatch;
+  the 3 extra errors appear after the existing frontier, not before it).
+
+- **S2 ARZ Rising Pillar (Obj2B) player-release clears on_object and riding state (ARZ1 f304 -> f311).**
+  `RisingPillarObjectInstance.releasePlayerAndBreak()` set rolling=true and in_air=true on the
+  launched player but omitted `bclr #status.player.on_object,status(a1)` from ROM `loc_25AF6`
+  (s2.asm:51401), leaving the engine player with both in_air=true and on_object=true. Two
+  consequences:
+  (1) The stale riding-state entry in `ObjectManager.SolidContacts.ridingStates` caused
+  `PlayableSpriteMovement`'s pre-movement recovery (line 456) to re-ground the player on the
+  next frame (`hasGroundingObjectSupport()` returned true from stale data → setAir(false),
+  setOnObject(true)), applying object-riding deceleration instead of pure air deceleration.
+  Engine produced tails_x_speed=0x00C2; ROM expects 0x00D0 (−0x18 air deceleration per frame).
+  Fix: call `player.setOnObject(false)` (matching ROM bclr on_object) and
+  `objectManager.clearRidingObject(player)` (clears stale riding state) in `releasePlayerAndBreak`.
+  Advances ARZ1 (TestS2ArzLevelSelectTraceReplay) trace frontier from frame 304 (813 errors)
+  to frame 311 (846 errors — Tails misses arrow hit due to pre-existing Obj22 Arrow
+  position divergence, separate issue). EHZ1 passes; ARZ2/MCZ1/MCZ2 unchanged.
+
+- **S2 Tails y_radius preservation on non-rolling terrain/object landing (MCZ2 f1290 -> f1487).**
+  `ObjectManager.SolidContacts.clearRollingOnLanding()` had an else-if branch that called
+  `applyStandingRadii(false)` whenever a player landed with `rolling=false` but with non-default
+  radii (e.g. y_radius=14 left over from a prior rolling state). This is S3K behavior:
+  ROM `Player_TouchFloor` (`sonic3k.asm:24341-24343` / `29134-29136`) unconditionally resets
+  y_radius/x_radius before testing `Status_Roll`, so S3K can leave Tails with rolling radii
+  but no roll bit set (via the despawn marker's `Status_InAir` direct write) and still recover
+  on the next landing. S2 `Tails_ResetOnFloor` (`s2.asm:40624-40641`) uses `btst #Status_Roll;
+  bne Tails_ResetOnFloor_Part2`, gating the y_radius reset on `Status_Roll` being set. When
+  not rolling it skips the reset, preserving the stale y_radius value that the despawn path
+  left behind. In MCZ2 at frame 1290, `TailsCPU_Flying` respawn (`s2.asm:38797`) clears rolling
+  via a direct status byte write without touching y_radius, leaving y_radius=14 (rollYRadius).
+  The spurious `applyStandingRadii(false)` call then reset y_radius 14→15 one pixel too early,
+  raising Tails' ceiling probe position by 1 px and causing a different ceiling collision result.
+  Fix: gate the non-rolling radius reset on `featureSet.landingRollClearUsesCurrentYRadiusDelta()`
+  (true only for S3K). Advances MCZ2 trace frontier from frame 1290 (816 errors) to frame 1487
+  (773 errors — air mismatch from SwingingPlatform oscillation divergence, pre-existing issue).
+  MCZ1 (frame 1085, 452 errors) and EHZ1 (frame 304, 813 errors) unchanged.
+  Also fixed `GroundSensor.scanTileVertical()` PARTIAL_EMPTY path: the `-16` correction
+  applied to `prevResult` distance after a `FindFloor2` extension pass was double-counting
+  the tile-relative offset. ROM `loc_1E86A` applies `subi.w #$10,d1` to adjust for
+  FindFloor2's d2-relative distance, but the engine's `scanTileVertical` always computes
+  distance relative to `origY` (not the shifted check position), so the -16 is already
+  embedded. Removed the redundant subtraction.
+
+- **S2 SwingingPlatform (Obj15) out-of-range unload and CalcSine angle convention.**
+  Advances MCZ2 trace frontier from frame 1009 (909 errors) to frame 1290 (816 errors).
+  Two bugs fixed:
+  (1) The constructor called `updatePositions(0)` which placed the platform 136 px east
+  of its pivot (for chainCount=8), exceeding the 640 px `isOutOfRangeS1` threshold.
+  Because the S2 exec loop runs `syncActiveSpawnsLoad` before `runExecLoop`, the object
+  was immediately unloaded and marked dormant before its first `update()` call, preventing
+  it from ever becoming active. Fix: removed the constructor call; `this.x` starts at
+  `baseX`. Added `getOutOfRangeReferenceX()` override returning `baseX` so the range
+  check anchors on the spawn pivot, matching the ROM's `obX(a0)` = parent `x_pos` = baseX
+  at the time of the check (ROM `s2.asm:22541-22551` / `loc_FE50`).
+  (2) `updatePositions` applied `swingAngle = (oscValue - 0x40) & 0xFF` before looking
+  up sin/cos, then used `(-sin, cos)` as `(X, Y)`. This assumed the SINCOSLIST is
+  perfectly antisymmetric (SINCOSLIST[i+128] == -SINCOSLIST[i]), but the ROM table is
+  not: SINCOSLIST[147] = -117 while SINCOSLIST[19] = 115 (difference = 2; verified
+  against `docs/s2disasm/misc/sinewave.bin`). The ROM calls `CalcSine(oscValue)` directly
+  (`s2.asm:22604`) and assigns d0=sin to Y, d1=cos to X. Fix: removed the swingAngle
+  offset; now calls `calcSine(oscValue)` and `calcCosine(oscValue)` directly (verified
+  against ROM's fixed-point accumulation for all 3840 osc×chainCount combinations).
+  BOUNCE_LEFT/BOUNCE_RIGHT clamp logic was also corrected to remove a spurious
+  player-proximity gate (ROM sub_FE70 has no gate) and fix BOUNCE_LEFT osc==0x3F
+  threshold (plays knock sound + clamps; was previously clumped with `< 0x40`).
+
+- **S2 MTZ2 Conveyor (Obj6C) parent factory re-spawn loop.**
+  `ConveyorObjectInstance.createOrSpawnChildren` returned `null` for
+  parent-spawner subtypes (bit 7 set). Because the `ObjectManager` placement
+  `sortedNewSpawns` gate (`ObjectManager.java:2362`) only suppresses spawns
+  already in `activeObjects`, the parent re-entered the spawn list every
+  frame it stayed in the camera window — Diagnostic logging showed the
+  8-child cohort spawning ≈25,914 times in a single MTZ2 trace. Fix: mirror
+  ROM `Obj6C_Init` `loc_28112` (`s2.asm:54269-54301`), which uses
+  `movea.l a0,a1` to reuse the parent slot as the first child. The factory
+  now constructs the first child from `layout[0]` using the parent's own
+  `ObjectSpawn` and returns it, so `registerActiveObject` records the spawn
+  and placement stops re-spawning. Remaining 7 children still spawn via
+  `addDynamicObject`. Advances MTZ2 trace frontier y mismatch at frame 305
+  from 7 px (engine 0x05F2 vs ROM 0x05EB) to 1 px (engine 0x05EA);
+  MTZ1/MTZ3/EHZ1/CNZ/MCZ2 unchanged.
+
+- **S2 SteamSpring (Obj42) bypasses offscreen sidekick full-solid gate.**
+  Advances MTZ3 trace frontier from frame 460 (`tails_air` 0 vs 1, Tails
+  missed-landing event) to frame 765 (`air` 1 vs 0); error count drops
+  2626 -> 2601. ROM `Obj42` (`s2.asm:52030-52049`, `loc_26688`) calls
+  `SolidObject_Always_SingleCharacter` for BOTH Sonic and Tails, which jumps
+  directly to `SolidObject_cont` (`s2.asm:35147`) without consulting the
+  regular `SolidObject` P2 `render_flags.on_screen` gate (`s2.asm:34825-34828`)
+  or the `SolidObject_OnScreenTest` (`s2.asm:35140-35145`). The engine
+  applied `shouldSkipOffscreenSidekickFullSolid` to the SteamSpring's P2 pass,
+  so off-screen Tails passed through the piston instead of landing. Fix mirrors
+  `SpringObjectInstance.bypassesOffscreenSolidGate() = true` and follows
+  pitfall P27. MTZ/MTZ2/MCZ2/EHZ1 baselines unchanged. Noted-but-not-applied:
+  Obj66 (MTZSpringWall), Obj7B (PipeExitSpring), Obj86 (Flipper), and ObjD6
+  (PointPokey) also use `SolidObject_Always_SingleCharacter` and currently
+  lack the override; pursue when the next relevant trace frontier surfaces.
+
+- **S2 CNZ2 frontier investigation: Crawl closer-player selection.** No code change.
+  Confirmed that `CrawlBadnikInstance` must use `Obj_GetOrientationToPlayer`–style
+  closest-player selection (by absolute X distance) for proximity and orientation
+  checks. The fix advances CNZ2 frontier from f1490 to f630, but f630 exposes a
+  pre-existing 1px X-position drift in the first CNZ2 Crawl (slot s20) that
+  produces an incorrect bounce angle. Both the s20 (1px) and s17 (3px) Crawl X drifts
+  are pre-existing bugs unrelated to the closer-player change. Closer-player fix
+  reverted until the Crawl X-position drift is diagnosed. See `TRACE_FRONTIER_LOG.md`
+  for the full analysis.
+
+- **S2 MTZ3 Obj6A per-phase activation gate.** `MCZRotPformsObjectInstance.
+  loadPhaseParameters()` did not mirror ROM `loc_27CA2`'s `move.b #0,objoff_36
+  (a0)` (`s2.asm:53844`). ROM Obj6A in MTZ runs via routine 2 (`loc_27BDE` at
+  s2.asm:53754) which gates `ObjectMove` on `objoff_36`, so each call to
+  `loc_27CA2` clears the gate and the next frame falls back to standing-bit
+  walk-off detection. The engine latched `activated=true` permanently after
+  the first walk-off, cycling through all four MTZ phases unattended; over
+  ~340 frames the cumulative drift put MTZ3 slot 17's platform 0x2C px right
+  and 0x16 px up of ROM, exactly where engine Tails lands on the platform top
+  while ROM Tails keeps falling. Fix: reset `activated` on phase end when
+  `isMtz` (MCZ uses routine 4 which ignores `objoff_36`). Advances MTZ3 trace
+  frontier frame 340 (`tails_g_speed` 0x0000 vs 0x0018) -> frame 460
+  (`tails_air` 0 vs 1, Tails missed-landing event). MTZ1 errors drop from
+  945 -> 905 at the same frame 375 frontier. MTZ2/EHZ1/ARZ/CPZ/CNZ/HTZ/MCZ/
+  OOZ/SCZ/WFZ/DEZ unchanged; S3K AIZ/CNZ/MGZ unchanged.
+
+- **S2 SwingingPlatform (Obj15) chainCount cap removal + half-link offset.**
+  Advances MCZ2 trace frontier from frame 1006 to frame 1079 (781 -> 802 errors).
+  `SwingingPlatformObjectInstance` clamped subtype's low nybble to `min(7, ...)`
+  for chainCount, but ROM `Obj15_Init` (`s2.asm:22480`) only does
+  `andi.w #$F,d1` with no upper cap; MCZ2's first swinging platform (spawn
+  subtype `0x18`) needs 8 chains. The platform's position offset from the
+  pivot was also missing the half-link bias: ROM `sub_FE70`
+  (`s2.asm:22645-22654`) accumulates `sin/cos*0x10` per chain link then halves
+  the last increment (`asr.l #1`) for the platform's final position, yielding
+  `(chainCount + 0.5) * 0x10`, not `chainCount * 0x10`. Together these put the
+  engine's MCZ2 platform 24 pixels too high at `(0x0620, 0x05B8)` while ROM
+  had it at `(0x0620, 0x05D0)`, causing the engine to catch Sonic on a
+  platform he never landed on in ROM. Removed the `min(7, ...)` cap and added
+  the `+8` half-link offset to `chainLength` for the platform position only
+  (chain link positions still use `(i+1)*0x10`).
+
+- **S2 MTZ2 Conveyor (Obj6C) child base-position fix.** Children spawned by an
+  Obj6C parent (bit 7 of subtype set) were each constructed with their own
+  offset spawn position used as the waypoint-path origin (`baseX/baseY`,
+  `objoff_30/_32`). ROM `Obj6C_LoadSubObject` (`s2.asm:54137-54151`) captures
+  the PARENT's `x_pos`/`y_pos` into `d2`/`d3` before the spawn loop and writes
+  those unchanged into every child's `objoff_30/_32`, while the child's
+  `x_pos/y_pos` is set to `parent + layoutOffset`. Without this each child
+  orbited its own initial offset point instead of the shared parent center,
+  scattering the MTZ2 layout-1 platforms (engine had conveyors at
+  x=0x0340/0x037D where ROM had them at x=0x0320 forming the vertical spine
+  across the lava pit). Added a second `ConveyorObjectInstance` constructor
+  accepting explicit `baseX/baseY` and routed the parent's position through
+  `createOrSpawnChildren`. MTZ2 trace replay: engine now correctly lands Sonic
+  on the s29 conveyor at frame 305; frontier frame unchanged (305 y-snap delta),
+  error count 2189 → 2325 (post-landing y is 7 px low for the conveyor run
+  instead of falling off-screen). Other MTZ acts, MTZ3, and EHZ1 unaffected.
+
+- **S2 Spring (Obj41) clears Hurt routine on vertical/diagonal launch.**
+  Advances MCZ2 trace frontier from frame 925 to frame 1006 (737 -> 781 errors).
+  `SpringObjectInstance.applyUpSpring`/`applyDownSpring`/`applyDiagonalSpring`
+  did not clear the engine's `hurt` flag when launching the player. ROM
+  `Obj41_Up loc_189CA` (`s2.asm:33735`), `Obj41_Down loc_18CC6` (`s2.asm:34023`),
+  and the diagonal launchers (`loc_18DD8` line 34090, `loc_18EE6` line 34173)
+  all unconditionally write `move.b #2,routine(a1)` — overwriting the routine
+  byte from 4 (`Obj01_Hurt`) to 2 (`Obj01_Control`) so subsequent airborne
+  frames use `Obj01_MdAir`'s +$38 gravity plus `Sonic_UpVelCap` (-$FC0) instead
+  of `Obj01_Hurt`'s +$30 gravity (no cap). The engine left `hurt=true`, which
+  skipped `doJumpHeight()`/`applyUpwardVelocityCap` and returned 0x30 from
+  `getGravity()`. MCZ2 f925: ROM `y_speed=-0F88` (cap from -$1000 to -$FC0
+  then +$38) vs engine `-0FD0` (uncapped -$1000 + $30); diff 0x48 = missing
+  0x40 cap delta plus 0x08 gravity-step shortfall. `applyHorizontalSpring`
+  intentionally left alone — `Obj41_Horizontal loc_18AEE` does NOT write
+  `routine = 2` (player stays grounded).
+- **S2 MTZ3 Obj6A (MCZRotPforms) zone-aware behavior fix.** Advances MTZ3 trace
+  frontier from frame 298 (`air` 0 vs 1) to frame 340 (`tails_g_speed`).
+  `MCZRotPformsObjectInstance` was hard-wired to MCZ behavior in every zone:
+  MCZ velocity tables (`byte_27CF4`/`byte_27D12`), MCZ `y_radius=0x20`,
+  unconditional movement, and `spawn.subtype() & 0x0F` as the table cursor.
+  ROM `Obj6A_Init` (`s2.asm:53686-53751`) branches on `Current_Zone`: MTZ uses
+  `byte_27CDC` (4-phase), `y_radius=0x0C`, routine 2 (`loc_27BDE`, wait for
+  the player to walk off), and skips the subtype-0x18 child-spawn block; MCZ
+  uses `byte_27CF4`/`byte_27D12`, `y_radius=0x20`, routine 4 (`loc_27C66`,
+  move unconditionally), and spawns two child platforms for subtype 0x18.
+  ROM also stores the FULL `subtype` byte into `objoff_38` (`s2.asm:53750`)
+  and uses it as a byte offset into the velocity table — same "byte offset
+  is not array index" pitfall as the Obj65 fix. Rewrote the constructor to
+  detect zone via `services().currentZone()`, pick the correct table /
+  `y_radius` / parent-flag, store the full subtype byte as the phase cursor,
+  and gate movement on `activated` (MTZ waits, MCZ starts activated).
+- **S2 MTZ Long Platform (Obj65) properties-index and non-conveyor carry fix.**
+  Two bugs in `MTZLongPlatformObjectInstance` that combined to keep button-
+  triggered platforms stationary at spawn and then, once they moved, to carry
+  the rider as if they were conveyor belts. (1) ROM `Obj65_Init`
+  (`s2.asm:52379-52414`) decodes the subtype byte into a byte-offset `d0` into
+  the 2-byte-per-entry `Obj65_Properties` table (`s2.asm:52366-52376`) and uses
+  a separate second `lsr.w #2,d0` for `mapping_frame`; the engine was using the
+  shifted-twice value as the `PROPERTIES[]` row index, so a subtype `0xB1`
+  platform read width/y_radius from entry 3 and maxDist/childSubtype from entry
+  4 instead of entries 6/7, ending up with `moveSubtype = 0` (stationary) and
+  `currentDist = 0` (no retract baseline). (2) Once the platform-index fix made
+  the subtype-7 retract platform glide left, the engine's continued-riding path
+  shifted the rider by the full `currentX - ridingX` delta, whereas ROM `Obj65`
+  refreshes `objoff_2E` to the new x_pos in `loc_26D50` (subtypes 1/2/6/7) and
+  `loc_26E1A` (subtype 3) so `MvSonicOnPtfm` (`s2.asm:35402-35423`) sees a
+  zero carry delta. Added `SolidObjectProvider.carriesRiderOnHorizontalMove`
+  (default true) and overrode it on `MTZLongPlatformObjectInstance` to return
+  true only for the conveyor subtype 5 (`loc_26E4A`), matching ROM's two
+  carry-reference refresh paths. MTZ2 trace frontier moves from frame 221 to
+  frame 305 (-181 errors); MTZ act 1 drops from 1015 to 989 errors at the
+  same frame 281 Steam Spring frontier; ARZ/CNZ/CNZ2/EHZ1/MTZ3/OOZ unchanged.
+
+- **S2 MCZ VineSwitch (0x7F) edge-trigger release and Tails grab support
+  (MCZ2 trace replay).** Two bugs in `VineSwitchObjectInstance`. (1) The
+  release-on-button check used `isJumpPressed()` (held state). ROM
+  `Obj7F_Action` loads `Ctrl_1` as a word and then `andi.b #ABC,d0`, which
+  operates on the low byte that holds `Ctrl_1_Press` (just-pressed this
+  frame), not `Ctrl_1_Held` — so the player only releases on a fresh ABC
+  press. With held state, Sonic was released a single frame after grabbing
+  whenever B was still held from the jump that brought him to the vine.
+  Switched to `isJumpJustPressed()`. (2) The sidekick branch (ROM
+  `lea (Sidekick).w,a1 / move.w (Ctrl_2).w,d0 / bsr.s Obj7F_Action`) was
+  marked as deferred, so Tails could never grab the vine. Added a sidekick
+  pass via `services().sidekicks()`. Advances the MCZ2 trace frontier from
+  frame 198 to frame 925 (936 -> 737 errors).
+
+- **S2 OOZ Aquis (Obj50) four-bug ROM-accuracy fix.** Combined patch addressing
+  four confirmed divergences from `s2disasm` Obj50: (1) missing initial
+  `move.w #-$100, x_vel` from `Obj50_Init` (s2.asm:60100); (2) `bmi`-style
+  timer semantics in `Obj50_FollowPlayer` and `Obj50_WaitForNextShot`
+  (s2.asm:60244-60245, 60275-60276) replacing the engine's off-by-one
+  `if (--timer <= 0)`; (3) closer-player orientation via
+  `Obj_GetOrientationToPlayer` (s2.asm:72320-72346) using the sidekick when
+  it's closer than the main player; (4) `render_flags.on_screen` one-frame lag
+  in `Obj50_CheckIfOnScreen` (s2.asm:60181-60188) replacing the engine's
+  instantaneous `isOnScreen(32)` check with a paired this-frame/last-frame
+  flag set from `appendRenderCommands()`. Reduces OOZ2 trace-replay error
+  count from 1329 to 1280 (-49). OOZ1 first-error frontier (Buzzer at f509)
+  and OOZ2 first-error frontier (Tails+Spring/Fan `tails_y_speed` at f301)
+  are both gated by unrelated bugs and do not move; see
+  `docs/TRACE_FRONTIER_LOG.md` for details. No EHZ1/MTZ/CNZ regression.
+
+- **S2 OOZ Aquis investigation (no committed fix).** Documented an Aquis (`Obj50`)
+  investigation against the OOZ1 (frontier frame 563 `g_speed`) and OOZ2 (frontier
+  frame 389 `y_speed` sign reversal) traces. Three ROM-vs-engine deltas identified
+  — missing `move.w #-$100, x_vel(a0)` in `Obj50_Init` (`s2.asm:60100`), P30
+  `bmi`-style timer in `Obj50_FollowPlayer`/`Obj50_WaitForNextShot`
+  (`s2.asm:60244, 60275`), and closer-player orientation
+  (`Obj_GetOrientationToPlayer`, `s2.asm:72320-72346`). Each fix reduces OOZ2
+  errors but introduces an OOZ1 regression; none advances either frontier.
+
+- **S2 CNZ2 pinball_mode preservation flag fix.** `PhysicsFeatureSet.SONIC_2.
+  pinballLandingPreservesPinballMode` was still `false`, causing CNZ2 to regress to
+  frame 936. ROM `Sonic_ResetOnFloor` / `Tails_ResetOnFloor` (`s2.asm:37770-37771,
+  40625-40626`) never clear `pinball_mode`; both branch to `Part3` which only clears
+  in_air/pushing/rolljumping/jumping. Flag flipped to `true` restores the CNZ2
+  frontier to frame 1490.
+
+- **S2 MTZ SteamSpring timing and MTZLongPlatform props-lookup fix.** Two
+  independent MTZ object fixes advancing the MTZ1 frontier from frame 281 to 375
+  and MTZ2 from 221 to 222. `SteamSpringObjectInstance` switched to
+  `MANUAL_CHECKPOINT` mode so `SolidObject_Always_SingleCharacter` runs before the
+  state machine moves `y_pos`, matching ROM `loc_26688` (`s2.asm:52030-52049`).
+  `MTZLongPlatformObjectInstance.init()` used `d0 >> 2` for both the props-table
+  entry index and `mapping_frame`, collapsing 8 ROM entries to 4; ROM
+  `s2.asm:52386-52394` uses `d0/2` for the entry and `d0/4` for the frame
+  independently.
+
+- **S2 OOZ Octus collision size and rise timing fix.** Two fixes advancing OOZ1
+  frontier from frame 509 to 563 and OOZ2 from 301 to 389. `OctusBadnikInstance`
+  used touch size index 0x0C ((20,16) half-extents) where ROM writes
+  `collision_flags=$A` → Touch_Sizes[0xA]=(16,8) (`s2.asm:59905`). Octus
+  rise/hover state transitions used `timer <= 0` (triggered at zero) where ROM uses
+  `bmi` (triggered when timer goes negative), and the rise transition did not apply
+  `y_vel=-$200` on the transition frame as ROM's fall-through to `JmpTo19_ObjectMove`
+  does (`s2.asm:59958-59988`).
+
+- **S2 CNZ2 pinball-mode Tails jump and landing-clear fix.** Three related fixes
+  advancing the CNZ2 trace frontier from frame 554 to frame 1490. (1) ROM
+  `Tails_ResetOnFloor` (`s2.asm:40624-40660`) branches past the roll-clear block
+  when `pinball_mode` is set and never clears it; `PlayableSpriteMovement.
+  resetOnFloor()` was unconditionally calling `setPinballMode(false)`, preventing
+  Tails from staying in pinball mode through a landing. (2) ROM `Obj02_MdRoll`
+  (`s2.asm:39279-39282`) skips `Tails_Jump` entirely when `pinball_mode` is set;
+  `SidekickCpuController.updateNormal()` did not mirror this check, so the 16-frame
+  delayed B-press fired a jump even while Tails was rolling in pinball mode on the
+  ground. (3) `doCheckStartRoll()` had an over-broad move_lock CPU guard that
+  prevented S2 Tails from rolling during move_lock; S1/S2 `Sonic_RollStart` has no
+  such gate (`s2.asm:36954-36963,39939-39942`), so the guard is now scoped to S3K
+  only where `Tails_InputAcceleration_Path` actually gates it
+  (`sonic3k.asm:27797-27815`).
+
+- **S2 Crawl (0xC8) bounce physics and ENEMY dispatch fix (CNZ2 trace replay).**
+  Two bugs combined to produce wrong post-bounce velocity. First, `COLLISION_SIZE_INDEX`
+  was 0x09 (12×16 px) instead of ROM's 0x17 (8×8 px), inflating the touch window.
+  Second, `applyBounce` applied a flat −$700 y_vel instead of the ROM's radial
+  `CalcAngle + CalcSine` computation (`loc_3D3A4`, s2.asm:81932-81958), and the
+  ENEMY touch dispatch in `ObjectManager` called `applyEnemyBounce` after
+  `onPlayerAttack` because `hpBeforeHit=0 && !wasAlreadyDestroyed`, overwriting
+  the radial y_vel with the standard kill-bounce (+256 offset). `CrawlBadnikInstance`:
+  size index corrected to 0x17; `applyBounce` rewritten with `TrigLookupTable`.
+  `ObjectManager`: `applyEnemyBounce` now gated on instance being destroyed by
+  `onPlayerAttack` (both player and sidekick paths), so shield-bounce objects that
+  handle their own velocity without self-destructing are not double-bounced.
+  CNZ2 trace frontier advanced from frame 435 (`x_speed`) to frame 554 (`tails_y`).
+
+- **S2 horizontal spring right-edge collision parity (CNZ2 trace replay).** ROM
+  `Obj41_Horizontal` routes through `SolidObject_cont` (`s2.asm:35147`), which
+  rejects the X range with `bhi` (strictly greater than). This makes `relX ==
+  halfWidth*2` (player centre exactly at the spring's right edge) a valid side
+  contact. The engine's `usesInclusiveRightEdge()` defaulted to `false`
+  (`relXRaw >= rightLimit`), silently skipping that one-pixel boundary case.
+  `SpringObjectInstance` now overrides `usesInclusiveRightEdge()` to return
+  `true` for `TYPE_HORIZONTAL`, matching the existing pattern in
+  `Sonic3kSpringObjectInstance`. CNZ2 trace frontier advanced from frame 205
+  (`camera_x`) to frame 435 (`x_speed`).
+
+- **S2 HTZ Rexon detection-window asymmetry (HTZ trace replay).** ROM
+  `Obj94_WaitForPlayer` (s2.asm:73716-73722) uses `Obj_GetOrientationToPlayer`
+  to compute signed `d2 = body_x - player_x`, adds `$60`, and compares against
+  `$100` as UNSIGNED word (`bhs.s`). The window is asymmetric around the body:
+  signed `body_x - player_x` must lie in `[-$60, +$A0)`. The engine ported the
+  check as `Math.abs(...) + 0x60 < 0x100`, which is symmetric and includes a
+  64-px-wide left-side band (`(-$A0, -$60)`) that ROM rejects. With the player
+  approaching from the right, this fired detection ~34 frames earlier than ROM,
+  stopping the body several pixels right of ROM and shifting every downstream
+  head trajectory by the same offset. The Tails hurt-bounce direction at f5044
+  ended up reversed (engine +$200 vs ROM -$200) because the head that ultimately
+  hit Tails had drifted across her x-position. Fix ports the literal ROM
+  `(signedDelta + $60) & $FFFF < $100` window in `RexonBadnikInstance.
+  checkPlayerInRange`. HTZ frontier advanced f5044 (446 errs) -> f5511 (398 errs).
+  P12-class pitfall already catalogued.
+
+- **S3K AIZ1 Tails dormant-marker timing (AIZ trace replay).** ROM
+  `loc_13A10` (sonic3k.asm:26389-26397) writes Tails' dormant sentinel
+  (x_pos=$7F00, y_pos=0, Tails_CPU_routine=$A) on the FIRST tick that
+  dispatches Tails_CPU_Control — inside the same ROM frame that
+  SpawnLevelMainSprites placed her at `Player_1 - $20`. The engine's
+  `SidekickCpuController.updateInit` previously split the AIZ1 dormant
+  marker into two ticks (prime placement, then apply sentinel on the next
+  tick), so the first comparison frame after gameplay started (AIZ trace
+  frame 290) saw Tails at the level-start offset (0x0020, 0x0424) while
+  ROM already had her at (0x7F00, 0x0000). Combining the level-start
+  placement + dormant marker into a single `updateInit` branch matches
+  the ROM's single-tick sequence. AIZ first error advanced f290 -> f720.
+
+- **S3K sidekick bootstrap parity (CNZ/MGZ trace replay).** Three S3K
+  level-start divergences shared the same root cause: the engine cleared
+  `Status_InAir` on the sidekick after `applyZonePlayerState` set it for
+  MGZ1 / HCZ1 / LRZ1 / SSZ falling intros. Fix preserves the zone-event
+  in-air state in `SidekickCpuController.applyLevelStartSidekickPlacement`,
+  re-runs `Sonic3kLevelEventManager.applyZonePlayerState` after the test
+  fixture's `repositionRegisteredSidekicks` step (matching ROM's
+  `SpawnLevelMainSprites_SpawnPlayers` -> `SpawnLevelMainSprites` order,
+  sonic3k.asm:8132-8427), and adds a one-tick S3K sidekick prelude for
+  seed-frame-mode traces (CNZ Sonic+Tails) so the Tails carry trigger
+  (`loc_13A5A`, sonic3k.asm:26405-26415) and one in-air gravity tick
+  (`MoveSprite_TestGravity`) run before the frame-0 seed comparator
+  fires. CNZ first error advanced f0 -> f4790; MGZ f0 -> f1538.
+
+- **S2 native-prelude trace infrastructure (spec 2026-05-15).** The engine's
+  title-card phase now runs `ObjectManager` and player physics every frame
+  (universal ADR-1, matching ROM `TitleCard_Main` across S1/S2/S3K). This
+  populates Sonic's `Sonic_Pos_Record_Buf` natively during the prelude,
+  removing the root cause of the early-frontier Tails sub-state divergence
+  that capped every S2 level-select trace at ~300 frames. New trace
+  infrastructure surfaces: `TraceBinder.compareBootstrapFrame0` + new
+  `BootstrapDivergence` / `EngineSnapshot` records assert engine frame-0
+  state against the recorder's `player_history_snapshot`,
+  `cpu_state_snapshot`, and `object_state_snapshot` events for traces
+  recorded at `lua_script_version >= 9.2-s2` (see
+  `TraceMetadata.nativePreludeMode()`). Comparator results flow into
+  `DivergenceReport` as a new `bootstrap` category rendered ahead of the
+  per-frame divergences. `SidekickCpuController.hydrateFromRomCpuState`
+  widened to accept `targetX`/`targetY`. The deprecated
+  `*PreludeFramesForTraceReplay` knobs on `TraceReplayBootstrap` return 0
+  unconditionally (workaround for the title-card freeze, no longer needed).
+  New `oggf.trace.hydrate` system property (see CONFIGURATION.md) lets
+  developers snap engine state to the recorded frame-0 snapshot for
+  prelude-vs-gameplay bug isolation; off by default and CI-asserted off.
+  S2 level-select trace tests will pick up the improvement once their
+  metadata files are re-recorded with the v9.2-s2 recorder (T9 follow-up).
+
+
+- **Fix regressions from architectural review hardening.** Two
+  follow-up fixes for issues introduced by the previous entry.
+  `GenericFieldCapturer.usesCodecFieldSnapshot` now skips the codec
+  snapshot path for non-final fields whose codec declares
+  `requiresExistingTargetValue()` (currently `ObjectAnimationStateCodec`),
+  falling through to `deepCloneValue` so lazy-initialised animation
+  state — notably `MonitorObjectInstance.animationState` — restores
+  cleanly when null at restore time. `RewindSchemaRegistry`'s compact
+  path already had the equivalent guard; the generic path now matches.
+  Resolves `IllegalStateException: Cannot restore in-place rewind field
+  ... because the target value is null` in `TestRewindTorture`,
+  `TestRewindTraceSeekDeterminism`, `TestRewindIter1631Diagnostic`, and
+  `TestAbstractObjectInstanceRewindCapture#defaultClassFallsBackToGenericSidecarForNullableAnimationState`.
+  Separately, the MGZ BG-rise state machine now propagates correctly
+  to the registered `SwScrlMgz`: `MgzZoneRuntimeState` gains
+  `publishBgRiseState` (canonical events-side write) and
+  `syncBgRiseToScrollHandler` (resolves the registered handler via
+  `GameServices.parallaxOrNull` so the events package retains its
+  architectural separation), `SwScrlMgz.setBgRiseState` write-throughs
+  to runtime state, and `Sonic3kMGZEvents.updatePrePhysics` syncs the
+  handler after its state machine — previously `LevelFrameStep.execute`
+  skipped `parallaxManager.update()` so the handler cache stayed stale
+  between event tick and render, and `setBgRiseState` only mutated the
+  local cache which the next `update()` overwrote. Verified against
+  `MGZ2_BGEventTrigger` (`sonic3k.asm:107117`) and `MGZ2_BGDeform`
+  (`Lockon S3/Screen Events.asm:1090-1126`). Restores
+  `TestS3kMgz2BgRiseHeadless#eventsStateTransitionPropagatesToRegisteredSwScrlMgz`
+  and `#swScrlMgz_stateEightProducesDifferentScrollFromStateZero`.
+
+- **Architectural review hardening.** Tightens `RewindRegistry.capture()`
+  to reject `null` snapshots and tightens `restore()` to require explicit
+  `RewindSnapshottable.resetForMissingSnapshot()` for entries absent from
+  the composite snapshot — the previous silent skip was masking
+  coverage gaps. The default `resetForMissingSnapshot()` throws so
+  registered subsystems fail closed unless they opt in.
+  `GameplayModeContext.isGameplayRuntimeReady()` now returns `false`
+  once `tearDownManagers()` has run, so callers can't treat a torn-down
+  context as live. MGZ scroll-event state (screen shake, BG rise routine
+  / offset, boss BG scroll offset) has moved off direct `SwScrlMgz`
+  setter calls onto a new `MgzZoneRuntimeState` adapter installed
+  through `ZoneRuntimeRegistry`; `SwScrlMgz.update()` now reads runtime
+  state at frame time and `SwScrlMgz.init()` clears event-owned
+  overrides on level re-entry. `Sonic3kMGZEvents`,
+  `MGZTriggerPlatformObjectInstance`, `MgzMinibossInstance`, and
+  `TunnelbotBadnikInstance` migrated to the new publication path; an
+  architecture guard in `TestArchitecturalReviewGuard` rejects any
+  future direct `SwScrlMgz` import or setter usage from those files.
+  `BossExplosionObjectInstance` drops its `ObjectRenderManager`
+  constructor argument and now resolves the renderer through
+  `services().renderManager()` at draw time, matching the prevailing
+  object construction pattern; threaded through
+  `AbstractBossInstance.spawnDefeatExplosion`, `Sonic1FZBossInstance`,
+  `FZPlasmaLauncher`, the S2 `Sonic2ObjectRegistry` boss explosion
+  factory, and `CPZBossFallingPart`.
+  `Aiz2BossEndSequenceController` now compares the HCZ transition Y
+  threshold against `player.getCentreY()` (matching ROM `y_pos`
+  semantics) rather than `player.getY()` (top-left). The
+  `MgzMinibossInstance.KnucklesSpikePlatformChild` constructor now
+  takes camera coords captured parent-side instead of reading
+  `services().camera()` mid-construction, and
+  `TurboSpikerBadnikInstance` moves its water-splash SFX off the child
+  constructor onto the parent (with a deferred replay on the child's
+  first update) so child constructors no longer depend on
+  `services()`. `TestNoServicesInObjectConstructors` is hardened to
+  also catch qualified `obj.services()` calls inside constructors and
+  to recognise constructors with no access modifier.
+  `GraphicsManager.getUiRenderPipeline()` now calls
+  `syncRuntimeManagedReferences()` so the returned pipeline's
+  `FadeManager` always reflects the live runtime `FadeManager` after
+  gameplay rebuild, and `DefaultPowerUpSpawner` stops caching
+  `ObjectServices` at construction (resolves lazily via
+  `objectManager.services()` so it survives manager teardown/rebuild).
+  Trace-replay invariant tests move out of a hidden Surefire exclusion
+  into the trace-replay profile under `**/tests/trace/**/*.java`, so
+  they now actually run alongside the rest of the trace suite. New
+  tests cover the registry tightening (`TestRewindRegistry`),
+  torn-down readiness (`TestGameplayModeContextRewindRegistry`), the
+  MGZ runtime adapter (`TestS3kZoneRuntimeStateAdapters`,
+  `SwScrlMgzTest.initClearsMutableEventStateForLevelReentry`), the
+  centre-Y transition fix (`TestAiz2BossEndSequenceObjects`), and the
+  pipeline fade rebinding (`TestGraphicsManagerFadeRebinding`).
+  `src/test/resources/archunit.properties` pins
+  `freeze.store.default.allowStoreUpdate=false` so frozen baselines do
+  not auto-update during normal test runs.
+- **Rewind capture for final in-place helper fields.**
+  `GenericFieldCapturer` now captures and restores `final` helper
+  fields (e.g. `final SubpixelMotion.State motion = new ...`) through
+  `RewindCodec`-driven `CodecFieldSnapshot` payloads. Codecs that opt
+  in via `RewindCodec.capturesFinalFields()` serialize the helper's
+  scalar state into a `RewindStateBuffer` at capture and restore it
+  back into the existing field at replay, bypassing the previous
+  reject-on-final policy that required helper references to be
+  reassignable. `CutsceneKnucklesAiz1Instance.motionState` is
+  annotated `@RewindTransient` to document that the helper is a
+  scratch holder rebuilt from captured scalar position/velocity
+  fields; the rewind annotation baseline in
+  `TestRewindArchitectureGuard` is updated accordingly. New tests:
+  `TestGenericFieldCapturer.roundTripsFinalSubpixelMotionStateInPlace`
+  covers the codec-backed round trip;
+  `TestCutsceneKnucklesAiz1Instance.rewindCaptureSkipsScratchMotionState`
+  and the parallel `TestSonic3kMonitorObjectInstance` case cover the
+  AIZ cutscene and S3K monitor capture paths called out as motivating
+  examples.
+- **Complete architecture guard coverage.** Expands the ArchUnit and source
+  guard suite across runtime/session ownership, runtime-owned registry
+  construction, concrete Sonic provider construction, trace replay hydration
+  invariants, trace parser dependencies, rewind override/annotation growth,
+  `GameId` behavior branching, runtime disassembly asset access,
+  `Engine.java` responsibility budgets, `ObjectArtData` game-specific surface
+  growth, object coordinate hazard scanning, and singleton/gameplay lifecycle
+  setup drift in tests. New frozen ArchUnit baselines document existing
+  migration debt while preventing new violations. Stabilizes the sidekick
+  follow parity fixture so it resets the active game module before each test in
+  reused Maven forks, and migrates sidekick, timer, level-init, and object
+  lifecycle tests onto `TestEnvironment.resetAll()` to shrink the lifecycle
+  baseline. Strengthens the object-service migration guard with one
+  consolidated scanner that covers game object packages and shared object
+  infrastructure for direct global runtime access, leaving only documented
+  line-level bridge exceptions. Shared object guard helpers now live in one
+  test utility, `ObjectManager` resolves rewind overlap sidekicks through
+  injected `ObjectServices`, and the contributor guide documents the object
+  service access contract. The shared-layer frozen ArchUnit baseline is also
+  refreshed for the current `DefaultPowerUpSpawner` lambda bytecode form.
+- **ArchUnit architecture guard adoption.** Adds the ArchUnit JUnit 5 test
+  dependency and bytecode-level architecture rules for the existing dependency
+  invariants around rewind snapshot interfaces, shared/service boundaries,
+  level-layer S3K coupling, and cross-game data-select delegates. The
+  source-text guard remains for comment/string/XML surfaces that bytecode
+  analysis cannot inspect. Broader object-service, shared-layer, per-game slice,
+  and JUnit 5 API rules now guard against new architectural drift, with current
+  debt frozen under `src/test/resources/archunit/frozen` and documented in
+  `docs/architecture/archunit-exceptions.md`.
+- **Palette-cycle rewind coverage.** Adds a compact schema codec for palette
+  cycle state and extends Sonic 2/S3K palette and level-animation managers with
+  snapshot coverage so animated palette progress survives rewind round-trips.
+  New tests cover the palette-cycle codec and S3K ICZ rewind restoration.
+- **S3K CNZ miniboss completion.** Carnival Night Zone Act 1 now drives the
+  miniboss arena through ROM-cited event flow: the tunnel approach, arena
+  camera clamps, miniboss music, PLC/palette load, vertical scroll-control
+  handoff, layout-wall mutations, and defeat release are all represented.
+  The CNZ miniboss now has raw boss animations, explicit top/spinner and
+  coil children, top-piece terrain/base collision behavior, closed-coil
+  player touch routing through `ObjectManager`, and focused headless/object
+  coverage. The CNZ cylinder carry path also preserves the held player
+  position before launch so Sonic follows the cylinder down consistently.
+- **Rewind automatic-capture tooling.** Moves `RewindScanSupport` into
+  main sources so both tests and tools can share the runtime-owner source
+  scanner, and replaces the disabled manual field-inventory JUnit test
+  with `com.openggf.tools.rewind.RewindFieldInventoryTool`. The tool
+  emits unsupported rewind fields and exits non-zero until a migration
+  worklist is closed; `--object-rollout-candidates` reports concrete
+  object classes currently covered by default subclass scalar capture.
+  Adds the compact schema foundation under
+  `com.openggf.game.rewind.schema`: cached class schemas, field policy
+  classification, little-endian scalar buffers, codecs for supported value
+  shapes, immutable state blobs, policy registry support, context-aware
+  capture, and `CompactFieldCapturer` tests. Adds stable rewind identity
+  value records/table for players, objects, and spawns, plus compact codecs
+  for helper state, value collections/maps, immutable records, player
+  references, and object references. This path runs beside
+  `GenericFieldCapturer`; object/player snapshot rollout remains a
+  follow-up after policy and codec coverage are proven.
+- **Rewind object rollout now minimizes leaf-object churn.**
+  `GenericRewindEligibility.usesDefaultObjectSubclassCapture(...)`
+  centrally opts concrete `AbstractObjectInstance` subclasses into
+  default subclass scalar capture when they do not declare custom
+  `captureRewindState` / `restoreRewindState` overrides.
+  `GenericFieldCapturer.defaultObjectSubclassCapturedFieldsForAudit(...)`
+  and `RewindFieldInventoryTool --object-rollout-candidates` expose the
+  audit surface. Generic capture now also excludes `@RewindDeferred`
+  fields, and shared type/policy decisions should live in codecs or
+  `RewindPolicyRegistry` instead of repeated per-object annotations.
+- **Rewind blueprint follow-through.** Default non-badnik object subclasses
+  now capture compact schema-backed sidecar state through
+  `PerObjectRewindSnapshot.compactGenericState` whenever all default scalar
+  fields have codecs, falling back to the legacy generic snapshot only for
+  unsupported shapes. `RewindFieldInventoryTool --annotation-density`
+  reports transient/deferred annotation density and redundant transient
+  annotations. `ChildGraphPolicyInventoryTool` adds an audit-only scan for
+  child/spawn graph hotspots and policy prompts. A new encounter-validation
+  test harness compares engine forward-only snapshots against engine
+  rewind+replay snapshots, with an enabled S2 EHZ1 baseline scenario.
+- **Rewind: snapshot monitor `effectTarget` by sprite code.**
+  `AbstractMonitorObjectInstance.effectTarget` (the player who broke
+  the monitor and is owed the power-up at icon apex) was annotated
+  `@RewindDeferred` and so was excluded from snapshotting. Rewinding
+  back into a frame mid-icon-rise nulled out the field, and the apex
+  guard `if (!effectApplied && effectTarget != null)` skipped the
+  `applyPowerup` call -- the player never received the
+  shield/speed-shoes/etc. that the reference forward-run granted. The
+  divergence surfaced as `sprites[0].playerExtra.shield: A=true B=false`
+  plus the monitor slot's `effectApplied` field at iteration 1521 of
+  `TestRewindTorture#tortureProgressiveLongRewinds` (the next gap after
+  the `lastAnimationId` fix). `AbstractMonitorObjectInstance` now
+  overrides `captureRewindState`/`restoreRewindState` to capture the
+  player's stable sprite code in a new `MonitorRewindExtra` record on
+  `objectSubclassExtra`, resolving back via `SpriteManager.getSprite`
+  on restore. The `@RewindDeferred` annotation is retained as the
+  audit-policy flag (effectTarget is still excluded from
+  genericState), with its `reason` updated to point at the manual
+  capture path. The torture test stays `@Disabled` because a separate
+  object-manager slot-drift coverage gap surfaces at iteration ~1575;
+  description updated.
+- **Rewind: capture `PlayableSpriteAnimation.lastAnimationId`.**
+  `lastAnimationId` is the previous-animation tracker compared against
+  `sprite.animationId` on every animation update; a mismatch resets the
+  script's `animationFrameIndex` and `animationTick` to 0. Without
+  snapshotting it, repeated forward+rewind cycles (e.g. via
+  `TestRewindTorture#tortureProgressiveLongRewinds`) drifted the
+  tracker out of sync with the captured animation cursor, producing
+  spurious script resets (or skipping real ones) on the first replay
+  step. `mappingFrame`, `animationFrameIndex`, and `animationTick`
+  diverged after roughly 720 progressive-long cycles. Adds a
+  `PlayableSpriteAnimation.RewindState` record carrying
+  `lastAnimationId`, captured/restored alongside the existing
+  movement and spindash-dust state on `PlayerRewindExtra`. The torture
+  test stays `@Disabled` because a separate snapshot-coverage gap
+  (monitor-icon `effectTarget` is `@RewindDeferred`, breaking shield
+  acquisition replay) surfaces deeper in the run; description updated.
+- **Rewind torture test infrastructure.** Adds `TestRewindTorture` (S2
+  EHZ1 trace) plus three pluggable `RewindTorturePattern`
+  implementations -- adjacent rewinds (`FixedAdjacent` cycles of
+  `forward=2, rewind=1`), end-to-end long rewinds with progressive
+  landing (`ProgressiveLongRewind`), and seeded random
+  forward/rewind cycles (`Random_`). The driver runs the pattern
+  end-to-end against the trace, asserting `controller.currentFrame()`
+  matches the simulated logical frame after every cycle and comparing
+  full `CompositeSnapshot` content against a precomputed forward-only
+  reference at scheduled checkpoints. The shared
+  `RewindSnapshotDiff` helper produces path-based per-key diffs
+  (e.g. `object-manager.slot[16].state.dynamicSpawnX: A=0 B=551`)
+  capped at 20 leaf-diff lines per key, indexing
+  `ObjectManagerSnapshot.slots` / `childSpawns` by slot identity so
+  `IdentityHashMap`-induced ordering noise does not mask real state
+  divergence. All five test methods are currently `@Disabled`
+  pending the snapshot-coverage gaps each surfaces -- the
+  infrastructure itself is the deliverable for future rewind work.
+  Includes one fix surfaced by the test:
+  `AbstractBadnikInstance.restoreRewindState` previously called
+  `updateDynamicSpawn(currentX, currentY)` unconditionally after
+  hydrating `BadnikRewindExtra`, which overwrote
+  `dynamicSpawn = null` (set by the base-class restore from
+  `s.hasDynamicSpawn() == false`) at frame-0-style snapshots where
+  `currentX/Y` are at spawn position but `dynamicSpawn` had never been
+  touched. Now gated by `s.hasDynamicSpawn()` so capture-after-restore
+  round-trips at every frame.
+- **LZ wind tunnels now preserve the player's subpixel fraction across
+  the tunnel's per-frame X push and Y curve/input nudges.** ROM
+  `LZWindTunnels` (`docs/s1disasm/_inc/LZWaterFeatures.asm:338,341,348,353`)
+  applies its `addq.w #4,obX(a1)` X push, `add.w d0,obY(a1)` curve,
+  and `subq.w #1,obY(a1)` / `addq.w #1,obY(a1)` up/down input nudges
+  with word-only writes that touch only the pixel half of `obX`/`obY`,
+  leaving `obSubpixelX`/`obSubpixelY` (offsets 0xA / 0xE) untouched.
+  The engine called `setCentreX` / `setCentreY`, which zero
+  `xSubpixel`/`ySubpixel`, so every frame Sonic stayed inside the
+  tunnel the engine wiped his subpixel fraction. Migrated all four
+  call sites (LZ + SBZ3 wind-tunnel updates) to
+  `setCentreXPreserveSubpixel` / `setCentreYPreserveSubpixel`. The
+  trace-replay sub_x desync of `0x6400` against the LZ3 credits-demo
+  recording now matches ROM. The frame-221 +2 Y bump that remains is
+  a separate, documented REV01 ROM-bug discrepancy (`d0` is overwritten
+  by `move.b (v_vbla_byte).w,d0` then read as if it still held `obX`
+  for the curve check); see `docs/KNOWN_DISCREPANCIES.md`.
+  Also moved the wind-tunnel and water-slide rushing-water sound
+  timers from a local frame counter to the global `v_vbla_byte`
+  (`ObjectManager.getVblaCounter()`) so the sound cadence matches the
+  ROM's global-vblank phasing rather than drifting whenever Sonic
+  enters/exits the tunnel zone.
+- **SBZ Rotating Junction (object 0x66) now preserves the player's
+  subpixel fraction across `Jun_ChgPos` and the grab-midpoint adjust.**
+  ROM `Jun_ChgPos`
+  (`docs/s1disasm/_incObj/66 Rotating Junction.asm:167-172`) sets the
+  player's pixel position with `move.w d0,obX(a1)` /
+  `move.w d0,obY(a1)`, which writes only the upper word of each
+  4-byte position field (`obX = 8`, `obSubpixelX = 0xA`,
+  `obY = 0xC`, `obSubpixelY = 0xE` per `_Constants.asm:142-150`) and
+  leaves the subpixel fraction untouched. The grab body
+  (`obj66:87-93`) similarly relies on word-only `add.w` and `asr.w`
+  on `obX(a1)`/`obY(a1)` while the disc rotates Sonic into place.
+  The engine implementation called `setCentreX` /  `setCentreY`,
+  which zero `xSubpixel`/`ySubpixel` on every write, so each
+  junction frame advance was wiping any subpixel Sonic had
+  accumulated before being grabbed. After release, gravity-driven
+  `SpeedToPos` then accumulated from a zero subpixel base while the
+  ROM continued from a non-zero residue, producing a 1-pixel drift
+  by the time Sonic re-landed. On the SBZ1 credits demo this
+  surfaced at trace frame 285 (`y=0x01A8` vs ROM `0x01A9`) with
+  `ENG sub_y=0xA800` vs `ROM sub_y=0x2000`, and the 1-pixel offset
+  cascaded through the rest of the demo (58 errors). Switching the
+  two write sites to the `*PreserveSubpixel` helpers mirrors the
+  word-only ROM stores. Greens `TestS1Credits05Sbz1TraceReplay`.
+  Adds focused regression `TestSonic1JunctionSubpixelPreservation`.
+
+- **Touch-response on-screen gate now checks Y as well as X.**
+  `AbstractObjectInstance.isOnScreenForTouch()` previously returned true
+  for any object whose pre-update X was within the camera viewport,
+  ignoring Y entirely. ROM's gate is `obRender(a1) bit 7`, set by
+  `BuildSprites` (`docs/s1disasm/_inc/BuildSprites.asm:71-78` for the
+  default `.assumeHeight` branch when `obRender` bit 4 is clear, the
+  case for rings and most gameplay objects), which marks an object
+  off-screen when `obY - cameraY` is outside `[-32, 256)` — i.e. the
+  visible 224-line viewport plus a 32 px margin above and below.
+  ROM's `ReactToItem` (`docs/s1disasm/_incObj/sub ReactToItem.asm:26-27`)
+  reads that bit with `tst.b obRender(a1) / bpl.s .next` and skips
+  objects whose bit 7 is clear, so a ring whose Y has scrolled past
+  the camera viewport is not eligible for touch responses. The engine
+  was over-collecting: the SYZ3 credits demo at frame 253 collected an
+  off-screen ring s43 at (0x186E, 0x0662) while the camera was at
+  (0x17C2, 0x0556), giving rings=21 vs ROM rings=20. The fix uses
+  `cameraBounds.contains(preUpdateX, preUpdateY, halfWidth, 32)` so
+  the gate matches the previous frame's BuildSprites pass with the
+  same 32 px Y margin the ROM uses. Greens the SYZ3 credits demo
+  trace replay at frame 253. Adds focused regression
+  `TestS1OffscreenYRingTouchSkip` and refreshes the cached
+  `cameraBounds` inside `ObjectManager.snapshotTouchResponseState()` so
+  the inline-physics path's gate sees the post-camera-update bounds
+  matching ROM's BuildSprites-then-ReactToItem ordering.
+  `TestHTZBossTouchResponse` setUp now also pins `camera.setY` to the
+  boss arena Y; previously the test relied on the X-only on-screen
+  gate to bypass a Y mismatch between camera (Y=0) and boss (Y=0x0580).
+- **Touch-response Y gate is now S1-only.** The new
+  `cameraBounds.contains(x, y, halfWidth, 32)` Y check above is
+  ROM-correct for S1 only. ROM S2 `Touch_Loop`
+  (`docs/s2disasm/s2.asm` ~84502-84551) has no equivalent render-flag
+  gate at all — every active object is iterated regardless. ROM S3K
+  `TouchResponse` (`docs/skdisasm/sonic3k.asm:20655`) consumes a
+  pre-built `Collision_response_list` where the gate happens upstream
+  during list build, not at touch time. Applying the X+Y check
+  universally regressed S3K MGZ trace replay's first-fail from frame
+  2395 to frame 1659 (Tails picked up an unintended `tails_rolling`
+  state from objects ROM had on the response list). Added
+  `PhysicsFeatureSet.touchResponseUsesRenderFlagYGate` per the
+  per-game framework: `SONIC_1=true`, `SONIC_2=false`, `SONIC_3K=false`.
+  `AbstractObjectInstance.isOnScreenForTouch()` branches on the flag —
+  S1 keeps the X+Y gate (preserves the SYZ3 fix above); S2/S3K fall
+  back to the pre-Task-3 X-only gate (`cameraBounds.containsX(x)`).
+  Restores S3K MGZ trace replay first-fail to frame 2395, with
+  S1 SYZ3 still at trace match.
+- **MZ Push Block: skip inline solid resolution while in falling/sliding
+  state.** `Sonic1PushBlockObjectInstance.updateActive` now gates its
+  `checkpointAll()` call on the entering `solidState` being 0, mirroring
+  ROM's `loc_C186` dispatch
+  (`docs/s1disasm/_incObj/33 Pushable Blocks.asm:238-289`): only the state-0
+  branch (`loc_C218`) calls `Solid_ChkEnter`. ROM's state-4 (`loc_C1AA`)
+  and state-6 (`loc_C1F2`) paths return without ever testing for the
+  player. Without the gate, the engine published a STANDING contact on
+  the same frame the block transitioned from state 4 (falling) to state
+  0 (lava motion), which established a riding state one frame too early.
+  On the IMMEDIATELY next frame, `processInlineRidingObject`'s
+  `shiftX(deltaX)` platform-rider carry then dragged the player along
+  with the block's lava-slide -1 px movement — one frame ahead of ROM,
+  where `MvSonicOnPtfm` only fires once `obSolid==2` (set on a different
+  frame). Greens the MZ2 credits demo trace at frame 341 (ROM x=0x0E1A,
+  ENG was 0x0E19). Adds focused regression
+  `TestS1PushBlockSideContact` exercising the lava-slide first-frame
+  carry against the live MZ2 credits demo input.
+- **SLZ Elevator: post-jump rider pull-up.** `Sonic1ElevatorObjectInstance`
+  now opts into `SolidObjectProvider.carriesAirborneRiderAfterExitPlatform`
+  so the inline-riding carry runs after `ExitPlatform` clears the player's
+  on-object bit on the same frame Sonic launches. Mirrors ROM
+  `Elev_Action` (`docs/s1disasm/_incObj/59 SLZ Elevators.asm:84-101`),
+  which calls `ExitPlatform` → `Elev_Move` → unconditional
+  `MvSonicOnPtfm2` (`docs/s1disasm/_incObj/15 Swinging Platforms.asm:177-194`)
+  even when the rider has just jumped. Without the override the engine
+  applied the `Sonic_Jump` `addq.w #5, obY(a0)` rolling-radius adjust but
+  missed the elevator's continued-riding y_pos write, which left the
+  player ~2 px below ROM whenever the elevator moved up at the same
+  time as the jump. Greens the SLZ3 credits demo trace at frame 500
+  (ROM y=0x01F0, ENG was 0x01F2). Adds focused regression
+  `TestS1JumpFromElevator` exercising the same jump-while-riding code
+  path against a live SLZ act-3 fixture.
+- **Architecture cleanup: renamed `EngineServices` → `EngineContext`.**
+  Aligns with the design vocabulary in
+  `docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md`,
+  which calls the engine-globals container `EngineContext`. Mechanical
+  rename across 113 Java files (~419 token occurrences); the test class
+  `TestEngineServices` moved to `TestEngineContext`. Method names on
+  `RuntimeManager` (`getEngineServices`/`currentEngineServices`/
+  `configureEngineServices`) and `GameRuntime` (`getEngineServices`) were
+  intentionally left alone — they're stable API; only the return type
+  changed. The class file moved from `com.openggf.game.EngineServices` to
+  `com.openggf.game.session.EngineContext`. CLAUDE.md and AGENTS.md
+  updated to reflect the rename + the parking removal.
+- **Architecture cleanup: dropped `RuntimeManager.parkCurrent` /
+  `resumeParked` editor parking flow.** Per the runtime ownership migration
+  design, world data lives on `WorldSession` (durable across mode swaps) and
+  gameplay state lives on `GameplayModeContext` (disposable). With both in
+  place, the parking mechanism — which preserved the runtime intact across
+  editor mode entry — was redundant. `Engine.enterEditorFromCurrentPlayer`
+  now does a proper teardown via `RuntimeManager.destroyCurrent()`,
+  capturing/restoring the world-scoped state (loaded `Level`, zone/act,
+  camera bounds) on `WorldSession` since `LevelManager.resetState()`
+  write-throughs `null` during teardown. `Engine.resumePlaytestFromEditor`
+  uses `initializeGameplayRuntime` + `LevelManager.restoreInheritedLevel()`
+  to rebuild a fresh runtime over the surviving world. Removed
+  `parkCurrent` / `resumeParked` / `parked` field /
+  `suppressedGameplayMode` / `destroyParkedRuntimeIfSupersededBy` from
+  `RuntimeManager`. Removed lazy-create-on-`getCurrent`, since that
+  mid-flow side effect could re-attach fresh managers (replacing camera,
+  sprite, etc.) to a still-referenced gameplay mode and surprise callers
+  holding manager refs across the transition. Six parking-only tests
+  removed; four tests updated to call `createGameplay()` explicitly
+  instead of relying on auto-create. `TestEditorToggleIntegration`'s
+  editor round-trip tests still pass — proving world preservation +
+  gameplay counter reset on exit.
+- **`spawnChild` / `spawnFreeChild` migration sweep across S1 object
+  code.** Replaced direct `objectManager.addDynamicObject(...)` calls
+  in S1 instance classes with the inherited
+  `AbstractObjectInstance.spawnChild(() -> ...)` /
+  `spawnFreeChild(() -> ...)` helpers so that the
+  `CONSTRUCTION_CONTEXT` ThreadLocal is set before each child
+  constructor runs. This guarantees children calling `services()`
+  during construction see a non-null context and stops the migration
+  guard from regressing. Original ROM allocation semantics are
+  preserved (`addDynamicObject` -> `spawnFreeChild` for `FindFreeObj`,
+  `addDynamicObjectAfterCurrent` -> `spawnChild` for
+  `FindNextFreeObj`). Batches: badniks (Buzz Bomber, Cannonball,
+  Crabmeat, Motobug, Newtron); bosses (FZ, MZ, GHZ, SLZ, SYZ, FZ
+  plasma launcher, false floor, boss block, boss fire, SLZ spikeball);
+  level objects (breakable wall, bumper, collapsing floor/ledge, egg
+  prison, elevator, ending, gargoyle, giant ring, glass block, grass
+  fire, junction, lamppost, large grassy platform, lava
+  geyser/maker/wall, LZ conveyor, monitor, push block, ring flash,
+  seesaw, signpost, smash block, spin conveyor). `addDynamicObject`
+  call count inside classes extending `AbstractObjectInstance` under
+  `game/sonic1/objects/` reduced to zero.
+
+- **G4 follow-up: retired the broken
+  `Sonic2SmpsLoader.resolveMusicOffsetFromRom` and removed the deferred
+  priority-inversion TODO.** Investigation showed the function's premise
+  was wrong, not just its byte order: the S2 driver's `zMasterPlaylist`
+  flag table and per-bank pointer tables (`MusicPoint1`/`MusicPoint2`)
+  live inside the **Saxman-compressed** Z80 driver blob in 68K ROM, so
+  reading them as if they were uncompressed yields garbage regardless
+  of endianness. The previous implementation also indirected through a
+  stray pointer-to-pointer-table address (`MUSIC_PTR_TABLE_ADDR`,
+  pointing into mid-driver code) and decoded the resulting Z80
+  little-endian pointers as big-endian. On top of the compression
+  problem, the engine's `Sonic2Music` IDs are systematically shifted
+  relative to the disassembly's `zMasterPlaylist` entry order
+  (`EMERALD_HILL.id == 0x81` loads the EHZ track, but
+  `zMasterPlaylist[0]` is `Mus_2PResult`), so even a fully Z80-decompressed
+  lookup would disagree with the engine's intended track for most IDs
+  — `testChemicalPlantNoiseChannelEmitsVolume` confirmed this when the
+  prototype ROM-first priority was tried. `findMusicOffset` is now a
+  thin lookup over the hardcoded REV01 `musicMap` (returns -1 on miss);
+  `resolveMusicOffsetFromRom` and the misleading `MUSIC_FLAGS_ADDR` /
+  `MUSIC_PTR_TABLE_ADDR` constants were removed. The Javadoc captures
+  the two prerequisites for a future ROM-driven path (decompress the
+  Z80 driver first; reconcile engine-vs-disasm music ID schemes).
+- **Architecture cleanup: removed game-id branching from
+  `DefaultPowerUpSpawner`; documented G4 priority-inversion deferral in
+  code.** `DefaultPowerUpSpawner.spawnInvincibilityStars` no longer
+  switches on `instanceof Sonic3kGameModule`; instead, a new
+  `GameModule.getInvincibilityStarsFactory()` default returns the
+  game-agnostic `InvincibilityStarsObjectInstance::new`, and
+  `Sonic3kGameModule` overrides it to return
+  `Sonic3kInvincibilityStarsObjectInstance::new`. The S1 fixed shield
+  slot (ROM `v_shieldobj` at slot 6) is now expressed as
+  `PhysicsFeatureSet.shieldObjectFixedSlotIndex` (S1=6, S2/S3K=-1) and
+  consumed by `addPowerUpObject`, replacing the second
+  `instanceof Sonic1GameModule` check. Per-game behavioral differences
+  in this class are now gated entirely through `GameModule` factories or
+  `PhysicsFeatureSet` flags as required by `CLAUDE.md`. Separately, the
+  G4 priority-inversion deferral previously documented only in the
+  commit message now has an explicit `// TODO(G4-followup):` comment at
+  the top of `Sonic2SmpsLoader.findMusicOffset` citing the symptom
+  (Metropolis 0x82 / Chemical Plant 0x83 break TestRomAudioIntegration
+  when ROM resolution is primary) and the byte-order root cause inside
+  `resolveMusicOffsetFromRom`.
+- **G4: consolidated S2 uncompressed-track constants; documented why
+  ROM-resolution priority inversion is deferred.** The four uncompressed
+  track ROM addresses (1-Up, Game Over, Got Emerald, Credits) and their
+  explicit byte sizes are now named constants in `Sonic2SmpsConstants`
+  (`UNCOMPRESSED_*_ADDR` / `_SIZE`), shared between
+  `Sonic2SmpsLoader.musicMap` and `calculateUncompressedSize`. The
+  intended priority inversion in `findMusicOffset` (try
+  `resolveMusicOffsetFromRom` first, fall back to the empirical map)
+  could not be applied — the existing ROM-resolution path produces
+  wrong-but-non-negative offsets for several REV01 IDs (Metropolis 0x82,
+  Chemical Plant 0x83), as confirmed by TestRomAudioIntegration failing
+  when ROM resolution ran first. The endianness fix inside
+  `resolveMusicOffsetFromRom` is a separate audio-engine change requiring
+  independent verification; once that lands, the priority inversion
+  becomes a one-line follow-up. A deferral note is in `findMusicOffset`'s
+  Javadoc.
+- **G3: residual cleanup of the runtime-ownership migration.**
+  `StubObjectServices` now overrides `zoneRuntimeRegistry()` and
+  `zoneRuntimeState()` so unit tests using the stub get a deterministic
+  isolated `ZoneRuntimeRegistry` instead of silently routing through
+  `GameServices` (which defaults to `new ZoneRuntimeRegistry()` when no
+  runtime exists, producing a different fresh registry on each call —
+  brittle for tests that read state back). `rng()` and
+  `solidExecutionRegistry()` were already overridden.
+  `TestEnvironment.resetAll()` now calls
+  `AbstractObjectInstance.resetCameraBoundsForTests()` so the static
+  `cameraBounds` field starts every test from `(0, 0, 320, 224)` rather
+  than whatever the previous test left behind. Manager teardown moved
+  off `GameRuntime.destroy()` and onto a new
+  `GameplayModeContext.tearDownManagers()` helper called by
+  `GameRuntime.destroy()`. `GameplayModeContext.destroy()` (the
+  ModeContext interface override) remains a documented stub: the editor
+  flow's `SessionManager.destroyCurrentMode()` must NOT trigger manager
+  teardown while a parked runtime expects its managers to be alive on
+  resume. Once parking is replaced with a proper world-preserving
+  teardown, `tearDownManagers` can become `destroy()` directly. No
+  behavioral change for production code paths.
+- **G2: fixed Y-coord mix in `DebugRenderer.renderPlayerPlaneState` and
+  expanded the pattern atlas range table.** The plane-state debug label
+  was computing `screenY` from `playable.getY()` (top-left) while every
+  other label used `getCentreY()`, producing a ~19px vertical drift.
+  Changed to `getCentreY()` to match the sensor-dot rendering. Also
+  documented `0x34000` (S3K dust art) and the shared-base contexts at
+  `0x40000` and `0x50000` (multiple mutually-exclusive game subsystems
+  reuse the same base) in `docs/KNOWN_DISCREPANCIES.md`. Note that
+  `PatternAtlas.registerRange(...)` exists as a diagnostic collision
+  detector but is not enforced at every call site; adding bootstrap-time
+  `registerRange` calls in each owning subsystem is a follow-up.
+- **G1: removed render-path allocation and scan hotspots in `PatternAtlas`
+  and `GraphicsManager`.** `PatternAtlas.isSlotShared()` previously walked
+  all 8192 fast entries plus the sparse map every time `removeEntry()` was
+  called — the CNZ slot machine `uncachePattern` loop turned that into
+  ~393K array reads per frame. Replaced the scan with a per-`(atlasIndex,
+  slot)` reference count maintained by `putEntry`/`removeEntry`/`cleanupCommon`,
+  so the alias-safety check is now O(1). Behaviour is preserved: the
+  existing `TestPatternAtlasSlotReclamation` cases (slot reuse,
+  alias-doesn't-free, free-slot capacity) all pass. In
+  `GraphicsManager.endSpriteSatCollectionAndReplay()` and
+  `buildSpriteSatReplayCommands()` the per-frame defensive copy of
+  `spriteSatEntries`, the `new ArrayList<PatternRenderCommand>()` in the
+  replay builder, and the per-piece `new PatternDesc()` in
+  `appendDirectReplayCommands()` were eliminated. `process(...)` is the
+  only consumer of the live entry list and either returns a fresh list or
+  `List.of()` so the input can be drained directly; `reusableReplayCommands`
+  and `reusableReplayDesc` are now reusable instance fields cleared at
+  start of each replay (mirroring `PlayerSpriteRenderer.reusableDesc`).
+  Net effect on the SAT replay hot path: 0 `ArrayList` allocations and 0
+  `PatternDesc` allocations per call (was 2 + N).
+- **F3: extracted `LevelManager` rendering pipeline into `LevelRenderer`.**
+  Moved the per-frame rendering pass off `LevelManager`. The new
+  `LevelRenderer` (in `com.openggf.level`) owns the pre-allocated
+  `GLCommand` lambdas (water shader setup, BG ensure-capacity / tile pass /
+  scroll, FG low+high priority passes, high-priority FBO pass, shimmer
+  enable/disable), their mutable backing fields, the `viewportBuffer`, the
+  resolved `AdvancedRenderFrameState`, the `currentShimmerStyle` tracker,
+  and the bodies of `drawWithRenderOptions / renderSpriteObjectPass /
+  renderEndingBackground / renderBackgroundShader / updateWaterShaderState
+  / enqueueForegroundTilemapPass / renderHighPriorityTilesToFBO`.
+  `LevelManager` keeps the public `draw / drawWithSpritePriority /
+  drawWithRenderOptions / renderSpriteObjectPass / renderEndingBackground`
+  entry points as one-line delegators so existing callers (`Engine.draw*`,
+  `S1/S2DataSelectImageCacheManager`, visual regression tests) are
+  unchanged. The render output is byte-identical: GL command registration
+  order and shader uniform values are preserved. `LevelManager` shrinks
+  from 4812 to 3768 lines (~22% reduction) and now imports only
+  `glClearColor` from LWJGL (down from four `org.lwjgl.opengl.GL*.*`
+  wildcard imports). The water shader state block is part of the
+  extraction (`waterShaderSetupCommand`, `disableShimmerCommand`,
+  `disableWaterShaderCommand`). Test profile matches the baseline at
+  4216 passed / 44 failed / 0 errors.
+- **F2 phase 4: completed `ScrollEffectComposer` adoption across all scroll
+  handlers.** Migrated the remaining eight handlers from inline buffer
+  bookkeeping to the shared composer: S2 `SwScrlOoz`, `SwScrlArz`,
+  `SwScrlCnz` (rippling segment + 9 banded segments), `SwScrlDez` (36-element
+  TempArray-driven row segments), `SwScrlWfz` (data-array-driven layer
+  selection with normal/transition arrays), `SwScrlHtz` (gradient parallax
+  for animated clouds + earthquake mode), S3K `SwScrlSlots` (per-line
+  parallax driven by background deform segments + plane row updates), and
+  S3K `SwScrlGumball` (per-column FG VSCROLL for machine body). Each handler
+  now drives its own `ScrollEffectComposer` instance, writes its packed
+  scroll output through the composer (including per-line ripple, segment
+  fills, and pre-packed `int` writes), and publishes the composed buffer
+  back to the caller's `horizScrollBuf` via `copyPackedScrollWordsTo`. Min/
+  max scroll-offset bounds and `vscrollFactorBG` flow through the composer's
+  tracked state. Added two helper overloads to the composer to support
+  HTZ's pre-packed scroll writes:
+  `writePackedScrollWord(int, int)` and
+  `fillPackedScrollWords(int, int, int)`. With this commit, every
+  `AbstractZoneScrollHandler` subclass (26 of 26: 7 S1, 11 S2, 8 S3K) goes
+  through `ScrollEffectComposer`, completing the F2 scroll-handler unification.
+  All scroll-handler unit tests remain green at the prior baseline; the
+  pre-existing `SwScrlArzTest` / `SwScrlMczTest` setUp errors
+  (EngineServices not configured) are unchanged.
+- **F2 phase 3: migrated banded scroll handlers to `ScrollEffectComposer`.**
+  Continues the F2 architectural fix by migrating the next set of scroll
+  handlers - those whose `update()` writes a sequence of constant-bg-per-band
+  fills, possibly with a small per-line section. Migrated: S3K `SwScrlCnz`
+  (boss + normal CNZ paths); S2 `SwScrlEhz`, `SwScrlCpz`, `SwScrlMcz`; S1
+  `SwScrlGhz` (and by inheritance `SwScrlEnd`), `SwScrlMz`, `SwScrlSlz`,
+  `SwScrlSyz`. Each handler now drives its own `ScrollEffectComposer`,
+  building the packed scroll buffer via `fillPackedScrollWords` for constant
+  bands and `writePackedScrollWord` for per-line writes (water surface
+  ripple, perspective interpolation, ARZ-style row variation), then
+  publishes the composed words to the caller's `horizScrollBuf` via
+  `copyPackedScrollWordsTo`. Vscroll factor and min/max scroll-offset
+  bounds now flow through the composer. EHZ preserves its ROM-bug behavior
+  (lines 222-223 left untouched in caller buffer) by copying only the
+  written line range. Output is byte-identical to the prior loops; all
+  zone-specific scroll tests (Ghz, Mz, Cpz, Cnz, Mcz, Ooz,
+  TestScrollEffectComposer, ParallaxMczTest, TestS3kCnzBossScrollHandler,
+  TestSonic3kCnzScroll, TestSwScrlHtzEarthquakeMode, plus the prior-migrated
+  Aiz/Hcz/Mgz/Slots tests) still pass on the prior baseline. Remaining
+  banded handlers (S2 `SwScrlOoz`, `SwScrlArz`, `SwScrlCnz`, `SwScrlDez`,
+  `SwScrlWfz`) and complex handlers (S2 `SwScrlHtz`, S3K `SwScrlSlots`,
+  `SwScrlGumball`) will be migrated in subsequent phases.
+- **F2 phase 2: migrated trivial scroll handlers to `ScrollEffectComposer`.**
+  The architectural review found `ScrollEffectComposer` was used by only 3 of
+  8 S3K scroll handlers, and 0 of the 11 S2 + 7 S1 handlers. This commit
+  migrates the seven handlers whose `update()` is a uniform/constant FG/BG
+  parallax fill (no per-line VScroll, no waterline, no deform): S3K
+  `SwScrlS3kDefault` and `SwScrlPachinko`; S2 `SwScrlMtz` and `SwScrlScz`; S1
+  `SwScrlLz`, `SwScrlSbz`, and `SwScrlFz`. Each handler now drives a
+  per-instance `ScrollEffectComposer` with `fillPackedScrollWords` /
+  `setVscrollFactorBG`, and copies the composed buffer back into the caller's
+  `horizScrollBuf` via `copyPackedScrollWordsTo`. Min/max scroll-offset
+  tracking now flows through the composer's bounds rather than the legacy
+  `trackOffset()` calls. Output bytes are byte-identical to the prior loops.
+  Remaining S1/S2 banded handlers, S2/S3K complex handlers (HTZ, Slots,
+  Gumball), and the S3K CNZ handler will follow in later phases.
+- **S2 badnik child spawn safety: migrated direct `objectManager.addDynamicObject()`
+  calls to `spawnFreeChild()` for `BalkiryBadnikInstance`, `AsteronBadnikInstance`,
+  and `AquisBadnikInstance`.** Follow-up to the prior S1 badnik migration covering
+  the three S2 badniks explicitly named alongside the S1 ones in the F1b
+  architectural-fix review. Balkiry's jet-exhaust child, Asteron's
+  explosion + 5-spike-projectile burst, and Aquis's bullet projectile were all
+  calling `services().objectManager().addDynamicObject(child)` directly,
+  bypassing `AbstractObjectInstance.CONSTRUCTION_CONTEXT`. Routing through
+  `spawnFreeChild(Supplier)` sets the construction-time `ObjectServices`
+  ThreadLocal before the child factory runs and preserves the ROM-equivalent
+  `FindFreeObj` (low-slot) allocation semantics that the prior
+  `addDynamicObject` path had. Slot ordering, child types, and spawn timing are
+  byte-for-byte identical; the only behavioral difference is that child
+  constructors may now safely call `services()`. The full S2 test suite stays
+  on its prior baseline (4119 passed, 44 failed, 23 errors — pre-existing,
+  unrelated `TestSonic1SBZEvents` etc. configuration failures, identical
+  before and after the change). Other S1/S2 object instances still call
+  `objectManager.addDynamicObject` directly (~63 S1 callers plus several S2
+  badniks such as Octus/Slicer/Shellcracker/Sol/Turtloid) and will be migrated
+  in subsequent passes; this commit covers only the badniks explicitly listed
+  in the F1b architectural review.
+- **S1 badnik child spawn safety: migrated direct `objectManager.addDynamicObject()`
+  calls to `spawnFreeChild()` for `Sonic1BallHogBadnikInstance`,
+  `Sonic1BombBadnikInstance`, `Sonic1CaterkillerBadnikInstance`, and
+  `Sonic1OrbinautBadnikInstance`.** The four S1 badniks that ROM-spawn projectile,
+  fuse/explosion/shrapnel, body-segment, or orbiting-spike children were calling
+  `services().objectManager().addDynamicObject(child)` directly. That bypasses
+  `AbstractObjectInstance.CONSTRUCTION_CONTEXT`, so any child constructor that
+  invokes `services()` would throw `IllegalStateException` when reached through
+  these spawn paths. Routing through the inherited `spawnFreeChild(Supplier)`
+  helper sets the construction-time `ObjectServices` ThreadLocal before the child
+  factory runs, preserves the ROM-equivalent `FindFreeObj` (low-slot) allocation
+  semantics that the prior `addDynamicObject` call had, and keeps the existing
+  `allocateSlotAfter` chains for Bomb/Caterkiller/Orbinaut intact (the helper is
+  a no-op when a slot is already pre-assigned). Slot ordering, child types, and
+  spawn timing are byte-for-byte the same; the only behavioral difference is that
+  child constructors may now safely call `services()`. Per-object regression tests
+  (`TestSonic1CaterkillerBodyChaining`, `TestSonic1LabyrinthObjectsBasic`) and the
+  S1 trace replays (`TestS1Ghz1TraceReplay`, `TestS1Mz1TraceReplay`,
+  `TestS1Credits00Ghz1TraceReplay`, `TestS1Credits06Sbz2TraceReplay`,
+  `TestS1Credits07Ghz1bTraceReplay`) all stay green; the five pre-existing credits
+  trace failures (Mz2/Syz3/Lz3/Slz3/Sbz1) are unchanged in count and first-error
+  frame relative to the baseline. Other S1 object instances still call
+  `objectManager.addDynamicObject` directly and will be migrated in subsequent
+  passes; the listed badniks are the highest-risk subset because they are the
+  ones explicitly named in the F1b architectural-fix task and the ones whose
+  child types are most likely to gain `services()`-using constructors next.
+- **S1 badnik/object subpixel math: migrated to shared `SubpixelMotion` helper.**
+  ~17 Sonic 1 badnik and object instances each maintained their own private
+  `xSubpixel` / `ySubpixel` int fields and reimplemented 16:8 (`<<8`) or 16.16
+  (`<<16`) ROM fixed-point integration inline (`pos = (px << 8) | sub; pos +=
+  vel; ...`). All occurrences in `game.sonic1.objects` (Crabmeat, Caterkiller
+  head + body, Cannonball, Chopper, Motobug, Newtron, Roller, Yadrin, Orbinaut
+  + spike, BallHog, Gargoyle fireball, GirderBlock, LavaBall, LavaGeyser,
+  LavaWall, PushBlock) now consolidate the accumulators into a single
+  `SubpixelMotion.State motion` field per class and call
+  `SubpixelMotion.moveSprite` / `moveSprite2` / `moveX` / `speedToPos` /
+  `speedToPosY` for the integration. Existing (sometimes ROM-divergent)
+  semantics are preserved verbatim -- e.g. Cannonball/BallHog still apply
+  gravity *before* the Y move via a manual pre-increment + `moveSprite2`,
+  Gargoyle's fireball X-only path remains numerically identical for its
+  `±$200` velocity, and PushBlock's slow-sink direct 16.16 add and per-axis
+  velocity guards stay byte-for-byte the same. Pre-existing baseline test
+  failures (S1 trace replays, S3K trace replays, etc.) are unchanged in count
+  and first-error frame, confirming zero regression.
+- **HCZ wall chase: migrated BG-high overlay render and active flag off
+  `LevelManager` / `GameStateManager`.** The S3K-only inline render method
+  `LevelManager.renderBgHighPriorityOverlay()` (and its caller in
+  `LevelManager.draw()`) and the matching
+  `GameStateManager.bgHighPriorityOverlayActive` field were a zone-specific
+  leak in shared infrastructure -- the same architectural concern just fixed
+  for HTZ in the previous commit. The overlay was extracted into a new
+  `HczWallChaseBgOverlayEffect` (`com.openggf.game.sonic3k.render`) that
+  registers itself at the `AFTER_SPRITES` stage from
+  `Sonic3kZoneFeatureProvider`. The active flag storage moved into
+  `Sonic3kHCZEvents.wallChaseBgOverlayActive` (now the canonical source for
+  `HczZoneRuntimeState.wallChaseBgOverlayActive()`); a private
+  `setWallChaseBgOverlayActive(boolean)` setter encapsulates the
+  activation/deactivation transitions previously written through
+  `gameState().setBgHighPriorityOverlayActive(...)`. The
+  `bgHighPriorityOverlayActive` field plus its getter/setter on
+  `GameStateManager` are gone. HCZ-specific reference counts in
+  `LevelManager.java` and `GameStateManager.java` dropped to comments only
+  (no runtime references).
+- **HTZ earthquake: migrated BG-high overlay render and active flag off
+  `LevelManager` / `GameStateManager`.** The HTZ-only inline render method
+  `LevelManager.renderHtzEarthquakeBgHighOverlay()` (and its caller in
+  `LevelManager.draw()`) and the matching `GameStateManager.htzScreenShakeActive`
+  field were a long-standing zone-specific leak in shared infrastructure. The
+  shared `SpecialRenderEffectRegistry` framework already exists for exactly
+  this case (CNZ slot overlay, AIZ battleship, water surface), so the overlay
+  was extracted into a new `HtzEarthquakeBgOverlayEffect`
+  (`com.openggf.game.sonic2.render`) that registers itself at the
+  `AFTER_FOREGROUND` stage from `Sonic2ZoneFeatureProvider`. The active flag
+  storage moved into `Sonic2HTZEvents.earthquakeActive` (now the canonical
+  source for `HtzRuntimeState.earthquakeActive()`); a new
+  `setEarthquakeActive(boolean)` setter encapsulates the screen-shake-active
+  + tilemap-invalidation side effects that previously lived in
+  `ParallaxManager.setHtzScreenShake`. `ParallaxManager.setHtzScreenShake` and
+  the `htzScreenShakeActive` getter/setter on `GameStateManager` are gone.
+  `LevelTilemapManager` now consults a generic
+  `ZoneRuntimeState.requiresFullWidthBgTilemap()` default method (overridden
+  by `HtzRuntimeStateView`) instead of reading the HTZ flag from
+  `GameStateManager`. Htz reference counts dropped from 7→0 in
+  `LevelManager.java` and from 5→0 in `GameStateManager.java`.
+- **WaterSystem: moved per-game visual oscillation behind `WaterDataProvider`.**
+  `WaterSystem.getVisualWaterLevelY()` previously hard-coded
+  `gameId == GameId.S2 && zoneId == ZONE_ID_CPZ` and `gameId == GameId.S1 &&
+  (zoneId == LZ || (zoneId == SBZ && actId == 2))` branches in shared
+  infrastructure -- a direct violation of the feature-flag/provider rule.
+  Added a new `int getVisualWaterLevelOffset(int zoneId, int actId)` default
+  method to `WaterDataProvider` (default returns 0). `Sonic2WaterDataProvider`
+  overrides for CPZ to apply oscillator-0 bobbing centered at -8 (~ring
+  height); `Sonic1WaterDataProvider` overrides for LZ and SBZ3 with the ROM's
+  `oscillation >> 1` LZWaterFeatures.asm formula; S3K provider keeps the
+  default 0 (no oscillation). `WaterSystem` now resolves the provider via
+  `GameServices.module().getWaterDataProvider()` and adds the offset to the
+  base level. `getGameId()` count in `WaterSystem` dropped from 1 to 0; the
+  unused `GameId` and `OscillationManager` imports were removed.
+- **PhysicsFeatureSet: replaced game-id branches in `LevelManager` with feature flags.**
+  `LevelManager` had three branches that dispatched on game identity: two
+  copies of `gameModule.getGameId() == GameId.S3K` to opt the S3K respawn-
+  table latch in (line 917 in level load, line 4441 in act-transition
+  rebind), and one `activeModule instanceof Sonic1GameModule` arm in
+  `objectsExecuteAfterPlayerPhysics()` that bridged S1 onto the post-physics
+  object-execution path (its collisionModel is UNIFIED, so the prior
+  `DUAL_PATH || instanceof S1` test added S1 explicitly). Per CLAUDE.md's
+  "never use game-name if/else chains -- always use feature flags" rule,
+  promoted both to `PhysicsFeatureSet` fields: `permanentRespawnTableLatch`
+  (true for S3K only, cite sonic3k.asm:20953 `bset #7,status(a1)` in
+  `Touch_EnemyNormal`) and `objectsExecuteAfterPlayerPhysics` (true for S1/S2/S3K
+  per the 2026-04-18-solid-ordering-rom-accuracy plan). `LevelManager` now
+  reads both flags through `gameModule.getPhysicsProvider().getFeatureSet()`,
+  the `Sonic1GameModule` import is gone, and the `getGameId()` count in
+  `LevelManager` dropped from 3 to 1 (the one remaining use is in unrelated
+  diagnostic logging). `CrossGameFeatureProvider` and
+  `TestHybridPhysicsFeatureSet` propagate both new fields from the base
+  game; `TestPhysicsProfile` adds regression cases asserting the per-game
+  values.
+- **GameServices: unified `hasRuntime()` predicate with `gameplayModeOrNull()`,
+  migrated `bonusStage()` accessor off `RuntimeManager.getCurrent()`.**
+  `GameServices.hasRuntime()` previously checked
+  `RuntimeManager.getActiveRuntime() != null` while `gameplayModeOrNull()` and
+  every `*OrNull()` accessor checked
+  `SessionManager.getCurrentGameplayMode() != null && mode.getCamera() != null`.
+  After `RuntimeManager.parkCurrent()`, those two predicates disagreed:
+  `hasRuntime()` returned `false` while `gameplayModeOrNull()` could still
+  return non-null (the gameplay mode lives on past the runtime in
+  `SessionManager`). Code that guarded on `hasRuntime()` and then read via the
+  `*OrNull()` accessors could read parked-context state. Unified
+  `hasRuntime()` to delegate to `gameplayModeOrNull() != null` so both
+  predicates always agree.
+  Separately, `GameServices.bonusStage()` previously called
+  `requireRuntime()` -> `RuntimeManager.getCurrent()`, which has a side
+  effect: when the current runtime's `GameplayModeContext` no longer matches
+  `SessionManager.getCurrentGameplayMode()` it calls `current.destroy()` and
+  clears `current`. Calling `bonusStage()` during a mode transition could
+  silently destroy a live runtime. Migrated the active bonus-stage provider
+  field off `GameRuntime` onto `GameplayModeContext` (gameplay-scoped
+  lifetime, transferred across `parkCurrent`/`resumeParked`); `GameRuntime.
+  getActiveBonusStageProvider()` and `setActiveBonusStageProvider()` now
+  delegate to the mode context for source compatibility. `GameServices.
+  bonusStage()` and `bonusStageOrNull()` now resolve through
+  `requireGameplayMode(...)` / `gameplayModeOrNull()` and never call
+  `RuntimeManager.getCurrent()`. `requireRuntime(...)` is now unused inside
+  `GameServices`, marked `@Deprecated`. New tests cover the predicate-
+  equivalence invariant across no-runtime/active/parked/destroy transitions
+  and verify that repeated `bonusStage()` calls do not destroy the active
+  runtime. Architectural fix Task B1.
+- **Engine: reset GL state before post-fade `CREDITS_DEMO` sprite pass.**
+  In `Engine.display()`, the credits-demo branch that re-renders sprites
+  on top of the fade overlay (`shouldRenderDemoSpritesOverFade()`) now
+  invokes `GraphicsManager.resetForFixedFunction()` before the sprite
+  pass. The fade shader binds a program and toggles blend/depth state,
+  and although `FadeManager` restores blend on its own, the subsequent
+  sprite pass should not inherit the fade pass's leftover shader/texture
+  bindings. Architectural fix Task A3.
+- **S1 credits-demo bootstrap: removed trace-derived starting-pose override.**
+  `Sonic1CreditsDemoBootstrap.applyStartingPose` previously forced a
+  per-demo `setAnimationId` (WALK for demo 0, WAIT for demos 1-7) and
+  `setDirection(RIGHT)` whose values were derived from frame-zero trace
+  recordings rather than from the ROM. This was a spec violation of the
+  CLAUDE.md "Trace Replay Tests" comparison-only invariant — the bootstrap
+  must be ROM-derived only. `applyStartingPose` is deleted entirely; the
+  engine's natural post-spawn init and first `Sonic_Animate` pass now drive
+  the frame-zero pose. The credits-demo tests retain the same 3-pass /
+  5-fail profile (failures are pre-existing engine bugs at frame 221+, now
+  documented under "Sonic 1 credits demo trace replay divergences" in
+  `docs/KNOWN_DISCREPANCIES.md`). The class-level Javadoc citation in
+  `Sonic1CreditsDemoBootstrap` was also incorrect (pointed at
+  `Level_ChkDemo` at sonic.asm:2987-2990 — a timer/restart check, not the
+  demo bootstrap); corrected to `EndingDemoLoad` (sonic.asm:3827) and
+  `EndDemo_LampVar` (sonic.asm:3879). The same incorrect line numbers in
+  `Sonic1CreditsDemoData` (4171/4176) are corrected in step.
+- **Trace replay: hardened invariant guard and removed S1 credits-demo
+  hydration.** `AbstractCreditsDemoTraceReplayTest.applyFrameZeroPlayerSnapshot`
+  and `setupLzDemoState` previously read `TraceEvent.StateSnapshot.fields()`
+  and `TraceFrame.rings()/cameraX()/cameraY()` on frame 0 and wrote ~10
+  player/camera fields back into the engine — exactly the per-frame
+  comparison-only invariant violation that CLAUDE.md "Trace Replay Tests"
+  forbids. `TestTraceReplayInvariantGuard` did not catch this because its
+  forbidden-string list missed the new patterns. The two debug probes
+  (`DebugS1Credits03LzDoorProbe`, `DebugS1Credits05SbzJunctionProbe`)
+  inherited the same anti-pattern. Replaced the hydration with a
+  deterministic constants-only `Sonic1CreditsDemoBootstrap` helper that
+  applies the LZ Act 3 lamppost state from `Sonic1CreditsDemoData`
+  constants. (The starting-pose override added in this commit was itself a
+  spec violation and has been removed in the follow-up bullet above.) The LZ ring count is set to 0 (matching
+  ROM `Lamp_LoadInfo` in `_incObj/79 Lamppost.asm`, which loads
+  `v_lamp_rings` then immediately clears `v_rings` to 0) instead of the
+  `LZ_LAMP_RINGS=13` table value that ROM loads but never keeps. The guard
+  now rejects: any `applyFrameZeroPlayerSnapshot(`/`applyCustomRadii(` call,
+  any `fields.get("...")` snapshot read, any `frameZero != null` /
+  `recordedRings = frameZero` / `recordedCamera...` local-variable binding
+  that downstream-feeds engine setters, and a generic regex
+  `\.set[A-Z]\w*\([^)]*\b(state|frame|snapshot|sn)\.\w+` that catches setter
+  calls reading directly from a trace-side identifier. All 8 S1 credits demo
+  trace replay tests retain their pre-existing pass/fail profile after the
+  cleanup (3 pass, 5 fail on long-standing engine divergences unrelated to
+  this task).
+- **S3K: HCZ object art now ROM-only — eliminated `docs/skdisasm/` runtime
+  reads.** `Sonic3kObjectArtProvider` previously parsed three HCZ object
+  mapping tables (`Map_HCZMiniboss`, `Map_HCZEndBoss`, `Map_HCZWaterWall`) by
+  reading `.asm` source files from `docs/skdisasm/Levels/HCZ/Misc Object
+  Data/` at runtime via `Files.readAllLines`, violating the project's "ROM
+  only for runtime assets" hard rule and silently degrading to invisible
+  sprites whenever the disassembly tree was absent (CI / fresh clones). All
+  three call sites now use `S3kSpriteDataLoader.loadMappingFrames` with
+  ROM-verified table-base addresses
+  (`MAP_HCZ_MINIBOSS_ADDR=0x3629E0`,
+  `MAP_HCZ_END_BOSS_ADDR=0x3634D4`,
+  `MAP_HCZ_WATERWALL_ADDR=0x22EE10`); the existing
+  `MAP_HCZ_MINIBOSS_ADDR=0x362A28` constant was incorrect (pointed at the
+  first frame body rather than the offset table) and is now corrected. The
+  old asm-include parser, the duplicate-frame workaround for shared
+  `Frame_362BB0` labels (no longer needed because ROM-based reading of
+  duplicate offsets yields duplicate frames naturally), and the three `Path`
+  constants under `docs/` are removed.
+- **Runtime ownership migration: GameServices decoupled from GameRuntime
+  façade.** `GameServices` now resolves all gameplay-scoped manager accessors
+  through `SessionManager.getCurrentGameplayMode()` directly rather than via
+  `RuntimeManager.getCurrent()`/`GameRuntime.getX()`. Migrated ~58 mechanical
+  call sites across 27 files (engine top-level, level/sprite/graphics, S2/S3K
+  game-specific, plus tests) from `RuntimeManager.getCurrent().getX()` and
+  `runtime.getX()` patterns to the appropriate `GameServices.X()` accessors.
+  After the change, the `GameRuntime` façade still exists as a lifecycle
+  handle but is no longer load-bearing for production gameplay code; the only
+  remaining `GameRuntime` references are foundational (constructor parameters
+  for `DefaultObjectServices`/`RuntimeSaveContext`, the
+  `TraceReplayFixture.runtime()` interface contract, lifecycle methods on
+  `RuntimeManager`, and tests that legitimately exercise runtime instance
+  identity). Tests that asserted "post-`destroyCurrent` GameServices throws"
+  were updated to also call `SessionManager.clear()` since the new lifecycle
+  is "destroy runtime → managers reset, but gameplay-mode context still
+  alive; clear session → gameplay-mode context gone, GameServices throws".
+- **Runtime ownership migration: gameplay state split by lifetime.**
+  Per `docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md`,
+  the design's load-bearing split is now in place: `WorldSession` owns the
+  durable world data (active `GameModule`, the loaded `Level` including its
+  `MutableLevel` layout, and zone/act metadata); `GameplayModeContext` owns
+  the disposable gameplay-scoped managers (Camera, Timer, GameState, Fade,
+  Rng, SolidExecution, Water, Parallax, TerrainCollision, Collision, Sprite,
+  LevelManager) and the runtime-shared registries (`ZoneRuntimeRegistry`,
+  `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`,
+  `SpecialRenderEffectRegistry`, `AdvancedRenderModeController`,
+  `ZoneLayoutMutationPipeline`). `GameRuntime` is now a thin coordinator
+  façade whose getters delegate to the gameplay mode context — its 18
+  manager fields are gone. `LevelManager` keeps a write-through cache for
+  zone/act/level reads but `WorldSession` is the source of truth, so a
+  freshly-constructed `LevelManager` after editor exit re-inherits the
+  loaded level automatically. `GameplayModeContext.initializeFreshGameplayState()`
+  resets the design's "non-preserved" counters (score, timer, checkpoint)
+  on editor exit. New tests
+  `editorRoundTrip_preservesWorldSessionAndResetsGameplayCounters` and
+  `editorRoundTrip_preservesMutableLevelMutations` verify the editor enter/exit
+  round trip preserves world data + a `MutableLevel` mutation while resetting
+  session counters. `LevelManager.restoreInheritedLevel()` is added as a
+  building block for the future "drop `RuntimeManager.parkCurrent`" cleanup.
+  The empty `EngineContext` stub is removed (its role is already played by
+  `EngineServices`). Eliminating the `GameRuntime` façade entirely (51 file
+  refs) and replacing the parking flow with direct teardown remain mechanical
+  follow-ups, not blocking.
+- **Force-snap camera centres on `sprite_x - 160`, matching ROM.**
+  `Camera.updatePosition(force=true)` previously placed the camera at
+  `sprite.getCentreX() - 152` (the midpoint of the 144-160 horizontal
+  scroll deadzone). The ROM's level-load routine (s1disasm
+  `_inc/LevelSizeLoad & BgScrollSpeed.asm:111`, s2.asm:14787,
+  sonic3k.asm:38241) snaps to `MainCharacter.x_pos - $A0` (160) — the
+  right edge of the deadzone — before clamping to level bounds. The
+  off-by-8 error showed up as a +8 px engine `camera_x` at frame 0 in
+  six S1 credits demo trace replays (Mz2, Syz3, Slz3, Sbz1, Sbz2,
+  Ghz1b) plus S3K MGZ, but was hidden whenever the snap was clamped to
+  the left boundary (S1 GHZ1, S1 MZ1, S2 EHZ1, S3K AIZ all start
+  near `x=0` so the clamp masked the bug). With the formula corrected,
+  S1 Credits06 Sbz2 and S1 Credits07 Ghz1b pass cleanly; the remaining
+  S1 credits demos and S3K MGZ no longer report `camera_x` as the first
+  error and instead surface downstream parity issues for follow-up.
+- **Trace replay now validates camera position pixel-for-pixel.** The
+  BizHawk trace recorders (`tools/bizhawk/s{1,2,3k}_trace_recorder.lua`)
+  already capture ROM `Camera_X_pos` / `Camera_Y_pos` each frame, but
+  `TraceBinder` only displayed them as diagnostic context — divergent
+  engine camera scrolling was silently ignored. `TraceBinder.compareFrame`
+  now produces `camera_x` / `camera_y` field comparisons whenever both
+  ROM trace and engine diagnostics recorded coordinates, with both sides
+  masked `& 0xFFFF` to align ROM's u16 representation with the engine
+  `Camera.getX()/getY()` short return value across the sign boundary.
+  `ToleranceConfig` gains `cameraWarn` / `cameraError` (default 1/1, so
+  any mismatch is an ERROR) and a `withCameraTolerances(warn, error)`
+  opt-out for explicit per-test relaxation; the default is unchanged
+  pixel-perfect. `EngineDiagnostics` now stores `cameraY` alongside
+  `cameraX` and exposes a `formattedWithCamera(x, y, text)` factory so
+  `AbstractTraceReplayTest`'s precollapsed-context wrapper retains
+  numerics for comparison. The new comparator path enabled `S2 EHZ1`
+  trace replay end-to-end and surfaced previously-hidden S3K camera
+  divergences (AIZ/CNZ/MGZ/HCZ replay tests now show `camera_x` or
+  `camera_y` deltas at specific frames, e.g. AIZ1 frame 289 reports
+  `camera_y` expected `0x0396`, actual `0x0390`) for follow-up triage.
+- **S2 EHZ trace replay — Tails frame 3644 slope-resist parity fix.**
+  Engine `doSlopeResist` previously applied slope force to all games
+  whenever `g_speed == 0` and `|slope_force| >= 0x0D`, mirroring S3K
+  `Player_SlopeResist` (sonic3k.asm:23830-23856) which branches to
+  `loc_11DDC` when stationary and applies the force conditionally.
+  S1/S2 ROM (s1disasm/_incObj/01 Sonic.asm:1243-1244;
+  s2.asm:37394-37395, 40249-40250) instead returns unconditionally on
+  `tst.w inertia(a0) / beq.s` — a stationary S1/S2 player on a steep
+  slope stays put. Gated the at-rest kick behind a new
+  `PhysicsFeatureSet.slopeResistAppliesAtZeroInertia` flag (true for
+  S3K, false for S1/S2). `TestS2Ehz1TraceReplay.replayMatchesTrace`
+  goes from 26 errors at frame 3644 (Tails decelerated to `g_speed=0`
+  on angle 0xD0, ROM kept her stationary while engine slid her back
+  down the loop) to a full pass; S3K trace replays unaffected (S3K
+  flag is `true`, behaviour unchanged).
+- **Trace Test Mode — pause-time camera focus visualiser.** While
+  paused during a live trace session, the user can now cycle the
+  camera between up to five focus targets using the configured P1
+  LEFT/RIGHT keys: `Default` (the camera position at pause entry),
+  `Sidekick (Eng)` / `Sidekick (Trace)` (centred on the engine's
+  first sidekick or the recorded ROM-trace sidekick position), and
+  `Main (Eng)` / `Main (Trace)` (centred on the engine's main
+  playable sprite or the trace's recorded position). Trace variants
+  are skipped when their position equals the engine's; sidekick
+  options are skipped when no engine sidekick is spawned; main
+  options are skipped when the main player is despawned. The active
+  focus is shown in the top-right HUD as `Camera: <Mode>` with a
+  `<- -> Cycle Cameras` hint. On unpause, the camera snaps back to
+  its pre-pause position; gameplay determinism is preserved across
+  frame-step (camera is restored before the step runs and re-applied
+  after). The controller mutates only `Camera.setX/setY` — it never
+  calls `updatePosition` or any other manager update path, so no
+  object placement, parallax, or trace-recording state is disturbed.
+- **CNZ Trace F8123 — CNZ bumper misses sidekick Tails touch at
+  pixel-edge overlap (diagnosis only).** After the F7923 Clamer cprop
+  fix landed, the next CNZ first error is at F8123 (2683 errors). Tails
+  is following Sonic in `Tails_CPU_routine=6` (`loc_13D4A`,
+  sonic3k.asm:26656), airborne+rolling (`status=0x07`) at
+  `(x_pos=0x0F05, y_pos=0x0472)` with `(x_vel=0x00D7, y_vel=0x0268)`.
+  The CNZ stationary bumper at slot 14 (`object_code=0x00032EAA =
+  loc_32EAA`, sonic3k.asm:68850-68886) sits at `(0x0F00, 0x0488)` with
+  `width_pixels=$10, height_pixels=$10`, so its top edge is exactly at
+  Tails' bottom edge (`y=0x0480`). ROM treats this exact-edge contact
+  as a hit, runs `sub_32F56` (sonic3k.asm:68950-68992):
+  `x_vel = sin(arctan(bumper-player)+frame&3) × -$700 / 256` and
+  `y_vel = cos(...) × -$700 / 256`, plus `bset Status_InAir`,
+  `bclr Status_RollJump`, `bclr Status_Push`, `clr.b jumping`, then
+  spawns `Obj_EnemyScore` (`loc_2CD0C`, sonic3k.asm:61375). Three
+  evidence lines from `aux_state.jsonl` confirm this is the path:
+  (1) an `object_appeared` event at F8123 for slot 7 with
+  `object_type=0x0002CCE0` (`Obj_EnemyScore`) at the bumper's
+  `(0x0F00, 0x0488)`; (2) the next `Obj_EnemyScore` spawn at F8150 (27
+  frames later, the orbit-period gap) confirming the bumper as the
+  spawn source; (3) ROM `tails_x_speed` jumps `0x00D7 → 0x0230`,
+  `tails_y_speed` jumps `0x0268 → -0x06A5` -- discontinuous changes
+  incompatible with `Tails_InputAcceleration_Freespace` drag plus
+  `MoveSprite_TestGravity` air physics, but consistent with the bumper
+  full sin/cos/-$700 reseed. Engine `tails_x_speed` ends at `0x00BF`
+  (`= 0x00D7 - 0x18` air drag) and `tails_y_speed` at `0x02A0`
+  (`= 0x0268 + 0x38` gravity), i.e. the sidekick's frame-end state is
+  just the airborne-roll physics with no bumper bounce applied. The
+  divergence is upstream of `applyBounce` (which is sin/cos/-$700
+  correct) -- the engine's per-frame near-object scan window for the
+  sidekick appears to drop the stationary CNZ bumper before the touch
+  test runs (Sonic at `(0x0DE5, 0x0309)` is >600px from the bumper
+  while Tails' AABB edge overlaps it). Documented in
+  `docs/S3K_KNOWN_BUGS.md` with three engine-side fix candidates.
+  CNZ first-error stable at F8123 this round. AIZ first-error at
+  F8927 unchanged. S1 GHZ / S1 MZ1 / S2 EHZ trace replays remain GREEN.
+- **AIZ Trace F8927 — diagnosis-only entry for the next first
+  trace error after the F7660 swing-bounce fix landed.** Trace
+  shows Sonic rolling+airborne (`status=0x06`,
+  `status_secondary=0x11` Fire Shield) descending into the AIZ2
+  boss-arena entrance with `x_speed` capped at `0x0179` from F8923
+  through F8926; at F8927 the ROM zeroes `x_speed` and freezes
+  `x_pos` at `0x1208`, while the engine retains `0x0179` and drifts
+  ahead, producing 896 cascading errors over the next ~340 frames
+  including a phantom land at F8942. ROM frames F8931 onward show
+  the canonical "rolling-air sliding into a flush right-side wall"
+  signature: `x_speed` cycles 0 → 0x18 → 0x30 → 0x48 → 0x60 → 0
+  every 5 frames with a sub-x snap pushback, matching
+  `SonicKnux_DoLevelCollision`'s `CheckRightWallDist` arm
+  (sonic3k.asm:24061-24065 -- "stop Sonic since he hit a wall"
+  `move.w #0,x_vel(a0)`). The engine never observes that wall
+  hit. Three candidate root causes (missing terrain solid bit at
+  the boss-arena right wall, quadrant-routing skip in our
+  `DoLevelCollision` equivalent, or an x_radius-vs-fixed-`+10`
+  probe-offset mismatch matching the player path's
+  `addi.w #$A,d3` at sonic3k.asm:20195) are documented; the most
+  testable is the probe-offset hypothesis since rolling drops
+  `x_radius` from 9 to 7. No engine change in this round; only a
+  documented diagnosis. AIZ first-error stays at F8927 (errors
+  896). CNZ first-error at F7923 unchanged. S1 GHZ / S1 MZ1 / S2
+  EHZ trace replays remain GREEN.
+- **CNZ1 Trace F7923 — Clamer latched-cprop fired on wrong player
+  (FIXED).** ROM `Touch_Special.loc_103FA` (sonic3k.asm:21186-21194)
+  accumulates per-touch into the spring-child's
+  `collision_property(a1)` byte with a player-identity-dependent
+  increment: `+1` for Player_1 (Sonic), `+2` for Player_2 (sidekick
+  Tails). `Check_PlayerCollision` (sonic3k.asm:179904-179924) then
+  masks `& 3` and indexes `word_85890 = [P1, P1, P2, P2]` to pick the
+  launch target before clearing the byte. The engine's
+  `ClamerObjectInstance` was collapsing this to a single boolean
+  `springCprop`, so when the post-cooldown latch fired the engine
+  always launched the primary `playerEntity` passed into `update()`
+  (Sonic) instead of resolving the byte to the actual toucher. At
+  F7923 the engine launched Sonic into the air with the spring's
+  triplicate `-0x0800` write while ROM had Sonic still on the ground
+  and was re-firing the same spring on Tails. Replaced the boolean
+  with the ROM cprop byte; `onTouchResponse` increments by `+1` for
+  primary, `+2` for `playerEntity.isCpuControlled()` (Tails), and the
+  two latch-fire branches in `advanceSpringRoutine` resolve the
+  target via `cprop & 3` (`1 → primary`, `2 or 3 → first sidekick
+  from services().sidekicks()`). Cprop is cleared on consumption to
+  mirror `clr.b collision_property(a0)`. CNZ first-error advances
+  F7923 -> F8123 (2767 -> 2683 errors); AIZ first-error stable at
+  F8927; S1/S2 trace replays unaffected; `TestClamerObjectInstance`
+  GREEN.
+- **AIZ Mini-boss F7660 — `Swing_UpAndDown` peak bounce-back ROM
+  parity restored.** ROM `Swing_UpAndDown` (sonic3k.asm:177851-177879)
+  applies a bounce-back at the swing apex: when the velocity reaches
+  `±maxSpeed`, the routine flips direction (`bset/bclr #0,$38(a0)`),
+  negates `d0`, and falls into `loc_84812` which adds the now-opposite
+  `d0` back to `d1` in the same frame, so the stored peak velocity is
+  `±maxSpeed ∓ accel`, not the clamped extreme. The engine's
+  `AizMinibossSwingMotion.update()` was clamping the peak to
+  `±maxSpeed` (skipping the `loc_84812` step), so the swing apex held
+  the extreme velocity for one extra frame each half-cycle and the
+  swing drifted ~6 frames out of phase with ROM by trace F7660.
+  With the drifted swing the engine's miniboss y was 3 units low
+  vs ROM at F7660, which let the engine see the boss/Sonic AABB
+  overlap one frame ahead of ROM. ROM boss `Touch_ChkHurt`
+  (sonic3k.asm:20911-20915) negates `x_vel`, `y_vel`, and
+  `ground_vel` on a boss hit, so the ahead-by-one-frame detection
+  flipped Sonic's `g_speed`/`x_speed`/`y_speed` signs at F7660 in
+  the engine while ROM still showed them positive (ROM bounced at
+  F7661). Engine now applies the ROM bounce-back step
+  (`vel += accel` at the up peak, `vel -= accel` at the down peak)
+  so the swing apex matches ROM cycle-for-cycle. AIZ first-error
+  advances 7660 → 8927 (errors 975 → 896). CNZ first-error at F7923
+  unchanged. S1 GHZ / S1 MZ1 / S2 EHZ trace replays remain GREEN.
+- **AIZ Mini-boss F7552 — sidekick hurt-airborne boundary clamp now
+  matches ROM order (MOVE before BOUNDARY).** ROM `Obj01_Hurt`
+  (s2.asm:37820-37834), `Sonic_Hurt` (s1disasm/_incObj/01
+  Sonic.asm:1791-1804), and S3K `loc_122D8`/`loc_156D6`
+  (sonic3k.asm:24449-24467, 29194-29209) all run
+  `MoveSprite_TestGravity2`/`ObjectMove`/`SpeedToPos` BEFORE
+  `Sonic_LevelBound`/`Tails_Check_Screen_Boundaries` for routine 4
+  (hurt). The engine's `PlayableSpriteMovement.modeAirborne` ran the
+  boundary check pre-move for both normal and hurt airborne paths,
+  which lost one frame of lateral motion against
+  `Camera_max_X_pos+$128` during hurt knockback. AIZ Mini-boss F7552
+  trace expected `tails_x=0x1208, tails_x_speed=0x0000` and engine
+  produced `tails_x=0x1207, tails_x_speed=0x0200` (off-by-one px,
+  one frame behind on the right-edge clamp). Engine now reorders
+  the hurt airborne path: `doObjectMoveAndFall` → underwater
+  gravity reduction → `updateSensors` → `doLevelCollision`
+  (Sonic_HurtStop equivalent) → `doLevelBoundary`. AIZ first-error
+  advances 7552 → 7660 (errors 977 → 975). CNZ first-error at F7919
+  unchanged. S1 GHZ / S1 MZ1 / S2 EHZ trace replays remain GREEN.
+- **CNZ F=621 Clamer re-fire — Touch_Special cprop latch landed (round 4).**
+  `ClamerObjectInstance` now models the ROM spring child's `(a0) =
+  loc_890AA -> loc_890C8 -> loc_890D0 -> loc_890AA` cycle (sonic3k.asm:185953-185973)
+  with a three-state machine (LIVE / COOLDOWN_DRAIN / COOLDOWN_DONE)
+  plus a `springCprop` boolean mirroring `collision_property(a0)`
+  (sonic3k.asm:21162-21194). Touch on a cooldown frame latches the
+  cprop byte; the next non-cooldown spring update consumes it and
+  fires (matches the ROM F=619/F=621 fire schedule recorded in the
+  v6.15-s3k CNZ aux events). Spring rect uses ROM-correct cflags
+  `$D7` (`$40 | $17`, 8x8) at all times -- the engine-only
+  `SPRING_RELATCH_COLLISION_FLAGS = $40 | $12` widening and the
+  `springReenableFrame` mechanism are removed. Adds
+  `usesS3kTouchSpecialPropertyResponse()` override so the engine
+  decoder routes `cflags=$D7` through SPECIAL via the
+  Touch_Special property index list (sonic3k.asm:21165-21194),
+  consistent with `CnzBalloonInstance`. `TestS3kCnzTraceReplay`
+  first error advances F7919 -> F7923; F=619-625 zero errors.
+  `TestS3kAizTraceReplay` first error stable at F7552. S1 GHZ /
+  S1 MZ1 / S2 EHZ trace replays GREEN. `TestClamerObjectInstance`
+  6/6 GREEN.
+
+- **Trace visualizer ghost characters.** Test-mode visual trace sessions now
+  render grayscale, distance-faded ghost copies of the traced main character
+  and first sidekick during desyncs. Ghosts hydrate only render state from the
+  trace, keep isolated sidekick-style DPLC banks so their animation/art state
+  cannot corrupt real players or sidekicks, share the mirrored character's
+  render bucket and tile-priority layer, and draw behind the live characters.
+
+- **CNZ F=621 Clamer re-fire — ROM dispatch path narrowed; F=621
+  fire mechanism requires recorder extension to localise
+  (doc-only, round 2).** Continues from the prior F619 dispatch
+  surfacing round. ROM-side trace established that
+  `Check_PlayerCollision` (sonic3k.asm:179904-179916) consumes
+  `collision_property(a0)` written by `Touch_Special`
+  (sonic3k.asm:21162-21194) inside `Touch_Loop` — it is NOT a
+  geometric overlap test. The spring child re-adds itself to
+  `Collision_response_list` only when running `loc_890AA` (via
+  `jmp Child_DrawTouch_Sprite` at sonic3k.asm:185962); the
+  cooldown `loc_890C8` (sonic3k.asm:185965-185968) does not call
+  `Add_SpriteToCollisionResponseList`. Under that schedule the
+  spring child should be absent from the F=620-populated list
+  that Sonic's F=621 `TouchResponse` walks — yet the trace
+  records ROM firing the spring at F=621. Two candidate
+  hypotheses (`$2E` cooldown counter init non-zero, or
+  `collision_property` being written by an alternate dispatcher
+  such as `HyperTouch_Special` at sonic3k.asm:21401-21402)
+  documented; neither matches the observed F=619/F=621 cadence
+  without additional recorder data. Engine probes inside
+  `ObjectManager.processMultiRegionTouch` and
+  `ClamerObjectInstance.update` confirmed no engine Clamer
+  instance is active in the F=619-625 window of the engine run;
+  the existing `SPRING_RELATCH_COLLISION_FLAGS = $40|$12`
+  widening papers over the F=621 dispatch divergence at a
+  different player position than ROM. No code change landed:
+  recorder needs extension to capture per-frame
+  `Collision_response_list` membership and each object's
+  `collision_property` byte at the moment Sonic's
+  `TouchResponse` runs. Probes reverted before commit. Trace
+  replay baselines preserved: CNZ stable at F7919/2757, AIZ
+  stable at F7552/977, S1/S2 PASS. Comparison-only invariant
+  preserved.
+- **S3K AIZ F7552 round-4 audit — regenerated trace inspected, divergence
+  isolated to boundary clamp + `Tails_DoLevelCollision` wall push pair
+  (doc-only).** With the regenerated v6.13-s3k AIZ fixture's new
+  `terrain_wall_sensor_per_frame` events at F7549-F7560 in hand, ROM's
+  F7552 Tails state advances `0x1207 -> 0x1208` via TWO sequential
+  writes: (1) `Tails_Check_Screen_Boundaries` `loc_14F5C` boundary clamp
+  to `0x1207` (recorded as `pc=0x14F60 val=0x1207` in
+  `position_write_per_frame`), then (2) a `Tails_DoLevelCollision` wall
+  push of `+1` to `0x1208` (uses `add.w/sub.w`, not `move.w`, so it
+  doesn't appear in `position_write` events the v6.13 recorder hooks).
+  Engine fires NEITHER write — `tails_x` simply integrates from
+  `0x1205` to `0x1207` via `MoveSprite`, and end-of-frame state has
+  `tails_x=0x1207, tails_x_speed=0x0200, tails_x_sub` non-zero. Engine
+  `doLevelBoundary()` reads `camera.getMaxX() = 0x4640` (raw
+  `LevelSizes.AIZ2 xend`); ROM's `Camera_max_X_pos` at F7552 is
+  effectively `~0x10DF` (right-edge of the AIZ Mini-boss arena). Round
+  4 located one ROM `move.l` write that hits `Camera_max_X_pos`
+  ($00100010 longword at sonic3k.asm:104758-104759 in
+  `AIZ1_AIZ2_Transition`), but the trace's `aiz2_reload_resume`
+  checkpoint may take a different path. Round 5 plan: extend the
+  recorder's `aiz_boundary_state_per_frame` (currently F4660-F4679
+  only) to ALSO cover F7549-F7560, using the same multi-window pattern
+  v6.13 added for `velocity_write_per_frame` /
+  `position_write_per_frame`, then the next regen makes ROM's
+  `Camera_min/max_X_pos` at F7552 directly visible and the engine fix
+  becomes a `Sonic3kAIZEvents.updateAiz2SonicResize2` line that calls
+  `camera().setMaxX(<that value>)` in lockstep with the existing
+  `setMinX(0xF50)` lock. No engine code changed this round, no trace
+  fixture change. Cross-game baselines: S3K AIZ first-error stable at
+  F7552/977 errors, S3K CNZ stable at F7919. Comparison-only invariant
+  preserved.

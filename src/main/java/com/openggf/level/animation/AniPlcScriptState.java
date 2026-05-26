@@ -79,11 +79,31 @@ public class AniPlcScriptState {
         return destTileIndex + Math.max(tilesPerFrame, 1);
     }
 
+    public int destinationTileIndex() {
+        return destTileIndex;
+    }
+
+    public int tilesPerFrame() {
+        return tilesPerFrame;
+    }
+
     public void prime(Level level, GraphicsManager graphicsManager) {
         if (frameTileIds.length == 0 || artPatterns.length == 0) {
             return;
         }
         applyFrame(level, graphicsManager, frameTileIds[0]);
+    }
+
+    /** Returns the current countdown timer (rewind-restore access). */
+    public int getTimer() { return timer; }
+
+    /** Returns the current frame index (rewind-restore access). */
+    public int getFrameIndex() { return frameIndex; }
+
+    /** Restores playback counters from a snapshot (rewind-restore path). */
+    public void restoreCounters(int timer, int frameIndex) {
+        this.timer = timer;
+        this.frameIndex = frameIndex;
     }
 
     public void applyFrame(Level level, GraphicsManager graphicsManager, int tileId) {

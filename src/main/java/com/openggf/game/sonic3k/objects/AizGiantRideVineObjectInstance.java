@@ -3,11 +3,14 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -20,11 +23,13 @@ import java.util.List;
  * <p>Primary disassembly references:
  * Obj_AIZGiantRideVine (sonic3k.asm:46749-46963).
  */
-public class AizGiantRideVineObjectInstance extends AbstractObjectInstance {
+public class AizGiantRideVineObjectInstance extends AbstractObjectInstance implements PostPlayerUpdateHook {
     private static final int ROOT_FRAME = 0x21;
     private static final int HANDLE_FRAME = 0x20;
     private static final int PRIORITY_BUCKET = 4; // priority $200
     private static final int SEGMENT_GAP = 0x10;
+    private static final int ACTIVATED_SWING_STEP = 0x08;
+    private static final int ACTIVATED_SWING_INITIAL_VELOCITY = -0x1B0;
 
     private static final class Segment {
         int x;
@@ -42,11 +47,19 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance {
     private final Segment first;
     private final Segment[] chain;
     private final AizVineHandleLogic.State handle = new AizVineHandleLogic.State();
+    private boolean childSlotsReserved;
+    private int handleExecutionSlot = -1;
+    private boolean activatedSwingStarted;
+    private boolean activatedSwingReturning;
+    private int activatedSwingAngle;
+    private int activatedSwingVelocity;
 
     public AizGiantRideVineObjectInstance(ObjectSpawn spawn) {
         super(spawn, "AIZGiantRideVine");
         this.currentX = spawn.x();
         this.currentY = spawn.y();
+        // ROM reuses the last allocated child as the handle (move.l #loc_2257E,(a1)),
+        // so the number of actual vine segments before the handle is the low nibble.
         this.segmentCount = spawn.subtype() & 0x0F;
         this.phaseOffset = spawn.subtype() & 0xF0;
 
@@ -70,6 +83,8 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance {
         handle.y = currentY + handleYOffset;
         handle.prevX = handle.x;
         handle.prevY = handle.y;
+        activatedSwingAngle = asSigned16(phaseOffset << 8);
+        activatedSwingVelocity = ACTIVATED_SWING_INITIAL_VELOCITY;
     }
 
     @Override
@@ -93,9 +108,35 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance {
     }
 
     @Override
+    public int getReservedChildSlotCount() {
+        return romChildSlotCount();
+    }
+
+    @Override
+    public int getExecutionSlotIndex() {
+        // ROM Obj_AIZGiantRideVine keeps the root in its parent slot, then
+        // allocates children after it and rewrites the final child to loc_2257E
+        // (docs/skdisasm/sonic3k.asm:46749-46787, 46929-46950). sub_220C2
+        // player carry runs from that handle child after earlier slots such as
+        // Obj_CollapsingPlatform's loc_205DE solid pass
+        // (docs/skdisasm/sonic3k.asm:44841-44851). Execute the consolidated
+        // Java object at the handle slot once it has been reserved, while
+        // retaining the parent slot for lifecycle and child-slot cleanup.
+        return handleExecutionSlot >= 0 ? handleExecutionSlot : super.getExecutionSlotIndex();
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        updateSegmentsFromGlobalAngle(frameCounter);
+        reserveRomChildSlots();
+        int gameplayFrameCounter = frameCounter;
+        ObjectServices svc = tryServices();
+        if (svc != null && svc.levelManager() != null) {
+            // ROM: AIZ_vine_angle advances from ChangeRingFrame in the gameplay loop,
+            // not from the object/VBlank counter that ObjectManager passes here.
+            gameplayFrameCounter = svc.levelManager().getFrameCounter();
+        }
+        updateSegmentsFromGlobalAngle(gameplayFrameCounter);
         updateHandle(player);
         // Off-screen lifecycle is handled by the Placement system: non-persistent
         // objects are unloaded when the spawn leaves the window and respawned on
@@ -108,6 +149,13 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance {
     @Override
     public void onUnload() {
         clearGrabbedPlayers();
+    }
+
+    @Override
+    public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
+        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
+        AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
     }
 
     @Override
@@ -140,14 +188,11 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance {
             return;
         }
 
-        // loc_2248A default path: angle = sin(AIZ_vine_angle + subtypePhase) * $2C.
-        int angleByte = (currentAizVineAngleByte(frameCounter) + phaseOffset) & 0xFF;
-        int sin = TrigLookupTable.sinHex(angleByte);
-        first.angle = asSigned16(sin * 0x2C);
-        first.value3A = first.angle >> 3;
-        first.mappingFrame = ((angleByte(first.angle) + 4) & 0xFF) >> 3;
-        first.x = currentX;
-        first.y = currentY;
+        if (activatedSwingStarted) {
+            updateActivatedFirstSegment();
+        } else {
+            updatePassiveFirstSegment(frameCounter);
+        }
 
         Segment parent = first;
         for (Segment segment : chain) {
@@ -159,6 +204,42 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance {
             segment.y = parent.y + offset[1];
             parent = segment;
         }
+    }
+
+    private void updatePassiveFirstSegment(int frameCounter) {
+        // loc_2248A default path: angle = sin(AIZ_vine_angle + subtypePhase) * $2C.
+        int angleByte = (currentAizVineAngleByte(frameCounter) + phaseOffset) & 0xFF;
+        int sin = TrigLookupTable.sinHex(angleByte);
+        first.angle = asSigned16(sin * 0x2C);
+        first.value3A = first.angle >> 3;
+        first.mappingFrame = ((angleByte(first.angle) + 4) & 0xFF) >> 3;
+        first.x = currentX;
+        first.y = currentY;
+    }
+
+    private void updateActivatedFirstSegment() {
+        int velocity = activatedSwingVelocity;
+        if (!activatedSwingReturning) {
+            velocity = asSigned16(velocity + ACTIVATED_SWING_STEP);
+            activatedSwingVelocity = velocity;
+            activatedSwingAngle = asSigned16(activatedSwingAngle + velocity);
+            if ((byte) angleByte(activatedSwingAngle) >= 0) {
+                activatedSwingReturning = true;
+            }
+        } else {
+            velocity = asSigned16(velocity - ACTIVATED_SWING_STEP);
+            activatedSwingVelocity = velocity;
+            activatedSwingAngle = asSigned16(activatedSwingAngle + velocity);
+            if ((byte) angleByte(activatedSwingAngle) < 0) {
+                activatedSwingReturning = false;
+            }
+        }
+
+        first.angle = activatedSwingAngle;
+        first.value3A = first.angle >> 3;
+        first.mappingFrame = ((angleByte(first.angle) + 4) & 0xFF) >> 3;
+        first.x = currentX;
+        first.y = currentY;
     }
 
     private void updateHandle(AbstractPlayableSprite player) {
@@ -181,25 +262,57 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance {
         }
 
         AizVineHandleLogic.positionFromParent(handle, parentX, parentY, parentAngle);
-        var sidekicks = services().sidekicks();
-        AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
         AizVineHandleLogic.updatePlayers(handle, services(), player, sidekick, parentAngle);
+        // sub_220C2's giant-vine grab path only writes the handle's per-player
+        // grab byte at $32/$33 and player fields (docs/skdisasm/sonic3k.asm:
+        // 46731-46743). It does not alter the first child; loc_2248A continues
+        // to read AIZ_vine_angle on subsequent frames (sonic3k.asm:46840-46854).
+        if (services().levelManager() != null && services().levelManager().objectsExecuteAfterPlayerPhysics()) {
+            AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
+        }
+    }
+
+    private void reserveRomChildSlots() {
+        if (childSlotsReserved || getSlotIndex() < 0) {
+            return;
+        }
+        childSlotsReserved = true;
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.objectManager() == null) {
+            return;
+        }
+        int childCount = romChildSlotCount();
+        if (childCount > 0) {
+            int[] childSlots = svc.objectManager().allocateChildSlotsAfter(spawn, childCount, getSlotIndex());
+            handleExecutionSlot = childSlots[childSlots.length - 1];
+        }
+    }
+
+    private int romChildSlotCount() {
+        // Obj_AIZGiantRideVine allocates one child, then dbf allocates the
+        // remaining low-nibble count; the final child is rewritten as the handle.
+        return segmentCount + 1;
     }
 
     private void clearGrabbedPlayers() {
         AbstractPlayableSprite player = resolveMainPlayer();
-        var sidekicks = services().sidekicks();
-        AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
         clearControlFor(player, handle.p1.grabFlag != 0);
         clearControlFor(sidekick, handle.p2.grabFlag != 0);
         handle.p1.grabFlag = 0;
         handle.p2.grabFlag = 0;
     }
 
+    private AbstractPlayableSprite firstTrackedSidekick() {
+        return services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                ? sidekick
+                : null;
+    }
+
     private AbstractPlayableSprite resolveMainPlayer() {
         var sprite = services().spriteManager().getSprite(
-                config()
-                        .getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+                ActiveGameplayTeamResolver.resolveMainCharacterCode(config()));
         return sprite instanceof AbstractPlayableSprite playable ? playable : null;
     }
 
@@ -211,8 +324,15 @@ public class AizGiantRideVineObjectInstance extends AbstractObjectInstance {
     }
 
     private static int currentAizVineAngleByte(int frameCounter) {
-        // ROM: (AIZ_vine_angle).w is cleared on level init and incremented by $180 each frame.
-        int word = (frameCounter * 0x180) & 0xFFFF;
+        // ROM LevelLoop runs Process_Sprites before ChangeRingFrame
+        // (docs/skdisasm/sonic3k.asm:7894, 7910), and ChangeRingFrame then
+        // increments AIZ_vine_angle by $180 (docs/skdisasm/sonic3k.asm:9693).
+        // Obj_AIZGiantRideVine's loc_2248A reads the word during Process_Sprites
+        // (docs/skdisasm/sonic3k.asm:46843), so object code sees the angle value
+        // accumulated through the previous gameplay frame. Engine object updates
+        // run before LevelManager.update() increments its stored counter, so the
+        // stored value already represents that previous completed frame.
+        int word = (Math.max(0, frameCounter) * 0x180) & 0xFFFF;
         // move.b (AIZ_vine_angle).w,d0 reads the high byte.
         return (word >> 8) & 0xFF;
     }

@@ -5,11 +5,12 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import org.junit.Test;
+import com.openggf.sprites.playable.ObjectControlState;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 public class TestPachinkoMagnetOrbObjectInstance {
@@ -26,12 +27,42 @@ public class TestPachinkoMagnetOrbObjectInstance {
 
         verify(main).setControlLocked(true);
         verify(sidekick).setControlLocked(true);
-        verify(main).setObjectControlled(true);
-        verify(sidekick).setObjectControlled(true);
+        verify(main).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
         verify(main).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(sidekick).setAnimationId(Sonic3kAnimationIds.ROLL);
         verify(main, never()).setRolling(true);
         verify(sidekick, never()).setRolling(true);
+    }
+
+    @Test
+    public void duplicateSidekickEntriesDoNotTickCapturedSidekickTwiceOnFirstCapture() {
+        PachinkoMagnetOrbObjectInstance orb = new PachinkoMagnetOrbObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0xEC, 0, 0, false, 0));
+        AbstractPlayableSprite main = mockPlayerAt(0x100, 0x100);
+        AbstractPlayableSprite sidekick = mockPlayerAt(0x108, 0x108);
+        CountingObjectServices services = new CountingObjectServices();
+        services.withSidekicks(List.of(sidekick, sidekick));
+        orb.setServices(services);
+
+        orb.update(0, main);
+
+        verify(sidekick, times(1)).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        assertEquals(0, services.sfxCount);
+    }
+
+    @Test
+    public void capturesUpdatePlayerWhenPlayerQueryCannotResolveMain() {
+        PachinkoMagnetOrbObjectInstance orb = new PachinkoMagnetOrbObjectInstance(
+                new ObjectSpawn(0x100, 0x100, 0xEC, 0, 0, false, 0));
+        AbstractPlayableSprite main = mockPlayerAt(0x100, 0x100);
+        AbstractPlayableSprite sidekick = mockPlayerAt(0x108, 0x108);
+
+        orb.setServices(new TestObjectServices().withSidekicks(List.of(sidekick)));
+        orb.update(0, main);
+
+        verify(main).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
+        verify(sidekick).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
     }
 
     @Test
@@ -66,7 +97,7 @@ public class TestPachinkoMagnetOrbObjectInstance {
         orb.update(1, main);
         orb.update(2, main);
 
-        verify(main, times(1)).setObjectControlled(true);
+        verify(main, times(1)).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
     }
 
     @Test
@@ -145,3 +176,5 @@ public class TestPachinkoMagnetOrbObjectInstance {
         }
     }
 }
+
+

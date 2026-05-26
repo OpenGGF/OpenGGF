@@ -1,7 +1,8 @@
 # Controls Reference
 
 All controls are keyboard-based. Key bindings can be changed in `config.json`
-(see [Configuration](configuration.md)).
+(see [Configuration](configuration.md)) using either GLFW integer codes or
+human-readable key names such as `"SPACE"` and `"F9"`.
 
 ## Gameplay
 
@@ -11,6 +12,16 @@ All controls are keyboard-based. Key bindings can be changed in `config.json`
 | Space | Jump |
 | Enter | Pause / unpause |
 | Q | Advance one frame (while paused) |
+
+## Rewind
+
+Live rewind is only active when `LIVE_REWIND_ENABLED` is `true` in `config.json`.
+Visual Trace Test Mode uses the same default key through `TRACE_REWIND_KEY`.
+
+| Key | Action |
+|-----|--------|
+| R | Hold to rewind live gameplay (`LIVE_REWIND_KEY`) |
+| R | Hold to rewind visual trace playback (`TRACE_REWIND_KEY`) |
 
 ## Zone Navigation
 
@@ -46,6 +57,15 @@ These toggle visual debug information drawn over the game scene. They require
 |-----|--------|
 | D | Toggle free-fly debug mode (move camera freely with arrow keys) |
 | C | Teleport to the last checkpoint (furthest 'right') in this act. |
+
+## Experimental Editor
+
+These controls are only active when `EDITOR_ENABLED` is `true` in `config.json`.
+
+| Key | Action |
+|-----|--------|
+| Shift+Tab | Toggle between gameplay and the experimental editor overlay |
+| F5 | Restart the playtest from editor mode |
 
 ## Super Sonic / Emerald Debug
 

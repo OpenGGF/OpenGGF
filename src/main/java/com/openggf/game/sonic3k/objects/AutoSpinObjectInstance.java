@@ -8,6 +8,7 @@ import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
@@ -75,6 +76,7 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
     private boolean sidekickPastTrigger;
 
     private boolean initialized;
+    private String lastTraceEvent = "init";
 
     public AutoSpinObjectInstance(ObjectSpawn spawn) {
         super(spawn, "AutoSpin",
@@ -108,8 +110,9 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
 
         checkPlayerCrossing(player, true);
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            checkPlayerCrossing((AbstractPlayableSprite) sidekickEntity, false);
+        AbstractPlayableSprite nativeP2 = nativeP2OrNull(player);
+        if (nativeP2 != null) {
+            checkPlayerCrossing(nativeP2, false);
         }
     }
 
@@ -127,14 +130,23 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
             sonicPastTrigger = player.getCentreX() > objX;
         }
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
-            AbstractPlayableSprite sidekick = (AbstractPlayableSprite) sidekickEntity;
+        AbstractPlayableSprite sidekick = nativeP2OrNull(player);
+        if (sidekick != null) {
             if (verticalMode) {
                 sidekickPastTrigger = sidekick.getCentreY() > objY;
             } else {
                 sidekickPastTrigger = sidekick.getCentreX() > objX;
             }
         }
+    }
+
+    private AbstractPlayableSprite nativeP2OrNull(AbstractPlayableSprite nativeP1) {
+        for (PlayableEntity candidate : services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate != nativeP1 && candidate instanceof AbstractPlayableSprite sprite) {
+                return sprite;
+            }
+        }
+        return null;
     }
 
     /**
@@ -244,6 +256,20 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
         }
     }
 
+    @Override
+    public String traceDebugDetails() {
+        return String.format("sub=%02X flip=%s vert=%s no=%s ground=%s lock=%s past=%s/%s last=%s",
+                spawn.subtype() & 0xFF,
+                xFlipped,
+                verticalMode,
+                noSpinLock,
+                groundOnly,
+                lockControls,
+                sonicPastTrigger,
+                sidekickPastTrigger,
+                lastTraceEvent);
+    }
+
     private boolean isWithinRange(int pos, int center) {
         int delta = pos - center;
         return delta >= -getHalfWidth() && delta < getHalfWidth();
@@ -254,13 +280,20 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
      * Sets ground_vel and spin_dash_flag, then forces roll state.
      * When noSpinLock is set, skips speed/flag writes but still forces roll.
      * From sonic3k.asm lines 42394-42472.
+     *
+     * <p>ROM: spin_dash_flag = 0x01 (pinball mode) or 0x81 (pinball + speed lock).
+     * The 0x81 value causes Sonic_RollSpeed to skip its entire body (input,
+     * friction, deceleration), preserving ground_vel. This is NOT a control lock
+     * — slope gravity still modifies speed normally.
      */
     private void enableSpin(AbstractPlayableSprite player, short groundVel) {
+        lastTraceEvent = String.format("enableH:%04X:%s", groundVel & 0xFFFF,
+                player.isCpuControlled() ? "tails" : "sonic");
         if (!noSpinLock) {
             player.setGSpeed(groundVel);
             player.setPinballMode(true);
             if (lockControls) {
-                player.setControlLocked(true);
+                player.setPinballSpeedLock(true);
             }
         }
         forceRoll(player);
@@ -272,10 +305,12 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
      * From sonic3k.asm lines 42520-42594.
      */
     private void enableSpinVertical(AbstractPlayableSprite player, boolean crossingDownward) {
+        lastTraceEvent = String.format("enableV:%s:%s", crossingDownward ? "down" : "up",
+                player.isCpuControlled() ? "tails" : "sonic");
         if (!noSpinLock) {
             player.setPinballMode(true);
             if (lockControls) {
-                player.setControlLocked(true);
+                player.setPinballSpeedLock(true);
             }
         }
 
@@ -297,13 +332,14 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
 
     /**
      * Disables spin. Unconditionally clears spin_dash_flag to 0.
-     * From sonic3k.asm: clr.b spin_dash_flag(a1)
+     * From sonic3k.asm: move.b #0,spin_dash_flag(a1)
      */
     private void disableSpin(AbstractPlayableSprite player) {
         if (noSpinLock) return;
 
+        lastTraceEvent = "disable:" + (player.isCpuControlled() ? "tails" : "sonic");
         player.setPinballMode(false);
-        player.setControlLocked(false);
+        player.setPinballSpeedLock(false);
     }
 
     /**
@@ -319,8 +355,11 @@ public class AutoSpinObjectInstance extends BoxObjectInstance {
             return;
         }
 
+        short preRollCentreY = player.getCentreY();
         player.setRolling(true);
-        player.setY((short) (player.getY() + player.getRollHeightAdjustment()));
+        // ROM Obj_AutoSpin hardcodes addq.w #5,y_pos after setting roll radii
+        // (sonic3k.asm:42464-42469), independent of character height.
+        player.setCentreYPreserveSubpixel((short) (preRollCentreY + 5));
 
         SpriteAnimationProfile profile = player.getAnimationProfile();
         if (profile instanceof ScriptedVelocityAnimationProfile velocityProfile) {

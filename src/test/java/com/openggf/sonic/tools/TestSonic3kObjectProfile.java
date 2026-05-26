@@ -1,14 +1,14 @@
 package com.openggf.sonic.tools;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import com.openggf.level.LevelData;
 import com.openggf.tools.ObjectDiscoveryTool.LevelConfig;
 import com.openggf.tools.Sonic3kObjectProfile;
 
 import java.util.List;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSonic3kObjectProfile {
 
@@ -49,4 +49,24 @@ public class TestSonic3kObjectProfile {
         assertTrue(profile.getImplementedIds(hcz1).contains(0x99));
         assertFalse(profile.getImplementedIds(mhz1).contains(0x99));
     }
+
+    @Test
+    public void iczSegmentColumnIsMarkedImplementedForS3klLevelsOnly() {
+        Sonic3kObjectProfile profile = new Sonic3kObjectProfile();
+        List<LevelConfig> levels = profile.getLevels();
+
+        LevelConfig icz1 = levels.stream()
+                .filter(level -> level.levelData() == LevelData.S3K_ICECAP_1)
+                .findFirst()
+                .orElseThrow();
+        LevelConfig mhz1 = levels.stream()
+                .filter(level -> level.levelData() == LevelData.S3K_MUSHROOM_HILL_1)
+                .findFirst()
+                .orElseThrow();
+
+        assertTrue(profile.getImplementedIds().contains(0xB3));
+        assertTrue(profile.getImplementedIds(icz1).contains(0xB3));
+        assertFalse(profile.getImplementedIds(mhz1).contains(0xB3));
+    }
 }
+

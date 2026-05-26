@@ -522,10 +522,10 @@ Sections:
    `services()`. This separation exists to support the planned level editor, where
    multiple level contexts may coexist.
 
-3. **GameRuntime direction** — The target is an explicit `GameRuntime` object that
-   owns all mutable gameplay state. ObjectServices will be backed by a runtime
-   instance rather than singletons. This is in progress; contributors should be
-   aware of the direction.
+3. **Session-owned gameplay state** — The target is explicit ownership through
+   `SessionManager`, `WorldSession`, and `GameplayModeContext`. ObjectServices
+   are backed by the active gameplay mode rather than singletons or the retired
+   `GameRuntime` facade.
 
 4. **Level initialization** — The `LevelInitProfile` system: a declarative sequence
    of 13 steps that each game defines. Steps include loading layouts, decompressing
@@ -536,8 +536,10 @@ Sections:
    scrolls, objects within range are spawned via the `ObjectRegistry`. Each spawned
    object is an `ObjectInstance` subclass. Every frame, active objects receive
    `update()` and `appendRenderCommands()` calls. Objects set themselves as destroyed
-   when they should be removed. Dynamic objects (projectiles, debris) are added via
-   `ObjectManager.addDynamicObject()`.
+   when they should be removed. Dynamic child objects (projectiles, debris, boss
+   parts) should be spawned through the object's lifecycle helper, usually
+   `spawnChild(...)`, so ownership, remembered slots, and parent/child cleanup stay
+   consistent.
 
 6. **Rendering pipeline** — GPU-based. Tile patterns are uploaded to a texture atlas.
    Sprites are drawn as instanced quads referencing atlas regions. Background layers
@@ -607,8 +609,8 @@ Walk through creating `ArrowShooterObjectInstance`:
 - Constructor: extract position and flip from `ObjectSpawn`
 - `update()`: detection logic (compare player X to shooter X, threshold $40)
 - Animation state machine: idle -> detecting -> firing -> idle
-- `fireArrow()`: play SFX, create `ArrowProjectileInstance`, add via
-  `ObjectManager.addDynamicObject()`
+- `fireArrow()`: play SFX, create `ArrowProjectileInstance`, and spawn it via
+  `spawnChild(...)`
 - `appendRenderCommands()`: get renderer by art key, draw current frame
 - `appendDebugRenderCommands()`: draw bounding box for debug overlay
 
@@ -804,8 +806,8 @@ Suggested order for writing the pages, prioritizing the most impactful content f
 The guide should be updated alongside significant engine changes:
 
 - **game-status.md** — Updated with each release.
-- **architecture.md** — Updated when major architectural changes land (e.g., GameRuntime
-  migration).
+- **architecture.md** — Updated when major architectural changes land (e.g.,
+  session-ownership migration).
 - **tutorial-implement-object.md** — Stable unless the object system fundamentally changes.
 - **mapping-exercises.md** — Stable by design (teaches methods, not specific addresses).
 - **68000-primer.md** — Effectively permanent.

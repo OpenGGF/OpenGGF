@@ -22,7 +22,6 @@ import java.util.logging.Logger;
 public class AizIntroEmeraldGlowChild extends AbstractObjectInstance {
 
     private static final Logger LOG = Logger.getLogger(AizIntroEmeraldGlowChild.class.getName());
-
     private final AizIntroPlaneChild parent;
     private final int xOffset;
     private final int yOffset;
@@ -76,7 +75,7 @@ public class AizIntroEmeraldGlowChild extends AbstractObjectInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = AizIntroArtLoader.getEmeraldRenderer();
+        PatternSpriteRenderer renderer = AizIntroArtLoader.getEmeraldRenderer(services());
         if (renderer == null || !renderer.isReady()) return;
         // Screen-space coordinates use the ROM +128 sprite-table bias.
         int renderX = getX();

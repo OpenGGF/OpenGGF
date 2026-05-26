@@ -2,12 +2,10 @@ package com.openggf.sprites.playable;
 
 import com.openggf.data.RomByteReader;
 import com.openggf.game.CrossGameFeatureProvider;
-import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
 import com.openggf.game.PhysicsProfile;
 import com.openggf.graphics.RenderContext;
 import com.openggf.level.Level;
-import com.openggf.level.LevelManager;
 import com.openggf.level.Palette;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
@@ -96,7 +94,8 @@ public abstract class SuperStateController {
      */
     protected PaletteTarget resolvePaletteTarget(int logicalLine) {
         if (CrossGameFeatureProvider.isActive()) {
-            RenderContext donor = CrossGameFeatureProvider.getInstance().getDonorRenderContext();
+            CrossGameFeatureProvider crossGame = player.currentCrossGameFeatures();
+            RenderContext donor = crossGame.getDonorRenderContext();
             if (donor != null) {
                 Palette p = donor.getPalette(logicalLine);
                 if (p != null) {
@@ -168,7 +167,7 @@ public abstract class SuperStateController {
         state = SuperState.TRANSFORMING;
         player.setSuperSonic(true);
         // ROM: move.b #$81,obj_control(a0) - freeze physics during transformation
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         // ROM: move.b #$1F,anim(a0) - play transformation sparkle animation
         player.setForcedAnimationId(getTransformationAnimationId());
         onTransformationStarted();
@@ -182,7 +181,7 @@ public abstract class SuperStateController {
             ringDrainCounter = getRingDrainInterval();
             onSuperActivated();
             // ROM: clr.b obj_control(a0) - unfreeze after transformation complete
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setForcedAnimationId(-1);
         }
     }
@@ -212,7 +211,7 @@ public abstract class SuperStateController {
     private void revertToNormal() {
         player.setSuperSonic(false);
         // Clear transformation freeze in case revert happens during transformation
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setForcedAnimationId(-1);
         player.applyExternalPhysicsProfile(getNormalProfile());
         restoreNormalAnimProfile();

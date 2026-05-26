@@ -4,7 +4,8 @@ All settings live in `config.json` in the working directory (next to the JAR). I
 bundled `src/main/resources/config.json` is used as the default. Keys are enum names from
 `SonicConfiguration`; values are JSON strings, numbers, or booleans.
 
-Key bindings use **GLFW key codes** (integers). See the
+Key bindings accept either **GLFW key codes** (integers) or human-readable key names such as
+`"SPACE"`, `"Q"`, and `"GLFW_KEY_F9"`. See the
 [GLFW key token reference](https://www.glfw.org/docs/latest/group__keys.html) for the full list.
 Common values are shown in the tables below.
 
@@ -29,10 +30,10 @@ Paths are relative to the working directory (where the JAR is launched).
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `DEFAULT_ROM` | string | `"s1"` | Which game to boot: `"s1"`, `"s2"`, or `"s3k"`. Selects the corresponding ROM key below. |
+| `DEFAULT_ROM` | string | `"s2"` | Which game to boot: `"s1"`, `"s2"`, or `"s3k"`. Selects the corresponding ROM key below. |
 | `SONIC_1_ROM` | string | `"Sonic The Hedgehog (W) (REV01) [!].gen"` | Filename of the Sonic 1 ROM. |
 | `SONIC_2_ROM` | string | `"Sonic The Hedgehog 2 (W) (REV01) [!].gen"` | Filename of the Sonic 2 ROM. |
-| `SONIC_3K_ROM` | string | `"Sonic 3 & Knuckles (W) [!].gen"` | Filename of the Sonic 3&K ROM. |
+| `SONIC_3K_ROM` | string | `"Sonic and Knuckles & Sonic 3 (W) [!].gen"` | Filename of the Sonic 3&K (locked-on) ROM. |
 
 ---
 
@@ -40,10 +41,28 @@ Paths are relative to the working directory (where the JAR is launched).
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| `SHOW_LEGAL_DISCLAIMER_ON_STARTUP` | bool | `true` | Show the legal disclaimer screen on engine startup before the master title screen. White text on black, 5-second readability gate, any-key dismiss, fade-in/out transitions. Set `false` for headless tests, trace replay sessions, or CI runs that should not have to drive past this screen. |
 | `MASTER_TITLE_SCREEN_ON_STARTUP` | bool | `true` | Show the master title / game-selection screen on launch. When `false`, boots directly into the game set by `DEFAULT_ROM`. |
 | `TITLE_SCREEN_ON_STARTUP` | bool | `true` | Show the game-specific title screen (e.g. Sonic 2 title screen) before gameplay. Ignored when `MASTER_TITLE_SCREEN_ON_STARTUP` is true and game selection is pending. |
 | `LEVEL_SELECT_ON_STARTUP` | bool | `false` | Jump straight to the level select screen instead of the title screen. Useful for development. |
 | `S3K_SKIP_INTROS` | bool | `false` | (S3K only) Skip zone intro sequences such as the AIZ biplane cutscene and boot straight into playable gameplay. |
+
+---
+
+## Cross-Game Donation
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `CROSS_GAME_FEATURES_ENABLED` | bool | `false` | Enable cross-game feature donation. When `false`, each game uses only its own native frontend and gameplay assets. |
+| `CROSS_GAME_SOURCE` | string | `"s2"` | Donor game for cross-game features. Currently supports `"s2"` and `"s3k"`. |
+| `CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE` | bool | `false` | Force regeneration of the runtime Sonic 1 donated Data Select screenshot cache on the next eligible boot. |
+| `CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE` | bool | `false` | Force regeneration of the runtime Sonic 2 donated Data Select screenshot cache on the next eligible boot. |
+
+### Cross-Game Debug Key
+
+| Key | Default | Key Name | Description |
+|-----|---------|----------|-------------|
+| `CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY` | `39` | Apostrophe | While playing Sonic 1, log the current camera as a preview override point for donated Data Select screenshot tuning. |
 
 ---
 
@@ -53,6 +72,7 @@ Paths are relative to the working directory (where the JAR is launched).
 |-----|------|---------|-------------|
 | `MAIN_CHARACTER_CODE` | string | `"sonic"` | Identity of the player-controlled character. Currently only `"sonic"` is supported. |
 | `SIDEKICK_CHARACTER_CODE` | string | `""` | CPU-controlled sidekick spawned alongside the main character. Set to `"tails"` to enable Tails AI, `"sonic"` to clone the player, or `""` (empty) to disable. |
+| `DATA_SELECT_EXTRA_PLAYER_COMBOS` | string | `""` | Extra team combinations shown on the S3K Data Select screen. Format is `main,sidekick1,sidekick2;main2,sidekick1`. The first character in each group is the main character; remaining entries are sidekicks. Example: `"sonic,knuckles;sonic,tails,tails;knuckles,tails"`. This only affects Data Select team choices; normal gameplay and Level Select still use `MAIN_CHARACTER_CODE` and `SIDEKICK_CHARACTER_CODE`. |
 
 ---
 
@@ -74,13 +94,34 @@ Paths are relative to the working directory (where the JAR is launched).
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | `DEBUG_VIEW_ENABLED` | bool | `true` | Eagerly initialise the debug overlay subsystem. Required for any runtime debug keys to function. Does not show anything on-screen until debug mode is activated. |
+| `EDITOR_ENABLED` | bool | `false` | Allow the experimental in-engine editor overlay to be entered from gameplay with `Shift+Tab`. |
 | `DEBUG_COLLISION_VIEW_ENABLED` | bool | `false` | Draw collision sensor rays and solid object outlines over the scene at all times. |
+| `LIVE_REWIND_ENABLED` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
+| `LIVE_REWIND_TAPE_COAST_ENABLED` | bool | `false` | Enable experimental live-rewind coast after releasing the rewind key. Disabled by default, so held rewind remains one step per visual frame. |
+| `LIVE_REWIND_TAPE_COAST_ACCELERATION` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
+| `LIVE_REWIND_TAPE_COAST_DECELERATION` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
+| `LIVE_REWIND_TAPE_COAST_MAX_STEPS` | number | `4.0` | Maximum rewind steps per visual frame for optional tape-coast rewind. Used only when tape coast is enabled. |
+| `TEST_MODE_ENABLED` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `TRACE_CATALOG_DIR` and plays the chosen trace back in the live engine. Dev-only. |
+| `TRACE_CATALOG_DIR` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
 
 ---
 
 ## Key Bindings
 
-All key values are **GLFW key codes** (integers). The table lists each key's name, default code, and the human-readable key name for the default.
+Key bindings accept any of the following formats:
+
+| Format | Example | Notes |
+|--------|---------|-------|
+| GLFW numeric code | `81` | Traditional format |
+| Numeric string | `"81"` | Same as above, as a string |
+| Key name | `"Q"` | Human-readable, case-insensitive |
+| Named key | `"SPACE"`, `"ENTER"`, `"F9"` | Special keys by name |
+| Modifier key | `"LEFT_SHIFT"`, `"RIGHT_CONTROL"` | Modifier keys |
+| GLFW prefix | `"GLFW_KEY_Q"` | Full GLFW constant name (prefix stripped) |
+
+Invalid key names log a warning and fall back to the default binding for that key.
+
+The tables below list each key's name, default code, and the human-readable key name for the default.
 
 ### Gameplay Controls
 
@@ -93,6 +134,8 @@ All key values are **GLFW key codes** (integers). The table lists each key's nam
 | `JUMP` | `32` | Space | Jump / action button. |
 | `PAUSE_KEY` | `257` | Enter | Pause / unpause the game. |
 | `FRAME_STEP_KEY` | `81` | Q | Advance one frame while paused. |
+| `TRACE_REWIND_KEY` | `82` | R | Hold during visual Trace Test Mode replay to rewind deterministic engine state in real time, including reverse audio presentation and restored fade snapshots. |
+| `LIVE_REWIND_KEY` | `82` | R | Hold during live level play to rewind deterministic gameplay state when `LIVE_REWIND_ENABLED` is true, including reverse audio presentation and restored fade snapshots. |
 
 ### Debug Navigation
 
@@ -126,6 +169,19 @@ These keys are only active while a Special Stage is running.
 
 ---
 
+## Test-only system properties
+
+These properties are read by JVM system property lookups (`-D<name>=<value>` on
+the `mvn` or `java` command line) rather than `config.json`. They exist for
+diagnostic test runs only and must remain unset in CI.
+
+| Property | Type | Purpose |
+| --- | --- | --- |
+| `oggf.trace.hydrate` | Boolean (default `false`) | Diagnostic hydrate switch for trace replay tests. When `true` AND the trace's `metadata.json` declares a recorder version at or above `9.2-s2` (see `TraceMetadata.nativePreludeMode()`), the test harness snaps engine state to the recorded ROM frame-0 snapshot (player position-record buffer, sidekick CPU state, per-slot SST values) BEFORE the per-frame comparison loop begins. A run with this enabled is **NOT a valid green replay**: the switch masks the very divergences trace replay is designed to surface. Use only to isolate prelude bugs from gameplay-loop bugs. A `WARN`-level log line emits when the switch fires; `TestTraceHydrateSwitchDefault` is the CI guard that asserts the property is unset on master. |
+| `openggf.trace.s3k.probes` | Boolean (default `false`) | Enables verbose S3K-specific trace replay probes (cnz cylinder, aiz boundary, etc.). Diagnostic only. |
+
+---
+
 ## Example `config.json`
 
 ```json
@@ -133,12 +189,13 @@ These keys are only active while a Special Stage is running.
   "DEFAULT_ROM": "s2",
   "SONIC_1_ROM": "Sonic The Hedgehog (W) (REV01) [!].gen",
   "SONIC_2_ROM": "Sonic The Hedgehog 2 (W) (REV01) [!].gen",
-  "SONIC_3K_ROM": "Sonic 3 & Knuckles (W) [!].gen",
+  "SONIC_3K_ROM": "Sonic and Knuckles & Sonic 3 (W) [!].gen",
   "SCREEN_WIDTH_PIXELS": 320,
   "SCREEN_HEIGHT_PIXELS": 224,
   "SCREEN_WIDTH": 640,
   "SCREEN_HEIGHT": 448,
   "FPS": 60,
+  "SHOW_LEGAL_DISCLAIMER_ON_STARTUP": true,
   "MASTER_TITLE_SCREEN_ON_STARTUP": true,
   "TITLE_SCREEN_ON_STARTUP": true,
   "LEVEL_SELECT_ON_STARTUP": false,
@@ -151,13 +208,20 @@ These keys are only active while a Special Stage is running.
   "AUDIO_INTERNAL_RATE_OUTPUT": false,
   "PSG_NOISE_SHIFT_EVERY_TOGGLE": true,
   "DEBUG_VIEW_ENABLED": true,
+  "EDITOR_ENABLED": false,
   "DEBUG_COLLISION_VIEW_ENABLED": false,
-  "UP": 265,
-  "DOWN": 264,
-  "LEFT": 263,
-  "RIGHT": 262,
-  "JUMP": 32,
-  "PAUSE_KEY": 257,
-  "FRAME_STEP_KEY": 81
+  "LIVE_REWIND_ENABLED": false,
+  "LIVE_REWIND_TAPE_COAST_ENABLED": false,
+  "LIVE_REWIND_TAPE_COAST_ACCELERATION": 0.25,
+  "LIVE_REWIND_TAPE_COAST_DECELERATION": 0.5,
+  "LIVE_REWIND_TAPE_COAST_MAX_STEPS": 4.0,
+  "UP": "UP",
+  "DOWN": "DOWN",
+  "LEFT": "LEFT",
+  "RIGHT": "RIGHT",
+  "JUMP": "SPACE",
+  "PAUSE_KEY": "ENTER",
+  "FRAME_STEP_KEY": "Q",
+  "LIVE_REWIND_KEY": "R"
 }
 ```

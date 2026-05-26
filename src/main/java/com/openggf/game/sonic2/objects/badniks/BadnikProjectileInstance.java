@@ -7,6 +7,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -63,6 +64,7 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
     private boolean paletteBlink; // Toggles every frame for Nebula bomb (ROM: bchg palette_bit_0)
     private int cluckerAnimTimer; // Clucker shot animation timer (counts down from duration)
     private int cluckerAnimIndex; // Clucker shot animation index (0-7, cycles through 8 frames)
+    private boolean loadSubObjectInitPending;
 
     /**
      * Create a new projectile.
@@ -158,9 +160,23 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         this.fixedFrame = fixedFrame;
     }
 
+    /**
+     * ROM Obj98 first runs routine 0, which only calls LoadSubObject and then
+     * advances to routine 2. Children allocated after the current object can
+     * execute that init routine in the same ExecuteObjects pass, before their
+     * first movement frame.
+     */
+    public void deferFirstMovementForLoadSubObjectInit() {
+        this.loadSubObjectInitPending = true;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (loadSubObjectInitPending) {
+            loadSubObjectInitPending = false;
+            return;
+        }
         // Initial delay: projectile stays stationary (Octus bullet: 16 frames)
         if (initialDelay > 0) {
             initialDelay--;
@@ -182,8 +198,10 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         currentX = motionState.x;
         currentY = motionState.y;
 
-        // Check if off-screen (with margin) and destroy
-        if (!isOnScreen(32)) {
+        // ROM: Buzzer's Obj4B_Projectile ends with MarkObjGone_P1, so it stays
+        // alive until the normal object out_of_range window removes it.
+        boolean usesRomRangeUnload = type == ProjectileType.BUZZER_STINGER;
+        if (!usesRomRangeUnload && !isOnScreen(32)) {
             setDestroyed(true);
         }
 
@@ -213,6 +231,9 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
 
     @Override
     public int getCollisionFlags() {
+        if (loadSubObjectInitPending) {
+            return 0;
+        }
         // HURT category (0x80) + size index
         return 0x80 | (collisionSizeIndex & 0x3F);
     }
@@ -324,5 +345,58 @@ public class BadnikProjectileInstance extends AbstractObjectInstance
         }
 
         renderer.drawFrameIndex(frame, currentX, currentY, hFlip, false, paletteOverride);
+    }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState() {
+        return super.captureRewindState().withObjectSubclassExtra(
+                new PerObjectRewindSnapshot.BadnikProjectileRewindExtra(
+                        type.name(),
+                        currentX,
+                        currentY,
+                        motionState.xSub,
+                        motionState.ySub,
+                        xVelocity,
+                        yVelocity,
+                        applyGravity,
+                        gravity,
+                        collisionSizeIndex,
+                        animFrame,
+                        hFlip,
+                        initialDelay,
+                        fixedFrame,
+                        paletteBlink,
+                        cluckerAnimTimer,
+                        cluckerAnimIndex,
+                        loadSubObjectInitPending));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot) {
+        super.restoreRewindState(snapshot);
+        if (snapshot.objectSubclassExtra()
+                instanceof PerObjectRewindSnapshot.BadnikProjectileRewindExtra extra) {
+            currentX = extra.currentX();
+            currentY = extra.currentY();
+            xVelocity = extra.xVelocity();
+            yVelocity = extra.yVelocity();
+            applyGravity = extra.applyGravity();
+            gravity = extra.gravity();
+            collisionSizeIndex = extra.collisionSizeIndex();
+            animFrame = extra.animFrame();
+            hFlip = extra.hFlip();
+            initialDelay = extra.initialDelay();
+            fixedFrame = extra.fixedFrame();
+            paletteBlink = extra.paletteBlink();
+            cluckerAnimTimer = extra.cluckerAnimTimer();
+            cluckerAnimIndex = extra.cluckerAnimIndex();
+            loadSubObjectInitPending = extra.loadSubObjectInitPending();
+            motionState.x = currentX;
+            motionState.y = currentY;
+            motionState.xSub = extra.xSub();
+            motionState.ySub = extra.ySub();
+            motionState.xVel = xVelocity;
+            motionState.yVel = yVelocity;
+        }
     }
 }

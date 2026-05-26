@@ -72,7 +72,11 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
     private static final SolidObjectParams PARAMS_UP = new SolidObjectParams(8, 64, 65);
     // When down (horizontal): wide collision (width_pixels=$40)
     // ROM: move.b #$40,width_pixels(a0) when bridge is down
-    private static final SolidObjectParams PARAMS_DOWN = new SolidObjectParams(64, 8, 9);
+    // ROM loc_2A1A8 (s2.asm:56578): move.w #$4B, d1 → halfWidth = 0x4B = 75.
+    // The narrower $40=64 width_pixels value in the object header is used only
+    // for SolidObject_Landed's secondary hit-width check, not for the primary
+    // detection/riding width passed to JmpTo22_SolidObject in d1.
+    private static final SolidObjectParams PARAMS_DOWN = new SolidObjectParams(75, 8, 9);
 
     // Initial Y offset when spawned (bridge starts offset from spawn position)
     // ROM: subi.w #$48,y_pos(a0) (line 56457)
@@ -294,6 +298,30 @@ public class MCZDrawbridgeObjectInstance extends AbstractObjectInstance
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
+    }
+
+    /**
+     * ROM: Obj81 uses JmpTo22_SolidObject (s2.asm:56584), which routes through
+     * SolidObject_Landed (s2.asm:35368-35387). SolidObject_Landed branches when
+     * d3 (relY) in [0, 15] via "blo.s SolidObject_Landed" (unsigned lower), so
+     * distY==0 is an accepted landing — unlike PlatformObject_ChkYRange which
+     * has an additional gate. Allow zero-distance landings here to match ROM.
+     */
+    @Override
+    public boolean allowsZeroDistanceTopSolidLanding(PlayableEntity player) {
+        return true;
+    }
+
+    /**
+     * ROM: Obj81 uses SolidObject_Landed (s2.asm:35368-35387), not
+     * PlatformObject_ChkYRange (s2.asm:35696-35712). The SolidObject_Landed
+     * formula (playerY - relY + 3) is already implemented by resolveContactInternal;
+     * the PlatformObject absolute snap (anchorY - groundHalfHeight - yRadius - 1)
+     * does not apply here.
+     */
+    @Override
+    public boolean usesPlatformObjectLandingSnap() {
+        return false;
     }
 
     // SolidObjectListener implementation

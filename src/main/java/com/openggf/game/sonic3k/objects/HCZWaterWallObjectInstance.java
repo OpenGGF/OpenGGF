@@ -7,13 +7,15 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
-import java.util.Random;
 import java.util.logging.Logger;
 
 /**
@@ -35,9 +37,6 @@ import java.util.logging.Logger;
 public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
 
     private static final Logger LOG = Logger.getLogger(HCZWaterWallObjectInstance.class.getName());
-
-    // Shared random for spray particle variation
-    private static final Random RANDOM = new Random();
 
     // ===== Subtype 0: Horizontal Geyser Constants =====
     private static final int HORZ_Y_GUARD = 0x500;
@@ -276,16 +275,18 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
      * 75% main art, 25% bubble art.
      */
     private void spawnHorzSprayChild() {
-        int randVal = RANDOM.nextInt(16);
+        var rng = services().rng();
+        int randVal = rng.nextInt(16);
         int sprayXOff = randVal * 8 - 0x50;
         int sprayX = x + sprayXOff;
         int sprayY = y + 0x18;
-        boolean useBubbleArt = (RANDOM.nextInt(4) == 0); // 25% chance
-        int animId = RANDOM.nextInt(4);
+        boolean useBubbleArt = (rng.nextInt(4) == 0); // 25% chance
+        int animId = rng.nextInt(4);
+        int initialAnimTimer = 2 + rng.nextInt(4);
 
         WaterWallSprayChild spray = new WaterWallSprayChild(
                 sprayX, sprayY, 0x400, 0,
-                useBubbleArt, animId, artKey);
+                useBubbleArt, animId, artKey, initialAnimTimer);
         spawnDynamicObject(spray);
     }
 
@@ -437,7 +438,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
             player.setAir(true);
 
             // Apply to sidekicks
-            for (PlayableEntity sidekickEntity : services().sidekicks()) {
+            for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
                 if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
                     sidekick.setXSpeed((short) 0);
                     sidekick.setYSpeed((short) VERT_ERUPTION_PLAYER_Y_VEL);
@@ -486,17 +487,19 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
      * ROM: sub_304DA - Random positioning, 75% main art / 25% bubble art.
      */
     private void spawnVertSprayPair() {
+        var rng = services().rng();
         for (int i = 0; i < 2; i++) {
-            int randX = RANDOM.nextInt(16) * 0x40;
-            if (RANDOM.nextBoolean()) randX = -randX;
+            int randX = rng.nextInt(16) * 0x40;
+            if (rng.nextBoolean()) randX = -randX;
             int sprayX = x + (randX >> 8);
             int sprayY = y;
-            boolean useBubbleArt = (RANDOM.nextInt(4) == 0);
-            int animId = RANDOM.nextInt(4);
+            boolean useBubbleArt = (rng.nextInt(4) == 0);
+            int animId = rng.nextInt(4);
+            int initialAnimTimer = 2 + rng.nextInt(4);
 
             WaterWallSprayChild spray = new WaterWallSprayChild(
                     sprayX, sprayY, randX >> 4, -0x700,
-                    useBubbleArt, animId, artKey);
+                    useBubbleArt, animId, artKey, initialAnimTimer);
             spawnDynamicObject(spray);
         }
     }
@@ -507,12 +510,12 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
         if (playersControlled) return;
         playersControlled = true;
 
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+        for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                sidekick.setObjectControlled(true);
+                ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
                 sidekick.setControlLocked(true);
             }
         }
@@ -522,12 +525,12 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
         if (!playersControlled) return;
         playersControlled = false;
 
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+        for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
-                sidekick.setObjectControlled(false);
+                ObjectControlState.none().applyTo(sidekick);
                 sidekick.setControlLocked(false);
             }
         }
@@ -536,7 +539,7 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
     private void pullPlayersUp(AbstractPlayableSprite player, int pixels) {
         player.setY((short) (player.getY() - pixels));
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+        for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
                 sidekick.setY((short) (sidekick.getY() - pixels));
             }
@@ -546,11 +549,20 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
     private void setPlayerAnim(AbstractPlayableSprite player, Sonic3kAnimationIds animId) {
         player.setAnimationId(animId);
 
-        for (PlayableEntity sidekickEntity : services().sidekicks()) {
+        for (PlayableEntity sidekickEntity : sidekickParticipants(player)) {
             if (sidekickEntity instanceof AbstractPlayableSprite sidekick) {
                 sidekick.setAnimationId(animId);
             }
         }
+    }
+
+    private List<PlayableEntity> sidekickParticipants(AbstractPlayableSprite player) {
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> player,
+                () -> services().playerQuery().sidekicks());
+        return query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS).stream()
+                .filter(candidate -> candidate != player)
+                .toList();
     }
 
     // ===== Rendering =====
@@ -770,13 +782,13 @@ public class HCZWaterWallObjectInstance extends AbstractObjectInstance {
         private int surfaceFrameCount;
 
         WaterWallSprayChild(int x, int y, int xVel, int yVel,
-                boolean useBubbleArt, int animId, String parentArtKey) {
+                boolean useBubbleArt, int animId, String parentArtKey, int initialAnimTimer) {
             super(createChildSpawn(x, y), "WaterWallSpray");
             this.motion = new SubpixelMotion.State(x, y, 0, 0, xVel, yVel);
             this.useBubbleArt = useBubbleArt;
             this.animId = animId;
             this.parentArtKey = parentArtKey;
-            this.animTimer = 2 + RANDOM.nextInt(4);
+            this.animTimer = initialAnimTimer;
         }
 
         @Override

@@ -1,5 +1,9 @@
 package com.openggf.game;
 
+import com.openggf.game.save.SaveReason;
+
+import java.util.Optional;
+
 /**
  * Game-agnostic interface for ending/credits sequences.
  * <p>
@@ -13,6 +17,15 @@ package com.openggf.game;
  * that do not interleave demos (e.g., S2) can ignore these defaults.
  */
 public interface EndingProvider {
+    /**
+     * Returns a save request to issue when the engine starts the ending
+     * transition. Most games do not save here; S2 persists progression before
+     * entering credits.
+     */
+    default Optional<SaveReason> saveReasonOnEndingStart() {
+        return Optional.empty();
+    }
+
 
     /**
      * Called once when the ending sequence is triggered.

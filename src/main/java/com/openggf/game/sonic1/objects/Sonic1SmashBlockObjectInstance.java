@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -204,9 +205,7 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
 
         // Mark as remembered (RememberState) so it stays broken on revisit
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         // Restore cached item bonus before incrementing
         // From disassembly: move.w .count(a0),(v_itembonus).w
@@ -273,17 +272,17 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
         }
 
         List<SpriteMappingPiece> pieces = fragFrame.pieces();
-        int blockX = spawn.x();
-        int blockY = spawn.y();
+        final int blockX = spawn.x();
+        final int blockY = spawn.y();
+        final PatternSpriteRenderer fRenderer = renderer;
 
         for (int i = 0; i < FRAGMENT_COUNT; i++) {
-            SpriteMappingPiece piece = pieces.get(i);
-            int velX = FRAGMENT_SPEEDS[i][0];
-            int velY = FRAGMENT_SPEEDS[i][1];
+            final SpriteMappingPiece piece = pieces.get(i);
+            final int velX = FRAGMENT_SPEEDS[i][0];
+            final int velY = FRAGMENT_SPEEDS[i][1];
 
-            SmashBlockFragmentInstance fragment = new SmashBlockFragmentInstance(
-                    blockX, blockY, velX, velY, piece, renderer);
-            objectManager.addDynamicObject(fragment);
+            spawnFreeChild(() -> new SmashBlockFragmentInstance(
+                    blockX, blockY, velX, velY, piece, fRenderer));
         }
 
         // From disassembly SmashObject .playsnd:
@@ -350,12 +349,16 @@ public class Sonic1SmashBlockObjectInstance extends AbstractObjectInstance
 
         // Spawn points popup object
         if (objectManager != null) {
-            Sonic1PointsObjectInstance pointsObj = new Sonic1PointsObjectInstance(
-                    new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
-                    services(), points);
-            // ROM writes obFrame directly from d2>>1 for this path.
-            pointsObj.setScoreFrameIndex(pointsFrameIndex);
-            objectManager.addDynamicObject(pointsObj);
+            final int fPoints = points;
+            final int fPointsFrameIndex = pointsFrameIndex;
+            spawnFreeChild(() -> {
+                Sonic1PointsObjectInstance pointsObj = new Sonic1PointsObjectInstance(
+                        new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
+                        services(), fPoints);
+                // ROM writes obFrame directly from d2>>1 for this path.
+                pointsObj.setScoreFrameIndex(fPointsFrameIndex);
+                return pointsObj;
+            });
         }
     }
 

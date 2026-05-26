@@ -11,6 +11,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -102,6 +103,16 @@ public class CPZPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isTopSolidOnly() {
         return true;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
+    }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return baseX;
     }
 
     @Override
@@ -306,6 +317,13 @@ public class CPZPlatformObjectInstance extends AbstractObjectInstance
         ctx.drawLine(right, top, right, bottom, 0.8f, 0.5f, 0.2f);
         ctx.drawLine(right, bottom, left, bottom, 0.8f, 0.5f, 0.2f);
         ctx.drawLine(left, bottom, left, top, 0.8f, 0.5f, 0.2f);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("sub=%X base=%04X,%04X vel=%04X w=%02X",
+                moveType & 0xF, baseX & 0xFFFF, baseY & 0xFFFF,
+                yVel & 0xFFFF, widthPixels & 0xFF);
     }
 
 }

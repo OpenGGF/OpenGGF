@@ -4,7 +4,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.*;
 
@@ -24,7 +24,7 @@ public class TestPachinkoFlipperObjectInstance {
         when(player.isJumpJustPressed()).thenReturn(false, false, false);
 
         flipper.setServices(new TestObjectServices());
-        SolidContact standing = new SolidContact(true, false, false, false, false, 0);
+        SolidContact standing = new SolidContact(true, false, false, false, false, 0, false);
 
         flipper.onSolidContact(player, standing, 0);
         flipper.update(0, player);
@@ -36,3 +36,4 @@ public class TestPachinkoFlipperObjectInstance {
         verify(player, never()).setXSpeed(anyShort());
     }
 }
+

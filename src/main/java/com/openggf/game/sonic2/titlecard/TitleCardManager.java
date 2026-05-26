@@ -10,6 +10,7 @@ import com.openggf.data.RomManager;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.graphics.TitleCardSpriteRenderer;
 import com.openggf.level.Pattern;
 import com.openggf.util.PatternDecompressor;
@@ -66,7 +67,7 @@ public class TitleCardManager implements TitleCardProvider {
     private static final int SCREEN_HEIGHT = 224;
 
     /** Pattern base ID for title card art (high ID to avoid conflicts) */
-    private static final int PATTERN_BASE = 0x40000;
+    private static final int PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
 
     /**
      * VRAM layout for title card art:
@@ -211,7 +212,7 @@ public class TitleCardManager implements TitleCardProvider {
     private boolean artCached = false;
     private int lastLoadedZone = -1;  // Track which zone's letters we've loaded
 
-    private TitleCardManager() {}
+    public TitleCardManager() {}
 
     public static synchronized TitleCardManager getInstance() {
         if (instance == null) {
@@ -424,7 +425,7 @@ public class TitleCardManager implements TitleCardProvider {
             return;
         }
 
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = GameServices.graphics();
         if (graphicsManager == null) {
             return;
         }
@@ -671,7 +672,7 @@ public class TitleCardManager implements TitleCardProvider {
     public void draw() {
         ensureArtCached();
 
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = GameServices.graphics();
         if (graphicsManager == null) {
             return;
         }

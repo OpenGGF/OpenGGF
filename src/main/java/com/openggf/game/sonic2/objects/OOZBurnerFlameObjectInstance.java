@@ -50,7 +50,6 @@ public class OOZBurnerFlameObjectInstance extends AbstractObjectInstance
                 0
         ));
     }
-
     private final OOZPoppingPlatformObjectInstance parent;
     private final ObjectAnimationState animationState;
     private boolean flameActive;

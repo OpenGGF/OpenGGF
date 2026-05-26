@@ -11,6 +11,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractFallingFragment;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -384,9 +385,10 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
         // Spawn remaining 7 fragments as dynamic objects
         int maxFragments = Math.min(FRAGMENT_COUNT, delays.length);
         for (int i = 1; i < maxFragments; i++) {
-            CollapsingFloorFragmentInstance fragment = new CollapsingFloorFragmentInstance(
-                    x, y, FRAME_SMASH, i, delays[i], hFlip, artKey);
-            objectManager.addDynamicObject(fragment);
+            final int idx = i;
+            final int delay = delays[i];
+            spawnFreeChild(() -> new CollapsingFloorFragmentInstance(
+                    x, y, FRAME_SMASH, idx, delay, hFlip, artKey));
         }
 
         // Play collapse sound: move.w #sfx_Collapse,d0 / jmp (QueueSound2).l
@@ -410,9 +412,7 @@ public class Sonic1CollapsingFloorObjectInstance extends AbstractObjectInstance
     private void destroyWithWindowGatedRespawn() {
         if (!isDestroyed()) {
             ObjectManager objectManager = services().objectManager();
-            if (objectManager != null) {
-                objectManager.removeFromActiveSpawns(spawn);
-            }
+            ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
         }
         setDestroyed(true);
     }

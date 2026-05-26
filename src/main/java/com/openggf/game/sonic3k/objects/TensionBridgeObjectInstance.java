@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.GravityDebrisChild;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
@@ -407,7 +408,7 @@ public class TensionBridgeObjectInstance extends AbstractObjectInstance
             if (objectManager.isAnyPlayerRiding(this)) {
                 playerAtCollapse = player;
             }
-            objectManager.markRemembered(spawn);
+            ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
         }
 
         // Spawn fragment for each segment

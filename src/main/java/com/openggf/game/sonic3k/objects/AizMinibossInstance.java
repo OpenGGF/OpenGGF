@@ -2,12 +2,15 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
-import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectManager;
@@ -52,13 +55,13 @@ public class AizMinibossInstance extends AbstractBossInstance {
     private static final int DESCEND_TIME = 0xAF;
     private static final int SWING_PREP_TIME = 20;
     private static final int FLAME_PREP_TIME = 30;
-    private static final int BREATH_SWING_TIME = 0x80;
+    private static final int BREATH_CYCLE_COUNT = 8;       // ROM: move.b #8,$39(a0)
     private static final int VERTICAL_DRIFT_TIME = 0x5F;
     private static final int HOLD_TIME = 0x10;
-    private static final int HORIZONTAL_TIME = 0x60;
-    private static final int HORIZONTAL_RECOVERY_TIME = 0x30;
+    private static final int HORIZONTAL_CYCLE_COUNT = 4;    // ROM: move.b #4,$39(a0)
     private static final int INVULN_TIME = 0x20;
-
+    private static final int FATAL_HIT_DEFEAT_DELAY = 13;
+    private static final int DEFEAT_WAIT_FADE_TIMER = 0x3F;
     private static final int FLAG_PARENT_BITS = 0x38;
     private static final int FLAG_PARENT_COUNTER = 0x39;
     private static final int PARENT_BIT_BARREL_ACTIVATE = 1 << 1;
@@ -81,11 +84,36 @@ public class AizMinibossInstance extends AbstractBossInstance {
     private final AizMinibossSwingMotion swingMotion = new AizMinibossSwingMotion();
 
     private int waitTimer = -1;
-    private Runnable waitCallback;
+    private WaitCallback waitCallback = WaitCallback.NONE;
+    /** Callback for when the current horizontal swing count expires. */
+    private HorizontalCallback horizontalCallback = HorizontalCallback.NONE;
     private boolean defeatRenderComplete;
+    private int pendingDefeatTimer = -1;
+    private int defeatHandoffTimer = -1;
+    private boolean levelEndUnlockStarted;
+    private boolean levelEndSizeChangeStarted;
+    private int levelEndMaxXAccumulator;
+    private int levelEndMaxYAccumulator;
 
     /** Stagger explosion controller for boss defeat (ROM: Child6_CreateBossExplosion subtype 0). */
     private S3kBossExplosionController defeatExplosionController;
+
+    private enum WaitCallback {
+        NONE,
+        INITIAL_DELAY_COMPLETE,
+        DESCEND_COMPLETE,
+        SWING_PREP_COMPLETE,
+        FLAME_PREP_COMPLETE,
+        VERTICAL_ARC_PREP,
+        HORIZONTAL_ARC_START,
+        BREATH_CYCLE_COMPLETE
+    }
+
+    private enum HorizontalCallback {
+        NONE,
+        HORIZONTAL_ARC_PIVOT,
+        HORIZONTAL_ARC_COMPLETE
+    }
 
     public AizMinibossInstance(ObjectSpawn spawn) {
         super(spawn, "AIZMiniboss");
@@ -96,8 +124,15 @@ public class AizMinibossInstance extends AbstractBossInstance {
         state.routine = ROUTINE_INIT;
         state.hitCount = HIT_COUNT;
         waitTimer = -1;
-        waitCallback = null;
+        waitCallback = WaitCallback.NONE;
+        horizontalCallback = HorizontalCallback.NONE;
         defeatRenderComplete = false;
+        pendingDefeatTimer = -1;
+        defeatHandoffTimer = -1;
+        levelEndUnlockStarted = false;
+        levelEndSizeChangeStarted = false;
+        levelEndMaxXAccumulator = 0;
+        levelEndMaxYAccumulator = 0;
         defeatExplosionController = null;
     }
 
@@ -133,7 +168,6 @@ public class AizMinibossInstance extends AbstractBossInstance {
 
     @Override
     public void onPlayerAttack(PlayableEntity playerEntity, TouchResponseResult result) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (state.invulnerable || state.defeated) {
             return;
         }
@@ -147,10 +181,20 @@ public class AizMinibossInstance extends AbstractBossInstance {
 
         if (state.hitCount <= 0) {
             state.hitCount = 0;
-            state.defeated = true;
-            services().gameState().addScore(1000);
-            onDefeatStarted();
+            // ROM loc_68F62 enters the defeat branch from the boss object's
+            // own collision_property poll after the fatal touch response has
+            // cleared collision_flags. The parent remains live for the
+            // intervening frames, which preserves the AIZ arena-edge contact
+            // seen in the trace before Wait_FadeToLevelMusic starts.
+            pendingDefeatTimer = FATAL_HIT_DEFEAT_DELAY;
         }
+    }
+
+    private void triggerPendingDefeat() {
+        pendingDefeatTimer = -1;
+        state.defeated = true;
+        services().gameState().addScore(1000);
+        onDefeatStarted();
     }
 
     @Override
@@ -159,7 +203,8 @@ public class AizMinibossInstance extends AbstractBossInstance {
         state.xVel = 0;
         state.yVel = 0;
         waitTimer = -1;
-        waitCallback = null;
+        waitCallback = WaitCallback.NONE;
+        horizontalCallback = HorizontalCallback.NONE;
 
         // Clear invulnerability immediately to stop palette flash
         state.invulnerable = false;
@@ -170,6 +215,12 @@ public class AizMinibossInstance extends AbstractBossInstance {
         // CreateBossExp00: timer=$20 (33 explosions), xRange=$20, yRange=$20.
         // sub_52850 plays sfx_Explode each time it spawns an explosion child (every 3 frames).
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
+        // ROM loc_68FB6 switches the boss object to Wait_FadeToLevelMusic
+        // and creates Child6_CreateBossExplosion; the later loc_68C02
+        // Obj_EndSignControl callback is timed by the boss object's $2E,
+        // not by the explosion controller finishing (sonic3k.asm:137793-137806,
+        // 179651-179668,137381-137393).
+        defeatHandoffTimer = DEFEAT_WAIT_FADE_TIMER;
 
         services().fadeOutMusic();
 
@@ -188,15 +239,23 @@ public class AizMinibossInstance extends AbstractBossInstance {
     @Override
     protected void updateBossLogic(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        maintainArenaCameraLock();
+        if (pendingDefeatTimer >= 0) {
+            pendingDefeatTimer--;
+            if (pendingDefeatTimer < 0) {
+                triggerPendingDefeat();
+            }
+            updateCustomFlash();
+        }
         switch (state.routine) {
             case ROUTINE_INIT -> updateInit();
             case ROUTINE_WAIT_TRIGGER -> updateWaitTrigger();
             case ROUTINE_WAIT -> updateWaitOnly();
-            case ROUTINE_DESCEND -> updateMoveAndWait(false);
-            case ROUTINE_SWING -> updateMoveAndWait(true);
-            case ROUTINE_BREATH -> updateMoveAndWait(true);
+            case ROUTINE_DESCEND -> updateMoveAndWait();
+            case ROUTINE_SWING -> updateSwingAndWait();
+            case ROUTINE_BREATH -> updateBreathSwingCount();
             case ROUTINE_HOLD -> updateWaitOnly();
-            case ROUTINE_HORIZONTAL_SWING -> updateMoveAndWait(true);
+            case ROUTINE_HORIZONTAL_SWING -> updateHorizontalSwingCount();
             case ROUTINE_DEFEATED -> updateDefeated(frameCounter);
             default -> {
             }
@@ -220,25 +279,22 @@ public class AizMinibossInstance extends AbstractBossInstance {
         if (level == null || level.getPaletteCount() <= 1) {
             return;
         }
-        Palette pal = level.getPalette(1);
         // ROM: bit 0 of $20(a0) determines which color set
         boolean useDark = (state.invulnerabilityTimer & 1) != 0;
         int[] colors = useDark ? CUSTOM_FLASH_DARK : CUSTOM_FLASH_BRIGHT;
-        for (int i = 0; i < CUSTOM_FLASH_INDICES.length; i++) {
-            byte[] bytes = {(byte) ((colors[i] >> 8) & 0xFF), (byte) (colors[i] & 0xFF)};
-            pal.getColor(CUSTOM_FLASH_INDICES[i]).fromSegaFormat(bytes, 0);
-        }
-        var gm = services().graphicsManager();
-        if (gm.isGlInitialized()) {
-            gm.cachePaletteTexture(pal, 1);
-        }
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(),
+                level,
+                services().graphicsManager(),
+                S3kPaletteOwners.AIZ_MINIBOSS,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                1,
+                CUSTOM_FLASH_INDICES,
+                colors);
     }
 
     private void updateInit() {
-        Sonic3kAIZEvents events = getAizEvents();
-        if (events != null) {
-            events.setBossFlag(true);
-        }
+        S3kAizEventWriteSupport.setBossFlag(services(), true);
         services().gameState().setCurrentBossId(0x91);
         loadBossPalette();
         state.routine = ROUTINE_WAIT_TRIGGER;
@@ -246,24 +302,139 @@ public class AizMinibossInstance extends AbstractBossInstance {
 
     private void updateWaitTrigger() {
         var camera = services().camera();
-        PlayerCharacter character = ((Sonic3kLevelEventManager) services().levelEventProvider()).getPlayerCharacter();
+        PlayerCharacter character = currentPlayerCharacter();
         int triggerX = (character == PlayerCharacter.KNUCKLES) ? TRIGGER_X_KNUCKLES : TRIGGER_X;
         if (camera.getX() < triggerX) {
             return;
         }
 
-        camera.setMinX((short) triggerX);
-        camera.setMaxX((short) triggerX);
+        lockArenaCamera(triggerX);
         services().fadeOutMusic();
 
         state.routine = ROUTINE_WAIT;
-        setWait(WAIT_AFTER_TRIGGER, this::onInitialDelayComplete);
+        setWait(WAIT_AFTER_TRIGGER, WaitCallback.INITIAL_DELAY_COMPLETE);
+    }
+
+    private void maintainArenaCameraLock() {
+        if (state.routine < ROUTINE_WAIT) {
+            return;
+        }
+        int triggerX = currentPlayerCharacter() == PlayerCharacter.KNUCKLES
+                ? TRIGGER_X_KNUCKLES
+                : TRIGGER_X;
+        if (levelEndUnlockStarted || shouldReleaseArenaForAct2TitleExit()) {
+            levelEndUnlockStarted = true;
+            updateLevelEndCameraUnlock(triggerX);
+            return;
+        }
+        lockArenaCamera(triggerX);
+    }
+
+    private boolean shouldReleaseArenaForAct2TitleExit() {
+        if (!state.defeated || !defeatRenderComplete) {
+            return false;
+        }
+        // ROM Obj_LevelResults changes into the in-level title-card object for
+        // Act 1 results. Obj_TitleCardWait2 sets End_of_level_flag only after
+        // the title-card children have disappeared, then Obj_EndSignControlDoStart
+        // runs Change_Act2Sizes (sonic3k.asm:62708-62720,62276-62279,
+        // 180415-180419). Do not widen the miniboss arena during the child
+        // slide-out phase before that flag exists.
+        Sonic3kTitleCardManager titleCardManager =
+                services().gameService(Sonic3kTitleCardManager.class);
+        return services().gameState().isEndOfLevelFlag()
+                || (titleCardManager != null
+                        && titleCardManager.willSetInLevelEndOfLevelFlagThisUpdate());
+    }
+
+    private void updateLevelEndCameraUnlock(int triggerX) {
+        var camera = services().camera();
+        var level = services().currentLevel();
+        int storedMax = level != null ? level.getMaxX() : triggerX;
+
+        if (!levelEndSizeChangeStarted) {
+            levelEndSizeChangeStarted = true;
+            // ROM Change_Act2Sizes copies Act 2 size words into the stored
+            // camera-boundary memory and Camera_target_max_Y_pos, then creates
+            // gradual level-size objects (sonic3k.asm:180575-180609). Keep
+            // X/Y under the ROM gradual objects below; use the engine's target
+            // max-Y path for the copied Camera_target_max_Y_pos word. This
+            // proxy starts from the first frame where the ROM-created children
+            // are already eligible to run, so seed their 16.16 accumulators by
+            // one creation/update tick.
+            levelEndMaxXAccumulator = 0x4000;
+            levelEndMaxYAccumulator = 0x8000;
+            if (level != null) {
+                camera.setMinY((short) level.getMinY());
+                camera.setMaxYTarget((short) level.getMaxY());
+            }
+        }
+
+        // ROM Obj_IncLevEndXGradual (sonic3k.asm:178154-178169) widens
+        // Camera_max_X_pos with a 16.16 accumulator, adding $4000 per frame.
+        // The first three updates add zero integer pixels, so the arena remains
+        // locked on the first End_of_level_flag frame.
+        camera.setMinX((short) triggerX);
+        levelEndMaxXAccumulator += 0x4000;
+        int delta = levelEndMaxXAccumulator >>> 16;
+        int nextMax = (camera.getMaxX() & 0xFFFF) + delta;
+        if ((camera.getMaxX() & 0xFFFF) > storedMax) {
+            // ROM loc_84A6A stores Camera_stored_max_X_pos, then deletes the
+            // gradual level-end object (docs/skdisasm/sonic3k.asm:178165-178169).
+            // If a later AIZ event has already widened the camera farther
+            // (Obj_AIZ2BossSmall writes $6000 at sonic3k.asm:105602), this
+            // stale controller must not clamp it back to the old stored max.
+            setDestroyed(true);
+            return;
+        }
+        if (nextMax >= storedMax) {
+            camera.setMaxX((short) storedMax);
+            setDestroyed(true);
+        } else {
+            camera.setMaxX((short) nextMax);
+        }
+
+        int storedMaxY = level != null ? level.getMaxY() : (camera.getMaxYTarget() & 0xFFFF);
+        levelEndMaxYAccumulator += 0x8000;
+        int yDelta = levelEndMaxYAccumulator >>> 16;
+        var player = camera.getFocusedSprite();
+        boolean playerAirborne = player != null && player.getAir();
+        if (player != null && !playerAirborne) {
+            // ROM DeformBgLayer runs MoveCameraY before Do_ResizeEvents, so
+            // each grounded frame's +2 max-Y resize is a carry into the next
+            // camera frame. The engine's generic camera step eases max-Y before
+            // the camera move; carry this AIZ results proxy by that ROM
+            // post-camera resize tick once the title-exit jump has landed
+            // (sonic3k.asm:38313-38316,38761-38789,178210-178225).
+            yDelta += 2;
+        }
+        int nextMaxY = (camera.getMaxY() & 0xFFFF) + yDelta;
+        if (nextMaxY >= storedMaxY) {
+            camera.setMaxY((short) storedMaxY);
+        } else {
+            // ROM Obj_IncLevEndYGradual adds $8000 to its 16.16 accumulator and
+            // writes Camera_max_Y_pos until Camera_stored_max_Y_pos is reached
+            // (sonic3k.asm:178210-178225). Preserve the target word copied by
+            // Change_Act2Sizes after updating the current bound.
+            camera.setMaxY((short) nextMaxY);
+            camera.setMaxYTarget((short) storedMaxY);
+        }
+    }
+
+    private void lockArenaCamera(int triggerX) {
+        var camera = services().camera();
+        // ROM loc_68556 (sonic3k.asm:136774-136780) writes both
+        // Camera_min_X_pos and Camera_max_X_pos to d5 before the miniboss wait
+        // and fight routines. Reasserting preserves that lock across the
+        // engine's seamless AIZ1->AIZ2 reload bookkeeping.
+        camera.setMinX((short) triggerX);
+        camera.setMaxX((short) triggerX);
     }
 
     private void onInitialDelayComplete() {
         state.routine = ROUTINE_DESCEND;
         state.yVel = DESCEND_VEL;
-        setWait(DESCEND_TIME, this::onDescendComplete);
+        setWait(DESCEND_TIME, WaitCallback.DESCEND_COMPLETE);
 
         var objectManager = services().objectManager();
         spawnChild(new AizMinibossBodyChild(this), objectManager);
@@ -283,82 +454,151 @@ public class AizMinibossInstance extends AbstractBossInstance {
         setCustomFlag(FLAG_PARENT_BITS, getCustomFlag(FLAG_PARENT_BITS) | PARENT_BIT_BARREL_ACTIVATE);
         state.yVel = 0;
         swingMotion.setup1(state);
-        setWait(SWING_PREP_TIME, this::onSwingPrepComplete);
+        setWait(SWING_PREP_TIME, WaitCallback.SWING_PREP_COMPLETE);
     }
 
     private void onSwingPrepComplete() {
-        setWait(FLAME_PREP_TIME, this::onFlamePrepComplete);
+        setWait(FLAME_PREP_TIME, WaitCallback.FLAME_PREP_COMPLETE);
     }
 
     private void onFlamePrepComplete() {
+        // ROM: loc_68AFE — enter BREATH routine ($A) with Swing_UpAndDown_Count
         state.routine = ROUTINE_BREATH;
-        setCustomFlag(FLAG_PARENT_COUNTER, 8);
+        swingMotion.setCycleCounter(BREATH_CYCLE_COUNT);
         services().playSfx(Sonic3kSfx.FLAMETHROWER_QUIET.id);
         spawnBreathFlames();
-        setWait(BREATH_SWING_TIME, this::onBreathCycleComplete);
+        // No frame timer — phase progresses via swing half-cycle counting
+        waitTimer = -1;
+        waitCallback = WaitCallback.NONE;
     }
 
+    /**
+     * ROM: loc_68B1C — Swing_UpAndDown_Count, beq continue, tst d1 / bmi transition.
+     * Counts half-cycles of the Y oscillation. When the count expires (at a peak)
+     * AND y_vel < 0 (top of swing), transitions to the vertical drift phase.
+     * Once the counter goes negative, updateAndCount returns EXPIRED on every
+     * subsequent peak too, so no flag is needed.
+     */
+    private void updateBreathSwingCount() {
+        var result = swingMotion.updateAndCount(state);
+        if (result == AizMinibossSwingMotion.CountResult.EXPIRED && state.yVel < 0) {
+            onBreathCycleComplete();
+            return;
+        }
+        state.applyVelocity();
+    }
+
+    /**
+     * ROM: loc_68B34 — after breath swing count expires at top of oscillation.
+     * Toggles vertical direction: first pass moves up → horizontal arc,
+     * second pass moves down → restart attack cycle.
+     */
     private void onBreathCycleComplete() {
         // ROM: loc_68ADE — Knuckles fight triggers napalm after breath cycle
-        PlayerCharacter character = ((Sonic3kLevelEventManager) services().levelEventProvider()).getPlayerCharacter();
+        PlayerCharacter character = currentPlayerCharacter();
         if (character == PlayerCharacter.KNUCKLES) {
             setCustomFlag(FLAG_PARENT_BITS, getCustomFlag(FLAG_PARENT_BITS) | PARENT_BIT_NAPALM_ACTIVATE);
         }
 
+        // ROM: loc_68B34 — routine=6, wait=$5F, toggle bit 2 of $38
         state.routine = ROUTINE_DESCEND;
         int bits = getCustomFlag(FLAG_PARENT_BITS) ^ PARENT_BIT_ALT_VERTICAL;
         setCustomFlag(FLAG_PARENT_BITS, bits);
 
         if ((bits & PARENT_BIT_ALT_VERTICAL) != 0) {
+            // First pass: move up, then horizontal arc
             state.yVel = -DESCEND_VEL;
-            setWait(VERTICAL_DRIFT_TIME, this::onVerticalArcPrep);
+            setWait(VERTICAL_DRIFT_TIME, WaitCallback.VERTICAL_ARC_PREP);
         } else {
+            // Second pass: move down, restart attack cycle at loc_68ACC
             state.yVel = DESCEND_VEL;
-            setWait(VERTICAL_DRIFT_TIME, this::onDescendComplete);
+            setWait(VERTICAL_DRIFT_TIME, WaitCallback.DESCEND_COMPLETE);
         }
     }
 
+    /** ROM: loc_68B74 → loc_68B7C — hold at top, then start horizontal swing. */
     private void onVerticalArcPrep() {
         state.routine = ROUTINE_HOLD;
         state.xVel = 0;
         state.yVel = 0;
-        setWait(HOLD_TIME, this::onHorizontalArcStart);
+        setWait(HOLD_TIME, WaitCallback.HORIZONTAL_ARC_START);
     }
 
+    /**
+     * ROM: loc_68B92 — enter HORIZONTAL_SWING routine ($E) with Swing_UpAndDown_Count.
+     * Counter = 4, x_vel toggles direction via bit 3 of $38, Swing_Setup1 resets Y oscillation.
+     */
     private void onHorizontalArcStart() {
         state.routine = ROUTINE_HORIZONTAL_SWING;
-        setCustomFlag(FLAG_PARENT_COUNTER, 4);
+        swingMotion.setCycleCounter(HORIZONTAL_CYCLE_COUNT);
 
+        // ROM: bchg #3,$38(a0); bne.s skip_neg; neg.w d0
         int bits = getCustomFlag(FLAG_PARENT_BITS) ^ PARENT_BIT_ALT_HORIZONTAL;
         setCustomFlag(FLAG_PARENT_BITS, bits);
 
+        // ROM: d0=$100, if bit was 0 (now 1) → neg → x_vel=-$100 (left)
+        //      if bit was 1 (now 0) → no neg → x_vel=$100 (right)
         int xVel = ((bits & PARENT_BIT_ALT_HORIZONTAL) != 0) ? -DESCEND_VEL : DESCEND_VEL;
         state.xVel = xVel;
         swingMotion.setup1(state);
-        setWait(HORIZONTAL_TIME, this::onHorizontalArcPivot);
+        // No frame timer — phase progresses via swing half-cycle counting
+        waitTimer = -1;
+        waitCallback = WaitCallback.NONE;
+        horizontalCallback = HorizontalCallback.HORIZONTAL_ARC_PIVOT;
     }
 
+    /**
+     * ROM: loc_68BBC — Swing_UpAndDown_Count, bne call-callback, else MoveSprite2+Draw.
+     * When the half-cycle counter expires, calls the current callback (pivot or complete).
+     */
+    private void updateHorizontalSwingCount() {
+        var result = swingMotion.updateAndCount(state);
+        if (result == AizMinibossSwingMotion.CountResult.EXPIRED) {
+            runHorizontalCallback();
+            return;
+        }
+        state.applyVelocity();
+    }
+
+    /**
+     * ROM: loc_68BDC — first horizontal count expired.
+     * Reset counter for second pass, flip render flags (facing direction),
+     * apply one frame of movement, then continue horizontal swing.
+     */
     private void onHorizontalArcPivot() {
+        swingMotion.setCycleCounter(HORIZONTAL_CYCLE_COUNT);
         state.renderFlags ^= 1;
-        setCustomFlag(FLAG_PARENT_COUNTER, 4);
-        setWait(HORIZONTAL_RECOVERY_TIME, this::onHorizontalArcComplete);
+        state.applyVelocity(); // ROM: jmp (MoveSprite2).l
+        horizontalCallback = HorizontalCallback.HORIZONTAL_ARC_COMPLETE;
     }
 
+    /**
+     * ROM: loc_68BF6 → loc_68B7C — second horizontal count expired.
+     * Hold briefly, then return to the breath/vertical cycle via loc_68B34.
+     */
     private void onHorizontalArcComplete() {
         state.routine = ROUTINE_HOLD;
         state.xVel = 0;
         state.yVel = 0;
-        setWait(HOLD_TIME, this::onBreathCycleComplete);
+        setWait(HOLD_TIME, WaitCallback.BREATH_CYCLE_COMPLETE);
     }
 
     private void updateWaitOnly() {
         tickWait();
     }
 
-    private void updateMoveAndWait(boolean applySwing) {
-        if (applySwing) {
-            swingMotion.update(state);
-        }
+    /**
+     * ROM: loc_685FC — Swing_UpAndDown + MoveWaitTouch.
+     * Used for ROUTINE_SWING (routine 8): plain swing oscillation with frame timer.
+     */
+    private void updateSwingAndWait() {
+        swingMotion.update(state);
+        state.applyVelocity();
+        tickWait();
+    }
+
+    /** ROM: loc_68ABA — MoveSprite2 + Obj_Wait (no swing). */
+    private void updateMoveAndWait() {
         state.applyVelocity();
         tickWait();
     }
@@ -366,7 +606,7 @@ public class AizMinibossInstance extends AbstractBossInstance {
     private void updateDefeated(int frameCounter) {
         // Tick the stagger explosion controller each frame.
         // ROM: Obj_CreateBossExplosion (sub_52850) spawns one explosion every 3 frames
-        // at random offsets within ±$20 pixels. Total: 33 explosions over ~102 frames.
+        // at random offsets within +/-$20 pixels. Total: 33 explosions over ~102 frames.
         if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
             defeatExplosionController.tick();
             var objectManager = services().objectManager();
@@ -379,11 +619,19 @@ public class AizMinibossInstance extends AbstractBossInstance {
                             new S3kBossExplosionChild(pending.x(), pending.y()));
                 }
             }
-            return;
         }
 
-        // Explosions finished — spawn music fade-to-level transition, then signpost flow.
-        // ROM: Wait_FadeToLevelMusic → Obj_Song_Fade_ToLevelMusic → Restore_LevelMusic
+        if (defeatHandoffTimer >= 0) {
+            defeatHandoffTimer--;
+            if (defeatHandoffTimer < 0) {
+                startDefeatHandoff();
+            }
+        }
+    }
+
+    private void startDefeatHandoff() {
+        // ROM: Wait_FadeToLevelMusic -> Obj_Song_Fade_ToLevelMusic ->
+        // loc_68C02 -> Obj_EndSignControl.
         // The fire transition swaps tileset/palette to AIZ2's look, but the zone is still
         // technically AIZ1 and the level music is AIZ1.
         if (!defeatRenderComplete) {
@@ -395,26 +643,11 @@ public class AizMinibossInstance extends AbstractBossInstance {
             // Use spawnChild() so CONSTRUCTION_CONTEXT is set — the constructor calls services()
             spawnChild(() -> new S3kBossDefeatSignpostFlow(
                     state.x, 0,
-                    () -> {
-                        // AfterBoss_AIZ2: restore fire palette to palette line 1.
-                        // ROM: lea (Pal_AIZFire).l,a1 / jsr (PalLoad_Line1).l
-                        // PalLoad_Line1 copies 32 bytes to Normal_palette_line_2
-                        // (S3K 1-based naming: line_2 = engine index 1).
-                        // The real miniboss fights in the post-fire section (technically AIZ2),
-                        // so we restore Pal_AIZFire, NOT Pal_AIZ (green AIZ1 palette).
-                        try {
-                            byte[] palData = services().rom().readBytes(
-                                    Sonic3kConstants.PAL_AIZ_FIRE_ADDR, 32);
-                            services().updatePalette(1, palData);
-                        } catch (Exception e) {
-                            LOG.fine(() -> "AizMinibossInstance.updateDefeated: " + e.getMessage());
-                        }
-                    }
-            ));
+                    S3kBossDefeatSignpostFlow.CleanupAction.RESTORE_AIZ_FIRE_PALETTE));
         }
     }
 
-    private void setWait(int frames, Runnable callback) {
+    private void setWait(int frames, WaitCallback callback) {
         waitTimer = frames;
         waitCallback = callback;
     }
@@ -427,10 +660,39 @@ public class AizMinibossInstance extends AbstractBossInstance {
         if (waitTimer >= 0) {
             return;
         }
-        Runnable callback = waitCallback;
-        waitCallback = null;
-        if (callback != null) {
-            callback.run();
+        runWaitCallback();
+    }
+
+    private void runWaitCallback() {
+        if (waitCallback == WaitCallback.NONE) {
+            return;
+        }
+        WaitCallback callback = waitCallback;
+        waitCallback = WaitCallback.NONE;
+        switch (callback) {
+            case INITIAL_DELAY_COMPLETE -> onInitialDelayComplete();
+            case DESCEND_COMPLETE -> onDescendComplete();
+            case SWING_PREP_COMPLETE -> onSwingPrepComplete();
+            case FLAME_PREP_COMPLETE -> onFlamePrepComplete();
+            case VERTICAL_ARC_PREP -> onVerticalArcPrep();
+            case HORIZONTAL_ARC_START -> onHorizontalArcStart();
+            case BREATH_CYCLE_COMPLETE -> onBreathCycleComplete();
+            case NONE -> {
+            }
+        }
+    }
+
+    private void runHorizontalCallback() {
+        if (horizontalCallback == HorizontalCallback.NONE) {
+            return;
+        }
+        HorizontalCallback callback = horizontalCallback;
+        horizontalCallback = HorizontalCallback.NONE;
+        switch (callback) {
+            case HORIZONTAL_ARC_PIVOT -> onHorizontalArcPivot();
+            case HORIZONTAL_ARC_COMPLETE -> onHorizontalArcComplete();
+            case NONE -> {
+            }
         }
     }
 
@@ -486,14 +748,23 @@ public class AizMinibossInstance extends AbstractBossInstance {
         try {
             byte[] line = services().rom().readBytes(
                     Sonic3kConstants.PAL_AIZ_MINIBOSS_ADDR, 32);
-            services().updatePalette(1, line);
+            S3kPaletteWriteSupport.applyLine(
+                    services().paletteOwnershipRegistryOrNull(),
+                    services().currentLevel(),
+                    services().graphicsManager(),
+                    S3kPaletteOwners.AIZ_MINIBOSS,
+                    S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                    1,
+                    line);
         } catch (Exception e) {
             LOG.fine(() -> "AizMinibossInstance.loadBossPalette: " + e.getMessage());
         }
     }
 
-    private Sonic3kAIZEvents getAizEvents() {
-        return ((Sonic3kLevelEventManager) services().levelEventProvider()).getAizEvents();
+    private PlayerCharacter currentPlayerCharacter() {
+        return S3kRuntimeStates.resolvePlayerCharacter(
+                services().zoneRuntimeRegistry(),
+                services().configuration());
     }
 
     @Override
@@ -516,6 +787,35 @@ public class AizMinibossInstance extends AbstractBossInstance {
     @Override
     public boolean isHighPriority() {
         // ROM: make_art_tile(ArtTile_AIZMiniboss,1,1) — priority bit = 1
+        return true;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        var camera = services().camera();
+        var gameState = services().gameState();
+        return String.format("r=%02X hp=%d inv=%s it=%d wait=%d pend=%d def=%s done=%s exp=%s boss=%04X end=%s flag=%s cam=%04X min=%04X max=%04X",
+                state.routine & 0xFF,
+                state.hitCount,
+                state.invulnerable,
+                state.invulnerabilityTimer,
+                waitTimer,
+                pendingDefeatTimer,
+                state.defeated,
+                defeatRenderComplete,
+                defeatExplosionController == null || defeatExplosionController.isFinished(),
+                gameState.getCurrentBossId(),
+                gameState.isEndOfLevelActive(),
+                gameState.isEndOfLevelFlag(),
+                camera.getX() & 0xFFFF,
+                camera.getMinX() & 0xFFFF,
+                camera.getMaxX() & 0xFFFF);
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // Dynamic_resize spawns the boss offscreen, then Obj_AIZMiniboss waits
+        // for the later camera trigger before it appears.
         return true;
     }
 

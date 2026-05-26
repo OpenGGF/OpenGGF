@@ -6,8 +6,11 @@ import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -210,6 +213,22 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         return isSolidInCurrentState();
     }
 
+    @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // ROM: SolidObject_Landed re-reads width_pixels(a0). ObjB6_SubObjData
+        // stores width_pixels=$10, while loc_3B790 passes d1=$23 for the wider
+        // side/body collision envelope.
+        return 0x10;
+    }
+
+    @Override
+    public boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
+        // ROM: loc_3B790 jumps into S2 SolidObject_cont, which reads
+        // y_radius(a1), adds it to d2, and doubles that same d2 for the
+        // lower-half overlap range (s2.asm:35156-35169).
+        return true;
+    }
+
     // ==================== Behavior: Timed Tilt (Type 0, Routine 2) ====================
     // s2.asm loc_3B602-3B654
     // Waits for frame counter sync, then plays tilt animation sequence, advances via $FA
@@ -218,6 +237,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         switch (subRoutine) {
             case 2 -> {
                 // loc_3B624: solid platform, check frame counter sync
+                runSolidCheckpoint();
                 // move.b (Vint_runcount+3).w,d0 / andi.b #$F0,d0 / cmp.b subtype(a0),d0
                 int maskedFrame = (frameCounter & 0xFF) & 0xF0;
                 int subtypeMasked = spawn.subtype() & 0xF0;
@@ -254,6 +274,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         switch (subRoutine) {
             case 2 -> {
                 // loc_3B674: solid platform, countdown timer
+                runSolidCheckpoint();
                 timer--;
                 if (timer < 0) {
                     // Timer expired -> start fire sequence
@@ -300,6 +321,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         switch (subRoutine) {
             case 0 -> {
                 // loc_3B6E2: solid platform, check if player is standing
+                runSolidCheckpoint();
                 if (isAnyPlayerRiding()) {
                     // addq.b #2,routine_secondary(a0)
                     subRoutine = 2;
@@ -309,6 +331,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
             }
             case 2 -> {
                 // loc_3B6FE: solid platform, countdown delay
+                runSolidCheckpoint();
                 timer--;
                 if (timer < 0) {
                     // Timer expired -> determine direction and tilt
@@ -358,6 +381,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         switch (subRoutine) {
             case 2 -> {
                 // loc_3B764: vertical solid, countdown timer
+                runSolidCheckpoint();
                 timer--;
                 if (timer < 0) {
                     // loc_3B770: timer expired -> start animation
@@ -574,6 +598,10 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         timer = spawn.subtype() & 0xF0;
     }
 
+    private void runSolidCheckpoint() {
+        services().solidExecution().resolveSolidNowAll();
+    }
+
     /**
      * loc_3B7BC-3B7F6: Drop all riding players into the air.
      * Clears standing status bits and sets in_air for both players.
@@ -585,16 +613,12 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         }
         ObjectManager objectManager = services().objectManager();
 
-        // Get main character (ROM: MainCharacter)
-        AbstractPlayableSprite main = services().camera().getFocusedSprite();
-        if (main != null && objectManager.isRidingObject(main, this)) {
-            objectManager.clearRidingObject(main);
-        }
-
-        // Get sidekick(s) (ROM: Sidekick)
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (objectManager.isRidingObject(sidekick, this)) {
-                objectManager.clearRidingObject(sidekick);
+        for (PlayableEntity candidate : services().playerQuery()
+                .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (objectManager.isRidingObject(candidate, this)) {
+                objectManager.clearRidingObject(candidate);
+                candidate.setOnObject(false);
+                candidate.setAir(true);
             }
         }
     }
@@ -638,29 +662,9 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
      * -> x_flip is SET when d0 == 0 (player to the LEFT)
      */
     private boolean isPlayerToLeft(AbstractPlayableSprite player) {
-        AbstractPlayableSprite main = services().camera().getFocusedSprite();
-
-        // Determine the closest player by absolute horizontal distance
-        AbstractPlayableSprite closest = null;
-        int closestAbsDist = Integer.MAX_VALUE;
-
-        if (main != null) {
-            int diff = spawn.x() - main.getCentreX();
-            int absDiff = Math.abs(diff);
-            if (absDiff < closestAbsDist) {
-                closestAbsDist = absDiff;
-                closest = main;
-            }
-        }
-
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            int diff = spawn.x() - sidekick.getCentreX();
-            int absDiff = Math.abs(diff);
-            if (absDiff < closestAbsDist) {
-                closestAbsDist = absDiff;
-                closest = (AbstractPlayableSprite) sidekick;
-            }
-        }
+        ObjectPlayerQuery.NearestPlayerX nearest = services().playerQuery()
+                .nearestByRomX(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS, spawn.x());
+        AbstractPlayableSprite closest = nearest.player() instanceof AbstractPlayableSprite sprite ? sprite : null;
 
         if (closest == null) {
             // Fallback to passed-in player if no main/sidekick found
@@ -679,6 +683,25 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
             return false;
         }
         return services().objectManager().isAnyPlayerRiding(this);
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("bt=%d sub=%d timer=%d frame=%d anim=%d tick=%d flip=%d solid=%d init=%d",
+                behaviorType,
+                subRoutine,
+                timer,
+                mappingFrame,
+                animId,
+                animFrameTick,
+                xFlipStatus ? 1 : 0,
+                isSolidInCurrentState() ? 1 : 0,
+                initFrame ? 1 : 0);
     }
 
     /**

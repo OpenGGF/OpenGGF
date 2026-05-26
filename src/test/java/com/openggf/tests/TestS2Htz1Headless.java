@@ -1,13 +1,13 @@
 package com.openggf.tests;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.Sonic2LevelEventManager;
+import com.openggf.game.sonic2.runtime.HtzRuntimeState;
 import com.openggf.level.Chunk;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.Level;
@@ -16,15 +16,14 @@ import com.openggf.level.ParallaxManager;
 import com.openggf.level.SolidTile;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.rules.RequiresRom;
-import com.openggf.tests.rules.RequiresRomRule;
 import com.openggf.tests.rules.SonicGame;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Grouped headless tests for Sonic 2 HTZ Act 1.
  *
- * Level data is loaded once via {@link SharedLevel#load} in {@code @BeforeClass};
+ * Level data is loaded once via {@link SharedLevel#load} in {@code @BeforeAll};
  * sprite, camera, and game state are reset per test via {@link HeadlessTestFixture}.
  *
  * Merged from:
@@ -35,9 +34,6 @@ import static org.junit.Assert.*;
  */
 @RequiresRom(SonicGame.SONIC_2)
 public class TestS2Htz1Headless {
-
-    @ClassRule public static RequiresRomRule romRule = new RequiresRomRule();
-
     private static final int HTZ_ZONE = 4;
     private static final int HTZ_ACT = 0;
 
@@ -51,17 +47,17 @@ public class TestS2Htz1Headless {
     private Sonic sprite;
     private LevelManager levelManager;
 
-    @BeforeClass
+    @BeforeAll
     public static void loadLevel() throws Exception {
         sharedLevel = SharedLevel.load(SonicGame.SONIC_2, HTZ_ZONE, HTZ_ACT);
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanup() {
         if (sharedLevel != null) sharedLevel.dispose();
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         fixture = HeadlessTestFixture.builder()
                 .withSharedLevel(sharedLevel)
@@ -86,7 +82,8 @@ public class TestS2Htz1Headless {
         sprite.setY((short) 1403);
         fixture.camera().updatePosition(true);
 
-        Sonic2LevelEventManager lem = Sonic2LevelEventManager.getInstance();
+        Sonic2LevelEventManager lem =
+                (Sonic2LevelEventManager) GameServices.module().getLevelEventProvider();
 
         // Settle: let earthquake trigger and Sonic land on terrain
         for (int i = 0; i < 20; i++) {
@@ -94,8 +91,7 @@ public class TestS2Htz1Headless {
         }
 
         // Verify earthquake activated
-        assertTrue("Earthquake should have triggered (camera in zone)",
-                lem.getCameraBgYOffset() > 0 || lem.getEventRoutine() >= 2);
+        assertTrue(htzState().cameraBgYOffset() > 0 || lem.getEventRoutine() >= 2, "Earthquake should have triggered (camera in zone)");
 
         int baseY = sprite.getY();
         int maxY = baseY;
@@ -119,8 +115,8 @@ public class TestS2Htz1Headless {
             }
         }
 
-        assertFalse("Sonic should not clip through floor when riding descending platform "
-                + "(Y should stay <= " + (baseY + 30) + " but reached " + maxY + ")", detectedClip);
+        assertFalse(detectedClip, "Sonic should not clip through floor when riding descending platform "
+                + "(Y should stay <= " + (baseY + 30) + " but reached " + maxY + ")");
     }
 
     /**
@@ -155,7 +151,7 @@ public class TestS2Htz1Headless {
             }
         }
 
-        assertTrue("Sonic should take damage from subtype 4 lava at (7502, 1329)", wasHurt);
+        assertTrue(wasHurt, "Sonic should take damage from subtype 4 lava at (7502, 1329)");
     }
 
     // ========== From TestHTZInvisibleWallBug ==========
@@ -195,7 +191,7 @@ public class TestS2Htz1Headless {
 
         // Get ChunkDesc at bug location
         ChunkDesc chunkDesc = levelManager.getChunkDescAt((byte) 0, BUG_X, BUG_Y);
-        assertNotNull("ChunkDesc should exist at bug location", chunkDesc);
+        assertNotNull(chunkDesc, "ChunkDesc should exist at bug location");
 
         System.out.println("ChunkDesc details:");
         System.out.println("  Raw value: 0x" + Integer.toHexString(chunkDesc.get()));
@@ -481,7 +477,7 @@ public class TestS2Htz1Headless {
         }
 
         System.out.println("Final: (" + sprite.getX() + ", " + sprite.getY() + ")");
-        assertTrue("Sonic should progress past start position", sprite.getX() > 96);
+        assertTrue(sprite.getX() > 96, "Sonic should progress past start position");
     }
 
     /**
@@ -500,7 +496,8 @@ public class TestS2Htz1Headless {
         // Camera typically centers on Sonic with some offset.
         // We need to teleport both Sonic AND the camera to the trigger zone.
 
-        Sonic2LevelEventManager levelEventManager = Sonic2LevelEventManager.getInstance();
+        Sonic2LevelEventManager levelEventManager =
+                (Sonic2LevelEventManager) GameServices.module().getLevelEventProvider();
         ParallaxManager parallaxManager = GameServices.parallax();
         Camera camera = fixture.camera();
 
@@ -528,7 +525,7 @@ public class TestS2Htz1Headless {
         boolean enteredZone = false;
         for (int i = 0; i < 10 && !enteredZone; i++) {
             fixture.stepFrame(false, false, false, false, false);
-            if (GameServices.gameState().isHtzScreenShakeActive()) {
+            if (htzState().earthquakeActive()) {
                 enteredZone = true;
                 System.out.println("Earthquake triggered at frame " + i);
             }
@@ -537,14 +534,15 @@ public class TestS2Htz1Headless {
         System.out.println("After settling:");
         System.out.println("  Camera: (" + camera.getX() + ", " + camera.getY() + ")");
         System.out.println("  Sonic: (" + sprite.getX() + ", " + sprite.getY() + ")");
-        System.out.println("  HTZ shake active: " + GameServices.gameState().isHtzScreenShakeActive());
+        System.out.println("  HTZ shake active: " + htzState().earthquakeActive());
         System.out.println("  Screen shake active: " + GameServices.gameState().isScreenShakeActive());
-        System.out.println("  cameraBgYOffset: " + levelEventManager.getCameraBgYOffset());
+        System.out.println("  cameraBgYOffset: " + htzState().cameraBgYOffset());
 
         if (!enteredZone) {
             // Try forcing the shake manually to test the offset logic
             System.out.println("\nManually enabling earthquake for offset testing...");
-            parallaxManager.setHtzScreenShake(true);
+            ((Sonic2LevelEventManager) GameServices.module().getLevelEventProvider())
+                    .getHtzEvents().setEarthquakeActive(true);
         }
 
         System.out.println("\n=== Verifying offset values during earthquake ===");
@@ -558,7 +556,7 @@ public class TestS2Htz1Headless {
         for (int frame = 0; frame < 60; frame++) {
             fixture.stepFrame(false, false, false, false, false);
 
-            int cameraBgYOffset = levelEventManager.getCameraBgYOffset();
+            int cameraBgYOffset = htzState().cameraBgYOffset();
             int shakeOffsetY = parallaxManager.getShakeOffsetY();
             boolean screenShakeActive = GameServices.gameState().isScreenShakeActive();
             int combinedOffset = cameraBgYOffset + shakeOffsetY;
@@ -634,9 +632,9 @@ public class TestS2Htz1Headless {
                     System.out.println("This indicates an invisible wall!");
 
                     // Log earthquake state
-                    boolean htzShake = GameServices.gameState().isHtzScreenShakeActive();
+                    boolean htzShake = htzState().earthquakeActive();
                     boolean screenShake = GameServices.gameState().isScreenShakeActive();
-                    int bgYOffset = Sonic2LevelEventManager.getInstance().getCameraBgYOffset();
+                    int bgYOffset = htzState().cameraBgYOffset();
                     int shakeY = GameServices.parallax().getShakeOffsetY();
 
                     System.out.println("HTZ shake active: " + htzShake);
@@ -780,4 +778,12 @@ public class TestS2Htz1Headless {
             }
         }
     }
+
+    private static HtzRuntimeState htzState() {
+        return GameServices.zoneRuntimeRegistry()
+                .currentAs(HtzRuntimeState.class)
+                .orElseThrow(() -> new AssertionError("Expected HTZ runtime state to be installed"));
+    }
 }
+
+

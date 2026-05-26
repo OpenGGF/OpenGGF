@@ -18,6 +18,10 @@ public interface ObjectInstance {
         return getSpawn().y();
     }
 
+    default String getName() {
+        return getClass().getSimpleName();
+    }
+
     /**
      * Returns the object's X position as it was before the current frame's update loop.
      * Used by touch response collision checks to match ROM ordering, where ReactToItem
@@ -43,6 +47,16 @@ public interface ObjectInstance {
      */
     default void snapshotPreUpdatePosition() {
         // Default no-op; AbstractObjectInstance provides implementation.
+    }
+
+    /**
+     * Refreshes the object state used by touch-response collision before the
+     * player slot runs in inline-order modules. Unlike
+     * {@link #snapshotPreUpdatePosition()}, this must not advance unrelated
+     * first-frame bookkeeping such as solid-contact gating.
+     */
+    default void snapshotTouchResponseState() {
+        snapshotPreUpdatePosition();
     }
 
     /**
@@ -97,6 +111,22 @@ public interface ObjectInstance {
         return false;
     }
 
+    /**
+     * Returns true when this object is currently within the camera viewport (ROM
+     * render_flags bit 7 equivalent, set by Render_Sprites).  Solid contact
+     * resolution is gated on this in ROM SolidObject_cont (s2.asm:35140-35145
+     * SolidObject_OnScreenTest, sonic3k.asm:41390-41392 loc_1DF88,
+     * s1disasm/_incObj/sub SolidObject.asm:124-126 Solid_ChkEnter / line 86-87
+     * SolidObject2F).  Off-screen objects skip the side / top / bottom path so
+     * the player keeps their velocity even when the camera has scrolled past.
+     * Defaults to {@code true} so test stubs and pre-existing implementations
+     * stay opt-in; {@link AbstractObjectInstance} provides the camera-bounds
+     * check for production objects.
+     */
+    default boolean isWithinSolidContactBounds() {
+        return true;
+    }
+
     void update(int frameCounter, PlayableEntity player);
 
     void appendRenderCommands(List<GLCommand> commands);
@@ -109,11 +139,62 @@ public interface ObjectInstance {
     boolean isDestroyed();
 
     /**
+     * ROM parity: true when this destroy was triggered by an off-screen check
+     * (Sprite_OnScreen_Test family in sonic3k.asm). ROM clears bit 7 of the
+     * respawn-table entry ({@code bclr #7,(a2)} at loc_1B5A0 / sonic3k.asm:37275)
+     * so the placement system can re-spawn the object when the camera returns.
+     * Implementors that mark themselves destroyed via off-screen self-delete
+     * must override and return {@code true}; the placement layer routes those
+     * spawns to {@code removeFromActiveForUnload} (no permanent latch) instead
+     * of {@code removeFromActive} (latched, models player-kill explosions
+     * where ROM never clears the respawn bit).
+     */
+    default boolean isDestroyedRespawnable() {
+        return false;
+    }
+
+    /**
      * Returns true if this object should remain active even when its spawn position
      * is outside the camera window. Used by objects like spin tubes that need to
      * continue controlling the player after they've moved far from the object's origin.
      */
     default boolean isPersistent() {
+        return false;
+    }
+
+    /**
+     * Returns the X coordinate used by ROM-style {@code out_of_range} checks.
+     * <p>
+     * Most objects use their current X position, but some S1 objects store a
+     * separate anchor/origin in objoff_30/32/3A and feed that to the macro.
+     * The counter-based unload path must use the same reference X or grouped
+     * child objects can despawn before the parent anchor leaves range.
+     */
+    default int getOutOfRangeReferenceX() {
+        return getX();
+    }
+
+    /**
+     * Returns true when this object needs to replace the shared ROM-style
+     * out_of_range X check with an object-specific delete predicate.
+     * <p>
+     * Most objects should leave this false and provide, at most, a custom
+     * {@link #getOutOfRangeReferenceX()}. Use a full override only for ROM
+     * routines that do not call the standard macro, such as objects that test
+     * both ends of a movement range before deleting.
+     */
+    default boolean usesCustomOutOfRangeCheck() {
+        return false;
+    }
+
+    /**
+     * Object-specific out-of-range delete predicate. Called only when
+     * {@link #usesCustomOutOfRangeCheck()} returns true.
+     *
+     * @param cameraX current camera X position
+     * @return true when the object should delete itself as off-screen
+     */
+    default boolean isCustomOutOfRange(int cameraX) {
         return false;
     }
 
@@ -183,5 +264,13 @@ public interface ObjectInstance {
      */
     default void appendDebugRenderCommands(DebugRenderContext ctx) {
         // Default no-op
+    }
+
+    /**
+     * Optional compact state details for trace-replay divergence reports.
+     * Keep this to ROM-relevant fields that explain object/player mismatches.
+     */
+    default String traceDebugDetails() {
+        return "";
     }
 }

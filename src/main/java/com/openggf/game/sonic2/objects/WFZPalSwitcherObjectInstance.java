@@ -5,9 +5,11 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -55,6 +57,8 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance {
     private static final float FLIPPED_R = 0.8f;
     private static final float FLIPPED_G = 0.0f;
     private static final float FLIPPED_B = 0.8f;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
     private final int triggerHalfHeight;       // Y range (half-height) from WIDTH_TABLE
     private final boolean xFlipped;            // x_flip from render_flags (determines toggle direction)
@@ -80,15 +84,14 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (player == null) {
+        if (playerEntity == null) {
             return;
         }
 
         // Initialize crossing state based on current player positions
         // ROM: Obj8B_Init checks MainCharacter and Sidekick against x_pos (s2.asm:46554-46564)
         if (!initialized) {
-            initializeCrossingState(player);
+            initializeCrossingState(participants(playerEntity));
             initialized = true;
         }
 
@@ -99,13 +102,21 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance {
 
         // Check Sonic (main character)
         // ROM: lea objoff_34(a0),a2 / lea (MainCharacter).w,a1 / bsr.s loc_2142A
-        checkPlayerCrossing(player, true);
-
-        // Check Tails (sidekick)
-        // ROM: lea (Sidekick).w,a1 (s2.asm:46573)
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            checkPlayerCrossing((AbstractPlayableSprite) sidekick, false);
+        List<PlayableEntity> participants = participants(playerEntity);
+        for (int i = 0; i < participants.size(); i++) {
+            checkPlayerCrossing((AbstractPlayableSprite) participants.get(i), i == 0);
         }
+    }
+
+    private List<PlayableEntity> participants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
     }
 
     /**
@@ -113,18 +124,20 @@ public class WFZPalSwitcherObjectInstance extends BoxObjectInstance {
      * ROM: Obj8B_Init (s2.asm:46554-46564) checks if each character's x_pos
      * is past the object's x_pos at initialization time.
      */
-    private void initializeCrossingState(AbstractPlayableSprite player) {
+    private void initializeCrossingState(List<PlayableEntity> participants) {
         int objX = spawn.x();
 
         // ROM: cmp.w x_pos(a1),d1 / bhs.s loc_21402
         // bhs branches when objX >= playerX (player still to left, flag NOT set)
         // Falls through when objX < playerX (player to right, set objoff_34 = 1)
-        sonicPastTrigger = player.getCentreX() > objX;
+        if (!participants.isEmpty()) {
+            sonicPastTrigger = participants.getFirst().getCentreX() > objX;
+        }
 
         // Same check for sidekick(s)
-        for (PlayableEntity sidekick : services().sidekicks()) {
+        for (int i = 1; i < participants.size(); i++) {
             // ROM: cmp.w x_pos(a1),d1 / bhs.s Obj8B_Main (s2.asm:46562-46563)
-            tailsPastTrigger = sidekick.getCentreX() > objX;
+            tailsPastTrigger = participants.get(i).getCentreX() > objX;
         }
     }
 

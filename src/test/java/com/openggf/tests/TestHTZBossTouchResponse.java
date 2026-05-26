@@ -1,10 +1,10 @@
 package com.openggf.tests;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.bosses.Sonic2HTZBossInstance;
 import com.openggf.level.LevelManager;
@@ -18,8 +18,8 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -39,12 +39,16 @@ public class TestHTZBossTouchResponse {
     private AbstractPlayableSprite player;
     private Sonic2HTZBossInstance boss;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
-        RuntimeManager.createGameplay();
+        TestEnvironment.resetAll();
         // Position camera at boss arena so isOnScreenForTouch() passes for the boss.
-        // The default camera bounds (x=0, width=320) exclude HTZ_BOSS_X=0x3040.
+        // The default camera bounds (x=0, y=0, 320x224) exclude HTZ_BOSS_X=0x3040
+        // and HTZ_BOSS_Y=0x0580. ROM parity (BuildSprites Y check, see
+        // AbstractObjectInstance#isOnScreenForTouch) requires the camera Y to
+        // also be within range so the boss's render flag bit 7 stays set.
         GameServices.camera().setX((short) HTZ_BOSS_X);
+        GameServices.camera().setY((short) HTZ_BOSS_Y);
         touchTable = mock(TouchResponseTable.class);
         when(touchTable.getWidthRadius(HTZ_BOSS_SIZE_INDEX)).thenReturn(32);
         when(touchTable.getHeightRadius(HTZ_BOSS_SIZE_INDEX)).thenReturn(32);
@@ -61,6 +65,7 @@ public class TestHTZBossTouchResponse {
         when(player.getYRadius()).thenReturn((short) 20);
         when(player.getCrouching()).thenReturn(false);
         when(player.getRolling()).thenReturn(true);
+        when(player.getAnimationId()).thenReturn(2);
         when(player.getSpindash()).thenReturn(false);
         when(player.getInvincibleFrames()).thenReturn(0);
         when(player.getInvulnerable()).thenReturn(false);
@@ -70,9 +75,9 @@ public class TestHTZBossTouchResponse {
         when(player.getYSpeed()).thenReturn((short) -0x300);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -87,7 +92,7 @@ public class TestHTZBossTouchResponse {
         assertEquals(8, boss.getState().hitCount);
         objectManager.addDynamicObject(boss);
 
-        objectManager.update(0, player, List.of(), 1);
+        objectManager.update(GameServices.camera().getX(), player, List.of(), 1);
 
         assertEquals(7, boss.getState().hitCount);
         assertTrue(boss.getState().invulnerable);
@@ -105,6 +110,7 @@ public class TestHTZBossTouchResponse {
         when(dynamicPlayer.getYRadius()).thenReturn((short) 20);
         when(dynamicPlayer.getCrouching()).thenReturn(false);
         when(dynamicPlayer.getRolling()).thenAnswer(invocation -> rolling.get());
+        when(dynamicPlayer.getAnimationId()).thenAnswer(invocation -> rolling.get() ? 2 : 0);
         when(dynamicPlayer.getSpindash()).thenReturn(false);
         when(dynamicPlayer.getInvincibleFrames()).thenReturn(0);
         when(dynamicPlayer.getInvulnerable()).thenReturn(false);
@@ -116,13 +122,32 @@ public class TestHTZBossTouchResponse {
         objectManager.addDynamicObject(boss);
 
         // First frame: overlap begins while not attacking.
-        objectManager.update(0, dynamicPlayer, List.of(), 1);
+        objectManager.update(GameServices.camera().getX(), dynamicPlayer, List.of(), 1);
         assertEquals(8, boss.getState().hitCount);
 
         // Second frame: still overlapping, now attacking.
         rolling.set(true);
-        objectManager.update(0, dynamicPlayer, List.of(), 2);
+        objectManager.update(GameServices.camera().getX(), dynamicPlayer, List.of(), 2);
         assertEquals(7, boss.getState().hitCount);
+    }
+
+    @Test
+    public void removedBossDoesNotRemainAsATouchCandidateAfterReplacement() {
+        objectManager.addDynamicObject(boss);
+        objectManager.update(GameServices.camera().getX(), player, List.of(), 1);
+        assertEquals(7, boss.getState().hitCount);
+
+        objectManager.removeDynamicObject(boss);
+
+        Sonic2HTZBossInstance replacement = new Sonic2HTZBossInstance(
+                new ObjectSpawn(HTZ_BOSS_X, HTZ_BOSS_Y, Sonic2ObjectIds.HTZ_BOSS, 0, 0, false, 0));
+        objectManager.addDynamicObject(replacement);
+        objectManager.update(GameServices.camera().getX(), player, List.of(), 2);
+
+        assertEquals(7, boss.getState().hitCount,
+                "Removed boss should not remain in the touch candidate set");
+        assertEquals(7, replacement.getState().hitCount,
+                "Replacement boss should still be touch-damageable after add/remove cycles");
     }
 
     private static final class NoOpObjectRegistry implements ObjectRegistry {
@@ -141,3 +166,5 @@ public class TestHTZBossTouchResponse {
         }
     }
 }
+
+

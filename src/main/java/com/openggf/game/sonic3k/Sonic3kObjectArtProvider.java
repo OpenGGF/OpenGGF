@@ -4,13 +4,15 @@ import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.AnimalType;
-import com.openggf.level.objects.HudRenderManager;
+import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.resources.PlcParser;
@@ -31,8 +33,6 @@ import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -47,13 +47,13 @@ import java.util.logging.Logger;
  * This provider builds sprite sheets from the loaded level's pattern data
  * after the level has been loaded.
  */
-public class Sonic3kObjectArtProvider implements ObjectArtProvider {
+public class Sonic3kObjectArtProvider implements ObjectArtProvider,
+        com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kObjectArtProvider.class.getName());
-    private static final Path HCZ_MINIBOSS_MAPPING_ASM = Path.of(
-            "docs", "skdisasm", "Levels", "HCZ", "Misc Object Data", "Map - Miniboss.asm");
 
     private int currentZoneIndex = -2;
     private int currentActIndex = 0;
+    private int loadEpoch = 0;
 
     private final Map<String, PatternSpriteRenderer> renderers = new HashMap<>();
     private final Map<String, ObjectSpriteSheet> sheets = new HashMap<>();
@@ -76,6 +76,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
     private Pattern[] hudTextPatterns;
     private Pattern[] hudLivesPatterns;
     private Pattern[] hudLivesNumbers;
+    private Pattern[] hudHexDigits;
+    private HudStaticArt hudStaticArt;
 
     // Zone-specific animal types (set per loadArtForZone call)
     private int animalTypeA = AnimalType.FLICKY.ordinal();
@@ -105,6 +107,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
     @Override
     public void loadArtForZone(int zoneIndex) throws IOException {
         currentZoneIndex = zoneIndex;
+        loadEpoch++;
 
         // Clear previous registrations
         renderers.clear();
@@ -147,6 +150,16 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
         } else if (zoneIndex == 0x01) {
             loadSharedBossExplosionArt();
             loadHczMinibossArtFromPlc();
+            loadHczEndBossArt();
+            loadHczGeyserCutsceneArt();
+        } else if (zoneIndex == 0x03) {
+            // Task 6 scope: register the CNZ teleporter and boss art paths now,
+            // but keep the actual object behavior for Tasks 7 and 8.
+            loadCnzTeleporterArt();
+            loadSharedBossExplosionArt();
+            loadCnzMinibossArtFromPlc();
+            loadCnzEndBossArt();
+            loadCnzTraversalArt();
         }
 
         // Level-art sheets are registered later via registerLevelArtSheets()
@@ -211,6 +224,14 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
                 Sonic3kConstants.ART_UNC_LIVES_DIGITS_ADDR,
                 Sonic3kConstants.ART_UNC_LIVES_DIGITS_SIZE);
         LOG.info("Loaded " + (hudLivesNumbers != null ? hudLivesNumbers.length : 0) + " HUD lives digit patterns");
+
+        // Debug HUD hex font (ArtUnc_DebugDigits) - ASCII-aligned, 0-9 then A-F at +17.
+        hudHexDigits = loadUncompressedPatterns(rom,
+                Sonic3kConstants.ART_UNC_DEBUG_DIGITS_ADDR,
+                Sonic3kConstants.ART_UNC_DEBUG_DIGITS_SIZE);
+        LOG.info("Loaded " + (hudHexDigits != null ? hudHexDigits.length : 0) + " HUD debug-digit patterns");
+
+        hudStaticArt = Sonic3kHudStaticArtFactory.create(hudTextPatterns, hudLivesPatterns);
     }
 
     /**
@@ -218,8 +239,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
      * ROM: PLC_01 (Sonic), PLC_05 (Knuckles), PLC_07 (Tails).
      */
     private int resolveLifeIconAddr() {
-        String mainChar = com.openggf.configuration.SonicConfigurationService.getInstance()
-                .getString(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE);
+        String mainChar = ActiveGameplayTeamResolver.resolveMainCharacterCode(
+                GameServices.configuration());
         if ("knuckles".equalsIgnoreCase(mainChar)) {
             return Sonic3kConstants.ART_NEM_KNUCKLES_LIFE_ICON_ADDR;
         } else if ("tails".equalsIgnoreCase(mainChar)) {
@@ -876,6 +897,22 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
         registerLevelArtSheets(level, zoneIndex);
     }
 
+    @Override
+    public void reloadStandaloneArtForActTransition(int zoneIndex) {
+        // Refresh act index from LevelManager (act has changed since initial load)
+        currentActIndex = GameServices.level().getCurrentAct();
+
+        // Get the new act's art plan and reload standalone entries.
+        // Shared entries (explosion, monitor, shields, etc.) are already loaded
+        // and will simply be re-registered with the same key, which is harmless.
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan =
+                Sonic3kPlcArtRegistry.getPlan(zoneIndex, currentActIndex);
+        loadStandaloneFromRegistry(plan);
+
+        LOG.info("Reloaded standalone art for zone " + zoneIndex
+                + " act " + currentActIndex);
+    }
+
     /**
      * Registers object sprite sheets that use level patterns.
      * Must be called AFTER the level is loaded.
@@ -912,7 +949,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
         for (Sonic3kPlcArtRegistry.LevelArtEntry entry : plan.levelArt()) {
             ObjectSpriteSheet sheet;
             if (entry.builderName() != null) {
-                sheet = invokeBuilder(art, entry.builderName());
+                sheet = invokeBuilder(art, entry.builderName(), entry.artTileBase());
             } else if (entry.mappingAddr() > 0 && entry.frameFilter() != null) {
                 sheet = art.buildLevelArtSheetFromRomFiltered(
                         entry.mappingAddr(), entry.artTileBase(), entry.palette(),
@@ -928,31 +965,41 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
         }
     }
 
-    private ObjectSpriteSheet invokeBuilder(Sonic3kObjectArt art, String builderName) {
+    private ObjectSpriteSheet invokeBuilder(Sonic3kObjectArt art, String builderName, int artTileBase) {
         return switch (builderName) {
-            case "buildSpikesSheet" -> art.buildSpikesSheet();
-            case "buildSpringVerticalSheet" -> art.buildSpringVerticalSheet();
-            case "buildSpringVerticalYellowSheet" -> art.buildSpringVerticalYellowSheet();
-            case "buildSpringHorizontalSheet" -> art.buildSpringHorizontalSheet();
-            case "buildSpringHorizontalYellowSheet" -> art.buildSpringHorizontalYellowSheet();
-            case "buildSpringDiagonalSheet" -> art.buildSpringDiagonalSheet();
-            case "buildSpringDiagonalYellowSheet" -> art.buildSpringDiagonalYellowSheet();
-            case "buildAiz1TreeSheet" -> art.buildAiz1TreeSheet();
-            case "buildAiz1ZiplinePegSheet" -> art.buildAiz1ZiplinePegSheet();
-            case "buildAizForegroundPlantSheet" -> art.buildAizForegroundPlantSheet();
-            case "buildAnimatedStillSpritesSheet" -> art.buildAnimatedStillSpritesSheet();
-            case "buildAnimStillLrzD3Sheet" -> art.buildAnimStillLrzD3Sheet();
-            case "buildAnimStillLrz2Sheet" -> art.buildAnimStillLrz2Sheet();
-            case "buildAnimStillSozSheet" -> art.buildAnimStillSozSheet();
-            case "buildFlippingBridgeSheet" -> art.buildFlippingBridgeSheet();
-            case "buildDrawBridgeSheet" -> art.buildDrawBridgeSheet();
-            case "buildDisappearingFloorSheet" -> art.buildDisappearingFloorSheet();
-            case "buildDisappearingFloorBorderSheet" -> art.buildDisappearingFloorBorderSheet();
-            case "buildHczWaterRushBlockSheet" -> art.buildHczWaterRushBlockSheet();
-            case "buildDoorVerticalHczSheet" -> art.buildDoorVerticalHczSheet();
-            case "buildDoorVerticalCnzSheet" -> art.buildDoorVerticalCnzSheet();
-            case "buildDoorVerticalDezSheet" -> art.buildDoorVerticalDezSheet();
-            case "buildDoorHorizontalSheet" -> art.buildDoorHorizontalSheet();
+            case "buildSpikesSheet" -> art.buildSpikesSheet(artTileBase);
+            case "buildSpringVerticalSheet" -> art.buildSpringVerticalSheet(artTileBase);
+            case "buildSpringVerticalYellowSheet" -> art.buildSpringVerticalYellowSheet(artTileBase);
+            case "buildSpringHorizontalSheet" -> art.buildSpringHorizontalSheet(artTileBase);
+            case "buildSpringHorizontalYellowSheet" -> art.buildSpringHorizontalYellowSheet(artTileBase);
+            case "buildSpringDiagonalSheet" -> art.buildSpringDiagonalSheet(artTileBase);
+            case "buildSpringDiagonalYellowSheet" -> art.buildSpringDiagonalYellowSheet(artTileBase);
+            case "buildAiz1TreeSheet" -> art.buildAiz1TreeSheet(artTileBase);
+            case "buildAiz1ZiplinePegSheet" -> art.buildAiz1ZiplinePegSheet(artTileBase);
+            case "buildAizForegroundPlantSheet" -> art.buildAizForegroundPlantSheet(artTileBase);
+            case "buildAnimatedStillSpritesSheet" -> art.buildAnimatedStillSpritesSheet(artTileBase);
+            case "buildAnimStillLrzD3Sheet" -> art.buildAnimStillLrzD3Sheet(artTileBase);
+            case "buildAnimStillLrz2Sheet" -> art.buildAnimStillLrz2Sheet(artTileBase);
+            case "buildAnimStillSozSheet" -> art.buildAnimStillSozSheet(artTileBase);
+            case "buildFlippingBridgeSheet" -> art.buildFlippingBridgeSheet(artTileBase);
+            case "buildDrawBridgeSheet" -> art.buildDrawBridgeSheet(artTileBase);
+            case "buildDisappearingFloorSheet" -> art.buildDisappearingFloorSheet(artTileBase);
+            case "buildDisappearingFloorBorderSheet" -> art.buildDisappearingFloorBorderSheet(artTileBase);
+            case "buildHczWaterDropSheet" -> art.buildHczWaterDropSheet(artTileBase);
+            case "buildHczWaterRushBlockSheet" -> art.buildHczWaterRushBlockSheet(artTileBase);
+            case "buildDoorVerticalHczSheet" -> art.buildDoorVerticalHczSheet(artTileBase);
+            case "buildDoorVerticalCnzSheet" -> art.buildDoorVerticalCnzSheet(artTileBase);
+            case "buildDoorVerticalDezSheet" -> art.buildDoorVerticalDezSheet(artTileBase);
+            case "buildDoorHorizontalSheet" -> art.buildDoorHorizontalSheet(artTileBase);
+            case "buildCnzBalloonSheet" -> art.buildCnzBalloonSheet();
+            case "buildCnzCannonSheet" -> art.buildCnzCannonSheet();
+            case "buildCnzRisingPlatformSheet" -> art.buildCnzRisingPlatformSheet();
+            case "buildCnzTrapDoorSheet" -> art.buildCnzTrapDoorSheet();
+            case "buildCnzHoverFanSheet" -> art.buildCnzHoverFanSheet();
+            case "buildCnzCylinderSheet" -> art.buildCnzCylinderSheet();
+            case "buildCnzBumperSheet" -> art.buildCnzBumperSheet();
+            case "buildCnzVacuumTubeSheet" -> art.buildCnzVacuumTubeSheet();
+            case "buildCnzSpiralTubeSheet" -> art.buildCnzSpiralTubeSheet();
             default -> {
                 LOG.warning("Unknown builder: " + builderName);
                 yield null;
@@ -1073,37 +1120,235 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
+     * Ensures the shared boss explosion art is registered.
+     * Used by bosses in zones that do not preload the explosion sheet during zone art setup.
+     *
+     * @return true if the shared boss explosion sheet exists after the call
+     */
+    public boolean ensureBossExplosionArtLoaded() {
+        if (sheets.containsKey(ObjectArtKeys.BOSS_EXPLOSION)
+                && renderers.containsKey(ObjectArtKeys.BOSS_EXPLOSION)) {
+            return true;
+        }
+        loadSharedBossExplosionArt();
+        return sheets.containsKey(ObjectArtKeys.BOSS_EXPLOSION)
+                && renderers.containsKey(ObjectArtKeys.BOSS_EXPLOSION);
+    }
+
+    /**
      * Loads HCZ miniboss art via PLC 0x5B, matching the ROM's Load_PLC call.
      */
     private void loadHczMinibossArtFromPlc() {
         try {
             Rom rom = GameServices.rom().getRom();
             if (rom == null) return;
+            RomByteReader reader = RomByteReader.fromRom(rom);
             PlcDefinition plc = Sonic3kPlcLoader.parsePlc(rom, Sonic3kConstants.PLC_HCZ_MINIBOSS);
             List<Pattern[]> decompressed = PlcParser.decompressAll(rom, plc);
             if (decompressed.isEmpty() || decompressed.get(0).length == 0) {
                 LOG.warning("HCZ miniboss PLC produced no art");
                 return;
             }
-            List<SpriteMappingFrame> mappings = loadMappingsFromAsmInclude(HCZ_MINIBOSS_MAPPING_ASM);
-            if (mappings.isEmpty()) {
-                LOG.warning("HCZ miniboss asm mapping include produced no frames");
-                return;
-            }
-            // The ASM mapping has 36 header entries but only 35 unique Frame_ labels —
-            // frames 25 and 26 both point to Frame_362BB0 (blank). The sequential parser
-            // produces only one frame for the shared label, shifting all subsequent frames.
-            // Insert a duplicate blank frame at index 26 to restore correct alignment.
-            if (mappings.size() == 35) {
-                mappings.add(26, new SpriteMappingFrame(List.of()));
-            }
-
+            // ROM-parsed mappings use the offset-table size word to derive the
+            // frame count, so duplicate offsets (e.g. frames 25/26 both pointing
+            // at the blank Frame_362BB0) yield duplicate frame entries naturally
+            // and no count-correction workaround is needed.
             registerSheet(Sonic3kObjectArtKeys.HCZ_MINIBOSS,
-                    buildSheetFromPatterns(decompressed.get(0), mappings, 1));
+                    buildSheetFromPatterns(decompressed.get(0), reader,
+                            Sonic3kConstants.MAP_HCZ_MINIBOSS_ADDR, 1));
             LOG.info("Loaded HCZ miniboss art via PLC 0x5B: "
                     + decompressed.get(0).length + " tiles");
         } catch (IOException e) {
             LOG.warning("Failed to load HCZ miniboss art from PLC: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Loads HCZ end boss art via PLC 0x6C, matching the ROM's Load_PLC call.
+     * PLC entries: 0=boss body, 1=Robotnik ship, 2=boss explosion, 3=egg capsule.
+     * Loads entry 0 (boss body) and, when not yet registered, entry 1 (Robotnik
+     * ship); explosion and egg capsule art are loaded separately.
+     */
+    private void loadHczEndBossArt() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) return;
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            PlcDefinition plc = Sonic3kPlcLoader.parsePlc(rom, Sonic3kConstants.PLC_HCZ_END_BOSS);
+            List<Pattern[]> decompressed = PlcParser.decompressAll(rom, plc);
+            if (decompressed.isEmpty() || decompressed.get(0).length == 0) {
+                LOG.warning("HCZ end boss PLC produced no art");
+                return;
+            }
+
+            // Entry 0: Boss body art (Map_HCZEndBoss) — ROM-parsed.
+            registerSheet(Sonic3kObjectArtKeys.HCZ_END_BOSS,
+                    buildSheetFromPatterns(decompressed.get(0), reader,
+                            Sonic3kConstants.MAP_HCZ_END_BOSS_ADDR, 1));
+
+            // Entry 1: Robotnik ship art (ArtNem_RobotnikShip + Map_RobotnikShip)
+            if (decompressed.size() >= 2 && decompressed.get(1).length > 0
+                    && sheets.get(Sonic3kObjectArtKeys.ROBOTNIK_SHIP) == null) {
+                registerSheet(Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                        buildSheetFromPatterns(decompressed.get(1), reader,
+                                Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0));
+            }
+        } catch (IOException e) {
+            LOG.warning("Failed to load HCZ end boss art: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Registers the dedicated CNZ teleporter beam art used by
+     * {@code Obj_CNZTeleporter} and shared {@code Obj_TeleporterBeam} in CNZ.
+     *
+     * <p>The ROM queues {@code ArtKosM_CNZTeleport} directly instead of using a
+     * PLC entry, so this stays a dedicated load path rather than being folded
+     * into the shared standalone-PLC registry.
+     */
+    private void loadCnzTeleporterArt() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) return;
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
+            registerSheet(Sonic3kObjectArtKeys.CNZ_TELEPORTER, art.loadCnzTeleporterSheet(rom));
+        } catch (IOException e) {
+            LOG.warning("Failed to load CNZ teleporter art: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Loads CNZ miniboss art via PLC 0x5D (corrected from prior 0x5C in
+     * workstream D), matching the
+     * {@code PLC_5C_5D -> ArtTile_CNZMiniboss / ArtNem_CNZMiniboss} path.
+     *
+     * <p>Entry 0 is the dedicated miniboss body art and entry 1 is the shared
+     * boss explosion art. Task 6 only registers renderer infrastructure; the
+     * actual miniboss object implementation remains deferred to Task 7.
+     */
+    private void loadCnzMinibossArtFromPlc() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) return;
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            PlcDefinition plc = Sonic3kPlcLoader.parsePlc(rom, Sonic3kConstants.PLC_CNZ_MINIBOSS);
+            List<Pattern[]> decompressed = PlcParser.decompressAll(rom, plc);
+            if (decompressed.isEmpty() || decompressed.get(0).length == 0) {
+                LOG.warning("CNZ miniboss PLC produced no art");
+                return;
+            }
+
+            registerSheet(Sonic3kObjectArtKeys.CNZ_MINIBOSS,
+                    buildSheetFromPatterns(decompressed.get(0), reader,
+                            Sonic3kConstants.MAP_CNZ_MINIBOSS_ADDR, 1));
+
+            if (decompressed.size() >= 2 && decompressed.get(1).length > 0
+                    && sheets.get(ObjectArtKeys.BOSS_EXPLOSION) == null) {
+                registerSheet(ObjectArtKeys.BOSS_EXPLOSION,
+                        buildSheetFromPatterns(decompressed.get(1), reader,
+                                Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, 0));
+            }
+        } catch (IOException e) {
+            LOG.warning("Failed to load CNZ miniboss art from PLC: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Loads CNZ end-boss art via PLC 0x6E, matching the ROM's setup path.
+     *
+     * <p>PLC_6E loads the CNZ end-boss body, shared Robotnik ship art, shared
+     * boss explosion art, and the shared egg capsule art. Task 6 only registers
+     * those renderers so Task 8 can attach real behavior later without needing
+     * more infrastructure churn.
+     */
+    private void loadCnzEndBossArt() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) return;
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            PlcDefinition plc = Sonic3kPlcLoader.parsePlc(rom, Sonic3kConstants.PLC_CNZ_END_BOSS);
+            List<Pattern[]> decompressed = PlcParser.decompressAll(rom, plc);
+            if (decompressed.isEmpty() || decompressed.get(0).length == 0) {
+                LOG.warning("CNZ end boss PLC produced no art");
+                return;
+            }
+
+            registerSheet(Sonic3kObjectArtKeys.CNZ_END_BOSS,
+                    buildSheetFromPatterns(decompressed.get(0), reader,
+                            Sonic3kConstants.MAP_CNZ_END_BOSS_ADDR, 1));
+
+            if (decompressed.size() >= 2 && decompressed.get(1).length > 0
+                    && sheets.get(Sonic3kObjectArtKeys.ROBOTNIK_SHIP) == null) {
+                registerSheet(Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                        buildSheetFromPatterns(decompressed.get(1), reader,
+                                Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0));
+            }
+
+            if (decompressed.size() >= 3 && decompressed.get(2).length > 0
+                    && sheets.get(ObjectArtKeys.BOSS_EXPLOSION) == null) {
+                registerSheet(ObjectArtKeys.BOSS_EXPLOSION,
+                        buildSheetFromPatterns(decompressed.get(2), reader,
+                                Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, 0));
+            }
+        } catch (IOException e) {
+            LOG.warning("Failed to load CNZ end boss art: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Loads the CNZ traversal object sheets directly from ROM.
+     *
+     * <p>The visible traversal objects in this slice are ROM-backed through the
+     * lock-on offsets published in {@link Sonic3kConstants}. Vacuum Tube and
+     * Spiral Tube remain controller-only stubs in this slice and intentionally
+     * have no dedicated sheet yet.
+     */
+    private void loadCnzTraversalArt() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) return;
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            Level level = GameServices.level().getCurrentLevel();
+            Sonic3kObjectArt art = new Sonic3kObjectArt(level, reader);
+
+            registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_BALLOON, art.buildCnzBalloonSheet(), art);
+            registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_CANNON, art.loadCnzCannonSheet(rom), art);
+            registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_RISING_PLATFORM, art.buildCnzRisingPlatformSheet(), art);
+            registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_TRAP_DOOR, art.buildCnzTrapDoorSheet(), art);
+            registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_HOVER_FAN, art.buildCnzHoverFanSheet(), art);
+            // Cylinder is the last visible traversal object in this slice and
+            // keeps the ROM-parsed Map_CNZCylinder sheet rather than a fallback.
+            registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_CYLINDER, art.buildCnzCylinderSheet(), art);
+        } catch (IOException e) {
+            LOG.warning("Failed to load CNZ traversal art: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Loads HCZ geyser cutscene art (ArtKosM_HCZGeyserVert + Map_HCZWaterWall).
+     * ROM: The post-defeat geyser cutscene uses dedicated geyser art at
+     * ArtTile_HCZCutsceneGeyser (0x036B), not the boss body art.
+     * Frame 1 of Map_HCZWaterWall is the tall vertical water column (12 pieces).
+     * Frames 3-5 are splash sprites.
+     */
+    private void loadHczGeyserCutsceneArt() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) return;
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            Pattern[] patterns = decompressKosinskiModuled(rom,
+                    Sonic3kConstants.ART_KOSM_HCZ_GEYSER_VERT_ADDR);
+            if (patterns == null || patterns.length == 0) {
+                LOG.warning("HCZ geyser cutscene art decompression produced no tiles");
+                return;
+            }
+            registerSheet(Sonic3kObjectArtKeys.HCZ_GEYSER_CUTSCENE,
+                    buildSheetFromPatterns(patterns, reader,
+                            Sonic3kConstants.MAP_HCZ_WATERWALL_ADDR, 2));
+            LOG.info("Loaded HCZ geyser cutscene art: " + patterns.length + " tiles");
+        } catch (IOException e) {
+            LOG.warning("Failed to load HCZ geyser cutscene art: " + e.getMessage());
         }
     }
 
@@ -1301,89 +1546,6 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
         return new ObjectSpriteSheet(sheetPatterns, adjustedMappings, paletteIndex, 1);
     }
 
-    private static List<SpriteMappingFrame> loadMappingsFromAsmInclude(Path path) throws IOException {
-        if (!Files.exists(path)) {
-            return List.of();
-        }
-
-        List<String> lines = Files.readAllLines(path);
-        List<SpriteMappingFrame> frames = new ArrayList<>();
-        List<SpriteMappingPiece> currentPieces = null;
-        int remainingPieces = 0;
-
-        for (String rawLine : lines) {
-            String line = rawLine.trim();
-            if (line.isEmpty()) {
-                continue;
-            }
-
-            if (line.startsWith("Frame_")) {
-                int dcw = line.indexOf("dc.w");
-                if (dcw < 0) {
-                    continue;
-                }
-                int pieceCount = parseAsmNumber(line.substring(dcw + 4).trim());
-                currentPieces = new ArrayList<>(Math.max(pieceCount, 0));
-                remainingPieces = pieceCount;
-                if (pieceCount == 0) {
-                    frames.add(new SpriteMappingFrame(currentPieces));
-                    currentPieces = null;
-                }
-                continue;
-            }
-
-            if (remainingPieces <= 0 || currentPieces == null || !line.startsWith("dc.b")) {
-                continue;
-            }
-
-            String[] parts = line.substring(4).split(",");
-            if (parts.length < 6) {
-                continue;
-            }
-
-            int yOffset = (byte) parseAsmNumber(parts[0].trim());
-            int size = parseAsmNumber(parts[1].trim()) & 0xFF;
-            int tileWord = ((parseAsmNumber(parts[2].trim()) & 0xFF) << 8)
-                    | (parseAsmNumber(parts[3].trim()) & 0xFF);
-            int xOffset = (short) (((parseAsmNumber(parts[4].trim()) & 0xFF) << 8)
-                    | (parseAsmNumber(parts[5].trim()) & 0xFF));
-
-            int widthTiles = ((size >> 2) & 0x3) + 1;
-            int heightTiles = (size & 0x3) + 1;
-            int tileIndex = tileWord & 0x7FF;
-            boolean hFlip = (tileWord & 0x800) != 0;
-            boolean vFlip = (tileWord & 0x1000) != 0;
-            int paletteIndex = (tileWord >> 13) & 0x3;
-            boolean priority = (tileWord & 0x8000) != 0;
-
-            currentPieces.add(new SpriteMappingPiece(
-                    xOffset, yOffset, widthTiles, heightTiles,
-                    tileIndex, hFlip, vFlip, paletteIndex, priority));
-            remainingPieces--;
-            if (remainingPieces == 0) {
-                frames.add(new SpriteMappingFrame(currentPieces));
-                currentPieces = null;
-            }
-        }
-
-        return frames;
-    }
-
-    private static int parseAsmNumber(String token) {
-        String value = token.trim();
-        boolean negative = value.startsWith("-");
-        if (negative) {
-            value = value.substring(1).trim();
-        }
-        int parsed;
-        if (value.startsWith("$")) {
-            parsed = Integer.parseInt(value.substring(1), 16);
-        } else {
-            parsed = Integer.parseInt(value);
-        }
-        return negative ? -parsed : parsed;
-    }
-
     /**
      * Returns renderer keys whose level tile ranges overlap any of the given modified ranges.
      * Used by {@link Sonic3kPlcLoader#refreshAffectedRenderers} to find which
@@ -1429,6 +1591,46 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
     }
 
     /**
+     * Ensures a standalone registry-backed sheet is registered for the current zone/act.
+     * Used by objects whose ROM behavior loads auxiliary PLC art on demand.
+     *
+     * @param key standalone art key
+     * @return true if the sheet is registered after the call
+     */
+    public boolean ensureStandaloneArtLoaded(String key) {
+        if (renderers.containsKey(key) && sheets.containsKey(key)) {
+            return true;
+        }
+
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan =
+                Sonic3kPlcArtRegistry.getPlan(currentZoneIndex, currentActIndex);
+        Sonic3kPlcArtRegistry.StandaloneArtEntry entry = null;
+        for (Sonic3kPlcArtRegistry.StandaloneArtEntry candidate : plan.standaloneArt()) {
+            if (candidate.key().equals(key)) {
+                entry = candidate;
+                break;
+            }
+        }
+        if (entry == null) {
+            return false;
+        }
+
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) {
+                return false;
+            }
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
+            registerSheet(key, art.loadStandaloneSheet(rom, entry));
+            return renderers.containsKey(key) && sheets.containsKey(key);
+        } catch (IOException e) {
+            LOG.warning("Failed to ensure standalone art '" + key + "': " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Refreshes an existing sheet's pattern data and re-uploads GPU textures.
      * Used after PLC reloads or boss defeat to ensure renderers show updated art.
      *
@@ -1458,7 +1660,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
         System.arraycopy(src, 0, dst, 0, count);
 
         // Ask the renderer to re-upload the affected GPU textures.
-        GraphicsManager gfx = GraphicsManager.getInstance();
+        GraphicsManager gfx = GameServices.graphics();
         if (gfx != null && gfx.isGlInitialized() && renderer.isReady()) {
             renderer.updatePatternRange(gfx, 0, count);
         }
@@ -1509,8 +1711,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
     }
 
     @Override
-    public HudRenderManager.HudFlashMode getHudFlashMode() {
-        return HudRenderManager.HudFlashMode.TEXT_HIDE;
+    public Pattern[] getHudHexDigitPatterns() {
+        return hudHexDigits;
+    }
+
+    @Override
+    public HudStaticArt getHudStaticArt() {
+        return hudStaticArt;
     }
 
     @Override
@@ -1543,5 +1750,27 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider {
             }
         }
         return false;
+    }
+
+    // --- RewindSnapshottable<PlcProgressSnapshot> ---
+
+    @Override
+    public String key() {
+        return "s3k-plc-art";
+    }
+
+    @Override
+    public com.openggf.game.rewind.snapshot.PlcProgressSnapshot capture() {
+        return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(loadEpoch);
+    }
+
+    /**
+     * Restore is a no-op for v1: all PLC art is loaded at zone-load time and
+     * does not change per-frame. The epoch is recorded in the snapshot as a
+     * diagnostic check but is not re-applied here.
+     */
+    @Override
+    public void restore(com.openggf.game.rewind.snapshot.PlcProgressSnapshot snap) {
+        // No per-frame PLC state to restore in v1.
     }
 }

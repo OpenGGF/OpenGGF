@@ -39,9 +39,12 @@ public class TilemapShaderProgram extends ShaderProgram {
     private int vScrollColumnTextureLocation = -1;
     private int perColumnVScrollLocation = -1;
     private int screenHeightLocation = -1;
+    private int perLineScrollSampleYOffsetPxLocation = -1;
     private int vdpWrapWidthLocation = -1;
     private int vdpWrapHeightLocation = -1;
     private int nametableBaseLocation = -1;
+    private int upperBandWrapHeightPxLocation = -1;
+    private int upperBandWrapWidthTilesLocation = -1;
     private int frameCounterLocation = -1;
     private int shimmerStyleLocation = -1;
 
@@ -81,9 +84,12 @@ public class TilemapShaderProgram extends ShaderProgram {
         vScrollColumnTextureLocation = glGetUniformLocation(programId, "VScrollColumnTexture");
         perColumnVScrollLocation = glGetUniformLocation(programId, "PerColumnVScroll");
         screenHeightLocation = glGetUniformLocation(programId, "ScreenHeight");
+        perLineScrollSampleYOffsetPxLocation = glGetUniformLocation(programId, "PerLineScrollSampleYOffsetPx");
         vdpWrapWidthLocation = glGetUniformLocation(programId, "VDPWrapWidth");
         vdpWrapHeightLocation = glGetUniformLocation(programId, "VDPWrapHeight");
         nametableBaseLocation = glGetUniformLocation(programId, "NametableBase");
+        upperBandWrapHeightPxLocation = glGetUniformLocation(programId, "UpperBandWrapHeightPx");
+        upperBandWrapWidthTilesLocation = glGetUniformLocation(programId, "UpperBandWrapWidthTiles");
         frameCounterLocation = glGetUniformLocation(programId, "FrameCounter");
         shimmerStyleLocation = glGetUniformLocation(programId, "ShimmerStyle");
     }
@@ -212,6 +218,12 @@ public class TilemapShaderProgram extends ShaderProgram {
         }
     }
 
+    public void setPerLineScrollSampleYOffsetPx(float offsetPx) {
+        if (perLineScrollSampleYOffsetPxLocation >= 0) {
+            glUniform1f(perLineScrollSampleYOffsetPxLocation, offsetPx);
+        }
+    }
+
     public void setVdpWrapWidth(float width) {
         if (vdpWrapWidthLocation >= 0) {
             glUniform1f(vdpWrapWidthLocation, width);
@@ -231,6 +243,15 @@ public class TilemapShaderProgram extends ShaderProgram {
     public void setNametableBase(float base) {
         if (nametableBaseLocation >= 0) {
             glUniform1f(nametableBaseLocation, base);
+        }
+    }
+
+    public void setUpperBandWrap(float heightPx, float widthTiles) {
+        if (upperBandWrapHeightPxLocation >= 0) {
+            glUniform1f(upperBandWrapHeightPxLocation, heightPx);
+        }
+        if (upperBandWrapWidthTilesLocation >= 0) {
+            glUniform1f(upperBandWrapWidthTilesLocation, widthTiles);
         }
     }
 

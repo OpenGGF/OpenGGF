@@ -8,11 +8,13 @@ import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import com.openggf.debug.DebugColor;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -84,6 +86,8 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
     /** Animation ID for active spinning (player push is only active during this anim).
      * From disassembly: cmpi.b #4,anim(a0) */
     private static final int ACTIVE_SPIN_ANIM = 4;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     // ========== Animation system ==========
 
@@ -134,6 +138,10 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
     private int animFrameIndex; // index into ANIM_SCRIPTS[currentAnim], starting after speed byte
     private int animTimer;
     private int mappingFrame;
+    private int lastOscByte;
+    private int lastPlayerDy = Integer.MIN_VALUE;
+    private int lastPush;
+    private boolean lastPushedPlayer;
 
     public HPropellerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "HPropeller");
@@ -172,11 +180,10 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Only check players in WFZ mode (routine 2 = ObjB5_Main)
         // ROM order: player push check THEN animation update
         if (routineMode == ROUTINE_WFZ_MAIN) {
-            checkPlayers(player);
+            checkPlayers(playerEntity);
         }
 
         // Animate (both WFZ and SCZ modes)
@@ -268,22 +275,27 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
      * Checks both main character and sidekick for proximity and applies upward push.
      * From disassembly: ObjB5_CheckPlayers (s2.asm lines 79255-79295)
      */
-    private void checkPlayers(AbstractPlayableSprite mainPlayer) {
+    private void checkPlayers(PlayableEntity updatePlayer) {
         // ROM: cmpi.b #4,anim(a0) / bne.s ++ (rts)
         // Only push players when animation is the active spin (anim 4)
         if (currentAnim != ACTIVE_SPIN_ANIM) {
             return;
         }
 
-        // Check main character
-        if (mainPlayer != null) {
-            checkAndPushPlayer(mainPlayer);
+        for (PlayableEntity participant : pushParticipants(updatePlayer)) {
+            checkAndPushPlayer((AbstractPlayableSprite) participant);
         }
+    }
 
-        // Check sidekick(s)
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            checkAndPushPlayer((AbstractPlayableSprite) sidekick);
+    private List<PlayableEntity> pushParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
         }
+        return participants;
     }
 
     /**
@@ -314,7 +326,11 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
         // ROM: moveq #0,d1 / move.b (Oscillating_Data+$14).w,d1
         //      add.w y_pos(a1),d1 / addi.w #$60,d1 / sub.w y_pos(a0),d1
         int oscByte = OscillationManager.getByte(OSC_DATA_OFFSET);
+        lastOscByte = oscByte;
+        lastPushedPlayer = false;
+        lastPush = 0;
         int dy = oscByte + playerY + PUSH_Y_OFFSET - objY;
+        lastPlayerDy = dy;
 
         // ROM: bcs.s ++ (rts)  -> dy < 0 means out of range (carry set after sub)
         if (dy < 0) {
@@ -339,6 +355,8 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
         dy = (short) ((dy + PUSH_Y_OFFSET) & 0xFFFF);
         dy = -dy;
         int push = dy >> 4; // arithmetic shift right 4
+        lastPush = push;
+        lastPushedPlayer = true;
 
         // ROM: add.w d1,y_pos(a1)
         player.setY((short) (player.getY() + push));
@@ -368,6 +386,18 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
 
         // ROM: move.b #8,flip_speed(a1)
         player.setFlipSpeed(8);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("osc14=%02X dy=%s push=%d anim=%d timer=%d frame=%d pushed=%d",
+                lastOscByte & 0xFF,
+                lastPlayerDy == Integer.MIN_VALUE ? "--" : String.format("%04X", lastPlayerDy & 0xFFFF),
+                lastPush,
+                currentAnim,
+                animTimer,
+                mappingFrame,
+                lastPushedPlayer ? 1 : 0);
     }
 
     // ========== Rendering ==========

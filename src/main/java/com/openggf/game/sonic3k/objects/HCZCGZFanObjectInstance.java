@@ -13,6 +13,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -21,8 +22,8 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 /**
  * Object 0x38 — HCZ/CGZ Fan (Sonic 3 &amp; Knuckles, Hydrocity Zone / Chrome Gadget Zone).
@@ -105,8 +106,6 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
     private static final int PLAYER_FLIPS_REMAINING = 0x7F;
     // ROM: move.b #8,flip_speed(a1)
     private static final int PLAYER_FLIP_SPEED = 8;
-
-    private static final Random RANDOM = new Random();
 
     // ===== Configuration (from subtype) =====
     private final int innerRange;      // $36(a0): inner detection range
@@ -265,13 +264,17 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
      * ROM: loc_306C2 (sonic3k.asm:65394-65447).
      */
     private void updatePlayerInteraction(int frameCounter, AbstractPlayableSprite player) {
-        // Process both Player 1 and sidekicks (ROM: Player_1 + Player_2)
-        if (player != null) {
-            applyFanPush(player, frameCounter);
+        List<PlayableEntity> participants = services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
+        if (player != null && !participants.contains(player)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(player);
+            withUpdatePlayer.addAll(participants);
+            participants = withUpdatePlayer;
         }
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sk) {
-                applyFanPush(sk, frameCounter);
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                applyFanPush(sprite, frameCounter);
             }
         }
 
@@ -409,7 +412,7 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
         }
         // ROM: jsr (AllocateObject).l
         try {
-            int bubbleX = x + RANDOM.nextInt(16) - 8;  // ROM: random X offset -8..+7
+            int bubbleX = x + services().rng().nextInt(16) - 8;  // ROM: random X offset -8..+7
             spawnChild(() -> new FanBubbleChild(
                     new ObjectSpawn(bubbleX, y, Sonic3kObjectIds.HCZ_CGZ_FAN, 0, 0, false, 0)));
         } catch (Exception e) {
@@ -507,7 +510,6 @@ public class HCZCGZFanObjectInstance extends AbstractObjectInstance {
         private static final int BELOW_THRESHOLD = 0x20;
         // ROM: cmpi.w #-$30,d0 — above threshold
         private static final int ABOVE_THRESHOLD = -0x30;
-
         private final HCZCGZFanObjectInstance fanParent;
         private final int maxSlideDistance;   // $3A(a0): max slide offset
         private final boolean facingLeft;

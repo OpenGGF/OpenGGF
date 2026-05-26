@@ -4,6 +4,7 @@ import com.openggf.control.InputHandler;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.sonic1.audio.Sonic1Music;
+import com.openggf.game.GameServices;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.scroll.SwScrlGhz;
@@ -20,7 +21,6 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.glClearColor;
-import com.openggf.game.GameServices;
 
 /**
  * Manages the Sonic 1 Title Screen.
@@ -44,7 +44,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
     private static Sonic1TitleScreenManager instance;
 
-    private final SonicConfigurationService configService = SonicConfigurationService.getInstance();
+    private final SonicConfigurationService configService;
     private final Sonic1TitleScreenDataLoader dataLoader = new Sonic1TitleScreenDataLoader();
     private final PatternDesc reusableDesc = new PatternDesc();
 
@@ -116,13 +116,23 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     // Credit text rendering
     private boolean creditTextCached = false;
 
-    private Sonic1TitleScreenManager() {}
+    public Sonic1TitleScreenManager() {
+        this(null);
+    }
+
+    Sonic1TitleScreenManager(SonicConfigurationService configService) {
+        this.configService = configService;
+    }
 
     public static Sonic1TitleScreenManager getInstance() {
         if (instance == null) {
             instance = new Sonic1TitleScreenManager();
         }
         return instance;
+    }
+
+    private SonicConfigurationService configuration() {
+        return configService != null ? configService : GameServices.configuration();
     }
 
     /**
@@ -185,7 +195,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
         frameCounter++;
 
-        int startKey = configService.getInt(SonicConfiguration.JUMP);
+        int startKey = configuration().getInt(SonicConfiguration.JUMP);
 
         switch (state) {
             case INTRO_TEXT_FADE_IN:
@@ -465,7 +475,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         }
 
         // Re-upload palette line 2 to GPU
-        dataLoader.rechachePaletteLine(2);
+        dataLoader.rechachePaletteLine(GameServices.graphics(), 2);
     }
 
     @Override
@@ -474,10 +484,10 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
             return;
         }
 
-        GraphicsManager gm = GraphicsManager.getInstance();
+        GraphicsManager gm = GameServices.graphics();
 
         // Ensure palettes are uploaded to GPU (required for all pattern rendering)
-        dataLoader.cachePalettesToGpu();
+        dataLoader.cachePalettesToGpu(gm);
 
         // Intro text phases: render "SONIC TEAM PRESENTS"
         if (state == State.INTRO_TEXT_FADE_IN || state == State.INTRO_TEXT_HOLD ||
@@ -492,8 +502,8 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         }
 
         // Cache patterns to GPU
-        dataLoader.cacheGhzToGpu();
-        dataLoader.cacheForegroundToGpu();
+        dataLoader.cacheGhzToGpu(gm);
+        dataLoader.cacheForegroundToGpu(gm);
 
         // --- Render Plane B (GHZ background) ---
         gm.beginPatternBatch();
@@ -564,7 +574,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     private void drawIntroText(GraphicsManager gm) {
         // Cache credit text patterns on first draw
         if (!creditTextCached) {
-            dataLoader.cacheCreditTextToGpu();
+            dataLoader.cacheCreditTextToGpu(gm);
             creditTextCached = true;
             initCreditTextSpriteRenderer(gm);
         }
@@ -706,7 +716,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
      * Position from disassembly: x=$170, y=$F8 (VDP) → screen (240, 120).
      */
     private void drawTMSymbol(GraphicsManager gm) {
-        dataLoader.cacheTmToGpu();
+        dataLoader.cacheTmToGpu(gm);
 
         int baseX = TM_X;
         int baseY = TM_Y;
@@ -834,6 +844,11 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     }
 
     @Override
+    public TitleScreenAction consumeExitAction() {
+        return TitleScreenAction.ONE_PLAYER;
+    }
+
+    @Override
     public boolean supportsLevelSelectOverlay() {
         return true;
     }
@@ -857,11 +872,11 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
             return;
         }
 
-        GraphicsManager gm = GraphicsManager.getInstance();
+        GraphicsManager gm = GameServices.graphics();
 
         // Cache patterns to GPU (NOT palettes - level select palette is already active)
-        dataLoader.cacheForegroundToGpu();
-        dataLoader.cacheTmToGpu();
+        dataLoader.cacheForegroundToGpu(gm);
+        dataLoader.cacheTmToGpu(gm);
 
         if (!spritesInitialized) {
             initSpriteRenderers(gm);

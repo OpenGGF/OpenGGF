@@ -50,6 +50,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String AIZ_MINIBOSS_FLAME = "aiz_miniboss_flame";
     public static final String AIZ_MINIBOSS_SMALL = "aiz_miniboss_small";
     public static final String HCZ_MINIBOSS = "hcz_miniboss";
+    public static final String HCZ_END_BOSS = "hcz_end_boss";
+    public static final String HCZ_GEYSER_CUTSCENE = "hcz_geyser_cutscene";
 
     // AIZ End Boss (Object 0x92)
     public static final String AIZ_END_BOSS = "aiz_end_boss";
@@ -116,6 +118,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String HCZ_BLOCK = "hcz_block";
     public static final String HCZ_SNAKE_BLOCK = "hcz_snake_block";
     public static final String HCZ_SPINNING_COLUMN = "hcz_spinning_column";
+    public static final String ICZ_PLATFORMS = "icz_platforms";
+    public static final String ICZ_WALL_AND_COLUMN = "icz_wall_and_column";
     public static final String TENSION_BRIDGE_HCZ = "tension_bridge_hcz";
     public static final String TENSION_BRIDGE_ICZ = "tension_bridge_icz";
     public static final String TENSION_BRIDGE_LRZ = "tension_bridge_lrz";
@@ -133,6 +137,12 @@ public final class Sonic3kObjectArtKeys {
     public static final String HCZ_LARGE_FAN = "hcz_large_fan";
     public static final String HCZ_CONVEYOR_SPIKE = "hcz_conveyor_spike";
     public static final String BUBBLER = "bubbler";
+
+    // HCZ Water Splash (Object 0x6D, subtype 0)
+    public static final String HCZ_WATER_SPLASH = "hcz_water_splash";
+
+    // HCZ Water Drop (Object 0x6E)
+    public static final String HCZ_WATER_DROP = "hcz_water_drop";
 
     // HCZ Water Wall / Geyser (Object 0x3B)
     public static final String HCZ_GEYSER_HORZ = "hcz_geyser_horz";
@@ -153,11 +163,32 @@ public final class Sonic3kObjectArtKeys {
     public static final String HCZ_JAWZ = "hcz_jawz";
 
     // MGZ badniks
+    public static final String MGZ_SMASHING_PILLAR = "mgz_smashing_pillar";
+    public static final String LBZ_SMASHING_SPIKES = "lbz_smashing_spikes";
+    public static final String MGZ_SWINGING_PLATFORM = "mgz_swinging_platform";
+    public static final String MGZ_HEAD_TRIGGER = "mgz_head_trigger";
+    public static final String MGZ_MOVING_SPIKE_PLATFORM = "mgz_moving_spike_platform";
+    public static final String MGZ_TRIGGER_PLATFORM = "mgz_trigger_platform";
+    public static final String MGZ_SWINGING_SPIKE_BALL = "mgz_swinging_spike_ball";
+    public static final String MGZ_DASH_TRIGGER = "mgz_dash_trigger";
+    public static final String MGZ_PULLEY = "mgz_pulley";
+    public static final String MGZ_TOP_PLATFORM = "mgz_top_platform";
+    public static final String MGZ_TOP_LAUNCHER = "mgz_top_launcher";
     public static final String MGZ_SPIKER = "mgz_spiker";
     public static final String MGZ_MANTIS = "mgz_mantis";
     public static final String MGZ_BUBBLES_BADNIK = "mgz_bubbles_badnik";
     public static final String MGZ_MINIBOSS = "mgz_miniboss";
+    public static final String MGZ_MINIBOSS_SPIRE = "mgz_miniboss_spire";
     public static final String MGZ_MINIBOSS_DEBRIS = "mgz_miniboss_debris";
+    /** Tunnelbot shares art with MGZ Miniboss (same ObjDat_Tunnelbot → Map_MGZMiniboss). */
+    public static final String MGZ_TUNNELBOT = MGZ_MINIBOSS;
+    public static final String MGZ_TUNNELBOT_DEBRIS = MGZ_MINIBOSS_DEBRIS;
+    /** MGZ Act 2 Drilling Robotnik (mini-event + shared with future end-of-act boss). */
+    public static final String MGZ_ENDBOSS = "mgz_endboss";
+    /** Raw source art used by loc_6CFF4 / Perform_Art_Scaling for the air-attack zoom cue. */
+    public static final String MGZ_ENDBOSS_SCALED = "mgz_endboss_scaled";
+    /** Shared MGZ end-boss debris (chunks flung during drill-drop + arm damage). */
+    public static final String MGZ_ENDBOSS_DEBRIS = "mgz_endboss_debris";
 
     // CNZ badniks
     public static final String CNZ_SPARKLE = "cnz_sparkle";
@@ -165,6 +196,22 @@ public final class Sonic3kObjectArtKeys {
     public static final String CNZ_CLAMER = "cnz_clamer";
     public static final String CNZ_CLAMER_SHOT = "cnz_clamer_shot";
     public static final String CNZ_BALLOON = "cnz_balloon";
+    public static final String CNZ_CANNON = "cnz_cannon";
+    public static final String CNZ_RISING_PLATFORM = "cnz_rising_platform";
+    public static final String CNZ_TRAP_DOOR = "cnz_trap_door";
+    public static final String CNZ_HOVER_FAN = "cnz_hover_fan";
+    public static final String CNZ_CYLINDER = "cnz_cylinder";
+    public static final String CNZ_VACUUM_TUBE = "cnz_vacuum_tube";
+    public static final String CNZ_SPIRAL_TUBE = "cnz_spiral_tube";
+    public static final String CNZ_BUMPER = "cnz_bumper";
+
+    // CNZ route/boss infrastructure:
+    // - Obj_CNZTeleporter queues ArtKosM_CNZTeleport and then hands off to shared Obj_TeleporterBeam.
+    // - Obj_CNZMiniboss uses Map_CNZMiniboss after PLC_5C/5D loads its art.
+    // - Obj_CNZEndBoss uses Map_CNZEndBoss after PLC_6E loads body/ship/explosion/capsule art.
+    public static final String CNZ_TELEPORTER = "cnz_teleporter";
+    public static final String CNZ_MINIBOSS = "cnz_miniboss";
+    public static final String CNZ_END_BOSS = "cnz_end_boss";
 
     // Button (zone-specific variants)
     public static final String BUTTON = "button";            // Default (gray) - AIZ, MGZ, ICZ, LBZ, etc.

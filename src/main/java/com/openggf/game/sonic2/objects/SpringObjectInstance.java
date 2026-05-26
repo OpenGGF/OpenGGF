@@ -1,7 +1,11 @@
 package com.openggf.game.sonic2.objects;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.level.objects.SpringHelper;
 import com.openggf.level.objects.BoxObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.level.objects.*;
@@ -13,11 +17,11 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class SpringObjectInstance extends BoxObjectInstance
         implements SolidObjectProvider, SolidObjectListener, SlopedSolidProvider {
-
     // Subtype constants (shifted >> 3 & 0xE) - matches ROM Obj41_Index
     private static final int TYPE_UP = 0;
     private static final int TYPE_HORIZONTAL = 2;
@@ -48,6 +52,8 @@ public class SpringObjectInstance extends BoxObjectInstance
     private static final int ANIM_HORIZONTAL_TRIGGER = 3;
     private static final int ANIM_DIAGONAL_IDLE = 4;
     private static final int ANIM_DIAGONAL_TRIGGER = 5;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private final boolean redSpring;
     private ObjectAnimationState animationState;
@@ -80,8 +86,16 @@ public class SpringObjectInstance extends BoxObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (player == null) {
+        // Manual checkpoints drive spring activation from update().
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult contact) {
+        if (player == null || contact == null || contact.kind() == ContactKind.NONE) {
             return;
         }
 
@@ -94,25 +108,12 @@ public class SpringObjectInstance extends BoxObjectInstance
         int type = getType();
 
         if (type == TYPE_DIAGONAL_UP) {
-            // ROM: Obj41_DiagonallyUp calls SlopedSolid_SingleCharacter which sets the
-            // standing bit when the player lands on the sloped surface. The standing bit
-            // persists across frames. Our engine re-evaluates contacts each frame, and
-            // the generic side-vs-top comparison can misclassify contacts on the slope
-            // as side contacts (absDistX < absDistY). To match ROM behavior, accept any
-            // solid contact where the player is grounded — this mirrors the ROM's
-            // SlopedSolid_SingleCharacter which only checks !in_air + X range when the
-            // standing bit is already set.
-            //
-            // ROM: loc_18DB4 checks X threshold (springX +/-4 vs playerX) to prevent
-            // launch from the flat portion. In the ROM, this works because the player
-            // naturally walks past the threshold within a few frames. In our engine
-            // with batched solid contacts, the standing contact itself (resolved via
-            // resolveSlopedContact) already confirms the player is within the spring's
-            // sloped surface area, making the X threshold check redundant. The
-            // SolidObjectParams halfWidth (27) bounds the overall contact area, while
-            // the slope data constrains the Y surface — together they gate activation
-            // more accurately than the fixed 4px X offset.
-            if (!contact.standing() && player.getAir()) {
+            // ROM: Obj41_DiagonallyUp only calls loc_18DB4 after
+            // SlopedSolid_SingleCharacter sets the standing bit.
+            if (!contact.standingNow()) {
+                return;
+            }
+            if (!hasReachedDiagonalLaunchThreshold(player)) {
                 return;
             }
             applyDiagonalSpring(player, true);
@@ -120,8 +121,11 @@ public class SpringObjectInstance extends BoxObjectInstance
         }
 
         if (type == TYPE_DIAGONAL_DOWN) {
-            // Same logic as diagonal-up: accept any contact when player is grounded
-            if (!contact.touchBottom() && player.getAir()) {
+            // ROM: Obj41_DiagonallyDown only launches on the d4 == -2 bottom-contact path.
+            if (contact.kind() != ContactKind.BOTTOM) {
+                return;
+            }
+            if (!hasReachedDiagonalLaunchThreshold(player)) {
                 return;
             }
             applyDiagonalSpring(player, false);
@@ -130,7 +134,7 @@ public class SpringObjectInstance extends BoxObjectInstance
 
         if (type == TYPE_HORIZONTAL) {
             // ROM: checks pushing_bit, which maps to our pushing/touchSide
-            if (!contact.pushing()) {
+            if (!contact.pushingNow()) {
                 return;
             }
             applyHorizontalSpring(player);
@@ -138,7 +142,7 @@ public class SpringObjectInstance extends BoxObjectInstance
         }
 
         if (type == TYPE_DOWN) {
-            if (!contact.touchBottom()) {
+            if (contact.kind() != ContactKind.BOTTOM) {
                 return;
             }
             applyDownSpring(player);
@@ -146,7 +150,7 @@ public class SpringObjectInstance extends BoxObjectInstance
         }
 
         // Default: Up spring
-        if (!contact.standing()) {
+        if (!contact.standingNow()) {
             return;
         }
         applyUpSpring(player);
@@ -168,13 +172,28 @@ public class SpringObjectInstance extends BoxObjectInstance
     private void applyUpSpring(AbstractPlayableSprite player) {
         // ROM: addq.w #8,y_pos(a1) — push player down 8px (away from spring face)
         // before launching. y_pos is center coordinate.
-        player.setCentreY((short) (player.getCentreY() + 8));
+        player.setCentreYPreserveSubpixel((short) (player.getCentreY() + 8));
 
         // ROM: y_vel = negative value (negative = up in Y-down coordinate system)
         player.setYSpeed((short) getStrength()); // Negative = up
 
         player.setAir(true);
-        player.setGSpeed((short) 0);
+        // ROM loc_189CA (s2.asm:33732-33733):
+        //   bset #status.player.in_air,status(a1)
+        //   bclr #status.player.on_object,status(a1)
+        // SolidObject_Always_SingleCharacter just landed the player on the spring
+        // (set OnObj=1); the trigger sub immediately clears it as the player launches
+        // off. Without this clear, OnObj remains true into subsequent frames where
+        // ROM has it cleared, biasing leader-OnObj reads in CPU follow steering.
+        player.setOnObject(false);
+        // ROM loc_189CA (s2.asm:33735): move.b #2,routine(a1)
+        // Unconditionally forces the player back to Obj01_Control routine. When the
+        // player was in the Hurt routine (routine=4), this clears the hurt state so
+        // subsequent airborne frames use Obj01_MdAir's +$38 gravity and the
+        // Sonic_UpVelCap (-$FC0) cap rather than the hurt routine's +$30 gravity
+        // (no cap). MCZ2 trace F925: Sonic was hurt mid-air, hit an up-spring; the
+        // engine left hurt=true and produced y_speed=-$FD0 instead of ROM's -$F88.
+        player.setHurt(false);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
         trigger(player);
     }
@@ -193,7 +212,10 @@ public class SpringObjectInstance extends BoxObjectInstance
         player.setYSpeed((short) -getStrength()); // Negated = positive = down
 
         player.setAir(true);
-        player.setGSpeed((short) 0);
+        // ROM Obj41_Down trigger mirrors Obj41_Up (s2.asm:33732-33733): bclr Status_OnObj.
+        player.setOnObject(false);
+        // ROM loc_18CC6 (s2.asm:34023): move.b #2,routine(a1) — clears Hurt routine.
+        player.setHurt(false);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
         trigger(player);
     }
@@ -228,7 +250,8 @@ public class SpringObjectInstance extends BoxObjectInstance
             dir = Direction.LEFT;
         }
 
-        player.setCentreX((short) newCentreX);
+        // ROM adjusts x_pos with word-sized add/sub instructions, which preserve x_sub.
+        player.setCentreXPreserveSubpixel((short) newCentreX);
         player.setXSpeed((short) strength);
         player.setDirection(dir);
 
@@ -265,13 +288,13 @@ public class SpringObjectInstance extends BoxObjectInstance
         boolean flipped = isFlippedHorizontal();
 
         // ROM position offsets before launching
-        player.setCentreY((short) (player.getCentreY() + 6));
+        player.setCentreYPreserveSubpixel((short) (player.getCentreY() + 6));
         int newCentreX = player.getCentreX() + 6;
         if (!flipped) {
             // Unflipped (faces right): subtract 12 from X (net -6)
             newCentreX -= 12;
         }
-        player.setCentreX((short) newCentreX);
+        player.setCentreXPreserveSubpixel((short) newCentreX);
 
         int xStrength = flipped ? strength : -strength;
         int yStrength = up ? strength : -strength;
@@ -280,10 +303,29 @@ public class SpringObjectInstance extends BoxObjectInstance
         player.setYSpeed((short) yStrength);
         player.setDirection(xStrength < 0 ? Direction.LEFT : Direction.RIGHT);
         player.setAir(true);
-        player.setGSpeed((short) 0);
+        // ROM diagonal spring trigger mirrors Obj41_Up (s2.asm:33732-33733):
+        // bset Status_InAir then bclr Status_OnObj.
+        player.setOnObject(false);
+        // ROM loc_18DD8 (s2.asm:34090) / loc_18EE6 (s2.asm:34173): move.b #2,routine(a1)
+        // — clears Hurt routine. Matches Up/Down springs.
+        player.setHurt(false);
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 
         trigger(player);
+    }
+
+    /**
+     * ROM: loc_18DB4 gates diagonal spring launch on the player's centre X.
+     * Unflipped springs launch once {@code springX - 4 < playerX}; flipped springs
+     * launch while {@code playerX <= springX + 4}.
+     */
+    private boolean hasReachedDiagonalLaunchThreshold(AbstractPlayableSprite player) {
+        int springX = spawn.x() & 0xFFFF;
+        int playerX = player.getCentreX() & 0xFFFF;
+        if (isFlippedHorizontal()) {
+            return Integer.compareUnsigned((springX + 4) & 0xFFFF, playerX) >= 0;
+        }
+        return Integer.compareUnsigned((springX - 4) & 0xFFFF, playerX) < 0;
     }
 
     private void trigger(AbstractPlayableSprite player) {
@@ -385,6 +427,23 @@ public class SpringObjectInstance extends BoxObjectInstance
     }
 
     /**
+     * ROM divergence: every S2 spring variant uses
+     * {@code SolidObject_Always_SingleCharacter}
+     * (s2.asm:33709/33718/33784/33802) which jumps directly to
+     * {@code SolidObject_cont} (s2.asm:35147) without traversing the
+     * {@code SolidObject_OnScreenTest} on-screen gate at s2.asm:35140-35145.
+     * Off-screen springs therefore still resolve push and side contact in
+     * the ROM. Mirrors the S3K {@code SolidObjectFull2_1P} behaviour
+     * (sonic3k.asm:41065-41067).  The S2 PhysicsFeatureSet currently keeps
+     * {@code solidObjectOffscreenGate=false}; this override is defensive so
+     * the bypass continues to hold if S2 enables the gate in the future.
+     */
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        return true;
+    }
+
+    /**
      * ROM collision params vary by type:
      * Up/Down: D1=$1B (27), D2=8, D3=$10 (16)
      * Horizontal: D1=$13 (19), D2=$E (14), D3=$F (15)
@@ -408,6 +467,21 @@ public class SpringObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM: SolidObject_cont X gate rejects with bhi (s2.asm:35147-35150),
+        // so relX == halfWidth*2 is a valid side contact — match with inclusive edge.
+        return getType() == TYPE_HORIZONTAL;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(
+                usesStickyContactBuffer(),
+                usesInclusiveRightEdge(),
+                bypassesOffscreenSolidGate());
+    }
+
+    @Override
     public byte[] getSlopeData() {
         int type = getType();
         if (type == TYPE_DIAGONAL_UP) {
@@ -425,11 +499,43 @@ public class SpringObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean usesGroundedStandingCatchWindow() {
+        int type = getType();
+        return type == TYPE_DIAGONAL_UP || type == TYPE_DIAGONAL_DOWN;
+    }
+
+    @Override
+    public boolean addsSlopeCatchRangeToVerticalOverlap() {
+        int type = getType();
+        // S2 SlopedSolid_cont keeps the diagonal spring's d2 catch range in the
+        // vertical overlap value after sampling the slope surface:
+        // move.b y_radius,d3 / add.w d3,d2 / ... / add.w d2,d3.
+        return type == TYPE_DIAGONAL_UP || type == TYPE_DIAGONAL_DOWN;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
+
+        SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
+        for (PlayableEntity participant : playerParticipants(playerEntity)) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                applyCheckpointContact(player, batch.perPlayer().get(participant));
+            }
+        }
+    }
+
+    private List<PlayableEntity> playerParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
     }
 
     @Override

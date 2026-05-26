@@ -29,7 +29,6 @@ import java.util.List;
  * Rotation direction reverses when the player faces left.
  */
 public class Sonic3kInvincibilityStarsObjectInstance extends AbstractObjectInstance implements PowerUpObject {
-
     private final PlayableEntity player;
     private final PatternSpriteRenderer renderer;
 

@@ -10,6 +10,7 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseAttackable;
@@ -301,9 +302,9 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
             var objectManager = services().objectManager();
             if (objectManager != null) {
                 if (spawn.respawnTracked()) {
-                    objectManager.markRemembered(spawn);
+                    ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
                 } else {
-                    objectManager.removeFromActiveSpawns(spawn);
+                    ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
                 }
             }
         }
@@ -393,18 +394,15 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         }
 
         // btst #1,obStatus(a0) / beq.s .normal / neg.w obVelY(a1)
-        int fuseYSpeed = ceilingBomb ? -FUSE_Y_SPEED : FUSE_Y_SPEED;
-        Sonic1BombFuseInstance fuse = new Sonic1BombFuseInstance(
-                currentX, currentY, facingLeft, ceilingBomb, FUSE_TIME, fuseYSpeed, this);
+        final int fuseYSpeed = ceilingBomb ? -FUSE_Y_SPEED : FUSE_Y_SPEED;
         // ROM: FindNextFreeObj allocates slot after bomb
-        int mySlot = getSlotIndex();
-        if (mySlot >= 0) {
-            int childSlot = objectManager.allocateSlotAfter(mySlot);
-            if (childSlot >= 0) {
-                fuse.setSlotIndex(childSlot);
-            }
-        }
-        objectManager.addDynamicObject(fuse);
+        final int mySlot = getSlotIndex();
+        spawnFreeChild(() -> {
+            Sonic1BombFuseInstance fuse = new Sonic1BombFuseInstance(
+                    currentX, currentY, facingLeft, ceilingBomb, FUSE_TIME, fuseYSpeed, this);
+            ObjectLifetimeOps.assignFindNextFreeChildSlot(objectManager, fuse, mySlot);
+            return fuse;
+        });
     }
 
     /**
@@ -419,10 +417,9 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         }
 
         // Spawn explosion with bomb sound effect
-        ExplosionObjectInstance explosion = new ExplosionObjectInstance(
+        spawnFreeChild(() -> new ExplosionObjectInstance(
                 0x3F, currentX, currentY,
-                services().renderManager());
-        objectManager.addDynamicObject(explosion);
+                services().renderManager()));
 
         // sfx_Bomb = $C4 = BOSS_EXPLOSION
         services().playSfx(Sonic1Sfx.BOSS_EXPLOSION.id);
@@ -458,10 +455,10 @@ public class Sonic1BombBadnikInstance extends AbstractObjectInstance
         }
 
         for (int i = 0; i < SHRAPNEL_VELOCITIES.length; i++) {
-            Sonic1BombShrapnelInstance shrapnel = new Sonic1BombShrapnelInstance(
-                    fuseX, fuseY,
-                    SHRAPNEL_VELOCITIES[i][0], SHRAPNEL_VELOCITIES[i][1]);
-            objectManager.addDynamicObject(shrapnel);
+            final int vx = SHRAPNEL_VELOCITIES[i][0];
+            final int vy = SHRAPNEL_VELOCITIES[i][1];
+            spawnFreeChild(() -> new Sonic1BombShrapnelInstance(
+                    fuseX, fuseY, vx, vy));
         }
     }
 

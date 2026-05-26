@@ -1,3 +1,8 @@
+---
+name: s2-implement-object
+description: Guide for implementing Sonic 2 objects and badniks with ROM-accurate art, behavior, subtypes, and disassembly validation.
+---
+
 # Implement Sonic 2 Object/Badnik
 
 Implement a Sonic 2 object or badnik with complete ROM accuracy. This skill guides complete implementation including art, animation, sound effects, all subtypes, and cross-validation against the disassembly.
@@ -22,7 +27,7 @@ When delegating agents to explore the disassembly, instruct them to use the **s2
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s2disasm-guide skill (`.claude/skills/s2disasm-guide/skill.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s2disasm-guide skill (`.agents/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 Agents should:
 
@@ -60,6 +65,31 @@ Agents should:
    - The ObjectDiscoveryTool checklist also shows PLC IDs per object per zone
    - Check existing art keys in `Sonic2ObjectArtKeys.java`
    - Check if art is zone-specific or shared
+
+### Phase 1.5: ROM Behavioural Pitfall Review
+
+Before writing implementation code, read `rom-pitfalls.md` in this skill's
+directory. The file lists ROM behaviour classes where naive engine ports
+have produced trace-replay-visible divergences during prior frontier work.
+
+For each pitfall pattern:
+
+1. Decide whether your object is susceptible. Most patterns apply only to
+   specific object families (touch-response badniks, moving solids,
+   per-player interactives, free-fall objects, character-affecting state
+   transitions). Skip patterns the object can't trigger.
+2. For applicable patterns, plan your implementation to avoid the
+   anti-pattern. Quote the ROM convention from the pitfall entry in your
+   code comments where the convention matters (e.g., "P3: per-player
+   state at objoff_36 / objoff_37 — engine uses IdentityHashMap").
+3. If you find a NEW pattern during Phase 2 / Phase 4 cross-validation
+   that isn't yet catalogued — pause and add it to `rom-pitfalls.md`
+   before continuing. The catalogue grows by accretion; future
+   implementations benefit from each entry.
+
+This phase is short for objects that hit zero pitfalls (pass-through) and
+long for objects that hit several (e.g., a moving solid with rolling
+touch-response and per-player state hits P1, P3, P5, and P6 all at once).
 
 ### Phase 2: Implementation
 
@@ -216,7 +246,7 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 
 ##### Pattern 5: Boss (Zone Act 2 Boss Fights)
 
-**Use the dedicated `/s2-implement-boss` skill** (`.claude/skills/s2-implement-boss/skill.md`) for boss implementations.
+**Use the dedicated `/s2-implement-boss` skill** (`.agents/skills/s2-implement-boss/SKILL.md`) for boss implementations.
 
 Bosses differ significantly from regular objects:
 - Dynamic spawning via `Sonic2LevelEventManager` (not level layout)
@@ -298,6 +328,17 @@ Bosses differ significantly from regular objects:
 | `isOnScreen(margin)` | Inherited from `AbstractObjectInstance`. Off-screen visibility check. |
 | `DebugRenderContext` | `com.openggf.debug.DebugRenderContext` — use for `appendDebugRenderCommands()`. |
 
+##### Standard Object Contracts
+
+When the current branch provides shared object contracts, prefer them over new object-local booleans or direct state writes:
+
+- Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. Distinguish bit-0, bit-6, and bit-7 style gates instead of treating every controlled player as the same state.
+- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, all engine players, or engine sidekicks extended from native P2 logic. This is required for S2 Tails parity and OpenGGF multi-sidekick coherence.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
+- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
+- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
+- When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
+
 #### 2.5 Implementation Requirements
 
 **Engine Extensions**: If the ROM uses functionality that the engine doesn't expose, **you MUST extend the engine** rather than working around it or documenting it as a limitation. Examples:
@@ -319,6 +360,8 @@ When extending the engine:
 // From disassembly: move.w #$180,x_vel(a0)
 private static final int X_VELOCITY = 0x180;
 ```
+
+**Coordinate semantics**: ROM `x_pos` / `y_pos` map to `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()`. For playable-sprite native writes, prefer `NativePositionOps`; reserve raw preserve-subpixel centre setters for lower-level sprite internals or non-playable/object-local state. `getX()` / `getY()` are top-left sprite bounds and should only be used for render extents or explicit bounds checks. If a solid, camera trigger, or trace drifts by the sprite radius, audit for centre/top-left mixing first.
 
 **Subtypes**: Implement ALL subtypes from the subtype byte interpretation:
 ```java
@@ -367,6 +410,24 @@ registerFactory(Sonic2ObjectIds.OBJECT_NAME,
     (spawn, registry) -> new ObjectNameBadnikInstance(spawn));
 ```
 
+#### 2.7 Rewind Synchronization Fields
+
+Before finalizing a new object or badnik, classify every instance field for rewind. Key synchronization-relevant fields must remain captured: routine/state variables, timers/counters, subpixel positions, velocities, movement helper state, animation frame/timer when it drives gameplay, cooldown/reload flags, subtype-derived mutable state, per-player latches, rider/carry/contact maps, and child-spawn phase state. Do not add `@RewindTransient` to these fields just to satisfy `GenericFieldCapturer` or audit tests.
+
+Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable `ObjectSpawn` identity, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Dynamic spawn coordinates are gameplay state; capture them explicitly rather than treating the live `ObjectSpawn` reference as structural.
+
+Prefer standard value forms before object-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+#### 2.8 Rideable Solid Parity Checks
+
+For rideable solids, match the ROM's standing-bit lifetime exactly. The persisted standing bit is often read by the object's next-frame routine before `SolidObject` refreshes contact; do not clear rider state early just because the player has visually stepped off this frame. Separate "was standing last frame" from "is touching this frame" when object logic, release helpers, or trace diagnostics need both.
+
+Use the generic `PlatformObject` walk-off behaviour only when the ROM relies on normal solid-object release. If the disassembly calls an object-specific release/helper path, preserve that path's timing and side effects instead of replacing it with generic walk-off cleanup. Moving or collapsing platforms frequently use the persisted contact bit to decide whether to carry, drop, or snap the player.
+
+Routine transitions and pre-decrements are timing-sensitive. If ROM code increments `routine` then falls through, or pre-decrements a timer before branching, keep the same frame boundary in Java; moving the transition to the end of `update()` can shift platform motion, standing bits, sidekick contact, and animation by one frame.
+
+When validating manually with checkpoints or short trace starts, include sidekick/contact checks: player and sidekick riding bits, object contact/release events, carried position deltas, and the first frame after checkpoint restoration. A checkpoint route that looks correct for Sonic alone can still be wrong if Tails lands, releases, or respawns one frame off.
+
 ### Phase 3: Code Quality
 
 Ensure the implementation:
@@ -382,7 +443,7 @@ Ensure the implementation:
 
 Delegate to a review agent to cross-validate against the disassembly. **Include this instruction in the agent prompt:**
 
-> Use the s2disasm-guide skill (`.claude/skills/s2disasm-guide/skill.md`) for reference on disassembly structure, label conventions, and object system patterns.
+> Use the s2disasm-guide skill (`.agents/skills/s2disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
 
 ```
 Review the implementation of [ObjectName] (0xXX) against the Sonic 2 disassembly.
@@ -436,8 +497,8 @@ Once cross-validation is confirmed bug-free:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.claude/skills/s2disasm-guide/skill.md` |
-| **Boss skill** | `.claude/skills/s2-implement-boss/skill.md` |
+| **Disassembly guide** | `.agents/skills/s2disasm-guide/SKILL.md` |
+| **Boss skill** | `.agents/skills/s2-implement-boss/SKILL.md` |
 | Object IDs | `src/.../game/sonic2/constants/Sonic2ObjectIds.java` |
 | ROM offsets | `src/.../game/sonic2/constants/Sonic2Constants.java` |
 | Art keys | `src/.../game/sonic2/Sonic2ObjectArtKeys.java` |

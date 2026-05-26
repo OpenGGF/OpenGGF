@@ -36,7 +36,7 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
         MOVING_DOWN         // routine_secondary 8: descend back to start
     }
 
-    private static final int COLLISION_SIZE_INDEX = 0x0C; // From disassembly collision_flags $0C
+    private static final int COLLISION_SIZE_INDEX = 0x0A; // From disassembly collision_flags $A (s2.asm:59905)
     private static final int DETECT_RANGE = 0x80; // 128 pixels
     private static final int RISE_DELAY = 0x20; // 32 frames
     private static final int INITIAL_Y_VEL = -0x200; // Rise speed
@@ -101,11 +101,25 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void updateDelayBeforeRise() {
+        // ROM Obj4A_DelayBeforeMoveUp (s2.asm:59958-59967):
+        //   subq.w #1, objoff_2C(a0)
+        //   bmi.s +                  ; branch when timer goes NEGATIVE (after the
+        //                              ; decrement), not when it hits zero
+        //   rts
+        // + addq.b #2, routine_secondary(a0)
+        //   move.b #4, anim(a0)
+        //   move.w #-$200, y_vel(a0)
+        //   jmpto JmpTo19_ObjectMove ; apply -$200 y_vel via ObjectMove this frame
         timer--;
-        if (timer <= 0) {
+        if (timer < 0) {
             state = State.MOVING_UP;
             yVelocity = INITIAL_Y_VEL;
             animationState.setAnimId(4); // Rising animation
+            // ROM falls through to ObjectMove on the transition frame, so apply
+            // the initial -$200 velocity here. Without this, the Octus starts
+            // 2 pixels lower than ROM throughout its rise, delaying badnik-bounce
+            // hits by ~1 frame in OOZ trace replay.
+            applyYMovement();
         }
     }
 
@@ -124,8 +138,15 @@ public class OctusBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void updateHovering() {
+        // ROM Obj4A_Hover (s2.asm:59981-59988):
+        //   subq.w #1, objoff_2C(a0)
+        //   bmi.s +
+        //   rts
+        // + addq.b #2, routine_secondary(a0)
+        //   rts
+        // bmi triggers when timer goes negative, not when it reaches zero.
         timer--;
-        if (timer <= 0) {
+        if (timer < 0) {
             state = State.MOVING_DOWN;
             yVelocity = 0;
         }

@@ -21,7 +21,6 @@ public class AizEndBossFlameColumnChild extends AbstractObjectInstance {
     private static final int Y_OFFSET = -0x30;
     private static final int[] FRAMES = {0x21, 0x21, 0x22, 0x23};
     private static final int[] FRAME_DURATIONS = {1, 4, 5, 6};
-
     private final AizEndBossInstance boss;
     private int sequenceIndex;
     private int frameTimer;

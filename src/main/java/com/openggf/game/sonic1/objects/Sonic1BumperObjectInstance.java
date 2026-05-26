@@ -146,8 +146,8 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance {
         int dy = Math.abs(player.getCentreY() - spawn.y());
         int playerHalfWidth = 8;
         int playerHalfHeight = player.getYRadius();
-        return dx < (COLLISION_HALF_WIDTH + playerHalfWidth)
-                && dy < (COLLISION_HALF_HEIGHT + playerHalfHeight);
+        return dx <= (COLLISION_HALF_WIDTH + playerHalfWidth)
+                && dy <= (COLLISION_HALF_HEIGHT + playerHalfHeight);
     }
 
     /**
@@ -246,15 +246,17 @@ public class Sonic1BumperObjectInstance extends AbstractObjectInstance {
         services().gameState().addScore(POINTS_PER_HIT);
 
         // Spawn points popup (id_Points = 0x29)
-        ObjectServices svc = tryServices();
+        final ObjectServices svc = tryServices();
         ObjectManager objectManager = svc != null ? svc.objectManager() : null;
         if (objectManager != null) {
-            ObjectSpawn pointsSpawn = new ObjectSpawn(
-                    spawn.x(), spawn.y(), 0x29, 0, 0, false, 0);
-            Sonic1PointsObjectInstance pointsObj = new Sonic1PointsObjectInstance(
-                    pointsSpawn, svc, POINTS_PER_HIT);
-            pointsObj.setScoreFrameIndex(POINTS_FRAME_INDEX);
-            objectManager.addDynamicObject(pointsObj);
+            spawnFreeChild(() -> {
+                ObjectSpawn pointsSpawn = new ObjectSpawn(
+                        spawn.x(), spawn.y(), 0x29, 0, 0, false, 0);
+                Sonic1PointsObjectInstance pointsObj = new Sonic1PointsObjectInstance(
+                        pointsSpawn, svc, POINTS_PER_HIT);
+                pointsObj.setScoreFrameIndex(POINTS_FRAME_INDEX);
+                return pointsObj;
+            });
         }
     }
 

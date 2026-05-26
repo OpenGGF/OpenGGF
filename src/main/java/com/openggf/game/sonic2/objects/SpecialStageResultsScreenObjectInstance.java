@@ -1,8 +1,5 @@
 package com.openggf.game.sonic2.objects;
 
-import com.openggf.audio.AudioManager;
-import com.openggf.game.GameServices;
-import com.openggf.game.GameStateManager;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
@@ -10,17 +7,19 @@ import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageDataLoader;
 import com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager;
 import com.openggf.data.Rom;
-import com.openggf.data.RomManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -126,7 +125,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private static final int VRAM_HUD = 0x06CA;
     private static final int VRAM_END = 0x0710;        // End of HUD region (generous)
 
-    private static final int PATTERN_BASE = 0x40000;   // High ID to avoid conflicts (0x30000 used by water surface)
+    private static final int PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
     private static final int SOURCE_DIGITS_PATTERN_BASE = 0x41000;  // Separate base for preserved source digits
 
     // State tracking
@@ -142,6 +141,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private final boolean gotEmerald;
     private final int stageIndex;
     private final int totalEmeraldCount;
+    private final ObjectServices services;
 
     // Bonus values
     private int displayedRingCount;
@@ -184,11 +184,13 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private static final int DIGITS_PER_VALUE = 8;          // 4 digits x 2 tiles each
 
     public SpecialStageResultsScreenObjectInstance(int ringsCollected, boolean gotEmerald,
-                                                    int stageIndex, int totalEmeraldCount) {
+                                                    int stageIndex, int totalEmeraldCount,
+                                                    ObjectServices services) {
         this.ringsCollected = ringsCollected;
         this.gotEmerald = gotEmerald;
         this.stageIndex = stageIndex;
         this.totalEmeraldCount = totalEmeraldCount;
+        this.services = Objects.requireNonNull(services, "services");
 
         calculateBonuses();
         // Don't load art in constructor - do it lazily in ensureArtCached()
@@ -197,6 +199,10 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         LOGGER.info("Special Stage Results: rings=" + ringsCollected + ", gotEmerald=" + gotEmerald +
                 ", stage=" + (stageIndex + 1) + ", totalEmeralds=" + totalEmeraldCount +
                 ", displayedRingCount=" + displayedRingCount + ", emeraldBonus=" + emeraldBonus);
+    }
+
+    private ObjectServices services() {
+        return services;
     }
 
     /**
@@ -213,12 +219,12 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
      */
     private void loadArt() {
         try {
-            RomManager romManager = RomManager.getInstance();
+            var romManager = services().romManager();
             if (!romManager.isRomAvailable()) {
                 LOGGER.warning("ROM not available for results art loading");
                 return;
             }
-            Rom rom = romManager.getRom();
+            Rom rom = services().rom();
 
             // Load ArtNem_TitleCard2 - contains other letters (A,B,C,D,F,G,H,I,J,K,L,M,P,Q,R,S,T,U,V,W,X,Y)
             Pattern[] titleCard2Patterns = PatternDecompressor.nemesis(rom,
@@ -238,7 +244,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
             // Load special stage results art from DataLoader
             Pattern[] resultsArtPatterns = null;
-            Sonic2SpecialStageManager manager = Sonic2SpecialStageManager.getInstance();
+            Sonic2SpecialStageManager manager = services().gameService(Sonic2SpecialStageManager.class);
             if (manager != null) {
                 Sonic2SpecialStageDataLoader dataLoader = manager.getDataLoader();
                 if (dataLoader != null) {
@@ -487,7 +493,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             return;
         }
 
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = services().graphicsManager();
         if (graphicsManager == null) {
             LOGGER.warning("ensureArtCached: GraphicsManager is null");
             return;
@@ -566,7 +572,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         }
 
         // Re-cache the updated patterns to GPU
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = services().graphicsManager();
         if (graphicsManager != null) {
             // Re-cache ring bonus digit patterns (offset 8-15)
             for (int i = 0; i < DIGITS_PER_VALUE; i++) {
@@ -692,7 +698,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         totalBonus += totalIncrement;
 
         if (totalIncrement > 0) {
-            GameServices.gameState().addScore(totalIncrement);
+            services().gameState().addScore(totalIncrement);
         }
 
         // Play tick sound every N frames while tallying
@@ -770,7 +776,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         // Ensure art is cached for rendering
         ensureArtCached();
 
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = services().graphicsManager();
         if (graphicsManager == null) {
             return;
         }
@@ -962,7 +968,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             return;
         }
 
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = services().graphicsManager();
         if (graphicsManager == null) {
             return;
         }
@@ -1092,7 +1098,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         };
 
         for (int i = 0; i < 7; i++) {
-            boolean hasThisEmerald = GameServices.gameState().hasEmerald(i);
+            boolean hasThisEmerald = services().gameState().hasEmerald(i);
 
             if (hasThisEmerald) {
                 // ROM-accurate flash: display on odd frames only (btst #0)
@@ -1124,7 +1130,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         };
 
         for (int i = 0; i < 7; i++) {
-            boolean hasThisEmerald = GameServices.gameState().hasEmerald(i);
+            boolean hasThisEmerald = services().gameState().hasEmerald(i);
 
             if (hasThisEmerald) {
                 // ROM-accurate flash: display on odd frames only (btst #0)
@@ -1157,7 +1163,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             return;
         }
 
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = services().graphicsManager();
         if (graphicsManager == null) {
             return;
         }
@@ -1199,7 +1205,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     private void playTickSound() {
         try {
-            GameServices.audio().playSfx(Sonic2Sfx.BLIP.id);
+            services().audioManager().playSfx(Sonic2Sfx.BLIP.id);
         } catch (Exception e) {
             // Ignore audio errors
         }
@@ -1207,7 +1213,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     private void playTallyEndSound() {
         try {
-            GameServices.audio().playSfx(Sonic2Sfx.TALLY_END.id);
+            services().audioManager().playSfx(Sonic2Sfx.TALLY_END.id);
         } catch (Exception e) {
             // Ignore audio errors
         }

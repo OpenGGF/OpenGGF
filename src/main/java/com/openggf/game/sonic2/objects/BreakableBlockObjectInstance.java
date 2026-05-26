@@ -72,7 +72,6 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
 
     private final int halfWidth;
     private boolean broken;
-    private boolean playerWasRolling;
     private boolean initialized;
 
     public BreakableBlockObjectInstance(ObjectSpawn spawn, String name) {
@@ -98,52 +97,13 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (broken) {
-            return;
-        }
-
-        // Check if player is standing on us and rolling
-        // The original tracks player animation state each frame
-        if (player != null) {
-            playerWasRolling = player.getRolling();
-
-            // Check for breaking from below - when player is rolling and moving upward
-            // We handle this here because isSolidFor returns false for this case,
-            // so onSolidContact won't be called
-            if (player.getRolling() && player.getYSpeed() < 0) {
-                if (isPlayerOverlapping(player)) {
-                    // Create a synthetic contact for breaking from below
-                    SolidContact contact = new SolidContact(false, false, true, false, false);
-                    breakBlock(player, contact);
-                }
-            }
-        }
-    }
-
-    /**
-     * Check if the player overlaps with this block's collision area.
-     */
-    private boolean isPlayerOverlapping(AbstractPlayableSprite player) {
-        int blockX = spawn.x();
-        int blockY = spawn.y();
-        int playerX = player.getCentreX();
-        int playerY = player.getCentreY();
-        int playerYRadius = player.getYRadius();
-
-        // Check X overlap
-        int dx = Math.abs(playerX - blockX);
-        if (dx >= halfWidth + 11) {
-            return false;
-        }
-
-        // Check Y overlap - player's top must be near or overlapping block's bottom
-        int playerTop = playerY - playerYRadius;
-        int blockBottom = blockY + HALF_HEIGHT;
-        int blockTop = blockY - HALF_HEIGHT;
-
-        // Player is overlapping if their top is within the block's vertical range
-        return playerTop <= blockBottom && playerTop >= blockTop - playerYRadius;
+        // ROM Obj32_Main (s2.asm:48889-48905) runs SolidObject and then checks the
+        // BLOCK's own standing_mask (status bits 6/7). No special "rolling player
+        // moving up" detection is done here: side/below collisions are handled by
+        // SolidObject's ceiling/push paths and never break the block. The per-player
+        // break decision is made in onSolidContact below, using the SolidContact's
+        // standing flag (set by SolidObject when that player is currently standing
+        // on this object).
     }
 
     @Override
@@ -155,17 +115,10 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
 
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Block is not solid once broken
-        if (broken) {
-            return false;
-        }
-        // Don't be solid for rolling players moving upward - they should break through
-        // The break detection is handled in update() instead
-        if (player.getRolling() && player.getYSpeed() < 0) {
-            return false;
-        }
-        return true;
+        // Block is not solid once broken. ROM keeps the block fully solid before it
+        // breaks (Obj32_Main always invokes SolidObject); a rolling player moving
+        // upward hits the underside as a ceiling collision, not a break.
+        return !broken;
     }
 
     @Override
@@ -175,13 +128,23 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
             return;
         }
 
-        // Break the block if player is rolling and either:
-        // 1. Standing on top of the block
-        // 2. Hitting from below (e.g., exiting a spin tube upward)
-        // 3. Hitting from the side while rolling
-        boolean isRolling = playerWasRolling || player.getRolling();
-
-        if (isRolling && (contact.standing() || contact.touchBottom() || contact.touchSide())) {
+        // ROM Obj32_Main snapshots player anim before SolidObject, then checks
+        // standing bits after SolidObject (docs/s2disasm/s2.asm:48889-48959).
+        // Use the pre-contact rolling state because landing resolution can clear
+        // rolling before this callback runs.
+        boolean wasRolling = services().objectManager() != null
+                ? services().objectManager().getPreContactRolling()
+                : player.getRolling();
+        //   andi.b #standing_mask,d0         ; only break if a player is STANDING on the block
+        //   bne.s  Obj32_SupportingSomeone
+        //   ; ... checks each standing player's saved anim individually:
+        //   ; - MainCharacter standing && saved anim==Roll  -> Obj32_BouncePlayer(MainCharacter)
+        //   ; - Sidekick standing      && saved anim==Roll  -> Obj32_BouncePlayer(Sidekick)
+        // Side and below contacts NEVER break the block in ROM. Each player's own
+        // rolling state determines if THIS player triggers the break (the engine's
+        // previous "playerWasRolling" cache leaked Sonic's rolling state into Tails'
+        // onSolidContact call, knocking Tails airborne via the side-touch path).
+        if (contact.standing() && wasRolling) {
             breakBlock(player, contact);
         }
     }
@@ -195,17 +158,18 @@ public class BreakableBlockObjectInstance extends BoxObjectInstance
 
         // Mark as broken in persistence table (stays broken on respawn/revisit)
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
+        short preservedCentreY = player.getCentreY();
         // Force player into rolling state with proper hitbox (disassembly lines 48916-48919)
         // bset #status.player.rolling,status(a1)
         // move.b #$E,y_radius(a1)
         // move.b #7,x_radius(a1)
         // move.b #AniIDSonAni_Roll,anim(a1)
-        // setRolling(true) handles radius change and animation internally
+        // setRolling(true) handles radius change and animation internally, but
+        // ROM writes y_radius/x_radius/status without changing y_pos.
         player.setRolling(true);
+        player.setCentreYPreserveSubpixel(preservedCentreY);
 
         // Handle velocity based on contact direction:
         // - Standing on top: bounce upward

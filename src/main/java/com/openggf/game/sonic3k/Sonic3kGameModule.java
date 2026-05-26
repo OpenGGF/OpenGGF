@@ -33,21 +33,29 @@ import com.openggf.game.SpecialStageProvider;
 import com.openggf.game.sonic3k.events.S3kSeamlessMutationExecutor;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic3k.scroll.Sonic3kScrollHandlerProvider;
+import com.openggf.game.sonic3k.sidekick.Sonic3kCnzCarryTrigger;
 import com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageProvider;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
+import com.openggf.game.sonic3k.dataselect.S3kDataSelectManager;
+import com.openggf.game.sonic3k.dataselect.S3kSaveSnapshotProvider;
 import com.openggf.game.sonic3k.titlescreen.Sonic3kTitleScreenManager;
+import com.openggf.game.DataSelectProvider;
 import com.openggf.game.LevelSelectProvider;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.sonic3k.levelselect.Sonic3kLevelSelectManager;
 import com.openggf.game.GameId;
 import com.openggf.game.GameRng;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.dataselect.DataSelectHostProfile;
+import com.openggf.game.dataselect.DataSelectPresentationProvider;
+import com.openggf.game.dataselect.DataSelectSessionController;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
 import com.openggf.level.objects.TouchResponseTable;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCarryTrigger;
 import com.openggf.sprites.playable.SuperStateController;
 
 import java.util.logging.Level;
@@ -61,12 +69,34 @@ import java.util.logging.Logger;
  */
 public class Sonic3kGameModule implements GameModule {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kGameModule.class.getName());
+
+    static {
+        // Register the S3K data-select renderer as a cross-game donor so S1/S2 modules
+        // can request a donated presentation without naming the S3K-specific delegate.
+        com.openggf.game.dataselect.CrossGameDataSelectPresentations.registerDonor(
+                com.openggf.game.dataselect.CrossGameDataSelectPresentations.DONOR_S3K,
+                S3kDataSelectManager::new);
+    }
+
     private final GameAudioProfile audioProfile = new Sonic3kAudioProfile();
+    private final Sonic3kLevelEventManager levelEventManager = new Sonic3kLevelEventManager();
+    private final Sonic3kTitleCardManager titleCardManager = new Sonic3kTitleCardManager();
+    private final Sonic3kZoneRegistry zoneRegistry = new Sonic3kZoneRegistry();
+    private final Sonic3kTitleScreenManager titleScreenProvider = new Sonic3kTitleScreenManager();
+    private final Sonic3kLevelSelectManager levelSelectProvider = new Sonic3kLevelSelectManager();
+    private final com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile dataSelectHostProfile =
+            new com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile();
+    private DataSelectPresentationProvider dataSelectPresentationProvider;
+    private final com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager specialStageManager =
+            new com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager();
+    private final Sonic3kSpecialStageProvider specialStageProvider =
+            new Sonic3kSpecialStageProvider(specialStageManager);
+    private final LevelInitProfile levelInitProfile = new Sonic3kLevelInitProfile(levelEventManager);
+    private final SidekickCarryTrigger sidekickCarryTrigger = new Sonic3kCnzCarryTrigger();
     private Sonic3kScrollHandlerProvider scrollHandlerProvider;
-    private Sonic3kLevelEventManager levelEventManager;
     private PhysicsProvider physicsProvider;
     private Sonic3kObjectArtProvider objectArtProvider;
-    private Sonic3kSpecialStageProvider specialStageProvider;
+    private ObjectRegistry objectRegistry;
     private final Sonic3kBonusStageCoordinator bonusStageCoordinator = new Sonic3kBonusStageCoordinator();
 
     @Override
@@ -91,7 +121,10 @@ public class Sonic3kGameModule implements GameModule {
 
     @Override
     public ObjectRegistry createObjectRegistry() {
-        return new Sonic3kObjectRegistry();
+        if (objectRegistry == null) {
+            objectRegistry = new Sonic3kObjectRegistry();
+        }
+        return objectRegistry;
     }
 
     @Override
@@ -123,9 +156,6 @@ public class Sonic3kGameModule implements GameModule {
 
     @Override
     public LevelEventProvider getLevelEventProvider() {
-        if (levelEventManager == null) {
-            levelEventManager = Sonic3kLevelEventManager.getInstance();
-        }
         return levelEventManager;
     }
 
@@ -141,7 +171,7 @@ public class Sonic3kGameModule implements GameModule {
 
     @Override
     public ZoneRegistry getZoneRegistry() {
-        return Sonic3kZoneRegistry.getInstance();
+        return zoneRegistry;
     }
 
     @Override
@@ -159,17 +189,41 @@ public class Sonic3kGameModule implements GameModule {
 
     @Override
     public TitleCardProvider getTitleCardProvider() {
-        return Sonic3kTitleCardManager.getInstance();
+        return titleCardManager;
     }
 
     @Override
     public TitleScreenProvider getTitleScreenProvider() {
-        return Sonic3kTitleScreenManager.getInstance();
+        return titleScreenProvider;
     }
 
     @Override
     public LevelSelectProvider getLevelSelectProvider() {
-        return Sonic3kLevelSelectManager.getInstance();
+        return levelSelectProvider;
+    }
+
+    @Override
+    public DataSelectProvider getDataSelectProvider() {
+        return getDataSelectPresentationProvider();
+    }
+
+    @Override
+    public DataSelectPresentationProvider getDataSelectPresentationProvider() {
+        if (dataSelectPresentationProvider == null) {
+            dataSelectPresentationProvider = new DataSelectPresentationProvider(S3kDataSelectManager::new,
+                    new DataSelectSessionController(dataSelectHostProfile));
+        }
+        return dataSelectPresentationProvider;
+    }
+
+    @Override
+    public DataSelectHostProfile getDataSelectHostProfile() {
+        return dataSelectHostProfile;
+    }
+
+    @Override
+    public com.openggf.game.save.SaveSnapshotProvider getSaveSnapshotProvider() {
+        return new S3kSaveSnapshotProvider();
     }
 
     @Override
@@ -203,8 +257,6 @@ public class Sonic3kGameModule implements GameModule {
         return new Sonic3kWaterDataProvider();
     }
 
-    private final LevelInitProfile levelInitProfile = new Sonic3kLevelInitProfile();
-
     @Override
     public LevelInitProfile getLevelInitProfile() {
         return levelInitProfile;
@@ -231,9 +283,14 @@ public class Sonic3kGameModule implements GameModule {
     public SuperStateController createSuperStateController(
             AbstractPlayableSprite player) {
         if (CrossGameFeatureProvider.isActive()) {
-            return CrossGameFeatureProvider.getInstance().createSuperStateController(player);
+            return GameServices.crossGameFeatures().createSuperStateController(player);
         }
         return new Sonic3kSuperStateController(player);
+    }
+
+    @Override
+    public SidekickCarryTrigger getSidekickCarryTrigger() {
+        return sidekickCarryTrigger;
     }
 
     @Override
@@ -244,8 +301,11 @@ public class Sonic3kGameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
-        if (type == Sonic3kLevelEventManager.class) return (T) Sonic3kLevelEventManager.getInstance();
-        if (type == Sonic3kTitleCardManager.class) return (T) Sonic3kTitleCardManager.getInstance();
+        if (type == Sonic3kLevelEventManager.class) return (T) levelEventManager;
+        if (type == Sonic3kTitleCardManager.class) return (T) titleCardManager;
+        if (type == Sonic3kZoneRegistry.class) return (T) zoneRegistry;
+        if (type == com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager.class)
+            return (T) specialStageManager;
         return null;
     }
 
@@ -259,9 +319,6 @@ public class Sonic3kGameModule implements GameModule {
 
     @Override
     public SpecialStageProvider getSpecialStageProvider() {
-        if (specialStageProvider == null) {
-            specialStageProvider = new Sonic3kSpecialStageProvider();
-        }
         return specialStageProvider;
     }
 
@@ -273,6 +330,12 @@ public class Sonic3kGameModule implements GameModule {
     @Override
     public boolean supportsSidekick() {
         return true;
+    }
+
+    @Override
+    public java.util.function.Function<com.openggf.game.PlayableEntity,
+            com.openggf.level.objects.AbstractObjectInstance> getInvincibilityStarsFactory() {
+        return com.openggf.game.sonic3k.objects.Sonic3kInvincibilityStarsObjectInstance::new;
     }
 
     @Override

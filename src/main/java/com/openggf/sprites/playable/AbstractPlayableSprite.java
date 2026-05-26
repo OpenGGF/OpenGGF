@@ -5,7 +5,7 @@ import com.openggf.game.AnimationId;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.CrossGameFeatureProvider;
-import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
 import com.openggf.game.InstaShieldHandle;
 import com.openggf.game.PhysicsFeatureSet;
@@ -19,17 +19,23 @@ import com.openggf.game.ShieldType;
 import com.openggf.game.DamageCause;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelState;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.timer.TimerManager;
 
 import com.openggf.audio.GameAudioProfile;
 
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.level.LevelManager;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectControlledSolidContactController;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
+import com.openggf.level.objects.PerObjectRewindSnapshot.PlayerRewindExtra;
+import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
 import com.openggf.physics.Sensor;
@@ -42,6 +48,7 @@ import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.managers.SpindashDustController;
@@ -56,6 +63,7 @@ import com.openggf.timer.timers.SpeedShoesTimer;
 public abstract class AbstractPlayableSprite extends AbstractSprite implements com.openggf.game.PlayableEntity {
         private static final Logger LOGGER = Logger.getLogger(AbstractPlayableSprite.class.getName());
 
+        @RewindTransient(reason = "playable controller is structural; mutable controller state is captured explicitly")
         protected final PlayableSpriteController controller;
 
         protected GroundMode runningMode = GroundMode.GROUND;
@@ -77,6 +85,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         protected byte topSolidBit = 0x0C;
         protected byte lrbSolidBit = 0x0D;
+        /** ROM status_tertiary bit-field, mirrored so objects can coordinate across frames. */
+        private byte statusTertiary = 0;
 
         /**
          * Sonic 1 loop plane state. When true, the player is on the "low plane"
@@ -102,7 +112,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         // Records input buttons and status flags each frame for Tails CPU input replay.
         // Entry format matches ROM: word 0 = Ctrl_1_Logical (input), word 1 = status
         private short[] inputHistory = new short[64];
+        private byte[] jumpPressHistory = new byte[64];
         private byte[] statusHistory = new byte[64];
+        private boolean followerHistoryRecordedThisTick;
+        /** Current frame logical controller state (ROM: Ctrl_1_Logical). */
+        private short logicalInputState = 0;
+        /** Current frame logical jump press bit (ROM: low byte of Ctrl_1_Logical). */
+        private boolean logicalJumpPressState = false;
 
         // Input bitmask constants (matching Mega Drive controller layout)
         public static final int INPUT_UP    = 0x01;
@@ -128,6 +144,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private boolean cpuControlled = false;
 
         /** The CPU controller for AI-driven sprites */
+        @RewindTransient(reason = "sidekick CPU controller is structural; mutable CPU state is captured explicitly")
         private SidekickCpuController cpuController;
 
         /**
@@ -143,6 +160,52 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * See s2.asm lines 36712, 37745 for usage in rolling/landing logic.
          */
         protected boolean pinballMode = false;
+
+        /**
+         * When true, the entire roll speed routine (input, friction, deceleration)
+         * is skipped — only slope gravity modifies ground_vel. Matches ROM behaviour
+         * of spin_dash_flag bit 7 (value 0x81) which causes {@code Sonic_RollSpeed}
+         * to jump directly to velocity conversion (sonic3k.asm line 22936: bmi.w loc_115C6).
+         * <p>
+         * Set by AutoSpin objects when subtype bit 7 is active. Distinct from
+         * {@link #pinballMode} which only prevents uncurling at low speed.
+         */
+        protected boolean pinballSpeedLock = false;
+
+        /**
+         * One-shot object handoff flag for ROM paths that keep a player curled
+         * through the next floor touch without enabling general pinball-mode
+         * movement while airborne. Set by the owning object and consumed by
+         * {@code PlayableSpriteMovement.resetOnFloor()}.
+         */
+        protected boolean preserveRollingOnNextLanding = false;
+
+        /**
+         * One-shot object handoff flag for ROM paths that leave the player curled
+         * at zero ground speed without enabling pinball-mode's forced speed boost.
+         * Set by the owning object and consumed by roll-stop handling.
+         */
+        protected boolean preserveRollingOnNextRollStop = false;
+
+        /**
+         * One-frame companion to {@link #preserveRollingOnNextRollStop}. Set when
+         * an object-preserved zero-speed roll seeds the stopper-chamber boost so
+         * the next roll-speed tick applies natural friction only.
+         */
+        protected boolean objectPreservedRollBoostFollowup = false;
+
+        /**
+         * One-frame ground-wall probe extension after an object-preserved roll
+         * boost. Used by S2 Obj85 stopper chambers where the ROM reaches the
+         * chamber wall one frame after the zero-speed keep-rolling push.
+         */
+        protected boolean objectPreservedRollWallProbe = false;
+
+        /**
+         * Object-scoped velocity carry after a preserved zero-speed roll is
+         * converted into a solid-wall push by the owning object.
+         */
+        protected boolean objectPreservedRollVelocityCarry = false;
 
         /**
          * Whether the player is in a roll-tunnel section (S1 GHZ S-tubes).
@@ -162,6 +225,24 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Whether or not this sprite is in the air
          */
         protected boolean air = false;
+
+        /**
+         * Pre-physics snapshot of physics state, captured at the start of
+         * each {@code handleMovement} tick (before any physics mutates the
+         * player). Used by per-object hooks that run AFTER physics in the
+         * engine's frame order but BEFORE physics in the ROM frame order
+         * (e.g. {@code CnzWireCageObjectInstance} which captures the player
+         * based on the airborne state ROM saw before player physics gated
+         * via {@code object_control} bit 0). The fields snapshot
+         * {@code air}, {@code angle}, {@code groundVel}, {@code xSpeed},
+         * {@code ySpeed} as ROM would have read them at the start of
+         * {@code Tails_Control}/{@code Sonic_Control} dispatch.
+         */
+        protected boolean prePhysicsAir = false;
+        protected byte prePhysicsAngle = 0;
+        protected short prePhysicsGSpeed = 0;
+        protected short prePhysicsXSpeed = 0;
+        protected short prePhysicsYSpeed = 0;
 
         /**
          * Whether this sprite is currently jumping (ROM: jumping(a0) status bit).
@@ -198,6 +279,45 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * When true, AnglePos skips terrain collision - the object handles positioning.
          */
         protected boolean onObject = false;
+
+        /**
+         * Snapshot of {@link #onObject} captured at the START of the current
+         * playable frame (before any player tick has run). Refreshed by
+         * {@link #captureOnObjectAtFrameStart()} from {@code SpriteManager.beginPlayableFrame}.
+         *
+         * <p>ROM analog: in {@code Tails_CPU_Control} (sonic3k.asm:26688-26700,
+         * S2 s2.asm:38933+), the follow-steering logic reads the leader's
+         * {@code Status_OnObj} bit MID-FRAME, before solid-object processing
+         * (sub_1FF1E sonic3k.asm:44306-44319, loc_1FFC4 sonic3k.asm:44369-44381)
+         * has cleared it for jumpers. {@code Sonic_Jump} (sonic3k.asm:23288-23354)
+         * sets {@code Status_InAir} but does NOT touch {@code Status_OnObj}; the
+         * bit only clears later when objects run. The engine's
+         * {@code PlayableSpriteMovement.doJump} and air-unseat paths clear
+         * {@code onObject} EARLIER in the player tick, so by the time the
+         * Tails CPU runs (next playable in {@code SpriteManager.update}), the
+         * live {@code isOnObject()} value already reflects the leader's
+         * post-tick state. Reading {@link #getOnObjectAtFrameStart()} preserves
+         * the pre-tick (mid-frame, ROM-equivalent) view.
+         */
+        private boolean onObjectAtFrameStart = false;
+
+        /**
+         * ROM-style latched solid interaction object id.
+         * Mirrors the object id resolved from the player's SST {@code interact} slot,
+         * which persists even after {@code status.on_object} is cleared.
+         */
+        protected int latchedSolidObjectId = 0;
+
+        /**
+         * Set when {@code Player_SlopeRepel} slipped the player into air on the
+         * current physics frame (sonic3k.asm:23929 {@code bset #Status_InAir}).
+         * Cleared at the start of each player update tick. Used by per-object
+         * release-vs-restore decisions (e.g. {@code CnzWireCageObjectInstance})
+         * to distinguish "slope-repel just slipped, honour the air state" from
+         * "stale terrain probe spuriously set air, restore the on-object
+         * status".
+         */
+        protected boolean slopeRepelJustSlipped = false;
 
         /**
          * Whether to stick to convex surfaces even at low speeds.
@@ -329,6 +449,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         private PlayerSpriteRenderer spriteRenderer;
         private int mappingFrame = 0;
+        private int renderFlagWidthPixels = 0x18;
+        private boolean renderFlagOnScreen = true;
+        private boolean renderFlagOnScreenValid = false;
         private int animationFrameCount = 0;
         private SpriteAnimationProfile animationProfile;
         private SpriteAnimationSet animationSet;
@@ -366,6 +489,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         // Physics provider fields — populated from GameModule when available
         private PhysicsProfile physicsProfile;
+        private GameModule runtimeBoundStateModule;
         private PhysicsModifiers physicsModifiers;
         private PhysicsFeatureSet physicsFeatureSet;
 
@@ -403,6 +527,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * When true, user inputs are ignored (Control_Locked in ROM).
          */
         protected boolean controlLocked = false;
+        private boolean hasQueuedControlLockedState = false;
+        private boolean queuedControlLocked = false;
+        private boolean hasQueuedForceInputRightState = false;
+        private boolean queuedForceInputRight = false;
         /**
          * Movement lock timer (ROM: move_lock). When > 0, player input is ignored
          * and the player cannot move. Decremented each frame.
@@ -415,6 +543,54 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * obj_control = $81 behavior used by spin tubes, corkscrews, etc.
          */
         protected boolean objectControlled = false;
+        /**
+         * Companion flag to {@link #objectControlled}: when {@code true} the
+         * controlling object owns physics (object_control bits 0-6 in ROM) but
+         * the sidekick CPU AI dispatcher is allowed to run, matching ROM's
+         * {@code bmi.w} (bit 7) check at {@code sonic3k.asm:26672}. Default
+         * {@code false} preserves existing engine behaviour for the bit-7
+         * (flight / despawn / super state / debug) callers. Cleared whenever
+         * {@link #setObjectControlled(boolean)} is set to {@code false}.
+         */
+        protected boolean objectControlAllowsCpu = false;
+        /**
+         * ROM {@code object_control} bit 0 equivalent. S3K uses this bit to skip
+         * the normal player movement dispatch, independently from the bit-7 CPU
+         * and touch-response gates. Defaulting this to true when object control is
+         * asserted preserves existing engine semantics for legacy callers.
+         */
+        protected boolean objectControlSuppressesMovement = false;
+        /**
+         * Narrow seam for MGZ top-platform carry. That object uses object control for
+         * ownership but still needs SolidObject side/top feedback from its controlling
+         * platform instance while the carry is active.
+         */
+        @com.openggf.game.rewind.RewindDeferred(reason = "active carried solid contact needs stable object identity snapshot")
+        protected ObjectInstance mgzTopPlatformCarrySolidContactObject;
+        protected boolean mgzTopPlatformSpringHandoffPending;
+        protected int mgzTopPlatformSpringHandoffXVel;
+        protected int mgzTopPlatformSpringHandoffYVel;
+        /**
+         * When true, airborne terrain collision is suppressed for this frame.
+         * Set by zone feature providers (e.g., HCZ vertical water tunnels) to
+         * prevent false collision contacts from stalling the player.  Cleared
+         * each frame by the zone handler that sets it.
+         */
+        protected boolean suppressAirCollision = false;
+        /**
+         * ROM object_control bit 6 for objects that own curved/loop movement
+         * while still letting normal player movement run. Sonic_WalkSpeed skips
+         * CalcRoomInFront when this bit is set.
+         */
+        protected boolean suppressGroundWallCollision = false;
+        /**
+         * When true, the airborne floor check in quadrants 0x40/0xC0 runs even
+         * when ySpeed &lt; 0.  ROM equivalent: {@code WindTunnel_flag} gating
+         * at sonic3k.asm:24204/24299.  Set by zone feature providers (e.g.,
+         * HCZ horizontal water tunnels) so pipe walls constrain the player
+         * vertically even when the tunnel pushes upward.
+         */
+        protected boolean forceFloorCheck = false;
         /**
          * When true, the sprite is not rendered. Used by the Giant Ring flash
          * to make Sonic invisible during the special stage entry sequence.
@@ -480,6 +656,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Affects physics constants and triggers entry/exit speed changes.
          */
         protected boolean inWater = false;
+        /**
+         * Tracks the ROM speed-constant block independently from Status_Underwater.
+         * Direct status-byte writes can clear the underwater bit without running
+         * the water-exit routine that restores max speed, acceleration, and
+         * deceleration.
+         */
+        protected boolean waterPhysicsActive = false;
         protected boolean preventTailsRespawn = false;
         /**
          * Previous frame's water state, used for detecting transitions.
@@ -502,6 +685,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public void setPowerUpSpawner(PowerUpSpawner spawner) {
                 this.powerUpSpawner = spawner;
+                ensurePersistentInstaShieldObject();
         }
 
         /**
@@ -573,8 +757,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectMappingFrameControl = false;
                 this.forcedAnimationId = -1;
                 this.onObject = false;
+                this.latchedSolidObjectId = 0;
                 this.sliding = false;
                 this.stickToConvex = false;
+                this.suppressGroundWallCollision = false;
                 // Reset ground mode to GROUND - critical for sensor direction on level load.
                 // Without this, if player was on a wall/ceiling when previous level ended,
                 // sensors would point in wrong direction and collision detection would fail.
@@ -584,6 +770,12 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.rolling = false;
                 this.rollingJump = false;
                 this.pinballMode = false;
+                this.pinballSpeedLock = false;
+                this.preserveRollingOnNextLanding = false;
+                this.preserveRollingOnNextRollStop = false;
+                this.objectPreservedRollBoostFollowup = false;
+                this.objectPreservedRollWallProbe = false;
+                this.objectPreservedRollVelocityCarry = false;
                 this.tunnelMode = false;
                 this.spindash = false;
                 this.lookDelayCounter = 0;
@@ -600,13 +792,28 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.forcedInputMask = 0;
                 this.forcedAnimationId = -1;
                 this.controlLocked = false;
+                this.hasQueuedControlLockedState = false;
+                this.queuedControlLocked = false;
+                this.hasQueuedForceInputRightState = false;
+                this.queuedForceInputRight = false;
                 this.moveLockTimer = 0;
                 this.objectControlled = false;
+                this.objectControlAllowsCpu = false;
+                this.objectControlSuppressesMovement = false;
+                this.mgzTopPlatformCarrySolidContactObject = null;
                 this.hidden = false;
                 this.objectControlReleasedFrame = Integer.MIN_VALUE;
                 this.jumpInputPressed = false;
                 this.jumpInputJustPressed = false;
                 this.jumpInputPressedPreviousFrame = false;
+                this.upInputPressed = false;
+                this.downInputPressed = false;
+                this.leftInputPressed = false;
+                this.rightInputPressed = false;
+                this.logicalInputState = 0;
+                this.renderFlagWidthPixels = 0x18;
+                this.renderFlagOnScreen = true;
+                this.renderFlagOnScreenValid = false;
                 this.movementInputActive = false;
                 this.spiralActiveFrame = Integer.MIN_VALUE;
                 this.flipAngle = 0;
@@ -615,6 +822,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.flipTurned = false;
                 this.inWater = false;
                 this.wasInWater = false;
+                this.waterPhysicsActive = false;
                 this.waterSkimActive = false;
                 this.preventTailsRespawn = false;
                 this.superSonic = false;
@@ -628,6 +836,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.topSolidBit = 0x0C;
                 this.lrbSolidBit = 0x0D;
                 this.loopLowPlane = false;
+                this.statusTertiary = 0;
                 defineSpeeds(); // Reset speeds to default
                 instaShieldRegistered = false; // Force re-registration with new ObjectManager on level load
                 resolvePhysicsProfile();
@@ -636,6 +845,332 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // explicitly restore standing dimensions and sensor offsets here.
                 setHeight(runHeight);
                 applyStandingRadii(false);
+        }
+
+        // -----------------------------------------------------------------------
+        // Rewind state capture / restore
+        // -----------------------------------------------------------------------
+
+        /**
+         * Captures the full mutable gameplay surface of this playable sprite into a
+         * {@link PerObjectRewindSnapshot} with an attached {@link PlayerRewindExtra}.
+         *
+         * <p>The returned snapshot has null {@code badnikExtra} (not applicable for
+         * players) and carries all sprite base fields (position, subpixel, dimensions)
+         * plus the full {@code AbstractPlayableSprite} mutable surface.
+         *
+         * <p>Render-service references and character physics constants are
+         * excluded. Animation cursor state is captured so a restored frame can
+         * render exactly even when rewind happens while paused.
+         */
+        public PerObjectRewindSnapshot captureRewindState() {
+                return captureRewindState(true);
+        }
+
+        public PerObjectRewindSnapshot captureRewindState(boolean includeFollowHistory) {
+                SidekickCpuRewindExtra sidekickCpuExtra =
+                        cpuController != null ? cpuController.captureRewindState() : null;
+                PlayerRewindExtra extra = new PlayerRewindExtra(
+                        // AbstractSprite base fields
+                        xPixel, yPixel,
+                        xSubpixel, ySubpixel,
+                        width, height,
+                        direction, layer,
+                        runningMode, xRadius, yRadius,
+                        // Movement / physics
+                        gSpeed, xSpeed, ySpeed, jump,
+                        angle, statusTertiary, loopLowPlane,
+                        topSolidBit, lrbSolidBit,
+                        prePhysicsAir, prePhysicsAngle,
+                        prePhysicsGSpeed, prePhysicsXSpeed, prePhysicsYSpeed,
+                        air, rolling, jumping, rollingJump,
+                        pinballMode, pinballSpeedLock, preserveRollingOnNextLanding,
+                        preserveRollingOnNextRollStop, objectPreservedRollBoostFollowup,
+                        objectPreservedRollWallProbe, objectPreservedRollVelocityCarry, tunnelMode,
+                        onObject, onObjectAtFrameStart,
+                        latchedSolidObjectId, slopeRepelJustSlipped,
+                        stickToConvex, sliding, pushing,
+                        skidding, skidDustTimer,
+                        wallClimbX, rightWallPenetrationTimer,
+                        balanceState,
+                        springing, springingFrames,
+                        dead, drowningDeath, drownPreDeathTimer,
+                        hurt, deathCountdown,
+                        invulnerableFrames, invincibleFrames,
+                        spindash, spindashCounter,
+                        crouching, lookingUp, lookDelayCounter,
+                        doubleJumpFlag, doubleJumpProperty,
+                        shield, shieldType, instaShieldRegistered,
+                        speedShoes, superSonic,
+                        forceInputRight, forcedInputMask,
+                        forcedJumpPress, suppressNextJumpPress,
+                        deferredObjectControlRelease,
+                        controlLocked, hasQueuedControlLockedState, queuedControlLocked,
+                        hasQueuedForceInputRightState, queuedForceInputRight,
+                        moveLockTimer,
+                        objectControlled, objectControlAllowsCpu, objectControlSuppressesMovement,
+                        objectControlReleasedFrame,
+                        suppressAirCollision, suppressGroundWallCollision, forceFloorCheck,
+                        hidden,
+                        renderFlagOnScreen, renderFlagOnScreenValid,
+                        mgzTopPlatformSpringHandoffPending,
+                        mgzTopPlatformSpringHandoffXVel,
+                        mgzTopPlatformSpringHandoffYVel,
+                        jumpInputPressed, jumpInputJustPressed, jumpInputPressedPreviousFrame,
+                        upInputPressed, downInputPressed,
+                        leftInputPressed, rightInputPressed,
+                        movementInputActive,
+                        logicalInputState, logicalJumpPressState,
+                        cpuControlled, historyPos, followerHistoryRecordedThisTick,
+                        spiralActiveFrame, flipAngle, flipSpeed,
+                        flipsRemaining, flipTurned,
+                        inWater, waterPhysicsActive, wasInWater, waterSkimActive,
+                        preventTailsRespawn,
+                        badnikChainCounter,
+                        bubbleAnimId,
+                        initPhysicsActive,
+                        objectMappingFrameControl,
+                        mappingFrame,
+                        animationId,
+                        forcedAnimationId,
+                        animationFrameIndex,
+                        animationTick,
+                        debugMode,
+                        controller.getMovement().captureRewindState(),
+                        controller.getSpindashDust() != null
+                                ? controller.getSpindashDust().captureRewindState()
+                                : null,
+                        controller.getAnimation() != null
+                                ? controller.getAnimation().captureRewindState()
+                                : null,
+                        sidekickCpuExtra,
+                        includeFollowHistory ? xHistory : null,
+                        includeFollowHistory ? yHistory : null,
+                        includeFollowHistory ? inputHistory : null,
+                        includeFollowHistory ? jumpPressHistory : null,
+                        includeFollowHistory ? statusHistory : null);
+                // Player snapshots use a stub PerObjectRewindSnapshot (no badnikExtra; playerExtra holds everything).
+                return new PerObjectRewindSnapshot(
+                        false, false,       // destroyed, destroyedRespawnable
+                        false, 0, 0,         // hasDynamicSpawn, dynamicSpawnX, dynamicSpawnY
+                        0, 0, false, 0,      // preUpdateX/Y, preUpdateValid, preUpdateCollisionFlags
+                        false, false,        // skipTouchThisFrame, solidContactFirstFrame
+                        0, -1,               // slotIndex, respawnStateIndex
+                        null,                // badnikExtra
+                        null,                // badnikSubclassExtra
+                        extra                // playerExtra
+                );
+        }
+
+        /**
+         * Restores the full mutable gameplay surface of this playable sprite from a
+         * {@link PerObjectRewindSnapshot}.  Throws {@link IllegalStateException} if the
+         * snapshot has no {@link PlayerRewindExtra} — every snapshot for a player object
+         * must have been produced by this class's {@link #captureRewindState()}.
+         */
+        public void restoreRewindState(PerObjectRewindSnapshot s) {
+                PlayerRewindExtra extra = s.playerExtra();
+                if (extra == null) {
+                        throw new IllegalStateException(
+                                "AbstractPlayableSprite.restoreRewindState requires PlayerRewindExtra");
+                }
+                // AbstractSprite base fields
+                this.xPixel = extra.xPixel();
+                this.yPixel = extra.yPixel();
+                this.xSubpixel = extra.xSubpixel();
+                this.ySubpixel = extra.ySubpixel();
+                this.width = extra.width();
+                this.height = extra.height();
+                this.direction = extra.direction();
+                this.layer = extra.layer();
+                this.runningMode = extra.runningMode();
+                setCollisionRadii(extra.xRadius(), extra.yRadius(), false);
+                // Movement / physics
+                this.gSpeed = extra.gSpeed();
+                this.xSpeed = extra.xSpeed();
+                this.ySpeed = extra.ySpeed();
+                this.jump = extra.jump();
+                this.angle = extra.angle();
+                this.statusTertiary = extra.statusTertiary();
+                this.loopLowPlane = extra.loopLowPlane();
+                this.topSolidBit = extra.topSolidBit();
+                this.lrbSolidBit = extra.lrbSolidBit();
+                this.prePhysicsAir = extra.prePhysicsAir();
+                this.prePhysicsAngle = extra.prePhysicsAngle();
+                this.prePhysicsGSpeed = extra.prePhysicsGSpeed();
+                this.prePhysicsXSpeed = extra.prePhysicsXSpeed();
+                this.prePhysicsYSpeed = extra.prePhysicsYSpeed();
+                this.air = extra.air();
+                this.rolling = extra.rolling();
+                this.jumping = extra.jumping();
+                this.rollingJump = extra.rollingJump();
+                this.pinballMode = extra.pinballMode();
+                this.pinballSpeedLock = extra.pinballSpeedLock();
+                this.preserveRollingOnNextLanding = extra.preserveRollingOnNextLanding();
+                this.preserveRollingOnNextRollStop = extra.preserveRollingOnNextRollStop();
+                this.objectPreservedRollBoostFollowup = extra.objectPreservedRollBoostFollowup();
+                this.objectPreservedRollWallProbe = extra.objectPreservedRollWallProbe();
+                this.objectPreservedRollVelocityCarry = extra.objectPreservedRollVelocityCarry();
+                this.tunnelMode = extra.tunnelMode();
+                this.onObject = extra.onObject();
+                this.onObjectAtFrameStart = extra.onObjectAtFrameStart();
+                this.latchedSolidObjectId = extra.latchedSolidObjectId();
+                this.slopeRepelJustSlipped = extra.slopeRepelJustSlipped();
+                this.stickToConvex = extra.stickToConvex();
+                this.sliding = extra.sliding();
+                this.pushing = extra.pushing();
+                this.skidding = extra.skidding();
+                this.skidDustTimer = extra.skidDustTimer();
+                this.wallClimbX = extra.wallClimbX();
+                this.rightWallPenetrationTimer = extra.rightWallPenetrationTimer();
+                this.balanceState = extra.balanceState();
+                this.springing = extra.springing();
+                this.springingFrames = extra.springingFrames();
+                this.dead = extra.dead();
+                this.drowningDeath = extra.drowningDeath();
+                this.drownPreDeathTimer = extra.drownPreDeathTimer();
+                this.hurt = extra.hurt();
+                this.deathCountdown = extra.deathCountdown();
+                this.invulnerableFrames = extra.invulnerableFrames();
+                this.invincibleFrames = extra.invincibleFrames();
+                this.spindash = extra.spindash();
+                this.spindashCounter = extra.spindashCounter();
+                this.crouching = extra.crouching();
+                this.lookingUp = extra.lookingUp();
+                this.lookDelayCounter = extra.lookDelayCounter();
+                this.doubleJumpFlag = extra.doubleJumpFlag();
+                this.doubleJumpProperty = extra.doubleJumpProperty();
+                this.shield = extra.shield();
+                this.shieldType = extra.shieldType();
+                this.instaShieldRegistered = extra.instaShieldRegistered();
+                this.speedShoes = extra.speedShoes();
+                this.superSonic = extra.superSonic();
+                this.forceInputRight = extra.forceInputRight();
+                this.forcedInputMask = extra.forcedInputMask();
+                this.forcedJumpPress = extra.forcedJumpPress();
+                this.suppressNextJumpPress = extra.suppressNextJumpPress();
+                this.deferredObjectControlRelease = extra.deferredObjectControlRelease();
+                this.controlLocked = extra.controlLocked();
+                this.hasQueuedControlLockedState = extra.hasQueuedControlLockedState();
+                this.queuedControlLocked = extra.queuedControlLocked();
+                this.hasQueuedForceInputRightState = extra.hasQueuedForceInputRightState();
+                this.queuedForceInputRight = extra.queuedForceInputRight();
+                this.moveLockTimer = extra.moveLockTimer();
+                this.objectControlled = extra.objectControlled();
+                this.objectControlAllowsCpu = extra.objectControlAllowsCpu();
+                this.objectControlSuppressesMovement = extra.objectControlSuppressesMovement();
+                this.objectControlReleasedFrame = extra.objectControlReleasedFrame();
+                this.suppressAirCollision = extra.suppressAirCollision();
+                this.suppressGroundWallCollision = extra.suppressGroundWallCollision();
+                this.forceFloorCheck = extra.forceFloorCheck();
+                this.hidden = extra.hidden();
+                this.renderFlagOnScreen = extra.renderFlagOnScreen();
+                this.renderFlagOnScreenValid = extra.renderFlagOnScreenValid();
+                this.mgzTopPlatformSpringHandoffPending = extra.mgzTopPlatformSpringHandoffPending();
+                this.mgzTopPlatformSpringHandoffXVel = extra.mgzTopPlatformSpringHandoffXVel();
+                this.mgzTopPlatformSpringHandoffYVel = extra.mgzTopPlatformSpringHandoffYVel();
+                this.jumpInputPressed = extra.jumpInputPressed();
+                this.jumpInputJustPressed = extra.jumpInputJustPressed();
+                this.jumpInputPressedPreviousFrame = extra.jumpInputPressedPreviousFrame();
+                this.upInputPressed = extra.upInputPressed();
+                this.downInputPressed = extra.downInputPressed();
+                this.leftInputPressed = extra.leftInputPressed();
+                this.rightInputPressed = extra.rightInputPressed();
+                this.movementInputActive = extra.movementInputActive();
+                this.logicalInputState = extra.logicalInputState();
+                this.logicalJumpPressState = extra.logicalJumpPressState();
+                this.cpuControlled = extra.cpuControlled();
+                this.historyPos = extra.historyPos();
+                this.followerHistoryRecordedThisTick = extra.followerHistoryRecordedThisTick();
+                this.spiralActiveFrame = extra.spiralActiveFrame();
+                this.flipAngle = extra.flipAngle();
+                this.flipSpeed = extra.flipSpeed();
+                this.flipsRemaining = extra.flipsRemaining();
+                this.flipTurned = extra.flipTurned();
+                this.inWater = extra.inWater();
+                this.waterPhysicsActive = extra.waterPhysicsActive();
+                this.wasInWater = extra.wasInWater();
+                this.waterSkimActive = extra.waterSkimActive();
+                this.preventTailsRespawn = extra.preventTailsRespawn();
+                this.badnikChainCounter = extra.badnikChainCounter();
+                this.bubbleAnimId = extra.bubbleAnimId();
+                this.initPhysicsActive = extra.initPhysicsActive();
+                this.objectMappingFrameControl = extra.objectMappingFrameControl();
+                this.mappingFrame = extra.mappingFrame();
+                this.animationId = extra.animationId();
+                this.forcedAnimationId = extra.forcedAnimationId();
+                this.animationFrameIndex = extra.animationFrameIndex();
+                this.animationTick = extra.animationTick();
+                this.debugMode = extra.debugMode();
+                controller.getMovement().restoreRewindState(extra.movementState());
+                if (controller.getSpindashDust() != null) {
+                        controller.getSpindashDust().restoreRewindState(extra.spindashDustState());
+                }
+                if (controller.getAnimation() != null) {
+                        controller.getAnimation().restoreRewindState(extra.animationState());
+                }
+                if (extra.sidekickCpuExtra() != null) {
+                        if (cpuController == null) {
+                                throw new IllegalStateException(
+                                        "Cannot restore SidekickCpuController state without a live controller");
+                        }
+                        cpuController.restoreRewindState(extra.sidekickCpuExtra());
+                }
+                // Sidekick follow-history circular buffers. Without restoring these,
+                // the follower reads stale leader-position history and diverges on
+                // the very first replay step.
+                if (extra.xHistory() != null) {
+                        System.arraycopy(extra.xHistory(), 0, this.xHistory, 0,
+                                Math.min(extra.xHistory().length, this.xHistory.length));
+                }
+                if (extra.yHistory() != null) {
+                        System.arraycopy(extra.yHistory(), 0, this.yHistory, 0,
+                                Math.min(extra.yHistory().length, this.yHistory.length));
+                }
+                if (extra.inputHistory() != null) {
+                        System.arraycopy(extra.inputHistory(), 0, this.inputHistory, 0,
+                                Math.min(extra.inputHistory().length, this.inputHistory.length));
+                }
+                if (extra.jumpPressHistory() != null) {
+                        System.arraycopy(extra.jumpPressHistory(), 0, this.jumpPressHistory, 0,
+                                Math.min(extra.jumpPressHistory().length, this.jumpPressHistory.length));
+                }
+                if (extra.statusHistory() != null) {
+                        System.arraycopy(extra.statusHistory(), 0, this.statusHistory, 0,
+                                Math.min(extra.statusHistory().length, this.statusHistory.length));
+                }
+                // Sensor offsets are derived from restored radii plus air/angle/running mode.
+                // Recompute after direct field hydration so rewind does not keep offsets from
+                // the pre-restore sprite state.
+                updateSensorOffsetsFromRadii();
+        }
+
+        /**
+         * Recreates power-up visuals after all rewind adapters have restored. The
+         * object manager restores after sprites, so visual rebinding must be
+         * deferred until the registry's post-restore phase.
+         */
+        public void refreshPowerUpObjectsAfterRewindRestore() {
+                if (!shield || shieldType == null) {
+                        if (shieldObject != null) {
+                                shieldObject.destroy();
+                                shieldObject = null;
+                        }
+                        shield = false;
+                        shieldType = null;
+                        return;
+                }
+
+                if (shieldObject != null) {
+                        shieldObject.destroy();
+                        shieldObject = null;
+                }
+                if (powerUpSpawner != null) {
+                        shieldObject = powerUpSpawner.spawnShield(this, shieldType);
+                        if (shieldObject != null && invincibleFrames > 0) {
+                                shieldObject.setVisible(false);
+                        }
+                }
         }
 
         public void giveShield() {
@@ -678,6 +1213,20 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public ShieldType getShieldType() {
                 return shieldType;
+        }
+
+        /**
+         * Removes the current shield (if any) without affecting other power-ups.
+         * Used by objects that strip shields (e.g., LBZ2 water tunnels).
+         */
+        public void removeShield() {
+                if (!shield) return;
+                shield = false;
+                shieldType = null;
+                if (shieldObject != null) {
+                        shieldObject.destroy();
+                        shieldObject = null;
+                }
         }
 
         public PowerUpObject getShieldObject() {
@@ -759,42 +1308,74 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public final Camera currentCamera() {
-                var runtime = RuntimeManager.getCurrent();
-                return runtime != null ? runtime.getCamera() : Camera.getInstance();
+                return GameServices.camera();
         }
 
         public final LevelManager currentLevelManager() {
-                var runtime = RuntimeManager.getCurrent();
-                return runtime != null ? runtime.getLevelManager() : LevelManager.getInstance();
+                return GameServices.level();
+        }
+
+        public final LevelManager currentLevelManagerIfAvailable() {
+                return GameServices.levelOrNull();
+        }
+
+        public final GameModule currentGameModule() {
+                return GameServices.currentOrBootstrapGameModule();
+        }
+
+        public final CrossGameFeatureProvider currentCrossGameFeatures() {
+                return GameServices.crossGameFeatures();
+        }
+
+        public final int resolveAnimationId(CanonicalAnimation animation) {
+                refreshRuntimeBoundStateIfNeeded();
+                GameModule module = currentGameModule();
+                return module != null ? module.resolveAnimationId(animation) : -1;
         }
 
         public final LevelState currentLevelState() {
-                LevelManager levelManager = currentLevelManager();
+                LevelManager levelManager = currentLevelManagerIfAvailable();
                 return levelManager != null ? levelManager.getLevelGamestate() : null;
         }
 
         public final TimerManager currentTimerManager() {
-                var runtime = RuntimeManager.getCurrent();
-                return runtime != null ? runtime.getTimers() : TimerManager.getInstance();
+                return GameServices.timers();
         }
 
         public final GameStateManager currentGameState() {
-                var runtime = RuntimeManager.getCurrent();
-                return runtime != null ? runtime.getGameState() : GameStateManager.getInstance();
+                return GameServices.gameState();
+        }
+
+        public final GameStateManager currentGameStateOrNull() {
+                return GameServices.gameStateOrNull();
         }
 
         public final CollisionSystem currentCollisionSystem() {
-                var runtime = RuntimeManager.getCurrent();
-                return runtime != null ? runtime.getCollisionSystem() : CollisionSystem.getInstance();
+                return GameServices.collision();
+        }
+
+        public final CollisionSystem currentCollisionSystemOrNull() {
+                return GameServices.collisionOrNull();
         }
 
         public final AudioManager currentAudioManager() {
-                return AudioManager.getInstance();
+                return GameServices.audio();
+        }
+
+        public final com.openggf.game.GameRng currentRng() {
+                return GameServices.rng();
+        }
+
+        public final com.openggf.game.GameRng currentRngOrNull() {
+                return GameServices.rngOrNull();
+        }
+
+        public final DrowningController getDrowningController() {
+                return controller != null ? controller.getDrowning() : null;
         }
 
         public final WaterSystem currentWaterSystem() {
-                var runtime = RuntimeManager.getCurrent();
-                return runtime != null ? runtime.getWaterSystem() : WaterSystem.getInstance();
+                return GameServices.water();
         }
 
         /**
@@ -845,6 +1426,31 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.mappingFrame = Math.max(0, mappingFrame);
         }
 
+        /**
+         * ROM parity helper for BuildSprites / render_flags.on_screen culling.
+         * Sonic 2 Obj01/Obj02 init both set width_pixels(a0) = $18.
+         */
+        public int getRenderFlagWidthPixels() {
+                return renderFlagWidthPixels;
+        }
+
+        public void setRenderFlagWidthPixels(int renderFlagWidthPixels) {
+                this.renderFlagWidthPixels = Math.max(0, renderFlagWidthPixels);
+        }
+
+        public boolean isRenderFlagOnScreen() {
+                return renderFlagOnScreen;
+        }
+
+        public boolean hasRenderFlagOnScreenState() {
+                return renderFlagOnScreenValid;
+        }
+
+        public void setRenderFlagOnScreen(boolean renderFlagOnScreen) {
+                this.renderFlagOnScreen = renderFlagOnScreen;
+                this.renderFlagOnScreenValid = true;
+        }
+
         public int getAnimationFrameCount() {
                 return animationFrameCount;
         }
@@ -871,6 +1477,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public int getAnimationId() {
                 return animationId;
+        }
+
+        @Override
+        public void forceAnimationRestart() {
+                PlayableSpriteAnimation anim = getAnimationManager();
+                if (anim != null) {
+                        anim.resetLastAnimationId();
+                }
         }
 
         public void setAnimationId(int animationId) {
@@ -1018,11 +1632,54 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
         }
 
+        /**
+         * Object/platform solid landings can clear Status_InAir while Sonic is
+         * still in routine 4. ROM then runs Sonic_HurtStop on the next player
+         * update and only there clears routine 4 plus velocities.
+         */
+        public void setAirAfterObjectHurtLanding() {
+                if (this.air) {
+                        rollingJump = false;
+                        jumping = false;
+                        if (doubleJumpFlag > 0 && !rolling) {
+                                applyStandingRadii(false);
+                                objectMappingFrameControl = false;
+                                forcedAnimationId = -1;
+                        }
+                        doubleJumpFlag = 0;
+                        doubleJumpProperty = 0;
+                        currentGameState().resetItemBonus();
+                }
+                this.air = false;
+                updatePushSensorYOffset();
+                resetBadnikChain();
+        }
+
+        public void completeHurtLandingRecovery() {
+                hurt = false;
+                setHighPriority(false);
+                invulnerableFrames = 0x78;
+                setXSpeed((short) 0);
+                setYSpeed((short) 0);
+                setGSpeed((short) 0);
+                setSpindash(false);
+        }
+
         public boolean isJumping() {
                 return jumping;
         }
 
         public void setJumping(boolean jumping) {
+                if (controller != null) {
+                        // The ROM jumping byte is also the Sonic_JumpHeight latch.
+                        // Object releases that set jumping need the release-height cap,
+                        // while springs clear it so external launches are not capped.
+                        if (jumping && !this.jumping) {
+                                controller.getMovement().setJumpHeightLatch();
+                        } else if (!jumping) {
+                                controller.getMovement().clearJumpHeightLatch();
+                        }
+                }
                 this.jumping = jumping;
         }
 
@@ -1056,6 +1713,129 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setOnObject(boolean onObject) {
                 this.onObject = onObject;
+        }
+
+        /**
+         * Captures the current {@link #onObject} value into the frame-start
+         * snapshot. Called by {@code SpriteManager.beginPlayableFrame} before
+         * any playable's per-frame tick runs, so consumers reading
+         * {@link #getOnObjectAtFrameStart()} see the value as it was at the
+         * top of the frame, matching the ROM's mid-frame view when one
+         * playable's logic reads another playable's status.
+         */
+        public void captureOnObjectAtFrameStart() {
+                this.onObjectAtFrameStart = this.onObject;
+        }
+
+        /**
+         * Returns the {@link #onObject} value as it was at the START of the
+         * current playable frame (before any player tick ran). Use this in
+         * cross-playable reads where the ROM accesses another sprite's
+         * {@code Status_OnObj} bit BEFORE solid-object processing has run for
+         * the frame (e.g. {@code Tails_CPU_Control} follow-steering at
+         * sonic3k.asm:26688-26700 / s2.asm:38933+).
+         */
+        public boolean getOnObjectAtFrameStart() {
+                return onObjectAtFrameStart;
+        }
+
+        public int getLatchedSolidObjectId() {
+                return latchedSolidObjectId;
+        }
+
+        public void setLatchedSolidObjectId(int latchedSolidObjectId) {
+                this.latchedSolidObjectId = latchedSolidObjectId & 0xFF;
+                if (this.latchedSolidObjectId == 0) {
+                        this.latchedSolidObjectInstance = null;
+                }
+        }
+
+        /**
+         * ROM analog: tracks the {@link com.openggf.level.objects.ObjectInstance}
+         * the sprite was last latched onto via the SolidObject framework.
+         * Used by {@link SidekickCpuController#checkDespawn()} to detect when
+         * the latched instance has been deleted (mirroring ROM
+         * {@code sub_13EFC} sonic3k.asm:26823 reading {@code (a3)=0} from a
+         * slot freed by {@code Delete_Referenced_Sprite} sonic3k.asm:36116).
+         *
+         * <p>{@code latchedSolidObjectId} is sticky across destruction
+         * (it's an 8-bit ID with no instance identity), so the instance
+         * reference is needed for unambiguous "did the actual ride disappear"
+         * detection. The reference is cleared when the controller despawns,
+         * inits, or the engine clears latched state.
+         */
+        @com.openggf.game.rewind.RewindDeferred(reason = "latched solid contact needs stable object identity snapshot")
+        protected com.openggf.level.objects.ObjectInstance latchedSolidObjectInstance;
+
+        public com.openggf.level.objects.ObjectInstance getLatchedSolidObjectInstance() {
+                return latchedSolidObjectInstance;
+        }
+
+        public void setLatchedSolidObjectInstance(com.openggf.level.objects.ObjectInstance instance) {
+                this.latchedSolidObjectInstance = instance;
+        }
+
+        /**
+         * Convenience: set both the latched id and instance atomically. Mirrors
+         * the engine's SolidObject paths in
+         * {@link com.openggf.level.objects.ObjectManager} that resolve a
+         * standing/touching contact and bind the sprite to the live instance.
+         */
+        public void setLatchedSolidObject(int latchedSolidObjectId,
+                        com.openggf.level.objects.ObjectInstance instance) {
+                this.latchedSolidObjectId = latchedSolidObjectId & 0xFF;
+                this.latchedSolidObjectInstance = instance;
+        }
+
+        /** True when {@code Player_SlopeRepel} slipped the player into air on
+         * the current physics tick. Cleared at the start of each tick. */
+        public boolean isSlopeRepelJustSlipped() {
+                return slopeRepelJustSlipped;
+        }
+
+        public void setSlopeRepelJustSlipped(boolean value) {
+                this.slopeRepelJustSlipped = value;
+        }
+
+        /**
+         * Captures the player's state at the start of the current physics
+         * tick. Called by {@link com.openggf.sprites.managers.PlayableSpriteMovement#handleMovement}
+         * before any physics mutations. Per-object hooks running after
+         * physics (e.g. {@code CnzWireCageObjectInstance}) read these
+         * snapshots to make ROM-correct decisions based on the state ROM
+         * would have observed before player physics ran in slot order.
+         */
+        public void capturePrePhysicsSnapshot() {
+                this.prePhysicsAir = this.air;
+                this.prePhysicsAngle = this.angle;
+                this.prePhysicsGSpeed = this.gSpeed;
+                this.prePhysicsXSpeed = (short) this.xSpeed;
+                this.prePhysicsYSpeed = (short) this.ySpeed;
+        }
+
+        /** Pre-physics air state from {@link #capturePrePhysicsSnapshot()}. */
+        public boolean wasPrePhysicsAir() {
+                return prePhysicsAir;
+        }
+
+        /** Pre-physics angle from {@link #capturePrePhysicsSnapshot()}. */
+        public byte getPrePhysicsAngle() {
+                return prePhysicsAngle;
+        }
+
+        /** Pre-physics ground velocity from {@link #capturePrePhysicsSnapshot()}. */
+        public short getPrePhysicsGSpeed() {
+                return prePhysicsGSpeed;
+        }
+
+        /** Pre-physics X velocity from {@link #capturePrePhysicsSnapshot()}. */
+        public short getPrePhysicsXSpeed() {
+                return prePhysicsXSpeed;
+        }
+
+        /** Pre-physics Y velocity from {@link #capturePrePhysicsSnapshot()}. */
+        public short getPrePhysicsYSpeed() {
+                return prePhysicsYSpeed;
         }
 
         public boolean isSliding() {
@@ -1141,6 +1921,61 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return;
                 }
                 this.lrbSolidBit = lrbSolidBit;
+        }
+
+        // ROM status_tertiary ($37) bit layout (SCHG "wall cling"):
+        //   bit 7 — wall-cling active (only MGZ Top Platform raises this in stock S3K).
+        //   bit 6 — SolidObjectFull side-hit feedback while bit 7 is set.
+        //   bit 5 — SolidObjectFull ceiling-hit feedback while bit 7 is set.
+        private static final int WALL_CLING_BIT = 1 << 7;
+        private static final int WALL_CLING_SIDE_BIT = 1 << 6;
+        private static final int WALL_CLING_TOP_BIT = 1 << 5;
+
+        public boolean isWallCling() {
+                return (statusTertiary & WALL_CLING_BIT) != 0;
+        }
+
+        public void setWallCling(boolean active) {
+                statusTertiary = (byte) ((statusTertiary & ~WALL_CLING_BIT)
+                        | (active ? WALL_CLING_BIT : 0));
+        }
+
+        public boolean hasWallClingSideContact() {
+                return (statusTertiary & WALL_CLING_SIDE_BIT) != 0;
+        }
+
+        public void setWallClingSideContact(boolean active) {
+                statusTertiary = (byte) ((statusTertiary & ~WALL_CLING_SIDE_BIT)
+                        | (active ? WALL_CLING_SIDE_BIT : 0));
+        }
+
+        public boolean consumeWallClingSideContact() {
+                boolean set = hasWallClingSideContact();
+                if (set) {
+                        setWallClingSideContact(false);
+                }
+                return set;
+        }
+
+        public boolean hasWallClingTopContact() {
+                return (statusTertiary & WALL_CLING_TOP_BIT) != 0;
+        }
+
+        public void setWallClingTopContact(boolean active) {
+                statusTertiary = (byte) ((statusTertiary & ~WALL_CLING_TOP_BIT)
+                        | (active ? WALL_CLING_TOP_BIT : 0));
+        }
+
+        public boolean consumeWallClingTopContact() {
+                boolean set = hasWallClingTopContact();
+                if (set) {
+                        setWallClingTopContact(false);
+                }
+                return set;
+        }
+
+        public void clearWallClingState() {
+                statusTertiary = 0;
         }
 
         public boolean isLoopLowPlane() {
@@ -1335,6 +2170,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void tickStatus() {
+                refreshRuntimeBoundStateIfNeeded();
                 // ROM: invulnerable_time only decrements in Sonic_Display (routine 2).
                 // During hurt routine (routine 4), DisplaySprite is called directly,
                 // so the timer stays frozen until Sonic lands.
@@ -1727,6 +2563,48 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
+         * Queues a Control_Locked state change for the next playable frame.
+         * Use this for ROM globals written by later SST slots after Sonic's
+         * own control routine has already run this frame.
+         */
+        public void queueControlLockedForNextFrame(boolean controlLocked) {
+                this.hasQueuedControlLockedState = true;
+                this.queuedControlLocked = controlLocked;
+        }
+
+        /**
+         * Queues the signpost-style forced-right latch for the next playable frame.
+         * This mirrors scripts that overwrite Ctrl_1_Logical after Sonic has
+         * already consumed input for the current frame.
+         */
+        public void queueForceInputRightForNextFrame(boolean forceInputRight) {
+                this.hasQueuedForceInputRightState = true;
+                this.queuedForceInputRight = forceInputRight;
+        }
+
+        /**
+         * Applies any queued control/input latch changes at the start of the
+         * current playable frame.
+         */
+        public void applyQueuedControlStateForFrameStart() {
+                if (hasQueuedControlLockedState) {
+                        this.controlLocked = queuedControlLocked;
+                        hasQueuedControlLockedState = false;
+                }
+                if (hasQueuedForceInputRightState) {
+                        setForceInputRight(queuedForceInputRight);
+                        hasQueuedForceInputRightState = false;
+                }
+        }
+
+        public void clearQueuedControlState() {
+                hasQueuedControlLockedState = false;
+                queuedControlLocked = false;
+                hasQueuedForceInputRightState = false;
+                queuedForceInputRight = false;
+        }
+
+        /**
          * Gets the movement lock timer (ROM: move_lock).
          * When > 0, player input is ignored.
          */
@@ -1767,16 +2645,182 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.objectControlled = objectControlled;
                 if (objectControlled) {
                         this.deferredObjectControlRelease = false;
+                        this.objectControlSuppressesMovement = true;
+                } else {
+                        this.mgzTopPlatformCarrySolidContactObject = null;
+                        clearMgzTopPlatformSpringHandoff();
+                        this.objectControlAllowsCpu = false;
+                        this.objectControlSuppressesMovement = false;
                 }
+        }
+
+        /**
+         * ROM-bit-7 ({@code bmi.w}) test for {@link SidekickCpuController#updateNormal}'s
+         * early-out gate. When {@code true}, the controlling object holds the player via
+         * ROM {@code object_control} bits 0-6 only (e.g. CNZ wire cage's bits 1+6, MGZ
+         * twisting loop's bit 0+1+6) — ROM lets {@code Tails_CPU_Control} keep generating
+         * input in this case (sonic3k.asm:26672 {@code bmi.w} only branches when the sign
+         * bit is set). When {@code false} (default), the controlling object is the
+         * ROM-bit-7 case (flight, super state, despawn marker, debug) and the engine's
+         * CPU controller skips its NORMAL state body to match ROM's {@code bmi.w} skip.
+         *
+         * <p>Cleared automatically when {@link #setObjectControlled(boolean)} is set to
+         * {@code false}; the controlling object must re-assert the flag every time it
+         * re-asserts {@link #setObjectControlled}{@code (true)}.
+         */
+        public boolean isObjectControlAllowsCpu() {
+                return objectControlAllowsCpu;
+        }
+
+        public void setObjectControlAllowsCpu(boolean objectControlAllowsCpu) {
+                this.objectControlAllowsCpu = objectControlAllowsCpu;
+        }
+
+        /**
+         * Returns true when normal movement, gravity, boundary checks, and terrain
+         * collision should be skipped by ROM {@code object_control} bit 0.
+         * Some object routines set only this movement gate while still allowing
+         * TouchResponse and later SolidObject checks in the same ExecuteObjects pass.
+         */
+        public boolean isObjectControlSuppressesMovement() {
+                return objectControlSuppressesMovement;
+        }
+
+        public void setObjectControlSuppressesMovement(boolean objectControlSuppressesMovement) {
+                this.objectControlSuppressesMovement = objectControlSuppressesMovement;
+        }
+
+        public void applyObjectControlState(ObjectControlState state) {
+                Objects.requireNonNull(state, "state");
+                setObjectControlled(state.objectControlled());
+                if (state.objectControlled() && state.writesObjectControlAllowsCpu()) {
+                        setObjectControlAllowsCpu(state.objectControlAllowsCpu());
+                }
+                setObjectControlSuppressesMovement(state.objectControlSuppressesMovement());
+        }
+
+        /**
+         * Returns true when this sprite should skip the per-frame touch-response
+         * collision pass — ROM's {@code object_control} bit-7 gate at the call
+         * sites listed in {@link com.openggf.game.PlayableEntity#isTouchResponseSuppressedByObjectControl()}.
+         * <p>
+         * The engine encodes ROM bit-7-style {@code object_control} (flight $81,
+         * super $83, despawn marker $81, debug $83) as
+         * {@code objectControlled && !objectControlAllowsCpu} (see comment block
+         * on {@link #setObjectControlAllowsCpu(boolean)}). Bits 0-6 only — e.g.
+         * CNZ wire cage's $42, MGZ twisting loop's $43 — keep
+         * {@code objectControlAllowsCpu} true so the engine still runs
+         * TouchResponse, mirroring the ROM dispatcher leaving
+         * {@code Tails_CPU_Control} active for those callers.
+         */
+        @Override
+        public boolean isTouchResponseSuppressedByObjectControl() {
+                return objectControlled && !objectControlAllowsCpu;
+        }
+
+        /**
+         * Returns whether solid-object contacts should still be evaluated while
+         * object-controlled. This is an explicit MGZ top-platform carry seam, not a
+         * generic wall-cling rule.
+         */
+        public boolean allowsSolidContactsWhileObjectControlled(ObjectInstance candidate) {
+                if (candidate == null || mgzTopPlatformCarrySolidContactObject == null) {
+                        return false;
+                }
+                if (candidate == mgzTopPlatformCarrySolidContactObject) {
+                        return true;
+                }
+                return mgzTopPlatformCarrySolidContactObject instanceof ObjectControlledSolidContactController controller
+                        && controller.allowsObjectControlledSolidContact(this, candidate);
+        }
+
+        public void setMgzTopPlatformCarrySolidContactObject(ObjectInstance instance) {
+                this.mgzTopPlatformCarrySolidContactObject = instance;
+                if (instance == null) {
+                        clearMgzTopPlatformSpringHandoff();
+                }
+        }
+
+        public boolean isMgzTopPlatformCarryOwnedBy(ObjectInstance instance) {
+                return mgzTopPlatformCarrySolidContactObject == instance;
+        }
+
+        public void recordMgzTopPlatformSpringHandoff(int xVel, int yVel) {
+                if (mgzTopPlatformCarrySolidContactObject == null) {
+                        return;
+                }
+                mgzTopPlatformSpringHandoffPending = true;
+                mgzTopPlatformSpringHandoffXVel = xVel;
+                mgzTopPlatformSpringHandoffYVel = yVel;
+        }
+
+        public boolean hasMgzTopPlatformSpringHandoffPending() {
+                return mgzTopPlatformSpringHandoffPending;
+        }
+
+        public int getMgzTopPlatformSpringHandoffXVel() {
+                return mgzTopPlatformSpringHandoffXVel;
+        }
+
+        public int getMgzTopPlatformSpringHandoffYVel() {
+                return mgzTopPlatformSpringHandoffYVel;
+        }
+
+        public void clearMgzTopPlatformSpringHandoff() {
+                mgzTopPlatformSpringHandoffPending = false;
+                mgzTopPlatformSpringHandoffXVel = 0;
+                mgzTopPlatformSpringHandoffYVel = 0;
+        }
+
+        /**
+         * Returns whether the current hurt path should suppress generic lost-ring
+         * spawning for the active MGZ top-platform carry state. This stays tied to
+         * the explicit MGZ ownership seam instead of the generic wall-cling bit so
+         * future status_tertiary users do not inherit the exception accidentally.
+         */
+        public boolean suppressesLostRingSpawnOnHurt() {
+                return isWallCling() && mgzTopPlatformCarrySolidContactObject != null;
+        }
+
+        public boolean isSuppressAirCollision() {
+                return suppressAirCollision;
+        }
+
+        public void setSuppressAirCollision(boolean suppress) {
+                this.suppressAirCollision = suppress;
+        }
+
+        public boolean isSuppressGroundWallCollision() {
+                return suppressGroundWallCollision;
+        }
+
+        public void setSuppressGroundWallCollision(boolean suppress) {
+                this.suppressGroundWallCollision = suppress;
+        }
+
+        public boolean isForceFloorCheck() {
+                return forceFloorCheck;
+        }
+
+        public void setForceFloorCheck(boolean force) {
+                this.forceFloorCheck = force;
         }
 
         /**
          * Defers object-control release until the end of the current frame.
          * This matches ROM object ordering where Sonic's routine has already
          * run before a later object clears {@code f_playerctrl}.
+         *
+         * <p>For S3K handoffs such as AIZ vines, the deferred marker keeps
+         * object-control ordering visible without preserving ROM
+         * {@code object_control} bit 0 movement ownership. ROM
+         * {@code Player_AnglePos} still runs for non-bit-0 states and takes the
+         * ground walkoff branch when no floor is found
+         * (docs/skdisasm/sonic3k.asm:18728, 18839-18842).
          */
         public void deferObjectControlRelease() {
                 this.deferredObjectControlRelease = true;
+                this.objectControlSuppressesMovement = false;
         }
 
         /**
@@ -1786,6 +2830,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public void releaseFromObjectControl(int frameCounter) {
                 this.objectControlled = false;
+                this.objectControlAllowsCpu = false;
+                this.objectControlSuppressesMovement = false;
+                this.mgzTopPlatformCarrySolidContactObject = null;
                 this.objectControlReleasedFrame = frameCounter;
         }
 
@@ -1816,7 +2863,18 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Returns whether jump was freshly pressed this frame, including forced/demo input.
          */
         public boolean isJumpJustPressed() {
-                return jumpInputJustPressed;
+                return jumpInputJustPressed || forcedJumpPress;
+        }
+
+        /**
+         * Returns the ROM-visible logical jump press bit published for this
+         * playable's current update. Unlike {@link #isJumpPressed()}, this does
+         * not read the live held/forced latch; objects that receive
+         * Ctrl_1_logical/Ctrl_2_logical from ROM routines should use this edge
+         * bit.
+         */
+        public boolean isLogicalJumpPressActive() {
+                return logicalJumpPressState;
         }
 
         /**
@@ -1824,10 +2882,20 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Called by movement manager each frame with the current jump button state.
          */
         public void setJumpInputPressed(boolean pressed) {
+                setJumpInputPressed(pressed,
+                        (pressed || isForcedInputActive(INPUT_JUMP)) && !jumpInputPressedPreviousFrame);
+        }
+
+        /**
+         * Sets the jump input state with an explicit raw press edge.
+         * ROM object routines read Ctrl_1_pressed before movement has consumed
+         * the controller state, even while movement control is locked.
+         */
+        public void setJumpInputPressed(boolean pressed, boolean justPressed) {
                 this.jumpInputPressed = pressed;
                 boolean combinedJumpPressed = pressed || isForcedInputActive(INPUT_JUMP);
-                this.jumpInputJustPressed =
-                        combinedJumpPressed && !jumpInputPressedPreviousFrame;
+                this.jumpInputJustPressed = justPressed
+                        || (isForcedInputActive(INPUT_JUMP) && !jumpInputPressedPreviousFrame);
                 this.jumpInputPressedPreviousFrame = combinedJumpPressed;
         }
 
@@ -1880,6 +2948,77 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.downInputPressed = down;
                 this.leftInputPressed = left;
                 this.rightInputPressed = right;
+        }
+
+        /**
+         * Publishes the logical pad state used by movement this frame.
+         * ROM ref: Sonic_RecordPos stores Ctrl_1_Logical, not the raw held-button state.
+         *
+         * <p>ROM-faithful Ctrl_1_locked latch: when
+         * {@link PhysicsFeatureSet#controlLockLatchesLogicalInput()} is true and
+         * {@link #isControlLocked()} is set, the write is skipped so the
+         * previous frame's logical pad state persists.
+         * Mirrors {@code Sonic_Control} (S3K sonic3k.asm:21541-21545
+         * {@code loc_10760}):
+         * <pre>
+         *   tst.b   (Ctrl_1_locked).w
+         *   bne.s   loc_10780               ; if locked, SKIP the copy
+         *   move.w  (Ctrl_1).w,(Ctrl_1_logical).w
+         * </pre>
+         * Without the latch the engine zeroed {@code logicalInputState} the
+         * moment any in-level object set {@code controlLocked=true}, which
+         * propagated through {@link #endOfTick()} into {@code inputHistory}
+         * and corrupted the Sidekick CPU's $40-frame-delayed leader input
+         * read ({@code Tails_CPU_Control}, sonic3k.asm:26683-26689).
+         *
+         * <p>The latch is gated per-game because the previous universal
+         * implementation (commit f3347ea89, reverted in 9793e4617)
+         * regressed S2 EHZ trace replay from PASS to F5121: S2's existing
+         * {@code setControlLocked(true)} sites (FlipperObjectInstance,
+         * CPZSpinTubeObjectInstance, Sonic2DeathEggRobotInstance,
+         * SignpostObjectInstance) expect the post-lock zero state for
+         * animation gating. The S2 ROM has the same short-circuit
+         * (s2.asm:35933-35935 {@code Obj01_Control}); flipping S2 to
+         * {@code true} requires re-validating those call sites and the
+         * EHZ trace baseline.
+         */
+        public void setLogicalInputState(boolean up, boolean down, boolean left, boolean right, boolean jump) {
+                setLogicalInputState(up, down, left, right, jump, isJumpJustPressed());
+        }
+
+        /**
+         * Publishes the logical pad state plus the low-byte jump press bit.
+         * ROM stores the whole Ctrl_1_Logical word in Sonic_Stat_Record_Buf;
+         * Tails_CPU_Control later copies that delayed word to Ctrl_2_logical
+         * (S3K sonic3k.asm:26683-26803). The existing compact history stores
+         * held buttons only, so the low-byte press bit is tracked separately
+         * without changing getInputHistory() consumers.
+         */
+        public void setLogicalInputState(boolean up, boolean down, boolean left, boolean right, boolean jump,
+                        boolean jumpPress) {
+                if (isControlLocked()
+                                && physicsFeatureSet != null
+                                && physicsFeatureSet.controlLockLatchesLogicalInput()) {
+                        return;
+                }
+                if (hurt
+                                && physicsFeatureSet != null
+                                && physicsFeatureSet.hurtRoutineLatchesLogicalInput()) {
+                        return;
+                }
+                short input = 0;
+                if (up) input |= INPUT_UP;
+                if (down) input |= INPUT_DOWN;
+                if (left) input |= INPUT_LEFT;
+                if (right) input |= INPUT_RIGHT;
+                if (jump) input |= INPUT_JUMP;
+                this.logicalInputState = input;
+                this.logicalJumpPressState = jumpPress;
+        }
+
+        public void clearLogicalInputState() {
+                this.logicalInputState = 0;
+                this.logicalJumpPressState = false;
         }
 
         /**
@@ -2057,13 +3196,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
                 applyStandingRadii(false);
 
-                // Set our entire history for x and y to be the starting position so if
-                // the player spindashes immediately the camera effect won't be b0rked.
-                // ROM: Sonic_Pos_Record_Buf has 64 entries
+                // ROM stores delayed player history in centre coordinates. Keeping the
+                // engine buffer in the same space avoids replay drift when the current
+                // hitbox size differs from the historical one (for example after rolling).
                 for (short i = 0; i < 64; i++) {
-                        xHistory[i] = x;
-                        yHistory[i] = y;
+                        xHistory[i] = getCentreX();
+                        yHistory[i] = getCentreY();
                         inputHistory[i] = 0;
+                        jumpPressHistory[i] = 0;
                         statusHistory[i] = 0;
                 }
                 // Always use PlayableSpriteController - it checks debugMode internally
@@ -2076,9 +3216,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Falls back gracefully if no provider is available (defineSpeeds() values remain).
          */
         private void resolvePhysicsProfile() {
+                resolvePhysicsProfile(bootstrapSafeGameModule());
+        }
+
+        private void resolvePhysicsProfile(GameModule module) {
+                runtimeBoundStateModule = module;
                 try {
-                        PhysicsProvider provider = GameModuleRegistry.getCurrent().getPhysicsProvider();
+                        PhysicsProvider provider = module != null ? module.getPhysicsProvider() : null;
                         if (provider == null) {
+                                bubbleAnimId = module != null ? module.resolveAnimationId(CanonicalAnimation.BUBBLE) : -1;
                                 return;
                         }
                         String charType;
@@ -2124,24 +3270,43 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
                 // Cross-game donation: override only the feature set with hybrid (donor spindash + base physics)
                 if (CrossGameFeatureProvider.isActive()) {
-                        this.physicsFeatureSet = CrossGameFeatureProvider.getInstance().getHybridFeatureSet();
+                        this.physicsFeatureSet = currentCrossGameFeatures().getHybridFeatureSet();
                 }
-                // Create or re-register persistent insta-shield object (ROM: SpawnLevelMainSprites_SpawnPlayers)
-                // ROM (sonic3k.asm:20614-20615): character_id == 0 check — Sonic only, not Tails/Knuckles
-                if (physicsFeatureSet != null && physicsFeatureSet.instaShieldEnabled()
-                        && getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD) {
-                        if (instaShieldObject == null && powerUpSpawner != null) {
-                                try {
-                                        instaShieldObject = powerUpSpawner.createInstaShield(this);
-                                } catch (IllegalStateException e) {
-                                        // Services not yet available (e.g., prepareForLevel before ObjectManager).
-                                        // Deferred to tickStatus() where ObjectManager context is active.
-                                }
-                        }
-                        // Registration deferred to tickStatus() to avoid double-add
-                        // when resolvePhysicsProfile() and tickStatus() both run on the same frame
+                ensurePersistentInstaShieldObject();
+                bubbleAnimId = module != null ? module.resolveAnimationId(CanonicalAnimation.BUBBLE) : -1;
+        }
+
+        private void ensurePersistentInstaShieldObject() {
+                // ROM: SpawnLevelMainSprites_SpawnPlayers creates the persistent Sonic-only
+                // insta-shield object after player setup. In the engine, powerUpSpawner can
+                // arrive later than physics resolution, so re-check when either dependency changes.
+                if (instaShieldObject != null || powerUpSpawner == null || physicsFeatureSet == null) {
+                        return;
                 }
-                bubbleAnimId = GameModuleRegistry.getCurrent().resolveAnimationId(CanonicalAnimation.BUBBLE);
+                if (!physicsFeatureSet.instaShieldEnabled()
+                        || getSecondaryAbility() != SecondaryAbility.INSTA_SHIELD) {
+                        return;
+                }
+                try {
+                        instaShieldObject = powerUpSpawner.createInstaShield(this);
+                } catch (IllegalStateException e) {
+                        // Services not yet available (e.g., prepareForLevel before ObjectManager).
+                        // Deferred until the next level-load or spawner-injection pass.
+                }
+                // Registration remains deferred to tickStatus() to avoid double-add when
+                // resolvePhysicsProfile() and tickStatus() run on the same frame.
+        }
+
+        private void refreshRuntimeBoundStateIfNeeded() {
+                GameModule module = currentGameModule();
+                if (module == null || module == runtimeBoundStateModule) {
+                        return;
+                }
+                resolvePhysicsProfile(module);
+        }
+
+        private GameModule bootstrapSafeGameModule() {
+                return GameServices.bootstrapGameModule();
         }
 
         /**
@@ -2154,11 +3319,28 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         private void clearInitOverride() {
                 if (!initPhysicsActive) return;
                 initPhysicsActive = false;
+                resetSpeedConstantsToCanonical();
+        }
+
+        private void resetSpeedConstantsToCanonical() {
                 if (canonicalProfile != null) {
                         this.runAccel = canonicalProfile.runAccel();
                         this.runDecel = canonicalProfile.runDecel();
                         this.max = canonicalProfile.max();
+                } else if (physicsProfile != null) {
+                        this.runAccel = physicsProfile.runAccel();
+                        this.runDecel = physicsProfile.runDecel();
+                        this.max = physicsProfile.max();
                 }
+        }
+
+        /**
+         * Returns the resolved per-character physics profile, or {@code null} if
+         * none has been bound yet (early bootstrap before
+         * {@link #resolvePhysicsProfile()}).
+         */
+        public PhysicsProfile getPhysicsProfile() {
+                return physicsProfile;
         }
 
         /**
@@ -2239,9 +3421,15 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // This prevents getting stuck on LauncherSprings or in other locked states
                 controlLocked = false;
                 pinballMode = false;
+                pinballSpeedLock = false;
                 objectControlled = false;
+                objectControlAllowsCpu = false;
+                objectControlSuppressesMovement = false;
+                mgzTopPlatformCarrySolidContactObject = null;
                 onObject = false;           // Clear "standing on object" flag
+                latchedSolidObjectId = 0;
                 stickToConvex = false;      // Clear slope adhesion flag (set by slope-mode launches)
+                suppressGroundWallCollision = false;
         }
 
         /**
@@ -2265,10 +3453,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 // (s2.asm:36014 — expiry code restores Super values, confirming this design)
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveAccel(runAccel, inWater, effectiveShoes);
+                        return physicsModifiers.effectiveAccel(runAccel, waterPhysicsActive, effectiveShoes);
                 }
                 // Fallback: Water overrides shoes (ROM sets absolute values on water entry)
-                if (inWater) {
+                if (waterPhysicsActive) {
                         return (short) (runAccel / 2);
                 }
                 if (effectiveShoes) {
@@ -2280,10 +3468,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getRunDecel() {
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveDecel(runDecel, inWater, effectiveShoes);
+                        return physicsModifiers.effectiveDecel(runDecel, waterPhysicsActive, effectiveShoes);
                 }
                 // Fallback: Water overrides shoes
-                if (inWater) {
+                if (waterPhysicsActive) {
                         return (short) (runDecel / 2);
                 }
                 return runDecel;
@@ -2304,10 +3492,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getFriction() {
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveFriction(friction, inWater, effectiveShoes);
+                        return physicsModifiers.effectiveFriction(friction, waterPhysicsActive, effectiveShoes);
                 }
                 // Fallback: Water overrides shoes (ROM sets absolute values on water entry)
-                if (inWater) {
+                if (waterPhysicsActive) {
                         return (short) (friction / 2);
                 }
                 if (effectiveShoes) {
@@ -2319,10 +3507,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public short getMax() {
                 boolean effectiveShoes = hasSpeedShoes() && !isSuperSonic();
                 if (physicsModifiers != null) {
-                        return physicsModifiers.effectiveMax(max, inWater, effectiveShoes);
+                        return physicsModifiers.effectiveMax(max, waterPhysicsActive, effectiveShoes);
                 }
                 // Fallback: Water overrides shoes (ROM sets absolute values on water entry)
-                if (inWater) {
+                if (waterPhysicsActive) {
                         return (short) (max / 2);
                 }
                 if (effectiveShoes) {
@@ -2374,6 +3562,62 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public short[] getYHistory() {
                 return yHistory;
+        }
+
+        /**
+         * Diagnostic-only writeback for ROM-style follower history buffers.
+         *
+         * <p><strong>Trace replay must not call this on a normal green run.</strong>
+         * Recorded history snapshots are comparison-only diagnostics. This
+         * accessor is kept for focused unit diagnostics and must not be wired
+         * into committed trace replay bootstrap or per-frame replay loops.
+         */
+        public void hydrateRecordedHistory(short[] xHistory, short[] yHistory,
+                                    short[] inputHistory, byte[] statusHistory,
+                                    int historyPos) {
+                if (xHistory == null || yHistory == null || inputHistory == null || statusHistory == null) {
+                        throw new IllegalArgumentException("History buffers must be non-null");
+                }
+                if (xHistory.length != this.xHistory.length
+                        || yHistory.length != this.yHistory.length
+                        || inputHistory.length != this.inputHistory.length
+                        || statusHistory.length != this.statusHistory.length) {
+                        throw new IllegalArgumentException("History buffers must all have length "
+                                + this.xHistory.length);
+                }
+                System.arraycopy(xHistory, 0, this.xHistory, 0, this.xHistory.length);
+                System.arraycopy(yHistory, 0, this.yHistory, 0, this.yHistory.length);
+                System.arraycopy(inputHistory, 0, this.inputHistory, 0, this.inputHistory.length);
+                for (int i = 0; i < this.jumpPressHistory.length; i++) {
+                        this.jumpPressHistory[i] = 0;
+                }
+                System.arraycopy(statusHistory, 0, this.statusHistory, 0, this.statusHistory.length);
+                this.historyPos = (byte) historyPos;
+        }
+
+        /**
+         * Read-only snapshot of the ROM-style follower history rings, for the
+         * trace replay bootstrap comparator (frame-0 assertion). Returns
+         * defensive copies so the caller cannot mutate engine state.
+         */
+        public short[] copyXHistory() {
+                return xHistory.clone();
+        }
+
+        public short[] copyYHistory() {
+                return yHistory.clone();
+        }
+
+        public short[] copyInputHistory() {
+                return inputHistory.clone();
+        }
+
+        public byte[] copyStatusHistory() {
+                return statusHistory.clone();
+        }
+
+        public int historyPos() {
+                return historyPos & 0xFF;
         }
 
         public boolean isCpuControlled() {
@@ -2437,6 +3681,9 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public void setRolling(boolean rolling) {
                 if (this.rolling == rolling) {
+                        if (rolling) {
+                                applyRollAnimationFromProfile();
+                        }
                         return;
                 }
 
@@ -2457,6 +3704,23 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 }
 
                 this.rolling = rolling;
+                if (rolling) {
+                        applyRollAnimationFromProfile();
+                }
+        }
+
+        private void applyRollAnimationFromProfile() {
+                if (animationProfile instanceof ScriptedVelocityAnimationProfile profile) {
+                        setAnimationId(profile.getRollAnimId());
+                }
+        }
+
+        /**
+         * Clears only the status rolling bit for ROM paths that write the
+         * status byte directly without touching collision radii or dimensions.
+         */
+        public void clearRollingFlagPreserveRadii() {
+                this.rolling = false;
         }
 
         public boolean getRollingJump() {
@@ -2465,6 +3729,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setRollingJump(boolean rollingJump) {
                 this.rollingJump = rollingJump;
+                if (rollingJump) {
+                        // ROM Sonic_Jump restores default_y_radius/default_x_radius before
+                        // branching to Sonic_RollJump for an already-rolling jump.
+                        applyStandingRadii(false);
+                }
         }
 
         /**
@@ -2481,6 +3750,74 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public void setPinballMode(boolean pinballMode) {
                 this.pinballMode = pinballMode;
+        }
+
+        public boolean getPinballSpeedLock() {
+                return pinballSpeedLock;
+        }
+
+        public void setPinballSpeedLock(boolean pinballSpeedLock) {
+                this.pinballSpeedLock = pinballSpeedLock;
+        }
+
+        public void preserveRollingOnNextLanding() {
+                this.preserveRollingOnNextLanding = true;
+        }
+
+        public boolean consumePreserveRollingOnNextLanding() {
+                boolean preserve = preserveRollingOnNextLanding;
+                preserveRollingOnNextLanding = false;
+                return preserve;
+        }
+
+        public void preserveRollingOnNextRollStop() {
+                this.preserveRollingOnNextRollStop = true;
+        }
+
+        public boolean consumePreserveRollingOnNextRollStop() {
+                boolean preserve = preserveRollingOnNextRollStop;
+                preserveRollingOnNextRollStop = false;
+                return preserve;
+        }
+
+        public boolean shouldPreserveRollingOnNextRollStop() {
+                return preserveRollingOnNextRollStop;
+        }
+
+        public void markObjectPreservedRollBoostFollowup() {
+                this.objectPreservedRollBoostFollowup = true;
+        }
+
+        public boolean consumeObjectPreservedRollBoostFollowup() {
+                boolean followup = objectPreservedRollBoostFollowup;
+                objectPreservedRollBoostFollowup = false;
+                return followup;
+        }
+
+        public void markObjectPreservedRollWallProbe() {
+                this.objectPreservedRollWallProbe = true;
+        }
+
+        public boolean shouldApplyObjectPreservedRollWallProbe() {
+                return objectPreservedRollWallProbe;
+        }
+
+        public boolean consumeObjectPreservedRollWallProbe() {
+                boolean probe = objectPreservedRollWallProbe;
+                objectPreservedRollWallProbe = false;
+                return probe;
+        }
+
+        public void markObjectPreservedRollVelocityCarry() {
+                this.objectPreservedRollVelocityCarry = true;
+        }
+
+        public boolean shouldApplyObjectPreservedRollVelocityCarry() {
+                return objectPreservedRollVelocityCarry;
+        }
+
+        public void clearObjectPreservedRollVelocityCarry() {
+                this.objectPreservedRollVelocityCarry = false;
         }
 
         public boolean isTunnelMode() {
@@ -2522,6 +3859,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public short getStandYRadius() {
                 return standYRadius;
+        }
+
+        public short getStandXRadius() {
+                return standXRadius;
+        }
+
+        public short getRollYRadius() {
+                return rollYRadius;
         }
 
         /**
@@ -2615,6 +3960,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return controller.getMovement();
         }
 
+        @Override
+        public void applyPostObjectLandingAbilities(int savedDoubleJumpFlag) {
+                controller.getMovement().applyPostObjectLandingAbilities(this, savedDoubleJumpFlag);
+        }
+
         public PlayableSpriteAnimation getAnimationManager() {
                 return controller.getAnimation();
         }
@@ -2667,7 +4017,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (desired < 0) {
                         desired += xHistory.length;
                 }
-                return (short) (xHistory[desired] + (width / 2));
+                return xHistory[desired];
         }
 
         public final short getCentreY(int framesBehind) {
@@ -2675,21 +4025,108 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (desired < 0) {
                         desired += yHistory.length;
                 }
-                return (short) (yHistory[desired] + (height / 2));
+                return yHistory[desired];
         }
 
         /**
-         * Fills position history with current position.
-         * ROM: Reset_Player_Position_Array — called on spindash release & fire dash
-         * so the camera delay looks back to "right here" instead of stale positions.
+         * Fills position history with current position. Used by paths that
+         * want to flush the camera-delay buffer ONLY (no input/status clear),
+         * such as the engine-internal sidekick respawn seeding and the
+         * spindash-release scroll-delay reset where ROM only manipulates
+         * `H_scroll_frame_offset` without touching Stat_table.
+         *
+         * Use {@link #resetPositionAndStatTableHistory()} for the full
+         * ROM `Reset_Player_Position_Array` semantics (Pos_table refill +
+         * Stat_table clear).
          */
         public void resetPositionHistory() {
-                short currentX = getX();
-                short currentY = getY();
+                short currentX = getCentreX();
+                short currentY = getCentreY();
                 for (int i = 0; i < xHistory.length; i++) {
                         xHistory[i] = currentX;
                         yHistory[i] = currentY;
                 }
+                followerHistoryRecordedThisTick = false;
+        }
+
+        /**
+         * Mirrors ROM `Reset_Player_Position_Array` (sonic3k.asm:22166-22193):
+         * writes Pos_table = (x_pos, y_pos) for all 64 entries AND clears all
+         * Stat_table 32-bit slots to 0 (`move.l #0, (a2)+`). Called by
+         * Sonic_FireShield (sonic3k.asm:23428), Sonic_HyperDash
+         * (sonic3k.asm:23521), and the player-init / death-respawn paths
+         * (sonic3k.asm:21525, 21938). Subsequent delayed Tails_CPU_Control
+         * reads of Stat_table return ZERO for any slot not yet refilled by
+         * Sonic_RecordPos.
+         *
+         * AIZ trace F7381 motivation: Sonic activates Fire Shield Dash at
+         * F7366 which runs Reset_Player_Position_Array. Without clearing
+         * inputHistory and statusHistory the engine retained Sonic's true
+         * F7350-F7365 LEFT input bits, while ROM Stat_table read zeros for
+         * any slot not yet refilled in the 16 frames after the reset. The
+         * stale LEFT input drove Tails CPU to a -0x18 x_speed where ROM
+         * holds 0x0000 (sonic3k.asm:26683-26705,26755-26785).
+         */
+        public void resetPositionAndStatTableHistory() {
+                short currentX = getCentreX();
+                short currentY = getCentreY();
+                for (int i = 0; i < xHistory.length; i++) {
+                        xHistory[i] = currentX;
+                        yHistory[i] = currentY;
+                        inputHistory[i] = 0;
+                        jumpPressHistory[i] = 0;
+                        statusHistory[i] = 0;
+                }
+                followerHistoryRecordedThisTick = false;
+        }
+
+        /**
+         * Pre-fills the position history ring with the leader's centre offset
+         * by the given delta, mirroring ROM Obj01_Init's
+         * {@code subi.w #$20,x_pos / addi_.w #4,y_pos / Sonic_RecordPos x 64 /
+         * addi.w #$20,x_pos / subi_.w #4,y_pos} sequence (s2.asm:35907-35918,
+         * sonic3k.asm:21936-21940). That sequence seeds Sonic_Pos_Record_Buf
+         * with Tails' spawn-offset position so the first ~16 frames of
+         * Tails_CPU_Normal read targetX = Tails_x (no acceleration) before
+         * the live Sonic_RecordPos writes the actual Sonic centre into the
+         * ring.
+         *
+         * <p>Used by the sidekick CPU bootstrap to recreate the same pre-fill
+         * profile when entering the title-card prelude. Input/jump/status
+         * history are left unchanged (ROM Init does not touch Stat_Record_Buf).
+         *
+         * <p>Also resets {@code historyPos} so the next
+         * {@link #recordFollowerHistoryForTick()} call writes to slot 0 — ROM
+         * {@code Sonic_Pos_Record_Index} is reset to 0 just before the 64-entry
+         * fill loop (s2.asm:35909), and the post-fill {@code addq.b #4,...}
+         * wraparound leaves it back at 0 so the first live Sonic_RecordPos
+         * write goes to slot 0.
+         */
+        public void prefillPositionHistoryWithOffset(int xOffset, int yOffset) {
+                short prefillX = (short) (getCentreX() + xOffset);
+                short prefillY = (short) (getCentreY() + yOffset);
+                for (int i = 0; i < xHistory.length; i++) {
+                        xHistory[i] = prefillX;
+                        yHistory[i] = prefillY;
+                }
+                // Engine's recordFollowerHistoryForTick() increments-then-writes,
+                // so set historyPos to 63 (one slot before slot 0) so the next
+                // record call writes to slot 0 matching ROM's first live write.
+                historyPos = 63;
+                followerHistoryRecordedThisTick = false;
+        }
+
+        /**
+         * Clears the per-tick gate that prevents
+         * {@link #recordFollowerHistoryForTick()} from running twice in the
+         * same playable tick. Normal frames call this from
+         * {@link #endOfTick()}; bootstrap paths that record follower history
+         * outside the standard playable tick (e.g. the title-card prelude
+         * which only ticks sidekicks but still needs Sonic_RecordPos parity)
+         * call it explicitly so the next prelude frame can record again.
+         */
+        public void clearFollowerHistoryRecordedFlag() {
+                followerHistoryRecordedThisTick = false;
         }
 
         /**
@@ -2703,6 +4140,32 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         desired += inputHistory.length;
                 }
                 return inputHistory[desired];
+        }
+
+        /**
+         * Returns whether the delayed logical controller word carried a jump
+         * press bit. ROM Tails CPU consumes the low byte of Ctrl_1_Logical
+         * together with the delayed held buttons when copying to Ctrl_2_logical.
+         */
+        public final boolean getJumpPressHistory(int framesBehind) {
+                int desired = historyPos - framesBehind;
+                if (desired < 0) {
+                        desired += jumpPressHistory.length;
+                }
+                return jumpPressHistory[desired] != 0;
+        }
+
+        /**
+         * Returns the circular history slot index used by delayed follower reads.
+         * Diagnostic-only: replay reports use this to compare engine history
+         * selection against ROM Stat_table/Pos_table evidence.
+         */
+        public final int getHistorySlotIndex(int framesBehind) {
+                int desired = historyPos - framesBehind;
+                if (desired < 0) {
+                        desired += inputHistory.length;
+                }
+                return desired;
         }
 
         /**
@@ -2837,13 +4300,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
-         * Causes the sprite to update its position history as we are now at the end
-         * of the tick so all movement calculations have been performed.
+         * Mirrors the ROM follower-history write point (`Sonic_RecordPos` in S3K
+         * sonic3k.asm:22119-22136): movement/collision has run, but animation,
+         * touch response, and later object-side rewrites have not. Sidekick CPU
+         * reads this table later in the same Process_Sprites pass.
          */
-        public void endOfTick() {
-                if (deferredObjectControlRelease) {
-                        objectControlled = false;
-                        deferredObjectControlRelease = false;
+        public void recordFollowerHistoryForTick() {
+                if (followerHistoryRecordedThisTick) {
+                        return;
                 }
                 // ROM: Sonic_Pos_Record_Index wraps at 256 bytes (64 entries * 4 bytes per entry)
                 if (historyPos == 63) {
@@ -2851,17 +4315,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 } else {
                         historyPos++;
                 }
-                xHistory[historyPos] = xPixel;
-                yHistory[historyPos] = yPixel;
+                xHistory[historyPos] = getCentreX();
+                yHistory[historyPos] = getCentreY();
 
-                // ROM: Sonic_Stat_Record_Buf records input buttons and status each frame
-                short input = 0;
-                if (upInputPressed) input |= INPUT_UP;
-                if (downInputPressed) input |= INPUT_DOWN;
-                if (leftInputPressed) input |= INPUT_LEFT;
-                if (rightInputPressed) input |= INPUT_RIGHT;
-                if (jumpInputPressed) input |= INPUT_JUMP;
-                inputHistory[historyPos] = input;
+                inputHistory[historyPos] = logicalInputState;
+                jumpPressHistory[historyPos] = (byte) (logicalJumpPressState ? 1 : 0);
 
                 byte status = 0;
                 if (getDirection() == Direction.LEFT) status |= STATUS_FACING_LEFT;
@@ -2873,6 +4331,23 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 if (inWater) status |= STATUS_UNDERWATER;
                 if (preventTailsRespawn) status |= STATUS_PREVENT_TAILS_RESPAWN;
                 statusHistory[historyPos] = status;
+                followerHistoryRecordedThisTick = true;
+        }
+
+        /**
+         * Completes per-frame cleanup. If a path did not reach the normal
+         * Sonic_RecordPos-equivalent point, record history here as a fallback.
+         */
+        public void endOfTick() {
+                if (deferredObjectControlRelease) {
+                        objectControlled = false;
+                        objectControlAllowsCpu = false;
+                        objectControlSuppressesMovement = false;
+                        mgzTopPlatformCarrySolidContactObject = null;
+                        deferredObjectControlRelease = false;
+                }
+                recordFollowerHistoryForTick();
+                followerHistoryRecordedThisTick = false;
         }
 
         public short getRenderCentreX() {
@@ -2930,6 +4405,11 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         if (wfs != null && wfs.elementalShieldsEnabled()
                                         && shield && shieldType == ShieldType.BUBBLE) {
                                 controller.getDrowning().replenishAir();
+                        } else if (fixedLevelObjectOwnsDrowningBubbleCadence()) {
+                                // S3K installs Breathing_bubbles/Breathing_bubbles_P2
+                                // in fixed object RAM. Their Obj_AirCountdown cadence
+                                // owns Random_Number/AllocateObject timing; keep the
+                                // generic controller from double-consuming RNG.
                         } else {
                                 boolean shouldDrown = controller.getDrowning().update();
                                 if (shouldDrown) {
@@ -2940,16 +4420,59 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
+         * Updates the ROM Status_Underwater mirror while object_control bit 0 is
+         * suppressing movement. S3K Tails' dispatcher skips Tails_Modes under
+         * object_control (sonic3k.asm:26220-26248), but still falls through to
+         * Tails_Water. Tails_Water sets/clears Status_Underwater and speed
+         * constants before checking object_control; when object_control is set
+         * and CPU routine is not 4, it returns before the velocity quarter/double
+         * paths (sonic3k.asm:27416-27470).
+         */
+        public void updateWaterStateObjectControlled(int waterLevelY) {
+                wasInWater = inWater;
+
+                if (waterSkimActive) {
+                        inWater = false;
+                        return;
+                }
+
+                boolean nowInWater = getCentreY() > waterLevelY;
+                if (!wasInWater && nowInWater) {
+                        currentWaterSystem().incrementWaterEnteredCounter();
+                        clearInitOverride();
+                        resetSpeedConstantsToCanonical();
+                        waterPhysicsActive = true;
+                } else if (wasInWater && !nowInWater) {
+                        currentWaterSystem().incrementWaterEnteredCounter();
+                        clearInitOverride();
+                        resetSpeedConstantsToCanonical();
+                        waterPhysicsActive = false;
+                }
+                inWater = nowInWater;
+        }
+
+        private boolean fixedLevelObjectOwnsDrowningBubbleCadence() {
+                try {
+                        return GameServices.module().getLevelEventProvider()
+                                        .ownsFixedDrowningBubbleCadence(this);
+                } catch (IllegalStateException ex) {
+                        return false;
+                }
+        }
+
+        /**
          * Called when player enters water.
          * Applies instantaneous velocity changes per original game logic.
          */
         protected void onEnterWater() {
                 LOGGER.fine("Player entered water");
                 // Increment global Water_entered_counter so objects can detect water transitions
-                WaterSystem.getInstance().incrementWaterEnteredCounter();
+                currentWaterSystem().incrementWaterEnteredCounter();
                 // S3K: water entry resets Character_Speeds init values to canonical
                 // (sonic3k.asm:22225-22227 sets absolute values, not relative to init)
                 clearInitOverride();
+                resetSpeedConstantsToCanonical();
+                waterPhysicsActive = true;
 
                 // Fire and Lightning shields dissipate on water entry (s3.asm:34693, 34780)
                 PhysicsFeatureSet fs = getPhysicsFeatureSet();
@@ -2964,13 +4487,13 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         }
                 }
 
-                // ROM: asr.w x_vel(a0) - halve horizontal velocity once
-                xSpeed = (short) (xSpeed / 2);
-                gSpeed = (short) (gSpeed / 2);
+                // ROM: asr.w x_vel(a0) - halve horizontal velocity once.
+                // Sonic_Water does not modify ground_vel/inertia on water entry.
+                xSpeed = (short) (xSpeed >> 1);
 
                 // ROM: asr.w y_vel(a0) twice - divide by 4 unconditionally
                 // (both upward and downward velocity)
-                ySpeed = (short) (ySpeed / 4);
+                ySpeed = (short) (ySpeed >> 2);
 
                 // ROM (s2.asm:36050-36110): Skip splash if y_vel is 0 after quartering
                 //   tst.w   y_vel(a0)
@@ -2996,18 +4519,26 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected void onExitWater() {
                 LOGGER.fine("Player exited water");
                 // Increment global Water_entered_counter so objects can detect water transitions
-                WaterSystem.getInstance().incrementWaterEnteredCounter();
+                currentWaterSystem().incrementWaterEnteredCounter();
                 // S3K: water exit resets Character_Speeds init values to canonical
                 // (sonic3k.asm:22253-22255 sets absolute $600/$C/$80, not relative to init)
                 clearInitOverride();
+                resetSpeedConstantsToCanonical();
+                waterPhysicsActive = false;
 
                 // ROM does NOT modify x_vel on water exit - only top_speed/accel/decel
                 // change, which affects future acceleration but not current velocity
 
-                // ROM: cmpi.b #4,routine(a0) - skip y_vel doubling if hurt
-                //      beq.s +
-                //      asl y_vel(a0)
-                if (!isHurt()) {
+                // ROM: cmpi.b #4,routine(a0) - skip y_vel doubling if hurt.
+                // S2/S3K additionally skip asl y_vel when already moving upward
+                // faster than -$400 (s2.asm:36120-36124, sonic3k.asm:22267-22270).
+                PhysicsFeatureSet fs = getPhysicsFeatureSet();
+                boolean shouldDoubleYSpeed = !isHurt();
+                if (shouldDoubleYSpeed && fs != null && fs.waterExitBoostSkipsFastUpwardVelocity()
+                                && ySpeed < -0x400) {
+                        shouldDoubleYSpeed = false;
+                }
+                if (shouldDoubleYSpeed) {
                         // Double y velocity (both up and down)
                         ySpeed = (short) (ySpeed * 2);
                 }
@@ -3138,6 +4669,19 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         public void setInWater(boolean inWater) {
                 this.inWater = inWater;
                 this.wasInWater = inWater;
+                this.waterPhysicsActive = inWater;
+        }
+
+        /**
+         * Clears only the underwater status bit for ROM routines that write
+         * {@code status(a0)} directly. S3K {@code sub_13ECA} writes
+         * {@code Status_InAir} (sonic3k.asm:26804-26808), so the next
+         * {@code Tails_Water} call sees Status_Underwater already clear and
+         * does not restore the speed constants.
+         */
+        public void clearUnderwaterStatusPreserveWaterPhysics() {
+                this.inWater = false;
+                this.wasInWater = false;
         }
 
         // ==================== Physics Constant Getters with Modifiers
@@ -3152,7 +4696,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public short getEffectiveRunAccel() {
                 // Water overrides shoes (ROM sets absolute values on water entry)
-                if (inWater) {
+                if (waterPhysicsActive) {
                         return (short) (runAccel / 2);
                 }
                 if (speedShoes) {
@@ -3165,7 +4709,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * Returns effective run deceleration, accounting for modifiers.
          */
         public short getEffectiveRunDecel() {
-                if (inWater) {
+                if (waterPhysicsActive) {
                         return (short) (runDecel / 2);
                 }
                 // Speed shoes don't affect decel in original
@@ -3177,7 +4721,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public short getEffectiveFriction() {
                 // Water overrides shoes (ROM sets absolute values on water entry)
-                if (inWater) {
+                if (waterPhysicsActive) {
                         return (short) (friction / 2);
                 }
                 if (speedShoes) {
@@ -3191,7 +4735,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public short getEffectiveMax() {
                 // Water overrides shoes (ROM sets absolute values on water entry)
-                if (inWater) {
+                if (waterPhysicsActive) {
                         return (short) (max / 2);
                 }
                 if (speedShoes) {
@@ -3235,3 +4779,5 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return -0x400;
         }
 }
+
+

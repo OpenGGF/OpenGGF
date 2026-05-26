@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -106,6 +107,11 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         // Obj6B uses regular SolidObject (jsrto JmpTo14_SolidObject), not PlatformObject,
         // so it's fully solid from all sides, not just the top.
         return false;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fromProvider(this);
     }
 
     @Override

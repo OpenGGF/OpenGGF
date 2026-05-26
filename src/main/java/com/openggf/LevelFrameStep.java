@@ -3,9 +3,9 @@ package com.openggf;
 import com.openggf.camera.Camera;
 import com.openggf.game.BonusStageProvider;
 import com.openggf.game.GameServices;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.level.LevelManager;
+import com.openggf.sprites.managers.SpriteManager;
 
 /**
  * Canonical level-mode frame update sequence.
@@ -14,10 +14,11 @@ import com.openggf.level.LevelManager;
  * Both {@link GameLoop} and the headless test runner ({@code HeadlessTestRunner})
  * MUST delegate to this class rather than duplicating the step sequence.
  * <p>
- * Order mirrors the Mega Drive ROM, but differs by collision model:
- * S1 runs ExecuteObjects before PlayerPhysics in this engine's unified path,
- * while S2/S3K run PlayerPhysics first, then ExecuteObjects with inline solid
- * resolution. Both flows converge before level events, camera, and scroll.
+ * Order mirrors the Mega Drive ROM.
+ * Inline solid-resolution modules run player physics first, then ExecuteObjects
+ * with per-object solid checkpoints so object code sees the post-physics player
+ * state during its own update. Legacy compatibility modules keep the older
+ * objects-before-physics ordering.
  * <p>
  * ROM reference (sonic.asm:3042-3044): {@code LZWaterFeatures} runs before
  * {@code ExecuteObjects} so that wind tunnel / water slide state is visible
@@ -77,29 +78,44 @@ public final class LevelFrameStep {
         //    ROM: LZWaterFeatures runs before ExecuteObjects (sonic.asm:3042).
         levelManager.updateZoneFeaturesPrePhysics();
 
-        boolean inlineSolidResolution = levelManager.usesInlineObjectSolidResolution();
+        boolean inlineSolidResolution = levelManager.objectsExecuteAfterPlayerPhysics();
         if (inlineSolidResolution) {
-            // 2. S2/S3K player physics first. Touch responses run per-player inside
-            //    tickPlayablePhysics after movement, matching Sonic's slot ordering.
+            // 2. Inline-order modules need a frame-start snapshot of object touch
+            //    state because player-slot ReactToItem runs before ExecuteObjects.
+            levelManager.prepareTouchResponseSnapshots();
+
+            // 2. Inline solid-resolution path: player physics first. Touch responses
+            //    run per-player inside tickPlayablePhysics after movement, matching
+            //    the player-slot-first ROM ordering.
             wrapper.wrap("physics", spriteUpdate);
 
-            // 3. S2/S3K object execution after player physics, with inline solid
-            //    resolution so later objects see earlier contact adjustments.
+            // 3. Object execution after player physics, with inline solid checkpoints
+            //    so later objects see earlier contact adjustments.
             wrapper.wrap("objects", levelManager::updateObjectPositionsPostPhysicsWithoutTouches);
         } else {
-            // 2. S1 unified path keeps objects before physics. Touch responses are
-            //    still deferred to tickPlayablePhysics after movement.
+            // 2. Legacy compatibility path keeps objects before physics. Touch
+            //    responses are still deferred to tickPlayablePhysics after movement.
             wrapper.wrap("objects", levelManager::updateObjectPositionsWithoutTouches);
 
             // 3. Sprite / player physics update (caller-provided).
             wrapper.wrap("physics", spriteUpdate);
+
+            // 3b. Some later SST-slot scripts read Sonic after his movement has
+            //     completed and only write globals for the next frame. Legacy
+            //     object-order modules need an explicit post-player hook for
+            //     those cases because regular object updates already ran.
+            wrapper.wrap("post-player-hooks", levelManager::updateObjectPostPlayerHooks);
         }
 
         // 4. Dynamic level events — boss arenas, boundary changes, zone transitions.
-        LevelEventProvider levelEvents = GameModuleRegistry.getCurrent().getLevelEventProvider();
+        LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
         if (levelEvents != null) {
+            wrapper.wrap("fixed-objects", levelEvents::updateFixedInLevelObjects);
             levelEvents.update();
         }
+        boolean cameraDrivenScroll = levelManager.advanceCameraDrivenScrollForFrame();
+
+        levelManager.flushQueuedLayoutMutations();
 
         BonusStageProvider bonusStageProvider = GameServices.bonusStage();
         boolean integratedBonusStageUpdate = bonusStageProvider != null
@@ -112,7 +128,7 @@ public final class LevelFrameStep {
         }
 
         // 5. Camera — ease boundaries toward targets, then reposition.
-        if (!suppressDefaultCamera) {
+        if (!suppressDefaultCamera && !cameraDrivenScroll) {
             wrapper.wrap("camera", () -> {
                 camera.updateBoundaryEasing();
                 camera.updatePosition();
@@ -129,5 +145,12 @@ public final class LevelFrameStep {
 
         // 6. Level scroll / parallax / animation update.
         wrapper.wrap("level", levelManager::update);
+
+        // 7. Cache BuildSprites on-screen results for next frame's logic.
+        SpriteManager spriteManager = GameServices.spritesOrNull();
+        if (spriteManager != null) {
+            spriteManager.refreshPlayableRenderFlags(camera);
+        }
+        levelManager.clearSidekickRomVisibleReloadFrameCounterBridge();
     }
 }

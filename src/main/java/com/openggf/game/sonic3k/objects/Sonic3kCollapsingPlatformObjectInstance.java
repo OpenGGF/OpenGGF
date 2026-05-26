@@ -80,14 +80,14 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
      * Gentle slope from 0x1F (left) to 0x0E (right).
      */
     private static final byte[] AIZ_SLOPE_DATA = {
-            0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1E, 0x1E, 0x1E,
-            0x1E, 0x1D, 0x1D, 0x1D, 0x1D, 0x1C, 0x1C, 0x1C,
-            0x1C, 0x1B, 0x1B, 0x1B, 0x1B, 0x1A, 0x1A, 0x1A,
-            0x1A, 0x19, 0x19, 0x19, 0x19, 0x18, 0x18, 0x18,
-            0x18, 0x17, 0x17, 0x17, 0x17, 0x16, 0x16, 0x16,
-            0x16, 0x15, 0x15, 0x15, 0x15, 0x14, 0x14, 0x14,
-            0x14, 0x13, 0x13, 0x13, 0x13, 0x12, 0x12, 0x12,
-            0x12, 0x11, 0x11, 0x10, 0x10, 0x0F, 0x0F, 0x0E
+            0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F,
+            0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F,
+            0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1E, 0x1E,
+            0x1D, 0x1D, 0x1C, 0x1C, 0x1B, 0x1B, 0x1A, 0x1A,
+            0x19, 0x19, 0x18, 0x18, 0x17, 0x17, 0x16, 0x16,
+            0x15, 0x15, 0x14, 0x14, 0x13, 0x13, 0x12, 0x12,
+            0x11, 0x11, 0x10, 0x10, 0x0F, 0x0F, 0x0E, 0x0E,
+            0x0E, 0x0E, 0x0E, 0x0E, 0x0E, 0x0E, 0x0E, 0x0E
     };
 
     /**
@@ -96,11 +96,11 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
      */
     private static final byte[] ICZ_SLOPE_DATA = {
             0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-            0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
-            0x30, 0x2F, 0x2E, 0x2D, 0x2C, 0x2B, 0x2A, 0x29
+            0x30, 0x30, 0x30, 0x30, 0x2F, 0x2F, 0x2F, 0x2F,
+            0x2F, 0x2F, 0x2F, 0x2F, 0x2F, 0x2F, 0x2F, 0x2F,
+            0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E,
+            0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2D,
+            0x2D, 0x2D, 0x2D, 0x2D, 0x2D, 0x2C, 0x2B, 0x2A
     };
 
     /** Per-zone configuration record. */
@@ -147,10 +147,68 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     // The parent remains solid and invisible for this many frames after fragments spawn,
     // then releases the player. (ROM: loc_205DE countdown -> sub_205FC release)
     private int solidStayTimer;
+    private boolean releasePending;
+    private boolean releaseSolidPassExposed;
+
+    /**
+     * One-frame flag controlling the post-update solid pass slope sample
+     * suppression. Engine flow:
+     * <ol>
+     *   <li>Engine calls {@code update()}; {@code performCollapse()} runs and
+     *       sets {@link #pendingTransitionSkip}.</li>
+     *   <li>Engine runs the post-update solid pass; this frame still samples
+     *       slope (matches ROM F3316, the last {@code loc_20594}/sub_205B6 frame).</li>
+     *   <li>Next frame's {@code update()} promotes
+     *       {@link #pendingTransitionSkip} to
+     *       {@link #transitionFrameSlopeSkip} (state==2 first ride frame).</li>
+     *   <li>That frame's post-update solid pass sees the flag and skips the
+     *       y_pos write while keeping the player attached, mirroring ROM
+     *       F3317 -- the transition frame where
+     *       {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45394)
+     *       jmps to {@code Play_SFX} without falling through to
+     *       {@code sub_205B6} (sonic3k.asm:44830).</li>
+     *   <li>Subsequent frame's {@code update()} clears the flag; ROM's
+     *       {@code loc_205DE} resumes calling {@code sub_205B6}
+     *       (sonic3k.asm:44851), so the slope sample is back on.</li>
+     * </ol>
+     *
+     * <p>The two-stage promotion accounts for the engine running
+     * {@code performCollapse()} one frame earlier than ROM's transition (the
+     * engine's {@code onSolidContact} sets {@code state=1} on the first
+     * standing frame, while ROM's {@code loc_20594} only sets {@code $3A=1}
+     * on the second standing frame at sonic3k.asm:44825). The pre-fix engine
+     * happened to write the same y_pos at F3316 (last sample frame in both)
+     * but wrote an extra slope sample at F3317 that ROM did not. The fix
+     * pushes the suppression to F3317, leaving F3316 untouched.
+     */
+    private boolean transitionFrameSlopeSkip;
+    private boolean pendingTransitionSkip;
 
     // Post-fragment parent fall state
     private int velY;
     private int yFrac;
+
+    // ROM Sprite_OnScreen_Test (sonic3k.asm:37262) reads Camera_X_pos_coarse_back,
+    // which Load_Sprites (sonic3k.asm:37545 loc_1B7F2) sets at the START of each
+    // frame's level loop -- BEFORE Process_Sprites (sonic3k.asm:7893 -> 7894).
+    // Camera_X_pos_coarse_back therefore reflects {@code Camera_X_pos} at the
+    // start of frame N, which equals end-of-frame-N-1 (camera moves during
+    // DeformBgLayer at sonic3k.asm:7897, AFTER Process_Sprites). In the engine
+    // {@link com.openggf.LevelFrameStep} runs object execution (step 4) BEFORE
+    // the camera tracking step (step 5: {@code camera.updatePosition()}), so
+    // {@code services().camera().getX()} read at the start of this object's
+    // {@code update()} already corresponds to the same start-of-frame value
+    // ROM saw at its Load_Sprites. No additional caching is required: the
+    // engine's frame-step ordering already mirrors ROM's by-construction.
+    //
+    // (Round 13 attempted to mirror ROM by caching the previous frame's value,
+    // under the mistaken premise that Load_Sprites runs AFTER Process_Sprites.
+    // The disassembly (sonic3k.asm:7893 jsr Load_Sprites; 7894 jsr
+    // Process_Sprites; 7897 jsr DeformBgLayer) shows the order is in fact
+    // Load_Sprites -> Process_Sprites -> DeformBgLayer, so the round-13 cache
+    // pulled cam_X from too far in the past and let the platform's destruction
+    // lag ROM by one frame, which in turn delayed the AIZ trace F6255 sidekick
+    // freed-slot despawn by one frame.)
 
     public Sonic3kCollapsingPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "CollapsingPlatform");
@@ -192,6 +250,19 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
     }
 
     @Override
+    public boolean rejectsZeroDistanceTopSolidLanding() {
+        return true;
+    }
+
+    @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // S3K SolidObjCheckSloped2 only rejects negative object_control values.
+        // AIZ's sequence can hold a positive object-control state while this
+        // platform still supports the player.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Solid during normal, collapsing, AND solid-stay states.
@@ -199,11 +270,67 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         return state < 3;
     }
 
+    /**
+     * One-frame suppression of the slope sample / y_pos write for the
+     * state-1 -> state-2 transition frame. ROM
+     * {@code ObjPlatformCollapse_CreateFragments} (sonic3k.asm:45394-45442)
+     * does not fall through to {@code sub_205B6}, so the slope sample is
+     * skipped while the player remains attached. Player y_pos therefore
+     * holds the previous frame's value -- which is the trace observation at
+     * AIZ F6920 ({@code y=0x0342} continuing F6919's value, while the
+     * post-physics x_pos {@code 0x0E8B} would have sampled
+     * {@code AIZ_SLOPE_DATA[0x2B]=0x14} and produced {@code 0x0341}).
+     */
+    @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        return transitionFrameSlopeSkip;
+    }
+
+    @Override
+    public boolean sampleSlopeOnRideExit(PlayableEntity player) {
+        // ROM loc_205DE runs sub_205B6 (SolidObjectTopSloped2) before
+        // sub_205FC clears Status_OnObj and sets Status_InAir on the rider
+        // (sonic3k.asm:44850-44864). The engine's split object/solid phases
+        // can reach the ride-exit branch after state has advanced to 3, so the
+        // final sloped y_pos write is still required before clearing support.
+        return state == 3;
+    }
+
+    /**
+     * Opt out of {@code ObjectManager.unloadCounterBasedOutOfRange()} so this
+     * platform's lifecycle is governed exclusively by ROM's
+     * {@code Sprite_OnScreen_Test} analog inside {@link #update}. The two
+     * checks share the same 0x280 threshold but differ by one frame:
+     * {@code unloadCounterBasedOutOfRange} compares against the CURRENT
+     * frame's camera_x, while ROM's S3K {@code Sprite_OnScreen_Test} reads
+     * {@code Camera_X_pos_coarse_back} which {@code Load_Sprites} updates
+     * AFTER {@code Process_Sprites} (sonic3k.asm:37545 loc_1B7F2). Letting
+     * the engine destroy the platform with the eager current-frame value
+     * collapses it one frame too early relative to ROM, which was the
+     * blocker preventing the F6255 freed-slot despawn analog from firing.
+     */
+    @Override
+    public boolean isPersistent() {
+        return true;
+    }
+
     // ===== SolidObjectListener =====
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (releasePending && player != null && contact.standing()) {
+            // ROM loc_205DE resolves SolidObjectTopSloped2 before sub_205FC
+            // releases the player. The engine's separate solid pass is the
+            // matching point to clear ride state after the no-movement frame.
+            state = 3;
+            releasePending = false;
+            releaseSolidPassExposed = false;
+            player.setAir(true);
+            player.setOnObject(false);
+            services().objectManager().clearRidingObject(player);
+            return;
+        }
         if (contact.standing() && state == 0) {
             // Player stepped on: set trigger flag (ROM: $3A)
             triggered = true;
@@ -215,35 +342,76 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        // Clear last frame's transition-frame slope suppression and promote
+        // any pending suppression to active. See pendingTransitionSkip docs:
+        // the post-update solid pass runs after this update() returns, so
+        // active flag set here applies to that pass; on the next frame's
+        // update we'll clear it. Pending becomes active across exactly one
+        // frame, mirroring ROM's transition frame skipping sub_205B6.
+        transitionFrameSlopeSkip = pendingTransitionSkip;
+        pendingTransitionSkip = false;
         switch (state) {
             case 0 -> {
-                // Normal: just check if triggered via onSolidContact
+                // Normal: just check if triggered via onSolidContact.
                 if (triggered) {
                     state = 1;
                 }
+                // ROM loc_20594 falls through to sub_205B6 -> Sprite_OnScreen_Test
+                // every frame in pre-collapse and standing-trigger states. Mirror
+                // that off-screen delete here so the platform vanishes at the
+                // ROM-correct frame when the camera scrolls past it (sonic3k.asm:
+                // 44814 loc_20594, 44830 sub_205B6, 37262 Sprite_OnScreen_Test).
+                if (!spriteOnScreenTestPasses()) {
+                    setDestroyedByOffscreen();
+                }
             }
             case 1 -> {
-                // Collapsing: countdown timer
+                // Collapsing: countdown timer.
                 if (collapseTimer <= 0) {
                     performCollapse();
                 } else {
                     collapseTimer--;
                 }
+                // Same per-frame off-screen delete as state 0 -- ROM does not
+                // skip Sprite_OnScreen_Test while $38 counts down (sonic3k.asm:
+                // 44830 sub_205B6 -> 37262 Sprite_OnScreen_Test).
+                if (state != 2 && !spriteOnScreenTestPasses()) {
+                    setDestroyedByOffscreen();
+                }
             }
             case 2 -> {
                 // Solid-stay: parent is invisible but still solid (ROM: loc_205DE).
                 // Player continues standing on the invisible platform while fragments
-                // fall away beneath them. Timer counts down from collapseDelays[0].
+                // fall away beneath them. ROM calls sub_205B6 before decrementing
+                // $38, so the normal solid pass must still see this object as solid.
+                if (releasePending) {
+                    if (releaseSolidPassExposed) {
+                        // ROM loc_205DE (sonic3k.asm:44850-44854) performs
+                        // sub_205B6 before rewriting the action pointer and
+                        // clearing any rider in sub_205FC. Expose one engine
+                        // post-update solid pass first; if no contact consumed
+                        // it, promote here on the next update so abandoned
+                        // platforms cannot remain invisible solids forever.
+                        state = 3;
+                        releasePending = false;
+                        releaseSolidPassExposed = false;
+                    } else {
+                        releaseSolidPassExposed = true;
+                    }
+                    break;
+                }
                 solidStayTimer--;
                 if (solidStayTimer <= 0) {
-                    // Timer expired: release the player and start falling.
-                    // ROM: sub_205FC clears Status_OnObj, Status_Push, sets Status_InAir.
-                    state = 3;
-                    if (player != null) {
-                        player.setAir(true);
-                        player.setOnObject(false);
-                    }
+                    releasePending = true;
+                    releaseSolidPassExposed = false;
+                }
+                // ROM loc_205DE entry-point begins with `bsr.w sub_205B6` which
+                // re-runs the SolidObjectTopSloped2 + Sprite_OnScreen_Test pair
+                // each frame (sonic3k.asm:44851). Off-screen delete remains
+                // active during solid-stay countdown so the platform exits
+                // cleanly when the camera scrolls past during fragment fall.
+                if (!spriteOnScreenTestPasses()) {
+                    setDestroyedByOffscreen();
                 }
             }
             case 3 -> {
@@ -255,10 +423,59 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
                 yFrac = y32 & 0xFFFF;
 
                 if (!isOnScreen(128)) {
-                    setDestroyed(true);
+                    // ROM ObjPlatformCollapse_CreateFragments clears the respawn
+                    // table bit before the falling parent reaches loc_20620
+                    // (sonic3k.asm:45435-45438). Route the final parent delete
+                    // through the respawnable/off-screen path so S3K's permanent
+                    // destroy latch does not suppress a later layout respawn.
+                    setDestroyedByOffscreen();
                 }
             }
         }
+    }
+
+    /**
+     * ROM Sprite_OnScreen_Test (sonic3k.asm:37262):
+     * <pre>
+     *   move.w  x_pos(a0),d0
+     *   andi.w  #$FF80,d0
+     *   sub.w   (Camera_X_pos_coarse_back).w,d0
+     *   cmpi.w  #$280,d0
+     *   bhi.w   loc_1B5A0    ; off-screen -> Delete_Current_Sprite
+     * </pre>
+     * {@code Camera_X_pos_coarse_back} = {@code (Camera_X_pos - $80) & $FF80},
+     * recomputed by {@code Load_Sprites} (sonic3k.asm:37472-37478) at the
+     * START of the level loop -- BEFORE {@code Process_Sprites} runs the
+     * platform's solid pass (sonic3k.asm:7893 jsr Load_Sprites; 7894 jsr
+     * Process_Sprites; 7897 jsr DeformBgLayer). So during ROM
+     * {@code Process_Sprites} of frame N, {@code Camera_X_pos_coarse_back}
+     * reflects {@code Camera_X_pos} at the start of frame N (i.e. the same
+     * cam_X the camera held at the end of frame N-1, since
+     * {@code DeformBgLayer} -- the per-frame camera-tracker -- runs only
+     * AFTER {@code Process_Sprites}).
+     *
+     * <p>The engine's {@link com.openggf.LevelFrameStep} mirrors that order
+     * exactly: object execution (where this method runs) is step 4, while
+     * {@code camera.updatePosition()} is step 5. So
+     * {@code services().camera().getX()} read inside this method is already
+     * the start-of-frame cam_X, equal to the end-of-frame-N-1 cam_X, equal to
+     * ROM's {@code Camera_X_pos_coarse_back} input.
+     *
+     * <p>The arithmetic is unsigned 16-bit: a platform that has scrolled
+     * BEHIND the camera underflows the subtraction into the high $FFxx range,
+     * which exceeds $280 and triggers the {@code bhi} delete branch.
+     *
+     * @return true if the platform passes the test (stays alive); false if
+     *         the camera has scrolled far enough that ROM would
+     *         {@code Delete_Current_Sprite} this slot
+     */
+    private boolean spriteOnScreenTestPasses() {
+        int currentCameraX = services().camera().getX() & 0xFFFF;
+        int cameraXPosCoarseBack = (currentCameraX - 0x80) & 0xFF80;
+        int objectXCoarse = x & 0xFF80;
+        // ROM uses 16-bit unsigned wrap; emulate with a 16-bit AND.
+        int diff = (objectXCoarse - cameraXPosCoarseBack) & 0xFFFF;
+        return diff <= 0x280;
     }
 
     /**
@@ -275,7 +492,22 @@ public class Sonic3kCollapsingPlatformObjectInstance extends AbstractObjectInsta
         // ROM: ObjPlatformCollapse_SmashObject writes collapseDelays[0] into the parent's $38,
         // and loc_205DE counts it down while still calling SolidObjectTopSloped2.
         state = 2;
-        solidStayTimer = config.collapseDelays[0];
+        releasePending = false;
+        releaseSolidPassExposed = false;
+        // ROM ObjPlatformCollapse_CreateFragments (sonic3k.asm:45394) does NOT
+        // fall through to sub_205B6 -- it jmps to Play_SFX. So the slope
+        // sample / y_pos write is skipped on the ROM transition frame.
+        //
+        // The engine performs this state transition one frame earlier than ROM
+        // (onSolidContact sets state=1 on the first standing frame, while ROM
+        // sets $3A=1 on the second standing frame; sonic3k.asm:44820,44825).
+        // We therefore defer the suppression to the NEXT frame's solid pass,
+        // which corresponds to ROM's actual transition frame.
+        pendingTransitionSkip = true;
+        // ROM loc_205DE resolves SolidObjectTopSloped2 before decrementing $38.
+        // ObjectManager runs object updates before the separate solid pass, so keep
+        // one extra stored tick to expose the same number of solid frames.
+        solidStayTimer = config.collapseDelays[0] + 1;
 
         // Play collapse SFX
         if (isOnScreen()) {

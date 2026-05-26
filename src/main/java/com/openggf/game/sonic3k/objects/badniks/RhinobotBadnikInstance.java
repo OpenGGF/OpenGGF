@@ -28,8 +28,8 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance {
     private static final int FLOOR_MIN_DIST = -1;
     private static final int FLOOR_MAX_DIST = 0x0C;
 
-    private static final int DETECT_X = 0x20;             // sub_870A4 d3 compare
-    private static final int DETECT_Y = 0x60;             // sub_870A4 d2 compare
+    private static final int DETECT_X = 0x60;             // sub_870A4 d2 horizontal compare
+    private static final int DETECT_Y = 0x20;             // sub_870A4 d3 vertical compare
 
     private static final int FRAME_SLOW = 0;
     private static final int FRAME_RUN = 1;
@@ -74,9 +74,12 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (destroyed) {
+        if (isDestroyed()) {
+            return;
+        }
+        if (!isOnScreenX()) {
             return;
         }
 
@@ -148,6 +151,7 @@ public final class RhinobotBadnikInstance extends AbstractS3kBadnikInstance {
         if (player == null) {
             return false;
         }
+        // Find_SonicTails leaves horizontal distance in d2 and vertical distance in d3.
         int dx = player.getCentreX() - currentX;
         int dy = Math.abs(player.getCentreY() - currentY);
         if (Math.abs(dx) > DETECT_X || dy > DETECT_Y) {

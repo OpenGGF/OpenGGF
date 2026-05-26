@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -119,6 +120,8 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     private int y;
     private final int baseX;  // objoff_30: saved X position
     private final int baseY;  // objoff_34: saved Y position
+    private final int outOfRangeReferenceX; // objoff_44: saved deletion anchor
+    private final int outOfRangeLimit;      // objoff_42: deletion range
     // Stationary bob state (type 0) — sine-based vertical nudge when player stands
     private final PlatformBobHelper bobHelper = new PlatformBobHelper();
 
@@ -162,6 +165,11 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
         this.baseY = spawn.y();
         this.x = baseX;
         this.y = baseY;
+        // ROM Obj_FloatingPlatform saves x_pos to $44 and checks that anchor
+        // at loc_25628, not the moving platform's live x_pos. Types 12+ widen
+        // the delete range and bias $44 by +$100 (sonic3k.asm:50810-50835).
+        this.outOfRangeReferenceX = moveType >= 12 ? baseX + 0x100 : baseX;
+        this.outOfRangeLimit = moveType >= 12 ? 0x380 : 0x280;
 
         // Initialize SubpixelMotion state for Rising platform (type 7)
         this.risingState = new SubpixelMotion.State(baseX, baseY, 0, 0, 0, 0);
@@ -200,6 +208,11 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
@@ -224,6 +237,25 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
     public int getY() {
         return y;
     }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return outOfRangeReferenceX;
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return outOfRangeLimit != 0x280;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        int objRounded = outOfRangeReferenceX & 0xFF80;
+        int cameraBack = (cameraX - 0x80) & 0xFF80;
+        int distance = (objRounded - cameraBack) & 0xFFFF;
+        return distance > outOfRangeLimit;
+    }
+
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);
@@ -355,13 +387,17 @@ public class FloatingPlatformObjectInstance extends AbstractObjectInstance
         if (!rising) {
             if (isPlayerRiding()) {
                 rising = true;
+                // ROM Platform_Rising sets $3C/y_radius and returns; MoveSprite2
+                // starts on the next object update (sonic3k.asm locret_25200).
+                return;
             } else {
                 return;
             }
         }
 
-        // MoveSprite2 via SubpixelMotion (ROM: ext.l d0; asl.l #8,d0; add.l d0,d3)
-        SubpixelMotion.moveSprite2(risingState);
+        // ROM MoveSprite2 updates the 32-bit object position with velocity << 8
+        // (sonic3k.asm:36053-36062), preserving the full 16-bit fractional word.
+        SubpixelMotion.speedToPos(risingState);
         y = risingState.y;
 
         // Accelerate upward only when below target (sonic3k.asm:50477-50483)

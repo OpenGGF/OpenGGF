@@ -1,6 +1,13 @@
-# Known Discrepancies from Original ROM
+# Known Discrepancies from Original ROMs
 
-This document tracks intentional deviations from the original Sonic 2 ROM implementation. These are cases where we've chosen a different approach for cleaner architecture, better maintainability, or other engineering reasons, while preserving identical runtime behavior.
+This document tracks **intentional deviations** from the original Sonic 1 / 2 / 3&K ROMs that apply engine-wide (cross-game) or to Sonic 1 / Sonic 2 specifically. Entries here are architectural choices we've made (cleaner code, added features, deliberate corrections of known ROM bugs) that we accept and do not plan to revert. Runtime gameplay behavior is preserved unless a rationale explicitly justifies a visible change (e.g., the multi-sidekick entry adds gameplay that the ROM never supported).
+
+**What does NOT belong here:**
+- Bugs, incomplete implementations, and parity gaps that we *intend to fix* → [KNOWN_BUGS.md](KNOWN_BUGS.md)
+- Sonic 3 & Knuckles-specific intentional discrepancies → [S3K_KNOWN_DISCREPANCIES.md](S3K_KNOWN_DISCREPANCIES.md)
+- Sonic 3 & Knuckles-specific bugs → [S3K_KNOWN_BUGS.md](S3K_KNOWN_BUGS.md)
+
+Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
 ## Table of Contents
 
@@ -10,8 +17,11 @@ This document tracks intentional deviations from the original Sonic 2 ROM implem
 4. [HTZ Cloud Scroll Precision Fix](#htz-cloud-scroll-precision-fix)
 5. [MCZ Rotating Platforms Child Cleanup](#mcz-rotating-platforms-child-cleanup)
 6. [Multi-Sidekick Daisy Chain](#multi-sidekick-daisy-chain)
-7. [Bonus Stage Game Mode](#bonus-stage-game-mode)
-8. [HCZ Conveyor Belt Rolling State Clear](#hcz-conveyor-belt-rolling-state-clear)
+7. [Sonic 1 Monitor Sidekick Guard](#sonic-1-monitor-sidekick-guard)
+8. [Bonus Stage Game Mode](#bonus-stage-game-mode)
+9. [HCZ Conveyor Belt Rolling State Clear](#hcz-conveyor-belt-rolling-state-clear)
+10. [S2 Logical-Input Latch Disabled During Control Lock](#s2-logical-input-latch-disabled-during-control-lock)
+11. [S2 CPZ Visual Water Surface Oscillation](#s2-cpz-visual-water-surface-oscillation)
 
 ---
 
@@ -141,9 +151,26 @@ We use **extended pattern ID ranges** with fixed bases that don't overlap:
 | `0x20000` | Objects | Monitors, springs, badniks, zone-specific objects |
 | `0x28000` | HUD | Score, time, rings display (fixed base) |
 | `0x30000` | Water surface | Underwater palette transition patterns |
+| `0x34000` | S3K Dust | Spindash/skid dust art (`Sonic3kDustArt.DUST_PATTERN_BASE`) |
 | `0x38000+` | Sidekick DPLC banks | Extra banks for duplicate-character sidekicks (global running offset) |
 | `0x39000+` | Sidekick tail appendages | Extra banks for duplicate Tails tail sprites (Obj05) |
-| `0x40000` | Title Card | Zone/act title card patterns |
+| `0x40000` | Title Card / S1 SS Results / S3K AIZ Intro | Shared base; mutually-exclusive game contexts (see below) |
+| `0x50000` | Level Select / S1 Title Card / S3K Title Card / S3K Data Select | Shared base; mutually-exclusive game contexts (see below) |
+
+**Shared-base contexts** (`0x40000`):
+- S2 Title Card (`TitleCardManager.PATTERN_BASE`) — gameplay scope, not active during cutscenes
+- S2 Special Stage Results (`SpecialStageResultsScreenObjectInstance.PATTERN_BASE`)
+- S1 Special Stage Results Screen (`Sonic1SpecialStageResultsScreen.PATTERN_BASE`)
+- S3K AIZ Intro Art Loader (`AizIntroArtLoader.INTRO_PATTERN_BASE`) — only active during AIZ1 intro
+- S2 Title Screen (`TitleScreenDataLoader`) — only active before any gameplay
+
+**Shared-base contexts** (`0x50000`):
+- S1 Title Card (`Sonic1TitleCardManager.PATTERN_BASE`)
+- S3K Title Card (`Sonic3kTitleCardManager.PATTERN_BASE`)
+- S1/S2/S3K Level Select (`Sonic1LevelSelectConstants`, `LevelSelectConstants`, `Sonic3kLevelSelectConstants`)
+- S3K Data Select (`S3kDataSelectRenderer.DATA_SELECT_PATTERN_BASE`)
+
+These bases are reused across game-context-mutually-exclusive subsystems (e.g., title card vs. level select vs. data select are never active in the same frame). `PatternAtlas.registerRange(...)` provides a diagnostic collision detector but is not yet enforced at every call site — adding bootstrap-time `registerRange` calls in each owning subsystem is a follow-up.
 
 ```java
 // LevelManager.java
@@ -327,6 +354,31 @@ Empty string disables sidekicks (default). Single value preserves ROM-accurate s
 
 ---
 
+## Sonic 1 Monitor Sidekick Guard
+
+**Location:** `Sonic1MonitorObjectInstance.java`
+**ROM Reference:** `docs/s1disasm/_incObj/26 Monitor.asm`
+
+### Original Implementation
+
+Sonic 1 has no CPU sidekick actor. `Touch_Monitor` only ever runs with the single main player object in `a1`, so the ROM does not need a sidekick-specific monitor-break guard.
+
+### Our Implementation
+
+When cross-game sidekicks are donated into Sonic 1, `Sonic1MonitorObjectInstance.onTouchResponse(...)` now returns early for `player.isCpuControlled()`. This matches the engine's shared monitor rule already used by the Sonic 2 and Sonic 3K monitor implementations.
+
+### Rationale
+
+1. **Cross-game donation introduces a new actor class** - Sonic 1 content can now run with AI sidekicks that the ROM never had to consider.
+2. **Protects intended ownership rules** - Sidekicks should not be able to break monitors or claim their rewards in donated-content scenarios.
+3. **Keeps behavior aligned across games** - Sonic 2 and S3K already block CPU sidekicks from monitor breaks, so the donated S1 path should not be the odd exception.
+
+### Verification
+
+`TestSonic1MonitorObjectInstance.cpuSidekickCannotBreakSonic1Monitor` covers the donated-sidekick path. The local S1 disassembly also confirms that the static monitor icon mapping (`Map_Monitor` frame `2`) is real art, so no icon-suppression discrepancy entry is needed.
+
+---
+
 ## Bonus Stage Game Mode
 
 **Location:** `GameLoop.java`, `GameMode.java`
@@ -411,3 +463,176 @@ private void capturePlayer(AbstractPlayableSprite player, PlayerBeltState state,
 ### Verification
 
 With the fix, the player is vulnerable to enemy touch responses while on the conveyor belt, matching original hardware behavior. The release path still unconditionally sets `Status_Roll`, so belt exit behavior is unaffected.
+
+---
+
+## S2 Logical-Input Latch Disabled During Control Lock
+
+**Location:** `PhysicsFeatureSet.controlLockLatchesLogicalInput`, `AbstractPlayableSprite.setLogicalInputState`
+**ROM Reference:** S2 `Obj01_Control` at `s2.asm:35933-35935`; S3K `Sonic_Control` at `sonic3k.asm:21541-21545 loc_10760`.
+
+### What ROM Does
+
+Both S2 and S3K's player control routines short-circuit the `Ctrl_1 → Ctrl_1_logical` copy when `Ctrl_1_locked = 1`:
+
+```
+tst.b   (Ctrl_1_locked).w
+bne.s   loc_10760               ; skip move.w (Ctrl_1).w, (Ctrl_1_logical).w
+```
+
+The result is that `Ctrl_1_logical` retains its previous frame's value while the lock is active. Sonic_RecordPos then writes the latched (non-zero) value into `Stat_table`, and downstream consumers (e.g. Tails CPU follow-steering) see the latched value rather than the live raw pad.
+
+### What We Do
+
+The `PhysicsFeatureSet.controlLockLatchesLogicalInput` flag controls whether the engine mirrors this short-circuit. The flag is **`true` for SONIC_3K** (ROM-correct) but **`false` for SONIC_2 and SONIC_1**:
+
+```java
+// AbstractPlayableSprite.setLogicalInputState
+if (isControlLocked() && physicsFeatureSet != null
+        && physicsFeatureSet.controlLockLatchesLogicalInput()) {
+    return;  // S3K: latch the previous frame's logicalInputState
+}
+this.logicalInputState = input;  // S2/S1: continue writing through the lock
+```
+
+### Rationale
+
+S2's `Obj01_Control` ROM cite confirms the latch behaviour matches S3K, but S2's existing `setControlLocked(true)` call sites in the engine (`FlipperObjectInstance`, `CPZSpinTubeObjectInstance`, `Sonic2DeathEggRobotInstance`, `SignpostObjectInstance`) were calibrated against the engine's prior **non-latching** behaviour:
+
+1. **Animation gating depends on post-lock zero state.** The S2 lock-using objects rely on `logicalInputState = 0` while the lock is active to drive their lock-period animations correctly. Enabling the latch reverses that — `logicalInputState` would retain pre-lock controller state — and breaks the animations.
+
+2. **S2 EHZ trace replay regression.** A universal latch (commit `f3347ea89`, reverted in `9793e4617`) regressed `TestS2Ehz1TraceReplay` from PASS to F5121 with 113 errors (`tails_x_speed -0x576` vs ROM `-0x4EA`).
+
+3. **No active S3K trace dependency yet.** The S3K AIZ F7381 blocker that motivated adding the latch turned out **not** to be a `Ctrl_1_locked` issue (verified against the v6.12-s3k recorder's `control_lock_state` events — `Ctrl_1_locked = 0` for the entire AIZ F7361-F7385 window). The S3K-side latch remains as foundation for future option-A work, but S2 has no current need for it.
+
+4. **Re-enabling requires audit.** Flipping `controlLockLatchesLogicalInput = true` for S2 (and S1) needs a full audit of every `setControlLocked(true)` call site in those games to confirm the post-lock animation paths still work with latched input, plus re-recording the S2/S1 trace fixtures against ROM.
+
+### Verification
+
+`TestS2Ehz1TraceReplay`, `TestS1Ghz1TraceReplay`, and `TestS1Mz1TraceReplay` remain green with the gated latch (commit `64a65de0e`). `TestLogicalInputControlLockLatch` covers all four cases: S3K-flag-true sprites latch and clear on unlock; S1/S2 flag-false sprites continue writing through the lock.
+
+### Removal Condition
+
+Remove this entry once the S2/S1 trace fixtures have been re-recorded against ROM-correct `Ctrl_1_logical` semantics, every existing `setControlLocked(true)` S2 call site has been audited to confirm post-lock animation correctness with the latch enabled, and the `controlLockLatchesLogicalInput` flag is flipped to `true` for `SONIC_2` and `SONIC_1`.
+
+---
+
+## S2 CPZ Visual Water Surface Oscillation
+
+**Location:** `Sonic2WaterDataProvider.getVisualWaterLevelOffset` (CPZ branch), `WaterSystem.getOscillatedWaterLevel`
+**ROM Reference:** `docs/s2disasm/s2.asm:5273-5282` (`MoveWater`)
+
+### Original Implementation
+
+For non-ARZ S2 water zones (CPZ Act 2, plus the unused HPZ), `MoveWater` reads the first word of `Oscillating_Data`, shifts it right by 1, and adds the result to `Water_Level_2` to produce the visible water surface position:
+
+```asm
+MoveWater:
+    clr.b   (Water_fullscreen_flag).w
+    moveq   #0,d0
+    cmpi.b  #aquatic_ruin_zone,(Current_Zone).w
+    beq.s   +
+    move.b  (Oscillating_Data).w,d0
+    lsr.w   #1,d0
++
+    add.w   (Water_Level_2).w,d0
+    move.w  d0,(Water_Level_1).w
+```
+
+`Oscillating_Data` is the value-word of oscillator 0 (initial value `$0080`, limit `$10`), so the high byte read by `move.b` ranges 0..16 and the resulting `lsr.w #1` offset is 0..8 — a one-sided positive bob added on top of `Water_Level_2`.
+
+### Engine Implementation
+
+`Sonic2WaterDataProvider.getVisualWaterLevelOffset(ZONE_CPZ, 1)` returns `OscillationManager.getByte(0) - 8`, producing a signed offset in the range `-8..+7` centred around zero. `WaterSystem.getOscillatedWaterLevel` then adds this to the base water level. The shift-by-1 from the ROM is replaced by a subtract-by-8 recentring.
+
+### Rationale
+
+The engine uses this offset purely as a *visual* bob applied on top of the gameplay water level (`baseLevel`) returned by the water system. Centring around zero (`oscillation - 8` in place of the ROM's `oscillation >> 1`) keeps the absolute water gameplay surface anchored at the value owned by `WaterSystem` / the dynamic water handler, while the visible surface oscillates symmetrically `±8` pixels rather than only ever sitting 0..8 pixels *below* its nominal level. The original 0..+8 one-sided bob would otherwise need every base water level returned from `WaterDataProvider.getStartingWaterLevel` (and every dynamic target written by event managers) to be biased down by 4 pixels to hit the same visible mean — an invasive change for a purely cosmetic axis.
+
+The `-8` recentring has been the engine's behaviour since `WaterSystem` was first authored; the `dfbc610c9` test commit / `7cad4c068` provider refactor only moved the existing logic out of `WaterSystem` and onto the per-game `WaterDataProvider`. No commit on this branch introduced the divergence.
+
+### Verification
+
+`TestSonic2WaterDataProvider.testCpz2VisualOffsetAtResetIsMinusEight` pins the post-`OscillationManager.reset()` value at literal `-8`, and `testCpz2VisualOffsetTracksOscillatorAfterStepping` asserts the formula `getByte(0) - 8` after stepping the oscillator (with an explicit `byte0 != 0` precondition so the test would fail if the oscillator never advanced). Trace replay fixtures are unaffected because the comparator covers camera/player position only, not water-level pixel offsets.
+
+### Removal Condition
+
+Remove this entry if the engine is ever re-aligned to the ROM's `lsr.w #1` formula. That would require either biasing every base water level returned from `WaterDataProvider.getStartingWaterLevel` (and every `DynamicWaterHandler` target write) down by 4 pixels, or changing the visual contract so callers expect a one-sided 0..+8 bob layered on top of a slightly higher mean.
+
+---
+
+## Sonic 1 credits demo trace replay divergences (post-frame-0-hydration removal)
+
+**Source:** Removed in commit following `6ea9554`. Prior commit `6ea9554` removed `TraceEvent.StateSnapshot` hydration from `AbstractCreditsDemoTraceReplayTest` so the replay tests now exercise the engine without per-frame trace correction. The follow-up commit additionally removed the trace-derived per-demo `STARTING_ANIMATION_ID` / `setDirection(RIGHT)` overrides from `Sonic1CreditsDemoBootstrap.applyStartingPose` (now deleted) and let the engine's natural `Sonic_Animate` pass and post-spawn defaults drive the frame-zero pose. Removing those overrides did not change which credits demos pass or fail.
+
+### Status
+
+All 8 S1 credits-demo trace replay tests pass in the 2026-05-19 targeted S1
+regression sweep. The historical failures below were exposed after removing
+trace-state hydration and trace-derived pose overrides; they were pre-existing
+engine bugs that the prior hydration was masking, not regressions caused by
+removing the trace-derived overrides. See `docs/TRACE_FRONTIER_LOG.md` for the
+latest frontier snapshot.
+
+| Test | First divergence frame | First divergence | Total errors |
+|------|------------------------|------------------|--------------|
+| `TestS1Credits01Mz2TraceReplay` | resolved 2026-05-19 | MZ push-block lava-geyser slot/launch phase | 0 in targeted replay |
+| `TestS1Credits02Syz3TraceReplay` | resolved before 2026-05-19 sweep | full targeted replay passes | 0 in targeted sweep |
+| `TestS1Credits03Lz3TraceReplay` | resolved 2026-05-18 | REV01 LZ wind-tunnel d0-clobber/vblank-phase emulation | 0 in targeted replay |
+| `TestS1Credits04Slz3TraceReplay` | resolved before 2026-05-19 sweep | full targeted replay passes | 0 in targeted sweep |
+| `TestS1Credits05Sbz1TraceReplay` | resolved before 2026-05-19 sweep | full targeted replay passes | 0 in targeted sweep |
+
+### Rationale for not patching from traces
+
+Per CLAUDE.md "Trace Replay Tests" the comparison-only invariant forbids hydrating engine state from `TraceEvent.StateSnapshot` events; trace data is read-only diagnostic input. Any per-credit override to mask these failures would be a spec violation. The bugs need to be diagnosed and fixed in the engine (likely physics, ring/object collision, or zone-specific systems such as LZ water/SBZ junction objects) and the failing tests turned green by ROM-accurate code paths, not bootstrap papering.
+
+### Resolved MZ2 (`TestS1Credits01Mz2TraceReplay`) push-block/geyser root cause (2026-05-19)
+
+The MZ2 credits trace diverged when the pushed block reached the
+`PushB_LoadLava` positions and spawned a geyser maker from a later SST slot.
+`GMake_Wait` (`docs/s1disasm/_incObj/4C & 4D Lava Geyser Maker.asm`) first
+spends one live tick after `FindFreeObj`, then its bubble animation advances
+to `GMake_MakeLava`. At that point the maker sets the parent block airborne
+and writes `#-$580` to `obVelY`.
+
+The engine now mirrors both phases: parent-spawned geyser makers start with
+one live tick, and `Sonic1PushBlockObjectInstance.applyLavaGeyserLaunch`
+preserves the first airborne frame's launch phase so the initial `#-$580`
+displacement is visible before `loc_C056`'s `+$18` gravity affects the next
+velocity. This removes the frame-493 maker timing drift and the frame-499
+one-pixel vertical mismatch without reading trace state back into the engine.
+
+### Resolved LZ3 (`TestS1Credits03Lz3TraceReplay`) y-bump root cause (2026-05-18)
+
+The 2px Y drift starting at frame 221 is caused by a documented bug in the
+ORIGINAL Sonic 1 REV01 ROM. `LZWindTunnels` (`docs/s1disasm/_inc/LZWaterFeatures.asm`)
+overwrites the low byte of `d0` with `v_vbla_byte` (line 313) but later uses
+`d0` as if it still held the saved player X for the curve check (line 329).
+Disassembly comment at line 309: `d0 is overwritten but later used as if it
+wasn't!`. The `if FixBugs` branch wraps `move.w d1,d0` to restore the saved
+X.
+
+The bug fires the curve adjustment (`+2`/`-2` to `obY`) on frames where it
+would otherwise be skipped — most notably every 64 frames when the rushing
+water sound branch reloads `d0` with `sfx_Waterfall = 0x00D0`. The recorded
+trace, captured on REV01 hardware, contains those occasional `+2` bumps.
+
+`Sonic1LZWaterEvents` now emulates the REV01 non-FixBugs path by preserving
+the high byte of the player X check while replacing the low byte with
+`v_vblank_byte & 0x3F`, and by using the waterfall SFX id on sound-gate
+frames. `Sonic1CreditsDemoBootstrap` also seeds the LZ credits-demo vblank
+phase when applying the lamppost state, so the first ROM y-bump occurs at the
+same trace frame instead of drifting by the engine's default object-manager
+counter phase.
+
+The `Sonic1LZWaterEvents` X-push and Y-input nudges have been migrated from
+`setCentreX`/`setCentreY` (which zero sub-pixels) to
+`setCentreXPreserveSubpixel`/`setCentreYPreserveSubpixel` so that ROM-accurate
+word-only writes (`addq.w #4,obX`, `subq.w #1,obY`, `addq.w #1,obY`,
+`add.w d0,obY`) preserve `obSubpixelX`/`obSubpixelY`. This brings the trace's
+`sub_x` line into agreement (was a persistent `0x6400` desync) while the
+REV01 wind-tunnel bug emulation removes the remaining LZ3 y divergence.
+
+### Removal Condition
+
+Remove this entry once each listed test has been diagnosed (root-cause identified in the engine), fixed at the source, and is consistently green against the recorded ROM trace.

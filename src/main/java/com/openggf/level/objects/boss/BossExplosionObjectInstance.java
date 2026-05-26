@@ -2,7 +2,6 @@ package com.openggf.level.objects.boss;
 
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.game.PlayableEntity;
@@ -17,15 +16,13 @@ public class BossExplosionObjectInstance extends AbstractObjectInstance {
     private static final int FRAME_DELAY = 7;
     private static final int LAST_FRAME = 6;
 
-    private final ObjectRenderManager renderManager;
     private final int sfxId;
     private int mappingFrame;
     private int frameTimer;
     private boolean initialized;
 
-    public BossExplosionObjectInstance(int x, int y, ObjectRenderManager renderManager, int sfxId) {
+    public BossExplosionObjectInstance(int x, int y, int sfxId) {
         super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "Boss Explosion");
-        this.renderManager = renderManager;
         this.sfxId = sfxId;
         this.mappingFrame = 0;
         this.frameTimer = FRAME_DELAY;
@@ -53,6 +50,7 @@ public class BossExplosionObjectInstance extends AbstractObjectInstance {
         if (isDestroyed()) {
             return;
         }
+        var renderManager = services().renderManager();
         if (renderManager == null) {
             return;
         }

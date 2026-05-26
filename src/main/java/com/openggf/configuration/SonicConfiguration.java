@@ -96,6 +96,11 @@ public enum SonicConfiguration {
 	DEBUG_VIEW_ENABLED,
 
 	/**
+	 * Whether the level editor may be entered from normal gameplay.
+	 */
+	EDITOR_ENABLED,
+
+	/**
 	 * Whether to display debugging collision information on screen.
 	 */
 	DEBUG_COLLISION_VIEW_ENABLED,
@@ -229,6 +234,41 @@ public enum SonicConfiguration {
 	PLAYBACK_START_OFFSET_FRAME,
 
 	/**
+	 * Key held in visual Trace Test Mode to rewind deterministic engine state.
+	 */
+	TRACE_REWIND_KEY,
+
+	/**
+	 * Whether held-key rewind is enabled during ordinary live level play.
+	 */
+	LIVE_REWIND_ENABLED,
+
+	/**
+	 * Key held during ordinary live level play to rewind deterministic gameplay state.
+	 */
+	LIVE_REWIND_KEY,
+
+	/**
+	 * Whether live rewind continues with a short decelerating tape-coast after key release.
+	 */
+	LIVE_REWIND_TAPE_COAST_ENABLED,
+
+	/**
+	 * Per-tick live rewind speed increase when tape-coast policy is enabled.
+	 */
+	LIVE_REWIND_TAPE_COAST_ACCELERATION,
+
+	/**
+	 * Per-tick live rewind speed decrease after release when tape-coast policy is enabled.
+	 */
+	LIVE_REWIND_TAPE_COAST_DECELERATION,
+
+	/**
+	 * Maximum live rewind steps per tick when tape-coast policy is enabled.
+	 */
+	LIVE_REWIND_TAPE_COAST_MAX_STEPS,
+
+	/**
 	 * Key to teleport player to the last checkpoint (debug).
 	 */
 	DEBUG_LAST_CHECKPOINT_KEY,
@@ -253,6 +293,13 @@ public enum SonicConfiguration {
 	 * Set to "tails" or "sonic" to spawn a sidekick, or empty string to disable.
 	 */
 	SIDEKICK_CHARACTER_CODE,
+
+	/**
+	 * Semicolon-separated list of extra player combinations for the data select screen.
+	 * Each combo is a comma-separated list: main character first, then sidekicks.
+	 * Example: "sonic,knuckles;knuckles,tails"
+	 */
+	DATA_SELECT_EXTRA_PLAYER_COMBOS,
 
 	/**
 	 * Filename for the Sonic 1 ROM.
@@ -298,15 +345,49 @@ public enum SonicConfiguration {
 	MASTER_TITLE_SCREEN_ON_STARTUP,
 
 	/**
+	 * Whether to show the legal disclaimer screen on startup before the
+	 * master title screen. Default true. Test harnesses set this false.
+	 */
+	SHOW_LEGAL_DISCLAIMER_ON_STARTUP,
+
+	/**
 	 * Whether to enable cross-game feature donation (e.g., S2 sprites in S1).
 	 * When false (default), the base game runs unmodified.
 	 */
 	CROSS_GAME_FEATURES_ENABLED,
 
 	/**
+	 * Whether to force regeneration of the Sonic 1 data select image cache.
+	 */
+	CROSS_GAME_S1_DATA_SELECT_IMAGE_GEN_OVERRIDE,
+
+	/**
+	 * Whether to force regeneration of the Sonic 2 data select image cache.
+	 */
+	CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE,
+
+	/**
+	 * Debug key to log the current camera position as an S1 data select preview override.
+	 */
+	CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY,
+
+	/**
 	 * Which game to use as the donor for cross-game features: "s2" or "s3k".
 	 * Only used when CROSS_GAME_FEATURES_ENABLED is true.
 	 */
-	CROSS_GAME_SOURCE;
+	CROSS_GAME_SOURCE,
+
+	/**
+	 * When true, the master title screen becomes the Trace Test Mode
+	 * picker (lists all traces under TRACE_CATALOG_DIR, plays the chosen
+	 * one back inside the live engine). Dev-only. Default false.
+	 */
+	TEST_MODE_ENABLED,
+
+	/**
+	 * Directory scanned by TraceCatalog when TEST_MODE_ENABLED is true.
+	 * Resolved against user.dir. Default "src/test/resources/traces".
+	 */
+	TRACE_CATALOG_DIR;
 
 }

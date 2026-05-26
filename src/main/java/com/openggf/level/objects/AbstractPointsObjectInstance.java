@@ -56,7 +56,7 @@ public abstract class AbstractPointsObjectInstance extends AbstractObjectInstanc
     public void update(int frameCounter, PlayableEntity player) {
         // ROM: tst.w y_vel(a0) / bpl.w DeleteObject
         if (yVel >= 0) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
             return;
         }
         // ROM: bsr.w ObjectMove - apply velocity to position

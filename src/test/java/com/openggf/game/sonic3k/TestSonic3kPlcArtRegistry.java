@@ -1,12 +1,13 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
-import org.junit.Test;
+import com.openggf.level.resources.CompressionType;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestSonic3kPlcArtRegistry {
 
@@ -15,12 +16,11 @@ public class TestSonic3kPlcArtRegistry {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x00, 0);
 
         assertNotNull(plan);
-        assertTrue("Expected at least 7 shared level art entries",
-                plan.levelArt().size() >= 7);
+        assertTrue(plan.levelArt().size() >= 7, "Expected at least 7 shared level art entries");
 
         boolean hasSpikes = plan.levelArt().stream()
                 .anyMatch(e -> Sonic3kObjectArtKeys.SPIKES.equals(e.key()));
-        assertTrue("Expected spikes entry in level art", hasSpikes);
+        assertTrue(hasSpikes, "Expected spikes entry in level art");
     }
 
     @Test
@@ -62,7 +62,7 @@ public class TestSonic3kPlcArtRegistry {
     public void hcz1PlanHasBlastoidNotJawz() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x01, 0);
         assertNotNull(plan);
-        assertEquals(18, plan.standaloneArt().size());
+        assertEquals(20, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_LARGE_FAN)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_BLASTOID)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_TURBO_SPIKER)));
@@ -73,7 +73,7 @@ public class TestSonic3kPlcArtRegistry {
     public void hcz2PlanHasJawzNotBlastoid() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x01, 1);
         assertNotNull(plan);
-        assertEquals(18, plan.standaloneArt().size());
+        assertEquals(20, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_LARGE_FAN)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_JAWZ)));
         assertFalse(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_BLASTOID)));
@@ -83,9 +83,10 @@ public class TestSonic3kPlcArtRegistry {
     public void mgz1PlanHasMinibossAndDiagonalSpringOverride() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x02, 0);
         assertNotNull(plan);
-        assertEquals(9, plan.standaloneArt().size());
+        assertEquals(10, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_SPIKER)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_MINIBOSS)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_MINIBOSS_SPIRE)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_MINIBOSS_DEBRIS)));
         assertFalse(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_MANTIS)));
 
@@ -101,9 +102,27 @@ public class TestSonic3kPlcArtRegistry {
     public void mgz2PlanHasMantisNotMiniboss() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x02, 1);
         assertNotNull(plan);
-        assertEquals(8, plan.standaloneArt().size());
+        assertEquals(12, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_MANTIS)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_ENDBOSS)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_ENDBOSS_DEBRIS)));
         assertFalse(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_MINIBOSS)));
+    }
+
+    @Test
+    public void mgz2PlanLoadsEndBossScaledCueFromUncompressedArtScaledBlob() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x02, 1);
+
+        Sonic3kPlcArtRegistry.StandaloneArtEntry scaled = plan.standaloneArt().stream()
+                .filter(e -> "mgz_endboss_scaled".equals(e.key()))
+                .findFirst().orElse(null);
+
+        assertNotNull(scaled, "loc_6CFF4 uses ArtScaled_MGZEndBoss for the air-attack zoom cue");
+        assertEquals(0x36C572, scaled.artAddr());
+        assertEquals(CompressionType.UNCOMPRESSED, scaled.compression());
+        assertEquals(0x1000, scaled.artSize(), "ArtScaled_MGZEndBoss is 128 raw 4bpp tiles");
+        assertEquals(1, scaled.palette(), "ObjDat3_6D7B4 uses make_art_tile(ArtTile_MGZEndBossScaled,1,0)");
     }
 
     @Test
@@ -373,13 +392,12 @@ public class TestSonic3kPlcArtRegistry {
         for (int zone = 0x00; zone <= 0x0D; zone++) {
             for (int act = 0; act <= 1; act++) {
                 Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(zone, act);
-                assertNotNull("Zone 0x" + Integer.toHexString(zone) + " act " + act + " returned null", plan);
+                assertNotNull(plan, "Zone 0x" + Integer.toHexString(zone) + " act " + act + " returned null");
                 assertNotNull(plan.standaloneArt());
                 assertNotNull(plan.levelArt());
                 // All zones should have at least the 7 shared level-art entries
-                assertTrue("Zone 0x" + Integer.toHexString(zone) + " act " + act
-                                + " has fewer than 7 level art entries",
-                        plan.levelArt().size() >= 7);
+                assertTrue(plan.levelArt().size() >= 7, "Zone 0x" + Integer.toHexString(zone) + " act " + act
+                                + " has fewer than 7 level art entries");
             }
         }
     }
@@ -390,8 +408,7 @@ public class TestSonic3kPlcArtRegistry {
         int[] populatedZones = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C};
         for (int zone : populatedZones) {
             Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(zone, 0);
-            assertFalse("Zone 0x" + Integer.toHexString(zone) + " should have standalone entries",
-                    plan.standaloneArt().isEmpty());
+            assertFalse(plan.standaloneArt().isEmpty(), "Zone 0x" + Integer.toHexString(zone) + " should have standalone entries");
         }
     }
 
@@ -403,12 +420,12 @@ public class TestSonic3kPlcArtRegistry {
                 Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(zone, act);
                 Set<String> keys = new HashSet<>();
                 for (var e : plan.standaloneArt()) {
-                    assertTrue("Duplicate standalone key '" + e.key() + "' in zone 0x"
-                            + Integer.toHexString(zone) + " act " + act, keys.add(e.key()));
+                    assertTrue(keys.add(e.key()), "Duplicate standalone key '" + e.key() + "' in zone 0x"
+                            + Integer.toHexString(zone) + " act " + act);
                 }
                 for (var e : plan.levelArt()) {
-                    assertTrue("Duplicate level-art key '" + e.key() + "' in zone 0x"
-                            + Integer.toHexString(zone) + " act " + act, keys.add(e.key()));
+                    assertTrue(keys.add(e.key()), "Duplicate level-art key '" + e.key() + "' in zone 0x"
+                            + Integer.toHexString(zone) + " act " + act);
                 }
             }
         }
@@ -419,9 +436,7 @@ public class TestSonic3kPlcArtRegistry {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0xFF, 0);
 
         assertNotNull(plan);
-        assertTrue("Expected at least 7 shared level art entries",
-                plan.levelArt().size() >= 7);
-        assertEquals("Expected shared standalone art only for unknown zone",
-                5, plan.standaloneArt().size());
+        assertTrue(plan.levelArt().size() >= 7, "Expected at least 7 shared level art entries");
+        assertEquals(5, plan.standaloneArt().size(), "Expected shared standalone art only for unknown zone");
     }
 }

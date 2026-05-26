@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -147,7 +148,7 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance {
         capturedPlayer = player;
         releaseCompetingMagnetOrbs(player, frameCounter);
         setPlayerCenterY(player, currentY);
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
@@ -273,7 +274,6 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance {
     }
 
     private static final class EnergyTrapColumnChild extends AbstractObjectInstance {
-
         private final PachinkoEnergyTrapObjectInstance parent;
         private int currentX;
         private int currentY;
@@ -321,7 +321,6 @@ public class PachinkoEnergyTrapObjectInstance extends AbstractObjectInstance {
     private static final class EnergyTrapBeamChild extends AbstractObjectInstance {
 
         private static final int[] ANIMATION = {0, 1, 2, 3, 4, 3, 2, 1};
-
         private final PachinkoEnergyTrapObjectInstance parent;
         private int beamAngle;
         private int currentX;

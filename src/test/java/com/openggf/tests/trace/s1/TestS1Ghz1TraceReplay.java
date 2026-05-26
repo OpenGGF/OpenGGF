@@ -1,4 +1,5 @@
 package com.openggf.tests.trace.s1;
+import com.openggf.trace.*;
 
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -29,3 +30,5 @@ public class TestS1Ghz1TraceReplay extends AbstractTraceReplayTest {
         return Path.of("src/test/resources/traces/s1/ghz1_fullrun");
     }
 }
+
+

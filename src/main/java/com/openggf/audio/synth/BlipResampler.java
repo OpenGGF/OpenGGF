@@ -88,7 +88,7 @@ public class BlipResampler {
     private double ratio;  // inputRate / outputRate
 
     // Circular buffer for input samples (stereo)
-    private static final int BUFFER_SIZE = 1 << 14;
+    private static final int BUFFER_SIZE = 1 << 13;
     private static final int BUFFER_MASK = BUFFER_SIZE - 1;
     private final int[] historyL = new int[BUFFER_SIZE];
     private final int[] historyR = new int[BUFFER_SIZE];
@@ -120,6 +120,19 @@ public class BlipResampler {
     public void reset(double inputRate, double outputRate) {
         this.ratio = inputRate / outputRate;
         reset();
+    }
+
+    Snapshot captureSnapshot() {
+        return new Snapshot(ratio, historyL, historyR, head, inputIndex, outputPos);
+    }
+
+    void restoreSnapshot(Snapshot snapshot) {
+        ratio = snapshot.ratio();
+        System.arraycopy(snapshot.historyL(), 0, historyL, 0, historyL.length);
+        System.arraycopy(snapshot.historyR(), 0, historyR, 0, historyR.length);
+        head = snapshot.head();
+        inputIndex = snapshot.inputIndex();
+        outputPos = snapshot.outputPos();
     }
 
     /**
@@ -196,5 +209,24 @@ public class BlipResampler {
         }
         int pos = (head - (int) (inputIndex - idx)) & BUFFER_MASK;
         return history[pos];
+    }
+
+    public record Snapshot(
+            double ratio,
+            int[] historyL,
+            int[] historyR,
+            int head,
+            long inputIndex,
+            double outputPos) {
+        public Snapshot {
+            historyL = Arrays.copyOf(historyL, historyL.length);
+            historyR = Arrays.copyOf(historyR, historyR.length);
+        }
+
+        @Override
+        public int[] historyL() { return Arrays.copyOf(historyL, historyL.length); }
+
+        @Override
+        public int[] historyR() { return Arrays.copyOf(historyR, historyR.length); }
     }
 }

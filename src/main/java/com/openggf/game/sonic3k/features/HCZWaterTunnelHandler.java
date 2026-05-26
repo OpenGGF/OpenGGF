@@ -1,9 +1,14 @@
 package com.openggf.game.sonic3k.features;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+import java.util.List;
 
 /**
  * HCZ Water Tunnel physics — a global per-frame subroutine that pushes the
@@ -49,6 +54,11 @@ public final class HCZWaterTunnelHandler {
 
     private static boolean windTunnelFlagP1;
     private static boolean windTunnelFlagP2;
+
+    /** Influence flag of the tunnel entry each player is currently inside.
+     *  0 = horizontal flow (D-pad nudges Y), non-zero = vertical flow (D-pad nudges X). */
+    private static int activeTunnelInfluenceP1;
+    private static int activeTunnelInfluenceP2;
 
     private static int exitAnimTimerP1;
     private static int exitAnimTimerP2;
@@ -110,10 +120,14 @@ public final class HCZWaterTunnelHandler {
      * @param act current act index (0 = HCZ1, 1 = HCZ2)
      */
     public static void update(int act) {
+        update(playerQueryFromGameServices(), act);
+    }
+
+    static void update(ObjectPlayerQuery query, int act) {
         // ROM: tst.w (Debug_placement_mode).w / bne locret_705A
         // Checked per-player below.
 
-        AbstractPlayableSprite player = GameServices.camera().getFocusedSprite();
+        AbstractPlayableSprite player = asPlayableSprite(query.mainPlayerOrNull());
         if (player == null) {
             return;
         }
@@ -135,14 +149,15 @@ public final class HCZWaterTunnelHandler {
             }
         }
 
-        for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
-            if (!sidekick.isDebugMode()) {
-                windTunnelFlagP2 = processPlayer(sidekick, tunnels, windTunnelFlagP2, 1);
+        AbstractPlayableSprite p2 = nativeP2From(query);
+        if (p2 != null) {
+            if (!p2.isDebugMode()) {
+                windTunnelFlagP2 = processPlayer(p2, tunnels, windTunnelFlagP2, 1);
             }
             if (exitAnimTimerP2 > 0) {
-                if (!sidekick.getAir()) {
+                if (!p2.getAir()) {
                     exitAnimTimerP2 = 0;
-                    sidekick.setForcedAnimationId(-1);
+                    p2.setForcedAnimationId(-1);
                 }
             }
         }
@@ -154,20 +169,22 @@ public final class HCZWaterTunnelHandler {
     public static void reset() {
         windTunnelFlagP1 = false;
         windTunnelFlagP2 = false;
+        activeTunnelInfluenceP1 = 0;
+        activeTunnelInfluenceP2 = 0;
         exitAnimTimerP1 = 0;
         exitAnimTimerP2 = 0;
     }
 
     /**
      * Returns whether the given player is currently being moved by the
-     * wind tunnel system. When true, standard level collision should be
-     * suppressed — the tunnel handler controls position directly.
+     * wind tunnel system.
      *
      * @param playerIndex 0 for P1, 1 for P2/sidekick
      */
     public static boolean isPlayerInTunnel(int playerIndex) {
         return playerIndex == 0 ? windTunnelFlagP1 : windTunnelFlagP2;
     }
+
 
     /**
      * Returns whether HCZ should temporarily present as "dry" for palette/waterline
@@ -215,6 +232,22 @@ public final class HCZWaterTunnelHandler {
                 return false;
             }
 
+            // Set per-sprite collision flags for PlayableSpriteMovement.
+            // Horizontal tunnels (influence=0): enable collision with forced
+            // floor checks so pipe walls constrain the player vertically.
+            // Vertical tunnels (influence!=0): suppress collision because the
+            // engine's collision data causes false ceiling contacts inside
+            // vertical pipes that the ROM's tile solidity avoids.
+            boolean horizontal = entry[INFLUENCE_FLAG] == 0;
+            player.setSuppressAirCollision(!horizontal);
+            player.setForceFloorCheck(horizontal);
+
+            if (playerIndex == 0) {
+                activeTunnelInfluenceP1 = entry[INFLUENCE_FLAG];
+            } else {
+                activeTunnelInfluenceP2 = entry[INFLUENCE_FLAG];
+            }
+
             short xVel = (short) entry[X_VEL];
             short yVel = (short) entry[Y_VEL];
 
@@ -235,10 +268,6 @@ public final class HCZWaterTunnelHandler {
             player.setForcedAnimationId(Sonic3kAnimationIds.FLOAT2);
 
             // ROM: bset #1,status(a1) — sets InAir status bit.
-            // In the ROM this is separate from the physics mode byte, but
-            // our engine uses air as the mode selector. Ceiling collision in
-            // modeAirborne is suppressed via the isPlayerInTunnel() check in
-            // PlayableSpriteMovement.
             player.setAir(true);
 
             // ROM: move.b #0,double_jump_flag(a1)
@@ -278,6 +307,9 @@ public final class HCZWaterTunnelHandler {
                 && playerX >= 0x2F30 && playerX < 0x2F70
                 && playerY < 0x0680 && playerY >= 0x0440
                 && !player.isObjectControlled()) {
+            // Vertical continuation — suppress collision like vertical tunnels.
+            player.setSuppressAirCollision(true);
+            player.setForceFloorCheck(false);
             player.setXSpeed((short) 0);
             player.setYSpeed((short) -0x0400);
             player.setGSpeed((short) 0);
@@ -289,7 +321,10 @@ public final class HCZWaterTunnelHandler {
             return true;
         }
 
-        // No tunnel matched and no continuation applies.
+        // No tunnel matched and no continuation applies — clear collision flags.
+        player.setSuppressAirCollision(false);
+        player.setForceFloorCheck(false);
+
         // ROM: tst.b (a3) / beq locret_705A / move.b #$1A,anim(a1)
         if (wasInTunnel) {
             if (playerIndex == 0) {
@@ -302,5 +337,24 @@ public final class HCZWaterTunnelHandler {
         }
 
         return false;
+    }
+
+    private static ObjectPlayerQuery playerQueryFromGameServices() {
+        AbstractPlayableSprite mainPlayer = GameServices.camera().getFocusedSprite();
+        SpriteManager sprites = GameServices.spritesOrNull();
+        List<? extends PlayableEntity> sidekicks = sprites != null
+                ? List.copyOf(sprites.getSidekicks())
+                : List.of();
+        return new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> sidekicks);
+    }
+
+    private static AbstractPlayableSprite nativeP2From(ObjectPlayerQuery query) {
+        return asPlayableSprite(query.nativeP2OrNull());
+    }
+
+    private static AbstractPlayableSprite asPlayableSprite(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite ? sprite : null;
     }
 }

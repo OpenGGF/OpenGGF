@@ -1,5 +1,6 @@
 package com.openggf.game;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic1.Sonic1RomDetector;
 import com.openggf.game.sonic2.Sonic2RomDetector;
@@ -17,13 +18,12 @@ import java.util.logging.Logger;
  *
  * <p>Usage:
  * <pre>
- * RomDetectionService service = RomDetectionService.getInstance();
- * Optional&lt;GameModule&gt; module = service.detectAndCreateModule(rom);
- * if (module.isPresent()) {
- *     GameModuleRegistry.setCurrent(module.get());
- * }
+ * RomDetectionService service = EngineServices.current().romDetection();
+ * boolean detected = service.detectAndSetModule(rom);
+ * GameModule module = SessionManager.requireCurrentGameModule();
  * </pre>
  */
+@CompositionRoot
 public class RomDetectionService {
     private static final Logger LOGGER = Logger.getLogger(RomDetectionService.class.getName());
     private static RomDetectionService instance;
@@ -112,11 +112,16 @@ public class RomDetectionService {
     }
 
     /**
-     * Detects the game type from the ROM and automatically sets the current GameModule.
-     * This is a convenience method that combines detection with setting the registry.
+     * Detects the game type from the ROM and updates the bootstrap module default
+     * through the {@link GameModuleRegistry} compatibility facade.
+     *
+     * <p>This method does not own active gameplay module state. Once a
+     * {@code WorldSession} exists, {@link GameModuleRegistry#getCurrent()}
+     * resolves from session-owned state instead.
      *
      * @param rom the ROM to analyze
-     * @return true if a module was detected and set, false otherwise
+     * @return true if a module was detected, false if the bootstrap default was
+     * reset to Sonic 2 fallback
      */
     public boolean detectAndSetModule(Rom rom) {
         Optional<GameModule> module = detectAndCreateModule(rom);
@@ -124,6 +129,7 @@ public class RomDetectionService {
             GameModuleRegistry.setCurrent(module.get());
             return true;
         }
+        GameModuleRegistry.reset();
         return false;
     }
 

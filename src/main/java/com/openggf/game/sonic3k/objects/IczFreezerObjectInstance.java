@@ -1,0 +1,684 @@
+package com.openggf.game.sonic3k.objects;
+
+import com.openggf.game.DamageCause;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.GravityDebrisChild;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Object 0xB2 - ICZ Freezer.
+ *
+ * <p>ROM reference: {@code Obj_ICZFreezer} at sonic3k.asm:188153.
+ * The parent starts a frost jet when a player is within 0x40 pixels on X,
+ * toggles the jet every 0x40 frames, spawns visible frost puffs every other
+ * active frame, and creates a delayed capture cloud that freezes nearby players.
+ */
+public class IczFreezerObjectInstance extends AbstractObjectInstance implements TouchResponseProvider {
+
+    private static final String ART_KEY = Sonic3kObjectArtKeys.ICZ_PLATFORMS;
+    private static final int OBJECT_ID = Sonic3kObjectIds.ICZ_FREEZER;
+
+    // ObjDat_ICZFreezer: priority $280, width $10, height $0C, frame 6, collision $9A.
+    private static final int PRIORITY_BUCKET = 5;
+    private static final int HALF_WIDTH = 0x10;
+    private static final int HALF_HEIGHT = 0x0C;
+    private static final int MAPPING_FRAME = 6;
+    private static final int COLLISION_FLAGS = 0x9A;
+
+    // loc_8A656 / loc_8A67E.
+    private static final int ACTIVATE_X_RANGE = 0x40;
+    private static final int JET_PHASE_FRAMES = 0x40;
+    private static final int FROST_PUFF_INTERVAL = 1;
+    private static final int CAPTURE_CLOUD_OFFSET = 0x30;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
+
+    private final int x;
+    private final int y;
+    private final boolean hFlip;
+    private final boolean verticalFlip;
+
+    private boolean frostCycleActive;
+    private boolean freezeJetActive;
+    private int phaseTimer;
+    private int frostPuffTimer;
+    private int frostPuffsSpawned;
+    private int captureCloudsSpawned;
+    private CaptureCloud lastCaptureCloud;
+
+    public IczFreezerObjectInstance(ObjectSpawn spawn) {
+        super(spawn, "ICZFreezer");
+        this.x = spawn.x();
+        this.y = spawn.y();
+        this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+        this.verticalFlip = (spawn.renderFlags() & 0x02) != 0;
+    }
+
+    @Override
+    public void update(int frameCounter, PlayableEntity playerEntity) {
+        if (!frostCycleActive) {
+            if (nearestPlayerXDistance(playerEntity) < ACTIVATE_X_RANGE) {
+                startFrostCycle();
+            }
+            return;
+        }
+
+        if (nearestPlayerXDistance(playerEntity) >= ACTIVATE_X_RANGE) {
+            stopFrostCycle();
+            return;
+        }
+
+        updateJetPhase();
+        updateFrostPuffs();
+    }
+
+    private void startFrostCycle() {
+        frostCycleActive = true;
+        freezeJetActive = false;
+        phaseTimer = 0;
+        frostPuffTimer = 0;
+        playSfx(Sonic3kSfx.FROST_PUFF.id);
+    }
+
+    private void stopFrostCycle() {
+        frostCycleActive = false;
+        freezeJetActive = false;
+    }
+
+    private void updateJetPhase() {
+        phaseTimer--;
+        if (phaseTimer >= 0) {
+            return;
+        }
+
+        phaseTimer = JET_PHASE_FRAMES;
+        freezeJetActive = !freezeJetActive;
+        if (freezeJetActive) {
+            spawnCaptureCloud();
+        }
+    }
+
+    private void updateFrostPuffs() {
+        if (!freezeJetActive) {
+            return;
+        }
+
+        frostPuffTimer--;
+        if (frostPuffTimer >= 0) {
+            return;
+        }
+
+        frostPuffTimer = FROST_PUFF_INTERVAL;
+        spawnFrostPuff();
+    }
+
+    private void spawnCaptureCloud() {
+        int cloudY = y + (verticalFlip ? -CAPTURE_CLOUD_OFFSET : CAPTURE_CLOUD_OFFSET);
+        lastCaptureCloud = spawnChild(() -> new CaptureCloud(x, cloudY, hFlip, this));
+        captureCloudsSpawned++;
+    }
+
+    private void spawnFrostPuff() {
+        int puffY = y + (verticalFlip ? -0x0C : 0x0C);
+        spawnChild(() -> new FrostPuff(x, puffY, verticalFlip));
+        frostPuffsSpawned++;
+    }
+
+    private int nearestPlayerXDistance(PlayableEntity playerEntity) {
+        ObjectServices services = tryServices();
+        ObjectPlayerQuery serviceQuery = services != null ? services.playerQuery() : null;
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> playerEntity,
+                () -> serviceQuery != null ? serviceQuery.sidekicks() : List.of());
+        return query.nearestByRomX(PLAYER_PARTICIPATION, x).distance();
+    }
+
+    private void playSfx(int sfxId) {
+        ObjectServices services = tryServices();
+        if (services != null) {
+            services.playSfx(sfxId);
+        }
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        return COLLISION_FLAGS;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return 0;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(true);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return new TouchResponseProfile(
+                TouchCategoryDecodeMode.NORMAL,
+                false,
+                true,
+                multiRegionSource,
+                TouchShieldDeflectCapability.NONE,
+                0,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                multiRegionSource
+                        ? TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
+                        : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+    }
+
+    @Override
+    public TouchRegion[] getMultiTouchRegions() {
+        return new TouchRegion[] { new TouchRegion(x, y, COLLISION_FLAGS) };
+    }
+
+    @Override
+    public int getX() {
+        return x;
+    }
+
+    @Override
+    public int getY() {
+        return y;
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        return RenderPriority.clamp(PRIORITY_BUCKET);
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return HALF_WIDTH;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return HALF_HEIGHT;
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        PatternSpriteRenderer renderer = getRenderer(ART_KEY);
+        if (renderer != null) {
+            renderer.drawFrameIndex(MAPPING_FRAME, x, y, hFlip, verticalFlip, 1);
+        }
+    }
+
+    public boolean isFrostCycleActiveForTesting() {
+        return frostCycleActive;
+    }
+
+    public boolean isFreezeJetActiveForTesting() {
+        return freezeJetActive;
+    }
+
+    public int frostPuffsSpawnedForTesting() {
+        return frostPuffsSpawned;
+    }
+
+    public int captureCloudsSpawnedForTesting() {
+        return captureCloudsSpawned;
+    }
+
+    public CaptureCloud lastCaptureCloudForTesting() {
+        return lastCaptureCloud;
+    }
+
+    public CaptureCloud createCaptureCloudForTesting(int x, int y, boolean hFlip) {
+        return new CaptureCloud(x, y, hFlip, this);
+    }
+
+    public AbstractObjectInstance createFrostPuffForTesting(int x, int y, boolean verticalFlip) {
+        return new FrostPuff(x, y, verticalFlip);
+    }
+
+    public static final class CaptureCloud extends AbstractObjectInstance {
+        // loc_8A748 starts at $1F, then scans after the underflow.
+        private static final int CAPTURE_DELAY_FRAMES = 0x1F;
+        private static final int OFF_PHASE_DELETE_DELAY = 0x1F;
+        private static final int CAPTURE_MIN_X = -0x10;
+        private static final int CAPTURE_MAX_X = 0x20;
+        private static final int CAPTURE_MIN_Y = -0x28;
+        private static final int CAPTURE_MAX_Y = 0x50;
+
+        private final IczFreezerObjectInstance parent;
+        private final int x;
+        private final int y;
+        private final boolean hFlip;
+
+        private int captureDelay = CAPTURE_DELAY_FRAMES;
+        private int offPhaseDelay;
+        private boolean offPhase;
+        private FrozenPlayerBlock frozenBlock;
+
+        private CaptureCloud(int x, int y, boolean hFlip, IczFreezerObjectInstance parent) {
+            super(new ObjectSpawn(x, y, OBJECT_ID, 0, hFlip ? 1 : 0, false, y), "ICZFreezerCaptureCloud");
+            this.x = x;
+            this.y = y;
+            this.hFlip = hFlip;
+            this.parent = parent;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (isDestroyed() || frozenBlock != null) {
+                return;
+            }
+            if (parent == null || !parent.freezeJetActive) {
+                updateOffPhase(playerEntity);
+                return;
+            }
+            offPhase = false;
+            if (captureDelay-- >= 0) {
+                return;
+            }
+
+            scanForCapture(playerEntity);
+        }
+
+        private void updateOffPhase(PlayableEntity playerEntity) {
+            if (!offPhase) {
+                offPhase = true;
+                offPhaseDelay = OFF_PHASE_DELETE_DELAY;
+                return;
+            }
+            if (offPhaseDelay-- < 0) {
+                setDestroyed(true);
+                return;
+            }
+            scanForCapture(playerEntity);
+        }
+
+        private void scanForCapture(PlayableEntity playerEntity) {
+            AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
+            if (!canCapture(player)) {
+                return;
+            }
+
+            capture(player);
+        }
+
+        private boolean canCapture(AbstractPlayableSprite player) {
+            if (player == null || player.isObjectControlled() || player.getDead() || player.isDebugMode()) {
+                return false;
+            }
+            if (player.getInvulnerable() || player.getInvulnerableFrames() > 0 || player.getInvincibleFrames() > 0) {
+                return false;
+            }
+
+            int dx = player.getCentreX() - x;
+            int dy = player.getCentreY() - y;
+            return dx >= CAPTURE_MIN_X && dx < CAPTURE_MAX_X
+                    && dy >= CAPTURE_MIN_Y && dy < CAPTURE_MAX_Y;
+        }
+
+        private void capture(AbstractPlayableSprite player) {
+            ObjectControlState.nativeBit7FullControl().applyTo(player);
+            player.setAir(true);
+            player.setXSpeed((short) 0);
+            player.setYSpeed((short) 0);
+            player.setGSpeed((short) 0);
+            player.setAnimationId(0x1A);
+
+            frozenBlock = spawnChild(() -> new FrozenPlayerBlock(player, parent.x, hFlip));
+            setDestroyed(true);
+        }
+
+        @Override
+        public int getX() {
+            return x;
+        }
+
+        @Override
+        public int getY() {
+            return y;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // The ROM capture child is an invisible range checker.
+        }
+
+        public FrozenPlayerBlock frozenBlockForTesting() {
+            return frozenBlock;
+        }
+    }
+
+    public static final class FrozenPlayerBlock extends AbstractObjectInstance {
+        // ObjDat3_8AAAA: priority $80, width $14, height $10, frame 2.
+        private static final int PRIORITY_BUCKET = 1;
+        private static final int MAPPING_FRAME = 2;
+        private static final int PALETTE = 2;
+        private static final int INITIAL_X_SPEED = 0x200;
+        private static final int INITIAL_Y_SPEED = -0x400;
+        private static final int BREAK_TIMER = 0x7F;
+        private static final int POST_BREAK_INVULNERABILITY = 2 * 60;
+        private static final int DEBRIS_COUNT = 12;
+        private static final int GRAVITY = 0x38;
+        private static final int FLOOR_Y_RADIUS = 0x10;
+
+        private final AbstractPlayableSprite capturedPlayer;
+        private final List<IceDebris> debris = new ArrayList<>(DEBRIS_COUNT);
+        private final SubpixelMotion.State motion;
+
+        private int breakTimer = BREAK_TIMER;
+        private boolean landedOnTerrain;
+
+        private FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int parentX, boolean hFlip) {
+            super(new ObjectSpawn(capturedPlayer.getCentreX(), capturedPlayer.getCentreY(),
+                    OBJECT_ID, 0, hFlip ? 1 : 0, false, capturedPlayer.getCentreY()), "ICZFreezerFrozenPlayer");
+            this.capturedPlayer = capturedPlayer;
+            int xSpeed = capturedPlayer.getCentreX() >= parentX ? INITIAL_X_SPEED : -INITIAL_X_SPEED;
+            this.motion = new SubpixelMotion.State(capturedPlayer.getCentreX(), capturedPlayer.getCentreY(),
+                    0, 0, xSpeed, INITIAL_Y_SPEED);
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (isDestroyed()) {
+                return;
+            }
+
+            if (!landedOnTerrain) {
+                SubpixelMotion.moveSprite(motion, GRAVITY);
+                snapToTerrainIfColliding();
+            }
+            syncCapturedPlayer();
+
+            if (breakTimer-- < 0) {
+                breakOpen(frameCounter);
+            }
+        }
+
+        private void snapToTerrainIfColliding() {
+            TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(motion.x, motion.y, FLOOR_Y_RADIUS);
+            if (floor.foundSurface() && floor.distance() < 0) {
+                motion.y += floor.distance();
+                motion.ySub = 0;
+                landedOnTerrain = true;
+            }
+        }
+
+        private void syncCapturedPlayer() {
+            if (capturedPlayer == null) {
+                return;
+            }
+            ObjectControlState.nativeBit7FullControl().applyTo(capturedPlayer);
+            capturedPlayer.setCentreX((short) motion.x);
+            capturedPlayer.setCentreY((short) motion.y);
+            capturedPlayer.setXSpeed((short) 0);
+            capturedPlayer.setYSpeed((short) 0);
+            capturedPlayer.setGSpeed((short) 0);
+        }
+
+        private void breakOpen(int frameCounter) {
+            if (capturedPlayer != null) {
+                capturedPlayer.applyHurt(getX(), DamageCause.SPIKE);
+                capturedPlayer.releaseFromObjectControl(frameCounter);
+                capturedPlayer.setInvulnerableFrames(POST_BREAK_INVULNERABILITY);
+            }
+            spawnDebris();
+            setDestroyed(true);
+        }
+
+        private void spawnDebris() {
+            for (int i = 0; i < DEBRIS_COUNT; i++) {
+                int[] velocity = VELOCITY_INDEX[i];
+                int debrisSubtype = i * 2;
+                IceDebris child = spawnChild(() -> new IceDebris(getX(), getY(), debrisSubtype,
+                        velocity[0], velocity[1]));
+                debris.add(child);
+            }
+        }
+
+        @Override
+        public int getX() {
+            return motion.x;
+        }
+
+        @Override
+        public int getY() {
+            return motion.y;
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return RenderPriority.clamp(PRIORITY_BUCKET);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            PatternSpriteRenderer renderer = getRenderer(ART_KEY);
+            if (renderer != null) {
+                renderer.drawFrameIndex(MAPPING_FRAME, getX(), getY(), false, false, PALETTE);
+            }
+        }
+
+        public AbstractPlayableSprite capturedPlayerForTesting() {
+            return capturedPlayer;
+        }
+
+        public int debrisSpawnedForTesting() {
+            return debris.size();
+        }
+    }
+
+    private static final class FrostPuff extends AbstractObjectInstance {
+        private static final int PRIORITY_BUCKET = 1;
+        private static final int PALETTE = 2;
+        private static final int SCRIPT_END_OFFSET = 0x48;
+        private static final int[][] ROM_OFFSETS = {
+                {0x10, 0x16, 0x03},
+                {0x10, 0x16, 0x03},
+                {0x14, 0x16, 0x03},
+                {0x18, 0x16, 0x03},
+                {0x1C, 0x16, 0x07},
+                {0x22, 0x17, 0x07},
+                {0x26, 0x17, 0x07},
+                {0x2E, 0x17, 0x07},
+                {0x32, 0x17, 0x07},
+                {0x3C, 0x18, 0x07},
+                {0x40, 0x18, 0x0F},
+                {0x4D, 0x19, 0x0F},
+                {0x52, 0x19, 0x0F},
+                {0x4B, 0x19, 0x0F},
+                {0x44, 0x19, 0x0F},
+                {0x42, 0x19, 0x0F},
+                {0x3E, 0x18, 0x0F},
+                {0x3B, 0x17, 0x0F},
+                {0x38, 0x16, 0x0F}
+        };
+
+        private final boolean verticalFlip;
+        private final int originX;
+        private final int originY;
+        private int x;
+        private int y;
+        private int scriptOffset;
+        private int mappingFrame = 0x16;
+        private int scriptTimer;
+        private boolean initialized;
+        private boolean drawThisFrame;
+
+        private FrostPuff(int x, int y, boolean verticalFlip) {
+            super(new ObjectSpawn(x, y, OBJECT_ID, 0, 0, false, y), "ICZFreezerFrostPuff");
+            this.verticalFlip = verticalFlip;
+            this.originX = x;
+            this.originY = y + (verticalFlip ? 0x0C : -0x0C);
+            this.x = x;
+            this.y = y;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            drawThisFrame = false;
+            if (!initialized) {
+                initialized = true;
+                return;
+            }
+            scriptTimer--;
+            if (scriptTimer >= 0) {
+                return;
+            }
+            scriptTimer = 2;
+            scriptOffset += 4;
+            if (scriptOffset >= SCRIPT_END_OFFSET) {
+                setDestroyed(true);
+                return;
+            }
+
+            int[] entry = ROM_OFFSETS[scriptOffset >> 2];
+            int random = nextRandomRaw();
+            int randomMask = entry[2];
+            int centre = randomMask >> 1;
+            int dx = (random & randomMask) - centre;
+            int randomDy = ((random >>> 16) & randomMask) - centre;
+            int dy = verticalFlip ? -entry[0] : entry[0];
+            x = originX + dx;
+            y = originY + dy + randomDy;
+            mappingFrame = entry[1];
+            drawThisFrame = true;
+        }
+
+        private int nextRandomRaw() {
+            ObjectServices services = tryServices();
+            return services != null && services.rng() != null ? services.rng().nextRaw() : 0;
+        }
+
+        @Override
+        public int getX() {
+            return x;
+        }
+
+        @Override
+        public int getY() {
+            return y;
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return RenderPriority.clamp(PRIORITY_BUCKET);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (isDestroyed() || !drawThisFrame) {
+                return;
+            }
+            PatternSpriteRenderer renderer = getRenderer(ART_KEY);
+            if (renderer != null) {
+                renderer.drawFrameIndex(mappingFrame, x, y, false, verticalFlip, PALETTE);
+            }
+        }
+    }
+
+    private static final class IceDebris extends GravityDebrisChild {
+        private static final int PRIORITY_BUCKET = 5;
+        private static final int PALETTE = 2;
+        private static final int GRAVITY = 0x38;
+        private static final int[] RAW_ANIMATION_UPPER = {
+                0, 0x27, 0x0C, 0x27, 0x0D, 0x27, 0x0E, 0xFC
+        };
+        private static final int[] RAW_ANIMATION_LOWER = {
+                0, 0x27, 0x0F, 0x27, 0x10, 0x27, 0x11, 0xFC
+        };
+
+        private final int[] rawAnimation;
+        private int mappingFrame = 0x0C;
+        private int animFrame;
+        private int animFrameTimer;
+
+        private IceDebris(int x, int y, int subtype, int xVel, int yVel) {
+            super(new ObjectSpawn(x, y, OBJECT_ID, subtype, 0, false, y),
+                    "ICZFreezerIceDebris", xVel, yVel, GRAVITY);
+            this.rawAnimation = subtype >= 8 ? RAW_ANIMATION_LOWER : RAW_ANIMATION_UPPER;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            animateRaw();
+            super.update(frameCounter, player);
+        }
+
+        private void animateRaw() {
+            animFrameTimer--;
+            if (animFrameTimer >= 0) {
+                return;
+            }
+
+            animFrame = (animFrame + 1) & 0xFF;
+            int scriptIndex = animFrame + 1;
+            int value = scriptIndex < rawAnimation.length ? rawAnimation[scriptIndex] : 0xFC;
+            if ((value & 0x80) != 0) {
+                mappingFrame = rawAnimation[1];
+                animFrameTimer = rawAnimation[0];
+                animFrame = 0;
+                return;
+            }
+            animFrameTimer = rawAnimation[0];
+            mappingFrame = value;
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return RenderPriority.clamp(PRIORITY_BUCKET);
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            PatternSpriteRenderer renderer = getRenderer(ART_KEY);
+            if (renderer != null) {
+                renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false, PALETTE);
+            }
+        }
+    }
+
+    /**
+     * {@code Obj_VelocityIndex} entries selected by {@code ChildObjDat_8AAEA}
+     * children with {@code Set_IndexedVelocity(d0=$C)}.
+     */
+    private static final int[][] VELOCITY_INDEX = {
+            { 0x200, -0x200},
+            {-0x300, -0x200},
+            { 0x300, -0x200},
+            {-0x200, -0x200},
+            {      0, -0x200},
+            {-0x400, -0x300},
+            { 0x400, -0x300},
+            { 0x300, -0x300},
+            {-0x400, -0x300},
+            { 0x400, -0x300},
+            {-0x200, -0x200},
+            { 0x200, -0x200}
+    };
+}

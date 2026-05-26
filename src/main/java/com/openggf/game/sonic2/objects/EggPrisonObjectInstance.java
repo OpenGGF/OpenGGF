@@ -11,6 +11,7 @@ import com.openggf.level.objects.EggPrisonAnimalInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -234,9 +235,7 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
 
         // Mark as remembered so capsule never respawns (ROM: RememberState="true")
         ObjectManager objectManager = services().objectManager();
-        if (objectManager != null) {
-            objectManager.markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
 
         // Spawn explosion at lock position (plays explosion SFX on init, matching ROM)
         spawnExplosion(lockX, lockY);

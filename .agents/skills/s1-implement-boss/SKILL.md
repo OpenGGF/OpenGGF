@@ -1,5 +1,5 @@
 ---
-title: Implement Sonic 1 Boss
+name: s1-implement-boss
 description: Guide for implementing Sonic 1 bosses with ROM-accurate behavior, arena setup, defeat flow, and disassembly cross-checks.
 ---
 
@@ -13,8 +13,8 @@ $ARGUMENTS: Boss name or zone (e.g., "GHZ boss", "Green Hill boss", "0x3D", "Fin
 
 ## Related Skills
 
-- **s1disasm-guide** (`.agents/skills/s1disasm-guide/skill.md`) - Disassembly navigation, label conventions, RomOffsetFinder
-- **s1-implement-object** (`.agents/skills/s1-implement-object/skill.md`) - For non-boss Sonic 1 objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
+- **s1disasm-guide** (`.agents/skills/s1disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
+- **s1-implement-object** (`.agents/skills/s1-implement-object/SKILL.md`) - For non-boss Sonic 1 objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
 
 ## Sonic 1 Boss List
 
@@ -52,10 +52,11 @@ $ARGUMENTS: Boss name or zone (e.g., "GHZ boss", "Green Hill boss", "0x3D", "Fin
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s1disasm-guide skill (`.agents/skills/s1disasm-guide/skill.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s1disasm-guide skill (`.agents/skills/s1disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 **Research checklist:**
 - [ ] Locate boss object file in `docs/s1disasm/_incObj/` (may have multiple parts)
+- [ ] Treat ROM `obX` / `obY` as centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
 - [ ] Find animation file in `docs/s1disasm/_anim/Eggman.asm` or boss-specific
 - [ ] Find mapping file in `docs/s1disasm/_maps/` (e.g., `Eggman.asm`, `Boss Items.asm`)
 - [ ] Identify sub-object spawning pattern (`ObjData` tables or inline)
@@ -184,17 +185,14 @@ S1 bosses use `ObjData` tables to define child objects. Parse these tables and s
 ```java
 // S1 pattern: sub-objects defined as data table entries
 private void spawnChildComponents() {
-    ObjectManager manager = services().objectManager();
-
     // From BossName_ObjData table in disassembly
     // Each entry typically: x_offset, y_offset, mapping_frame, subtype
-    BossChildInstance child = new BossChildInstance(this, xOffset, yOffset);
-    manager.addDynamicObject(child);
+    BossChildInstance child = spawnChild(() -> new BossChildInstance(this, xOffset, yOffset));
     childComponents.add(child);
 }
 ```
 
-Children can extend `AbstractBossChild` (shared with S2) or be simple independent objects depending on the boss pattern.
+Children can extend `AbstractBossChild` (shared with S2) or be simple independent objects depending on the boss pattern. Prefer `spawnChild(...)`, `spawnFreeChild(...)`, or an existing `level.objects` lifecycle helper instead of direct `ObjectManager.addDynamicObject(...)`.
 
 ### Phase 5: Hit Handling
 
@@ -262,7 +260,28 @@ registerFactory(Sonic1ObjectIds.ZONE_BOSS,
 
 `Sonic1ObjectRegistry` already has `registerDefaultFactories()` — add your factory registration there.
 
-### Phase 8: Code Quality
+### Phase 8: Rewind Synchronization Fields
+
+Before finalizing a boss or boss child, classify every instance field for rewind. Key synchronization-relevant fields must remain captured: routine/state variables, phase flags, hit counters, timers, attack cooldowns, arena/camera-lock latches, subpixel positions, velocities, movement helper state, child component state, defeat-flow state, per-player contact/carry/rider latches, and dynamic spawn coordinates. Do not add `@RewindTransient` to these fields just to satisfy `GenericFieldCapturer` or audit tests.
+
+Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable spawn identity, parent/child graph references, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Boss `dynamicSpawn` references are not structural by default; capture coordinates explicitly or defer generic migration.
+
+Prefer standard value forms before boss-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+Bosses participate in player/object lifecycle beyond hit counts. Cross-check player and sidekick contacts, carried state, invulnerability/hurt timing, child despawn, and arena-lock latches against the ROM, especially across defeat and transition frames.
+
+### Phase 8.5: Shared Object Contracts
+
+Bosses and boss children may need bespoke state, but still prefer shared contracts when they fit:
+
+- Use `ObjectControlState` for forced-control and cutscene-control predicates instead of raw boolean combinations.
+- Use `ObjectPlayerQuery` and `ObjectPlayerParticipationPolicy` for hit, contact, and targeting decisions. S1 native boss logic is main-player focused; OpenGGF sidekick participation must be explicit when extended.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes; reserve raw preserve-subpixel setters for lower-level sprite internals or non-playable boss-local state.
+- Use `ObjectLifetimeOps` for child deletion, despawn, and dynamic-expire semantics.
+- Reuse canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` compatibility wrappers where they preserve existing boss behavior.
+- Ratchet guard baselines when adding source guards; do not let historical direct-control or lifecycle calls block new hard-fail enforcement.
+
+### Phase 9: Code Quality
 
 Ensure the implementation:
 - Has no TODOs or placeholder code
@@ -325,8 +344,8 @@ Report any discrepancies with specific line references.
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.agents/skills/s1disasm-guide/skill.md` |
-| **Object skill** | `.agents/skills/s1-implement-object/skill.md` |
+| **Disassembly guide** | `.agents/skills/s1disasm-guide/SKILL.md` |
+| **Object skill** | `.agents/skills/s1-implement-object/SKILL.md` |
 | Base boss | `src/.../level/objects/boss/AbstractBossInstance.java` |
 | Boss state context | `src/.../level/objects/boss/BossStateContext.java` |
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |

@@ -1,7 +1,7 @@
 package com.openggf.sprites.playable;
 
 import com.openggf.game.CanonicalAnimation;
-import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.physics.Direction;
 
 /**
@@ -12,24 +12,38 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
 
     private static final int RESPAWN_Y_OFFSET = 192;
     private static final int MAX_FLY_ACCEL = 12;
+    private static final int S2_FLYING_OFFSCREEN_TIMEOUT_FRAMES = 300;
     private final int flyAnimId;
-    private static final int FOLLOW_DELAY_FRAMES = 17;
-    private static final int FLY_LAND_BLOCKERS = 0xD2;
+    /** S2 fallback if no PhysicsFeatureSet is resolved (legacy unit-test sidekicks). */
+    private static final int FLY_LAND_BLOCKERS_FALLBACK = PhysicsFeatureSet.SIDEKICK_FLY_LAND_BLOCKERS_S2;
+    /** Sonic OST routine value at/above which the leader is considered dead/dying.
+     *  ROM: {@code cmpi.b #6,(Player_1+routine).w / bhs.s loc_13D42} (sonic3k.asm:26629-26630). */
+    private static final int LEADER_DEAD_ROUTINE_THRESHOLD = 6;
 
     private final SidekickCpuController controller;
+    private int offscreenFlightFrames;
 
     public TailsRespawnStrategy(SidekickCpuController controller) {
         this.controller = controller;
-        this.flyAnimId = GameModuleRegistry.getCurrent().resolveAnimationId(CanonicalAnimation.FLY);
+        this.flyAnimId = controller.resolveAnimationId(CanonicalAnimation.FLY);
     }
 
     @Override
     public boolean beginApproach(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
-        sidekick.setCentreX(leader.getCentreX());
-        sidekick.setCentreY((short) (leader.getCentreY() - RESPAWN_Y_OFFSET));
-        sidekick.setXSpeed((short) 0);
-        sidekick.setYSpeed((short) 0);
-        sidekick.setGSpeed((short) 0);
+        offscreenFlightFrames = 0;
+        sidekick.setCentreXPreserveSubpixel(leader.getCentreX());
+        sidekick.setCentreYPreserveSubpixel((short) (leader.getCentreY() - RESPAWN_Y_OFFSET));
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs != null && fs.sidekickRespawnEntersCatchUpFlight()) {
+            // S3K Tails_Catch_Up_Flying loc_13B50 (sonic3k.asm:26503-26506)
+            // zeroes x_vel, y_vel, and ground_vel immediately after teleporting.
+            // S2 TailsCPU_Respawn (s2.asm:38768-38779) only writes routine,
+            // position, priority, and spindash fields; TailsCPU_Flying clears
+            // velocities later when it enters NORMAL (s2.asm:38877-38882).
+            sidekick.setXSpeed((short) 0);
+            sidekick.setYSpeed((short) 0);
+            sidekick.setGSpeed((short) 0);
+        }
         sidekick.setAir(true);
         sidekick.setDead(false);
         sidekick.setHurt(false);
@@ -37,7 +51,7 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
         sidekick.setSpindashCounter((short) 0);
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         return true;
     }
 
@@ -46,50 +60,127 @@ public class TailsRespawnStrategy implements SidekickRespawnStrategy {
                                      int frameCounter) {
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setControlLocked(true);
-        sidekick.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
 
-        int targetX = leader.getCentreX(FOLLOW_DELAY_FRAMES);
-        int targetY = controller.clampTargetYToWater(leader.getCentreY(FOLLOW_DELAY_FRAMES));
+        if (handleS2FlyingOffscreenTimeout(sidekick)) {
+            return false;
+        }
+
+        int targetX = leader.getCentreX(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES);
+        int targetY = controller.clampTargetYToWater(
+                leader.getCentreY(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES));
         int sidekickX = sidekick.getCentreX();
         int sidekickY = sidekick.getCentreY();
 
         int dx = targetX - sidekickX;
+        int dy = targetY - sidekickY;
+        int remainingDx = dx;
         if (dx != 0) {
             int move = Math.abs(dx) / 16;
             move = Math.min(move, MAX_FLY_ACCEL);
-            move += Math.abs(leader.getXSpeed()) / 256;
+            // ROM uses "mvabs.b x_vel(a1),d1" here. On 68000 this reads the first
+            // byte of the big-endian word, i.e. the signed high byte of x_vel.
+            move += Math.abs(leader.getXSpeed() >> 8);
             move += 1;
             move = Math.min(move, Math.abs(dx));
             if (dx > 0) {
                 sidekick.setDirection(Direction.RIGHT);
                 sidekick.setX((short) (sidekick.getX() + move));
-                sidekick.setXSpeed((short) (move * 256));
+                remainingDx = dx - move;
             } else {
                 sidekick.setDirection(Direction.LEFT);
                 sidekick.setX((short) (sidekick.getX() - move));
-                sidekick.setXSpeed((short) (-move * 256));
+                remainingDx = dx + move;
             }
-        } else {
-            sidekick.setXSpeed((short) 0);
         }
 
-        int dy = targetY - sidekickY;
         if (dy > 0) {
             sidekick.setY((short) (sidekick.getY() + 1));
-            sidekick.setYSpeed((short) 0x100);
         } else if (dy < 0) {
             sidekick.setY((short) (sidekick.getY() - 1));
-            sidekick.setYSpeed((short) -0x100);
-        } else {
-            sidekick.setYSpeed((short) 0);
         }
 
-        int remainingDx = targetX - sidekick.getCentreX();
-        int remainingDy = targetY - sidekick.getCentreY();
-        byte recordedStatus = leader.getStatusHistory(FOLLOW_DELAY_FRAMES);
-        if ((recordedStatus & FLY_LAND_BLOCKERS) == 0 && remainingDx == 0 && remainingDy == 0) {
+        byte recordedStatus = leader.getStatusHistory(SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES);
+        // ROM TailsCPU_Flying exits when:
+        // - the post-horizontal residual d0 is zero (horizontal catch-up may finish
+        //   in this frame after applying the x_vel-based speed bonus), and
+        // - the pre-vertical residual d1 was already zero (vertical +/-1 movement
+        //   does NOT allow same-frame completion because d1 is tested before the move).
+        //
+        // The status-blocker mask AND leader-alive check differ per game:
+        //   * S2 (s2.asm:38872-38873) andi.b #$D2,d2 / bne return — bits 1+4+6+7
+        //     (in_air|roll_jump|underwater|bit7). NO leader-routine check; transitions
+        //     to NORMAL even if Sonic is hurt or dead.
+        //   * S3K (sonic3k.asm:26625, 26629-26630) andi.b #$80,d2 (bit 7 only) AND
+        //     cmpi.b #6,(Player_1+routine).w / bhs (skip if Sonic dead).
+        // Resolved through PhysicsFeatureSet so each game's ROM behavior is preserved.
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        int statusBlockerMask = fs != null
+                ? fs.sidekickFlyLandStatusBlockerMask()
+                : FLY_LAND_BLOCKERS_FALLBACK;
+        boolean requireLeaderAlive = fs != null && fs.sidekickFlyLandRequiresLeaderAlive();
+        if ((recordedStatus & statusBlockerMask) == 0 && remainingDx == 0 && dy == 0) {
+            if (requireLeaderAlive && leader.getDead()) {
+                return false;
+            }
             return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean handlesApproachDespawn() {
+        return true;
+    }
+
+    @Override
+    public void onApproachComplete(AbstractPlayableSprite sidekick, AbstractPlayableSprite leader) {
+        sidekick.setHighPriority(leader.isHighPriority());
+        sidekick.setTopSolidBit(leader.getTopSolidBit());
+        sidekick.setLrbSolidBit(leader.getLrbSolidBit());
+    }
+
+    @Override
+    public int consumeApproachDespawnCarryFrames() {
+        int frames = offscreenFlightFrames;
+        offscreenFlightFrames = 0;
+        return frames;
+    }
+
+    private boolean handleS2FlyingOffscreenTimeout(AbstractPlayableSprite sidekick) {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        if (fs != null && fs.sidekickRespawnEntersCatchUpFlight()) {
+            return false;
+        }
+        boolean onScreen = sidekick.hasRenderFlagOnScreenState()
+                ? sidekick.isRenderFlagOnScreen()
+                : sidekick.currentCamera() != null && sidekick.currentCamera().isOnScreen(sidekick);
+        if (onScreen) {
+            offscreenFlightFrames = 0;
+            return false;
+        }
+        offscreenFlightFrames++;
+        if (offscreenFlightFrames < S2_FLYING_OFFSCREEN_TIMEOUT_FRAMES) {
+            return false;
+        }
+
+        // S2 TailsCPU_Flying timeout writes Tails_respawn_counter=0,
+        // Tails_CPU_routine=2, obj_control=$81, Status_InAir, x_pos=0,
+        // y_pos=0, and fly animation (docs/s2disasm/s2.asm:38795-38806).
+        // This is distinct from TailsCPU_CheckDespawn's $4000 marker.
+        offscreenFlightFrames = 0;
+        sidekick.clearRollingFlagPreserveRadii();
+        sidekick.clearUnderwaterStatusPreserveWaterPhysics();
+        sidekick.setOnObject(false);
+        sidekick.setPushing(false);
+        sidekick.setLatchedSolidObjectId(0);
+        sidekick.setAir(true);
+        sidekick.setCentreXPreserveSubpixel((short) 0);
+        sidekick.setCentreYPreserveSubpixel((short) 0);
+        sidekick.setForcedAnimationId(flyAnimId);
+        sidekick.setControlLocked(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        controller.returnApproachToSpawningAfterFlyingTimeout();
+        return true;
     }
 }

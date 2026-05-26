@@ -1,23 +1,26 @@
 package com.openggf.game.sonic1.objects;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.openggf.camera.Camera;
+import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.SessionManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.TestEnvironment;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSonic1LavaGeyserOutOfRange {
 
@@ -40,9 +43,10 @@ public class TestSonic1LavaGeyserOutOfRange {
         }
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        TestEnvironment.activeGameplayMode();
         GameServices.camera().resetState();
         Camera camera = GameServices.camera();
         camera.setX((short) 0);
@@ -50,9 +54,9 @@ public class TestSonic1LavaGeyserOutOfRange {
         AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -66,9 +70,8 @@ public class TestSonic1LavaGeyserOutOfRange {
             manager.update(0, null, null, i + 1);
         }
 
-        assertEquals("Maker should be created once and persist in-range on X", 1, registry.createCalls);
-        assertEquals("Maker should remain active (no Y-based out_of_range deletion)", 1,
-                manager.getActiveObjects().size());
+        assertEquals(1, registry.createCalls, "Maker should be created once and persist in-range on X");
+        assertEquals(1, manager.getActiveObjects().size(), "Maker should remain active (no Y-based out_of_range deletion)");
     }
 
     @Test
@@ -79,7 +82,7 @@ public class TestSonic1LavaGeyserOutOfRange {
 
         maker.update(1, null);
 
-        assertTrue("Maker should delete when outside ROM out_of_range X window", maker.isDestroyed());
+        assertTrue(maker.isDestroyed(), "Maker should delete when outside ROM out_of_range X window");
     }
 
     /**
@@ -111,7 +114,7 @@ public class TestSonic1LavaGeyserOutOfRange {
                 null, GameServices.camera(), services);
         managerRef[0] = manager;
 
-        // Directly add a lavafall HEAD (subtype 1) — this is what the maker spawns.
+        // Directly add a lavafall HEAD (subtype 1) â€” this is what the maker spawns.
         // Its first update() calls initializeHead() which spawns body + third piece.
         ObjectSpawn headSpawn = new ObjectSpawn(0x180, 0x400, 0x4D, 1, 0, false, 0);
         Sonic1LavaGeyserObjectInstance head = new Sonic1LavaGeyserObjectInstance(
@@ -127,8 +130,8 @@ public class TestSonic1LavaGeyserOutOfRange {
         }
 
         int totalObjects = manager.getActiveObjects().size();
-        assertTrue("Lavafall should not cascade-spawn objects (found " + totalObjects
-                + ", expected <= 5)", totalObjects <= 5);
+        assertTrue(totalObjects <= 5, "Lavafall should not cascade-spawn objects (found " + totalObjects
+                + ", expected <= 5)");
     }
 
     @Test
@@ -138,12 +141,12 @@ public class TestSonic1LavaGeyserOutOfRange {
                 bodySpawn, Sonic1LavaGeyserObjectInstance.Role.BODY, null, null, false);
         body.setServices(new TestObjectServices().withCamera(GameServices.camera()));
 
-        assertTrue("Body piece should remain persistent when X is in range, even if Y is off-screen",
-                body.isPersistent());
+        assertTrue(body.isPersistent(), "Body piece should remain persistent when X is in range, even if Y is off-screen");
 
         GameServices.camera().setX((short) 0x600);
 
-        assertFalse("Body piece should become non-persistent when X leaves out_of_range window",
-                body.isPersistent());
+        assertFalse(body.isPersistent(), "Body piece should become non-persistent when X leaves out_of_range window");
     }
 }
+
+

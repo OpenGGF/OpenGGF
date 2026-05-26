@@ -19,6 +19,8 @@
 -- v2.2 changes: add standonobject (offset 0x3D) to physics.csv — which object
 -- slot Sonic is riding on. Add routine_change events to aux with full Sonic
 -- state + interacting object context (critical for hurt/bounce diagnosis).
+-- v3.0 changes: rename v_framecount to gameplay_frame_counter and add
+-- vblank_counter plus lag_counter for counter-driven replay phase selection.
 ------------------------------------------------------------------------------
 
 -----------------
@@ -103,9 +105,10 @@ local OBJ_TOTAL_SLOTS      = 128  -- total SST slots (0-127)
 local OBJ_DYNAMIC_START    = 32   -- first dynamic slot (FindFreeObj starts here)
 local OBJ_DYNAMIC_COUNT    = 96   -- dynamic slots 32-127
 
--- Frame counter (v_framecount at $FFFE02, word — increments each Level_MainLoop)
+-- Frame counter (v_framecount at $FFFE04, word — increments each Level_MainLoop)
 -- NOTE: 0xFE0C is v_vbla_count (longword, VBlank interrupt counter — different!)
-local ADDR_FRAMECOUNT      = 0xFE02
+local ADDR_FRAMECOUNT      = 0xFE04
+local ADDR_VBLA_WORD       = 0xFE0E
 
 -- Genesis joypad bitmask (matching engine convention)
 local INPUT_UP    = 0x01
@@ -179,6 +182,40 @@ local function rom_joypad_to_mask(raw)
     return mask
 end
 
+-- Mirrors the S2 recorder's BK2-derived input read. ROM-side v_jpadhold1
+-- updates from inside ReadJoypads which runs only from specific V-int
+-- subroutines; on lag frames and during long V-int paths the written byte
+-- can lag the BK2 logical input by one game frame, producing spurious
+-- "Input alignment error" failures in AbstractCreditsDemoTraceReplayTest.
+-- Read the BK2 movie input directly so the CSV input column matches what
+-- the test fixture's BK2 reader will see during validation.
+local function bk2_input_mask(fallback_raw, trace_row)
+    if not movie.isloaded() then
+        return rom_joypad_to_mask(fallback_raw)
+    end
+    -- Replay metadata defines trace row N as BK2 frame
+    -- (bk2_frame_offset + N). Use that same convention here; direct
+    -- emu.framecount() is one frame ahead in this recorder loop.
+    local frame_index = bk2_frame_offset ~= nil
+        and trace_row ~= nil
+        and (bk2_frame_offset + trace_row)
+        or emu.framecount()
+    local jp = movie.getinput(frame_index, 1)
+    if jp == nil then
+        return rom_joypad_to_mask(fallback_raw)
+    end
+    local mask = 0
+    if jp["P1 Up"]    or jp["Up"]    then mask = mask | INPUT_UP    end
+    if jp["P1 Down"]  or jp["Down"]  then mask = mask | INPUT_DOWN  end
+    if jp["P1 Left"]  or jp["Left"]  then mask = mask | INPUT_LEFT  end
+    if jp["P1 Right"] or jp["Right"] then mask = mask | INPUT_RIGHT end
+    if jp["P1 A"] or jp["A"] or jp["P1 B"] or jp["B"]
+            or jp["P1 C"] or jp["C"] then
+        mask = mask | INPUT_JUMP
+    end
+    return mask
+end
+
 -- Format a number as hex with specified width
 local function hex(val, width)
     width = width or 4
@@ -213,9 +250,10 @@ local function open_files()
     physics_file = io.open(OUTPUT_DIR .. "physics.csv", "w")
     aux_file = io.open(OUTPUT_DIR .. "aux_state.jsonl", "w")
 
-    -- v2.2 header: v2.1 fields + stand_on_obj (which object slot Sonic is riding on)
+    -- v3 header: gameplay/VBlank execution counters plus stand_on_obj.
     physics_file:write("frame,input,x,y,x_speed,y_speed,g_speed,angle,air,rolling,ground_mode,"
-        .. "x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,v_framecount,stand_on_obj\n")
+        .. "x_sub,y_sub,routine,camera_x,camera_y,rings,status_byte,gameplay_frame_counter,stand_on_obj,"
+        .. "vblank_counter,lag_counter\n")
     physics_file:flush()
 end
 
@@ -232,7 +270,8 @@ local function write_metadata()
     meta_file:write('  "start_x": "0x' .. hex(start_x) .. '",\n')
     meta_file:write('  "start_y": "0x' .. hex(start_y) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "2.2",\n')
+    meta_file:write('  "lua_script_version": "3.2",\n')
+    meta_file:write('  "trace_schema": 3,\n')
     meta_file:write('  "csv_version": 4,\n')
     meta_file:write('  "rom_checksum": "",\n')
     meta_file:write('  "notes": ""\n')
@@ -491,10 +530,19 @@ local function on_frame_end()
         return
     end
 
-    -- Safety: detect when the BK2 movie has finished playback.
-    -- BizHawk pauses the emulator when a movie ends; the main while loop
-    -- calls client.unpause() so we still get here.
+    -- Stop exactly when the trace would need an input frame past the end of
+    -- the loaded BK2. BizHawk's movie mode can lag behind in chromeless runs,
+    -- which lets the recorder append no-input tail frames that replay cannot
+    -- consume later.
     if HEADLESS and movie.isloaded() then
+        local movie_length = movie.length()
+        if movie_length > 0 and (bk2_frame_offset + trace_frame) >= movie_length then
+            print(string.format(
+                "Reached BK2 end at trace frame %d (bk2 offset %d, movie length %d). Finalising.",
+                trace_frame, bk2_frame_offset, movie_length))
+            finished = true
+            return
+        end
         if movie.mode() == "FINISHED" then
             print(string.format(
                 "Movie playback finished at trace frame %d (emu frame %d). Finalising.",
@@ -527,10 +575,13 @@ local function on_frame_end()
     local rolling = (status & STATUS_ROLLING) ~= 0
     local ground_mode = air and 0 or angle_to_ground_mode(angle)
 
-    -- Read held input directly from RAM (works during movie playback;
-    -- joypad.get() returns physical controller state which is zero in headless)
+    -- Derive CSV `input` column from BK2 movie directly so the recorded
+    -- value matches AbstractCreditsDemoTraceReplayTest's BK2 reader; ROM-
+    -- side v_jpadhold1 is updated by ReadJoypads which only runs inside
+    -- specific V-int subroutines and can lag the BK2 by a frame on lag-
+    -- frame paths. raw_input still feeds the state_snapshot aux event.
     local raw_input = mainmemory.read_u8(0xF604)  -- v_jpadhold1
-    local input_mask = rom_joypad_to_mask(raw_input)
+    local input_mask = bk2_input_mask(raw_input, trace_frame)
 
     -- Format helper for unsigned 16-bit hex
     local function uhex(val)
@@ -538,15 +589,20 @@ local function on_frame_end()
         return val
     end
 
-    -- v_framecount: ROM's own frame counter (ticks each Level_MainLoop iteration)
-    local v_framecount = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
+    -- gameplay_frame_counter ticks only when Level_MainLoop completes.
+    local gameplay_frame_counter = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
 
     -- standonobject: SST slot index of object Sonic is standing on (0 = none)
     local stand_on_obj = mainmemory.read_u8(PLAYER_BASE + OFF_STAND_ON_OBJ)
 
-    -- v2.2 CSV: v2.1 fields + stand_on_obj
+    -- vblank_counter ticks every VBlank. Sonic 1 does not expose a dedicated
+    -- lag counter, so write 0 as a diagnostic placeholder in schema v3.
+    local vblank_counter = mainmemory.read_u16_be(ADDR_VBLA_WORD)
+    local lag_counter = 0
+
+    -- v3 CSV: execution counters plus stand_on_obj.
     physics_file:write(string.format(
-        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%04X,%04X,%04X,%02X,%04X,%02X\n",
+        "%04X,%04X,%04X,%04X,%04X,%04X,%04X,%02X,%d,%d,%d,%04X,%04X,%02X,%04X,%04X,%04X,%02X,%04X,%02X,%04X,%04X\n",
         trace_frame, input_mask, x, y,
         uhex(x_speed), uhex(y_speed), uhex(g_speed),
         angle,
@@ -558,8 +614,10 @@ local function on_frame_end()
         camera_x, camera_y,
         rings,
         status,
-        v_framecount,
-        stand_on_obj))
+        gameplay_frame_counter,
+        stand_on_obj,
+        vblank_counter,
+        lag_counter))
     -- Flush periodically instead of every frame to reduce I/O overhead.
     -- Also update metadata every 300 frames (~5 sec) so a killed process
     -- still has a valid (if slightly stale) metadata.json.
@@ -628,7 +686,7 @@ end
 -- The onframeend callback pattern doesn't work because callbacks stop
 -- firing when BizHawk pauses, and client.exit() can kill the process
 -- before file I/O completes.
-print("S1 Trace Recorder v2.2 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
+print("S1 Trace Recorder v3.0 loaded. Waiting for level gameplay (Game_Mode=0x0C, controls unlocked)...")
 
 while true do
     on_frame_end()

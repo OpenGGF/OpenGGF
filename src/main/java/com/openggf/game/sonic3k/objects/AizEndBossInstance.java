@@ -2,12 +2,14 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
-import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectManager;
@@ -84,7 +86,6 @@ public class AizEndBossInstance extends AbstractBossInstance {
     private static final int REPOSITION_TIME = 0x7F;      // ROM: move.w #$7F,$2E
     private static final int POST_DEFEAT_SONIC = 0xBF;    // ROM: move.w #$BF
     private static final int POST_DEFEAT_KNUX = 0xFF;     // ROM: move.w #$FF
-
     // ===== Swing parameters (ROM: loc_6933A) =====
     private static final int SWING_AMPLITUDE = 0xC0;     // ROM: move.w #$C0,$3E(a0)
     private static final int SWING_INITIAL_VEL = 0xC0;   // ROM: move.w #$C0,y_vel(a0)
@@ -114,7 +115,20 @@ public class AizEndBossInstance extends AbstractBossInstance {
     private int yBase;          // _unkFA86
 
     private int waitTimer = -1;
-    private Runnable waitCallback;
+    private WaitCallback waitCallback = WaitCallback.NONE;
+
+    private enum WaitCallback {
+        NONE,
+        START_BOSS_MUSIC,
+        ON_EMERGE_COMPLETE,
+        BEGIN_HOVER,
+        ON_HOVER_COMPLETE,
+        ON_FIRE_TIMER_EXPIRED,
+        BEGIN_RETREAT,
+        BEGIN_RE_SUBMERGE,
+        ON_RE_SUBMERGE_COMPLETE,
+        LOOP_BACK_TO_EMERGE
+    }
 
     /** ROM: angle ($26) — selects position index (0, 4, 8, or $C). */
     private int angle;
@@ -142,6 +156,9 @@ public class AizEndBossInstance extends AbstractBossInstance {
     private boolean highPriorityArt;
     private int mappingFrame;
 
+    /** Set once when Obj_AIZEndBossMain begins; never cleared. Gates rendering. */
+    private boolean renderActivated;
+
     // Swing state
     private int swingVelocity;
     private boolean swingDown;
@@ -149,6 +166,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
     // Defeat sequence
     private S3kBossExplosionController defeatExplosionController;
     private boolean defeatRenderComplete;
+    private int defeatPhaseTimer;
 
     // Children references
     private AizEndBossShipChild shipChild;
@@ -167,7 +185,8 @@ public class AizEndBossInstance extends AbstractBossInstance {
         state.routine = ROUTINE_INIT;
         state.hitCount = HIT_COUNT;
         waitTimer = -1;
-        waitCallback = null;
+        waitCallback = WaitCallback.NONE;
+        defeatPhaseTimer = 0;
         defeatRenderComplete = false;
         defeatExplosionController = null;
         fireSignalActive = false;
@@ -176,6 +195,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
         collisionEnabled = false;
         highPriorityArt = false;
         mappingFrame = 0;
+        renderActivated = false;
         flags38 = 0;
         facingRight = false;
         angle = 0;
@@ -215,6 +235,11 @@ public class AizEndBossInstance extends AbstractBossInstance {
     }
 
     @Override
+    protected boolean usesBaseHitHandler() {
+        return false; // ROM: sub_69BE2 — self-contained flash + timer in updateBossLogic()
+    }
+
+    @Override
     protected int getBossHitSfxId() {
         return Sonic3kSfx.BOSS_HIT.id;
     }
@@ -235,7 +260,11 @@ public class AizEndBossInstance extends AbstractBossInstance {
                 || (flags38 & FLAG_HIDDEN) != 0) {
             return 0;
         }
-        return 0xC0 | COLLISION_SIZE;
+        // ROM ObjDat_AIZEndBoss starts with collision $10, but the revealed
+        // setup overwrites it with $16 before touch is active
+        // (sonic3k.asm:138109-138114). Keep the raw enemy-style flag byte:
+        // Touch_Enemy treats this as a boss through nonzero collision_property.
+        return COLLISION_FLAGS_ACTIVE;
     }
 
     @Override
@@ -311,10 +340,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
         services().camera().setMaxX((short) cameraLockX);
 
         // Set Boss_flag to lock screen (ROM: st (Boss_flag).w)
-        Sonic3kAIZEvents events = getAizEvents();
-        if (events != null) {
-            events.setBossFlag(true);
-        }
+        S3kAizEventWriteSupport.setBossFlag(services(), true);
         services().gameState().setCurrentBossId(0x92);
 
         // Fade out current music
@@ -325,7 +351,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
 
         // Transition to wait-then-play-music
         waitTimer = WAIT_BEFORE_MUSIC;
-        waitCallback = this::startBossMusic;
+        waitCallback = WaitCallback.START_BOSS_MUSIC;
         state.routine = ROUTINE_EMERGE; // Will be overridden after wait
         // But first we wait — handle via the emerge routine checking waitTimer
 
@@ -345,6 +371,10 @@ public class AizEndBossInstance extends AbstractBossInstance {
      * Called after music starts playing.
      */
     private void doMainInit() {
+        // ROM: Obj_AIZEndBossMain is the first code path that calls
+        // Draw_And_Touch_Sprite — activate rendering from this point on.
+        renderActivated = true;
+
         // ROM: SetUp_ObjAttributes, ObjDat_AIZEndBoss
         // collision_property = 8 (already set)
         // render_flags bit 0 = 1 (face right)
@@ -388,15 +418,15 @@ public class AizEndBossInstance extends AbstractBossInstance {
         emergeAnimFrame = 0;
         emergeAnimTimer = 0;
         waitTimer = -1;
-        waitCallback = this::onEmergeComplete;
+        waitCallback = WaitCallback.ON_EMERGE_COMPLETE;
     }
 
     // Emerge animation state (ROM: byte_69D98 — flickering between frame $2B and frame 0)
     private int emergeAnimFrame;
     private int emergeAnimTimer;
-    // ROM animation: alternating $2B (hidden) and 0 (visible) with delays
-    // Simplified: flicker for ~40 frames then become visible
-    private static final int EMERGE_FLICKER_DURATION = 40;
+    // ROM byte_69D98 has thirteen zero-delay raw-animation entries before
+    // the $F4 callback to loc_69302 (sonic3k.asm:139089-139104).
+    private static final int EMERGE_FLICKER_DURATION = 13;
 
     /** ROM: loc_692E2 — Emerge animation (flickering reveal). */
     private void updateEmerge() {
@@ -406,12 +436,8 @@ public class AizEndBossInstance extends AbstractBossInstance {
         }
         if (waitTimer == 0) {
             waitTimer = -1;
-            if (waitCallback != null) {
-                Runnable cb = waitCallback;
-                waitCallback = null;
-                cb.run();
-                return;
-            }
+            runWaitCallback();
+            return;
         }
 
         // Animate emerge flicker
@@ -445,32 +471,31 @@ public class AizEndBossInstance extends AbstractBossInstance {
 
         // Set callback to transition to hover after revealed animation
         revealedAnimTimer = 0;
-        waitCallback = this::beginHover;
+        waitCallback = WaitCallback.BEGIN_HOVER;
     }
 
     private int revealedAnimTimer;
-    // ROM: byte_69DB3 — multi-delay animation frames $1B(0), $1B(4), $1C(5), $1D(6), 0(0)
-    private static final int REVEALED_ANIM_DURATION = 16; // sum of delays: 1+5+6+7+1 = 20
+    // ROM byte_69DB3 is consumed by Animate_RawNoSSTMultiDelay: $1B/$00,
+    // $1B/$04, $1C/$05, $1D/$06, $00/$00, then $F4 callback
+    // (docs/skdisasm/sonic3k.asm:138120-138122,139104-139110,177558-177587).
+    private static final int REVEALED_FRAME_1B_END = 6;
+    private static final int REVEALED_FRAME_1C_END = 12;
+    private static final int REVEALED_FRAME_1D_END = 19;
+    private static final int REVEALED_FRAME_VISIBLE_END = 20;
 
     /** ROM: loc_6932C — Revealed animation. */
     private void updateRevealed() {
         revealedAnimTimer++;
-        // Animate through reveal frames
-        if (revealedAnimTimer < 1) {
+        if (revealedAnimTimer <= REVEALED_FRAME_1B_END) {
             mappingFrame = 0x1B;
-        } else if (revealedAnimTimer < 6) {
-            mappingFrame = 0x1B;
-        } else if (revealedAnimTimer < 12) {
+        } else if (revealedAnimTimer <= REVEALED_FRAME_1C_END) {
             mappingFrame = 0x1C;
-        } else if (revealedAnimTimer < 19) {
+        } else if (revealedAnimTimer <= REVEALED_FRAME_1D_END) {
             mappingFrame = 0x1D;
-        } else {
+        } else if (revealedAnimTimer <= REVEALED_FRAME_VISIBLE_END) {
             mappingFrame = 0;
-            if (waitCallback != null) {
-                Runnable cb = waitCallback;
-                waitCallback = null;
-                cb.run();
-            }
+        } else {
+            runWaitCallback();
         }
     }
 
@@ -478,7 +503,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
     private void beginHover() {
         state.routine = ROUTINE_HOVER;
         waitTimer = HOVER_TIME;
-        waitCallback = this::onHoverComplete;
+        waitCallback = WaitCallback.ON_HOVER_COMPLETE;
 
         // ROM: Swing parameters
         swingVelocity = SWING_INITIAL_VEL;
@@ -504,11 +529,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
             waitTimer--;
         } else if (waitTimer == 0) {
             waitTimer = -1;
-            if (waitCallback != null) {
-                Runnable cb = waitCallback;
-                waitCallback = null;
-                cb.run();
-            }
+            runWaitCallback();
         }
     }
 
@@ -522,13 +543,13 @@ public class AizEndBossInstance extends AbstractBossInstance {
             // ROM: move.w #4,angle ; move.w #$2F,$2E ; callback=loc_693DC
             angle = 4;
             waitTimer = FIRE_TIME_SONIC;
-            waitCallback = this::onFireTimerExpired;
+            waitCallback = WaitCallback.ON_FIRE_TIMER_EXPIRED;
         } else {
             // Second cycle (post-defeat path): longer wait
             // ROM: Sonic=$BF, Knuckles=$FF
             PlayerCharacter character = getPlayerCharacter();
             waitTimer = (character == PlayerCharacter.KNUCKLES) ? POST_DEFEAT_KNUX : POST_DEFEAT_SONIC;
-            waitCallback = this::beginRetreat;
+            waitCallback = WaitCallback.BEGIN_RETREAT;
         }
 
         state.routine = ROUTINE_HOVER; // Continue hovering during fire window
@@ -540,14 +561,14 @@ public class AizEndBossInstance extends AbstractBossInstance {
         fireSignalActive = true;
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(true);
         waitTimer = FIRE_SIGNAL_WAIT;
-        waitCallback = this::beginRetreat;
+        waitCallback = WaitCallback.BEGIN_RETREAT;
     }
 
     /** ROM: loc_693C0 — Retreat into water. */
     private void beginRetreat() {
         state.routine = ROUTINE_ATTACK_WAIT;
         waitTimer = RETREAT_WAIT;
-        waitCallback = this::beginReSubmerge;
+        waitCallback = WaitCallback.BEGIN_RE_SUBMERGE;
         // ROM: andi.b #$F5,$38 — clear bits 1 and 3
         flags38 &= ~(FLAG_PROPELLER_FIRE | FLAG_EMERGE_STARTED);
         fireSignalActive = false;
@@ -568,7 +589,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
         // Set up emerge animation
         emergeAnimFrame = 0;
         emergeAnimTimer = 0;
-        waitCallback = this::onReSubmergeComplete;
+        waitCallback = WaitCallback.ON_RE_SUBMERGE_COMPLETE;
     }
 
     /** ROM: loc_6942A — After submerging, decide next phase. */
@@ -589,7 +610,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
         // Pick random reposition target (ROM: loc_69A66)
         selectRandomPosition();
 
-        waitCallback = this::loopBackToEmerge;
+        waitCallback = WaitCallback.LOOP_BACK_TO_EMERGE;
     }
 
     /** ROM: loc_69456 — Incrementally scroll camera right during reposition. */
@@ -618,11 +639,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
             waitTimer--;
         } else if (waitTimer == 0) {
             waitTimer = -1;
-            if (waitCallback != null) {
-                Runnable cb = waitCallback;
-                waitCallback = null;
-                cb.run();
-            }
+            runWaitCallback();
         }
     }
 
@@ -639,11 +656,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
             waitTimer--;
         } else if (waitTimer == 0) {
             waitTimer = -1;
-            if (waitCallback != null) {
-                Runnable cb = waitCallback;
-                waitCallback = null;
-                cb.run();
-            }
+            runWaitCallback();
         }
     }
 
@@ -655,32 +668,41 @@ public class AizEndBossInstance extends AbstractBossInstance {
         state.xVel = 0;
         state.yVel = 0;
         waitTimer = -1;
-        waitCallback = null;
+        waitCallback = WaitCallback.NONE;
         flags38 |= FLAG_DEFEAT_STARTED;
-        // ROM: The boss remains visible during the defeat explosion sequence.
-        // Don't set FLAG_HIDDEN yet — let the defeat animation play out.
-        // Keep highPriorityArt so the boss renders in front of the waterfall.
+        // ROM: loc_47A74 — bset #7,art_tile hides the boss machine body.
+        // The Robotnik ship child (AizEndBossShipChild) keeps rendering independently.
+        flags38 |= FLAG_HIDDEN;
         highPriorityArt = true;
         collisionEnabled = false;
         mappingFrame = 0;
 
-        // Signal children
+        // Signal combat children (arms, propellers, flames, column) to self-destruct.
+        // The ship child checks boss.getState().defeated instead and handles its own
+        // multi-phase defeat animation (ROM: Obj_RobotnikShip routines 2-6).
         defeatSignal = true;
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
 
         // ROM: BossDefeated_StopTimer — timer stop handled by gameState
 
-        // ROM: Wait_FadeToLevelMusic then callback loc_69482
         services().fadeOutMusic();
 
-        // Spawn 6 debris explosion children (ROM: ChildObjDat_69D66)
+        // ROM: The ship child (Obj_RobotnikShip) creates its own explosion controller
+        // via Child6_CreateBossExplosion subtype 4 at loc_460DC. In the engine we keep
+        // this on the boss for simplicity — subtype 0 produces the same visual effect.
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
 
-        // After explosions: spawn egg capsule
-        defeatPhaseTimer = 60; // Wait for explosions before capsule
-    }
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager != null) {
+            AizEndBossDebrisChild.spawnAll(state.x, state.y, objectManager);
+        }
 
-    private int defeatPhaseTimer;
+        // Existing AIZ handoff wait; updateDefeated applies Obj_Wait's
+        // pre-decrement callback semantics so $2E=$7F expires after the
+        // negative transition, not when it first reaches zero
+        // (sonic3k.asm:177944-177952).
+        defeatPhaseTimer = 0x7F;
+    }
 
     private void updateDefeated() {
         if (defeatExplosionController != null && !defeatExplosionController.isFinished()) {
@@ -688,24 +710,21 @@ public class AizEndBossInstance extends AbstractBossInstance {
             spawnPendingExplosions();
         }
 
-        if (defeatPhaseTimer > 0) {
+        if (defeatPhaseTimer >= 0) {
             defeatPhaseTimer--;
-            if (defeatPhaseTimer == 0) {
+            if (defeatPhaseTimer < 0) {
                 spawnEggCapsuleAndFinish();
             }
         }
     }
 
-    /** ROM: loc_694A4 — Spawn Egg Capsule, clear Boss_flag, restore level music. */
+    /** ROM: loc_694A4/loc_694AA — Spawn Egg Capsule and clear Boss_flag. */
     private void spawnEggCapsuleAndFinish() {
         eggCapsuleSignal = true;
         AizCollapsingLogBridgeObjectInstance.setDrawBridgeBurnActive(false);
 
         // Clear Boss_flag (ROM: clr.b (Boss_flag).w)
-        Sonic3kAIZEvents events = getAizEvents();
-        if (events != null) {
-            events.setBossFlag(false);
-        }
+        S3kAizEventWriteSupport.setBossFlag(services(), false);
         services().gameState().setCurrentBossId(0);
 
         // ROM: AfterBoss_AIZ2 — load fire palette.
@@ -727,7 +746,10 @@ public class AizEndBossInstance extends AbstractBossInstance {
             if (getPlayerCharacter() != PlayerCharacter.KNUCKLES) {
                 Aiz2BossEndSequenceState.reset();
                 Aiz2BossEndSequenceState.activateCutsceneOverrideObjects();
-                objectManager.addDynamicObject(Aiz2EndEggCapsuleInstance.createForCamera(
+                // ROM loc_694AA creates the route-8 capsule through
+                // CreateChild6_Simple, which allocates after the current boss
+                // slot (sonic3k.asm:138247-138255, 177114-177129).
+                objectManager.addDynamicObjectAfterCurrent(Aiz2EndEggCapsuleInstance.createForCamera(
                         services().camera().getX(), services().camera().getY()));
                 objectManager.addDynamicObject(AizDrawBridgeObjectInstance.createCutsceneOverride());
                 objectManager.addDynamicObject(S3kCutsceneButtonObjectInstance.createCutsceneOverride());
@@ -736,7 +758,7 @@ public class AizEndBossInstance extends AbstractBossInstance {
                 int newMaxX = targetMaxX + 0x158;
                 services().camera().setMaxX((short) newMaxX);
                 S3kBossDefeatSignpostFlow defeatFlow = new S3kBossDefeatSignpostFlow(
-                        state.x, 1, null);
+                        state.x, 1, S3kBossDefeatSignpostFlow.CleanupAction.NONE);
                 objectManager.addDynamicObject(defeatFlow);
             }
         }
@@ -751,7 +773,9 @@ public class AizEndBossInstance extends AbstractBossInstance {
         int newAngle;
         var rng = services().rng();
         do {
-            newAngle = rng.nextInt(4) * 4; // 0, 4, 8, or $C
+            // ROM loc_69A66 calls Random_Number and masks the raw word with #$C,
+            // then rejects repeats (sonic3k.asm:138748-138756).
+            newAngle = rng.nextBits(0x0C); // 0, 4, 8, or $C
         } while (newAngle == angle);
         angle = newAngle;
 
@@ -759,10 +783,12 @@ public class AizEndBossInstance extends AbstractBossInstance {
         int targetX = targetMaxX + REPOSITION_TARGETS[targetIndex][0];
         int targetY = yBase + REPOSITION_TARGETS[targetIndex][1];
 
-        // Calculate velocity to reach target in REPOSITION_TIME+1 frames (ROM: 128 frames)
-        int frames = REPOSITION_TIME + 1;
-        state.xVel = ((targetX - state.x) << 8) / frames;
-        state.yVel = ((targetY - state.y) << 8) / frames;
+        // ROM loc_69A66 subtracts the full longword x_pos/y_pos, doubles the
+        // 16.16 delta, then takes the high word as velocity
+        // (sonic3k.asm:138756-138771). This preserves subpixel phase from the
+        // prior hover when the boss dives and repositions.
+        state.xVel = velocityTowardTargetLongword(targetX, state.xFixed);
+        state.yVel = velocityTowardTargetLongword(targetY, state.yFixed);
 
         waitTimer = REPOSITION_TIME;
 
@@ -773,16 +799,18 @@ public class AizEndBossInstance extends AbstractBossInstance {
     // ===== Velocity & position helpers =====
 
     private void applyVelocity() {
-        // 16:8 fixed-point position update (ROM: MoveSprite2)
-        int xPos24 = (state.x << 8) | (state.xFixed & 0xFF);
-        xPos24 += state.xVel;
-        state.x = xPos24 >> 8;
-        state.xFixed = xPos24 & 0xFF;
+        // ROM MoveSprite2 adds signed velocity << 8 to the full longword
+        // position, not just an 8-bit fractional byte (sonic3k.asm:36053-36061).
+        state.xFixed += state.xVel << 8;
+        state.yFixed += state.yVel << 8;
+        state.x = state.xFixed >> 16;
+        state.y = state.yFixed >> 16;
+    }
 
-        int yPos24 = (state.y << 8) | (state.yFixed & 0xFF);
-        yPos24 += state.yVel;
-        state.y = yPos24 >> 8;
-        state.yFixed = yPos24 & 0xFF;
+    private static int velocityTowardTargetLongword(int target, int currentLongword) {
+        long targetLongword = (long) target << 16;
+        long delta = targetLongword - currentLongword;
+        return (int) ((delta << 1) >> 16);
     }
 
     // ===== Custom palette flash (ROM: sub_69C5C + sub_69BE2) =====
@@ -796,40 +824,46 @@ public class AizEndBossInstance extends AbstractBossInstance {
         var level = services().currentLevel();
         if (level == null || level.getPaletteCount() <= BOSS_PALETTE_INDEX) return;
 
-        Palette pal = level.getPalette(BOSS_PALETTE_INDEX);
         boolean flash = (state.invulnerabilityTimer & 1) == 0;
         int[] colors = flash ? FLASH_HIT_COLORS : FLASH_NORMAL_COLORS;
-        for (int i = 0; i < FLASH_PAL_INDICES.length; i++) {
-            byte[] bytes = {(byte) ((colors[i] >> 8) & 0xFF), (byte) (colors[i] & 0xFF)};
-            pal.getColor(FLASH_PAL_INDICES[i]).fromSegaFormat(bytes, 0);
-        }
-        var gm = services().graphicsManager();
-        if (gm.isGlInitialized()) {
-            gm.cachePaletteTexture(pal, BOSS_PALETTE_INDEX);
-        }
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(),
+                level,
+                services().graphicsManager(),
+                S3kPaletteOwners.AIZ_END_BOSS,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                BOSS_PALETTE_INDEX,
+                FLASH_PAL_INDICES,
+                colors);
     }
 
     private void restoreNormalPalette() {
         var level = services().currentLevel();
         if (level == null || level.getPaletteCount() <= BOSS_PALETTE_INDEX) return;
 
-        Palette pal = level.getPalette(BOSS_PALETTE_INDEX);
-        for (int i = 0; i < FLASH_PAL_INDICES.length; i++) {
-            byte[] bytes = {(byte) ((FLASH_NORMAL_COLORS[i] >> 8) & 0xFF),
-                    (byte) (FLASH_NORMAL_COLORS[i] & 0xFF)};
-            pal.getColor(FLASH_PAL_INDICES[i]).fromSegaFormat(bytes, 0);
-        }
-        var gm = services().graphicsManager();
-        if (gm.isGlInitialized()) {
-            gm.cachePaletteTexture(pal, BOSS_PALETTE_INDEX);
-        }
+        S3kPaletteWriteSupport.applyColors(
+                services().paletteOwnershipRegistryOrNull(),
+                level,
+                services().graphicsManager(),
+                S3kPaletteOwners.AIZ_END_BOSS,
+                S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                BOSS_PALETTE_INDEX,
+                FLASH_PAL_INDICES,
+                FLASH_NORMAL_COLORS);
     }
 
     private void loadBossPalette() {
         try {
             byte[] line = services().rom().readBytes(
                     Sonic3kConstants.PAL_AIZ_END_BOSS_ADDR, 32);
-            services().updatePalette(BOSS_PALETTE_INDEX, line);
+            S3kPaletteWriteSupport.applyLine(
+                    services().paletteOwnershipRegistryOrNull(),
+                    services().currentLevel(),
+                    services().graphicsManager(),
+                    S3kPaletteOwners.AIZ_END_BOSS,
+                    S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                    BOSS_PALETTE_INDEX,
+                    line);
         } catch (Exception e) {
             LOG.fine(() -> "AizEndBossInstance.loadBossPalette: " + e.getMessage());
         }
@@ -851,7 +885,14 @@ public class AizEndBossInstance extends AbstractBossInstance {
             // level tiles are not corrupted and no PLC reload is needed.
             byte[] firePal = services().rom().readBytes(
                     Sonic3kConstants.PAL_AIZ_FIRE_ADDR, 32);
-            services().updatePalette(BOSS_PALETTE_INDEX, firePal);
+            S3kPaletteWriteSupport.applyLine(
+                    services().paletteOwnershipRegistryOrNull(),
+                    services().currentLevel(),
+                    services().graphicsManager(),
+                    S3kPaletteOwners.AIZ_END_BOSS,
+                    S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
+                    BOSS_PALETTE_INDEX,
+                    firePal);
         } catch (Exception e) {
             LOG.fine(() -> "AizEndBossInstance.loadAfterBossArt: " + e.getMessage());
         }
@@ -913,6 +954,10 @@ public class AizEndBossInstance extends AbstractBossInstance {
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed() || defeatRenderComplete) return;
+        // ROM: Draw_And_Touch_Sprite is only called from Obj_AIZEndBossMain, which
+        // is not reached until after Obj_Wait + Obj_AIZEndBossMusic + doMainInit().
+        // Before that, the object just does rts — completely invisible.
+        if (!renderActivated) return;
         if ((flags38 & FLAG_HIDDEN) != 0) return;
 
         ObjectRenderManager renderManager = services().renderManager();
@@ -970,6 +1015,11 @@ public class AizEndBossInstance extends AbstractBossInstance {
         return defeatSignal;
     }
 
+    /** ROM: $38 bit 4 — set when defeat phase 1 begins (signals ship child to escape). */
+    public boolean isDefeatStarted() {
+        return (flags38 & FLAG_DEFEAT_STARTED) != 0;
+    }
+
     public boolean isHidden() {
         return (flags38 & FLAG_HIDDEN) != 0;
     }
@@ -993,28 +1043,29 @@ public class AizEndBossInstance extends AbstractBossInstance {
     // ===== Helpers =====
 
     private void runWaitCallback() {
-        if (waitCallback == null) {
+        if (waitCallback == WaitCallback.NONE) {
             return;
         }
-        Runnable cb = waitCallback;
-        waitCallback = null;
-        cb.run();
-    }
-
-    private Sonic3kAIZEvents getAizEvents() {
-        try {
-            return ((Sonic3kLevelEventManager) services().levelEventProvider()).getAizEvents();
-        } catch (Exception e) {
-            return null;
+        WaitCallback callback = waitCallback;
+        waitCallback = WaitCallback.NONE;
+        switch (callback) {
+            case START_BOSS_MUSIC -> startBossMusic();
+            case ON_EMERGE_COMPLETE -> onEmergeComplete();
+            case BEGIN_HOVER -> beginHover();
+            case ON_HOVER_COMPLETE -> onHoverComplete();
+            case ON_FIRE_TIMER_EXPIRED -> onFireTimerExpired();
+            case BEGIN_RETREAT -> beginRetreat();
+            case BEGIN_RE_SUBMERGE -> beginReSubmerge();
+            case ON_RE_SUBMERGE_COMPLETE -> onReSubmergeComplete();
+            case LOOP_BACK_TO_EMERGE -> loopBackToEmerge();
+            case NONE -> {}
         }
     }
 
     // Package-private: accessed by AizEndBossPropellerChild for the Knuckles multi-fire check.
     PlayerCharacter getPlayerCharacter() {
-        try {
-            return ((Sonic3kLevelEventManager) services().levelEventProvider()).getPlayerCharacter();
-        } catch (Exception e) {
-            return PlayerCharacter.SONIC_AND_TAILS;
-        }
+        return S3kRuntimeStates.resolvePlayerCharacter(
+                services().zoneRuntimeRegistry(),
+                services().configuration());
     }
 }

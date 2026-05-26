@@ -1,10 +1,15 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.data.RomByteReader;
+import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.GameServices;
+import com.openggf.game.animation.AnimatedTileChannelGraph;
+import com.openggf.game.animation.ChannelContext;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
-import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
@@ -23,7 +28,8 @@ import java.util.logging.Logger;
  * Animates S3K zone tiles using the ROM's AniPLC script format plus the direct
  * HCZ background DMA updates that sit alongside AniPLC in the original engine.
  */
-class Sonic3kPatternAnimator implements AnimatedPatternManager {
+class Sonic3kPatternAnimator implements AnimatedPatternManager,
+        com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot> {
     private static final Logger LOG = Logger.getLogger(Sonic3kPatternAnimator.class.getName());
 
     private static final int HCZ1_WATERLINE_VISIBLE = 0x60;
@@ -69,9 +75,38 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
             0x00, 0x00, 0x00, 0x00,
             0xA0, 0x0A, 0x50, 0x05
     };
+    private static final int[] CNZ_DMA_WORD_COUNTS = {
+            0x200, 0x000,
+            0x1C0, 0x040,
+            0x180, 0x080,
+            0x140, 0x0C0,
+            0x100, 0x100,
+            0x0C0, 0x140,
+            0x080, 0x180,
+            0x040, 0x1C0
+    };
+    private static final int[] ICZ_HORIZONTAL_DMA_WORD_COUNTS = {
+            0x100, 0x000,
+            0x0C0, 0x040,
+            0x080, 0x080,
+            0x040, 0x0C0
+    };
+    private static final int ANIPLC_LRZ1_ADDR = 0x028A6A;
+    private static final int ART_UNC_ANI_SOZ1_BG_ADDR = 0x0BD9C0;
+    private static final int ART_UNC_ANI_SOZ1_BG_SIZE = 0x0C00;
+    private static final int ART_UNC_ANI_SOZ1_BG2_ADDR = 0x0BE5C0;
+    private static final int ART_UNC_ANI_SOZ1_BG2_SIZE = 0x1800;
+    private static final int[] SOZ1_SPLIT_WORD_COUNTS = {
+            0x0C0, 0x000,
+            0x090, 0x030,
+            0x060, 0x060,
+            0x030, 0x090
+    };
+    private static final int SOZ1_BOSS_LOCK_MIN_X = 0x4180;
+    private static final int SOZ1_BOSS_LOCK_MIN_Y = 0x0960;
 
+    private final AnimatedTileChannelGraph graph;
     private final Level level;
-    private final GraphicsManager graphicsManager = GraphicsManager.getInstance();
     private final int zoneIndex;
     private final int actIndex;
     private final boolean isSkipIntro;
@@ -102,6 +137,14 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
     private final Pattern[] hcz2Art2Patterns;
     private final Pattern[] hcz2Art3Patterns;
     private final Pattern[] hcz2Art4Patterns;
+    private final byte[] cnzBgData;
+    private final byte[] iczArt1Data;
+    private final byte[] iczArt2Data;
+    private final byte[] iczArt3Data;
+    private final byte[] iczArt4Data;
+    private final byte[] iczArt5Data;
+    private final byte[] soz1BgData;
+    private final byte[] soz1Bg2Data;
     private final byte[] pachinkoScratch;
     private final byte[] pachinkoLowSource;
     private final byte[] pachinkoHighSource;
@@ -114,6 +157,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
     private int pachinkoPhase;
     private int pachinkoSourceOffset;
     private int pachinkoStripeOffset;
+    private int frameCounter;
 
     // Gumball bonus stage: direct DMA of uncompressed art based on BG scroll
     // ROM: AnimateTiles_Gumball (sonic3k.asm:55266)
@@ -132,6 +176,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
 
     Sonic3kPatternAnimator(RomByteReader reader, Level level,
                            int zoneIndex, int actIndex, boolean isSkipIntro) {
+        this.graph = GameServices.animatedTileChannelGraph();
         this.level = level;
         this.zoneIndex = zoneIndex;
         this.actIndex = actIndex;
@@ -163,6 +208,14 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
             this.hcz2Art2Patterns = null;
             this.hcz2Art3Patterns = null;
             this.hcz2Art4Patterns = null;
+            this.cnzBgData = null;
+            this.iczArt1Data = null;
+            this.iczArt2Data = null;
+            this.iczArt3Data = null;
+            this.iczArt4Data = null;
+            this.iczArt5Data = null;
+            this.soz1BgData = null;
+            this.soz1Bg2Data = null;
             this.pachinkoScratch = null;
             this.pachinkoLowSource = null;
             this.pachinkoHighSource = null;
@@ -173,6 +226,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
             } else {
                 this.gumballAniData = null;
             }
+            installGraphChannels();
             return;
         }
 
@@ -186,10 +240,11 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
         }
         ensureHczPatternCapacity();
         ensurePachinkoPatternCapacity();
+        ensureIczPatternCapacity();
 
         boolean isAiz1Intro = zoneIndex == 0 && actIndex == 0 && !isSkipIntro;
         if (!isAiz1Intro) {
-            AniPlcParser.primeScripts(scripts, level, graphicsManager);
+            AniPlcParser.primeScripts(scripts, level, GameServices.graphics());
         }
 
         this.firstTreePatterns = zoneIndex == 0 && actIndex == 1
@@ -250,7 +305,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
             this.hcz2Art2Patterns = null;
             this.hcz2Art3Patterns = null;
             this.hcz2Art4Patterns = null;
-
+            this.cnzBgData = null;
             // HCZ1 starts with the lower repair strips resident before the
             // waterline-specific recomposition path kicks in.
             applyPatternsToLevel(this.hcz1LowerBg1Patterns, 0x2F4);
@@ -294,6 +349,33 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
             this.hcz2Art4Patterns = loadUncompressedPatterns(reader,
                     Sonic3kConstants.ART_UNC_HCZ2_4_ADDR,
                     Sonic3kConstants.ART_UNC_HCZ2_4_SIZE);
+            this.cnzBgData = null;
+        } else if (zoneIndex == 0x03) {
+            this.hczWaterlineScrollData = null;
+            this.hcz1DynamicBlockData = null;
+            this.hcz1WaterlineBelow1Data = null;
+            this.hcz1WaterlineAbove1Data = null;
+            this.hcz1WaterlineBelow1Patterns = null;
+            this.hcz1UpperBg1Patterns = null;
+            this.hcz1WaterlineAbove1Patterns = null;
+            this.hcz1LowerBg1Patterns = null;
+            this.hcz1WaterlineBelow2Data = null;
+            this.hcz1WaterlineAbove2Data = null;
+            this.hcz1WaterlineBelow2Patterns = null;
+            this.hcz1UpperBg2Patterns = null;
+            this.hcz1WaterlineAbove2Patterns = null;
+            this.hcz1LowerBg2Patterns = null;
+            this.hcz2SmallBgLineData = null;
+            this.hcz2Art2Data = null;
+            this.hcz2Art3Data = null;
+            this.hcz2Art4Data = null;
+            this.hcz2SmallBgLinePatterns = null;
+            this.hcz2Art2Patterns = null;
+            this.hcz2Art3Patterns = null;
+            this.hcz2Art4Patterns = null;
+            this.cnzBgData = loadRawBytes(reader,
+                    Sonic3kConstants.ART_UNC_ANI_CNZ_6_ADDR,
+                    Sonic3kConstants.ART_UNC_ANI_CNZ_6_SIZE);
         } else {
             this.hczWaterlineScrollData = null;
             this.hcz1DynamicBlockData = null;
@@ -317,6 +399,39 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
             this.hcz2Art2Patterns = null;
             this.hcz2Art3Patterns = null;
             this.hcz2Art4Patterns = null;
+            this.cnzBgData = null;
+        }
+
+        if (zoneIndex == 0x05) {
+            this.iczArt1Data = loadRawBytes(reader,
+                    Sonic3kConstants.ART_UNC_ANI_ICZ_1_ADDR,
+                    Sonic3kConstants.ART_UNC_ANI_ICZ_1_SIZE);
+            this.iczArt2Data = loadRawBytes(reader,
+                    Sonic3kConstants.ART_UNC_ANI_ICZ_2_ADDR,
+                    Sonic3kConstants.ART_UNC_ANI_ICZ_2_SIZE);
+            this.iczArt3Data = loadRawBytes(reader,
+                    Sonic3kConstants.ART_UNC_ANI_ICZ_3_ADDR,
+                    Sonic3kConstants.ART_UNC_ANI_ICZ_3_SIZE);
+            this.iczArt4Data = loadRawBytes(reader,
+                    Sonic3kConstants.ART_UNC_ANI_ICZ_4_ADDR,
+                    Sonic3kConstants.ART_UNC_ANI_ICZ_4_SIZE);
+            this.iczArt5Data = loadRawBytes(reader,
+                    Sonic3kConstants.ART_UNC_ANI_ICZ_5_ADDR,
+                    Sonic3kConstants.ART_UNC_ANI_ICZ_5_SIZE);
+        } else {
+            this.iczArt1Data = null;
+            this.iczArt2Data = null;
+            this.iczArt3Data = null;
+            this.iczArt4Data = null;
+            this.iczArt5Data = null;
+        }
+
+        if (zoneIndex == 0x08 && actIndex == 0) {
+            this.soz1BgData = loadRawBytes(reader, ART_UNC_ANI_SOZ1_BG_ADDR, ART_UNC_ANI_SOZ1_BG_SIZE);
+            this.soz1Bg2Data = loadRawBytes(reader, ART_UNC_ANI_SOZ1_BG2_ADDR, ART_UNC_ANI_SOZ1_BG2_SIZE);
+        } else {
+            this.soz1BgData = null;
+            this.soz1Bg2Data = null;
         }
 
         if (zoneIndex == 0x14) {
@@ -353,6 +468,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
         } else {
             this.gumballAniData = null;
         }
+        installGraphChannels();
     }
 
     @Override
@@ -368,6 +484,11 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
             runAllScripts();
             return;
         }
+        if (!graph.channels().isEmpty()) {
+            graph.update(new ChannelContext(
+                    graph, null, level, GameServices.zoneRuntimeState(), zoneIndex, actIndex, frameCounter++));
+            return;
+        }
         if (scripts.isEmpty()) {
             return;
         }
@@ -378,13 +499,6 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
                     updateAiz1();
                 } else {
                     updateAiz2();
-                }
-            }
-            case 1 -> {
-                if (actIndex == 0) {
-                    updateHcz1();
-                } else {
-                    updateHcz2();
                 }
             }
             default -> runAllScripts();
@@ -413,6 +527,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
         }
 
         if (!scripts.isEmpty()) {
+            GraphicsManager graphicsManager = GameServices.graphics();
             scripts.get(0).tick(level, graphicsManager);
         }
         if (!firstTreeApplied && firstTreePatterns != null) {
@@ -421,17 +536,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
         }
     }
 
-    private void updateHcz1() {
-        updateHcz1BackgroundStrips();
-        runAllScripts();
-    }
-
-    private void updateHcz2() {
-        updateHcz2BackgroundStrips();
-        runAllScripts();
-    }
-
     private void runAllScripts() {
+        GraphicsManager graphicsManager = GameServices.graphics();
         for (AniPlcScriptState script : scripts) {
             script.tick(level, graphicsManager);
         }
@@ -439,17 +545,113 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
 
     private boolean isAizBossActive() {
         try {
-            Sonic3kLevelEventManager lem = Sonic3kLevelEventManager.getInstance();
-            if (lem != null) {
-                Sonic3kAIZEvents aizEvents = lem.getAizEvents();
-                if (aizEvents != null) {
-                    return aizEvents.isBossFlag();
-                }
-            }
+            AizZoneRuntimeState aizState = GameServices.hasRuntime()
+                    ? S3kRuntimeStates.currentAiz(GameServices.zoneRuntimeRegistry()).orElse(null)
+                    : null;
+            return aizState != null && aizState.isBossFlagActive();
         } catch (Exception e) {
             LOG.fine(() -> "Sonic3kPatternAnimator.isAizBossActive: " + e.getMessage());
         }
         return false;
+    }
+
+    private boolean isGenericBossActive() {
+        try {
+            if (GameServices.module().getLevelEventProvider() instanceof AbstractLevelEventManager manager) {
+                return manager.isBossActive();
+            }
+        } catch (Exception e) {
+            LOG.fine(() -> "Sonic3kPatternAnimator.isGenericBossActive: " + e.getMessage());
+        }
+        return false;
+    }
+
+    boolean shouldRunScriptChannels() {
+        return !scripts.isEmpty();
+    }
+
+    boolean shouldRunMgzScriptChannels() {
+        return !scripts.isEmpty() && !isGenericBossActive();
+    }
+
+    boolean shouldRunHcz1CustomChannels() {
+        return hczWaterlineScrollData != null
+                && hcz1DynamicBlockData != null
+                && hcz1WaterlineBelow1Patterns != null
+                && hcz1LowerBg1Patterns != null
+                && hcz1WaterlineBelow2Patterns != null
+                && hcz1LowerBg2Patterns != null
+                && hcz1UpperBg1Patterns != null
+                && hcz1WaterlineAbove1Patterns != null
+                && hcz1UpperBg2Patterns != null
+                && hcz1WaterlineAbove2Patterns != null;
+    }
+
+    boolean shouldRunHcz2CustomChannels() {
+        return hcz2SmallBgLineData != null
+                && hcz2Art2Data != null
+                && hcz2Art3Data != null
+                && hcz2Art4Data != null;
+    }
+
+    boolean shouldRunSoz1CustomChannels() {
+        return soz1BgData != null && soz1Bg2Data != null;
+    }
+
+    /**
+     * CNZ custom DMA can run whenever the direct background art source is
+     * present. The graph caches the phase, so this guard does not need to
+     * inspect transient animation state.
+     */
+    boolean shouldRunCnzCustomChannels() {
+        return cnzBgData != null;
+    }
+
+    boolean shouldRunIczHorizontalCustomChannels() {
+        return iczArt1Data != null;
+    }
+
+    boolean shouldRunIczAct1VerticalCustomChannels() {
+        return actIndex == 0
+                && iczArt2Data != null
+                && iczArt3Data != null
+                && iczArt4Data != null
+                && iczArt5Data != null;
+    }
+
+    void tickScript(AniPlcScriptState script) {
+        script.tick(level, GameServices.graphics());
+    }
+
+    void updateHcz1BackgroundStripsForGraph() {
+        updateHcz1BackgroundStrips();
+    }
+
+    void updateHcz2BackgroundStripsForGraph() {
+        updateHcz2BackgroundStrips();
+    }
+
+    void updateSoz1BackgroundTilesForGraph() {
+        updateSoz1BackgroundTiles();
+    }
+
+    /**
+     * Graph entry point for the direct-DMA half of AnimateTiles_CNZ.
+     *
+     * <p>The shared graph owns the invalidation policy, while this method keeps
+     * the ROM-shaped transfer math in one place for direct comparison against
+     * {@code AnimateTiles_CNZ}.
+     */
+    void updateCnzBackgroundTilesForGraph() {
+        updateCnzBackgroundTiles();
+    }
+
+    void updateIczHorizontalTilesForGraph() {
+        updateIczHorizontalTiles();
+    }
+
+    void updateIczAct1VerticalTilesForGraph() {
+        updateIczAct1VerticalTiles();
     }
 
     private void updateHcz1BackgroundStrips() {
@@ -635,6 +837,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
         int sourceTileOffset = sourceByteOffset / Pattern.PATTERN_SIZE_IN_ROM;
         int tileCount = byteLength / Pattern.PATTERN_SIZE_IN_ROM;
         int maxPatterns = level.getPatternCount();
+        GraphicsManager graphicsManager = GameServices.graphics();
         boolean canUpdateTextures = graphicsManager.isGlInitialized();
         for (int i = 0; i < tileCount; i++) {
             int sourceIndex = sourceTileOffset + i;
@@ -667,12 +870,29 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
         applyRawPatternBytesToLevel(slice, destTile);
     }
 
+    private void applyRawPatternSliceAllowingRowOffset(byte[] sourceData, int sourceByteOffset,
+                                                       int byteLength, int destTile) {
+        if (sourceData == null || byteLength <= 0) {
+            return;
+        }
+        if ((byteLength % Pattern.PATTERN_SIZE_IN_ROM) != 0
+                || sourceByteOffset < 0
+                || sourceByteOffset + byteLength > sourceData.length) {
+            return;
+        }
+
+        byte[] slice = new byte[byteLength];
+        System.arraycopy(sourceData, sourceByteOffset, slice, 0, byteLength);
+        applyRawPatternBytesToLevel(slice, destTile);
+    }
+
     private void applyPatternsToLevel(Pattern[] sourcePatterns, int destTile) {
         if (sourcePatterns == null || sourcePatterns.length == 0) {
             return;
         }
 
         int maxPatterns = level.getPatternCount();
+        GraphicsManager graphicsManager = GameServices.graphics();
         boolean canUpdateTextures = graphicsManager.isGlInitialized();
         for (int i = 0; i < sourcePatterns.length; i++) {
             int destIndex = destTile + i;
@@ -685,6 +905,259 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
                 graphicsManager.updatePatternTexture(dest, destIndex);
             }
         }
+    }
+
+    int computeSoz1Phase() {
+        if (isSoz1BossArenaPhaseLocked()) {
+            return 0;
+        }
+        int cameraX = getCameraX();
+        int eventsBg10 = cameraX >> 5;
+        int cameraXPosBgCopy = resolveSoz1BgCameraX(cameraX);
+        return (eventsBg10 - cameraXPosBgCopy) & 0x1F;
+    }
+
+    // SOZ1 normally derives this phase from Events_bg+$10 and Camera_X_pos_BG_copy.
+    // Until SOZ event/runtime state exists, use the boss-arena camera locks as a
+    // compatibility bridge for the late-act path that forces the phase back to 0.
+    private boolean isSoz1BossArenaPhaseLocked() {
+        if (zoneIndex != 0x08 || actIndex != 0) {
+            return false;
+        }
+        try {
+            int minX = GameServices.camera().getMinX() & 0xFFFF;
+            int minY = GameServices.camera().getMinY() & 0xFFFF;
+            return minX >= SOZ1_BOSS_LOCK_MIN_X && minY >= SOZ1_BOSS_LOCK_MIN_Y;
+        } catch (Exception e) {
+            LOG.fine(() -> "Sonic3kPatternAnimator.isSoz1BossArenaPhaseLocked: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private int resolveSoz1BgCameraX(int cameraX) {
+        try {
+            int bgCameraX = GameServices.parallax().getBgCameraX();
+            if (bgCameraX != Integer.MIN_VALUE) {
+                return bgCameraX;
+            }
+        } catch (Exception e) {
+            LOG.fine(() -> "Sonic3kPatternAnimator.resolveSoz1BgCameraX: " + e.getMessage());
+        }
+        return cameraX >> 4;
+    }
+
+    /**
+     * ROM: AnimateTiles_ICZ horizontal phase formula:
+     * {@code (Events_bg+$10 - Camera_X_pos_BG_copy) & $1F}.
+     */
+    int computeIczHorizontalPhase() {
+        int bgCameraX = resolveIczBgCameraX();
+        int eventsBg10 = resolveIczEventsBg10(bgCameraX);
+        return (eventsBg10 - bgCameraX) & 0x1F;
+    }
+
+    /**
+     * Packs the four ICZ1 vertical direct-DMA phases into one graph phase key.
+     */
+    int computeIczAct1VerticalCompositePhase() {
+        int bgCameraY = resolveIczAct1BgCameraY();
+        int eventsBg12 = asrWordValue(bgCameraY, 1);
+        int phase2 = (-(bgCameraY - eventsBg12)) & 0x3F;
+        int phase3 = (-(bgCameraY - asrWordValue(eventsBg12, 1)
+                - asrWordValue(asrWordValue(eventsBg12, 1), 1))) & 0x1F;
+        int phase4 = (-(bgCameraY - asrWordValue(eventsBg12, 1))) & 0x0F;
+        int phase5 = (-(bgCameraY - asrWordValue(eventsBg12, 2))) & 0x07;
+        return phase2 | (phase3 << 6) | (phase4 << 11) | (phase5 << 15);
+    }
+
+    private int resolveIczBgCameraX() {
+        int cameraX = getCameraX();
+        if (actIndex == 0) {
+            int x = cameraX & 0xFFFF;
+            if (x < 0x3940) {
+                return 0x1880;
+            }
+            return asrWordValue(cameraX, 1) - 0x1D80;
+        }
+
+        int cameraY = getCameraY();
+        if (!isIczAct2Indoor(cameraX, cameraY)) {
+            return 0;
+        }
+        int d0 = ((short) cameraX) << 16;
+        d0 >>= 1;
+        int d1 = d0 >> 3;
+        for (int i = 0; i < 4; i++) {
+            d0 -= d1;
+        }
+        return (short) (d0 >> 16);
+    }
+
+    private int resolveIczEventsBg10(int bgCameraX) {
+        if (actIndex == 0) {
+            int cameraX = getCameraX() & 0xFFFF;
+            if (cameraX < 0x3940) {
+                return 0;
+            }
+            return asrWordValue(bgCameraX, 1);
+        }
+
+        int cameraX = getCameraX();
+        int cameraY = getCameraY();
+        if (!isIczAct2Indoor(cameraX, cameraY)) {
+            return 0;
+        }
+        int d0 = ((short) cameraX) << 16;
+        d0 >>= 1;
+        int d1 = d0 >> 3;
+        for (int i = 0; i < 5; i++) {
+            d0 -= d1;
+        }
+        return (short) (d0 >> 16);
+    }
+
+    private int resolveIczAct1BgCameraY() {
+        int cameraY = getCameraY();
+        int cameraX = getCameraX() & 0xFFFF;
+        if (cameraX < 0x3940) {
+            return asrWordValue(cameraY, 7);
+        }
+        return asrWordValue(cameraY, 1);
+    }
+
+    private boolean isIczAct2Indoor(int cameraX, int cameraY) {
+        int x = cameraX & 0xFFFF;
+        int y = cameraY & 0xFFFF;
+        if (x >= 0x1900 && x < 0x1B80) {
+            return true;
+        }
+        return x >= 0x1000 && x < 0x3600 && y >= 0x720;
+    }
+
+    /**
+     * ROM: AnimateTiles_ICZ direct horizontal DMA path. It copies one or two
+     * split slices from ArtUnc_AniICZ__1 into tiles $10E-$11D.
+     */
+    private void updateIczHorizontalTiles() {
+        if (iczArt1Data == null) {
+            return;
+        }
+
+        int phase = computeIczHorizontalPhase();
+        int baseOffset = ror16(phase & 7, 7);
+        int splitBits = phase & 0x18;
+        int primarySourceOffset = baseOffset + (splitBits << 4);
+        int pairIndex = splitBits >> 2;
+        int firstWordCount = ICZ_HORIZONTAL_DMA_WORD_COUNTS[pairIndex];
+        int secondWordCount = ICZ_HORIZONTAL_DMA_WORD_COUNTS[pairIndex + 1];
+
+        applyRawPatternSliceToLevel(iczArt1Data, primarySourceOffset, firstWordCount << 1, 0x10E);
+        if (secondWordCount != 0) {
+            int secondDestTile = 0x10E + ((firstWordCount << 1) / Pattern.PATTERN_SIZE_IN_ROM);
+            applyRawPatternSliceToLevel(iczArt1Data, baseOffset, secondWordCount << 1, secondDestTile);
+        }
+    }
+
+    /**
+     * ROM: AnimateTiles_ICZ act-1 vertical DMA path. These row-offset copies
+     * upload the indoor BG pieces at tiles $122-$130.
+     */
+    private void updateIczAct1VerticalTiles() {
+        if (!shouldRunIczAct1VerticalCustomChannels()) {
+            return;
+        }
+
+        int bgCameraY = resolveIczAct1BgCameraY();
+        int eventsBg12 = asrWordValue(bgCameraY, 1);
+
+        int phase2 = (-(bgCameraY - eventsBg12)) & 0x3F;
+        applyRawPatternSliceAllowingRowOffset(iczArt2Data, phase2 << 2, 0x100, 0x122);
+
+        int halfEvents = asrWordValue(eventsBg12, 1);
+        int quarterEvents = asrWordValue(halfEvents, 1);
+        int phase3 = (-(bgCameraY - halfEvents - quarterEvents)) & 0x1F;
+        applyRawPatternSliceAllowingRowOffset(iczArt3Data, phase3 << 2, 0x080, 0x12A);
+
+        int phase4 = (-(bgCameraY - halfEvents)) & 0x0F;
+        applyRawPatternSliceAllowingRowOffset(iczArt4Data, phase4 << 2, 0x040, 0x12E);
+
+        int phase5 = (-(bgCameraY - asrWordValue(eventsBg12, 2))) & 0x07;
+        applyRawPatternSliceAllowingRowOffset(iczArt5Data, phase5 << 2, 0x020, 0x130);
+    }
+
+    /**
+     * ROM: AnimateTiles_CNZ phase formula.
+     *
+     * <p>CNZ derives its direct-DMA phase from the same shared-state edge that
+     * Task 3 published through the runtime adapter:
+     * {@code (Events_bg+$10 - Camera_X_pos_BG_copy) & $3F}. This keeps the
+     * animated tiles tied to the actual deform math instead of a free-running
+     * local counter.
+     */
+    int computeCnzPhase() {
+        if (!GameServices.hasRuntime()) {
+            return 0;
+        }
+        CnzZoneRuntimeState state = GameServices.zoneRuntimeRegistry()
+                .currentAs(CnzZoneRuntimeState.class)
+                .orElse(null);
+        if (state == null) {
+            return 0;
+        }
+        return (state.deformPhaseBgX() - state.publishedBgCameraX()) & 0x3F;
+    }
+
+    /**
+     * ROM: AnimateTiles_CNZ direct background DMA path.
+     *
+     * <p>The ROM uses {@code phase & 7} to choose the base 1 KB source bank,
+     * {@code phase & $38} to select one of eight split layouts from
+     * {@code word_27C9C}, and then DMA-copies one or two word-count segments
+     * from {@code ArtUnc_AniCNZ__6} into VRAM tile {@code $308+}. The engine
+     * mirrors that by copying raw pattern slices into the level pattern buffer
+     * so the graph can own CNZ's direct-DMA destination range.
+     */
+    private void updateCnzBackgroundTiles() {
+        if (cnzBgData == null) {
+            return;
+        }
+
+        int phase = computeCnzPhase();
+        int baseSourceOffset = ror16(phase & 7, 6);
+        int bandBits = phase & 0x38;
+        int primarySourceOffset = baseSourceOffset + (bandBits << 4);
+        int pairIndex = bandBits >> 2;
+        int firstWordCount = CNZ_DMA_WORD_COUNTS[pairIndex];
+        int secondWordCount = CNZ_DMA_WORD_COUNTS[pairIndex + 1];
+
+        applyRawPatternSliceToLevel(cnzBgData, primarySourceOffset, firstWordCount << 1, 0x308);
+        if (secondWordCount != 0) {
+            int secondDestTile = 0x308 + ((firstWordCount << 1) / Pattern.PATTERN_SIZE_IN_ROM);
+            applyRawPatternSliceToLevel(cnzBgData, baseSourceOffset, secondWordCount << 1, secondDestTile);
+        }
+    }
+
+    private void updateSoz1BackgroundTiles() {
+        if (soz1BgData == null || soz1Bg2Data == null) {
+            return;
+        }
+
+        int phase = computeSoz1Phase();
+        int lowPhase = phase & 7;
+        int splitBits = phase & 0x18;
+        int baseOffset = lowPhase * 0x180;
+        int mainOffset = baseOffset + (splitBits * 12);
+        int splitIndex = splitBits >> 2;
+        int firstWordCount = SOZ1_SPLIT_WORD_COUNTS[splitIndex];
+        int secondWordCount = SOZ1_SPLIT_WORD_COUNTS[splitIndex + 1];
+
+        applyRawPatternSliceToLevel(soz1BgData, mainOffset, firstWordCount << 1, 0x330);
+        if (secondWordCount != 0) {
+            int secondDestTile = 0x330 + ((firstWordCount << 1) / Pattern.PATTERN_SIZE_IN_ROM);
+            applyRawPatternSliceToLevel(soz1BgData, baseOffset, secondWordCount << 1, secondDestTile);
+        }
+
+        applyRawPatternSliceToLevel(soz1Bg2Data, phase * 0x0C0, 0x060, 0x33C);
     }
 
     private void ensureHczPatternCapacity() {
@@ -701,6 +1174,12 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
         if (zoneIndex == 0x14) {
             level.ensurePatternCapacity(PACHINKO_BG_DEST_TILE
                     + (PACHINKO_BG_DMA_BYTES / Pattern.PATTERN_SIZE_IN_ROM));
+        }
+    }
+
+    private void ensureIczPatternCapacity() {
+        if (zoneIndex == 0x05) {
+            level.ensurePatternCapacity(0x131);
         }
     }
 
@@ -729,10 +1208,17 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
         return patterns;
     }
 
-    private int computeHcz1WaterlineDelta() {
+    int computeHcz1WaterlineDelta() {
         int delta = (short) (getCameraY() - HCZ1_EQUILIBRIUM_Y);
         int quarterDelta = delta >> 2;
         return (short) (quarterDelta - delta);
+    }
+
+    int computeHcz2CompositePhase() {
+        int[] hScroll = buildHcz2HScrollValues(getCameraX());
+        int eventsBg12 = hScroll[3] - hScroll[9];
+        int eventsBg14 = hScroll[2] - hScroll[9];
+        return ((eventsBg12 & 0x3F) << 8) | (eventsBg14 & 0x3F);
     }
 
     private int[] buildHcz2HScrollValues(int cameraX) {
@@ -802,6 +1288,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
         // Copy 8 tiles from source offset to level patterns at tile 0x40, wrapping the
         // source data on overflow.
         level.ensurePatternCapacity(GUMBALL_DEST_TILE + GUMBALL_TILE_COUNT);
+        GraphicsManager graphicsManager = GameServices.graphics();
         boolean canUpdateTextures = graphicsManager.isGlInitialized();
         byte[] tileData = new byte[Pattern.PATTERN_SIZE_IN_ROM];
         for (int i = 0; i < GUMBALL_TILE_COUNT; i++) {
@@ -954,13 +1441,45 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
             case 1 -> actIndex == 0
                     ? Sonic3kConstants.ANIPLC_HCZ1_ADDR
                     : Sonic3kConstants.ANIPLC_HCZ2_ADDR;
+            case 2 -> Sonic3kConstants.ANIPLC_MGZ_ADDR;
+            case 0x03 -> Sonic3kConstants.ANIPLC_CNZ_ADDR;
+            case 0x05 -> Sonic3kConstants.ANIPLC_ICZ_ADDR;
+            case 0x08 -> ANIPLC_LRZ1_ADDR;
             case 0x14 -> Sonic3kConstants.ANIPLC_PACHINKO_ADDR;
             default -> -1;
         };
     }
 
+    private void installGraphChannels() {
+        if (zoneIndex == 2) {
+            graph.install(S3kAnimatedTileChannels.buildMgzChannels(this, scripts));
+            return;
+        }
+        if (zoneIndex == 1) {
+            graph.install(S3kAnimatedTileChannels.buildHczChannels(this, scripts, actIndex));
+            return;
+        }
+        if (zoneIndex == 0x08 && actIndex == 0) {
+            graph.install(S3kAnimatedTileChannels.buildSozChannels(this, scripts));
+            return;
+        }
+        if (zoneIndex == 0x03) {
+            graph.install(S3kAnimatedTileChannels.buildCnzChannels(this, scripts));
+            return;
+        }
+        if (zoneIndex == 0x05) {
+            graph.install(S3kAnimatedTileChannels.buildIczChannels(this, scripts, actIndex));
+            return;
+        }
+        graph.install(List.of());
+    }
+
     private static int word(int value) {
         return value & 0xFFFF;
+    }
+
+    private static int asrWordValue(int value, int bits) {
+        return (short) value >> bits;
     }
 
     private static int negateWord(int value) {
@@ -1025,5 +1544,69 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager {
             destPos += 0x100;
         }
         return expanded;
+    }
+
+    // --- RewindSnapshottable<PatternAnimatorSnapshot> ---
+
+    @Override
+    public String key() {
+        return "pattern-animator";
+    }
+
+    @Override
+    public com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot capture() {
+        // AniPLC script counters
+        com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.ScriptCounter[] sc =
+                new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.ScriptCounter[scripts.size()];
+        for (int i = 0; i < scripts.size(); i++) {
+            AniPlcScriptState s = scripts.get(i);
+            sc[i] = new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.ScriptCounter(
+                    s.getTimer(), s.getFrameIndex());
+        }
+        // Scalar state packed into extra blob (45 bytes: 1 bool + 11 ints)
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(45);
+        buf.put((byte) (firstTreeApplied ? 1 : 0));
+        buf.putInt(lastHcz1WaterlineDelta);
+        buf.putInt(lastHcz2SmallBgLineValue);
+        buf.putInt(lastHcz2Art2Value);
+        buf.putInt(lastHcz2Art3Value);
+        buf.putInt(lastHcz2Art4Value);
+        buf.putInt(pachinkoPhase);
+        buf.putInt(pachinkoSourceOffset);
+        buf.putInt(pachinkoStripeOffset);
+        buf.putInt(frameCounter);
+        buf.putInt(lastGumballIndex);
+        buf.putInt(gumballFrameCounter);
+        return new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot(
+                sc,
+                new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.HandlerCounter[0],
+                buf.array());
+    }
+
+    @Override
+    public void restore(com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot snap) {
+        // Restore AniPLC script counters
+        com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.ScriptCounter[] sc = snap.scriptCounters();
+        int restoreCount = Math.min(sc.length, scripts.size());
+        for (int i = 0; i < restoreCount; i++) {
+            scripts.get(i).restoreCounters(sc[i].timer(), sc[i].frameIndex());
+        }
+        // Restore scalar state from extra blob
+        byte[] extra = snap.extra();
+        if (extra != null && extra.length >= 45) {
+            java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(extra);
+            firstTreeApplied     = buf.get() != 0;
+            lastHcz1WaterlineDelta   = buf.getInt();
+            lastHcz2SmallBgLineValue = buf.getInt();
+            lastHcz2Art2Value        = buf.getInt();
+            lastHcz2Art3Value        = buf.getInt();
+            lastHcz2Art4Value        = buf.getInt();
+            pachinkoPhase            = buf.getInt();
+            pachinkoSourceOffset     = buf.getInt();
+            pachinkoStripeOffset     = buf.getInt();
+            frameCounter             = buf.getInt();
+            lastGumballIndex         = buf.getInt();
+            gumballFrameCounter      = buf.getInt();
+        }
     }
 }

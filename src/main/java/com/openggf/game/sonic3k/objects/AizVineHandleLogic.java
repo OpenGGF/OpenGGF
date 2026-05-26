@@ -6,6 +6,7 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 /**
  * Shared handle/ride logic for AIZ ride-vine objects (Obj06/Obj0C).
@@ -44,8 +45,8 @@ final class AizVineHandleLogic {
     static final class PlayerState {
         int grabFlag;
         int releaseDelay;
-        /** True while the player hasn't released jump since grabbing. */
-        boolean jumpHeldSinceGrab;
+        boolean pendingJumpRelease;
+        int pendingReleaseAngle;
     }
 
     static final class State {
@@ -133,17 +134,50 @@ final class AizVineHandleLogic {
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        player.setCentreX((short) handle.x);
-        player.setCentreY((short) (handle.y + PLAYER_HANG_Y_OFFSET));
+        player.setCentreXPreserveSubpixel((short) handle.x);
+        player.setCentreYPreserveSubpixel((short) (handle.y + PLAYER_HANG_Y_OFFSET));
         player.setAnimationId(Sonic3kAnimationIds.HANG2);
         player.setForcedAnimationId(Sonic3kAnimationIds.HANG2);
         player.setObjectMappingFrameControl(true);
         player.setSpindash(false);
-        player.setObjectControlled(true);
-        player.setControlLocked(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        // ROM grab path (sonic3k.asm:46739-46743 loc_22302) writes only:
+        //   move.b #3, object_control(a1)
+        //   andi.b #$FD, render_flags(a1)
+        //   move.b #1, (a2)
+        // ROM writes object_control = 3 (bits 0+1, NOT bit 7). The dispatcher's
+        // bit-7 gates therefore stay clear: Sonic_Control's input mirror keeps
+        // running, Tails_CPU_Control still sees the leader as "free" (sonic3k.asm:
+        // 26481-26482 bmi.w branch in Tails_Catch_Up_Flying only fires when bit 7
+        // is set), and the per-frame TouchResponse pass is not suppressed.
+        // Engine analog: keep objectControlAllowsCpu=true so the SidekickCpuController
+        // NORMAL/CATCH_UP_FLIGHT bit-7 gates evaluate the same way ROM's bmi.w does.
+        // No Ctrl_1_locked write. ROM Sonic_Control still runs the input
+        // mirror (sonic3k.asm:21970 loc_10BF0 → move.w (Ctrl_1).w,
+        // (Ctrl_1_logical).w), so Sonic_RecordPos at sonic3k.asm:22132
+        // captures the live BK2 input into Stat_table. Tails CPU then sees
+        // that input 16 frames later via getInputHistory(16).
+        //
+        // Setting controlLocked here suppressed the engine's logical input
+        // (SpriteManager.publishInputState gates effective inputs on
+        // !controlLocked, line 388-392), which zeroed inputHistory and
+        // caused Tails to lose all air-acceleration cues during AIZ
+        // GiantRideVine grab sequences. AIZ trace F2878 reproduces this:
+        // Sonic was grabbed at F285x while pressing right; ROM-side Tails
+        // saw the right input via Stat_table 16 frames later and applied
+        // 0x18/frame air-acceleration; engine-side Tails saw zero input
+        // and accumulated -0x14 instead of the expected +0x03 at F2878.
+        //
+        // CPU Tails is different: loc_13E0A/loc_13E34 in Tails_CPU_Control
+        // (sonic3k.asm:26717-26724, 26735-26742) suppress the +/-1 follow
+        // nudge when object_control bit 0 is set. Obj_AIZGiantRideVine writes
+        // object_control=3 in sub_220C2, so mirror bit 0 for CPU sidekicks
+        // without applying the same input-history lock to Player_1.
+        if (player.isCpuControlled()) {
+            player.setControlLocked(true);
+        }
         player.setRenderFlips(player.getDirection() == Direction.LEFT, false);
         playerState.grabFlag = 1;
-        playerState.jumpHeldSinceGrab = player.isJumpPressed();
         if (services != null) {
             services.playSfx(Sonic3kSfx.GRAB.id);
         }
@@ -193,17 +227,14 @@ final class AizVineHandleLogic {
             return;
         }
 
-        // ROM uses jpadpress1 (edge-detected new press), not jpadhold1.
-        // Wait for the player to release jump before recognising a new press.
-        if (playerState.jumpHeldSinceGrab) {
-            if (!player.isJumpPressed()) {
-                playerState.jumpHeldSinceGrab = false;
-            }
-        } else if (player.isJumpPressed()) {
-            clearPlayerControl(player);
-            playerState.grabFlag = 0;
-            playerState.releaseDelay = RELEASE_DELAY;
-            launchPlayer(handle, player, parentAngle);
+        // ROM sub_220C2 reads Ctrl_1_logical/Ctrl_2_logical and masks only
+        // A/B/C press-edge bits before entering loc_22136.
+        if (player.isJumpJustPressed()) {
+            // The vine object runs after Sonic in the ROM SST order. Queue the
+            // release so the velocity is visible at frame end, but position
+            // integration does not happen until the next player step.
+            playerState.pendingJumpRelease = true;
+            playerState.pendingReleaseAngle = parentAngle;
             return;
         }
 
@@ -214,6 +245,28 @@ final class AizVineHandleLogic {
             setPlayerHeldMode1(handle, player, parentAngle);
         }
         player.setRenderFlips(player.getDirection() == Direction.LEFT, false);
+    }
+
+    static void updatePostPlayer(State state,
+            AbstractPlayableSprite player1,
+            AbstractPlayableSprite player2) {
+        updatePostPlayer(state, state.p1, player1);
+        updatePostPlayer(state, state.p2, player2);
+    }
+
+    private static void updatePostPlayer(State handle, PlayerState playerState, AbstractPlayableSprite player) {
+        if (!playerState.pendingJumpRelease) {
+            return;
+        }
+        playerState.pendingJumpRelease = false;
+        if (player == null || playerState.grabFlag == 0) {
+            return;
+        }
+
+        clearPlayerControlImmediate(player);
+        playerState.grabFlag = 0;
+        playerState.releaseDelay = RELEASE_DELAY;
+        launchPlayer(handle, player, playerState.pendingReleaseAngle);
     }
 
     private static void launchPlayer(State handle, AbstractPlayableSprite player, int parentAngle) {
@@ -238,13 +291,17 @@ final class AizVineHandleLogic {
         player.setAir(true);
         player.setJumping(true);
         player.applyRollingRadii(false);
+        int centreX = player.getCentreX();
+        int centreY = player.getCentreY();
         player.setRolling(true);
+        player.setCentreXPreserveSubpixel((short) centreX);
+        player.setCentreYPreserveSubpixel((short) centreY);
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
     }
 
     private static void setPlayerHeldMode0(State handle, AbstractPlayableSprite player, int parentAngle) {
-        player.setCentreX((short) handle.x);
-        player.setCentreY((short) (handle.y + PLAYER_HANG_Y_OFFSET));
+        player.setCentreXPreserveSubpixel((short) handle.x);
+        player.setCentreYPreserveSubpixel((short) (handle.y + PLAYER_HANG_Y_OFFSET));
 
         int angle = angleByte(parentAngle);
         if (player.getDirection() == Direction.LEFT) {
@@ -273,20 +330,28 @@ final class AizVineHandleLogic {
         player.setAnimationId(Sonic3kAnimationIds.WALK);
         player.setForcedAnimationId(Sonic3kAnimationIds.WALK);
         player.setMappingFrame(frame);
-        player.setCentreX((short) (handle.x + offsetX));
-        player.setCentreY((short) (handle.y + offsetY));
+        player.setCentreXPreserveSubpixel((short) (handle.x + offsetX));
+        player.setCentreYPreserveSubpixel((short) (handle.y + offsetY));
     }
 
     static void clearPlayerControl(AbstractPlayableSprite player) {
         player.setObjectMappingFrameControl(false);
         player.setForcedAnimationId(-1);
         player.setControlLocked(false);
-        player.setObjectControlled(false);
+        player.deferObjectControlRelease();
         // Suppress the stale jump press to prevent immediate ability activation
         // (insta-shield / glide). While object-controlled, PlayableSpriteMovement
         // doesn't run, so its jumpPrevious field is stale. Without suppression the
         // edge detector sees a false "new press" on the release frame, which
         // satisfies the double-jump condition and fires the ability instantly.
+        player.suppressNextJumpPress();
+    }
+
+    private static void clearPlayerControlImmediate(AbstractPlayableSprite player) {
+        player.setObjectMappingFrameControl(false);
+        player.setForcedAnimationId(-1);
+        player.setControlLocked(false);
+        ObjectControlState.none().applyTo(player);
         player.suppressNextJumpPress();
     }
 

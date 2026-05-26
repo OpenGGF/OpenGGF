@@ -2,7 +2,6 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.configuration.SonicConfiguration;
-import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
@@ -11,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
 import java.util.List;
@@ -261,7 +261,7 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance {
 
         // move.b #$81,(f_playerctrl).w
         // Bit 0 = control lock, bit 7 = disable object interaction
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
 
         // move.b #id_Roll,obAnim(a1)
@@ -433,7 +433,7 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance {
         targetY = signExtend16(waypointData[1]);
 
         // clr.b (f_playerctrl).w
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setControlLocked(false);
         player.setForcedAnimationId(-1);
         controlledPlayer = null;
@@ -600,7 +600,7 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance {
         // prevents this during active transport. This is a safety net.
         if (routine != Routine.WAIT) {
             if (controlledPlayer != null) {
-                controlledPlayer.setObjectControlled(false);
+                ObjectControlState.none().applyTo(controlledPlayer);
                 controlledPlayer.setControlLocked(false);
                 controlledPlayer.setForcedAnimationId(-1);
             }
@@ -611,7 +611,7 @@ public class Sonic1TeleporterObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void appendDebugRenderCommands(DebugRenderContext ctx) {
-        if (!SonicConfigurationService.getInstance().getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED)) {
+        if (!services().configuration().getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED)) {
             return;
         }
 

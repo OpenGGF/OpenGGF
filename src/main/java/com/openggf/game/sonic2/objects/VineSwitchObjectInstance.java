@@ -9,10 +9,13 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -77,6 +80,8 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
     // === Jump Velocity ===
     // ROM: move.w #-$300,y_vel(a1)
     private static final int RELEASE_Y_VELOCITY = -0x300;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     /**
      * Creates a new VineSwitch object instance.
@@ -97,19 +102,31 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
         }
 
         // Process player interactions
         // ROM: Obj7F_Main (loc_2981E) calls Obj7F_Action for each player
-        processPlayerInteraction(player, false);  // Player 1 (MainCharacter)
-        // Note: Player 2 (Sidekick) support deferred - underlying state fields are in place
+        List<PlayableEntity> participants = interactionParticipants(playerEntity);
+        for (int i = 0; i < participants.size(); i++) {
+            processPlayerInteraction((AbstractPlayableSprite) participants.get(i), i != 0);
+        }
 
         // Update mapping frame based on grab state
         // ROM: tst.w objoff_30(a0) / beq.s + / move.b #1,mapping_frame(a0)
         updateMappingFrame();
+    }
+
+    private List<PlayableEntity> interactionParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
     }
 
     /**
@@ -159,9 +176,13 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
      * @param isPlayer2 true if this is player 2
      */
     private void handleGrabbedPlayer(AbstractPlayableSprite player, boolean isPlayer2) {
-        // Check for A/B/C button press to release
+        // Check for A/B/C button PRESS (edge-triggered) to release.
         // ROM: andi.b #button_B_mask|button_C_mask|button_A_mask,d0 / beq.w return_29936
-        if (player.isJumpPressed()) {
+        // Critical: `move.w (Ctrl_1).w,d0` followed by `andi.b` operates on the LOW byte
+        // of d0, which is Ctrl_1_Press (just-pressed this frame), not Ctrl_1_Held. The
+        // player must freshly press a jump button to release; merely holding the button
+        // since before grab does not release.
+        if (player.isJumpJustPressed()) {
             releasePlayer(player, isPlayer2);
             return;
         }
@@ -243,7 +264,7 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
 
         // Lock player control
         // ROM: move.b #1,obj_control(a1)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // Mark as grabbed
         // ROM: move.b #1,(a2)
@@ -276,7 +297,7 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
     private void releasePlayer(AbstractPlayableSprite player, boolean isPlayer2) {
         // Clear control lock
         // ROM: clr.b obj_control(a1)
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
 
         // Clear grab flag
         // ROM: clr.b (a2)

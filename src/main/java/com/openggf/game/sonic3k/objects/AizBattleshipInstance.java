@@ -1,9 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.events.S3kAizEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -145,7 +144,9 @@ public class AizBattleshipInstance extends AbstractObjectInstance {
         AizShipBombInstance bomb = new AizShipBombInstance(
                 new ObjectSpawn(cameraX + screenX, worldY, 0, 0, 0, false, 0),
                 this, bombScriptX, worldY);
-        om.addDynamicObject(bomb);
+        // ROM Obj_AIZBattleshipMain creates bombs with AllocateObjectAfterCurrent
+        // (sonic3k.asm:105315), so bomb slots must follow the ship's slot.
+        om.addDynamicObjectAfterCurrent(bomb);
     }
 
     private void updateSecondaryCameraY(int shipX) {
@@ -163,22 +164,11 @@ public class AizBattleshipInstance extends AbstractObjectInstance {
         int shipX = shipXFixed >> 16;
 
         // Signal the event system that the battleship is complete
-        Sonic3kAIZEvents events = getAizEvents();
-        if (events != null) {
-            events.onBattleshipComplete();
-        }
+        S3kAizEventWriteSupport.onBattleshipComplete(services());
 
         LOG.info("AIZ2 battleship: ship exited at shipX=0x" + Integer.toHexString(shipX)
                 + " after " + frameCounter + " frames, " + scriptIndex + " bombs dropped");
         setDestroyed(true);
-    }
-
-    private Sonic3kAIZEvents getAizEvents() {
-        try {
-            return ((Sonic3kLevelEventManager) services().levelEventProvider()).getAizEvents();
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     @Override
@@ -199,6 +189,11 @@ public class AizBattleshipInstance extends AbstractObjectInstance {
     public void appendRenderCommands(List<GLCommand> commands) {
         // The battleship manipulates the background plane in the ROM and does not
         // render as an individual sprite. No rendering needed here.
+    }
+
+    @Override
+    public boolean isPersistent() {
+        return !isDestroyed();
     }
 
     @Override

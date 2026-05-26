@@ -260,6 +260,16 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOnScreenHalfWidth() {
+        return 0x18;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 8;
+    }
+
+    @Override
     public void appendDebugRenderCommands(DebugRenderContext ctx) {
         // Solid collision box (green)
         ctx.drawRect(spawn.x(), currentY, SOLID_HALF_WIDTH, SOLID_AIR_HALF_HEIGHT,
@@ -280,8 +290,15 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {
+        // Obj_AIZSpikedLog calls SolidObjectFull (sonic3k.asm:60148-60153).
+        // That helper skips Player_2 when render_flags bit 7 is clear
+        // (sonic3k.asm:41003-41008), unlike SolidObjectFull2.
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity player, SolidContact contact, int frameCounter) {
-        // Standing detection is handled via isPlayerRiding() in updateSwingState()
     }
 
     // ===== Child Access =====
@@ -306,7 +323,6 @@ public class AizSpikedLogObjectInstance extends AbstractObjectInstance
 
         // collision_flags = 0x9C: HURT type (bit 7), size index 0x1C (sonic3k.asm:60051)
         private static final int COLLISION_FLAGS_ACTIVE = 0x9C;
-
         private final AizSpikedLogObjectInstance parent;
         private int currentX;
         private int currentY;

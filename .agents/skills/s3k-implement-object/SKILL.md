@@ -1,5 +1,5 @@
 ---
-title: Implement Sonic 3&K Object/Badnik
+name: s3k-implement-object
 description: Guide for implementing Sonic 3 and Knuckles objects and badniks with ROM-accurate art, behavior, and disassembly validation.
 ---
 
@@ -22,11 +22,32 @@ When delegating agents to explore the disassembly, instruct them to use the **s3
 
 ## Implementation Process
 
-### Critical: Use S&K-Side ROM Addresses
+### Current Priority: Route-Impact Objects First
+
+S3K object work should advance playable vertical slices before low-impact checklist closure. Prioritize objects that unblock AIZ -> HCZ continuity, then CNZ, MGZ, and ICZ route work.
+
+Use this order when several objects are available:
+
+1. Route blockers: doors, launchers, forced movement, water/chase pieces, boss gates, and terrain mutations required to finish a route.
+2. Platforms and terrain modifiers: moving platforms, collapsing structures, carriers, crushers, and path-changing solids.
+3. Hazards and boss/miniboss support objects.
+4. High-usage badniks that affect traversal, sidekick behavior, or trace blockers.
+5. Decorative or isolated objects after the slice is playable.
+
+When an object owns state that other systems need, publish it through the shared runtime stack where appropriate (`ZoneRuntimeRegistry`, `ZoneLayoutMutationPipeline`, `PaletteOwnershipRegistry`, or render/scroll framework hooks) instead of adding one-off zone-local state.
+
+### Critical: Use S&K-Side ROM Addresses — NEVER the Sonic 3 Standalone Addresses
 
 The locked-on ROM has two halves: **S&K** (0x000000–0x1FFFFF) and **S3** (0x200000–0x3FFFFF). Many shared assets exist in both halves with identical data. **Always use S&K-side addresses (< 0x200000)** for all ROM constants in `Sonic3kConstants.java`.
 
-When RomOffsetFinder returns results from both `sonic3k.asm` and `s3.asm`, always use the `sonic3k.asm` address. When reading object disassembly, always use the `sonic3k.asm` version (S3KL code path), as it may contain zone-specific overrides absent from the S3 standalone version.
+**Do NOT use Sonic 3 (`s3.asm`) pointers/addresses for S3K work**, even when the two halves appear identical. The S3 half is the Sonic 3 standalone code path and is not referenced at runtime by the S3KL (locked-on) execution path. Addresses >= 0x200000 are *wrong* for the engine's S3K module; quoting them will produce silent parity drift that is hard to trace.
+
+Rules for finding S3K pointers:
+
+- Always run `RomOffsetFinder` with `--game s3k` (never default/`--game s2`, and never read values out of a Sonic 3 disassembly or ROM map).
+- When the tool returns multiple results for the same label — one from `sonic3k.asm` and one from `s3.asm` — **pick the `sonic3k.asm` one**. If only an `s3.asm` result exists, re-search: the S&K label may have a different prefix/suffix, or the data may live under `Levels/{ZONE}/` rather than at the top of the asm.
+- When reading object disassembly, always use the `sonic3k.asm` version (S3KL code path); it may contain zone-specific overrides (e.g., FBZ art tile, Knuckles variants) absent from the S3 version.
+- If you genuinely cannot find an S&K-side equivalent, stop and ask — do not fall back to the S3 address.
 
 ### Phase 1: Research & Discovery
 
@@ -38,7 +59,7 @@ The same ID can mean different objects depending on the zone set. For example, 0
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/skill.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 Agents should:
 
@@ -86,6 +107,29 @@ Agents should:
 5. **Check for boss objects** - If the object is a mini-boss or end boss:
    - **Redirect to `/s3k-implement-boss`** skill instead
    - Boss indicators: `Obj_XXXMiniboss`, `Obj_XXXEndBoss`, `collision_property` used as hit counter, camera lock behavior
+
+### Phase 1.5: ROM Behavioural Pitfall Review
+
+Before writing implementation code, read `rom-pitfalls.md` in this skill's
+directory. The file lists ROM behaviour classes where naive engine ports
+have produced trace-replay-visible divergences during prior frontier work.
+
+For each pitfall pattern:
+
+1. Decide whether your S3K object is susceptible. Most patterns apply only
+   to specific object families (touch-response badniks, moving solids,
+   per-player interactives, free-fall objects, character-affecting state
+   transitions). Skip patterns the object can't trigger.
+2. For applicable patterns, plan your implementation to avoid the
+   anti-pattern. Quote the ROM convention from the pitfall entry in your
+   code comments where the convention matters.
+3. If you find a NEW pattern during Phase 2 / Phase 4 cross-validation
+   that isn't yet catalogued — pause and add it to `rom-pitfalls.md`
+   before continuing. The catalogue grows by accretion.
+4. **S3K-specific entries** (zone-set resolution, S&K-vs-S3 address
+   confusion, dynamic-resize / AniPLC interactions) should be tagged
+   `**S3K-specific:**` so they don't get duplicated to the S2 catalogue
+   on next sync.
 
 ### Phase 2: Implementation
 
@@ -201,7 +245,7 @@ public class ObjectNameBadnikInstance extends AbstractBadnikInstance {
 ```
 
 ##### Pattern 3: Boss
-**Use the dedicated `/s3k-implement-boss` skill** (`.agents/skills/s3k-implement-boss/skill.md`) for boss implementations.
+**Use the dedicated `/s3k-implement-boss` skill** (`.agents/skills/s3k-implement-boss/SKILL.md`) for boss implementations.
 
 **Detect a boss when:**
 - Object label contains `Miniboss` or `EndBoss`
@@ -288,6 +332,17 @@ Renderer keys are defined in `Sonic3kObjectArtKeys` and registered in `Sonic3kPl
 | `isOnScreen(margin)` | Inherited from `AbstractObjectInstance`. Off-screen visibility check. |
 | `DebugRenderContext` | `com.openggf.debug.DebugRenderContext` — use for `appendDebugRenderCommands()`. |
 
+##### Standard Object Contracts
+
+When the current branch provides shared object contracts, prefer them over new object-local booleans or direct state writes:
+
+- Use `ObjectControlState` for native object-control bits and derived movement/CPU/contact predicates. S3K has narrower bit-7-style gates in some sidekick paths; do not collapse them into one generic `isObjectControlled()` check.
+- Use `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` when an object chooses main player, native P1/P2, closest player, all engine players, or engine sidekicks extended from native P2 logic. Character-specific Knuckles/Tails paths still need explicit policy.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
+- Use `ObjectLifetimeOps` for destroy/delete/offscreen-expire semantics; avoid hand-written remembered-object, respawn, or slot-transfer code unless the object has a documented bespoke lifecycle.
+- Prefer canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` adapters for standard solid, touch, and lifecycle behavior. Compatibility wrappers should preserve current behavior first; migrate only after characterization tests prove equivalence.
+- When adding or tightening guard tests, ratchet guard baselines: inventory existing violations, allowlist only historical cases with reasons, and hard-fail new direct player/object-control/lifecycle shortcuts.
+
 ##### Child Object Spawning
 
 Prefer `spawnChild()` for runtime-spawned children (body segments, projectiles, explosions):
@@ -295,7 +350,9 @@ Prefer `spawnChild()` for runtime-spawned children (body segments, projectiles, 
 ChildObject child = spawnChild(() -> new ChildObject(spawn, params));
 ```
 
-Legacy pattern (still works): `services().objectManager().addDynamicObject(childInstance)`.
+Avoid direct `services().objectManager().addDynamicObject(childInstance)` in new object
+work unless the allocation path is documented as a lifecycle bridge that cannot use the
+standard helpers.
 
 #### 2.5 Implementation Requirements
 
@@ -312,8 +369,8 @@ private static final int X_VELOCITY = 0x100;
 **S3K field name mapping**: When translating disassembly, use these S3K→engine mappings:
 | S3K Field | Engine Method/Field |
 |-----------|-------------------|
-| `x_pos` | `getX()` / `setX()` (center coords) |
-| `y_pos` | `getY()` / `setY()` (center coords) |
+| `x_pos` | `getCentreX()` / `setCentreX()` (ROM position) |
+| `y_pos` | `getCentreY()` / `setCentreY()` (ROM position) |
 | `x_vel` | X velocity |
 | `y_vel` | Y velocity |
 | `routine` | routine state variable |
@@ -324,6 +381,10 @@ private static final int X_VELOCITY = 0x100;
 | `mapping_frame` | current mapping frame |
 | `shield_reaction` | shield reaction flags (S3K-specific) |
 | `character_id` | player character type (Sonic/Tails/Knuckles) |
+
+For playable-sprite native writes to `x_pos` / `y_pos`, prefer `NativePositionOps`. Reserve raw preserve-subpixel centre setters for lower-level sprite internals or non-playable/object-local state.
+
+`getX()` / `getY()` are top-left sprite bounds, not ROM `x_pos` / `y_pos`. Use them only for render extents or explicit bounds checks. This matters for route blockers, moving solids, kill planes, boss triggers, and trace comparisons.
 
 **Shield reactions** (S3K-specific): If the object uses `shield_reaction`:
 ```java
@@ -379,6 +440,18 @@ registerFactory(Sonic3kObjectIds.OBJECT_NAME,
     (spawn, registry) -> new ObjectNameBadnikInstance(spawn));
 ```
 
+#### 2.7 Rewind Synchronization Fields
+
+Before finalizing a new object or badnik, classify every instance field for rewind. Key synchronization-relevant fields must remain captured: routine/state variables, timers/counters, subpixel positions, velocities, movement helper state, animation frame/timer when it drives gameplay, cooldown/reload flags, subtype-derived mutable state, per-player latches, rider/carry/contact maps, and child-spawn phase state. Do not add `@RewindTransient` to these fields just to satisfy `GenericFieldCapturer` or audit tests.
+
+Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable `ObjectSpawn` identity, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Dynamic spawn coordinates are gameplay state; capture them explicitly rather than treating the live `ObjectSpawn` reference as structural.
+
+Prefer standard value forms before object-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+#### 2.8 Player/Object Participation Checks
+
+For route-impact objects, validate every participant the ROM touches: Sonic, Tails, Knuckles, CPU sidekick paths, ride/carry latches, `object_control` gates, forced movement, shield reactions, and child-object ownership. Preserve embedded `SolidObject` timing where the ROM calls it; moving collision to the end of `update()` can shift standing bits, sidekick carry, and trace frontiers by one frame.
+
 ### Phase 3: Code Quality
 
 Ensure the implementation:
@@ -394,7 +467,7 @@ Ensure the implementation:
 
 Delegate to a review agent to cross-validate against the disassembly. **Include this instruction in the agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/skill.md`) for reference on disassembly structure, label conventions, and object system patterns.
+> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, and object system patterns.
 
 ```
 Review the implementation of [ObjectName] against the Sonic 3&K disassembly.
@@ -472,8 +545,8 @@ Once cross-validation is confirmed bug-free:
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.agents/skills/s3k-disasm-guide/skill.md` |
-| **Boss skill** | `.agents/skills/s3k-implement-boss/skill.md` |
+| **Disassembly guide** | `.agents/skills/s3k-disasm-guide/SKILL.md` |
+| **Boss skill** | `.agents/skills/s3k-implement-boss/SKILL.md` |
 | Zone set enum | `src/.../game/sonic3k/constants/S3kZoneSet.java` |
 | Object IDs | `src/.../game/sonic3k/constants/Sonic3kObjectIds.java` |
 | ROM offsets | `src/.../game/sonic3k/constants/Sonic3kConstants.java` |

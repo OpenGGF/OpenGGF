@@ -1,10 +1,13 @@
 package com.openggf.game;
 
+import com.openggf.architecture.CompositionRoot;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
@@ -21,6 +24,7 @@ import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.graphics.RenderContext;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -46,6 +50,7 @@ import java.util.logging.Logger;
  * <p>Singleton. Activated via {@code CROSS_GAME_FEATURES_ENABLED} config key.
  * The donor ROM is opened as a secondary ROM (no module detection side-effect).
  */
+@CompositionRoot
 public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, SpindashDustArtProvider {
     private static final Logger LOGGER = Logger.getLogger(CrossGameFeatureProvider.class.getName());
 
@@ -65,8 +70,24 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     private SpriteArtSet instaShieldArtSet;
     private DonorCapabilities donorCapabilities;
     private boolean active;
+    private final RomManager romManager;
+    private final SonicConfigurationService configService;
 
     private CrossGameFeatureProvider() {
+        this(null, null);
+    }
+
+    CrossGameFeatureProvider(RomManager romManager, SonicConfigurationService configService) {
+        this.romManager = romManager;
+        this.configService = configService;
+    }
+
+    private RomManager romManager() {
+        return romManager != null ? romManager : GameServices.rom();
+    }
+
+    private SonicConfigurationService configService() {
+        return configService != null ? configService : GameServices.configuration();
     }
 
     public static synchronized CrossGameFeatureProvider getInstance() {
@@ -86,7 +107,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         this.donorGameId = GameId.fromCode(donorGameCode);
 
         // Same-game guard: disable donation when donor == host
-        GameId hostId = GameModuleRegistry.getCurrent().getGameId();
+        GameId hostId = resolveHostGameId();
         if (donorGameId == hostId) {
             LOGGER.info("Donor same as host (" + donorGameId.code() + "), donation disabled");
             active = false;
@@ -101,7 +122,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
             return;
         }
 
-        Rom donorRom = RomManager.getInstance().getSecondaryRom(donorGameId.code());
+        Rom donorRom = romManager().getSecondaryRom(donorGameId.code());
         this.donorReader = RomByteReader.fromRom(donorRom);
 
         if (donorGameId == GameId.S3K) {
@@ -120,12 +141,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
 
         // Create donor render context for palette isolation
         donorRenderContext = RenderContext.getOrCreateDonor(donorGameId);
-        String mainChar = com.openggf.configuration.SonicConfigurationService.getInstance()
-                .getString(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE);
-        Palette charPalette = loadCharacterPalette(mainChar);
-        if (charPalette != null) {
-            donorRenderContext.setPalette(0, charPalette);
-        }
+        syncDonorRenderPalette(ActiveGameplayTeamResolver.resolveMainCharacterCode(configService()));
 
         initializeDonorAudio();
         loadInstaShieldArt();
@@ -141,8 +157,18 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         return instance != null && instance.active;
     }
 
+    /**
+     * Returns true if the cross-game feature provider is active and the donor
+     * game is Sonic 3&amp;K. Used to gate features that require S3K donation
+     * specifically (e.g., donated data select presentation).
+     */
+    public static boolean isS3kDonorActive() {
+        return isActive() && instance.donorGameId == GameId.S3K;
+    }
+
     @Override
     public SpriteArtSet loadPlayerSpriteArt(String characterCode) throws IOException {
+        syncDonorRenderPalette(characterCode);
         if (donorCapabilities == null) {
             return null;
         }
@@ -268,6 +294,16 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         return donorRenderContext;
     }
 
+    private void syncDonorRenderPalette(String characterCode) {
+        if (donorRenderContext == null) {
+            return;
+        }
+        Palette charPalette = loadCharacterPalette(characterCode);
+        if (charPalette != null) {
+            donorRenderContext.setPalette(0, charPalette);
+        }
+    }
+
     /**
      * Initializes donor audio: creates a donor SmpsLoader and DacData from
      * the donor ROM, then registers all donor sounds with AudioManager.
@@ -283,7 +319,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         }
 
         try {
-            Rom donorRom = RomManager.getInstance().getSecondaryRom(donorGameId.code());
+            Rom donorRom = romManager().getSecondaryRom(donorGameId.code());
             donorSmpsLoader = donorProfile.createSmpsLoader(donorRom);
             donorDacData = donorSmpsLoader.loadDacData();
 
@@ -364,6 +400,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     }
 
     public void close() {
+        donorGameId = null;
         donorReader = null;
         s2PlayerArt = null;
         s3kPlayerArt = null;
@@ -377,6 +414,13 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         instaShieldArtSet = null;
         donorCapabilities = null;
         active = false;
+    }
+
+    private GameId resolveHostGameId() {
+        if (GameServices.hasRuntime()) {
+            return GameServices.module().getGameId();
+        }
+        return GameServices.currentOrBootstrapGameModule().getGameId();
     }
 
     /**
@@ -443,7 +487,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
 
         // Inherit collision model from the base game module so plane switching
         // works correctly in S2/S3K levels with cross-game features enabled
-        PhysicsFeatureSet baseFeatureSet = GameModuleRegistry.getCurrent()
+        PhysicsFeatureSet baseFeatureSet = GameServices.module()
                 .getPhysicsProvider().getFeatureSet();
 
         return new PhysicsFeatureSet(
@@ -456,6 +500,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
                 baseFeatureSet.inputAlwaysCapsGroundSpeed(),    // inputAlwaysCapsGroundSpeed (from base game)
                 donorCapabilities.hasElementalShields(),        // elementalShieldsEnabled (from donor)
                 donorCapabilities.hasInstaShield(),             // instaShieldEnabled (from donor)
+                baseFeatureSet.jumpRepressClearsRollJumpBeforeAbility(), // jumpRepressClearsRollJumpBeforeAbility (from base game)
                 baseFeatureSet.angleDiffCardinalSnap(),         // angleDiffCardinalSnap (from base game)
                 baseFeatureSet.extendedEdgeBalance(),           // extendedEdgeBalance (from base game)
                 baseFeatureSet.ringFloorCheckMask(),            // ringFloorCheckMask (from base game)
@@ -465,9 +510,54 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
                 baseFeatureSet.superSpindashSpeedTable(),       // superSpindashSpeedTable (from base game)
                 baseFeatureSet.movingCrouchThreshold(),         // movingCrouchThreshold (from base game)
                 baseFeatureSet.groundWallCollisionEnabled(),    // groundWallCollisionEnabled (from base game)
+                baseFeatureSet.groundWallPushRequiresFacingIntoWall(), // groundWallPushRequiresFacingIntoWall (from base game)
+                baseFeatureSet.animationChangeClearsPush(),     // animationChangeClearsPush (from base game)
                 baseFeatureSet.airSuperspeedPreserved(),        // airSuperspeedPreserved (from base game)
+                baseFeatureSet.slopeResistStartsFromRest(),     // slopeResistStartsFromRest (from base game)
                 baseFeatureSet.slopeRepelChecksOnObject(),      // slopeRepelChecksOnObject (from base game)
-                baseFeatureSet.fastScrollCap()                  // fastScrollCap (from base game)
+                baseFeatureSet.slopeRepelUsesS3kSlipKick(),     // slopeRepelUsesS3kSlipKick (from base game)
+                baseFeatureSet.pinballLandingPreservesRoll(),   // pinballLandingPreservesRoll (from base game)
+                baseFeatureSet.pinballLandingPreservesPinballMode(), // pinballLandingPreservesPinballMode (from base game)
+                baseFeatureSet.topSolidLandingAllowsZeroDist(), // topSolidLandingAllowsZeroDist (from base game)
+                baseFeatureSet.airBottomSolidHitClearsGroundSpeed(), // airBottomSolidHitClearsGroundSpeed (from base game)
+                baseFeatureSet.airRightWallHitContinuesIntoCeilingSeparation(), // airRightWallHitContinuesIntoCeilingSeparation (from base game)
+                baseFeatureSet.airLeftWallHitContinuesIntoCeilingSeparation(), // airLeftWallHitContinuesIntoCeilingSeparation (from base game)
+                baseFeatureSet.fullSolidBottomOverlapUsesCurrentYRadiusOnly(), // fullSolidBottomOverlapUsesCurrentYRadiusOnly (from base game)
+                baseFeatureSet.fastScrollCap(),                 // fastScrollCap (from base game)
+                baseFeatureSet.bossHitNegatesGroundSpeed(),     // bossHitNegatesGroundSpeed (from base game)
+                baseFeatureSet.stageRingsUseObjectTouchCollection(), // stageRingsUseObjectTouchCollection (from base game)
+                baseFeatureSet.sidekickFollowSnapThreshold(),   // sidekickFollowSnapThreshold (from base game)
+                baseFeatureSet.sidekickDespawnX(),              // sidekickDespawnX (from base game)
+                baseFeatureSet.sidekickFollowLeadOffset(),      // sidekickFollowLeadOffset (from base game)
+                baseFeatureSet.sidekickSpawningRequiresGroundedLeader(), // sidekickSpawningRequiresGroundedLeader (from base game)
+                baseFeatureSet.useScreenYWrapValueForVisibility(),  // useScreenYWrapValueForVisibility (from base game)
+                baseFeatureSet.sidekickDespawnUsesObjectIdMismatch(), // sidekickDespawnUsesObjectIdMismatch (from base game)
+                baseFeatureSet.sidekickFlyLandStatusBlockerMask(),  // sidekickFlyLandStatusBlockerMask (from base game)
+                baseFeatureSet.sidekickFlyLandRequiresLeaderAlive(), // sidekickFlyLandRequiresLeaderAlive (from base game)
+                baseFeatureSet.solidObjectOffscreenGate(),       // solidObjectOffscreenGate (from base game)
+                baseFeatureSet.solidObjectRequiresSidekickOnScreen(), // solidObjectRequiresSidekickOnScreen (from base game)
+                baseFeatureSet.sidekickDespawnUsesRidingInstanceLoss(), // sidekickDespawnUsesRidingInstanceLoss (from base game)
+                baseFeatureSet.sidekickRespawnEntersCatchUpFlight(), // sidekickRespawnEntersCatchUpFlight (from base game)
+                baseFeatureSet.sidekickClearsStalePushVelocityBeforeGroundMove(), // sidekickClearsStalePushVelocityBeforeGroundMove (from base game)
+                baseFeatureSet.sidekickCpuUsesLevelFrameCounter(), // sidekickCpuUsesLevelFrameCounter (from base game)
+                baseFeatureSet.landingRollClearUsesCurrentYRadiusDelta(), // landingRollClearUsesCurrentYRadiusDelta (from base game)
+                baseFeatureSet.levelBoundaryRightStrict(), // levelBoundaryRightStrict (from base game)
+                baseFeatureSet.levelBoundaryUsesCentreY(), // levelBoundaryUsesCentreY (from base game)
+                baseFeatureSet.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(), // solidObjectTopBranchAlwaysLiftsOnUpwardVelocity (from base game)
+                baseFeatureSet.sidekickPushBypassUsesGraceStatus(), // sidekickPushBypassUsesGraceStatus (from base game)
+                baseFeatureSet.sidekickNormalCpuSkipsHurtRoutine(), // sidekickNormalCpuSkipsHurtRoutine (from base game)
+                baseFeatureSet.controlLockLatchesLogicalInput(), // controlLockLatchesLogicalInput (from base game)
+                baseFeatureSet.hurtRoutineLatchesLogicalInput(), // hurtRoutineLatchesLogicalInput (from base game)
+                baseFeatureSet.waterExitBoostSkipsFastUpwardVelocity(), // waterExitBoostSkipsFastUpwardVelocity (from base game)
+                baseFeatureSet.slopeResistAppliesAtZeroInertia(), // slopeResistAppliesAtZeroInertia (from base game)
+                baseFeatureSet.permanentRespawnTableLatch(), // permanentRespawnTableLatch (from base game)
+                baseFeatureSet.objectsExecuteAfterPlayerPhysics(), // objectsExecuteAfterPlayerPhysics (from base game)
+                baseFeatureSet.speedShoesTimerPrePhysicsExtraTicks(), // speedShoesTimerPrePhysicsExtraTicks (from base game)
+                baseFeatureSet.shieldObjectFixedSlotIndex(), // shieldObjectFixedSlotIndex (from base game)
+                baseFeatureSet.invincibilityStarsFixedSlotIndex(), // invincibilityStarsFixedSlotIndex (from base game)
+                baseFeatureSet.touchResponseUsesRenderFlagYGate(), // touchResponseUsesRenderFlagYGate (from base game)
+                baseFeatureSet.sidekickDeathUsesDeferredDespawn(), // sidekickDeathUsesDeferredDespawn (from base game)
+                baseFeatureSet.rightWallDeepProbePreservesPenetration() // rightWallDeepProbePreservesPenetration (from base game)
         );
     }
 

@@ -52,7 +52,7 @@ ROM filenames can be changed in `config.json` if yours differ. See
 3. Place your ROM files in the project root directory (next to `pom.xml`).
 4. Run:
    ```
-   java -jar target/OpenGGF-0.5.20260411-jar-with-dependencies.jar
+   java -jar target/OpenGGF-0.6.prerelease-jar-with-dependencies.jar
    ```
 
 ## First Launch
@@ -79,6 +79,9 @@ does not exist, defaults are used. A few settings you might want to change immed
 | `SCREEN_WIDTH` / `SCREEN_HEIGHT` | Window size in pixels | `640` x `448` |
 | `AUDIO_ENABLED` | Enable or disable sound | `true` |
 | `SIDEKICK_CHARACTER_CODE` | Add Tails as a CPU sidekick (`"tails"` or `""`) | `""` |
+| `EDITOR_ENABLED` | Allow `Shift+Tab` to open the experimental editor overlay | `false` |
+
+Key bindings can be written as names like `"SPACE"` and `"F9"` instead of raw numeric key codes.
 
 For the full list, see [Configuration](configuration.md) or the
 [Configuration Reference](../../../CONFIGURATION.md).

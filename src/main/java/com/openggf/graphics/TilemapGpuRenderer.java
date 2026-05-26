@@ -55,6 +55,9 @@ public class TilemapGpuRenderer {
     private float perLineScreenHeight = 224.0f;
     private float perLineVdpWrapWidth = 0.0f;
     private float perLineNametableBase = 0.0f;
+    private float perLineScrollSampleYOffsetPx = 0.0f;
+    private float upperBandWrapHeightPx = 0.0f;
+    private float upperBandWrapWidthTiles = 0.0f;
     private boolean perColumnVScroll = false;
 
     private float bgVdpWrapHeight = 0.0f;
@@ -128,12 +131,23 @@ public class TilemapGpuRenderer {
      * Automatically resets after render().
      */
     public void enablePerLineScroll(int hScrollTextureId, float screenHeight,
-            float vdpWrapWidth, float nametableBase) {
+            float vdpWrapWidth, float nametableBase, float sampleYOffsetPx) {
         this.perLineScroll = true;
         this.perLineHScrollTextureId = hScrollTextureId;
         this.perLineScreenHeight = screenHeight;
         this.perLineVdpWrapWidth = vdpWrapWidth;
         this.perLineNametableBase = nametableBase;
+        this.perLineScrollSampleYOffsetPx = sampleYOffsetPx;
+    }
+
+    /**
+     * Limits the X wrap width for the upper portion of a BG tilemap.
+     * Used by MGZ2 state 8 where the cloud rows only occupy the left portion of
+     * the BG layout while lower rows expose the fake-floor strip.
+     */
+    public void setUpperBandWrap(float heightPx, float widthTiles) {
+        this.upperBandWrapHeightPx = heightPx;
+        this.upperBandWrapWidthTiles = widthTiles;
     }
 
     /**
@@ -146,7 +160,7 @@ public class TilemapGpuRenderer {
             return;
         }
         foregroundLineScrollBuffer.upload(packedHScroll);
-        enablePerLineScroll(foregroundLineScrollBuffer.getTextureId(), 224.0f, 0.0f, 0.0f);
+        enablePerLineScroll(foregroundLineScrollBuffer.getTextureId(), 224.0f, 0.0f, 0.0f, 0.0f);
     }
 
     /**
@@ -171,6 +185,22 @@ public class TilemapGpuRenderer {
     public void setShimmerState(int frameCounter, int shimmerStyle) {
         this.shimmerFrameCounter = frameCounter;
         this.shimmerStyle = shimmerStyle;
+    }
+
+    private static float resolvePerLineScrollSampleRow(float pixelYFromTop,
+            float sampleYOffsetPx, float screenHeight) {
+        float maxScanline = screenHeight - 1.0f;
+        if (maxScanline <= 0.0f) {
+            return 0.0f;
+        }
+        float scanline = pixelYFromTop - sampleYOffsetPx;
+        if (scanline < 0.0f) {
+            return 0.0f;
+        }
+        if (scanline > maxScanline) {
+            return maxScanline;
+        }
+        return scanline;
     }
 
     public int getShimmerStyle() {
@@ -268,6 +298,9 @@ public class TilemapGpuRenderer {
         shader.setVdpWrapWidth(perLineScroll ? perLineVdpWrapWidth : 0.0f);
         shader.setVdpWrapHeight(layer == Layer.BACKGROUND ? bgVdpWrapHeight : 0.0f);
         shader.setNametableBase(perLineScroll ? perLineNametableBase : 0.0f);
+        shader.setPerLineScrollSampleYOffsetPx(perLineScroll ? perLineScrollSampleYOffsetPx : 0.0f);
+        shader.setUpperBandWrap(layer == Layer.BACKGROUND ? upperBandWrapHeightPx : 0.0f,
+                layer == Layer.BACKGROUND ? upperBandWrapWidthTiles : 0.0f);
         // Always assign HScrollTexture to unit 5 to satisfy macOS sampler validation.
         shader.setHScrollTexture(5);
         shader.setVScrollColumnTexture(6);
@@ -305,22 +338,11 @@ public class TilemapGpuRenderer {
 
         quadRenderer.draw(0, 0, windowWidth, windowHeight);
 
-        glActiveTexture(GL_TEXTURE6);
-        glBindTexture(GL_TEXTURE_1D, dummyTexture1dId);
-        glActiveTexture(GL_TEXTURE5);
-        glBindTexture(GL_TEXTURE_1D, dummyTexture1dId);
         perLineScroll = false; // Reset for next frame
+        perLineScrollSampleYOffsetPx = 0.0f;
+        upperBandWrapHeightPx = 0.0f;
+        upperBandWrapWidthTiles = 0.0f;
         perColumnVScroll = false;
-        glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_1D, dummyTexture1dId);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, 0);
 
         shader.stop();
     }

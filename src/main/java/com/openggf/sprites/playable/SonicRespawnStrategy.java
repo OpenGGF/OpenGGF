@@ -95,7 +95,7 @@ public class SonicRespawnStrategy implements SidekickRespawnStrategy {
 
         // Let normal physics drive movement
         sidekick.setControlLocked(false);
-        sidekick.setObjectControlled(false);
+        ObjectControlState.none().applyTo(sidekick);
         sidekick.setForcedAnimationId(-1);
 
         // Face toward the leader

@@ -5,11 +5,11 @@ import com.openggf.game.sonic1.objects.TestPlayableSprite;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectParams;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestSonic3kInvisibleHurtBlockHObjectInstance {
 
@@ -45,7 +45,7 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
                 new ObjectSpawn(0x100, 0x180, 0x6A, 0x11, 0x01, false, 0));
         RecordingPlayer player = new RecordingPlayer();
 
-        block.onSolidContact(player, new SolidContact(false, true, false, false, false, 6), 7);
+        block.onSolidContact(player, new SolidContact(false, true, false, false, false, 6, true), 7);
 
         assertTrue(player.hurtOrDeathCalled);
     }
@@ -110,3 +110,4 @@ public class TestSonic3kInvisibleHurtBlockHObjectInstance {
         }
     }
 }
+

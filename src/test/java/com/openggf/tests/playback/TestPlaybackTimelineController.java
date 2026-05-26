@@ -1,11 +1,11 @@
 package com.openggf.tests.playback;
 
 import com.openggf.debug.playback.PlaybackTimelineController;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestPlaybackTimelineController {
 
@@ -64,4 +64,20 @@ public class TestPlaybackTimelineController {
         assertEquals(3, timeline.getCursorFrame());
         assertFalse(timeline.isPlaying());
     }
+
+    @Test
+    public void seekAndPlayMovesCursorAndUpdatesPlayingState() {
+        PlaybackTimelineController timeline = new PlaybackTimelineController(12);
+        timeline.seekAndPlay(8, true);
+
+        assertEquals(8, timeline.getCursorFrame());
+        assertTrue(timeline.isPlaying());
+
+        timeline.seekAndPlay(4, false);
+
+        assertEquals(4, timeline.getCursorFrame());
+        assertFalse(timeline.isPlaying());
+    }
 }
+
+

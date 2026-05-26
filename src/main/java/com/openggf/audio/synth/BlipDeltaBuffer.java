@@ -331,4 +331,49 @@ public class BlipDeltaBuffer {
     public void endFrame(int clocks) {
         offsetFp += (long) clocks * factorFp;
     }
+
+    Snapshot captureSnapshot() {
+        return new Snapshot(
+                factorFp,
+                offsetFp,
+                Arrays.copyOf(bufferL, size),
+                Arrays.copyOf(bufferR, size),
+                size,
+                integL,
+                integR);
+    }
+
+    void restoreSnapshot(Snapshot snapshot) {
+        this.factorFp = snapshot.factorFp();
+        this.offsetFp = snapshot.offsetFp();
+        this.size = snapshot.size();
+        this.bufferL = Arrays.copyOf(snapshot.bufferL(), snapshot.size());
+        this.bufferR = Arrays.copyOf(snapshot.bufferR(), snapshot.size());
+        this.integL = snapshot.integL();
+        this.integR = snapshot.integR();
+    }
+
+    public record Snapshot(
+            long factorFp,
+            long offsetFp,
+            int[] bufferL,
+            int[] bufferR,
+            int size,
+            int integL,
+            int integR) {
+        public Snapshot {
+            bufferL = Arrays.copyOf(bufferL, bufferL.length);
+            bufferR = Arrays.copyOf(bufferR, bufferR.length);
+        }
+
+        @Override
+        public int[] bufferL() {
+            return Arrays.copyOf(bufferL, bufferL.length);
+        }
+
+        @Override
+        public int[] bufferR() {
+            return Arrays.copyOf(bufferR, bufferR.length);
+        }
+    }
 }

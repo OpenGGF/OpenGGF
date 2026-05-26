@@ -2,8 +2,9 @@ package com.openggf.game;
 
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
+import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
-import com.openggf.level.objects.HudRenderManager;
+import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.animation.SpriteAnimationSet;
@@ -91,6 +92,35 @@ public interface ObjectArtProvider {
     Pattern[] getHudLivesNumbers();
 
     /**
+     * Gets the shared static HUD art bundle used by the mapping-driven HUD renderer.
+     *
+     * @return the static HUD art bundle, or null if the provider still uses legacy HUD wiring
+     */
+    default HudStaticArt getHudStaticArt() {
+        return null;
+    }
+
+    /**
+     * Gets the ROM-native hex-digit font used by the debug HUD (player/camera coords).
+     * Tile layout is ASCII-aligned: digits 0-9 at offsets 0-9 and A-F at offsets
+     * 17-22 (see {@link HudRenderManager#setHexDigitsPatternIndex(int)}).
+     *
+     * @return the hex digit pattern array, or null when not loaded
+     */
+    default Pattern[] getHudHexDigitPatterns() {
+        return null;
+    }
+
+    /**
+     * Optional palette override used only while drawing the lives HUD.
+     * This is for cases where donated life-icon art needs a different palette
+     * contract than the rest of the shared in-level palette line.
+     */
+    default Palette getHudLivesPaletteOverride() {
+        return null;
+    }
+
+    /**
      * Gets all available renderer keys.
      *
      * @return list of renderer keys
@@ -134,16 +164,6 @@ public interface ObjectArtProvider {
     }
 
     /**
-     * Gets the HUD flash mode for warning indicators (rings=0, time>=9:00).
-     * S1/S2 use palette swap (red flash), S3K hides the text label entirely.
-     *
-     * @return the flash mode, default PALETTE_SWAP (S1/S2 behavior)
-     */
-    default HudRenderManager.HudFlashMode getHudFlashMode() {
-        return HudRenderManager.HudFlashMode.PALETTE_SWAP;
-    }
-
-    /**
      * Registers object art sheets that depend on level tile data (e.g., smashable
      * ground, collapsing ledges, platforms that reuse level patterns).
      * Called after level load when the level's Pattern[] is available.
@@ -153,5 +173,17 @@ public interface ObjectArtProvider {
      */
     default void registerLevelTileArt(Level level, int zoneIndex) {
         // Default no-op — games without level-tile-based object art need not override
+    }
+
+    /**
+     * Reloads standalone (ROM-compressed) object art for the current act.
+     * Called during seamless act transitions to pick up act-specific badnik art
+     * (e.g., HCZ Act 1 has Blastoid, Act 2 has Jawz) that differs from the
+     * previous act's art plan.
+     *
+     * @param zoneIndex the current zone index
+     */
+    default void reloadStandaloneArtForActTransition(int zoneIndex) {
+        // Default no-op — only S3K has act-specific standalone art plans
     }
 }

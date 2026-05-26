@@ -32,20 +32,48 @@ CNZ --validate-only
 | **s3k-palette-cycling** | `.claude/skills/s3k-palette-cycling/skill.md` | Implement AnPal handlers with counter/step/limit cycling and validation |
 | **s3k-zone-validate** | `.claude/skills/s3k-zone-validate/skill.md` | Visual comparison via stable-retro + image recognition for validation |
 
+## S&K-Side Addresses Only — Never Sonic 3 Standalone
+
+When dispatching feature agents, re-iterate this rule in every prompt: **the engine is S3KL (locked-on), so all ROM constants must come from the S&K half (`sonic3k.asm`, addresses < 0x200000). Never use Sonic 3 (`s3.asm`) pointers or addresses**, even when the two halves look identical. Always invoke `RomOffsetFinder` with `--game s3k`, and if a lookup returns both halves, pick the `sonic3k.asm` result. See `s3k-disasm-guide` for the full selection rule.
+
+## Framework-First Rule
+
+When feature agents implement the zone, prefer the runtime-owned stack over bespoke zone-local state, but keep the goal practical: close a playable S3K route slice. Do not launch broad architecture-only migrations unless they directly reduce risk or duplication in the target slice.
+
+- Shared event/object/scroll state belongs in a typed `ZoneRuntimeRegistry` adapter.
+- Timer-driven palette work and event-driven palette mutations should route through `PaletteOwnershipRegistry`.
+- AniPLC and script-driven art uploads should use `AnimatedTileChannelGraph` and `S3kAnimatedTileChannels` where possible.
+- Tile/block/chunk edits should use `ZoneLayoutMutationPipeline` (directly or via `S3kSeamlessMutationExecutor`).
+- Extra overlays and frame render flags should go through `SpecialRenderEffectRegistry` / `AdvancedRenderModeController`.
+- New scanline-fill math should reuse `ScrollEffectComposer`, `DeformationPlan`, `ScatterFillPlan`, and `WaterlineBlendComposer`.
+
+## Slice-First Completion Rule
+
+A zone bring-up is successful when it advances a playable route, not when a checklist row changes state. For current work, prioritize AIZ -> HCZ continuity first, then feed CNZ, MGZ, and ICZ into the same standard.
+
+Every bring-up plan should identify:
+
+- Traversal blockers: doors, launchers, forced-movement paths, water/chase mechanics, boss gates, and terrain mutations required to finish the route.
+- Event flow: camera locks, bounds, cutscenes, act transitions, boss/miniboss arenas, and palette mutations.
+- Visual coherence: parallax, animated tiles, palette cycling, PLC/art loads, staged overlays, and render-mode state needed for the area to look recognizable.
+- Parity gates: known trace blockers, object lifecycle, player/sidekick participation, coordinate semantics, rewind-relevant state, focused headless tests, and stable-retro visual validation where practical.
+
+When route blockers involve objects or bosses, make the object contract decision explicit in the plan: `ObjectControlState` for forced/control bits, `ObjectPlayerQuery` plus `ObjectPlayerParticipationPolicy` for native slots versus OpenGGF sidekicks, `ObjectLifetimeOps` for delete/despawn/remembered-object behavior, and canonical solid/touch/lifecycle profiles through compatibility wrappers. Guard work should ratchet baselines from inventory before hard-failing new shortcuts.
+
 ## Zone Priority Order
 
-Zones listed in recommended bring-up order. AIZ is already implemented and serves as the reference.
+Zones listed in recommended bring-up order. This order favors playable route closure over global checklist coverage. AIZ is already implemented and serves as the reference.
 
 | Priority | Zone | Full Name | Existing Features | Complexity Notes |
 |----------|------|-----------|-------------------|------------------|
 | -- | AIZ | Angel Island Zone | Events, parallax, animated tiles, palette cycling | **Reference zone** -- fully implemented |
-| 1 | HCZ | Hydrocity Zone | Palette cycling exists | Water system integration, common zone, validate existing palette cycling |
-| 2 | LBZ | Launch Base Zone | Palette cycling exists | Complex events (rising water, dual acts), validate existing palette cycling |
-| 3 | LRZ | Lava Reef Zone | Palette cycling exists | Lava mechanics, visual payoff, validate existing palette cycling |
-| 4 | CNZ | Carnival Night Zone | Palette cycling exists | Barrel physics, lighting effects, validate existing palette cycling |
-| 5 | ICZ | IceCap Zone | Palette cycling exists | Snowboarding intro sequence, validate existing palette cycling |
-| 6 | FBZ | Flying Battery Zone | Palette cycling placeholder | Flying Battery mechanics, palette cycling may be stub |
-| 7 | MGZ | Marble Garden Zone | Parallax done | Needs events + animated tiles + boss, parallax already implemented |
+| 1 | HCZ | Hydrocity Zone | Palette cycling exists | First AIZ continuation slice; water, chase, transitions, and boss/event parity |
+| 2 | CNZ | Carnival Night Zone | Palette cycling exists | Existing trace/object work; bumpers, cylinders, miniboss, lighting, and sidekick-sensitive interactions |
+| 3 | MGZ | Marble Garden Zone | Parallax done | Existing runtime-state/parallax base; events, animated tiles, miniboss/boss flow |
+| 4 | ICZ | IceCap Zone | Palette cycling exists | Active object work; snowboarding, ice objects, Freezer, validation of palette/PLC state |
+| 5 | LBZ | Launch Base Zone | Palette cycling exists | Complex events (rising water, dual acts), validate existing palette cycling |
+| 6 | LRZ | Lava Reef Zone | Palette cycling exists | Lava mechanics, visual payoff, validate existing palette cycling |
+| 7 | FBZ | Flying Battery Zone | Palette cycling placeholder | Flying Battery mechanics, palette cycling may be stub |
 | 8 | MHZ | Mushroom Hill Zone | None | Time-of-season (act color changes), no existing features |
 | 9 | SOZ | Sandopolis Zone | None | Time-of-day system, ghosts, complex zone |
 | 10 | SSZ | Sky Sanctuary Zone | None | Short zone, unique sky mechanics |

@@ -2,13 +2,13 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GameModule;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.level.objects.ShieldObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.Pattern;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
@@ -38,7 +38,6 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
         frameIndex = 0;
         delayCounter = 0;
         currentMappingFrame = 0;
-        ensureShieldArtLoaded();
         initAnimation(0);
     }
 
@@ -92,27 +91,34 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
     }
 
     /**
-     * Obj_LightningShield_CreateSpark (sonic3k.asm:34811-34858).
+     * Obj_LightningShield_CreateSpark (docs/skdisasm/sonic3k.asm:34811-34858).
      * Creates 4 spark particles with diagonal velocities; shield stays on script 0.
      */
     public void triggerSparks() {
         AbstractPlayableSprite player = ((AbstractPlayableSprite) getPlayer());
         if (player == null) return;
         Sonic3kObjectArtProvider artProvider = getS3kArtProvider();
-        if (artProvider == null) return;
-        SpriteArtSet sparkArtSet = artProvider.getShieldArtSet(Sonic3kObjectArtKeys.LIGHTNING_SPARK);
-        if (sparkArtSet == null || sparkArtSet.animationSet() == null) return;
+        SpriteAnimationSet sparkAnimationSet = null;
+        Pattern[] sparkTiles = null;
+        if (artProvider != null) {
+            SpriteArtSet sparkArtSet = artProvider.getShieldArtSet(Sonic3kObjectArtKeys.LIGHTNING_SPARK);
+            if (sparkArtSet != null) {
+                sparkAnimationSet = sparkArtSet.animationSet();
+                sparkTiles = sparkArtSet.artTiles();
+            }
+        }
 
         int cx = player.getCentreX();
         int cy = player.getCentreY();
-        // ROM velocity table (sonic3k.asm:34840-34844)
+        // ROM allocates the children before assigning art state, so headless/object
+        // parity must not depend on loaded renderer art (sonic3k.asm:34811-34844).
         int[][] velocities = {
             {-0x200, -0x200}, {0x200, -0x200},
             {-0x200,  0x200}, {0x200,  0x200}
         };
         for (int[] vel : velocities) {
             LightningSparkObjectInstance spark = new LightningSparkObjectInstance(
-                    cx, cy, vel[0], vel[1], sparkArtSet.animationSet(), sparkArtSet.artTiles());
+                    cx, cy, vel[0], vel[1], sparkAnimationSet, sparkTiles);
             spawnDynamicObject(spark);
         }
     }
@@ -201,8 +207,8 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
         commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, cx, top, 0, 0));
     }
 
-    private static Sonic3kObjectArtProvider getS3kArtProvider() {
-        GameModule module = GameModuleRegistry.getCurrent();
+    private Sonic3kObjectArtProvider getS3kArtProvider() {
+        GameModule module = services().gameModule();
         if (module == null) return null;
         ObjectArtProvider provider = module.getObjectArtProvider();
         return (provider instanceof Sonic3kObjectArtProvider s3k) ? s3k : null;

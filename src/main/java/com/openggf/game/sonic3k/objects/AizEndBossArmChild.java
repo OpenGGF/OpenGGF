@@ -38,7 +38,6 @@ public class AizEndBossArmChild extends AbstractBossChild {
     private static final int ROUTINE_ANIMATE_OPEN = 6;
     private static final int ROUTINE_WAIT_FIRE = 8;
     private static final int ROUTINE_WAIT_RETRACT = 10;
-
     private final AizEndBossInstance boss;
     private final int offsetX;
     private final int offsetY;
@@ -63,7 +62,7 @@ public class AizEndBossArmChild extends AbstractBossChild {
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (!beginUpdate(frameCounter)) return;
+        if (!shouldUpdate(frameCounter)) return;
 
         // ROM Refresh_ChildPositionAdjusted negates child_dx when the parent is X-flipped.
         int signedOffsetX = boss.isFacingRight() ? -offsetX : offsetX;

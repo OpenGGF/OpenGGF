@@ -1,20 +1,25 @@
 package com.openggf.game;
 
+import com.openggf.TraceSessionLauncher;
 import com.openggf.control.InputHandler;
-import com.openggf.Engine;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.TexturedQuadRenderer;
+import com.openggf.testmode.TestModeTracePicker;
+import com.openggf.trace.catalog.TraceCatalog;
+import com.openggf.trace.catalog.TraceEntry;
 
 import org.lwjgl.system.MemoryUtil;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.logging.Logger;
 
@@ -95,6 +100,10 @@ public class MasterTitleScreen {
     // GL resources
     private TexturedQuadRenderer renderer;
     private PixelFont font;
+    // Loaded lazily when TEST_MODE_ENABLED fires. Matches the rest
+    // of the debug overlay (no drop shadow).
+    private PixelFont pickerFont;
+    private TestModeTracePicker tracePicker;
     private int bgTextureId;
     private int solidWhiteTextureId; // 1x1 white texture for solid color overlays
     private int emblemTextureId;
@@ -107,16 +116,23 @@ public class MasterTitleScreen {
     private int cloudSmallWidth, cloudSmallHeight;
 
     private final List<CloudSprite> clouds = new ArrayList<>();
+    private final SonicConfigurationService configService;
 
     private boolean gameSelected = false;
 
-    public void initialize() {
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
+    public MasterTitleScreen() {
+        this(GameServices.configuration());
+    }
 
+    public MasterTitleScreen(SonicConfigurationService configService) {
+        this.configService = Objects.requireNonNull(configService, "configService");
+    }
+
+    public void initialize() {
         // Check ROM availability
         for (int i = 0; i < GameEntry.values().length; i++) {
             GameEntry entry = GameEntry.values()[i];
-            String romPath = config.getString(entry.romConfigKey);
+            String romPath = configService.getString(entry.romConfigKey);
             romAvailable[i] = romPath != null && !romPath.isEmpty() && new File(romPath).exists();
         }
 
@@ -228,11 +244,38 @@ public class MasterTitleScreen {
             return;
         }
 
+        if (configService.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
+            if (tracePicker == null) {
+                Path root = Path.of(System.getProperty("user.dir"))
+                        .resolve(configService.getString(SonicConfiguration.TRACE_CATALOG_DIR))
+                        .normalize();
+                tracePicker = new TestModeTracePicker(
+                        TraceCatalog.scan(root), ensurePickerFont());
+            }
+            tracePicker.update(inputHandler);
+            switch (tracePicker.consumeResult()) {
+                case LAUNCH -> {
+                    TraceEntry entry = tracePicker.selectedEntry();
+                    if (entry != null) {
+                        if (TraceSessionLauncher.launch(entry)) {
+                            tracePicker = null;
+                        }
+                    }
+                }
+                case BACK -> {
+                    // Disable test mode for this session so normal game-select runs
+                    configService.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
+                    tracePicker = null;
+                }
+                case NONE -> { }
+            }
+            return;
+        }
+
         // Handle input
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        int leftKey = config.getInt(SonicConfiguration.LEFT);
-        int rightKey = config.getInt(SonicConfiguration.RIGHT);
-        int jumpKey = config.getInt(SonicConfiguration.JUMP);
+        int leftKey = configService.getInt(SonicConfiguration.LEFT);
+        int rightKey = configService.getInt(SonicConfiguration.RIGHT);
+        int jumpKey = configService.getInt(SonicConfiguration.JUMP);
 
         if (inputHandler.isKeyPressed(leftKey)) {
             selectedIndex = Math.max(0, selectedIndex - 1);
@@ -264,14 +307,17 @@ public class MasterTitleScreen {
     public void draw() {
         if (renderer == null) return;
 
-        // Set projection matrix from Engine
-        Engine engine = Engine.getInstance();
-        if (engine != null) {
-            renderer.setProjectionMatrix(engine.getProjectionMatrixBuffer());
-        }
-
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        if (tracePicker != null) {
+            // Paint solid black behind the picker so the regular master-title
+            // artwork doesn't bleed through.
+            renderer.drawTexture(solidWhiteTextureId, 0, 0, SCREEN_W, SCREEN_H,
+                    0f, 0f, 0f, 1f);
+            tracePicker.render();
+            return;
+        }
 
         // 1. Background (full screen)
         renderer.drawTexture(bgTextureId, 0, 0, SCREEN_W, SCREEN_H);
@@ -301,6 +347,10 @@ public class MasterTitleScreen {
         // 5. Title text "OpenGGF" (centered, top) - drawn after emblem so it appears in front
         renderer.drawTexture(titleTextId, titleX, titleGlY, scaledTitleW, scaledTitleH);
 
+        // All foreground text (subtitle + game menu + nav hints) shares the font atlas,
+        // so mega-batch into a single GL draw call.
+        font.beginMegaBatch();
+
         // 6. Subtitle text, right-aligned to title's right edge - drawn after title (no overlap)
         int titleRightEdge = (int)(titleX + scaledTitleW)-8;
         int subtitleY = (int)(SCREEN_H - titleGlY) - 6;
@@ -316,24 +366,28 @@ public class MasterTitleScreen {
         font.drawTextCentered("< >  Select    Enter  Confirm", SCREEN_W, 210,
             0.6f, 0.6f, 0.7f, 0.8f);
 
+        font.endMegaBatch();
+
         // 7. Error message overlay
         if (state == State.ERROR_DISPLAY) {
             // Semi-transparent black overlay using solid white texture tinted black
+            // (separate texture; not batched with font).
             renderer.drawTexture(solidWhiteTextureId, 0, 0, SCREEN_W, SCREEN_H, 0f, 0f, 0f, 0.5f);
 
-            // Error text
+            // Error text - second batch (overlay texture sits between the two batches).
+            font.beginMegaBatch();
             GameEntry entry = GameEntry.values()[selectedIndex];
             font.drawTextCentered("ROM NOT FOUND", SCREEN_W, 90, 1f, 0.3f, 0.3f, 1f);
             font.drawTextCentered(entry.displayName, SCREEN_W, 105, 0.8f, 0.8f, 0.8f, 1f);
 
-            SonicConfigurationService config = SonicConfigurationService.getInstance();
-            String romFile = config.getString(entry.romConfigKey);
+            String romFile = configService.getString(entry.romConfigKey);
             if (romFile == null || romFile.isEmpty()) {
                 romFile = "(not configured)";
             } else if (romFile.length() > 35) {
                 romFile = "..." + romFile.substring(romFile.length() - 32);
             }
             font.drawTextCentered(romFile, SCREEN_W, 125, 0.5f, 0.5f, 0.5f, 0.8f);
+            font.endMegaBatch();
         }
     }
 
@@ -396,6 +450,29 @@ public class MasterTitleScreen {
     }
 
     /**
+     * Programmatic selection used by {@link com.openggf.TraceSessionLauncher}
+     * to force a game without user input. Must be called while state is
+     * {@code ACTIVE}. Seeds the internal "selected" state so
+     * {@link #isGameSelected()} returns true on the next tick.
+     */
+    public void selectEntry(GameEntry entry) {
+        Objects.requireNonNull(entry, "entry");
+        this.selectedIndex = entry.ordinal();
+        if (!romAvailable[selectedIndex]) {
+            throw new IllegalStateException("Selected ROM is unavailable: " + entry.gameId);
+        }
+        this.state = State.CONFIRMING;
+        playConfirmSound();
+        this.gameSelected = true;
+    }
+
+    public void setProjectionMatrix(float[] projectionMatrix) {
+        if (renderer != null && projectionMatrix != null) {
+            renderer.setProjectionMatrix(projectionMatrix);
+        }
+    }
+
+    /**
      * Returns the game ID ("s1", "s2", "s3k") of the selected entry.
      */
     public String getSelectedGameId() {
@@ -405,8 +482,27 @@ public class MasterTitleScreen {
     /**
      * Cleans up all GL resources.
      */
+    private PixelFont ensurePickerFont() {
+        if (pickerFont == null) {
+            pickerFont = new PixelFont();
+            try {
+                pickerFont.init("pixel-font-ns.png", renderer);
+            } catch (IOException e) {
+                LOGGER.warning("Failed to load pixel-font-ns.png for trace picker, "
+                        + "falling back to master-title font: " + e.getMessage());
+                pickerFont = font;
+            }
+        }
+        return pickerFont;
+    }
+
     public void cleanup() {
         if (font != null) font.cleanup();
+        // pickerFont is only non-null AND distinct from font when the
+        // no-shadow atlas loaded successfully. Clean it up separately.
+        if (pickerFont != null && pickerFont != font) {
+            pickerFont.cleanup();
+        }
         PngTextureLoader.deleteTexture(bgTextureId);
         PngTextureLoader.deleteTexture(solidWhiteTextureId);
         PngTextureLoader.deleteTexture(emblemTextureId);

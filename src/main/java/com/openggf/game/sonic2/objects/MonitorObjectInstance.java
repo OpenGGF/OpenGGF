@@ -3,11 +3,13 @@ import com.openggf.level.objects.ObjectAnimationState;
 import com.openggf.level.objects.ExplosionObjectInstance;
 
 import com.openggf.game.sonic2.audio.Sonic2Music;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -15,6 +17,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
@@ -26,6 +29,8 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
+import com.openggf.sprites.Sprite;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.audio.GameSound;
@@ -59,6 +64,21 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     private int currentY;
 
     private boolean initialized;
+    private boolean mainCharacterStanding;
+    private boolean mainCharacterPushing;
+    private boolean sidekickStanding;
+    private boolean sidekickPushing;
+    private String lastTouchBranch = "none";
+    private int lastTouchYSpeed;
+    private int lastTouchPlayerY;
+    private int lastTouchMonitorY;
+    private int lastTouchAnimation;
+    private int lastTouchMoveLock;
+    private int lastTouchForcedAnimation;
+    private boolean lastTouchObjectControlled;
+    private boolean lastTouchRolling;
+    private String lastTouchAnimationProfile = "none";
+    private int lastTouchAnimationScriptCount;
 
     public MonitorObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -108,6 +128,16 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     }
 
     @Override
+    protected boolean delayFirstIconUpdateAfterBreak() {
+        // ROM Obj26_Break spawns separate Obj2E monitor contents with FindFreeObj.
+        // In this trace the contents land in slot 21 while the shell is slot 26,
+        // so the child cannot execute until the next object pass (s2.asm:25523,
+        // 25557-25622). This class embeds Obj2E state in the shell, so skip the
+        // shell's same-frame post-break update to preserve child-object timing.
+        return true;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -148,9 +178,24 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     @Override
     public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (broken || player == null || player.isCpuControlled()) {
+        if (broken || player == null) {
             return;
         }
+        lastTouchBranch = "enter";
+        lastTouchYSpeed = player.getYSpeed();
+        lastTouchPlayerY = player.getCentreY();
+        lastTouchMonitorY = currentY;
+        lastTouchAnimation = player.getAnimationId();
+        lastTouchMoveLock = player.getMoveLockTimer();
+        lastTouchForcedAnimation = player.getForcedAnimationId();
+        lastTouchObjectControlled = player.isObjectControlled();
+        lastTouchRolling = player.getRolling();
+        lastTouchAnimationProfile = player.getAnimationProfile() == null
+                ? "none"
+                : player.getAnimationProfile().getClass().getSimpleName();
+        lastTouchAnimationScriptCount = player.getAnimationSet() == null
+                ? -1
+                : player.getAnimationSet().getScriptCount();
 
         // Hitting from below (Moving Up)
         // ROM reference: Touch_Monitor (s2.asm lines 84742-84763)
@@ -162,6 +207,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             // ROM check: move.w y_pos(a0),d0; subi.w #$10,d0; cmp.w y_pos(a1),d0; blo.s return
             // If player center - 16 >= monitor Y, then player is hitting from below
             if (playerCenterY - 0x10 >= monitorY) {
+                lastTouchBranch = "below";
                 LOGGER.fine(() -> "Monitor hit from below: player at (" + player.getX() + "," + player.getY() +
                     ") ySpeed=" + player.getYSpeed() + " monitor at (" + spawn.x() + "," + currentY + ")");
 
@@ -173,24 +219,43 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                     falling = true;
                     yVel = FALLING_INITIAL_VEL;  // -0x180 upward
                 }
+            } else {
+                lastTouchBranch = "below-side-return";
             }
             return;
         }
 
         // Hitting from above (Moving Down or Stationary)
-        if (!player.getRolling()) {
+        // ROM: Touch_Monitor checks anim(a0) == AniIDSonAni_Roll here, not the
+        // broader rolling status bit. The animation transition lags status changes
+        // by a frame in some cases, which affects monitor break timing.
+        if (player.getAnimationId() != Sonic2AnimationIds.ROLL.id()) {
+            lastTouchBranch = "not-roll-return";
             return;
         }
 
         // Break Monitor and Bounce Player Up
         broken = true;
 
+        boolean touchingMonitorAsSolid = wasTouchingMonitor(player);
+        lastTouchBranch = "break-tms=" + (touchingMonitorAsSolid ? "1" : "0");
+
         // Mark as broken in persistence table
         ObjectManager objectManager = services().objectManager();
+        ObjectLifetimeOps.markSpawnRemembered(objectManager, spawn);
         if (objectManager != null) {
-            objectManager.markRemembered(spawn);
+            objectManager.clearRidingObject(player);
         }
 
+        // ROM Obj26_Break only forces the character airborne when the monitor's
+        // own standing/pushing bits were set for that character.
+        if (touchingMonitorAsSolid) {
+            player.setOnObject(false);
+            player.setPushing(false);
+            player.setAir(true);
+        }
+        clearTouchingMonitor(player);
+        releaseTouchingCharactersOnBreak(objectManager, player);
         player.setYSpeed((short) -player.getYSpeed());
         mappingFrame = BROKEN_FRAME;
         startIconRise(spawn.y(), player);
@@ -202,6 +267,28 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
                     new ExplosionObjectInstance(0x27, spawn.x(), spawn.y(), renderManager));
         }
         services().playSfx(Sonic2Sfx.EXPLOSION.id);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("touch=%s ys=%04X py=%04X my=%04X anim=%02X roll=%d ml=%02X forced=%02X objctl=%d prof=%s scripts=%d broken=%d fall=%d mcS=%d mcP=%d skS=%d skP=%d",
+                lastTouchBranch,
+                lastTouchYSpeed & 0xFFFF,
+                lastTouchPlayerY & 0xFFFF,
+                lastTouchMonitorY & 0xFFFF,
+                lastTouchAnimation & 0xFF,
+                lastTouchRolling ? 1 : 0,
+                lastTouchMoveLock & 0xFF,
+                lastTouchForcedAnimation & 0xFF,
+                lastTouchObjectControlled ? 1 : 0,
+                lastTouchAnimationProfile,
+                lastTouchAnimationScriptCount,
+                broken ? 1 : 0,
+                falling ? 1 : 0,
+                mainCharacterStanding ? 1 : 0,
+                mainCharacterPushing ? 1 : 0,
+                sidekickStanding ? 1 : 0,
+                sidekickPushing ? 1 : 0);
     }
 
     @Override
@@ -235,7 +322,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
     @Override
     public int getCollisionFlags() {
-        return 0x46;
+        return broken ? 0 : 0x46;
     }
 
     @Override
@@ -257,12 +344,36 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         if (player == null) {
             return true;
         }
+        if (isSidekick(player)) {
+            // S2 one-player mode: SolidObject_Monitor_Tails always branches to
+            // SolidObject_cont before checking roll anim (docs/s2disasm/s2.asm:25459-25466).
+            return true;
+        }
+        // ROM: SolidObject_Monitor_Sonic (s2disasm/s2.asm:25448-25453):
+        //   btst d6,status(a0)              ; is Sonic already standing on the monitor?
+        //   bne.s Obj26_ChkOverEdge         ; if yes → carry him regardless of rolling
+        //   cmpi.b #AniIDSonAni_Roll,anim(a1) ; is Sonic spinning?
+        //   bne.w SolidObject_cont           ; if not spinning → solid
+        //   rts                              ; if spinning → not solid (new landing blocked)
+        // The rolling gate only blocks NEW landings. A player already standing
+        // bypasses the check and goes straight to the edge/carry path.
+        if (mainCharacterStanding) {
+            return true;
+        }
         return !player.getRolling();
     }
 
     @Override
     public boolean hasMonitorSolidity() {
-        return true;
+        // S2 Obj26 does not use the SPG Mon_SolidSides geometry. Its monitor
+        // wrapper gates roll-animation hits, then branches to SolidObject_cont
+        // for normal solid classification (docs/s2disasm/s2.asm:25448-25452).
+        return false;
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(false);
     }
 
     @Override
@@ -276,7 +387,74 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Solid contact used for standing/edge checks in ROM; no behavior yet.
+        if (player == null) {
+            return;
+        }
+        if (contact.standing()) {
+            setStandingOnMonitor(player, true);
+        }
+        if (contact.pushing()) {
+            setPushingMonitor(player, true);
+        }
+    }
+
+    private boolean wasTouchingMonitor(AbstractPlayableSprite player) {
+        return isSidekick(player)
+                ? sidekickStanding || sidekickPushing
+                : mainCharacterStanding || mainCharacterPushing;
+    }
+
+    private void clearTouchingMonitor(AbstractPlayableSprite player) {
+        setStandingOnMonitor(player, false);
+        setPushingMonitor(player, false);
+    }
+
+    private void releaseTouchingCharactersOnBreak(ObjectManager objectManager, AbstractPlayableSprite breaker) {
+        SpriteManager spriteManager = services().spriteManager();
+        if (spriteManager == null) {
+            return;
+        }
+        for (Sprite sprite : spriteManager.getAllSprites()) {
+            if (!(sprite instanceof AbstractPlayableSprite playable) || playable == breaker) {
+                continue;
+            }
+            if (!wasTouchingMonitor(playable)) {
+                continue;
+            }
+            spriteManager.deferCrossPlayableMutationUntilPostTick(
+                    playable,
+                    () -> releaseTouchingCharacterOnBreak(objectManager, playable));
+        }
+    }
+
+    private void releaseTouchingCharacterOnBreak(ObjectManager objectManager, AbstractPlayableSprite player) {
+        if (objectManager != null) {
+            objectManager.clearRidingObject(player);
+        }
+        player.setOnObject(false);
+        player.setPushing(false);
+        player.setAir(true);
+        clearTouchingMonitor(player);
+    }
+
+    private void setStandingOnMonitor(AbstractPlayableSprite player, boolean standing) {
+        if (isSidekick(player)) {
+            sidekickStanding = standing;
+        } else {
+            mainCharacterStanding = standing;
+        }
+    }
+
+    private void setPushingMonitor(AbstractPlayableSprite player, boolean pushing) {
+        if (isSidekick(player)) {
+            sidekickPushing = pushing;
+        } else {
+            mainCharacterPushing = pushing;
+        }
+    }
+
+    private boolean isSidekick(AbstractPlayableSprite player) {
+        return player.isCpuControlled();
     }
 
     @Override

@@ -1,19 +1,19 @@
 package com.openggf.tests;
 
 import com.openggf.camera.Camera;
-import com.openggf.debug.playback.Bk2Movie;
-import com.openggf.debug.playback.Bk2MovieLoader;
-import com.openggf.game.GameRuntime;
-import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.level.LevelManager;
+import com.openggf.debug.playback.Bk2Movie;
+import com.openggf.debug.playback.Bk2MovieLoader;
+import com.openggf.game.GameServices;
+import com.openggf.game.session.GameplayTeamBootstrap;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.physics.GroundSensor;
-import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Sonic;
+import com.openggf.trace.replay.TraceReplayFixture;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -24,15 +24,15 @@ import java.nio.file.Path;
  * found in headless test classes (sprite creation, camera setup, level event
  * initialization, HeadlessTestRunner wiring).
  */
-public final class HeadlessTestFixture {
+public final class HeadlessTestFixture implements TraceReplayFixture {
 
-    private final GameRuntime runtime;
+    private final GameplayModeContext gameplayMode;
     private final HeadlessTestRunner runner;
     private final AbstractPlayableSprite sprite;
 
-    private HeadlessTestFixture(GameRuntime runtime, HeadlessTestRunner runner,
+    private HeadlessTestFixture(GameplayModeContext gameplayMode, HeadlessTestRunner runner,
                                 AbstractPlayableSprite sprite) {
-        this.runtime = runtime;
+        this.gameplayMode = gameplayMode;
         this.runner = runner;
         this.sprite = sprite;
     }
@@ -63,19 +63,44 @@ public final class HeadlessTestFixture {
         return runner.skipFrameFromRecording();
     }
 
+    /** Consume one BK2 input frame without stepping gameplay or timing counters. */
+    public int consumeRecordingFrameInputOnly() {
+        return runner.consumeRecordingFrameInputOnly();
+    }
+
+    /** Advance the BK2 cursor without stepping gameplay. */
+    public void advanceRecordingCursor(int frameCount) {
+        runner.advanceRecordingCursor(frameCount);
+    }
+
+    @Override
+    public int peekRecordingInputAt(int offset) {
+        return runner.peekRecordingInputAt(offset);
+    }
+
     /** Returns the playable sprite managed by this fixture. */
     public AbstractPlayableSprite sprite() {
         return sprite;
     }
 
-    /** Returns the camera from the runtime. */
+    /** Returns the camera from the active gameplay mode. */
     public Camera camera() {
-        return runtime.getCamera();
+        return GameServices.camera();
     }
 
-    /** Returns the game runtime. */
-    public GameRuntime runtime() {
-        return runtime;
+    /**
+     * Returns the active gameplay mode.
+     *
+     * @deprecated use {@link #gameplayMode()} in new tests.
+     */
+    @Deprecated(forRemoval = false)
+    public GameplayModeContext runtime() {
+        return gameplayMode;
+    }
+
+    @Override
+    public GameplayModeContext gameplayMode() {
+        return gameplayMode;
     }
 
     /** Returns the underlying headless test runner. */
@@ -100,6 +125,7 @@ public final class HeadlessTestFixture {
         private Bk2Movie bk2Movie;
         private int bk2FrameOffset;
         private boolean startPositionIsCentre;
+        private boolean customStartPositionProvided;
 
         private Builder() {}
 
@@ -117,6 +143,7 @@ public final class HeadlessTestFixture {
         public Builder startPosition(short x, short y) {
             this.startX = x;
             this.startY = y;
+            this.customStartPositionProvided = true;
             return this;
         }
 
@@ -148,14 +175,50 @@ public final class HeadlessTestFixture {
 
             // 1. Reset transient per-test state
             TestEnvironment.resetPerTest();
+            GraphicsManager.getInstance().initHeadless();
 
-            // 2. If withZoneAndAct was used, load the level now (full production path)
+            // 2. Shared-level tests rely on the config snapshot that was active
+            // when the level was originally loaded. @RequiresRom rebuilds the
+            // runtime before each test method, which restores default config.
+            if (sharedLevel != null) {
+                SonicConfigurationService config = SonicConfigurationService.getInstance();
+                config.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, sharedLevel.skipIntros());
+                config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, sharedLevel.mainCharCode());
+                config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, sharedLevel.sidekickCharCode());
+            }
+
+            // 3. Register the active gameplay team before any load path that
+            // needs it. Fresh zone/act loads and shared-level reloads both
+            // expect the main sprite to exist before
+            // LevelManager.spawnPlayerAtStartPosition(), and Sonic 2 traces
+            // rely on Tails being present from the same bootstrap phase.
+            boolean needsSharedLevelReload = sharedLevel != null
+                    && GameServices.level().getCurrentLevel() == null;
+
+            AbstractPlayableSprite sprite = null;
+            if (sharedLevel == null || needsSharedLevelReload) {
+                sprite = GameplayTeamBootstrap.registerActiveTeam(
+                        GameServices.module(),
+                        GameServices.sprites(),
+                        SonicConfigurationService.getInstance())
+                        .mainSprite();
+            }
+
+            // 4. Load or rewire the requested level.
             if (sharedLevel == null) {
                 try {
                     GameServices.level().loadZoneAndAct(zone, act);
                 } catch (IOException e) {
                     throw new UncheckedIOException(
                             "Failed to load zone " + zone + " act " + act, e);
+                }
+            } else if (GameServices.level().getCurrentLevel() == null) {
+                try {
+                    GameServices.level().loadZoneAndAct(sharedLevel.zone(), sharedLevel.act());
+                } catch (IOException e) {
+                    throw new UncheckedIOException(
+                            "Failed to reload shared level zone " + sharedLevel.zone()
+                                    + " act " + sharedLevel.act(), e);
                 }
             } else {
                 // Re-wire CollisionSystem after per-test reset when using SharedLevel.
@@ -167,55 +230,83 @@ public final class HeadlessTestFixture {
                 }
             }
 
-            // 3. Determine character code
-            String charCode;
-            if (sharedLevel != null) {
-                charCode = sharedLevel.mainCharCode();
-            } else {
-                charCode = SonicConfigurationService.getInstance()
-                        .getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+            // 5. Create/register the active team if the shared-level reuse path
+            // skipped the normal load bootstrap.
+            if (sprite == null) {
+                sprite = GameplayTeamBootstrap.registerActiveTeam(
+                        GameServices.module(),
+                        GameServices.sprites(),
+                        SonicConfigurationService.getInstance())
+                        .mainSprite();
+            }
+            if (sprite.getAnimationProfile() == null && GameServices.level() != null) {
+                GameServices.level().refreshPlayableSpriteArt();
             }
 
-            // 4. Create sprite at start position
-            Sonic sprite = new Sonic(charCode, startX, startY);
-            if (startPositionIsCentre) {
-                // ROM start coordinates are centre-based. setCentreX/Y adjusts xPixel
-                // to (x - width/2), matching LevelManager.spawnPlayerAtStartPosition().
-                sprite.setCentreX(startX);
-                sprite.setCentreY(startY);
+            // 6. Preserve existing builder semantics for explicit custom starts by
+            // reapplying the requested coordinates after any level load.
+            if (customStartPositionProvided) {
+                if (startPositionIsCentre) {
+                    sprite.setCentreX(startX);
+                    sprite.setCentreY(startY);
+                } else {
+                    sprite.setX(startX);
+                    sprite.setY(startY);
+                }
             }
 
-            // 5. Register with SpriteManager
-            GameServices.sprites().addSprite(sprite);
+            // 7. Re-anchor registered sidekicks to the current player position.
+            GameplayTeamBootstrap.repositionRegisteredSidekicks(
+                    GameServices.module(),
+                    GameServices.level());
 
-            // 6. Wire GroundSensor
+            // 8. Wire GroundSensor
             GroundSensor.setLevelManager(GameServices.level());
 
-            // 7. Initialize camera via production path
+            // 9. Initialize camera via production path
             GameServices.level().initCameraForLevel();
 
-            // 8. Initialize level events via production path
+            // 10. Initialize level events via production path
             GameServices.level().initLevelEventsForLevel();
 
-            // 9. Initial ground snap — ROM runs terrain probes during title card
-            //    frames (~120 frames) which snap the player to ground and set the
-            //    correct terrain angle. Tests skip the title card, so do one probe
-            //    to establish ground attachment. Uses threshold=14 (S1 always uses
-            //    14; S2/S3K at speed=0 would use min(0+4,14)=4, but 14 is safe for
-            //    a static snap at spawn).
+            // 10b. Re-apply S3K zone player state after sidekick reposition.
+            // ROM's SpawnLevelMainSprites_SpawnPlayers (sonic3k.asm:8335-8427)
+            // sets sidekick position FIRST, then SpawnLevelMainSprites
+            // (sonic3k.asm:8132-8205) sets the in-air status for zones like
+            // MGZ1 / HCZ1 / LRZ1 / SSZ. repositionRegisteredSidekicks at step
+            // 7 clears the in-air bit via spawnSidekicks, so the zone-event
+            // handler must run again to restore the falling-intro state.
+            var levelEventProvider = GameServices.module().getLevelEventProvider();
+            if (levelEventProvider instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kLem) {
+                s3kLem.applyZonePlayerState();
+            }
+
+            // 11. Refresh sidekick CPU bounds after camera/event init. The
+            // level-load and reanchor paths can snapshot camera bounds before
+            // initCameraForLevel()/initLevelEventsForLevel() have finalized
+            // them; title-card sidekick prelude ticks must see the finalized
+            // bounds.
+            TraceReplaySessionBootstrap.refreshSidekickCpuBoundsFromCamera();
+
+            // 12. Initial ground snap. ROM runs terrain probes during title card
+            // frames (~120 frames) which snap the player to ground and set the
+            // correct terrain angle. Tests skip the title card, so do one probe
+            // to establish ground attachment. Uses threshold=14 (S1 always uses
+            // 14; S2/S3K at speed=0 would use min(0+4,14)=4, but 14 is safe for
+            // a static snap at spawn).
             GameServices.collision().resolveGroundAttachment(
                     sprite, 14, () -> false);
 
-            // 10. Get runtime and create runner
-            GameRuntime runtime = RuntimeManager.getCurrent();
+            // 13. Resolve the active session context and create runner
+            GameplayModeContext gameplayMode = TestEnvironment.activeGameplayMode();
             HeadlessTestRunner runner = new HeadlessTestRunner(sprite);
 
-            // 11. Wire BK2 recording if provided
+            // 14. Wire BK2 recording if provided
             if (bk2Movie != null) {
                 runner.setBk2Movie(bk2Movie, bk2FrameOffset);
             }
 
-            return new HeadlessTestFixture(runtime, runner, sprite);
+            return new HeadlessTestFixture(gameplayMode, runner, sprite);
         }
     }
 }

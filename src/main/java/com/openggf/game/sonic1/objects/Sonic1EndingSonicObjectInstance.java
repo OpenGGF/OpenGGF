@@ -1,12 +1,10 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.mutation.MutationEffects;
 import com.openggf.graphics.GLCommand;
-import com.openggf.level.Level;
-import com.openggf.level.Map;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -307,28 +305,21 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance {
         }
         emeraldsSpawned = true;
 
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
+        if (services().objectManager() == null) {
             return;
         }
 
         // ROM: ECha_CreateEms spawns 6 emeralds at player position
         // with angle offsets spaced by $100/6 = $2A
         int angleStep = 0x100 / 6; // $2A
-        setConstructionContext(services());
-        try {
-            for (int i = 0; i < 6; i++) {
-                int angleOffset = (angleStep * i) & 0xFF;
-                int emeraldFrame = i + 1; // frames 1-6
-                Sonic1EndingEmeraldsObjectInstance emerald =
-                        new Sonic1EndingEmeraldsObjectInstance(currentX, currentY, angleOffset, emeraldFrame);
-                objectManager.addDynamicObject(emerald);
-                if (i == 0) {
-                    emeraldMaster = emerald;
-                }
+        for (int i = 0; i < 6; i++) {
+            final int angleOffset = (angleStep * i) & 0xFF;
+            final int emeraldFrame = i + 1; // frames 1-6
+            Sonic1EndingEmeraldsObjectInstance emerald = spawnFreeChild(() ->
+                    new Sonic1EndingEmeraldsObjectInstance(currentX, currentY, angleOffset, emeraldFrame));
+            if (i == 0) {
+                emeraldMaster = emerald;
             }
-        } finally {
-            clearConstructionContext();
         }
     }
 
@@ -343,24 +334,18 @@ public class Sonic1EndingSonicObjectInstance extends AbstractObjectInstance {
      * that reference the animated Kos_EndFlowers tile positions.
      */
     private void patchLayoutWithFlowers() {
-        Level level = services().currentLevel();
-        if (level == null) {
-            return;
-        }
-        Map map = level.getMap();
-        if (map == null) {
-            return;
-        }
-        try {
-            // ROM writes $2E at v_lvllayout+$80 (row 1, col 0)
-            //          $2F at v_lvllayout+$81 (row 1, col 1)
-            map.setValue(0, 0, 1, (byte) 0x2E);
-            map.setValue(0, 1, 1, (byte) 0x2F);
-            // ROM: bsr.w DrawChunks — re-render level with modified layout
-            services().invalidateForegroundTilemap();
-        } catch (IllegalArgumentException e) {
-            LOGGER.warning("Ending layout patch failed: " + e.getMessage());
-        }
+        // ROM writes $2E at v_lvllayout+$80 (row 1, col 0)
+        //          $2F at v_lvllayout+$81 (row 1, col 1)
+        // ROM: bsr.w DrawChunks — pipeline publishes redraw effects automatically.
+        services().zoneLayoutMutationPipeline().queue(context -> {
+            try {
+                context.surface().setBlockInMap(0, 0, 1, 0x2E);
+                return context.surface().setBlockInMap(0, 1, 1, 0x2F);
+            } catch (IllegalArgumentException e) {
+                LOGGER.warning("Ending layout patch failed: " + e.getMessage());
+                return MutationEffects.NONE;
+            }
+        });
     }
 
     private void clearEmeralds() {

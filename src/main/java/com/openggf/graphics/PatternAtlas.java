@@ -1,6 +1,7 @@
 package com.openggf.graphics;
 
 import org.lwjgl.system.MemoryUtil;
+import com.openggf.debug.PerformanceProfiler;
 import com.openggf.level.Pattern;
 
 import java.nio.ByteBuffer;
@@ -39,6 +40,11 @@ public class PatternAtlas {
     private Entry[] fastEntries = new Entry[FAST_ENTRIES_SIZE];
     private final Map<Integer, Entry> sparseEntries = new HashMap<>();
     private final List<AtlasPage> pages = new ArrayList<>();
+    // Per-(atlasIndex, slot) reference count. Replaces the O(N) scan in isSlotShared:
+    // multiple Entry objects (aliases) can point at the same physical atlas slot, and we
+    // must only free that slot when the last reference is removed. Key encoding:
+    //   ((long) atlasIndex << 32) | (slot & 0xFFFFFFFFL)
+    private final Map<Long, Integer> slotRefCounts = new HashMap<>();
     // Lazily allocated to avoid LWJGL native library loading in headless tests
     private ByteBuffer patternUploadBuffer;
     private boolean initialized = false;
@@ -49,9 +55,15 @@ public class PatternAtlas {
     private byte[][] cpuPixels;      // per-atlas-page pixel data [atlasWidth * atlasHeight]
     private boolean[] dirtyPages;    // tracks which pages were written during batch
     private boolean batchMode = false;
+    private byte[] patternUploadScratch;
+    private final PerformanceProfiler profiler;
 
     /** Describes a registered virtual pattern ID range for collision detection. */
     public record PatternRange(int base, int size, String category) {}
+
+    public void registerRange(PatternAtlasRange range) {
+        registerRange(range.base(), range.size(), range.category());
+    }
 
     private final List<PatternRange> registeredRanges = new ArrayList<>();
 
@@ -85,6 +97,10 @@ public class PatternAtlas {
     }
 
     public PatternAtlas(int atlasWidth, int atlasHeight) {
+        this(atlasWidth, atlasHeight, null);
+    }
+
+    public PatternAtlas(int atlasWidth, int atlasHeight, PerformanceProfiler profiler) {
         if (atlasWidth % TILE_SIZE != 0 || atlasHeight % TILE_SIZE != 0) {
             throw new IllegalArgumentException("Atlas size must be divisible by tile size");
         }
@@ -93,6 +109,7 @@ public class PatternAtlas {
         this.tilesPerRow = atlasWidth / TILE_SIZE;
         this.tilesPerColumn = atlasHeight / TILE_SIZE;
         this.maxSlots = tilesPerRow * tilesPerColumn;
+        this.profiler = profiler;
         // patternUploadBuffer is lazily allocated when first needed
     }
 
@@ -210,8 +227,6 @@ public class PatternAtlas {
      * @return true if the pattern was removed, false if it wasn't cached
      */
     public boolean removeEntry(int patternId) {
-        // Remove from lookup BEFORE calling isSlotShared() —
-        // the scan must not find this entry itself.
         Entry old;
         if (patternId >= 0 && patternId < FAST_ENTRIES_SIZE) {
             old = fastEntries[patternId];
@@ -220,7 +235,7 @@ public class PatternAtlas {
             old = sparseEntries.remove(patternId);
         }
         if (old != null) {
-            if (!isSlotShared(old)) {
+            if (releaseSlotRef(old.atlasIndex(), old.slot())) {
                 AtlasPage page = pages.get(old.atlasIndex());
                 page.freeSlot(old.slot());
             }
@@ -229,25 +244,31 @@ public class PatternAtlas {
         return false;
     }
 
+    private static long slotRefKey(int atlasIndex, int slot) {
+        return ((long) atlasIndex << 32) | (slot & 0xFFFFFFFFL);
+    }
+
+    /** Increment the reference count for an (atlasIndex, slot) pair. */
+    private void retainSlotRef(int atlasIndex, int slot) {
+        long key = slotRefKey(atlasIndex, slot);
+        slotRefCounts.merge(key, 1, Integer::sum);
+    }
+
     /**
-     * Check whether any remaining entry shares the same physical atlas slot
-     * as the given (already-removed) entry. Used to guard against freeing
-     * slots that are still referenced by aliases.
+     * Decrement the reference count for an (atlasIndex, slot) pair.
+     * @return {@code true} if the count reached zero (caller may free the physical slot).
      */
-    private boolean isSlotShared(Entry removed) {
-        int targetAtlas = removed.atlasIndex();
-        int targetSlot = removed.slot();
-        for (int i = 0; i < FAST_ENTRIES_SIZE; i++) {
-            Entry e = fastEntries[i];
-            if (e != null && e.atlasIndex() == targetAtlas && e.slot() == targetSlot) {
-                return true;
-            }
+    private boolean releaseSlotRef(int atlasIndex, int slot) {
+        long key = slotRefKey(atlasIndex, slot);
+        Integer count = slotRefCounts.get(key);
+        if (count == null) {
+            return true;
         }
-        for (Entry e : sparseEntries.values()) {
-            if (e.atlasIndex() == targetAtlas && e.slot() == targetSlot) {
-                return true;
-            }
+        if (count <= 1) {
+            slotRefCounts.remove(key);
+            return true;
         }
+        slotRefCounts.put(key, count - 1);
         return false;
     }
 
@@ -301,6 +322,7 @@ public class PatternAtlas {
         batchMode = false;
         Arrays.fill(fastEntries, null);
         sparseEntries.clear();
+        slotRefCounts.clear();
         pages.clear();
         cpuPixels = null;
         dirtyPages = null;
@@ -348,11 +370,22 @@ public class PatternAtlas {
     }
 
     private void putEntry(int patternId, Entry entry) {
+        Entry previous;
         if (patternId >= 0 && patternId < FAST_ENTRIES_SIZE) {
+            previous = fastEntries[patternId];
             fastEntries[patternId] = entry;
         } else {
-            sparseEntries.put(patternId, entry);
+            previous = sparseEntries.put(patternId, entry);
         }
+        // If we displaced an existing entry at the same patternId, release its slot ref.
+        // ensureEntry() short-circuits on existing IDs, so this branch is defensive — but
+        // any code path that overwrites a live entry must keep ref counts balanced.
+        if (previous != null) {
+            if (releaseSlotRef(previous.atlasIndex(), previous.slot())) {
+                pages.get(previous.atlasIndex()).freeSlot(previous.slot());
+            }
+        }
+        retainSlotRef(entry.atlasIndex(), entry.slot());
     }
 
     /**
@@ -380,39 +413,53 @@ public class PatternAtlas {
         if (cpuPixels == null || dirtyPages == null) {
             return;
         }
-        int pagePixels = atlasWidth * atlasHeight;
-        ByteBuffer buf = ensureFullPageUploadBuffer();
-        for (int i = 0; i < pages.size(); i++) {
-            if (!dirtyPages[i]) {
-                continue;
+        // Time the per-dirty-page glTexSubImage2D uploads. endBatch() runs at most
+        // a few times per frame, but DPLC-driven calls happen mid render.sprites.
+        // Using beginSection here would truncate render.sprites every frame, so we
+        // measure manually and credit render.atlas_upload via recordSectionTime,
+        // which preserves the active section by shifting its start timestamp.
+        long uploadStartNanos = System.nanoTime();
+        try {
+            int pagePixels = atlasWidth * atlasHeight;
+            ByteBuffer buf = ensureFullPageUploadBuffer();
+            for (int i = 0; i < pages.size(); i++) {
+                if (!dirtyPages[i]) {
+                    continue;
+                }
+                int textureId = getTextureId(i);
+                if (textureId == 0) {
+                    continue;
+                }
+                buf.clear();
+                buf.put(cpuPixels[i], 0, pagePixels);
+                buf.flip();
+                glBindTexture(GL_TEXTURE_2D, textureId);
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, atlasWidth, atlasHeight,
+                        GL_RED, GL_UNSIGNED_BYTE, buf);
+                glBindTexture(GL_TEXTURE_2D, 0);
+                dirtyPages[i] = false;
             }
-            int textureId = getTextureId(i);
-            if (textureId == 0) {
-                continue;
+        } finally {
+            if (profiler != null) {
+                profiler.recordSectionTime("render.atlas_upload",
+                        System.nanoTime() - uploadStartNanos);
             }
-            buf.clear();
-            buf.put(cpuPixels[i], 0, pagePixels);
-            buf.flip();
-            glBindTexture(GL_TEXTURE_2D, textureId);
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, atlasWidth, atlasHeight,
-                    GL_RED, GL_UNSIGNED_BYTE, buf);
-            glBindTexture(GL_TEXTURE_2D, 0);
-            dirtyPages[i] = false;
         }
     }
 
     private void uploadPattern(Pattern pattern, Entry entry) {
         int pixelX = entry.tileX() * TILE_SIZE;
         int pixelY = entry.tileY() * TILE_SIZE;
+        byte[] patternPixels = ensurePatternUploadScratch();
+        pattern.copyInto(patternPixels, 0);
 
         // Always write to the CPU-side buffer (keeps it in sync for future batches)
         if (cpuPixels != null && entry.atlasIndex() < cpuPixels.length) {
             byte[] page = cpuPixels[entry.atlasIndex()];
-            for (int col = 0; col < TILE_SIZE; col++) {
-                int dstRowStart = (pixelY + col) * atlasWidth + pixelX;
-                for (int row = 0; row < TILE_SIZE; row++) {
-                    page[dstRowStart + row] = pattern.getPixel(row, col);
-                }
+            for (int row = 0; row < TILE_SIZE; row++) {
+                int srcRowStart = row * TILE_SIZE;
+                int dstRowStart = (pixelY + row) * atlasWidth + pixelX;
+                System.arraycopy(patternPixels, srcRowStart, page, dstRowStart, TILE_SIZE);
             }
         }
 
@@ -427,12 +474,7 @@ public class PatternAtlas {
         // Immediate upload (non-batch path)
         ByteBuffer patternBuffer = ensurePatternUploadBuffer();
         patternBuffer.clear();
-        for (int col = 0; col < TILE_SIZE; col++) {
-            for (int row = 0; row < TILE_SIZE; row++) {
-                byte colorIndex = pattern.getPixel(row, col);
-                patternBuffer.put(colorIndex);
-            }
-        }
+        patternBuffer.put(patternPixels, 0, TILE_SIZE * TILE_SIZE);
         patternBuffer.flip();
 
         int textureId = getTextureId(entry.atlasIndex());
@@ -440,6 +482,13 @@ public class PatternAtlas {
         glTexSubImage2D(GL_TEXTURE_2D, 0, pixelX, pixelY, TILE_SIZE, TILE_SIZE,
                 GL_RED, GL_UNSIGNED_BYTE, patternBuffer);
         glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    private byte[] ensurePatternUploadScratch() {
+        if (patternUploadScratch == null) {
+            patternUploadScratch = new byte[TILE_SIZE * TILE_SIZE];
+        }
+        return patternUploadScratch;
     }
 
     private AtlasPage getOrCreatePage(boolean headless) {

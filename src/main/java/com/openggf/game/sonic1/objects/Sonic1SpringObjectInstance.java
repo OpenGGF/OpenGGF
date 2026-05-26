@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.SpringBounceHelper;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
@@ -152,6 +153,10 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         player.setY((short) (player.getY() + 8));
         player.setYSpeed((short) strength);
         player.setAir(true);
+        // ROM Spring_BounceUp (s1disasm/_incObj/41 Springs.asm:88-89): bset Status_InAir,
+        // bclr Status_OnObj. Solid_ResetFloor just landed Sonic on the spring (set
+        // OnObj=1); the trigger immediately clears it as Sonic launches off.
+        player.setOnObject(false);
         // ROM does NOT zero g_speed — it stays at x_speed from Solid_ResetFloor
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 
@@ -177,6 +182,9 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         // ROM negates strength for down springs: positive = downward
         player.setYSpeed((short) -strength);
         player.setAir(true);
+        // ROM Spring_BounceDwn (s1disasm/_incObj/41 Springs.asm:183-184) mirrors Spring_BounceUp:
+        // bset Status_InAir / bclr Status_OnObj after the trigger.
+        player.setOnObject(false);
         // ROM does NOT zero g_speed
         player.setSpringing(SpringBounceHelper.CONTROL_LOCK_FRAMES);
 
@@ -262,6 +270,11 @@ public class Sonic1SpringObjectInstance extends AbstractObjectInstance
         }
         // Spring_Up / Spring_Dwn: d1=$1B (27), d2=8, d3=$10 (16)
         return new SolidObjectParams(27, 8, 16);
+    }
+
+    @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fullSolid(usesStickyContactBuffer());
     }
 
     @Override

@@ -1,5 +1,9 @@
 package com.openggf.game;
 
+import com.openggf.tests.TestEnvironment;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.session.EngineServices;
+import com.openggf.game.session.EngineContext;
 import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.level.objects.SpringHelper;
@@ -25,11 +29,13 @@ class TestCollisionModel {
 
     @BeforeEach
     void setUp() {
+        ensureBootstrapRuntime();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
     }
 
     @AfterEach
     void tearDown() {
+        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
@@ -58,6 +64,7 @@ class TestCollisionModel {
     // ========================================
 
     static Stream<Arguments> setterGuardProvider() {
+        ensureBootstrapRuntime();
         return Stream.of(
                 // S1: setters are no-ops
                 Arguments.of(new Sonic1GameModule(), "topSolidBit", 0x0C, (byte) 0x0E, 0x0C, "S1 top ignored"),
@@ -112,6 +119,7 @@ class TestCollisionModel {
     // ========================================
 
     static Stream<Arguments> springHelperProvider() {
+        ensureBootstrapRuntime();
         return Stream.of(
                 Arguments.of(new Sonic1GameModule(), 0x0C, 0x0D, "S1 spring no-op"),
                 Arguments.of(new Sonic2GameModule(), 0x0E, 0x0F, "S2 spring works")
@@ -128,4 +136,13 @@ class TestCollisionModel {
         assertEquals(expectedTop, sprite.getTopSolidBit(), label + " topSolidBit");
         assertEquals(expectedLrb, sprite.getLrbSolidBit(), label + " lrbSolidBit");
     }
+
+    private static void ensureBootstrapRuntime() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+        if (SessionManager.getCurrentGameplayMode() == null) {
+            TestEnvironment.activeGameplayMode();
+        }
+    }
 }
+
+

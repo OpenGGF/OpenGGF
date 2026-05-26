@@ -2,7 +2,6 @@ package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.configuration.SonicConfiguration;
-import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.Sonic1ZoneFeatureProvider;
 import com.openggf.game.ZoneFeatureProvider;
@@ -12,12 +11,19 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import com.openggf.debug.DebugColor;
 import java.util.List;
@@ -39,6 +45,17 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
 
     // move.w obX(a0),d0 / addi.w #$14,d0
     private static final int GRAB_X_OFFSET = 0x14;
+
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            true,
+            true,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     // subi.w #$18,d0
     private static final int CLIMB_MIN_Y_OFFSET = 0x18;
@@ -64,9 +81,6 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
 
     // obColProp emulation signal from touch callback.
     private boolean touchSignal;
-
-    // v_jpadpress2 edge detection.
-    private boolean jumpPressedPrevious;
 
     public Sonic1PoleThatBreaksObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PoleThatBreaks");
@@ -124,19 +138,18 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
         player.setAnimationId(Sonic1AnimationIds.HANG);
 
         // move.b #1,(f_playerctrl).w
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
 
         // move.b #1,(f_wtunnelallow).w
         setWindTunnelDisabled(true);
 
         // move.b #1,pole_grabbed(a0)
         poleGrabbed = true;
-        jumpPressedPrevious = player.isJumpPressed();
     }
 
     private void updateGrabbedPlayer(AbstractPlayableSprite player) {
         if (player == null) {
-            releasePlayer(null, false);
+            releasePlayer(null);
             return;
         }
 
@@ -144,7 +157,7 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
             poleTime--;
             if (poleTime == 0) {
                 mappingFrame = FRAME_BROKEN;
-                releasePlayer(player, false);
+                releasePlayer(player);
                 return;
             }
         }
@@ -167,16 +180,14 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
             player.setCentreY((short) newY);
         }
 
-        boolean jumpPressedNow = player.isJumpPressed();
-        if (jumpPressedNow && !jumpPressedPrevious) {
+        if (player.isJumpJustPressed()) {
             mappingFrame = FRAME_BROKEN;
-            releasePlayer(player, true);
+            releasePlayer(player);
             return;
         }
-        jumpPressedPrevious = jumpPressedNow;
     }
 
-    private void releasePlayer(AbstractPlayableSprite player, boolean consumeJumpPress) {
+    private void releasePlayer(AbstractPlayableSprite player) {
         // clr.b obColType(a0)
         collisionFlags = 0;
 
@@ -185,20 +196,13 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
 
         // clr.b (f_playerctrl).w / clr.b (f_wtunnelallow).w
         if (player != null) {
-            if (consumeJumpPress) {
-                // ROM: the ABC edge that releases the pole is read by the pole object
-                // after Sonic's mode logic for that frame has already run, so it does
-                // not trigger an immediate jump on release.
-                player.suppressNextJumpPress();
-            }
-            player.deferObjectControlRelease();
+            ObjectControlState.none().applyTo(player);
         }
         setWindTunnelDisabled(false);
 
         // clr.b pole_grabbed(a0)
         poleGrabbed = false;
         touchSignal = false;
-        jumpPressedPrevious = false;
     }
 
     @Override
@@ -212,8 +216,13 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
     }
 
     @Override
-    public boolean requiresContinuousTouchCallbacks() {
-        return true;
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override
@@ -241,7 +250,7 @@ public class Sonic1PoleThatBreaksObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendDebugRenderCommands(DebugRenderContext ctx) {
-        if (!SonicConfigurationService.getInstance().getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED)) {
+        if (!services().configuration().getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED)) {
             return;
         }
 

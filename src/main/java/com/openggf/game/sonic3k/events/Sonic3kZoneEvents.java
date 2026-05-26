@@ -5,19 +5,29 @@ import com.openggf.audio.AudioManager;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameModule;
+import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kPlcLoader;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.resources.PlcParser.PlcDefinition;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Palette;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.function.Supplier;
 
 /**
  * Base class for Sonic 3&K per-zone dynamic level events.
@@ -67,12 +77,65 @@ public abstract class Sonic3kZoneEvents {
         return GameServices.gameState();
     }
 
+    protected GameStateManager gameStateOrNull() {
+        return GameServices.gameStateOrNull();
+    }
+
     protected WaterSystem waterSystem() {
         return GameServices.water();
     }
 
     protected SpriteManager spriteManager() {
         return GameServices.sprites();
+    }
+
+    protected GraphicsManager graphics() {
+        return GameServices.graphics();
+    }
+
+    protected GameModule module() {
+        return GameServices.module();
+    }
+
+    protected PaletteOwnershipRegistry paletteRegistryOrNull() {
+        return GameServices.paletteOwnershipRegistryOrNull();
+    }
+
+    protected com.openggf.level.ParallaxManager parallaxOrNull() {
+        return GameServices.parallaxOrNull();
+    }
+
+    protected boolean hasRuntime() {
+        return GameServices.hasRuntime();
+    }
+
+    protected ZoneLayoutMutationPipeline zoneLayoutMutationPipeline() {
+        return GameServices.zoneLayoutMutationPipeline();
+    }
+
+    protected ZoneLayoutMutationPipeline zoneLayoutMutationPipelineOrNull() {
+        return GameServices.zoneLayoutMutationPipelineOrNull();
+    }
+
+    protected static GraphicsManager graphicsStatic() {
+        return GameServices.graphics();
+    }
+
+    protected static PaletteOwnershipRegistry paletteRegistryOrNullStatic() {
+        return GameServices.paletteOwnershipRegistryOrNull();
+    }
+
+    protected void cachePaletteTextureIfReady(Palette palette, int paletteLine) {
+        GraphicsManager graphicsManager = graphics();
+        if (graphicsManager.isGlInitialized()) {
+            graphicsManager.cachePaletteTexture(palette, paletteLine);
+        }
+    }
+
+    protected PlayerCharacter playerCharacter() {
+        return S3kRuntimeStates.resolvePlayerCharacter(
+                GameServices.hasRuntime() ? GameServices.zoneRuntimeRegistry() : null,
+                GameServices.configuration());
     }
 
     /** Reset event state for a new level load. */
@@ -119,6 +182,14 @@ public abstract class Sonic3kZoneEvents {
         }
     }
 
+    protected <T extends ObjectInstance> T spawnObject(Supplier<T> factory) {
+        LevelManager lm = levelManager();
+        if (lm == null || lm.getObjectManager() == null) {
+            return null;
+        }
+        return lm.getObjectManager().createDynamicObject(factory);
+    }
+
     /**
      * Loads a palette from ROM and applies it to the specified palette line.
      * ROM equivalent: PalLoad_Now
@@ -128,7 +199,15 @@ public abstract class Sonic3kZoneEvents {
             Rom rom = GameServices.rom().getRom();
             LevelManager levelManager = GameServices.level();
             byte[] paletteData = rom.readBytes(romAddr, PALETTE_LINE_SIZE);
-            levelManager.updatePalette(paletteLine, paletteData);
+            S3kPaletteWriteSupport.applyLine(
+                    GameServices.paletteOwnershipRegistryOrNull(),
+                    levelManager.getCurrentLevel(),
+                    GameServices.graphics(),
+                    S3kPaletteOwners.ZONE_EVENT_PALETTE_LOAD,
+                    S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                    paletteLine,
+                    paletteData,
+                    true);
         } catch (Exception e) {
             LOGGER.warning("Failed to load palette from ROM offset 0x" +
                     Integer.toHexString(romAddr) + ": " + e.getMessage());
@@ -158,7 +237,7 @@ public abstract class Sonic3kZoneEvents {
         }
     }
 
-    protected static void loadPaletteFromPalPointers(int palPointersIndex) {
+    public static void loadPaletteFromPalPointers(int palPointersIndex) {
         try {
             Rom rom = GameServices.rom().getRom();
             int entryAddr = Sonic3kConstants.PAL_POINTERS_ADDR
@@ -179,8 +258,19 @@ public abstract class Sonic3kZoneEvents {
             for (int i = 0; i < lineCount; i++) {
                 byte[] lineData = new byte[PALETTE_LINE_SIZE];
                 System.arraycopy(data, i * PALETTE_LINE_SIZE, lineData, 0, PALETTE_LINE_SIZE);
-                levelManager.updatePalette(startLine + i, lineData);
+                S3kPaletteWriteSupport.applyLine(
+                        GameServices.paletteOwnershipRegistryOrNull(),
+                        levelManager.getCurrentLevel(),
+                        GameServices.graphics(),
+                        S3kPaletteOwners.ZONE_EVENT_PALETTE_LOAD,
+                        S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                        startLine + i,
+                        lineData);
             }
+            S3kPaletteWriteSupport.resolvePendingWritesNow(
+                    GameServices.paletteOwnershipRegistryOrNull(),
+                    levelManager.getCurrentLevel(),
+                    GameServices.graphics());
             LOGGER.info("Loaded palette #" + palPointersIndex + ": " + lineCount
                     + " lines from 0x" + Integer.toHexString(sourceAddr)
                     + " to line " + startLine);

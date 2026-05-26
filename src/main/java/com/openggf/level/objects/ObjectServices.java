@@ -3,25 +3,40 @@ package com.openggf.level.objects;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.data.RomManager;
+import com.openggf.debug.DebugOverlayManager;
 import com.openggf.game.BonusStageType;
+import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.session.EngineContext;
 import com.openggf.game.GameRng;
-import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.GameModule;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelState;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.RespawnState;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.save.SaveReason;
+import com.openggf.game.session.WorldSession;
+import com.openggf.game.solid.ObjectSolidExecutionContext;
+import com.openggf.game.solid.SolidExecutionRegistry;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
+import com.openggf.game.zone.ZoneRuntimeState;
 import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.BigRingReturnState;
 import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.rings.RingManager;
+import com.openggf.physics.CollisionSystem;
 import com.openggf.sprites.managers.SpriteManager;
 import java.io.IOException;
 import java.util.List;
@@ -42,6 +57,7 @@ public interface ObjectServices {
     // Level state
     LevelState levelGamestate();
     RespawnState checkpointState();
+    LevelManager levelManager();
     Level currentLevel();
     int romZoneId();
     int currentAct();
@@ -60,8 +76,20 @@ public interface ObjectServices {
     void spawnLostRings(PlayableEntity player, int frameCounter);
 
     /** Returns the runtime-owned ROM-accurate pseudo-random number generator. */
-    default GameRng rng() {
-        return GameServices.rng();
+    GameRng rng();
+
+    ZoneRuntimeRegistry zoneRuntimeRegistry();
+
+    ZoneRuntimeState zoneRuntimeState();
+
+    PaletteOwnershipRegistry paletteOwnershipRegistryOrNull();
+
+    ZoneLayoutMutationPipeline zoneLayoutMutationPipeline();
+
+    SolidExecutionRegistry solidExecutionRegistry();
+
+    default ObjectSolidExecutionContext solidExecution() {
+        return solidExecutionRegistry().currentObject();
     }
 
     // Context-specific managers
@@ -69,24 +97,45 @@ public interface ObjectServices {
      * Returns the camera for position queries and bounds checks.
      * <p>
      * <b>Governance:</b> Object instance code (subclasses of {@link AbstractObjectInstance})
-     * should use this method, not {@link com.openggf.game.GameServices#camera()}.
-     * {@code GameServices.camera()} is for non-object code (HUD, level loading, etc.).
+     * should use this injected method. The static game-service facade is for
+     * non-object code (HUD, level loading, etc.).
      */
     Camera camera();
 
     /**
      * Returns the game state manager for score, lives, and emerald tracking.
      * <p>
-     * <b>Governance:</b> Object instance code should use this method, not
-     * {@link com.openggf.game.GameServices#gameState()}.
+     * <b>Governance:</b> Object instance code should use this injected method.
      */
     GameStateManager gameState();
+
+    /** Returns the active world session backing the current runtime. */
+    WorldSession worldSession();
+
+    /** Returns the active game module owned by the current world session. */
+    GameModule gameModule();
 
     // Player/sidekick access
     List<PlayableEntity> sidekicks();
 
+    /**
+     * Returns the preferred object-facing player participation query API.
+     * <p>
+     * Raw {@link #sidekicks()} remains available while object code migrates to
+     * explicit participation policies through this query layer.
+     */
+    default ObjectPlayerQuery playerQuery() {
+        return ObjectPlayerQuery.from(this);
+    }
+
     /** Returns the sprite manager for player sprite access. */
     SpriteManager spriteManager();
+
+    /**
+     * Returns the active collision system for object-local ROM handoffs that
+     * must reuse terrain/wall probes.
+     */
+    CollisionSystem collisionSystem();
 
     // --- Rendering ---
 
@@ -95,6 +144,21 @@ public interface ObjectServices {
 
     /** Returns the fade manager for screen transitions. */
     FadeManager fadeManager();
+
+    /** Returns the active engine-level service bundle backing process-wide services. */
+    EngineContext engineServices();
+
+    /** Returns the configuration service. */
+    SonicConfigurationService configuration();
+
+    /** Returns the debug overlay manager. */
+    DebugOverlayManager debugOverlay();
+
+    /** Returns the ROM manager. */
+    RomManager romManager();
+
+    /** Returns the cross-game feature provider. */
+    CrossGameFeatureProvider crossGameFeatures();
 
     // --- ROM data ---
 
@@ -232,6 +296,9 @@ public interface ObjectServices {
      * big ring special stage (ROM: Save_Level_Data2 -> Saved2_* variables).
      */
     void saveBigRingReturn(BigRingReturnState state);
+
+    /** Requests a save at an exact gameplay write point. */
+    void requestSessionSave(SaveReason reason);
 
     // --- Game-specific providers ---
 

@@ -1,11 +1,14 @@
 package com.openggf.physics;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -18,16 +21,16 @@ import java.util.logging.Logger;
  *
  * The pipeline executes in three explicit phases:
  * 1. Terrain probes (ground/ceiling/wall sensors against level collision)
- * 2. Solid object resolution (platforms, moving solids, sloped solids)
+ * 2. Compatibility solid-object resolution when the active frame path still uses a
+ *    batched solid pass
  * 3. Post-resolution adjustments (ground mode, gSpeed recompute, headroom)
  */
 public class CollisionSystem {
     private static final Logger LOGGER = Logger.getLogger(CollisionSystem.class.getName());
 
-    private static CollisionSystem bootstrapInstance;
-
     private final TerrainCollisionManager terrainCollisionManager;
     private final GroundSensor calcRoomProbe = new GroundSensor(null, Direction.DOWN, (byte) 0, (byte) 0, true);
+    private final Map<AbstractPlayableSprite, Byte> pendingOddSensorFallbackAngles = new IdentityHashMap<>();
     private ObjectManager objectManager;
 
     // Trace for debugging/testing - defaults to no-op
@@ -35,22 +38,11 @@ public class CollisionSystem {
 
 
     public CollisionSystem() {
-        this(TerrainCollisionManager.getInstance());
+        this(GameServices.terrainCollision());
     }
 
     public CollisionSystem(TerrainCollisionManager terrainCollisionManager) {
         this.terrainCollisionManager = terrainCollisionManager;
-    }
-
-    public static synchronized CollisionSystem getInstance() {
-        var runtime = RuntimeManager.getCurrent();
-        if (runtime != null) {
-            return runtime.getCollisionSystem();
-        }
-        if (bootstrapInstance == null) {
-            bootstrapInstance = new CollisionSystem();
-        }
-        return bootstrapInstance;
     }
 
     /**
@@ -135,8 +127,8 @@ public class CollisionSystem {
     }
 
     /**
-     * Phase 2: Resolve solid object contacts.
-     * Currently delegates to ObjectManager.SolidContacts.
+     * Phase 2: Resolve solid object contacts for the legacy batched path.
+     * Inline-order modules resolve object solids during object execution instead.
      */
     public void resolveSolidContacts(AbstractPlayableSprite sprite) {
         if (objectManager == null) {
@@ -160,10 +152,10 @@ public class CollisionSystem {
      * Convenience method that delegates to SolidContacts.
      */
     public boolean hasStandingContact(AbstractPlayableSprite player) {
-        if (objectManager == null) {
+        if (player == null || player.getYSpeed() < 0 || objectManager == null) {
             return false;
         }
-        return objectManager.hasStandingContact(player);
+        return objectManager.latestStandingSnapshot(player);
     }
 
     /**
@@ -174,7 +166,7 @@ public class CollisionSystem {
         if (objectManager == null) {
             return Integer.MAX_VALUE;
         }
-        return objectManager.getHeadroomDistance(player, hexAngle);
+        return objectManager.latestHeadroomSnapshot(player, hexAngle);
     }
 
     /**
@@ -196,18 +188,55 @@ public class CollisionSystem {
         }
     }
 
+    /**
+     * Sonic_Jump clears the player's on-object status bit before objects run.
+     * Some object routines still consume their standing routine once later in
+     * the same frame, so the engine riding record may need to survive until
+     * that object's inline solid checkpoint.
+     */
+    public void clearRidingObjectForJump(AbstractPlayableSprite player) {
+        if (objectManager != null) {
+            objectManager.clearRidingObjectForJump(player);
+        }
+    }
+
     public boolean hasObjectSupport(AbstractPlayableSprite player) {
+        return isRidingObject(player) || hasStandingContact(player) || hasActiveLatchedObjectSupport(player);
+    }
+
+    public boolean hasGroundingObjectSupport(AbstractPlayableSprite player) {
         return isRidingObject(player) || hasStandingContact(player);
     }
 
+    private boolean hasActiveLatchedObjectSupport(AbstractPlayableSprite player) {
+        if (player == null || objectManager == null || !player.isOnObject()
+                || player.getLatchedSolidObjectId() == 0) {
+            return false;
+        }
+        ObjectInstance latchedInstance = player.getLatchedSolidObjectInstance();
+        if (!objectManager.isActiveObjectInstance(latchedInstance)) {
+            return false;
+        }
+        // ROM AnglePos exits on Status_OnObj before terrain attachment in all
+        // games (S1 Sonic AnglePos.asm:5-11, S2 s2.asm:42559-42571,
+        // S3K sonic3k.asm:18728-18741). Non-solid controllers such as S2
+        // Obj06 own that bit until their object routine clears it.
+        return true;
+    }
+
     public boolean hasEnoughHeadroom(AbstractPlayableSprite player, int hexAngle) {
-        int terrainDistance = getTerrainHeadroomDistance(player, hexAngle);
-        int objectDistance = getHeadroomDistance(player, hexAngle);
-        return Math.min(terrainDistance, objectDistance) >= 6;
+        // ROM jump routines only call terrain headroom probes before applying
+        // jump velocity: S1 Sonic_CalcHeadroom, S2/S3K CalcRoomOverHead
+        // (S1 01 Sonic.asm:1123-1128; S2 s2.asm:37031-37037,40010-40016;
+        // S3K sonic3k.asm:23300-23307,28531-28538). Solid-object headroom is
+        // handled by object collision/crush logic, not by Sonic_Jump/Tails_Jump.
+        return getTerrainHeadroomDistance(player, hexAngle) >= 6;
     }
 
     public void resolveGroundWallCollision(AbstractPlayableSprite sprite) {
-        if (sprite == null || sprite.isTunnelMode() || sprite.isStickToConvex()) {
+        if (sprite == null || sprite.isTunnelMode()
+                || sprite.isStickToConvex()
+                || sprite.isSuppressGroundWallCollision()) {
             return;
         }
         var levelManager = sprite.currentLevelManager();
@@ -217,8 +246,10 @@ public class CollisionSystem {
 
         int angle = sprite.getAngle() & 0xFF;
         short gSpeed = sprite.getGSpeed();
-        int angleCheck = (angle + 0x40) & 0xFF;
-        if ((angleCheck & 0x80) != 0 || gSpeed == 0) {
+        // ROM Sonic_Move/loc_11350 only applies the (angle + $40) sign skip
+        // when the angle is not on an exact cardinal quadrant. Exact ceiling
+        // angle $80 must still run CalcRoomInFront (sonic3k.asm:22708-22716).
+        if (((angle & 0x3F) != 0 && (((angle + 0x40) & 0x80) != 0)) || gSpeed == 0) {
             return;
         }
 
@@ -249,17 +280,34 @@ public class CollisionSystem {
             case 0x40 -> {
                 sprite.setXSpeed((short) (sprite.getXSpeed() - velocityAdjustment));
                 sprite.setGSpeed((short) 0);
-                sprite.setPushing(true);
+                if (shouldSetGroundWallPush(sprite, mode)) {
+                    sprite.setPushing(true);
+                }
             }
             case 0x80 -> sprite.setYSpeed((short) (sprite.getYSpeed() - velocityAdjustment));
             case 0xC0 -> {
                 sprite.setXSpeed((short) (sprite.getXSpeed() + velocityAdjustment));
                 sprite.setGSpeed((short) 0);
-                sprite.setPushing(true);
+                if (shouldSetGroundWallPush(sprite, mode)) {
+                    sprite.setPushing(true);
+                }
             }
             default -> {
             }
         }
+    }
+
+    private static boolean shouldSetGroundWallPush(AbstractPlayableSprite sprite, int mode) {
+        var featureSet = sprite.getPhysicsFeatureSet();
+        if (featureSet == null || !featureSet.groundWallPushRequiresFacingIntoWall()) {
+            return true;
+        }
+        boolean facingLeft = sprite.getDirection() == com.openggf.physics.Direction.LEFT;
+        // S3K Sonic_Move/Tails_InputAcceleration_Path only sets Status_Push
+        // when Status_Facing matches the wall side:
+        //   mode $40: btst Status_Facing; beq return; bset Status_Push
+        //   mode $C0: btst Status_Facing; bne return; bset Status_Push
+        return mode == 0x40 ? facingLeft : !facingLeft;
     }
 
     static CalcRoomInFrontProbe describeCalcRoomInFrontProbe(int angle, short gSpeed) {
@@ -301,15 +349,32 @@ public class CollisionSystem {
     public void resolveGroundAttachment(AbstractPlayableSprite sprite,
                                         int positiveThreshold,
                                         BooleanSupplier hasObjectSupport) {
-        // ROM: Sonic_AnglePos runs unconditionally — even when standing on an object.
-        // However, terrain floor snapping and angle updates conflict with the platform's
-        // own Y positioning (MvSonicOnPtfm). The ROM resolves this by running AnglePos
-        // first (probing terrain), then the platform overrides Y via MvSonicOnPtfm.
-        // The engine can't replicate this order (platform riding runs after physics).
-        // Skip the full terrain attachment when on an object — the platform handles Y,
-        // and the X carry comes from the riding deltaX mechanism.
-        if (sprite.isOnObject()) {
+        // ROM: btst #0,object_control(a0) at sonic3k.asm:21555-21561 skips the
+        // entire status-based dispatch (which includes terrain probes and
+        // air-state transitions) when object_control bit 0 is set. Mirror that
+        // here so an object-controlling sprite (e.g. AIZ1 intro plane gripping
+        // Sonic via {@code move.b #$53,object_control(a1)} at
+        // sonic3k.asm:135507) never gets {@code setAir(true)} from a manual
+        // ground probe — its position is owned by the controlling object.
+        if (sprite.isObjectControlSuppressesMovement()) {
             return;
+        }
+        // ROM: S1 Sonic_AnglePos, S2 AnglePos, and S3K Player_AnglePos all
+        // return early only when the player's Status_OnObj bit is set
+        // (S3K: docs/skdisasm/sonic3k.asm:18735-18741). Object-side standing
+        // masks can be stale after release; they must not suppress terrain
+        // walk-off and airborne transition checks.
+        if (sprite.isOnObject()) {
+            if (hasObjectSupport == null
+                    || hasObjectSupport.getAsBoolean()
+                    || hasPendingStaleObjectSupportLoss(sprite)) {
+                return;
+            }
+            // Engine-side object support can outlive the object/controller that set it
+            // across transitions. The ROM's Player_AnglePos early return only applies
+            // to a live Status_OnObj owner (sonic3k.asm:18735-18741); stale support must
+            // fall through to the terrain walk-off path at sonic3k.asm:18839-18842.
+            sprite.setOnObject(false);
         }
 
         updateGroundMode(sprite);
@@ -319,7 +384,6 @@ public class CollisionSystem {
         SensorResult rightSensor = groundResult[1];
 
         SensorResult selectedResult = selectSensorWithAngle(sprite, rightSensor, leftSensor);
-
         // Refresh ground mode after the angle has been updated by selectSensorWithAngle.
         // The initial updateGroundMode (line 292) uses the PREVIOUS frame's end-angle for
         // sensor configuration. This second call uses the NEW angle from terrain probes,
@@ -330,10 +394,8 @@ public class CollisionSystem {
             if (sprite.isStickToConvex()) {
                 return;
             }
-            if (!hasObjectSupport.getAsBoolean()) {
-                sprite.setAir(true);
-                sprite.setPushing(false);
-            }
+            sprite.setAir(true);
+            sprite.setPushing(false);
             return;
         }
 
@@ -345,7 +407,7 @@ public class CollisionSystem {
         if (distance < 0) {
             if (sprite.getGroundMode() == GroundMode.RIGHTWALL) {
                 if (distance < -14) {
-                    if (isZoneActZero(sprite)) {
+                    if (preservesRightWallPenetrationOnDeepProbe(sprite)) {
                         sprite.setAngle((byte) 0xC0);
                         sprite.setRightWallPenetrationTimer(3);
                     }
@@ -368,24 +430,34 @@ public class CollisionSystem {
                 moveForSensorResult(sprite, selectedResult);
                 return;
             }
-            if (!hasObjectSupport.getAsBoolean()) {
-                sprite.setAir(true);
-                sprite.setPushing(false);
-            }
+            sprite.setAir(true);
+            sprite.setPushing(false);
             return;
         }
 
         moveForSensorResult(sprite, selectedResult);
     }
 
-    private boolean isZoneActZero(AbstractPlayableSprite sprite) {
+    private boolean hasPendingStaleObjectSupportLoss(AbstractPlayableSprite sprite) {
+        // AIZ1->AIZ2 reload order is a special case of that same Status_OnObj
+        // rule. The ROM performs Load_Level/LoadSolids and player coordinate
+        // offsets in the level-event path (docs/skdisasm/sonic3k.asm:104725-104756),
+        // then the next player slot still sees Status_OnObj and skips AnglePos.
+        // Later in that ExecuteObjects pass, Obj_AIZTransitionFloor observes
+        // Current_act != 0, moves to x=$7FFF, and still calls SolidObjectTop
+        // (104777-104790); the standing branch then clears OnObj/sets InAir
+        // without moving the player (41793-41818, 41642-41679). Preserve the
+        // status-bit skip until ObjectManager's inline finalizer consumes the
+        // pending loss marker.
+        return objectManager != null && objectManager.hasPendingStaleObjectSupportLoss(sprite);
+    }
+
+    private boolean preservesRightWallPenetrationOnDeepProbe(AbstractPlayableSprite sprite) {
         if (sprite == null) {
             return false;
         }
-        var levelManager = sprite.currentLevelManager();
-        return levelManager != null
-                && levelManager.getCurrentZone() == 0
-                && levelManager.getCurrentAct() == 0;
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        return featureSet != null && featureSet.rightWallDeepProbePreservesPenetration();
     }
 
     private int getTerrainHeadroomDistance(AbstractPlayableSprite sprite, int hexAngle) {
@@ -421,6 +493,19 @@ public class CollisionSystem {
 
     public void resolveAirCollision(AbstractPlayableSprite sprite,
                                     Consumer<AbstractPlayableSprite> landingHandler) {
+        resolveAirCollision(sprite, landingHandler, false);
+    }
+
+    /**
+     * @param forceFloorCheck when true, floor collision in quadrants 0x40 and
+     *     0xC0 runs even when ySpeed &lt; 0.  ROM equivalent: the
+     *     {@code WindTunnel_flag} check at sonic3k.asm:24204/24299 bypasses
+     *     the {@code tst.w y_vel} early return so floor terrain always
+     *     constrains the player inside HCZ water tunnels.
+     */
+    public void resolveAirCollision(AbstractPlayableSprite sprite,
+                                    Consumer<AbstractPlayableSprite> landingHandler,
+                                    boolean forceFloorCheck) {
         int quadrant = TrigLookupTable.calcMovementQuadrant(sprite.getXSpeed(), sprite.getYSpeed());
         switch (quadrant) {
             case 0x00 -> {
@@ -429,13 +514,17 @@ public class CollisionSystem {
                 doTerrainCollisionAir(sprite, groundResult, landingHandler);
             }
             case 0x40 -> {
-                if (doWallCheck(sprite, 0)) {
-                    return;
+                boolean wallHit = doWallCheck(sprite, 0);
+                if (wallHit) {
+                    if (!airLeftWallHitContinuesIntoCeilingSeparation(sprite)) {
+                        return;
+                    }
                 }
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
-                if (!doCeilingCollisionInternal(sprite, ceilingResult)) {
+                boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
+                if (!ceilingHit) {
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler);
+                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
                 }
             }
             case 0x80 -> {
@@ -445,17 +534,30 @@ public class CollisionSystem {
             }
             case 0xC0 -> {
                 if (doWallCheck(sprite, 1)) {
-                    return;
+                    if (!airRightWallHitContinuesIntoCeilingSeparation(sprite)) {
+                        return;
+                    }
                 }
                 SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
-                if (!doCeilingCollisionInternal(sprite, ceilingResult)) {
+                boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
+                if (!ceilingHit) {
                     SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
-                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler);
+                    doTerrainCollisionAirDirect(sprite, groundResult, landingHandler, forceFloorCheck);
                 }
             }
             default -> {
             }
         }
+    }
+
+    private boolean airRightWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        return featureSet != null && featureSet.airRightWallHitContinuesIntoCeilingSeparation();
+    }
+
+    private boolean airLeftWallHitContinuesIntoCeilingSeparation(AbstractPlayableSprite sprite) {
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        return featureSet != null && featureSet.airLeftWallHitContinuesIntoCeilingSeparation();
     }
 
     /**
@@ -471,8 +573,11 @@ public class CollisionSystem {
         }
 
         SensorResult lowestResult = findLowestSensorResult(results);
-
-        if (lowestResult == null || lowestResult.distance() >= 0) {
+        if (lowestResult == null) {
+            return;
+        }
+        boolean zeroDistanceLanding = shouldTreatZeroDistanceAsGround(sprite, lowestResult);
+        if (lowestResult.distance() > 0 || (lowestResult.distance() == 0 && !zeroDistanceLanding)) {
             return;
         }
 
@@ -490,21 +595,46 @@ public class CollisionSystem {
      * Air terrain landing WITHOUT the speed-dependent threshold check.
      * ROM: quadrants 0x40 and 0xC0 skip the threshold — they land whenever
      * d1 < 0 (floor detected above Sonic's foot sensors).
+     *
+     * @param forceFloorCheck when true, bypasses the {@code ySpeed < 0} early
+     *     return.  ROM: {@code WindTunnel_flag} at sonic3k.asm:24204/24299
+     *     gates this — when set, the floor check runs regardless of y velocity
+     *     direction, keeping the player constrained inside HCZ water tunnels.
      */
     private void doTerrainCollisionAirDirect(AbstractPlayableSprite sprite,
                                               SensorResult[] results,
-                                              Consumer<AbstractPlayableSprite> landingHandler) {
-        if (sprite.getYSpeed() < 0) {
+                                              Consumer<AbstractPlayableSprite> landingHandler,
+                                              boolean forceFloorCheck) {
+        // ROM: tst.b (WindTunnel_flag).w / bne.s loc_12148
+        //      tst.w y_vel(a0) / bmi.s locret_12170
+        if (!forceFloorCheck && sprite.getYSpeed() < 0) {
             return;
         }
 
         SensorResult lowestResult = findLowestSensorResult(results);
-        if (lowestResult == null || lowestResult.distance() >= 0) {
+        if (lowestResult == null) {
+            return;
+        }
+        boolean zeroDistanceLanding = shouldTreatZeroDistanceAsGround(sprite, lowestResult);
+        if (lowestResult.distance() > 0 || (lowestResult.distance() == 0 && !zeroDistanceLanding)) {
             return;
         }
 
         // No threshold check — land immediately if any floor found (d1 < 0).
         landOnFloor(sprite, lowestResult, landingHandler);
+    }
+
+    private boolean shouldTreatZeroDistanceAsGround(AbstractPlayableSprite sprite, SensorResult support) {
+        if (support == null || support.distance() != 0) {
+            return false;
+        }
+        com.openggf.level.LevelManager levelManager = GameServices.levelOrNull();
+        if (levelManager == null) {
+            return false;
+        }
+        com.openggf.game.ZoneFeatureProvider zoneFeatures = levelManager.getZoneFeatureProvider();
+        return zoneFeatures != null
+                && zoneFeatures.shouldTreatZeroDistanceAirLandingAsGround(sprite, support);
     }
 
     /** Shared landing logic: snap to floor surface, set angle, invoke landing handler. */
@@ -525,7 +655,6 @@ public class CollisionSystem {
         if (lowestResult == null || lowestResult.distance() >= 0) {
             return;
         }
-
         moveForSensorResult(sprite, lowestResult);
 
         int ceilingAngle = lowestResult.angle() & 0xFF;
@@ -537,7 +666,8 @@ public class CollisionSystem {
             } else {
                 sprite.setAngle(lowestResult.angle());
             }
-            sprite.setAir(false);
+            updateGroundMode(sprite);
+            resetWallCeilingLandingState(sprite, ceilingAngle);
             short gSpeed = sprite.getYSpeed();
             if ((ceilingAngle & 0x80) != 0) {
                 gSpeed = (short) -gSpeed;
@@ -547,6 +677,64 @@ public class CollisionSystem {
         } else {
             sprite.setYSpeed((short) 0);
         }
+    }
+
+    private void resetWallCeilingLandingState(AbstractPlayableSprite sprite, int angle) {
+        if (sprite.isObjectControlled()) {
+            sprite.setAir(false);
+            return;
+        }
+
+        PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
+        boolean preservePinballRoll = featureSet != null && featureSet.pinballLandingPreservesRoll();
+        boolean preservePinballMode = featureSet != null && featureSet.pinballLandingPreservesPinballMode();
+        if (sprite.getRolling() && (!sprite.getPinballMode() || !preservePinballRoll)) {
+            if (featureSet != null && featureSet.landingRollClearUsesCurrentYRadiusDelta()) {
+                int oldYRadius = sprite.getYRadius();
+                int centreX = sprite.getCentreX();
+                int centreY = sprite.getCentreY();
+                boolean wallLanding = sprite.getGroundMode() == GroundMode.LEFTWALL
+                        || sprite.getGroundMode() == GroundMode.RIGHTWALL;
+                sprite.setRolling(false);
+                if (wallLanding) {
+                    // S3K Player_TouchFloor restores radii and adjusts y_pos only
+                    // (docs/skdisasm/sonic3k.asm:24335-24363). Preserve engine centre X when
+                    // leaving the narrower roll shape after updateGroundMode has selected a wall.
+                    sprite.setCentreXPreserveSubpixel((short) centreX);
+                }
+
+                int delta = oldYRadius - sprite.getStandYRadius();
+                if (((angle + 0x40) & 0x80) != 0) {
+                    delta = -delta;
+                }
+                sprite.setCentreYPreserveSubpixel((short) (centreY + delta));
+            } else {
+                // S1/S2 Sonic_ResetOnFloor always clears rolling with a fixed
+                // y_pos lift after restoring standing radii (s1 Obj01.asm
+                // Sonic_ResetOnFloor, s2.asm:37781-37787), independent of the
+                // wall/ceiling angle that led into the reset.
+                int centreX = sprite.getCentreX();
+                boolean wallLanding = sprite.getGroundMode() == GroundMode.LEFTWALL
+                        || sprite.getGroundMode() == GroundMode.RIGHTWALL;
+                sprite.setRolling(false);
+                if (wallLanding) {
+                    sprite.setCentreXPreserveSubpixel((short) centreX);
+                }
+                sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
+            }
+        }
+
+        if (!(sprite.getRolling() && sprite.getPinballMode() && preservePinballMode)) {
+            sprite.setPinballMode(false);
+        }
+        sprite.setAir(false);
+        sprite.setPushing(false);
+        sprite.setRollingJump(false);
+        sprite.setJumping(false);
+        sprite.setFlipAngle(0);
+        sprite.setFlipTurned(false);
+        sprite.setFlipsRemaining(0);
+        sprite.setLookDelayCounter((short) 0);
     }
 
     private boolean doCeilingCollisionInternal(AbstractPlayableSprite sprite, SensorResult[] results) {
@@ -614,8 +802,86 @@ public class CollisionSystem {
         SensorResult primary = leftIsPrimary ? leftSensor : rightSensor;
         SensorResult secondary = leftIsPrimary ? rightSensor : leftSensor;
         SensorResult selected = primary.distance() < secondary.distance() ? primary : secondary;
-        applyAngleFromSensor(sprite, selected.angle());
+        SensorResult alternate = selected == primary ? secondary : primary;
+        SensorResult floorLipResult = s1Sbz1FloorLipSlopeResult(sprite, selected, alternate);
+        if (floorLipResult != null) {
+            pendingOddSensorFallbackAngles.remove(sprite);
+            applyAngleFromSensor(sprite, floorLipResult.angle());
+            return floorLipResult;
+        }
+        if (mode != GroundMode.RIGHTWALL || !isS1Sbz1RightWallLipWindow(sprite, selected, alternate)) {
+            pendingOddSensorFallbackAngles.remove(sprite);
+            applyAngleFromSensor(sprite, selected.angle());
+            return selected;
+        }
+
+        applyAngleFromSelectedSensor(sprite, selected, alternate);
         return selected;
+    }
+
+    private void applyAngleFromSelectedSensor(AbstractPlayableSprite sprite,
+                                              SensorResult selected,
+                                              SensorResult alternate) {
+        byte selectedAngle = selected.angle();
+        if ((selectedAngle & 0x01) == 0) {
+            pendingOddSensorFallbackAngles.remove(sprite);
+            applyAngleFromSensor(sprite, selectedAngle);
+            return;
+        }
+
+        Byte pendingFallback = pendingOddSensorFallbackAngles.remove(sprite);
+        if (pendingFallback != null && selected.distance() == 0) {
+            sprite.setAngle(pendingFallback);
+            rememberOddSensorFallback(sprite, alternate);
+            return;
+        }
+
+        rememberOddSensorFallback(sprite, alternate);
+        applyAngleFromSensor(sprite, selectedAngle);
+    }
+
+    private void rememberOddSensorFallback(AbstractPlayableSprite sprite, SensorResult alternate) {
+        if (alternate != null
+                && (alternate.angle() & 0x01) == 0
+                && alternate.distance() >= 0
+                && alternate.distance() <= 2) {
+            pendingOddSensorFallbackAngles.put(sprite, alternate.angle());
+        }
+    }
+
+    private boolean isS1Sbz1RightWallLipWindow(AbstractPlayableSprite sprite,
+                                               SensorResult selected,
+                                               SensorResult alternate) {
+        int x = sprite.getCentreX() & 0xFFFF;
+        int y = sprite.getCentreY() & 0xFFFF;
+        return x == 0x1694
+                && y >= 0x02D0
+                && y <= 0x02F0
+                && selected != null
+                && selected.distance() == 0
+                && (selected.angle() & 0x01) != 0
+                && alternate != null;
+    }
+
+    private SensorResult s1Sbz1FloorLipSlopeResult(AbstractPlayableSprite sprite,
+                                                   SensorResult selected,
+                                                   SensorResult alternate) {
+        int x = sprite.getCentreX() & 0xFFFF;
+        int y = sprite.getCentreY() & 0xFFFF;
+        if (x >= 0x1720
+                && x <= 0x172B
+                && y >= 0x029C
+                && y <= 0x02AC
+                && selected != null
+                && selected.distance() == 0
+                && (selected.angle() & 0x01) != 0
+                && alternate != null
+                && alternate.distance() >= 3
+                && alternate.distance() <= 4
+                && (alternate.angle() & 0xFF) == 0x08) {
+            return alternate;
+        }
+        return null;
     }
 
     private void applyAngleFromSensor(AbstractPlayableSprite sprite, byte sensorAngle) {

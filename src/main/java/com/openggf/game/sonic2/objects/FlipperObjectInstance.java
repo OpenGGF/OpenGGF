@@ -1,5 +1,8 @@
 package com.openggf.game.sonic2.objects;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.ContactKind;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.level.objects.BoxObjectInstance;
 import com.openggf.level.objects.ObjectAnimationState;
 
@@ -10,8 +13,12 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.*;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
 
 /**
@@ -55,12 +62,23 @@ public class FlipperObjectInstance extends BoxObjectInstance
     private static final int ANIM_HORIZONTAL_IDLE = 2;
     private static final int ANIM_HORIZONTAL_TRIGGER_LEFT = 3;
     private static final int ANIM_HORIZONTAL_TRIGGER_RIGHT = 4;
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     private ObjectAnimationState animationState;
     private boolean animInitialized;
     private final int idleAnimId;
     private int mappingFrame;
-    private int launchCooldown = 0;
+    // ROM parity: Obj86 has no global cooldown; each player is tracked
+    // independently via objoff_36 (P1) / objoff_37 (P2) in s2.asm:57870-57879.
+    // The engine previously used a single launchCooldown counter that would
+    // suppress the contact callback for ALL players for 16 frames after any
+    // launch, so a Tails-vs-flipper push immediately after a Sonic-vs-flipper
+    // launch silently dropped (CNZ trace f201, slot 23 horizontal flipper at
+    // @0280,0368).  Switch to a per-player cooldown so a launch on one
+    // character cannot starve the other.
+    private final IdentityHashMap<AbstractPlayableSprite, Integer> launchCooldown =
+            new IdentityHashMap<>();
 
     // Vertical flipper state tracking (per loc_2B20A in s2.asm)
     // 0 = not standing, 1 = standing/rolling on flipper
@@ -72,7 +90,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
     // has moved away. Our onSolidContact callback only fires when there IS a contact,
     // so we must check in update() whether the player has left and release the lock.
     private AbstractPlayableSprite lockedPlayer = null;
-    private boolean contactThisFrame = false;
+    private boolean lockedPlayerPreviousMovementSuppressed;
 
     public FlipperObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, 8, 8, 0.8f, 0.4f, 0.2f, false);
@@ -82,8 +100,23 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (player == null || launchCooldown > 0) {
+        // Manual checkpoints drive Obj86 state; callbacks are intentionally
+        // passive so the inline and normal object paths share one state machine.
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
+    }
+
+    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {
+        if (player == null || result == null) {
+            return;
+        }
+        // ROM parity: cooldown is per-player (objoff_36/37 are independent
+        // bytes in s2.asm).  Skip launch only when THIS player just got
+        // launched, not when the other character did.
+        if (launchCooldown.getOrDefault(player, 0) > 0) {
             return;
         }
 
@@ -97,20 +130,19 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
         if (isHorizontal()) {
             // Horizontal flipper: launch on push (loc_2B35C)
-            if (contact.pushing()) {
+            if (result.pushingNow()) {
                 applyHorizontalLaunch(player);
             }
         } else {
-            // Mark that we received a contact callback this frame - used by update()
-            // to detect when the player has moved out of range entirely (no callback).
-            contactThisFrame = true;
-
             // Vertical flipper state machine (loc_2B20A - loc_2B288)
-            if (contact.standing()) {
+            if (result.standingNow()) {
                 // ROM: move.b #1,obj_control(a1) - locks ALL player input including jumping
                 // This is set every frame while standing on the flipper
                 player.setControlLocked(true);
-                lockedPlayer = player;
+                // Obj01_Control skips the player movement dispatch while
+                // obj_control bit 0 is set, then still runs display/record/
+                // animation/TouchResponse (s2.asm:35937-35962).
+                suppressMovementForLockedPlayer(player);
 
                 if (playerFlipperState == 0) {
                     // First frame standing: enter rolling state (loc_2B20A)
@@ -132,13 +164,13 @@ public class FlipperObjectInstance extends BoxObjectInstance
                         applyFlipperSlide(player);
                     }
                 }
-            } else {
+            } else if (result.kind() == ContactKind.NONE) {
                 // Player left flipper without jumping (loc_2B23C branch to clear)
                 // ROM: move.b #0,obj_control(a1)
-                if (playerFlipperState != 0) {
+                if (playerFlipperState != 0 && (lockedPlayer == null || lockedPlayer == player)) {
                     releaseLockedPlayer();
+                    playerFlipperState = 0;
                 }
-                playerFlipperState = 0;
             }
 
             // Process pending launch (loc_2B290)
@@ -157,9 +189,11 @@ public class FlipperObjectInstance extends BoxObjectInstance
         int slideAmount = mappingFrame - 1;
         if (!isFlippedHorizontal()) {
             slideAmount = -slideAmount;
-            player.setDirection(Direction.LEFT);
-        } else {
+            // ROM sets x_flip, then clears it for non-flipped Obj86 before
+            // writing the slide speed (s2.asm:57922-57934).
             player.setDirection(Direction.RIGHT);
+        } else {
+            player.setDirection(Direction.LEFT);
         }
         player.setX((short)(player.getX() + slideAmount));
         player.setXSpeed((short)(slideAmount << 8));
@@ -180,14 +214,10 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
         int angle = (adjustedDistance >> 2) + 0x40;
 
-        // Convert Mega Drive angle (0x00-0xFF, where 0x40 = up) to radians
-        double radians = (angle & 0xFF) * 2.0 * Math.PI / 256.0;
-
-        // ROM uses CalcSine which returns sin/cos scaled by ~256, then multiplies
-        // by magnitude and divides by 256 (asr.l #8). Since Math.sin/cos return
-        // -1.0 to 1.0 (not scaled), we just multiply directly without dividing.
-        int yVel = (int) (velocityMagnitude * Math.sin(radians));
-        int xVel = (int) (velocityMagnitude * Math.cos(radians));
+        // ROM uses integer CalcSine, then muls/asr.l #8
+        // (s2.asm:57966-57982). Floating point trig rounds differently here.
+        int yVel = (TrigLookupTable.sinHex(angle) * velocityMagnitude) >> 8;
+        int xVel = (TrigLookupTable.cosHex(angle) * velocityMagnitude) >> 8;
 
         if (isFlippedHorizontal()) {
             xVel = -xVel;
@@ -196,13 +226,13 @@ public class FlipperObjectInstance extends BoxObjectInstance
         player.setYSpeed((short) yVel);
         player.setXSpeed((short) xVel);
         player.setAir(true);
+        player.setOnObject(false);
         player.setPushing(false);  // Clear pushing state - matches BumperObjectInstance pattern
-        player.setGSpeed((short) 0);
+        // ROM Obj86 launch writes x_vel/y_vel but leaves inertia unchanged
+        // (s2.asm:57982-57988).
 
         // ROM: move.b #0,obj_control(a1) at loc_2B2E2 - release control lock
-        player.setControlLocked(false);
-        player.setPinballMode(false);
-        lockedPlayer = null;
+        releaseLockedPlayer();
 
         // Clear solid object riding state to prevent the object system from
         // continuing to track the player's position relative to the flipper.
@@ -217,7 +247,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
 
         triggerVerticalAnimation();
         playFlipperSound();
-        launchCooldown = 16;
+        launchCooldown.put(player, 16);
     }
 
     private void applyHorizontalLaunch(AbstractPlayableSprite player) {
@@ -245,22 +275,34 @@ public class FlipperObjectInstance extends BoxObjectInstance
         player.setGSpeed((short) xVel);
         // NOTE: y_vel is NOT cleared in the ROM for horizontal flippers (loc_2B35C-loc_2B3BC)
         // The player stays grounded and rolls at high speed - y_vel is handled by the movement system
-        player.setPushing(false);  // Clear pushing state - matches BumperObjectInstance pattern
+        // Obj86's horizontal branch does not clear Status_Push after the
+        // SolidObject side-push launch (s2.asm:58021-58045). TailsCPU_Normal
+        // runs before the following movement/animation pass and reads that
+        // live push bit at s2.asm:38943.
 
         // ROM: move.w #$F,move_lock(a1) - lock player input for 15 frames
         player.setMoveLockTimer(15);
         // ROM: bset #status.player.rolling / bne.s loc_2B3BC / addq.w #5,y_pos
         // Only adjust Y if not already rolling
         if (!player.getRolling()) {
+            // ROM parity (s2.asm:58040-58042 set rolling / bne loc_2B3BC /
+            // addq.w #5, y_pos): on first contact the flipper pushes
+            // y_pos down by a fixed 5 px, regardless of character.  Engine
+            // setRolling() shrinks the visual height which already moves
+            // the centre by (runHeight - rollHeight)/2 (10/2=5 for Sonic,
+            // 2/2=1 for Tails), so applying getRollHeightAdjustment() here
+            // only nets +5 centre for Sonic.  Capture pre-roll centre and
+            // write centre += 5 directly so Tails matches ROM as well.
+            short preCentreY = player.getCentreY();
             player.setRolling(true);
-            player.setY((short) (player.getY() + player.getRollHeightAdjustment()));
+            player.setCentreYPreserveSubpixel((short)(preCentreY + 5));
         }
         // ROM always explicitly sets collision radii (y=14, x=7) at loc_2B3BC
         player.applyRollingRadii(false);
 
         triggerHorizontalAnimation(playerIsRightOfFlipper);
         playFlipperSound();
-        launchCooldown = 16;
+        launchCooldown.put(player, 16);
     }
 
     private void triggerVerticalAnimation() {
@@ -321,6 +363,29 @@ public class FlipperObjectInstance extends BoxObjectInstance
         return isFlippedHorizontal();
     }
 
+    @Override
+    public boolean addsSlopeCatchRangeToVerticalOverlap() {
+        return !isHorizontal();
+    }
+
+    @Override
+    public boolean preservesPostSpecialTouchAirborneSideVelocity() {
+        // ObjD7 can write x_vel from TouchResponse immediately before Obj86's
+        // manual SolidObject checkpoint in the same frame (s2.asm:59403,
+        // s2.asm:57869). This is only valid for an actual same-frame SPECIAL
+        // touch; ordinary flipper side contacts still zero x_vel.
+        return true;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj86 horizontal uses SolidObject_Always_SingleCharacter
+        // (s2.asm:58002/58011), whose right-edge rejection is `bhi`
+        // via SolidObject_cont (s2.asm:35157). relX == width*2 remains a
+        // valid edge push and lets loc_2B35C fire on the same frame.
+        return isHorizontal();
+    }
+
     private void ensureInitialized() {
         if (animInitialized) {
             return;
@@ -336,24 +401,44 @@ public class FlipperObjectInstance extends BoxObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (launchCooldown > 0) {
-            launchCooldown--;
+        // Per-player cooldown decrement (mirrors ROM's independent objoff_36/37
+        // tracking in s2.asm:57870-57879).
+        if (!launchCooldown.isEmpty()) {
+            launchCooldown.entrySet().removeIf(entry -> {
+                int next = entry.getValue() - 1;
+                if (next <= 0) {
+                    return true;
+                }
+                entry.setValue(next);
+                return false;
+            });
         }
 
-        // ROM: loc_2B20A runs every frame as part of the object's main routine.
-        // It checks the standing bit (set/cleared by SlopedSolid) and clears
-        // obj_control when the player is no longer standing. Our onSolidContact
-        // callback only fires when collision is detected, so if the player has
-        // moved out of range entirely, we never get a callback. Detect that here.
-        if (!isHorizontal() && playerFlipperState != 0 && !contactThisFrame) {
-            releaseLockedPlayer();
-            playerFlipperState = 0;
+        SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
+        for (PlayableEntity participant : playerParticipants(playerEntity)) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                PlayerSolidContactResult result = batch.perPlayer().get(participant);
+                applyCheckpointContact(player, result != null ? result : checkpoint(player));
+            }
         }
-        contactThisFrame = false;
 
         animationState.update();
         mappingFrame = animationState.getMappingFrame();
+    }
+
+    private List<PlayableEntity> playerParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
+    }
+
+    private PlayerSolidContactResult checkpoint(AbstractPlayableSprite player) {
+        return services().solidExecution().resolveSolidNow(player);
     }
 
     /**
@@ -363,9 +448,23 @@ public class FlipperObjectInstance extends BoxObjectInstance
     private void releaseLockedPlayer() {
         if (lockedPlayer != null) {
             lockedPlayer.setControlLocked(false);
+            ObjectControlState.setMovementSuppressionPreservingOwnership(
+                    lockedPlayer, lockedPlayerPreviousMovementSuppressed);
             lockedPlayer.setPinballMode(false);
             lockedPlayer = null;
+            lockedPlayerPreviousMovementSuppressed = false;
         }
+    }
+
+    private void suppressMovementForLockedPlayer(AbstractPlayableSprite player) {
+        if (lockedPlayer != player) {
+            if (lockedPlayer != null) {
+                releaseLockedPlayer();
+            }
+            lockedPlayer = player;
+            lockedPlayerPreviousMovementSuppressed = player.isObjectControlSuppressesMovement();
+        }
+        ObjectControlState.setMovementSuppressionPreservingOwnership(player, true);
     }
 
     @Override

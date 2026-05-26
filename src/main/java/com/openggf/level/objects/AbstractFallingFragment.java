@@ -1,6 +1,5 @@
 package com.openggf.level.objects;
 
-import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.game.PlayableEntity;
 
@@ -75,7 +74,7 @@ public abstract class AbstractFallingFragment extends AbstractObjectInstance {
         SubpixelMotion.objectFall(motion, GRAVITY);
 
         if (!isOnScreen(OFF_SCREEN_MARGIN)) {
-            setDestroyed(true);
+            ObjectLifetimeOps.expireDynamic(this);
         }
     }
 

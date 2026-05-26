@@ -7,6 +7,15 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseProfile;
+import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -32,7 +41,7 @@ import java.util.List;
  *   <tr><td>Object ID</td><td>0x44</td><td>ObjPtr_RoundBumper</td></tr>
  *   <tr><td>Bounce Velocity</td><td>$700 (1792)</td><td>line 44689</td></tr>
  *   <tr><td>Collision Flags</td><td>$D7</td><td>line 44624</td></tr>
- *   <tr><td>Collision Box</td><td>12x24 pixels</td><td>Touch_Sizes[0x17]</td></tr>
+ *   <tr><td>Collision Box</td><td>16x16 pixels</td><td>Touch_Sizes[0x17]</td></tr>
  *   <tr><td>width_pixels</td><td>$10 (16 px)</td><td>line 44622</td></tr>
  *   <tr><td>Sound</td><td>SndID_Bumper (0xB4)</td><td>line 44665</td></tr>
  *   <tr><td>Points</td><td>10</td><td>AddPoints2 with d0=1</td></tr>
@@ -67,7 +76,8 @@ import java.util.List;
  * @see HexBumperObjectInstance Hex bumper with 4-direction quantized physics
  * @see BonusBlockObjectInstance Drop target with hit tracking
  */
-public class BumperObjectInstance extends AbstractObjectInstance {
+public class BumperObjectInstance extends AbstractObjectInstance
+        implements TouchResponseProvider, TouchResponseListener {
 
     // ========================================================================
     // ROM Constants
@@ -97,6 +107,17 @@ public class BumperObjectInstance extends AbstractObjectInstance {
      */
     private static final int COLLISION_HALF_HEIGHT = 8;
 
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY,
+            true,
+            false,
+            false,
+            TouchShieldDeflectCapability.NONE,
+            0,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+
     // ========================================================================
     // Animation Constants
     // ========================================================================
@@ -110,16 +131,13 @@ public class BumperObjectInstance extends AbstractObjectInstance {
     /** Duration of hit animation in frames */
     private static final int ANIM_DURATION = 8;
 
-    /** Cooldown frames after bounce to prevent repeated hits */
-    private static final int BOUNCE_COOLDOWN = 8;
-
     // ========================================================================
     // Instance State
     // ========================================================================
 
     private int animFrame = FRAME_IDLE;
     private int animTimer = 0;
-    private int bounceCooldown = 0;
+    private int collisionProperty = 0;
 
     public BumperObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -127,7 +145,8 @@ public class BumperObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        processPendingBounce(playerEntity, frameCounter);
+
         // Return to idle frame after animation
         if (animTimer > 0) {
             animTimer--;
@@ -136,37 +155,23 @@ public class BumperObjectInstance extends AbstractObjectInstance {
             }
         }
 
-        // Update bounce cooldown
-        if (bounceCooldown > 0) {
-            bounceCooldown--;
-        }
-
-        // Check collision with player (only if not on cooldown)
-        if (player != null && !player.isHurt() && !player.getDead() && bounceCooldown == 0) {
-            if (checkCollision(player)) {
-                applyBounce(player, frameCounter);
-            }
-        }
     }
 
-    /**
-     * Check collision using rectangular hitbox.
-     * <p>
-     * ROM uses collision_flags $D7 which maps to Touch_Sizes[0x17].
-     * Touch_Sizes values are half-width, half-height = 8, 8 = 16x16 total box.
-     * <p>
-     * Note: Player getX()/getY() returns top-left corner, so we use getCentreX()/getCentreY()
-     * to compare with the bumper's center position (spawn.x(), spawn.y()).
-     */
-    private boolean checkCollision(AbstractPlayableSprite player) {
-        int dx = Math.abs(player.getCentreX() - spawn.x());
-        int dy = Math.abs(player.getCentreY() - spawn.y());
+    private void processPendingBounce(PlayableEntity playerEntity, int frameCounter) {
+        int pending = collisionProperty;
+        if (pending == 0) {
+            return;
+        }
 
-        int playerHalfWidth = 8; // Approximate player half-width
-        int playerHalfHeight = player.getYRadius();
-
-        return dx < (COLLISION_HALF_WIDTH + playerHalfWidth) &&
-               dy < (COLLISION_HALF_HEIGHT + playerHalfHeight);
+        if ((pending & 0x01) != 0 && playerEntity instanceof AbstractPlayableSprite player) {
+            applyBounce(player, frameCounter);
+        }
+        if ((pending & 0x02) != 0) {
+            if (services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick) {
+                applyBounce(sidekick, frameCounter);
+            }
+        }
+        collisionProperty = 0;
     }
 
     /**
@@ -194,8 +199,12 @@ public class BumperObjectInstance extends AbstractObjectInstance {
         // CalcAngle using ROM lookup table (handles dx=dy=0 → returns 0x40 = down)
         int angle = TrigLookupTable.calcAngle((short) dx, (short) dy);
 
-        // Add wobble: ROM adds (Timer_frames & 3) to the byte angle directly
-        angle = (angle + (frameCounter & 3)) & 0xFF;
+        // ROM: move.b (Level_frame_counter).w,d1 reads the high byte of the
+        // big-endian word on 68k, then masks it with 3 (s2.asm:44675-44677).
+        int levelFrameCounter = services().levelManager() != null
+                ? services().levelManager().getFrameCounter()
+                : frameCounter;
+        angle = (angle + ((levelFrameCounter >> 8) & 3)) & 0xFF;
 
         // CalcSine + apply -$700 velocity
         // ROM: muls.w #-$700,d1; asr.l #8,d1 → x_vel = cos * -$700 / 256
@@ -214,13 +223,15 @@ public class BumperObjectInstance extends AbstractObjectInstance {
         // bclr #status.player.pushing,status(a0)
         // clr.b jumping(a0)
         player.setAir(true);
+        player.setRollingJump(false);
+        player.setJumping(false);
         player.setPushing(false);
-        player.setGSpeed((short) 0);
+        // Obj44 writes only x_vel/y_vel and state bits here; inertia is
+        // preserved by the ROM routine (s2.asm:44669-44689).
 
-        // Trigger animation and cooldown
+        // Trigger animation
         animFrame = FRAME_HIT;
         animTimer = ANIM_DURATION;
-        bounceCooldown = BOUNCE_COOLDOWN;
 
         // Play sound
         services().playSfx(GameSound.BUMPER);
@@ -231,6 +242,57 @@ public class BumperObjectInstance extends AbstractObjectInstance {
                 new ObjectSpawn(spawn.x(), spawn.y(), 0x29, 0, 0, false, 0),
                 services(), 10);
         services().objectManager().addDynamicObject(pointsObj);
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        return 0xD7;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return collisionProperty;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public boolean usesSonic2TouchSpecialPropertyResponse() {
+        return true;
+    }
+
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        return true;
+    }
+
+    @Override
+    public boolean requiresRenderFlagForTouch() {
+        // S2 TouchResponse iterates collision_flags directly with no
+        // render_flags.on_screen gate (s2.asm:84537-84551). Obj44 depends on
+        // that path: Touch_Special increments collision_property, then
+        // Obj44_Main consumes it for P1/P2 bounce bits (s2.asm:44653-44667).
+        return false;
+    }
+
+    @Override
+    public void onTouchResponse(PlayableEntity playerEntity, TouchResponseResult result, int frameCounter) {
+        // S2 Touch_Special loc_3FA00 increments collision_property once for
+        // P1 and twice for the sidekick; Obj44_Main then tests bits 0/1
+        // (s2.asm:44653-44667, 85073-85098).
+        if (playerEntity instanceof AbstractPlayableSprite sprite && sprite.isCpuControlled()) {
+            collisionProperty += 2;
+        } else {
+            collisionProperty += 1;
+        }
     }
 
     @Override

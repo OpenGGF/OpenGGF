@@ -1,6 +1,11 @@
 package com.openggf.game.sonic3k.bonusstage.slots;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.sprites.playable.Sonic;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -11,6 +16,17 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kSlotPlayerRuntime {
+
+    @BeforeEach
+    void setUp() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SessionManager.clear();
+        SessionManager.clear();
+    }
 
     @Test
     void initializeUsesRomBootstrapState() {
@@ -337,3 +353,5 @@ class TestS3kSlotPlayerRuntime {
         assertEquals(-1, state.lastCollisionIndex());
     }
 }
+
+

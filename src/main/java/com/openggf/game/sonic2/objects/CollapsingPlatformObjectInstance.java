@@ -5,6 +5,8 @@ import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.debug.DebugRenderContext;
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
@@ -192,6 +194,9 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
+        boolean isStanding = hasStandingContact(batch);
+
         // ROM: Obj1F_FragmentFall — collapsed parent falls with gravity, delete when offscreen.
         if (collapsed) {
             parentVelY += GRAVITY;
@@ -212,18 +217,14 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         if (inFragmentPhase) {
             if (fragmentPhaseDelay > 0) {
                 fragmentPhaseDelay--;
-                // ROM: sub_10B36 — when delay reaches zero, detach both players.
-                // bclr #status.player.on_object / bset #status.player.in_air
+                // ROM: sub_10B36 (s2.asm:23730-23737) clears only
+                // Status_OnObj and Status_Push when the parent-fragment
+                // delay expires. Status_InAir is left for normal player
+                // movement to set on the next unsupported frame.
                 if (fragmentPhaseDelay <= 0) {
                     collapsed = true;
                     parentY = spawn.y();
-                    if (player != null) {
-                        if (services().objectManager() != null) {
-                            services().objectManager().clearRidingObject(player);
-                        }
-                        player.setAir(true);
-                        player.setOnObject(false);
-                    }
+                    detachFragmentRiders(batch);
                 }
             }
             return;
@@ -239,7 +240,6 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         }
 
         // ROM: check status standing_mask bits — set stood_on_flag when player is on platform
-        boolean isStanding = isPlayerStanding();
         if (isStanding) {
             stoodOnFlag = true;
         }
@@ -284,13 +284,12 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // ROM: Obj1F_Main — standing_mask bits set stood_on_flag.
-        // Using the callback (like S1/S3K) instead of polling ensures the flag
-        // is set on the same frame the player lands, matching ROM timing.
-        if (contact.standing() && !inFragmentPhase && !collapsed) {
-            stoodOnFlag = true;
-        }
+        // Manual checkpoints drive collapsing-platform standing state from update().
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -338,6 +337,15 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         return services().objectManager().isAnyPlayerRiding(this);
     }
 
+    protected boolean hasStandingContact(SolidCheckpointBatch batch) {
+        for (PlayerSolidContactResult result : batch.perPlayer().values()) {
+            if (result != null && result.standingNow()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void collapse() {
         if (inFragmentPhase || collapsed) {
             return;
@@ -347,7 +355,11 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         // The parent stays solid at its original position during the fragment delay.
         // Only fragment 0 (the parent) provides collision; other fragments are visual only.
         inFragmentPhase = true;
-        fragmentPhaseDelay = config.delayData()[0];  // Parent gets first delay value
+        // ROM Obj1F_CreateFragments writes the delay byte, then the parent is
+        // seen as routine 4 before Obj1F_Fragment gets its first decrementing
+        // pass. The engine enters the fragment-phase branch immediately on the
+        // corresponding visible frame, so keep one pre-decrement tick here.
+        fragmentPhaseDelay = config.delayData()[0] + 1;  // Parent gets first delay value
         mappingFrame = 1;  // Show collapsed appearance
 
         // Play collapse sound
@@ -357,12 +369,25 @@ public class CollapsingPlatformObjectInstance extends AbstractObjectInstance
         spawnFragments();
 
         // Mark as remembered to prevent respawn (ROM-accurate behavior)
-        if (services().objectManager() != null) {
-            services().objectManager().markRemembered(spawn);
-        }
+        ObjectLifetimeOps.markSpawnRemembered(services().objectManager(), spawn);
 
         LOGGER.fine(() -> String.format("CollapsingPlatform at (%d,%d) collapsed, spawning %d fragments",
                 spawn.x(), spawn.y(), config.delayData().length));
+    }
+
+    private void detachFragmentRiders(SolidCheckpointBatch batch) {
+        ObjectManager objectManager = services().objectManager();
+        if (batch == null || objectManager == null) {
+            return;
+        }
+        for (PlayableEntity rider : batch.perPlayer().keySet()) {
+            if (rider != null && objectManager.isRidingObject(rider, this)) {
+                objectManager.clearRidingObject(rider);
+                rider.setOnObject(false);
+                rider.setPushing(false);
+                rider.forceAnimationRestart();
+            }
+        }
     }
 
     private void spawnFragments() {

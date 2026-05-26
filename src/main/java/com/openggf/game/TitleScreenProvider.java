@@ -9,6 +9,13 @@ import com.openggf.control.InputHandler;
  */
 public interface TitleScreenProvider {
 
+    enum TitleScreenAction {
+        ONE_PLAYER,
+        TWO_PLAYER,
+        OPTIONS,
+        OTHER
+    }
+
     enum State {
         /** Screen is not active */
         INACTIVE,
@@ -86,5 +93,13 @@ public interface TitleScreenProvider {
      */
     default void drawFrozenForLevelSelect() {
         // Default: no-op (Sonic 2 etc. have a completely different level select)
+    }
+
+    default TitleScreenAction consumeExitAction() {
+        return TitleScreenAction.OTHER;
+    }
+
+    default void setExitToLevelHandler(Runnable handler) {
+        // Default: no-op.
     }
 }

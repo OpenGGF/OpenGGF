@@ -1,5 +1,6 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.SolidCheckpointBatch;
 
 import com.openggf.game.sonic1.Sonic1SwitchManager;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
@@ -10,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -211,15 +213,22 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         ensureInitialized();
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        playerStanding = isPlayerRiding();
-
-        // MBlock_StandOn (routine 4): ExitPlatform, save X, move, MvSonicOnPtfm2
-        // MBlock_Platform (routine 2): move, PlatformObject
-        // Both call MBlock_Move then check deletion.
+        // ROM order:
+        // - routine 2: MBlock_Move, then PlatformObject
+        // - routine 4: ExitPlatform, save X, MBlock_Move, then MvSonicOnPtfm2
+        // So the platform moves first, and the standing latch that gates
+        // type 02/04/09 advancement is effectively the prior frame's state.
         applyMovement();
 
         updateDynamicSpawn(x, y);
+
+        SolidCheckpointBatch batch = checkpointAll();
+        playerStanding = hasStandingContact(batch);
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -241,9 +250,13 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean carriesAirborneRiderAfterExitPlatform() {
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Standing state managed via isPlayerRiding() in update()
+        // Standing state is driven via manual checkpoints in update().
     }
 
     @Override
@@ -261,6 +274,11 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
     public boolean isPersistent() {
         // out_of_range.w DeleteObject,mblock_origX(a0)
         return !isDestroyed() && isInRange(origX);
+    }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        return origX;
     }
 
     // ========================================

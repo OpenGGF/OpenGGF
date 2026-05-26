@@ -9,9 +9,10 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.ParallaxManager;
+import com.openggf.level.objects.RomObjectSnapshot;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
@@ -46,6 +47,7 @@ public class BalkiryBadnikInstance extends AbstractBadnikInstance {
     // Subpixel position accumulators (16.16 fixed point for ObjectMove)
     private int subPixelX;
     private int subPixelY;
+    private boolean initialized;
 
     public BalkiryBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Balkiry", Sonic2BadnikConfig.DESTRUCTION);
@@ -71,8 +73,19 @@ public class BalkiryBadnikInstance extends AbstractBadnikInstance {
     }
 
     @Override
+    public void hydrateFromRomSnapshot(RomObjectSnapshot snapshot) {
+        super.hydrateFromRomSnapshot(snapshot);
+        this.subPixelX = snapshot.xSub() & 0xFF;
+        this.subPixelY = snapshot.ySub() & 0xFF;
+        this.initialized = snapshot.routine() >= 2;
+    }
+
+    @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (!initialized) {
+            initialized = true;
+            return;
+        }
         // ROM: JmpTo26_ObjectMove - apply velocity to position (subpixel precision)
         // x_pos += x_vel (as 16.16 fixed point)
         subPixelX += xVelocity;
@@ -102,7 +115,7 @@ public class BalkiryBadnikInstance extends AbstractBadnikInstance {
      */
     private void spawnJetChild() {
         // Create jet child spawn - subtype $1A selects Obj9C_SubObjData
-        ObjectSpawn jetSpawn = new ObjectSpawn(
+        final ObjectSpawn jetSpawn = new ObjectSpawn(
                 currentX, currentY,
                 Sonic2ObjectIds.BALKIRY_JET,
                 0x1A, // subtype for jet exhaust
@@ -110,8 +123,7 @@ public class BalkiryBadnikInstance extends AbstractBadnikInstance {
                 false,
                 spawn.rawYWord());
 
-        BalkiryJetObjectInstance jet = new BalkiryJetObjectInstance(jetSpawn, this);
-        services().objectManager().addDynamicObject(jet);
+        spawnFreeChild(() -> new BalkiryJetObjectInstance(jetSpawn, this));
     }
 
     @Override
@@ -123,6 +135,11 @@ public class BalkiryBadnikInstance extends AbstractBadnikInstance {
     @Override
     protected int getCollisionSizeIndex() {
         return COLLISION_SIZE_INDEX;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.standardEnemy();
     }
 
     @Override

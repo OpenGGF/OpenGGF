@@ -13,6 +13,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 
 import java.util.List;
@@ -226,7 +227,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
         lastDirectionBits = 0;                   // objoff_36 = 0
 
         // Lock player movement (obj_control = $81)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setAnimationId(Sonic2AnimationIds.FLOAT);  // Per disassembly line 76221
@@ -326,7 +327,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
      */
     private void hurtAndReleasePlayer() {
         if (grabbedPlayer != null) {
-            grabbedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(grabbedPlayer);
             grabbedPlayer.setAir(true);
 
             // ROM: Hurt_Sidekick - CPU Tails only gets knockback, no ring scatter or death
@@ -356,7 +357,7 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
 
     private void releasePlayer(boolean escaped) {
         if (grabbedPlayer != null) {
-            grabbedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(grabbedPlayer);
             grabbedPlayer.setAir(true);
             // Per disassembly: player just becomes airborne and falls naturally
             // No velocity change on escape
@@ -445,20 +446,19 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
             return;
         }
 
-        // Grabber is ceiling-mounted - can only be destroyed from above
-        // Player must be above the Grabber's center and moving downward (or at least not upward)
-        int playerCentreY = player.getCentreY();
-        int grabberCentreY = currentY;
+        // ROM parity: Touch_Enemy / Touch_KillEnemy (s2.asm:84807-84890) destroys
+        // the badnik whenever Sonic is rolling, spindashing, or invincible — the
+        // touch response is direction-agnostic.  Only the bounce-back direction
+        // depends on Sonic's relative position; the kill itself is unconditional.
+        // The Grabber is no exception (collision_flags=$B in ObjA7_SubObjData at
+        // s2.asm:76603, which is the standard "kill on roll" mask).  The previous
+        // "only destroy from above" guard rejected legitimate roll-jump kills
+        // from below (CPZ f680 trace divergence: Sonic kept his roll arc through
+        // the Grabber but the engine never killed it, then DIVING/grabPlayer
+        // zeroed his speeds).  ROM destroys the Grabber the moment Sonic's roll
+        // sensor overlaps it regardless of vertical direction.
 
-        // Only allow attack if player is above the grabber
-        if (playerCentreY >= grabberCentreY) {
-            // Player is at same level or below - ignore the attack
-            // This prevents destruction from jumping up into it from below
-            return;
-        }
-
-        // Player is above - allow the attack
-        // Release any grabbed player before destruction
+        // Release any grabbed player before destruction.
         if (grabbedPlayer != null) {
             releasePlayer(true);
         }

@@ -1,6 +1,10 @@
 package com.openggf;
 
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugOverlayToggle;
+import com.openggf.debug.DebugOverlayManager;
+import com.openggf.editor.EditorInputHandler;
 import com.openggf.game.*;
 
 import com.openggf.control.InputHandler;
@@ -14,20 +18,30 @@ import com.openggf.game.BonusStageProvider;
 import com.openggf.game.BonusStageState;
 import com.openggf.game.BonusStageType;
 import com.openggf.game.GameMode;
-import com.openggf.game.GameRuntime;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.LevelSelectProvider;
 import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.RespawnState;
+import com.openggf.game.GameId;
 import com.openggf.game.ResultsScreen;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.NoOpSpecialStageProvider;
 import com.openggf.game.SpecialStageProvider;
+import com.openggf.game.sonic1.Sonic1GameModule;
+import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
+import com.openggf.game.sonic1.dataselect.S1DataSelectImageGenerator;
+import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
 import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
+import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.rewind.LiveRewindManager;
+import com.openggf.game.startup.DataSelectPresentationResolution;
+import com.openggf.game.startup.StartupRouteResolver;
+import com.openggf.game.startup.TitleActionRoute;
+import com.openggf.graphics.PixelFontTextRenderer;
 import com.openggf.level.BigRingReturnState;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
@@ -42,9 +56,19 @@ import com.openggf.game.DemoLamppostState;
 import com.openggf.level.WaterSystem;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.data.RomManager;
+import com.openggf.game.save.SaveReason;
+import com.openggf.game.save.SessionSaveRequests;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
+import com.openggf.testmode.TraceCameraFocusController;
 
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 /**
@@ -77,28 +101,43 @@ public class GameLoop {
                     | (1 << STATUS_BUBBLE_SHIELD_BIT);
 
     private static final Logger LOGGER = Logger.getLogger(GameLoop.class.getName());
+    private final EngineContext engineServices;
+    private final SonicConfigurationService configService;
+    private final AudioManager audioManager;
+    private final RomManager romManager;
+    private final DebugOverlayManager debugOverlayManager;
+    private SpriteManager spriteManager;
+    private Camera camera;
+    private TimerManager timerManager;
+    private LevelManager levelManager;
+    private GameStateManager gameState;
+    private FadeManager fadeManager;
+    private WaterSystem waterSystem;
+    private final PerformanceProfiler profiler;
+    private final PlaybackDebugManager playbackDebugManager;
+    private final LiveRewindManager liveRewindManager;
+    private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
 
-    private final SonicConfigurationService configService = SonicConfigurationService.getInstance();
-    private SpriteManager spriteManager = SpriteManager.getInstance();
-    private Camera camera = Camera.getInstance();
-    private TimerManager timerManager = TimerManager.getInstance();
-    private LevelManager levelManager = LevelManager.getInstance();
-    private GameStateManager gameState = GameStateManager.getInstance();
-    private FadeManager fadeManager = FadeManager.getInstance();
-    private WaterSystem waterSystem = WaterSystem.getInstance();
-    private final PerformanceProfiler profiler = PerformanceProfiler.getInstance();
-    private final PlaybackDebugManager playbackDebugManager = PlaybackDebugManager.getInstance();
-
-    // The gameplay runtime — set by Engine after RuntimeManager.createGameplay().
-    // When non-null, cached fields above are sourced from this runtime.
-    private com.openggf.game.GameRuntime runtime;
+    // The active session-owned gameplay mode. Cached fields above are sourced from this context.
+    private GameplayModeContext gameplayMode;
     private SpecialStageProvider activeSpecialStageProvider = NoOpSpecialStageProvider.INSTANCE;
 
     // Title card provider - lazily initialized when GameModule is available
     private TitleCardProvider titleCardProvider;
 
     private InputHandler inputHandler;
+    private EditorInputHandler editorInputHandler;
+    private Runnable editorPlaytestToggleHandler;
+    private Runnable editorFreshStartHandler;
     private GameMode currentGameMode = GameMode.LEVEL;
+    private Runnable editorStateSyncHandler;
+    private Supplier<MasterTitleScreen> masterTitleScreenSupplier;
+    private Consumer<String> masterTitleExitHandler;
+    private Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier;
+    private Runnable legalDisclaimerExitHandler;
+    private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
+    private long gameplayAudioFrame;
+    private boolean audioUpdatedThisStep;
 
     // Special stage results screen
     private ResultsScreen resultsScreen;
@@ -143,6 +182,9 @@ public class GameLoop {
     // Listener for game mode changes (used by Engine to update projection)
     private GameModeChangeListener gameModeChangeListener;
 
+    // Optional trace camera focus controller — ticked at the top of every stepInternal()
+    private TraceCameraFocusController traceCameraFocusController;
+
     /**
      * Callback interface for game mode changes.
      */
@@ -154,34 +196,132 @@ public class GameLoop {
     private volatile boolean userPaused = false;  // Keyboard toggle pause
     private boolean playbackInputSuppressed = false;
     private boolean playbackForcedMaskApplied = false;
-    private boolean playbackFrameConsumed = false;
+
+    /**
+     * Callback registered by {@link #launchGameByEntry} to run once
+     * Engine.exitMasterTitleScreen has rebuilt the gameplay mode.
+     * Staged into {@link #afterStepMasterTitleLaunchCallback} when
+     * {@link #doExitMasterTitleScreen} runs (inside the fade callback)
+     * and fired at the end of the next {@link #step()} so trace
+     * bootstrap code can safely call {@code step()} without reentering
+     * the master-title frame.
+     */
+    private Runnable pendingMasterTitleLaunchCallback;
+    private Runnable afterStepMasterTitleLaunchCallback;
+    private Runnable returnToMasterTitleHandler;
 
     public GameLoop() {
+        this(EngineServices.current());
+    }
+
+    public GameLoop(EngineContext engineServices) {
+        this.engineServices = Objects.requireNonNull(engineServices, "engineServices");
+        EngineServices.configure(this.engineServices);
+        this.configService = this.engineServices.configuration();
+        this.audioManager = this.engineServices.audio();
+        this.romManager = this.engineServices.roms();
+        this.debugOverlayManager = this.engineServices.debugOverlay();
+        this.profiler = this.engineServices.profiler();
+        this.playbackDebugManager = this.engineServices.playbackDebug();
+        this.liveRewindManager = new LiveRewindManager(configService);
+        refreshRuntimeBindings();
     }
 
     public GameLoop(InputHandler inputHandler) {
+        this(EngineServices.current(), inputHandler);
+    }
+
+    public GameLoop(EngineContext engineServices, InputHandler inputHandler) {
+        this(engineServices);
         this.inputHandler = inputHandler;
     }
 
-    /**
-     * Sets the gameplay runtime. Cached manager fields are re-assigned from
-     * the runtime so all existing field-based code continues to work.
-     */
-    public void setRuntime(com.openggf.game.GameRuntime runtime) {
-        this.runtime = runtime;
-        if (runtime != null) {
-            this.spriteManager = runtime.getSpriteManager();
-            this.camera = runtime.getCamera();
-            this.timerManager = runtime.getTimers();
-            this.levelManager = runtime.getLevelManager();
-            this.gameState = runtime.getGameState();
-            this.fadeManager = runtime.getFadeManager();
-            this.waterSystem = runtime.getWaterSystem();
+    public void setGameplayMode(GameplayModeContext gameplayMode) {
+        this.gameplayMode = gameplayMode;
+        refreshRuntimeBindings();
+    }
+
+    private void refreshRuntimeBindings() {
+        GameplayModeContext currentGameplayMode = gameplayMode != null
+                ? gameplayMode
+                : SessionManager.getCurrentGameplayMode();
+        if (currentGameplayMode == null || currentGameplayMode.getCamera() == null) {
+            // Gameplay mode has been torn down (e.g. trace teardown returning to
+            // master title). Clear cached references so resolveFadeManager()
+            // falls back to the graphics-owned bootstrap manager rather than
+            // a destroyed gameplay FadeManager that the UI pipeline no longer
+            // ticks — which would otherwise leave fade callbacks orphaned.
+            this.gameplayMode = null;
+            this.spriteManager = null;
+            this.camera = null;
+            this.timerManager = null;
+            this.levelManager = null;
+            this.gameState = null;
+            this.fadeManager = null;
+            this.waterSystem = null;
+            return;
         }
+        this.gameplayMode = currentGameplayMode;
+        this.spriteManager = currentGameplayMode.getSpriteManager();
+        this.camera = currentGameplayMode.getCamera();
+        this.timerManager = currentGameplayMode.getTimerManager();
+        this.levelManager = currentGameplayMode.getLevelManager();
+        this.gameState = currentGameplayMode.getGameStateManager();
+        this.fadeManager = currentGameplayMode.getFadeManager();
+        this.waterSystem = currentGameplayMode.getWaterSystem();
     }
 
     public void setInputHandler(InputHandler inputHandler) {
         this.inputHandler = inputHandler;
+    }
+
+    public void setEditorInputHandler(EditorInputHandler editorInputHandler) {
+        this.editorInputHandler = editorInputHandler;
+    }
+
+    public void renderLiveRewindHud(PixelFontTextRenderer textRenderer) {
+        liveRewindManager.renderHud(currentGameMode, textRenderer);
+    }
+
+    public void setEditorPlaytestToggleHandler(Runnable editorPlaytestToggleHandler) {
+        this.editorPlaytestToggleHandler = editorPlaytestToggleHandler;
+    }
+
+    public void setDataSelectActionHandler(Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler) {
+        this.dataSelectActionHandler = dataSelectActionHandler;
+    }
+
+    public void setEditorFreshStartHandler(Runnable editorFreshStartHandler) {
+        this.editorFreshStartHandler = editorFreshStartHandler;
+    }
+
+    public void setEditorStateSyncHandler(Runnable editorStateSyncHandler) {
+        this.editorStateSyncHandler = editorStateSyncHandler;
+    }
+
+    public void setMasterTitleScreenSupplier(Supplier<MasterTitleScreen> masterTitleScreenSupplier) {
+        this.masterTitleScreenSupplier = masterTitleScreenSupplier;
+    }
+
+    public void setMasterTitleExitHandler(Consumer<String> masterTitleExitHandler) {
+        this.masterTitleExitHandler = masterTitleExitHandler;
+    }
+
+    public void setLegalDisclaimerScreenSupplier(Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier) {
+        this.legalDisclaimerSupplier = legalDisclaimerSupplier;
+    }
+
+    public void setLegalDisclaimerExitHandler(Runnable legalDisclaimerExitHandler) {
+        this.legalDisclaimerExitHandler = legalDisclaimerExitHandler;
+    }
+
+    private void updateEditorMode() {
+        if (editorInputHandler != null) {
+            editorInputHandler.update(inputHandler);
+        }
+        if (editorStateSyncHandler != null) {
+            editorStateSyncHandler.run();
+        }
     }
 
     /**
@@ -192,7 +332,7 @@ public class GameLoop {
      */
     private TitleCardProvider getTitleCardProviderLazy() {
         if (titleCardProvider == null) {
-            titleCardProvider = GameModuleRegistry.getCurrent().getTitleCardProvider();
+            titleCardProvider = GameServices.module().getTitleCardProvider();
         }
         return titleCardProvider;
     }
@@ -203,6 +343,10 @@ public class GameLoop {
 
     public void setGameModeChangeListener(GameModeChangeListener listener) {
         this.gameModeChangeListener = listener;
+    }
+
+    public void setTraceCameraFocusController(TraceCameraFocusController controller) {
+        this.traceCameraFocusController = controller;
     }
 
     public GameMode getCurrentGameMode() {
@@ -271,9 +415,9 @@ public class GameLoop {
      */
     private synchronized void updateAudioPauseState() {
         if (paused || userPaused) {
-            AudioManager.getInstance().pause();
+            audioManager.pause();
         } else {
-            AudioManager.getInstance().resume();
+            audioManager.resume();
         }
     }
 
@@ -282,24 +426,109 @@ public class GameLoop {
      * Call this method at your target FPS (typically 60fps).
      */
     public void step() {
+        try {
+            stepInternal();
+        } finally {
+            runAfterStepMasterTitleLaunchCallbackIfPresent();
+        }
+    }
+
+    private void stepInternal() {
         if (inputHandler == null) {
             throw new IllegalStateException("InputHandler must be set before calling step()");
         }
+        audioUpdatedThisStep = false;
+        refreshRuntimeBindings();
+        PaletteOwnershipRegistry paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
+        if (paletteRegistry != null) {
+            paletteRegistry.beginFrame();
+        }
         playbackDebugManager.handleInput(inputHandler);
-        syncPlaybackInputBridge();
         playbackDebugManager.setObservedMode(currentGameMode);
+
+        // Trace realtime rewind must run before the playback input bridge.
+        // On the release frame it seeks the BK2 timeline back to PLAY; sampling
+        // forced input before that would feed the resumed gameplay tick a
+        // zero/stale mask while the comparator advances the rewound movie row.
+        if (currentGameMode == GameMode.LEVEL
+                && TraceSessionLauncher.active() != null
+                && TraceSessionLauncher.active().handleRealtimeRewindInput(inputHandler)) {
+            inputHandler.update();
+            return;
+        }
+        if (currentGameMode == GameMode.LEVEL
+                && TraceSessionLauncher.active() == null
+                && liveRewindManager.handleRealtimeRewindInput(currentGameMode, inputHandler)) {
+            inputHandler.update();
+            return;
+        }
+
+        syncPlaybackInputBridge();
+
+        // Legal disclaimer screen mode - runs before master title screen.
+        // Must be checked before pause handling since keys trigger dismissal.
+        if (currentGameMode == GameMode.LEGAL_DISCLAIMER) {
+            LegalDisclaimerScreen disclaimer = legalDisclaimerSupplier != null
+                    ? legalDisclaimerSupplier.get()
+                    : null;
+            if (disclaimer != null) {
+                disclaimer.update(inputHandler);
+                if (disclaimer.isDismissed() && legalDisclaimerExitHandler != null) {
+                    legalDisclaimerExitHandler.run();
+                    legalDisclaimerExitHandler = null;
+                }
+            }
+            inputHandler.update();
+            return;
+        }
 
         // Master title screen mode - runs before any ROM/game systems are loaded.
         // Must be checked before pause handling since Enter is both confirm and pause.
         if (currentGameMode == GameMode.MASTER_TITLE_SCREEN) {
-            MasterTitleScreen masterScreen =
-                    Engine.getInstance().getMasterTitleScreen();
+            MasterTitleScreen masterScreen = masterTitleScreenSupplier != null
+                    ? masterTitleScreenSupplier.get()
+                    : null;
             if (masterScreen != null) {
                 masterScreen.update(inputHandler);
                 if (masterScreen.isGameSelected()) {
                     exitMasterTitleScreen(masterScreen);
                 }
             }
+            inputHandler.update();
+            return;
+        }
+
+        if (!isPaused()
+                && (currentGameMode == GameMode.EDITOR
+                || (currentGameMode == GameMode.LEVEL
+                && configService.getBoolean(SonicConfiguration.EDITOR_ENABLED)))
+                && inputHandler.isKeyPressed(GLFW_KEY_TAB)
+                && (inputHandler.isKeyDown(GLFW_KEY_LEFT_SHIFT)
+                || inputHandler.isKeyDown(GLFW_KEY_RIGHT_SHIFT))
+                && editorPlaytestToggleHandler != null) {
+            editorPlaytestToggleHandler.run();
+            inputHandler.update();
+            return;
+        }
+
+        if (currentGameMode == GameMode.EDITOR) {
+            if (inputHandler.isKeyPressed(GLFW_KEY_F5) && editorFreshStartHandler != null) {
+                editorFreshStartHandler.run();
+                inputHandler.update();
+                return;
+            }
+            updateEditorMode();
+            inputHandler.update();
+            return;
+        }
+
+        // Trace Test Mode: Esc during a live trace session begins the
+        // early-exit fade. Checked before pause so Esc never gets eaten
+        // by another handler.
+        if (currentGameMode == GameMode.LEVEL
+                && TraceSessionLauncher.active() != null
+                && inputHandler.isKeyPressed(GLFW_KEY_ESCAPE)) {
+            TraceSessionLauncher.active().requestEarlyExit();
             inputHandler.update();
             return;
         }
@@ -316,23 +545,37 @@ public class GameLoop {
         int frameStepKey = configService.getInt(SonicConfiguration.FRAME_STEP_KEY);
         boolean doFrameStep = isPaused() && inputHandler.isKeyPressed(frameStepKey);
 
+        // Tick the trace test-mode camera focus controller AFTER toggleUserPause so
+        // it observes the post-toggle pause state. This guarantees that on the
+        // unpause-press frame the controller restores the original camera BEFORE
+        // any sprite/object/manager update path samples camera position later in
+        // this method. Must run before the paused early-return so the same call
+        // also handles the pause-enter snapshot and the frame-step camera restore.
+        if (traceCameraFocusController != null) {
+            traceCameraFocusController.tick(inputHandler);
+        }
+
         // When paused (and not frame stepping), still update input handler so we can detect keys
         if (isPaused() && !doFrameStep) {
             inputHandler.update();
             return;
         }
 
-        profiler.beginSection("audio");
-        AudioManager.getInstance().update();
-        profiler.endSection("audio");
+        boolean deferAudioUntilGameplayTick =
+                currentGameMode == GameMode.LEVEL
+                        || currentGameMode == GameMode.BONUS_STAGE
+                        || currentGameMode == GameMode.TITLE_CARD;
+        if (!deferAudioUntilGameplayTick) {
+            updateNonGameplayAudio(doFrameStep);
+        }
 
         profiler.beginSection("timers");
         timerManager.update();
         profiler.endSection("timers");
 
         profiler.beginSection("input");
-        GameServices.debugOverlay().updateInput(inputHandler);
-        DebugObjectArtViewer.getInstance().updateInput(inputHandler);
+        debugOverlayManager.updateInput(inputHandler);
+        debugOverlayManager.getObjectArtViewer().updateInput(inputHandler);
 
         // Check for Special Stage toggle (TAB by default)
         if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.SPECIAL_STAGE_KEY))) {
@@ -430,28 +673,46 @@ public class GameLoop {
                 exitTitleCard();
                 // Continue to LEVEL mode processing this frame (fall through)
             } else {
-                // Still in locked phase.
-                // Run player physics only if the title card provider allows it.
-                // S2: runs physics so Sonic settles onto ground / Tornado (SCZ).
-                // S1/S3K: ROM title card path is blocking for player movement; Sonic
-                // stays frozen until control is released (important for airborne
-                // starts like SBZ3, HCZ1, and LRZ1).
+                // Still in locked phase. The work performed differs by game,
+                // matching the ROM title-card wait loops:
+                //
+                //   S1  Level_TtlCardLoop (sonic.asm:2766-2794) -> ExecuteObjects
+                //                                                  + BuildSprites + RunPLC
+                //                                                  (NO camera, NO level events)
+                //   S2  Level_TtlCard     (s2.asm:4914-4924)    -> RunObjects + BuildSprites
+                //                                                  + RunPLC_RAM (camera ticks
+                //                                                  via VInt routine)
+                //   S3K title-card wait   (sonic3k.asm:7737-7748) -> Process_Sprites
+                //                                                  + Render_Sprites
+                //                                                  (NO camera, NO level events)
+                //
+                // The {@link TitleCardProvider#shouldRunPlayerPhysics()} gate
+                // selects per-game behaviour:
+                //   - S2 ROM advances player object slots through RunObjects
+                //     during Level_TtlCard so Sonic settles onto the Tornado
+                //     in SCZ. Use the full LevelFrameStep canonical order
+                //     (objects + camera + dynamic events + parallax + water).
+                //   - S1/S3K ROMs run a minimal wait loop that ticks objects
+                //     only — no camera update, no level events, no scroll.
+                //     Use the legacy minimal pre-orchestration path so the
+                //     S3K AIZ trace and S1 Level_TtlCardLoop parity hold.
+                beginGameplayAudioFrameForTick();
                 if (tcpCard.shouldRunPlayerPhysics()) {
-                    spriteManager.updateWithoutInput();
-                    if (levelManager.usesInlineObjectSolidResolution()) {
-                        levelManager.updateObjectPositionsPostPhysicsWithoutTouches();
-                    } else {
-                        levelManager.updateObjectPositions();
-                    }
+                    // S2: full title-card frame step.
+                    LevelFrameStep.execute(levelManager, camera, () -> spriteManager.update(inputHandler),
+                            (name, step) -> {
+                                profiler.beginSection(name);
+                                step.run();
+                                profiler.endSection(name);
+                            });
                 } else {
-                    // Keep objects updated during title card lock even when the player
-                    // is frozen. SCZ depends on ObjB2 (Tornado) solid updates during
-                    // this phase so Sonic lands on the plane instead of free-falling.
+                    // S1/S3K: ROM TitleCard_Main / Level_TtlCardLoop runs
+                    // ExecuteObjects only -- no camera tick, no level-event
+                    // routines, no scroll update.
                     levelManager.updateObjectPositions();
+                    camera.updatePosition(true);
                 }
-                // Force camera to snap to player position during title card (no smooth
-                // scrolling)
-                camera.updatePosition(true);
+                advanceGameplayAudioFrameForTick(doFrameStep);
                 profiler.endSection("input");
                 return; // Don't process LEVEL mode logic yet
             }
@@ -461,7 +722,7 @@ public class GameLoop {
             if (titleScreen != null) {
                 titleScreen.update(inputHandler);
 
-                if (titleScreen.isExiting()) {
+                if (titleScreen.isExiting() && !fadeManager.isActive()) {
                     exitTitleScreen();
                 }
             }
@@ -477,6 +738,18 @@ public class GameLoop {
                 // Check if user made a selection
                 if (levelSelect.isExiting()) {
                     exitLevelSelect();
+                }
+            }
+            inputHandler.update();
+            profiler.endSection("input");
+            return; // Don't process LEVEL mode logic
+        } else if (currentGameMode == GameMode.DATA_SELECT) {
+            // Update data select screen (S3K save slot selection)
+            DataSelectProvider dataSelect = getDataSelectProviderLazy();
+            if (dataSelect != null) {
+                dataSelect.update(inputHandler);
+                if (dataSelect.isExiting()) {
+                    exitDataSelect();
                 }
             }
             inputHandler.update();
@@ -511,6 +784,18 @@ public class GameLoop {
                 if (levelManager.consumeInLevelTitleCardRequest()) {
                     enterInLevelTitleCard(levelManager.getInLevelTitleCardZone(), levelManager.getInLevelTitleCardAct());
                 }
+                updateNonGameplayAudio(doFrameStep);
+                // Trace playback still consumes one BK2/VBlank row on a
+                // transition-only frame. Headless replay advances its movie
+                // cursor after applySeamlessTransition(); keep the live
+                // comparator cursor aligned with the same ordering.
+                playbackDebugManager.onLevelFrameAdvanced();
+                TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+                if (traceSession != null) {
+                    traceSession.recordExternalRewindFrame();
+                } else {
+                    liveRewindManager.resetBufferAtCurrentFrame(currentGameMode);
+                }
                 return;
             }
 
@@ -522,6 +807,7 @@ public class GameLoop {
             // Check if a title card was requested (new level loaded)
             if (levelManager.consumeTitleCardRequest()) {
                 enterTitleCard(levelManager.getTitleCardZone(), levelManager.getTitleCardAct());
+                updateNonGameplayAudio(doFrameStep);
                 return; // Skip normal level update this frame
             }
 
@@ -530,45 +816,72 @@ public class GameLoop {
             if (!fadeManager.isActive()) {
                 if (levelManager.consumeRespawnRequest()) {
                     startRespawnFade();
+                    updateNonGameplayAudio(doFrameStep);
                     return;
                 }
                 if (levelManager.consumeNextActRequest()) {
                     startNextActFade();
+                    updateNonGameplayAudio(doFrameStep);
                     return;
                 }
                 if (levelManager.consumeNextZoneRequest()) {
                     startNextZoneFade();
+                    updateNonGameplayAudio(doFrameStep);
                     return;
                 }
                 if (levelManager.consumeZoneActRequest()) {
                     startZoneActFade(levelManager.getRequestedZone(), levelManager.getRequestedAct());
+                    updateNonGameplayAudio(doFrameStep);
                     return;
                 }
                 if (levelManager.consumeCreditsRequest()) {
                     startEndingFade();
+                    updateNonGameplayAudio(doFrameStep);
                     return;
                 }
             }
 
-            boolean freezeForArtViewer = GameServices.debugOverlay()
-                    .isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER);
+            boolean freezeForArtViewer = debugOverlayManager.isEnabled(DebugOverlayToggle.OBJECT_ART_VIEWER);
             // Freeze level updates during special/bonus stage entry transitions
             boolean freezeForSpecialStage = specialStageTransitionPending;
             boolean freezeForBonusStage = bonusStageTransitionPending;
             // ObjB2 transition parity: freeze gameplay during pending zone-act fade.
             boolean freezeForZoneActTransition = levelManager.isLevelInactiveForTransition();
             if (!freezeForArtViewer && !freezeForSpecialStage && !freezeForBonusStage && !freezeForZoneActTransition) {
-                // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
-                LevelFrameStep.execute(levelManager, camera, () -> {
-                    spriteManager.update(inputHandler);
-                    if (playbackFrameConsumed) {
-                        playbackDebugManager.onLevelFrameAdvanced();
-                    }
-                }, (name, step) -> {
-                    profiler.beginSection(name);
-                    step.run();
-                    profiler.endSection(name);
-                });
+                beginGameplayAudioFrameForTick();
+                // LiveTraceComparator (or any PlaybackFrameObserver) may ask
+                // us to skip the gameplay tick on ROM lag frames so the
+                // engine and trace stay aligned. Cursor advance still runs
+                // via onLevelFrameAdvanced below.
+                boolean skipGameplay = playbackDebugManager.shouldSkipCurrentGameplayTick();
+                if (!skipGameplay) {
+                    // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
+                    LevelFrameStep.execute(levelManager, camera, () -> spriteManager.update(inputHandler),
+                            (name, step) -> {
+                                profiler.beginSection(name);
+                                step.run();
+                                profiler.endSection(name);
+                            });
+                } else if (levelManager.getObjectManager() != null) {
+                    // ROM v_vbla_byte increments in VBlank even on rows where
+                    // LevelLoop did not run. Headless trace replay mirrors
+                    // this in HeadlessTestRunner.skipFrameFromRecording();
+                    // live visual trace mode must do the same or object timing
+                    // gates enter gameplay hundreds of VBlanks behind.
+                    levelManager.getObjectManager().advanceVblaCounter();
+                }
+                advanceGameplayAudioFrameForTick(doFrameStep);
+                // Fire the BK2-advance callback either way — on both real
+                // gameplay ticks and lag-gated skips — so the observer's
+                // cursor always matches the BK2 cursor. onLevelFrameAdvanced
+                // is a no-op when no playback session is active.
+                playbackDebugManager.onLevelFrameAdvanced();
+                TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+                if (traceSession != null) {
+                    traceSession.recordExternalRewindFrame();
+                } else {
+                    liveRewindManager.recordExternalFrame(currentGameMode, inputHandler);
+                }
 
                 // Check if a checkpoint star requested a special stage
                 if (levelManager.consumeSpecialStageRequest()) {
@@ -580,6 +893,14 @@ public class GameLoop {
                 if (bonusRequest != null) {
                     enterBonusStage(bonusRequest);
                 }
+
+                // Drive the trace session completion-hold + auto-fade state.
+                traceSession = TraceSessionLauncher.active();
+                if (traceSession != null) {
+                    traceSession.tick();
+                }
+            } else {
+                updateNonGameplayAudio(doFrameStep);
             }
 
             // Debug keys for level transitions (use request system for fade)
@@ -605,6 +926,11 @@ public class GameLoop {
             if (isUnmodifiedDebugKeyPressed(configService.getInt(SonicConfiguration.LEVEL_SELECT_KEY))) {
                 enterLevelSelect();
             }
+
+            if (isUnmodifiedDebugKeyPressed(
+                    configService.getInt(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY))) {
+                logCurrentPreviewCaptureOverride();
+            }
         } else if (currentGameMode == GameMode.BONUS_STAGE) {
             // Continue updating title card overlay during bonus stage
             // (EXIT phase: elements slide off screen after exitTitleCard transitioned here)
@@ -620,6 +946,7 @@ public class GameLoop {
             // Bonus stage runs the same level frame steps as LEVEL mode
             boolean freezeForBonusExit = bonusStageTransitionPending;
             if (!freezeForBonusExit) {
+                beginGameplayAudioFrameForTick();
                 LevelFrameStep.execute(levelManager, camera, () -> {
                     spriteManager.update(inputHandler);
                 }, (name, step) -> {
@@ -642,6 +969,9 @@ public class GameLoop {
                 if (activeBonusStageProvider != null && activeBonusStageProvider.isStageComplete()) {
                     exitBonusStage();
                 }
+                advanceGameplayAudioFrameForTick(doFrameStep);
+            } else {
+                updateNonGameplayAudio(doFrameStep);
             }
 
             // Debug: F11 cycles through bucket/priority isolation for the gumball machine
@@ -654,12 +984,71 @@ public class GameLoop {
             }
         }
 
+        // Post-update hook for the trace test-mode camera focus controller.
+        // Runs after gameplay updates but before the frame is rendered, so the
+        // controller can re-apply the chosen focus camera within the same frame
+        // a frame-step ran in. No flicker; sidekick despawns mid-step are handled
+        // here (rebuild + fall back to DEFAULT before render).
+        if (traceCameraFocusController != null) {
+            traceCameraFocusController.postUpdate();
+        }
+
         inputHandler.update();
     }
 
+    private void updateNonGameplayAudio(boolean doFrameStep) {
+        if (audioUpdatedThisStep) {
+            return;
+        }
+        if (shouldAdvanceGameplayAudioForCurrentMode()) {
+            beginGameplayAudioFrameForTick();
+            advanceGameplayAudioFrameForTick(doFrameStep);
+            return;
+        }
+        profiler.beginSection("audio");
+        if (doFrameStep) {
+            audioManager.advancePausedFrameStepAudio();
+        } else {
+            audioManager.update();
+        }
+        audioUpdatedThisStep = true;
+        profiler.endSection("audio");
+    }
+
+    private boolean shouldAdvanceGameplayAudioForCurrentMode() {
+        return currentGameMode == GameMode.LEVEL
+                || currentGameMode == GameMode.BONUS_STAGE
+                || currentGameMode == GameMode.TITLE_CARD;
+    }
+
+    private void beginGameplayAudioFrameForTick() {
+        gameplayAudioFrame++;
+        audioManager.beginGameplayAudioFrame(gameplayAudioFrame);
+    }
+
+    private void advanceGameplayAudioFrameForTick(boolean doFrameStep) {
+        if (audioUpdatedThisStep) {
+            return;
+        }
+        profiler.beginSection("audio");
+        if (doFrameStep) {
+            audioManager.advancePausedFrameStepAudio();
+        } else {
+            audioManager.advanceGameplayFrameAudio();
+            audioManager.update();
+        }
+        audioUpdatedThisStep = true;
+        profiler.endSection("audio");
+    }
+
     private void syncPlaybackInputBridge() {
-        playbackFrameConsumed = false;
         boolean shouldDrive = playbackDebugManager.isDriving(currentGameMode);
+        if (spriteManager == null) {
+            playbackDebugManager.clearLastAppliedState();
+            playbackForcedMaskApplied = false;
+            playbackInputSuppressed = false;
+            return;
+        }
         if (shouldDrive != playbackInputSuppressed) {
             spriteManager.setPlaybackInputSuppressed(shouldDrive);
             playbackInputSuppressed = shouldDrive;
@@ -670,7 +1059,6 @@ public class GameLoop {
             player.setForcedInputMask(playbackDebugManager.getCurrentForcedInputMask());
             player.setForcedJumpPress(playbackDebugManager.isCurrentForcedJumpPress());
             playbackForcedMaskApplied = true;
-            playbackFrameConsumed = true;
             return;
         }
 
@@ -683,16 +1071,25 @@ public class GameLoop {
         }
     }
 
-    private AbstractPlayableSprite getMainPlayableSprite() {
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null || mainCode.isBlank()) {
-            mainCode = "sonic";
+    /**
+     * Package-private so {@code com.openggf.TraceSessionLauncher.LiveFixture}
+     * can resolve the primary playable sprite by calling the same
+     * ActiveGameplayTeamResolver path the rest of GameLoop uses.
+     */
+    AbstractPlayableSprite getMainPlayableSprite() {
+        if (spriteManager == null) {
+            return null;
         }
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
         if (sprite instanceof AbstractPlayableSprite playable) {
             return playable;
         }
         return null;
+    }
+
+    private String resolveMainCharacterCode() {
+        return ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
     }
 
     /**
@@ -771,7 +1168,7 @@ public class GameLoop {
         }
 
         // Find the furthest right checkpoint (game-agnostic)
-        int checkpointId = GameModuleRegistry.getCurrent().getCheckpointObjectId();
+        int checkpointId = GameServices.module().getCheckpointObjectId();
         if (checkpointId == 0) {
             LOGGER.info("DEBUG: Current game has no checkpoint object ID configured");
             return;
@@ -785,10 +1182,9 @@ public class GameLoop {
             int checkpointX = lastCheckpoint.x();
             int checkpointY = lastCheckpoint.y();
 
-            String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-            if (mainCode == null) mainCode = "sonic";
+            String mainCode = resolveMainCharacterCode();
             var sprite = spriteManager.getSprite(mainCode);
-            if (sprite instanceof AbstractPlayableSprite player) {
+                if (sprite instanceof AbstractPlayableSprite player) {
                 // Teleport player to checkpoint position
                 player.setX((short) checkpointX);
                 player.setY((short) checkpointY);
@@ -817,6 +1213,21 @@ public class GameLoop {
         } else {
             LOGGER.info("DEBUG: No checkpoints found in this level");
         }
+    }
+
+    private void logCurrentPreviewCaptureOverride() {
+        if (camera == null || levelManager == null) {
+            return;
+        }
+        S1DataSelectImageGenerator.PreviewCapturePoint point =
+                S1DataSelectImageGenerator.previewCapturePointFromCamera(camera.getX(), camera.getY());
+        LOGGER.info("DEBUG: Preview capture override for zone "
+                + levelManager.getRomZoneId()
+                + " -> new PreviewCapturePoint("
+                + point.centreX()
+                + ", "
+                + point.centreY()
+                + ")");
     }
 
     /**
@@ -946,9 +1357,7 @@ public class GameLoop {
         }
 
         // Clear power-ups before entering special stage
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null)
-            mainCode = "sonic";
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
         if (sprite instanceof AbstractPlayableSprite playable) {
             playable.clearPowerUps();
@@ -959,11 +1368,10 @@ public class GameLoop {
 
         // Fade out the current music gradually (ROM: MusID_FadeOut / zFadeOutMusic)
         // This preserves the SFX we just started, unlike stopMusic() which silences all
-        AudioManager.getInstance().fadeOutMusic();
+        audioManager.fadeOutMusic();
 
         // Determine which stage to enter
-        GameStateManager gsm = this.gameState;
-        final int stageIndex = gsm.consumeCurrentSpecialStageIndexAndAdvance();
+        final int stageIndex = ssProvider.consumeStageIndexForEntry(this.gameState);
 
         if (screenAlreadyFaded) {
             // Screen is already fully faded (from S1 results screen after big ring).
@@ -1037,7 +1445,7 @@ public class GameLoop {
             return;
         }
 
-        BonusStageProvider provider = GameModuleRegistry.getCurrent().getBonusStageProvider();
+        BonusStageProvider provider = GameServices.module().getBonusStageProvider();
         if (!provider.hasBonusStages()) {
             LOGGER.fine("Current game module has no bonus stages; ignoring entry request");
             return;
@@ -1054,8 +1462,7 @@ public class GameLoop {
         }
 
         // Capture state snapshot
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null) mainCode = "sonic";
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
 
         int playerX = 0, playerY = 0;
@@ -1069,7 +1476,7 @@ public class GameLoop {
             savedShieldStatus = encodeSavedShieldStatus(playable);
         }
 
-        LevelEventProvider eventProvider = GameModuleRegistry.getCurrent().getLevelEventProvider();
+        LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
         int resizeFg = 0, resizeBg = 0;
         if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
             resizeFg = eventMgr.getEventRoutineFg();
@@ -1105,11 +1512,12 @@ public class GameLoop {
                 camera.getX(), camera.getY(),
                 topSolidBit, lrbSolidBit,
                 camera.getMaxY(),
-                savedTimerFrames
+                savedTimerFrames,
+                captureCurrentWaterLevelForStageReturn()
         );
 
         // Fade out music
-        AudioManager.getInstance().fadeOutMusic();
+        audioManager.fadeOutMusic();
 
         bonusStageTransitionPending = true;
         fadeManager.startFadeToBlack(() -> {
@@ -1130,11 +1538,11 @@ public class GameLoop {
         bonusStageTransitionPending = false;
         pendingBonusStageShieldRestore = null;
 
-        // Register provider on GameRuntime so objects can access via GameServices.bonusStage()
+        // Register provider on the active gameplay mode so objects can access it via GameServices.bonusStage().
         activeBonusStageProvider = provider;
-        GameRuntime rt = RuntimeManager.getCurrent();
-        if (rt != null) {
-            rt.setActiveBonusStageProvider(provider);
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.setActiveBonusStageProvider(provider);
         }
 
         provider.onEnter(type, savedState);
@@ -1154,8 +1562,8 @@ public class GameLoop {
             LOGGER.severe("Failed to load bonus stage zone: " + e.getMessage());
             provider.onExit();
             activeBonusStageProvider = null;
-            if (rt != null) {
-                rt.setActiveBonusStageProvider(null);
+            if (gameplayMode != null) {
+                gameplayMode.setActiveBonusStageProvider(null);
             }
             currentGameMode = GameMode.LEVEL;
             return;
@@ -1177,13 +1585,14 @@ public class GameLoop {
         // Play bonus stage music at title card start (ROM: Restore_LevelMusic during title card)
         int musicId = provider.getMusicId(type);
         if (musicId >= 0) {
-            AudioManager.getInstance().playMusic(musicId);
+            audioManager.playMusic(musicId);
         }
 
         // Enter TITLE_CARD mode — exitTitleCard will transition to BONUS_STAGE
         GameMode oldMode = currentGameMode;
         postTitleCardDestination = PostTitleCardDestination.BONUS_STAGE;
         currentGameMode = GameMode.TITLE_CARD;
+        applyTitleCardControlLock(true);
 
         // Cancel the FadeManager overlay — the bonus title card manages its own
         // per-channel background fade (matching ROM Pal_FadeFromBlack). The FadeManager
@@ -1277,7 +1686,7 @@ public class GameLoop {
         BonusStageProvider provider = activeBonusStageProvider;
         BonusStageState savedState = provider.getSavedState();
 
-        AudioManager.getInstance().fadeOutMusic();
+        audioManager.fadeOutMusic();
 
         bonusStageTransitionPending = true;
         if (shouldStartBonusStageExitFade(provider)) {
@@ -1308,10 +1717,9 @@ public class GameLoop {
         activeBonusStageProvider = null;
         levelManager.setBonusStageHudLayout(false);
 
-        // Clear from GameRuntime
-        GameRuntime rt = RuntimeManager.getCurrent();
-        if (rt != null) {
-            rt.setActiveBonusStageProvider(null);
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode != null) {
+            gameplayMode.setActiveBonusStageProvider(null);
         }
 
         if (savedState == null) {
@@ -1356,7 +1764,7 @@ public class GameLoop {
         }
 
         // Restore event routine state (prevents camera lock replay)
-        LevelEventProvider eventProvider = GameModuleRegistry.getCurrent().getLevelEventProvider();
+        LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
         if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
             eventMgr.restoreEventRoutineState(
                     savedState.dynamicResizeRoutineFg(),
@@ -1364,8 +1772,7 @@ public class GameLoop {
         }
 
         // Restore player position and collision path
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null) mainCode = "sonic";
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
         if (sprite instanceof AbstractPlayableSprite playable) {
             playable.setCentreX((short) savedState.playerX());
@@ -1396,6 +1803,7 @@ public class GameLoop {
         camera.setY((short) savedState.cameraY());
         camera.setMaxY((short) savedState.cameraMaxY());
         camera.updatePosition(true);
+        restoreSavedWaterLevelForStageReturn(savedState.meanWaterLevel());
 
         // Restore ring count + add bonus stage rewards
         if (levelManager.getLevelGamestate() != null) {
@@ -1425,11 +1833,12 @@ public class GameLoop {
         GameMode oldMode = currentGameMode;
         postTitleCardDestination = PostTitleCardDestination.LEVEL;
         currentGameMode = GameMode.TITLE_CARD;
+        applyTitleCardControlLock(true);
 
         // Play zone music (ROM: Restore_LevelMusic during title card wait)
         int zoneMusicId = levelManager.getCurrentLevelMusicId();
         if (zoneMusicId >= 0) {
-            AudioManager.getInstance().playMusic(zoneMusicId);
+            audioManager.playMusic(zoneMusicId);
         }
 
         // Fade from black — level + zone title card become visible together
@@ -1438,8 +1847,32 @@ public class GameLoop {
         if (gameModeChangeListener != null) {
             gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
         }
-
         LOGGER.info("Exiting bonus stage, entering zone title card for zone " + zone + " act " + act);
+    }
+
+    private int captureCurrentWaterLevelForStageReturn() {
+        if (waterSystem == null || levelManager == null) {
+            return 0;
+        }
+        int featureZone = levelManager.getFeatureZoneId();
+        int featureAct = levelManager.getFeatureActId();
+        if (!waterSystem.hasWater(featureZone, featureAct)) {
+            return 0;
+        }
+        return waterSystem.getWaterLevelY(featureZone, featureAct);
+    }
+
+    private void restoreSavedWaterLevelForStageReturn(int meanWaterLevel) {
+        if (meanWaterLevel <= 0 || waterSystem == null || levelManager == null) {
+            return;
+        }
+        int featureZone = levelManager.getFeatureZoneId();
+        int featureAct = levelManager.getFeatureActId();
+        if (!waterSystem.hasWater(featureZone, featureAct)) {
+            return;
+        }
+        waterSystem.setWaterLevelDirect(featureZone, featureAct, meanWaterLevel);
+        waterSystem.setWaterLevelTarget(featureZone, featureAct, meanWaterLevel);
     }
 
     static int encodeSavedShieldStatus(AbstractPlayableSprite playable) {
@@ -1486,10 +1919,7 @@ public class GameLoop {
     }
 
     AbstractPlayableSprite resolveMainPlayableSprite() {
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null) {
-            mainCode = "sonic";
-        }
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
         return sprite instanceof AbstractPlayableSprite playable ? playable : null;
     }
@@ -1675,6 +2105,7 @@ public class GameLoop {
         // from exitResultsScreen()'s fade-to-white). Without this, the white overlay
         // persists indefinitely because completeFade() sees no new fade was started.
         fadeManager.startFadeFromWhite(null);
+        requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
 
         LOGGER.info("Exited Results Screen, entering Title Card for zone " + zoneIndex + " act " + actIndex);
     }
@@ -1690,9 +2121,7 @@ public class GameLoop {
 
         // Restore player to checkpoint state BEFORE title card starts
         // This prevents the player from falling/dying during the title card animation
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null)
-            mainCode = "sonic";
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
         if (sprite instanceof AbstractPlayableSprite playable) {
             RespawnState checkpointState = levelManager.getCheckpointState();
@@ -1700,12 +2129,13 @@ public class GameLoop {
             if (levelManager.hasBigRingReturn()) {
                 // S3K big ring path: restore all Saved2_* state
                 BigRingReturnState br = levelManager.getBigRingReturn();
-                br.restoreToPlayer(playable, camera, levelManager.getLevelGamestate());
+                br.restoreToPlayer(playable, camera, levelManager.getLevelGamestate(),
+                        waterSystem, levelManager.getFeatureZoneId(), levelManager.getFeatureActId());
                 // ROM: restore Dynamic_resize_routine AFTER initLevel() has reset it to 0.
                 // Without this, the resize state machine restarts from routine 0 and
                 // rapidly re-processes all boundary thresholds with the camera already
                 // deep in the level, causing incorrect camera locks.
-                LevelEventProvider eventProvider = GameModuleRegistry.getCurrent().getLevelEventProvider();
+                LevelEventProvider eventProvider = GameServices.module().getLevelEventProvider();
                 if (eventProvider instanceof AbstractLevelEventManager eventMgr) {
                     eventMgr.restoreEventRoutineState(br.dynamicResizeRoutine(), 0);
                 }
@@ -1757,6 +2187,7 @@ public class GameLoop {
                 }
             }
         }
+        applyTitleCardControlLock(true);
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
@@ -1766,7 +2197,7 @@ public class GameLoop {
         // Start zone music immediately when title card begins (not at the end)
         int zoneMusicId = levelManager.getCurrentLevelMusicId();
         if (zoneMusicId >= 0) {
-            AudioManager.getInstance().playMusic(zoneMusicId);
+            audioManager.playMusic(zoneMusicId);
             LOGGER.fine("Started zone music at title card: 0x" + Integer.toHexString(zoneMusicId));
         }
 
@@ -1792,9 +2223,7 @@ public class GameLoop {
         currentGameMode = GameMode.TITLE_CARD;
 
         // Freeze the player during title card - full state reset
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null)
-            mainCode = "sonic";
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
         if (sprite instanceof AbstractPlayableSprite playable) {
             // Freeze all movement
@@ -1809,6 +2238,7 @@ public class GameLoop {
             playable.setInvulnerableFrames(0);
             playable.setRolling(false);
         }
+        applyTitleCardControlLock(true);
 
         // Initialize the title card manager
         if (getTitleCardProviderLazy() != null) {
@@ -1840,6 +2270,37 @@ public class GameLoop {
     }
 
     /**
+     * Applies (or releases) the control lock on all playable sprites for the
+     * duration of the title card.
+     *
+     * <p>ROM parity:
+     * <ul>
+     *   <li>S1 sets {@code Control_Locked} during the title-card setup so
+     *       Sonic_ControlsLock skips input parsing.</li>
+     *   <li>S2 sets {@code Control_Locked}/{@code Control_Locked_P2} at
+     *       s2.asm:4950-4951 immediately after the {@code Level_TtlCard}
+     *       wait loop, before the player is allowed to move.</li>
+     *   <li>S3K sets {@code Ctrl_1_locked}/{@code Ctrl_2_locked} at
+     *       sonic3k.asm:7774-7775 immediately after the title-card wait
+     *       loop, clearing them when the level proper starts.</li>
+     * </ul>
+     *
+     * <p>Both the main player and any CPU sidekicks are toggled so the
+     * canonical {@code LevelFrameStep} sprite update path reads no input
+     * while the title card is on screen.
+     */
+    private void applyTitleCardControlLock(boolean locked) {
+        if (spriteManager == null) {
+            return;
+        }
+        for (var sprite : spriteManager.getAllSprites()) {
+            if (sprite instanceof AbstractPlayableSprite playable) {
+                playable.setControlLocked(locked);
+            }
+        }
+    }
+
+    /**
      * Exits the title card and returns to level mode.
      * Note: We do NOT reset the title card manager here because the overlay
      * (TEXT_WAIT and TEXT_EXIT phases) still needs to run. The title card
@@ -1852,6 +2313,7 @@ public class GameLoop {
         }
 
         GameMode oldMode = currentGameMode;
+        applyTitleCardControlLock(false);
 
         if (postTitleCardDestination == PostTitleCardDestination.BONUS_STAGE) {
             // Transitioning to bonus stage after "BONUS STAGE" title card
@@ -1871,7 +2333,7 @@ public class GameLoop {
             applyPendingBonusStageShieldRestore(resolveMainPlayableSprite());
 
             // Re-apply zone-specific player state (airborne intros like HCZ1, MGZ1)
-            LevelEventProvider levelEvents = GameModuleRegistry.getCurrent().getLevelEventProvider();
+            LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
             if (levelEvents instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kEvents) {
                 s3kEvents.applyZonePlayerState();
             }
@@ -1910,12 +2372,76 @@ public class GameLoop {
     // ==================== Master Title Screen Methods ====================
 
     /**
+     * Programmatic path into {@link #exitMasterTitleScreen}. Seeds the
+     * master-title selection and runs the same post-selection bootstrap
+     * as a user pressing Enter. The callback is deferred until the next
+     * {@link #step()} unwinds, so trace bootstrap code may safely call
+     * {@code gameLoop.step()} without reentering the master-title frame.
+     */
+    /**
+     * Pre-flight check for {@link #launchGameByEntry}. Returns false when
+     * a master-title fade is already in flight (launchGameByEntry would
+     * throw in that case). Package-private so
+     * {@link TraceSessionLauncher} can refuse a launch *before* mutating
+     * the configuration service.
+     */
+    boolean canLaunchGameNow() {
+        return !resolveFadeManager().isActive();
+    }
+
+    void launchGameByEntry(MasterTitleScreen.GameEntry entry, Runnable afterGameLoaded) {
+        MasterTitleScreen masterScreen = masterTitleScreenSupplier != null
+                ? masterTitleScreenSupplier.get() : null;
+        if (masterScreen == null) {
+            throw new IllegalStateException("No master title screen available");
+        }
+        if (resolveFadeManager().isActive()) {
+            throw new IllegalStateException(
+                    "Cannot launch game: a master-title fade is already in flight");
+        }
+        pendingMasterTitleLaunchCallback = afterGameLoaded;
+        try {
+            masterScreen.selectEntry(entry);
+            exitMasterTitleScreen(masterScreen);
+        } catch (RuntimeException e) {
+            // selectEntry / exitMasterTitleScreen failed before the fade
+            // started — the callback will never fire, so drop it rather
+            // than leaking it into an unrelated future exit.
+            pendingMasterTitleLaunchCallback = null;
+            throw e;
+        }
+    }
+
+    private void runAfterStepMasterTitleLaunchCallbackIfPresent() {
+        Runnable callback = afterStepMasterTitleLaunchCallback;
+        afterStepMasterTitleLaunchCallback = null;
+        if (callback != null) {
+            callback.run();
+        }
+    }
+
+    void setReturnToMasterTitleHandler(Runnable returnToMasterTitleHandler) {
+        this.returnToMasterTitleHandler = returnToMasterTitleHandler;
+    }
+
+    /**
+     * Tear down the current trace session and hand control back to the
+     * Engine so it can recreate the master title screen and reset
+     * gameplay state. Called by {@link TraceSessionLauncher#teardown()}.
+     */
+    void returnToMasterTitle() {
+        if (returnToMasterTitleHandler != null) {
+            returnToMasterTitleHandler.run();
+        }
+    }
+
+    /**
      * Exits the master title screen after the user selects a game.
      * Performs a fade-to-black, then initializes the selected game (Phase 2),
      * and transitions to the game-specific title screen.
      */
     private void exitMasterTitleScreen(MasterTitleScreen masterScreen) {
-        FadeManager fadeManager = this.fadeManager;
+        FadeManager fadeManager = resolveFadeManager();
         if (fadeManager.isActive()) {
             return;
         }
@@ -1933,10 +2459,15 @@ public class GameLoop {
      * Actually performs the master title screen exit after fade-to-black completes.
      */
     private void doExitMasterTitleScreen(String selectedGameId) {
-        Engine engine = Engine.getInstance();
-        if (engine != null) {
-            engine.exitMasterTitleScreen(selectedGameId);
+        if (masterTitleExitHandler != null) {
+            masterTitleExitHandler.accept(selectedGameId);
         }
+        // Stage the programmatic launch callback (if any) to fire at the
+        // end of the next step() rather than inline, so trace bootstrap
+        // code can call gameLoop.step() without reentering master-title
+        // logic.
+        afterStepMasterTitleLaunchCallback = pendingMasterTitleLaunchCallback;
+        pendingMasterTitleLaunchCallback = null;
 
         // When TITLE_SCREEN_ON_STARTUP or LEVEL_SELECT_ON_STARTUP is true,
         // initializeGame() sets currentGameMode via initializeTitleScreenMode/
@@ -1947,9 +2478,17 @@ public class GameLoop {
             currentGameMode = GameMode.LEVEL;
         }
 
-        fadeManager.startFadeFromBlack(null);
+        resolveFadeManager().startFadeFromBlack(null);
 
         LOGGER.info("Exited master title screen, now in mode: " + currentGameMode);
+    }
+
+    private FadeManager resolveFadeManager() {
+        FadeManager manager = this.fadeManager;
+        if (manager != null) {
+            return manager;
+        }
+        return engineServices.graphics().getFadeManager();
     }
 
     // ==================== Title Screen Methods ====================
@@ -1963,10 +2502,9 @@ public class GameLoop {
 
         // Ensure the ROM is loaded and audio is initialized
         try {
-            var rom = GameServices.rom().getRom();
-            var gameModule = GameModuleRegistry.getCurrent();
+            var rom = romManager.getRom();
+            var gameModule = GameServices.module();
 
-            AudioManager audioManager = AudioManager.getInstance();
             audioManager.setAudioProfile(gameModule.getAudioProfile());
             audioManager.setRom(rom);
         } catch (IOException e) {
@@ -1992,12 +2530,12 @@ public class GameLoop {
     }
 
     /**
-     * Exits the title screen. Fades to black, then transitions to level select
-     * (if LEVEL_SELECT_ON_STARTUP is true) or loads EHZ Act 1.
+     * Exits the title screen and hands off to the resolved destination.
      *
-     * <p>Special case: If the title screen supports a level select overlay
-     * (e.g. Sonic 1), the transition is immediate with no fade and no music
-     * restart, matching the original hardware behaviour.
+     * <p>The destination flow owns the visual transition: Sonic 1 level select
+     * reuses the frozen title backdrop, Sonic 2 level start goes straight into
+     * the pre-level/title-card pipeline, and donated data select uses a
+     * fade-to-black / fade-from-black handoff.
      */
     private void exitTitleScreen() {
         TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
@@ -2005,32 +2543,32 @@ public class GameLoop {
             return;
         }
 
-        boolean levelSelectOnStartup = configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP);
+        TitleActionRoute route = resolveTitleActionRoute(titleScreen);
 
         // Sonic 1 level select: immediate transition, no fade, music continues.
         // The original game loads Pal_LevelSel and clears the BG plane instantly.
         // Title screen art data is kept loaded so it can be rendered behind the
         // level select text with the brown/sepia palette tint.
-        if (levelSelectOnStartup && titleScreen.supportsLevelSelectOverlay()) {
+        if (route == TitleActionRoute.LEVEL_SELECT && titleScreen.supportsLevelSelectOverlay()) {
             doEnterLevelSelectFromTitleScreen();
             return;
         }
 
-        // Don't start another fade if one is already in progress
-        FadeManager fadeManager = this.fadeManager;
-        if (fadeManager.isActive()) {
+        if (shouldFadeTitleScreenExit(route) && fadeManager.isActive()) {
             return;
         }
 
         // Fade out title music
-        AudioManager.getInstance().fadeOutMusic();
+        audioManager.fadeOutMusic();
 
-        // Start fade-to-black, then transition
-        fadeManager.startFadeToBlack(() -> {
-            doExitTitleScreen();
-        });
+        if (shouldFadeTitleScreenExit(route)) {
+            fadeManager.startFadeToBlack(() -> doExitTitleScreen(route));
+            LOGGER.info("Title screen exit fading to " + route);
+            return;
+        }
 
-        LOGGER.info("Starting fade-to-black for Title Screen exit");
+        doExitTitleScreen(route);
+        LOGGER.info("Title screen exit routed directly to " + route);
     }
 
     /**
@@ -2070,33 +2608,16 @@ public class GameLoop {
      */
     private void doExitTitleScreen() {
         TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
+        doExitTitleScreen(resolveTitleActionRoute(titleScreen));
+    }
+
+    private void doExitTitleScreen(TitleActionRoute route) {
+        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
         if (titleScreen != null) {
             titleScreen.reset();
         }
 
-        boolean levelSelectOnStartup = configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP);
-        if (levelSelectOnStartup) {
-            // Transition to level select
-            doEnterLevelSelect();
-        } else {
-            // Load EHZ Act 1
-            GameMode oldMode = currentGameMode;
-            currentGameMode = GameMode.LEVEL;
-
-            try {
-                levelManager.loadZoneAndAct(0, 0);
-            } catch (IOException e) {
-                LOGGER.severe("Failed to load EHZ Act 1: " + e.getMessage());
-                throw new RuntimeException("Failed to load EHZ Act 1", e);
-            }
-
-            if (gameModeChangeListener != null) {
-                gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
-            }
-
-            fadeManager.startFadeFromBlack(null);
-            LOGGER.info("Title screen -> EHZ Act 1");
-        }
+        executeTitleActionRoute(route);
     }
 
     /**
@@ -2107,11 +2628,200 @@ public class GameLoop {
     }
 
     private TitleScreenProvider getTitleScreenProviderLazy() {
-        var gameModule = GameModuleRegistry.getCurrent();
+        var gameModule = GameServices.module();
         if (gameModule != null) {
-            return gameModule.getTitleScreenProvider();
+            TitleScreenProvider titleScreenProvider = gameModule.getTitleScreenProvider();
+            if (titleScreenProvider != null) {
+                titleScreenProvider.setExitToLevelHandler(this::handleTitleScreenExitFromProvider);
+            }
+            return titleScreenProvider;
         }
         return null;
+    }
+
+    private void startLevelFromTitleScreenImmediate() {
+        setGameMode(GameMode.LEVEL);
+        try {
+            levelManager.loadZoneAndAct(0, 0);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load title screen start level", e);
+        }
+        fadeManager.startFadeFromBlack(null);
+    }
+
+    private void handleTitleScreenExitFromProvider() {
+        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
+        if (titleScreen == null) {
+            return;
+        }
+
+        TitleActionRoute route = resolveTitleActionRoute(titleScreen);
+        // Provider callbacks fire after the provider has already finished its
+        // own staged exit, so this path must hand off directly.
+        if (route == TitleActionRoute.LEVEL_SELECT && titleScreen.supportsLevelSelectOverlay()) {
+            doEnterLevelSelectFromTitleScreen();
+            return;
+        }
+
+        if (shouldFadeTitleScreenExit(route) && fadeManager.isActive()) {
+            return;
+        }
+
+        if (shouldFadeTitleScreenExit(route)) {
+            fadeManager.startFadeToBlack(() -> doExitTitleScreen(route));
+            return;
+        }
+
+        doExitTitleScreen(route);
+    }
+
+    private TitleActionRoute resolveTitleActionRoute(TitleScreenProvider titleScreen) {
+        var gameModule = GameServices.module();
+        if (gameModule == null || titleScreen == null) {
+            return TitleActionRoute.LEVEL;
+        }
+        TitleScreenProvider.TitleScreenAction exitAction = titleScreen.consumeExitAction();
+        if (exitAction == null) {
+            exitAction = TitleScreenProvider.TitleScreenAction.OTHER;
+        }
+        return startupRouteResolver.resolveTitleAction(
+                gameModule,
+                resolveDataSelectPresentation(),
+                true,
+                configService.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP),
+                exitAction);
+    }
+
+    private DataSelectPresentationResolution resolveDataSelectPresentation() {
+        var gameModule = GameServices.module();
+        if (gameModule == null) {
+            return new DataSelectPresentationResolution(false, null);
+        }
+
+        DataSelectProvider dataSelectProvider = getDataSelectProviderLazy();
+        boolean dataSelectEligible = dataSelectProvider != null
+                && !(dataSelectProvider instanceof NoOpDataSelectProvider);
+        boolean crossGameEnabled = configService.getBoolean(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED);
+        boolean s3kConfiguredDonor = "s3k".equalsIgnoreCase(
+                configService.getString(SonicConfiguration.CROSS_GAME_SOURCE));
+        // All modules that expose a DataSelectPresentationProvider use the
+        // S3K presentation manager as their delegate. Resolve the presentation
+        // game as S3K so the startup router recognises the donated screen for
+        // S1/S2 hosts.
+        GameId presentationId = gameModule.getGameId();
+        if (dataSelectEligible
+                && dataSelectProvider instanceof com.openggf.game.dataselect.DataSelectPresentationProvider) {
+            boolean nativeS3kDataSelect = gameModule.getGameId() == GameId.S3K;
+            boolean donatedS3kDataSelect = crossGameEnabled && s3kConfiguredDonor;
+            if (nativeS3kDataSelect || donatedS3kDataSelect) {
+                presentationId = GameId.S3K;
+            } else {
+                dataSelectEligible = false;
+            }
+        }
+        return new DataSelectPresentationResolution(dataSelectEligible, presentationId);
+    }
+
+    private boolean shouldFadeTitleScreenExit(TitleActionRoute route) {
+        return route == TitleActionRoute.DATA_SELECT || route == TitleActionRoute.LEVEL;
+    }
+
+    private void executeTitleActionRoute(TitleActionRoute route) {
+        switch (route) {
+            case DATA_SELECT -> initializeDataSelectMode();
+            case LEVEL_SELECT -> doEnterLevelSelect();
+            case LEVEL, TWO_PLAYER, OPTIONS, OTHER -> startLevelFromTitleScreenImmediate();
+        }
+    }
+
+    // ==================== Data Select Methods ====================
+
+    /**
+     * Initializes the data select screen mode.
+     * Called when the S3K title screen exits (instead of going directly to level).
+     */
+    private void initializeDataSelectMode() {
+        GameMode oldMode = currentGameMode;
+        currentGameMode = GameMode.DATA_SELECT;
+        camera.setX((short) 0);
+        camera.setY((short) 0);
+        var dataSelect = getDataSelectProviderLazy();
+        if (dataSelect != null) {
+            dataSelect.initialize();
+        }
+        if (gameModeChangeListener != null) {
+            gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
+        }
+        fadeManager.startFadeFromBlack(null);
+    }
+
+    /**
+     * Transitions from the title screen to the data select screen.
+     * Used as the exitToLevelHandler for S3K title screen.
+     */
+    private void startDataSelectFromTitleScreen() {
+        initializeDataSelectMode();
+    }
+
+    /**
+     * Exits the data select screen.
+     * For now, transitions to level loading.
+     * This will be enhanced in later tasks to handle slot selection.
+     */
+    private void exitDataSelect() {
+        if (resolveFadeManager().isActive()) {
+            return;
+        }
+        var dataSelect = getDataSelectProviderLazy();
+        com.openggf.game.dataselect.DataSelectAction action = com.openggf.game.dataselect.DataSelectAction.none();
+        if (dataSelect instanceof com.openggf.game.dataselect.AbstractDataSelectProvider provider) {
+            action = provider.consumePendingAction();
+        }
+        if (action.type() == com.openggf.game.dataselect.DataSelectActionType.NONE
+                || dataSelectActionHandler == null) {
+            if (dataSelect != null) {
+                dataSelect.reset();
+            }
+            return;
+        }
+        if (isDataSelectGameplayAction(action.type())) {
+            com.openggf.game.dataselect.DataSelectAction pendingAction = action;
+            audioManager.fadeOutMusic();
+            resolveFadeManager().startFadeToBlack(() -> {
+                if (dataSelect != null) {
+                    dataSelect.reset();
+                }
+                dataSelectActionHandler.accept(pendingAction);
+                resolveFadeManager().startFadeFromBlack(null);
+            });
+            return;
+        }
+        if (dataSelect != null) {
+            dataSelect.reset();
+        }
+        dataSelectActionHandler.accept(action);
+    }
+
+    private boolean isDataSelectGameplayAction(com.openggf.game.dataselect.DataSelectActionType type) {
+        return switch (type) {
+            case NO_SAVE_START, NEW_SLOT_START, LOAD_SLOT, CLEAR_RESTART -> true;
+            case NONE, DELETE_SLOT -> false;
+        };
+    }
+
+    /**
+     * Gets the data select provider from the current game module.
+     */
+    public DataSelectProvider getDataSelectProvider() {
+        return getDataSelectProviderLazy();
+    }
+
+    /**
+     * Lazily retrieves the data select provider from the current game module.
+     */
+    private DataSelectProvider getDataSelectProviderLazy() {
+        var gameModule = GameServices.module();
+        return gameModule != null ? gameModule.getDataSelectProvider() : null;
     }
 
     // ==================== Level Select Methods ====================
@@ -2127,11 +2837,10 @@ public class GameLoop {
 
         // Ensure the ROM is loaded and audio is initialized before level select
         try {
-            var rom = GameServices.rom().getRom();
-            var gameModule = GameModuleRegistry.getCurrent();
+            var rom = romManager.getRom();
+            var gameModule = GameServices.module();
 
             // Initialize audio system with game module's audio profile
-            AudioManager audioManager = AudioManager.getInstance();
             audioManager.setAudioProfile(gameModule.getAudioProfile());
             audioManager.setRom(rom);
         } catch (IOException e) {
@@ -2175,7 +2884,7 @@ public class GameLoop {
         }
 
         // Fade out current music
-        AudioManager.getInstance().fadeOutMusic();
+        audioManager.fadeOutMusic();
 
         // Start fade-to-black, then enter level select when complete
         fadeManager.startFadeToBlack(() -> {
@@ -2257,7 +2966,7 @@ public class GameLoop {
             levelSelect.reset();
 
             // Fade out level select music
-            AudioManager.getInstance().fadeOutMusic();
+            audioManager.fadeOutMusic();
 
             // Start fade-to-black, then load level
             fadeManager.startFadeToBlack(() -> {
@@ -2307,7 +3016,7 @@ public class GameLoop {
      * Lazily retrieves the level select provider from the current game module.
      */
     private LevelSelectProvider getLevelSelectProviderLazy() {
-        var gameModule = GameModuleRegistry.getCurrent();
+        var gameModule = GameServices.module();
         if (gameModule != null) {
             return gameModule.getLevelSelectProvider();
         }
@@ -2323,7 +3032,7 @@ public class GameLoop {
         LOGGER.info("Starting fade-to-black for respawn");
 
         // Fade out current music (ROM: s2.asm:4757 - level entry with title card)
-        AudioManager.getInstance().fadeOutMusic();
+        audioManager.fadeOutMusic();
 
         // Start fade-to-black, then respawn when complete
         fadeManager.startFadeToBlack(() -> {
@@ -2351,7 +3060,7 @@ public class GameLoop {
         LOGGER.info("Starting fade-to-black for next act");
 
         // Fade out current music (ROM: s2.asm:4757 - level entry with title card)
-        AudioManager.getInstance().fadeOutMusic();
+        audioManager.fadeOutMusic();
 
         // Start fade-to-black, then load next act when complete
         fadeManager.startFadeToBlack(() -> {
@@ -2382,7 +3091,7 @@ public class GameLoop {
         LOGGER.info("Starting fade-to-black for next zone");
 
         // Fade out current music (ROM: s2.asm:4757 - level entry with title card)
-        AudioManager.getInstance().fadeOutMusic();
+        audioManager.fadeOutMusic();
 
         // Start fade-to-black, then load next zone when complete
         fadeManager.startFadeToBlack(() -> {
@@ -2412,7 +3121,7 @@ public class GameLoop {
     private void startZoneActFade(int zone, int act) {
         LOGGER.info("Starting fade-to-black for zone " + zone + " act " + act);
 
-        AudioManager.getInstance().fadeOutMusic();
+        audioManager.fadeOutMusic();
 
         fadeManager.startFadeToBlack(() -> {
             doZoneAct(zone, act);
@@ -2432,6 +3141,20 @@ public class GameLoop {
         fadeManager.startFadeFromBlack(null);
 
         LOGGER.info("Loaded zone " + zone + " act " + act);
+    }
+
+    /**
+     * Requests a save to the active session slot, if any.
+     * Safe to call when no session is active or when the session has no save slot.
+     *
+     * @param reason the reason triggering this save
+     */
+    private void requestSessionSave(SaveReason reason) {
+        SessionSaveRequests.requestCurrentSessionSave(reason);
+    }
+
+    public void requestSaveForCurrentSession(SaveReason reason) {
+        requestSessionSave(reason);
     }
 
     /**
@@ -2460,7 +3183,7 @@ public class GameLoop {
     }
 
     private SpecialStageProvider getCurrentModuleSpecialStageProvider() {
-        var module = GameModuleRegistry.getCurrent();
+        var module = GameServices.module();
         if (module == null) {
             return NoOpSpecialStageProvider.INSTANCE;
         }
@@ -2470,21 +3193,21 @@ public class GameLoop {
     private void playSpecialStageTransitionSfx(SpecialStageProvider ssProvider) {
         int sfxId = ssProvider.getTransitionSfxId();
         if (sfxId >= 0) {
-            AudioManager.getInstance().playSfx(sfxId);
+            audioManager.playSfx(sfxId);
         }
     }
 
     private void playSpecialStageStageMusic(SpecialStageProvider ssProvider) {
         int musicId = ssProvider.getStageMusicId();
         if (musicId >= 0) {
-            AudioManager.getInstance().playMusic(musicId);
+            audioManager.playMusic(musicId);
         }
     }
 
     private void playSpecialStageResultsMusic(SpecialStageProvider ssProvider) {
         int musicId = ssProvider.getResultsMusicId();
         if (musicId >= 0) {
-            AudioManager.getInstance().playMusic(musicId);
+            audioManager.playMusic(musicId);
         }
     }
 
@@ -2625,7 +3348,11 @@ public class GameLoop {
      */
     private void startEndingFade() {
         LOGGER.info("Starting fade-to-white for ending sequence");
-        AudioManager.getInstance().fadeOutMusic();
+        EndingProvider provider = GameServices.module().getEndingProvider();
+        if (provider != null) {
+            provider.saveReasonOnEndingStart().ifPresent(this::requestSessionSave);
+        }
+        audioManager.fadeOutMusic();
         fadeManager.startFadeToWhite(this::doEnterEnding);
     }
 
@@ -2634,7 +3361,7 @@ public class GameLoop {
      * Initializes the EndingProvider from the current GameModule.
      */
     private void doEnterEnding() {
-        endingProvider = GameModuleRegistry.getCurrent().getEndingProvider();
+        endingProvider = GameServices.module().getEndingProvider();
         if (endingProvider == null) {
             // No ending provider for this game — return to title screen
             LOGGER.warning("No EndingProvider available, returning to title screen");
@@ -2718,8 +3445,7 @@ public class GameLoop {
         shouldAdvanceFrozenScene = shouldAdvanceFrozenScene || endingProvider.shouldAdvanceFrozenDemoScene();
 
         // Apply demo input to player
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null) mainCode = "sonic";
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
         if (sprite instanceof AbstractPlayableSprite player) {
             if (!endingProvider.shouldRunDemoGameplay()) {
@@ -2753,14 +3479,14 @@ public class GameLoop {
         // Run level physics — follows LevelFrameStep canonical order (steps 1-4),
         // but steps 5-6 are conditional on scroll-freeze state during ending fadeout.
         levelManager.updateZoneFeaturesPrePhysics();
-        if (levelManager.usesInlineObjectSolidResolution()) {
+        if (levelManager.objectsExecuteAfterPlayerPhysics()) {
             spriteManager.update(inputHandler);
             levelManager.updateObjectPositionsPostPhysicsWithoutTouches();
         } else {
             levelManager.updateObjectPositions();
             spriteManager.update(inputHandler);
         }
-        LevelEventProvider levelEvents = GameModuleRegistry.getCurrent().getLevelEventProvider();
+        LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
         if (levelEvents != null) {
             levelEvents.update();
         }
@@ -2838,8 +3564,7 @@ public class GameLoop {
 
         // Position the player at the demo start position (ROM uses center coordinates)
         DemoLamppostState lamppost = endingProvider.getDemoLamppostState();
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null) mainCode = "sonic";
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
         if (sprite instanceof AbstractPlayableSprite player) {
             // ROM: EndingDemoLoad clears rings, time, score, lamppost (sonic.asm:4148-4152)
@@ -2920,8 +3645,7 @@ public class GameLoop {
         // Restore player keyboard input and clear HUD suppression
         spriteManager.setInputSuppressed(false);
         levelManager.setForceHudSuppressed(false);
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null) mainCode = "sonic";
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
         if (sprite instanceof AbstractPlayableSprite player) {
             player.setControlLocked(false);
@@ -2943,15 +3667,14 @@ public class GameLoop {
         // Clean up any remaining demo state
         spriteManager.setInputSuppressed(false);
         levelManager.setForceHudSuppressed(false);
-        String mainCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        if (mainCode == null) mainCode = "sonic";
+        String mainCode = resolveMainCharacterCode();
         var sprite = spriteManager.getSprite(mainCode);
         if (sprite instanceof AbstractPlayableSprite player) {
             player.setControlLocked(false);
             player.clearForcedInputMask();
         }
 
-        AudioManager.getInstance().fadeOutMusic();
+        audioManager.fadeOutMusic();
 
         FadeManager fadeManager = this.fadeManager;
         if (!fadeManager.isActive()) {

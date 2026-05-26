@@ -15,6 +15,7 @@ class TestCNZSlotMachineRng {
     @Test
     void setupTargetsUsesVintCounterBytesForSpeedsAndTarget() throws Exception {
         CNZSlotMachineManager manager = new CNZSlotMachineManager();
+        setIntField(manager, "routine", 0x18);
         manager.activate();
 
         manager.update(0x1200);
@@ -67,3 +68,5 @@ class TestCNZSlotMachineRng {
         return (int[]) field.get(target);
     }
 }
+
+

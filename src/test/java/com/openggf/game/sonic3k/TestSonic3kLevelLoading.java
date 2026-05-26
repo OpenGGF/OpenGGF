@@ -4,7 +4,6 @@ import com.openggf.game.sonic3k.scroll.Sonic3kZoneConstants;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -17,11 +16,11 @@ import com.openggf.level.Block;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
+import com.openggf.level.Palette;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.tests.rules.RequiresRom;
-import com.openggf.tests.rules.RequiresRomCondition;
 import com.openggf.tests.rules.SonicGame;
 
 import java.util.stream.Stream;
@@ -33,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * Verifies resource plans, level boundaries, and start positions.
  */
 @RequiresRom(SonicGame.SONIC_3K)
-@ExtendWith(RequiresRomCondition.class)
 class TestSonic3kLevelLoading {
 
     private LevelManager levelManager;
@@ -162,6 +160,33 @@ class TestSonic3kLevelLoading {
         assertTrue(chunk0ReferencedByBlocks, "S3K AIZ intro block data references chunk index 0");
     }
 
+    @Test
+    void icz1StartsWithLockOnIntroMountainPalette() throws Exception {
+        Sonic sprite = new Sonic(mainCharacter, (short) 100, (short) 400);
+        GameServices.sprites().addSprite(sprite);
+        Camera camera = GameServices.camera();
+        camera.setFocusedSprite(sprite);
+        camera.setFrozen(false);
+
+        levelManager.loadZoneAndAct(Sonic3kZoneConstants.ZONE_ICZ, 0);
+        GroundSensor.setLevelManager(levelManager);
+        camera.updatePosition(true);
+
+        Level level = levelManager.getCurrentLevel();
+        assertNotNull(level, "ICZ1 level should not be null");
+
+        int[] introPaletteLine4 = {
+                0x0EEE, 0x0EEC, 0x0EEA, 0x0ECA, 0x0EC8,
+                0x0EA6, 0x0E86, 0x0E64, 0x0E40, 0x0E00,
+                0x0C00, 0x0000, 0x0AEC, 0x0CEA, 0x0E80
+        };
+        Palette line4 = level.getPalette(3);
+        for (int i = 0; i < introPaletteLine4.length; i++) {
+            assertColorWord(line4.getColor(i + 1), introPaletteLine4[i],
+                    "ICZ1 intro mountain palette line 4 color " + (i + 1));
+        }
+    }
+
     static Stream<Arguments> zoneActProvider() {
         return Stream.of(
                 Arguments.of(Sonic3kZoneConstants.ZONE_AIZ, 0, "Angel Island Act 1"),
@@ -218,7 +243,7 @@ class TestSonic3kLevelLoading {
         assertTrue(maxY > minY,
                 label + ": maxY (" + maxY + ") should be > minY (" + minY + ")");
 
-        Sonic3kZoneRegistry registry = Sonic3kZoneRegistry.getInstance();
+        Sonic3kZoneRegistry registry = new Sonic3kZoneRegistry();
         int[] startPos = registry.getStartPosition(zone, act);
         // DDZ (Doomsday) has ROM-accurate start X=0
         if (zone != Sonic3kZoneConstants.ZONE_DDZ) {
@@ -226,4 +251,22 @@ class TestSonic3kLevelLoading {
         }
         assertTrue(startPos[1] != 0, label + ": start Y should be non-zero");
     }
+
+    private static void assertColorWord(Palette.Color actual, int segaWord, String message) {
+        Palette.Color expected = colorFromSegaWord(segaWord);
+        assertEquals(expected.r & 0xFF, actual.r & 0xFF, message + " red");
+        assertEquals(expected.g & 0xFF, actual.g & 0xFF, message + " green");
+        assertEquals(expected.b & 0xFF, actual.b & 0xFF, message + " blue");
+    }
+
+    private static Palette.Color colorFromSegaWord(int segaWord) {
+        Palette.Color color = new Palette.Color();
+        byte[] data = {
+                (byte) ((segaWord >>> 8) & 0xFF),
+                (byte) (segaWord & 0xFF)
+        };
+        color.fromSegaFormat(data, 0);
+        return color;
+    }
 }
+

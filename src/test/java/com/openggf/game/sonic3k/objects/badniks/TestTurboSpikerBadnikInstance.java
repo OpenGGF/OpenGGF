@@ -1,46 +1,55 @@
 package com.openggf.game.sonic3k.objects.badniks;
 
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
+import com.openggf.tests.FullReset;
+import com.openggf.tests.SingletonResetExtension;
 import com.openggf.tests.TestablePlayableSprite;
-import com.openggf.tests.rules.SingletonResetRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
+import org.junit.jupiter.api.parallel.Isolated;
 import org.mockito.MockedStatic;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
+@ExtendWith(SingletonResetExtension.class)
+@FullReset
+@Isolated
+@Execution(ExecutionMode.SAME_THREAD)
 public class TestTurboSpikerBadnikInstance {
 
-    @Rule
-    public SingletonResetRule resetRule = new SingletonResetRule();
-
-    @org.junit.Before
+    @BeforeEach
     public void setUp() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
     }
 
-    @org.junit.After
+    @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     @Test
@@ -65,8 +74,8 @@ public class TestTurboSpikerBadnikInstance {
             }
 
             assertEquals("SHELLLESS_RUN", readState(turboSpiker));
-            assertTrue("Expected shell launch SFX", services.playedSfx.contains(Sonic3kSfx.FLOOR_LAUNCHER.id));
-            assertTrue("Expected shell trail child after launch", services.spawnedChildren.size() >= 2);
+            assertTrue(services.playedSfx.contains(Sonic3kSfx.FLOOR_LAUNCHER.id), "Expected shell launch SFX");
+            assertTrue(services.spawnedChildren.size() >= 2, "Expected shell trail child after launch");
         }
     }
 
@@ -87,7 +96,7 @@ public class TestTurboSpikerBadnikInstance {
             turboSpiker.update(1, player);
             assertEquals("EMERGE_DELAY", readState(turboSpiker));
             assertEquals(7, services.spawnedChildren.size());
-            assertTrue("Expected splash SFX", services.playedSfx.contains(Sonic3kSfx.SPLASH.id));
+            assertTrue(services.playedSfx.contains(Sonic3kSfx.SPLASH.id), "Expected splash SFX");
 
             for (int frame = 2; frame <= 5; frame++) {
                 turboSpiker.update(frame, player);
@@ -101,6 +110,49 @@ public class TestTurboSpikerBadnikInstance {
             }
             assertEquals("PATROL", readState(turboSpiker));
             assertEquals(5, turboSpiker.getPriorityBucket());
+        }
+    }
+
+    @Test
+    public void wrappedSidekickNearestByRomXTriggersShellLaunch() throws Exception {
+        try (MockedStatic<ObjectTerrainUtils> ignored = mockWalkableFloor()) {
+            AbstractObjectInstance.updateCameraBounds(0xFF00, 0, 0x10080, 224, 0);
+            RecordingServices services = new RecordingServices();
+            TurboSpikerBadnikInstance turboSpiker = new TurboSpikerBadnikInstance(
+                    new ObjectSpawn(0xFFF0, 0x100, Sonic3kObjectIds.TURBO_SPIKER, 0x20, 0, false, 0));
+            turboSpiker.setServices(services);
+
+            TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x7FFF, (short) 0x100);
+            TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x0010, (short) 0x100);
+            services.sidekicks = List.of(sidekick);
+
+            turboSpiker.update(0, player);
+            assertEquals("PATROL", readState(turboSpiker));
+
+            turboSpiker.update(1, player);
+            assertEquals("LAUNCH_PREP", readState(turboSpiker));
+        }
+    }
+
+    @Test
+    public void deadWrappedSidekickIsIgnoredForShellLaunch() throws Exception {
+        try (MockedStatic<ObjectTerrainUtils> ignored = mockWalkableFloor()) {
+            AbstractObjectInstance.updateCameraBounds(0xFF00, 0, 0x10080, 224, 0);
+            RecordingServices services = new RecordingServices();
+            TurboSpikerBadnikInstance turboSpiker = new TurboSpikerBadnikInstance(
+                    new ObjectSpawn(0xFFF0, 0x100, Sonic3kObjectIds.TURBO_SPIKER, 0x20, 0, false, 0));
+            turboSpiker.setServices(services);
+
+            TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x7FFF, (short) 0x100);
+            TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x0010, (short) 0x100);
+            sidekick.setDead(true);
+            services.sidekicks = List.of(sidekick);
+
+            turboSpiker.update(0, player);
+            assertEquals("PATROL", readState(turboSpiker));
+
+            turboSpiker.update(1, player);
+            assertEquals("PATROL", readState(turboSpiker));
         }
     }
 
@@ -121,9 +173,11 @@ public class TestTurboSpikerBadnikInstance {
         private final List<Integer> playedSfx = new ArrayList<>();
         private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
         private final ObjectManager objectManager;
+        private List<com.openggf.game.PlayableEntity> sidekicks = List.of();
 
         private RecordingServices() {
             objectManager = mock(ObjectManager.class);
+            withPlayerQuery(new ObjectPlayerQuery(() -> null, this::sidekicks));
             doAnswer(invocation -> {
                 ObjectInstance child = invocation.getArgument(0);
                 if (child instanceof AbstractObjectInstance instance) {
@@ -142,6 +196,11 @@ public class TestTurboSpikerBadnikInstance {
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);
+        }
+
+        @Override
+        public List<com.openggf.game.PlayableEntity> sidekicks() {
+            return sidekicks;
         }
     }
 }

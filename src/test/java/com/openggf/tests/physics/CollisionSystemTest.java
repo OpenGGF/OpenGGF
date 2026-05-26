@@ -1,15 +1,25 @@
 package com.openggf.tests.physics;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.level.LevelManager;
+import com.openggf.game.PlayableEntity;
 import com.openggf.physics.*;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectRegistry;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.graphics.GLCommand;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestEnvironment;
-import org.junit.Before;
-import org.junit.Test;
+import org.mockito.Mockito;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for CollisionSystem behavior and trace recording.
@@ -21,7 +31,7 @@ public class CollisionSystemTest {
     private CollisionSystem collisionSystem;
     private RecordingCollisionTrace trace;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         TestEnvironment.resetAll();
         GameServices.collision().resetState();
@@ -45,6 +55,74 @@ public class CollisionSystemTest {
 
         assertNotNull(fresh.getTrace());
         assertEquals(NoOpCollisionTrace.INSTANCE, fresh.getTrace());
+    }
+
+    @Test
+    public void testHasStandingContactDelegatesToLatestSnapshot() {
+        TrackingObjectManager objectManager = new TrackingObjectManager(true, 12);
+        collisionSystem.setObjectManager(objectManager);
+
+        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
+
+        assertTrue(collisionSystem.hasStandingContact(player));
+        assertEquals(1, objectManager.latestStandingCalls);
+        assertEquals(0, objectManager.fallbackStandingCalls);
+    }
+
+    @Test
+    public void testHasStandingContactIgnoresUpwardMotionBeforeDelegation() {
+        TrackingObjectManager objectManager = new TrackingObjectManager(true, 12);
+        collisionSystem.setObjectManager(objectManager);
+
+        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
+        Mockito.when(player.getYSpeed()).thenReturn((short) -1);
+
+        assertFalse(collisionSystem.hasStandingContact(player));
+        assertEquals(0, objectManager.latestStandingCalls);
+        assertEquals(0, objectManager.fallbackStandingCalls);
+    }
+
+    @Test
+    public void testClearRidingObjectInvalidatesStandingSnapshot() {
+        TrackingObjectManager objectManager = new TrackingObjectManager(true, 12);
+        collisionSystem.setObjectManager(objectManager);
+
+        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
+
+        assertTrue(collisionSystem.hasStandingContact(player));
+        collisionSystem.clearRidingObject(player);
+        assertFalse(collisionSystem.hasStandingContact(player));
+        assertEquals(2, objectManager.latestStandingCalls);
+        assertEquals(1, objectManager.clearRidingCalls);
+    }
+
+    @Test
+    public void testGetHeadroomDistanceDelegatesToLatestSnapshot() {
+        TrackingObjectManager objectManager = new TrackingObjectManager(true, 12);
+        collisionSystem.setObjectManager(objectManager);
+
+        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
+
+        assertEquals(12, collisionSystem.getHeadroomDistance(player, 0x40));
+        assertEquals(1, objectManager.latestHeadroomCalls);
+        assertEquals(0, objectManager.fallbackHeadroomCalls);
+    }
+
+    @Test
+    public void testJumpHeadroomUsesTerrainOnly() {
+        TrackingObjectManager objectManager = new TrackingObjectManager(true, 0);
+        collisionSystem.setObjectManager(objectManager);
+
+        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
+        Sensor clearCeiling = new FixedSensor(player, Direction.UP, 10);
+        Mockito.when(player.getCeilingSensors()).thenReturn(new Sensor[]{clearCeiling, clearCeiling});
+        Mockito.when(player.getPushSensors()).thenReturn(new Sensor[]{clearCeiling, clearCeiling});
+
+        assertTrue(collisionSystem.hasEnoughHeadroom(player, 0x00),
+                "Sonic_Jump/Tails_Jump gate on CalcRoomOverHead terrain distance only "
+                        + "(S3K sonic3k.asm:23300-23307,28531-28538)");
+        assertEquals(0, objectManager.latestHeadroomCalls,
+                "Object headroom snapshots must not participate in the ROM jump gate");
     }
 
     @Test
@@ -73,7 +151,7 @@ public class CollisionSystemTest {
         other.onTerrainProbesComplete(100, 200, (byte) 0);
 
         List<String> differences = trace.compareWith(other);
-        assertTrue("Identical traces should have no differences", differences.isEmpty());
+        assertTrue(differences.isEmpty(), "Identical traces should have no differences");
     }
 
     @Test
@@ -84,7 +162,7 @@ public class CollisionSystemTest {
         other.onTerrainProbesStart(150, 200, false); // Different X
 
         List<String> differences = trace.compareWith(other);
-        assertFalse("Different traces should have differences", differences.isEmpty());
+        assertFalse(differences.isEmpty(), "Different traces should have differences");
     }
 
     @Test
@@ -95,7 +173,7 @@ public class CollisionSystemTest {
         other.onTerrainProbesStart(101, 200, false); // 1 pixel diff
 
         List<String> differences = trace.compareWith(other);
-        assertTrue("1-pixel difference should be tolerated", differences.isEmpty());
+        assertTrue(differences.isEmpty(), "1-pixel difference should be tolerated");
     }
 
     @Test
@@ -250,7 +328,7 @@ public class CollisionSystemTest {
         other.onTerrainProbesComplete(100, 200, (byte) 0x40);
 
         List<String> differences = trace.compareWith(other);
-        assertFalse("Angle mismatch should be reported", differences.isEmpty());
+        assertFalse(differences.isEmpty(), "Angle mismatch should be reported");
     }
 
     @Test
@@ -261,7 +339,7 @@ public class CollisionSystemTest {
         other.onTerrainProbesStart(100, 200, false);
 
         List<String> differences = trace.compareWith(other);
-        assertFalse("Flag mismatch should be reported", differences.isEmpty());
+        assertFalse(differences.isEmpty(), "Flag mismatch should be reported");
     }
 
     @Test
@@ -387,7 +465,7 @@ public class CollisionSystemTest {
         other.onTerrainProbeResult("ground_A", result2);
 
         List<String> differences = trace.compareWith(other);
-        assertTrue("1-pixel distance difference should be tolerated", differences.isEmpty());
+        assertTrue(differences.isEmpty(), "1-pixel distance difference should be tolerated");
     }
 
     @Test
@@ -401,19 +479,21 @@ public class CollisionSystemTest {
         other.onTerrainProbeResult("ground_A", result2);
 
         List<String> differences = trace.compareWith(other);
-        assertFalse("5-pixel distance difference should not be tolerated", differences.isEmpty());
+        assertFalse(differences.isEmpty(), "5-pixel distance difference should not be tolerated");
     }
 
     @Test
     public void testEventTypeEnumValues() {
         CollisionEvent.EventType[] types = CollisionEvent.EventType.values();
-        assertEquals(8, types.length);
+        assertEquals(10, types.length);
         assertNotNull(CollisionEvent.EventType.valueOf("TERRAIN_PROBES_START"));
         assertNotNull(CollisionEvent.EventType.valueOf("TERRAIN_PROBE_RESULT"));
         assertNotNull(CollisionEvent.EventType.valueOf("TERRAIN_PROBES_COMPLETE"));
         assertNotNull(CollisionEvent.EventType.valueOf("SOLID_CONTACTS_START"));
         assertNotNull(CollisionEvent.EventType.valueOf("SOLID_CANDIDATE"));
         assertNotNull(CollisionEvent.EventType.valueOf("SOLID_RESOLVED"));
+        assertNotNull(CollisionEvent.EventType.valueOf("SOLID_CHECKPOINT_START"));
+        assertNotNull(CollisionEvent.EventType.valueOf("SOLID_CHECKPOINT_RESULT"));
         assertNotNull(CollisionEvent.EventType.valueOf("SOLID_CONTACTS_COMPLETE"));
         assertNotNull(CollisionEvent.EventType.valueOf("POST_ADJUSTMENT"));
     }
@@ -422,7 +502,7 @@ public class CollisionSystemTest {
     public void testEmptyTraceComparison() {
         RecordingCollisionTrace other = new RecordingCollisionTrace();
         List<String> differences = trace.compareWith(other);
-        assertTrue("Two empty traces should have no differences", differences.isEmpty());
+        assertTrue(differences.isEmpty(), "Two empty traces should have no differences");
     }
 
     @Test
@@ -430,21 +510,43 @@ public class CollisionSystemTest {
         CollisionSystem first = GameServices.collision();
         first.resetState();
         CollisionSystem second = GameServices.collision();
-        assertSame("resetState() should not change instance", first, second);
+        assertSame(first, second, "resetState() should not change instance");
     }
 
     @Test
     public void testSameInstanceReturned() {
         CollisionSystem first = GameServices.collision();
         CollisionSystem second = GameServices.collision();
-        assertSame("Without reset, same instance should be returned", first, second);
+        assertSame(first, second, "Without reset, same instance should be returned");
+    }
+
+    @Test
+    public void testGroundSensorDefaultLevelManagerTracksRuntimeRecreation() {
+        GroundSensor.setLevelManager(null);
+
+        GameplayModeContext firstGameplayMode = TestEnvironment.activeGameplayMode();
+        LevelManager firstLevelManager = invokeGroundSensorLevelManager();
+        assertSame(firstGameplayMode.getLevelManager(), firstLevelManager, "GroundSensor should resolve the current gameplay LevelManager");
+
+        SessionManager.clear();
+        TestEnvironment.activeGameplayMode();
+
+        try {
+            GameplayModeContext secondGameplayMode = TestEnvironment.activeGameplayMode();
+            LevelManager secondLevelManager = invokeGroundSensorLevelManager();
+
+            assertSame(secondGameplayMode.getLevelManager(), secondLevelManager, "GroundSensor should resolve the recreated gameplay LevelManager");
+            assertNotSame(firstLevelManager, secondLevelManager, "GroundSensor should not retain the destroyed gameplay LevelManager");
+        } finally {
+            GroundSensor.setLevelManager(null);
+        }
     }
 
     @Test
     public void testCalcRoomInFrontProbeOnFloorMovingRightUsesRightWallProbe() {
         Object probe = describeCalcRoomInFrontProbe(0x00, (short) 0x400);
 
-        assertEquals("Expected right-wall mode dispatch", 0xC0, readProbeInt(probe, "mode"));
+        assertEquals(0xC0, readProbeInt(probe, "mode"), "Expected right-wall mode dispatch");
         assertEquals(Direction.RIGHT, readProbeDirection(probe, "globalDirection"));
         assertEquals(10, readProbeInt(probe, "offsetX"));
         assertEquals(0, readProbeInt(probe, "offsetY"));
@@ -455,7 +557,7 @@ public class CollisionSystemTest {
     public void testCalcRoomInFrontProbeOnRightWallMovingUpUsesCeilingProbe() {
         Object probe = describeCalcRoomInFrontProbe(0xC0, (short) 0x400);
 
-        assertEquals("Expected ceiling-mode dispatch from right wall", 0x80, readProbeInt(probe, "mode"));
+        assertEquals(0x80, readProbeInt(probe, "mode"), "Expected ceiling-mode dispatch from right wall");
         assertEquals(Direction.UP, readProbeDirection(probe, "globalDirection"));
         assertEquals(0, readProbeInt(probe, "offsetX"));
         assertEquals(-10, readProbeInt(probe, "offsetY"));
@@ -466,7 +568,7 @@ public class CollisionSystemTest {
     public void testCalcRoomInFrontProbeOnCeilingMovingLeftUsesRightWallProbe() {
         Object probe = describeCalcRoomInFrontProbe(0x80, (short) -0x400);
 
-        assertEquals("Expected right-wall mode dispatch from ceiling", 0xC0, readProbeInt(probe, "mode"));
+        assertEquals(0xC0, readProbeInt(probe, "mode"), "Expected right-wall mode dispatch from ceiling");
         assertEquals(Direction.RIGHT, readProbeDirection(probe, "globalDirection"));
         assertEquals(10, readProbeInt(probe, "offsetX"));
         assertEquals(0, readProbeInt(probe, "offsetY"));
@@ -477,7 +579,7 @@ public class CollisionSystemTest {
     public void testCalcRoomInFrontProbeOnLeftWallMovingDownUsesCeilingProbe() {
         Object probe = describeCalcRoomInFrontProbe(0x40, (short) -0x400);
 
-        assertEquals("Expected ceiling-mode dispatch from left wall", 0x80, readProbeInt(probe, "mode"));
+        assertEquals(0x80, readProbeInt(probe, "mode"), "Expected ceiling-mode dispatch from left wall");
         assertEquals(Direction.UP, readProbeDirection(probe, "globalDirection"));
         assertEquals(0, readProbeInt(probe, "offsetX"));
         assertEquals(-10, readProbeInt(probe, "offsetY"));
@@ -492,6 +594,16 @@ public class CollisionSystemTest {
             return method.invoke(null, angle, gSpeed);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to invoke describeCalcRoomInFrontProbe", e);
+        }
+    }
+
+    private static LevelManager invokeGroundSensorLevelManager() {
+        try {
+            Method method = GroundSensor.class.getDeclaredMethod("getLevelManager");
+            method.setAccessible(true);
+            return (LevelManager) method.invoke(null);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to invoke GroundSensor.getLevelManager", e);
         }
     }
 
@@ -514,4 +626,79 @@ public class CollisionSystemTest {
             throw new AssertionError("Failed reading probe accessor " + accessor, e);
         }
     }
+
+    private static final class TrackingObjectManager extends com.openggf.level.objects.ObjectManager {
+        private final boolean standingSnapshot;
+        private final int headroomSnapshot;
+        private boolean standingSnapshotCleared;
+        int latestStandingCalls;
+        int latestHeadroomCalls;
+        int fallbackStandingCalls;
+        int fallbackHeadroomCalls;
+        int clearRidingCalls;
+
+        private TrackingObjectManager(boolean standingSnapshot, int headroomSnapshot) {
+            super(List.of(), new ObjectRegistry() {
+                @Override
+                public ObjectInstance create(ObjectSpawn spawn) {
+                    return null;
+                }
+
+                @Override
+                public void reportCoverage(List<ObjectSpawn> spawns) {
+                }
+
+                @Override
+                public String getPrimaryName(int objectId) {
+                    return "Test";
+                }
+            }, 0, null, null);
+            this.standingSnapshot = standingSnapshot;
+            this.headroomSnapshot = headroomSnapshot;
+        }
+
+        public boolean latestStandingSnapshot(PlayableEntity player) {
+            latestStandingCalls++;
+            return standingSnapshot && !standingSnapshotCleared;
+        }
+
+        public int latestHeadroomSnapshot(PlayableEntity player, int hexAngle) {
+            latestHeadroomCalls++;
+            return headroomSnapshot;
+        }
+
+        @Override
+        public void clearRidingObject(PlayableEntity player) {
+            clearRidingCalls++;
+            standingSnapshotCleared = true;
+        }
+
+        @Override
+        public boolean hasStandingContact(PlayableEntity player) {
+            fallbackStandingCalls++;
+            return false;
+        }
+
+        @Override
+        public int getHeadroomDistance(PlayableEntity player, int hexAngle) {
+            fallbackHeadroomCalls++;
+            return Integer.MAX_VALUE;
+        }
+    }
+
+    private static final class FixedSensor extends Sensor {
+        private final int distance;
+
+        private FixedSensor(AbstractPlayableSprite sprite, Direction direction, int distance) {
+            super(sprite, direction, (byte) 0, (byte) 0, true);
+            this.distance = distance;
+        }
+
+        @Override
+        protected SensorResult doScan(short dx, short dy) {
+            return new SensorResult((byte) 0, (byte) distance, 0, direction);
+        }
+    }
 }
+
+

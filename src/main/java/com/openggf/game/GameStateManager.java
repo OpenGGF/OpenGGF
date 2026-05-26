@@ -1,5 +1,9 @@
 package com.openggf.game;
 
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.GameStateSnapshot;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -10,21 +14,21 @@ import java.util.logging.Logger;
  * - Emerald_count: number of emeralds collected (0-7)
  * - Got_Emeralds_array: which specific emeralds have been obtained
  */
-public class GameStateManager {
+public class GameStateManager implements RewindSnapshottable<GameStateSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(GameStateManager.class.getName());
     private static final int DEFAULT_SPECIAL_STAGE_COUNT = 7;
     private static final int DEFAULT_CHAOS_EMERALD_COUNT = 7;
 
-    private static GameStateManager bootstrapInstance;
-
     private int score;
     private int lives;
+    private int continues;
 
     private int currentSpecialStageIndex;
     private int emeraldCount;
     private int specialStageCount;
     private int chaosEmeraldCount;
     private boolean[] gotEmeralds;
+    private boolean[] gotSuperEmeralds;
 
     /**
      * Current boss ID (ROM: Current_Boss_ID).
@@ -41,13 +45,14 @@ public class GameStateManager {
     private boolean screenShakeActive;
 
     /**
-     * HTZ-specific screen shake flag (ROM: Screen_Shaking_Flag_HTZ at $FFFFF7C3).
-     * This is the master flag for HTZ earthquake sequences. Unlike the general
-     * Screen_Shaking_Flag which gets cleared during delay periods, this flag
-     * stays active for the entire earthquake sequence.
-     * Used by Obj30 (RisingLava) to determine if the platform should be solid.
+     * Background collision flag (ROM: Background_collision_flag at $FFFFF7C7).
+     * When set, terrain collision routines (FindFloor, FindWall) perform a dual-path
+     * scan: first against FG collision data, then against BG collision data. The
+     * result with the greater distance (more lenient) is used. This allows the
+     * player to collide with background-layer terrain during specific sequences
+     * (e.g., HCZ2 wall chase, SSZ moving platforms).
      */
-    private boolean htzScreenShakeActive;
+    private boolean backgroundCollisionFlag;
 
     /**
      * Giant Ring collected flag (S1 ROM: f_bigring at $FFFFF7AA).
@@ -108,33 +113,28 @@ public class GameStateManager {
         resetSession();
     }
 
-    public static synchronized GameStateManager getInstance() {
-        GameRuntime runtime = RuntimeManager.getCurrent();
-        if (runtime != null) {
-            return runtime.getGameState();
-        }
-        if (bootstrapInstance == null) {
-            bootstrapInstance = new GameStateManager();
-        }
-        return bootstrapInstance;
-    }
-
     /**
      * Resets the game session state to defaults (Score: 0, Lives: 3, no emeralds).
      */
     public void resetSession() {
         this.score = 0;
         this.lives = 3;
+        this.continues = 0;
 
         this.currentSpecialStageIndex = 0;
         this.emeraldCount = 0;
         for (int i = 0; i < gotEmeralds.length; i++) {
             gotEmeralds[i] = false;
         }
+        if (gotSuperEmeralds != null) {
+            for (int i = 0; i < gotSuperEmeralds.length; i++) {
+                gotSuperEmeralds[i] = false;
+            }
+        }
 
         this.currentBossId = 0;
         this.screenShakeActive = false;
-        this.htzScreenShakeActive = false;
+        this.backgroundCollisionFlag = false;
         this.bigRingCollected = false;
         this.wfzFireToggle = false;
         this.itemBonus = 0;
@@ -181,6 +181,45 @@ public class GameStateManager {
         this.lives++;
     }
 
+    public int getContinues() {
+        return continues;
+    }
+
+    public void addContinue() {
+        this.continues++;
+    }
+
+    public void restoreSaveProgress(int lives, int continues, List<Integer> chaosEmeralds, List<Integer> superEmeralds) {
+        this.lives = Math.max(0, lives);
+        this.continues = Math.max(0, continues);
+        this.emeraldCount = 0;
+        for (int i = 0; i < gotEmeralds.length; i++) {
+            gotEmeralds[i] = false;
+        }
+        if (gotSuperEmeralds != null) {
+            for (int i = 0; i < gotSuperEmeralds.length; i++) {
+                gotSuperEmeralds[i] = false;
+            }
+        }
+        if (chaosEmeralds != null) {
+            for (Integer emeraldIndex : chaosEmeralds) {
+                if (emeraldIndex != null && emeraldIndex >= 0 && emeraldIndex < gotEmeralds.length
+                        && !gotEmeralds[emeraldIndex]) {
+                    gotEmeralds[emeraldIndex] = true;
+                    emeraldCount++;
+                }
+            }
+        }
+        if (gotSuperEmeralds != null && superEmeralds != null) {
+            for (Integer emeraldIndex : superEmeralds) {
+                if (emeraldIndex != null && emeraldIndex >= 0 && emeraldIndex < gotSuperEmeralds.length
+                        && gotEmeralds[emeraldIndex]) {
+                    gotSuperEmeralds[emeraldIndex] = true;
+                }
+            }
+        }
+    }
+
     public void loseLife() {
         if (this.lives > 0) {
             this.lives--;
@@ -209,6 +248,36 @@ public class GameStateManager {
     }
 
     /**
+     * Scans from the current special stage index until an uncollected stage
+     * for the requested emerald set is found, then advances the cursor to the
+     * following slot. Used by games whose ROM stage-selection policy skips
+     * already-collected emerald stages.
+     */
+    public int consumeCurrentSpecialStageIndexAndAdvanceSkippingCollected(boolean superEmeraldMode) {
+        if (specialStageCount <= 0) {
+            return 0;
+        }
+        int startIndex = Math.floorMod(currentSpecialStageIndex, specialStageCount);
+        int selectedIndex = startIndex;
+        for (int offset = 0; offset < specialStageCount; offset++) {
+            int candidateIndex = (startIndex + offset) % specialStageCount;
+            if (isSpecialStageUncollected(candidateIndex, superEmeraldMode)) {
+                selectedIndex = candidateIndex;
+                break;
+            }
+        }
+        currentSpecialStageIndex = (selectedIndex + 1) % specialStageCount;
+        return selectedIndex;
+    }
+
+    private boolean isSpecialStageUncollected(int index, boolean superEmeraldMode) {
+        if (superEmeraldMode) {
+            return !hasSuperEmerald(index);
+        }
+        return !hasEmerald(index);
+    }
+
+    /**
      * Gets the total number of emeralds collected (0-7).
      */
     public int getEmeraldCount() {
@@ -221,6 +290,29 @@ public class GameStateManager {
      */
     public boolean hasEmerald(int index) {
         return index >= 0 && index < gotEmeralds.length && gotEmeralds[index];
+    }
+
+    public List<Integer> getCollectedChaosEmeraldIndices() {
+        List<Integer> indices = new ArrayList<>();
+        for (int i = 0; i < gotEmeralds.length; i++) {
+            if (gotEmeralds[i]) {
+                indices.add(i);
+            }
+        }
+        return List.copyOf(indices);
+    }
+
+    public List<Integer> getCollectedSuperEmeraldIndices() {
+        List<Integer> indices = new ArrayList<>();
+        if (gotSuperEmeralds == null) {
+            return List.of();
+        }
+        for (int i = 0; i < gotSuperEmeralds.length; i++) {
+            if (gotSuperEmeralds[i]) {
+                indices.add(i);
+            }
+        }
+        return List.copyOf(indices);
     }
 
     /**
@@ -237,6 +329,34 @@ public class GameStateManager {
             gotEmeralds[index] = true;
             emeraldCount++;
         }
+    }
+
+    public boolean hasSuperEmerald(int index) {
+        return gotSuperEmeralds != null
+                && index >= 0
+                && index < gotSuperEmeralds.length
+                && gotSuperEmeralds[index];
+    }
+
+    public synchronized void markSuperEmeraldCollected(int index) {
+        if (gotSuperEmeralds == null || index < 0 || index >= gotSuperEmeralds.length) {
+            LOGGER.warning("Attempted to mark super emerald " + index +
+                    " but valid range is 0-" + ((gotSuperEmeralds == null ? 0 : gotSuperEmeralds.length) - 1));
+            return;
+        }
+        gotSuperEmeralds[index] = true;
+    }
+
+    public boolean hasAllSuperEmeralds() {
+        if (gotSuperEmeralds == null || gotSuperEmeralds.length == 0) {
+            return false;
+        }
+        for (boolean gotSuperEmerald : gotSuperEmeralds) {
+            if (!gotSuperEmerald) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -259,6 +379,7 @@ public class GameStateManager {
         this.specialStageCount = safeStageCount;
         this.chaosEmeraldCount = safeEmeraldTarget;
         this.gotEmeralds = new boolean[safeEmeraldTarget];
+        this.gotSuperEmeralds = new boolean[safeEmeraldTarget];
         this.currentSpecialStageIndex = 0;
         this.emeraldCount = 0;
     }
@@ -337,31 +458,23 @@ public class GameStateManager {
     }
 
     /**
-     * Gets the HTZ-specific screen shake flag.
-     * ROM: tst.b (Screen_Shaking_Flag_HTZ).w
+     * Gets the background collision flag.
+     * ROM: tst.b (Background_collision_flag).w
      *
-     * This is the master flag checked by Obj30 (RisingLava) to determine
-     * if the invisible solid platforms should be active. Unlike the general
-     * Screen_Shaking_Flag, this stays on during delay periods.
-     *
-     * @return true if HTZ earthquake sequence is active
+     * @return true if background collision is enabled
      */
-    public boolean isHtzScreenShakeActive() {
-        return htzScreenShakeActive;
+    public boolean isBackgroundCollisionFlag() {
+        return backgroundCollisionFlag;
     }
 
     /**
-     * Sets the HTZ-specific screen shake flag.
-     * ROM: move.b #1,(Screen_Shaking_Flag_HTZ).w to enable
-     * ROM: move.b #0,(Screen_Shaking_Flag_HTZ).w to disable
+     * Sets the background collision flag.
+     * ROM: st (Background_collision_flag).w / clr.b (Background_collision_flag).w
      *
-     * This is set when entering an HTZ earthquake area and cleared when exiting.
-     * The flag persists through delay periods when the lava pauses at limits.
-     *
-     * @param active true to enable HTZ earthquake mode, false to disable
+     * @param flag true to enable dual-path BG collision, false to disable
      */
-    public void setHtzScreenShakeActive(boolean active) {
-        this.htzScreenShakeActive = active;
+    public void setBackgroundCollisionFlag(boolean flag) {
+        this.backgroundCollisionFlag = flag;
     }
 
     /**
@@ -473,5 +586,40 @@ public class GameStateManager {
      * ROM: move.b #1,(End_of_level_flag).w
      */
     public void setEndOfLevelFlag(boolean flag) { this.endOfLevelFlag = flag; }
-}
 
+    @Override
+    public String key() {
+        return "gamestate";
+    }
+
+    @Override
+    public GameStateSnapshot capture() {
+        return new GameStateSnapshot(
+                score, lives, continues, currentSpecialStageIndex, emeraldCount,
+                gotEmeralds, gotSuperEmeralds, currentBossId,
+                screenShakeActive, backgroundCollisionFlag, bigRingCollected,
+                wfzFireToggle, itemBonus, reverseGravityActive,
+                collectedSpecialRings, endOfLevelActive, endOfLevelFlag);
+    }
+
+    @Override
+    public void restore(GameStateSnapshot snapshot) {
+        this.score = snapshot.score();
+        this.lives = snapshot.lives();
+        this.continues = snapshot.continues();
+        this.currentSpecialStageIndex = snapshot.currentSpecialStageIndex();
+        this.emeraldCount = snapshot.emeraldCount();
+        this.gotEmeralds = snapshot.gotEmeralds().clone();
+        this.gotSuperEmeralds = snapshot.gotSuperEmeralds().clone();
+        this.currentBossId = snapshot.currentBossId();
+        this.screenShakeActive = snapshot.screenShakeActive();
+        this.backgroundCollisionFlag = snapshot.backgroundCollisionFlag();
+        this.bigRingCollected = snapshot.bigRingCollected();
+        this.wfzFireToggle = snapshot.wfzFireToggle();
+        this.itemBonus = snapshot.itemBonus();
+        this.reverseGravityActive = snapshot.reverseGravityActive();
+        this.collectedSpecialRings = snapshot.collectedSpecialRings();
+        this.endOfLevelActive = snapshot.endOfLevelActive();
+        this.endOfLevelFlag = snapshot.endOfLevelFlag();
+    }
+}

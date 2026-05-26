@@ -5,27 +5,45 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
-import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.GameServices;
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.ZoneFeatureProvider;
-import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.render.AdvancedRenderFrameState;
+import com.openggf.game.render.AdvancedRenderMode;
+import com.openggf.game.render.AdvancedRenderModeContext;
+import com.openggf.game.render.AdvancedRenderModeController;
+import com.openggf.game.render.SpecialRenderEffect;
+import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.sonic3k.features.AizBattleshipRenderFeature;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.features.AizTransitionRenderFeature;
+import com.openggf.game.sonic3k.render.HczWallChaseBgOverlayEffect;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotMachinePanelAnimator;
 import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
 import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
+import com.openggf.game.sonic3k.render.IczBigSnowPileBackgroundEffect;
+import com.openggf.game.sonic3k.render.IczBigSnowPilePriorityMaskEffect;
+import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.physics.Direction;
+import com.openggf.physics.SensorResult;
 import com.openggf.level.scroll.M68KMath;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import com.openggf.game.GameServices;
 
 /**
  * Zone feature provider for Sonic 3 &amp; Knuckles.
@@ -34,12 +52,86 @@ import com.openggf.game.GameServices;
  */
 public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kZoneFeatureProvider.class.getName());
+    private static final int VDP_BG_PLANE_WIDTH_PX = 512;
 
     private final AizBattleshipRenderFeature aizBattleshipRenderFeature = new AizBattleshipRenderFeature();
     private final AizTransitionRenderFeature aizTransitionRenderFeature = new AizTransitionRenderFeature();
+    private final SpecialRenderEffect hczWallChaseBgOverlayEffect = new HczWallChaseBgOverlayEffect();
+    private final SpecialRenderEffect iczBigSnowPileBackgroundEffect = new IczBigSnowPileBackgroundEffect();
+    private final SpecialRenderEffect iczBigSnowPilePriorityMaskEffect = new IczBigSnowPilePriorityMaskEffect();
+    private final AdvancedRenderMode slotMachineForegroundScrollMode = new AdvancedRenderMode() {
+        @Override
+        public String id() {
+            return "s3k-slot-machine-foreground-scroll";
+        }
+
+        @Override
+        public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
+            if (context.zoneIndex() == Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
+                builder.enablePerLineForegroundScroll();
+            }
+        }
+    };
+    private final AdvancedRenderMode mgzCollapseForegroundVScrollMode = new AdvancedRenderMode() {
+        @Override
+        public String id() {
+            return "s3k-mgz2-collapse-foreground-vscroll";
+        }
+
+        @Override
+        public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
+            if (context.zoneIndex() != Sonic3kZoneIds.ZONE_MGZ || context.actIndex() != 1) {
+                return;
+            }
+            if (!(GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager manager)
+                    || manager.getMgzEvents() == null) {
+                return;
+            }
+
+            short[] override = manager.getMgzEvents()
+                    .buildCollapseForegroundVScrollOverride(context.camera().getX());
+            if (override != null) {
+                builder.setForegroundPerColumnVScrollOverride(override);
+            }
+        }
+    };
     private Sonic3kWaterSurfaceManager waterSurfaceManager;
-    private boolean forcedAizForestFrontPriority;
+    private final Set<AbstractPlayableSprite> forcedAizForestFrontPrioritySprites = new HashSet<>();
     private S3kSlotMachinePanelAnimator slotMachinePanelAnimator;
+
+    /**
+     * S3K default is full-width BG (a single big tilemap copy of the layout's
+     * BG layer). That works for zones whose BG interesting content lives in
+     * the first 4 blocks (512px), but some S3K background routines refresh the
+     * 64-cell VDP plane from an explicit BG source X.
+     *
+     * <p>Flipping those zones to the S2 wrap model (512px tilemap, rebuilt when
+     * {@code bgTilemapBaseX} shifts) lets {@link SwScrlMgz#getBgCameraX()}
+     * during state 8 relocate the 512px window so terrain cols come into
+     * view. ICZ1's opening mountain BG similarly uses {@code d1=$1880} in
+     * {@code ICZ1_BackgroundInit} before {@code Refresh_PlaneFull}.
+     */
+    @Override
+    public boolean bgWrapsHorizontally() {
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager == null) {
+            return false;
+        }
+        int zoneId = levelManager.getFeatureZoneId();
+        return zoneId == Sonic3kZoneIds.ZONE_MGZ
+                || zoneId == Sonic3kZoneIds.ZONE_ICZ;
+    }
+
+    @Override
+    public boolean useFullWidthBackgroundTilemapWindow(int zoneIndex,
+                                                       int actIndex,
+                                                       int bgCameraX,
+                                                       int cachedBgContiguousWidthPx) {
+        return zoneIndex == Sonic3kZoneIds.ZONE_MGZ
+                && actIndex == 1
+                && bgCameraX != Integer.MIN_VALUE
+                && cachedBgContiguousWidthPx > VDP_BG_PLANE_WIDTH_PX;
+    }
 
     @Override
     public void initZoneFeatures(Rom rom, int zoneIndex, int actIndex, int cameraX) throws IOException {
@@ -69,7 +161,31 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void update(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
-        updateAizForestFrontPriority(player, zoneIndex);
+        ObjectPlayerQuery playerQuery = playerQueryFromRuntime(player);
+        if (zoneIndex == Sonic3kZoneIds.ZONE_AIZ
+                && GameServices.module().getLevelEventProvider()
+                instanceof Sonic3kLevelEventManager mgr) {
+            var events = mgr.getAizEvents();
+            if (events != null) {
+                events.releaseBattleshipScrollLockCamera();
+            }
+        }
+        for (PlayableEntity participant :
+                playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+            if (participant instanceof AbstractPlayableSprite playable) {
+                updateAizForestFrontPriority(playable, zoneIndex);
+            }
+        }
+    }
+
+    private ObjectPlayerQuery playerQueryFromRuntime(AbstractPlayableSprite player) {
+        var spriteManager = GameServices.spritesOrNull();
+        List<AbstractPlayableSprite> sidekicks = spriteManager != null
+                ? List.copyOf(spriteManager.getSidekicks())
+                : List.of();
+        return new ObjectPlayerQuery(
+                () -> player,
+                () -> sidekicks);
     }
 
     /**
@@ -80,13 +196,74 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
     @Override
     public void updatePrePhysics(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
         var levelManager = GameServices.levelOrNull();
+        if (zoneIndex == Sonic3kZoneIds.ZONE_AIZ && player != null && !player.getDead()) {
+            int act = levelManager != null ? levelManager.getFeatureActId() : 0;
+            if (GameServices.module().getLevelEventProvider()
+                    instanceof Sonic3kLevelEventManager mgr) {
+                mgr.ensureZoneRuntimeStateInstalled();
+                var events = mgr.getAizEvents();
+                if (events != null) {
+                    events.updatePrePhysics(act);
+                }
+            }
+        }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ && player != null && !player.getDead()) {
             int act = levelManager != null ? levelManager.getFeatureActId() : 0;
             HCZWaterTunnelHandler.update(act);
             // Water skim runs after tunnels (ROM: Obj_HCZWaterSplash runs in ExecuteObjects
             // which is after sub_6F4A/water tunnels)
             HCZWaterSkimHandler.update();
+            if (GameServices.module().getLevelEventProvider()
+                    instanceof Sonic3kLevelEventManager mgr) {
+                mgr.ensureZoneRuntimeStateInstalled();
+                var events = mgr.getHczEvents();
+                if (events != null) {
+                    int frameCounter = levelManager != null ? levelManager.getFrameCounter() : 0;
+                    events.updatePrePhysics(act, frameCounter);
+                }
+            }
         }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_MGZ && player != null && !player.getDead()) {
+            int act = levelManager != null ? levelManager.getFeatureActId() : 0;
+            if (GameServices.module().getLevelEventProvider()
+                    instanceof Sonic3kLevelEventManager mgr) {
+                mgr.ensureZoneRuntimeStateInstalled();
+                var events = mgr.getMgzEvents();
+                if (events != null) {
+                    events.updatePrePhysics(act);
+                }
+            }
+        }
+    }
+
+    @Override
+    public boolean shouldTreatZeroDistanceAirLandingAsGround(AbstractPlayableSprite player,
+                                                             SensorResult support) {
+        if (player == null || support == null || support.direction() != Direction.DOWN) {
+            return false;
+        }
+        if (getFeatureZoneId() != Sonic3kZoneIds.ZONE_AIZ || getFeatureActId() != 0) {
+            return false;
+        }
+        // AIZ1's intro-refreshed rock terrain has a one-pixel contact boundary
+        // where the ROM lands while the engine's pixel-only sensor reports d1=0.
+        // Scope this to truly-flat floor angles only (0x00 or 0xFF). Slight
+        // downhill slopes (e.g. angle 0xFA, −6°) are NOT affected: the ROM's
+        // `bpl` at sonic3k.asm:28905 treats d1 == 0 as airborne regardless of
+        // angle, so widening the range to all ±15° angles caused the AIZ1
+        // rolling-airborne Tails trace replay to land one frame early on a
+        // 0xFA slope pixel where the ROM stayed airborne.
+        int angle = support.angle() & 0xFF;
+        boolean exactlyFlatFloor = angle == 0x00 || angle == 0xFF;
+        return exactlyFlatFloor
+                && player.getAir()
+                && player.getRolling()
+                && player.getYSpeed() >= 0;
+    }
+
+    protected int getFeatureZoneId() {
+        var levelManager = GameServices.levelOrNull();
+        return levelManager != null ? levelManager.getFeatureZoneId() : -1;
     }
 
     private void updateAizForestFrontPriority(AbstractPlayableSprite player, int zoneIndex) {
@@ -94,9 +271,9 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
             return;
         }
 
-        Sonic3kAIZEvents aizEvents = getAizEvents();
-        boolean forestFrontPhaseActive = aizEvents != null && aizEvents.isBattleshipForestFrontPhaseActive();
-        boolean bossArenaFrontPriority = aizEvents != null && aizEvents.isBossFlag();
+        AizZoneRuntimeState aizState = getAizState();
+        boolean forestFrontPhaseActive = aizState != null && aizState.isBattleshipForestFrontPhaseActive();
+        boolean bossArenaFrontPriority = aizState != null && aizState.isBossFlagActive();
 
         // ROM: During the post-boss cutscene (egg capsule, results, walk-right,
         // bridge collapse) the player's art_tile high-priority bit stays set.
@@ -108,14 +285,15 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         if (forestFrontPhaseActive || bossArenaFrontPriority || postBossCutsceneActive) {
             player.setHighPriority(true);
             player.setPriorityBucket(RenderPriority.MIN);
-            forcedAizForestFrontPriority = true;
+            forcedAizForestFrontPrioritySprites.add(player);
             return;
         }
 
-        if (forcedAizForestFrontPriority && canReleaseAizForestFrontPriority(player)) {
+        if (forcedAizForestFrontPrioritySprites.contains(player)
+                && canReleaseAizForestFrontPriority(player)) {
             player.setHighPriority(false);
             player.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
-            forcedAizForestFrontPriority = false;
+            forcedAizForestFrontPrioritySprites.remove(player);
         }
     }
 
@@ -141,7 +319,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         aizBattleshipRenderFeature.reset();
         aizTransitionRenderFeature.reset();
         waterSurfaceManager = null;
-        forcedAizForestFrontPriority = false;
+        forcedAizForestFrontPrioritySprites.clear();
         if (slotMachinePanelAnimator != null) {
             slotMachinePanelAnimator.cleanup();
             slotMachinePanelAnimator = null;
@@ -186,12 +364,11 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         // Render water skim splash sprites (at water level, following player)
         HCZWaterSkimHandler.render(camera);
-        aizTransitionRenderFeature.renderFlameOverlay(camera, frameCounter);
         var levelManager = GameServices.levelOrNull();
         if (levelManager == null || levelManager.getCurrentZone() != Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
             return;
         }
-        if (!(GameModuleRegistry.getCurrent().getBonusStageProvider() instanceof Sonic3kBonusStageCoordinator coordinator)) {
+        if (!(GameServices.module().getBonusStageProvider() instanceof Sonic3kBonusStageCoordinator coordinator)) {
             return;
         }
         if (coordinator.activeSlotRuntime() == null) {
@@ -210,7 +387,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         if (levelManager == null || levelManager.getCurrentZone() != Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
             return;
         }
-        if (!(GameModuleRegistry.getCurrent().getBonusStageProvider() instanceof Sonic3kBonusStageCoordinator coordinator)) {
+        if (!(GameServices.module().getBonusStageProvider() instanceof Sonic3kBonusStageCoordinator coordinator)) {
             return;
         }
         if (coordinator.activeSlotRuntime() == null) {
@@ -238,7 +415,44 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public void renderAfterBackground(Camera camera, int frameCounter) {
-        aizBattleshipRenderFeature.renderAfterBackground(camera, frameCounter);
+        var levelManager = GameServices.levelOrNull();
+        if (levelManager != null
+                && levelManager.getCurrentZone() == Sonic3kZoneIds.ZONE_SLOT_MACHINE
+                && GameServices.currentOrBootstrapGameModule().getBonusStageProvider()
+                instanceof Sonic3kBonusStageCoordinator coordinator
+                && coordinator.activeSlotRuntime() != null) {
+            coordinator.activeSlotRuntime().ensureForegroundGlassPriority();
+        }
+    }
+
+    @Override
+    public void registerSpecialRenderEffects(SpecialRenderEffectRegistry registry, int zoneIndex, int actIndex) {
+        if (zoneIndex == Sonic3kZoneIds.ZONE_AIZ) {
+            registry.register(aizTransitionRenderFeature);
+            if (actIndex == 1) {
+                registry.register(aizBattleshipRenderFeature);
+            }
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
+            registry.register(hczWallChaseBgOverlayEffect);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_ICZ && actIndex == 0) {
+            registry.register(iczBigSnowPileBackgroundEffect);
+            registry.register(iczBigSnowPilePriorityMaskEffect);
+        }
+    }
+
+    @Override
+    public void registerAdvancedRenderModes(AdvancedRenderModeController controller, int zoneIndex, int actIndex) {
+        if (zoneIndex == Sonic3kZoneIds.ZONE_AIZ) {
+            controller.register(aizTransitionRenderFeature);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
+            controller.register(slotMachineForegroundScrollMode);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_MGZ && actIndex == 1) {
+            controller.register(mgzCollapseForegroundVScrollMode);
+        }
     }
 
     @Override
@@ -248,16 +462,6 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         baseIndex = HCZWaterSkimHandler.ensurePatternsCached(graphicsManager, baseIndex);
         return baseIndex;
-    }
-
-    @Override
-    public boolean shouldEnableForegroundHeatHaze(int zoneIndex, int actIndex, int cameraX) {
-        return aizTransitionRenderFeature.shouldEnableForegroundHeatHaze(zoneIndex, actIndex, cameraX);
-    }
-
-    @Override
-    public boolean shouldEnablePerLineForegroundScroll(int zoneIndex, int actIndex, int cameraX) {
-        return zoneIndex == Sonic3kZoneIds.ZONE_SLOT_MACHINE;
     }
 
     @Override
@@ -303,12 +507,12 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         if (zoneIndex != 0 || actIndex != 0) {
             return false;
         }
-        SonicConfigurationService configService = SonicConfigurationService.getInstance();
+        SonicConfigurationService configService = GameServices.configuration();
         if (configService.getBoolean(SonicConfiguration.S3K_SKIP_INTROS)) {
             return false;
         }
-        String mainCharacter = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
-        return mainCharacter != null && "sonic".equalsIgnoreCase(mainCharacter.trim());
+        String mainCharacter = ActiveGameplayTeamResolver.resolveMainCharacterCode(configService);
+        return "sonic".equalsIgnoreCase(mainCharacter);
     }
 
     @Override
@@ -338,9 +542,10 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         return zoneIndex == Sonic3kZoneIds.ZONE_GUMBALL;
     }
 
-    protected Sonic3kAIZEvents getAizEvents() {
-        Sonic3kLevelEventManager levelEventManager = Sonic3kLevelEventManager.getInstance();
-        return levelEventManager != null ? levelEventManager.getAizEvents() : null;
+    protected AizZoneRuntimeState getAizState() {
+        return GameServices.hasRuntime()
+                ? S3kRuntimeStates.currentAiz(GameServices.zoneRuntimeRegistry()).orElse(null)
+                : null;
     }
 
     protected int getFeatureActId() {

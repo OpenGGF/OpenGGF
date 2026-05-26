@@ -5,6 +5,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.LevelSelectProvider;
 import com.openggf.game.sonic1.audio.Sonic1Music;
+import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.sonic1.titlescreen.Sonic1TitleScreenManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
@@ -37,7 +38,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
 
     private static Sonic1LevelSelectManager instance;
 
-    private final SonicConfigurationService configService = SonicConfigurationService.getInstance();
+    private final SonicConfigurationService configService;
     private final Sonic1LevelSelectDataLoader dataLoader = new Sonic1LevelSelectDataLoader();
     private final PatternDesc reusableDesc = new PatternDesc();
 
@@ -55,7 +56,12 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
     private int fadeTimer = 0;
     private static final int FADE_DURATION = 16;
 
-    private Sonic1LevelSelectManager() {
+    public Sonic1LevelSelectManager() {
+        this(null);
+    }
+
+    Sonic1LevelSelectManager(SonicConfigurationService configService) {
+        this.configService = configService;
     }
 
     public static synchronized Sonic1LevelSelectManager getInstance() {
@@ -63,6 +69,10 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
             instance = new Sonic1LevelSelectManager();
         }
         return instance;
+    }
+
+    private SonicConfigurationService configuration() {
+        return configService != null ? configService : GameServices.configuration();
     }
 
     @Override
@@ -137,11 +147,12 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
     }
 
     private void updateActive(InputHandler input) {
-        int upKey = configService.getInt(SonicConfiguration.UP);
-        int downKey = configService.getInt(SonicConfiguration.DOWN);
-        int leftKey = configService.getInt(SonicConfiguration.LEFT);
-        int rightKey = configService.getInt(SonicConfiguration.RIGHT);
-        int jumpKey = configService.getInt(SonicConfiguration.JUMP);
+        SonicConfigurationService config = configuration();
+        int upKey = config.getInt(SonicConfiguration.UP);
+        int downKey = config.getInt(SonicConfiguration.DOWN);
+        int leftKey = config.getInt(SonicConfiguration.LEFT);
+        int rightKey = config.getInt(SonicConfiguration.RIGHT);
+        int jumpKey = config.getInt(SonicConfiguration.JUMP);
 
         // Handle up/down navigation
         if (input.isKeyDown(upKey)) {
@@ -249,18 +260,19 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
         // This ensures the title screen art appears with the brown/sepia tint
         // from Pal_LevelSel, matching the original hardware behaviour where
         // changing CRAM immediately affects all displayed tiles.
-        dataLoader.cacheToGpu();
-
-        GraphicsManager gm = GraphicsManager.getInstance();
+        GraphicsManager gm = GameServices.graphics();
         if (gm == null || gm.isHeadlessMode()) {
             return;
         }
+        dataLoader.cacheToGpu(gm);
 
         // Render frozen title screen art behind the level select text.
         // The level select palette is already active on the GPU, so the
         // foreground logo and Sonic sprite appear brown/sepia.
-        Sonic1TitleScreenManager titleScreen = Sonic1TitleScreenManager.getInstance();
-        if (titleScreen.supportsLevelSelectOverlay()) {
+        TitleScreenProvider provider = GameServices.module().getTitleScreenProvider();
+        Sonic1TitleScreenManager titleScreen =
+                provider instanceof Sonic1TitleScreenManager manager ? manager : null;
+        if (titleScreen != null && titleScreen.supportsLevelSelectOverlay()) {
             titleScreen.drawFrozenForLevelSelect();
         }
 

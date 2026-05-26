@@ -1,5 +1,5 @@
 ---
-title: Implement Sonic 3&K Boss
+name: s3k-implement-boss
 description: Guide for implementing Sonic 3 and Knuckles bosses with ROM-accurate behavior, arena setup, and disassembly cross-checks.
 ---
 
@@ -13,8 +13,8 @@ $ARGUMENTS: Boss name or zone (e.g., "AIZ mini-boss", "Angel Island end boss", "
 
 ## Related Skills
 
-- **s3k-disasm-guide** (`.agents/skills/s3k-disasm-guide/skill.md`) - Disassembly navigation, label conventions, RomOffsetFinder
-- **s3k-implement-object** (`.agents/skills/s3k-implement-object/skill.md`) - For non-boss Sonic 3&K objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
+- **s3k-disasm-guide** (`.agents/skills/s3k-disasm-guide/SKILL.md`) - Disassembly navigation, label conventions, RomOffsetFinder
+- **s3k-implement-object** (`.agents/skills/s3k-implement-object/SKILL.md`) - For non-boss Sonic 3&K objects and badniks. **Section 2.4 lists all reusable engine utilities** — check it before writing movement, collision, or rendering code.
 
 ## Zone-Set-Aware Boss IDs
 
@@ -82,11 +82,18 @@ S3K has **both mini-bosses (Act 1) and end bosses (Act 2)** per zone — signifi
 | **Constants file** | `Sonic3kConstants.java` | `Sonic2Constants.java` | `Sonic1Constants.java` |
 | **Registry** | `Sonic3kObjectRegistry.java` | `Sonic2ObjectRegistry.java` | `Sonic1ObjectRegistry.java` |
 
-## Critical: Use S&K-Side ROM Addresses
+## Critical: Use S&K-Side ROM Addresses — NEVER the Sonic 3 Standalone Addresses
 
 The locked-on ROM has two halves: **S&K** (0x000000–0x1FFFFF) and **S3** (0x200000–0x3FFFFF). Many shared assets exist in both halves with identical data. **Always use S&K-side addresses (< 0x200000)** for all ROM constants in `Sonic3kConstants.java`.
 
-When RomOffsetFinder returns results from both `sonic3k.asm` and `s3.asm`, always use the `sonic3k.asm` address. When reading boss disassembly, always use the `sonic3k.asm` version (S3KL code path), as it may contain zone-specific overrides or Knuckles variants absent from the S3 standalone version.
+**Do NOT use Sonic 3 (`s3.asm`) pointers/addresses for S3K work**, even when the two halves appear identical. The S3 half is the Sonic 3 standalone code path and is not referenced at runtime by the S3KL (locked-on) execution path. Addresses >= 0x200000 are *wrong* for the engine's S3K module.
+
+Rules for finding S3K pointers:
+
+- Always run `RomOffsetFinder` with `--game s3k`. Never default or `--game s2`; never read values out of a Sonic 3 disassembly or ROM map.
+- When the tool returns both `sonic3k.asm` and `s3.asm` results, **pick the `sonic3k.asm` one**.
+- When reading boss disassembly, always use the `sonic3k.asm` version (S3KL code path); it may contain zone-specific overrides or Knuckles variants absent from the S3 standalone version.
+- If you cannot find an S&K-side equivalent, stop and ask — do not substitute an S3 address.
 
 ## Implementation Process
 
@@ -94,7 +101,7 @@ When RomOffsetFinder returns results from both `sonic3k.asm` and `s3.asm`, alway
 
 Delegate multiple agents to explore the disassembly. **Include this instruction in each agent prompt:**
 
-> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/skill.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
+> Use the s3k-disasm-guide skill (`.agents/skills/s3k-disasm-guide/SKILL.md`) for reference on disassembly structure, label conventions, RomOffsetFinder commands, and object system patterns.
 
 **Research checklist:**
 - [ ] Locate boss object in `docs/skdisasm/sonic3k.asm` (search for `Obj_ZONEMiniboss` or `Obj_ZONEEndBoss`)
@@ -120,6 +127,7 @@ Delegate multiple agents to explore the disassembly. **Include this instruction 
 
 **Key disassembly patterns to identify:**
 - `collision_flags` set to boss collision category
+- ROM `x_pos` / `y_pos` as centre coordinates. Use `getCentreX()` / `setCentreX()` and `getCentreY()` / `setCentreY()` for boss bodies, children, projectiles, and dynamic spawns; reserve `getX()` / `getY()` for top-left render bounds.
 - `collision_property` used for hit count (starts at 8, decremented)
 - Boss palette flash via palette RAM writes
 - Camera boundary manipulation for arena lock
@@ -170,7 +178,7 @@ private void updateAizAct1Events() {
 | `SwingMotion.update()` | `com.openggf.physics.SwingMotion` | Boss oscillates/bobs/swings (ROM's `Swing_UpAndDown`). Returns velocity, direction, and peak-reached flag. |
 | `ObjectTerrainUtils.checkFloorDist()` | `com.openggf.physics` | Floor/ceiling/wall detection for boss projectiles or ground-following bosses. |
 | `TrigLookupTable.calcAngle()` / `sinHex()` / `cosHex()` | `com.openggf.physics` | Circular motion, aimed projectiles, angle-based velocity. ROM-accurate 256-step trig. |
-| `S3kBadnikProjectileInstance` | `game.sonic3k.objects.badniks` | Reusable projectile with gravity, HURT collision (0x80), and shield deflection. Spawn via `ObjectManager.addDynamicObject()`. |
+| `S3kBadnikProjectileInstance` | `game.sonic3k.objects.badniks` | Reusable projectile with gravity, HURT collision (0x80), and shield deflection. Spawn via `spawnChild(...)`, `spawnFreeChild(...)`, or an existing `level.objects` lifecycle helper. |
 | `BoxObjectInstance` | `game.sonic2.objects` | Invisible trigger zones with debug visualization. |
 
 **Collision patterns:**
@@ -262,15 +270,12 @@ For visual-only children that share the parent's object slot:
 For children with separate behavior/collision:
 ```java
 private void spawnChildComponents() {
-    ObjectManager manager = services().objectManager();
-
-    BossChildInstance child = new BossChildInstance(this, xOffset, yOffset);
-    manager.addDynamicObject(child);
+    BossChildInstance child = spawnChild(() -> new BossChildInstance(this, xOffset, yOffset));
     childComponents.add(child);
 }
 ```
 
-Children can extend `AbstractBossChild` (shared with S2) or be independent objects.
+Children can extend `AbstractBossChild` (shared with S2) or be independent objects. Avoid direct `ObjectManager.addDynamicObject(...)` unless the boss has a documented lifecycle reason that cannot use the standard helpers.
 
 ### Phase 5: Hit Handling
 
@@ -376,7 +381,28 @@ registerFactory(Sonic3kObjectIds.ZONE_ENDBOSS,
 
 Register your factory in existing `Sonic3kObjectRegistry.registerDefaultFactories()`.
 
-### Phase 9: Code Quality
+### Phase 9: Rewind Synchronization Fields
+
+Before finalizing a boss or boss child, classify every instance field for rewind. Key synchronization-relevant fields must remain captured: routine/state variables, phase flags, hit counters, timers, attack cooldowns, arena/camera-lock latches, subpixel positions, velocities, movement helper state, child component state, defeat-flow state, per-player contact/carry/rider latches, and dynamic spawn coordinates. Do not add `@RewindTransient` to these fields just to satisfy `GenericFieldCapturer` or audit tests.
+
+Use `@RewindTransient(reason = "...")` only for structural or derived fields: `ObjectServices`, stable spawn identity, parent/child graph references, renderers/art caches, listeners/callbacks, immutable config, debug-only state, or values rebuilt from ROM data/live managers. If a field is synchronization-relevant but not generically capturable, convert it to a primitive/record/supported array, add an explicit snapshot/codec, or keep the class on its legacy/manual rewind path. Boss `dynamicSpawn` references are not structural by default; capture coordinates explicitly or defer generic migration.
+
+Prefer standard value forms before boss-specific adapters: replace callback `Runnable` fields with rewindable enum continuation tokens, and make small mutable helper or owned-child state implement `RewindStateful<S>` so the generic capturer snapshots its value while preserving live object identity.
+
+Bosses participate in player/object lifecycle beyond hit counts. Cross-check Sonic/Tails/Knuckles contacts, sidekick carry/release, shield reactions, invulnerability/hurt timing, child despawn, and arena-lock latches against the ROM, especially across defeat and transition frames.
+
+### Phase 9.5: Shared Object Contracts
+
+Bosses and boss children may need bespoke state, but still prefer shared contracts when they fit:
+
+- Use `ObjectControlState` for forced-control, cutscene-control, and sidekick suppression predicates instead of raw boolean combinations.
+- Use `ObjectPlayerQuery` and `ObjectPlayerParticipationPolicy` for hit, contact, targeting, and Knuckles/Tails variant decisions. Native S3K slot behavior and OpenGGF multi-sidekick behavior must be distinguished deliberately.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes; reserve raw preserve-subpixel setters for lower-level sprite internals or non-playable boss-local state.
+- Use `ObjectLifetimeOps` for child deletion, despawn, and dynamic-expire semantics.
+- Reuse canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` compatibility wrappers where they preserve existing boss behavior.
+- Ratchet guard baselines when adding source guards; do not let historical direct-control or lifecycle calls block new hard-fail enforcement.
+
+### Phase 10: Code Quality
 
 Ensure the implementation:
 - Has no TODOs or placeholder code
@@ -446,8 +472,8 @@ Report any discrepancies with specific line references.
 
 | Purpose | Location |
 |---------|----------|
-| **Disassembly guide** | `.agents/skills/s3k-disasm-guide/skill.md` |
-| **Object skill** | `.agents/skills/s3k-implement-object/skill.md` |
+| **Disassembly guide** | `.agents/skills/s3k-disasm-guide/SKILL.md` |
+| **Object skill** | `.agents/skills/s3k-implement-object/SKILL.md` |
 | Base boss | `src/.../level/objects/boss/AbstractBossInstance.java` |
 | Boss state context | `src/.../level/objects/boss/BossStateContext.java` |
 | Boss child base | `src/.../level/objects/boss/AbstractBossChild.java` |

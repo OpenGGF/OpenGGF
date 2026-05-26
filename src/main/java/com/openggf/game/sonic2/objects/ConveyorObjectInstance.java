@@ -170,9 +170,24 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
             new SolidObjectParams(WIDTH_PIXELS, Y_RADIUS, Y_RADIUS + 1);
 
     public ConveyorObjectInstance(ObjectSpawn spawn, String name) {
+        this(spawn, name, spawn.x(), spawn.y());
+    }
+
+    /**
+     * Constructor with explicit base position for the waypoint path origin.
+     * <p>
+     * Children spawned by a parent subtype (bit 7 set) inherit the PARENT's
+     * x_pos/y_pos as their objoff_30/objoff_32 (path base), not their own spawn
+     * position. ROM Obj6C_LoadSubObject (s2.asm:54137-54151) writes the parent's
+     * d2/d3 (parent x/y, captured before the loop) into the child's objoff_30/_32
+     * even though the child's x_pos/y_pos is set to {@code parent + layoutOffset}.
+     * Without this distinction every child orbits around its own offset position
+     * instead of the shared parent center, scattering the platforms.
+     */
+    public ConveyorObjectInstance(ObjectSpawn spawn, String name, int baseX, int baseY) {
         super(spawn, name);
-        this.baseX = spawn.x();
-        this.baseY = spawn.y();
+        this.baseX = baseX;
+        this.baseY = baseY;
         this.xFlip = (spawn.renderFlags() & 0x01) != 0;
 
         int subtype = spawn.subtype();
@@ -220,11 +235,22 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
 
     /**
      * Static factory method to spawn children for parent subtypes (bit 7 set).
-     * The parent spawner reads child layout data and creates individual conveyor
-     * platform instances, then the parent itself is not added to the object list.
+     * <p>
+     * <b>ROM parity:</b> {@code Obj6C_Init} at s2.asm:54269 ({@code loc_28112})
+     * reuses the parent slot itself as the FIRST child:
+     * {@code movea.l a0,a1} sets {@code a1 = a0} so the first
+     * {@code Obj6C_LoadSubObject} pass overwrites the parent's
+     * {@code x_pos/y_pos/subtype/objoff_30/objoff_32} with the first child layout
+     * entry. The parent's subtype loses bit 7 (it becomes the child's subtype),
+     * so subsequent frames run {@code Obj6C_Main} (the parent never re-spawns).
+     * <p>
+     * The engine mirrors this by returning the first child as the factory's
+     * instance (occupying the parent spawn's slot in {@code activeObjects} so
+     * placement does not re-trigger the spawn every frame) and spawning the
+     * remaining children via {@link ObjectManager#addDynamicObject}.
      *
      * @param spawn The parent spawner's ObjectSpawn
-     * @return null (children are added via ObjectManager.addDynamicObject)
+     * @return The first child instance (or an individual platform when bit 7 is clear)
      */
     public static ConveyorObjectInstance createOrSpawnChildren(ObjectSpawn spawn) {
         int subtype = spawn.subtype();
@@ -234,7 +260,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
             return new ConveyorObjectInstance(spawn, "Conveyor");
         }
 
-        // Parent spawner (bit 7 set) - spawn children and return null
+        // Parent spawner (bit 7 set) - bake into first child + spawn remaining 7
         int layoutIndex = subtype & 0x7F;
         if (layoutIndex >= CHILD_LAYOUTS.length) {
             LOGGER.warning("Conveyor parent subtype 0x" + Integer.toHexString(subtype)
@@ -242,37 +268,56 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
             return null;
         }
 
-        // Use construction context since this factory runs during object creation
         var ctx = constructionContext();
         ObjectManager manager = ctx != null ? ctx.objectManager() : null;
-        if (manager == null) {
-            return null;
-        }
 
         int[][] layout = CHILD_LAYOUTS[layoutIndex];
         int parentX = spawn.x();
         int parentY = spawn.y();
         int parentStatus = spawn.renderFlags();
 
-        for (int[] child : layout) {
-            int childX = parentX + signExtend16(child[0]);
-            int childY = parentY + signExtend16(child[1]);
-            int childSubtype = child[2] & 0xFF;
+        // First child: reuse the parent's spawn slot. ROM Obj6C_Init at
+        // s2.asm:54275 (movea.l a0,a1) writes the first child into the parent's
+        // own SST entry. Mirror this so placement sees the spawn as "loaded" via
+        // registerActiveObject in the caller and does NOT add it back to
+        // sortedNewSpawns next frame, which would re-spawn the full child set.
+        int[] firstChild = layout[0];
+        int firstX = parentX + signExtend16(firstChild[0]);
+        int firstY = parentY + signExtend16(firstChild[1]);
+        int firstSubtype = firstChild[2] & 0xFF;
+        ObjectSpawn firstSpawn = new ObjectSpawn(
+                firstX, firstY,
+                Sonic2ObjectIds.CONVEYOR,
+                firstSubtype,
+                parentStatus,
+                false,
+                spawn.rawYWord());
+        ConveyorObjectInstance firstInstance =
+                new ConveyorObjectInstance(firstSpawn, "Conveyor", parentX, parentY);
 
-            ObjectSpawn childSpawn = new ObjectSpawn(
-                    childX, childY,
-                    Sonic2ObjectIds.CONVEYOR,
-                    childSubtype,
-                    parentStatus,
-                    false,
-                    spawn.rawYWord());
+        // Remaining children: spawn as dynamic objects with parent's x/y as base.
+        if (manager != null) {
+            for (int i = 1; i < layout.length; i++) {
+                int[] child = layout[i];
+                int childX = parentX + signExtend16(child[0]);
+                int childY = parentY + signExtend16(child[1]);
+                int childSubtype = child[2] & 0xFF;
 
-            ConveyorObjectInstance childInstance = new ConveyorObjectInstance(childSpawn, "Conveyor");
-            manager.addDynamicObject(childInstance);
+                ObjectSpawn childSpawn = new ObjectSpawn(
+                        childX, childY,
+                        Sonic2ObjectIds.CONVEYOR,
+                        childSubtype,
+                        parentStatus,
+                        false,
+                        spawn.rawYWord());
+
+                ConveyorObjectInstance childInstance =
+                        new ConveyorObjectInstance(childSpawn, "Conveyor", parentX, parentY);
+                manager.addDynamicObject(childInstance);
+            }
         }
 
-        // Parent removes itself: addq.l #4,sp; rts (skips back to caller)
-        return null;
+        return firstInstance;
     }
 
     @Override

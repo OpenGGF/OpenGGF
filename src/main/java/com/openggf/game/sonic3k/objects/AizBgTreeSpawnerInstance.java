@@ -1,8 +1,8 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
-import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -33,16 +33,17 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance {
 
     /**
      * Tree spawn script from ROM (AIZMakeTreeScript).
-     * 17 entries of {scroll_threshold, x_position}.
-     * X positions alternate between $280 and $380 but are effectively unused
-     * since the parallax calculation in AizBgTreeInstance overrides screen X.
+     * ROM has 17 entries but the last 2 (thresholds $50C, $557) spawn trees
+     * that fall past the physical end of the forest. On real hardware they are
+     * hidden behind opaque high-priority FG tiles (VDP priority masking);
+     * the engine's renderer does not fully replicate that masking, so we trim
+     * the script to the 15 entries whose trees are actually visible.
      */
     private static final int[][] TREE_SCRIPT = {
             {0x000, 0x280}, {0x032, 0x380}, {0x08E, 0x280}, {0x103, 0x380},
             {0x179, 0x280}, {0x1C6, 0x380}, {0x233, 0x280}, {0x2A0, 0x380},
             {0x30A, 0x280}, {0x37C, 0x380}, {0x3C7, 0x280}, {0x401, 0x380},
-            {0x439, 0x280}, {0x46E, 0x380}, {0x4CA, 0x280}, {0x50C, 0x380},
-            {0x557, 0x280},
+            {0x439, 0x280}, {0x46E, 0x380}, {0x4CA, 0x280},
     };
 
     /** True once camera has reached the activation threshold. */
@@ -64,8 +65,8 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity player) {
         if (isDestroyed()) return;
 
-        Sonic3kAIZEvents events = getAizEvents();
-        if (events == null) {
+        AizZoneRuntimeState state = currentAizState();
+        if (state == null) {
             return;
         }
 
@@ -76,14 +77,14 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance {
                 return;
             }
             activated = true;
-            activationSmoothScrollX = events.getBattleshipSmoothScrollX();
+            activationSmoothScrollX = state.getBattleshipSmoothScrollX();
             LOG.info("AIZ2 tree spawner: activated at cameraX=0x"
                     + Integer.toHexString(cameraX)
                     + ", smoothX=0x" + Integer.toHexString(activationSmoothScrollX));
         }
 
         // Process script entries
-        int currentSmooth = events.getBattleshipSmoothScrollX();
+        int currentSmooth = state.getBattleshipSmoothScrollX();
         int scrollDistance = currentSmooth - activationSmoothScrollX;
 
         while (scriptIndex < TREE_SCRIPT.length) {
@@ -117,11 +118,7 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance {
         // No-op: spawner has no visual representation
     }
 
-    private Sonic3kAIZEvents getAizEvents() {
-        try {
-            return ((Sonic3kLevelEventManager) services().levelEventProvider()).getAizEvents();
-        } catch (Exception e) {
-            return null;
-        }
+    private AizZoneRuntimeState currentAizState() {
+        return S3kRuntimeStates.currentAiz(services().zoneRuntimeRegistry()).orElse(null);
     }
 }

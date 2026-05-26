@@ -1,6 +1,6 @@
 package com.openggf.tests;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 
@@ -8,7 +8,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_APOSTROPHE;
 
 public class TestSonicConfigurationService {
     @Test
@@ -40,8 +41,8 @@ public class TestSonicConfigurationService {
         try {
             service.saveConfig();
 
-            assertTrue("saveConfig should create config.json", file.exists());
-            assertTrue("config.json should not be empty", file.length() > 0);
+            assertTrue(file.exists(), "saveConfig should create config.json");
+            assertTrue(file.length() > 0, "config.json should not be empty");
         } finally {
             if (existed) {
                 Files.write(file.toPath(), originalBytes);
@@ -54,15 +55,25 @@ public class TestSonicConfigurationService {
     @Test
     public void testGetters() {
         SonicConfigurationService svc = SonicConfigurationService.getInstance();
+        svc.resetToDefaults();
         assertEquals(640, svc.getInt(SonicConfiguration.SCREEN_WIDTH));
         assertEquals(320, svc.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         // DEBUG_VIEW_ENABLED is environment-dependent; just verify it returns a value
         svc.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED);
+        svc.getBoolean(SonicConfiguration.EDITOR_ENABLED);
         assertEquals(1.0, svc.getDouble(SonicConfiguration.SCALE), 0.001);
         // Per-game ROM defaults are always populated
         assertEquals("Sonic The Hedgehog 2 (W) (REV01) [!].gen",
                 svc.getString(SonicConfiguration.SONIC_2_ROM));
         // DEFAULT_ROM is always populated (from config.json or applyDefaults)
         assertFalse(svc.getString(SonicConfiguration.DEFAULT_ROM).isEmpty());
+        assertEquals("", svc.getString(SonicConfiguration.PLAYBACK_MOVIE_PATH));
+        assertTrue(svc.getBoolean(SonicConfiguration.TITLE_SCREEN_ON_STARTUP));
+        assertFalse(svc.getBoolean(SonicConfiguration.LEVEL_SELECT_ON_STARTUP));
+        assertTrue(svc.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP));
+        assertEquals(GLFW_KEY_APOSTROPHE, svc.getInt(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY));
+        assertFalse(svc.getBoolean(SonicConfiguration.CROSS_GAME_S2_DATA_SELECT_IMAGE_GEN_OVERRIDE));
     }
 }
+
+

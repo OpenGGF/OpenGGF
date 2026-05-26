@@ -3,12 +3,13 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import org.junit.Test;
+import com.openggf.sprites.playable.ObjectControlState;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class TestPachinkoEnergyTrapObjectInstance {
@@ -25,7 +26,7 @@ public class TestPachinkoEnergyTrapObjectInstance {
         trap.setServices(new TestObjectServices());
         trap.update(0, player);
 
-        verify(player).setObjectControlled(true);
+        verify(player).applyObjectControlState(ObjectControlState.nativeBit7FullControl());
         verify(player).setControlLocked(true);
         verify(player).setXSpeed((short) 0);
         verify(player).setOnObject(false);
@@ -91,3 +92,5 @@ public class TestPachinkoEnergyTrapObjectInstance {
         assertEquals(yAfterCapture, trap.getY());
     }
 }
+
+

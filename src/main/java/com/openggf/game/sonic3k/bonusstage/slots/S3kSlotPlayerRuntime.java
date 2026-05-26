@@ -4,6 +4,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 public final class S3kSlotPlayerRuntime {
     private static final int DEBUG_MOVE_SPEED = 3;
@@ -44,7 +45,7 @@ public final class S3kSlotPlayerRuntime {
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setControlLocked(false);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setOnObject(false);
         slotOriginX = initialOriginX << POSITION_SHIFT;
         slotOriginY = initialOriginY << POSITION_SHIFT;
@@ -147,7 +148,7 @@ public final class S3kSlotPlayerRuntime {
             return;
         }
         player.setControlLocked(true);
-        player.setObjectControlled(false);
+        ObjectControlState.none().applyTo(player);
         player.setAir(true);
         player.setRolling(true);
         player.setOnObject(false);

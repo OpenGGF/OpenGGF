@@ -3,7 +3,6 @@ package com.openggf.level.objects.boss;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Palette;
-import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -84,7 +83,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (!state.defeated) {
+        if (!state.defeated && usesBaseHitHandler()) {
             hitHandler.update();
             // Note: paletteFlasher.update() is now called inside hitHandler.update()
             // to match ROM order: flash first, then decrement timer
@@ -167,6 +166,19 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     }
 
     /**
+     * Whether this boss uses the base class hit handler for invulnerability
+     * timer management and palette flashing.
+     * <p>S3K bosses with custom palette flash (sub_69C5C-style) should override
+     * this to return {@code false} and manage invulnerability entirely in
+     * {@link #updateBossLogic}. This prevents the base {@code hitHandler} from
+     * decrementing the timer before the custom flash reads bit&nbsp;0, which
+     * would invert the flash/normal alternation.
+     */
+    protected boolean usesBaseHitHandler() {
+        return true;
+    }
+
+    /**
      * SFX played when the boss takes damage.
      */
     protected abstract int getBossHitSfxId();
@@ -197,8 +209,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
      * Uses standard random offset calculation: (random >> 2) - 0x20.
      */
     protected void spawnDefeatExplosion() {
-        ObjectRenderManager renderManager = services().renderManager();
-        if (renderManager == null || services().objectManager() == null) {
+        if (services().renderManager() == null || services().objectManager() == null) {
             return;
         }
         int random = services().rng().nextWord();
@@ -207,7 +218,6 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         BossExplosionObjectInstance explosion = new BossExplosionObjectInstance(
                 state.x + xOffset,
                 state.y + yOffset,
-                renderManager,
                 getBossExplosionSfxId());
         services().objectManager().addDynamicObject(explosion);
     }
@@ -356,7 +366,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         }
 
         private void uploadPaletteToGpu(Palette palette) {
-            GraphicsManager gm = GraphicsManager.getInstance();
+            GraphicsManager gm = services().graphicsManager();
             if (gm.isGlInitialized()) {
                 int paletteIndex = getPaletteLineForFlash();
                 gm.cachePaletteTexture(palette, paletteIndex);

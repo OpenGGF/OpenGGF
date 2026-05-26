@@ -5,6 +5,8 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
@@ -73,6 +75,12 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         SHELLLESS_RUN
     }
 
+    private static final ObjectPlayerParticipationPolicy TARGET_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
+
+    private record TargetSelection(AbstractPlayableSprite player, int distance) {
+    }
+
     private final boolean hiddenVariant;
     private final int turnResetTimer;
 
@@ -86,7 +94,6 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     private boolean waterfallOverlayVisible;
     private int animIndex;
     private int animTimer;
-
     private TurboSpikerShellChild shellChild;
 
     public TurboSpikerBadnikInstance(ObjectSpawn spawn) {
@@ -101,8 +108,8 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
-    public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (destroyed || !isOnScreenX()) {
+    protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed() || !isOnScreenX()) {
             return;
         }
 
@@ -130,7 +137,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (destroyed) {
+        if (isDestroyed()) {
             return;
         }
         ObjectRenderManager renderManager = services().renderManager();
@@ -162,8 +169,8 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private void updateHiddenWait(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite target = findNearestTarget(mainPlayer);
-        if (target == null || findNearestPlayerXDistance(target) >= DETECT_RANGE) {
+        TargetSelection target = findNearestTarget(mainPlayer);
+        if (target.player() == null || target.distance() >= DETECT_RANGE) {
             return;
         }
 
@@ -195,7 +202,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private void updatePatrol(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite target = findNearestTarget(mainPlayer);
+        TargetSelection target = findNearestTarget(mainPlayer);
         if (shouldLaunchShell(target)) {
             enterLaunchPrep();
             return;
@@ -287,13 +294,13 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private void trackInitialFacing(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite target = findNearestTarget(mainPlayer);
-        if (target == null || target.getDead()) {
+        AbstractPlayableSprite target = findNearestTarget(mainPlayer).player();
+        if (target == null) {
             xVelocity = facingLeft ? -INITIAL_TRACK_SPEED : INITIAL_TRACK_SPEED;
             return;
         }
 
-        if (currentX - target.getCentreX() >= 0) {
+        if (romSignedXDelta(target) >= 0) {
             facingLeft = true;
             xVelocity = -INITIAL_TRACK_SPEED;
         } else {
@@ -302,53 +309,44 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         }
     }
 
-    private boolean shouldLaunchShell(AbstractPlayableSprite target) {
-        if (target == null || target.getDead()) {
+    private boolean shouldLaunchShell(TargetSelection target) {
+        AbstractPlayableSprite player = target.player();
+        if (player == null) {
             return false;
         }
-        if (findNearestPlayerXDistance(target) >= DETECT_RANGE) {
+        if (target.distance() >= DETECT_RANGE) {
             return false;
         }
 
-        int directionCode = currentX - target.getCentreX() >= 0 ? 0 : 2;
+        int directionCode = romSignedXDelta(player) >= 0 ? 0 : 2;
         if (!facingLeft) {
             directionCode -= 2;
         }
         return directionCode == 0;
     }
 
-    private AbstractPlayableSprite findNearestTarget(AbstractPlayableSprite mainPlayer) {
-        AbstractPlayableSprite nearest = null;
-        int nearestDistance = Integer.MAX_VALUE;
-
-        if (mainPlayer != null && !mainPlayer.getDead()) {
-            nearest = mainPlayer;
-            nearestDistance = Math.abs(currentX - mainPlayer.getCentreX());
-        }
+    private TargetSelection findNearestTarget(AbstractPlayableSprite mainPlayer) {
         ObjectServices svc = tryServices();
-        if (svc == null) {
-            return nearest;
-        }
-
-        for (PlayableEntity sidekick : svc.sidekicks()) {
-            if (!(sidekick instanceof AbstractPlayableSprite sprite) || sprite.getDead()) {
-                continue;
-            }
-            int distance = Math.abs(currentX - sprite.getCentreX());
-            if (distance < nearestDistance) {
-                nearest = sprite;
-                nearestDistance = distance;
-            }
-        }
-        return nearest;
+        ObjectPlayerQuery query = new ObjectPlayerQuery(
+                () -> mainPlayer,
+                () -> svc != null ? svc.playerQuery().sidekicks() : List.of());
+        ObjectPlayerQuery.NearestPlayerX nearest = query.nearestByRomX(
+                TARGET_PARTICIPATION,
+                currentX,
+                TurboSpikerBadnikInstance::isLivePlayable);
+        return new TargetSelection((AbstractPlayableSprite) nearest.player(), nearest.distance());
     }
 
-    private int findNearestPlayerXDistance(AbstractPlayableSprite target) {
-        return target == null ? Integer.MAX_VALUE : Math.abs(currentX - target.getCentreX());
+    private static boolean isLivePlayable(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite && !sprite.getDead();
+    }
+
+    private int romSignedXDelta(AbstractPlayableSprite target) {
+        return (short) ((currentX - target.getCentreX()) & 0xFFFF);
     }
 
     private boolean shouldShowWaterfallOverlay() {
-        return waterfallOverlayVisible && !destroyed;
+        return waterfallOverlayVisible && !isDestroyed();
     }
 
     private int adjustedOffsetX(int baseOffset) {
@@ -360,20 +358,19 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private void spawnWaterSplashBurst() {
+        services().playSfx(Sonic3kSfx.SPLASH.id);
         for (int i = 0; i < WATER_SPLASH_OFFSETS_X.length; i++) {
             int index = i;
-            boolean playSound = i == 0;
             spawnChild(() -> new TurboSpikerWaterSplashParticle(
                     this,
                     currentX + adjustedOffsetX(WATER_SPLASH_OFFSETS_X[index]),
                     currentY + WATER_SPLASH_OFFSETS_Y[index],
-                    playSound));
+                    false));
         }
     }
 
     private static final class TurboSpikerShellChild extends AbstractObjectInstance
             implements TouchResponseProvider {
-
         private final TurboSpikerBadnikInstance parent;
 
         private int currentX;
@@ -384,15 +381,14 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         private int ySubpixel;
         private boolean attached = true;
         private boolean facingLeft;
-
         private TurboSpikerTrailEmitter trailEmitter;
 
         TurboSpikerShellChild(TurboSpikerBadnikInstance parent) {
             super(parent.getSpawn(), "TurboSpikerShell");
             this.parent = parent;
-            this.facingLeft = parent.facingLeft;
-            this.currentX = parent.currentX + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
-            this.currentY = parent.currentY;
+            this.facingLeft = parent.badnikFacingLeft();
+            this.currentX = parent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
+            this.currentY = parent.getY();
         }
 
         void launch() {
@@ -400,9 +396,9 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
                 return;
             }
             attached = false;
-            facingLeft = parent.facingLeft;
-            currentX = parent.currentX + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
-            currentY = parent.currentY;
+            facingLeft = parent.badnikFacingLeft();
+            currentX = parent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
+            currentY = parent.getY();
             xVelocity = facingLeft ? -SHELL_LAUNCH_SPEED_X : SHELL_LAUNCH_SPEED_X;
             yVelocity = SHELL_LAUNCH_SPEED_Y;
             trailEmitter = spawnChild(() -> new TurboSpikerTrailEmitter(this));
@@ -420,9 +416,9 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
                     setDestroyed(true);
                     return;
                 }
-                facingLeft = parent.facingLeft;
-                currentX = parent.currentX + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
-                currentY = parent.currentY;
+                facingLeft = parent.badnikFacingLeft();
+                currentX = parent.getX() + adjustedOffsetX(SHELL_OFFSET_X, facingLeft);
+                currentY = parent.getY();
                 return;
             }
 
@@ -495,7 +491,6 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         private static final int SPAWN_INTERVAL_MASK = 0x03;
         private static final int OFFSET_X = -4;
         private static final int OFFSET_Y = 0x14;
-
         private final TurboSpikerShellChild shell;
         private int mappingFrame = SHELL_TRAIL_FRAME;
 
@@ -579,10 +574,12 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
         private final int[] frames;
         private final int frameDelay;
         private final int priorityBucket;
+        private final boolean playSound;
 
         private int frameIndex;
         private int frameTimer;
         private int mappingFrame;
+        private boolean soundPlayed;
 
         TurboSpikerAnimatedParticle(ObjectSpawn ownerSpawn, String name, int x, int y,
                 int[] frames, int frameDelay, int priorityBucket, boolean playSound) {
@@ -593,13 +590,15 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
             this.frameDelay = frameDelay;
             this.priorityBucket = priorityBucket;
             this.mappingFrame = frames[0];
-            if (playSound) {
-                services().playSfx(Sonic3kSfx.SPLASH.id);
-            }
+            this.playSound = playSound;
         }
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (playSound && !soundPlayed) {
+                services().playSfx(Sonic3kSfx.SPLASH.id);
+                soundPlayed = true;
+            }
             frameTimer--;
             if (frameTimer >= 0) {
                 return;
@@ -648,7 +647,6 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     private static final class TurboSpikerWaterfallOverlayChild extends AbstractObjectInstance {
-
         private final TurboSpikerBadnikInstance parent;
 
         TurboSpikerWaterfallOverlayChild(TurboSpikerBadnikInstance parent) {
@@ -665,17 +663,17 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
         @Override
         public ObjectSpawn getSpawn() {
-            return buildSpawnAt(parent.currentX, parent.currentY);
+            return buildSpawnAt(parent.getX(), parent.getY());
         }
 
         @Override
         public int getX() {
-            return parent.currentX;
+            return parent.getX();
         }
 
         @Override
         public int getY() {
-            return parent.currentY;
+            return parent.getY();
         }
 
         @Override
@@ -693,7 +691,7 @@ public final class TurboSpikerBadnikInstance extends AbstractS3kBadnikInstance {
             if (renderer == null || !renderer.isReady()) {
                 return;
             }
-            renderer.drawFrameIndex(0, parent.currentX, parent.currentY, false, false);
+            renderer.drawFrameIndex(0, parent.getX(), parent.getY(), false, false);
         }
     }
 }

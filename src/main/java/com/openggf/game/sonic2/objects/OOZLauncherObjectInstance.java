@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -21,8 +22,12 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -103,15 +108,8 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private boolean broken = false;
     private boolean launcherActive = false;
 
-    // Invisible launcher states per player (ROM routine 6 states)
-    private int sonicLauncherState = 0;   // 0 = proximity detection, 2 = tracking movement
-    private int tailsLauncherState = 0;
-
-    // Saved player state before solid collision (ROM: objoff_32-36)
-    private int savedSonicAnim;
-    private int savedTailsAnim;
-    private int savedSonicYVel;
-    private int savedTailsYVel;
+    // Invisible launcher states per player (ROM routine 6 states).
+    private final Map<AbstractPlayableSprite, LauncherPlayerState> playerStates = new IdentityHashMap<>();
 
     private final SolidObjectParams solidParams;
 
@@ -146,12 +144,11 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         }
 
         // Save player state before solid collision (ROM: Obj3D_Main)
-        savedSonicAnim = player.getAnimationId();
-        savedSonicYVel = player.getYSpeed();
-
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            savedTailsAnim = sidekick.getAnimationId();
-            savedTailsYVel = sidekick.getYSpeed();
+        for (AbstractPlayableSprite participant : playerParticipants(player)) {
+            LauncherPlayerState state = stateFor(participant);
+            state.savedAnim = participant.getAnimationId();
+            state.savedYVel = participant.getYSpeed();
+            state.hasSavedState = true;
         }
 
         // Solid collision is handled by SolidObjectProvider/SolidObjectListener
@@ -165,12 +162,14 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Determine which player is contacting
-        boolean isSidekick = services().sidekicks().contains(player);
+        if (!playerParticipants(player).contains(player)) {
+            return;
+        }
 
         // Check if standing player is rolling (ROM: cmpi.b #AniIDSonAni_Roll,objoff_32)
-        int savedAnim = isSidekick ? savedTailsAnim : savedSonicAnim;
-        int savedYVel = isSidekick ? savedTailsYVel : savedSonicYVel;
+        LauncherPlayerState state = stateFor(player);
+        int savedAnim = state.hasSavedState ? state.savedAnim : player.getAnimationId();
+        int savedYVel = state.hasSavedState ? state.savedYVel : player.getYSpeed();
 
         if (savedAnim == Sonic2AnimationIds.ROLL.id()) {
             launchPlayer(player, savedYVel, frameCounter);
@@ -203,8 +202,9 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
     private void breakBlock(int frameCounter) {
         broken = true;
         launcherActive = true;
-        sonicLauncherState = 0;
-        tailsLauncherState = 0;
+        for (LauncherPlayerState state : playerStates.values()) {
+            state.launcherState = 0;
+        }
 
         spawnFragments();
 
@@ -265,16 +265,15 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Process main character (Sonic)
-        sonicLauncherState = processLauncherState(player, sonicLauncherState);
-
-        // Process Tails
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            tailsLauncherState = processLauncherState((AbstractPlayableSprite) sidekick, tailsLauncherState);
+        boolean anyActive = false;
+        for (AbstractPlayableSprite participant : playerParticipants(player)) {
+            LauncherPlayerState state = stateFor(participant);
+            state.launcherState = processLauncherState(participant, state.launcherState);
+            anyActive |= state.launcherState != 0;
         }
 
-        // Delete when both states are 0 (ROM: beq.w JmpTo3_MarkObjGone3)
-        if (sonicLauncherState == 0 && tailsLauncherState == 0) {
+        // Delete when all tracked player states are 0 (ROM: beq.w JmpTo3_MarkObjGone3)
+        if (!anyActive) {
             launcherActive = false;
         }
     }
@@ -316,14 +315,14 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         // ROM: Skip Tails if flying (CPU routine 4)
         // The engine doesn't expose Tails CPU routine directly, but this check
         // prevents capturing Tails while they're in flight mode
-        if (services().sidekicks().contains(player)
+        if (player.isCpuControlled()
                 && player.getAir() && !player.getRolling()) {
             return 0;
         }
 
         // Launch the player (ROM: loc_24FC2)
         // ROM: move.b #$81,obj_control(a1)
-        player.setObjectControlled(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
         // ROM: move.b #AniIDSonAni_Roll,anim(a1)
         player.setAnimationId(Sonic2AnimationIds.ROLL);
@@ -374,7 +373,7 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         // Check if player is off-screen (ROM: btst #render_flags.on_screen)
         if (!isPlayerOnScreen(player)) {
             // Release player
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setControlLocked(false);
             player.setAir(true);
             player.setOnObject(false);
@@ -389,6 +388,24 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         player.setCentreY((short) (player.getCentreY() + (yVel >> 8)));
 
         return 2; // Stay in tracking state
+    }
+
+    private List<AbstractPlayableSprite> playerParticipants(AbstractPlayableSprite updatePlayer) {
+        List<PlayableEntity> queried = services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        ArrayList<AbstractPlayableSprite> players = new ArrayList<>(queried.size() + 1);
+        for (PlayableEntity participant : queried) {
+            if (participant instanceof AbstractPlayableSprite sprite) {
+                players.add(sprite);
+            }
+        }
+        if (updatePlayer != null && !players.contains(updatePlayer)) {
+            players.add(updatePlayer);
+        }
+        return players;
+    }
+
+    private LauncherPlayerState stateFor(AbstractPlayableSprite player) {
+        return playerStates.computeIfAbsent(player, ignored -> new LauncherPlayerState());
     }
 
     private boolean isPlayerOnScreen(AbstractPlayableSprite player) {
@@ -551,6 +568,13 @@ public class OOZLauncherObjectInstance extends AbstractObjectInstance
         public int getPriorityBucket() {
             return RenderPriority.clamp(4);
         }
+    }
+
+    private static final class LauncherPlayerState {
+        private int launcherState;
+        private int savedAnim;
+        private int savedYVel;
+        private boolean hasSavedState;
     }
 
 }

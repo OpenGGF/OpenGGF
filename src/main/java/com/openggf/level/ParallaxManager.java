@@ -2,11 +2,12 @@ package com.openggf.level;
 
 import com.openggf.camera.Camera;
 import com.openggf.data.Rom;
-import com.openggf.game.GameModuleRegistry;
-import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.GameModule;
 import com.openggf.game.ScrollHandlerProvider;
+import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.game.rewind.snapshot.ParallaxSnapshot;
+import com.openggf.level.scroll.CameraDrivenScrollHandler;
 import com.openggf.level.scroll.ZoneScrollHandler;
 
 import java.io.IOException;
@@ -20,7 +21,7 @@ import java.util.logging.Logger;
  * {@link ScrollHandlerProvider} obtained from the active {@link GameModule}.
  * ParallaxManager itself contains no game-specific imports or constants.
  */
-public class ParallaxManager {
+public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(ParallaxManager.class.getName());
 
     public static final int VISIBLE_LINES = 224;
@@ -59,19 +60,6 @@ public class ParallaxManager {
     // Cached BG camera X from the active scroll handler (Integer.MIN_VALUE = no offset)
     private int cachedBgCameraX = Integer.MIN_VALUE;
     private int cachedBgPeriodWidth = 512;
-
-    private static ParallaxManager bootstrapInstance;
-
-    public static synchronized ParallaxManager getInstance() {
-        var runtime = RuntimeManager.getCurrent();
-        if (runtime != null) {
-            return runtime.getParallaxManager();
-        }
-        if (bootstrapInstance == null) {
-            bootstrapInstance = new ParallaxManager();
-        }
-        return bootstrapInstance;
-    }
 
     /**
      * Reset zone state to force reinitialization on next initZone call.
@@ -116,7 +104,7 @@ public class ParallaxManager {
         }
 
         // Get the game-specific scroll handler provider
-        GameModule module = GameModuleRegistry.getCurrent();
+        GameModule module = GameServices.module();
 
         if (module != null) {
             scrollProvider = module.getScrollHandlerProvider();
@@ -169,6 +157,15 @@ public class ParallaxManager {
 
     public short getVscrollFactorBG() {
         return vscrollFactorBG;
+    }
+
+    /**
+     * Returns the active zone scroll handler for the given zone, or null.
+     * Used by event handlers that need to communicate directly with
+     * their zone's scroll handler (e.g., HCZ2 wall-chase driving SwScrlHcz).
+     */
+    public ZoneScrollHandler getHandler(int zoneId) {
+        return scrollProvider != null ? scrollProvider.getHandler(zoneId) : null;
     }
 
     /**
@@ -276,17 +273,6 @@ public class ParallaxManager {
         GameServices.gameState().setScreenShakeActive(screenShakeFlag);
     }
 
-    /**
-     * Set the HTZ screen shake mode flag.
-     * This sets the HTZ-specific flag (Screen_Shaking_Flag_HTZ) which stays
-     * active for the entire earthquake sequence, as well as the general
-     * screen shake flag for visual shake effects.
-     */
-    public void setHtzScreenShake(boolean active) {
-        GameServices.gameState().setHtzScreenShakeActive(active);
-        GameServices.gameState().setScreenShakeActive(active);
-    }
-
     public void update(int zoneId, int actId, Camera cam, int frameCounter, int bgScrollY) {
         // Clear scroll buffer to ensure deterministic state
         // (some zone handlers intentionally leave lines unwritten)
@@ -346,6 +332,32 @@ public class ParallaxManager {
         } else {
             fillMinimal(cam);
         }
+    }
+
+    /**
+     * Advances scroll routines that drive foreground camera movement as gameplay
+     * state. Render-time parallax updates must only consume the resulting state.
+     */
+    public boolean advanceCameraDrivenScroll(int zoneId, int actId, Camera cam, int frameCounter) {
+        if (!providerLoaded) {
+            try {
+                Rom rom = GameServices.rom().getRom();
+                if (rom != null) {
+                    load(rom);
+                }
+            } catch (IOException e) {
+                LOGGER.warning("Failed to lazy-load scroll provider: " + e.getMessage());
+            }
+        }
+        if (scrollProvider == null || cam == null) {
+            return false;
+        }
+        initZone(zoneId, actId, cam.getX(), cam.getY());
+        ZoneScrollHandler handler = scrollProvider.getHandler(zoneId);
+        if (handler instanceof CameraDrivenScrollHandler cameraDriven) {
+            return cameraDriven.advanceCameraForFrame(cam, actId);
+        }
+        return false;
     }
 
     /**
@@ -468,5 +480,23 @@ public class ParallaxManager {
             java.util.Arrays.fill(vScrollPerColumnFG, count, FG_VSCROLL_COLUMN_COUNT, (short) 0);
         }
         hasPerColumnVScrollFG = true;
+    }
+
+    // ── RewindSnapshottable ───────────────────────────────────────────────
+
+    @Override
+    public String key() {
+        return "parallax";
+    }
+
+    @Override
+    public ParallaxSnapshot capture() {
+        return new ParallaxSnapshot();
+    }
+
+    @Override
+    public void restore(ParallaxSnapshot s) {
+        // Parallax is derived from restored camera, frame, zone and handler
+        // state. GameplayModeContext recomputes it after the registry restore.
     }
 }

@@ -6,6 +6,7 @@ import com.openggf.game.GameServices;
 import com.openggf.audio.GameSound;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug;
 import com.openggf.graphics.GraphicsManager;
@@ -17,7 +18,6 @@ import com.openggf.debug.FontSize;
 
 import com.openggf.graphics.GLCommand;
 
-import java.awt.Font;
 import com.openggf.debug.DebugColor;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,7 +42,6 @@ import static com.openggf.game.sonic2.specialstage.Sonic2SpecialStageConstants.*
  */
 public class Sonic2SpecialStageManager {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SpecialStageManager.class.getName());
-    private static Sonic2SpecialStageManager instance;
 
     /**
      * Result state for special stage completion.
@@ -53,8 +52,9 @@ public class Sonic2SpecialStageManager {
         FAILED
     }
 
-    private final SonicConfigurationService configService = SonicConfigurationService.getInstance();
-    private final GraphicsManager graphicsManager = GraphicsManager.getInstance();
+    private final SonicConfigurationService configService;
+    private final GraphicsManager graphicsManager;
+    private final Sonic2SpecialStageSpriteDebug debugSprites;
 
     private Sonic2SpecialStageDataLoader dataLoader;
     private Rom rom;
@@ -306,14 +306,39 @@ public class Sonic2SpecialStageManager {
             0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0
     };
 
-    private Sonic2SpecialStageManager() {
+    public Sonic2SpecialStageManager() {
+        this(new Sonic2SpecialStageSpriteDebug(), null, null);
     }
 
-    public static synchronized Sonic2SpecialStageManager getInstance() {
-        if (instance == null) {
-            instance = new Sonic2SpecialStageManager();
+    public Sonic2SpecialStageManager(Sonic2SpecialStageSpriteDebug debugSprites) {
+        this(debugSprites, null, null);
+    }
+
+    Sonic2SpecialStageManager(Sonic2SpecialStageSpriteDebug debugSprites,
+                              SonicConfigurationService configService,
+                              GraphicsManager graphicsManager) {
+        this.debugSprites = debugSprites;
+        this.configService = configService;
+        this.graphicsManager = graphicsManager;
+    }
+
+    private SonicConfigurationService configuration() {
+        return configService != null ? configService : GameServices.configuration();
+    }
+
+    private GraphicsManager graphicsManager() {
+        return graphicsManager != null ? graphicsManager : GameServices.graphics();
+    }
+
+    private GraphicsManager graphicsManagerOrNull() {
+        if (graphicsManager != null) {
+            return graphicsManager;
         }
-        return instance;
+        try {
+            return GameServices.graphics();
+        } catch (IllegalStateException ignored) {
+            return null;
+        }
     }
 
     /**
@@ -390,6 +415,8 @@ public class Sonic2SpecialStageManager {
      * Sets up the object system (rings, bombs, perspective data).
      */
     private void setupObjectSystem() throws IOException {
+        GraphicsManager graphicsManager = graphicsManager();
+
         // Load perspective data
         perspectiveData = new Sonic2PerspectiveData();
         perspectiveData.load(dataLoader);
@@ -600,6 +627,7 @@ public class Sonic2SpecialStageManager {
      * from SS Emerald.bin per-stage when the emerald spawns.
      */
     private void applyEmeraldPalette() {
+        GraphicsManager graphicsManager = graphicsManagerOrNull();
         if (palettes == null || graphicsManager == null) {
             return;
         }
@@ -663,6 +691,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void applyCheckpointRainbowPalette(boolean bright) {
+        GraphicsManager graphicsManager = graphicsManagerOrNull();
         if (palettes == null || graphicsManager == null) {
             return;
         }
@@ -696,6 +725,7 @@ public class Sonic2SpecialStageManager {
      * while the checkpoint rainbow animation is active.
      */
     private void updateRainbowPaletteCycle() {
+        GraphicsManager graphicsManager = graphicsManagerOrNull();
         if (!checkpointRainbowPaletteActive || palettes == null || graphicsManager == null) {
             return;
         }
@@ -784,6 +814,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void setupPalettes() {
+        GraphicsManager graphicsManager = graphicsManager();
         palettes = Sonic2SpecialStagePalette.createPalettes(currentStage);
 
         for (int i = 0; i < palettes.length; i++) {
@@ -794,6 +825,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void setupPatterns() throws IOException {
+        GraphicsManager graphicsManager = graphicsManager();
         backgroundPatternBase = SS_PATTERN_BASE;
         trackPatternBase = SS_PATTERN_BASE + 256;
         playerPatternBase = trackPatternBase + 512;
@@ -852,7 +884,6 @@ public class Sonic2SpecialStageManager {
                 messagesPatterns.length + " Messages patterns");
 
         // Update debug sprite viewer with all pattern bases
-        Sonic2SpecialStageSpriteDebug debugSprites = Sonic2SpecialStageSpriteDebug.getInstance();
         debugSprites.setPlayerPatternBase(playerPatternBase);
         debugSprites.setHudPatternBase(hudPatternBase, hudPatterns.length);
         debugSprites.setStartPatternBase(startPatternBase, startPatterns.length);
@@ -860,11 +891,12 @@ public class Sonic2SpecialStageManager {
     }
 
     private void setupRenderer() throws IOException {
+        GraphicsManager graphicsManager = graphicsManager();
         renderer = new Sonic2SpecialStageRenderer(graphicsManager);
         // Pattern bases are set in setupPatterns() after they have valid values
 
         // Initialize shader-based background renderer
-        bgRenderer = new SpecialStageBackgroundRenderer();
+        bgRenderer = new SpecialStageBackgroundRenderer(graphicsManager);
         bgRenderer.init();
         LOGGER.fine("Special Stage background renderer initialized with shader");
 
@@ -888,7 +920,7 @@ public class Sonic2SpecialStageManager {
         sonicPlayer = null;
         tailsPlayer = null;
 
-        String characterCode = configService.getString(SonicConfiguration.MAIN_CHARACTER_CODE);
+        String characterCode = ActiveGameplayTeamResolver.resolveMainCharacterCode(configuration());
         if (characterCode == null) {
             characterCode = "sonic";
         }
@@ -1617,6 +1649,8 @@ public class Sonic2SpecialStageManager {
             return;
         }
 
+        GraphicsManager graphicsManager = graphicsManager();
+
         if (alignmentTestMode) {
             drawAlignmentTest();
             return;
@@ -1703,6 +1737,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void drawAlignmentTest() {
+        GraphicsManager graphicsManager = graphicsManager();
         boolean renderPlaneB = planeDebugMode.renderPlaneB();
         boolean renderPlaneA = planeDebugMode.renderPlaneA();
 
@@ -1754,7 +1789,7 @@ public class Sonic2SpecialStageManager {
 
         if (alignmentTextRenderer == null) {
             alignmentTextRenderer = new GlyphBatchRenderer();
-            alignmentTextRenderer.init(new Font("SansSerif", Font.PLAIN, 12));
+            alignmentTextRenderer.init(null);
         }
 
         alignmentTextRenderer.updateViewport(viewportWidth, viewportHeight);
@@ -1805,7 +1840,7 @@ public class Sonic2SpecialStageManager {
 
         if (lagCompensationTextRenderer == null) {
             lagCompensationTextRenderer = new GlyphBatchRenderer();
-            lagCompensationTextRenderer.init(new Font("SansSerif", Font.PLAIN, 12));
+            lagCompensationTextRenderer.init(null);
         }
 
         lagCompensationTextRenderer.updateViewport(viewportWidth, viewportHeight);
@@ -1893,7 +1928,11 @@ public class Sonic2SpecialStageManager {
      */
     public void reset() {
         // Stop any playing music when resetting
-        GameServices.audio().stopMusic();
+        try {
+            GameServices.audio().stopMusic();
+        } catch (IllegalStateException ignored) {
+            // Plain construction/reset tests run without configured engine services.
+        }
 
         initialized = false;
         currentStage = 0;
@@ -2058,7 +2097,7 @@ public class Sonic2SpecialStageManager {
      */
     public void toggleSpriteDebugMode() {
         spriteDebugMode = !spriteDebugMode;
-        Sonic2SpecialStageSpriteDebug.getInstance().setEnabled(spriteDebugMode);
+        debugSprites.setEnabled(spriteDebugMode);
         LOGGER.info("Sprite debug mode: " + (spriteDebugMode ? "ON" : "OFF"));
     }
 
@@ -2078,7 +2117,7 @@ public class Sonic2SpecialStageManager {
         if (!initialized) {
             return null;
         }
-        return Sonic2SpecialStageSpriteDebug.getInstance();
+        return debugSprites;
     }
 
     /**

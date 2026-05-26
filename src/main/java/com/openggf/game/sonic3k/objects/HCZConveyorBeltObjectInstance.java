@@ -5,8 +5,11 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -193,20 +196,18 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
             loadArray[rawSubtype] = true;
         }
 
-        AbstractPlayableSprite player = (playerEntity instanceof AbstractPlayableSprite)
-                ? (AbstractPlayableSprite) playerEntity : null;
+        NativePlayerSlots slots = nativePlayerSlots(playerEntity);
 
         // ROM: loc_311C4 (sonic3k.asm:66344-66365)
         // Process Player 1
-        if (player != null) {
-            processPlayer(player, p1State, frameCounter);
+        if (slots.p1 != null) {
+            processPlayer(slots.p1, p1State, frameCounter);
         }
 
-        // Process sidekicks (Player 2)
-        for (PlayableEntity sidekick : services().sidekicks()) {
-            if (sidekick instanceof AbstractPlayableSprite sk) {
-                processPlayer(sk, p2State, frameCounter);
-            }
+        // Process native Player 2 only. Extended engine sidekicks need their own
+        // per-sidekick state before they can safely participate in this object.
+        if (slots.p2 != null) {
+            processPlayer(slots.p2, p2State, frameCounter);
         }
 
         // Camera culling (sonic3k.asm:66355-66364)
@@ -221,6 +222,31 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         if (cameraX > rightCheck) {
             unloadBelt();
         }
+    }
+
+    private NativePlayerSlots nativePlayerSlots(PlayableEntity updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        PlayableEntity main = query.mainPlayerOrNull();
+        if (!(main instanceof AbstractPlayableSprite) && updatePlayer instanceof AbstractPlayableSprite) {
+            main = updatePlayer;
+        }
+
+        AbstractPlayableSprite p1 = (main instanceof AbstractPlayableSprite sprite) ? sprite : null;
+        AbstractPlayableSprite p2 = null;
+        for (PlayableEntity candidate : query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate == main || !(candidate instanceof AbstractPlayableSprite sprite)) {
+                continue;
+            }
+            p2 = sprite;
+            break;
+        }
+        if (p2 == p1) {
+            p2 = null;
+        }
+        return new NativePlayerSlots(p1, p2);
+    }
+
+    private record NativePlayerSlots(AbstractPlayableSprite p1, AbstractPlayableSprite p2) {
     }
 
     /**
@@ -274,11 +300,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         // ROM: Jump check (A/B/C buttons) (sonic3k.asm:66411-66412)
         // ROM uses andi.w #button_A_mask|button_B_mask|button_C_mask,d1 which tests the
         // LOW byte of Ctrl_1_logical = newly pressed buttons only, NOT held state.
-        // We track previous frame's held state to detect new presses.
-        boolean jumpHeld = player.isJumpPressed();
-        boolean jumpNewPress = jumpHeld && !state.lastJumpHeld;
-        state.lastJumpHeld = jumpHeld;
-        if (jumpNewPress) {
+        if (player.isJumpJustPressed()) {
             // ROM: loc_312C0 (sonic3k.asm:66434-66438)
             if (player.isInWater()) {
                 player.setYSpeed(JUMP_VELOCITY_UNDERWATER);
@@ -432,8 +454,8 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         // ROM: move.b #0,anim(a1) — idle animation base
         player.setAnimationId(0);
 
-        // ROM: move.b #3,object_control(a1) — full object control
-        player.setObjectControlled(true);
+        // ROM: move.b #3,object_control(a1) — bits 0-6, movement suppressed but CPU/touch remain allowed.
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
 
         // ROM: move.b #$63/$65,mapping_frame(a1) — initial frame
         player.setObjectMappingFrameControl(true);
@@ -615,14 +637,16 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
 
     /**
      * Prevents the ObjectManager's standard out-of-range check from unloading this
-     * belt while a player is captured. The belt is very wide (leftBound to rightBound)
-     * but {@link #getX()} returns leftBound, so the standard check may see it as
-     * "off-screen" even though the player is still on it. The belt handles its own
-     * camera culling with a wider margin in {@link #update}.
+     * belt. The belt can be very wide (leftBound to rightBound, up to 688px) but
+     * {@link #getX()} returns leftBound, so the ObjectManager's isOutOfRangeS1
+     * check (which uses a 640px window from getX()) may kill the belt when the
+     * camera is near the right edge. The belt handles its own camera culling
+     * correctly using both leftBound and rightBound with a 0x280 margin in
+     * {@link #update}, so the external check must be bypassed entirely.
      */
     @Override
     public boolean isPersistent() {
-        return p1State.active || p2State.active;
+        return true;
     }
 
     /**
@@ -660,7 +684,7 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
      */
     private void safeReleaseCapturedPlayer(PlayerBeltState state) {
         if (state.active && state.capturedPlayer != null) {
-            state.capturedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(state.capturedPlayer);
             state.capturedPlayer.setObjectMappingFrameControl(false);
             state.capturedPlayer.setAir(true);
             state.active = false;
@@ -738,6 +762,5 @@ public class HCZConveyorBeltObjectInstance extends AbstractObjectInstance {
         int animCounter;      // byte 6(a2): frame animation counter
         int frameSetOffset;   // byte 8(a2): 0 or $10
         AbstractPlayableSprite capturedPlayer;  // reference for safe cleanup
-        boolean lastJumpHeld; // previous frame's jump button state for new-press detection
     }
 }

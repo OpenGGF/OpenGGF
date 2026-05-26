@@ -2,12 +2,13 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
-import com.openggf.data.RomManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
-import com.openggf.level.LevelManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.BootstrapObjectServices;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteDplcFrame;
@@ -84,9 +85,10 @@ public class AizIntroArtLoader {
     private static ObjectSpriteSheet corkFloorSheet;
 
     private static boolean loaded = false;
+    private static ObjectServices activeServices;
 
     // Renderer cache — lazy-initialized on first render call
-    private static final int INTRO_PATTERN_BASE = 0x40000;
+    private static final int INTRO_PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
     private static PatternSpriteRenderer planeRenderer;
     private static PatternSpriteRenderer emeraldRenderer;
     private static PatternSpriteRenderer introSpritesRenderer;
@@ -105,33 +107,43 @@ public class AizIntroArtLoader {
      * subsequent calls are no-ops if already loaded.
      */
     public static synchronized void loadAllIntroArt() {
+        loadAllIntroArt(new BootstrapObjectServices());
+    }
+
+    public static synchronized void loadAllIntroArt(ObjectServices services) {
         if (loaded) {
             return;
         }
 
-        LOG.info("Loading AIZ1 intro art...");
+        ObjectServices previousServices = activeServices;
+        activeServices = services;
+        try {
+            LOG.info("Loading AIZ1 intro art...");
 
-        loadPlaneArt();
-        loadEmeraldArt();
-        loadIntroSpritesArt();
-        loadKnucklesArt();
-        loadCorkFloorArt();
+            loadPlaneArt();
+            loadEmeraldArt();
+            loadIntroSpritesArt();
+            loadKnucklesArt();
+            loadCorkFloorArt();
 
-        loadPlaneMappings();
-        loadEmeraldMappings();
-        loadWaveMappings();
-        loadKnucklesMappings();
-        loadKnucklesDplc();
-        loadCorkFloorMappings();
+            loadPlaneMappings();
+            loadEmeraldMappings();
+            loadWaveMappings();
+            loadKnucklesMappings();
+            loadKnucklesDplc();
+            loadCorkFloorMappings();
 
-        loadSuperSonicPaletteCycleData();
-        loadCutsceneKnucklesPalette();
-        loadEmeraldPalette();
+            loadSuperSonicPaletteCycleData();
+            loadCutsceneKnucklesPalette();
+            loadEmeraldPalette();
 
-        buildSpriteSheets();
+            buildSpriteSheets();
 
-        loaded = true;
-        LOG.info("AIZ1 intro art loaded successfully.");
+            loaded = true;
+            LOG.info("AIZ1 intro art loaded successfully.");
+        } finally {
+            activeServices = previousServices;
+        }
     }
 
     /**
@@ -178,8 +190,14 @@ public class AizIntroArtLoader {
      */
     public static void loadPlaneArt() {
         if (planePatterns != null) return;
+        Rom rom = tryCurrentRom();
+        if (rom == null) {
+            LOG.fine("Skipping AIZ intro plane art load because no ROM-backed ObjectServices are active");
+            planePatterns = new Pattern[0];
+            return;
+        }
         try {
-            byte[] data = decompressKosinskiModuled(Sonic3kConstants.ART_KOSM_AIZ_INTRO_PLANE_ADDR);
+            byte[] data = decompressKosinskiModuled(rom, Sonic3kConstants.ART_KOSM_AIZ_INTRO_PLANE_ADDR);
             LOG.fine("Plane art decompressed: " + data.length + " bytes (" + (data.length / 32) +
                     " tiles, expected 136 tiles / 4352 bytes)");
             planePatterns = bytesToPatterns(data);
@@ -197,8 +215,14 @@ public class AizIntroArtLoader {
      */
     public static void loadEmeraldArt() {
         if (emeraldPatterns != null) return;
+        Rom rom = tryCurrentRom();
+        if (rom == null) {
+            LOG.fine("Skipping AIZ intro emerald art load because no ROM-backed ObjectServices are active");
+            emeraldPatterns = new Pattern[0];
+            return;
+        }
         try {
-            byte[] data = decompressKosinskiModuled(Sonic3kConstants.ART_KOSM_AIZ_INTRO_EMERALDS_ADDR);
+            byte[] data = decompressKosinskiModuled(rom, Sonic3kConstants.ART_KOSM_AIZ_INTRO_EMERALDS_ADDR);
             emeraldPatterns = bytesToPatterns(data);
             LOG.fine("Loaded emerald art: " + emeraldPatterns.length + " patterns");
         } catch (Exception e) {
@@ -214,8 +238,13 @@ public class AizIntroArtLoader {
      */
     public static void loadIntroSpritesArt() {
         if (introSpritesPatterns != null) return;
+        Rom rom = tryCurrentRom();
+        if (rom == null) {
+            LOG.fine("Skipping AIZ intro sprite art load because no ROM-backed ObjectServices are active");
+            introSpritesPatterns = new Pattern[0];
+            return;
+        }
         try {
-            Rom rom = currentRom();
             FileChannel channel = rom.getFileChannel();
             synchronized (rom) {
                 channel.position(Sonic3kConstants.ART_NEM_AIZ_INTRO_SPRITES_ADDR);
@@ -236,8 +265,13 @@ public class AizIntroArtLoader {
      */
     public static void loadKnucklesArt() {
         if (knucklesPatterns != null) return;
+        Rom rom = tryCurrentRom();
+        if (rom == null) {
+            LOG.fine("Skipping AIZ intro Knuckles art load because no ROM-backed ObjectServices are active");
+            knucklesPatterns = new Pattern[0];
+            return;
+        }
         try {
-            Rom rom = currentRom();
             byte[] data = rom.readBytes(
                     Sonic3kConstants.ART_UNC_CUTSCENE_KNUX_ADDR,
                     Sonic3kConstants.ART_UNC_CUTSCENE_KNUX_SIZE);
@@ -267,7 +301,7 @@ public class AizIntroArtLoader {
             // Mapping tiles $1C-$37 → VRAM tiles $1D-$38 → level pattern indices 0x1D-0x38.
             var level = currentLevel();
             if (level == null || level.getPatternCount() < 0x39) {
-                LOG.warning("Level patterns not available for cork floor (count="
+                LOG.fine("Skipping AIZ intro cork floor art load because level patterns are unavailable (count="
                         + (level != null ? level.getPatternCount() : 0) + ")");
                 corkFloorPatterns = new Pattern[0];
                 return;
@@ -298,8 +332,13 @@ public class AizIntroArtLoader {
      */
     public static void loadPlaneMappings() {
         if (planeMappings != null) return;
+        RomByteReader reader = tryReader();
+        if (reader == null) {
+            LOG.fine("Skipping AIZ intro plane mappings because no ROM-backed ObjectServices are active");
+            planeMappings = List.of();
+            return;
+        }
         try {
-            RomByteReader reader = getReader();
             planeMappings = loadS3kMappingFrames(reader, Sonic3kConstants.MAP_AIZ_INTRO_PLANE_ADDR);
             LOG.fine("Loaded plane mappings: " + planeMappings.size() + " frames");
         } catch (Exception e) {
@@ -314,8 +353,13 @@ public class AizIntroArtLoader {
      */
     public static void loadEmeraldMappings() {
         if (emeraldMappings != null) return;
+        RomByteReader reader = tryReader();
+        if (reader == null) {
+            LOG.fine("Skipping AIZ intro emerald mappings because no ROM-backed ObjectServices are active");
+            emeraldMappings = List.of();
+            return;
+        }
         try {
-            RomByteReader reader = getReader();
             emeraldMappings = loadS3kMappingFrames(reader, Sonic3kConstants.MAP_AIZ_INTRO_EMERALDS_ADDR);
             LOG.fine("Loaded emerald mappings: " + emeraldMappings.size() + " frames");
         } catch (Exception e) {
@@ -330,8 +374,13 @@ public class AizIntroArtLoader {
      */
     public static void loadWaveMappings() {
         if (waveMappings != null) return;
+        RomByteReader reader = tryReader();
+        if (reader == null) {
+            LOG.fine("Skipping AIZ intro wave mappings because no ROM-backed ObjectServices are active");
+            waveMappings = List.of();
+            return;
+        }
         try {
-            RomByteReader reader = getReader();
             waveMappings = loadS3kMappingFrames(reader, Sonic3kConstants.MAP_AIZ_INTRO_WAVES_ADDR);
             LOG.fine("Loaded wave mappings: " + waveMappings.size() + " frames");
         } catch (Exception e) {
@@ -346,8 +395,13 @@ public class AizIntroArtLoader {
      */
     public static void loadKnucklesMappings() {
         if (knucklesMappings != null) return;
+        RomByteReader reader = tryReader();
+        if (reader == null) {
+            LOG.fine("Skipping AIZ intro Knuckles mappings because no ROM-backed ObjectServices are active");
+            knucklesMappings = List.of();
+            return;
+        }
         try {
-            RomByteReader reader = getReader();
             knucklesMappings = loadS3kMappingFrames(reader, Sonic3kConstants.MAP_CUTSCENE_KNUX_ADDR);
             LOG.fine("Loaded Knuckles mappings: " + knucklesMappings.size() + " frames");
         } catch (Exception e) {
@@ -367,8 +421,13 @@ public class AizIntroArtLoader {
      */
     public static void loadCorkFloorMappings() {
         if (corkFloorMappings != null) return;
+        RomByteReader reader = tryReader();
+        if (reader == null) {
+            LOG.fine("Skipping AIZ intro cork floor mappings because no ROM-backed ObjectServices are active");
+            corkFloorMappings = List.of();
+            return;
+        }
         try {
-            RomByteReader reader = getReader();
             corkFloorMappings = loadS3kMappingFramesWithTileOffset(
                     reader, Sonic3kConstants.MAP_AIZ_CORK_FLOOR_ADDR, -0x1C);
             LOG.fine("Loaded cork floor mappings: " + corkFloorMappings.size() + " frames");
@@ -393,8 +452,13 @@ public class AizIntroArtLoader {
      */
     public static void loadKnucklesDplc() {
         if (knucklesDplcFrames != null) return;
+        RomByteReader reader = tryReader();
+        if (reader == null) {
+            LOG.fine("Skipping AIZ intro Knuckles DPLC because no ROM-backed ObjectServices are active");
+            knucklesDplcFrames = List.of();
+            return;
+        }
         try {
-            RomByteReader reader = getReader();
             knucklesDplcFrames = loadS3kDplcFrames(reader, Sonic3kConstants.DPLC_CUTSCENE_KNUX_ADDR);
             LOG.fine("Loaded Knuckles DPLC: " + knucklesDplcFrames.size() + " frames");
         } catch (Exception e) {
@@ -416,10 +480,15 @@ public class AizIntroArtLoader {
      */
     public static void loadSuperSonicPaletteCycleData() {
         if (superSonicPaletteCycleData != null) return;
+        Rom rom = tryCurrentRom();
+        if (rom == null) {
+            LOG.fine("Skipping AIZ intro Super Sonic palette cycle load because no ROM-backed ObjectServices are active");
+            superSonicPaletteCycleData = new byte[0];
+            return;
+        }
         try {
             int size = Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_ENTRY_COUNT
                     * Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_ENTRY_SIZE;
-            Rom rom = currentRom();
             superSonicPaletteCycleData = rom.readBytes(Sonic3kConstants.PAL_CYCLE_SUPER_SONIC_ADDR, size);
             LOG.fine("Loaded Super Sonic palette cycle data: " + superSonicPaletteCycleData.length + " bytes");
         } catch (Exception e) {
@@ -434,8 +503,13 @@ public class AizIntroArtLoader {
      */
     public static void loadCutsceneKnucklesPalette() {
         if (cutsceneKnucklesPalette != null) return;
+        Rom rom = tryCurrentRom();
+        if (rom == null) {
+            LOG.fine("Skipping AIZ intro cutscene Knuckles palette load because no ROM-backed ObjectServices are active");
+            cutsceneKnucklesPalette = new byte[0];
+            return;
+        }
         try {
-            Rom rom = currentRom();
             cutsceneKnucklesPalette = rom.readBytes(Sonic3kConstants.PAL_CUTSCENE_KNUX_ADDR, 32);
             LOG.fine("Loaded cutscene Knuckles palette: " + cutsceneKnucklesPalette.length + " bytes");
         } catch (Exception e) {
@@ -450,8 +524,13 @@ public class AizIntroArtLoader {
      */
     public static void loadEmeraldPalette() {
         if (emeraldPalette != null) return;
+        Rom rom = tryCurrentRom();
+        if (rom == null) {
+            LOG.fine("Skipping AIZ intro emerald palette load because no ROM-backed ObjectServices are active");
+            emeraldPalette = new byte[0];
+            return;
+        }
         try {
-            Rom rom = currentRom();
             emeraldPalette = rom.readBytes(Sonic3kConstants.PAL_AIZ_INTRO_EMERALDS_ADDR, 32);
             LOG.fine("Loaded emerald palette: " + emeraldPalette.length + " bytes");
         } catch (Exception e) {
@@ -567,9 +646,13 @@ public class AizIntroArtLoader {
      * Safe to call before GL is initialized (no-ops gracefully).
      */
     public static void applyKnucklesPalette() {
+        applyKnucklesPalette(new BootstrapObjectServices());
+    }
+
+    public static void applyKnucklesPalette(ObjectServices services) {
         byte[] data = getCutsceneKnucklesPalette();
         if (data == null || data.length == 0) return;
-        GraphicsManager gm = GraphicsManager.getInstance();
+        GraphicsManager gm = graphicsManager(services);
         if (gm == null || !gm.isGlInitialized()) return;
         Palette palette = new Palette();
         palette.fromSegaFormat(data);
@@ -583,9 +666,13 @@ public class AizIntroArtLoader {
      * Safe to call before GL is initialized (no-ops gracefully).
      */
     public static void applyEmeraldPalette() {
+        applyEmeraldPalette(new BootstrapObjectServices());
+    }
+
+    public static void applyEmeraldPalette(ObjectServices services) {
         byte[] data = getEmeraldPalette();
         if (data == null || data.length == 0) return;
-        GraphicsManager gm = GraphicsManager.getInstance();
+        GraphicsManager gm = graphicsManager(services);
         if (gm == null || !gm.isGlInitialized()) return;
         Palette palette = new Palette();
         palette.fromSegaFormat(data);
@@ -601,30 +688,44 @@ public class AizIntroArtLoader {
      * Safe to call every frame — no-ops if already cached.
      */
     public static void ensureRenderersCached() {
+        ensureRenderersCached(new BootstrapObjectServices());
+    }
+
+    public static void ensureRenderersCached(ObjectServices services) {
         if (renderersCached || !loaded) return;
-        GraphicsManager gm = GraphicsManager.getInstance();
-        if (gm == null || !gm.isGlInitialized()) return;
+        GraphicsManager gm = graphicsManager(services);
+        if (gm == null) return;
 
         int nextBase = INTRO_PATTERN_BASE;
 
-        planeRenderer = new PatternSpriteRenderer(planeSheet);
-        planeRenderer.ensurePatternsCached(gm, nextBase);
-        nextBase += planePatterns.length;
+        if (planeSheet != null && planePatterns != null && planePatterns.length > 0) {
+            planeRenderer = new PatternSpriteRenderer(planeSheet);
+            planeRenderer.ensurePatternsCached(gm, nextBase);
+            nextBase += planePatterns.length;
+        }
 
-        emeraldRenderer = new PatternSpriteRenderer(emeraldSheet);
-        emeraldRenderer.ensurePatternsCached(gm, nextBase);
-        nextBase += emeraldPatterns.length;
+        if (emeraldSheet != null && emeraldPatterns != null && emeraldPatterns.length > 0) {
+            emeraldRenderer = new PatternSpriteRenderer(emeraldSheet);
+            emeraldRenderer.ensurePatternsCached(gm, nextBase);
+            nextBase += emeraldPatterns.length;
+        }
 
-        introSpritesRenderer = new PatternSpriteRenderer(introSpritesSheet);
-        introSpritesRenderer.ensurePatternsCached(gm, nextBase);
-        nextBase += introSpritesPatterns.length;
+        if (introSpritesSheet != null && introSpritesPatterns != null && introSpritesPatterns.length > 0) {
+            introSpritesRenderer = new PatternSpriteRenderer(introSpritesSheet);
+            introSpritesRenderer.ensurePatternsCached(gm, nextBase);
+            nextBase += introSpritesPatterns.length;
+        }
 
-        knucklesRenderer = new PatternSpriteRenderer(knucklesSheet);
-        knucklesRenderer.ensurePatternsCached(gm, nextBase);
-        nextBase += knucklesPatterns.length;
+        if (knucklesSheet != null && knucklesPatterns != null && knucklesPatterns.length > 0) {
+            knucklesRenderer = new PatternSpriteRenderer(knucklesSheet);
+            knucklesRenderer.ensurePatternsCached(gm, nextBase);
+            nextBase += knucklesPatterns.length;
+        }
 
-        corkFloorRenderer = new PatternSpriteRenderer(corkFloorSheet);
-        corkFloorRenderer.ensurePatternsCached(gm, nextBase);
+        if (corkFloorSheet != null && corkFloorPatterns != null && corkFloorPatterns.length > 0) {
+            corkFloorRenderer = new PatternSpriteRenderer(corkFloorSheet);
+            corkFloorRenderer.ensurePatternsCached(gm, nextBase);
+        }
 
         renderersCached = true;
         LOG.info("AIZ intro renderers cached. Pattern bases: plane=" +
@@ -636,31 +737,51 @@ public class AizIntroArtLoader {
 
     /** Returns the plane renderer, lazily caching if needed. */
     public static PatternSpriteRenderer getPlaneRenderer() {
-        ensureRenderersCached();
+        return getPlaneRenderer(new BootstrapObjectServices());
+    }
+
+    public static PatternSpriteRenderer getPlaneRenderer(ObjectServices services) {
+        ensureRenderersCached(services);
         return planeRenderer;
     }
 
     /** Returns the emerald renderer, lazily caching if needed. */
     public static PatternSpriteRenderer getEmeraldRenderer() {
-        ensureRenderersCached();
+        return getEmeraldRenderer(new BootstrapObjectServices());
+    }
+
+    public static PatternSpriteRenderer getEmeraldRenderer(ObjectServices services) {
+        ensureRenderersCached(services);
         return emeraldRenderer;
     }
 
     /** Returns the intro sprites (waves) renderer, lazily caching if needed. */
     public static PatternSpriteRenderer getIntroSpritesRenderer() {
-        ensureRenderersCached();
+        return getIntroSpritesRenderer(new BootstrapObjectServices());
+    }
+
+    public static PatternSpriteRenderer getIntroSpritesRenderer(ObjectServices services) {
+        ensureRenderersCached(services);
         return introSpritesRenderer;
     }
 
     /** Returns the Knuckles renderer, lazily caching if needed. */
     public static PatternSpriteRenderer getKnucklesRenderer() {
-        ensureRenderersCached();
+        return getKnucklesRenderer(new BootstrapObjectServices());
+    }
+
+    public static PatternSpriteRenderer getKnucklesRenderer(ObjectServices services) {
+        ensureRenderersCached(services);
         return knucklesRenderer;
     }
 
     /** Returns the cork floor renderer (for rock child objects), lazily caching if needed. */
     public static PatternSpriteRenderer getCorkFloorRenderer() {
-        ensureRenderersCached();
+        return getCorkFloorRenderer(new BootstrapObjectServices());
+    }
+
+    public static PatternSpriteRenderer getCorkFloorRenderer(ObjectServices services) {
+        ensureRenderersCached(services);
         return corkFloorRenderer;
     }
 
@@ -828,9 +949,7 @@ public class AizIntroArtLoader {
      * Reads enough data from ROM to cover the compressed stream, then
      * delegates to {@link KosinskiReader#decompressModuled(byte[], int)}.
      */
-    private static byte[] decompressKosinskiModuled(int romAddr) throws IOException {
-        Rom rom = currentRom();
-
+    private static byte[] decompressKosinskiModuled(Rom rom, int romAddr) throws IOException {
         // Read KosM 2-byte BE header: total decompressed size
         byte[] header = rom.readBytes(romAddr, 2);
         int fullSize = ((header[0] & 0xFF) << 8) | (header[1] & 0xFF);
@@ -879,13 +998,45 @@ public class AizIntroArtLoader {
         return RomByteReader.fromRom(currentRom());
     }
 
+    private static RomByteReader tryReader() {
+        Rom rom = tryCurrentRom();
+        if (rom == null) {
+            return null;
+        }
+        try {
+            return RomByteReader.fromRom(rom);
+        } catch (IOException ex) {
+            return null;
+        }
+    }
+
     private static Rom currentRom() throws IOException {
-        return RomManager.getInstance().getRom();
+        if (activeServices == null) {
+            throw new IOException("AIZ intro art loader requires ObjectServices");
+        }
+        return activeServices.rom();
+    }
+
+    private static Rom tryCurrentRom() {
+        if (activeServices == null) {
+            return null;
+        }
+        try {
+            return activeServices.rom();
+        } catch (IOException ex) {
+            return null;
+        }
     }
 
     private static com.openggf.level.Level currentLevel() {
-        LevelManager levelManager = LevelManager.getInstance();
-        return levelManager != null ? levelManager.getCurrentLevel() : null;
+        return activeServices != null ? activeServices.currentLevel() : null;
+    }
+
+    private static GraphicsManager graphicsManager(ObjectServices services) {
+        if (services != null && services.graphicsManager() != null) {
+            return services.graphicsManager();
+        }
+        return activeServices != null ? activeServices.graphicsManager() : null;
     }
 
     /**
@@ -910,7 +1061,12 @@ public class AizIntroArtLoader {
 
         // Knuckles sheet: palette index 1 (Knuckles palette line), frame delay 1
         // Apply DPLC remapping so mapping tile indices reference the correct source tiles.
-        if (knucklesPatterns != null && knucklesMappings != null) {
+        if (knucklesPatterns != null
+                && knucklesPatterns.length > 0
+                && knucklesMappings != null
+                && !knucklesMappings.isEmpty()
+                && knucklesDplcFrames != null
+                && !knucklesDplcFrames.isEmpty()) {
             List<SpriteMappingFrame> remapped = applyDplcRemap(knucklesMappings, knucklesDplcFrames);
             knucklesSheet = new ObjectSpriteSheet(knucklesPatterns, remapped, 1, 1);
         }

@@ -1,14 +1,17 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.solid.SolidCheckpointBatch;
 
 import com.openggf.game.OscillationManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -217,13 +220,21 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        playerStanding = isPlayerRiding();
-
         // LGrass_Types: dispatch movement
         applyMovement();
 
         updateDynamicSpawn(x, y);
+
+        // Manual checkpoints replace the legacy post-pass callback, so the
+        // current frame's movement uses the previously latched standing state
+        // and the new standing state is captured for the next frame.
+        SolidCheckpointBatch batch = checkpointAll();
+        playerStanding = hasStandingContact(batch);
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override
@@ -274,6 +285,19 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
     }
 
     @Override
+    public boolean addsSlopeCatchRangeToVerticalOverlap() {
+        // S1 SolidObject2F:
+        //   move.b obHeight(a1),d3
+        //   add.w d3,d2
+        //   ...
+        //   add.w d2,d3
+        // The platform's catch range ($20/$30) participates in the side/top-bottom
+        // classification, which is required for edge side contact at the MZ1 trace's
+        // first large-grassy-platform encounter.
+        return true;
+    }
+
+    @Override
     public int getSlopeBaseline() {
         // SolidObject2F uses relative slope samples:
         //   slopeOffset = slopeSample - slopeData[0]
@@ -285,8 +309,7 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Standing state is managed via isPlayerRiding() check in update()
+        // Standing state is driven via manual checkpoints in update().
     }
 
     @Override
@@ -453,23 +476,21 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
         }
 
         // Fire base Y = lgrass_origY + 8 - 3 = baseY + 5
-        int fireBaseY = baseY + 5;
+        final int fireBaseY = baseY + 5;
         // Fire starts at left edge: obX - $40
-        int fireStartX = x - 0x40;
+        final int fireStartX = x - 0x40;
+        final int fSinkOffset = sinkOffset;
+        final int parentSlot = getSlotIndex();
 
-        walkerFire = new Sonic1GrassFireObjectInstance(
-                fireStartX, fireBaseY, sinkOffset, slopeData, this, true);
-        // ROM: FindNextFreeObj allocates a slot AFTER the platform's slot.
-        // This ensures the fire runs its first update in the same frame
-        // (its slot hasn't been processed yet in the ExecuteObjects loop).
-        int parentSlot = getSlotIndex();
-        if (parentSlot >= 0) {
-            int fireSlot = services().objectManager().allocateSlotAfter(parentSlot);
-            if (fireSlot >= 0) {
-                walkerFire.setSlotIndex(fireSlot);
-            }
-        }
-        services().objectManager().addDynamicObject(walkerFire);
+        walkerFire = spawnFreeChild(() -> {
+            Sonic1GrassFireObjectInstance fire = new Sonic1GrassFireObjectInstance(
+                    fireStartX, fireBaseY, fSinkOffset, slopeData, this, true);
+            // ROM: FindNextFreeObj allocates a slot AFTER the platform's slot.
+            // This ensures the fire runs its first update in the same frame
+            // (its slot hasn't been processed yet in the ExecuteObjects loop).
+            ObjectLifetimeOps.assignFindNextFreeChildSlot(services().objectManager(), fire, parentSlot);
+            return fire;
+        });
 
         // Register walker itself in children list for sink offset updates
         fireChildren.add(walkerFire);

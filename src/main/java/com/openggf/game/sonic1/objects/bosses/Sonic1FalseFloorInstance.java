@@ -8,9 +8,12 @@ import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -74,6 +77,8 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
     private static final int ROUTINE_SOLID_WAITING = 2;
     private static final int ROUTINE_DISINTEGRATING = 4;
     private static final int ROUTINE_CLEANUP = 6;
+    private static final ObjectPlayerParticipationPolicy CLEANUP_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     // ---- Instance state ----
     private int routine = ROUTINE_INIT;
@@ -145,6 +150,10 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
             case ROUTINE_DISINTEGRATING -> updateDisintegrating();
             case ROUTINE_CLEANUP -> updateCleanup(player);
         }
+
+        if (!isDestroyed() && (routine == ROUTINE_SOLID_WAITING || routine == ROUTINE_DISINTEGRATING)) {
+            super.checkpointAll();
+        }
     }
 
     // ---- Routine 0: FFloor_Main (initialization) ----
@@ -153,17 +162,16 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
         currentY = MASTER_Y;
         updateDynamicSpawn(currentX, currentY);
 
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
+        if (services().objectManager() == null) {
             return;
         }
 
         // Spawn 8 child blocks (ROM: moveq #7,d6 -> dbf loop = 8 iterations)
         for (int i = 0; i < CHILD_COUNT; i++) {
-            int childX = CHILD_START_X + (i * CHILD_SPACING);
-            FalseFloorBlock block = new FalseFloorBlock(childX, CHILD_Y, i);
+            final int childX = CHILD_START_X + (i * CHILD_SPACING);
+            final int slot = i;
+            FalseFloorBlock block = spawnFreeChild(() -> new FalseFloorBlock(childX, CHILD_Y, slot));
             childBlocks.add(block);
-            objectManager.addDynamicObject(block);
         }
 
         routine = ROUTINE_SOLID_WAITING;
@@ -219,10 +227,11 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
     private void updateCleanup(AbstractPlayableSprite player) {
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
-            objectManager.clearRidingObject(player);
-
-            for (PlayableEntity sidekick : services().sidekicks()) {
-                objectManager.clearRidingObject(sidekick);
+            ObjectPlayerQuery query = new ObjectPlayerQuery(
+                    () -> player,
+                    () -> services().playerQuery().sidekicks());
+            for (PlayableEntity participant : query.playersFor(CLEANUP_PARTICIPATION)) {
+                objectManager.clearRidingObject(participant);
             }
         }
 
@@ -290,6 +299,11 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Handled by ObjectManager
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     // =========================================================================
@@ -369,8 +383,7 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
         private void breakApart() {
             broken = true;
 
-            ObjectManager objectManager = services().objectManager();
-            if (objectManager == null) {
+            if (services().objectManager() == null) {
                 setDestroyed(true);
                 return;
             }
@@ -378,14 +391,13 @@ public class Sonic1FalseFloorInstance extends AbstractObjectInstance
             // ROM: FFloor_Break - first fragment reuses parent, remaining 3 are new objects.
             // We create all 4 as new objects since our architecture differs.
             for (int i = 0; i < 4; i++) {
-                int fragX = currentX + FRAGMENT_OFFSETS[i][0];
-                int fragY = currentY + FRAGMENT_OFFSETS[i][1];
-                int fragYVel = FRAGMENT_Y_VEL[i];
-                int fragFrame = FRAGMENT_FRAMES[i];
+                final int fragX = currentX + FRAGMENT_OFFSETS[i][0];
+                final int fragY = currentY + FRAGMENT_OFFSETS[i][1];
+                final int fragYVel = FRAGMENT_Y_VEL[i];
+                final int fragFrame = FRAGMENT_FRAMES[i];
 
-                FalseFloorFragment fragment = new FalseFloorFragment(
-                        fragX, fragY, fragYVel, fragFrame);
-                objectManager.addDynamicObject(fragment);
+                spawnFreeChild(() -> new FalseFloorFragment(
+                        fragX, fragY, fragYVel, fragFrame));
             }
 
             // ROM: move.w #sfx_WallSmash,d0; jsr (QueueSound2).l

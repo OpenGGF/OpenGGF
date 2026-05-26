@@ -1,6 +1,6 @@
 package com.openggf.game.sonic2;
 
-import com.openggf.game.GameModuleRegistry;
+import com.openggf.game.GameServices;
 import com.openggf.game.ZoneArtProvider;
 import com.openggf.game.common.CommonSpriteDataLoader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
@@ -278,6 +278,8 @@ public class Sonic2ObjectArt {
         Pattern[] hudLivesPatterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR, "SonicLife");
         Pattern[] hudLivesNumbers = safeLoadUncompressedPatterns(Sonic2Constants.ART_UNC_LIVES_NUMBERS_ADDR,
                 Sonic2Constants.ART_UNC_LIVES_NUMBERS_SIZE, "LivesNumbers");
+        Pattern[] debugFontPatterns = safeLoadUncompressedPatterns(Sonic2Constants.ART_UNC_DEBUG_FONT_ADDR,
+                Sonic2Constants.ART_UNC_DEBUG_FONT_SIZE, "DebugFont");
         ObjectArtData artData = new ObjectArtData(
                 monitorSheet,
                 spikeSheet,
@@ -322,7 +324,7 @@ public class Sonic2ObjectArt {
                 hudTextPatterns,
                 hudLivesPatterns,
                 hudLivesNumbers,
-                (Pattern[]) null, // debugFontPatterns
+                debugFontPatterns,
                 monitorMappings,
                 springMappings,
                 checkpointMappings,
@@ -2332,7 +2334,7 @@ public class Sonic2ObjectArt {
      * @return the art configuration, or null if not available
      */
     private ZoneArtProvider.ObjectArtConfig getObjectArtConfig(int objectId, int zoneIndex) {
-        return GameModuleRegistry.getCurrent().getZoneArtProvider().getObjectArt(objectId, zoneIndex);
+        return GameServices.module().getZoneArtProvider().getObjectArt(objectId, zoneIndex);
     }
 
     /**

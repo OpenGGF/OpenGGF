@@ -1,0 +1,639 @@
+package com.openggf;
+
+import com.openggf.audio.rewind.AudioPresentationPolicy;
+import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.debug.playback.Bk2Movie;
+import com.openggf.debug.playback.Bk2MovieLoader;
+import com.openggf.debug.playback.PlaybackDebugManager;
+import com.openggf.control.InputHandler;
+import com.openggf.configuration.GlfwKeyNameResolver;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.session.GameplayTeamBootstrap;
+import com.openggf.game.GameMode;
+import com.openggf.game.GameServices;
+import com.openggf.game.MasterTitleScreen;
+import com.openggf.game.TitleCardProvider;
+import com.openggf.game.session.GameplayModeContext;
+import com.openggf.game.session.SessionManager;
+import com.openggf.game.rewind.InputSource;
+import com.openggf.game.rewind.PlaybackController;
+import com.openggf.game.rewind.RewindController;
+import com.openggf.game.rewind.RewindSeekAwareEngineStepper;
+import com.openggf.graphics.PixelFontTextRenderer;
+import com.openggf.sprites.ghost.GhostTraceRenderer;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.testmode.TraceCameraFocusController;
+import com.openggf.testmode.TraceHudOverlay;
+import com.openggf.trace.ToleranceConfig;
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceExecutionPhase;
+import com.openggf.trace.TraceFrame;
+import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.catalog.TraceEntry;
+import com.openggf.trace.live.LiveTraceComparator;
+import com.openggf.trace.replay.TraceReplayFixture;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
+
+import java.util.logging.Logger;
+
+/**
+ * Drives a Trace Test Mode playback session. The picker calls
+ * {@link #launch(TraceEntry)}; the launcher then asynchronously:
+ * <ol>
+ *   <li>asks {@link GameLoop#launchGameByEntry} to run the same
+ *       master-title exit path as a user selecting the game,</li>
+ *   <li>when the runtime is ready (callback from step 1), loads the
+ *       trace's zone/act, starts programmatic BK2 playback, applies
+ *       {@link TraceReplaySessionBootstrap}, and attaches a
+ *       {@link LiveTraceComparator} + HUD overlay.</li>
+ * </ol>
+ *
+ * <p>The session ends either on BK2 exhaustion (after a 1-second hold
+ * on {@code TRACE COMPLETE}) or on Esc, both converging on a single
+ * fade-to-black → {@link #teardown()} → picker path.
+ */
+public final class TraceSessionLauncher {
+
+    private static final Logger LOGGER =
+            Logger.getLogger(TraceSessionLauncher.class.getName());
+
+    /** Hold (in seconds at 60 Hz) on TRACE COMPLETE before auto-fade. */
+    private static final double COMPLETION_HOLD_SECONDS = 1.0;
+
+    private static TraceSessionLauncher activeSession;
+
+    private final TraceEntry entry;
+    private final TraceData trace;
+    private final Bk2Movie movie;
+    /**
+     * Snapshot of the user's gameplay-altering config taken before
+     * {@link TraceReplaySessionBootstrap#prepareConfiguration} ran.
+     * Restored in {@link #teardown()} so the picker returns to the
+     * user's own team / cross-game / S3K_SKIP_INTROS preferences.
+     */
+    private final TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot;
+    private LiveTraceComparator comparator;
+    private TraceCameraFocusController cameraFocusController;
+    private TraceHudOverlay overlay;
+    private final GhostTraceRenderer ghostRenderer = new GhostTraceRenderer();
+    private TraceReplayFixture fixture;
+    private PlaybackController rewindPlaybackController;
+    private RewindController rewindController;
+    private int rewindMovieBaseFrame;
+    private int rewindTraceBaseFrame;
+    private boolean realtimeRewinding;
+
+    private boolean completionArmed;
+    private int completionHoldFrames;
+    private boolean fadeStarted;
+
+    private TraceSessionLauncher(TraceEntry entry, TraceData trace, Bk2Movie movie,
+                                 TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot) {
+        this.entry = entry;
+        this.trace = trace;
+        this.movie = movie;
+        this.configSnapshot = configSnapshot;
+    }
+
+    public static TraceSessionLauncher active() {
+        return activeSession;
+    }
+
+    public static boolean launch(TraceEntry entry) {
+        GameLoop loop = Engine.currentGameLoop();
+        if (loop == null) {
+            LOGGER.severe("Cannot launch trace " + entry.dir()
+                    + ": Engine is not initialised");
+            return false;
+        }
+        // prepareConfiguration must run BEFORE launchGameByEntry
+        // because the master-title exit handler calls
+        // GameplayTeamBootstrap.registerActiveTeam, which reads
+        // MAIN_CHARACTER_CODE / SIDEKICK_CHARACTER_CODE to build the
+        // sprites for this session. If we deferred the write until
+        // after the handler, the session would use the pre-trace team.
+        //
+        // Pre-flight the fade check via GameLoop so we don't mutate
+        // config and then fail at launchGameByEntry with a
+        // fade-active throw. GameServices.fade() isn't usable here —
+        // no gameplay mode exists at master-title time — so go through
+        // GameLoop which resolves the graphics-backed fade manager.
+        if (!loop.canLaunchGameNow()) {
+            LOGGER.severe("Cannot launch trace " + entry.dir()
+                    + ": a master-title fade is already in flight");
+            return false;
+        }
+        // Snapshot the user's gameplay config BEFORE prepareConfiguration
+        // mutates it, so teardown can restore the team / cross-game /
+        // S3K_SKIP_INTROS preferences the user actually had.
+        TraceReplaySessionBootstrap.ConfigSnapshot configSnapshot =
+                TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        boolean configMutated = false;
+        try {
+            TraceData trace = TraceData.load(entry.dir());
+            Bk2Movie movie = new Bk2MovieLoader().load(entry.bk2Path());
+            TraceSessionLauncher session = new TraceSessionLauncher(
+                    entry, trace, movie, configSnapshot);
+            TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
+            configMutated = true;
+            loop.launchGameByEntry(
+                    resolveGameEntry(entry.gameId()),
+                    session::finishLaunchAfterGameBootstrap);
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(java.util.logging.Level.SEVERE,
+                    "Failed to launch trace " + entry.dir(), e);
+            // If we already mutated config before launchGameByEntry
+            // threw, restore the user's settings so the picker
+            // resumes with their preferences intact.
+            if (configMutated) {
+                TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
+            }
+            return false;
+        }
+    }
+
+    private void finishLaunchAfterGameBootstrap() {
+        GameLoop loop = Engine.currentGameLoop();
+        if (loop == null) {
+            LOGGER.severe("Trace launch callback fired after engine teardown; "
+                    + "aborting for " + entry.dir());
+            return;
+        }
+        PlaybackDebugManager playback = GameServices.playbackDebug();
+        try {
+            // prepareConfiguration already ran inside launch() before
+            // launchGameByEntry fired — the master-title exit handler
+            // needs the recorded team config in place when it calls
+            // GameplayTeamBootstrap.registerActiveTeam.
+            //
+            // Mirror TestEnvironment.resetPerTest so the replay starts
+            // from the same zero state the headless trace tests do.
+            // Without this, state left by initializeGame() (title
+            // screen, default level, residual objects) leaks in and
+            // causes subpixel drift from frame 0 that surfaces at the
+            // first enemy destruction.
+            //
+            // The reset zaps the sprite manager, so we need to
+            // re-register the active team BEFORE loadZoneAndAct runs
+            // (loadZoneAndAct's spawnPlayerAtStartPosition expects the
+            // main sprite to already exist — otherwise the camera's
+            // focusedSprite ends up null on the next frame).
+            TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
+            GameplayTeamBootstrap.registerActiveTeam(
+                    GameServices.module(),
+                    GameServices.sprites(),
+                    GameServices.configuration());
+            GameServices.level().loadZoneAndAct(entry.zone(), entry.act());
+            loop.setGameMode(GameMode.LEVEL);
+
+            // Swallow every title-card request the level load raised —
+            // both the main `consumeTitleCardRequest` (fired by
+            // requestTitleCardIfNeeded during profile load steps; if
+            // left armed, GameLoop.stepInternal flips the mode to
+            // TITLE_CARD on the next step, freezing the sprite and
+            // desyncing the BK2 cursor from the comparator) and the
+            // in-level variant. Headless trace tests bypass both via
+            // the headless graphics mode; we do it explicitly.
+            //
+            // Relies on TitleCardProvider.reset() being a simple state
+            // wipe that can't throw — true for all three game modules
+            // today (S1/S2/S3K TitleCardManager.reset are field resets).
+            GameServices.level().consumeTitleCardRequest();
+            GameServices.level().consumeInLevelTitleCardRequest();
+            TitleCardProvider titleCardProvider =
+                    GameServices.module() != null
+                            ? GameServices.module().getTitleCardProvider()
+                            : null;
+            if (titleCardProvider != null && titleCardProvider.isOverlayActive()) {
+                titleCardProvider.reset();
+            }
+
+            int startIndex = TraceReplayBootstrap
+                    .recordingStartFrameForTraceReplay(trace);
+            playback.startSession(movie, startIndex);
+
+            this.fixture = new LiveFixture(playback, loop);
+            // Reapply metadata start centre + initial ground snap
+            // BEFORE applyBootstrap so the order matches the headless
+            // fixture (which does these in Builder.build() — i.e.
+            // before any trace-data bootstrap runs). Running them
+            // after applyBootstrap would clobber subpixel state the
+            // helper's hydration steps wrote for seeded traces.
+            TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
+            TraceReplaySessionBootstrap.BootstrapResult boot =
+                    TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
+
+            int initialCursor = boot.replayStart().startingTraceIndex();
+            TraceFrame previousDriveFrame = boot.replayStart().hasSeededTraceState()
+                    ? trace.getFrame(boot.replayStart().seededTraceIndex())
+                    : initialCursor > 0 ? trace.getFrame(initialCursor - 1) : null;
+            TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(
+                    previousDriveFrame,
+                    initialCursor < trace.frameCount() ? trace.getFrame(initialCursor) : null);
+            this.comparator = new LiveTraceComparator(
+                    trace,
+                    ToleranceConfig.DEFAULT,
+                    initialCursor,
+                    loop::getMainPlayableSprite,
+                    loop::toggleUserPause);
+            this.cameraFocusController = new TraceCameraFocusController(
+                    comparator,
+                    loop::getMainPlayableSprite,
+                    () -> {
+                        var sprites = GameServices.spritesOrNull();
+                        if (sprites == null) return null;
+                        var sks = sprites.getSidekicks();
+                        return sks.isEmpty() ? null : sks.get(0);
+                    },
+                    GameServices::camera,
+                    GameServices.configuration(),
+                    loop::isPaused);
+            loop.setTraceCameraFocusController(cameraFocusController);
+            this.overlay = new TraceHudOverlay(comparator,
+                    () -> cameraFocusController.currentLabel(),
+                    this::rewindStatusLabel);
+            playback.setFrameObserver(comparator);
+            installTraceRewindController(loop, startIndex, initialCursor);
+            activeSession = this;
+        } catch (Exception e) {
+            // Partial bootstrap: detach playback, restore the user's
+            // gameplay config (we already mutated it in launch()), and
+            // route back to the picker so the engine doesn't end up
+            // orphaned in LEVEL mode with no session.
+            playback.endSession();
+            loop.setTraceCameraFocusController(null);
+            this.cameraFocusController = null;
+            activeSession = null;
+            TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
+            LOGGER.log(java.util.logging.Level.SEVERE,
+                    "Failed to finish trace launch for " + entry.dir(), e);
+            // loop is guaranteed non-null here — we early-returned at the
+            // top of the method when it was null.
+            loop.returnToMasterTitle();
+        }
+    }
+
+    /** Called from {@link GameLoop} each LEVEL tick while active. */
+    public void tick() {
+        if (comparator == null || fadeStarted) {
+            return;
+        }
+        if (comparator.isComplete() && !completionArmed) {
+            completionArmed = true;
+            completionHoldFrames = (int) Math.round(COMPLETION_HOLD_SECONDS * 60.0);
+        }
+        if (completionArmed) {
+            if (completionHoldFrames > 0) {
+                completionHoldFrames--;
+            } else {
+                startFadeOut();
+            }
+        }
+    }
+
+    /**
+     * Handles the held real-time rewind key in visual Trace Test Mode.
+     *
+     * @return true when the frame was consumed by rewind and normal gameplay
+     *         should not advance
+     */
+    public boolean handleRealtimeRewindInput(InputHandler input) {
+        if (input == null || rewindPlaybackController == null
+                || rewindController == null || comparator == null || fadeStarted) {
+            cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+            return false;
+        }
+        int rewindKey = GameServices.configuration().getInt(SonicConfiguration.TRACE_REWIND_KEY);
+        boolean held = input.isKeyDown(rewindKey);
+        if (held) {
+            if (!realtimeRewinding) {
+                GameServices.audio().beginReverseAudioPresentation();
+                beginReverseFadePresentation();
+            }
+            realtimeRewinding = true;
+            rewindPlaybackController.rewind();
+            rewindPlaybackController.tick();
+            GameServices.audio().update();
+            syncVisualRewindCursors(false);
+            if (cameraFocusController != null) {
+                cameraFocusController.syncDefaultCameraToCurrentPosition();
+            }
+            completionArmed = false;
+            return true;
+        }
+        if (realtimeRewinding) {
+            rewindPlaybackController.play();
+            syncVisualRewindCursors(true);
+            cleanupRealtimeRewindPresentation(AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+        }
+        return false;
+    }
+
+    /** Records a normal visual replay frame after {@link GameLoop} has advanced it. */
+    public void recordExternalRewindFrame() {
+        if (realtimeRewinding || rewindController == null || fadeStarted) {
+            return;
+        }
+        rewindController.recordExternalStep();
+    }
+
+    /** Called when Esc is pressed during a LEVEL tick. */
+    public void requestEarlyExit() {
+        if (comparator == null || fadeStarted) {
+            return;
+        }
+        startFadeOut();
+    }
+
+    public void render(PixelFontTextRenderer textRenderer) {
+        if (overlay != null) {
+            overlay.render(textRenderer);
+        }
+    }
+
+    public void renderGhosts() {
+        renderGhostsForLayer(Integer.MIN_VALUE, false, false);
+    }
+
+    public void renderGhostsForLayer(int bucket, boolean highPriority) {
+        renderGhostsForLayer(bucket, highPriority, true);
+    }
+
+    private void renderGhostsForLayer(int bucket, boolean highPriority, boolean filterLayer) {
+        if (comparator == null) {
+            return;
+        }
+        GameLoop loop = Engine.currentGameLoop();
+        if (loop == null) {
+            return;
+        }
+        var sprites = GameServices.spritesOrNull();
+        if (filterLayer) {
+            ghostRenderer.renderForLayer(
+                    comparator.metadata(),
+                    comparator.currentVisualFrame(),
+                    loop.getMainPlayableSprite(),
+                    sprites != null ? sprites.getRegisteredSidekicks() : java.util.List.of(),
+                    bucket,
+                    highPriority);
+        } else {
+            ghostRenderer.render(
+                    comparator.metadata(),
+                    comparator.currentVisualFrame(),
+                    loop.getMainPlayableSprite(),
+                    sprites != null ? sprites.getRegisteredSidekicks() : java.util.List.of());
+        }
+    }
+
+    private void startFadeOut() {
+        fadeStarted = true;
+        GameServices.fade().startFadeToBlack(this::teardown);
+    }
+
+    private void installTraceRewindController(GameLoop loop, int movieBaseFrame, int traceBaseFrame) {
+        var gameplayMode = SessionManager.getCurrentGameplayMode();
+        if (gameplayMode == null) {
+            return;
+        }
+        this.rewindMovieBaseFrame = movieBaseFrame;
+        this.rewindTraceBaseFrame = traceBaseFrame;
+        this.rewindPlaybackController = gameplayMode.installPlaybackController(
+                new OffsetMovieInputSource(movie, movieBaseFrame),
+                new VisualTraceRewindStepper(loop, movie, trace, movieBaseFrame, traceBaseFrame),
+                60);
+        this.rewindController = gameplayMode.getRewindController();
+    }
+
+    private void syncVisualRewindCursors(boolean playing) {
+        int relativeFrame = rewindController.currentFrame();
+        GameServices.playbackDebug().seekSessionFrame(
+                rewindMovieBaseFrame + relativeFrame,
+                playing);
+        comparator.seekForRewind(rewindTraceBaseFrame + relativeFrame);
+    }
+
+    private void beginReverseFadePresentation() {
+        var fadeManager = GameServices.fadeOrNull();
+        if (fadeManager != null) {
+            fadeManager.beginReversePresentation();
+        }
+    }
+
+    private void endReverseFadePresentationIfNeeded() {
+        var fadeManager = GameServices.fadeOrNull();
+        if (fadeManager != null && fadeManager.isReversePresentationActive()) {
+            fadeManager.endReversePresentation();
+        }
+    }
+
+    private void cleanupRealtimeRewindPresentation(AudioPresentationPolicy policy) {
+        endReverseFadePresentationIfNeeded();
+        if (!realtimeRewinding) {
+            return;
+        }
+        realtimeRewinding = false;
+        if (rewindController != null) {
+            GameServices.audio().afterRewindRestore(rewindController.currentFrame(), policy);
+        } else {
+            GameServices.audio().endReverseAudioPresentation();
+        }
+    }
+
+    private String rewindStatusLabel() {
+        if (rewindController == null) {
+            return null;
+        }
+        int rewindKey = GameServices.configuration().getInt(SonicConfiguration.TRACE_REWIND_KEY);
+        String key = GlfwKeyNameResolver.nameOf(rewindKey);
+        if (realtimeRewinding) {
+            return "REWIND " + rewindController.currentFrame();
+        }
+        return "Hold " + key + " Rewind";
+    }
+
+    private void teardown() {
+        // Clear the static session pointer BEFORE kicking off the
+        // runtime reset so any callback running during teardown
+        // (GameLoop tick, Engine.draw, observer afterFrameAdvanced)
+        // sees a clean "no session active" state instead of the
+        // half-torn-down launcher.
+        activeSession = null;
+        GameServices.playbackDebug().endSession();
+        if (rewindController != null) {
+            GameServices.audio().afterRewindRestore(
+                    rewindController.currentFrame(),
+                    AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+        }
+        // Restore the user's gameplay-altering config before we
+        // rebuild the master title. If the user re-launches the
+        // picker immediately, they see their own preferences rather
+        // than whatever the trace dictated.
+        TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
+        GameLoop loop = Engine.currentGameLoop();
+        if (loop != null) {
+            loop.setTraceCameraFocusController(null);
+            loop.returnToMasterTitle();
+        }
+        this.cameraFocusController = null;
+    }
+
+    private static final class OffsetMovieInputSource implements InputSource {
+        private final Bk2Movie movie;
+        private final int baseFrame;
+
+        private OffsetMovieInputSource(Bk2Movie movie, int baseFrame) {
+            this.movie = movie;
+            this.baseFrame = Math.max(0, baseFrame);
+        }
+
+        @Override
+        public int frameCount() {
+            return Math.max(1, movie.getFrameCount() - baseFrame + 1);
+        }
+
+        @Override
+        public Bk2FrameInput read(int frame) {
+            int movieFrame = baseFrame + Math.max(0, frame - 1);
+            return movie.getFrame(movieFrame);
+        }
+    }
+
+    private static final class VisualTraceRewindStepper implements RewindSeekAwareEngineStepper {
+        private final GameLoop loop;
+        private final Bk2Movie movie;
+        private final TraceData trace;
+        private final int movieBaseFrame;
+        private final int traceBaseFrame;
+
+        private VisualTraceRewindStepper(GameLoop loop, Bk2Movie movie, TraceData trace,
+                                         int movieBaseFrame, int traceBaseFrame) {
+            this.loop = loop;
+            this.movie = movie;
+            this.trace = trace;
+            this.movieBaseFrame = movieBaseFrame;
+            this.traceBaseFrame = traceBaseFrame;
+        }
+
+        @Override
+        public void step(Bk2FrameInput inputs) {
+            int relative = Math.max(0, inputs.frameIndex() - movieBaseFrame + 1);
+            int traceIndex = traceBaseFrame + relative - 1;
+            if (isVblankOnly(traceIndex)) {
+                var level = GameServices.levelOrNull();
+                if (level != null && level.getObjectManager() != null) {
+                    level.getObjectManager().advanceVblaCounter();
+                }
+                return;
+            }
+
+            var sprites = GameServices.spritesOrNull();
+            var level = GameServices.levelOrNull();
+            var camera = GameServices.cameraOrNull();
+            if (sprites == null || level == null || camera == null) {
+                return;
+            }
+
+            AbstractPlayableSprite player = loop.getMainPlayableSprite();
+            if (player != null) {
+                player.setForcedInputMask(inputs.p1InputMask());
+                int previousAction = inputs.frameIndex() > 0
+                        ? movie.getFrame(inputs.frameIndex() - 1).p1ActionMask()
+                        : 0;
+                int pressed = (inputs.p1ActionMask() ^ previousAction) & inputs.p1ActionMask();
+                player.setForcedJumpPress(pressed != 0);
+            }
+            sprites.setPlaybackInputSuppressed(true);
+            LevelFrameStep.execute(level, camera, () -> sprites.update(loop.getInputHandler()));
+        }
+
+        @Override
+        public void restoreToFrame(int frame, Bk2FrameInput inputAtFrame) {
+            AbstractPlayableSprite player = loop.getMainPlayableSprite();
+            if (player != null && inputAtFrame != null) {
+                player.setForcedInputMask(inputAtFrame.p1InputMask());
+                player.setForcedJumpPress(false);
+            }
+        }
+
+        private boolean isVblankOnly(int traceIndex) {
+            if (traceIndex < 0 || traceIndex >= trace.frameCount()) {
+                return false;
+            }
+            TraceFrame current = trace.getFrame(traceIndex);
+            TraceFrame previous = traceIndex > 0 ? trace.getFrame(traceIndex - 1) : null;
+            TraceExecutionPhase phase =
+                    TraceReplayBootstrap.phaseForReplay(trace, previous, current);
+            return phase == TraceExecutionPhase.VBLANK_ONLY;
+        }
+    }
+
+    private static MasterTitleScreen.GameEntry resolveGameEntry(String gameId) {
+        return switch (gameId) {
+            case "s1" -> MasterTitleScreen.GameEntry.SONIC_1;
+            case "s2" -> MasterTitleScreen.GameEntry.SONIC_2;
+            case "s3k" -> MasterTitleScreen.GameEntry.SONIC_3K;
+            default -> throw new IllegalArgumentException("Unknown game: " + gameId);
+        };
+    }
+
+    /** Thin live-engine implementation of {@link TraceReplayFixture}. */
+    private static final class LiveFixture implements TraceReplayFixture {
+        private final PlaybackDebugManager playback;
+        private final GameLoop gameLoop;
+
+        private LiveFixture(PlaybackDebugManager playback, GameLoop gameLoop) {
+            this.playback = playback;
+            this.gameLoop = gameLoop;
+        }
+
+        @Override
+        public AbstractPlayableSprite sprite() {
+            return gameLoop.getMainPlayableSprite();
+        }
+
+        @Override
+        public GameplayModeContext gameplayMode() {
+            return SessionManager.getCurrentGameplayMode();
+        }
+
+        @Override
+        public int stepFrameFromRecording() {
+            Bk2FrameInput frame = playback.currentFrameOrThrow();
+            int mask = toReplayValidationMask(frame);
+            gameLoop.step();
+            return mask;
+        }
+
+        @Override
+        public int skipFrameFromRecording() {
+            Bk2FrameInput frame = playback.currentFrameOrThrow();
+            int mask = toReplayValidationMask(frame);
+            playback.advanceCurrentFrameWithoutGameplay();
+            return mask;
+        }
+
+        @Override
+        public int consumeRecordingFrameInputOnly() {
+            Bk2FrameInput frame = playback.currentFrameOrThrow();
+            int mask = toReplayValidationMask(frame);
+            playback.advanceCurrentFrameWithoutGameplay();
+            return mask;
+        }
+
+        @Override
+        public void advanceRecordingCursor(int frameCount) {
+            for (int i = 0; i < frameCount; i++) {
+                playback.advanceCurrentFrameWithoutGameplay();
+            }
+        }
+
+        private static int toReplayValidationMask(Bk2FrameInput frame) {
+            int mask = frame.p1InputMask();
+            if (frame.p1ActionMask() != 0) {
+                mask |= AbstractPlayableSprite.INPUT_JUMP;
+            }
+            return mask;
+        }
+    }
+}

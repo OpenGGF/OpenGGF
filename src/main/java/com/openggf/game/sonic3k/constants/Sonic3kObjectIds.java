@@ -1,5 +1,13 @@
 package com.openggf.game.sonic3k.constants;
 
+/**
+ * Named Sonic 3 & Knuckles object IDs used by the engine's S3K object registry.
+ *
+ * <p>The S3KL/SKL pointer tables remap some high IDs by zone set. New constants
+ * added for the CNZ bring-up intentionally follow the S3KL naming from
+ * {@code Object pointers - SK Set 1.asm}, while registry code remains zone-set
+ * aware so the same numeric slot can still resolve to DEZ names on the SKL side.
+ */
 public final class Sonic3kObjectIds {
     public static final int MONITOR = 0x01;
     public static final int PATH_SWAP = 0x02;
@@ -15,6 +23,7 @@ public final class Sonic3kObjectIds {
     public static final int BREAKABLE_WALL = 0x0D;
     public static final int TWISTED_RAMP = 0x0E;
     public static final int COLLAPSING_BRIDGE = 0x0F;
+    public static final int AUTOMATIC_TUNNEL = 0x24;
     public static final int AUTO_SPIN = 0x26;
     public static final int CORK_FLOOR = 0x2A;
     public static final int AIZ_FLIPPING_BRIDGE = 0x2B;
@@ -24,8 +33,12 @@ public final class Sonic3kObjectIds {
     public static final int INVISIBLE_BLOCK = 0x28;
     public static final int AIZ_DISAPPEARING_FLOOR = 0x29;
     public static final int AIZ_DRAW_BRIDGE = 0x32;
+    public static final int SINKING_MUD = 0x4F;
+    public static final int MGZ_TWISTING_LOOP = 0x50;
     public static final int FLOATING_PLATFORM = 0x51;
     public static final int BUMPER = 0x4A;
+    // S3KL object table: Obj_CNZTriangleBumpers.
+    public static final int CNZ_TRIANGLE_BUMPER = 0x4B;
     public static final int BUBBLER = 0x54;
     public static final int BUTTON = 0x33;
     public static final int STAR_POST = 0x34;
@@ -36,10 +49,44 @@ public final class Sonic3kObjectIds {
     public static final int HCZ_LARGE_FAN = 0x39;
     public static final int HCZ_SPINNING_COLUMN = 0x68;
     public static final int HCZ_WATER_WALL = 0x3B;
+    public static final int DOOR = 0x3C;
     public static final int HCZ_HAND_LAUNCHER = 0x3A;
     public static final int HCZ_CONVEYOR_BELT = 0x3E;
     public static final int HCZ_CONVEYOR_SPIKE = 0x3F;
     public static final int HCZ_BLOCK = 0x40;
+    // S3KL object table: Obj_CNZBalloon.
+    public static final int CNZ_BALLOON = 0x41;
+    // S3KL object table: Obj_CNZCannon.
+    public static final int CNZ_CANNON = 0x42;
+    // S3KL object table: Obj_CNZRisingPlatform.
+    public static final int CNZ_RISING_PLATFORM = 0x43;
+    // S3KL object table: Obj_CNZTrapDoor.
+    public static final int CNZ_TRAP_DOOR = 0x44;
+    // S3KL object table: Obj_CNZHoverFan.
+    public static final int CNZ_HOVER_FAN = 0x46;
+    // S3KL object table: Obj_CNZCylinder.
+    public static final int CNZ_CYLINDER = 0x47;
+    // S3KL object table: Obj_CNZVacuumTube. Controller-only scaffold for Task 1.
+    public static final int CNZ_VACUUM_TUBE = 0x48;
+    // S3KL object table: Obj_CNZGiantWheel.
+    public static final int CNZ_GIANT_WHEEL = 0x49;
+    // S3KL object table: Obj_CNZSpiralTube. Controller-only scaffold for Task 1.
+    public static final int CNZ_SPIRAL_TUBE = 0x4C;
+    // S3KL object table: Obj_CNZBarberPoleSprite.
+    public static final int CNZ_BARBER_POLE = 0x4D;
+    // S3KL object table: Obj_CNZWireCage.
+    public static final int CNZ_WIRE_CAGE = 0x4E;
+    public static final int MGZLBZ_SMASHING_PILLAR_ALT = 0x20;
+    public static final int MGZLBZ_SMASHING_PILLAR = 0x52;
+    public static final int MGZ_SWINGING_PLATFORM = 0x53;
+    public static final int MGZ_HEAD_TRIGGER = 0x55;
+    public static final int MGZ_MOVING_SPIKE_PLATFORM = 0x56;
+    public static final int MGZ_TRIGGER_PLATFORM = 0x57;
+    public static final int MGZ_SWINGING_SPIKE_BALL = 0x58;
+    public static final int MGZ_DASH_TRIGGER = 0x59;
+    public static final int MGZ_PULLEY = 0x5A;
+    public static final int MGZ_TOP_PLATFORM = 0x5B;
+    public static final int MGZ_TOP_LAUNCHER = 0x5C;
     public static final int HCZ_SNAKE_BLOCKS = 0x67;
     public static final int TENSION_BRIDGE = 0x6C;
     public static final int INVISIBLE_HURT_BLOCK_H = 0x6A;
@@ -47,6 +94,10 @@ public final class Sonic3kObjectIds {
     public static final int SS_ENTRY_RING = 0x85;
     public static final int GUMBALL_MACHINE = 0x86;
     public static final int GUMBALL_TRIANGLE_BUMPER = 0x87;
+    // S3KL object table: Obj_CNZWaterLevelCorkFloor.
+    public static final int CNZ_WATER_LEVEL_CORK_FLOOR = 0x88;
+    // S3KL object table: Obj_CNZWaterLevelButton.
+    public static final int CNZ_WATER_LEVEL_BUTTON = 0x89;
     public static final int BLOOMINATOR = 0x8C;
     public static final int RHINOBOT = 0x8D;
     public static final int MONKEY_DUDE = 0x8E;
@@ -56,6 +107,12 @@ public final class Sonic3kObjectIds {
     public static final int TURBO_SPIKER = 0x96;
     public static final int MEGA_CHOPPER = 0x97;
     public static final int POINDEXTER = 0x98;
+    public static final int BUBBLES_BADNIK = 0x9B;
+    public static final int SPIKER = 0x9C;
+    public static final int MANTIS = 0x9D;
+    public static final int MGZ_MINIBOSS = 0x9F;
+    public static final int MGZ_END_BOSS = 0xA1;
+    public static final int MGZ_END_BOSS_KNUX = 0xA2;
     public static final int STILL_SPRITE = 0x2F;
     public static final int ANIMATED_STILL_SPRITE = 0x30;
     public static final int HIDDEN_MONITOR = 0x80;
@@ -75,7 +132,44 @@ public final class Sonic3kObjectIds {
     public static final int PACHINKO_MAGNET_ORB = 0xEC;
     public static final int PACHINKO_ITEM_ORB = 0xED;
     public static final int HCZ_TWISTING_LOOP = 0x69;
+    public static final int HCZ_WATER_SPLASH = 0x6D;
+    public static final int HCZ_WATER_DROP = 0x6E;
+    // S3KL object table: Obj_ICZPathFollowPlatform.
+    public static final int ICZ_PATH_FOLLOW_PLATFORM = 0xB0;
+    // S3KL object table: Obj_ICZBreakableWall.
+    public static final int ICZ_BREAKABLE_WALL = 0xB1;
+    // S3KL object table: Obj_ICZFreezer.
+    public static final int ICZ_FREEZER = 0xB2;
+    public static final int ICZ_SEGMENT_COLUMN = 0xB3;
+    // S3KL object table: Obj_ICZSwingingPlatform.
+    public static final int ICZ_SWINGING_PLATFORM = 0xB4;
+    // S3KL object table: Obj_ICZStalagtite.
+    public static final int ICZ_STALAGTITE = 0xB5;
+    // S3KL object table: Obj_ICZIceCube.
+    public static final int ICZ_ICE_CUBE = 0xB6;
+    // S3KL object table: Obj_ICZIceSpikes. SKL reuses $B7 for DDZAsteroid.
+    public static final int ICZ_ICE_SPIKES = 0xB7;
+    // S3KL object table: Obj_ICZHarmfulIce. SKL reuses $B8 for DDZMissile.
+    public static final int ICZ_HARMFUL_ICE = 0xB8;
+    public static final int TUNNELBOT = 0x9E;
     public static final int HCZ_MINIBOSS = 0x99;
+    public static final int HCZ_END_BOSS = 0x9A;
+    // S3KL object table: Obj_Clamer.
+    public static final int CLAMER = 0xA3;
+    // S3KL object table: Obj_Sparkle.
+    public static final int SPARKLE = 0xA4;
+    // S3KL object table: Obj_Batbot.
+    public static final int BATBOT = 0xA5;
+    // S3KL object table: Obj_CNZMiniboss. SKL reuses $A6 for DEZMiniboss.
+    public static final int CNZ_MINIBOSS = 0xA6;
+    // S3KL object table: Obj_CNZEndBoss. SKL reuses $A7 for DEZEndBoss.
+    public static final int CNZ_END_BOSS = 0xA7;
+    // S3KL object table: Obj_Penguinator.
+    public static final int PENGUINATOR = 0xAD;
+    // S3KL object table: Obj_StarPointer.
+    public static final int STAR_POINTER = 0xAE;
+    // S3KL object table: Obj_ICZCrushingColumn.
+    public static final int ICZ_CRUSHING_COLUMN = 0xAF;
 
     private Sonic3kObjectIds() {
     }

@@ -2,6 +2,7 @@ package com.openggf.game.sonic2;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 
@@ -10,6 +11,7 @@ import com.openggf.data.RomByteReader;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.HudStaticArt;
 import com.openggf.level.objects.ObjectArtData;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -31,12 +33,14 @@ import java.util.logging.Logger;
  * This provider lazily initializes the art loader when first needed, obtaining the ROM
  * from RomManager.
  */
-public class Sonic2ObjectArtProvider implements ObjectArtProvider {
+public class Sonic2ObjectArtProvider implements ObjectArtProvider,
+        com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.PlcProgressSnapshot> {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectArtProvider.class.getName());
 
     private Sonic2ObjectArt artLoader;
     private ObjectArtData artData;
     private int currentZoneIndex = -2; // Use -2 to distinguish from explicit -1
+    private int loadEpoch = 0;
 
     private final Map<String, PatternSpriteRenderer> renderers = new HashMap<>();
     private final Map<String, ObjectSpriteSheet> sheets = new HashMap<>();
@@ -54,6 +58,9 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
     private Pattern[] hudTextPatterns;
     private Pattern[] hudLivesPatterns;
     private Pattern[] hudLivesNumbers;
+    private Pattern[] hudHexDigits;
+    private HudStaticArt hudStaticArt;
+    private boolean livesNameUsesIconPalette;
 
     /**
      * Creates a new Sonic2ObjectArtProvider.
@@ -90,6 +97,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
         ensureArtLoader();
         artData = artLoader.loadForZone(zoneIndex);
         currentZoneIndex = zoneIndex;
+        loadEpoch++;
 
         // Clear previous registrations
         renderers.clear();
@@ -194,9 +202,12 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
         hudTextPatterns = artData.getHudTextPatterns();
         hudLivesPatterns = artData.getHudLivesPatterns();
         hudLivesNumbers = artData.getHudLivesNumbers();
+        hudHexDigits = artData.getDebugFontPatterns();
+        livesNameUsesIconPalette = false;
 
         // Cross-game: override lives icon with donor character art (e.g., Knuckles from S3K)
         overrideLivesArtFromDonor();
+        rebuildHudStaticArt();
 
         LOGGER.info("Sonic2ObjectArtProvider loaded for zone " + zoneIndex +
                 " with " + rendererKeys.size() + " renderers (PLC-driven)");
@@ -337,39 +348,60 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
         return hudLivesNumbers;
     }
 
+    @Override
+    public Pattern[] getHudHexDigitPatterns() {
+        return hudHexDigits;
+    }
+
+    @Override
+    public HudStaticArt getHudStaticArt() {
+        return hudStaticArt;
+    }
+
     /**
      * When cross-game features are active and the character is Knuckles,
      * loads the Knuckles life icon from the S3K donor ROM to replace the
      * S2 Sonic life icon.
      */
     private void overrideLivesArtFromDonor() {
-        if (!com.openggf.game.CrossGameFeatureProvider.isActive()) {
+        if (!com.openggf.game.CrossGameFeatureProvider.isS3kDonorActive()) {
             return;
         }
-        String mainChar = com.openggf.configuration.SonicConfigurationService.getInstance()
-                .getString(com.openggf.configuration.SonicConfiguration.MAIN_CHARACTER_CODE);
+        String mainChar = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
         if (!"knuckles".equalsIgnoreCase(mainChar)) {
             return;
         }
-        // Load Knuckles life icon from donor S3K ROM
-        String donorId = com.openggf.game.CrossGameFeatureProvider.getInstance().getDonorGameId();
-        if (!"s3k".equals(donorId)) {
-            return;
+        Pattern[] knuxLife = loadS3kKnucklesLivesPatterns();
+        if (knuxLife != null && knuxLife.length > 0) {
+            hudLivesPatterns = knuxLife;
+            livesNameUsesIconPalette = true;
+            rebuildHudStaticArt();
+            LOGGER.info("Overrode lives icon with Knuckles art from S3K donor (" + knuxLife.length + " tiles)");
         }
+    }
+
+    private void rebuildHudStaticArt() {
+        hudStaticArt = Sonic2HudStaticArtFactory.create(
+                hudTextPatterns,
+                hudLivesPatterns,
+                livesNameUsesIconPalette);
+    }
+
+    Pattern[] loadS3kKnucklesLivesPatterns() {
         try {
-            com.openggf.data.Rom donorRom = com.openggf.data.RomManager.getInstance().getSecondaryRom("s3k");
+            com.openggf.data.Rom donorRom = GameServices.rom().getSecondaryRom("s3k");
             Pattern[] knuxLife = com.openggf.util.PatternDecompressor.nemesis(donorRom,
                     com.openggf.game.sonic3k.constants.Sonic3kConstants.ART_NEM_KNUCKLES_LIFE_ICON_ADDR);
             if (knuxLife != null && knuxLife.length > 0) {
                 // Remap pixel indices from S3K palette layout to S2-compatible layout.
                 // Both palettes have the same colors but at different indices.
                 remapPaletteIndices(knuxLife);
-                hudLivesPatterns = knuxLife;
-                LOGGER.info("Overrode lives icon with Knuckles art from S3K donor (" + knuxLife.length + " tiles)");
+                return knuxLife;
             }
         } catch (Exception e) {
             LOGGER.warning("Failed to load Knuckles life icon from donor: " + e.getMessage());
         }
+        return null;
     }
 
     /**
@@ -514,5 +546,27 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider {
         if (sheet != null) {
             registerSheet(Sonic2ObjectArtKeys.MTZ_STEAM_PISTON, sheet);
         }
+    }
+
+    // --- RewindSnapshottable<PlcProgressSnapshot> ---
+
+    @Override
+    public String key() {
+        return "s2-plc-art";
+    }
+
+    @Override
+    public com.openggf.game.rewind.snapshot.PlcProgressSnapshot capture() {
+        return new com.openggf.game.rewind.snapshot.PlcProgressSnapshot(loadEpoch);
+    }
+
+    /**
+     * Restore is a no-op for v1: all PLC art is loaded at zone-load time and
+     * does not change per-frame. The epoch is recorded in the snapshot as a
+     * diagnostic check but is not re-applied here.
+     */
+    @Override
+    public void restore(com.openggf.game.rewind.snapshot.PlcProgressSnapshot snap) {
+        // No per-frame PLC state to restore in v1.
     }
 }

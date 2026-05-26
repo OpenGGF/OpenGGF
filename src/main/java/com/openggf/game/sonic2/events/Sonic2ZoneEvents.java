@@ -5,6 +5,7 @@ import com.openggf.audio.AudioManager;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
@@ -65,6 +66,10 @@ public abstract class Sonic2ZoneEvents {
         return GameServices.sprites();
     }
 
+    protected ZoneLayoutMutationPipeline mutationPipeline() {
+        return GameServices.zoneLayoutMutationPipeline();
+    }
+
     protected Rom rom() throws IOException {
         return GameServices.rom().getRom();
     }
@@ -84,6 +89,14 @@ public abstract class Sonic2ZoneEvents {
 
     public void setEventRoutine(int routine) {
         this.eventRoutine = routine;
+    }
+
+    public int getBossSpawnDelay() {
+        return bossSpawnDelay;
+    }
+
+    public void setBossSpawnDelay(int delay) {
+        this.bossSpawnDelay = delay;
     }
 
     /** Spawn a dynamic object into the level. */

@@ -7,7 +7,11 @@ description: Use when starting work on a new S3K zone to catalogue its features 
 
 Analyse the Sonic 3&K disassembly to produce a structured feature catalogue for a given zone. This skill reads the zone's event routines (`Dynamic_Resize`), parallax handlers (`Deform`), animated tile scripts (`AniPLC`), palette cycling (`AnPal`), and notable objects, then outputs a specification that other implementation skills consume.
 
+For every extracted feature, also note which runtime-owned framework should host the implementation on the Java side: `ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`, `ZoneLayoutMutationPipeline`, `SpecialRenderEffectRegistry`, `AdvancedRenderModeController`, and the `level.scroll.compose` helpers centered on `ScrollEffectComposer`.
+
 The output is a **zone analysis spec** -- a structured document listing every feature, its disassembly location, confidence level, and implementation notes. This is the prerequisite step before implementing any zone feature.
+
+Current S3K planning is slice-first. The analysis spec must distinguish features that block a playable route from features that are lower-impact polish. For the near term, call out relevance to AIZ -> HCZ continuity first, then CNZ, MGZ, and ICZ follow-up slices. Do not treat "all features in the zone" as equal priority.
 
 ## Inputs
 
@@ -125,6 +129,12 @@ Objects unique to this zone or with zone-specific behavior.
 ```bash
 grep -n "Obj_{ZONE}\|{ZONE}_Object\|{ZONE}.*_obj\|Obj_.*{ZONE}" docs/skdisasm/sonic3k.asm | head -40
 ```
+
+For notable objects, classify route impact:
+
+- `BLOCKER`: required for traversal, act transition, boss gate, forced movement, water/chase flow, or terrain mutation.
+- `HIGH`: hazards, platforms, boss/miniboss support, or common badniks that affect trace/sidekick behavior.
+- `POLISH`: decorative, isolated, or low-impact objects that can wait until the slice is playable.
 
 Check the zone's object placement directory for object IDs in use:
 ```bash
@@ -458,6 +468,15 @@ Produce the zone analysis spec using the template below. Save it to `docs/s3k-zo
 ### Dependencies
 - {Feature X requires Feature Y to be implemented first}
 - {Feature Z requires PLC ID $XX to be registered}
+
+## Framework Routing
+
+- **Runtime state:** {which event/object/scroll state should live in a typed `ZoneRuntimeRegistry` adapter}
+- **Palette ownership:** {which palette mutations/cycles should route through `PaletteOwnershipRegistry` / `S3kPaletteWriteSupport`}
+- **Animated tiles:** {which scripts map cleanly to `AnimatedTileChannelGraph` channels vs. requiring custom DMA helpers}
+- **Layout mutations:** {which tile/block/chunk swaps should use `ZoneLayoutMutationPipeline` / `S3kSeamlessMutationExecutor`}
+- **Render registries:** {which overlays should be staged via `SpecialRenderEffectRegistry` or `AdvancedRenderModeController`}
+- **Scroll composition:** {which parallax bands/waterline behaviour should reuse `ScrollEffectComposer`, `DeformationPlan`, `ScatterFillPlan`, or `WaterlineBlendComposer`}
 
 ### Known Risks
 - {Any areas of LOW confidence that need deeper investigation}

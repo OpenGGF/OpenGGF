@@ -7,7 +7,13 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchActorContextPolicy;
+import com.openggf.level.objects.TouchAttackBouncePolicy;
+import com.openggf.level.objects.TouchCategoryDecodeMode;
+import com.openggf.level.objects.TouchOverlapStopPolicy;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -27,10 +33,21 @@ import java.util.List;
 public class AizMinibossBarrelShotChild extends AbstractObjectInstance implements TouchResponseProvider {
     private static final int COLLISION_FLAGS_HAZARD = 0x98;
     private static final int SHIELD_REACTION_BOUNCE = 1 << 3;
+    private static final int SHIELD_REACTION_FLAGS = SHIELD_REACTION_BOUNCE | (1 << 4);
     private static final int FRAME_RISE_A = 0x0C;
     private static final int FRAME_RISE_B = 0x0D;
     private static final int PROJECTILE_PALETTE = 0;
     private static final int Y_RADIUS = 8; // ROM loc_68CE4: y_radius
+    private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
+            TouchCategoryDecodeMode.NORMAL,
+            false,
+            true,
+            false,
+            TouchShieldDeflectCapability.SHIELD_DEFLECT,
+            SHIELD_REACTION_FLAGS,
+            TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+            TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+            TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
 
     private static final int[] SELECT_TABLE_NORMAL = {
             2, 3, 4, 0, 0, 2, 4, 0, 1, 3, 4, 0, 0, 1, 4, 0
@@ -57,8 +74,9 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
         TOP_DROP_SIMPLE,
         TOP_DROP_ADVANCED
     }
-
     private final AbstractBossInstance parent;
+    /** ROM: parent3 of the shot = the barrel that spawned it. */
+    private final AizMinibossFlameBarrelChild barrel;
     private final int barrelSubtype;
     private final Mode mode;
 
@@ -76,13 +94,14 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
     private boolean needsInitSfx;
 
     public AizMinibossBarrelShotChild(AbstractBossInstance parent,
-                                      int barrelSubtype,
+                                      AizMinibossFlameBarrelChild barrel,
                                       int x,
                                       int y,
                                       Mode mode) {
-        super(new ObjectSpawn(x, y, 0x90, barrelSubtype, 0, false, 0), "AIZMinibossBarrelShot");
+        super(new ObjectSpawn(x, y, 0x90, barrel.getBarrelSubtype(), 0, false, 0), "AIZMinibossBarrelShot");
         this.parent = parent;
-        this.barrelSubtype = barrelSubtype & 0xFF;
+        this.barrel = barrel;
+        this.barrelSubtype = barrel.getBarrelSubtype() & 0xFF;
         this.mode = mode;
 
         this.currentX = x;
@@ -171,22 +190,34 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
         move();
         animateRise();
 
-        if (!isOnScreen(128)) {
-            setDestroyed(true);
-            return;
-        }
-        // ROM loc_68D70: ObjHitFloor_DoRoutine with y_radius=8
+        // ROM loc_68D5E: Animate_Raw + MoveSprite2 + ObjHitFloor_DoRoutine.
+        // The ROM has no explicit off-screen check here — the arena camera is locked
+        // and the shot is placed at camera-relative coordinates, so it's always on-screen.
+        // Floor check with y_radius=8 (ROM loc_68CE4).
         TerrainCheckResult floor = ObjectTerrainUtils.checkFloorDist(currentX, currentY, Y_RADIUS);
         if (floor.hasCollision()) {
-            services().playSfx(Sonic3kSfx.MISSILE_EXPLODE.id);
-            spawnImpactFlames();
-            setDestroyed(true);
+            onFloorImpact();
+            return;
+        }
+        // Failsafe: the ROM arena always has solid floor within the visible screen.
+        // If the terrain check misses (e.g. post-fire mutation seam), force impact
+        // once the shot falls past the visible area bottom.
+        int screenBottom = services().camera().getY() + 224;
+        if (currentY >= screenBottom) {
+            onFloorImpact();
         }
     }
 
+    private void onFloorImpact() {
+        services().playSfx(Sonic3kSfx.MISSILE_EXPLODE.id);
+        spawnImpactFlames();
+        setDestroyed(true);
+    }
+
     private void enterTopDropPhase() {
-        int timerCounter = (parent.getCustomFlag(0x39) + 4) & 0xFF;
-        parent.setCustomFlag(0x39, timerCounter);
+        // ROM: sub_68EE4 — reads/writes the BARREL's $39 counter, not the boss's.
+        int timerCounter = (barrel.getPositionCounter() + 4) & 0xFF;
+        barrel.setPositionCounter(timerCounter);
 
         int index = ((barrelSubtype >> 1) + (timerCounter & 0x0C)) & 0x0F;
         boolean hFlip = (parent.getState().renderFlags & 1) != 0;
@@ -259,7 +290,17 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
     @Override
     public int getShieldReactionFlags() {
         // Bit 3: bounce shield deflection. Bit 4: fire shield immunity.
-        return SHIELD_REACTION_BOUNCE | (1 << 4);
+        return SHIELD_REACTION_FLAGS;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TOUCH_RESPONSE_PROFILE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TOUCH_RESPONSE_PROFILE;
     }
 
     @Override
@@ -299,6 +340,8 @@ public class AizMinibossBarrelShotChild extends AbstractObjectInstance implement
 
     @Override
     public int getPriorityBucket() {
-        return 2;
+        // ROM: sub_6885A uses word_6902A with priority $280 (bucket 5) during rise.
+        // loc_688B0/loc_68D48 changes to priority $80 (bucket 1) for drop phase.
+        return (state == State.TOP_DROP_SIMPLE || state == State.TOP_DROP_ADVANCED) ? 1 : 5;
     }
 }

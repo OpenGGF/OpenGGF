@@ -1,14 +1,18 @@
 package com.openggf.game.sonic1.objects;
 
+import com.openggf.game.solid.PlayerSolidContactResult;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SlopedSolidProvider;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -43,6 +47,9 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
 
     // From disassembly: obPriority = 3
     private static final int PRIORITY = 3;
+
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS;
 
     // ghzbend1.bin - Maximum depression depth per bridge length and player position
     // 17 rows x 16 columns. Row = segment count (0-16), column = player position.
@@ -142,6 +149,18 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM Bri_Solid passes the already-final PlatformObject width in d1/d2.
+        // Do not apply the generic SolidObject +$B landing-width narrowing.
+        return true;
+    }
+
+    @Override
+    public boolean forceAirOnRideExit() {
+        return false;
+    }
+
+    @Override
     public byte[] getSlopeData() {
         return slopeData;
     }
@@ -159,31 +178,23 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        // Standing detection is handled in update() via isAnyPlayerRiding
+        // Standing detection is handled via manual checkpoints in update().
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     // ---- Update logic ----
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        ObjectManager objectManager = services().objectManager();
-
-        playerOnBridge = false;
-
-        if (player != null && objectManager != null && objectManager.isAnyPlayerRiding(this)) {
-            playerOnBridge = true;
-
-            // Determine which log Sonic is standing on
-            // From Bri_WalkOff/ExitPlatform2: d0 = (sonicX - bridgeX + logCount*8 + 8) >> 4
-            // The +8 offset comes from Bri_Solid: d1 = logCount*8; addq.w #8,d1
-            int relX = player.getCentreX() - spawn.x() + (logCount * 8) + 8;
-            int logIdx = relX >> 4;
-            if (logIdx < 0) logIdx = 0;
-            if (logIdx >= logCount) logIdx = logCount - 1;
-            playerLogIndex = logIdx;
-
+        if (playerOnBridge) {
+            AbstractPlayableSprite currentRider = currentRidingPlayer();
+            if (currentRider != null) {
+                updatePlayerLogIndex(currentRider);
+            }
             // Increase depression angle (ramp up)
             // From disassembly: addq.b #4,objoff_3E(a0); cmpi.b #$40,d0
             if (depressionAngle < MAX_DEPRESSION_ANGLE) {
@@ -214,6 +225,58 @@ public class Sonic1BridgeObjectInstance extends AbstractObjectInstance
 
         // Update slope data for collision system
         updateSlopeData();
+
+        // Manual checkpoints replace the legacy post-pass callback. Already-riding
+        // players update the log index before bending above; new contacts latch here
+        // for the next frame's Bri_WalkOff-equivalent bend.
+        SolidCheckpointBatch batch = checkpointAll();
+        updateStandingState(batch);
+    }
+
+    private AbstractPlayableSprite firstStandingPlayer(SolidCheckpointBatch batch) {
+        for (PlayableEntity candidate : services().playerQuery().playersFor(PLAYER_PARTICIPATION)) {
+            if (candidate instanceof AbstractPlayableSprite sprite) {
+                PlayerSolidContactResult result = batch.perPlayer().get(candidate);
+                if (result != null && result.standingNow()) {
+                    return sprite;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void updateStandingState(SolidCheckpointBatch batch) {
+        AbstractPlayableSprite standingPlayer = firstStandingPlayer(batch);
+        playerOnBridge = standingPlayer != null;
+        if (standingPlayer == null) {
+            return;
+        }
+
+        updatePlayerLogIndex(standingPlayer);
+    }
+
+    private AbstractPlayableSprite currentRidingPlayer() {
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager == null) {
+            return null;
+        }
+        for (PlayableEntity candidate : services().playerQuery().playersFor(PLAYER_PARTICIPATION)) {
+            if (candidate instanceof AbstractPlayableSprite sprite
+                    && objectManager.getRidingObject(sprite) == this) {
+                return sprite;
+            }
+        }
+        return null;
+    }
+
+    private void updatePlayerLogIndex(AbstractPlayableSprite standingPlayer) {
+        // From Bri_WalkOff/ExitPlatform2: d0 = (sonicX - bridgeX + logCount*8 + 8) >> 4
+        // The +8 offset comes from Bri_Solid: d1 = logCount*8; addq.w #8,d1
+        int relX = standingPlayer.getCentreX() - spawn.x() + (logCount * 8) + 8;
+        int logIdx = relX >> 4;
+        if (logIdx < 0) logIdx = 0;
+        if (logIdx >= logCount) logIdx = logCount - 1;
+        playerLogIndex = logIdx;
     }
 
     /**

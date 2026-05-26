@@ -9,6 +9,7 @@ import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.level.objects.ObjectSpriteSheet;
@@ -102,7 +103,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             (Sonic1Constants.VRAM_RESULTS_HUD_TEXT + 0x1A) - Sonic1Constants.VRAM_RESULTS_BASE;
 
     // GPU cache base IDs (avoids collision with level 0x20000, SS 0x10000, HUD 0x28000).
-    private static final int PATTERN_BASE = 0x40000;
+    private static final int PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
     private static final int EMERALD_PATTERN_BASE = 0x41000;
 
     // Score digit copy constants (matching Sonic1ObjectArtProvider).
@@ -263,7 +264,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
 
         appendEmeraldIndicators(commands, camera);
 
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = GameServices.graphics();
         if (graphicsManager != null) {
             graphicsManager.flushPatternBatch();
         }
@@ -403,7 +404,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             return;
         }
 
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = GameServices.graphics();
         if (graphicsManager == null) {
             return;
         }
@@ -514,7 +515,7 @@ public final class Sonic1SpecialStageResultsScreen implements ResultsScreen {
             writeScoreValue(combinedPatterns, score, sourceDigitPatterns);
         }
 
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = GameServices.graphics();
         if (graphicsManager != null) {
             resultsRenderer.updatePatternRange(graphicsManager, ringDigitStart,
                     Sonic1Constants.S1_RESULTS_BONUS_DIGIT_GROUP_TILES);

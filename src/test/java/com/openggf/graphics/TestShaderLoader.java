@@ -1,11 +1,11 @@
 package com.openggf.graphics;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TestShaderLoader {
 
@@ -16,4 +16,15 @@ public class TestShaderLoader {
         assertFalse(source.isBlank());
         assertTrue(source.contains("gl_Position"));
     }
+
+    @Test
+    public void instancedPriorityShaderSupportsGhostEffect() throws IOException {
+        String source = ShaderLoader.loadShaderSource("shaders/shader_instanced_priority.glsl");
+
+        assertTrue(source.contains("uniform int GhostMode;"));
+        assertTrue(source.contains("uniform float GhostAlpha;"));
+        assertTrue(source.contains("clamp(GhostAlpha"));
+    }
 }
+
+

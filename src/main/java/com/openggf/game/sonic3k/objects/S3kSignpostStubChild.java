@@ -23,7 +23,6 @@ public class S3kSignpostStubChild extends AbstractObjectInstance {
     private static final Logger LOG = Logger.getLogger(S3kSignpostStubChild.class.getName());
 
     private static final int Y_OFFSET = 0x18;
-
     private final S3kSignpostInstance parent;
     private int currentX;
     private int currentY;

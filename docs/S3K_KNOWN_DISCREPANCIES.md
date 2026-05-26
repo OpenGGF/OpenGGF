@@ -1,6 +1,13 @@
 # Known Discrepancies from Original S3K ROM
 
-This document tracks intentional deviations from the original Sonic 3 & Knuckles ROM implementation. These are cases where we've chosen a different approach for cleaner architecture, better maintainability, or other engineering reasons, while preserving identical runtime behavior.
+This document tracks **intentional deviations** from the original Sonic 3 & Knuckles ROM. Entries here are architectural choices we've made (cleaner code, added features, deliberate corrections of known ROM bugs) that we accept and do not plan to revert. Runtime gameplay behavior is preserved unless a rationale explicitly justifies a visible change (e.g., the "Save System" entry adds JSON persistence that replaces SRAM).
+
+**What does NOT belong here:**
+- Bugs, incomplete implementations, and parity gaps that we *intend to fix* → [S3K_KNOWN_BUGS.md](S3K_KNOWN_BUGS.md)
+- General (cross-game) engine-level issues → [KNOWN_BUGS.md](KNOWN_BUGS.md)
+- General (cross-game) intentional discrepancies → [KNOWN_DISCREPANCIES.md](KNOWN_DISCREPANCIES.md)
+
+Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
 ## Table of Contents
 
@@ -8,12 +15,15 @@ This document tracks intentional deviations from the original Sonic 3 & Knuckles
 2. [Obj_Wait Timer Pattern](#obj_wait-timer-pattern)
 3. [Immediate Art Loading](#immediate-art-loading)
 4. [Knuckles DPLC Pre-Loading](#knuckles-dplc-pre-loading)
+5. [Save System](#save-system)
+6. [Tails Flying-With-Cargo Physics](#tails-flying-with-cargo-physics)
+7. [HCZ Object Mappings: Removal of `docs/` Runtime Reads](#hcz-object-mappings-removal-of-docs-runtime-reads)
 
 ---
 
 ## AIZ Intro Object Spawn Source
 
-**Location:** `Sonic3kAIZEvents.java`
+**Location:** `Sonic3kAIZEvents.java`  
 **ROM Reference:** `sonic3k.asm` line 8111+ (`SpawnLevelMainSprites`)
 
 ### Original Implementation
@@ -44,7 +54,7 @@ public void init(int act) {
 
 ### Rationale
 
-1. **Consistent with engine architecture** - All dynamic object spawning for cutscenes goes through level event handlers (e.g., `Sonic2CNZEvents` spawns the CNZ boss). No separate `SpawnLevelMainSprites` equivalent exists.
+1. **Consistent with engine architecture** - All dynamic object spawning for cutscenes goes through level event handlers (for example `Sonic2CNZEvents` spawning the CNZ boss). No separate `SpawnLevelMainSprites` equivalent exists.
 2. **Object exists from frame 1 either way** - Both paths create the object before the first `update()` call.
 3. **Cleaner init flow** - Zone-specific behavior belongs in zone event handlers, not in a monolithic sprite spawning routine.
 
@@ -56,7 +66,7 @@ The intro object is active on the first frame of level execution, identical to t
 
 ## Obj_Wait Timer Pattern
 
-**Location:** `AizPlaneIntroInstance.java`, `CutsceneKnucklesAiz1Instance.java`
+**Location:** `AizPlaneIntroInstance.java`, `CutsceneKnucklesAiz1Instance.java`  
 **ROM Reference:** `sonic3k.asm` `Obj_Wait` subroutine, SST offsets `$2E`/`$34`
 
 ### Original Implementation
@@ -95,7 +105,7 @@ Timer-driven routine transitions fire on the exact same frame as the ROM's `Obj_
 
 ## Immediate Art Loading
 
-**Location:** `AizPlaneIntroInstance.java`, `AizIntroPlaneChild.java`, `AizIntroTerrainSwap.java`
+**Location:** `AizPlaneIntroInstance.java`, `AizIntroPlaneChild.java`, `AizIntroTerrainSwap.java`  
 **ROM Reference:** `sonic3k.asm` `Queue_Kos_Module` calls at `loc_6777A`, `Kos_decomp_queue_count` gate in `AIZ1_Resize`
 
 ### Original Implementation
@@ -111,7 +121,7 @@ The ROM queues KosinskiM-compressed art for deferred DMA transfer during V-blank
     jsr     (Queue_Kos_Module).l
 ```
 
-This queues the decompression work to be spread across multiple V-blank intervals, avoiding frame drops from large decompressions. Downstream, `AIZ1_Resize` routine 2 gates the transition to routine 4 (Y boundary unlock, dynamic maxY) on `Kos_decomp_queue_count` reaching 0 — the BG event handler stays in intro deformation mode until the queue drains.
+This queues the decompression work to be spread across multiple V-blank intervals, avoiding frame drops from large decompressions. Downstream, `AIZ1_Resize` routine 2 gates the transition to routine 4 (Y boundary unlock, dynamic maxY) on `Kos_decomp_queue_count` reaching `0` - the BG event handler stays in intro deformation mode until the queue drains.
 
 ### Our Implementation
 
@@ -122,14 +132,14 @@ byte[] planeArt = ResourceLoader.decompress(romAddr, CompressionType.KOSINSKI_MO
 graphicsManager.writePatterns(ART_TILE_AIZ_INTRO_PLANE, planeArt);
 ```
 
-Since there is no decompression queue to poll, the `AIZ1_Resize` routine 2→4 gate uses an `introWasPlayed` flag (from `Sonic3kAIZEvents.shouldSpawnIntro()`) instead of a queue count. When the intro was played, a 30-frame countdown simulates the queue drain delay. When the intro was skipped, `mainLevelPhaseActive` is set immediately — matching the ROM where `Kos_decomp_queue_count` is already 0 at level start.
+Since there is no decompression queue to poll, the `AIZ1_Resize` routine `2 -> 4` gate uses an `introWasPlayed` flag (from `Sonic3kAIZEvents.shouldSpawnIntro()`) instead of a queue count. When the intro was played, a 30-frame countdown simulates the queue drain delay. When the intro was skipped, `mainLevelPhaseActive` is set immediately - matching the ROM where `Kos_decomp_queue_count` is already `0` at level start.
 
 ### Rationale
 
-1. **No V-blank constraint** - The engine doesn't have a V-blank DMA budget. Decompression during init has no frame timing impact.
+1. **No V-blank constraint** - The engine does not have a V-blank DMA budget. Decompression during init has no frame timing impact.
 2. **Art available before first draw** - Immediate loading guarantees patterns are ready when the object first renders, eliminating any possibility of a blank-frame glitch.
-3. **Simpler code path** - No deferred queue management needed.
-4. **Intro check is equivalent to queue count** - When the intro wasn't played, no Kos data was queued, so the count would be 0. Checking `introWasPlayed` produces the same result.
+3. **Simpler code path** - No deferred queue management is needed.
+4. **Intro check is equivalent to queue count** - When the intro was not played, no Kos data was queued, so the count would be `0`. Checking `introWasPlayed` produces the same result.
 
 ### Verification
 
@@ -139,7 +149,7 @@ All art tiles are present from the first frame the object renders. `TestS3kAiz1S
 
 ## Knuckles DPLC Pre-Loading
 
-**Location:** `CutsceneKnucklesAiz1Instance.java`
+**Location:** `CutsceneKnucklesAiz1Instance.java`  
 **ROM Reference:** `sonic3k.asm` `Perform_DPLC` calls in `CutsceneKnux_AIZ1`
 
 ### Original Implementation
@@ -169,7 +179,7 @@ for (int frame = 0; frame < frameCount; frame++) {
 
 ### Rationale
 
-1. **No VRAM scarcity** - Modern systems have abundant texture memory; the ~64KB VDP limit doesn't apply.
+1. **No VRAM scarcity** - Modern systems have abundant texture memory; the VDP's limit does not apply directly.
 2. **Eliminates per-frame pattern transfer** - No need to track which frame was last loaded or detect frame changes.
 3. **Simpler rendering** - Each mapping frame references stable tile indices, making the draw path straightforward.
 
@@ -177,3 +187,100 @@ for (int frame = 0; frame < frameCount; frame++) {
 
 Every Knuckles animation frame displays the correct patterns at the correct positions, matching the ROM's per-frame DPLC result.
 
+---
+
+## Save System
+
+**Location:** `com.openggf.game.save`, `com.openggf.game.dataselect`, `com.openggf.game.sonic3k.dataselect`  
+**ROM Reference:** `sonic3k.asm` SRAM routines (`ReadSaveGame`, `WriteSaveGame`), save-screen objects (`ObjDat_SaveScreen`, `Obj_SaveScreen_*`)
+
+### Original Implementation
+
+The ROM stores save data directly in battery-backed SRAM at fixed offsets. Each of the 8 slots occupies a contiguous region with zone/act, character, emerald, and clear flags packed into specific byte positions. The save screen itself is object-driven, with authored selector/card objects and mappings rather than a debug-style overlay.
+
+### Our Implementation
+
+OpenGGF now keeps the native S3K save-screen flow but stores saves as JSON envelopes instead of raw SRAM. Key differences:
+
+- **Per-slot JSON files** stored at `saves/s3k/slotN.json` wrapped in a `SaveEnvelope` with version, game code, slot number, payload, and hash.
+- **SHA-256 integrity** rather than the ROM checksum routine. Hash mismatches log warnings during Data Select scan but do not block otherwise valid saves.
+- **Corrupt quarantine** - malformed, unreadable, wrong-game, or structurally invalid save files are renamed to `.corrupt` and treated as empty slots.
+- **No-op unsaved sessions** - save requests route through `SaveSessionContext`; when no slot is active, they silently no-op.
+- **Snapshot providers** - game-specific payload capture is handled by `SaveSnapshotProvider` implementations rather than direct SRAM-style writes.
+- **Session-owned launch metadata** - active slot ownership, selected team, and launch zone/act are carried by `WorldSession` and `SaveSessionContext` rather than being inferred from config during gameplay.
+- **Restricted clear restart modeling** - clear slots use Java-side restart tables reconstructed from the disassembly, including Knuckles-specific restrictions, rather than exposing unrestricted level selection.
+- **Native S3K save-screen parity** - the native `S3K` `1 PLAYER` route now renders from the authored object layout and mapping frames; the old RECTI/text-placeholder selector path is gone on that production path. Cross-game donation remains separate work, and the temporary S1/S2 placeholder managers are not part of this parity claim.
+
+### Rationale
+
+1. **Platform independence** - JSON files work on any OS without SRAM hardware emulation.
+2. **Human-readable** - save files can be inspected and manually edited for debugging.
+3. **Extensible** - the envelope format supports versioning and per-game payload schemas.
+4. **Parity with the original menu flow** - the S3K save screen now follows the original authored layout and selector behavior, while the backend storage remains engine-owned.
+
+### Verification
+
+`TestSaveManager` verifies round-trip write/read, hash validation, corrupt quarantine, wrong-game detection, replacement of stale `.corrupt` artifacts, and no-op unsaved sessions. `TestS3kSaveSnapshotProvider` verifies payload capture includes team, zone, act, lives, emerald count, and clear-restart metadata. `TestS3kDataSelectPresentation` verifies the native save-screen renderer uses authored layout objects and mapping frames instead of the old RECTI overlay path. `TestGameLoop` verifies active-slot saves are written on bonus-stage and special-stage returns, that `S3K` `ONE_PLAYER` routes into native Data Select, and that `TWO_PLAYER`/overlay bypasses do not.
+
+### Manual Validation
+
+- `2026-04-13`: native S3K parity pass captured via `com.openggf.game.sonic3k.dataselect.S3kDataSelectVisualCapture`, which renders the live native S3K Data Select frontend with real ROM assets into `target/s3k-dataselect-visual/native_s3k_dataselect_slot1.png` for inspection.
+
+---
+
+## Tails Flying-With-Cargo Physics
+
+**Location:** Tails flight physics (`SidekickCpuController`, `PlayableSpriteMovement.applyGravity`)
+**ROM Reference:** `sonic3k.asm:27592` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27553` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
+
+### Original Implementation
+
+ROM `Tails_Stand_Freespace` at `sonic3k.asm:27553-27555` branches to `Tails_FlyingSwimming` whenever `double_jump_flag(a0)` is non-zero, swapping the normal `+0x38` air gravity for `+0x08` flight gravity from `Tails_Move_FlySwim` (sonic3k.asm:27633 `loc_1488C`). The flag is set when Tails picks up Sonic for the CNZ1 carry intro (`loc_13FC2` at sonic3k.asm:26904 writes `double_jump_flag=1`) and is NOT cleared by the ground-release path at `loc_14016` — Tails continues under flight physics until he actually touches the floor.
+
+### Our Implementation
+
+The engine reproduces this behavior with a feature-scoped gate rather than a flat bit check:
+
+1. `SidekickCpuController.updateCarryInit()` sets `sidekick.setDoubleJumpFlag(1)` at the same point ROM `loc_13FC2` writes the flag.
+2. The ground-release branch in `updateCarrying()` zeros Tails's `x_vel/y_vel/ground_vel` and keeps the air bit set (matching ROM `loc_14016` at sonic3k.asm:26923-26946). Crucially, it does NOT clear `double_jump_flag` — the ROM leaves it set so Tails continues in flight physics for at least one more tick while the carry-release impulse propagates to Sonic.
+3. `PlayableSpriteMovement.applyGravity()` and `doObjectMoveAndFall()` gate flight gravity on `sprite.getSecondaryAbility() == FLY && sprite.getDoubleJumpFlag() != 0` (mirrors `Tails_Stand_Freespace` → `Tails_FlyingSwimming` branch).
+4. Tails's CPU flight AI — `Tails_Catch_Up_Flying` (routine 0x02 at `sonic3k.asm:26474`) and `Tails_FlySwim_Unknown` (routine 0x04 at `sonic3k.asm:26534`) — is ported into `SidekickCpuController.CATCH_UP_FLIGHT` / `FLIGHT_AUTO_RECOVERY`, plus the NORMAL → `FLIGHT_AUTO_RECOVERY` transition on a dead leader.
+
+### Rationale
+
+1. **Feature-scoped gate over raw flag** — `double_jump_flag` is overloaded in the ROM: Sonic's insta-shield uses it (values 1-$20 during shield timing), Knuckles's glide uses it (1=gliding, 2=stopped, 3=sliding), and Tails's flight uses it (non-zero = flight-gravity). Gating the flight-gravity substitution on `SecondaryAbility.FLY` prevents Sonic's insta-shield and Knuckles's glide from accidentally acquiring the `+0x08` gravity. The ROM achieves the same scoping naturally because only Tails's code path hits `Tails_Stand_Freespace`.
+2. **Plan reference** — See `docs/superpowers/plans/2026-04-24-s3k-tails-cpu-flight-ai.md` for the full breakdown of the carry-release and flight-AI ports.
+
+### Verification
+
+`TestSidekickCpuControllerCarry`, `TestSidekickCpuControllerCatchUpFlight`, and `TestSidekickCpuControllerFlightAutoRecovery` cover the state-machine transitions. `TestS3kCnzCarryHeadless` verifies the CNZ1 intro carry-release frame window.
+
+---
+
+## HCZ Object Mappings: Removal of `docs/` Runtime Reads
+
+**Location:** `Sonic3kObjectArtProvider.java`, `Sonic3kConstants.java`
+**ROM Reference:** `Lockon S3/LockOn Data.asm:838` (`Map_HCZMiniboss`), `:856` (`Map_HCZEndBoss`), `:192` (`Map_HCZWaterWall`)
+
+### Original Implementation (engine, pre-fix)
+
+`Sonic3kObjectArtProvider` previously parsed three HCZ object mapping tables (`Map_HCZMiniboss`, `Map_HCZEndBoss`, `Map_HCZWaterWall`) by reading `.asm` source files from `docs/skdisasm/Levels/HCZ/Misc Object Data/` at runtime via `Files.readAllLines`, falling back to an empty mapping list (and therefore invisible sprites) whenever the disassembly tree was absent. This violated the project's "ROM only for runtime assets" hard rule documented in `CLAUDE.md`.
+
+### Fixed Implementation
+
+All three call sites now read mapping bytes from the user-supplied ROM via `S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr)` using the new constants:
+- `MAP_HCZ_MINIBOSS_ADDR = 0x3629E0` (was incorrectly `0x362A28`, which pointed at the first frame body rather than the offset table base)
+- `MAP_HCZ_END_BOSS_ADDR = 0x3634D4`
+- `MAP_HCZ_WATERWALL_ADDR = 0x22EE10`
+
+Each address was derived from the disassembly's absolute `Frame_<addr>` labels (since the lock-on data is anchored at `org $200000` in the `Sonic3_Complete` build) and verified by reading the ROM at the computed offset and confirming the first word equals the expected offset-table size and the first frame's piece count matches the source.
+
+The duplicate-frame workaround for shared `Frame_362BB0` labels in HCZ miniboss is no longer needed, because ROM-based reading of duplicate offsets yields duplicate frame entries naturally.
+
+### Rationale
+
+This is not a behavioral discrepancy from the ROM — sprite output is identical to before, when the disassembly tree was present. It is recorded here only because the previous implementation deviated from the project's ROM-only sourcing rule and silently degraded under the (CI / fresh clone) configurations where `docs/skdisasm/` is absent.
+
+### Verification
+
+`TestSonic3kLevelLoading` and `TestSonic3kBootstrapResolver` continue to pass. The `loadMappingsFromAsmInclude` helper and the three `Path` constants pointing under `docs/` have been removed from `Sonic3kObjectArtProvider`.

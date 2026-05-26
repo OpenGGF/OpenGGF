@@ -40,7 +40,6 @@ public class Sonic1LamppostTwirlInstance extends AbstractObjectInstance {
 
     // Mapping frame for red ball only
     private static final int TWIRL_FRAME = 2;
-
     private final Sonic1LamppostObjectInstance parent;
     private final int centerX;
     private final int centerY;

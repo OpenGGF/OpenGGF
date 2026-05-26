@@ -8,8 +8,6 @@ import com.openggf.game.TitleScreenProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsConstants;
-import com.openggf.Engine;
-import com.openggf.GameLoop;
 import com.openggf.audio.AudioManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
@@ -49,8 +47,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kTitleScreenManager.class.getName());
 
     private static Sonic3kTitleScreenManager instance;
+    private Runnable exitToLevelHandler = () -> {};
 
-    private final SonicConfigurationService configService = SonicConfigurationService.getInstance();
+    private final SonicConfigurationService configService = GameServices.configuration();
     private final Sonic3kTitleScreenDataLoader dataLoader = new Sonic3kTitleScreenDataLoader();
     private final PatternDesc reusableDesc = new PatternDesc();
 
@@ -85,9 +84,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         WHITE_FLASH,
         /** Banner bounce + menu selection. */
         INTERACTIVE,
-        /** Fade to black before exiting (handles fade ourselves since
-         *  FadeManager instance may differ between GameLoop and UiRenderPipeline
-         *  after the RuntimeManager singleton migration). */
+        /** Fade to black before exiting. */
         FADE_OUT,
         /** Fade complete, ready to exit. */
         EXITING
@@ -280,7 +277,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     // Constructor and singleton
     // -----------------------------------------------------------------------
 
-    private Sonic3kTitleScreenManager() {
+    public Sonic3kTitleScreenManager() {
     }
 
     public static synchronized Sonic3kTitleScreenManager getInstance() {
@@ -388,7 +385,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             dataLoader.loadData();
         }
 
-        GraphicsManager gm = GraphicsManager.getInstance();
+        GraphicsManager gm = GameServices.graphics();
         if (gm == null || gm.isHeadlessMode()) {
             return;
         }
@@ -440,11 +437,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         segaSoundPlayed = false;
         spritesInitialized = false;
 
-        // Cancel any stale FadeManager overlay. The GameLoop's exitTitleScreen()
-        // uses fadeManager.startFadeToBlack() with a callback to doExitTitleScreen(),
-        // which calls this reset(). After the callback, FadeManager.completeFade()
-        // would persist the black overlay indefinitely (holdDuration = MAX_VALUE).
-        // Cancelling here clears the overlay so the level can render.
+        // Defensive cleanup in case some earlier flow left a generic FadeManager
+        // overlay active before the title screen was reset.
         GameServices.fade().cancel();
 
         LOGGER.info("S3K title screen reset to inactive");
@@ -463,6 +457,16 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     @Override
     public boolean isActive() {
         return state != State.INACTIVE;
+    }
+
+    @Override
+    public TitleScreenAction consumeExitAction() {
+        return menuSelection == 0 ? TitleScreenAction.ONE_PLAYER : TitleScreenAction.TWO_PLAYER;
+    }
+
+    @Override
+    public void setExitToLevelHandler(Runnable handler) {
+        this.exitToLevelHandler = handler != null ? handler : () -> {};
     }
 
     // -----------------------------------------------------------------------
@@ -553,7 +557,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * Each step overwrites colors 0-6 (14 bytes) with data from the transition table.
      */
     private void applyPalTransitionStep(byte[] transitionData, int step) {
-        GraphicsManager gm = GraphicsManager.getInstance();
+        GraphicsManager gm = GameServices.graphics();
         if (gm == null || gm.isHeadlessMode()) {
             return;
         }
@@ -629,9 +633,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      *
      * <p>We handle the full exit transition ourselves rather than relying on
      * the GameLoop's {@code exitTitleScreen()} → FadeManager → callback chain,
-     * because the upstream RuntimeManager singleton migration can cause the
-     * FadeManager instance in GameLoop to differ from the one that the
-     * UiRenderPipeline updates, preventing the fade callback from ever firing.
+     * because title transitions may run across differently scoped fade managers.
      *
      * <p>When our visual fade completes, we directly reset, set the game mode
      * to LEVEL, and load the first zone.
@@ -651,11 +653,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
             // Transition directly to LEVEL mode and load the first zone
             try {
-                Engine engine = Engine.getInstance();
-                if (engine != null) {
-                    engine.getGameLoop().setGameMode(com.openggf.game.GameMode.LEVEL);
-                }
-                GameServices.level().loadZoneAndAct(0, 0);
+                exitToLevelHandler.run();
             } catch (Exception e) {
                 LOGGER.severe("Failed to load level after title screen: " + e.getMessage());
             }
@@ -679,14 +677,19 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             GameServices.audio().playSfx(Sonic3kSfx.SWITCH.id);
         }
 
-        // Start pressed - begin exit fade
+        // Start pressed - 1 PLAYER hands off through GameLoop routing, while the
+        // competition path keeps the provider-owned fade sequence.
         if (input.isKeyPressed(jumpKey)) {
+            if (menuSelection == 0) {
+                state = State.EXITING;
+                LOGGER.info("S3K title screen handing off to GameLoop for 1 PLAYER");
+                return;
+            }
             phase = Phase.FADE_OUT;
             phaseTimer = 0;
             // State stays ACTIVE during our fade — we only set EXITING once
-            // the visual fade is complete, so the GameLoop's exitTitleScreen()
-            // finds the screen already black and can transition immediately.
-            AudioManager.getInstance().fadeOutMusic();
+            // the visual fade is complete, so GameLoop can hand off immediately.
+            GameServices.audio().fadeOutMusic();
             LOGGER.info("S3K title screen starting exit fade (menu selection: " + menuSelection + ")");
             return;
         }
@@ -1005,7 +1008,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * which contains the water gradient colors.
      */
     private void applyWaterRotPalette(byte[] waterRotData) {
-        GraphicsManager gm = GraphicsManager.getInstance();
+        GraphicsManager gm = GameServices.graphics();
         if (gm == null || gm.isHeadlessMode()) {
             return;
         }

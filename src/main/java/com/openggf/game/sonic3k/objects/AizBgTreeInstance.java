@@ -1,12 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
+import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -58,15 +57,16 @@ public class AizBgTreeInstance extends AbstractObjectInstance {
     public void update(int frameCounter, PlayableEntity player) {
         if (isDestroyed()) return;
 
-        // Delete when auto-scroll ends (small boss has exited, camera unlocked)
-        // or camera has passed the boss area
-        Sonic3kAIZEvents events = getAizEvents();
-        boolean autoScrollActive = (events != null && events.isBattleshipAutoScrollActive());
-        if (!autoScrollActive || services().camera().getX() >= DELETE_CAMERA_X) {
+        // ROM: Obj_AIZ2BGTreeMove — delete only when camera passes the boss area.
+        // Trees persist after auto-scroll ends; the AIZ runtime state's
+        // battleshipSmoothScrollX continues to accumulate camera deltas, so
+        // trees scroll off naturally.
+        if (services().camera().getX() >= DELETE_CAMERA_X) {
             setDestroyed(true);
             return;
         }
-        int currentSmooth = (events != null) ? events.getBattleshipSmoothScrollX() : 0;
+        AizZoneRuntimeState state = currentAizState();
+        int currentSmooth = state != null ? state.getBattleshipSmoothScrollX() : 0;
         int scrollDelta = currentSmooth - spawnSmoothScrollX;
 
         // 3/4 parallax: scrollDelta - (scrollDelta >> 2)
@@ -122,11 +122,7 @@ public class AizBgTreeInstance extends AbstractObjectInstance {
     @Override
     public boolean isHighPriority() { return false; }
 
-    private Sonic3kAIZEvents getAizEvents() {
-        try {
-            return ((Sonic3kLevelEventManager) services().levelEventProvider()).getAizEvents();
-        } catch (Exception e) {
-            return null;
-        }
+    private AizZoneRuntimeState currentAizState() {
+        return S3kRuntimeStates.currentAiz(services().zoneRuntimeRegistry()).orElse(null);
     }
 }

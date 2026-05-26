@@ -34,7 +34,6 @@ public class FZPlasmaBall extends AbstractObjectInstance implements TouchRespons
 
     private static final int BOSS_FZ_Y = Sonic1Constants.BOSS_FZ_Y;
     private static final SpriteAnimationSet PLASMA_ANIMATIONS = Sonic1BossAnimations.getPlasmaAnimations();
-
     private final FZPlasmaLauncher launcher;
 
     // Movement state

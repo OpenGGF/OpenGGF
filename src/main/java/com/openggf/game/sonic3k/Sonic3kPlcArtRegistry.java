@@ -626,6 +626,19 @@ public final class Sonic3kPlcArtRegistry {
                 null
         ));
 
+        // Gray Button: ArtNem_GrayButton, palette 0
+        // ROM: PLC_CutsceneButton loads this at runtime for the Knuckles cutscene.
+        // Cutscene button uses palette 0 so it survives Pal_CutsceneKnux on line 1.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.BUTTON,
+                Sonic3kConstants.ART_NEM_GRAY_BUTTON_ADDR,
+                CompressionType.NEMESIS,
+                0,
+                Sonic3kConstants.MAP_BUTTON_ADDR,
+                0,   // palette 0
+                -1   // no DPLC
+        ));
+
         // Water Rush main sprite: ArtNem_HCZWaterRush, loaded via PLC_0E
         // Hardcoded mappings (mappingAddr=0 triggers dispatch in loadStandaloneSheet)
         standalone.add(new StandaloneArtEntry(
@@ -645,6 +658,29 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ARTTILE_HCZ_WATER_RUSH_BLOCK,
                 2,
                 "buildHczWaterRushBlockSheet"
+        ));
+
+        // Water Splash subtype 0: ArtUnc_HCZWaterSplash, uncompressed, palette 2
+        // ROM: make_art_tile(ArtTile_HCZWaterSplash, 2, 0), hardcoded mappings
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HCZ_WATER_SPLASH,
+                Sonic3kConstants.ART_UNC_HCZ_WATER_SPLASH_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_HCZ_WATER_SPLASH_SIZE,
+                0,
+                2,
+                -1
+        ));
+
+        // Water Drop (Obj_WaterDrop, ID 0x6E): ArtTile_HCZ2Slide = $035C, palette 1
+        // ROM: make_art_tile(ArtTile_HCZ2Slide, 1, 0), Map_HCZWaterDrop (7 frames)
+        // Custom builder because frame 6 uses tile 0x0A4 (different VRAM source)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.HCZ_WATER_DROP,
+                -1,
+                Sonic3kConstants.ARTTILE_HCZ2_SLIDE,
+                1,
+                "buildHczWaterDropSheet"
         ));
 
         // HCZ Hand Launcher: ArtTile_HCZMisc + $1A, palette 1
@@ -714,10 +750,10 @@ public final class Sonic3kPlcArtRegistry {
         ));
 
         // Geyser debris art (Map_HCZWaterWallDebris, tiles at ArtTile_HCZGeyser+$58)
-        // Uses same compressed art as horizontal geyser but with debris mappings.
+        // HCZ2 cutscene debris uses the vertical cutscene geyser art source.
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.HCZ_GEYSER_DEBRIS,
-                Sonic3kConstants.ART_KOSM_HCZ_GEYSER_HORZ_ADDR,
+                Sonic3kConstants.ART_KOSM_HCZ_GEYSER_VERT_ADDR,
                 CompressionType.KOSINSKI_MODULED,
                 0,
                 0,
@@ -838,12 +874,21 @@ public final class Sonic3kPlcArtRegistry {
                     -1
             ));
             standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.MGZ_MINIBOSS_SPIRE,
+                    Sonic3kConstants.ART_NEM_MGZ_SPIRE_ADDR,
+                    CompressionType.NEMESIS,
+                    0,
+                    Sonic3kConstants.MAP_MGZ_MINIBOSS_SPIRE_ADDR,
+                    2,
+                    -1
+            ));
+            standalone.add(new StandaloneArtEntry(
                     Sonic3kObjectArtKeys.MGZ_MINIBOSS_DEBRIS,
                     Sonic3kConstants.ART_KOSM_MGZ_ENDBOSS_DEBRIS_ADDR,
                     CompressionType.KOSINSKI_MODULED,
                     0,
-                    Sonic3kConstants.MAP_MGZ_MINIBOSS_ADDR,
-                    1,
+                    Sonic3kConstants.MAP_MGZ_ENDBOSS_DEBRIS_ADDR,
+                    2, // ROM: make_art_tile(ArtTile_MGZMiniBossDebris,2,0) — palette line 2
                     -1
             ));
         } else {
@@ -854,6 +899,55 @@ public final class Sonic3kPlcArtRegistry {
                     0,
                     Sonic3kConstants.MAP_MANTIS_ADDR,
                     1,
+                    -1
+            ));
+            // MGZ2 Drilling Robotnik (mini-events + future end boss).
+            // ROM: ObjDat_MGZDrillBoss at sonic3k.asm:144542 — make_art_tile(ArtTile_MGZEndBoss,1,0).
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.MGZ_ENDBOSS,
+                    Sonic3kConstants.ART_KOSM_MGZ_ENDBOSS_ADDR,
+                    CompressionType.KOSINSKI_MODULED,
+                    0,
+                    Sonic3kConstants.MAP_MGZ_ENDBOSS_ADDR,
+                    1,
+                    -1
+            ));
+            // ROM: loc_6CFF4 stores ArtScaled_MGZEndBoss in $42(a0), then
+            // Perform_Art_Scaling reads the raw 0x1000-byte source art and DMA
+            // uploads the result to ArtTile_MGZEndBossScaled.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.MGZ_ENDBOSS_SCALED,
+                    Sonic3kConstants.ART_UNC_MGZ_ENDBOSS_SCALED_ADDR,
+                    CompressionType.UNCOMPRESSED,
+                    Sonic3kConstants.ART_UNC_MGZ_ENDBOSS_SCALED_SIZE,
+                    -1,
+                    1,
+                    -1
+            ));
+            // Shared Robotnik ship art (for the ship + pilot sprite on top of the drill).
+            // ROM: Load_PLC #$6D at Obj_MGZ2DrillingRobotnik init (sonic3k.asm:142399) loads
+            // ArtNem_RobotnikShip alongside the MGZ end-boss art. The ship uses Map_RobotnikShip
+            // with make_art_tile(ArtTile_RobotnikShip, 0, 0) — palette line 0.
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                    Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR,
+                    CompressionType.NEMESIS,
+                    0,
+                    Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR,
+                    0,
+                    -1
+            ));
+            // MGZ2 end-boss debris art (ArtKosM_MGZEndBossDebris + Map_MGZEndBossDebris).
+            // ROM: ObjDat3_6D7A8 (sonic3k.asm:144569) uses make_art_tile(ArtTile_MGZEndBossDebris,2,1)
+            // — palette line 2. Used by the 10 debris chunks spawned during drilldown
+            // (ChildObjDat_6D7EA at sonic3k.asm:144597).
+            standalone.add(new StandaloneArtEntry(
+                    Sonic3kObjectArtKeys.MGZ_ENDBOSS_DEBRIS,
+                    Sonic3kConstants.ART_KOSM_MGZ_ENDBOSS_DEBRIS_ADDR,
+                    CompressionType.KOSINSKI_MODULED,
+                    0,
+                    Sonic3kConstants.MAP_MGZ_ENDBOSS_DEBRIS_ADDR,
+                    2,
                     -1
             ));
         }
@@ -878,6 +972,98 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kObjectArtKeys.FLOATING_PLATFORM_MGZ,
                 Sonic3kConstants.MAP_MGZ_FLOATING_PLATFORM_ADDR,
                 1,
+                2,
+                null
+        ));
+
+        // Swinging Platform: make_art_tile(ArtTile_MGZMisc1, 2, 0)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.MGZ_SWINGING_PLATFORM,
+                Sonic3kConstants.MAP_MGZ_SWINGING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MISC1,
+                2,
+                null
+        ));
+
+        // Smashing Pillar (MGZ form of Obj_MGZLBZSmashingPillar): make_art_tile($001, 2, 0)
+        // ROM: sonic3k.asm:56866 (zone == 2 branch).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.MGZ_SMASHING_PILLAR,
+                Sonic3kConstants.MAP_MGZ_SMASHING_PILLAR_ADDR,
+                1,
+                2,
+                null
+        ));
+
+        // Trigger Platform: make_art_tile($001, 2, 0)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.MGZ_TRIGGER_PLATFORM,
+                Sonic3kConstants.MAP_MGZ_TRIGGER_PLATFORM_ADDR,
+                1,
+                2,
+                null
+        ));
+
+        // Head Trigger (Obj_MGZHeadTrigger, ID 0x55): make_art_tile(ArtTile_MGZMisc2, 1, 1).
+        // Art is loaded by PLC_12_13 / PLC_14_15 (ArtNem_MGZMisc2) before level start.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.MGZ_HEAD_TRIGGER,
+                Sonic3kConstants.MAP_MGZ_HEAD_TRIGGER_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MISC2,
+                1,
+                null
+        ));
+
+        // Swinging Spike Ball: make_art_tile(ArtTile_MGZMisc1, 1, 0)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.MGZ_SWINGING_SPIKE_BALL,
+                Sonic3kConstants.MAP_MGZ_SWINGING_SPIKE_BALL_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MISC1,
+                1,
+                null
+        ));
+
+        // Moving Spike Platform (Obj_MGZMovingSpikePlatform, ID 0x56): make_art_tile($001, 2, 0)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.MGZ_MOVING_SPIKE_PLATFORM,
+                Sonic3kConstants.MAP_MGZ_MOVING_SPIKE_PLATFORM_ADDR,
+                1,
+                2,
+                null
+        ));
+
+        // Dash Trigger: make_art_tile(ArtTile_MGZMisc1, 1, 0)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.MGZ_DASH_TRIGGER,
+                Sonic3kConstants.MAP_MGZ_DASH_TRIGGER_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MISC1,
+                1,
+                null
+        ));
+
+        // Pulley: make_art_tile(ArtTile_MGZMisc1, 1, 0)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.MGZ_PULLEY,
+                Sonic3kConstants.MAP_MGZ_PULLEY_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MISC1,
+                1,
+                null
+        ));
+
+        // Top Platform: make_art_tile(ArtTile_MGZMisc1, 1, 0)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.MGZ_TOP_PLATFORM,
+                Sonic3kConstants.MAP_MGZ_TOP_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MISC1,
+                1,
+                null
+        ));
+
+        // Top Launcher: make_art_tile(ArtTile_MGZMisc2, 2, 0)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.MGZ_TOP_LAUNCHER,
+                Sonic3kConstants.MAP_MGZ_TOP_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_MGZ_MISC2,
                 2,
                 null
         ));
@@ -979,6 +1165,16 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ARTTILE_CNZ_BUTTON,
                 2,
                 null
+        ));
+
+        // Bumper: ArtTile_CNZMisc + $13, palette 2.
+        // ROM: Obj_Bumper, non-Pachinko/non-competition path.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.CNZ_BUMPER,
+                -1,
+                Sonic3kConstants.ARTTILE_CNZ_BUMPER,
+                2,
+                "buildCnzBumperSheet"
         ));
 
         // Door (Object 0x3C) vertical: ArtTile_CNZMisc + $C5, palette 2
@@ -1096,6 +1292,24 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kObjectArtKeys.TENSION_BRIDGE_ICZ,
                 Sonic3kConstants.MAP_ICZ_TENSION_BRIDGE_ADDR,
                 Sonic3kConstants.ARTTILE_ICZ_MISC1,
+                2,
+                null
+        ));
+
+        // Shared ICZ platform mappings used by Obj_ICZSegmentColumn break debris.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.ICZ_PLATFORMS,
+                Sonic3kConstants.MAP_ICZ_PLATFORMS_ADDR,
+                Sonic3kConstants.ARTTILE_ICZ_MISC1,
+                2,
+                null
+        ));
+
+        // ICZ Wall/Column objects: Obj_ICZSegmentColumn uses make_art_tile($001, 2, 0).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN,
+                Sonic3kConstants.MAP_ICZ_WALL_AND_COLUMN_ADDR,
+                1,
                 2,
                 null
         ));
@@ -1245,6 +1459,16 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kObjectArtKeys.COLLAPSING_BRIDGE_LBZ_LEDGE,
                 Sonic3kConstants.MAP_LBZ_COLLAPSING_LEDGE_ADDR,
                 1,
+                2,
+                null
+        ));
+
+        // Smashing Spikes (LBZ form of Obj_MGZLBZSmashingPillar): make_art_tile(ArtTile_LBZTubeTrans, 2, 0)
+        // ROM: sonic3k.asm:56859 (zone != 2 branch).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LBZ_SMASHING_SPIKES,
+                Sonic3kConstants.MAP_LBZ_SMASHING_SPIKES_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ_TUBE_TRANS,
                 2,
                 null
         ));

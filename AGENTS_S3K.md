@@ -3,6 +3,22 @@
 This document captures S3K-specific implementation intricacies for AI agents and developers.
 Referenced from [CLAUDE.md](CLAUDE.md) § "Sonic 3&K Bring-up Notes".
 
+## Current Delivery Priority
+
+S3K work should be planned around playable vertical slices, not isolated checklist closure.
+The immediate route target is AIZ through HCZ, with CNZ, MGZ, and ICZ work feeding the
+same standard. A slice is not "done" because its level loads or an object exists; it needs
+coherent traversal, event/camera flow, scroll/parallax, animated tiles, palette/PLC state,
+boss or transition behavior, sidekick-sensitive interactions, rewind-relevant state capture,
+and trace or visual validation for known blockers.
+
+When implementing slice features, use the runtime-owned shared systems where they apply:
+`ZoneRuntimeRegistry`, `PaletteOwnershipRegistry`, `AnimatedTileChannelGraph`,
+`ZoneLayoutMutationPipeline`, `ScrollEffectComposer`, `SpecialRenderEffectRegistry`, and
+`AdvancedRenderModeController`. Broad S1/S2 or old-S3K migration is useful when it removes
+active duplication or risk in code already touched by the slice; it should not displace
+playable S3K progress.
+
 ## Per-Frame Palette Animation
 
 ### Overview
@@ -11,8 +27,13 @@ The ROM's `AnimatePalettes` routine runs **every frame** and dispatches to per-z
 that cycle palette colors through ROM data tables. This is the `AnPal_*` system in the
 disassembly (`sonic3k.asm:3105-3282`, `s3.asm:3245-3414`).
 
-**Implementation:** `Sonic3kPaletteCycler` (called via `Sonic3kLevelAnimationManager` →
-`LevelManager.update()` each frame).
+**Implementation:** `Sonic3kPaletteCycler` (called via `Sonic3kLevelAnimationManager` from
+the level draw path — `LevelRenderer.drawWithRenderOptions` ticks
+`animatedPaletteManager.update()` each frame), with writes composed through the runtime-owned
+`PaletteOwnershipRegistry` via `S3kPaletteWriteSupport` before the frame is committed.
+
+> Headless tests that bypass the renderer must explicitly tick the cycler — e.g.
+> `LevelManager.getAnimatedPaletteManager().update()` — to advance palette state.
 
 ### Palette Animation vs. Palette Mutation
 
@@ -21,10 +42,11 @@ These are two distinct systems that both modify palette colors at runtime:
 | System | Trigger | Example | Implementation |
 |--------|---------|---------|----------------|
 | **Palette Animation** (AnPal) | Timer-based, every N frames | AIZ waterfall shimmer, torch glow cycling | `Sonic3kPaletteCycler` |
-| **Palette Mutation** (_Resize) | Camera-position threshold | AIZ1 hollow tree color 15 darkening at X≥$2B00 | `Sonic3kAIZEvents.updateStage2PaletteColor()` |
+| **Palette Mutation** (_Resize) | Camera-position threshold | AIZ1 hollow tree color 15 darkening at X≥$2B00 | `Sonic3kAIZEvents.applyResizePaletteMutation()` |
 
 Palette mutations are one-shot writes in `_Resize` routines (event handlers), not cycling.
-They should stay in `Sonic3kAIZEvents` (or the zone's event handler), not in the cycler.
+They should stay in `Sonic3kAIZEvents` (or the zone's event handler), typically routed through
+the event helper methods backed by `PaletteOwnershipRegistry`, not in the cycler.
 
 ### The Counter/Step/Limit Pattern
 
@@ -131,6 +153,16 @@ at runtime. Both must be implemented for visual accuracy.
 ## Reusable Engine Utilities for S3K Objects
 
 When implementing S3K objects, bosses, or badniks, **always check for existing utilities before writing new code**. The following patterns have been reimplemented multiple times and should be reused:
+
+### Object Behavior Contracts
+
+New S3K object, boss, badnik, and trace work should use the shared object-physics contracts when they fit:
+
+- Use `ObjectControlState` for native object-control bit intent and derived movement, touch, solid, and CPU predicates. Do not add raw object-control setter combinations unless they are compatibility bridges with tests.
+- Use `ObjectPlayerQuery` plus an explicit `ObjectPlayerParticipationPolicy` for player selection. Distinguish native P1/P2 slot behavior from OpenGGF's extended multi-sidekick behavior deliberately.
+- Use `NativePositionOps` for playable-sprite native `x_pos` / `y_pos` writes. Raw preserve-subpixel centre setters are for lower-level sprite internals or non-playable/object-local state.
+- Use `ObjectLifetimeOps` for destruction, offscreen expiry, respawn-latch updates, dynamic expiry, and slot transfer semantics.
+- Declare canonical `SolidRoutineProfile`, `TouchResponseProfile`, and `ObjectLifecycleProfile` values when they preserve current behavior. Leave bespoke boss or multi-part object behavior explicit and covered by focused tests.
 
 ### Physics & Movement
 

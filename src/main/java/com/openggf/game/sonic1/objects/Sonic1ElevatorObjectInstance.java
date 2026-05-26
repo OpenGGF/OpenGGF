@@ -1,15 +1,17 @@
 package com.openggf.game.sonic1.objects;
+
 import com.openggf.game.PlayableEntity;
 
 import com.openggf.debug.DebugRenderContext;
+import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
-import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
+import com.openggf.level.objects.SolidExecutionMode;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -61,6 +63,8 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
 
     // Platform surface height (thin platform for solid contact)
     private static final int HALF_HEIGHT = 0x08;
+    // MvSonicOnPtfm2 uses a 9px standing snap for continued riding.
+    private static final int GROUND_HALF_HEIGHT = 0x09;
 
     // From disassembly: move.b #4,obPriority(a0)
     private static final int PRIORITY = 4;
@@ -218,19 +222,28 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Routine 2 (Elev_Platform): just runs PlatformObject check via SolidObjectProvider.
-        // Standing detection is automatic via ObjectManager.
-        // When player stands, ObjectManager sets routine to 4.
-
         if (routine == 4) {
-            // Routine 4 (Elev_Action): execute movement types
+            // ROM Elev_Action runs ExitPlatform, then movement, then MvSonicOnPtfm2.
+            // Resolve the solid contact after movement so the riding player is
+            // snapped to the platform's moved position in the same frame.
             executeActionTypes(player);
+            updateDynamicSpawn(x, y);
+            checkpointAll();
         } else if (routine == 2) {
-            // Routine 2 (Elev_Platform): runs Elev_Types for movement
-            executeWaitingTypes(player);
+            // Routine 2 (Elev_Platform): PlatformObject runs before Elev_Types.
+            // Manual checkpoints do not invoke the legacy onSolidContact callback, so
+            // advance into routine 4 directly from the standing result before type dispatch.
+            SolidCheckpointBatch batch = checkpointAll();
+            if (hasStandingContact(batch)) {
+                routine = 4;
+            }
+            if (routine == 4) {
+                executeActionTypes(player);
+            } else {
+                executeWaitingTypes(player);
+            }
+            updateDynamicSpawn(x, y);
         }
-
-        updateDynamicSpawn(x, y);
     }
 
     /**
@@ -422,10 +435,8 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
             // move.w obX(a0),obX(a1)
             // move.w obY(a0),obY(a1)
             // move.b #$E,obSubtype(a1)
-            var objectManager = services().objectManager();
-            if (objectManager != null) {
-                ObjectInstance child = new Sonic1ElevatorObjectInstance(origX, origY);
-                objectManager.addDynamicObject(child);
+            if (services().objectManager() != null) {
+                spawnFreeChild(() -> new Sonic1ElevatorObjectInstance(origX, origY));
             }
         }
     }
@@ -453,7 +464,7 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return new SolidObjectParams(halfWidth, HALF_HEIGHT, HALF_HEIGHT);
+        return new SolidObjectParams(halfWidth, HALF_HEIGHT, GROUND_HALF_HEIGHT);
     }
 
     @Override
@@ -462,9 +473,46 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ROM: Elev_Platform / Elev_Action load d1 directly from obActWid before
+        // calling PlatformObject / ExitPlatform, so the collision half-width is
+        // already the correct Solid_Landed standing width.
+        return true;
+    }
+
+    @Override
+    public boolean carriesAirborneRiderAfterExitPlatform() {
+        // ROM Elev_Action (docs/s1disasm/_incObj/59 SLZ Elevators.asm:84-101)
+        // is structurally identical to MBlock_StandOn (docs/s1disasm/_incObj/52
+        // Moving Blocks.asm:65-83): both call ExitPlatform first, then run their
+        // movement, then unconditionally jump into MvSonicOnPtfm2
+        // (docs/s1disasm/_incObj/15 Swinging Platforms.asm:177-194). The
+        // platform-carry runs even after ExitPlatform has cleared the player's
+        // on-object bit because the player jumped this frame, so the rider's
+        // y_pos still tracks the elevator's post-move position on the launch
+        // frame. The Sonic_Jump rolling-radius adjust (sonic.asm:1166
+        // addq.w #5, obY(a0)) is applied earlier in the player update and is
+        // overwritten by MvSonicOnPtfm2's elevatorY-9-obHeight write.
+        //
+        // Without this opt-in the engine misses the post-jump pull-up while
+        // still applying the +5 adjust, leaving the player a couple of pixels
+        // below ROM whenever the elevator moves up at the same time as the
+        // jump (s1_credits_04_slz3 trace frame 500: ROM y=0x01F0,
+        // ENG y=0x01F2). See ObjectManager.processInlineRidingObject /
+        // applyRidingCarry which already implements the equivalent of
+        // MvSonicOnPtfm2 once the provider opts in.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed() && !isSpawner;
+    }
+
+    @Override
+    public SolidExecutionMode solidExecutionMode() {
+        return SolidExecutionMode.MANUAL_CHECKPOINT;
     }
 
     @Override

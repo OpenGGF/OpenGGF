@@ -5,9 +5,10 @@ package com.openggf.game.sonic1.credits;
  * <p>
  * From the S1 disassembly:
  * <ul>
- *   <li>{@code EndDemo_Levels} (sonic.asm:4171) — level order</li>
+ *   <li>{@code EndingDemoLoad} (sonic.asm:3827) — credits demo entry point</li>
+ *   <li>{@code EndDemo_Levels} (sonic.asm:3865) — level order</li>
  *   <li>{@code DemoEndDataPtr} (MoveSonicInDemo.asm:100) — demo input pointers</li>
- *   <li>{@code EndDemo_LampVar} (sonic.asm:4176) — SLZ lamppost state</li>
+ *   <li>{@code EndDemo_LampVar} (sonic.asm:3879) — LZ lamppost state</li>
  * </ul>
  */
 public final class Sonic1CreditsDemoData {
@@ -88,8 +89,9 @@ public final class Sonic1CreditsDemoData {
 
     /**
      * Demo playback duration for each credit (frames).
-     * ROM: sonic.asm:2987-2990 — checks v_creditsnum==4 (already incremented),
-     * so the 510-frame timer applies to original credit 3 (LZ Act 3).
+     * ROM: sonic.asm:2890-2896 (Level_Demo) — credits demos default to 540
+     * frames; v_creditsnum==4 (already incremented after EndingDemoLoad)
+     * shortens the LZ Act 3 demo to 510 frames.
      */
     public static final int[] DEMO_TIMER = {
         540, // Credit 0: GHZ1
@@ -132,7 +134,7 @@ public final class Sonic1CreditsDemoData {
 
     // ========================================================================
     // LZ lamppost state (credit 3 only)
-    // From EndDemo_LampVar (sonic.asm:4176-4187)
+    // From EndDemo_LampVar (sonic.asm:3879-3890)
     // ROM checks v_creditsnum==4 (already incremented) → original credit 3 (LZ Act 3).
     // Despite the s1disasm label saying "Star Light Zone", the water height (0x308)
     // and position data confirm this is for Labyrinth Zone.
@@ -156,6 +158,8 @@ public final class Sonic1CreditsDemoData {
     public static final int LZ_LAMP_WATER_HEIGHT = 0x0308;
     /** LZ demo water routine at lamppost. ROM: EndDemo_LampVar dc.b 1 (v_wtr_routine) */
     public static final int LZ_LAMP_WATER_ROUTINE = 1;
+    /** LZ credits vblank phase entering the wind tunnel, preserving the REV01 y-bump cadence. */
+    public static final int LZ_LAMP_VBLA_COUNTER = 52;
 
     /** Text display duration (frames). ROM: move.w #120,(v_generictimer).w */
     public static final int TEXT_DISPLAY_FRAMES = 120;

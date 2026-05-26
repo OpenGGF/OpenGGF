@@ -1,20 +1,33 @@
 package com.openggf.tests;
 
+import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.game.render.SpecialRenderEffect;
+import com.openggf.game.render.SpecialRenderEffectContext;
+import com.openggf.game.render.SpecialRenderEffectRegistry;
+import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.level.*;
 import com.openggf.level.rings.RingSpawn;
-import org.junit.Before;
-import org.junit.Test;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.sprites.managers.SpriteManager;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.rings.RingSpriteSheet;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestLevelManager {
 
-    @Before
+    @BeforeEach
     public void setUp() {
         TestEnvironment.resetAll();
     }
@@ -34,7 +47,7 @@ public class TestLevelManager {
         // LevelManager.getChunkDescAt calls getBlockAtPosition
         ChunkDesc chunkDesc = levelManager.getChunkDescAt((byte) 0, 0, 0);
 
-        assertNotNull("ChunkDesc should not be null for block index 128", chunkDesc);
+        assertNotNull(chunkDesc, "ChunkDesc should not be null for block index 128");
     }
 
     @Test
@@ -54,8 +67,120 @@ public class TestLevelManager {
 
         levelManager.processDirtyRegions();
 
-        assertTrue("Solid-tile dirty set should be consumed by the frame pipeline",
-                mutableLevel.consumeDirtySolidTiles().isEmpty());
+        assertTrue(mutableLevel.consumeDirtySolidTiles().isEmpty(), "Solid-tile dirty set should be consumed by the frame pipeline");
+    }
+
+    @Test
+    public void dispatchSpecialRenderEffectsInvokesRegisteredStageEffects() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        SpecialRenderEffectRegistry registry = GameServices.specialRenderEffectRegistry();
+        registry.clear();
+        AtomicInteger calls = new AtomicInteger();
+        AtomicInteger frameCounter = new AtomicInteger(-1);
+
+        registry.register(new SpecialRenderEffect() {
+            @Override
+            public SpecialRenderEffectStage stage() {
+                return SpecialRenderEffectStage.AFTER_FOREGROUND;
+            }
+
+            @Override
+            public void render(SpecialRenderEffectContext context) {
+                calls.incrementAndGet();
+                frameCounter.set(context.frameCounter());
+            }
+        });
+
+        Method dispatch = LevelManager.class.getDeclaredMethod(
+                "dispatchSpecialRenderEffects", SpecialRenderEffectStage.class, int.class);
+        dispatch.setAccessible(true);
+        dispatch.invoke(levelManager, SpecialRenderEffectStage.AFTER_FOREGROUND, 77);
+
+        assertEquals(1, calls.get(), "LevelManager should dispatch registered stage effects");
+        assertEquals(77, frameCounter.get(), "Stage dispatch should preserve frame counter");
+    }
+
+    @Test
+    public void seamlessReloadFrameCounterBridgeAdvancesStoredLevelAndSpriteCounters() throws Exception {
+        LevelManager levelManager = GameServices.level();
+        SpriteManager spriteManager = GameServices.sprites();
+        Field levelCounter = LevelManager.class.getDeclaredField("frameCounter");
+        levelCounter.setAccessible(true);
+        levelCounter.setInt(levelManager, 0x153F);
+        spriteManager.setFrameCounter(0x153F);
+
+        Method advance = LevelManager.class.getDeclaredMethod("advanceFrameCounterAcrossSeamlessReload");
+        advance.setAccessible(true);
+        advance.invoke(levelManager);
+
+        assertEquals(0x1540, levelManager.getFrameCounter(),
+                "S3K Tails CPU reads the stored Level_frame_counter cadence after seamless reloads");
+        assertEquals(0x1540, spriteManager.getFrameCounter(),
+                "SpriteManager's gameplay counter should stay aligned across skipped reload frames");
+    }
+
+    @Nested
+    @RequiresRom(SonicGame.SONIC_2)
+    class RomBackedZoneFeatureTests {
+        @Test
+        public void initializeZoneFeatureProviderRegistersSpecialRenderEffects() throws Exception {
+            LevelManager levelManager = GameServices.level();
+            SpecialRenderEffectRegistry registry = GameServices.specialRenderEffectRegistry();
+            registry.clear();
+
+            Method initProvider = LevelManager.class.getDeclaredMethod(
+                    "initializeZoneFeatureProvider", ZoneFeatureProvider.class);
+            initProvider.setAccessible(true);
+            initProvider.invoke(levelManager, new RegisteringZoneFeatureProvider());
+
+            assertFalse(registry.isEmpty(), "Zone feature init should register special render effects");
+        }
+
+        @Test
+        public void reinitializeZoneFeaturesClearsExistingRenderRegistriesBeforeReregisteringProvider() throws Exception {
+            LevelManager levelManager = GameServices.level();
+            SpecialRenderEffectRegistry registry = GameServices.specialRenderEffectRegistry();
+            registry.clear();
+            GameServices.advancedRenderModeController().clear();
+
+            registry.register(new SpecialRenderEffect() {
+                @Override
+                public SpecialRenderEffectStage stage() {
+                    return SpecialRenderEffectStage.AFTER_BACKGROUND;
+                }
+
+                @Override
+                public void render(SpecialRenderEffectContext context) {
+                    // no-op
+                }
+            });
+            GameServices.advancedRenderModeController().register(new com.openggf.game.render.AdvancedRenderMode() {
+                @Override
+                public String id() {
+                    return "preexisting-test-mode";
+                }
+
+                @Override
+                public void contribute(
+                        com.openggf.game.render.AdvancedRenderModeContext context,
+                        com.openggf.game.render.AdvancedRenderFrameState.Builder builder) {
+                    builder.enableForegroundHeatHaze();
+                }
+            });
+
+            Field providerField = LevelManager.class.getDeclaredField("zoneFeatureProvider");
+            providerField.setAccessible(true);
+            providerField.set(levelManager, new RegisteringZoneFeatureProvider());
+
+            Method reinitialize = LevelManager.class.getDeclaredMethod("reinitializeZoneFeaturesForActTransition");
+            reinitialize.setAccessible(true);
+            reinitialize.invoke(levelManager);
+
+            assertEquals(1, registry.size(SpecialRenderEffectStage.AFTER_BACKGROUND),
+                    "Existing effects should be cleared before zone features re-register current ones");
+            assertEquals(1, GameServices.advancedRenderModeController().size(),
+                    "Existing advanced render modes should be cleared before zone features re-register current ones");
+        }
     }
 
     private static class MockLevel implements Level {
@@ -166,4 +291,81 @@ public class TestLevelManager {
             return new Palette();
         }
     }
+
+    private static final class RegisteringZoneFeatureProvider implements ZoneFeatureProvider {
+        @Override
+        public void initZoneFeatures(com.openggf.data.Rom rom, int zoneIndex, int actIndex, int cameraX) {
+            // No-op
+        }
+
+        @Override
+        public void update(com.openggf.sprites.playable.AbstractPlayableSprite player, int cameraX, int zoneIndex) {
+            // No-op
+        }
+
+        @Override
+        public void reset() {
+            // No-op
+        }
+
+        @Override
+        public boolean hasCollisionFeatures(int zoneIndex) {
+            return false;
+        }
+
+        @Override
+        public boolean hasWater(int zoneIndex) {
+            return false;
+        }
+
+        @Override
+        public int getWaterLevel(int zoneIndex, int actIndex) {
+            return Integer.MAX_VALUE;
+        }
+
+        @Override
+        public void render(Camera camera, int frameCounter) {
+            // No-op
+        }
+
+        @Override
+        public int ensurePatternsCached(GraphicsManager graphicsManager, int baseIndex) {
+            return baseIndex;
+        }
+
+        @Override
+        public void registerSpecialRenderEffects(SpecialRenderEffectRegistry registry, int zoneIndex, int actIndex) {
+            registry.register(new SpecialRenderEffect() {
+                @Override
+                public SpecialRenderEffectStage stage() {
+                    return SpecialRenderEffectStage.AFTER_BACKGROUND;
+                }
+
+                @Override
+                public void render(SpecialRenderEffectContext context) {
+                    // No-op
+                }
+            });
+        }
+
+        @Override
+        public void registerAdvancedRenderModes(
+                com.openggf.game.render.AdvancedRenderModeController controller, int zoneIndex, int actIndex) {
+            controller.register(new com.openggf.game.render.AdvancedRenderMode() {
+                @Override
+                public String id() {
+                    return "registering-zone-feature-provider";
+                }
+
+                @Override
+                public void contribute(
+                        com.openggf.game.render.AdvancedRenderModeContext context,
+                        com.openggf.game.render.AdvancedRenderFrameState.Builder builder) {
+                    builder.enablePerLineForegroundScroll();
+                }
+            });
+        }
+    }
 }
+
+

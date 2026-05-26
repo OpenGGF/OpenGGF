@@ -10,7 +10,6 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 
-import java.util.Random;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -73,7 +72,6 @@ public class DrowningController {
 
     private final AbstractPlayableSprite player;
     private final AudioManager audioManager;
-    private final Random random = new Random();
 
     /** Remaining air in seconds */
     private int remainingAir;
@@ -104,6 +102,9 @@ public class DrowningController {
 
     /** Whether bubble config has been resolved */
     private boolean bubbleConfigResolved;
+
+    public record FixedCountdownAirEvent(int airBefore, int airAfter, int countdownNumber, boolean drowned) {
+    }
 
     public DrowningController(AbstractPlayableSprite player) {
         this.player = player;
@@ -215,8 +216,9 @@ public class DrowningController {
      * @param countdownNumber Countdown number to display (-1 for regular bubble)
      */
     private void spawnBreathingBubbles(int countdownNumber) {
+        com.openggf.game.GameRng rng = player.currentRng();
         // Determine number of bubbles (1 or 2, equal chance)
-        int bubbleCount = random.nextBoolean() ? 1 : 2;
+        int bubbleCount = rng.nextBoolean() ? 1 : 2;
 
         if (countdownNumber >= 0) {
             // Countdown bubble logic
@@ -225,7 +227,7 @@ public class DrowningController {
                 spawnBubble(countdownNumber);
             } else {
                 // 2 bubbles - 25% chance first is countdown, otherwise second is countdown
-                boolean firstIsCountdown = random.nextInt(4) == 0;
+                boolean firstIsCountdown = rng.nextInt(4) == 0;
 
                 if (firstIsCountdown) {
                     spawnBubble(countdownNumber);
@@ -250,7 +252,7 @@ public class DrowningController {
      * @param countdownNumber Countdown number (-1 for regular bubble)
      */
     private void spawnBubble(int countdownNumber) {
-        LevelManager levelManager = player.currentLevelManager();
+        LevelManager levelManager = player.currentLevelManagerIfAvailable();
         if (levelManager == null || levelManager.getObjectManager() == null) {
             return;
         }
@@ -324,7 +326,7 @@ public class DrowningController {
     private void scheduleSecondBubble(int countdownNumber) {
         pendingSecondBubble = true;
         pendingCountdownNumber = countdownNumber;
-        secondBubbleDelay = 1 + random.nextInt(SECOND_BUBBLE_MAX_DELAY);
+        secondBubbleDelay = 1 + player.currentRng().nextInt(SECOND_BUBBLE_MAX_DELAY);
     }
 
     /**
@@ -344,7 +346,11 @@ public class DrowningController {
      * Called when exiting water or replenishing air while drowning music was playing.
      */
     private void restartZoneMusic() {
-        int musicId = player.currentLevelManager().getCurrentLevelMusicId();
+        LevelManager levelManager = player.currentLevelManagerIfAvailable();
+        if (levelManager == null) {
+            return;
+        }
+        int musicId = levelManager.getCurrentLevelMusicId();
         if (musicId >= 0) {
             audioManager.playMusic(musicId);
         }
@@ -376,6 +382,42 @@ public class DrowningController {
 
     public int getRemainingAir() {
         return remainingAir;
+    }
+
+    /**
+     * A fixed level-event air-countdown object may own bubble allocation and
+     * RNG cadence, but the air-left side effects are the shared ROM path:
+     * warning ding at 25/20/15, drowning music at 12, then decrement air_left.
+     */
+    public FixedCountdownAirEvent performFixedCountdownAirEvent(boolean allowAudio) {
+        frameTimer = FRAMES_PER_SECOND;
+        int airBefore = remainingAir;
+        if (allowAudio && WARNING_CHIME_LEVELS.contains(airBefore)) {
+            audioManager.playSfx(GameSound.AIR_DING);
+        }
+        if (allowAudio && airBefore == DROWNING_MUSIC_LEVEL && !drowningMusicStarted) {
+            GameAudioProfile audioProfile = audioManager.getAudioProfile();
+            if (audioProfile != null) {
+                audioManager.playMusic(audioProfile.getDrowningMusicId());
+                drowningMusicStarted = true;
+            }
+        }
+        int countdownNumber = getCountdownNumber(airBefore);
+        remainingAir--;
+        return new FixedCountdownAirEvent(airBefore, remainingAir, countdownNumber, remainingAir < 0);
+    }
+
+    public void setRemainingAirFromFixedCountdown(int remainingAir) {
+        this.remainingAir = remainingAir;
+    }
+
+    public void resetAirTimerFromFixedCountdownDeath() {
+        remainingAir = INITIAL_AIR;
+        frameTimer = FRAMES_PER_SECOND;
+    }
+
+    public int countdownNumberForFixedCountdown(int airLevel) {
+        return getCountdownNumber(airLevel);
     }
 
     public boolean isDrowningMusicPlaying() {

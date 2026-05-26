@@ -1,6 +1,6 @@
 # Game Status
 
-Last updated: 2026-04-11 (v0.5.20260411)
+Last updated: 2026-05-13 (v0.6.prerelease development)
 
 This page describes the current state of each supported game. It is intended to set
 expectations honestly -- what works well, what is incomplete, and what you might encounter.
@@ -80,19 +80,21 @@ expectations honestly -- what works well, what is incomplete, and what you might
 
 ## Sonic 3 & Knuckles (S3K)
 
-**Status: Expanding. AIZ is substantially playable and HCZ now has early gameplay coverage.**
+**Status: Expanding, and the current development focus. AIZ is substantially playable and HCZ now has early gameplay coverage into HCZ2.**
 
 ### What works
 
 - Angel Island Zone intro cutscene, Act 1 gameplay, miniboss defeat flow, signpost, and results.
 - AIZ fire transition, Flying Battery bombing sequence, AIZ2 end boss, post-boss capsule flow,
   and AIZ-to-HCZ transition.
-- HCZ water rush, conveyor, fan, block, door, water skim, miniboss, and HCZ1-to-HCZ2 transition work.
-- Title screen and level select screen.
+- HCZ water rush, conveyor, fan, block, door, water skim, miniboss, HCZ1-to-HCZ2 transition,
+  and the HCZ2 moving-wall chase sequence work.
+- Title screen, level select screen, and data select screen with 8 save slots and team selection.
 - Knuckles as a playable character, including glide/climb support.
 - Blue Ball special stages and active bonus-stage work across Gumball, Glowing Sphere/Pachinko,
   and Slots.
 - Shield system, water system, palette cycling, and expanding badnik/object coverage.
+- Water state now restores correctly after returning from side stages.
 - SMPS audio with S3K-specific driver configuration (Z80 bank-switching, DPCM).
 
 ### Known gaps
@@ -102,13 +104,34 @@ expectations honestly -- what works well, what is incomplete, and what you might
 - Many S3K objects, badniks, and bosses are not yet implemented.
 - Bonus stages are still in active parity work rather than final polish.
 - S3K's more complex PLC/art loading system still has partial parity.
-- No save/load system.
+- Data select visual parity is still in progress (native selector art, emerald display).
 
 ### Notable quirks
 
 - S3K uses KosinskiM (Kosinski Moduled) compression, combined 1P+2P mapping tables,
   and a more complex Z80 sound driver than S1/S2.
-- S3K remains the current development focus after v0.5; see ROADMAP.md for the v0.6+ direction.
+- S3K work is now prioritized as playable vertical slices rather than isolated checklist
+  completion. A useful slice has traversal objects, event/camera behavior, scroll/parallax,
+  animated tiles, palette/PLC state, bosses or transitions, trace coverage for known blockers,
+  and visual validation where practical. The near-term route target is AIZ through HCZ, with
+  CNZ, MGZ, and ICZ work feeding the same standard.
+
+---
+
+## Experimental Tooling
+
+### Level Editor Overlay
+
+An experimental editor overlay is now available behind `EDITOR_ENABLED` in `config.json`.
+When enabled, use `Shift+Tab` during gameplay to park the current playtest and enter the editor
+overlay, then use the same shortcut to resume. The current snapshot supports:
+
+- World cursor and grid navigation.
+- Focused block and chunk previews.
+- Early derive/edit flows for live level data.
+- Resume and restart handling around editor playtests.
+
+This is still a development tool rather than a polished end-user level editor.
 
 ---
 
@@ -122,6 +145,12 @@ sprites, spindash mechanics, and sound effects while you play a different base g
 | S2 sprites in S1 | Working |
 | S2 spindash in S1 | Working |
 | Super Sonic cross-delegation | Working |
+| S3K Data Select donated to S1/S2 | Working |
 | S3K sprites in S1/S2 | Experimental |
 
 Enable with `CROSS_GAME_FEATURES_ENABLED` and `CROSS_GAME_SOURCE` in config.json.
+
+When S3K donates the Data Select frontend, the save screen stays visually S3K-native,
+but save semantics remain host-owned. Slot routing, progression, clear-restart rules,
+and emerald identity come from the host game. Donated host emerald colors are adapted
+into the S3K save-card palette contract instead of assuming raw palette-slot parity.

@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -152,9 +153,28 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public SolidRoutineProfile getSolidRoutineProfile() {
+        return SolidRoutineProfile.fromProvider(this);
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
+    }
+
+    /**
+     * ROM s2.asm Obj65 carries the rider only for the conveyor subtype 5
+     * ({@code loc_26E4A}), which updates only {@code x_pos} and leaves the
+     * {@code objoff_2E} carry reference saved at the pre-move x. All other
+     * Obj65 movement subtypes use {@code loc_26D50} (subtypes 1/2/6/7) or
+     * {@code loc_26E1A} (subtype 3), both of which refresh {@code objoff_2E}
+     * to the new x_pos so {@code MvSonicOnPtfm} sees a zero delta and the
+     * rider stands still while the platform glides underneath.
+     */
+    @Override
+    public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        return moveSubtype == 5;
     }
 
     @Override
@@ -212,18 +232,25 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     }
 
     private void init() {
-        // Calculate properties index: (subtype >> 2) & 0x1C gives byte offset,
-        // then >> 2 again for index (s2.asm lines 52383-52389)
+        // ROM s2.asm:52386-52394 -- subtype to props lookup:
+        //   lsr.w #2,d0; andi.w #$1C,d0     -> d0 = byte offset into PROPERTIES
+        //   lea Obj65_Properties(pc,d0.w),a3 -> a3 = entry at byte offset d0
+        //   move.b (a3)+,width_pixels        -> entry width
+        //   move.b (a3)+,y_radius            -> entry y_radius
+        //   lsr.w #2,d0; move.b d0,mapping_frame -> mapping_frame = d0/4
+        // Each PROPERTIES entry is 2 bytes, so the ENTRY INDEX is d0/2, while
+        // the mapping_frame is d0/4. These are NOT the same index.
         int rawSubtype = spawn.subtype();
-        int d0 = (rawSubtype >> 2) & 0x1C; // lsr.w #2 + andi.w #$1C
-        int propsIndex = d0 >> 2; // lsr.w #2 for mapping_frame
-        if (propsIndex >= PROPERTIES.length) {
-            propsIndex = 0;
+        int d0 = (rawSubtype >> 2) & 0x1C;
+        int entryIndex = d0 >> 1;             // a3 = props + d0 -> entry index = d0/2
+        int frameIndex = d0 >> 2;             // mapping_frame = d0/4
+        if (entryIndex >= PROPERTIES.length) {
+            entryIndex = 0;
         }
 
-        widthPixels = PROPERTIES[propsIndex][0];
-        yRadius = PROPERTIES[propsIndex][1];
-        mappingFrame = propsIndex;
+        widthPixels = PROPERTIES[entryIndex][0];
+        yRadius = PROPERTIES[entryIndex][1];
+        mappingFrame = frameIndex;
 
         // Note: propsIndex 2 (standalone cog) is routed to MTZLongPlatformCogInstance by the factory.
 
@@ -239,7 +266,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         // to the next entry. The 3rd read ((a3)+) gives maxDist (= width of next entry),
         // and the 4th read ((a3)) gives the child subtype (= y_radius of next entry).
         // s2.asm lines 52407-52414
-        int nextIndex = propsIndex + 1;
+        int nextIndex = entryIndex + 1;
         if (nextIndex < PROPERTIES.length) {
             maxDist = PROPERTIES[nextIndex][0];
         } else {
@@ -505,7 +532,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
      * Writes x_pos to MTZ_Platform_Cog_X shared variable.
      */
     private void moveConveyor() {
-        boolean isMtzAct3 = (services().currentZone() == Sonic2ZoneConstants.ZONE_MTZ
+        boolean isMtzAct3 = (services().currentZone() == Sonic2ZoneConstants.ROM_ZONE_MTZ
                 && services().currentAct() == 2);
 
         if (!triggered) {

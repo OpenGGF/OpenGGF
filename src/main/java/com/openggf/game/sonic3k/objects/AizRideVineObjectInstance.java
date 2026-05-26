@@ -3,11 +3,13 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -20,7 +22,7 @@ import java.util.List;
  * <p>Primary disassembly references:
  * Obj_AIZRideVine / Obj_AIZRideVineHandle (sonic3k.asm:46098-46748).
  */
-public class AizRideVineObjectInstance extends AbstractObjectInstance {
+public class AizRideVineObjectInstance extends AbstractObjectInstance implements PostPlayerUpdateHook {
     private static final int ROOT_FRAME = 0x21;
     private static final int HANDLE_FRAME = 0x20;
     private static final int PRIORITY_BUCKET = 4; // priority $200
@@ -132,6 +134,13 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance {
     @Override
     public void onUnload() {
         clearGrabbedPlayers();
+    }
+
+    @Override
+    public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
+        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
+        AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
     }
 
     private void updateRootState() {
@@ -287,9 +296,11 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance {
     private void updateHandle(AbstractPlayableSprite player) {
         Segment lastSegment = chain[chain.length - 1];
         AizVineHandleLogic.positionFromParent(handle, lastSegment.x, lastSegment.y, lastSegment.angle);
-        var sidekicks = services().sidekicks();
-        AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
         AizVineHandleLogic.updatePlayers(handle, services(), player, sidekick, lastSegment.angle);
+        if (services().levelManager() != null && services().levelManager().objectsExecuteAfterPlayerPhysics()) {
+            AizVineHandleLogic.updatePostPlayer(handle, player, sidekick);
+        }
     }
 
     private void updateStillSprite() {
@@ -315,18 +326,22 @@ public class AizRideVineObjectInstance extends AbstractObjectInstance {
 
     private void clearGrabbedPlayers() {
         AbstractPlayableSprite player = resolveMainPlayer();
-        var sidekicks = services().sidekicks();
-        AbstractPlayableSprite sidekick = sidekicks.isEmpty() ? null : (AbstractPlayableSprite) sidekicks.getFirst();
+        AbstractPlayableSprite sidekick = firstTrackedSidekick();
         clearControlFor(player, handle.p1.grabFlag != 0);
         clearControlFor(sidekick, handle.p2.grabFlag != 0);
         handle.p1.grabFlag = 0;
         handle.p2.grabFlag = 0;
     }
 
+    private AbstractPlayableSprite firstTrackedSidekick() {
+        return services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick
+                ? sidekick
+                : null;
+    }
+
     private AbstractPlayableSprite resolveMainPlayer() {
         var sprite = services().spriteManager().getSprite(
-                config()
-                        .getString(SonicConfiguration.MAIN_CHARACTER_CODE));
+                ActiveGameplayTeamResolver.resolveMainCharacterCode(config()));
         return sprite instanceof AbstractPlayableSprite playable ? playable : null;
     }
 

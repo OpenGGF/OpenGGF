@@ -1,18 +1,20 @@
 package com.openggf.level.objects;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import com.openggf.game.RuntimeManager;
+import com.openggf.game.session.SessionManager;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.openggf.graphics.GLCommand;
 import org.mockito.Mockito;
 import com.openggf.game.DamageCause;
+import com.openggf.game.PhysicsFeatureSet;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
-
+import com.openggf.debug.DebugOverlayManager;
+import com.openggf.camera.Camera;
 import java.util.List;
-
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -25,11 +27,21 @@ public class TestTouchResponseManager {
     private TouchResponseTable table;
     private AbstractPlayableSprite player;
 
-    @Before
+    @BeforeEach
     public void setUp() {
-        RuntimeManager.createGameplay();
         // Use Mockito to mock TouchResponseTable since its constructor reads from ROM
         table = Mockito.mock(TouchResponseTable.class);
+        DebugOverlayManager debugOverlay = mock(DebugOverlayManager.class);
+        when(debugOverlay.isEnabled(any())).thenReturn(false);
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        when(camera.isVerticalWrapEnabled()).thenReturn(false);
+        ObjectServices services = new TestObjectServices()
+                .withDebugOverlay(debugOverlay)
+                .withCamera(camera);
         objectManager = new ObjectManager(List.of(), new ObjectRegistry() {
             @Override
             public ObjectInstance create(ObjectSpawn spawn) {
@@ -44,7 +56,7 @@ public class TestTouchResponseManager {
             public String getPrimaryName(int objectId) {
                 return "Test";
             }
-        }, 0, null, table);
+        }, 0, null, table, null, camera, services);
         objectManager.resetTouchResponses();
 
         // Create a mock player using Mockito
@@ -61,9 +73,9 @@ public class TestTouchResponseManager {
         when(player.getRingCount()).thenReturn(0);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
-        RuntimeManager.destroyCurrent();
+        SessionManager.clear();
     }
 
     // ==================== Overlap Detection Tests ====================
@@ -82,8 +94,7 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertFalse("Should not overlap when object is far to the right",
-                obj.wasTouched);
+        assertFalse(obj.wasTouched, "Should not overlap when object is far to the right");
     }
 
     @Test
@@ -95,8 +106,7 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertFalse("Should not overlap when object is far to the left",
-                obj.wasTouched);
+        assertFalse(obj.wasTouched, "Should not overlap when object is far to the left");
     }
 
     @Test
@@ -108,8 +118,7 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertFalse("Should not overlap when object is far above",
-                obj.wasTouched);
+        assertFalse(obj.wasTouched, "Should not overlap when object is far above");
     }
 
     @Test
@@ -121,8 +130,7 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertFalse("Should not overlap when object is far below",
-                obj.wasTouched);
+        assertFalse(obj.wasTouched, "Should not overlap when object is far below");
     }
 
     @Test
@@ -134,8 +142,7 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertTrue("Should overlap when object is at player position",
-                obj.wasTouched);
+        assertTrue(obj.wasTouched, "Should overlap when object is at player position");
     }
 
     @Test
@@ -147,8 +154,7 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertTrue("Should overlap with large object near player",
-                obj.wasTouched);
+        assertTrue(obj.wasTouched, "Should overlap with large object near player");
     }
 
     // ==================== Touch Category Tests ====================
@@ -162,8 +168,7 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertEquals("Category should be ENEMY for flags 0x00-0x3F",
-                TouchCategory.ENEMY, obj.lastResult.category());
+        assertEquals(TouchCategory.ENEMY, obj.lastResult.category(), "Category should be ENEMY for flags 0x00-0x3F");
     }
 
     @Test
@@ -175,8 +180,7 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertEquals("Category should be SPECIAL for flags 0x40-0x7F",
-                TouchCategory.SPECIAL, obj.lastResult.category());
+        assertEquals(TouchCategory.SPECIAL, obj.lastResult.category(), "Category should be SPECIAL for flags 0x40-0x7F");
     }
 
     @Test
@@ -188,8 +192,7 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertEquals("Category should be HURT for flags 0x80-0xBF",
-                TouchCategory.HURT, obj.lastResult.category());
+        assertEquals(TouchCategory.HURT, obj.lastResult.category(), "Category should be HURT for flags 0x80-0xBF");
     }
 
     @Test
@@ -201,8 +204,137 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertEquals("Category should be BOSS for flags 0xC0-0xFF",
-                TouchCategory.BOSS, obj.lastResult.category());
+        assertEquals(TouchCategory.BOSS, obj.lastResult.category(), "Category should be BOSS for flags 0xC0-0xFF");
+    }
+
+    @Test
+    public void testS3kTouchSpecialPropertyFlagDecoding() {
+        // S3K Touch_Special treats 0xC0|$17 as collision_property signaling,
+        // not boss damage/bounce handling.
+        MockS3kTouchSpecialObject obj = new MockS3kTouchSpecialObject(160, 112, 0xD7);
+        setupTableSize(0x17, 8, 8);
+        objectManager.addDynamicObject(obj);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertEquals(TouchCategory.SPECIAL, obj.lastResult.category(),
+                "S3K Touch_Special property indices must dispatch as listener-only special callbacks");
+        assertEquals(0x17, obj.lastResult.sizeIndex());
+    }
+
+    @Test
+    public void testS3kTouchSpecialUnlistedC0FlagDoesNotDecodeAsBoss() {
+        // ROM Touch_ChkValue routes all $C0 flags to Touch_Special
+        // (sonic3k.asm:20773-20778). Touch_Special only mutates
+        // collision_property for listed sizes; unlisted size $0F returns
+        // without boss handling (sonic3k.asm:21162-21183).
+        MockS3kTouchSpecialObject obj = new MockS3kTouchSpecialObject(160, 112, 0xCF);
+        setupTableSize(0x0F, 24, 24);
+        objectManager.addDynamicObject(obj);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertEquals(TouchCategory.SPECIAL, obj.lastResult.category(),
+                "S3K $C0 unlisted touch flags must be Touch_Special no-op, not generic boss bounce");
+        assertEquals(0x0F, obj.lastResult.sizeIndex());
+    }
+
+    @Test
+    public void testCnzBalloonDoesNotFireFromDistantPlayer() {
+        // Reproduce the latent CNZ-balloon false-positive from the AIZ F6313 round-16
+        // diagnostic: ROM-accurate Tails at (0x09E1, 0x0658) vs balloon at
+        // (0x0A78, 0x068C) — a 151px X-distance that should NOT overlap with
+        // Touch_Sizes[$17] = (8, 8). ROM Obj_CNZBalloon at sonic3k.asm:66747.
+        when(player.getCentreX()).thenReturn((short) 0x09E1);
+        when(player.getCentreY()).thenReturn((short) 0x0658);
+        when(player.getYRadius()).thenReturn((short) 15); // Tails standYRadius
+        when(player.getCrouching()).thenReturn(false);
+
+        MockS3kTouchSpecialObject balloon = new MockS3kTouchSpecialObject(0x0A78, 0x068C, 0xD7);
+        setupTableSize(0x17, 8, 8);
+        objectManager.addDynamicObject(balloon);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertFalse(balloon.wasTouched,
+                "ROM Touch_Sizes[$17] = (8, 8) — a balloon 151px away in X must not fire onTouchResponse");
+    }
+
+    @Test
+    public void testTouchResponseSkippedWhenObjectControlSuppresses() {
+        // ROM Sonic_Display (sonic3k.asm:22019-22021) and Tails_Display
+        // (sonic3k.asm:26263-26266) skip the TouchResponse pass when
+        // object_control's bit-7-equivalent is set. Engine's
+        // PlayableEntity#isTouchResponseSuppressedByObjectControl() exposes
+        // this gate. Without it, sprites in CATCH_UP_FLIGHT or
+        // FLIGHT_AUTO_RECOVERY (object_control=$81) fire false-positive
+        // touch collisions that ROM never runs.
+        when(player.isTouchResponseSuppressedByObjectControl()).thenReturn(true);
+
+        // Place an object directly under the player so an unsuppressed pass
+        // would definitely overlap.
+        MockTouchObject obj = new MockTouchObject(160, 112, 0x08);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(obj);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertFalse(obj.wasTouched,
+                "Touch response must be skipped when object_control suppresses it (ROM bit-7 gate)");
+    }
+
+    @Test
+    public void testSidekickTouchResponseSkippedWhenObjectControlSuppresses() {
+        // ROM Tails_Display (sonic3k.asm:26263-26266) skips TouchResponse for
+        // Tails when object_control bit 7 is set. This is the path
+        // Tails_Catch_Up_Flying (sonic3k.asm:26511) and Tails_FlySwim_Unknown
+        // (sonic3k.asm:26542) take when entering CATCH_UP_FLIGHT and
+        // FLIGHT_AUTO_RECOVERY — both write object_control=$81. Engine's
+        // sidekick CPU controller mirrors that via setObjectControlled(true)
+        // without setObjectControlAllowsCpu(true).
+        AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
+        when(sidekick.getCentreX()).thenReturn((short) 160);
+        when(sidekick.getCentreY()).thenReturn((short) 112);
+        when(sidekick.getYRadius()).thenReturn((short) 15);
+        when(sidekick.getCrouching()).thenReturn(false);
+        when(sidekick.getDead()).thenReturn(false);
+        when(sidekick.isDebugMode()).thenReturn(false);
+        when(sidekick.isTouchResponseSuppressedByObjectControl()).thenReturn(true);
+
+        // Distant leader so the sidekick is the only candidate for the touch
+        // hit; place the object on top of the sidekick.
+        when(player.getCentreX()).thenReturn((short) 500);
+        MockTouchObject obj = new MockTouchObject(160, 112, 0x08);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(obj);
+
+        objectManager.update(0, player, List.of(sidekick), 1);
+
+        assertFalse(obj.wasTouched,
+                "Sidekick touch response must be skipped during CATCH_UP_FLIGHT / FLIGHT_AUTO_RECOVERY");
+    }
+
+    @Test
+    public void testCnzBalloonContinuousNonOverlapDoesNotFire() {
+        // Same scenario but with requiresContinuousTouchCallbacks() = true (matches
+        // CnzBalloonInstance behaviour). ROM Obj_CNZBalloon's main routine reads
+        // collision_property each frame and only branches into sub_317AE (launch)
+        // when Touch_Process set the bit. Engine must mirror this — continuous
+        // callbacks must not fire when there is no overlap.
+        when(player.getCentreX()).thenReturn((short) 0x09E1);
+        when(player.getCentreY()).thenReturn((short) 0x0658);
+        when(player.getYRadius()).thenReturn((short) 15);
+        when(player.getCrouching()).thenReturn(false);
+
+        MockContinuousS3kTouchSpecialObject balloon =
+                new MockContinuousS3kTouchSpecialObject(0x0A78, 0x068C, 0xD7);
+        setupTableSize(0x17, 8, 8);
+        objectManager.addDynamicObject(balloon);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertFalse(balloon.wasTouched,
+                "Continuous-callback objects must respect overlap math; non-overlap must not fire");
     }
 
     // ==================== Player State Tests ====================
@@ -216,8 +348,7 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertFalse("Should not touch objects when player is dead",
-                obj.wasTouched);
+        assertFalse(obj.wasTouched, "Should not touch objects when player is dead");
     }
 
     @Test
@@ -231,8 +362,7 @@ public class TestTouchResponseManager {
         objectManager.update(0, player, List.of(), 1);
 
         // Object should NOT touch when player is crouching and object is above normal standing position
-        assertFalse("Crouching should reduce hitbox height",
-                obj.wasTouched);
+        assertFalse(obj.wasTouched, "Crouching should reduce hitbox height");
     }
 
     // ==================== Enemy Bounce Tests ====================
@@ -240,6 +370,7 @@ public class TestTouchResponseManager {
     @Test
     public void testEnemyAttackedWhenPlayerRolling() {
         when(player.getRolling()).thenReturn(true); // Attacking state
+        when(player.getAnimationId()).thenReturn(0x02);
         when(player.getYSpeed()).thenReturn((short) 500); // Falling
         when(player.getCentreY()).thenReturn((short) 100); // Above enemy
 
@@ -249,7 +380,62 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertTrue("Enemy should have been attacked when player is rolling", enemy.wasAttacked);
+        assertTrue(enemy.wasAttacked, "Enemy should have been attacked when player is rolling");
+    }
+
+    @Test
+    public void testS3kSidekickRollingStatusWithoutRollAnimationDoesNotAttackEnemy() {
+        when(player.getCentreX()).thenReturn((short) 500);
+
+        AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
+        when(sidekick.getCentreX()).thenReturn((short) 160);
+        when(sidekick.getCentreY()).thenReturn((short) 112);
+        when(sidekick.getYRadius()).thenReturn((short) 20);
+        when(sidekick.getCrouching()).thenReturn(false);
+        when(sidekick.getDead()).thenReturn(false);
+        when(sidekick.getInvulnerable()).thenReturn(false);
+        when(sidekick.getInvincibleFrames()).thenReturn(0);
+        when(sidekick.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(sidekick.getRolling()).thenReturn(true);
+        when(sidekick.getAnimationId()).thenReturn(Sonic3kAnimationIds.WALK.id());
+
+        MockAttackableEnemy enemy = new MockAttackableEnemy(160, 112, 0x08);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(enemy);
+
+        objectManager.update(0, player, List.of(sidekick), 1);
+
+        assertFalse(enemy.wasAttacked,
+                "S3K Touch_Enemy uses anim=$02/$09, so a stale rolling status bit alone must not kill enemies");
+        verify(sidekick).applyHurt(anyInt());
+    }
+
+    @Test
+    public void testSidekickTouchResponseStopsAfterFirstOverlappingObject() {
+        when(player.getCentreX()).thenReturn((short) 500);
+
+        AbstractPlayableSprite sidekick = mock(AbstractPlayableSprite.class);
+        when(sidekick.getCentreX()).thenReturn((short) 160);
+        when(sidekick.getCentreY()).thenReturn((short) 112);
+        when(sidekick.getYRadius()).thenReturn((short) 20);
+        when(sidekick.getCrouching()).thenReturn(false);
+        when(sidekick.getDead()).thenReturn(false);
+        when(sidekick.getInvulnerable()).thenReturn(false);
+        when(sidekick.getInvincibleFrames()).thenReturn(0);
+        when(sidekick.getPhysicsFeatureSet()).thenReturn(PhysicsFeatureSet.SONIC_3K);
+        when(sidekick.getAnimationId()).thenReturn(Sonic3kAnimationIds.ROLL.id());
+
+        MockTouchObject firstOverlap = new MockTouchObject(160, 112, 0x48);
+        MockAttackableEnemy laterEnemy = new MockAttackableEnemy(160, 112, 0x08);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(firstOverlap);
+        objectManager.addDynamicObject(laterEnemy);
+
+        objectManager.update(0, player, List.of(sidekick), 1);
+
+        assertTrue(firstOverlap.wasTouched, "Sidekick should process the first overlapping object");
+        assertFalse(laterEnemy.wasAttacked,
+                "ReactToItem returns after the first overlap, so later enemies must not be scanned");
     }
 
     @Test
@@ -287,6 +473,44 @@ public class TestTouchResponseManager {
                 any(DamageCause.class), anyBoolean());
     }
 
+    @Test
+    public void singleRegionTouchResultIncludesProfileShieldReactionFlags() {
+        MockShieldTouchObject flame = new MockShieldTouchObject(160, 112, 0x88, 0x10);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(flame);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertEquals(0x10, flame.lastResult.shieldReactionFlags(),
+                "Single-region dispatch should copy profile shield flags into the touch result");
+    }
+
+    @Test
+    public void multiRegionTouchResultIncludesTouchedRegionShieldReactionFlags() {
+        MockMultiRegionTouchObject flame = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(500, 112, 0x88, 0),
+                new TouchResponseProvider.TouchRegion(160, 112, 0x88, 0x10));
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(flame);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertEquals(0x10, flame.lastResult.shieldReactionFlags(),
+                "Multi-region dispatch should copy the overlapping region shield flags into the touch result");
+    }
+
+    @Test
+    public void hurtDamageCauseUsesTouchedResultShieldReactionFlags() {
+        MockMultiRegionTouchObject flame = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 112, 0x88, 0x10));
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(flame);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        verify(player).applyHurtOrDeath(anyInt(), eq(DamageCause.FIRE), anyBoolean());
+    }
+
     // ==================== Overlap Persistence Tests ====================
 
     @Test
@@ -297,15 +521,14 @@ public class TestTouchResponseManager {
 
         // First update - should trigger touch
         objectManager.update(0, player, List.of(), 1);
-        assertTrue("First update should trigger touch", obj.wasTouched);
+        assertTrue(obj.wasTouched, "First update should trigger touch");
 
         // Reset touch flag
         obj.wasTouched = false;
 
         // Second update - still overlapping but should NOT trigger again
         objectManager.update(0, player, List.of(), 1);
-        assertFalse("Second update should NOT trigger touch for same overlap",
-                obj.wasTouched);
+        assertFalse(obj.wasTouched, "Second update should NOT trigger touch for same overlap");
     }
 
     @Test
@@ -315,11 +538,11 @@ public class TestTouchResponseManager {
         objectManager.addDynamicObject(obj);
 
         objectManager.update(0, player, List.of(), 1);
-        assertTrue("First update should trigger touch", obj.wasTouched);
+        assertTrue(obj.wasTouched, "First update should trigger touch");
 
         obj.wasTouched = false;
         objectManager.update(0, player, List.of(), 2);
-        assertTrue("Continuous callback object should trigger again while still overlapping", obj.wasTouched);
+        assertTrue(obj.wasTouched, "Continuous callback object should trigger again while still overlapping");
     }
 
     @Test
@@ -330,8 +553,72 @@ public class TestTouchResponseManager {
 
         objectManager.update(0, player, List.of(), 1);
 
-        assertFalse("Objects flagged skipTouchThisFrame should not trigger touch callbacks",
-                obj.wasTouched);
+        assertFalse(obj.wasTouched, "Objects flagged skipTouchThisFrame should not trigger touch callbacks");
+    }
+
+    @Test
+    public void skipSolidContactDoesNotSuppressMultiRegionTouch() {
+        MockMultiRegionSkipSolidTouchObject spikes = new MockMultiRegionSkipSolidTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 112, 0x88, 0));
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(spikes);
+
+        objectManager.update(0, player, List.of(), 1);
+
+        assertTrue(spikes.wasTouched,
+                "skipSolidContactThisFrame is a solid-contact gate and must not suppress multi-region touch");
+    }
+
+    @Test
+    public void testRunTouchResponsesForPlayerUsesLiveCurrentObjectPosition() {
+        // Current position barely overlaps; pre-update position does not.
+        MockTrackedTouchObject obj = new MockTrackedTouchObject(174, 112, 176, 112, 0x48);
+        setupTableSize(8, 6, 6);
+        objectManager.addDynamicObject(obj);
+
+        objectManager.runTouchResponsesForPlayer(player, 1);
+
+        assertTrue(obj.wasTouched,
+                "Player-slot touch responses should use the live object position because objects have not updated yet");
+    }
+
+    @Test
+    public void testFrame387MissileGeometryOverlapsWithRollingPlayer() {
+        when(player.getCentreX()).thenReturn((short) 0x0241);
+        when(player.getCentreY()).thenReturn((short) 0x0394);
+        when(player.getYRadius()).thenReturn((short) 14);
+        when(player.getRolling()).thenReturn(true);
+
+        MockTrackedTouchObject missile = new MockTrackedTouchObject(
+                0x024A, 0x0386,
+                0x024C, 0x0384,
+                0x87);
+        setupTableSize(7, 6, 6);
+        objectManager.addDynamicObject(missile);
+
+        objectManager.runTouchResponsesForPlayer(player, 1);
+
+        assertTrue(missile.wasTouched,
+                "The GHZ frame-387 missile geometry should overlap Sonic with rolling radii");
+    }
+
+    @Test
+    public void testRunTouchResponsesRefreshesPreUpdateSnapshotForCurrentFrame() {
+        MockSnapshotTouchObject obj = new MockSnapshotTouchObject(300, 112, 0x48);
+        setupTableSize(8, 16, 16);
+        objectManager.addDynamicObject(obj);
+
+        // Simulate the end of the previous frame: the saved pre-update snapshot is stale
+        // and still points at the old off-screen position.
+        obj.snapshotPreUpdatePosition();
+
+        // At the start of the current frame, the object is already overlapping Sonic.
+        obj.setPosition(160, 112);
+
+        objectManager.runTouchResponsesForPlayer(player, 1);
+
+        assertTrue(obj.wasTouched,
+                "Player-slot touch responses should ignore stale prior-frame snapshots and use the current object position");
     }
 
     @Test
@@ -352,8 +639,7 @@ public class TestTouchResponseManager {
         when(player.getCentreX()).thenReturn((short) 160);
         objectManager.update(0, player, List.of(), 1);
 
-        assertTrue("Touch should trigger again after exit and re-enter",
-                obj.wasTouched);
+        assertTrue(obj.wasTouched, "Touch should trigger again after exit and re-enter");
     }
 
     // ==================== Reset Tests ====================
@@ -372,8 +658,7 @@ public class TestTouchResponseManager {
 
         // Now touch should trigger again
         objectManager.update(0, player, List.of(), 1);
-        assertTrue("Touch should trigger after reset even for same overlap",
-                obj.wasTouched);
+        assertTrue(obj.wasTouched, "Touch should trigger after reset even for same overlap");
     }
 
     // ==================== Helper Classes ====================
@@ -457,6 +742,80 @@ public class TestTouchResponseManager {
         }
     }
 
+    private static final class MockShieldTouchObject extends MockTouchObject {
+        private final int shieldReactionFlags;
+
+        private MockShieldTouchObject(int x, int y, int flags, int shieldReactionFlags) {
+            super(x, y, flags);
+            this.shieldReactionFlags = shieldReactionFlags;
+        }
+
+        @Override
+        public int getShieldReactionFlags() {
+            return shieldReactionFlags;
+        }
+    }
+
+    private static final class MockMultiRegionTouchObject extends MockTouchObject {
+        private final TouchResponseProvider.TouchRegion[] regions;
+
+        private MockMultiRegionTouchObject(TouchResponseProvider.TouchRegion... regions) {
+            super(0, 0, 0);
+            this.regions = regions;
+        }
+
+        @Override
+        public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+            return regions;
+        }
+    }
+
+    private static final class MockMultiRegionSkipSolidTouchObject extends MockTouchObject {
+        private final TouchResponseProvider.TouchRegion[] regions;
+
+        private MockMultiRegionSkipSolidTouchObject(TouchResponseProvider.TouchRegion... regions) {
+            super(0, 0, 0);
+            this.regions = regions;
+        }
+
+        @Override
+        public boolean isSkipSolidContactThisFrame() {
+            return true;
+        }
+
+        @Override
+        public TouchResponseProvider.TouchRegion[] getMultiTouchRegions() {
+            return regions;
+        }
+    }
+
+    private static class MockS3kTouchSpecialObject extends MockTouchObject {
+        public MockS3kTouchSpecialObject(int x, int y, int flags) {
+            super(x, y, flags);
+        }
+
+        @Override
+        public boolean usesS3kTouchSpecialPropertyResponse() {
+            return true;
+        }
+    }
+
+    private static class MockContinuousS3kTouchSpecialObject extends MockTouchObject {
+        public MockContinuousS3kTouchSpecialObject(int x, int y, int flags) {
+            super(x, y, flags);
+        }
+
+        @Override
+        public boolean usesS3kTouchSpecialPropertyResponse() {
+            return true;
+        }
+
+        @Override
+        public boolean requiresContinuousTouchCallbacks() {
+            return true;
+        }
+    }
+
     private static class MockSkipTouchObject extends MockTouchObject {
         public MockSkipTouchObject(int x, int y, int flags) {
             super(x, y, flags);
@@ -467,4 +826,95 @@ public class TestTouchResponseManager {
             return true;
         }
     }
+
+    private static class MockTrackedTouchObject extends MockTouchObject {
+        private final int currentX;
+        private final int currentY;
+        private final int preUpdateX;
+        private final int preUpdateY;
+
+        public MockTrackedTouchObject(int currentX, int currentY, int preUpdateX, int preUpdateY, int flags) {
+            super(currentX, currentY, flags);
+            this.currentX = currentX;
+            this.currentY = currentY;
+            this.preUpdateX = preUpdateX;
+            this.preUpdateY = preUpdateY;
+        }
+
+        @Override
+        public int getX() {
+            return currentX;
+        }
+
+        @Override
+        public int getY() {
+            return currentY;
+        }
+
+        @Override
+        public int getPreUpdateX() {
+            return preUpdateX;
+        }
+
+        @Override
+        public int getPreUpdateY() {
+            return preUpdateY;
+        }
+    }
+
+    private static class MockSnapshotTouchObject extends AbstractObjectInstance
+            implements TouchResponseProvider, TouchResponseListener {
+        private int currentX;
+        private int currentY;
+        private final int collisionFlags;
+        boolean wasTouched = false;
+
+        private MockSnapshotTouchObject(int x, int y, int flags) {
+            super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "MockSnapshotTouchObject");
+            this.currentX = x;
+            this.currentY = y;
+            this.collisionFlags = flags;
+        }
+
+        void setPosition(int x, int y) {
+            this.currentX = x;
+            this.currentY = y;
+        }
+
+        @Override
+        public int getX() {
+            return currentX;
+        }
+
+        @Override
+        public int getY() {
+            return currentY;
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            return collisionFlags;
+        }
+
+        @Override
+        public int getCollisionProperty() {
+            return 0;
+        }
+
+        @Override
+        public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
+            wasTouched = true;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
 }
+
+
+

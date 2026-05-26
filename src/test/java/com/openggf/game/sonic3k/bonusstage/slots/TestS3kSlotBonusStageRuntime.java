@@ -1,12 +1,12 @@
 package com.openggf.game.sonic3k.bonusstage.slots;
 
+import com.openggf.game.session.SessionManager;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
-import com.openggf.game.GameRuntime;
+import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.GameServices;
-import com.openggf.game.RuntimeManager;
 import com.openggf.game.sonic3k.objects.S3kSlotRingRewardObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kSlotSpikeRewardObjectInstance;
 import com.openggf.graphics.GraphicsManager;
@@ -22,6 +22,9 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
+import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -38,21 +41,20 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestS3kSlotBonusStageRuntime {
-    private Field levelManagerField;
-    private LevelManager originalLevelManager;
+    @BeforeEach
+    void setUp() {
+        TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_3K);
+    }
 
     @AfterEach
-    void tearDown() throws Exception {
-        if (levelManagerField != null) {
-            levelManagerField.set(null, originalLevelManager);
-        }
-        RuntimeManager.destroyCurrent();
+    void tearDown() {
+        SessionManager.clear();
         SonicConfigurationService.getInstance().resetToDefaults();
     }
 
     @Test
     void bootstrapReplacesTailsMainCharacterAtRawPositionTransfersRendererStateAndRemovesSidekicks() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -108,7 +110,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void queuedRingRewardActivatesInsideRuntimeAndExpires() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         Tails originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -139,7 +141,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void queuedRingRewardsSpawnIndependentTransientChildren() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         Tails originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -160,7 +162,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void queuedSpikeRewardsSpawnIndependentTransientChildren() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         Tails originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -180,7 +182,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void bootstrapPreservesLiveCollisionBitsOnSwappedSlotPlayer() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -201,7 +203,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void bootstrapKeepsSlotPlayerLowPriorityEvenWhenLivePlayerWasHighPriority() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -220,7 +222,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void runtimeUpdateDoesNotImmediatelyCaptureAndFreezeBootstrapPlayer() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -243,7 +245,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void runtimeUpdateKeepsCameraBoundToSlotRuntimeOrigin() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -263,7 +265,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void runtimeUpdateBuildsVisibleSemanticCellsForSlotLayout() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -289,7 +291,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void runtimeUsesSharedMachineAnchorForCageAndDisplay() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -313,7 +315,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void machineDisplayAnchorDoesNotRotateWithStageAngle() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -338,7 +340,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void goalExitReportsCompletedProviderFadeAfterRomExitFadeCompletes() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -361,7 +363,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void lateRuntimeRenderPassDoesNotDrawMachineFacePanel() throws Exception {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -381,7 +383,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void shutdownRestoresOriginalPlayerAndCameraFocus() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         Tails originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -406,7 +408,7 @@ class TestS3kSlotBonusStageRuntime {
 
     @Test
     void shutdownRestoresOriginalPlayerOnBootstrapRuntimeAfterCurrentRuntimeRecreation() {
-        GameRuntime bootstrapRuntime = RuntimeManager.createGameplay();
+        GameplayModeContext bootstrapMode = TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         Tails originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -416,25 +418,30 @@ class TestS3kSlotBonusStageRuntime {
         S3kSlotBonusStageRuntime runtime = new S3kSlotBonusStageRuntime();
         runtime.bootstrap();
 
-        assertTrue(bootstrapRuntime.getSpriteManager().getSprite("tails") instanceof S3kSlotBonusPlayer);
-        assertNotSame(originalPlayer, bootstrapRuntime.getSpriteManager().getSprite("tails"));
-        assertSame(bootstrapRuntime.getSpriteManager().getSprite("tails"), bootstrapRuntime.getCamera().getFocusedSprite());
+        assertTrue(bootstrapMode.getSpriteManager().getSprite("tails") instanceof S3kSlotBonusPlayer);
+        assertNotSame(originalPlayer, bootstrapMode.getSpriteManager().getSprite("tails"));
+        assertSame(bootstrapMode.getSpriteManager().getSprite("tails"), bootstrapMode.getCamera().getFocusedSprite());
 
-        GameRuntime recreatedRuntime = RuntimeManager.createGameplay();
+        GameplayModeContext recreatedMode = TestEnvironment.activeGameplayMode();
 
         runtime.shutdown();
 
-        assertSame(originalPlayer, bootstrapRuntime.getSpriteManager().getSprite("tails"));
-        assertSame(originalPlayer, bootstrapRuntime.getCamera().getFocusedSprite());
+        // After the session ownership migration, GameplayModeContext owns the
+        // disposable managers (SpriteManager, Camera, etc.). The active
+        // gameplay mode owns those managers, so both references resolve to the same
+        // SpriteManager. The shutdown invariant — original player restored to
+        // the active SpriteManager — is preserved through that shared view.
+        assertSame(originalPlayer, bootstrapMode.getSpriteManager().getSprite("tails"));
+        assertSame(originalPlayer, bootstrapMode.getCamera().getFocusedSprite());
         assertFalse(runtime.isInitialized());
-        assertTrue(recreatedRuntime.getSpriteManager().getSprite("tails") == null);
+        assertSame(originalPlayer, recreatedMode.getSpriteManager().getSprite("tails"));
 
-        bootstrapRuntime.destroy();
+        bootstrapMode.destroy();
     }
 
     @Test
     void bootstrapInitializesAllSubsystems() {
-        RuntimeManager.createGameplay();
+        TestEnvironment.activeGameplayMode();
         SonicConfigurationService.getInstance().setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "tails");
 
         AbstractPlayableSprite originalPlayer = new Tails("tails", (short) 0x460, (short) 0x430);
@@ -475,24 +482,10 @@ class TestS3kSlotBonusStageRuntime {
     }
 
     private void installRenderer(RecordingRenderer renderer, String artKey) throws Exception {
-        levelManagerField = LevelManager.class.getDeclaredField("levelManager");
-        levelManagerField.setAccessible(true);
-        originalLevelManager = (LevelManager) levelManagerField.get(null);
         ObjectRenderManager renderManager = new ObjectRenderManager(new StubObjectArtProvider(renderer, artKey));
-        levelManagerField.set(null, new TestLevelManager(renderManager));
-    }
-
-    private static final class TestLevelManager extends LevelManager {
-        private final ObjectRenderManager renderManager;
-
-        private TestLevelManager(ObjectRenderManager renderManager) {
-            this.renderManager = renderManager;
-        }
-
-        @Override
-        public ObjectRenderManager getObjectRenderManager() {
-            return renderManager;
-        }
+        Field objectRenderManagerField = LevelManager.class.getDeclaredField("objectRenderManager");
+        objectRenderManagerField.setAccessible(true);
+        objectRenderManagerField.set(TestEnvironment.activeGameplayMode().getLevelManager(), renderManager);
     }
 
     private static final class StubObjectArtProvider implements ObjectArtProvider {
@@ -588,3 +581,5 @@ class TestS3kSlotBonusStageRuntime {
         }
     }
 }
+
+
