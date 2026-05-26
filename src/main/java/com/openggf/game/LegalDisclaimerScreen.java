@@ -77,6 +77,12 @@ public class LegalDisclaimerScreen {
      */
     static final int PROMPT_FADE_IN_FRAMES = 30;
 
+    /** Pulse cycle period (frames). 90 frames = 1.5 s at 60 fps. */
+    static final int PROMPT_PULSE_PERIOD_FRAMES = 90;
+
+    private static final double PROMPT_PULSE_OMEGA =
+            2.0 * Math.PI / PROMPT_PULSE_PERIOD_FRAMES;
+
     private static final String HEADER = "LEGAL NOTICE";
 
     /**
@@ -102,7 +108,6 @@ public class LegalDisclaimerScreen {
     private TexturedQuadRenderer renderer;
     private PixelFont font;
     private int solidWhiteTextureId;
-    private int frameCounter;
     private List<String> wrappedBodyLines;
 
     public LegalDisclaimerScreen(FadeManager fadeManager) {
@@ -147,7 +152,6 @@ public class LegalDisclaimerScreen {
     }
 
     public void update(InputHandler inputHandler) {
-        frameCounter++;
         boolean keyPressed = inputHandler.isAnyKeyJustPressed();
         boolean enteredExiting = state.tick(keyPressed);
         if (enteredExiting) {
@@ -182,13 +186,16 @@ public class LegalDisclaimerScreen {
             bodyY += BODY_LINE_HEIGHT;
         }
 
-        // Dismiss prompt — fades in over PROMPT_FADE_IN_FRAMES, then pulses.
+        // Dismiss prompt — fade-in and pulse share the same dismissible-phase
+        // frame counter so they're aligned. Pulse starts at its trough
+        // (brightness 0.2) and rises with the fade-in for a clean bloom up
+        // to peak, then settles into the 0.2..1.0 cycle.
         if (state.isDismissPromptVisible()) {
             int dismissibleFrames = state.getDismissibleFrameCounter();
             float fadeIn = dismissibleFrames >= PROMPT_FADE_IN_FRAMES
                     ? 1.0f
                     : dismissibleFrames / (float) PROMPT_FADE_IN_FRAMES;
-            float pulse = 0.6f + 0.4f * (float) Math.sin(frameCounter * 0.065);
+            float pulse = 0.6f - 0.4f * (float) Math.cos(dismissibleFrames * PROMPT_PULSE_OMEGA);
             float brightness = pulse * fadeIn;
             font.drawTextCentered(PROMPT, SCREEN_W, PROMPT_Y, brightness, brightness, brightness, 1f);
         }
