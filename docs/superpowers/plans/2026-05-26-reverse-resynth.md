@@ -627,12 +627,12 @@ Append to `TestPcmHistoryRing.java`:
 `mvn "-Dtest=TestPcmHistoryRing" test`
 Expected: FAIL on the three new tests (method missing).
 
-- [ ] **Step 3: Make ReverseCursor.oldestReadableFrame mutable + add `extendOldestTo` + `oldestReadableFrame()` accessor**
+- [ ] **Step 3: Make ReverseCursor.oldestReadableFrame mutable + add `extendOldestTo`, `oldestReadableFrame()`, `nextReadableFrame()`, `maxPrependableFrames()` accessors**
 
 Edit `PcmHistoryRing.java`:
 
 - Change `private final long oldestReadableFrame;` to `private long oldestReadableFrame;` inside the `ReverseCursor` class.
-- Add (inside `ReverseCursor`):
+- Add (inside `ReverseCursor` — note it's a non-static inner class so it can read the outer `capacityFrames` directly):
 
 ```java
         public long oldestReadableFrame() {
@@ -641,6 +641,24 @@ Edit `PcmHistoryRing.java`:
 
         public long nextReadableFrame() {
             return nextReadableFrame;
+        }
+
+        /**
+         * Returns the maximum number of frames a caller can safely
+         * {@link PcmHistoryRing#prependBackward} given the current cursor
+         * state. The ring is bounded; once the unread window equals
+         * {@code capacityFrames}, no more frames can be prepended until the
+         * cursor consumes some via {@link #readPrevious}. Returns 0 in that
+         * case so the caller (typically {@code ReverseResynthesizer}) can
+         * back off and let {@code drainPcm} make progress before retrying.
+         */
+        public int maxPrependableFrames() {
+            long unread = nextReadableFrame - oldestReadableFrame + 1;
+            long room = capacityFrames - unread;
+            if (room <= 0) {
+                return 0;
+            }
+            return (int) Math.min(room, (long) Integer.MAX_VALUE);
         }
 
         void extendOldestTo(long newOldest) {
@@ -722,9 +740,13 @@ readPrevious calls drain the prepended range. Enforces adjacency
 safety (cursor.nextReadableFrame - start + 1 <= capacity) so the
 new writes can never land on slots the cursor has not yet read.
 
-ReverseCursor exposes oldestReadableFrame() and nextReadableFrame()
-accessors and a package-private extendOldestTo so the prepend path
-can lower the floor.
+ReverseCursor exposes oldestReadableFrame(), nextReadableFrame(), and
+maxPrependableFrames() accessors plus a package-private extendOldestTo
+so the prepend path can lower the floor. maxPrependableFrames returns
+how many frames can be safely prepended given the cursor's current
+unread span — used by ReverseResynthesizer.runOneBurst to cap each
+burst by the ring's physical-slot budget so a full ring is a clean
+no-op instead of an IllegalArgumentException.
 
 Spec: docs/superpowers/specs/2026-05-26-reverse-resynth-design.md
 (Architecture rows for PcmHistoryRing and ReverseCursor; Edge case 8).
@@ -1512,10 +1534,24 @@ public final class ReverseResynthesizer {
     }
 
     private boolean runOneBurst(PcmHistoryRing.ReverseCursor cursor) {
-        long targetOldestAudioFrame = cursor.oldestReadableFrame() - burstAudioFrames;
-        if (targetOldestAudioFrame < 0) {
+        // Cap the burst by the cursor's physical-slot availability. The ring
+        // has a fixed capacity; once the unread window fills it, no more
+        // frames can be prepended without corrupting unread slots. drainPcm
+        // is expected to drain a chunk between calls, freeing slots; until
+        // it does, we return false so ensureHeadroom's loop yields.
+        int maxPrependable = cursor.maxPrependableFrames();
+        if (maxPrependable <= 0) {
             return false;
         }
+        int requestedBurst = Math.min(burstAudioFrames, maxPrependable);
+        // Cap by the start-of-history floor: we can't synthesize earlier than
+        // audio frame 0.
+        long burstFloor = Math.max(0L, cursor.oldestReadableFrame() - requestedBurst);
+        int actualBurstFrames = (int) (cursor.oldestReadableFrame() - burstFloor);
+        if (actualBurstFrames <= 0) {
+            return false;
+        }
+        long targetOldestAudioFrame = burstFloor;
         AudioLogicalSnapshot keyframe = keyframes.keyframeAtOrBeforeAudioFrame(targetOldestAudioFrame);
         if (keyframe == null
                 || keyframe.backend() == null
@@ -1530,7 +1566,9 @@ public final class ReverseResynthesizer {
         long gameFrame = keyframe.commandTimelineFrame();
         long audioFrame = keyframe.backend().clockSnapshot().totalSamplesProduced();
         long burstEnd = cursor.oldestReadableFrame(); // exclusive
-        int burstFrames = (int) (burstEnd - targetOldestAudioFrame);
+        // burstFrames == actualBurstFrames (already capped above by both ring
+        // capacity and the start-of-history floor).
+        int burstFrames = actualBurstFrames;
         if (burstFrames <= 0) {
             return false;
         }
@@ -1683,9 +1721,10 @@ class TestReverseResynthesizer {
 
     @Test
     void ensureHeadroomExtendsWindowToCoverRequestedFrames() {
-        PcmHistoryRing ring = new PcmHistoryRing(64);
-        // Set up a runtime + scripted music stream so the burst loop has
-        // something to read.
+        // Overfill an 8-frame ring so cursor.oldestReadableFrame() > 0 at the
+        // start — only then is a backward burst meaningful. (If oldestRead is
+        // already 0, runOneBurst hits the start-of-history floor and bails.)
+        PcmHistoryRing ring = new PcmHistoryRing(8);
         AudioManager audio = AudioManager.getInstance();
         audio.resetState();
         StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
@@ -1694,33 +1733,66 @@ class TestReverseResynthesizer {
         audio.setBackend(new NullAudioBackend());
         runtime.setMusicStream(new ScriptedAudioStream((short) 1, (short) 1));
 
-        // Advance 4 game frames forward (8 audio frames in the ring at 120/60).
-        for (int i = 0; i < 4; i++) {
-            audio.advanceGameplayFrameAudio();
-        }
-
-        // Capture a keyframe at audio-frame 0 so the resynth has something to
-        // seek backwards to.
+        // Capture a keyframe at audio-frame 0 BEFORE producing any audio so
+        // the resynth has a frame-0 anchor to seek backward to.
         AudioKeyframeStore store = new AudioKeyframeStore();
         store.capture(0L, audio);
 
-        // Cursor starts with 8 frames of unread history. Ask ensureHeadroom
-        // for 20 frames — the burst loop should extend the window backwards
-        // beyond the original capacity to satisfy the request.
+        // Produce 12 game-frames of audio (24 audio-frames). The 8-frame ring
+        // keeps the last 8 (audio frames 16..23), so oldestReadable = 16.
+        for (int i = 0; i < 12; i++) {
+            audio.advanceGameplayFrameAudio();
+        }
         PcmHistoryRing.ReverseCursor cursor = ring.createReverseCursor();
+        // Consume 4 frames so the ring has 4 free physical slots for the
+        // burst to prepend into without violating the ring's capacity
+        // invariant.
+        short[] drain = new short[8];
+        cursor.readPrevious(drain, 4);
+        long beforeOldest = cursor.oldestReadableFrame();
+
         ReverseResynthesizer resynth = new ReverseResynthesizer(
                 ring, store, audio, runtime, /* burst */ 4, /* threshold */ 2);
+        resynth.ensureHeadroom(cursor, /* framesNeeded */ 6);
 
-        long beforeOldest = cursor.oldestReadableFrame();
-        resynth.ensureHeadroom(cursor, /* framesNeeded */ 20);
         assertTrue(cursor.oldestReadableFrame() < beforeOldest,
-                "ensureHeadroom must lower cursor.oldestReadableFrame to cover the requested frame count");
-        // After the burst loop, the cursor's headroom should reach at least
-        // framesNeeded + threshold = 22 (or be at the start-of-history floor).
+                "ensureHeadroom must lower cursor.oldestReadableFrame after consuming"
+                        + " some unread span (oldestBefore=" + beforeOldest
+                        + " oldestAfter=" + cursor.oldestReadableFrame() + ")");
         long headroom = cursor.nextReadableFrame() - cursor.oldestReadableFrame() + 1;
-        assertTrue(headroom >= 20 || cursor.oldestReadableFrame() == 0,
+        assertTrue(headroom >= 6 || cursor.oldestReadableFrame() == 0,
                 "ensureHeadroom must satisfy the request or hit the start-of-history floor; headroom="
                         + headroom + " oldest=" + cursor.oldestReadableFrame());
+    }
+
+    @Test
+    void ensureHeadroomReturnsCleanlyWhenRingIsFull() {
+        // Fresh cursor on a full ring has no consumed slots — runOneBurst
+        // must back off so drainPcm can drain some frames first.
+        PcmHistoryRing ring = new PcmHistoryRing(8);
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
+                new AudioFrameClock(120, 60), new AudioOutputFifo(120), ring);
+        audio.setDeterministicAudioRuntime(runtime);
+        audio.setBackend(new NullAudioBackend());
+        runtime.setMusicStream(new ScriptedAudioStream((short) 1, (short) 1));
+
+        AudioKeyframeStore store = new AudioKeyframeStore();
+        store.capture(0L, audio);
+        for (int i = 0; i < 12; i++) {
+            audio.advanceGameplayFrameAudio();
+        }
+        PcmHistoryRing.ReverseCursor cursor = ring.createReverseCursor();
+        long beforeOldest = cursor.oldestReadableFrame();
+
+        ReverseResynthesizer resynth = new ReverseResynthesizer(
+                ring, store, audio, runtime, /* burst */ 4, /* threshold */ 2);
+        resynth.ensureHeadroom(cursor, /* framesNeeded */ 10);
+
+        assertEquals(beforeOldest, cursor.oldestReadableFrame(),
+                "Full ring -> ensureHeadroom must no-op; drainPcm's loop is responsible"
+                        + " for draining a chunk before retrying");
     }
 }
 ```
@@ -1742,12 +1814,15 @@ feat(runtime): ReverseResynthesizer drives historical PCM bursts
 
 New class synthesizes PCM into PcmHistoryRing below the reverse
 cursor's readable floor when held-rewind drains past the existing
-ring window. ensureHeadroom loops while the cursor has less than
-HEADROOM_THRESHOLD_FRAMES of unread data, restoring the live drivers
-from the latest audio keyframe whose clock snapshot precedes the
-burst target, replaying SFX timeline entries under REVERSE_RESYNTH,
-forward-stepping the chips game-frame-by-game-frame, mixing SFX into
-music, and prepending the burst's audio into the ring.
+ring window. ensureHeadroom(cursor, framesNeeded) loops while the
+cursor has less than framesNeeded + threshold of unread data,
+restoring the live drivers from the latest audio keyframe whose
+clock snapshot precedes the burst target, replaying SFX timeline
+entries under REVERSE_RESYNTH, forward-stepping the chips
+game-frame-by-game-frame, mixing SFX into music, and prepending the
+burst's audio into the ring. runOneBurst caps the burst by
+cursor.maxPrependableFrames() so a full ring is a clean no-op and
+drainPcm's outer loop is responsible for draining a chunk first.
 
 DeterministicAudioRuntime gains musicStreamForReverseResynth,
 sfxStreamForReverseResynth, and samplesForNextFrameForReverseResynth
@@ -1797,16 +1872,46 @@ In `drainPcm`, wrap the existing reverse-cursor branch:
     @Override
     public int drainPcm(short[] target, int frames) {
         if (reverseCursor != null) {
-            if (reverseResynthesizer != null) {
-                // Pass the requested frame count so ensureHeadroom can produce
-                // enough PCM to fully satisfy this drain (plus its own slack
-                // threshold). A constant threshold alone would leave large
-                // drains under-served by the burst loop.
-                reverseResynthesizer.ensureHeadroom(reverseCursor, frames);
+            // Loop: extend the cursor's readable window with the resynth as
+            // much as the ring's physical-slot budget allows, then read a
+            // chunk, then loop. Each readPrevious frees physical slots so the
+            // next ensureHeadroom call can extend further. Without the loop,
+            // a single ensureHeadroom call from a full-ring cursor would
+            // refuse to extend (no slots free), and readPrevious could only
+            // satisfy at most one ring-capacity worth of frames in a single
+            // drainPcm call — which is wrong when the caller's request
+            // exceeds the ring capacity.
+            int totalRead = 0;
+            while (totalRead < frames) {
+                int remaining = frames - totalRead;
+                if (reverseResynthesizer != null) {
+                    reverseResynthesizer.ensureHeadroom(reverseCursor, remaining);
+                }
+                long unread = reverseCursor.nextReadableFrame()
+                        - reverseCursor.oldestReadableFrame() + 1;
+                if (unread <= 0) {
+                    break; // history exhausted past the start-of-history floor
+                }
+                int chunk = (int) Math.min(unread, (long) remaining);
+                short[] chunkBuf = new short[chunk * 2];
+                int got = reverseCursor.readPrevious(chunkBuf, chunk);
+                if (got <= 0) {
+                    break;
+                }
+                System.arraycopy(chunkBuf, 0, target, totalRead * 2, got * 2);
+                totalRead += got;
+                if (got < chunk) {
+                    // readPrevious stopped early; nothing more available.
+                    break;
+                }
             }
-            int read = reverseCursor.readPrevious(target, frames);
-            rememberLastReverseFrame(target, read);
-            return read;
+            // Pad the unfilled tail with silence so the caller's buffer is
+            // fully written even when history runs out.
+            if (totalRead < frames) {
+                java.util.Arrays.fill(target, totalRead * 2, frames * 2, (short) 0);
+            }
+            rememberLastReverseFrame(target, totalRead);
+            return totalRead;
         }
         // ...existing FIFO drain path unchanged...
     }
@@ -1890,13 +1995,19 @@ Expected: PASS.
 git add src/main/java/com/openggf/audio/runtime/StreamBackedDeterministicAudioRuntime.java \
         src/test/java/com/openggf/audio/runtime/TestStreamBackedDeterministicAudioRuntime.java
 git commit -m "$(cat <<'EOF'
-feat(runtime): drainPcm calls ReverseResynthesizer.ensureHeadroom
+feat(runtime): drainPcm loops read+ensureHeadroom for resynth
 
 StreamBackedDeterministicAudioRuntime gains a setReverseResynthesizer
-setter and, in drainPcm, invokes ensureHeadroom on the cursor before
-readPrevious whenever a resynthesizer is attached. This is the seam
-LWJGLAudioBackend uses to enable extended reverse playback past the
-10-second history wall.
+setter and rewrites drainPcm's reverse-cursor branch into a loop:
+ensureHeadroom(remaining), readPrevious(chunk), update totalRead,
+repeat. Each readPrevious call frees physical slots in the ring; the
+next ensureHeadroom can use those slots to extend the cursor backward
+further. Without the loop, drainPcm could not satisfy any request
+larger than the ring's capacity, because a single ensureHeadroom call
+against a full-ring cursor refuses to extend (no free slots).
+
+This is the seam LWJGLAudioBackend uses to enable extended reverse
+playback past the 10-second history wall.
 
 Spec: docs/superpowers/specs/2026-05-26-reverse-resynth-design.md
 (Architecture, StreamBackedDeterministicAudioRuntime row; Control
@@ -2434,7 +2545,8 @@ If the smoke passes, update the resynth spec status from "Approved, ready to imp
 
 ### Type consistency
 
-- `burstAudioFrames` and `headroomThresholdFrames` are constructor args throughout (Tasks 10, 11, 12, 14, 15). `ensureHeadroom(cursor, framesNeeded)` takes the upcoming-drain frame count as a second parameter and produces enough PCM to satisfy `framesNeeded + headroomThresholdFrames` of unread data (or hits the start-of-history floor first). `drainPcm` passes the caller's `frames` argument to it.
+- `burstAudioFrames` and `headroomThresholdFrames` are constructor args throughout (Tasks 10, 11, 12, 14, 15). `ensureHeadroom(cursor, framesNeeded)` takes the upcoming-drain frame count as a second parameter and produces enough PCM to satisfy `framesNeeded + headroomThresholdFrames` of unread data (or hits the start-of-history floor first, or the ring is currently full so the burst no-ops). `drainPcm` loops with the resynth: ensureHeadroom → readPrevious chunk → ensureHeadroom → ..., so requests larger than the ring's capacity get filled across multiple iterations as the cursor frees slots.
+- `ReverseCursor.maxPrependableFrames()` (Task 5) provides the physical-slot budget. `ReverseResynthesizer.runOneBurst` (Task 10) reads it to cap each burst; without that cap, a full-ring prepend would throw the adjacency invariant rather than return false.
 - `keyframeAtOrBeforeAudioFrame(long)` consistent across Tasks 7, 10.
 - `replayCommandsAtGameFrame(AudioManager, AudioLogicalSnapshot, long)` consistent across Tasks 7, 10.
 - `pcmHistoryRingForReverseResynth`, `musicStreamForReverseResynth`, `sfxStreamForReverseResynth`, `samplesForNextFrameForReverseResynth`, `sampleRateForReverseResynth` — used in Tasks 10 and 12 with the same shape.
