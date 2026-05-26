@@ -469,7 +469,7 @@ public class LWJGLAudioBackend implements AudioBackend {
             }
         }
 
-        if (smpsDriver != null && (currentStream == smpsDriver || runtimeProvidesPresentationPcm())) {
+        if (smpsDriver != null) {
             // Mix into current driver
             if (isContinuous) {
                 smpsDriver.startContinuousSfx(data.getId(), contTrackCount);
