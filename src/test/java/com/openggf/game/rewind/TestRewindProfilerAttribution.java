@@ -75,6 +75,43 @@ class TestRewindProfilerAttribution {
     }
 
     @Test
+    void stepBackwardAttributesKeyframeRestorePrimerToRewindStep() {
+        RecordingSectionProfiler prof = new RecordingSectionProfiler();
+        RewindRegistry reg = new RewindRegistry(prof);
+        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
+        InputSource inputs = new FakeInputSource(120);
+        AtomicInteger state = new AtomicInteger();
+        EngineStepper stepper = (in) -> state.incrementAndGet();
+        reg.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "k"; }
+            @Override public Integer capture() { return state.get(); }
+            @Override public void restore(Integer s) { state.set(s); }
+        });
+
+        RewindController rc = new RewindController(
+                reg, keyframes, inputs, stepper, 5, null, prof);
+
+        for (int i = 0; i < 7; i++) rc.step();
+        prof.clearTranscript();
+
+        rc.stepBackward();
+
+        // After registry.restore inside the keyframe-restore lambda, the section is
+        // closed. Before rewind.replay opens, primeStepperAtFrame runs — that work
+        // must credit to rewind.step, not fall into the unattributed gap.
+        List<String> transcript = prof.transcript();
+        int firstRestoreEnd = transcript.indexOf("end:rewind.restore");
+        int firstReplayBegin = transcript.indexOf("begin:rewind.replay");
+        assertTrue(firstRestoreEnd >= 0, "Expected first end:rewind.restore: " + transcript);
+        assertTrue(firstReplayBegin > firstRestoreEnd,
+                "Expected begin:rewind.replay after first end:rewind.restore: " + transcript);
+        List<String> gap = transcript.subList(firstRestoreEnd + 1, firstReplayBegin);
+        assertTrue(gap.contains("begin:rewind.step"),
+                "Expected begin:rewind.step between keyframe-restore close and replay open "
+                        + "(primer work attribution gap): gap=" + gap + " transcript=" + transcript);
+    }
+
+    @Test
     void stepBackwardLeavesProfilerCleanWhenStepperThrows() {
         RecordingSectionProfiler prof = new RecordingSectionProfiler();
         RewindRegistry reg = new RewindRegistry(prof);

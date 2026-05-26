@@ -201,6 +201,10 @@ public final class RewindController {
                     keyframeSnapshot,
                     () -> {
                         registry.restore(restoreSnapshot);
+                        // registry.restore closed rewind.restore in its finally; re-open
+                        // rewind.step so primeStepperAtFrame credits to it instead of
+                        // falling into the unattributed gap before rewind.replay opens.
+                        if (profiler != null) profiler.beginSection("rewind.step");
                         pos[0] = keyframeSnapshot;
                         primeStepperAtFrame(pos[0]);
                     },

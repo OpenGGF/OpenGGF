@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **`RewindController.stepBackward` keyframe-restore primer work now credits to `rewind.step` instead of falling into an unattributed gap before `rewind.replay` opens.**
+
 - **Performance overview and rewind contributor guide updated for new profiler sections.**
 
 - **Rewind profiler sections (`rewind.restore` / `rewind.step` / `rewind.seek` / `rewind.replay`) are now wired in production via `GameplayModeContext`.**
