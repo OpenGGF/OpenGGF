@@ -113,6 +113,31 @@ class TestStreamBackedDeterministicAudioRuntime {
     }
 
     @Test
+    void consumeCommandsDrainsPriorFrameBacklogOnNextAdvance() {
+        // Regression: if a command is submitted at frame N but advanceFrame is
+        // next called at a later frame (e.g., the game tick froze and skipped
+        // an audio frame, or playMusic was recorded just before
+        // beginGameplayAudioFrame incremented the counter), the entry must
+        // still be processed — not silently dropped. Pre-fix, the runtime
+        // filtered consumed entries by entry.frame() == frame but removed by
+        // entry.frame() <= frame, so past-frame entries were swept away
+        // without dispatch.
+        AudioOutputFifo fifo = new AudioOutputFifo(8);
+        StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
+                new AudioFrameClock(2, 1), fifo);
+        List<String> calls = new ArrayList<>();
+        runtime.setCommandHandler(command -> calls.add(((AudioCommand.PlaySfx) command).sfxName()));
+
+        runtime.submit(new AudioTimelineEntry(3, 0,
+                new AudioCommand.PlaySfx(-1, "A", AudioCommand.SfxRoute.FALLBACK_NAME, 1.0f, null)));
+
+        runtime.advanceFrame(5, FrameAudioMode.NORMAL);
+
+        assertEquals(List.of("A"), calls,
+                "Past-frame commands must be drained on the next advance, not dropped");
+    }
+
+    @Test
     void normalFramesMirrorFinalMixedPcmIntoReverseHistory() {
         AudioOutputFifo fifo = new AudioOutputFifo(8);
         StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(

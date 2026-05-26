@@ -192,8 +192,16 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     }
 
     private void consumeCommands(long frame) {
+        // Drain everything queued at or before `frame`. The filter mirrors the
+        // remove predicate below, so any command whose frame number is less
+        // than or equal to the current advance frame is dispatched before it
+        // is swept from the queue. The == form was too tight: when a tick
+        // skips an audio frame (e.g., a freeze during act transition, or
+        // playMusic recorded just before beginGameplayAudioFrame increments
+        // the counter), the queued command's frame can be strictly less than
+        // the next advance frame and would be silently dropped.
         List<AudioTimelineEntry> entries = pendingCommands.stream()
-                .filter(entry -> entry.frame() == frame)
+                .filter(entry -> entry.frame() <= frame)
                 .sorted(Comparator.comparingLong(AudioTimelineEntry::frame)
                         .thenComparingInt(AudioTimelineEntry::order))
                 .toList();
