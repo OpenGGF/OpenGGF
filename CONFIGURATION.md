@@ -41,6 +41,7 @@ Paths are relative to the working directory (where the JAR is launched).
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
+| `SHOW_LEGAL_DISCLAIMER_ON_STARTUP` | bool | `true` | Show the legal disclaimer screen on engine startup before the master title screen. White text on black, 5-second readability gate, any-key dismiss, fade-in/out transitions. Set `false` for headless tests, trace replay sessions, or CI runs that should not have to drive past this screen. |
 | `MASTER_TITLE_SCREEN_ON_STARTUP` | bool | `true` | Show the master title / game-selection screen on launch. When `false`, boots directly into the game set by `DEFAULT_ROM`. |
 | `TITLE_SCREEN_ON_STARTUP` | bool | `true` | Show the game-specific title screen (e.g. Sonic 2 title screen) before gameplay. Ignored when `MASTER_TITLE_SCREEN_ON_STARTUP` is true and game selection is pending. |
 | `LEVEL_SELECT_ON_STARTUP` | bool | `false` | Jump straight to the level select screen instead of the title screen. Useful for development. |
@@ -194,6 +195,7 @@ diagnostic test runs only and must remain unset in CI.
   "SCREEN_WIDTH": 640,
   "SCREEN_HEIGHT": 448,
   "FPS": 60,
+  "SHOW_LEGAL_DISCLAIMER_ON_STARTUP": true,
   "MASTER_TITLE_SCREEN_ON_STARTUP": true,
   "TITLE_SCREEN_ON_STARTUP": true,
   "LEVEL_SELECT_ON_STARTUP": false,

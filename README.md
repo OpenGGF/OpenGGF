@@ -20,6 +20,9 @@ modding and customisation.
 > all related characters, names, and trademarks are the property of Sega Corporation. No ROM images
 > or other copyrighted game data are included in this repository. Users must supply their own
 > legally obtained ROM files to use this software.
+>
+> The disclaimer is also shown in-engine on startup; it can be disabled by setting
+> `SHOW_LEGAL_DISCLAIMER_ON_STARTUP=false` in `config.json`.
 
 ## User Guide
 
