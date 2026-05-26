@@ -146,6 +146,9 @@ public class Engine {
 	// Master title screen (game selection before ROM loading)
 	private MasterTitleScreen masterTitleScreen;
 
+	// Legal disclaimer screen (pre-ROM disclaimer)
+	private LegalDisclaimerScreen legalDisclaimerScreen;
+
 	// Viewport parameters for aspect-ratio-correct rendering
 	private int viewportX = 0;
 	private int viewportY = 0;
@@ -1386,6 +1389,17 @@ public class Engine {
 	}
 
 	public void draw() {
+		if (getCurrentGameMode() == GameMode.LEGAL_DISCLAIMER) {
+			if (camera != null) {
+				camera.setX((short) 0);
+				camera.setY((short) 0);
+			}
+			if (legalDisclaimerScreen != null) {
+				legalDisclaimerScreen.setProjectionMatrix(getProjectionMatrixBuffer());
+				legalDisclaimerScreen.draw();
+			}
+			return;
+		}
 		if (getCurrentGameMode() == GameMode.MASTER_TITLE_SCREEN) {
 			if (camera != null) {
 				camera.setX((short) 0);
