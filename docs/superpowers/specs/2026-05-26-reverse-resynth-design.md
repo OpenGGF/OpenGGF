@@ -1,7 +1,7 @@
 # Reverse Audio Re-Synthesis Design
 
 **Date:** 2026-05-26
-**Status:** **Parked** — depends on prerequisite migration (see "Prerequisite" below). External review surfaced six findings (P1.1–P1.3, P2.1–P2.3); P1.2/P1.3/P2.1/P2.2/P2.3 are folded into this revised spec, P1.1 is the prerequisite.
+**Status:** Approved, ready to implement. Prerequisite migration landed on develop at `158e4cab3` (Merge branch `worktree-feature+ai-lwjgl-runtime-presentation-migration` into develop), plus follow-ups for consumeCommands backlog (`367612eb4`) and beginGameplayAudioFrame monotonic clamp (`9b37ff0ef`). External review surfaced six findings (P1.1–P1.3, P2.1–P2.3); P1.2/P1.3/P2.1/P2.2/P2.3 are folded into this revised spec, P1.1 was the prerequisite.
 **Scope:** Extend held-rewind audio past the current 10-second silence wall by re-synthesizing historical PCM from audio keyframes.
 
 ## Prerequisite
