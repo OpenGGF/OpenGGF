@@ -242,7 +242,7 @@ public class AudioManager {
                 commandTimeline.currentFrame(),
                 commandTimeline.nextOrder(),
                 commandTimeline.entries().size(),
-                backend != null ? backend.captureLogicalSnapshot() : AudioBackendLogicalSnapshot.empty(),
+                captureBackendSnapshotWithClock(),
                 donorGameIds,
                 donorBindings);
     }
@@ -259,6 +259,11 @@ public class AudioManager {
             donorSoundBindings.put(binding.sound(), new DonorSfxBinding(binding.donorGameId(), binding.sfxId()));
         }
 
+        // Deliberately do NOT call deterministicAudioRuntime.restoreClockSnapshot here.
+        // The clock snapshot rides on AudioBackendLogicalSnapshot purely so the
+        // ReverseResynthesizer can look up audio-frame indices for each keyframe
+        // during a burst — restoring it here would corrupt forward audio-frame
+        // indexing for any subsequent normal-rewind seek.
         if (backend != null) {
             backend.restoreLogicalSnapshot(
                     snapshot.backend(),
@@ -492,6 +497,27 @@ public class AudioManager {
 
     private AudioBackendLogicalSnapshot currentBackendLogicalSnapshot() {
         return backend != null ? backend.captureLogicalSnapshot() : AudioBackendLogicalSnapshot.empty();
+    }
+
+    private com.openggf.audio.rewind.AudioBackendLogicalSnapshot captureBackendSnapshotWithClock() {
+        com.openggf.audio.rewind.AudioBackendLogicalSnapshot base = backend != null
+                ? backend.captureLogicalSnapshot()
+                : com.openggf.audio.rewind.AudioBackendLogicalSnapshot.empty();
+        com.openggf.audio.runtime.AudioFrameClock.Snapshot clock =
+                deterministicAudioRuntime.captureClockSnapshot();
+        if (clock == null) {
+            return base;
+        }
+        return new com.openggf.audio.rewind.AudioBackendLogicalSnapshot(
+                base.currentMusic(),
+                base.sfxBlocked(),
+                base.pendingRestore(),
+                base.speedShoesEnabled(),
+                base.speedMultiplier(),
+                base.overrideStack(),
+                base.musicDriver(),
+                base.standaloneSfxDriver(),
+                clock);
     }
 
     private void restoreBackendLogicalSnapshot(AudioBackendLogicalSnapshot snapshot) {
