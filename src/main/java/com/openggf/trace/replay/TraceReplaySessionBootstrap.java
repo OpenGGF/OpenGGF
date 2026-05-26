@@ -219,6 +219,16 @@ public final class TraceReplaySessionBootstrap {
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
             ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
             objectPreludeFrames = s2TornadoObjectPreludeFrames(trace, objectManager);
+            if (objectPreludeFrames == 0) {
+                // Non-Tornado S2 native-prelude traces need the generic
+                // title-card object prelude: ROM ticks Level_MainLoop during
+                // the title card before Level_started_flag is set
+                // (s2.asm:5004-5092). Without this the engine starts every
+                // S2 trace with objects out of step with the BK2 frame 0
+                // state and divergences accumulate.
+                objectPreludeFrames = TraceReplayBootstrap
+                        .s2GenericObjectTitleCardPreludeFramesForTraceReplay(trace);
+            }
             int zoneFeatureVblankOffset =
                     TraceReplayBootstrap.zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(trace);
             if (zoneFeaturePreludeFrames > 0
