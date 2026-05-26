@@ -1255,13 +1255,36 @@ In `beginReverseAudioPresentation`, before invoking the runtime's reverse begin 
             backend.endReversePresentation();
         }
         if (preReverseSnapshot != null) {
+            // 1. Restore driver state (music + standalone SFX) via the normal
+            //    restoreLogicalSnapshot path. This deliberately does NOT touch
+            //    the runtime clock — see the comment on restoreLogicalSnapshot.
             restoreLogicalSnapshot(preReverseSnapshot);
+            // 2. Separately restore the runtime clock to where it was BEFORE
+            //    held-rewind started. ReverseResynthesizer mutates the clock
+            //    on every burst (runtime.restoreClockSnapshot to a keyframe
+            //    audio-frame index, then forward-step), so at endReverse the
+            //    clock is parked at the last synthesized historical audio
+            //    frame. Without this explicit restore, forward audio after
+            //    held-rewind would resume from that historical position,
+            //    breaking audio-frame indexing.
+            //
+            //    We do this OUTSIDE restoreLogicalSnapshot so normal rewind
+            //    seeks (RewindController.seekTo, stepBackward) continue to
+            //    leave the runtime clock at its current live position — they
+            //    don't touch the clock and shouldn't be made to.
+            com.openggf.audio.runtime.AudioFrameClock.Snapshot clockSnap =
+                    preReverseSnapshot.backend() != null
+                            ? preReverseSnapshot.backend().clockSnapshot()
+                            : null;
+            if (clockSnap != null) {
+                deterministicAudioRuntime.restoreClockSnapshot(clockSnap);
+            }
             preReverseSnapshot = null;
         }
     }
 ```
 
-This re-runs the SMPS driver state that existed before held-rewind started, so any chip mutations the resynthesizer performed during the rewind session are erased. `afterRewindRestore` runs separately (called from `LiveRewindManager` after the bracket closes) and applies its presentation policy on top of the restored state.
+This re-runs the SMPS driver state that existed before held-rewind started, then explicitly puts the runtime clock back where it was before the rewind. `afterRewindRestore` runs separately (called from `LiveRewindManager` after the bracket closes) and applies its presentation policy on top of the restored state.
 
 - [ ] **Step 4: Write a regression test**
 
@@ -1304,6 +1327,40 @@ class TestAudioManagerReverseBracket {
                 backend.restoreLogicalSnapshotCalls,
                 "endReverseAudioPresentation must invoke exactly one backend.restoreLogicalSnapshot");
     }
+
+    @Test
+    void endReverseAudioPresentationRestoresTheRuntimeClock() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime runtime =
+                new com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime(
+                        new com.openggf.audio.runtime.AudioFrameClock(120, 60),
+                        new com.openggf.audio.runtime.AudioOutputFifo(120));
+        audio.setDeterministicAudioRuntime(runtime);
+        audio.setBackend(new NullAudioBackend());
+
+        // Advance a few audio frames to seed a non-zero pre-rewind clock.
+        runtime.setMusicStream(new ScriptedAudioStream((short) 1, (short) 0));
+        for (int i = 0; i < 5; i++) {
+            audio.advanceGameplayFrameAudio();
+        }
+        long preRewindAudioFrame = runtime.captureClockSnapshot().totalSamplesProduced();
+
+        audio.beginReverseAudioPresentation();
+        // Simulate a burst pulling the clock backward — this is what the
+        // ReverseResynthesizer would do in production.
+        runtime.restoreClockSnapshot(new com.openggf.audio.runtime.AudioFrameClock.Snapshot(
+                120, 60, 0L, 0));
+        org.junit.jupiter.api.Assertions.assertEquals(0L,
+                runtime.captureClockSnapshot().totalSamplesProduced(),
+                "Sanity: burst left the clock at the historical audio-frame");
+
+        audio.endReverseAudioPresentation();
+
+        org.junit.jupiter.api.Assertions.assertEquals(preRewindAudioFrame,
+                runtime.captureClockSnapshot().totalSamplesProduced(),
+                "endReverseAudioPresentation must restore the runtime clock to the pre-rewind position");
+    }
 }
 ```
 
@@ -1326,9 +1383,14 @@ beginReverseAudioPresentation now snapshots the full
 AudioLogicalSnapshot (music + standalone SFX driver state, plus the
 runtime clock) into a private stash before delegating to the runtime
 and backend reverse-start hooks. endReverseAudioPresentation pops the
-stash via restoreLogicalSnapshot before returning, so any live-driver
-mutations the ReverseResynthesizer performed across burst restores
-get erased when held-rewind ends.
+stash via restoreLogicalSnapshot (driver state) and a separate
+deterministicAudioRuntime.restoreClockSnapshot (runtime clock),
+because restoreLogicalSnapshot deliberately doesn't restore the clock
+on normal seek paths. Without the explicit clock restore here, the
+ReverseResynthesizer's per-burst clock-rewinds would leave the runtime
+clock parked at the last synthesized historical audio-frame index at
+endReverse, breaking forward audio-frame indexing for subsequent live
+play.
 
 Addresses spec finding P1.2: without this bracket, SFX driver state
 leaked across bursts and bled into post-rewind audio.
@@ -1419,11 +1481,26 @@ public final class ReverseResynthesizer {
         this.headroomThresholdFrames = headroomThresholdFrames;
     }
 
-    public void ensureHeadroom(PcmHistoryRing.ReverseCursor cursor) {
+    /**
+     * Tops up the cursor's readable window so it can satisfy a read of
+     * {@code framesNeeded} stereo frames with at least
+     * {@link #headroomThresholdFrames} of slack remaining afterwards (when
+     * possible). Returns early if a burst attempt fails because no usable
+     * keyframe is available — the caller's {@code readPrevious} will then
+     * naturally drop to silence past the existing history floor.
+     *
+     * <p>{@code framesNeeded} must reflect the size of the upcoming
+     * {@code readPrevious} so the resynth produces enough PCM to cover the
+     * caller's actual request. Using a constant target independent of the
+     * request would let a large drain underrun the ring when the headroom
+     * threshold alone wasn't enough headroom.
+     */
+    public void ensureHeadroom(PcmHistoryRing.ReverseCursor cursor, int framesNeeded) {
         if (cursor == null) {
             return;
         }
-        while (headroomFor(cursor) < headroomThresholdFrames) {
+        long target = (long) framesNeeded + headroomThresholdFrames;
+        while (headroomFor(cursor) < target) {
             if (!runOneBurst(cursor)) {
                 break;
             }
@@ -1461,11 +1538,17 @@ public final class ReverseResynthesizer {
         short[] mixed = new short[burstFrames * 2];
         int mixedOffset = 0;
 
-        AudioStream music = runtime.musicStreamForReverseResynth();
-        AudioStream sfx = runtime.sfxStreamForReverseResynth();
-
         while (audioFrame < burstEnd) {
             keyframes.replayCommandsAtGameFrame(audioManager, keyframe, gameFrame);
+            // Re-read the runtime's music and sfx streams every iteration.
+            // replayCommandsAtGameFrame can flow into backend.playSfxSmps or
+            // backend.playSmps, which install fresh SmpsDriver instances via
+            // runtime.setMusicStream / runtime.setSfxStream. A stream captured
+            // once before the loop would go stale immediately after the first
+            // such command, and a freshly-started SFX would silently drop out
+            // of the mix until the next burst.
+            AudioStream music = runtime.musicStreamForReverseResynth();
+            AudioStream sfx = runtime.sfxStreamForReverseResynth();
             int samplesThisFrame = runtime.samplesForNextFrameForReverseResynth();
             short[] musicScratch = new short[samplesThisFrame * 2];
             short[] sfxScratch = new short[samplesThisFrame * 2];
@@ -1593,13 +1676,13 @@ class TestReverseResynthesizer {
                 ring, store, audio, runtime, /* burst */ 8, /* threshold */ 4);
 
         long beforeOldest = cursor.oldestReadableFrame();
-        resynth.ensureHeadroom(cursor);
+        resynth.ensureHeadroom(cursor, /* framesNeeded */ 10);
         assertEquals(beforeOldest, cursor.oldestReadableFrame(),
                 "No keyframes available -> no prepend, cursor floor unchanged");
     }
 
     @Test
-    void ensureHeadroomExtendsWindowWhenKeyframeAvailable() {
+    void ensureHeadroomExtendsWindowToCoverRequestedFrames() {
         PcmHistoryRing ring = new PcmHistoryRing(64);
         // Set up a runtime + scripted music stream so the burst loop has
         // something to read.
@@ -1611,29 +1694,33 @@ class TestReverseResynthesizer {
         audio.setBackend(new NullAudioBackend());
         runtime.setMusicStream(new ScriptedAudioStream((short) 1, (short) 1));
 
-        // Advance 10 game frames forward to populate the ring with samples 1..40
-        // (10 frames × 2 samples/frame × 2 channels).
-        for (int i = 0; i < 10; i++) {
+        // Advance 4 game frames forward (8 audio frames in the ring at 120/60).
+        for (int i = 0; i < 4; i++) {
             audio.advanceGameplayFrameAudio();
         }
 
-        // Capture a keyframe AFTER the first frame so the resynth has something
-        // to seek to.
+        // Capture a keyframe at audio-frame 0 so the resynth has something to
+        // seek backwards to.
         AudioKeyframeStore store = new AudioKeyframeStore();
         store.capture(0L, audio);
 
-        // Set up a cursor and drain most of its window to drop below threshold.
+        // Cursor starts with 8 frames of unread history. Ask ensureHeadroom
+        // for 20 frames — the burst loop should extend the window backwards
+        // beyond the original capacity to satisfy the request.
         PcmHistoryRing.ReverseCursor cursor = ring.createReverseCursor();
-        short[] drain = new short[16];
-        cursor.readPrevious(drain, 8);
-
         ReverseResynthesizer resynth = new ReverseResynthesizer(
-                ring, store, audio, runtime, /* burst */ 4, /* threshold */ 4);
+                ring, store, audio, runtime, /* burst */ 4, /* threshold */ 2);
 
         long beforeOldest = cursor.oldestReadableFrame();
-        resynth.ensureHeadroom(cursor);
+        resynth.ensureHeadroom(cursor, /* framesNeeded */ 20);
         assertTrue(cursor.oldestReadableFrame() < beforeOldest,
-                "ensureHeadroom must lower cursor.oldestReadableFrame when keyframe is available");
+                "ensureHeadroom must lower cursor.oldestReadableFrame to cover the requested frame count");
+        // After the burst loop, the cursor's headroom should reach at least
+        // framesNeeded + threshold = 22 (or be at the start-of-history floor).
+        long headroom = cursor.nextReadableFrame() - cursor.oldestReadableFrame() + 1;
+        assertTrue(headroom >= 20 || cursor.oldestReadableFrame() == 0,
+                "ensureHeadroom must satisfy the request or hit the start-of-history floor; headroom="
+                        + headroom + " oldest=" + cursor.oldestReadableFrame());
     }
 }
 ```
@@ -1711,7 +1798,11 @@ In `drainPcm`, wrap the existing reverse-cursor branch:
     public int drainPcm(short[] target, int frames) {
         if (reverseCursor != null) {
             if (reverseResynthesizer != null) {
-                reverseResynthesizer.ensureHeadroom(reverseCursor);
+                // Pass the requested frame count so ensureHeadroom can produce
+                // enough PCM to fully satisfy this drain (plus its own slack
+                // threshold). A constant threshold alone would leave large
+                // drains under-served by the burst loop.
+                reverseResynthesizer.ensureHeadroom(reverseCursor, frames);
             }
             int read = reverseCursor.readPrevious(target, frames);
             rememberLastReverseFrame(target, read);
@@ -2043,8 +2134,8 @@ Append:
 ```java
     @Test
     void reverseDrainExtendsPastHistoryWindowWithResynthesizer() {
-        // Setup: small 1-second history ring (8 audio frames at 120Hz / 60fps).
-        // 4 game-frames produced = 8 audio frames in ring.
+        // Setup: small 8-audio-frame history ring (at 120Hz / 60fps, that's
+        // 4 game-frames worth — each game frame produces 2 audio frames).
         PcmHistoryRing ring = new PcmHistoryRing(8);
         AudioFrameClock clock = new AudioFrameClock(120, 60);
         AudioOutputFifo fifo = new AudioOutputFifo(120);
@@ -2064,25 +2155,31 @@ Append:
         // Capture keyframe at game-frame 0 BEFORE producing any audio.
         keyframes.capture(0L, audio);
 
-        // Produce 8 game-frames of music. Ring holds the last 4 frames (8 audio
-        // frames at 2 samples per frame).
+        // Produce 8 game-frames of music. Ring holds the most recent 8 audio
+        // frames (8 game-frames × 2 audio-frames/game-frame, capped at the
+        // ring's 8-frame capacity).
         for (int i = 0; i < 8; i++) {
             audio.advanceGameplayFrameAudio();
         }
 
-        // Attach the resynthesizer.
+        // Attach the resynthesizer. drainPcm will pass `frames=10` to
+        // ensureHeadroom, so the burst loop needs to produce enough older
+        // PCM to satisfy a 10-frame request even though the ring only held
+        // 8 forward frames.
         ReverseResynthesizer resynth = new ReverseResynthesizer(
                 ring, keyframes, audio, runtime, /* burst */ 4, /* threshold */ 2);
         runtime.setReverseResynthesizer(resynth);
 
         runtime.beginReversePresentation();
 
-        // Drain past the original 4-frame window. Without the resynth this would
-        // produce silence after 4 frames. With it, we expect non-zero samples
-        // throughout.
+        // Drain past the original 8-frame window. Without the resynth this
+        // would return 8 (ring exhausted, rest silent). With it, we expect
+        // 10 fully populated stereo frames.
         short[] target = new short[20];
         int read = runtime.drainPcm(target, 10);
-        assertEquals(10, read);
+        assertEquals(10, read,
+                "drainPcm must return the full requested frame count when a"
+                        + " ReverseResynthesizer is attached and a keyframe is available");
 
         boolean allNonZero = true;
         for (int i = 0; i < 20; i++) {
@@ -2092,7 +2189,7 @@ Append:
             }
         }
         assertTrue(allNonZero,
-                "Resynthesizer should extend the reverse window past the original 4 frames;"
+                "Resynthesizer should extend the reverse window past the original 8 frames;"
                         + " drain returned target=" + java.util.Arrays.toString(target));
     }
 ```
@@ -2327,7 +2424,7 @@ If the smoke passes, update the resynth spec status from "Approved, ready to imp
 - **End-to-end test (test #9)** — Task 14.
 - **Performance benchmark (test #11)** — Task 15.
 - **Manual smoke (test #10)** — Task 16, step 2.
-- **Rewind bracket save/restore for SFX driver state (P1.2 fix)** — Task 9.
+- **Rewind bracket save/restore for SFX driver state (P1.2 fix)** — Task 9. Includes a separate `restoreClockSnapshot` call at endReverse because `restoreLogicalSnapshot` deliberately doesn't touch the clock, and the burst loop's per-keyframe clock rewinds would otherwise leave the runtime parked at a historical audio-frame index.
 - **WAV SFX silent under REVERSE_RESYNTH (P2.3)** — Task 8's silent-no-op behavior covers this.
 
 ### Placeholder scan
@@ -2337,7 +2434,7 @@ If the smoke passes, update the resynth spec status from "Approved, ready to imp
 
 ### Type consistency
 
-- `burstAudioFrames` and `headroomThresholdFrames` are constructor args throughout (Tasks 10, 11, 12, 14, 15).
+- `burstAudioFrames` and `headroomThresholdFrames` are constructor args throughout (Tasks 10, 11, 12, 14, 15). `ensureHeadroom(cursor, framesNeeded)` takes the upcoming-drain frame count as a second parameter and produces enough PCM to satisfy `framesNeeded + headroomThresholdFrames` of unread data (or hits the start-of-history floor first). `drainPcm` passes the caller's `frames` argument to it.
 - `keyframeAtOrBeforeAudioFrame(long)` consistent across Tasks 7, 10.
 - `replayCommandsAtGameFrame(AudioManager, AudioLogicalSnapshot, long)` consistent across Tasks 7, 10.
 - `pcmHistoryRingForReverseResynth`, `musicStreamForReverseResynth`, `sfxStreamForReverseResynth`, `samplesForNextFrameForReverseResynth`, `sampleRateForReverseResynth` — used in Tasks 10 and 12 with the same shape.
