@@ -381,6 +381,31 @@ public final class TraceReplayBootstrap {
     }
 
     /**
+     * Number of title-card-phase Level_MainLoop object ticks an S2 non-Tornado
+     * native-prelude trace expects to have run before its first compared frame.
+     *
+     * <p>S2 ROM runs {@code Level_MainLoop} object ticks while the title card is
+     * displayed before {@code Level_started_flag} is set
+     * ({@code docs/s2disasm/s2.asm:5004-5008, 5060-5066, 5077-5092}). Headless
+     * trace replay skips the title-card phase entirely and starts directly at
+     * gameplay frame 1, so it must reproduce those native object ticks before
+     * the comparison loop begins or every S2 trace diverges within ~100-200
+     * frames from compounded post-title-card object/player state drift.
+     *
+     * <p>Tornado routes (SCZ) use {@link #s2TornadoTitleCardPreludeFramesForTraceReplay}
+     * which gates the same prelude on the live ObjB2 routine/subtype; this
+     * method returns 0 for them so the Tornado-specific bootstrap stays the
+     * sole authority for that route. Returns 0 for non-S2 traces, traces
+     * without sidekicks, and legacy traces (lua_script_version &lt; 9.2-s2).
+     */
+    public static int s2GenericObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
+        if (usesS2TornadoRideStartForTraceReplay(trace)) {
+            return 0;
+        }
+        return resolveS2TitleCardPreludeFrames(trace);
+    }
+
+    /**
      * Returns false because trace start state is comparison data only. Kept as
      * a named policy gate for callers that need to avoid legacy hydration paths.
      */
