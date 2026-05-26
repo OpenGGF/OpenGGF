@@ -166,9 +166,13 @@ public class LegalDisclaimerScreen {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        // Solid black background
+        // Solid black background (separate texture; not batched with text).
         renderer.drawTexture(solidWhiteTextureId, 0, 0, SCREEN_W, SCREEN_H,
                 0f, 0f, 0f, 1f);
+
+        // All text (header + body + prompt) shares the font atlas, so we
+        // mega-batch into a single GL draw call.
+        font.beginMegaBatch();
 
         // Header (full scale)
         font.drawTextCentered(HEADER, SCREEN_W, 22, 1f, 1f, 1f, 1f);
@@ -199,6 +203,8 @@ public class LegalDisclaimerScreen {
             float brightness = pulse * fadeIn;
             font.drawTextCentered(PROMPT, SCREEN_W, PROMPT_Y, brightness, brightness, brightness, 1f);
         }
+
+        font.endMegaBatch();
     }
 
     /**
