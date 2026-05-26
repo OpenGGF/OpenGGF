@@ -286,7 +286,7 @@ public class PerformancePanelRenderer {
                 String name = alloc.name();
                 pb.setLength(0);
                 appendFixed1(pb, alloc.kbPerFrame()).append("KB ");
-                pb.append(name, 0, Math.min(name.length(), 8));
+                pb.append(name, 0, Math.min(name.length(), 9));
                 drawTextBottomLeft(pb.toString(), textX, memY, DebugColor.ORANGE);
             }
         }
