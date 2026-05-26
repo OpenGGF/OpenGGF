@@ -133,6 +133,8 @@ public class GameLoop {
     private Runnable editorStateSyncHandler;
     private Supplier<MasterTitleScreen> masterTitleScreenSupplier;
     private Consumer<String> masterTitleExitHandler;
+    private Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier;
+    private Runnable legalDisclaimerExitHandler;
     private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
     private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
@@ -305,6 +307,14 @@ public class GameLoop {
         this.masterTitleExitHandler = masterTitleExitHandler;
     }
 
+    public void setLegalDisclaimerScreenSupplier(Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier) {
+        this.legalDisclaimerSupplier = legalDisclaimerSupplier;
+    }
+
+    public void setLegalDisclaimerExitHandler(Runnable legalDisclaimerExitHandler) {
+        this.legalDisclaimerExitHandler = legalDisclaimerExitHandler;
+    }
+
     private void updateEditorMode() {
         if (editorInputHandler != null) {
             editorInputHandler.update(inputHandler);
@@ -454,6 +464,23 @@ public class GameLoop {
         }
 
         syncPlaybackInputBridge();
+
+        // Legal disclaimer screen mode - runs before master title screen.
+        // Must be checked before pause handling since keys trigger dismissal.
+        if (currentGameMode == GameMode.LEGAL_DISCLAIMER) {
+            LegalDisclaimerScreen disclaimer = legalDisclaimerSupplier != null
+                    ? legalDisclaimerSupplier.get()
+                    : null;
+            if (disclaimer != null) {
+                disclaimer.update(inputHandler);
+                if (disclaimer.isDismissed() && legalDisclaimerExitHandler != null) {
+                    legalDisclaimerExitHandler.run();
+                    legalDisclaimerExitHandler = null;
+                }
+            }
+            inputHandler.update();
+            return;
+        }
 
         // Master title screen mode - runs before any ROM/game systems are loaded.
         // Must be checked before pause handling since Enter is both confirm and pause.
