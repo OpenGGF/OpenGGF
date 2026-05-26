@@ -24,6 +24,7 @@ class TestSingletonLifecycleGuard {
             src/test/java/com/openggf/TestTraceSessionLauncherRewindPresentation.java#setUp
             src/test/java/com/openggf/game/TestGameStateManager.java#setUp
             src/test/java/com/openggf/game/TestInstaShieldVisual.java#setUpTest
+            src/test/java/com/openggf/game/TestLegalDisclaimerHandoff.java#setUp
             src/test/java/com/openggf/game/TestPostLoadAssemblyBehavior.java#resetCamera
             src/test/java/com/openggf/game/TestS3kCharacterSpeeds.java#setUp
             src/test/java/com/openggf/game/TestSpindashGating.java#setUp
