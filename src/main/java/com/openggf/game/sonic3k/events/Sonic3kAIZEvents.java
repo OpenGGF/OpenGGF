@@ -40,7 +40,6 @@ import com.openggf.level.resources.ResourceLoader;
 import com.openggf.level.WaterSystem;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.SidekickCpuController;
 
 import java.io.IOException;
 import java.util.List;
@@ -86,6 +85,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     // Cascading overwrite: $020E → $0004 at $2B00 → $0C02 at $2D80.
     private static final int PALETTE_MUT_THRESHOLD_DARK = 0x2B00;
     private static final int PALETTE_MUT_THRESHOLD_FIRE = 0x2D80;
+    private static final int RAISED_MIN_Y_THRESHOLD = 0x2C00;
+    private static final int RAISED_MIN_Y = 0x02E0;
     private static final int FIRE_MIN_X_LOCK = 0x2D80;
     private static final int PALETTE_MUT_COLOR_RED = 0x020E;
     private static final int PALETTE_MUT_COLOR_DARK = 0x0004;
@@ -213,8 +214,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private boolean introSidekickMarkerReleased;
     /** True while the intro->main-level refresh is holding raw Events_fg_5 high. */
     private boolean introNormalRefreshPending;
-    /** Last ROM-visible counter published through the AIZ intro normal-refresh bridge. */
-    private int lastIntroNormalRefreshFrameCounterBridge = -1;
     private boolean paletteSwapped;
     private boolean boundariesUnlocked;
     private boolean fireMinXLockReached;
@@ -319,6 +318,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int FIRE_RISE_ACCEL = 0x0280;
     private static final int FIRE_RISE_MAX_SPEED = 0xA000;
     private static final int FIRE_BG_FINISH_Y = 0x0310;
+    private static final int AIZ2_POST_FIRE_CAMERA_MAX_X = 0x6000;
     /** Height of the fire tile zone in the BG layout (0x310 - 0x100 = 0x210). */
     private static final int FIRE_TILE_HEIGHT = FIRE_BG_FINISH_Y - FIRE_TILE_START_Y;
     // ROM parity: AIZ1BGE_FireTransition switches to the fire-stage overlays at
@@ -430,7 +430,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         introMinXLocked = false;
         introSidekickMarkerReleased = false;
         introNormalRefreshPending = false;
-        lastIntroNormalRefreshFrameCounterBridge = -1;
         paletteSwapped = false;
         boundariesUnlocked = false;
         fireMinXLockReached = false;
@@ -513,7 +512,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     public void updatePrePhysics(int act) {
         if (act == 0) {
             releaseAizIntroSidekickMarkerPrePhysics();
-            publishIntroNormalRefreshFrameCounterBridgePrePhysics();
             return;
         }
         if (act != 1 || !battleshipAutoScrollActive) {
@@ -531,23 +529,16 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     }
 
     private void releaseAizIntroSidekickMarkerPrePhysics() {
-        int thresholdX = Math.max(camera().getX() & 0xFFFF, camera().previewNextX() & 0xFFFF);
-        if (introSidekickMarkerReleased || thresholdX < PALETTE_SWAP_X) {
+        int cameraX = camera().getX() & 0xFFFF;
+        if (introSidekickMarkerReleased || cameraX < PALETTE_SWAP_X) {
             return;
         }
-        // AIZ1_Resize writes Tails_CPU_routine after Process_Sprites during the
-        // prior ROM frame (sonic3k.asm:38873-38900). The engine's full resize
-        // update still runs later in the frame; this pre-physics bridge exposes
-        // that already-published ROM write before the next sidekick CPU slot.
+        // AIZ1_Resize writes Tails_CPU_routine after MoveCamera/Do_ResizeEvents,
+        // i.e. after the current Process_Sprites slot but before the next one
+        // (sonic3k.asm:38873-38900). This bridge exposes only a prior committed
+        // resize write; a preview-only crossing still belongs to this frame's
+        // later resize step.
         releaseAizIntroSidekickMarker();
-    }
-
-    private void publishIntroNormalRefreshFrameCounterBridgePrePhysics() {
-        int thresholdX = Math.max(camera().getX() & 0xFFFF, camera().previewNextX() & 0xFFFF);
-        if (thresholdX < TERRAIN_SWAP_X) {
-            return;
-        }
-        publishIntroNormalRefreshFrameCounterBridge();
     }
 
     /**
@@ -651,6 +642,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // ROM does — otherwise Camera_max_Y_pos lags by one frame, which delays the
             // sidekick kill-plane fire by one frame at AIZ1 cam_x crossing $2D80.
             resizeMaxYFromX(frameEndCameraX);
+            applyResizeMinYFromX(frameEndCameraX);
             applyResizePaletteMutation(frameEndCameraX);
             applyAct1FireMinXResize(frameEndCameraX);
         }
@@ -668,7 +660,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         boolean released = false;
         for (AbstractPlayableSprite sidekick : sm.getRegisteredSidekicks()) {
             if (sidekick.getCpuController() != null) {
-                released |= sidekick.getCpuController().releaseAizIntroDormantMarker();
+                released |= sidekick.getCpuController().releaseDormantMarkerForLevelEvent();
             }
         }
         introSidekickMarkerReleased |= released;
@@ -688,6 +680,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                 return;
             }
         }
+    }
+
+    private void applyResizeMinYFromX(int cameraX) {
+        // ROM AIZ1_Resize loc_1C550 writes Camera_min_Y_pos=0, then raises it
+        // to $02E0 once Camera_X_pos >= $2C00 (sonic3k.asm:38939-38958).
+        camera().setMinY((short) (cameraX >= RAISED_MIN_Y_THRESHOLD ? RAISED_MIN_Y : 0));
     }
 
     private void applyAct1FireMinXResize(int cameraX) {
@@ -758,6 +756,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      */
     boolean shouldSpawnIntro(int act) {
         return act == 0 && !bootstrap.isSkipIntro();
+    }
+
+    public boolean shouldEnterIntroSidekickDormantMarker(AbstractPlayableSprite sidekick) {
+        return sidekick != null
+                && shouldSpawnIntro(0)
+                && playerCharacter() == PlayerCharacter.SONIC_AND_TAILS;
     }
 
     private boolean spawnIntroObject() {
@@ -1146,14 +1150,34 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                     firePhaseFrames++;
                     if (firePhaseFrames >= FIRE_REDRAW_FRAMES) {
                         fireSequencePhase = FireSequencePhase.AIZ2_WAIT_FIRE;
-                        act2WaitFireDrawActive = true;
+                        // ROM clears Events_bg+$00 when AIZ2BGE_FireRedraw completes;
+                        // AIZ2BGE_WaitFire later sets it only when
+                        // Camera_Y_pos_BG_copy low bits enter $20..$2F
+                        // (sonic3k.asm:105041-105072).
+                        act2WaitFireDrawActive = false;
                         firePhaseFrames = 0;
                     }
                 }
                 case AIZ2_WAIT_FIRE -> {
                     // Continue scroll-off until fire has exited the screen.
                     advanceFireRise(false);
+                    if (!act2WaitFireDrawActive) {
+                        // ROM AIZ2BGE_WaitFire cannot take the row-draw/$0310
+                        // release branch until Events_bg+$00 is set after the
+                        // low-bit gate (sonic3k.asm:105041-105075). The engine's
+                        // carried fixed-point BG copy already starts on the
+                        // scrolled-off strip, so model the flag timing without
+                        // rewriting the coordinate.
+                        act2WaitFireDrawActive = true;
+                        break;
+                    }
                     if (getFireTransitionBgY() >= FIRE_BG_FINISH_Y) {
+                        // ROM AIZ2BGE_WaitFire releases the post-reload X clamp
+                        // by writing Camera_max_X_pos=$6000 as soon as
+                        // Camera_Y_pos_BG_copy reaches $0310
+                        // (sonic3k.asm:105075-105092). Camera_min_X_pos remains
+                        // at $0010 so Sonic cannot scroll back into the transition.
+                        camera().setMaxX((short) AIZ2_POST_FIRE_CAMERA_MAX_X);
                         applyPostFireContinuationPaletteLine4(levelManager());
                         fireSequencePhase = FireSequencePhase.AIZ2_BG_REDRAW;
                         firePhaseFrames = 0;
@@ -1952,7 +1976,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         if (!introNormalRefreshPending && !AizPlaneIntroInstance.isMainLevelPhaseActive() && cameraX >= TERRAIN_SWAP_X) {
             eventsFg5 = true;
             introNormalRefreshPending = true;
-            publishIntroNormalRefreshFrameCounterBridge();
             LOG.info("AIZ1 intro: Events_fg_5 set for main-level refresh at cameraX=0x"
                     + Integer.toHexString(cameraX));
         }
@@ -1961,36 +1984,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             introNormalRefreshPending = false;
             LOG.info("AIZ1 intro: Events_fg_5 cleared after main-level refresh");
         }
-    }
-
-    private void publishIntroNormalRefreshFrameCounterBridge() {
-        LevelManager levelManager = levelManager();
-        SpriteManager spriteManager = spriteManager();
-        if (levelManager == null || spriteManager == null) {
-            return;
-        }
-        int levelFrameCounter = levelManager.getFrameCounter();
-        int romVisibleFrameCounter = levelFrameCounter + 1;
-        if (lastIntroNormalRefreshFrameCounterBridge == romVisibleFrameCounter) {
-            return;
-        }
-        if ((romVisibleFrameCounter & 0x3F) != 0) {
-            return;
-        }
-        boolean published = false;
-        for (AbstractPlayableSprite sidekick : spriteManager.getRegisteredSidekicks()) {
-            SidekickCpuController controller = sidekick.getCpuController();
-            boolean canSpend = controller != null
-                    && controller.canSpendAizIntroNormalRefreshFrameBridge(romVisibleFrameCounter);
-            if (canSpend) {
-                controller.overrideNextCpuFrameCounter(romVisibleFrameCounter);
-                published = true;
-            }
-        }
-        if (!published) {
-            return;
-        }
-        lastIntroNormalRefreshFrameCounterBridge = romVisibleFrameCounter;
     }
 
     private void beginFireTransition() {
@@ -2045,10 +2038,13 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         // Reset BG_Y to within the fire zone so the act 2 scroll-off works.
         // During the linger, BG_Y advanced well past the fire zone (wrapping
-        // handled the visuals).  For act 2, the fire needs to start within
-        // the zone and scroll off the top naturally (wrapping disabled).
-        // 0x1E0 gives full-screen fire that scrolls off over ~19 frames.
-        int scrollOffStartY = 0x01E0_0000;
+        // handled the visuals). For act 2, the fire needs to start within the
+        // zone and scroll off naturally. ROM releases Camera_max_X_pos only
+        // when AIZ2BGE_WaitFire sees Camera_Y_pos_BG_copy >= $0310 after the
+        // 16-frame AIZ2BGE_FireRedraw phase (sonic3k.asm:105031-105092);
+        // starting the resumed scroll at $0140 aligns that release with the
+        // ROM-visible AIZ2 reveal frame.
+        int scrollOffStartY = 0x0140_0000;
         pendingFireSequence = new PendingFireSequence(
                 FireSequencePhase.AIZ2_FIRE_REDRAW,
                 scrollOffStartY,
@@ -2084,12 +2080,16 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
                         .playerOffset(-0x2F00, -0x80)
                         .cameraOffset(-0x2F00, -0x80)
                         // ROM: AIZ1BGE_Finish subtracts the same offsets from
-                        // Camera_X/Y_pos, then writes long #$00000260 at
-                        // Camera_min_Y_pos and word $260 to Camera_target_max_Y_pos.
-                        // That leaves minY at 0 while targeting the $260 vertical
-                        // boundary; the camera is not recentered from the player.
+                        // Camera_X/Y_pos, writes long #$00100010 at Camera_min_X_pos,
+                        // then writes long #$00000260 at Camera_min_Y_pos and word
+                        // $260 to Camera_target_max_Y_pos (sonic3k.asm:104747-104762).
+                        // That locks camera X at $10 and snaps current maxY to $260;
+                        // the camera is not recentered from the player.
                         .preserveOffsetCameraPosition(true)
+                        .postTransitionMinX(0x10)
+                        .postTransitionMaxX(0x10)
                         .postTransitionMinY(0)
+                        .postTransitionMaxY(0x260)
                         .postTransitionMaxYTarget(0x260)
                         .build());
         LOG.info("AIZ1: requested seamless in-place post-miniboss reload");

@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.TrigLookupTable;
@@ -72,6 +73,54 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
         // The visible CNZ pole is level art; this object owns only the ride logic.
     }
 
+    @Override
+    public String traceDebugDetails() {
+        if (riders.isEmpty()) {
+            return String.format("bp mir=%s riders=0", mirrored);
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("bp mir=").append(mirrored).append(" riders=").append(riders.size());
+        int emitted = 0;
+        for (Map.Entry<AbstractPlayableSprite, RiderState> entry : riders.entrySet()) {
+            if (emitted++ >= 2) {
+                sb.append(" ...");
+                break;
+            }
+            AbstractPlayableSprite player = entry.getKey();
+            RiderState state = entry.getValue();
+            sb.append(String.format(
+                    " p=%04X,%04X lat=%s tr=%04X.%04X rel=%02X cur=%02X/%02X in=%s out=%04X,%04X %s",
+                    player.getCentreX() & 0xFFFF,
+                    player.getCentreY() & 0xFFFF,
+                    state.latched,
+                    state.lastTrackPosition & 0xFFFF,
+                    (int) (state.trackFixed & TRACK_FRACTION_MASK),
+                    state.lastTrackRel & 0xFF,
+                    state.lastCurve & 0xFF,
+                    state.lastVisibleCurve & 0xFF,
+                    state.innerTrack,
+                    state.lastOutputX & 0xFFFF,
+                    state.lastOutputY & 0xFFFF,
+                    state.lastBranch));
+        }
+        return sb.toString();
+    }
+
+    @Override
+    public void onUnload() {
+        /*
+         * Obj_CNZBarberPoleSprite ends with Delete_Sprite_If_Not_In_Range
+         * (docs/skdisasm/sonic3k.asm:69348-69357), which zeros the SST via
+         * Delete_Current_Sprite when the pole unloads. Tails then compares
+         * the stored interact slot against that cleared SST in sub_13EFC and
+         * branches to sub_13ECA's $81/air/$7F00 catch-up marker
+         * (docs/skdisasm/sonic3k.asm:26816-26833, 26800-26808). Mark this
+         * instance destroyed on unload so stale engine latch references see
+         * the same freed-slot transition.
+         */
+        ObjectLifetimeOps.destroyLatched(this);
+    }
+
     private void tryLatchNormal(AbstractPlayableSprite player, RiderState state) {
         if (player.isOnObject() && player.getLatchedSolidObjectId() != Sonic3kObjectIds.CNZ_BARBER_POLE) {
             return;
@@ -127,6 +176,13 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
         state.latched = true;
         state.trackFixed = ((long) (track & 0xFFFF) << 16) | (player.getXSubpixelRaw() & TRACK_FRACTION_MASK);
         state.innerTrack = inner;
+        state.lastBranch = "latch";
+        state.lastTrackPosition = track;
+        state.lastTrackRel = 0;
+        state.lastCurve = 0;
+        state.lastVisibleCurve = 0;
+        state.lastOutputX = player.getCentreX();
+        state.lastOutputY = player.getCentreY();
 
         if (player.getAir()) {
             player.setYSpeed((short) 0);
@@ -141,6 +197,19 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
     private void continueRide(AbstractPlayableSprite player, RiderState state) {
         if (player.getLatchedSolidObjectId() != Sonic3kObjectIds.CNZ_BARBER_POLE) {
             state.latched = false;
+            return;
+        }
+        if (player.getLatchedSolidObjectInstance() != this) {
+            /*
+             * loc_33376 dispatches loc_334B6 only when this object's standing
+             * bit is set; sub_337D8 clears the previous object's standing bit
+             * before writing the new interact object (docs/skdisasm/
+             * sonic3k.asm:69348-69357, 69461, 69775-69782). Engine rider
+             * state is per instance, so stale pole state must not keep writing
+             * the player's position after another pole became interact(a1).
+             */
+            state.latched = false;
+            state.lastBranch = "stale";
             return;
         }
 
@@ -172,6 +241,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
         state.trackFixed += (long) player.getXSpeed() * 0xC0L;
 
         int trackPosition = (int) (state.trackFixed >> 16);
+        state.lastTrackPosition = trackPosition;
         int d0 = mirrored
                 ? player.getXRadius() + trackPosition
                 : -player.getXRadius() + trackPosition;
@@ -202,6 +272,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
         player.setCentreYPreserveSubpixel((short) y);
         player.setAngle((byte) 0x20);
         player.setOnObject(true);
+        recordPositionDebug(state, "normal", trackRel, curve, visibleCurve, x, y);
     }
 
     private void positionMirrored(AbstractPlayableSprite player, RiderState state, int trackRel) {
@@ -218,6 +289,17 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
         player.setCentreYPreserveSubpixel((short) y);
         player.setAngle((byte) 0xE0);
         player.setOnObject(true);
+        recordPositionDebug(state, "mirrored", trackRel, curve, visibleCurve, x, y);
+    }
+
+    private void recordPositionDebug(
+            RiderState state, String branch, int trackRel, int curve, int visibleCurve, int x, int y) {
+        state.lastBranch = branch;
+        state.lastTrackRel = trackRel;
+        state.lastCurve = curve;
+        state.lastVisibleCurve = visibleCurve;
+        state.lastOutputX = x;
+        state.lastOutputY = y;
     }
 
     private int rideAngle() {
@@ -248,6 +330,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
 
     private void release(AbstractPlayableSprite player, RiderState state) {
         state.latched = false;
+        state.lastBranch = "release";
         player.setOnObject(false);
         player.setFlipsRemaining(0);
         player.setFlipSpeed(4);
@@ -257,5 +340,12 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
         private boolean latched;
         private long trackFixed;
         private boolean innerTrack;
+        private String lastBranch = "none";
+        private int lastTrackPosition;
+        private int lastTrackRel;
+        private int lastCurve;
+        private int lastVisibleCurve;
+        private int lastOutputX;
+        private int lastOutputY;
     }
 }

@@ -255,34 +255,27 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
 
     /**
      * ROM: Signpost bump-from-below mechanic.
-     * Player must be jumping (in air + rolling jump) and moving upward,
-     * and within the bump detection box.
+     * Player must be in animation #2 and moving upward, and within the bump
+     * detection box.
      */
     private void checkBumpFromBelow(AbstractPlayableSprite player) {
         if (player == null || bumpCooldown > 0) {
             return;
         }
 
-        // Player must be in air and jumping (animation ID 2 = rolling/jumping)
-        if (!player.getAir()) {
-            return;
+        // ROM EndSign_CheckPlayerHit checks the range once, then calls sub_83A70
+        // for Sonic and Tails in that order. The delay byte is written inside
+        // sub_83A70, so a same-frame Tails hit can overwrite Sonic's x velocity
+        // (docs/skdisasm/sonic3k.asm:176342-176365, 176372-176387).
+        for (PlayableEntity candidate : playerQuery(player).playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2)) {
+            if (candidate instanceof AbstractPlayableSprite sprite && isRomBumpCandidate(worldX, worldY, sprite)) {
+                applyRomBumpFromBelow(sprite);
+            }
         }
-        if (player.getYSpeed() >= 0) {
-            return;
-        }
+    }
 
-        // Range check
-        int dx = player.getCentreX() - worldX;
-        int dy = player.getCentreY() - worldY;
-        if (dx < BUMP_LEFT || dx >= BUMP_RIGHT || dy < BUMP_TOP || dy >= BUMP_BOTTOM) {
-            return;
-        }
-
-        // Bump!
-        int kickX = (worldX - player.getCentreX()) * 16;
-        if (kickX == 0) {
-            kickX = 8;
-        }
+    private void applyRomBumpFromBelow(AbstractPlayableSprite player) {
+        int kickX = romBumpXVelocity(worldX, player.getCentreX());
         // xVel/yVel are 8.8 fixed-point
         xVel = kickX;
         yVel = -0x200;
@@ -296,6 +289,28 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         services().gameState().addScore(100);
         bumpCooldown = BUMP_COOLDOWN;
         LOG.fine("S3K Signpost bumped! xVel=" + xVel);
+    }
+
+    static boolean isRomBumpCandidate(int signpostX, int signpostY, AbstractPlayableSprite player) {
+        if (!hasRomBumpPose(player)) {
+            return false;
+        }
+        int dx = player.getCentreX() - signpostX;
+        int dy = player.getCentreY() - signpostY;
+        return dx >= BUMP_LEFT && dx < BUMP_RIGHT && dy >= BUMP_TOP && dy < BUMP_BOTTOM;
+    }
+
+    static int romBumpXVelocity(int signpostX, int playerX) {
+        int kickX = (signpostX - playerX) * 16;
+        return kickX == 0 ? 8 : kickX;
+    }
+
+    static boolean hasRomBumpPose(AbstractPlayableSprite player) {
+        // ROM sub_83A70 only accepts anim(a1)==#2 and upward y_vel(a1);
+        // it does not test Status_InAir (docs/skdisasm/sonic3k.asm:176372-176387).
+        return player != null
+                && player.getAnimationId() == Sonic3kAnimationIds.ROLL.id()
+                && player.getYSpeed() < 0;
     }
 
     // =========================================================================
@@ -316,7 +331,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         advanceAnimation();
 
         postLandTimer--;
-        if (postLandTimer <= 0) {
+        if (romPostLandTimerExpired(postLandTimer)) {
             // Show final face frame
             PlayerCharacter pc = getPlayerCharacter();
             animFrame = FACE_FRAMES[pc.ordinal()];
@@ -325,6 +340,12 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
             state = State.RESULTS;
             LOG.fine("S3K Signpost LANDED -> RESULTS");
         }
+    }
+
+    static boolean romPostLandTimerExpired(int timerAfterDecrement) {
+        // Obj_EndSignLanded uses subq.w #1,$2E(a0); bmi.s, so $0000 is still
+        // a waiting frame and only $FFFF advances (docs/skdisasm/sonic3k.asm:176198-176208).
+        return (short) timerAfterDecrement < 0;
     }
 
     // =========================================================================
@@ -341,21 +362,16 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
             return;
         }
 
-        // ROM: Set_PlayerEndingPose (sonic3k.asm lines 181977-181988)
-        // object_control = $81: bit 7 = under object control (freeze physics),
-        //                       bit 0 = don't update routine
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setControlLocked(true);
-        player.setXSpeed((short) 0);
-        player.setYSpeed((short) 0);
-        player.setGSpeed((short) 0);
-        player.setAnimationId(Sonic3kAnimationIds.VICTORY);
+        applyMainPlayerEndingPose(player);
 
         // ROM line 176215: st (Ctrl_2_locked).w — lock sidekick input
         // Also apply Set_PlayerEndingPose equivalent so Tails does a victory pose
         for (PlayableEntity candidate : playerQuery(player)
                 .playersFor(ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
             if (candidate instanceof AbstractPlayableSprite sprite) {
+                if (sprite == player) {
+                    continue;
+                }
                 applyEndingPose(sprite);
             }
         }
@@ -372,6 +388,25 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
     private void applyEndingPose(AbstractPlayableSprite sprite) {
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setControlLocked(true);
+        sprite.setXSpeed((short) 0);
+        sprite.setYSpeed((short) 0);
+        sprite.setGSpeed((short) 0);
+        sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
+    }
+
+    static void applyMainPlayerEndingPose(AbstractPlayableSprite sprite) {
+        if (sprite == null) {
+            return;
+        }
+        // Set_PlayerEndingPose writes object_control=$81, victory animation,
+        // and zero velocities, but does not set Ctrl_1_locked
+        // (docs/skdisasm/sonic3k.asm:181977-181988). Obj_EndSignLanded only
+        // locks Ctrl_2 (docs/skdisasm/sonic3k.asm:176198-176218), so Sonic
+        // keeps copying raw Ctrl_1 into Ctrl_1_logical while object_control
+        // freezes movement; Sonic_RecordPos then stores that live input for
+        // Tails' delayed follow history (docs/skdisasm/sonic3k.asm:21541-21545,
+        // 22119-22136).
+        ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setXSpeed((short) 0);
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0);
@@ -462,5 +497,22 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
 
     public int getWorldY() {
         return worldY;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format(
+                "state=%s x=%04X y=%04X sub=%02X,%02X vel=%04X,%04X landed=%b timer=%04X anim=%02X/%02X",
+                state,
+                worldX & 0xFFFF,
+                worldY & 0xFFFF,
+                subX & 0xFF,
+                subY & 0xFF,
+                xVel & 0xFFFF,
+                yVel & 0xFFFF,
+                landed,
+                postLandTimer & 0xFFFF,
+                animFrame & 0xFF,
+                animIndex & 0xFF);
     }
 }

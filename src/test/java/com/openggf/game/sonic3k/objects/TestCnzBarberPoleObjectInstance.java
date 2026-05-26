@@ -18,6 +18,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestCnzBarberPoleObjectInstance {
 
     @Test
+    void unloadUsesLatchedLifecycleDestructionPolicy() {
+        CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x2870, 0x0190, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+
+        pole.onUnload();
+
+        assertTrue(pole.isDestroyed());
+    }
+
+    @Test
     void normalRelatchUsesRomUnsignedWordCompareForInnerTrackFlag() {
         CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
                 new ObjectSpawn(0x0F70, 0x0810, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
@@ -62,6 +72,33 @@ class TestCnzBarberPoleObjectInstance {
         assertTrue(sidekick.isOnObject());
         assertFalse(sidekick.getAir());
         assertEquals(Sonic3kObjectIds.CNZ_BARBER_POLE, sidekick.getLatchedSolidObjectId());
+    }
+
+    @Test
+    void stalePoleRiderStateDoesNotOverwriteCurrentInteractPole() {
+        CnzBarberPoleObjectInstance oldPole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+        CnzBarberPoleObjectInstance currentPole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0180, 0x0100, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+        oldPole.setServices(new TestObjectServices());
+
+        TestPlayableSprite player = new TestPlayableSprite();
+        player.setCentreX((short) 0x0100);
+        player.setCentreY((short) 0x00C9);
+        oldPole.update(0, player);
+        assertEquals(oldPole, player.getLatchedSolidObjectInstance());
+
+        player.setLatchedSolidObject(Sonic3kObjectIds.CNZ_BARBER_POLE, currentPole);
+        player.setCentreX((short) 0x0200);
+        player.setCentreY((short) 0x0200);
+        player.setXSpeed((short) 0x0400);
+        player.setGSpeed((short) 0x0400);
+
+        oldPole.update(1, player);
+
+        assertEquals(0x0200, player.getCentreX() & 0xFFFF);
+        assertEquals(0x0200, player.getCentreY() & 0xFFFF);
+        assertEquals(currentPole, player.getLatchedSolidObjectInstance());
     }
 
     @Test

@@ -46,6 +46,19 @@ class TestCnzHoverFanObjectInstance {
                 "The update player must still participate when ObjectPlayerQuery cannot resolve main");
     }
 
+    @Test
+    void movingHoverFanUsesSavedOriginForOffscreenLifecycle() {
+        CnzHoverFanInstance fan = new CnzHoverFanInstance(
+                new ObjectSpawn(0x1850, 0x0AA0, 0x46, 0x80, 0x01, false, 0));
+
+        fan.setServices(new TestObjectServices());
+        fan.update(0, null);
+
+        assertEquals(0x1850, fan.getOutOfRangeReferenceX(),
+                "Obj_CNZHoverFan loc_31E36 feeds saved $30(a0) to Sprite_OnScreen_Test2 "
+                        + "after moving live x_pos (docs/skdisasm/sonic3k.asm:67327-67332,67349-67350).");
+    }
+
     private static TestablePlayableSprite playerAt(String code, int centreX, int centreY) {
         TestablePlayableSprite player = new TestablePlayableSprite(code, (short) 0, (short) 0);
         player.setCentreX((short) centreX);

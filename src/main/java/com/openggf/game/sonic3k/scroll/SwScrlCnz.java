@@ -26,6 +26,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
     private static final int BOSS_BG_Y_OFFSET = 0x100;
 
     private final ScrollEffectComposer composer = new ScrollEffectComposer();
+    private int bossBgCameraX = Integer.MIN_VALUE;
 
     @Override
     public void update(int[] horizScrollBuf,
@@ -66,7 +67,10 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
                                  int cameraX,
                                  int cameraY,
                                  int shakeY) {
-        short bgScroll = negWord(cameraX - BOSS_BG_X_OFFSET);
+        // ROM CNZ1_BossLevelScroll2 writes Camera_X_pos_BG_copy = Camera_X_pos_copy - $2F80;
+        // background collision probes use that copy through Camera_X_diff (sonic3k.asm:107721-107725).
+        bossBgCameraX = cameraX - BOSS_BG_X_OFFSET;
+        short bgScroll = negWord(bossBgCameraX);
         CnzZoneRuntimeState state = cnzRuntimeState();
         int bossScrollOffsetY = state != null ? state.bossScrollOffsetY() : 0;
         composer.setVscrollFactorBG((short) (cameraY - BOSS_BG_Y_OFFSET + bossScrollOffsetY + shakeY));
@@ -76,6 +80,21 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    @Override
+    public int getBgCameraX() {
+        if (!shouldUseBossScroll()) {
+            return Integer.MIN_VALUE;
+        }
+        if (GameServices.gameStateOrNull() != null
+                && GameServices.gameState().isBackgroundCollisionFlag()) {
+            Camera camera = GameServices.cameraOrNull();
+            if (camera != null) {
+                return camera.getX() - BOSS_BG_X_OFFSET;
+            }
+        }
+        return bossBgCameraX;
     }
 
     /**

@@ -200,6 +200,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
             int act = levelManager != null ? levelManager.getFeatureActId() : 0;
             if (GameServices.module().getLevelEventProvider()
                     instanceof Sonic3kLevelEventManager mgr) {
+                mgr.ensureZoneRuntimeStateInstalled();
                 var events = mgr.getAizEvents();
                 if (events != null) {
                     events.updatePrePhysics(act);
@@ -214,6 +215,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
             HCZWaterSkimHandler.update();
             if (GameServices.module().getLevelEventProvider()
                     instanceof Sonic3kLevelEventManager mgr) {
+                mgr.ensureZoneRuntimeStateInstalled();
                 var events = mgr.getHczEvents();
                 if (events != null) {
                     int frameCounter = levelManager != null ? levelManager.getFrameCounter() : 0;
@@ -225,6 +227,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
             int act = levelManager != null ? levelManager.getFeatureActId() : 0;
             if (GameServices.module().getLevelEventProvider()
                     instanceof Sonic3kLevelEventManager mgr) {
+                mgr.ensureZoneRuntimeStateInstalled();
                 var events = mgr.getMgzEvents();
                 if (events != null) {
                     events.updatePrePhysics(act);

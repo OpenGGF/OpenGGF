@@ -4,6 +4,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.data.Rom;
+import com.openggf.game.GameRng;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
@@ -160,6 +161,29 @@ class TestAizEndBossInstance {
     }
 
     @Test
+    void revealedRawAnimationUsesRomCallbackTimingBeforeHover() throws Exception {
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+
+        AizEndBossInstance boss = buildBoss(services);
+        invokeNoArg(boss, "onEmergeComplete");
+
+        for (int frame = 0; frame < 20; frame++) {
+            invokeNoArg(boss, "updateRevealed");
+        }
+        assertEquals(4, boss.getState().routine,
+                "byte_69DB3 should not hit its $F4 callback before the 21st revealed update");
+        assertEquals(0, boss.getMappingFrame(),
+                "byte_69DB3's final visible entry is mapping frame 0 for one update");
+
+        invokeNoArg(boss, "updateRevealed");
+
+        assertEquals(6, boss.getState().routine,
+                "byte_69DB3 $F4 callback should enter loc_6933A hover on the 21st update");
+    }
+
+    @Test
     void cameraScrollPhaseLetsCameraFollowIntoExpandedRightBound() throws Exception {
         RecordingServices services = new RecordingServices();
         services.withCamera(camera);
@@ -195,6 +219,78 @@ class TestAizEndBossInstance {
         invokeNoArg(boss, "beginHover");
 
         assertTrue(boss.isFacingRight());
+    }
+
+    @Test
+    void repositionSelectorUsesRomRawMaskNotLowTwoBits() throws Exception {
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        GameRng rng = new GameRng(GameRng.Flavour.S3K, 0xA1AFBE1BL);
+        services.withRng(rng);
+
+        AizEndBossInstance boss = buildBoss(services);
+        boss.getState().x = 0x48A0;
+        boss.getState().y = 0x01BD;
+        boss.getState().xFixed = 0x48A00000;
+        boss.getState().yFixed = 0x01BD0000;
+
+        invokeNoArg(boss, "selectRandomPosition");
+
+        assertEquals(0x08, boss.getAngle(),
+                "Obj_AIZEndBoss loc_69A66 masks Random_Number with #$C; "
+                        + "raw A1AF5778 should select target index $8, not low-bit index 0 "
+                        + "(sonic3k.asm:138748-138756)");
+        assertEquals(((0x4A40 - 0x48A0) << 8) / 0x80, boss.getState().xVel,
+                "Target index $8 should travel to _unkFA84+$160 = $4A40 over $80 frames");
+    }
+
+    @Test
+    void repositionVelocityUsesFullLongwordPositionSubpixels() throws Exception {
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+        GameRng rng = new GameRng(GameRng.Flavour.S3K, 0xA1AFBE1BL);
+        services.withRng(rng);
+
+        AizEndBossInstance boss = buildBoss(services);
+        boss.getState().x = 0x48A0;
+        boss.getState().y = 0x01BD;
+        boss.getState().xFixed = 0x48A00000;
+        boss.getState().yFixed = 0x01BD8000;
+
+        invokeNoArg(boss, "selectRandomPosition");
+
+        assertEquals(-0x003B, boss.getState().yVel,
+                "loc_69A66 subtracts the full longword y_pos before doubling the delta; "
+                        + "$01BD.8000 to target $01A0 should produce y_vel=-$3B "
+                        + "(sonic3k.asm:138764-138771)");
+    }
+
+    @Test
+    void defeatCapsuleHandoffWaitUsesObjWaitPredecrementSemantics() throws Exception {
+        RecordingServices services = new RecordingServices();
+        services.withCamera(camera);
+        services.withGameState(new GameStateManager());
+
+        AizEndBossInstance boss = buildBoss(services);
+        boss.getState().hitCount = 1;
+
+        boss.onPlayerAttack(null, null);
+
+        for (int frame = 0; frame < 0x7F; frame++) {
+            boss.update(frame, null);
+            assertTrue(!readBoolean(boss, "eggCapsuleSignal"),
+                    "Obj_Wait branches only after --$2E is negative, so $2E=$7F "
+                            + "must not spawn the capsule while it is still non-negative "
+                            + "(sonic3k.asm:177944-177952)");
+        }
+
+        boss.update(0x7F, null);
+
+        assertTrue(readBoolean(boss, "eggCapsuleSignal"),
+                "The AIZ capsule callback should run on the negative transition "
+                        + "after 128 Obj_Wait entries from $2E=$7F");
     }
 
     private static AizEndBossInstance buildBoss(ObjectServices services) throws Exception {

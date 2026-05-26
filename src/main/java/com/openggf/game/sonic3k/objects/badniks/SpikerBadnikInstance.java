@@ -51,6 +51,11 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
     private static final int TOP_SPIKE_TOUCH_NUDGE_Y = 6;
     private static final int TOP_SPIKE_COOLDOWN = 0x10;
 
+    // Obj_Spiker begins with Obj_WaitOffscreen before sub_88DCE/routine
+    // dispatch (sonic3k.asm:185372-185381). The wrapper uses Map_Offscreen
+    // width/height $20 until render_flags bit 7 is set (sonic3k.asm:180266-180298).
+    private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
+
     private static final int[] LAUNCH_ANIM_FRAMES = {1, 2, 1, 0};
     private static final int[] LAUNCH_ANIM_DELAYS = {0, 1, 0, 5};
 
@@ -74,6 +79,7 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
     private SpikerSideLauncherChild leftLauncher;
     private SpikerSideLauncherChild rightLauncher;
     private SpikerTopSpikeChild topSpike;
+    private boolean waitingForOnscreen = true;
 
     public SpikerBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Spiker",
@@ -83,7 +89,16 @@ public final class SpikerBadnikInstance extends AbstractS3kBadnikInstance {
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+        if (waitingForOnscreen) {
+            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+                return;
+            }
+            // loc_85B02 restores the saved Spiker operation and returns, so
+            // SetUp_ObjAttributes/CreateChild1_Normal run on the next object pass.
+            waitingForOnscreen = false;
             return;
         }
 

@@ -9,15 +9,15 @@ import java.util.List;
  * S3K boss explosion controller (ROM: Obj_BossExplosionSpecial → Obj_CreateBossExplosion).
  * Plain Java object (not an ObjectInstance) — ticked directly by the owning boss.
  *
- * ROM flow (s3.asm Obj_BossExpControl / Obj_NormalExpControl):
- * 1. Initial Obj_Wait: $2E = 3-1 = 2 (3 frames before first explosion)
+ * ROM flow (sonic3k.asm Obj_BossExpControl / Obj_NormalExpControl):
+ * 1. Obj_CreateBossExplosion initializes wait timer
  * 2. Obj_NormalExpControl: decrement $39 timer, spawn explosion, set $2E = 3-1
- * 3. Obj_Wait: 3 frames between each explosion
- * 4. Repeat until $39 goes negative (bmi → delete)
+ * 3. Obj_Wait: 3 frames between subsequent explosions
+ * 4. Repeat until $39 decrements to zero, then delete before spawning.
  *
  * CreateBossExp02: timer=$28, xRange=$80, yRange=$80, routine=2
- * Result: 41 explosions ($28→$00 inclusive), each spaced 3 frames apart.
- * Total duration: 3 + 41*3 = 126 frames (~2.1 seconds).
+ * Result: 39 explosions ($27→$01 inclusive), each spaced 3 frames apart.
+ * Total duration: 3 + 39*3 plus the zero-timer delete wait.
  *
  * SFX (sfx_Explode) is played by the controller (sub_52850), not by each child.
  */
@@ -55,7 +55,6 @@ public class S3kBossExplosionController {
         this.timer = params[0];
         this.xRange = params[1];
         this.yRange = params[2];
-        // ROM: move.w #3-1,$2E(a0) — initial wait is same as between-explosion wait
         this.intervalCounter = SPAWN_INTERVAL - 1;
     }
 
@@ -65,12 +64,14 @@ public class S3kBossExplosionController {
         if (intervalCounter >= 0) {
             return;
         }
-        // ROM: Obj_NormalExpControl fires when Obj_Wait counter goes negative
+        // ROM timed controls decrement $39 and branch to delete when it becomes zero
+        // before creating a child (sonic3k.asm:176775-176792).
         timer--;
-        if (timer < 0) {
+        if (timer <= 0) {
+            timer = -1;
             return;
         }
-        // ROM: sub_52850 plays sfx_Explode, spawns child, applies random offset
+        // ROM: sub_52850 plays sfx_Explode, spawns child, applies random offset.
         spawnExplosionChild();
         intervalCounter = SPAWN_INTERVAL - 1; // ROM: move.w #3-1,$2E(a0)
     }
@@ -80,7 +81,7 @@ public class S3kBossExplosionController {
     }
 
     private void spawnExplosionChild() {
-        // ROM: sub_52850 random offset calculation (s3.asm:101267-101285)
+        // ROM: sub_52850 random offset calculation (sonic3k.asm:176746-176751).
         int random = rng.nextRaw();
         int xMask = (xRange * 2) - 1;
         int yMask = (yRange * 2) - 1;

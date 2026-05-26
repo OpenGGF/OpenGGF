@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 
 /**
@@ -17,6 +18,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
     private static final int COLLISION_SIZE = 0x0D;
     private static final int PRIORITY_BUCKET = 5;
     private static final int ACTIVATION_RANGE = 0x40;
+    private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
     private static final int CHASE_MAX_SPEED = 0x200;
     private static final int CHASE_ACCELERATION = 8;
     private static final int INITIAL_ACTIVE_X_SPEED = 0x200;
@@ -26,6 +28,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
 
     private State state = State.INIT;
     private boolean waitingForOnscreen = true;
+    private boolean deleteCurrentSpriteMarker;
 
     public BatbotBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Batbot", Sonic3kObjectArtKeys.CNZ_BATBOT,
@@ -37,14 +40,24 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
         if (isDestroyed()) {
             return;
         }
+        if (deleteCurrentSpriteMarker) {
+            setDestroyedByOffscreen();
+            return;
+        }
 
-        // Obj_Batbot enters through Obj_WaitOffscreen. The ROM does not run
-        // the Batbot state machine until DisplaySprite has marked it visible.
-        if (!isOnScreen()) {
+        if (waitingForOnscreen) {
+            // Obj_WaitOffscreen installs Map_Offscreen with width/height $20
+            // and restores Obj_Batbot only after the temporary sprite has been
+            // drawn onscreen; the restored object op runs next frame
+            // (sonic3k.asm:180266-180297, 186266-186272).
+            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+                updateDynamicSpawn(currentX, currentY);
+                return;
+            }
+            waitingForOnscreen = false;
             updateDynamicSpawn(currentX, currentY);
             return;
         }
-        waitingForOnscreen = false;
 
         switch (state) {
             case INIT -> initialize();
@@ -53,6 +66,24 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
         }
 
         updateDynamicSpawn(currentX, currentY);
+        if (isDeleteSpriteIfNotInRange()) {
+            // ROM Sprite_CheckDeleteTouch branches through loc_85088/Go_Delete_Sprite:
+            // set status bit 7 and install Delete_Current_Sprite, leaving the SST
+            // slot occupied until the next ExecuteObjects pass (sonic3k.asm:
+            // 179058-179134). CNZ2 slot-pressure guards depend on this marker
+            // remaining occupied through the next low-slot allocation window.
+            deleteCurrentSpriteMarker = true;
+        }
+    }
+
+    @Override
+    public boolean usesCustomOutOfRangeCheck() {
+        return true;
+    }
+
+    @Override
+    public boolean isCustomOutOfRange(int cameraX) {
+        return false;
     }
 
     private void initialize() {
@@ -115,13 +146,23 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
 
     @Override
     public int getCollisionFlags() {
-        return waitingForOnscreen ? 0 : super.getCollisionFlags();
+        return deleteCurrentSpriteMarker || waitingForOnscreen || state == State.INIT ? 0 : super.getCollisionFlags();
+    }
+
+    private boolean isDeleteSpriteIfNotInRange() {
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.camera() == null) {
+            return false;
+        }
+        int objectCoarse = currentX & 0xFF80;
+        int cameraCoarseBack = (svc.camera().getX() - 0x80) & 0xFF80;
+        return ((objectCoarse - cameraCoarseBack) & 0xFFFF) > 0x280;
     }
 
     @Override
     public String traceDebugDetails() {
-        return String.format("state=%s waitOn=%s vx=%04X vy=%04X spawn=%04X,%04X",
-                state, waitingForOnscreen, xVelocity & 0xFFFF, yVelocity & 0xFFFF,
+        return String.format("state=%s waitOn=%s delMark=%s vx=%04X vy=%04X spawn=%04X,%04X",
+                state, waitingForOnscreen, deleteCurrentSpriteMarker, xVelocity & 0xFFFF, yVelocity & 0xFFFF,
                 spawn.x() & 0xFFFF, spawn.y() & 0xFFFF);
     }
 }

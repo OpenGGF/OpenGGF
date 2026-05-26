@@ -57,7 +57,7 @@ class TestCnzMinibossAnimationArt {
         boss.update(1, null);
         boss.appendRenderCommands(new ArrayList<>());
 
-        verify(harness.renderer()).drawFrameIndex(5, 0x3240, 0x02B8, false, false);
+        verify(harness.renderer()).drawFrameIndex(6, 0x3240, 0x02B8, false, false);
     }
 
     @Test

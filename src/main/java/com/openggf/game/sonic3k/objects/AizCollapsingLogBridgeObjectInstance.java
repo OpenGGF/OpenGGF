@@ -69,6 +69,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     private int collapseTimer;
     private boolean segmentsSpawned;
     private boolean collapseArmedByStanding;
+    private boolean fireCollapseSolidFrame;
     private final List<PlayableEntity> standingPlayers = new ArrayList<>(2);
     private final Set<PlayableEntity> ejectedPlayers = new HashSet<>(2);
 
@@ -126,6 +127,15 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // loc_2AE98/loc_2AF06 load width_pixels(a0) directly into d1 before
+        // SolidObjectTop (sonic3k.asm:59299-59306,59341-59348). Unlike
+        // SolidObjectFull callers, this path does not add $B and must not be
+        // narrowed again by the shared landing-width correction.
+        return true;
+    }
+
+    @Override
     public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
         // The AIZ2 fire drawbridge trace reaches loc_2AF06 -> SolidObjectTop
         // with Tails exactly on the top boundary for two frames. ROM
@@ -151,7 +161,7 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
         if (state == STATE_FINAL) {
             return false;
         }
-        if ((state == STATE_COLLAPSING || collapseArmedByStanding || segmentsSpawned)
+        if ((((state == STATE_COLLAPSING || segmentsSpawned) && !fireCollapseSolidFrame) || collapseArmedByStanding)
                 && (services().objectManager() == null
                 || !services().objectManager().isRidingObject(player, this))) {
             // ROM loc_2AF70 no longer calls SolidObjectTop. It only tests
@@ -174,10 +184,19 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        fireCollapseSolidFrame = false;
         boolean collapseStartedThisFrame = false;
         if (state == STATE_IDLE && !isFireBridge && collapseArmedByStanding) {
             startCollapse();
             collapseStartedThisFrame = true;
+        }
+        if (state == STATE_IDLE && isFireBridge && drawBridgeBurnActive) {
+            // loc_2AEE2 initializes the fire drawbridge collapse and falls
+            // through directly into loc_2AF06/SolidObjectTop in the same
+            // object routine (sonic3k.asm:59331-59348).
+            startCollapse();
+            collapseStartedThisFrame = true;
+            fireCollapseSolidFrame = true;
         }
 
         if (state == STATE_IDLE || collapseStartedThisFrame) {
@@ -189,9 +208,6 @@ public class AizCollapsingLogBridgeObjectInstance extends AbstractObjectInstance
 
         switch (state) {
             case STATE_IDLE -> {
-                if (isFireBridge && drawBridgeBurnActive) {
-                    startCollapse();
-                }
             }
             case STATE_COLLAPSING -> {
                 if (collapseStartedThisFrame) {

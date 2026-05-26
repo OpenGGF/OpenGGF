@@ -136,6 +136,24 @@ public class SwScrlMgz extends AbstractZoneScrollHandler {
         mgz2CloudAccumulator.set(0);
         mgz2CloudsFrozen = false;
         lastActId = -1;
+        MgzZoneRuntimeState runtimeState = currentRuntimeState();
+        if (runtimeState != null && runtimeState.actIndex() == actId) {
+            bgRiseRoutine = runtimeState.bgRiseRoutine();
+            bgRiseOffset = runtimeState.bgRiseOffset();
+            bossBgScrollOffset = runtimeState.hasBossBgScrollOffset()
+                    ? runtimeState.bossBgScrollOffset()
+                    : Integer.MIN_VALUE;
+            if (bgRiseRoutine == BG_RISE_SONIC_STATE) {
+                lastBgCameraX = ((short) cameraX) - MGZ2_SONIC_RISE_X_BASE;
+                vscrollFactorBG = (short) (((short) cameraY) - MGZ2_SONIC_RISE_Y_BASE + bgRiseOffset);
+            } else if (bgRiseRoutine == BG_RISE_AFTER_MOVE_STATE) {
+                mgz2CloudsFrozen = true;
+                lastBgCameraX = bossBgScrollOffset == Integer.MIN_VALUE ? cameraX : bossBgScrollOffset;
+                vscrollFactorBG = (short) computeMgz2BgY(cameraY - MGZ2_AFTER_MOVE_Y_BASE);
+            } else if (bossBgScrollOffset != Integer.MIN_VALUE) {
+                lastBgCameraX = bossBgScrollOffset;
+            }
+        }
     }
 
     private static final int HSCROLL_WORD_COUNT = 32;

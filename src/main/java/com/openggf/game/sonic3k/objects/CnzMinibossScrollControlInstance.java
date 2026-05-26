@@ -88,6 +88,19 @@ public final class CnzMinibossScrollControlInstance extends AbstractObjectInstan
     }
 
     @Override
+    public String traceDebugDetails() {
+        return String.format(
+                "r=%02X off=%08X/%04X vel=%08X defeat=%s init=%s post=%s",
+                routine & 0xFF,
+                accumulatedOffset16_16,
+                (accumulatedOffset16_16 >> 16) & 0xFFFF,
+                currentVelocity16_16,
+                bossDefeatSignalConsumed,
+                initialLayoutMutated,
+                postBossLayoutMutated);
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity player) {
         if (!bossDefeatSignalConsumed
                 && S3kCnzEventWriteSupport.consumeMinibossDefeatSignalForScrollControl(services())) {
@@ -111,10 +124,9 @@ public final class CnzMinibossScrollControlInstance extends AbstractObjectInstan
 
     private void updateMain() {
         if (bossDefeatSignalConsumed) {
-            if ((accumulatedOffset16_16 >> 16) >= FG_HANDOFF_OFFSET_PIXELS - 1) {
-                completeFinalHandoff();
-                return;
-            }
+            // ROM: loc_52042 falls through into Obj_CNZMinibossScrollWait after
+            // clearing Events_fg_5; it does not skip directly to the final handoff
+            // based on the current Events_bg+$08 offset (sonic3k.asm:107770-107795).
             routine = ROUTINE_WAIT_ALIGN;
             updateWaitAlign(ROUTINE_SLOW);
             return;
@@ -157,6 +169,7 @@ public final class CnzMinibossScrollControlInstance extends AbstractObjectInstan
         accumulatedOffset16_16 = ((accumulatedOffset16_16 >> 16) & 0xFF) << 16;
         services().camera().setMaxYTarget((short) 0x1000);
         services().gameState().setBackgroundCollisionFlag(true);
+        S3kCnzEventWriteSupport.advanceMinibossBackgroundRoutineAfterScrollSnap(services());
         mutatePostBossTunnelLayoutOnce();
         routine = ROUTINE_WAIT_FINAL;
         publishScrollState();

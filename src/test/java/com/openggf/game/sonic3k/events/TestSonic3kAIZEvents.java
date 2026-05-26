@@ -432,8 +432,8 @@ public class TestSonic3kAIZEvents {
         assertTrue(afterReload.active());
         assertEquals(224, afterReload.coverHeightPx());
         assertEquals(beforeReload.wavePhase(), afterReload.wavePhase());
-        // requestAct2Transition() intentionally resets BG Y to 0x1E0 for scroll-off start
-        assertEquals(0x01E0, afterReload.sourceWorldY());
+        // requestAct2Transition() intentionally resets BG Y to 0x140 for scroll-off start.
+        assertEquals(0x0140, afterReload.sourceWorldY());
         assertEquals(FireCurtainStage.AIZ2_REDRAW, afterReload.stage());
     }
 
@@ -893,6 +893,7 @@ public class TestSonic3kAIZEvents {
         camera.setX((short) 0x4880);
         camera.setY((short) 0x015A);
         aiz2.sprite().setXSpeed((short) 0x0600);
+        aiz2.sprite().setYSpeed((short) 0);
         aiz2.sprite().setGSpeed((short) 0x0600);
         aiz2.sprite().setAir(false);
         aiz2.sprite().setOnObject(false);
@@ -905,14 +906,6 @@ public class TestSonic3kAIZEvents {
         events.update(1, 0);
         GameServices.level().getObjectManager().update(camera.getX(), aiz2.sprite(), List.of(), 1,
                 false, true, true);
-        aiz2.sprite().setCentreXPreserveSubpixel((short) 0x4880);
-        aiz2.sprite().setCentreYPreserveSubpixel((short) 0x01FC);
-        aiz2.sprite().setXSpeed((short) 0x0600);
-        aiz2.sprite().setGSpeed((short) 0x0600);
-        aiz2.sprite().setAir(false);
-        aiz2.sprite().setOnObject(false);
-        GameServices.level().getObjectManager().update(camera.getX(), aiz2.sprite(), List.of(), 1,
-                false, true, true);
 
         assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
                         .anyMatch(object -> object instanceof AizCollapsingLogBridgeObjectInstance
@@ -920,7 +913,7 @@ public class TestSonic3kAIZEvents {
                                 && object.getY() == 0x0218),
                 "The fire log bridge must be active before checking its SolidObjectTop contact");
         assertTrue(aiz2.sprite().isOnObject(),
-                "ROM loc_2AEE2 calls SolidObjectTop and sets Status_OnObj for Sonic at $4880,$01FC");
+                "ROM loc_2AEE2 falls through to loc_2AF06/SolidObjectTop in the collapse-start frame");
     }
 
     @Test

@@ -49,7 +49,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
     protected void registerDefaultFactories() {
         factories.put(Sonic3kObjectIds.MONITOR,
                 (spawn, registry) -> new Sonic3kMonitorObjectInstance(spawn));
-        factories.put(Sonic3kObjectIds.PATH_SWAP, (spawn, registry) -> null);
+        factories.put(Sonic3kObjectIds.PATH_SWAP, (spawn, registry) -> new Sonic3kPathSwapObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.AIZ_HOLLOW_TREE,
                 (spawn, registry) -> new AizHollowTreeObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.COLLAPSING_PLATFORM,

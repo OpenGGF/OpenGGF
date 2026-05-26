@@ -42,6 +42,8 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
     private static final int ANIM_HIT_DURATION = 8;
     private static final int MAX_SCORE_HITS = 10;
     private static final int SCORE_PER_HIT = 10;
+    private static final int LIST_ADD_WINDOW = 0x280;
+    private static final int CAMERA_COARSE_BACK_OFFSET = 0x80;
 
     private final int originX;
     private final int originY;
@@ -99,6 +101,23 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
     @Override
     public int getOutOfRangeReferenceX() {
         return originX;
+    }
+
+    @Override
+    public boolean isOnScreenForTouch() {
+        ObjectServices svc = tryServices();
+        if (svc == null || svc.camera() == null) {
+            return super.isOnScreenForTouch();
+        }
+        // Obj_Bumper adds CNZ bumpers to Collision_response_list using the
+        // original anchor $30(a0), not the current orbit point:
+        // (origin_x & $FF80) - Camera_X_pos_coarse_back <= $280
+        // (sonic3k.asm:68881-68886). Camera_X_pos_coarse_back is
+        // (Camera_X_pos - $80) & $FF80 (sonic3k.asm:37472-37478).
+        int cameraCoarseBack = ((svc.camera().getX() & 0xFFFF) - CAMERA_COARSE_BACK_OFFSET) & 0xFF80;
+        int originCoarse = originX & 0xFF80;
+        int delta = (originCoarse - cameraCoarseBack) & 0xFFFF;
+        return delta <= LIST_ADD_WINDOW;
     }
 
     @Override
@@ -239,6 +258,15 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
             GameStateManager gameState = svc != null ? svc.gameState() : null;
             if (gameState != null) {
                 gameState.addScore(SCORE_PER_HIT);
+            }
+            if (svc != null && svc.objectManager() != null) {
+                // ROM sub_32F56 adds the bumper score, then AllocateObject
+                // creates Obj_EnemyScore at the bumper coordinates.
+                // docs/skdisasm/sonic3k.asm:68980-68989
+                svc.objectManager().addDynamicObject(new Sonic3kPointsObjectInstance(
+                        new ObjectSpawn(currentX, currentY, 0x29, 0, 0, false, 0),
+                        svc,
+                        SCORE_PER_HIT));
             }
         }
     }

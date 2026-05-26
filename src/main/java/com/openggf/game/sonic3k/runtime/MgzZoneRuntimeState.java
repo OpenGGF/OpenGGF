@@ -29,6 +29,7 @@ public final class MgzZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return events.getDynamicResizeRoutine(); }
     @Override public boolean isActTransitionFlagActive() { return events.isEventsFg5Raw(); }
+    public boolean isBackedBy(Sonic3kMGZEvents candidate) { return events == candidate; }
 
     public int bgRiseRoutine() {
         return events.getBgRiseRoutine();
@@ -60,7 +61,7 @@ public final class MgzZoneRuntimeState implements S3kZoneRuntimeState {
     public void syncBgRiseToScrollHandler() {
         SwScrlMgz handler = resolveMgzScrollHandler();
         if (handler != null) {
-            handler.syncBgRiseFromEvents();
+            handler.setBgRiseState(bgRiseRoutine(), bgRiseOffset());
         }
     }
 

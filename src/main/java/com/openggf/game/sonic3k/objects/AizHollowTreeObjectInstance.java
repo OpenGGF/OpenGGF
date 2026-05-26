@@ -201,9 +201,17 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         // lack of bit 7 means CPU/touch dispatch is not suppressed.
 
         if (mainPlayer) {
+            // Obj_AIZHollowTree writes Camera_min/max_X_pos=$2C60 and $38=$3C
+            // immediately after Player_1 capture (sonic3k.asm:43702-43704).
+            // Tails_Check_Screen_Boundaries reads Camera_min_X_pos+$10 on the
+            // next Tails physics tick and clamps Tails there when crossed
+            // (sonic3k.asm:28414-28450). The engine camera step runs later in
+            // this frame, so defer only the visible horizontal clamp; keep the
+            // boundary word live for sidekick/player boundary logic.
             Camera camera = services().camera();
             camera.setMinX((short) CAMERA_LOCK_X);
             camera.setMaxX((short) CAMERA_LOCK_X);
+            camera.deferHorizontalBoundaryClampOnce();
             cameraLockTimer = CAMERA_LOCK_TIMER;
             spawnDynamicObject(new AizTreeRevealControlObjectInstance(treeX, treeY));
         }

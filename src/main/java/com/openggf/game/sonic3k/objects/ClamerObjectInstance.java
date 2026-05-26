@@ -16,6 +16,7 @@ import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.level.objects.TouchResponseAttackable;
@@ -24,6 +25,7 @@ import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -52,11 +54,22 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     private static final int PARENT_COLLISION_FLAGS = 0x0A;
     private static final int SPRING_COLLISION_FLAGS = 0x40 | 0x17;
     private static final int SPRING_OFFSET_Y = -8;
+    // Obj_WaitOffscreen installs Map_Offscreen and width/height $20 until the
+    // render pass sets render_flags bit 7 (docs/skdisasm/sonic3k.asm:
+    // 180266-180298). Obj_Clamer enters through it before loc_88FDC
+    // initializes attributes and spawns the spring child (185857-185877).
+    private static final int WAIT_OFFSCREEN_MARGIN = 0x20;
     private static final int LAUNCH_SPEED = 0x800;
     private static final int CLOSE_FRAMES = 10;
 
     /** ROM loc_88FEC: cmpi.w #$60, d2; bhs loc_8900C. */
     private static final int AUTO_CLOSE_DX_THRESHOLD = 0x60;
+    private static final int[] AUTO_CLOSE_ANIM_FRAMES = {0, 5, 6, 7, 8, 7, 6, 5, 0};
+    private static final int[] AUTO_CLOSE_ANIM_DELAYS = {2, 2, 2, 0x2F, 5, 0x1F, 2, 2, 0x1F};
+    private static final int AUTO_CLOSE_PROJECTILE_FRAME = 8;
+    private static final int PROJECTILE_COLLISION_FLAGS = 0x80 | 0x18;
+    private static final int PROJECTILE_SHIELD_REACTION_BOUNCE = 1 << 3;
+    private static final int PROJECTILE_DEFLECT_SPEED = 0x800;
     private static final ObjectPlayerParticipationPolicy AUTO_CLOSE_PARTICIPATION =
             ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
     private static final ObjectPlayerParticipationPolicy CPROP_TARGET_PARTICIPATION =
@@ -127,7 +140,12 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     private boolean firedDuringThisFramesTouch;
     private int lastObservedFrameCounter;
     private int closeTimer;
+    private int autoCloseAnimIndex;
+    private int autoCloseAnimTimer;
+    private boolean springFiredFlag;
     private boolean destroyed;
+    private ClamerSpringChild springChildSlot;
+    private boolean waitingForOnscreen = true;
 
     public ClamerObjectInstance(ObjectSpawn spawn) {
         super(spawn, "Clamer");
@@ -141,6 +159,16 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         if (destroyed) {
             return;
         }
+        if (waitingForOnscreen) {
+            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+                return;
+            }
+            // loc_85B02 restores the saved Clamer entry point and returns;
+            // loc_88FDC/CreateChild1_Normal execute on the next object pass.
+            waitingForOnscreen = false;
+            return;
+        }
+        ensureSpringChildSlot();
         lastObservedFrameCounter = frameCounter;
 
         // ROM Clamer_Index dispatch (sonic3k.asm:185860).
@@ -237,6 +265,17 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         firedDuringThisFramesTouch = false;
     }
 
+    private void ensureSpringChildSlot() {
+        if (springChildSlot != null) {
+            return;
+        }
+        // ROM loc_88FDC spawns ChildObjDat_89148 with CreateChild1_Normal
+        // (sonic3k.asm:185875-185879, 185998-186000). The engine keeps the
+        // spring response on the parent for multi-region cprop timing, but
+        // the child still has to consume a real SST slot for placement order.
+        springChildSlot = spawnChild(() -> new ClamerSpringChild(this));
+    }
+
     /**
      * ROM Check_PlayerCollision (sonic3k.asm:179904-179924):
      * <pre>
@@ -284,6 +323,18 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
         //     movea.w parent3(a0), a1
         //     bset   #0, $38(a1)         (signal parent snap-shut)
         applySpringLaunch(player);
+        springFiredFlag = true;
+        if (routine == ROUTINE_AUTO_CLOSE) {
+            // ROM loc_89064 (sonic3k.asm:185930-185942) does not test $38 bit 0;
+            // the auto-close animation and ChildObjDat_89150 projectile spawn
+            // continue even if the spring child fires during routine 6.
+            return;
+        }
+        startSnapShut();
+    }
+
+    private void startSnapShut() {
+        springFiredFlag = false;
         closeTimer = CLOSE_FRAMES;
         routine = ROUTINE_SNAP_SHUT;
     }
@@ -306,6 +357,10 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
      * </pre>
      */
     private void updateIdle(PlayableEntity primary) {
+        if (springFiredFlag) {
+            startSnapShut();
+            return;
+        }
         if (closeTimer > 0) {
             closeTimer--;
             mappingFrame = closeTimer == 0 ? 0 : Math.min(4, CLOSE_FRAMES - closeTimer);
@@ -335,7 +390,12 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             // loc_89036: transition to routine 0x06 (auto-close).
             routine = ROUTINE_AUTO_CLOSE;
             mappingFrame = 0;
-            closeTimer = CLOSE_FRAMES;
+            // Animate_RawNoSSTMultiDelay increments anim_frame by 2 before
+            // reading byte_89185 (sonic3k.asm:177561-177574). loc_89036 clears
+            // anim_frame, so the first routine-6 animation tick leaves frame 0
+            // as the already-visible mapping and loads the second table pair.
+            autoCloseAnimIndex = 1;
+            autoCloseAnimTimer = 0;
             // ROM loc_890AA runs independently of the parent's routine, so we
             // do not touch the spring child cooldown here.
         }
@@ -357,24 +417,64 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     }
 
     /**
-     * ROM loc_89064 (sonic3k.asm:185930-185940): close animation triggered by
-     * the auto-close gate. The original spring child is inactive while in this
-     * routine; once the close animation completes the parent resets to
-     * routine 0x02 via loc_89056.
+     * ROM loc_89064 (sonic3k.asm:185930-185940): auto-close uses
+     * Animate_RawNoSSTMultiDelay over byte_89185, and when a frame change sets
+     * mapping_frame = 8 it spawns ChildObjDat_89150 through
+     * CreateChild5_ComplexAdjusted. The child is a real SST slot
+     * ({@code loc_86D4A -> loc_86D5E}) and is therefore part of CNZ slot
+     * pressure; it is not just a rendered effect.
      */
     private void updateAutoClose() {
-        if (closeTimer > 0) {
-            closeTimer--;
-            mappingFrame = closeTimer == 0 ? 0 : Math.min(4, CLOSE_FRAMES - closeTimer);
+        // Animate_RawNoSSTMultiDelay decrements the unsigned byte timer first;
+        // bpl returns while it remains non-negative. When it underflows, the
+        // next anim_frame-selected frame/delay pair is loaded
+        // (sonic3k.asm:177561-177574, 185930-185940; byte_89185 at
+        // 186039-186049).
+        autoCloseAnimTimer = (autoCloseAnimTimer - 1) & 0xFF;
+        if (autoCloseAnimTimer < 0x80) {
             return;
         }
-        routine = ROUTINE_IDLE;
-        mappingFrame = 0;
+
+        if (autoCloseAnimIndex >= AUTO_CLOSE_ANIM_FRAMES.length) {
+            routine = ROUTINE_IDLE;
+            mappingFrame = 0;
+            autoCloseAnimIndex = 0;
+            autoCloseAnimTimer = 0;
+            return;
+        }
+
+        int newFrame = AUTO_CLOSE_ANIM_FRAMES[autoCloseAnimIndex];
+        mappingFrame = newFrame;
+        autoCloseAnimTimer = AUTO_CLOSE_ANIM_DELAYS[autoCloseAnimIndex];
+        autoCloseAnimIndex++;
+
+        if (newFrame == AUTO_CLOSE_PROJECTILE_FRAME && isOnScreenX()) {
+            spawnAutoCloseProjectile();
+        }
+    }
+
+    private void spawnAutoCloseProjectile() {
+        // ChildObjDat_89150 (sonic3k.asm:186020-186027):
+        // loc_86D4A child, ObjDat3_8913C, MoveSprite2, offset -$10,+2,
+        // x_vel -$200. CreateChild5_ComplexAdjusted flips X offset/velocity
+        // when parent render_flags bit 0 is set (sonic3k.asm:177062-177108).
+        int xOffset = -0x10;
+        int xVelocity = -0x200;
+        if (facingRight) {
+            xOffset = -xOffset;
+            xVelocity = -xVelocity;
+        }
+        int childX = currentX + xOffset;
+        int childY = currentY + 2;
+        int childXVel = xVelocity;
+        spawnChild(() -> new ClamerAutoCloseProjectile(
+                buildSpawnAt(childX, childY),
+                childXVel));
     }
 
     @Override
     public int getCollisionFlags() {
-        if (destroyed) {
+        if (destroyed || waitingForOnscreen) {
             return 0;
         }
         // ROM loc_89014 (sonic3k.asm:185899-185906) clears collision_flags
@@ -419,7 +519,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
 
     @Override
     public TouchRegion[] getMultiTouchRegions() {
-        if (destroyed) {
+        if (destroyed || waitingForOnscreen) {
             return new TouchRegion[0];
         }
 
@@ -492,10 +592,23 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             return;
         }
         destroyed = true;
+        destroySpringChildSlot();
         int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
         setDestroyed(true);
         DestructionEffects.destroyBadnik(
                 currentX, currentY, spawn, mySlot, playerEntity, services(), S3K_DESTRUCTION_CONFIG);
+    }
+
+    @Override
+    public void onUnload() {
+        destroySpringChildSlot();
+    }
+
+    private void destroySpringChildSlot() {
+        if (springChildSlot != null) {
+            springChildSlot.setDestroyed(true);
+            springChildSlot = null;
+        }
     }
 
     private void applySpringLaunch(AbstractPlayableSprite player) {
@@ -540,7 +653,7 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (destroyed) {
+        if (destroyed || waitingForOnscreen) {
             return;
         }
         ObjectRenderManager renderManager = services().renderManager();
@@ -586,6 +699,164 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     private record ClosestPlayer(AbstractPlayableSprite player, int dx) {
     }
 
+    private static final class ClamerSpringChild extends AbstractObjectInstance {
+        private final ClamerObjectInstance parent;
+
+        private ClamerSpringChild(ClamerObjectInstance parent) {
+            super(parent.buildSpawnAt(parent.currentX, parent.currentY + SPRING_OFFSET_Y), "ClamerSpringChild");
+            this.parent = parent;
+        }
+
+        @Override
+        public int getX() {
+            return parent.currentX;
+        }
+
+        @Override
+        public int getY() {
+            return parent.currentY + SPRING_OFFSET_Y;
+        }
+
+        @Override
+        public ObjectSpawn getSpawn() {
+            return buildSpawnAt(getX(), getY());
+        }
+
+        @Override
+        public boolean isDestroyed() {
+            return super.isDestroyed() || parent.destroyed || parent.isDestroyed();
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            // Slot-only child: the parent renders and exposes the spring region.
+        }
+    }
+
+    private static final class ClamerAutoCloseProjectile extends AbstractObjectInstance
+            implements TouchResponseProvider {
+        private final SubpixelMotion.State motion;
+        private boolean collisionEnabled = true;
+        private boolean deleteNextFrame;
+
+        private ClamerAutoCloseProjectile(ObjectSpawn spawn, int xVelocity) {
+            super(spawn, "ClamerAutoCloseProjectile");
+            // loc_86D4A sets ObjDat3_8913C and loc_86D5E runs MoveSprite2
+            // before Sprite_CheckDeleteTouchXY (sonic3k.asm:182257-182265).
+            this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, xVelocity, 0);
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            if (deleteNextFrame) {
+                setDestroyed(true);
+                return;
+            }
+            SubpixelMotion.moveSprite2(motion);
+            if (!spriteCheckDeleteTouchXYKeepsAlive()) {
+                // Sprite_CheckDeleteTouchXY branches through Go_Delete_Sprite,
+                // which installs Delete_Current_Sprite and leaves the SST slot
+                // occupied until the next ExecuteObjects pass (sonic3k.asm:
+                // 179027-179039, 179131-179134, 36108-36122).
+                collisionEnabled = false;
+                deleteNextFrame = true;
+            }
+        }
+
+        private boolean spriteCheckDeleteTouchXYKeepsAlive() {
+            ObjectServices svc = tryServices();
+            int cameraX = svc != null && svc.camera() != null ? svc.camera().getX() : 0;
+            int cameraY = svc != null && svc.camera() != null ? svc.camera().getY() : 0;
+
+            // Sprite_CheckDeleteTouchXY:
+            //   (x_pos & $FF80) - Camera_X_pos_coarse_back <= $280 unsigned
+            //   y_pos - Camera_Y_pos + $80 < $200 unsigned
+            // Camera_X_pos_coarse_back is refreshed by Load_Sprites as
+            // (Camera_X_pos - $80) & $FF80 before Process_Sprites
+            // (sonic3k.asm:37545-37553, 179027-179039).
+            int xAligned = getX() & 0xFF80;
+            int coarseBack = (cameraX - 0x80) & 0xFF80;
+            int xDistance = (xAligned - coarseBack) & 0xFFFF;
+            if (xDistance > 0x280) {
+                return false;
+            }
+            int yDistance = (getY() - cameraY + 0x80) & 0xFFFF;
+            return yDistance < 0x200;
+        }
+
+        @Override
+        public int getX() {
+            return motion.x;
+        }
+
+        @Override
+        public int getY() {
+            return motion.y;
+        }
+
+        @Override
+        public ObjectSpawn getSpawn() {
+            return buildSpawnAt(getX(), getY());
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            return collisionEnabled && !deleteNextFrame ? PROJECTILE_COLLISION_FLAGS : 0;
+        }
+
+        @Override
+        public boolean isPersistent() {
+            // Dynamic child lifetime is owned by loc_86D5E's
+            // Sprite_CheckDeleteTouchXY tail, not by ObjectManager's generic
+            // post-update out_of_range pass. Go_Delete_Sprite keeps the SST
+            // slot occupied as a Delete_Current_Sprite marker until the next
+            // ExecuteObjects pass (sonic3k.asm:182263-182266,179027-179039,
+            // 179131-179134,36108-36122).
+            return true;
+        }
+
+        @Override
+        public int getCollisionProperty() {
+            return 0;
+        }
+
+        @Override
+        public int getShieldReactionFlags() {
+            // loc_86D4A: bset #3,shield_reaction(a0).
+            return PROJECTILE_SHIELD_REACTION_BOUNCE;
+        }
+
+        @Override
+        public boolean onShieldDeflect(PlayableEntity playerEntity) {
+            if (!(playerEntity instanceof AbstractPlayableSprite player)) {
+                return false;
+            }
+            int dx = player.getCentreX() - getX();
+            int dy = player.getCentreY() - getY();
+            int angle = TrigLookupTable.calcAngle(saturateToShort(dx), saturateToShort(dy));
+            motion.xVel = -((TrigLookupTable.cosHex(angle) * PROJECTILE_DEFLECT_SPEED) >> 8);
+            motion.yVel = -((TrigLookupTable.sinHex(angle) * PROJECTILE_DEFLECT_SPEED) >> 8);
+            collisionEnabled = false;
+            return true;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            ObjectServices svc = tryServices();
+            if (svc == null || svc.renderManager() == null) {
+                return;
+            }
+            PatternSpriteRenderer renderer = svc.renderManager().getRenderer(Sonic3kObjectArtKeys.CNZ_CLAMER);
+            if (renderer != null && renderer.isReady()) {
+                renderer.drawFrameIndex(9, getX(), getY(), false, false);
+            }
+        }
+    }
+
+    private static short saturateToShort(int value) {
+        return (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, value));
+    }
+
     // Test hooks (package-private) ------------------------------------------
 
     /** Test-only: current ROM-style routine value. */
@@ -596,5 +867,11 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
     /** Test-only: directly run the auto-close evaluator with a primary player. */
     void testStepIdle(PlayableEntity primary) {
         updateIdle(primary);
+    }
+
+    /** Test-only: bypass Obj_WaitOffscreen for unit fixtures without a camera. */
+    void testReleaseWaitOffscreen() {
+        waitingForOnscreen = false;
+        ensureSpringChildSlot();
     }
 }

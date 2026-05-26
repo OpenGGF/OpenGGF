@@ -51,6 +51,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
     private static final int S3K_PRE_TALLY_DELAY = 360;  // 6*60 frames (ROM line 62580)
     private static final int S3K_WAIT_DURATION = 90;      // ROM line 62676
     private static final int MUSIC_TRIGGER_FRAME = 71;    // 360 - 289 = 71 (ROM line 62626)
+    private static final int RESULTS_CREATE_KOS_GATE_FRAMES = 9;
 
     // Time bonus table (ROM lines 62910-62918)
     private static final int[] TIME_BONUSES = {5000, 5000, 1000, 500, 400, 300, 100, 10};
@@ -99,6 +100,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
     private final ResultsElement[] elements = new ResultsElement[12];
     private int exitQueueCounter;
     private int childrenRemaining;
+    private int createGateFrames = RESULTS_CREATE_KOS_GATE_FRAMES;
+    private boolean actTransitionSignaled;
 
     public S3kResultsScreenObjectInstance(PlayerCharacter character, int act) {
         super("S3kResults");
@@ -117,13 +120,25 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         // Create elements
         createElements();
 
-        // ROM: Obj_LevelResultsCreate (line 62616) — set Events_fg_5 at creation
-        // time so the background event can prepare the transition. The actual level
-        // reload is gated on endOfLevelFlag (results complete) in the HCZ BG handler.
-        signalActTransitionIfNeeded();
-
         LOG.fine(() -> String.format("S3K results init: character=%s act=%d timeBonus=%d ringBonus=%d",
                 character, act, timeBonus, ringBonus));
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format(
+                "state=%02X timer=%04X total=%04X act=%d create=%02X sig=%b time=%d ring=%d total=%d music=%b complete=%b",
+                state,
+                stateTimer & 0xFFFF,
+                totalFrames & 0xFFFF,
+                act,
+                createGateFrames & 0xFFFF,
+                actTransitionSignaled,
+                timeBonus,
+                ringBonus,
+                totalBonusCountUp,
+                musicPlayed,
+                complete);
     }
 
     // ---- Element data structure ----
@@ -296,6 +311,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         this.playerRef = player;
         this.frameCounter = frameCounter;
+        updateCreateGate();
         stateTimer++;
         totalFrames++;
 
@@ -330,6 +346,26 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
             stateTimer = 0;
             // Do NOT call onExitReady() here — wait for exit queue to finish
         }
+    }
+
+    private void updateCreateGate() {
+        if (actTransitionSignaled) {
+            return;
+        }
+
+        createGateFrames--;
+        if (romResultsCreateGateReady(createGateFrames)) {
+            // ROM Obj_LevelResultsInit queues three Kosinski module loads and
+            // advances to Obj_LevelResultsCreate; Create polls Kos_modules_left
+            // before allocating child objects and setting Events_fg_5
+            // (docs/skdisasm/sonic3k.asm:62512-62584, 62586-62616).
+            signalActTransitionIfNeeded();
+            actTransitionSignaled = true;
+        }
+    }
+
+    static boolean romResultsCreateGateReady(int framesAfterDecrement) {
+        return framesAfterDecrement <= 0;
     }
 
     /**
@@ -460,9 +496,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
      * Sets Events_fg_5 for Act 1 zones (except AIZ zone 0 and ICZ zone 5)
      * to trigger the background event handler's seamless act transition.
      *
-     * <p>In the ROM this fires at creation time and the Kos queue delays the
-     * actual transition. Our engine has no Kos queue, so we defer this to
-     * {@link #onExitReady()} after the tally completes.
+     * <p>ROM Obj_LevelResultsInit queues the Kosinski module loads first; the
+     * create gate above models Obj_LevelResultsCreate polling Kos_modules_left
+     * before this flag is written.
      */
     private void signalActTransitionIfNeeded() {
         if (act != 0) return;  // Act 2 — no transition
@@ -501,13 +537,21 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
                 }
             }
         }
-        // Restore camera. When the AIZ2 cutscene override is active, the
+        boolean aizAct1MinibossTitleHandoff = zone == 0x00 && act == 0;
+
+        // Restore camera. AIZ Act 1 is excluded because ROM Obj_LevelResults
+        // changes into the in-level Act 2 title card without touching camera
+        // bounds; Obj_EndSignControlDoStart waits for that title card to set
+        // End_of_level_flag before Change_Act2Sizes creates the gradual
+        // level-size objects (sonic3k.asm:62708-62720,62276-62279,
+        // 180415-180419,180575-180609).
+        // When the AIZ2 cutscene override is active, the
         // Aiz2BossEndSequenceController manages camera bounds for the walk-right
         // sequence. Restoring full level bounds here would snap the camera back
         // to the pre-boss area (ROM: loc_694D4 uses Obj_IncLevEndXGradual).
         var cam = services().camera();
         cam.setFrozen(false);
-        if (!Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
+        if (!aizAct1MinibossTitleHandoff && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
             if (level != null) {
                 cam.setMinX((short) level.getMinX());
@@ -523,12 +567,18 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
 
         services().gameState().setEndOfLevelActive(false);
 
-        // Always set endOfLevelFlag so S3kBossDefeatSignpostFlow can self-destruct
-        // and release camera boundaries. For act 2 this also triggers the zone transition.
-        services().gameState().setEndOfLevelFlag(true);
+        if (isAct2OrSpecial) {
+            // ROM loc_2DCF8 sets End_of_level_flag directly for Act 2/Sky
+            // Sanctuary/LRZ boss results (sonic3k.asm:62693-62705).
+            services().gameState().setEndOfLevelFlag(true);
+        }
 
         if (!isAct2OrSpecial) {
             // Act 1: transition to act 2 (ROM lines 62708-62720)
+            // ROM loc_2DD06 mutates the results object into Obj_TitleCard
+            // without setting End_of_level_flag. The in-level title-card wait
+            // path sets it after its children are gone (sonic3k.asm:62708-62720,
+            // 62244-62279).
             // ROM: move.b #1,(Apparent_act).w — update display act so
             // death/restart title cards show "Act 2" from this point on.
             services().setApparentAct(1);

@@ -78,10 +78,10 @@ class TestSpikerBadnikInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x100, (short) 0x100);
         services.withMain(player);
 
-        spiker.update(0, player);
+        advancePastWaitOffscreenInit(spiker, player);
         assertEquals(3, services.spawnedChildren.size(), "Spiker should create two launchers and the top spike");
 
-        for (int frame = 1; frame <= 10; frame++) {
+        for (int frame = 2; frame <= 10; frame++) {
             spiker.update(frame, player);
         }
 
@@ -115,8 +115,8 @@ class TestSpikerBadnikInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x100, (short) 0x100);
         services.withMain(player);
 
-        spiker.update(0, player);
-        for (int frame = 1; frame <= 10; frame++) {
+        advancePastWaitOffscreenInit(spiker, player);
+        for (int frame = 2; frame <= 10; frame++) {
             spiker.update(frame, player);
         }
 
@@ -153,7 +153,7 @@ class TestSpikerBadnikInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x100, (short) 0x100);
         services.withMain(player);
 
-        spiker.update(0, player);
+        advancePastWaitOffscreenInit(spiker, player);
         assertEquals(3, services.spawnedChildren.size(), "Expected launcher and top-spike children");
 
         spiker.onUnload();
@@ -175,8 +175,8 @@ class TestSpikerBadnikInstance {
                 new ObjectSpawn(0x120, 0x100, Sonic3kObjectIds.SPIKER, 0, 0, false, 0));
         spiker.setServices(services);
 
-        spiker.update(0, main);
-        for (int frame = 1; frame <= 10; frame++) {
+        advancePastWaitOffscreenInit(spiker, main);
+        for (int frame = 2; frame <= 10; frame++) {
             spiker.update(frame, main);
         }
 
@@ -194,8 +194,8 @@ class TestSpikerBadnikInstance {
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x100, (short) 0x100);
         services.withMain(player);
 
-        spiker.update(0, player);
-        for (int frame = 1; frame <= 10; frame++) {
+        advancePastWaitOffscreenInit(spiker, player);
+        for (int frame = 2; frame <= 10; frame++) {
             spiker.update(frame, player);
         }
         AbstractObjectInstance leftLauncher = findChild(services.spawnedChildren, 0x110, 0x104);
@@ -254,6 +254,11 @@ class TestSpikerBadnikInstance {
                 .filter(child -> child.getName().equals(name))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("Missing child named " + name));
+    }
+
+    private static void advancePastWaitOffscreenInit(SpikerBadnikInstance spiker, PlayableEntity player) {
+        spiker.update(0, player);
+        spiker.update(1, player);
     }
 
     private static class RecordingServices extends StubObjectServices {

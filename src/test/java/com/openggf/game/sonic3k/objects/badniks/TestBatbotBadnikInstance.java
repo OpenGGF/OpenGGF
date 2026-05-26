@@ -78,6 +78,9 @@ class TestBatbotBadnikInstance {
         assertEquals(0x1AF0, batbot.getX(),
                 "Obj_Batbot compares only d2 from Find_SonicTails, the nearest player's absolute X distance");
         batbot.update(2, player);
+        assertEquals(0x1AF0, batbot.getX(),
+                "Obj_WaitOffscreen restores Obj_Batbot one frame before its activation routine runs");
+        batbot.update(3, player);
 
         assertEquals(0x1AF2, batbot.getX());
     }
@@ -99,11 +102,15 @@ class TestBatbotBadnikInstance {
         batbot.update(1, player);
         batbot.update(2, player);
 
+        assertEquals(0x1AF0, batbot.getX(),
+                "The first normal Batbot frame can arm x_vel but does not call MoveSprite2");
+        batbot.update(3, player);
+
         assertEquals(0x1AF2, batbot.getX(),
                 "x_vel starts at $200 and Chase_Object refuses to store $208");
         assertEquals(0x0638, batbot.getY(),
                 "y_vel is only $08 on the first MoveSprite2 frame");
-        batbot.update(3, player);
+        batbot.update(4, player);
 
         assertEquals(0x1AF4, batbot.getX());
         assertEquals(0x0638, batbot.getY());
@@ -130,9 +137,38 @@ class TestBatbotBadnikInstance {
         putBatbotOnScreen();
         batbot.update(1, player);
 
+        assertEquals(0, batbot.getCollisionFlags(),
+                "Obj_WaitOffscreen restores Obj_Batbot and returns before SetUp_ObjAttributes");
+        assertEquals(0x1AF0, batbot.getX());
+
+        batbot.update(2, player);
+
         assertEquals(0x0D, batbot.getCollisionFlags());
         assertEquals(0x1AF0, batbot.getX(),
-                "First visible frame initializes and arms x_vel; movement starts in the chase routine");
+                "The first normal Obj_Batbot frame initializes collision but does not move");
+    }
+
+    @Test
+    void objWaitOffscreenUsesRomTwentyPixelTemporarySpriteMargin() {
+        AbstractObjectInstance.updateCameraBounds(0x2420, 0x00A1, 0x2560, 0x0181, 0);
+        BatbotBadnikInstance batbot = new BatbotBadnikInstance(new ObjectSpawn(0x24C0,
+                0x0088, Sonic3kObjectIds.BATBOT, 0, 0, false, 0));
+        batbot.setServices(new TestObjectServices());
+        AbstractPlayableSprite player = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+        player.setCentreX((short) 0x24C0);
+        player.setCentreY((short) 0x0088);
+
+        batbot.update(0, player);
+
+        assertEquals(0, batbot.getCollisionFlags(),
+                "Map_Offscreen width/height $20 makes the wrapper visible, but the restored op waits one frame");
+        batbot.update(1, player);
+
+        assertEquals(0x0D, batbot.getCollisionFlags(),
+                "Obj_Batbot now runs SetUp_ObjAttributes instead of waiting for exact point visibility");
     }
 
     @Test

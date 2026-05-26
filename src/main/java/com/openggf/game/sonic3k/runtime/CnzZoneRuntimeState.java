@@ -22,6 +22,7 @@ public final class CnzZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return events.getDynamicResizeRoutine(); }
     @Override public boolean isActTransitionFlagActive() { return events.isEventsFg5(); }
+    public boolean isBackedBy(Sonic3kCNZEvents candidate) { return events == candidate; }
 
     public Sonic3kCNZEvents.BossBackgroundMode bossBackgroundMode() {
         return events.getBossBackgroundMode();

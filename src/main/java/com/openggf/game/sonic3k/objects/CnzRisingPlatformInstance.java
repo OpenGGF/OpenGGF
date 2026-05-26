@@ -129,6 +129,14 @@ public final class CnzRisingPlatformInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOnScreenHalfWidth() {
+        // ROM Obj_CNZRisingPlatform writes width_pixels=$30; Sonic_Move uses
+        // width_pixels(a1) for object-edge balance (sonic3k.asm:67132,
+        // 22462-22473), so the render/balance width must match the solid width.
+        return HALF_WIDTH;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return true;
     }
