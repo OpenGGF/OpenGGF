@@ -1,5 +1,2399 @@
 # Trace Frontier Log
 
+## 2026-05-26 - Trace cleanup audit: no zone carve-outs for new sidekick fixes
+
+- Policy update:
+  - Added the no zone/route/frame carve-out rule to `AGENTS.md`, `CLAUDE.md`,
+    `.agents/skills/trace-replay-bug-fixing/SKILL.md`, and
+    `.claude/skills/trace-replay-bug-fixing/skill.md`.
+  - Explicitly called out that "ROM-default behaviour except in AIZ" is still a
+    zone-specific carve-out and is not acceptable.
+- Sidekick cleanup:
+  - Removed the trace-replay wording from the sidekick CPU ROM-state test helper
+    and made `hydrateFromRomCpuState` package-private.
+  - Verified no `replay_sidekicks`, `replaySidekicks`, or removed normal
+    frame-counter bridge APIs remain in source/tests/docs.
+- Trace bootstrap cleanup:
+  - Removed S2 Tornado replay gates keyed to `metadata.zone()` and now discover
+    the live ObjB2 ride-start shape through object routine/subtype predicates.
+  - Removed the S2 SlotMachine title-card prelude gate keyed to
+    `rom_zone_id == 0x0C`; it now depends on the recorder-advertised
+    `cnz_slot_machine_state_per_frame` capability.
+  - Restored S2 native-prelude sidekick title-card timing as a game-level
+    execution rule derived from `Sonic_Pos_Record_Index == 0x68` (26
+    `Sonic_RecordPos` calls). This removed the temporary CNZ frame-0
+    sidekick-speed regression without adding a zone carve-out.
+- Focused non-trace guards:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.TestTraceDataParsing,com.openggf.trace.TestPreludeFramesKnobsZero,com.openggf.testmode.TestModeTracePickerTest" test "-DfailIfNoTests=false"`
+  - PASS: 52 tests, 0 failures.
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuControllerHydrate,com.openggf.sprites.playable.TestSidekickCpuControllerCarry,com.openggf.sprites.playable.TestSidekickCpuFollowParity,com.openggf.tests.TestTraceReplayInvariantGuard" test "-DfailIfNoTests=false"`
+  - PASS: 55 tests, 0 failures.
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy,com.openggf.tests.trace.TestTraceDataParsing,com.openggf.tests.trace.TestSonic2TornadoRidePrelude" test "-DfailIfNoTests=false"`
+  - PASS: 51 tests, 0 failures.
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.trace.TestPreludeFramesKnobsZero,com.openggf.tests.trace.TestTraceReplayStartPositionPolicy" test "-DfailIfNoTests=false"`
+  - PASS: 19 tests, 0 failures.
+- Full-suite guard:
+  `mvn "-Dmse=off" test`
+  - PASS: 5359 tests, 0 failures, 0 errors, 6 skipped.
+  - `git diff --check` reported no whitespace errors.
+- S2 trace regression guard:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - CNZ: restored to the logged frame 3906 frontier,
+    `tails_y expected=0x06C0 actual=0x06C1`.
+  - SCZ: PASS.
+  - WFZ: still fails at the logged frame 4719,
+    `x_speed expected=0x08D6 actual=0x08E2`.
+  - Count: CNZ 94 errors / 0 warnings; WFZ 589 errors / 0 warnings.
+- S3K trace regression guard:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - AIZ: still fails at frame 19714,
+    `x_speed expected=0x0014 actual=0x0000`.
+  - CNZ: still fails at frame 22036,
+    `y_speed expected=-06C8 actual=-0700`.
+  - MGZ: still fails at frame 4124,
+    `y_speed expected=0x0000 actual=0x01AC`.
+  - No S3K trace regression was observed in these gates.
+
+## 2026-05-25 - S3K frontier audit after review cleanup (no trace regressions)
+
+- Scope: staging-prep review after removing temporary debug output, replacing
+  trace-row-derived sidekick replay bootstrap with explicit metadata, and
+  narrowing S3K recorder schema advertising.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: still fails at frame 22036
+    `y_speed expected=-06C8 actual=-0700`.
+  - Count: 1460 errors / 17 warnings.
+- AIZ replay:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: still fails at frame 19714
+    `x_speed expected=0x0014 actual=0x0000`.
+  - Count: 30 errors / 23 warnings.
+  - This supersedes older detailed AIZ notes that stopped at frame 19669; the
+    current authoritative AIZ frontier is frame 19714.
+- MGZ replay:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: still fails at frame 4124
+    `y_speed expected=0x0000 actual=0x01AC`.
+  - Count: 3852 errors / 64 warnings.
+  - This supersedes older MGZ notes that mention intermediate frames 2458 or
+    3777; the current authoritative MGZ frontier is frame 4124.
+
+No S3K trace regression was observed in the current AIZ/CNZ/MGZ gates. All
+three fail at the same top frontier as the pre-cleanup review runs.
+
+## 2026-05-25 - Touch-response single-region profile dispatch restores CNZ spark frontier (CNZ f21772 -> f22036)
+
+- Regression triage:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  initially stopped again at frame 15299
+  `tails_y expected=0x02EC actual=0x02ED`.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#openGoSpawnsRomCoilSparkChildren+openCoilSparkAppliesSidekickHurtKnockback" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayCnzMinibossTailsPushBypassUsesHurtLatchedLeaderInput" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Bootstrap policy guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.TestTraceReplayStartPositionPolicy,com.openggf.trace.TestPreludeFramesKnobsZero" test "-DfailIfNoTests=false"`
+  - PASS: 18 tests, 0 failures.
+- CNZ replay after fix:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from the logged frame 21772
+    `y_speed expected=-0700 actual=-0220` to frame 22036
+    `y_speed expected=-06C8 actual=-0700`.
+  - New count: 1460 errors / 17 warnings.
+- AIZ regression guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: still fails at the known frame 19714
+    `x_speed expected=0x0014 actual=0x0000`; the old f8941 AIZ regression did
+    not return.
+
+### Root cause
+
+The f15299 regression was caused by `ObjectManager.TouchResponses` always
+calling `TouchResponseProvider#getTouchResponseProfile(boolean)`, even for
+single-region objects. Objects such as `CnzMinibossSparkInstance` override the
+no-arg profile to opt out of the generic render-visibility touch gate because
+ROM `Child_DrawTouch_Sprite` adds those spark children directly to S3K's
+collision-response list (`docs/skdisasm/sonic3k.asm:178048-178053,21200-21209`).
+Bypassing that no-arg override rebuilt a default profile with
+`requiresRenderFlagForTouch=true`, so the trace saw the sparks present but
+`gate=offscreenTouch`, and Tails stayed on the pre-hurt trajectory.
+
+The manager now asks real multi-region providers for the boolean profile, but
+uses the no-arg profile for single-region objects. This restores custom
+single-region profiles without adding a CNZ-specific engine hack.
+
+### New CNZ frontier (frame 22036)
+
+`y_speed mismatch (expected=-06C8, actual=-0700)`. Sonic, Tails, camera, and
+positions match at the first error; Sonic's balloon launch vertical speed is
+one gravity step too strong after the CNZ2 balloon cluster around
+`@1308,05E8`.
+
+## 2026-05-24 - S3K CNZ rising-platform width_pixels clears Tails history drift (CNZ f21199 -> f21772)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused rising-platform guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzRisingPlatformInstance" test "-DfailIfNoTests=false"`
+  - PASS: 6 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 21199
+    `tails_x expected=0x1166 actual=0x1165` to frame 21772
+    `y_speed expected=-0700 actual=-0220`.
+  - New count: 1440 errors / 17 warnings.
+
+### Root cause
+
+Frame 21199 was downstream of Sonic's recorded status history, not a Tails-local
+position write. Tails CPU consumed a delayed leader status byte whose facing bit
+differed from ROM, so it missed the ROM `leader_on_object` one-pixel nudge. The
+first upstream owner was frame 21107: engine Sonic falsely entered Balance4 and
+flipped left while standing still on a CNZ rising platform, and that full status
+byte was later recorded for Tails by `Sonic_RecordPos`
+(`docs/skdisasm/sonic3k.asm:22119-22133`).
+
+ROM `Obj_CNZRisingPlatform` initializes `width_pixels=$30`
+(`docs/skdisasm/sonic3k.asm:67126-67136`), and `Sonic_Move` reads
+`width_pixels(a1)` from the ridden object for object-edge balance
+(`docs/skdisasm/sonic3k.asm:22462-22473`). The engine had the solid width at
+`$30` but left the rendered/balance width at the default `$10`, making the
+f21107 geometry look beyond the left edge. `CnzRisingPlatformInstance` now
+exposes `$30` as its on-screen/balance half-width.
+
+### New CNZ frontier (frame 21772)
+
+`y_speed mismatch (expected=-0700, actual=-0220)`. The f21199 Tails X drift is
+cleared. The new first error is main-player vertical launch timing in CNZ2 near
+a balloon/cannon cluster around `$1080,$0700`: ROM has already applied the
+strong upward balloon velocity, while the engine is still on the weaker
+pre-launch trajectory and touches the nearby balloon several frames later.
+
+## 2026-05-24 - S3K Render_Sprites exclusive solid gate clears CNZ spike push (CNZ f21147 -> f21199)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused spike guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kSpikeObjectInstance" test "-DfailIfNoTests=false"`
+  - PASS: 3 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 21147
+    `tails_x_speed expected=-0006 actual=0x0000` to frame 21199
+    `tails_x expected=0x1166 actual=0x1165`.
+  - New count: 1447 errors / 17 warnings.
+
+### Root cause
+
+Frame 21147 was a stale sidekick `Status_Push` carryover from a CNZ2 spike.
+ROM `Obj_Spikes` runs `SolidObjectFull` before its `Sprite_OnScreen_Test2`
+tail call (`docs/skdisasm/sonic3k.asm:49011-49039`), so the solid helper reads
+the `render_flags` bit 7 set by the previous `Render_Sprites` pass. That
+renderer rejects exact lower/right edges with `bhs`/`bge`
+(`docs/skdisasm/sonic3k.asm:36347-36365`). At CNZ f21146 the spike at
+`@1170,08B0` is exactly at `camera_y + 224 + height_pixels`, so ROM has
+already cleared bit 7; `SolidObjectFull_1P` branches through the offscreen
+clear path instead of re-setting Tails' push bit
+(`docs/skdisasm/sonic3k.asm:41016-41018,41390-41394,41528-41532`).
+
+The engine's solid-contact bounds used inclusive upper edges, keeping the spike
+solid for one extra frame and making Tails CPU take `current_push_bypass` at
+frame 21147. `CameraBounds` now exposes a ROM `Render_Sprites` bounds helper
+with exclusive upper edges, and `AbstractObjectInstance.isWithinSolidContactBounds`
+uses it only for SolidObjectFull's render-flag gate.
+
+### New CNZ frontier (frame 21199)
+
+`tails_x mismatch (expected=0x1166, actual=0x1165)`. Player/camera and Tails
+velocities match at the first error. Tails is in `leader_on_object` near the
+CNZRisingPlatform/spike cluster; the remaining one-pixel X drift appears to be
+position/order state after the now-correct push release, not a current
+horizontal velocity mismatch.
+
+## 2026-05-24 - S3K CNZ cylinder jump-release uses Ctrl logical press bits (CNZ f19296 -> f21147)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 28 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 19296
+    `tails_air expected=0 actual=1` to frame 21147
+    `tails_x_speed expected=-0006 actual=0x0000`.
+  - New count: 1558 errors / 17 warnings.
+
+### Root cause
+
+Frame 19296 was a CNZCylinder P2 held-rider release bug. ROM
+`Obj_CNZCylinder` passes `Ctrl_1_logical` / `Ctrl_2_logical` in `d5` to
+`sub_324C0`, and `loc_325B6` tests only the low-byte A/B/C press bits before
+taking the jump-release branch (`docs/skdisasm/sonic3k.asm:67656-67672,
+68059-68064`). The trace shows ROM `ctrl2=0000/00`, so Tails stays held with
+`object_control=$03`; the engine used the live held/forced jump latch and took
+`p2=release_jump` anyway.
+
+`CnzCylinderInstance` now tests the playable's published ROM-visible logical
+jump press bit for this one object path. A focused guard covers the f19296
+shape: CPU Tails has live jump held but `Ctrl_2_logical` has no jump press, so
+the cylinder keeps Tails grounded/object-controlled instead of releasing.
+
+### New CNZ frontier (frame 21147)
+
+`tails_x_speed mismatch (expected=-0006, actual=0x0000)`. Player/camera and
+Tails position match at the first error. ROM Tails has current CPU input
+`0404` and post-CPU speed `FFFA`, while the engine is still in
+`current_push_bypass` for Tails and leaves x/ground speed at zero near a
+CNZRisingPlatform/spikes cluster in CNZ2.
+
+## 2026-05-24 - S3K CNZ stale offscreen sidekick ride slot despawn (CNZ f18917 -> f19296)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Removed the unproven CNZCylinder offscreen P2 interact-latch patch and its guard; it did not move the trace and was not needed for the bounded fix below.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuDespawnParity#s3kOffscreenUnloadedRideSlotDespawnsEvenWhenInstanceWasNotDestroyed,com.openggf.game.sonic3k.objects.TestCnzBalloonInstance#underwaterNegativeSubtypeLaunchesWithoutPlayerPositionSnap,com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 29 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 18917
+    `tails_y_speed expected=0x0000 actual=0x0010` to frame 19296
+    `tails_air expected=0 actual=1`.
+  - New count: 1568 errors / 16 warnings.
+
+### Root cause
+
+Frame 18917 was S3K Tails CPU's stale offscreen interact-slot path. ROM
+`sub_13EFC` checks offscreen Tails, sees `Status_OnObj`, reads the cached
+interact slot, and compares the cached interact word with the first word at
+that slot. Once the CNZCylinder slot has been freed, the first word is zero, so
+ROM branches through `sub_13ECA` and writes the `$81` catch-up marker with
+zeroed marker position (`docs/skdisasm/sonic3k.asm:26816-26833,26799-26809`;
+freed slot via `Delete_Referenced_Sprite` at `docs/skdisasm/sonic3k.asm:36116-36124`).
+
+The engine already had a S3K feature flag for destroyed latched ride instances,
+but counter-window unload removes the instance from `ObjectManager` without
+necessarily setting the destroyed flag. `SidekickCpuController` now treats a
+latched ride instance that is no longer active as the same freed-slot condition,
+while remaining behind the existing sidekick despawn feature gates.
+
+### New CNZ frontier (frame 19296)
+
+`tails_air mismatch (expected=0, actual=1)`. Player/camera and Tails position
+match at the first error. ROM has Tails on CNZCylinder slot 29 at
+`@17EA,0B3C` with `object_control=$03`/standing state; the engine has Tails
+airborne after a `release_jump` path from the matching nearby cylinder.
+
+## 2026-05-24 - S3K CNZ P2 horizontal cylinder side-contact frame-entry anchor (CNZ f18259 -> f18735)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance#horizontalOscillatorCpuSidekickNewSideContactUsesFrameEntryXAnchor" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 18259
+    `tails_x expected=0x1440 actual=0x143F` to frame 18735
+    `g_speed expected=0x01E6 actual=0x04BA`.
+  - New count: 1196 errors / 17 warnings.
+
+### Root cause
+
+Frame 18259 was a split object/solid checkpoint anchor mismatch on a free CPU
+sidekick side contact with horizontal CNZCylinder subtype `$42`. Sidekick CPU
+and physics produced the expected pre-object value, then the cylinder's inline
+solid checkpoint wrote Tails from `143B.E000` to `143F.E000`. ROM context had
+the cylinder at `@1415,0AE0`; engine current position was `@1414,0AE0` with
+`pre=@1415,0AE0`.
+
+ROM `Obj_CNZCylinder` runs `sub_321E2`, P1 `sub_324C0`, P2 `sub_324C0`, then
+passes the live object-pass `x_pos(a0)` in `d4` to `SolidObjectFull`
+(`docs/skdisasm/sonic3k.asm:67656-67672,41006-41010`). `SolidObject_cont` uses
+that `d4` anchor for side classification/separation
+(`docs/skdisasm/sonic3k.asm:41394-41407,41488-41495`). In the engine split, the
+current horizontal oscillator can be one step ahead by the deferred solid
+checkpoint, so free P2 side contact must use the frame-entry cylinder X anchor.
+`CnzCylinderInstance` now applies that object-local anchor for CPU sidekick
+horizontal new side contact; no generic solid/object-manager behavior changed.
+
+The replay context also keeps a clean sidekick object-mutation diagnostic
+(`eng-tails-objmut`) so future sidekick post-physics overwrites can be compared
+without stack-print noise.
+
+### New CNZ frontier (frame 18735)
+
+`g_speed mismatch (expected=0x01E6, actual=0x04BA)`. Tails is aligned at the new
+first error, including position and velocities. Player position, camera,
+`x_speed`, and `y_speed` also match at the first error, but engine ground speed
+is stale/high while ROM has `g_speed=$01E6` near the CNZ2 cylinder /
+invisible-hurt-block cluster around `$1449,$0AE0` and `$1428,$0B64`.
+
+## 2026-05-24 - S3K CNZ cylinder standing-bit recapture has no cooldown (CNZ f18155 -> f18259)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 26 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 18155
+    `x_speed expected=0x0000 actual=-03FA` to frame 18259
+    `tails_x expected=0x1440 actual=0x143F`.
+  - New count: 1269 errors / 17 warnings.
+
+### Root cause
+
+Frame 18155 was an engine-only CNZCylinder recapture cooldown. Sonic had landed
+on the subtype `$42` cylinder at `$147E,$0AE0` on the previous frame, and the
+standing bit was set while the player had just left object-control state. ROM
+`Obj_CNZCylinder` runs P1/P2 `sub_324C0` before `SolidObjectFull`
+(`docs/skdisasm/sonic3k.asm:67656-67672`). In the inactive rider path,
+`sub_324C0` consumes the standing bit immediately, stores the rider distance,
+writes `x_vel=0`, `y_vel=0`, `ground_vel=0`, and sets `object_control=$03`
+with no recent-release cooldown (`docs/skdisasm/sonic3k.asm:67985-68005`).
+The engine skipped this capture because `wasRecentlyObjectControlled(...)`
+returned true, so generic movement friction left `x_speed=$FC06` instead of
+the ROM zero.
+
+`CnzCylinderInstance` now lets both on-screen and offscreen standing-bit
+contacts enter the ROM capture path immediately. This stays object-local; no
+generic solid-contact or movement behavior changed.
+
+### New CNZ frontier (frame 18259)
+
+`tails_x mismatch (expected=0x1440, actual=0x143F)`. Sonic and camera are
+aligned through the previous cylinder-speed failure. The new owner is
+Tails-only one pixel of X drift near the CNZ2 cylinder / triangle-bumper /
+invisible-block cluster, with ROM reporting a `tailsInteract` object at
+`@1580,0AD8` while the engine has no matching nearby touch at the first error.
+
+## 2026-05-24 - S3K CNZ barber-pole stale rider instance guard (CNZ f17806 -> f18155)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused barber-pole guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzBarberPoleObjectInstance" test "-DfailIfNoTests=false"`
+  - PASS: 5 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 17806
+    `x expected=0x0ECB actual=0x0ECA` to frame 18155
+    `x_speed expected=0x0000 actual=-03FA`.
+  - New count: 1620 errors / 17 warnings.
+
+### Root cause
+
+Frame 17806 was a stale CNZ barber-pole rider overwrite. Trace diagnostics showed
+the current pole at `@0EF0,0A10` latched Sonic and computed the ROM-correct
+position `0ECB,09B7`, but an older pole at `@0E70,0990` still had a latched
+engine rider state and ran later in the object pass, overwriting Sonic to
+`0ECA,09AD`. ROM `loc_33376` only dispatches the continued ride path
+`loc_334B6` when the current object's player standing bit is set, and
+`sub_337D8` clears the previous object's standing bit before writing the new
+`interact(a1)` pointer (`docs/skdisasm/sonic3k.asm:69348-69357,69461,
+69775-69782`).
+
+`CnzBarberPoleObjectInstance` now requires the sprite's latched object instance
+to be this pole before executing continued ride. Stale per-instance rider state
+is dropped without changing the player's current latch, matching the ROM's
+single standing-bit/interact owner. The object also keeps compact
+`traceDebugDetails()` output for future CNZ barber-pole comparisons.
+
+### New CNZ frontier (frame 18155)
+
+`x_speed mismatch (expected=0x0000, actual=-03FA)`. The f17806 player position
+and camera mismatch are cleared. The new owner is later in CNZ2 near a
+CNZCylinder / triangle-bumper / invisible-block cluster: ROM has Sonic stopped
+and riding/on object, while the engine still carries negative ground/x speed.
+
+## 2026-05-24 - S3K CNZ post-transition camera bounds and Act 2 size bridge (CNZ f17322 -> f17806)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused CNZ event guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kCnzAct1EventFlow#cnzPostTransitionStartsRomAct2LevelSizeGradualAfterTitleCardHandoff+secondEventsFg5AtTransitionStageRequestsSeamlessActSwap+cnzDoTransitionAppliesRomCoordinateRemapImmediately" test "-DfailIfNoTests=false"`
+  - PASS: 3 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 17322
+    `camera_x expected=0x0260 actual=0x0261` to frame 17806
+    `x expected=0x0ECB actual=0x0ECA`.
+  - New count: 1626 errors / 17 warnings.
+
+### Root cause
+
+Frame 17322 was a CNZ1-to-CNZ2 transition camera-bound mismatch. The engine
+offset the camera position during `CNZ1BGE_DoTransition`, but it let the Act 2
+level load restore normal Act 2 camera bounds immediately. ROM offsets the live
+camera position and the live min/max bounds by the transition deltas after
+`Load_Level` (`docs/skdisasm/sonic3k.asm:107626-107646`), so CNZ now passes
+post-transition min/max X/Y and target max Y overrides through the seamless
+transition request.
+
+That exposed the next camera-bound phase at frame 17423: ROM begins expanding
+the Act 2 horizontal bound after the surviving end-sign-control chain calls
+`Change_Act2Sizes`, but the engine reload removes that object chain. CNZ now
+mirrors the delayed `Change_Act2Sizes` / gradual level-size children locally
+using the ROM gradual accumulator cadence
+(`docs/skdisasm/sonic3k.asm:180415-180419,180575-180632,178154-178168,
+178192-178224,197460-197468`).
+
+### New CNZ frontier (frame 17806)
+
+`x mismatch (expected=0x0ECB, actual=0x0ECA)`. The transition remap, control
+release, and post-transition camera clamp/gradual bound timing now match through
+the prior failures. The new owner is later CNZ2 player/object interaction near
+the barber-pole/bumper cluster; camera differences at the new window are
+downstream of the one-pixel player position divergence.
+
+## 2026-05-24 - S3K CNZ post-transition control and logical-input handoff (CNZ f17278 -> f17322)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused control-handoff guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestS3kSignpostInstance#mainEndingPoseDoesNotLockCtrl1LogicalInputHistory,com.openggf.tests.TestS3kCnzAct1EventFlow#cnzPostTransitionResultsHandoffRestoresPlayerControlAfterRomDelay,com.openggf.game.sonic3k.events.TestS3kTransitionWriteSupport" test "-DfailIfNoTests=false"`
+  - PASS: 4 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 17278
+    `x_speed expected=0x000C actual=0x0000` to frame 17322
+    `camera_x expected=0x0260 actual=0x0261`.
+  - New count: 1763 errors / 17 warnings.
+
+### Root cause
+
+Frame 17278 had two handoff defects. First, the engine rebuilt CNZ objects during
+the act reload and lost the live `Obj_LevelResults` / `Obj_EndSignControl` chain
+that clears `_unkFAA8` and then restores both players
+(`docs/skdisasm/sonic3k.asm:62708-62720,180406-180412`). CNZ now requests a
+delayed post-transition release so both players clear `object_control=$81` in
+the ROM window.
+
+Second, the engine treated the main player's signpost ending pose as a
+`Ctrl_1_locked` state. ROM `Set_PlayerEndingPose` writes `object_control=$81`,
+victory animation, and zero velocities only
+(`docs/skdisasm/sonic3k.asm:181977-181988`); `Obj_EndSignLanded` locks only
+`Ctrl_2` (`docs/skdisasm/sonic3k.asm:176198-176218`). Sonic therefore keeps
+copying raw `Ctrl_1` into `Ctrl_1_logical` while object control freezes movement,
+and `Sonic_RecordPos` stores that live input for Tails' delayed follow history
+(`docs/skdisasm/sonic3k.asm:21541-21545,22119-22136`). The signpost pose now
+keeps P1 logical input live and leaves the sidekick lock intact.
+
+### New CNZ frontier (frame 17322)
+
+`camera_x mismatch (expected=0x0260, actual=0x0261)`. Player and Tails
+positions, velocities, and Tails CPU input now match through the previous
+handoff failure. The next owner is post-transition horizontal camera clamp/hold
+timing, not sidekick control release or logical-input history.
+
+## 2026-05-24 - S3K CNZ signpost results create gate (CNZ f16669 -> f17278)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused signpost/results guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestS3kSignpostInstance,com.openggf.game.sonic3k.objects.TestS3kResultsScreenObjectInstance" test "-DfailIfNoTests=false"`
+  - PASS: 5 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 16669
+    `x expected=0x02D0 actual=0x32D0` to frame 17278
+    `x_speed expected=0x000C actual=0x0000`.
+  - New count: 2190 errors / 17 warnings.
+
+### Root cause
+
+Frame 16669 was the CNZ1-to-CNZ2 transition gate. The signpost bump eligibility
+and landed-timer fixes brought the results object into the ROM window, but the
+engine still signaled `Events_fg_5` as soon as `S3kResultsScreenObjectInstance`
+was constructed. ROM `Obj_LevelResultsInit` queues three Kosinski module loads
+and advances to `Obj_LevelResultsCreate` (`docs/skdisasm/sonic3k.asm:
+62512-62584`); `Obj_LevelResultsCreate` polls `Kos_modules_left` and only then
+sets `Events_fg_5` for Act 1 non-AIZ/non-ICZ zones
+(`docs/skdisasm/sonic3k.asm:62586-62616`). CNZ screen events consume that flag
+in the same frame because `Process_Sprites` runs before `ScreenEvents`
+(`docs/skdisasm/sonic3k.asm:7884-7895,107603-107653`).
+
+The engine now models that create gate before writing the transition signal.
+The first local attempt opened the gate one frame early; the corrected guard
+keeps the engine in CNZ1 coordinates through f16668 and performs the ROM-matched
+CNZ2 remap at f16669.
+
+### New CNZ frontier (frame 17278)
+
+`x_speed mismatch (expected=0x000C, actual=0x0000)`. Player/camera coordinates
+are now in CNZ2 and match the ROM. Tails is still frozen in engine
+`object_control=$81`, while the ROM has cleared sidekick object control and the
+Tails CPU resumes normal `fallthrough_sub20` acceleration. The next owner is
+the in-level title-card / post-transition player-control handoff for P2, not
+the signpost or CNZ act-transition remap.
+
+## 2026-05-24 - S3K CNZ delayed post-boss BG-to-FG refresh/remap (CNZ f16360 -> f16669)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused CNZ event/scroll guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kCnzAct1EventFlow" test "-DfailIfNoTests=false"`
+  - PASS: 8 tests, 0 failures.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kCnzMinibossArenaHeadless#scrollControlBridgeSignalUsesRomWaitAndSlowPathBeforeEventHandoff+fgRefreshCopiesBossTunnelBgLayoutBackToForegroundCollision+fgRefreshRestoresTailsLandingCellFromBossBackgroundLayout" test "-DfailIfNoTests=false"`
+  - PASS: 3 tests, 0 failures.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kCnzBossScrollHandler" test "-DfailIfNoTests=false"`
+  - PASS: 5 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 16360
+    `air expected=0 actual=1` to frame 16669
+    `x expected=0x02D0 actual=0x32D0`.
+  - New count: 2929 errors / 17 warnings.
+
+### Root cause
+
+Frame 16360 was an early foreground handoff/remap. The engine completed the
+post-boss BG-to-FG layout copy immediately when `Events_fg_5` signaled, cleared
+background collision, zeroed the boss scroll offset, and remapped player/camera
+Y while the ROM was still executing the delayed redraw window. ROM
+`CNZ1BGE_AfterBoss` primes `Draw_delayed_position=$2F0` and
+`Draw_delayed_rowcount=$F`, then falls through to `CNZ1BGE_FGRefresh`
+(`docs/skdisasm/sonic3k.asm:107521-107533`). `Draw_PlaneVertSingleBottomUp`
+only takes the completion path after the row count decrements below zero
+(`docs/skdisasm/sonic3k.asm:103436-103452,107533-107539`). The actual copy,
+`Background_collision_flag` clear, `Events_bg+$08` clear, and `$1C0`
+player/camera Y remap happen at `loc_51DAE`
+(`docs/skdisasm/sonic3k.asm:107542-107568`), followed by the second delayed
+refresh pass (`docs/skdisasm/sonic3k.asm:107572-107583`).
+
+The engine now models the two delayed refresh passes with rowcount gating before
+the BG-to-FG copy/remap and before the transition gate. The first implementation
+completed one frame early at f16373; the corrected entry count preserves
+pre-remap state through f16373 and matches the ROM remap at f16374.
+
+### New CNZ frontier (frame 16669)
+
+`x mismatch (expected=0x02D0, actual=0x32D0)`. Player/Tails scalar state remains
+aligned through the delayed refresh window, and the ROM has now emitted
+`act_transition_to_cnz2` / zone-act `z=3 a=1`. The engine is still in the
+pre-transition world coordinate space (`cam_x=0x323B`, player `x=0x32D0`) while
+the ROM has applied the CNZ2 transition coordinate remap (`cam_x=0x023B`,
+player `x=0x02D0`, player `y=0x06AC`). The next owner is the seamless act swap
+coordinate/world-offset handoff, not the post-boss BG collision refresh.
+
+## 2026-05-24 - S3K CNZ miniboss top parent-defeat destruction stops false arena clears (CNZ f15735 -> f16360)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Scratch ROM diagnostic:
+  `tools/bizhawk/record_s3k_trace.bat "Sonic and Knuckles & Sonic 3 (W) [!].gen" "src/test/resources/traces/s3k/cnz/s3k-cnz-sonic-tails.bk2" level_gated_reset_aware`
+  with `OGGF_S3K_CNZ_EVENT_RAM_RANGE=15620-15735`.
+  - Scratch output was generated locally for diagnosis and is not retained in the repository.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#defeatedParentDestroysTopBeforeMovementAndArenaClear,com.openggf.tests.TestS3kCnzMinibossArenaHeadless#arenaChunkCollisionClearRunsFromScreenEventNotTopObjectWrite" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 15735
+    `tails_y_speed expected=0x0000 actual=0x05C0` to frame 16360
+    `air expected=0 actual=1`.
+  - New count: 2942 errors / 17 warnings.
+
+### Root cause
+
+Frame 15735 was not a BG-to-FG refresh timing issue. Scratch ROM event-RAM
+diagnostics showed `Events_bg+$00/$02` stayed `$0000/$0000` through the
+f15660-f15669 window, while the engine still had false arena clears at
+`f15668 snap=32D0,0310 raw=32C0,0300` and `f15669 snap=32F0,0330
+raw=32E0,0320`. Those clears removed the foreground chunk descriptors under
+Tails' later landing cell, leaving the engine to fall to the lower fallback row.
+
+The false clears came from the CNZ miniboss top continuing to run terrain probes
+after the parent was already defeated. ROM `Obj_CNZMinibossTopMain` checks the
+parent status bit 7 before `MoveSprite2`, `SolidObjectFull`, animation, or any
+terrain probe (`docs/skdisasm/sonic3k.asm:145053-145057`). When the parent is
+defeated it jumps to `loc_6DDD2`, creates the explosion, clears collision,
+displaces any player standing on it, and deletes the top
+(`docs/skdisasm/sonic3k.asm:145190-145199`). The engine now destroys the top
+before movement/arena-clear publication when its parent has entered the defeated
+state.
+
+### New CNZ frontier (frame 16360)
+
+`air mismatch (expected=0, actual=1)`. The old f15735 Tails support-cell
+failure is cleared; player and Tails positions/velocities are aligned at the
+new first error, foreground descriptors under the previous Tails landing cell
+are restored (`FG[0x65,5]=C7`), and the remaining owner is a later post-boss
+player grounded/status transition after scroll-control handoff.
+
+## 2026-05-24 - S3K CNZ focused-player look-down camera bias (CNZ f15569 -> f15627)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused CNZ guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayCnzMinibossLookDownBiasIsOwnedByFocusedPlayer" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 15569
+    `camera_y expected=0x028E actual=0x028C` to frame 15627
+    `camera_y expected=0x02B8 actual=0x02BA`.
+  - New count: 1933 errors / 16 warnings.
+
+### Root cause
+
+Frame 15569 was a camera-bias ownership bug, not a player-position or CNZ
+event/bounds mismatch. Sonic's DOWN input had reached the S3K
+`scroll_delay_counter=$78` threshold and correctly decremented the global
+camera Y bias from `$60` to `$5E`, but CPU Tails then ran the shared movement
+reset-screen path in the same engine frame and eased the global camera bias back
+to `$60`.
+
+S3K Sonic `Obj01_LookUpDown` owns `Camera_Y_pos_bias`: the DOWN branch clamps
+`scroll_delay_counter` at `$78`, subtracts 2 from `(a5)`, and skips the reset
+screen easing path (`docs/skdisasm/sonic3k.asm:22615-22673`). CPU Tails'
+normal ground path calls `Tails_InputAcceleration_Path` and the Tails roll
+check, with no equivalent camera-bias reset/pan (`docs/skdisasm/sonic3k.asm:
+25741-25746,25897-25937`). The engine now lets only non-CPU player movement
+mutate the shared look/reset camera bias; CPU sidekicks still keep normal
+screen-Y wrap behavior.
+
+### New CNZ frontier (frame 15627)
+
+`camera_y mismatch (expected=0x02B8, actual=0x02BA)`. Player and Tails
+positions, subpixels, velocities, status, and camera X are aligned at the first
+error. The next owner is later camera vertical follow/bounds behavior after the
+CNZ miniboss post-boss handoff: engine bias is already `$0008`, but ROM holds
+camera Y at `$02B8` while the engine scrolls down by two pixels.
+
+## 2026-05-24 - S3K CNZ open-coil spark children (CNZ f15299 -> f15382)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused miniboss spark guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#openGoSpawnsRomCoilSparkChildren+openCoilSparkAppliesSidekickHurtKnockback" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 15299
+    `tails_y expected=0x02EC actual=0x02ED` to frame 15382
+    `tails_x expected=0x32D7 actual=0x32D8`.
+  - New count: 3031 errors / 15 warnings.
+
+### Root cause
+
+Frame 15299 was the missing open-coil spark hurt contact from the CNZ miniboss.
+ROM `Obj_CNZMinibossOpenGo` creates `Child1_CNZCoilOpenSparks`, whose spark
+children refresh from the parent, animate, and enter the collision response list
+through `Child_DrawTouch_Sprite` (`docs/skdisasm/sonic3k.asm:144945-144951,
+145323-145346,145660-145692,178048-178053`). That path calls
+`Add_SpriteToCollisionResponseList` without an onscreen/render gate
+(`docs/skdisasm/sonic3k.asm:21200-21209`), so the spark child must bypass the
+engine's generic render-visibility touch gate. The spark uses collision byte
+`$92` and the normal hurt response path sets routine 4, air status, and
+knockback (`docs/skdisasm/sonic3k.asm:145660-145663,21050-21091`). The engine
+was missing the children, so Tails stayed on the pre-hurt trajectory.
+
+### New CNZ frontier (frame 15382)
+
+`tails_x mismatch (expected=0x32D7, actual=0x32D8)`. The f15299 one-pixel
+vertical divergence is cleared. The next owner is a Tails-only one-pixel X
+drift after the miniboss hurt/aftermath; at the first error the CPU branch and
+velocities already match (`xv/gv=0x0084`), so the new boundary is accumulated
+sidekick position/history rather than an immediate miniboss hurt velocity.
+
+## 2026-05-24 - S3K CNZ hurt-routine logical input latch (CNZ f15194 -> f15299)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused sidekick history guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s3kHurtRoutineRecordPosKeepsPreviousLogicalInputForFollowerHistory" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Focused CNZ guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayCnzMinibossTailsPushBypassUsesHurtLatchedLeaderInput" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 15194
+    `tails_g_speed expected=0x0000 actual=0x000C` to frame 15299
+    `tails_y expected=0x02EC actual=0x02ED`.
+  - New count: 3058 errors / 15 warnings.
+
+### Root cause
+
+The old f15194 owner was not a miniboss body/coil contact. Tails was in the
+S3K `loc_13DD0` current `Status_Push` bypass, which preserves the delayed
+`Ctrl_1_logical` word read from `Stat_table` and skips follow steering
+(`docs/skdisasm/sonic3k.asm:26696-26705,26775-26785`). ROM's delayed word had
+no horizontal input because the source Sonic frame was routine 4 hurt
+knockback: `loc_122BE` calls `Sonic_RecordPos` directly without entering
+`Sonic_Control` and without refreshing `Ctrl_1_logical`
+(`docs/skdisasm/sonic3k.asm:21967-21975,22132,24449-24467`; S2 has the same
+routine-4 shape at `docs/s2disasm/s2.asm:37810-37835`). The engine was
+publishing fresh live RIGHT into follower history during hurt frames, so the
+push-bypass frame replayed a spurious `$000C` Tails ground acceleration.
+
+### New CNZ frontier (frame 15299)
+
+`tails_y mismatch (expected=0x02EC, actual=0x02ED)`. The f15194 stale
+ground-speed pulse is cleared. The next owner is Tails-only during/just after
+the miniboss top sequence as Tails enters hurt routine 4; engine Tails is one
+pixel lower and already shows divergent hurt knockback follow-on velocities.
+
+## 2026-05-24 - S3K CNZ miniboss parent phase timing (CNZ f15059 -> f15194)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused phase guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#closingRawMultiDelayUsesPointerOnlyEntryBeforeCloseGo,com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayCnzMinibossParentSecondMovePassUsesRomPhase" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+- Focused miniboss suite:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics" test "-DfailIfNoTests=false"`
+  - PASS: 22 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 15059
+    `g_speed expected=0x02B4 actual=-02B4` to frame 15194
+    `tails_g_speed expected=0x0000 actual=0x000C`.
+  - New count: 3175 errors / 15 warnings.
+
+### Root cause
+
+Frame 15059 was not a body-hitbox issue. The body collision byte `$0C` and
+Touch_Enemy box math were already correct; the engine body was two pixels left
+because the CNZ miniboss parent restarted the second move pass late.
+
+Two local parent timing errors overlapped. The first Move-to-Go3 handoff reached
+routine 6 two engine frames early; the trace guard now pins the ROM-visible
+Go3/CloseGo handoff at f14712 for the `$90` Obj_Wait window
+(`docs/skdisasm/sonic3k.asm:144912-144923,177944-177949`). Later, WaitHit's
+Closing handoff was holding the first raw script pair too long. ROM
+`loc_6DB4E` only swaps `$30` to `AniRaw_CNZMinibossClosing` and `$34` to
+CloseGo, while `Animate_RawMultiDelay` pre-decrements `anim_frame_timer` before
+loading pairs (`docs/skdisasm/sonic3k.asm:144960-144969,145707-145708,
+177558-177586`). The compact parent raw-state entry now matches the
+ROM-visible CloseGo at f15004, letting the body reach `x=$3338` at f15059
+without applying the extra player rebound.
+
+### New CNZ frontier (frame 15194)
+
+`tails_g_speed mismatch (expected=0x0000, actual=0x000C)`. The f15059 main
+player body rebound is cleared. The next owner is Tails-only after the
+miniboss/top sequence: engine Tails is off-object with a tiny positive ground
+speed while ROM keeps zero.
+
+## 2026-05-24 - S3K CNZ miniboss opening-body repeat suppression (CNZ f14961 -> f15059)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused miniboss guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#bodyHitWhileOpeningStillSuppressesImmediateRepeatCollision,com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#productionTouchResponseClosedBodyBounceDoesNotOpenBeforeCloseGo" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+- Focused miniboss suite:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics" test "-DfailIfNoTests=false"`
+  - PASS: 20 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 14961
+    `tails_g_speed expected=-0218 actual=0x0218` to frame 15059
+    `g_speed expected=0x02B4 actual=-02B4`.
+  - New count: 2044 errors / 17 warnings.
+
+### Root cause
+
+At the old frontier, Tails had already received the ROM-correct miniboss body
+rebound, but the engine left the parent body touchable while the parent was
+already in Opening. The next frame applied a second immediate boss-body rebound
+and mirrored Tails' ground velocity back positive.
+
+ROM `Touch_Enemy` handles a boss-body attack before the object-specific
+`CNZMiniboss_CheckPlayerHit`: it backs up `collision_flags(a1)` to `$25(a1)`,
+stores the player marker in `$1C(a1)`, clears `collision_flags(a1)`, and
+decrements `collision_property(a1)` (`docs/skdisasm/sonic3k.asm:20916-20921`).
+`CNZMiniboss_CheckPlayerHit` then sees the cleared collision byte, seeds
+`$3A(a0)=$10`, and restores `$25(a0)` only when that countdown expires
+(`docs/skdisasm/sonic3k.asm:145404-145425`). `CnzMinibossInstance` now applies
+that collision suppression before returning from in-progress Opening/WaitHit/
+Closing player attacks, so Opening-body hits do not become repeat contacts on
+the next frame.
+
+### New CNZ frontier (frame 15059)
+
+`g_speed mismatch (expected=0x02B4, actual=-02B4)`. The f14961 Tails repeat
+rebound is cleared. Player/camera positions match at the first error, but the
+engine applies a later main-player miniboss parent/body touch around
+`@3336,0299` and reverses player velocity while ROM keeps the positive ground
+speed through that frame.
+
+## 2026-05-24 - S3K CNZ miniboss closed-body collision restore timer (CNZ f14650 -> f14943)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused miniboss/touch guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#playerAttackBeforeCloseGoBouncesWithoutOpeningCoil+playerAttackAfterCloseGoOpensCoilButDoesNotConsumeBossHp+productionTouchResponseCoilAttackOpensBossWithoutConsumingHp+productionTouchResponseClosedBodyBounceDoesNotOpenBeforeCloseGo,com.openggf.game.sonic3k.objects.TestS3kBossTouchResponseProfiles#cnzMinibossClosedBodyUsesRomObjDatCollisionByte,com.openggf.level.objects.TestTouchResponseManager#testS3kTouchSpecialUnlistedC0FlagDoesNotDecodeAsBoss" test "-DfailIfNoTests=false"`
+  - PASS: 6 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 14650 `y_speed expected=0x0870 actual=-0870`
+    to frame 14943 `g_speed expected=-0210 actual=0x0210`.
+  - New count: 2564 errors / 18 warnings.
+
+### Root cause
+
+Frame 14650 was a repeated closed-body rebound. The first rebound at frame
+14644 already matched ROM, but the engine kept the CNZ miniboss body touchable
+and applied the boss-hit velocity negation again six frames later. ROM
+`Touch_Enemy` backs up the body collision byte, clears `collision_flags(a1)`,
+stores the player marker, and decrements `collision_property(a1)` on a boss hit
+(`docs/skdisasm/sonic3k.asm:20909-20924`). On the following object pass,
+`CNZMiniboss_CheckPlayerHit` sees the cleared body collision, seeds `$3A(a0)`
+with `$10`, restores the collision_property count, and does not restore the
+backed-up collision byte from `$25(a0)` until the timer expires
+(`docs/skdisasm/sonic3k.asm:145404-145425`). `CnzMinibossInstance` now keeps
+the parent body collision suppressed for that local restore window without
+changing generic touch response.
+
+### New CNZ frontier (frame 14943)
+
+`g_speed mismatch (expected=-0210, actual=0x0210)`. The f14650 duplicate
+closed-body hit is cleared. The new owner is later in the miniboss opening/top
+sequence: ROM has already reversed the player velocity while the engine is still
+moving right with no body/top/coil overlap at the first error.
+
+## 2026-05-24 - S3K CNZ miniboss closed-body hit guard (CNZ f14594 -> f14650)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused miniboss/touch guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#playerAttackBeforeCloseGoBouncesWithoutOpeningCoil+playerAttackAfterCloseGoOpensCoilButDoesNotConsumeBossHp+productionTouchResponseCoilAttackOpensBossWithoutConsumingHp+productionTouchResponseClosedBodyBounceDoesNotOpenBeforeCloseGo,com.openggf.game.sonic3k.objects.TestS3kBossTouchResponseProfiles#cnzMinibossClosedBodyUsesRomObjDatCollisionByte,com.openggf.level.objects.TestTouchResponseManager#testS3kTouchSpecialUnlistedC0FlagDoesNotDecodeAsBoss" test "-DfailIfNoTests=false"`
+  - PASS: 6 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 14594 `tails_x_speed expected=0x0128 actual=-0200`
+    to frame 14650 `y_speed expected=0x0870 actual=-0870`.
+  - New count: 2054 errors / 19 warnings.
+
+### Root cause
+
+Frame 14594 was an early CNZ miniboss opening mismatch. The engine entered the
+Opening routine on any closed-body boss touch, which exposed the open coil/top
+hurt collision early and sent Tails through the sidekick hurt-object route.
+ROM `Obj_CNZMinibossInit` sets bit 3 of `$38(a0)` while the boss is still in
+the initial moving/closed phase (`docs/skdisasm/sonic3k.asm:144885-144895`).
+`Obj_CNZMinibossCloseGo` later clears that bit (`docs/skdisasm/sonic3k.asm:
+144922-144932`), and `CNZMiniboss_CheckPlayerHit` only switches to Opening
+when its `bset #3,$38(a0)` sees the bit was clear (`docs/skdisasm/sonic3k.asm:
+145404-145415`). Closed-body hits can still use the normal boss-hit rebound
+path (`docs/skdisasm/sonic3k.asm:20909-20924`), but they must not open the
+boss before CloseGo.
+
+### New CNZ frontier (frame 14650)
+
+`y_speed mismatch (expected=0x0870, actual=-0870)`. The f14594 Tails hurt/open
+state is gone; at f14650 the miniboss body/top/coil are closed and aligned
+between ROM and engine. The next owner is main-player closed-body touch
+response: engine applies full boss-hit velocity negation while ROM continues
+with downward positive `y_speed`.
+
+## 2026-05-24 - S3K CNZ Door current-X carry reference (CNZ f13575 -> f13628)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused door guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestDoorObjectInstance#horizontalDoorDoesNotCarryRiderOnSlideFrame" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 13575 `x expected=0x24C0 actual=0x24B8`
+    to frame 13628 `y_speed expected=-0258 actual=-0158`.
+  - New count: 3097 errors / 17 warnings.
+
+### Root cause
+
+Frame 13575 was a Door-specific rider carry mismatch. The horizontal CNZ Door
+had moved from `$24D0` to `$24C8`, and the engine treated it like a generic
+moving platform by applying `currentX - ridingX = -8` to the player on the
+continued-riding pass. ROM `Obj_Door` updates the door position first, then
+stores that same current `x_pos(a0)` in `d4` immediately before calling
+`SolidObjectFull` for both vertical and horizontal variants
+(`docs/skdisasm/sonic3k.asm:66123-66137, 66239-66258`). The continued-riding
+branch copies `d4` into `d2`; `MvSonicOnPtfm` subtracts current `x_pos(a0)`
+from `d2`, so the X carry delta is zero (`docs/skdisasm/sonic3k.asm:41038-41040,
+41642-41680`). `DoorObjectInstance` now opts out of horizontal rider carry
+without changing shared solid behavior.
+
+### New CNZ frontier (frame 13628)
+
+`y_speed mismatch (expected=-0258, actual=-0158)`. The next owner is after the
+door sequence near the Batbot/Clamer cluster: player X/subpixels match, but the
+engine has a less negative jump/fall velocity after touching/destroying the
+Batbot around `$24D0,$0089`.
+
+## 2026-05-24 - S3K CNZ door stale standing-bit no-contact return (CNZ f13486 -> f13575)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused solid guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestSolidObjectManager#inlineCheckpointAirborneStaleStandingBitDoesNotRelandSameObject" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 13486 `y_speed expected=0x0038 actual=0x0000`
+    to frame 13575 `x expected=0x24C0 actual=0x24B8`.
+  - New count: 2354 errors / 19 warnings.
+
+### Root cause
+
+Frame 13486 was a main-player support-release ordering mismatch on the CNZ
+door at `$24C0,$02C8`: after movement/physics the engine had applied gravity
+and matched ROM `y_speed=$0038`, but the door's inline solid checkpoint then
+re-landed the player from a stale standing bit and zeroed `y_speed`; a later
+object cleared support, leaving ROM status but engine velocity. S3K `Obj_Door`
+calls `SolidObjectFull` for both vertical and horizontal variants after
+preparing d1/d2/d3/d4 (`docs/skdisasm/sonic3k.asm:66136-66137,
+66249-66258`). `SolidObjectFull_1P` consumes this stale standing-bit/in-air
+case by clearing support and returning `d4=0` before `SolidObject_cont` can
+land the player (`docs/skdisasm/sonic3k.asm:41017-41035`); S2 has the same
+helper contract (`docs/s2disasm/s2.asm:34831-34849`). The engine keeps the
+pre-existing standing-bit snapshot/clear behavior for all solids, but the
+early no-contact return is opt-in for SolidObjectFull-style providers so
+custom objects such as CNZCylinder retain their object-local capture paths.
+
+### New CNZ frontier (frame 13575)
+
+`x mismatch (expected=0x24C0, actual=0x24B8)`. The new owner is later in the
+same door/Clamer/Batbot/CNZCylinder cluster: the player is riding slot 10 door
+in the engine while ROM is on object slot `$0C`, with an 8-pixel X offset and
+one ring-count difference already accumulated.
+
+## 2026-05-24 - S3K CNZ cylinder release reads stored ROM y_vel (CNZ f13116 -> f13486)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 25 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 13116 `y_speed expected=-0680 actual=-0880`
+    to frame 13486 `y_speed expected=0x0038 actual=0x0000`.
+  - New count: 2987 errors / 20 warnings.
+
+### Root cause
+
+Frame 13116 was a main-player jump release from subtype `$46` CNZCylinder.
+Engine `currentYVelocity` contained a synthetic `-$200` displacement derived
+from the vertical oscillator's one-pixel position step, so the release wrote
+`-$880`. ROM `loc_325B6` copies `y_vel(a0)` and adds `-$680`
+(`docs/skdisasm/sonic3k.asm:68059-68068`), but the sine vertical oscillator
+path `loc_3238C` writes `y_pos(a0)` directly and advances the angle without
+updating `y_vel(a0)` (`docs/skdisasm/sonic3k.asm:67865-67872`). CNZCylinder
+now uses the ROM stored velocity for rider launch/threshold calculations:
+mode-0 cylinders use the actual mode-0 `y_vel`; sine/circular routes contribute
+zero rather than the engine-only position delta.
+
+### New CNZ frontier (frame 13486)
+
+`y_speed mismatch (expected=0x0038, actual=0x0000)`. The new owner appears to
+be main-player object/support release around the door/vacuum/bumper cluster:
+ROM has just cleared `on_object` and applies gravity, while the engine is still
+at zero vertical speed after landing/support.
+
+## 2026-05-24 - S3K CNZ P2 vertical cylinder frame-entry support anchor (CNZ f13060 -> f13116)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 24 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 13060 `tails_y_speed expected=0x0320 actual=0x0000`
+    to frame 13116 `y_speed expected=-0680 actual=-0880`.
+  - New count: 2603 errors / 17 warnings.
+
+### Root cause
+
+Frame 13060 was Tails/P2 resolving a new top contact against subtype `$46`
+CNZCylinder after the engine had already advanced the vertical oscillator one
+pixel upward. ROM `Obj_CNZCylinder` runs motion, P1 `sub_324C0`, P2
+`sub_324C0`, then `SolidObjectFull` in the same object pass
+(`docs/skdisasm/sonic3k.asm:67656-67672`); P2 participates in
+`SolidObjectFull` while `render_flags(a1)` is negative
+(`docs/skdisasm/sonic3k.asm:41006-41016`). The vertical oscillator body writes
+`y_pos(a0)` before angle increment (`docs/skdisasm/sonic3k.asm:67865-67874`),
+and `SolidObject_cont` classifies the first top contact from that object-pass
+anchor (`docs/skdisasm/sonic3k.asm:41394-41440`). The engine now uses the
+frame-entry anchor for this CPU sidekick vertical-oscillator upward new-contact
+case, so Tails stays airborne with ROM `y_speed=$0320` through f13060.
+
+The f13062 follow-up was the same split-phase overwrite after P2 capture:
+`sub_324C0` restores radii, clears air/roll, sets `object_control=$03`, and the
+same object pass still calls `SolidObjectFull` for on-screen P2
+(`docs/skdisasm/sonic3k.asm:67985-68005, 41006-41016`). The capture wrote the
+ROM support Y from frame-entry `$0414`, but the later solid checkpoint had been
+using the already-stepped `$0413`. CNZCylinder now also uses the frame-entry Y
+anchor for CPU object-controlled riders on the same vertical-oscillator upward
+support path.
+
+### New CNZ frontier (frame 13116)
+
+`y_speed mismatch (expected=-0680, actual=-0880)`. Tails remains aligned at the
+first error. The new owner is main-player launch/release near the same
+CNZCylinder/cage/Clamer cluster: ROM releases Sonic with `y_speed=$F980` while
+the engine has `y_speed=$F780`. This is separate from the f13060 Tails support
+gate.
+
+## 2026-05-24 - S3K CNZ vertical cylinder held-support contact anchor (CNZ f13049 -> f13060)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 22 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 13049 `y expected=0x03E9 actual=0x03E8`
+    to frame 13060 `tails_y_speed expected=0x0320 actual=0x0000`.
+  - New count: 2632 errors / 17 warnings.
+
+### Root cause
+
+Frame 13049 was a split object/solid-phase overwrite on vertical CNZCylinder
+subtype `$46`. The cylinder's held-rider path first wrote Sonic to the
+ROM-correct frame-entry support Y, but the later inline solid-contact checkpoint
+overwrote that with the cylinder's already-updated current Y. ROM
+`Obj_CNZCylinder` runs `sub_321E2`, both `sub_324C0` rider calls, and
+`SolidObjectFull` inside one object pass (`docs/skdisasm/sonic3k.asm:
+67656-67672`). The vertical oscillator `loc_3238C` writes `y_pos(a0)` before
+angle increment (`docs/skdisasm/sonic3k.asm:67865-67874`), and
+`SolidObjectFull_1P` / `MvSonicOnPtfm` carries the rider from that same
+ROM-visible `y_pos(a0)` (`docs/skdisasm/sonic3k.asm:41016-41040,
+41667-41679`).
+
+CNZCylinder now uses its frame-entry Y anchor for the proven object-controlled
+vertical-oscillator upward support contact, matching the same local exception
+already used for the earlier circular vertical support case. The change is
+object-local; no generic placement loader or shared movement behavior changed.
+
+### New CNZ frontier (frame 13060)
+
+`tails_y_speed mismatch (expected=0x0320, actual=0x0000)`. Sonic/player and
+camera match at the first error. The new failure is Tails-only: ROM still has
+Tails airborne/rolling with `y_speed=$0320`, while the engine has already
+latched Tails as supported by the same CNZCylinder and zeroed his Y speed before
+the ROM's next P2 cylinder capture frame. This is a separate P2
+solid-support/capture timing boundary.
+
+## 2026-05-24 - S3K CNZ cylinder mode-0 zero-cross BPL parity (CNZ f12808 -> f13049)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 21 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 12808 `y expected=0x0535 actual=0x0534`
+    to frame 13049 `y expected=0x03E9 actual=0x03E8`.
+  - New count: 2640 errors / 17 warnings.
+
+### Root cause
+
+Frame 12808 was a hidden subpixel/velocity recurrence error in the same
+subtype `$20` mode-0 CNZCylinder vertical controller. The engine already
+matched the visible cylinder Y through frame 12807, but at the positive-offset
+return zero-crossing it treated `y_vel == 0` after the initial `-$20` step as
+eligible for the UP-held `-$20` branch. ROM `loc_322AC` does `tst.w y_vel(a0)`
+then `bpl.s loc_322D2`, so zero is non-negative and must take only the fixed
+`-$10` step (`docs/skdisasm/sonic3k.asm:67772-67787`). The earlier hidden
+subpixel difference becomes visible as the one-pixel rider/camera Y mismatch
+at frame 12808.
+
+### New CNZ frontier (frame 13049)
+
+`y mismatch (expected=0x03E9, actual=0x03E8)`. Player X/subpixels/speeds match;
+the camera follows the one-pixel player Y. The player is still
+object-controlled/supporting a CNZCylinder near `$2920,$041D`; engine cylinder
+slot reports `$2920,$041C` with `yv=FF00`, so the next owner appears to be the
+next mode-0 cylinder's late vertical support/held timing around the
+Clamer/cylinder cluster, not camera logic.
+
+## 2026-05-24 - S3K CNZ cylinder mode-0 live held input (CNZ f12588 -> f12808)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 20 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 12588 `y expected=0x04C9 actual=0x04CA`
+    to frame 12808 `y expected=0x0535 actual=0x0534`.
+  - New count: 3160 errors / 16 warnings.
+
+### Root cause
+
+Frame 12588 was not a rider snap or camera issue. The rider Y was one pixel low
+because the mode-0 CNZCylinder body itself was one pixel low after the vertical
+controller update. ROM `Obj_CNZCylinder` runs `sub_321E2`, P1/P2 `sub_324C0`,
+then `SolidObjectFull` in that object pass (`docs/skdisasm/sonic3k.asm:
+67656-67672`). In the subtype `$20` mode-0 route, `loc_32254` calls
+`MoveSprite2`, then reads the current `Ctrl_1_held_logical` /
+`Ctrl_2_held_logical` while the corresponding standing bit is set before
+applying the UP/DOWN acceleration adjustment (`docs/skdisasm/sonic3k.asm:
+67736-67752,67772-67782`).
+
+The engine correctly latched standing feedback across its split object/solid
+phases, but it also reused the prior solid callback's held-input byte for the
+mode-0 acceleration. At the f12582 UP transition this missed one `$20`
+upward-acceleration adjustment, leaving the cylinder at `$04FE` instead of
+ROM `$04FD` by f12588. CNZCylinder now keeps the stored standing cadence but
+reads live current-frame UP/DOWN from standing riders for mode-0 acceleration.
+
+### New CNZ frontier (frame 12808)
+
+`y mismatch (expected=0x0535, actual=0x0534)`. Player X/subpixels/speeds still
+match. Sonic is still object-controlled/supporting CNZCylinder slot 7 in the
+same mode-0 cluster; ROM cylinder is at `$28A0,$0569`, engine at `$28A0,$0568`
+with `pre=@28A0,056A` and `yv=FE60`, so the next owner remains the later
+mode-0 vertical return/support timing around the cylinder peak/reversal.
+
+## 2026-05-24 - S3K CNZ cylinder negative-step capture distance (CNZ f12187 -> f12588)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 19 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 12187 `x expected=0x2355 actual=0x2356`
+    to frame 12588 `y expected=0x04C9 actual=0x04CA`.
+  - New count: 3309 errors / 18 warnings.
+
+### Root cause
+
+Frame 12187 was the same CNZCylinder first-capture distance family on the
+narrow horizontal oscillator subtype `$41`, but with a negative center step and
+a rider on the left. ROM `Obj_CNZCylinder` runs `sub_321E2`, then P1/P2
+`sub_324C0`, then `SolidObjectFull` in the same object pass
+(`docs/skdisasm/sonic3k.asm:67656-67672`). The subtype `$41` route uses
+`loc_322F0`, which writes the horizontal `x_pos(a0)` before advancing the angle
+(`docs/skdisasm/sonic3k.asm:67807-67815`). When the inactive `sub_324C0` path
+first consumes the standing bit, it stores `abs(player.x_pos - object.x_pos)`
+into `2(a2)` (`docs/skdisasm/sonic3k.asm:67985-67998`), and the active held
+path later adds that stored distance to `x_pos(a0)`
+(`docs/skdisasm/sonic3k.asm:68019-68038`).
+
+In the engine split pass, the deferred non-CPU standing callback for this
+negative horizontal step was consumed after `centerX` had already advanced one
+extra pixel toward the rider, storing distance `$14` from `$236B` instead of
+the ROM-visible distance `$15` from the frame-entry `$236C`. CNZCylinder now
+uses the frame-entry X anchor for non-CPU horizontal first-capture whenever the
+split center update moved toward the rider; moving-away and CPU paths keep their
+existing behavior.
+
+### New CNZ frontier (frame 12588)
+
+`y mismatch (expected=0x04C9, actual=0x04CA)`. Player X, subpixels, and speeds
+match at the first error. Sonic is object-controlled/supporting CNZCylinder
+slot 7 near `$28A0,$04FD/$04FE`; the engine cylinder reports
+`pre=@28A0,0500` and `yv=FD70`, so the next owner appears to be vertical
+support/held timing in the CNZCylinder/bumper cluster rather than camera logic.
+
+## 2026-05-24 - S3K CNZ cylinder positive-step capture distance (CNZ f11907 -> f12187)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 18 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 11907 `x expected=0x2076 actual=0x2074`
+    to frame 12187 `x expected=0x2355 actual=0x2356`.
+  - New count: 3379 errors / 19 warnings.
+
+### Root cause
+
+Frame 11907 was a CNZCylinder first-capture distance error on the wide
+horizontal oscillator subtype `$52`. ROM `Obj_CNZCylinder` runs `sub_321E2`,
+then P1/P2 `sub_324C0`, then `SolidObjectFull` in the same object pass
+(`docs/skdisasm/sonic3k.asm:67656-67672`). The subtype `$52` route uses
+`loc_3230E`, which writes the horizontal `x_pos(a0)` before advancing the angle
+(`docs/skdisasm/sonic3k.asm:67818-67825`). When the inactive `sub_324C0` path
+first consumes the standing bit, it stores `abs(player.x_pos - object.x_pos)`
+into `2(a2)` (`docs/skdisasm/sonic3k.asm:67985-67998`), and the next active
+held path adds that stored distance back to `x_pos(a0)`
+(`docs/skdisasm/sonic3k.asm:68019-68038`).
+
+In the engine split pass, the deferred non-CPU standing callback for the
+positive horizontal step was consumed after `centerX` had already advanced one
+extra pixel, storing distance `$06` from `$206E` instead of the ROM-visible
+distance `$08` from the frame-entry `$206C`. CNZCylinder now uses the
+frame-entry X anchor for that non-CPU positive-step first-capture distance,
+leaving active held writes and CPU-specific paths under their existing guards.
+
+### New CNZ frontier (frame 12187)
+
+`x mismatch (expected=0x2355, actual=0x2356)`. Sonic/camera/speeds are aligned
+through frame 12186; Sonic is object-controlled/supporting a later CNZCylinder
+near `$236B,$0460` with speeds zero. The new mismatch is one pixel to the right
+on that later held/support path.
+
+## 2026-05-24 - S3K CNZ spike init-frame solid suppression (CNZ f11818 -> f11907)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused spike guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kSpikeObjectInstance" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 11818 `y expected=0x0164 actual=0x0170`
+    to frame 11907 `x expected=0x2076 actual=0x2074`.
+  - New count: 3398 errors / 19 warnings.
+
+### Root cause
+
+Frame 11818 was a same-spawn-frame spike solid collision. The moving upside-down
+spike at `$2000,$0145` had just become active; ROM `Obj_Spikes` initialization
+stores the main routine pointer and returns before any `sub_242B6` movement or
+`SolidObjectFull` call can run (`docs/skdisasm/sonic3k.asm:48925-49012`). The
+engine moved the spike to `$014D` and resolved its underside solid in that same
+activation frame, snapping Sonic from `$0164` to `$0170` and zeroing
+`y_speed`/`ground_vel` one frame early. S3K spikes now keep their base position
+and suppress solidity for that init-equivalent frame; the next execution reaches
+the normal moving-spike body (`docs/skdisasm/sonic3k.asm:49075-49110,
+49192-49263`).
+
+### New CNZ frontier (frame 11907)
+
+`x mismatch (expected=0x2076, actual=0x2074)`. Sonic has landed/captured on the
+next CNZCylinder around `$206E,$01A0`; positions and speeds match through frame
+11906, then engine/camera are two pixels left while object-control/support is
+active.
+
+## 2026-05-24 - S3K CNZ vertical cylinder side-contact anchor (CNZ f6678 -> f11818)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 17 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 6678 `x expected=0x15E9 actual=0x15EB`
+    to frame 11818 `y expected=0x0164 actual=0x0170`.
+  - New count: 3255 errors / 21 warnings.
+
+### Root cause
+
+The f6678 movement was already ROM-correct after player ground movement:
+`x_pos=$15E9`, `x_vel=ground_vel=$FE9A`. The mismatch was a later full-solid
+side response from CNZCylinder subtype `$45` at `$15C0,$04FE`, which applied
+`SolidObject_cont` side separation and `loc_1E056` speed-zeroing one frame
+early.
+
+ROM `Obj_CNZCylinder` runs its motion, P1/P2 `sub_324C0`, then
+`SolidObjectFull` in the object slot pass (`docs/skdisasm/sonic3k.asm:
+67656-67672`). The vertical oscillator path `loc_3236E` writes `y_pos(a0)` from
+the sine result (`docs/skdisasm/sonic3k.asm:67843-67851`), and
+`SolidObject_cont` classifies side-vs-top before zeroing speed in the side
+branch (`docs/skdisasm/sonic3k.asm:41394-41440,41473-41495`). In the engine's
+split pass, the subtype `$45` body had advanced from frame-entry `$04FD` to
+`$04FE` before the new side-contact classification, so it crossed the side
+threshold one frame early. CNZCylinder now uses the frame-entry Y anchor for
+new non-CPU, non-object-controlled vertical-oscillator contacts only.
+
+### New CNZ frontier (frame 11818)
+
+`y mismatch (expected=0x0164, actual=0x0170)`. Player and Tails X positions are
+aligned at the first error. Sonic has just jumped/been launched near the
+CNZ balloon/spikes/cylinder/cage cluster around `$2000`; engine has zeroed
+player `y_speed`/`ground_vel` while ROM still has upward `y_speed=$F9F0`.
+
+## 2026-05-24 - S3K CNZ P2 cylinder nudge/held-anchor cleanup (CNZ f4440 -> f6678)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused sidekick/cylinder guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#groundedFollowNudgeClearsQueuedLateContactBridge,com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 17 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 4440 `tails_x expected=0x1B9A actual=0x1B99`
+    to frame 6678 `x expected=0x15E9 actual=0x15EB`.
+  - New count: 3814 errors / 19 warnings.
+
+### Root cause
+
+Frame 4440 was a stale sidekick CPU bridge, not a trace-sync issue. ROM
+`loc_13E0A`/`loc_13E34` applies the +/-1 Tails follow nudge immediately when
+`ground_vel` is nonzero and has no deferred queue (`docs/skdisasm/sonic3k.asm:
+26717-26724,26734-26741`). The engine's queued late-contact bridge is still
+needed when the CPU pass was airborne and a later cylinder contact supplies the
+ROM-visible ground context, but at f4440 the current CPU pass was already
+grounded/nonzero. The immediate nudge now clears the queued bridge so
+`Obj_CNZCylinder` capture does not apply a second one-pixel shift.
+
+The follow-up f4447 mismatch was the same CNZCylinder split-phase held-anchor
+family for P2. ROM `Obj_CNZCylinder` runs motion, P1/P2 `sub_324C0`, then
+`SolidObjectFull` in one object slot pass (`docs/skdisasm/sonic3k.asm:
+67656-67672`), and active rider path `loc_32538` writes the held rider from
+the current ROM `x_pos(a0)` (`docs/skdisasm/sonic3k.asm:68019-68038`). In the
+engine split, subtype `$41` P2 hold saw current center `$1BA1` after frame-entry
+`$1BA0`; CPU sidekick horizontal-oscillator holds now use the same frame-entry
+anchor as the accepted player f4320 fix.
+
+### New CNZ frontier (frame 6678)
+
+`x mismatch (expected=0x15E9, actual=0x15EB)`. Player is grounded near the
+CNZ bumper/cylinder cluster around `$15C0-$1640`; Tails remains aligned enough
+at the first error. The new failure is main-player horizontal position/speed
+around nearby CNZCylinder/InvisibleHurtBlock/Bumper objects, not the previous
+P2 held-cylinder path.
+
+## 2026-05-24 - S3K CNZ cylinder held-anchor split phase (CNZ f4320 -> f4440)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 15 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 4320 `x expected=0x1BC7 actual=0x1BC6`
+    to frame 4440 `tails_x expected=0x1B9A actual=0x1B99`.
+  - New count: 3843 errors / 19 warnings.
+
+### Root cause
+
+The frame-4320 mismatch was CNZCylinder-local. ROM `Obj_CNZCylinder` executes
+`sub_321E2`, then the active rider path, then `SolidObjectFull` in one object
+slot pass (`docs/skdisasm/sonic3k.asm:67656-67672`). For subtype `$41`,
+`loc_322F0` writes the horizontal oscillator's `x_pos(a0)` before advancing the
+angle (`docs/skdisasm/sonic3k.asm:67807-67815`), and the held rider path
+`loc_32538` adds the rider offset to that same `x_pos(a0)` and writes player
+`x_pos(a1)` (`docs/skdisasm/sonic3k.asm:68019-68038`).
+
+The engine split had already advanced the cylinder center from `$1BDF` to
+`$1BDE` before the deferred non-CPU held-rider write, so it used the post-step
+anchor one frame too early. CNZCylinder now uses its frame-entry X anchor for
+non-CPU horizontal oscillator held writes whenever the center moved during the
+split phase, matching the ROM-visible `x_pos(a0)` consumed by `loc_32538`.
+
+### New CNZ frontier (frame 4440)
+
+`tails_x mismatch (expected=0x1B9A, actual=0x1B99)`. Player/camera/rings match at
+the first error. Tails is being captured/held by the same subtype `$41`
+CNZCylinder at `$1BA0,$07E0`; ROM has Tails one pixel farther right while the
+engine diagnostic shows `p2=capture pre=1B9A ... post=1B99`. This is a separate
+P2 capture/held-offset timing issue after the player f4320 anchor mismatch.
+
+## 2026-05-24 - S3K CNZ Clamer projectile native delete marker (CNZ f1577 -> f4320)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused Clamer / CNZ slot-pressure guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayClamerAutoCloseProjectileConsumesRomSlot+traceReplayClamerAutoCloseProjectileHoldsSlotUntilRomDeleteFrame,com.openggf.game.sonic3k.objects.TestClamerObjectInstance" test "-DfailIfNoTests=false"`
+  - PASS: 15 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ advances from frame 1577 `x expected=0x0F4C actual=0x0F4D`
+    to frame 4320 `x expected=0x1BC7 actual=0x1BC6`.
+  - New count: 3671 errors / 15 warnings.
+
+### Root cause
+
+The Clamer auto-close projectile is the `ChildObjDat_89150` child spawned by
+`Obj_Clamer` when the raw auto-close animation reaches mapping frame 8
+(`docs/skdisasm/sonic3k.asm:185930-185940,186020-186027`). Its routine enters
+`loc_86D4A`, then runs `loc_86D5E`: `MoveSprite2` followed by
+`Sprite_CheckDeleteTouchXY` (`docs/skdisasm/sonic3k.asm:182257-182266`).
+
+The engine already created the projectile in the ROM slot at frame 621, but the
+generic dynamic-child out-of-range pass removed it before the ROM-equivalent
+delete marker. ROM `Sprite_CheckDeleteTouchXY` branches through `Go_Delete_Sprite`,
+which installs `Delete_Current_Sprite` and keeps the SST slot occupied until the
+next `ExecuteObjects` pass (`docs/skdisasm/sonic3k.asm:179027-179039,
+179131-179134,36108-36122`). The projectile now owns its native offscreen
+lifetime instead of being freed by the manager-level generic cull.
+
+### New CNZ frontier (frame 4320)
+
+`x mismatch (expected=0x1BC7, actual=0x1BC6)`. Player/camera/rings match; Sonic
+is object-controlled on the CNZ cylinder cluster with matching zero velocities,
+but the engine is one pixel left at the first error. This is past the Clamer
+projectile slot-pressure/barber-pole inversion boundary and points at the later
+CNZ cylinder held-position/object-control path.
+
+## 2026-05-23 - S3K AIZ drawbridge SolidObjectFull2 landing width (AIZ f19394 -> f19669)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused AIZ drawbridge guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestAiz2BossEndSequenceObjects#drawBridgeFlatSupportStartsOnRoutineEntryAfterSettledAngleIsReached+drawBridgeUsesSolidObjectFull2ProfileForLandingWidthPixels" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- AIZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: AIZ advances from frame 19394 `y expected=0x01FD actual=0x01FC`
+    to frame 19669 `tails_x_speed expected=-0045 actual=-0051`.
+  - New count: 39 errors / 23 warnings.
+
+### Root cause
+
+The AIZ drawbridge object was modeled as a top-only solid with
+`groundHalfHeight=9`. ROM `Obj_AIZDrawBridge` uses `SolidObjectFull2` for the
+flat bridge, with `d1=$6B`, `d2=8`, and `d3=8`
+(`docs/skdisasm/sonic3k.asm:59625-59643`). Because `SolidObjectFull2` new
+landings narrow from the collision half-width back to `width_pixels=$60`, the
+ROM rejects Sonic at x `$4A76` and first rides the bridge at x `$4A80`; the
+top-only engine profile accepted the full `$6B` width early and snapped Y one
+pixel high. The bridge also now defers its settled/full-support phase until the
+next routine entry after `$38` reaches `$80`, matching `loc_2B2B0`
+(`docs/skdisasm/sonic3k.asm:59591-59613`).
+
+### New AIZ frontier (frame 19669)
+
+`tails_x_speed mismatch (expected=-0045, actual=-0051)`. Player Y/camera now
+survive the old f19394 drawbridge landing window. The new failure is sidekick
+movement during the post-bridge/end-capsule flow, with ROM Tails already in
+air/rolling-like status `06` while the engine sidekick speed is slightly more
+negative.
+
+## 2026-05-23 - S3K AIZ end-boss selector/full-longword travel (AIZ f19019 -> f19394)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused AIZ end-boss guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestAizEndBossInstance#repositionSelectorUsesRomRawMaskNotLowTwoBits+repositionVelocityUsesFullLongwordPositionSubpixels" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- AIZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: AIZ advances from frame 19019 `g_speed expected=0x00D4 actual=-00D4`
+    to frame 19394 `y expected=0x01FD actual=0x01FC`.
+  - New count: 120 errors / 23 warnings.
+
+### Root cause
+
+The engine's AIZ end-boss target selector used `rng.nextInt(4) * 4`, consuming
+the low two bits of `Random_Number`. ROM `loc_69A66` masks the raw word with
+`andi.w #$C,d0`, rejects the previous angle, then indexes `word_69AC8`
+(`sonic3k.asm:138748-138756`). At the AIZ f19019 window the trace-proven raw
+draw is `A1AF5778`; ROM therefore selects angle `$08`, targeting
+`_unkFA84+$160 = $4A40`.
+
+The selector alone made the boss hittable one frame early because the engine
+computed travel velocity from integer pixels and preserved only an 8-bit
+fractional byte. ROM subtracts the full longword `x_pos/y_pos`, doubles that
+16.16 delta, and takes the high word as velocity (`sonic3k.asm:138756-138771`);
+`MoveSprite2` then adds `x_vel/y_vel << 8` to the full longword position
+(`sonic3k.asm:36053-36061`). Preserving the full longword subpixel phase keeps
+the re-emerge/hover body at the ROM Y during the contact frame.
+
+### New AIZ frontier (frame 19394)
+
+`y mismatch (expected=0x01FD, actual=0x01FC)`. Player X/speeds, camera, and
+Tails match at the first error. Sonic is riding the AIZ draw bridge/end-sequence
+object after the boss hit; this is a separate draw-bridge/end-flow vertical
+carry or support-order issue.
+
+## 2026-05-23 - S3K AIZ end-boss reveal animation timing (AIZ f18847 -> f19019)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused AIZ end-boss guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestAizEndBossInstance#revealedRawAnimationUsesRomCallbackTimingBeforeHover" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- AIZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: AIZ advances from frame 18847 `camera_x expected=0x4880 actual=0x4882`
+    to frame 19019 `g_speed expected=0x00D4 actual=-00D4`.
+  - New count: 101 errors / 23 warnings.
+
+### Root cause
+
+The frame-18847 camera mismatch was the AIZ end boss entering its camera-scroll
+phase two frames too early. ROM routine `loc_6932C` drives the revealed animation
+through `Animate_RawNoSSTMultiDelay`, using `byte_69DB3` and only taking the
+`$F4` callback after the final `$00/$00` mapping frame
+(`docs/skdisasm/sonic3k.asm:138120-138122,139104-139110,177558-177587`).
+The engine collapsed that raw multi-delay sequence and entered `loc_6933A` hover
+on update 19 instead of update 21. That two-frame lead propagated through the
+hover/retreat/re-emerge sequence and advanced `loc_69456`'s `Camera_min_X_pos`
+and `Camera_max_X_pos` `+2` write two frames early
+(`docs/skdisasm/sonic3k.asm:138214-138224`).
+
+### New AIZ frontier (frame 19019)
+
+`g_speed mismatch (expected=0x00D4, actual=-00D4)`. Camera now matches through
+the old f18847 window and reaches `$4980,$015A` at the new first error. The new
+failure is player movement/sign during the AIZ end-boss/log-bridge section while
+Tails remains aligned at the first error.
+
+## 2026-05-23 - S3K CNZ f1577 slot-pressure regression diagnosis
+
+- Worktree: integrated local workspace with other workers' placement/AIZ/MGZ/CNZ/shared edits preserved.
+- Focused Clamer lifecycle guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestClamerObjectInstance" test "-DfailIfNoTests=false"`
+  - PASS: 11 tests.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Still fails at frame 1577: `x expected=0x0F4C actual=0x0F4D`, 3795 errors / 14 warnings.
+
+### Diagnosis
+
+The f1577 barber-pole inversion remains a pre-1325 slot-pressure problem, not
+the barber-pole order itself. A bounded Clamer lifecycle gap was confirmed:
+ROM `Obj_Clamer` runs `loc_88FDC`, calls `CreateChild1_Normal` with
+`ChildObjDat_89148`, and creates one hidden spring child at `y_pos-8`
+(`sonic3k.asm:185875-185879,185998-186000`). The engine previously folded that
+spring entirely into the parent and did not allocate the child SST slot. A local
+guard now covers that child slot allocation/release.
+
+That fix does not move the frontier. CNZ still has the old cylinder in engine
+slot 4 and the later cylinder/barber-pole cluster shifted (`CNZCylinder` in
+engine s7 where ROM has it in s6, low barber pole in engine s9 where ROM has
+it in s8). The remaining regression is therefore earlier than the Clamer child:
+likely parent object load/lifetime or two-axis placement timing before the
+f569/f642/f665 balloon pressure cascade.
+
+## 2026-05-23 - S3K AIZ sidekick dead-fall marker threshold (AIZ f18645 -> f18847)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused sidekick guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuDespawnParity#s3kDeadFallWaitsForCameraYPlus100BeforeDespawnMarker+s3kDeadFallAppliesDespawnMarkerAfterCameraYPlus100Threshold+s3kDespawnMarkerReturnsToCatchUpFlightRoutine+levelBoundaryKillRunsTailsTouchFloorBeforeDeathState" test "-DfailIfNoTests=false"`
+  - PASS: 4 tests.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- AIZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: AIZ advances from frame 18645 `tails_x expected=0x493F actual=0x7F00`
+    to frame 18847 `camera_x expected=0x4880 actual=0x4882`.
+  - New count: 102 errors / 23 warnings.
+
+### Root cause
+
+The engine treated S3K sidekick dead-fall as an immediate `sub_13ECA` marker
+warp. ROM routine `sub_123C2` first reads `Camera_Y_pos`, adds `$100`, and
+returns without calling `sub_13ECA` while Tails' `y_pos` is still within that
+camera-relative threshold (`sonic3k.asm:24546-24568`). Only after the threshold
+is crossed does it set routine 2 and branch to `sub_13ECA`, which writes
+`x_pos=$7F00`, `y_pos=0`, `object_control=$81`, and in-air status
+(`sonic3k.asm:24570-24578,26800-26809`). The caller at `loc_157C8` then still
+runs `MoveSprite_TestGravity` (`sonic3k.asm:29283-29285`).
+
+At the old frontier ROM Tails was at `y=$022F` with camera Y `$015A`; because
+`$022F <= $015A+$100`, ROM kept the dead-fall body local near `$493F`, while
+the engine had already parked him at `$7F00`.
+
+### New AIZ frontier (frame 18847)
+
+`camera_x mismatch (expected=0x4880, actual=0x4882)`. Player and Tails positions
+match at the first error; the remaining issue appears to be AIZ2 end-boss
+camera progression after the sidekick dead-fall marker timing is corrected.
+
+## 2026-05-23 - S3K AIZ stale sidekick push-grace follow steering (AIZ f10586 -> f18645)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused sidekick guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#normalPushGraceSuppressesGroundedFollowPulseInsideAizObjectBand+groundedPushGraceUsesCurrentControlWordOutsideAizObjectOrderBridge+s3kClearedPushGraceStillAllowsGroundedFollowRightInput+s3kLocalPushGraceNearAizSpikedLogsStillFallsThroughToFollowRight+s3kFarTargetPushGraceDoesNotBypassAutoJumpHeightAndDistanceGates+s3kLocalPushGraceOutsideAizObjectOrderDoesNotBypassAutoJumpGates+cnzDoorSupportGraceFallsThroughToFollowLeftNudgeWhenPushIsClear+s3kPanicReleaseGateUsesLevelFrameCounterLowByte+aizPanicReleaseGateUsesRomVisibleReloadCounterBridge" test "-DfailIfNoTests=false"`
+  - PASS: 9 tests.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- AIZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: AIZ advances from frame 10586 `tails_x expected=0x2071 actual=0x2070`
+    to frame 18645 `tails_x expected=0x493F actual=0x7F00`.
+  - New count: 139 errors / 23 warnings.
+
+### Root cause
+
+At frame 10586 the engine was treating stale local push grace as a full
+`loc_13DD0` push bypass. ROM only branches around FollowLeft/FollowRight when
+Tails' current `Status_Push` bit is set; if current push is clear, it falls
+through to the S3K `$30` follow steering threshold (`sonic3k.asm:26702-26729`)
+and `Tails_InputAcceleration_Path` consumes the resulting control word
+(`sonic3k.asm:27798-27805,28103-28122`). The engine branch
+`grace_push_bypass` suppressed that FollowRight override near the AIZ spiked
+logs, leaving Tails one pixel left and with stale negative ground speed.
+
+The fix keeps the short stale-push bridge only in proven AIZ object-order
+carrier contexts, where the engine can clear transient push before ROM reaches
+Tails' CPU slot: hollow tree and the giant ride-vine/collapsing-platform bridge
+(`sonic3k.asm:26696-26705,41668-41679,43649-43810,44784-44883,46481-46743,
+46749-46950`). Ordinary local grace now falls through to FollowLeft/FollowRight.
+
+### New AIZ frontier (frame 18645)
+
+`tails_x mismatch (expected=0x493F, actual=0x7F00)`. Player and camera match at
+the first error. ROM still has Tails visible near the AIZ2 end boss/log-bridge
+area with `status=$02`, while the engine has parked Tails at `$7F00` after the
+same local follow-steering section. Context points at a later sidekick
+despawn/parking or end-boss/log-bridge handoff issue, not the frame-10586 stale
+push-grace branch.
+
+## 2026-05-23 - S3K AIZ/CNZ sidekick panic cadence reconciliation (AIZ f9264 -> f10586)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cadence guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s3kPanicReleaseGateUsesLevelFrameCounterLowByte+aizPanicReleaseGateUsesRomVisibleReloadCounterBridge+normalAutoJumpCadenceUsesLevelFrameCounterWithoutInlinePlusOne" test "-DfailIfNoTests=false"`
+  - PASS: 3 tests.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- AIZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: AIZ advances from frame 9264 `tails_y expected=0x045C actual=0x045B`
+    back to frame 10586 `tails_x expected=0x2071 actual=0x2070`.
+  - New count: 814 errors / 23 warnings.
+
+### Root cause
+
+ROM `TailsCPU_Panic` reads the low byte at `Level_frame_counter+1`; the `+1`
+is the 68000 low-byte address, not an added frame
+(`sonic3k.asm:26869-26884`; S2 equivalent `s2.asm:39122-39139`). CNZ therefore
+must keep using the stored ROM-visible word: `$22FF` holds DOWN and `$2300`
+releases.
+
+AIZ after the Act 2 seamless reload is a separate engine scheduling gap already
+covered by the AIZ normal/catch-up counter bridges: the stored engine level
+counter is one tick behind the ROM-visible value during the sidekick CPU slot,
+while ROM `LevelLoop` increments `Level_frame_counter` before `Process_Sprites`
+(`sonic3k.asm:7888-7894`). The panic release/rev gate now uses that AIZ-local
+ROM-visible bridge without changing CNZ/MGZ stored-counter cadence.
+
+### New AIZ frontier (frame 10586)
+
+`tails_x mismatch (expected=0x2071, actual=0x2070)`. Player and camera match at
+the first error. Tails is near the AIZ Act 2 spiked-log/water-splash cluster;
+ROM has `branch=fallthrough_sub20`, delayed input `0808`, and post-CPU speed
+`$0080`, while the engine has `branch=grace_push_bypass`, delayed input `0004`,
+and post-physics ground speed `$FFDC`.
+
+## 2026-05-23 - S3K CNZ sidekick panic low-byte cadence (regression f8958 -> f11761)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Regression guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s3kPanicReleaseGateUsesLevelFrameCounterLowByte" test "-DfailIfNoTests=false"`
+  - PASS: 1 test.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: the integrated f8958 regression is cleared. CNZ now reaches frame 11761
+    `tails_y expected=0x00FC actual=0x00F1`.
+  - New count: 2805 errors / 20 warnings.
+
+### Root cause
+
+The ObjectManager signed `object_control` reject is now constrained to the proven CNZCylinder
+side-separation path: only `CNZCylinder` opts into `rejectsBit7ObjectControlSideContact`, and the
+shared check runs only in side-contact resolution. It no longer suppresses normal Door support/riding
+contacts.
+
+The frame-8958 Door symptom was a separate one-frame sidekick CPU cadence error. ROM `TailsCPU_Panic`
+keeps DOWN held while `(Level_frame_counter+1) & $7F != 0` and only releases when that low byte is zero
+(`sonic3k.asm:26869-26884`). The `+1` is the 68000 address of the word's low byte, not an added frame.
+At CNZ f8958 the ROM-visible counter is `$22FF`, so Tails must stay in panic/spindash for one more
+frame and release at `$2300`. The engine had interpreted that as `frameCounter + 1`, releasing
+`Tails_Spindash` early; that path adds one pixel to `y_pos` and sets rolling on release
+(`sonic3k.asm:28741-28781`), matching the regressed `tails_y=0x0231`.
+
+### New CNZ frontier (frame 11761)
+
+The next first error is back in the late CNZ balloon/cage/cylinder cluster. Player/camera and Tails X
+match at the first error; ROM has Tails airborne at `$1F45,$00FC` with `object_control=$81`, while the
+engine has Tails still marked on-object/support-like at `$1F45,$00F1`.
+
+## 2026-05-23 - S3K CNZ circular-cylinder vertical contact anchor (CNZ f11503 -> f11752)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 15 tests, 0 failures.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 11503
+    `y expected=0x00EC actual=0x00ED` / `camera_y expected=0x008C actual=0x008D`
+    to frame 11752 `tails_x expected=0x1F38 actual=0x1F35`.
+  - New count: 2805 errors / 20 warnings.
+
+### Root cause
+
+Frame 11503 was not the active `CNZCylinder` rider-slot path. The engine diagnostics had no
+`ObjectManager` ride/standing snapshot, but the player was still object-controlled and receiving a
+fresh full-solid support contact from the nearby circular CNZ cylinder. The cylinder's current center
+had already advanced vertically from `$0120` to `$0121`, while the ROM-visible object position used by
+the same-frame `SolidObjectFull` support write was still `$0120`.
+
+ROM `Obj_CNZCylinder` runs `sub_321E2`, then P1/P2 `sub_324C0`, then `SolidObjectFull`
+(`sonic3k.asm:67656-67672`). The circular `loc_323EC` path writes `y_pos(a0)` for quadrant movement
+while X can remain unchanged (`sonic3k.asm:67939-67958`), and `MvSonicOnPtfm` writes rider `y_pos`
+from the object's `y_pos(a0)` (`sonic3k.asm:41674-41679`). The fix is local to `CNZCylinder`:
+object-controlled, non-CPU, circular solid contacts use the saved frame-entry anchor only for the
+proven Y-only positive step (`centerX == preUpdateX && centerY > preUpdateY`). Active held-rider X
+paths and CPU sidekick paths keep their existing anchors.
+
+### New CNZ frontier (frame 11752)
+
+The new first error is Tails X: ROM has Tails at `$1F38`, engine at `$1F35`, with matching Tails Y and
+zero velocities. Context points at the balloon/cylinder/cage cluster after a sidekick despawn marker;
+main player/camera are aligned at this frontier.
+
+## 2026-05-23 - S3K CNZ wide-cylinder CPU held anchor (CNZ f10927 -> f10967)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 11 tests, 0 failures.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 10927
+    `tails_x expected=0x1A21 actual=0x1A20` to frame 10967
+    `tails_y expected=0x0130 actual=0x0131`.
+  - New count: 3518 errors / 30 warnings.
+
+### Root cause
+
+Frame 10927 was still in the `Obj_CNZCylinder` active held-rider path for subtype `$42`.
+ROM runs `sub_321E2`, then P1/P2 `sub_324C0`, then `SolidObjectFull` in one object pass
+(`sonic3k.asm:67656-67672`). The subtype `$42` wide horizontal path at `loc_3230E` writes
+`x_pos(a0) = $2E(a0) + (sin(angle)>>2)` before incrementing the angle (`sonic3k.asm:67818-67825`).
+The held-rider path at `loc_32538` then multiplies the stored distance word by the twist cosine and
+adds `x_pos(a0)` to write the rider X (`sonic3k.asm:68019-68038`).
+
+At frame 10927, the ROM-visible cylinder anchor was `$1A0A`, matching the engine's saved frame-entry
+anchor, while the engine's split update had already advanced the current cylinder center to `$1A09`.
+The existing frame-entry bridge covered non-CPU riders on the post-peak negative step, but still forced
+CPU sidekicks to use the current center. The fix extends the same subtype `$42`/post-peak bridge to
+CPU-held riders, still local to `CNZCylinder`; the narrower subtype `$41` post-peak guard remains on
+the current-anchor path.
+
+### New CNZ frontier (frame 10967)
+
+`tails_y mismatch (expected=0x0130, actual=0x0131)`. Player/camera and Tails X/speeds match at the
+new first error. The cylinder slot has just cleared via `p2=release_jump`; ROM has Tails at `$19C7,$0130`
+with `y_speed=-$0680`, while the engine has `$19C7,$0131` with the same velocity. This is a separate
+post-release jump/Y snap issue after the held-anchor path.
+
+## 2026-05-23 - S3K CNZ cylinder external-launch release (CNZ f10727 -> f10924)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 10727 `air expected=1 actual=0`
+    to frame 10924 `tails_x_speed expected=0x0000 actual=0x0018`.
+  - New count: 3508 errors / 21 warnings.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 9 tests, 0 failures.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kCnzDirectedTraversalHeadless" test "-DfailIfNoTests=false"`
+  - PASS: 24 tests, 0 failures.
+
+### Root cause
+
+Frame 10727 is a same-frame CNZ balloon/cylinder handoff. ROM `Obj_CNZBalloon`
+calls `sub_317AE`, which writes `y_vel=-$0700`, sets `Status_InAir`, clears
+roll/jump/push state, and clears `object_control` (`sonic3k.asm:66804-66810`).
+`Obj_CNZCylinder` still runs later in object order and executes its active rider
+path `sub_324C0/loc_32538`, which writes the held rider X/twist state
+(`sonic3k.asm:67656-67672,68019-68038`). When that path reaches the release
+exit, `loc_32604` clears only the cylinder's rider byte (`sonic3k.asm:68076-68078`);
+it does not zero the player's external launch velocity.
+
+The engine's CNZ balloon already applied the launch before the cylinder object
+pass, but the active cylinder slot treated the still-latched rider as a normal
+hold and zeroed `y_speed`, leaving Sonic grounded. The fix is local to
+`CNZCylinder`: when an active rider is already airborne and no longer
+object-controlled, apply only the ROM held-X/twist write, clear the stale
+cylinder support/slot, and preserve the external launch state.
+
+### New CNZ frontier (frame 10924)
+
+`tails_x_speed mismatch (expected=0x0000, actual=0x0018)`. Sonic/player and
+camera match at the new frontier. Tails is near the next CNZ cylinder/monitor
+cluster; ROM has Tails not on object with zero velocity, while the engine has
+Tails airborne/off-object with a small residual `x_speed=+$0018`.
+
+## 2026-05-23 - S3K CNZ wide-cylinder post-peak held anchor (CNZ f10637 -> f10727)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 10637 `x expected=0x1A14 actual=0x1A13`
+    to frame 10727 `air expected=1 actual=0`.
+  - New count: 3329 errors / 13 warnings.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance,com.openggf.tests.TestS3kCnzDirectedTraversalHeadless" test "-DfailIfNoTests=false"`
+  - PASS: 32 tests, 0 failures.
+
+### Root cause
+
+Frame 10637 was still in `Obj_CNZCylinder` active held-rider positioning, after the
+previous subtype `$42` positive-step bridge. ROM `loc_3230E` computes the wide
+horizontal cylinder's `x_pos` with `sin(angle)>>2` before adding the angle step
+(`sonic3k.asm:67818-67825`), and `Obj_CNZCylinder` then calls P1/P2 `sub_324C0`
+before `SolidObjectFull` in the same object routine (`sonic3k.asm:67656-67672`).
+The active rider path at `loc_32538` multiplies the stored distance word by the
+twist cosine and adds `x_pos(a0)` to write the rider X (`sonic3k.asm:68019-68038`).
+
+At frame 10637 the ROM slot 18 cylinder and the engine's frame-entry cylinder
+anchor were both `$1A20`, while the engine's current center had already stepped
+down to `$1A1F`. Applying the existing positive-step frame-entry bridge only on
+the increasing half left Sonic one pixel left on the first post-peak held frame.
+The fix extends that bridge only for the wide horizontal `$42`/`loc_3230E`
+negative step. The narrower `$41`/`loc_322F0` path remains on the current anchor
+for post-peak frames; a guard covers the frame-4321 route where using the
+frame-entry anchor would reintroduce `x actual=0x1BC8`.
+
+### New CNZ frontier (frame 10727)
+
+`air mismatch (expected=1, actual=0)`. Sonic's X/Y and camera are aligned through
+frame 10726. At frame 10727 ROM clears on-object and launches Sonic upward with
+`y_speed=-$0700` near the popped CNZ balloon/cylinder cluster, while the engine
+keeps him grounded on slot 17/CNZCylinder with `y_speed=0`. This is a separate
+CNZ cylinder/balloon release or support-clear timing issue after the held path.
+
+## 2026-05-23 - S3K CNZ cylinder non-CPU held-rider anchor (CNZ f10614 -> f10637)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 10614 `x expected=0x19F4 actual=0x19F3`
+    to frame 10637 `x expected=0x1A14 actual=0x1A13`.
+  - New count: 3396 errors / 14 warnings.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance,com.openggf.tests.TestS3kCnzDirectedTraversalHeadless" test "-DfailIfNoTests=false"`
+  - PASS: 30 tests, 0 failures.
+
+### Root cause
+
+Frame 10614 was in the active CNZCylinder held-rider path, not the free-contact
+side push path fixed at frame 10541. ROM `Obj_CNZCylinder` runs `sub_321E2`,
+then P1/P2 `sub_324C0`, then `SolidObjectFull` in one object pass
+(`sonic3k.asm:67656-67672`). In the active rider path, `loc_32538` computes the
+held X from the stored distance word at `2(a2)` plus `x_pos(a0)`, then advances
+the twist angle (`sonic3k.asm:68019-68038`).
+
+The engine's split object/solid pipeline can consume the first non-CPU standing
+callback after the horizontal oscillator has advanced one extra positive X step.
+That made the stored first-capture distance and the first held-frame anchor
+disagree by one pixel for Sonic on subtype `$42`. The fix keeps the ROM
+distance calculation local to `CNZCylinder`: deferred first capture uses the
+frame-entry X only when that is the closer ROM standing-bit anchor, and active
+non-CPU held frames use the frame-entry X only for positive horizontal steps.
+CPU sidekick holds remain on the current-center path because the engine already
+has CPU-before-object nudge compensation for P2, and applying the same anchor to
+CPU Tails regressed the earlier subtype `$41` route.
+
+### New CNZ frontier (frame 10637)
+
+`x mismatch (expected=0x1A14, actual=0x1A13)`. Sonic remains object-controlled
+on the same CNZCylinder path; the next issue is still local to the later held
+or release ordering around the cylinder/balloon/monitor cluster, with camera X
+following the one-pixel player drift.
+
+## 2026-05-23 - S3K CNZ horizontal cylinder free-contact anchor (CNZ f10541 -> f10614)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 10541 `x expected=0x19DD actual=0x19DF`
+    to frame 10614 `x expected=0x19F4 actual=0x19F3`.
+  - New count: 2904 errors / 14 warnings.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance,com.openggf.tests.TestS3kCnzDirectedTraversalHeadless" test "-DfailIfNoTests=false"`
+  - PASS: 29 tests, 0 failures.
+
+### Root cause
+
+Frame 10541 was a new/free side-contact with horizontal CNZCylinder subtype `$42`. The trace-visible
+ROM cylinder slot 18 was at `$19B2,$0160`; the engine had the same cylinder's previous position at
+`$19B2` but had already advanced the body to `$19B4` before the split inline solid checkpoint. With
+`SolidObject_cont` side separation (`sonic3k.asm:41394-41407,41488-41495`), anchoring the side push
+at `$19B4` pushes Sonic two pixels too far right. Subtype `$42` maps to the horizontal oscillator path
+that computes `x_pos` from `sin(angle)>>2` before incrementing the angle (`sonic3k.asm:67818-67825`).
+
+Fix: only horizontal CNZCylinder free contacts use the saved pre-update contact anchor in the engine
+checkpoint. Captured/object-controlled riders still use the current post-motion anchor because
+`Obj_CNZCylinder` runs `sub_324C0` before `SolidObjectFull`, and that rider path writes the held
+position from current `x_pos(a0)` (`sonic3k.asm:67656-67672,67985-68038`). CPU sidekick contacts are
+also left on the verified current-anchor path to preserve the earlier accepted cylinder-release
+frontiers.
+
+### New CNZ frontier (frame 10614)
+
+`x mismatch (expected=0x19F4, actual=0x19F3)`. Sonic is now object-controlled/riding the same
+horizontal cylinder; the cylinder center itself matches ROM at `$1A16,$0160`, but the held rider X is
+one pixel left. This points at the CNZCylinder `sub_324C0` held-rider distance/angle carry path, not
+the free-contact side separation fixed here.
+
+## 2026-05-23 - S3K AIZ miniboss results camera lock handoff (AIZ f8839 -> f8941)
+
+- Worktree: integrated local workspace with other workers' AIZ/CNZ/MGZ/shared edits preserved.
+- Commands:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2MinibossResultsHandoffKeepsArenaCameraLocked" test "-DfailIfNoTests=false"` - RED before the fix: frame 8839 had `Camera_min_X_pos=$0000`, proving the results handoff restored full AIZ bounds too early.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2MinibossResultsHandoffKeepsArenaCameraLocked" test "-DfailIfNoTests=false"` - PASS after the fix, 1 test.
+  - `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.game.sonic3k.objects.TestAizMinibossCameraUnlock" "-DfailIfNoTests=false"` - PASS, 1 test.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"` - FAIL at new frontier.
+- Result: AIZ advanced from frame 8839 `camera_x expected=0x10E0 actual=0x10F8`
+  to frame 8941 `camera_y expected=0x02C1 actual=0x02B8`
+  (703 errors / 24 warnings). Player/Tails state still match at the new first
+  error; the remaining mismatch is the post-title-card vertical camera/level-size
+  release phase.
+- Root cause/evidence:
+  - Engine results exit restored full AIZ level camera bounds during the Act 1
+    miniboss results-to-title-card handoff, and `AizMinibossInstance` began its
+    unlock path while the in-level Act 2 title card was only exiting.
+  - ROM `Obj_AIZMiniboss` locks `Camera_min_X_pos` and `Camera_max_X_pos` to
+    `$10E0` through `loc_68556` for the Sonic fight
+    (`sonic3k.asm:137251-137266,136774-136780`).
+  - ROM `Obj_LevelResults` Act 1 path changes the results object into
+    `Obj_TitleCard` without changing camera bounds
+    (`sonic3k.asm:62708-62720`). The in-level title card sets
+    `End_of_level_flag` only after its elements disappear
+    (`sonic3k.asm:62276-62279`), and only then does
+    `Obj_EndSignControlDoStart` call `Change_Act2Sizes`
+    (`sonic3k.asm:180415-180419,180575-180609`).
+- New frontier: frame 8941 camera-Y mismatch in the same AIZ miniboss/results
+  handoff. ROM begins moving camera Y upward (`$02C1`) while engine remains
+  clamped at `$02B8`; X is still locked at `$10E0`.
+
+## 2026-05-23 - S3K AIZ2 reload sidekick fallthrough auto-jump cadence (AIZ f7082 -> f8839)
+
+- Worktree: integrated local workspace with other workers' AIZ/CNZ/MGZ/shared edits preserved.
+- Commands:
+  - `javac --release 21 -encoding UTF-8 -classpath "<target/classes;target/test-classes;deps>" -d target/classes src/main/java/com/openggf/sprites/playable/SidekickCpuController.java` and matching `javac` for `TestS3kAizTraceReplay` - PASS. This scoped compile avoided unrelated dirty-workspace lifecycle failures.
+  - `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2ReloadSidekickFallthroughAutoJumpUsesRomVisibleCounter" "-DfailIfNoTests=false"` - PASS, 1 test.
+  - `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2ReloadSidekickUsesRomVisiblePushAutoJumpCadence+aiz2ReloadSidekickCatchUpGateUsesRomVisibleCounter+aiz2ReloadSidekickFallthroughAutoJumpUsesRomVisibleCounter" "-DfailIfNoTests=false"` - PASS, 3 tests.
+  - `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false"` - FAIL at new frontier.
+- Result: AIZ advanced from frame 7082 `tails_air expected=1 actual=0`
+  to frame 8839 `camera_x expected=0x10E0 actual=0x10F8`
+  (761 errors / 25 warnings). Player and Tails state match at the new first
+  error; the mismatch is the AIZ2 miniboss/end camera lock release.
+- Root cause/evidence:
+  - Frame 7082 was the normal `Tails_Normal` fallthrough path, not the
+    `sub_13ECA` catch-up marker path. ROM had `Level_frame_counter=$1A80`,
+    Tails entered airborne/rolling with `y_vel=-$0680`, and engine diagnostics
+    showed the stored counter one tick behind, so the same jump happened on
+    frame 7083.
+  - `LevelLoop` increments `Level_frame_counter` before `Process_Sprites`
+    (`sonic3k.asm:7888-7894`). `Tails_Normal` reads the delayed
+    `Pos_table`/`Stat_table` sample (`sonic3k.asm:26683-26700`), then the
+    normal distance/height path at `loc_13E7C` reads the visible frame counter
+    low byte (`sonic3k.asm:26760-26765`). `loc_13E9C` reads
+    `Level_frame_counter+1`, masks the low six bits, ORs jump buttons into
+    `Ctrl_2_logical`, and sets `Tails_CPU_auto_jump_flag`
+    (`sonic3k.asm:26775-26785`).
+  - The fix makes AIZ normal auto-jump cadence use that ROM-visible counter.
+    It is deliberately separate from the AIZ-only `sub_13ECA` marker bridge
+    controlled by `catchUpUsesRomVisibleLevelFrameCounter`, so CNZ/MGZ marker
+    cadence remains on the stored-counter path.
+- New frontier: frame 8839 camera-only mismatch after the AIZ2 miniboss area.
+  ROM holds camera at `$10E0,$02B8` with the player/Tails parked at the
+  miniboss/end setup; the engine has released camera/object-control state and
+  moves to `$10F8,$02BE`.
+
+## 2026-05-23 - S3K AIZ2 reload sidekick catch-up gate cadence (AIZ f6313 -> f7082)
+
+- Worktree: integrated local workspace with other workers' AIZ/CNZ/MGZ/shared edits preserved.
+- Commands:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2ReloadSidekickCatchUpGateUsesRomVisibleCounter" test "-DfailIfNoTests=false"` - RED before the fix: Tails was still parked at `$7F00,0000` with `x_speed/g_speed=$0445` on frame 6313.
+  - `mvn "-Dmse=off" compile "-Dmaven.compiler.failOnError=false"` - used to repopulate `target/classes` because the normal lifecycle is currently blocked by an unrelated dirty-workspace compile error in `PlayableSpriteMovement#getStatusByte`.
+  - `javac --release 21 -encoding UTF-8 -classpath "<target/classes;target/test-classes;deps>" -d target/classes src/main/java/com/openggf/sprites/playable/SidekickCpuController.java` and matching `javac` for `TestS3kAizTraceReplay`.
+  - `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2ReloadSidekickCatchUpGateUsesRomVisibleCounter" "-DfailIfNoTests=false"` - PASS, 1 test.
+  - `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2ReloadResumeAppliesRomCameraLock+aiz2FireRevealReleasesReloadCameraLockOnRomFrame+aiz2ReloadSidekickUsesRomVisiblePushAutoJumpCadence+aiz2ReloadSidekickCatchUpGateUsesRomVisibleCounter" "-DfailIfNoTests=false"` - PASS, 4 tests.
+  - `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false"` - FAIL at new frontier.
+- Result: AIZ advanced from frame 6313 `tails_x_speed expected=0x0000 actual=0x0445`
+  to frame 7082 `tails_air expected=1 actual=0` (938 errors / 25 warnings).
+- Root cause/evidence:
+  - ROM `sub_13ECA` parks Tails by setting `Tails_CPU_routine=2`,
+    `object_control=$81`, `status=Status_InAir`, `x_pos=$7F00`, and `y_pos=0`;
+    it deliberately does not clear `x_vel`, `y_vel`, or `ground_vel`
+    (`sonic3k.asm:26800-26809`). The stale `$0445` velocity at frames
+    6255-6312 was therefore correct.
+  - ROM `Tails_Catch_Up_Flying` routine 2 reads `Level_frame_counter`, masks
+    the low six bits, and when the gate fires reaches `loc_13B50`, which snaps
+    Tails to Sonic, writes `y_pos=Sonic.y-$C0`, clears `x_vel/y_vel/ground_vel`,
+    and enters routine 4 (`sonic3k.asm:26474-26511`).
+  - At AIZ2 post-reload frame 6313 the trace has `Level_frame_counter=$1780`,
+    so ROM fires the gate and clears speed. The engine evaluated the stored
+    counter one tick behind and fired at frame 6314, after the leader's
+    pre-object position had changed. The existing AIZ intro marker already
+    needed the ROM-visible counter bridge; this fix scopes the same marker-gate
+    bridge to AIZ zone only. CNZ/MGZ and other normal `sub_13ECA` marker cadence
+    still use the stored counter.
+- New frontier: frame 7082 sidekick-only auto-jump/air mismatch after
+  `aiz2_reload_resume`. Player and camera match. ROM Tails has just set
+  airborne/rolling with `y_speed=-$0680` from the normal CPU fallthrough path
+  at `Level_frame_counter=$1A80`, while the engine remains grounded and jumps
+  one frame later.
+
+## 2026-05-23 - S3K AIZ2 reload sidekick push auto-jump cadence (AIZ f5736 -> f6313)
+
+- Worktree: integrated local workspace with other workers' AIZ/CNZ/MGZ/shared edits preserved.
+- Commands:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2ReloadSidekickUsesRomVisiblePushAutoJumpCadence" test "-DfailIfNoTests=false"` - RED before the fix: Tails stayed grounded in the AIZ2 post-reload current-push bypass; PASS after the fix, 1 test.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2ReloadResumeAppliesRomCameraLock+aiz2FireRevealReleasesReloadCameraLockOnRomFrame+aiz2ReloadSidekickUsesRomVisiblePushAutoJumpCadence" test "-DfailIfNoTests=false"` - PASS, 3 tests.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"` - FAIL at new frontier.
+- Result: AIZ advanced from frame 5736 `tails_air expected=1 actual=0`
+  to frame 6313 `tails_x_speed expected=0x0000 actual=0x0445`
+  (962 errors / 25 warnings).
+- Root cause/evidence:
+  - In the fresh integrated repro, the first failing sidekick branch was the
+    normal-state `current_push_bypass` path after `aiz2_reload_resume`. ROM
+    Tails jumped because the frame counter visible to `loc_13E9C` was `$1540`,
+    while the engine evaluated the stored counter `$153F`.
+  - `LevelLoop` increments `Level_frame_counter` before `Process_Sprites`
+    (`sonic3k.asm:7888-7894`). `Tails_Normal` reads delayed position/status,
+    then tests Tails' current `Status_Push`; when current push is set and the
+    delayed push bit is clear it branches directly to `loc_13E9C`
+    (`sonic3k.asm:26683-26705`). `loc_13E9C` tests the low six bits of
+    `Level_frame_counter+1` and ORs jump buttons into `Ctrl_2_logical` when
+    the cadence hits (`sonic3k.asm:26775-26785`).
+  - The engine already had an AIZ object-order bridge for this ROM-visible
+    cadence in earlier AIZ Act 1 handoffs. The AIZ2 post-reload push-bypass is
+    the same zone-local ordering case, so the fix broadens that auto-jump
+    counter bridge from AIZ Act 1 to AIZ zone only. Normal `sub_13ECA` despawn
+    markers still use the stored frame-counter cadence outside the separate
+    AIZ1 dormant-marker override (`sonic3k.asm:26478-26488,26800-26809`).
+- New frontier: frame 6313 sidekick-only despawn/parking velocity mismatch.
+  Player and camera match; ROM Tails is parked/visible near the ride-vine area
+  with zero speed while the engine parks at `$7F00,0000` retaining
+  `x_speed/g_speed=$0445`.
+
+## 2026-05-23 - S3K AIZ2 reload camera lock/reveal release (AIZ f5497 -> f5736)
+
+- Worktree: integrated local workspace with other workers' AIZ/CNZ/MGZ/shared edits preserved.
+- Commands:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2ReloadResumeAppliesRomCameraLock" test "-DfailIfNoTests=false"` - PASS, 1 test.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aiz2FireRevealReleasesReloadCameraLockOnRomFrame" test "-DfailIfNoTests=false"` - PASS, 1 test.
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"` - FAIL at new frontier.
+- Result: AIZ advanced from frame 5497 camera mismatch after `aiz2_reload_resume`
+  to frame 5736 `tails_air expected=1 actual=0` (1023 errors / 25 warnings).
+- Root cause/evidence:
+  - `AIZ1BGE_Finish` subtracts `$2F00/$80` from player/camera and writes
+    `$0010/$0010` to `Camera_min_X_pos/Camera_max_X_pos`, plus `$0000/$0260`
+    to `Camera_min_Y_pos/Camera_max_Y_pos` and target max Y `$0260`
+    (`sonic3k.asm:104747-104762`; RAM order in
+    `sonic3k.constants.asm:355-362`). The engine only preserved the offset
+    camera position and target max Y, so the first post-reload camera update
+    followed Sonic to `$0028/$0278` instead of holding `$0010/$0260`.
+  - `AIZ2BGE_WaitFire` releases the X lock by writing
+    `Camera_max_X_pos=$6000` when `Camera_Y_pos_BG_copy >= $0310`, after the
+    `AIZ2BGE_FireRedraw`/row-draw gate (`sonic3k.asm:105031-105092`). The
+    engine lacked that release; once added, the existing resumed fire-BG start
+    released too early, so the AIZ2 resumed fire scroll start is `$0140` to
+    align the `$0310` reveal with the ROM-visible frame.
+- New frontier: player/camera match at frame 5736. The remaining first
+  divergence is sidekick-only after AIZ2 resume: ROM Tails is airborne/rolling
+  with `tails_y_speed=-0680`, while the engine Tails remains grounded in
+  `current_push_bypass`.
+
+## 2026-05-23 - S3K MGZ top-platform carry arithmetic (MGZ f3721 -> f3777)
+
+- Worktree: integrated local workspace with other workers' AIZ/CNZ/MGZ/shared edits preserved.
+- Regression guard:
+  `mvn "-Dmse=off" "-Dtest=TestS3kMgzTopPlatformParityHeadless" test "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false"`
+  - RED before the positive-centering arithmetic fix: `positiveCenteringKickUsesRomNegThenArithmeticShift`
+    expected platform `yVel=-9`, actual `-8`.
+  - RED before the later `$-100` band fix: `positiveCenteringKickAllowsRomOvershootPastMinus100Band`
+    expected platform `yVel=-0x0108`, actual `-0x0100`.
+  - PASS after fixes: 19 tests, 0 failures.
+- Focused MGZ replay/guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMgzF498AirRollPhysics,com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - `TestS3kMgzF498AirRollPhysics`: PASS, 1 test.
+  - `TestS3kMgzTraceReplay#replayMatchesTrace`: FAIL at new frontier.
+  - Result: MGZ frontier advanced from frame 3721 `y expected=0x0AA3 actual=0x0AA4`
+    through frame 3757 `y_speed expected=-0102 actual=-00F8`, then to frame 3777
+    `tails_y_speed expected=0x0038 actual=0x0000`.
+  - New count: 4856 errors / 68 warnings.
+
+### Root cause
+
+`Obj_MGZTopPlatform` positive centering at `loc_35148` copies `x_vel` to `d0`, branches only if
+negative, then executes `neg.w d0` before `asr.w #4` and adds that signed shifted value to
+`y_vel` after the `$8` upward kick (`sonic3k.asm:71966-71974`). The engine divided the positive
+`xVel` first and then subtracted it, so small positive velocities (`4`, `8`, etc.) contributed `0`
+instead of the ROM's `-1`. This left the platform/player vertical body motion one pixel/frame late
+at the old frame-3721 frontier.
+
+The later frame-3757 mismatch was another clamp ordering error in the same centering routine. ROM
+`loc_35148` and its mirrored negative branch `loc_3510A` subtract `$8`, compare the result against
+`-$100`, and only then add the signed `x_vel >> 4` contribution (`sonic3k.asm:71943-71951,
+71966-71974`). There is no post-add clamp, so a positive-centering case can overshoot from
+`-$F8` to `-$108`. The engine clamped after the add and flattened this into `-$100`, making the
+post-gravity player `y_speed` `-00F8` instead of the ROM's `-0102`.
+
+The same pass also keeps MGZ carried-player word writes/subpixel motion aligned with the ROM:
+`loc_34F84` snaps only `x_pos` and preserves player velocity/subpixels (`sonic3k.asm:71804-71817`),
+`loc_35070` runs `MoveSprite2` on the grabbed player (`sonic3k.asm:71901-71904`), and `sub_35202`
+only word-snaps carried-player `x_pos/y_pos` (`sonic3k.asm:72046-72058`). No trace data is written
+into engine state.
+
+### New MGZ frontier (frame 3777)
+
+Player/platform positions, subpixels, and Sonic velocities now match through the old top-platform
+frontier. At frame 3777 the first divergence is sidekick-only: ROM Tails has
+`tails_y_speed=0x0038`, while the engine has `0x0000`. ROM diagnostics show Tails airborne with
+`onObj=04` and `tailsInteract slot=4 ptr=B128 obj=0002413E @0CA0,098B`; the engine has Tails in
+the normal despawn/follow branch, no ride object, and no velocity injection. The next owner is a
+Tails/MGZ object interaction or sidekick route-state issue, not the Sonic top-platform centering
+formula.
+
+## 2026-05-23 - S3K AIZ/CNZ/MGZ delegated frontier pass
+
+- Branch: delegated S3K frontier workspace.
+- Commands:
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kAizIntroEventsHeadless,com.openggf.sprites.playable.TestSidekickCpuFollowParity#normalAutoJumpCadenceUsesLevelFrameCounterWithoutInlinePlusOne,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#aizIntroSidekickStaysAtCatchUpMarkerUntilRomGate,com.openggf.sprites.playable.TestSidekickCpuControllerRewindCapture" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kAizIntroEventsHeadless#releasedAizIntroSidekickUsesRomVisibleCounterAfterWaitingForCatchUpGate,com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMgzF498AirRollPhysics,com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestAizGiantRideVineObjectInstance,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#giantRideVineGrabsPlayerOnRomFrameAfterPlatformCarry" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzBumperObjectInstance#touchVisibilityUsesRomCollisionListWindowFromAnchor,com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#normalAutoJumpCadenceUsesLevelFrameCounterWithoutInlinePlusOne,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#sidekickAutoJumpsOnRomFrameAfterGiantRideVineHandoff" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" dependency:build-classpath "-Dmdep.outputFile=target/classpath.txt"`
+  - `$cp = "target/classes;target/test-classes;" + (Get-Content target/classpath.txt); javac --release 21 -encoding UTF-8 -cp $cp -d target/test-classes src/test/java/com/openggf/tests/trace/s3k/TestS3kAizTraceReplay.java; javac --release 21 -encoding UTF-8 -cp $cp -d target/test-classes src/test/java/com/openggf/tests/trace/s3k/S3kReplayCheckpointDetector.java`
+  - `mvn "-Dmse=off" compile surefire:test "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#normalAutoJumpCadenceUsesLevelFrameCounterWithoutInlinePlusOne,com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#sidekickAutoJumpsOnRomFrameAfterGiantRideVineHandoff" "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" compile surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" compile test-compile "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#hollowTreeCameraLockBecomesVisibleOnRomFrameAfterCapture" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#hollowTreeSidekickUsesRomVisibleAutoJumpCadenceOnReleaseFrame" test "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - `$cp = "target/classes;target/test-classes;" + (Get-Content target/classpath.txt); javac --release 21 -encoding UTF-8 -cp $cp -d target/classes src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java; javac --release 21 -encoding UTF-8 -cp $cp -d target/classes src/main/java/com/openggf/trace/replay/TraceReplayFixture.java; javac --release 21 -encoding UTF-8 -cp $cp -d target/test-classes src/test/java/com/openggf/tests/trace/s3k/TestS3kAizTraceReplay.java`
+  - `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#hollowTreeRideAppliesRomVerticalCameraMinimum" "-DfailIfNoTests=false"`
+  - `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false"`
+- Result: AIZ and CNZ frontiers advanced. MGZ was evaluated and left unchanged
+  because the first divergence points at upstream object slot occupancy rather
+  than a bounded physics/object routine fix.
+  Direct Surefire was used for the latest AIZ-only recheck because unrelated
+  dirty shared-workspace test sources currently block a normal `testCompile`.
+
+Current integrated verification facts:
+
+| Trace | Frontier / first error | Outcome |
+| --- | --- | --- |
+| `TestS3kAizTraceReplay#replayMatchesTrace` | frame 5497, `camera_y` expected `0x0260`, actual `0x0278` (`camera_x` also expected `0x0010`, actual `0x0028`) | moved from frame 2465 `tails_x_speed`, frame 2696 `x_speed`, frame 2721 `tails_air`, frame 3170 `tails_y`, frame 4539 `camera_x`, frame 4540 `tails_x`, frame 4577 `tails_air`, then frame 4646 `camera_y` |
+| `TestS3kCnzTraceReplay#replayMatchesTrace` | frame 8963, `tails_air` expected `0`, actual `1` | moved from frame 6568 `x_speed`, then frame 8123 `tails_x_speed` |
+| `TestS3kMgzTraceReplay#replayMatchesTrace` | frame 2458, `tails_g_speed` expected `0x0000`, actual `-0024` | moved from frame 2395 `g_speed` after MGZ Spiker/Tunnelbot `Obj_WaitOffscreen` lifecycle fixes; current run reported 5214 errors / 64 warnings |
+
+### MGZ frontier movement (frame 2395 -> 2458)
+
+MGZ's frame-2395 player `g_speed` divergence is cleared. The upstream slot
+pressure issue was a pair of MGZ badniks that allocated their SST slots from
+the placement loader but ran their real state machines before the ROM would.
+Both `Obj_Spiker` and `Obj_Tunnelbot` enter through `Obj_WaitOffscreen`, which
+installs `loc_85AD2`, draws a `$20` offscreen marker, and restores the saved
+operation pointer only after `render_flags` bit 7 is set
+(`sonic3k.asm:180266-180298`). `Obj_Spiker` calls this before child creation
+(`sonic3k.asm:185372-185397`), and `Obj_Tunnelbot` does the same before
+`Swing_Setup1`/`CreateChild1_Normal` (`sonic3k.asm:184710-184734`).
+
+The diagnostic window now matches the ROM lifecycle points: Spiker wrapper at
+frame 2216, Spiker active/children at frames 2315/2316, Tunnelbot wrapper at
+frame 2326, and Tunnelbot active/arms at frames 2362/2363. The remaining
+frontier at frame 2458 is Tails' interaction with ROM Obj1A920 in slots s4/s21
+while the engine still has different later SST pressure near the Tunnelbot and
+MGZ smashing-pillar area; no trigger/platform execution-order override was
+introduced.
+
+### AIZ frontier movement (frame 2465 -> 4646)
+
+Focused sidekick/AIZ/rewind guards passed. The old Tails marker release
+mismatch is cleared. AIZ's pre-physics release bridge waits for committed
+camera X rather than a preview-only threshold crossing. The AIZ-only catch-up
+path uses the ROM-visible `Level_frame_counter` edge for the intro marker
+release, while normal S3K `sub_13ECA` marker catch-up stays on the stored
+counter cadence (`Tails_Catch_Up_Flying` masks `Level_frame_counter` directly
+with no `+1`; sonic3k.asm:26478-26488).
+
+The frame-2696 player/vine handoff is also cleared. `Obj_AIZGiantRideVine`
+now samples `AIZ_vine_angle` on the same frame as the ROM object pass
+(`Process_Sprites` before `ChangeRingFrame`, sonic3k.asm:7894,7910; angle
+increment at sonic3k.asm:9693), and the giant-vine grab no longer starts the
+first child's activated swing integrator. ROM `sub_220C2` only writes the
+handle grab byte/player fields (sonic3k.asm:46731-46743); the first child
+continues the passive `loc_2248A` path reading `AIZ_vine_angle`
+(sonic3k.asm:46840-46854).
+
+The frame-2721 post-vine sidekick auto-jump is now cleared. ROM `Tails_Normal`
+uses the current-push bridge into `loc_13E9C`, then writes Ctrl 2 press bits
+before the player normal-mode jump step (`sonic3k.asm:26702-26705,
+26775-26785`); `LevelLoop` has already incremented `Level_frame_counter`
+before `Process_Sprites` (`sonic3k.asm:7888-7894`). The engine's stored level
+counter is one tick behind that ROM-visible view during AIZ's local
+giant-vine/collapsing-platform push handoff, so the one-tick cadence bridge is
+scoped to AIZ Act 1 NORMAL current-push bypass cadence. Normal `sub_13ECA`
+markers still use stored cadence.
+
+The frame-3170 sidekick auto-jump is now cleared by the same S3K
+current-push cadence rule. ROM frame 3170 has `Level_frame_counter=$0B41`, so
+the `loc_13E9C` low-6-bit gate does not jump; the engine had been evaluating
+the stored `$0B40` counter and entered `Tails_Jump` one frame early. The
+override remains limited to AIZ Act 1 NORMAL current-push bypass cadence; normal
+`sub_13ECA` catch-up markers still use stored cadence, preserving the CNZ/MGZ
+marker timing established above.
+
+The frame-4539/4540 hollow-tree camera and sidekick boundary handoff is now
+cleared. `Obj_AIZHollowTree` writes `Camera_min_X_pos` and `Camera_max_X_pos`
+to `$2C60` immediately after Player 1 capture (`sonic3k.asm:43702-43704`),
+and Tails' boundary routine reads `Camera_min_X_pos+$10` before clamping
+`x_pos`, `x_vel`, and `ground_vel` (`sonic3k.asm:28414-28450`). The engine
+keeps that boundary visible to sidekick physics while deferring only the
+same-frame visible camera clamp so the camera still appears on the ROM frame
+after capture.
+
+The frame-4577 hollow-tree sidekick jump is now cleared. The ROM diagnostic
+`input=$7878` is not movie jump input; the BK2 input is still RIGHT-only and
+ROM `Tails_CPU_Control` has ORed the CPU auto-jump bits into the delayed
+`Ctrl_2_logical` word at `loc_13E9C`. ROM frame 4577 has
+`Level_frame_counter=$10C0`, so the low-6-bit gate fires before `Tails_Jump`
+adds the angle-derived jump velocity and sets `Status_InAir|Status_Roll`
+(`sonic3k.asm:26775-26785,28519-28568`). The engine was evaluating the stored
+`$10BF` counter on the hollow-tree `leader_on_object` path and jumped one frame
+late. The ROM-visible one-tick cadence bridge is still AIZ-only and now covers
+only the proven local object-order cases: vine/platform current-push handoff and
+the hollow-tree leader-on-object release path. Normal `sub_13ECA` markers keep
+the stored counter cadence.
+
+The frame-4646 hollow-tree vertical camera clamp is now cleared. ROM
+`AIZ1_Resize loc_1C550` writes `Camera_min_Y_pos=0` after the max-Y table
+scan, then raises it to `$02E0` once `Camera_X_pos >= $2C00`
+(`sonic3k.asm:38939-38958`). The engine already used the ROM-phase
+end-of-frame camera X for the AIZ1 max-Y/palette resize checks, but did not
+port the matching min-Y write, leaving `Camera_min_Y_pos=0` and allowing the
+camera to scroll one pixel above the ROM top clamp during the hollow-tree ride.
+
+New AIZ frontier: frame 5497, `camera_y` expected `0x0260`, actual `0x0278`
+and `camera_x` expected `0x0010`, actual `0x0028` (1026 errors / 25 warnings).
+This is after the AIZ1 -> AIZ2 seamless reload checkpoint
+`aiz2_reload_resume`; player and Tails state still match at the first error,
+so the next bounded owner is AIZ act-transition camera restore/lock timing.
+
+### CNZ frontier movement (frame 6568 -> 8963)
+
+The frame-6568 `x_speed` delta was S3K speed-shoes expiry timing. S3K
+`Sonic_ChgJumpDir` doubles acceleration while speed shoes are active
+(sonic3k.asm:23088-23120), but `Sonic_Display` clears speed shoes and restores
+movement constants before the next movement step reads them when the display
+timer expires (sonic3k.asm:21540-21561,22067-22081). The S3K profile no longer
+adds an extra pre-physics timer tick for this path.
+
+The integrated conflict check also verified normal S3K `sub_13ECA` markers must
+not use the AIZ one-tick override: with the override applied globally, CNZ
+regressed to frame 830 (`tails_x_speed` expected `0x006A`, actual `0x0000`).
+After scoping the override to AIZ Act 1, CNZ advances to frame 8123. The new
+owner is likely a Tails CNZ bumper/object velocity injection, not marker
+release cadence.
+
+The frame-8123 bumper miss is now cleared. S3K `Obj_Bumper` adds CNZ bumpers
+to `Collision_response_list` using the original anchor `$30(a0)`, not the
+current orbit point: `(origin_x & $FF80) - Camera_X_pos_coarse_back <= $280`
+(sonic3k.asm:68823-68830,68881-68886), with
+`Camera_X_pos_coarse_back = (Camera_X_pos - $80) & $FF80`
+(sonic3k.asm:37472-37478). `CnzBumperObjectInstance` now mirrors that
+touch-list window.
+
+New CNZ frontier: frame 8963, `tails_air` expected `0`, actual `1`. ROM has
+Tails standing on object slot 6 / door object `0x3C @1040,0248`
+(`onObj=true`, `objP2=true`), while the engine reports the door as no-touch
+and Tails is airborne. Next owner is likely S3K CNZ door/platform sidekick
+standing logic.
+
+### MGZ evaluated, frontier unchanged
+
+MGZ still first diverges at frame 1538 (`y` expected `0x0DC9`, actual
+`0x0DC8`). The focused `TestS3kMgzF498AirRollPhysics` guard passes. Diagnostic
+comparison shows the immediate cause is trigger-platform timing from object
+slot order: in the ROM the trigger platforms occupy slots `s4`/`s5` and execute
+before the dash trigger in `s21`; in the engine the dash trigger is `s6` and
+the platforms are `s7`/`s8`, so the trigger is published before the platforms
+run. This points at earlier MGZ SST slot occupancy / child-object lifetime
+divergence, not an isolated air-roll or platform formula fix.
+
 ## 2026-05-21 - S3K AIZ/CNZ integrated object-physics verification refresh
 
 - Branch: object physics standardization worktree
@@ -2471,3 +4865,932 @@ returns `null`. ROM path: FindFloor `loc_1E86A` calls FindFloor2 at d2=0x383, no
 returns `null` → no ceiling hit → Sonic passes through 4px too far. This is the `prevResult==null`
 case in the `metric<0, adjusted<0` first-pass branch; a fix of `return ~yInTile` is ROM-accurate
 but causes a downstream regression at frame 1208 that requires separate investigation.
+
+## 2026-05-23 - S3K AIZ hollow-tree camera lock phase (AIZ f4539 -> f4540)
+
+- Worktree: integrated local workspace with other workers' CNZ/MGZ/shared edits preserved.
+- Focused guard:
+  `mvn "-Dmse=off" compile surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#hollowTreeCameraLockBecomesVisibleOnRomFrameAfterCapture" "-DfailIfNoTests=false"`
+  - RED before fix: frame 4539 expected camera_x `0x2C51`, actual `0x2C60`.
+  - PASS after fix: 1 test, 0 failures.
+- Full replay:
+  `mvn "-Dmse=off" compile surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false"`
+  - Result: AIZ frontier advanced from frame 4539 `camera_x expected=0x2C51 actual=0x2C60`
+    to frame 4540 `tails_x expected=0x2C70 actual=0x2C2B`.
+  - New count: 1341 errors / 25 warnings.
+
+### Root cause
+
+`Obj_AIZHollowTree` capture was otherwise aligned at frame 4539: Sonic position/speed/status,
+object-control state, sidekick state, and the tree's `$38=$3C` timer matched the ROM context.
+The engine applied the tree's `Camera_min_X_pos=$2C60` and `Camera_max_X_pos=$2C60` writes before
+its frame-end camera update, making the clamp visible one trace frame early. The ROM object code
+does write those words during the capture setup (`sonic3k.asm:43688-43704`), but the trace-visible
+camera position stays at the normal follow value on frame 4539 and first clamps to `$2C60` on
+frame 4540.
+
+Fix: keep the capture/timer/reveal-control effects immediate, but queue this object-local camera
+boundary write until the hollow-tree object's next update pass. No shared camera or CNZ/MGZ code
+was changed.
+
+### New AIZ frontier (frame 4540)
+
+`tails_x mismatch (expected=0x2C70, actual=0x2C2B)` after Sonic/camera match. ROM sidekick context
+shows `branch=leader_on_object`, status `0x02`, onObj `0x27`, and Tails parked at `0x2C70,0x0410`;
+engine Tails remains in normal follow physics at `0x2C2B,0x0411`. This is now a sidekick
+leader-on-object/hollow-tree handoff diagnostic and was left untouched in this AIZ camera fix.
+
+## 2026-05-23 - S3K CNZ Tails catch-up signed Y steering (CNZ f9344 -> f9801)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Regression guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuControllerFlightAutoRecovery#flightSteersNegativeYWordDownTowardPositiveTarget" test "-DfailIfNoTests=false"`
+  - RED before fix: expected Tails Y `0xFFDA`, actual `0xFFD8`.
+  - PASS after fix: 1 test, 0 failures.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuControllerFlightAutoRecovery,com.openggf.sprites.playable.TestSidekickCpuControllerCatchUpFlight,com.openggf.sprites.playable.TestSidekickCpuFollowParity#cnzDoorSupportGraceFallsThroughToFollowLeftNudgeWhenPushIsClear,com.openggf.sprites.managers.TestPlayableSpriteMovement#jumpPreservesStatusOnObjectUntilSolidObjectPass" test "-DfailIfNoTests=false"`
+  - PASS: 17 tests, 0 failures.
+- Full CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 9344 `tails_y expected=-0026 actual=-0028`
+    to frame 9801 `y_speed expected=0x07A8 actual=0x0000`.
+  - New count: 3310 errors / 15 warnings.
+
+### Root cause
+
+`Tails_FlySwim_Unknown` loads the delayed target from `Pos_table`, computes
+`y_pos(a0) - Tails_CPU_target_Y`, then branches on the signed word flags before adding
+`+1` or `-1` to Tails' Y position (`sonic3k.asm:26564-26565,26611-26620`). The engine masked
+Tails' current Y to an unsigned word before subtracting, so a negative offscreen Y such as
+`$FFD9` was treated as below the target rather than above it. At frame 9344 this made Tails move
+up to `$FFD8` while the ROM moved down to `$FFDA`.
+
+Fix: make the catch-up flight Y delta use a signed 16-bit subtraction result before choosing the
+`+1`/`-1` steering step. No trace data is written into engine state.
+
+### New CNZ frontier (frame 9801)
+
+`y_speed mismatch (expected=0x07A8, actual=0x0000)`. Sonic/player matches through frame 9800, then
+the engine lands on/near `CNZTrapDoor @1560,0284` one frame earlier than the ROM while the ROM still
+has `status=0x02` and downward `y_speed=0x07A8`. Tails' position still matches at the new frontier,
+so this is a separate CNZ trap-door/landing issue.
+
+## 2026-05-23 - S3K CNZ trap-door top-solid object phase (CNZ f9801 -> f9951)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Regression guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestSolidObjectManager#cnzTrapDoorUsesPreviousPlayerPositionForNewTopSolidLanding" test "-DfailIfNoTests=false"`
+  - RED before fix: expected Sonic to remain airborne with `y_speed=0x07A8`, but the engine landed
+    immediately on the trap door and zeroed Y speed.
+  - PASS after fix: 1 test, 0 failures.
+- Focused trap-door guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestSolidObjectManager#cnzTrapDoorSolidObjectTopAcceptsExactSurfaceBoundaryAndLandsOnePixelInside,com.openggf.level.objects.TestSolidObjectManager#cnzTrapDoorUsesPreviousPlayerPositionForNewTopSolidLanding,com.openggf.tests.TestS3kCnzLocalTraversalHeadless#trapDoorOpensFromTheROMTriggerWindowAndEventuallyCloses,com.openggf.tests.TestS3kCnzLocalTraversalHeadless#trapDoorDoesNotOpenWhenPlayerCenterIsAboveTheHinge,com.openggf.tests.TestS3kCnzLocalTraversalHeadless#trapDoorChecksExtraEngineSidekickFromParticipationQuery" test "-DfailIfNoTests=false"`
+  - PASS: 5 tests, 0 failures.
+- Full CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 9801 `y_speed expected=0x07A8 actual=0x0000`
+    to frame 9951 `tails_x_speed expected=0x0000 actual=0x0240`.
+  - New count: 3433 errors / 13 warnings.
+  - Fresh post-doc recheck used direct Surefire after the integrated workspace's unrelated
+    `MGZTopPlatformObjectInstance#getName()` compile error blocked the normal Maven lifecycle:
+    `mvn "-Dmse=off" "-Dmaven.compiler.failOnError=false" test-compile "-DfailIfNoTests=false"`,
+    then `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false"`.
+    It reproduced the same frame-9951 frontier and count.
+
+### Root cause
+
+`Obj_CNZTrapDoor` runs in the object pass, checks both players through `sub_31CFA`, then immediately
+calls `SolidObjectTop` with width `$20` and top offset `9` (`sonic3k.asm:67217-67225`). The
+trigger window in `sub_31CFA` is independent of the top-solid landing at this frame
+(`sonic3k.asm:67233-67249`). `SolidObjectTop` rejects players still above the surface and accepts the
+exact boundary before `RideObject_SetRide` (`sonic3k.asm:41982-42015`).
+
+At frame 9801 the ROM object still sees Sonic's previously completed Y position (`$025D`), so the
+top-solid check rejects the landing and the CPU/player step continues to final `y_speed=$07A8`. The
+engine's split pass was testing the just-moved Y position (`$0264`) against the trap door, accepted the
+exact top boundary one object phase early, and zeroed Y speed. The fix is object-local: S3K CNZ trap
+doors sample the previous completed player position for new `SolidObjectTop` contacts, matching the
+ROM object phase without changing shared collision.
+
+### New CNZ frontier (frame 9951)
+
+`tails_x_speed mismatch (expected=0x0000, actual=0x0240)`. ROM context has Tails standing on object
+slot 12, `CNZCylinder @1660,0284`, with `onObj=true objP2=true`; the engine has Tails off-object near
+`CNZCylinder @1660,0280 no-touch` and continuing normal follow movement. Sonic remains past the
+trap-door frontier, so this is a separate CNZ cylinder/sidekick support handoff issue.
+
+## 2026-05-23 - S3K CNZ cylinder grounded P2 standing-bit reboost (CNZ f9966 -> f10009)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Regression guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kCnzDirectedTraversalHeadless#cnzCylinderDoesNotReboostMode0WhenActiveGroundedSidekickSolidFeedbackDrops" test "-DfailIfNoTests=false"`
+  - PASS after fix: 1 test, 0 failures.
+- Focused cylinder guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kCnzDirectedTraversalHeadless#cnzCylinderUsesRomRenderHeightForBottomEdgeSidekickSolidPass+cnzCylinderSeedsGroundVelocityWhenVerticalMotionReachesRomLaunchThreshold+cnzCylinderDoesNotReboostMode0WhenActiveGroundedSidekickSolidFeedbackDrops+cnzCylinderReleasesWhenStandingContactIsLostWithoutJumpInput+cnzCylinderStandingLossClearsSlotWithoutJumpSetup+cnzCylinderRecapturesOffscreenCpuSidekickMarkerFromStandingBit+cnzCylinderMaintainsIndependentRiderStateForPlayerAndSidekick" test "-DfailIfNoTests=false"`
+  - PASS: 7 tests, 0 failures.
+- CNZ replay:
+  - Normal Maven lifecycle command was blocked in `testCompile` by unrelated integrated-workspace
+    compile errors after test compile cache invalidation.
+  - Direct Surefire replay:
+    `mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" "-DfailIfNoTests=false"`
+    - Result: CNZ frontier advanced from frame 9966
+      `tails_g_speed expected=0x0000 actual=0x0800` to frame 10009
+      `tails_x expected=0x167A actual=0x1679`.
+    - New count: 2713 errors / 15 warnings.
+
+### Root cause
+
+`loc_32208` compares `status(a0)&standing_mask` with `$3C(a0)` before the cylinder's
+`sub_324C0` and `SolidObjectFull` passes (`sonic3k.asm:67709-67718,67656-67672`). It only adds
+`$400` to `y_vel(a0)` for a real new standing-bit transition, and `loc_32594` later sets rider
+`ground_vel=$800` only when `abs(y_vel(a0)) >= $480` (`sonic3k.asm:67725-67742,68045-68056`).
+
+At frame 9966 ROM still has the cylinder P2 standing bit set continuously (`tailsInteract ... st=10`)
+while Tails is a grounded active cylinder rider. The engine could clear its internal standing mask for
+the active grounded sidekick when object-controlled solid feedback briefly dropped, then treat the
+returning P2 bit as a fresh landing. That false transition re-applied the `$400` mode-0 boost and
+crossed the `$480` launch threshold, producing the spurious `tails_g_speed=$0800`.
+
+Fix: preserve the prior standing bit for active, grounded, object-controlled CNZ cylinder riders until
+the release path makes the rider airborne. No shared collision or AIZ/MGZ behavior changed.
+
+### New CNZ frontier (frame 10009)
+
+`tails_x mismatch (expected=0x167A, actual=0x1679)`. Tails has released from
+`CNZCylinder @1660,0268`; ROM and engine agree on release state and most velocities, but the engine is
+one pixel left after the post-release CPU/physics step. This is a separate post-release
+sidekick/subpixel issue.
+
+## 2026-05-23 - S3K CNZ cylinder rider Ctrl logical latch fix (CNZ f10924 -> f10927)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 10 tests, 0 failures.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 10924
+    `tails_x_speed expected=0x0000 actual=0x0018` to frame 10927
+    `tails_x expected=0x1A21 actual=0x1A20`.
+  - New count: 3657 errors / 30 warnings.
+
+### Root cause
+
+`Obj_CNZCylinder` capture writes `x_vel=0`, `y_vel=0`, `ground_vel=0`, and `object_control=$03`, then
+clears roll/air/push flags (`sonic3k.asm:67999-68008`). It does not write `Ctrl_1_locked` or
+`Ctrl_2_locked`. S3K `Sonic_Control` only latches `Ctrl_1_logical` when the separate
+`Ctrl_1_locked` byte is nonzero (`sonic3k.asm:21539-21545`), and `Sonic_RecordPos` records that
+logical word into the delayed `Stat_table` used by `Tails_CPU_Control` (`sonic3k.asm:22124-22133,
+26683-26700`).
+
+The engine mapped CNZ cylinder capture to both ROM `object_control=$03` and the separate control-lock
+latch. While Sonic was held by the cylinder with raw input already zero, this preserved an older RIGHT
+bit in Sonic's delayed input history. Tails CPU copied that stale delayed bit through the
+`leader_on_object` branch, and normal airborne acceleration added `x_speed=$0018` after CPU at frame
+10924. The fix keeps the ROM object-control movement suppression but stops CNZCylinder from owning the
+separate logical-input lock.
+
+### New CNZ frontier (frame 10927)
+
+`tails_x mismatch (expected=0x1A21, actual=0x1A20)`. The stale delayed RIGHT input is gone
+(`eng-tails-cpu ... in=0000 gen=0000`), but once Tails is held by the cylinder the engine's cylinder
+center/held rider position is one pixel left of ROM (`CNZCylinder @1A09,0160` vs ROM `@1A0A,0160`).
+This is a separate CNZCylinder held-position/center timing issue.
+
+## 2026-05-23 - S3K AIZ Act 2 title/results level-size handoff (AIZ f8941 -> f8943)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- AIZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: AIZ frontier advanced from frame 8941
+    `camera_y expected=0x02C1 actual=0x02B8` to frame 8943
+    `camera_y expected=0x02D0 actual=0x02CE`.
+  - New count: 758 errors / 25 warnings.
+
+### Root cause
+
+The AIZ miniboss defeat handoff was still serializing the signpost/results flow behind the explosion
+controller. ROM `loc_68FB6` switches the boss object to `Wait_FadeToLevelMusic` and creates
+`Child6_CreateBossExplosion` in parallel; `loc_68C02`/`Obj_EndSignControl` is reached from the boss
+object's timer, not from explosion completion (`sonic3k.asm:137793-137806,179651-179668,
+137381-137393`).
+
+Once that lifecycle was aligned, the previous AIZ camera unlock proxy was also too broad: it widened
+the arena as soon as the title-card children were exiting. ROM only runs `Change_Act2Sizes` after the
+in-level title card has set `End_of_level_flag` (`sonic3k.asm:62708-62720,62276-62279,180415-180419`),
+then copies Act 2 sizes and creates the gradual level-size objects (`sonic3k.asm:180575-180609`).
+The engine now gates AIZ arena release on `End_of_level_flag`, keeps X under the
+`Obj_IncLevEndXGradual` `$4000` accumulator, and applies the Act 2 max-Y target plus
+`Obj_IncLevEndYGradual` `$8000` current-bound update (`sonic3k.asm:178154-178169,178210-178225`).
+
+### New AIZ frontier (frame 8943)
+
+`camera_y mismatch (expected=0x02D0, actual=0x02CE)`. Camera X now matches through this point, and
+the f8941/f8942 vertical release frames match. The remaining issue is the next vertical boundary phase
+after Sonic lands from the post-title-card jump, likely in the exact interaction between
+`Obj_IncLevEndYGradual` and `Do_ResizeEvents`/grounded vertical scroll ordering.
+
+## 2026-05-23 - S3K CNZ cylinder jump-release Y/solid ordering (CNZ f10967 -> f11061)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guards:
+  `mvn "-Dmse=off" clean "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 12 tests, 0 failures.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 10967
+    `tails_y expected=0x0130 actual=0x0131` to frame 11061
+    `tails_x expected=0x1A37 actual=0x1A3E`.
+  - New count: 3129 errors / 25 warnings.
+
+### Root cause
+
+`Obj_CNZCylinder` runs `sub_321E2`, then P1/P2 `sub_324C0`, then `SolidObjectFull`
+(`sonic3k.asm:67656-67672`). On the active jump branch, `loc_325B6` changes the rider's
+radii/animation/velocities and falls through to `loc_325F2`, which sets `Status_InAir` and clears
+`object_control`; it does not write `y_pos` (`sonic3k.asm:68058-68078`). Because the cylinder
+standing bit was set to reach `loc_32538`, the same object pass' `SolidObjectFull_1P` sees the
+airborne rider and returns through `loc_1DC98`, clearing support without reaching `loc_1E154`'s
+upward-velocity lift (`sonic3k.asm:41016-41034`).
+
+The engine was recomputing release Y from the cylinder's current center after its local hold rewrite,
+then allowing the generic S3K upward-velocity top lift to move Tails one pixel down on the horizontal
+release. The fix preserves the rider's pre-hold `y_pos` for jump release and suppresses only that
+released rider's same-frame generic solid contact for the cylinder object.
+
+### New CNZ frontier (frame 11061)
+
+`tails_x mismatch (expected=0x1A37, actual=0x1A3E)`. Tails' f10967 Y/release state now matches and
+the earlier f9983 vertical release remains green. The new failure is later in the post-release arc
+near monitors/balloon/cylinder context: ROM has Tails' x velocity/ground velocity zeroed while the
+engine preserves `x_speed=$00C8` / `ground_vel=$0211`.
+
+## 2026-05-23 - S3K CNZ monitor solid sidekick roll gate (CNZ f11061 -> f11310)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused monitor guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestSonic3kMonitorObjectInstance" test "-DfailIfNoTests=false"`
+  - PASS: 8 tests, 0 failures.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 11061
+    `tails_x expected=0x1A37 actual=0x1A3E` to frame 11310
+    `x expected=0x1B7D actual=0x1B7E`.
+  - New count: 4319 errors / 25 warnings.
+
+### Root cause
+
+S3K monitor object code calls `SolidObject_Monitor_SonicKnux` for Player 1, then
+`SolidObject_Monitor_Tails` for Player 2 (`sonic3k.asm:40480-40495`). The Player 2 path branches
+directly to `SolidObject_cont` when not in competition mode, before testing Tails' roll animation
+(`sonic3k.asm:40583-40590`). The shared `SolidObject_cont` classifier prioritizes side separation
+when horizontal penetration is less than or equal to vertical penetration, zeroing `x_vel` and
+`ground_vel` before subtracting the side distance from `x_pos` (`sonic3k.asm:41394-41509`).
+
+The engine had ported S3K monitors as S1-style monitor solidity and used the roll-animation gate for
+all players. That made rolling CPU Tails pass through the intact monitor at `$1A50,$00D0` instead of
+taking the normal side push at frame 11061.
+
+### New CNZ frontier (frame 11310)
+
+`x mismatch (expected=0x1B7D, actual=0x1B7E)`. Tails and immediate speeds match at the first error.
+The new failure is player-only while Sonic is object-controlled/on object near the next
+CNZ cylinder/bumper cluster; engine is one pixel ahead with matching zero velocities.
+
+## 2026-05-23 - S3K CNZ circular-cylinder held anchor (CNZ f11310 -> f11484)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 13 tests, 0 failures.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 11310
+    `x expected=0x1B7D actual=0x1B7E` to frame 11484
+    `x expected=0x1D15 actual=0x1D14`.
+  - New count: 3170 errors / 20 warnings.
+
+### Root cause
+
+Frame 11310 is an active held-rider frame on CNZCylinder subtype `$4B`. ROM
+`Obj_CNZCylinder` runs `sub_321E2`, then Player 1/Player 2 `sub_324C0`, then
+`SolidObjectFull` in one object pass (`sonic3k.asm:67656-67672`). The circular
+route writes object `x_pos/y_pos` before rider handling (`sonic3k.asm:67901-67973`),
+and active `loc_32538` writes the rider's `x_pos` from stored distance plus
+`x_pos(a0)` (`sonic3k.asm:68019-68038`).
+
+ROM frame 11310 still consumes cylinder slot 13 at `$1B93`; the engine's split
+phase had already advanced current center to `$1B94` while its frame-entry anchor
+still matched `$1B93`. The CNZCylinder held-anchor bridge now covers the proven
+circular positive step for non-CPU riders, keeping the player X write on the
+ROM-visible object anchor.
+
+### New CNZ frontier (frame 11484)
+
+`x mismatch (expected=0x1D15, actual=0x1D14)`. The f11310 player held-position
+drift is cleared. The new failure is later around the next CNZ balloon/cylinder/
+bumper cluster; player Y/speeds are aligned and camera follows the one-pixel X drift.
+
+## 2026-05-23 - S3K CNZ circular-cylinder first-capture distance (CNZ f11484 -> f11503)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused cylinder guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzCylinderInstance" test "-DfailIfNoTests=false"`
+  - PASS: 14 tests, 0 failures.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: CNZ frontier advanced from frame 11484
+    `x expected=0x1D15 actual=0x1D14` to frame 11503
+    `y expected=0x00EC actual=0x00ED`.
+  - New count: 2807 errors / 20 warnings.
+
+### Root cause
+
+Frame 11484 is the first held frame after a deferred first capture on CNZCylinder
+subtype `$4C`. ROM `Obj_CNZCylinder` runs `sub_321E2`, P1/P2 `sub_324C0`, and
+then `SolidObjectFull` in one object pass (`sonic3k.asm:67656-67672`). The
+circular route writes the cylinder `x_pos/y_pos` before rider handling
+(`sonic3k.asm:67901-67973`). The inactive capture path stores
+`abs(player.x_pos - x_pos(a0))` in the rider distance byte (`sonic3k.asm:67985-67998`),
+and the next active path adds that stored distance to current `x_pos(a0)` through
+`loc_32538` (`sonic3k.asm:68019-68038`).
+
+At frame 11483 ROM captures distance from cylinder X `$1CFE` and player X `$1D14`,
+so the distance byte is `$16`. The engine's split object/solid pipeline consumed
+that deferred standing bit after the cylinder had already stepped to `$1CFF`,
+storing `$15`; the following held frame therefore wrote Sonic one pixel left.
+The fix is local to `CNZCylinder`: circular, non-CPU, first-capture positive
+steps use the saved frame-entry X for the distance calculation only. Active
+held-frame anchor handling remains the existing disassembly-backed path.
+
+### New CNZ frontier (frame 11503)
+
+`y mismatch (expected=0x00EC, actual=0x00ED)` with matching player X and speeds.
+Camera Y follows the one-pixel player Y drift. The immediate object context is
+still the CNZ balloon/bumper/cylinder cluster, with Sonic object-controlled on
+slot 11 and the cylinder at `$1D00,$0120/$0121` in the trace window. This is a
+separate vertical support/carry issue and was left untouched.
+
+## 2026-05-23 - S3K AIZ Act 2 grounded max-Y resize carry (AIZ f8943 -> f9264)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused AIZ miniboss guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestAizMinibossCameraUnlock" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Focused AIZ intro guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kAizIntroEventsHeadless" test "-DfailIfNoTests=false"`
+  - PASS: 10 tests, 0 failures.
+- AIZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: AIZ frontier advanced from frame 8943
+    `camera_y expected=0x02D0 actual=0x02CE` to frame 9264
+    `tails_y expected=0x045C actual=0x045B`.
+  - New count: 757 errors / 25 warnings.
+
+### Root cause
+
+ROM `LevelLoop` runs sprite objects before background deformation (`sonic3k.asm:7884-7895`), and
+`DeformBgLayer` runs `MoveCameraY` before `Do_ResizeEvents` (`sonic3k.asm:38313-38316`). During the
+AIZ results/title-card level-size release, `Change_Act2Sizes` copies the Act 2 bounds and creates the
+gradual level-size objects (`sonic3k.asm:180575-180609`), while `Obj_IncLevEndYGradual` advances the
+current bottom bound with a `$8000` 16.16 accumulator (`sonic3k.asm:178210-178225`).
+
+The engine's generic camera step eases max-Y before the camera move. That made the AIZ-local
+level-end proxy miss the ROM post-camera grounded `Do_ResizeEvents` carry once Sonic landed from the
+post-title-card jump. The AIZ miniboss level-end max-Y proxy now carries that grounded +2 resize into
+the next camera frame while keeping the ROM gradual object accumulator and target-bound copy intact.
+
+### New AIZ frontier (frame 9264)
+
+`tails_y mismatch (expected=0x045C, actual=0x045B)`. Player position/speed/status and camera match at
+the first error. The remaining failure is sidekick-only near AIZ Act 2 collapsing platforms/fragments:
+ROM Tails is at `15E6,045C` with `x_speed=$0997,y_speed=$036C,g_speed=$0A30`, while the engine is at
+`15E5,045B` with the same immediate speed fields and no nearby tail object.
+
+## 2026-05-23 - S3K sidekick panic cadence uses ROM-visible level frame (AIZ f9264 -> f10586)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused sidekick guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.playable.TestSidekickCpuFollowParity#s3kPanicReleaseGateUsesRomVisibleLevelFrameCounter" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- AIZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: AIZ frontier advanced from frame 9264
+    `tails_y expected=0x045C actual=0x045B` to frame 10586
+    `tails_x expected=0x2071 actual=0x2070`.
+  - New count: 814 errors / 23 warnings.
+
+### Root cause
+
+Frame 9264 was not caused by collapsing-platform collision or a lost `ground_vel`.
+Temporary phase probes showed Tails kept `ground_vel=$0A16` through frame start and
+into the sidekick CPU slot, but the engine was still in `State.PANIC` for that slot.
+It switched to `NORMAL` only at the end of the slot, so ROM's next normal follow
+frame ran one tick earlier than the engine.
+
+ROM `TailsCPU_Panic` reads `(Level_frame_counter+1).w` for both the `$7F` release
+gate and the `$1F` rev gate (`sonic3k.asm:26869-26884`; S2 equivalent
+`s2.asm:39122-39139`). The S3K engine sidekick CPU intentionally sources the
+stored level counter for normal CPU gates, and that stored counter is one tick
+behind the ROM-visible value inside the current sprite slot. `resolvePanicPhaseCounter`
+now adds the same one-tick visibility bridge only when the CPU frame came from the
+stored level counter.
+
+### New AIZ frontier (frame 10586)
+
+`tails_x mismatch (expected=0x2071, actual=0x2070)`. Player and camera match at the
+first error. Tails is near AIZ Act 2 spiked logs/water splash objects; ROM reports
+`status=$61`, `ground_vel=$FFE2`, delayed input `0808`, and post-CPU speed `$0080`,
+while the engine is one pixel left with `branch=grace_push_bypass`, delayed input
+`0004`, and post-physics `ground_vel=$FFDC`. This is a separate sidekick push/grace
+or object-support handoff issue and was left for the next AIZ step.
+
+## 2026-05-23 - S3K MGZ Load_Sprites cursor-order guard (frontier unchanged at f4124)
+
+- Worktree: integrated local workspace with other workers' AIZ/CNZ/MGZ/shared edits preserved.
+- Focused placement guard:
+  `mvn "-Dmse=off" "-Dtest=TestObjectManagerVerticalPlacement" test "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false"`
+  - PASS: 5 tests, 0 failures.
+- Nearby lifecycle/object guards:
+  `mvn "-Dmse=off" "-Dtest=TestObjectManagerLifecycle,TestMGZSwingingPlatformObjectInstance" test "-DfailIfNoTests=false" "-Dsurefire.failIfNoSpecifiedTests=false"`
+  - PASS: 8 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- MGZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: unchanged at frame 4124,
+    `y_speed expected=0x0000 actual=0x01AC`.
+  - Count remains 4069 errors / 64 warnings.
+
+### Diagnosis
+
+S3K `Load_Sprites` performs an X-cursor pass before the Y-camera pass in the
+same loader call. The front cursor pass advances `Object_load_addr_front` while
+scanning newly entered X-window entries (`docs/skdisasm/sonic3k.asm:37640-37658`).
+The later Y-camera pass scans the already cursor-passed range and creates entries
+that become vertically eligible (`docs/skdisasm/sonic3k.asm:37723-37762`) using
+`CreateNewSprite4` / `AllocateObject` (`docs/skdisasm/sonic3k.asm:37889-37918`).
+
+The engine previously reconsidered all active-window, not-yet-created spawns in
+X order each frame. A focused guard now proves the S3K ordering boundary: when a
+low-X spawn has already been cursor-passed but was Y-deferred, and a newer high-X
+spawn enters the X window on the frame the low-X spawn becomes vertically eligible,
+the newer X-pass spawn consumes the lower SST slot first. This is implemented as
+an S3K `ObjectSlotLayout` profile behavior, preserving S1/S2 placement behavior.
+
+The full MGZ replay is still blocked by a remaining upstream slot/lifecycle
+divergence before frame 4124. At frame 4124 the ROM still has `MGZTopPlatform`
+in slot s5 and `SinkingMud` in s9; the engine has `MGZTopPlatform` in s6 and
+`SinkingMud` in s8, so Sonic remains object-controlled/suppressed and misses the
+ROM landing handoff. The next MGZ owner should continue looking for the earlier
+object lifecycle or allocation pressure that leaves one extra low slot occupied
+before this cluster.
+
+## 2026-05-24 - S3K CNZ Batbot Obj_WaitOffscreen margin (frontier f13628 -> f14005)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused Batbot guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.badniks.TestBatbotBadnikInstance" test "-DfailIfNoTests=false"`
+  - PASS: 7 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 13628
+    `y_speed expected=-0258 actual=-0158` to frame 14005
+    `tails_air expected=1 actual=0`.
+  - New count: 2921 errors / 17 warnings.
+
+### Root cause
+
+Frame 13628 was a false enemy-hit symptom. Engine player speed matched the ROM
+until S3K enemy touch response applied the ROM `+0x100` upward-hit bounce-down
+adjustment, but the touched Batbot was in the wrong place: engine Batbot slot 16
+was still near its spawn at `@24D0,0089`, while the ROM Batbot had already chased
+to `@24FE,00B0`.
+
+`Obj_Batbot` enters through `Obj_WaitOffscreen` before its normal state machine
+(`docs/skdisasm/sonic3k.asm:186266-186272`). `Obj_WaitOffscreen` installs
+`Map_Offscreen`, sets width/height to `$20`, and restores the normal object op
+only after the temporary sprite has been visible; the restored op runs on the
+next frame (`docs/skdisasm/sonic3k.asm:180266-180297`). The engine used a
+zero-margin point visibility check, so this high-on-screen Batbot waited until
+the camera Y crossed its exact position and started its chase dozens of frames
+late. Batbot now uses the ROM `$20` temporary-sprite margin and keeps collision
+disabled during the one-frame restored-op delay.
+
+### New CNZ frontier (frame 14005)
+
+Tails becomes object-controlled/despawned by the cage/barber-pole area in the ROM
+(`obj=$81`, air set, `tailsInteract` slot 5 destroyed), while the engine keeps
+Tails on-object and grounded with continued sidekick CPU physics. Player/camera
+still match at the first error. This is a separate CNZ cage/barber-pole/sidekick
+state handoff issue.
+
+## 2026-05-24 - S3K CNZ barber-pole unload frees latched sidekick (CNZ f14005 -> f14547)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused barber-pole guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzBarberPoleObjectInstance" test "-DfailIfNoTests=false"`
+  - PASS: 4 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 14005
+    `tails_air expected=1 actual=0` to frame 14547
+    `x_speed expected=-025B actual=0x025B`.
+  - New count: 2898 errors / 17 warnings.
+
+### Root cause
+
+At frame 14005 the ROM had already deleted barber-pole slot 5 while Tails still
+carried the old on-object/interact context. `Obj_CNZBarberPoleSprite` processes
+P1/P2 and then jumps to `Delete_Sprite_If_Not_In_Range`
+(`docs/skdisasm/sonic3k.asm:69348-69357`), which reaches the normal SST-zeroing
+delete path when the pole unloads. On the next sidekick CPU interact check,
+`sub_13EFC` compares `Tails_CPU_interact` against the cleared slot, fails, and
+branches to `sub_13ECA`; that routine writes `object_control=$81`, sets
+`Status_InAir`, and parks Tails at `$7F00,0`
+(`docs/skdisasm/sonic3k.asm:26816-26833,26800-26808`).
+
+The engine removed the barber-pole instance from the object manager but left the
+old instance non-destroyed, so Tails' stale latch reference continued to look
+valid and the sidekick stayed grounded/on-object. `CnzBarberPoleObjectInstance`
+now marks itself destroyed on unload using the same latched lifecycle operation
+already used by CNZ wire cage; the change is object-local and does not touch
+generic placement or solid-contact behavior.
+
+### New CNZ frontier (frame 14547)
+
+`x_speed mismatch (expected=-025B, actual=0x025B)`. The old f14005 Tails
+object-control/air handoff is cleared. The new owner is later at the CNZ
+miniboss cluster: player position/subpixels/camera match at frame 14547, but
+engine player horizontal speed has the opposite sign after touching the boss
+object, while Tails is aligned.
+
+## 2026-05-24 - S3K CNZ miniboss body collision byte (CNZ f14547 -> f14594)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestS3kBossTouchResponseProfiles#cnzMinibossClosedBodyUsesRomObjDatCollisionByte,com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#productionTouchResponseCoilAttackOpensBossWithoutConsumingHp,com.openggf.level.objects.TestTouchResponseManager#testS3kTouchSpecialUnlistedC0FlagDoesNotDecodeAsBoss" test "-DfailIfNoTests=false"`
+  - PASS: 3 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 14547
+    `x_speed expected=-025B actual=0x025B` to frame 14594
+    `tails_x_speed expected=0x0128 actual=-0200`.
+  - New count: 2828 errors / 18 warnings.
+
+### Root cause
+
+The f14547 sign flip was an engine-only early boss/body touch. The engine had
+the CNZ miniboss body exposed as `$CF`, inherited from the generic boss collision
+flag synthesis. The S3K object data does not do that: `ObjDat_CNZMiniboss`
+stores the complete body `collision_flags` byte `$0C` after the body
+width/height/frame fields (`docs/skdisasm/sonic3k.asm:145652-145656`), while
+`Obj_CNZMinibossInit` separately writes `collision_property(a0)=6`
+(`docs/skdisasm/sonic3k.asm:144885-144889`). With the ROM `$0C` size/category,
+the player does not overlap the body at frames 14547-14548 and rebounds at the
+ROM frame 14549.
+
+`CnzMinibossInstance` now overrides the full collision byte for the body instead
+of using `AbstractBossInstance`'s `$C0 | size` default. The body still reports
+collision_property 6, so the normal S3K enemy/boss hit path can negate player
+velocities when the ROM-sized body actually overlaps. A focused shared touch
+guard also preserves S3K `Touch_ChkValue`/`Touch_Special` behavior for actual
+profile-gated `$C0` special objects: `$C0` flags route to `Touch_Special`, and
+unlisted sizes return without boss-bounce (`docs/skdisasm/sonic3k.asm:20773-20778,
+21162-21194`).
+
+### New CNZ frontier (frame 14594)
+
+`tails_x_speed mismatch (expected=0x0128, actual=-0200)`. The f14547/f14549
+player miniboss body contact is cleared. The new owner is Tails-only after the
+miniboss opens: ROM CPU post still has positive sidekick speed before object
+response, while the engine has put Tails into the sidekick hurt-object routine
+with `x_speed=-0200` near the opened body/top/coil cluster.
+
+## 2026-05-24 - S3K CNZ miniboss parent start handoff (CNZ f14943 -> f14961)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#parentStartGateLeavesObjCnzMinibossGoHandoffFrameBeforeInit,com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#wait2RawGetFasterMatchesRomTopGoCadence" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+- Focused miniboss guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics" test "-DfailIfNoTests=false"`
+  - PASS: 19 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 14943
+    `g_speed expected=-0210 actual=0x0210` to frame 14961
+    `tails_g_speed expected=-0218 actual=0x0218`.
+  - New count: 2077 errors / 17 warnings.
+
+### Root cause
+
+The engine reached `Obj_CNZMinibossInit` two object updates earlier than the ROM.
+The diagnostic `traceDebugDetails` timeline showed ROM parent state still at
+routine 0 on frame 14278 and routine 2 from frame 14279, while the engine had
+already entered routine 2 at frame 14277 and reached `Go2`/routine 4 two frames
+early. That early parent phase left the boss still moving at the old f14943
+contact window, so the player missed the ROM opening-body rebound.
+
+ROM `Obj_CNZMiniboss` writes `#2*60` into the original wait object and stores
+`Obj_CNZMinibossGo` in `$34` (`docs/skdisasm/sonic3k.asm:144838-144840`).
+`Obj_CNZMinibossGo` only installs `Obj_CNZMinibossStart` and returns
+(`docs/skdisasm/sonic3k.asm:144850-144859`); `Obj_CNZMinibossStart` dispatches
+`Obj_CNZMinibossInit` on the following object update
+(`docs/skdisasm/sonic3k.asm:144863-144900`). The engine event mirror now stores
+one extra tick because it arms and decrements in the same update, and the parent
+object preserves the separate `Obj_CNZMinibossGo` handoff frame before running
+Init.
+
+### New CNZ frontier (frame 14961)
+
+`tails_g_speed mismatch (expected=-0218, actual=0x0218)`. The old f14943 player
+miniboss opening/contact phase is cleared. At the new frontier, player position,
+camera, and player speeds still match; the owner is Tails-only after the
+miniboss opening/top/coil contact sequence. The ROM has Tails rebounded left
+with negative ground speed, while the engine has the mirrored positive velocity
+at trace capture and applies a later sidekick post-physics touch flip.
+
+## 2026-05-24 - S3K CNZ miniboss top side-push lifetime (CNZ f15382 -> f15410)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic3k.objects.TestCnzMinibossTopPhysics#groundedSquashEdgeContactSetsPushOnMinibossTop" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 15382
+    `tails_x expected=0x32D7 actual=0x32D8` through the follow-up
+    f15383 push-lifetime boundary to frame 15410
+    `y_speed expected=-02E8 actual=0x02E8`.
+  - New count: 3148 errors / 19 warnings.
+
+### Root cause
+
+The f15382/f15383 Tails X drift was not hurt integration, spark timing, or
+subpixel rounding. Tails scalar position and velocity matched through f15381,
+but the ROM set `Status_Push` late in the object solid pass after Tails CPU.
+`Obj_CNZMinibossTopMain` calls `SolidObjectFull` with `d1=$13,d2=$C,d3=8`
+(`docs/skdisasm/sonic3k.asm:145057-145063`). In S3K `SolidObjectFull`, the
+grounded lower-half squash-edge branch at `loc_1E126` jumps back to the side
+helper when `abs(d0) < $10` (`docs/skdisasm/sonic3k.asm:41585-41594`), and
+that side helper sets the object's push bit and player `Status_Push` for any
+grounded side separation (`docs/skdisasm/sonic3k.asm:41488-41495`).
+
+The first fix lets CNZ miniboss top opt into that exact grounded edge-push
+behavior. The follow-up f15383 boundary exposed that the engine's object-push
+latch was keyed by `instance.getSpawn()`. The miniboss top rebuilds its dynamic
+spawn as it moves, so the f15382 no-contact clear checked a different key than
+the f15381 contact set. ROM stores the pushing bit in the same top SST
+`status(a0)` byte and clears it from `loc_1E0A2/sub_1E0C2`
+(`docs/skdisasm/sonic3k.asm:41512-41532`), so the top now opts into an instance
+solid-state latch key. The focused guard verifies both the grounded edge push
+set and the next no-contact clear after the top's dynamic position changes.
+
+### New CNZ frontier (frame 15410)
+
+`y_speed mismatch (expected=-02E8, actual=0x02E8)`. The previous Tails
+push-state/X position boundary is cleared: Tails position, subpixels, and
+sidekick CPU branch match through the new frontier. The new owner is main-player
+vertical rebound/sign handling near the CNZ miniboss coil/body while the parent
+is opening (`r=08`) and the coil touch is active.
+
+## 2026-05-24 - S3K CNZ miniboss OpenGo stored wait counter (CNZ f15410 -> f15569)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayCnzMinibossParentSecondMovePassUsesRomPhase" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 15410
+    `y_speed expected=-02E8 actual=0x02E8` to frame 15569
+    `camera_y expected=0x028E actual=0x028C`.
+  - New count: 1925 errors / 15 warnings.
+
+### Root cause
+
+The f15410 sign flip was a real miniboss coil touch, but it happened because
+the engine parent/coil kept moving right one frame too long after the second
+Opening/Closing cycle. The parent then overlapped the player at f15410 and
+`Touch_Enemy` negated the player's downward speed; the ROM parent/coil had
+already turned left and missed that rebound.
+
+ROM `Obj_CNZMinibossOpenGo` writes routine A, installs
+`Obj_CNZMinibossChangeDir` in `$34`, sets the open bit, and spawns the open
+sparks, but it does not write `$2E(a0)`
+(`docs/skdisasm/sonic3k.asm:144945-144951`). `Obj_CNZMinibossWaitHit` and
+`Obj_CNZMinibossClosing` do not call `Obj_Wait`
+(`docs/skdisasm/sonic3k.asm:144954-144969`), so the pre-opening Move wait
+counter survives until `CloseGo` returns to Move. `Obj_Wait` then decrements
+that stored `$2E` and jumps through `$34` when it goes negative
+(`docs/skdisasm/sonic3k.asm:177944-177952`). The engine had cleared the wait
+counter in `onOpenGo()`, delaying the post-open `ChangeDir` and leaving the
+coil at the wrong side of the player. `onOpenGo()` now preserves the stored
+wait counter, and the focused guard asserts the ROM-visible f15409 parent X
+and routine before the cleared f15410 touch window.
+
+### New CNZ frontier (frame 15569)
+
+`camera_y mismatch (expected=0x028E, actual=0x028C)`. At the new first error,
+player and Tails positions, subpixels, velocities, status, and object state are
+aligned enough; the first scalar owner is camera Y after the miniboss sequence.
+
+## 2026-05-24 - S3K CNZ miniboss scroll-control ROM Wait/Slow handoff (CNZ f15627 -> f15723)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kCnzMinibossArenaHeadless#scrollControlBridgeSignalUsesRomWaitAndSlowPathBeforeEventHandoff,com.openggf.tests.TestS3kCnzMinibossArenaHeadless#scrollControlPostBossPhasesSnapEnableBackgroundCollisionAndDeleteAt1C0" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 15627
+    `camera_y expected=0x02B8 actual=0x02BA` to frame 15723
+    `camera_x expected=0x3260 actual=0x3278`.
+  - New count: 1941 errors / 16 warnings.
+
+### Root cause
+
+The f15627 camera-Y drift was not a generic vertical camera bias problem.
+`CnzMinibossScrollControlInstance.updateMain()` had an engine-only high-offset
+shortcut that completed the final post-boss handoff as soon as the miniboss
+defeat signal arrived with the FG offset already near `$1C0`. ROM
+`Obj_CNZMinibossScrollMain` only clears `Events_fg_5`, advances the scroll
+control routine, and falls through to the wait path
+(`docs/skdisasm/sonic3k.asm:107770-107795`). The target max-Y restore to
+`$1000` happens later in Wait2 at `loc_5209E`
+(`docs/skdisasm/sonic3k.asm:107814-107828`), and the final event signal is
+emitted from Wait3 only after the offset reaches `$1C0`
+(`docs/skdisasm/sonic3k.asm:107841-107851`). Removing the shortcut keeps the
+arena current/target max-Y at `$02B8` through the previous f15627 window, as
+set when the miniboss arena starts (`docs/skdisasm/sonic3k.asm:144830-144837`).
+
+### New CNZ frontier (frame 15723)
+
+`camera_x mismatch (expected=0x3260, actual=0x3278)`. Player and Tails scalar
+state and camera Y match at the new first error; the remaining owner is
+horizontal camera/clamp release timing after the CNZ miniboss handoff.
+
+## 2026-05-24 - S3K CNZ miniboss Boss_flag falling edge keeps arena X clamp (CNZ f15723 -> f15735)
+
+- Worktree: integrated local workspace with other workers' AIZ/MGZ/CNZ/shared edits preserved.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestS3kCnzMinibossHeadless#minibossDefeatKeepsArenaXClampOnBossFlagFallingEdge,com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayCnzMinibossPostBossKeepsArenaXClampAfterBossFlagClear" test "-DfailIfNoTests=false"`
+  - PASS: 2 tests, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 15723
+    `camera_x expected=0x3260 actual=0x3278` to frame 15735
+    `tails_y_speed expected=0x0000 actual=0x05C0`.
+  - New count: 1940 errors / 16 warnings.
+
+### Root cause
+
+The engine restored the saved pre-arena horizontal camera bounds on the
+`Boss_flag` falling edge. ROM `Obj_CNZMinibossEndGo` clears `Boss_flag`, calls
+`AfterBoss_Cleanup`, and loads end-sign PLC state
+(`docs/skdisasm/sonic3k.asm:144996-145001`), but CNZ's after-boss cleanup
+entry is just `rts` (`docs/skdisasm/sonic3k.asm:176489-176557`). That means
+`Camera_max_X_pos` remains the arena clamp `$3260` after `Boss_flag` clears;
+the later CNZ scroll-control/background handoff owns the subsequent post-boss
+progression (`docs/skdisasm/sonic3k.asm:107603-107653`). The engine now only
+releases wall-grab suppression on the falling edge and leaves the X clamp in
+place.
+
+### New CNZ frontier (frame 15735)
+
+`tails_y_speed mismatch (expected=0x0000, actual=0x05C0)`. Player and camera
+remain aligned through the prior f15723 camera-X window; the next owner is
+Tails' post-boss/miniboss-top aftermath state near the destroyed/inactive
+object slot 5 marker.
+
+## 2026-05-24 - S3K Bubble Shield steep landing inertia ordering (CNZ f18735 -> f18916)
+
+- Worktree: integrated local workspace with other workers' CNZ/AIZ/MGZ/shared edits preserved.
+- Focused guard:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s3kBubbleShieldSteepLandingCopiesPostBounceYSpeedToGroundSpeed" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 18735
+    `g_speed expected=0x01E6 actual=0x04BA` to frame 18916
+    `y expected=0x0B6C actual=0x0B58`.
+  - New count: 1195 errors / 17 warnings.
+
+### Root cause
+
+At f18735 Sonic lands on a steep surface while underwater with Bubble Shield
+bounce armed. The engine wrote `ground_vel` from the pre-bounce `y_vel`, then
+`BubbleShield_Bounce` rewrote `x_vel/y_vel`, leaving stale inertia. ROM's S3K
+steep air-floor path reaches `loc_11FC2`, calls
+`Player_TouchFloor_Check_Spindash`, and only then copies `y_vel` into
+`ground_vel` (`docs/skdisasm/sonic3k.asm:24112-24117`). That makes
+`ground_vel` observe Bubble Shield's post-bounce `y_vel`.
+
+### New CNZ frontier (frame 18916)
+
+`y mismatch (expected=0x0B6C, actual=0x0B58)`. The f18735 Bubble Shield
+inertia mismatch is cleared. The new owner is later player Y near the CNZ2
+balloon/triangle-bumper/vacuum-tube cluster; player speed and `ground_vel`
+are already in the high launch state at the first error.
+
+## 2026-05-25 - S3K CNZ AirCountdown investigation cleanup (f20219 regression -> f21833)
+
+- Worktree: integrated local workspace with other workers' edits preserved.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: f20219 `tails_y expected=0x0A2E actual=0x0A2C` was traced to an
+    unretained fixed-AirCountdown investigation flag that suppressed the
+    shared drowning controller before a ROM-equivalent fixed object pass was
+    implemented. Removing that speculative suppression restores the run past
+    the prior f21772 frontier.
+  - New frontier: frame 21833
+    `y_speed expected=-0700 actual=-06C8`.
+  - New count: 1378 errors / 17 warnings.
+
+### Cleanup
+
+Removed the speculative `fixedAirCountdownController` feature flag and the
+`AbstractPlayableSprite` gates that skipped drowning-controller update/reset
+paths. Also removed AirCountdown-specific focused guard assertions from the CNZ
+slot-pressure diagnostic test. No fixed `Breathing_bubbles` behavior is
+retained; the remaining f21833 owner is the CNZ2 balloon/bumper launch window.
+
+## 2026-05-25 - S3K fixed AirCountdown sidecars preserve CNZ2 slot/RNG cadence (CNZ f21833 -> f22036)
+
+- Worktree: integrated local workspace with other workers' CNZ/AIZ/MGZ/shared edits preserved.
+- Focused guards:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayCnz2FixedAirCountdownInitialCadencePreservesBubblerSlot" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#traceReplayCnz2PreBalloonSlotPressureMatchesRomSequence" test "-DfailIfNoTests=false"`
+  - PASS: 1 test, 0 failures.
+- Compile guard:
+  `mvn "-Dmse=off" test-compile "-DfailIfNoTests=false"`
+  - PASS.
+- CNZ replay:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: advanced from frame 21833
+    `y_speed expected=-0700 actual=-06C8` to frame 22036
+    `y_speed expected=-06C8 actual=-0700`.
+  - New count: 1460 errors / 17 warnings.
+
+### Root cause
+
+S3K fixed `Breathing_bubbles` / `Breathing_bubbles_P2` are not dynamic SST
+objects. The ROM keeps them in fixed object RAM after dynamic sprites and
+before ScreenEvents (`docs/skdisasm/sonic3k.constants.asm:311-312`;
+`docs/skdisasm/sonic3k.asm:7893-7898,35965`), while visible countdown bubbles
+allocate through normal dynamic `AllocateObject` from the fixed controller
+cadence (`docs/skdisasm/sonic3k.asm:33490-33610`). The engine previously had
+no equivalent fixed controller in this phase, so the f17824 AirCountdown RNG
+calls and visible child slot pressure were missing. The retained S3K sidecar
+executes P1 then P2 fixed controllers without consuming dynamic SST slots,
+lets visible `Obj_AirCountdown` children consume normal dynamic slots, and
+suppresses only the conflicting generic S3K drowning bubble RNG/cadence while
+leaving air timer semantics in the player drowning controller.
+
+The visible child lifecycle now follows the observed ROM path at f17824-f17834:
+routine 0 init, routine 2 rising at `y_vel=$FF00`, surface transition to
+routine 8, then deletion (`docs/skdisasm/sonic3k.asm:33306-33370`).
+
+### New CNZ frontier (frame 22036)
+
+`y_speed mismatch (expected=-06C8, actual=-0700)`. The prior f21833 immediate
+launch mismatch is cleared. The new owner is still CNZ2 balloon phase/touch
+timing around the `@1308,05E8` / `@12F8,0645` balloon cluster; engine is now
+touching/popping the `@1308,05E8` balloon at f22036 while ROM has already
+observed one gravity step after the corresponding launch.

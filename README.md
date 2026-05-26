@@ -143,6 +143,11 @@ lifecycle contracts, migrates the highest-risk object paths onto those APIs,
 updates agent-facing implementation guidance, and installs static guard tests
 so future object work declares these physics contracts explicitly instead of
 reintroducing ad hoc state mutations.
+The latest route-parity pass expands S3K object, event, sidekick, rewind, and
+trace-debug coverage around AIZ/CNZ/MGZ slice work; removes temporary trace
+bootstrap zone carve-outs in favour of recorder capabilities or live object
+semantics; and records the active trace frontier state in
+`docs/TRACE_FRONTIER_LOG.md`.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?

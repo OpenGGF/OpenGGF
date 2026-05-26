@@ -349,6 +349,8 @@ The setters `setTopSolidBit()`/`setLrbSolidBit()` on `AbstractPlayableSprite` si
 
 **Rules:** Always verify against disassembly. Never use game-name `if/else` chains - always use feature flags. Per-game behavioral differences must be gated by feature flags (usually on `PhysicsFeatureSet`), never by code like `if (module.getGameId() == GameId.S1)`. When a ROM-level divergence is discovered, add a flag to `PhysicsFeatureSet`, set the correct value on each game's `SONIC_1` / `SONIC_2` / `SONIC_3K` constant, and branch on the flag at the call site.
 
+Trace fixes must not add zone/route/frame carve-outs. If a trace diverges in AIZ, CNZ, MGZ, or any other zone, model the ROM state that actually drives the branch: object id/routine, status/control bits, frame-counter visibility, physics profile, event flag, or data-driven object/profile condition. Do not branch on zone id/name, trace route, frame number, or a "known failing trace" exception. "Use ROM-default behaviour except in AIZ" is still a zone-specific carve-out and is not acceptable. Zone/event/object providers may expose ROM state at the owning boundary, but shared physics/sidekick/object code must consume semantic predicates and must not branch solely because `zone == AIZ` or similar.
+
 ### Physics Tests
 
 Tests in `src/test/java/com/openggf/game/`: `TestPhysicsProfile`, `TestPhysicsProfileRegression`, `TestSpindashGating`, `TestCollisionModel`.
