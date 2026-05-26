@@ -105,6 +105,8 @@ public final class TraceEventFormatter {
                     summarisePositionWrite(write);
             case TraceEvent.AizShipLoop shipLoop ->
                     summariseAizShipLoop(shipLoop);
+            case TraceEvent.SonicRecordPos recordPos ->
+                    summariseSonicRecordPos(recordPos);
             case TraceEvent.TailsCpuNormalStep step ->
                     summariseTailsCpuNormalStep(step);
             case TraceEvent.SidekickInteractObjectState state ->
@@ -145,6 +147,12 @@ public final class TraceEventFormatter {
                             state.p2Threshold() & 0xFF);
             case TraceEvent.CnzCylinderExecution execution ->
                     summariseCnzCylinderExecution(execution);
+            case TraceEvent.CnzEventRamState state ->
+                    summariseCnzEventRamState(state);
+            case TraceEvent.AirCountdownState state ->
+                    summariseAirCountdownState(state);
+            case TraceEvent.RngCall call ->
+                    summariseRngCall(call);
             case TraceEvent.AizBoundaryState state ->
                     String.format("%sAizBoundary cam=%04X/%04X y=%04X/%04X tree=%04X,%04X,%04X,%04X->%04X,%04X,%04X,%04X boundary=%s %04X,%04X,%04X,%04X->%04X,%04X,%04X,%04X post=%04X,%04X,%04X,%04X",
                             state.character() == null || state.character().isBlank()
@@ -315,6 +323,122 @@ public final class TraceEventFormatter {
         return "cnzCylExec " + String.join("; ", parts) + suffix;
     }
 
+    private static String summariseCnzEventRamState(TraceEvent.CnzEventRamState state) {
+        String scroll = "sc=none";
+        if (!state.scrollSlots().isEmpty()) {
+            TraceEvent.CnzEventRamState.ScrollControlSlot slot = state.scrollSlots().getFirst();
+            scroll = String.format("sc=s%d @%04X,%04X rtn=%02X/%02X st=%02X 2e=%02X 30=%02X 32=%02X 34=%02X 36=%02X 38=%02X",
+                    slot.slot(),
+                    slot.x() & 0xFFFF,
+                    slot.y() & 0xFFFF,
+                    slot.routine() & 0xFF,
+                    slot.routineSecondary() & 0xFF,
+                    slot.status() & 0xFF,
+                    slot.objoff2e() & 0xFF,
+                    slot.objoff30() & 0xFF,
+                    slot.objoff32() & 0xFF,
+                    slot.objoff34() & 0xFF,
+                    slot.objoff36() & 0xFF,
+                    slot.objoff38() & 0xFF);
+            if (state.scrollSlots().size() > 1) {
+                scroll += String.format(" +%d", state.scrollSlots().size() - 1);
+            }
+        }
+        return String.format(
+                "cnzEventRAM bg00=%04X bg02=%04X bg08=%04X/%08X bg0c=%04X/%08X bgR=%04X bgCol=%02X fg5=%04X camY=%04X maxY=%04X tgtMaxY=%04X %s",
+                state.eventsBg00Word() & 0xFFFF,
+                state.eventsBg02Word() & 0xFFFF,
+                state.eventsBg08Word() & 0xFFFF,
+                state.eventsBg08Long(),
+                state.eventsBg0cWord() & 0xFFFF,
+                state.eventsBg0cLong(),
+                state.eventsRoutineBg() & 0xFFFF,
+                state.backgroundCollisionFlag() & 0xFF,
+                state.eventsFg5() & 0xFFFF,
+                state.cameraY() & 0xFFFF,
+                state.cameraMaxY() & 0xFFFF,
+                state.cameraTargetMaxY() & 0xFFFF,
+                scroll);
+    }
+
+    private static String summariseAirCountdownState(TraceEvent.AirCountdownState state) {
+        String child = "child=none";
+        if (!state.visibleChildren().isEmpty()) {
+            TraceEvent.AirCountdownState.VisibleChild first = state.visibleChildren().getFirst();
+            child = String.format(
+                    "child=s%d @%04X,%04X sub=%02X rtn=%02X yv=%04X rf=%02X anim=%02X map=%02X af=%02X/%02X ang=%02X org=%04X 3C=%04X parent=%08X",
+                    first.slot(),
+                    first.x() & 0xFFFF,
+                    first.y() & 0xFFFF,
+                    first.subtype() & 0xFF,
+                    first.routine() & 0xFF,
+                    first.yVel() & 0xFFFF,
+                    first.renderFlags() & 0xFF,
+                    first.anim() & 0xFF,
+                    first.mappingFrame() & 0xFF,
+                    first.animFrame() & 0xFF,
+                    first.animFrameTimer() & 0xFF,
+                    first.angle() & 0xFF,
+                    first.obj34() & 0xFFFF,
+                    first.obj3c() & 0xFFFF,
+                    first.parentPtr());
+            if (state.visibleChildren().size() > 1) {
+                child += String.format(" +%d", state.visibleChildren().size() - 1);
+            }
+        }
+        return String.format(
+                "airCnt %s fixed=s%d code=%08X rtn=%02X sub=%02X 30=%04X 36=%02X 37=%02X 38=%02X 3A=%04X 3C=%04X 3E=%04X owner=%s ptr=%08X air=%02X st=%02X/%02X face=%s water=%s rng=%08X %s",
+                state.owner(),
+                state.fixedSlot(),
+                state.objectCode(),
+                state.routine() & 0xFF,
+                state.subtype() & 0xFF,
+                state.obj30() & 0xFFFF,
+                state.obj36() & 0xFF,
+                state.obj37() & 0xFF,
+                state.obj38() & 0xFF,
+                state.obj3a() & 0xFFFF,
+                state.obj3c() & 0xFFFF,
+                state.obj3e() & 0xFFFF,
+                state.ownerResolved(),
+                state.ownerPtr(),
+                state.ownerAirLeft() & 0xFF,
+                state.ownerStatus() & 0xFF,
+                state.ownerStatusSecondary() & 0xFF,
+                state.ownerFacingLeft() ? "L" : "R",
+                state.ownerUnderwater(),
+                state.rngSeed(),
+                child);
+    }
+
+    private static String summariseRngCall(TraceEvent.RngCall call) {
+        List<String> parts = new ArrayList<>();
+        int limit = Math.min(5, call.hits().size());
+        for (int i = 0; i < limit; i++) {
+            TraceEvent.RngCall.Hit hit = call.hits().get(i);
+            TraceEvent.RngCall.ObjectContext a0 = hit.a0();
+            parts.add(String.format(
+                    "pc=%05X ret=%06X %s seed=%08X->%08X res=%08X/%02X a0=s%d %08X @%04X,%04X r=%02X sub=%02X",
+                    hit.pc() & 0xFFFFFF,
+                    hit.callerPc() & 0xFFFFFF,
+                    hit.source(),
+                    hit.seedBefore(),
+                    hit.seedAfter(),
+                    hit.result(),
+                    hit.resultByte() & 0xFF,
+                    a0.slot(),
+                    a0.objectCode(),
+                    a0.x() & 0xFFFF,
+                    a0.y() & 0xFFFF,
+                    a0.routine() & 0xFF,
+                    a0.subtype() & 0xFF));
+        }
+        if (call.hits().size() > limit) {
+            parts.add(String.format("+%d", call.hits().size() - limit));
+        }
+        return parts.isEmpty() ? "rng empty" : "rng " + String.join(" | ", parts);
+    }
+
     private static String summariseTailsCpuNormalStep(TraceEvent.TailsCpuNormalStep step) {
         String base = String.format("tailsCpu status=%02X obj=%02X gv=%04X xv=%04X stat=%02X input=%04X",
                 step.status() & 0xFF,
@@ -377,6 +501,31 @@ public final class TraceEventFormatter {
             parts.add(String.format("+%d", shipLoop.hits().size() - limit));
         }
         return parts.isEmpty() ? "aizShipLoop empty" : "aizShipLoop " + String.join(" | ", parts);
+    }
+
+    private static String summariseSonicRecordPos(TraceEvent.SonicRecordPos recordPos) {
+        List<String> parts = new ArrayList<>();
+        int limit = Math.min(4, recordPos.hits().size());
+        for (int i = 0; i < limit; i++) {
+            TraceEvent.SonicRecordPos.Hit hit = recordPos.hits().get(i);
+            parts.add(String.format(
+                    "srcF=%d pc=%05X idx=%02X ctrl=%04X lock=%02X raw=%04X obj=%02X st=%02X/%02X @%04X,%04X",
+                    recordPos.frame(),
+                    hit.pc(),
+                    hit.posTableIndex() & 0xFF,
+                    hit.ctrl1Logical() & 0xFFFF,
+                    hit.ctrl1Locked() & 0xFF,
+                    hit.ctrl1Raw() & 0xFFFF,
+                    hit.objectControl() & 0xFF,
+                    hit.status() & 0xFF,
+                    hit.statusSecondary() & 0xFF,
+                    hit.x() & 0xFFFF,
+                    hit.y() & 0xFFFF));
+        }
+        if (recordPos.hits().size() > limit) {
+            parts.add(String.format("+%d", recordPos.hits().size() - limit));
+        }
+        return parts.isEmpty() ? "sonicRecord empty" : "sonicRecord " + String.join(" | ", parts);
     }
 
     private static String summariseWriteHits(String label,

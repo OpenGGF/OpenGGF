@@ -59,7 +59,7 @@ public final class TraceReplaySessionBootstrap {
      * <p>Call this BEFORE {@code LevelManager.loadZoneAndAct} when
      * starting a live trace replay. Without it, state left behind by
      * {@code Engine.initializeGame()} (title screen, default level,
-     * residual object state) leaks into the replay â€” one symptom is
+     * residual object state) leaks into the replay - one symptom is
      * subpixel drift from frame 0 that first becomes pixel-visible at
      * the first ROM-accurate collision or enemy destruction.
      */
@@ -106,7 +106,7 @@ public final class TraceReplaySessionBootstrap {
         SonicConfigurationService config = GameServices.configuration();
 
         // Team: the recorded trace dictates the team. If metadata
-        // didn't record one (legacy), force Sonic-solo â€” the trace
+        // didn't record one (legacy), force Sonic-solo - the trace
         // can't expect anything else.
         String main = meta.recordedMainCharacter();
         config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE,
@@ -210,8 +210,7 @@ public final class TraceReplaySessionBootstrap {
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace));
         int sidekickPreludeFrames =
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace);
-        int objectPreludeFrames =
-                TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace);
+        int objectPreludeFrames = 0;
         int zoneFeaturePreludeFrames =
                 TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(trace);
         var gameplayMode = fixture.gameplayMode();
@@ -219,6 +218,7 @@ public final class TraceReplaySessionBootstrap {
                 && gameplayMode.getLevelManager() != null
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
             ObjectManager objectManager = gameplayMode.getLevelManager().getObjectManager();
+            objectPreludeFrames = s2TornadoObjectPreludeFrames(trace, objectManager);
             int zoneFeatureVblankOffset =
                     TraceReplayBootstrap.zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(trace);
             if (zoneFeaturePreludeFrames > 0
@@ -243,7 +243,7 @@ public final class TraceReplaySessionBootstrap {
                 && gameplayMode.getLevelManager().getObjectManager() != null) {
             var levelManager = gameplayMode.getLevelManager();
             var objectManager = levelManager.getObjectManager();
-            applyS2SczTitleCardScrollPrelude(trace);
+            applyS2TornadoTitleCardScrollPrelude(trace, objectManager);
             var camera = GameServices.cameraOrNull();
             int cameraX = camera != null ? camera.getX() : 0;
             for (int i = 0; i < objectPreludeFrames; i++) {
@@ -327,13 +327,16 @@ public final class TraceReplaySessionBootstrap {
         }
     }
 
-    private static void applyS2SczTitleCardScrollPrelude(TraceData trace) {
+    private static void applyS2TornadoTitleCardScrollPrelude(TraceData trace, ObjectManager objectManager) {
         if (!TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace)
-                || trace == null
-                || trace.metadata() == null
-                || !"scz".equals(trace.metadata().zone())) {
+                || objectManager == null) {
             return;
         }
+        TornadoObjectInstance tornado = findRideStartTornado(objectManager);
+        if (tornado == null || !tornado.isSczRideStartPreludeObject()) {
+            return;
+        }
+
         var camera = GameServices.cameraOrNull();
         var parallax = GameServices.parallaxOrNull();
         if (camera == null || parallax == null) {
@@ -351,6 +354,18 @@ public final class TraceReplaySessionBootstrap {
         for (int i = 0; i < 2; i++) {
             parallax.advanceCameraDrivenScroll(Sonic2ZoneConstants.ZONE_SCZ, 0, camera, -(2 - i));
         }
+    }
+
+    private static int s2TornadoObjectPreludeFrames(TraceData trace, ObjectManager objectManager) {
+        if (!TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(trace)
+                || objectManager == null) {
+            return 0;
+        }
+        TornadoObjectInstance tornado = findRideStartTornado(objectManager);
+        if (tornado == null || !tornado.isRideStartPreludeObject()) {
+            return 0;
+        }
+        return TraceReplayBootstrap.s2TornadoTitleCardPreludeFramesForTraceReplay(trace);
     }
 
     /**
@@ -510,7 +525,10 @@ public final class TraceReplaySessionBootstrap {
         short playerStartX = meta.startX();
         player.setCentreX(playerStartX);
         player.setCentreY(meta.startY());
-        Sonic2TornadoRidePrelude.Seed seed = Sonic2TornadoRidePrelude.forZone(meta.zone());
+        if (!tornado.isRideStartPreludeObject()) {
+            return;
+        }
+        Sonic2TornadoRidePrelude.Seed seed = Sonic2TornadoRidePrelude.forTornado(tornado);
         player.setSubpixelRaw(player.getXSubpixelRaw(), seed.playerYSubpixel());
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
@@ -522,7 +540,7 @@ public final class TraceReplaySessionBootstrap {
         player.setGroundMode(GroundMode.GROUND);
 
         tornado.primeRideStart(playerStartX, meta.startY(), seed.tornadoYSubpixel8());
-        if ("wfz".equals(meta.zone())) {
+        if (tornado.isWfzStartRideStartPreludeObject()) {
             // The 26-frame object prelude consumed by the engine collapses ROM's
             // two ObjB2 init frames (ObjB2_Init at s2.asm:78271-78284 and
             // ObjB2_Main_WFZ_Start_init at s2.asm:78368-78372) into one engine

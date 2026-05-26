@@ -190,16 +190,47 @@
 -- v6.18-s3k adds aiz_ship_loop_per_frame execution diagnostics for
 -- AIZ2_DoShipLoop/sub_50318 in the same window.
 -- Diagnostic-only; no CSV schema change.
+-- v6.21-s3k adds sonic_record_pos_per_frame: hook-driven snapshots at
+-- Sonic_RecordPos entry with Pos_table_index, Ctrl_1_logical, Ctrl_1_locked,
+-- raw Ctrl_1, and Player_1 status/object_control. This exposes the exact
+-- Stat_table source written for Tails_CPU_Control's delayed read
+-- (sonic3k.asm:22124-22136, 26683-26700). Diagnostic-only.
+-- v6.22-s3k adds cnz_event_ram_per_frame: focused CNZ Act 1 event RAM
+-- snapshots for frames F15620-F15735 by default. Captures Events_bg+$00/$02
+-- miniboss arena impact coordinates, Events_bg+$08,
+-- Events_bg+$0C, Events_routine_bg, Background_collision_flag, Events_fg_5,
+-- and any Obj_CNZMinibossScrollControl OST slot state to diagnose the
+-- post-boss BG collision handoff around CNZ F15735
+-- (sonic3k.asm:107510-107576, 107734-107828). Diagnostic-only.
+-- v6.23-s3k adds air_countdown_state_per_frame: per-frame fixed-slot
+-- Breathing_bubbles / Breathing_bubbles_P2 state plus any visible dynamic
+-- Obj_AirCountdown children they have allocated. This exposes S3K fixed
+-- in-level object cadence without treating the fixed controller as a
+-- dynamic SST slot (sonic3k.constants.asm:307-312; sonic3k.asm:22221-22224,
+-- 27436-27439, 33289-33306, 33490-33610). Diagnostic-only.
+-- v6.24-s3k extends each visible dynamic Obj_AirCountdown child with
+-- render_flags, y_vel, anim/mapping frame state, $34, and $3C so the
+-- wobble/surface-pop/delete path can be compared against
+-- AirCountdown_Animate/ChkWater/Display/Delete
+-- (sonic3k.asm:33306-33370). Diagnostic-only.
+-- v6.25-s3k adds rng_call_per_frame: hook-driven Random_Number call
+-- diagnostics for the focused CNZ2 balloon phase window, recording seed
+-- before/after, result, return PC, and the current object register context.
+-- Diagnostic-only.
 ------------------------------------------------------------------------------
 
 -----------------
 --- Constants ---
 -----------------
 
-local OUTPUT_DIR = "trace_output/"
+local OUTPUT_DIR = os.getenv("OGGF_TRACE_OUTPUT_DIR") or "trace_output/"
+if OUTPUT_DIR:sub(-1) ~= "/" and OUTPUT_DIR:sub(-1) ~= "\\" then
+    OUTPUT_DIR = OUTPUT_DIR .. "/"
+end
 local HEADLESS = true
 local MOVIE_FRAME_SAFETY_MARGIN = 30
 local TRACE_PROFILE = os.getenv("OGGF_S3K_TRACE_PROFILE") or "gameplay_unlock"
+TRACE_STOP_FRAME = tonumber(os.getenv("OGGF_TRACE_STOP_FRAME") or "")
 local BK2_FRAME_COUNT = tonumber(os.getenv("OGGF_BK2_FRAME_COUNT") or "")
 local BIZHAWK_VERSION = "2.11"
 local GENESIS_CORE = "Genplus-gx"
@@ -222,11 +253,16 @@ local ADDR_CTRL2_LOGICAL    = 0xF66A
 local ADDR_RING_COUNT       = 0xFE20
 local ADDR_CAMERA_X         = 0xEE78
 local ADDR_CAMERA_Y         = 0xEE7C
+local ADDR_CAMERA_MAX_Y     = 0xEE1A
+local ADDR_CAMERA_TARGET_MAX_Y = 0xEE12
 local ADDR_ZONE             = 0xFE10
 local ADDR_ACT              = 0xFE11
 local ADDR_PLAYER_MODE      = 0xFF08
 local ADDR_APPARENT_ACT     = 0xEE4F
+local ADDR_EVENTS_ROUTINE_BG = 0xEEC2
 local ADDR_EVENTS_FG_5      = 0xEEC6
+local ADDR_EVENTS_BG        = 0xEED2
+local ADDR_BACKGROUND_COLLISION_FLAG = 0xF664
 local ADDR_LEVEL_STARTED_FLAG = 0xF711
 
 -- Player_1 ($FFFFB000) uses 32-bit positions: high word = pixel, low word = subpixel.
@@ -268,8 +304,14 @@ local OBJ_TOTAL_SLOTS       = 110
 local OBJ_DYNAMIC_START     = 3
 local OBJ_DYNAMIC_COUNT     = 90
 local SIDEKICK_BASE         = OBJ_TABLE_START + OBJ_SLOT_SIZE
+local AIR_COUNTDOWN_FIXED_P1_SLOT = 94
+local AIR_COUNTDOWN_FIXED_P2_SLOT = 95
+local ADDR_BREATHING_BUBBLES = OBJ_TABLE_START + (AIR_COUNTDOWN_FIXED_P1_SLOT * OBJ_SLOT_SIZE)
+local ADDR_BREATHING_BUBBLES_P2 = OBJ_TABLE_START + (AIR_COUNTDOWN_FIXED_P2_SLOT * OBJ_SLOT_SIZE)
+local OBJ_AIR_COUNTDOWN     = 0x00018164
 local OBJ_CNZ_BALLOON       = 0x00031754
 OBJ_CNZ_CYLINDER            = 0x00032188
+local OBJ_CNZ_MINIBOSS_SCROLL_CONTROL = 0x00052004
 local OBJ_ID_CNZ_BALLOON    = 0x41
 
 local ADDR_FRAMECOUNT       = 0xFE08
@@ -283,6 +325,7 @@ local OSC_TABLE_SIZE        = 0x42
 local ADDR_VBLA_WORD        = 0xFE12
 local ADDR_LAG_FRAME_COUNT  = 0xF628
 local ADDR_RNG_SEED         = 0xF636
+ADDR_RANDOM_NUMBER          = 0x001D24
 -- Tails CPU global block. Layout from sonic3k.constants.asm:618-626:
 --   $F700 Tails_CPU_interact     (word) - RAM addr of object Tails stood on
 --   $F702 Tails_CPU_idle_timer   (word) - counts down while Ctrl_2 idle
@@ -387,6 +430,36 @@ local V65 = {
     normal_step = nil,
     tails_cpu_hooks_registered = false,
 }
+
+local V621_SONIC_RECORD = {
+    -- Sonic_RecordPos (sonic3k.asm:22119-22136). Capturing entry state is
+    -- enough because the routine writes Pos_table/Stat_table using the current
+    -- Pos_table_index and Ctrl_1_logical before incrementing the index.
+    SONIC_RECORD_POS = 0x10D80,
+    hooks_registered = false,
+    hits = {},
+}
+
+V625_RNG_CALLS = {
+    FRAME_START = 17000,
+    FRAME_END = 21850,
+    enabled = false,
+    hooks_registered = false,
+    hits = {},
+}
+
+V625_RNG_CALLS.range = os.getenv("OGGF_S3K_RNG_CALL_RANGE")
+if V625_RNG_CALLS.range and V625_RNG_CALLS.range ~= "" then
+    V625_RNG_CALLS.enabled = true
+    local range_start, range_end = V625_RNG_CALLS.range:match("^(%d+)%-(%d+)$")
+    if range_start and range_end then
+        V625_RNG_CALLS.FRAME_START = tonumber(range_start)
+        V625_RNG_CALLS.FRAME_END = tonumber(range_end)
+    else
+        print("WARN: invalid OGGF_S3K_RNG_CALL_RANGE, expected <start>-<end>: "
+            .. V625_RNG_CALLS.range)
+    end
+end
 
 V66 = {
     -- Hook addresses resolved from labels in docs/skdisasm/sonic3k.asm:
@@ -874,7 +947,7 @@ local function write_metadata()
     meta_file:write('  "sidekicks": ["tails"],\n')
     meta_file:write('  "rng_seed": "0x' .. hex(start_rng_seed, 8) .. '",\n')
     meta_file:write('  "recording_date": "' .. os.date("%Y-%m-%d") .. '",\n')
-    meta_file:write('  "lua_script_version": "6.20-s3k",\n')
+    meta_file:write('  "lua_script_version": "6.25-s3k",\n')
     -- trace_schema: csv schema is unchanged from 5. v5 CSV + new per-frame
     -- cpu_state, oscillation_state, object_state, and interact_state aux
     -- events are detected by parsers via aux_schema_extras rather than a
@@ -924,16 +997,59 @@ local function write_metadata()
     -- v6.18 adds aiz_ship_loop_per_frame execution diagnostics for the
     -- same AIZ battleship handoff, capturing AIZ2_DoShipLoop/sub_50318
     -- register/camera/player context. Diagnostic-only.
+    -- v6.22 adds cnz_event_ram_per_frame for CNZ F15620-F15735
+    -- post-boss Events_bg / Events_routine_bg / Background_collision_flag
+    -- timing plus Obj_CNZMinibossScrollControl OST state. Diagnostic-only.
+    -- v6.23 adds air_countdown_state_per_frame for S3K fixed
+    -- Breathing_bubbles / Breathing_bubbles_P2 controller cadence and their
+    -- visible dynamic children. Diagnostic-only.
+    -- v6.24 extends visible dynamic child diagnostics with animation/render
+    -- lifetime fields. Diagnostic-only.
+    -- v6.25 adds rng_call_per_frame for focused CNZ2 Random_Number call
+    -- sequence diagnostics before the @10E8 balloon init. Diagnostic-only.
     -- All diagnostic-only.
     meta_file:write('  "trace_schema": 5,\n')
     meta_file:write('  "csv_version": 5,\n')
-    local aux_schema_extras
+    local aux_schema_extras = {
+        "cpu_state_per_frame",
+        "oscillation_state_per_frame",
+        "object_state_per_frame",
+        "interact_state_per_frame",
+        "velocity_write_per_frame",
+        "position_write_per_frame",
+        "tails_cpu_normal_step_per_frame",
+        "sidekick_interact_object_per_frame",
+        "control_lock_state_per_frame",
+        "sonic_record_pos_per_frame",
+        "air_countdown_state_per_frame"
+    }
     if is_aiz_end_to_end_profile() then
-        aux_schema_extras = '["cpu_state_per_frame", "oscillation_state_per_frame", "object_state_per_frame", "interact_state_per_frame", "velocity_write_per_frame", "position_write_per_frame", "tails_cpu_normal_step_per_frame", "sidekick_interact_object_per_frame", "aiz_boundary_state_per_frame", "aiz_transition_floor_solid_per_frame", "aiz_handoff_terrain_state_per_frame", "control_lock_state_per_frame", "terrain_wall_sensor_per_frame", "aiz_ship_loop_per_frame"]'
+        aux_schema_extras[#aux_schema_extras + 1] = "aiz_boundary_state_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "aiz_transition_floor_solid_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "aiz_handoff_terrain_state_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "terrain_wall_sensor_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "aiz_ship_loop_per_frame"
     else
-        aux_schema_extras = '["cpu_state_per_frame", "oscillation_state_per_frame", "object_state_per_frame", "interact_state_per_frame", "cage_state_per_frame", "cage_execution_per_frame", "velocity_write_per_frame", "position_write_per_frame", "tails_cpu_normal_step_per_frame", "sidekick_interact_object_per_frame", "cnz_cylinder_state_per_frame", "cnz_cylinder_execution_per_frame", "solid_object_cont_entry_per_frame", "control_lock_state_per_frame", "collision_response_list_per_frame", "collision_response_list_end_of_frame"]'
+        aux_schema_extras[#aux_schema_extras + 1] = "cage_state_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "cage_execution_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "cnz_cylinder_state_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "cnz_cylinder_execution_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "solid_object_cont_entry_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "collision_response_list_per_frame"
+        aux_schema_extras[#aux_schema_extras + 1] = "collision_response_list_end_of_frame"
+        if start_zone_name == "cnz" and (os.getenv("OGGF_S3K_CNZ_EVENT_RAM_RANGE") or "") ~= "" then
+            aux_schema_extras[#aux_schema_extras + 1] = "cnz_event_ram_per_frame"
+        end
+        if start_zone_name == "cnz" and V625_RNG_CALLS.enabled then
+            aux_schema_extras[#aux_schema_extras + 1] = "rng_call_per_frame"
+        end
     end
-    meta_file:write('  "aux_schema_extras": ' .. aux_schema_extras .. ',\n')
+    meta_file:write('  "aux_schema_extras": [')
+    for i, schema in ipairs(aux_schema_extras) do
+        if i > 1 then meta_file:write(", ") end
+        meta_file:write(json_quote(schema))
+    end
+    meta_file:write('],\n')
     meta_file:write('  "trace_profile": "' .. TRACE_PROFILE .. '",\n')
     meta_file:write('  "bizhawk_version": "' .. BIZHAWK_VERSION .. '",\n')
     meta_file:write('  "genesis_core": "' .. GENESIS_CORE .. '",\n')
@@ -1464,6 +1580,120 @@ local function write_sidekick_interact_object_state(player2_present)
         object_object_control, tostring(object_active),
         tostring(object_destroyed), tostring(object_p1_standing),
         tostring(object_p2_standing)))
+end
+
+local function owner_label_for_air_countdown_ptr(owner_ptr)
+    local owner_addr = owner_ptr % 0x10000
+    if owner_addr == PLAYER_BASE then
+        return "p1"
+    elseif owner_addr == SIDEKICK_BASE then
+        return "p2"
+    end
+    return "unknown"
+end
+
+local function write_air_countdown_state_per_frame()
+    if not aux_file then return end
+
+    local vfc = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
+    local rng_seed = mainmemory.read_u32_be(ADDR_RNG_SEED)
+    local fixed_slots = {
+        { owner = "p1", slot = AIR_COUNTDOWN_FIXED_P1_SLOT, addr = ADDR_BREATHING_BUBBLES },
+        { owner = "p2", slot = AIR_COUNTDOWN_FIXED_P2_SLOT, addr = ADDR_BREATHING_BUBBLES_P2 }
+    }
+
+    for _, fixed in ipairs(fixed_slots) do
+        local obj_code = mainmemory.read_u32_be(fixed.addr)
+        local owner_ptr = mainmemory.read_u32_be(fixed.addr + 0x40)
+        local owner_addr = owner_ptr % 0x10000
+        local owner_resolved = owner_label_for_air_countdown_ptr(owner_ptr)
+        local owner_air_left = 0
+        local owner_status = 0
+        local owner_status_secondary = 0
+        local owner_facing_left = false
+        local owner_underwater = false
+        if owner_resolved ~= "unknown" then
+            owner_air_left = mainmemory.read_u8(owner_addr + 0x2C)
+            owner_status = mainmemory.read_u8(owner_addr + OFF_STATUS)
+            owner_status_secondary = mainmemory.read_u8(owner_addr + OFF_STATUS_SECONDARY)
+            owner_facing_left = (owner_status & STATUS_FACING_LEFT) ~= 0
+            owner_underwater = (owner_status & STATUS_UNDERWATER) ~= 0
+        end
+
+        local children = {}
+        if owner_ptr ~= 0 then
+            for slot = OBJ_DYNAMIC_START, (OBJ_DYNAMIC_START + OBJ_DYNAMIC_COUNT - 1) do
+                local child_addr = OBJ_TABLE_START + (slot * OBJ_SLOT_SIZE)
+                local child_code = mainmemory.read_u32_be(child_addr)
+                if child_code == OBJ_AIR_COUNTDOWN then
+                    local child_parent = mainmemory.read_u32_be(child_addr + 0x40)
+                    if (child_parent % 0x10000) == owner_addr then
+                        local child_y_vel = mainmemory.read_s16_be(child_addr + OFF_Y_VEL)
+                        if child_y_vel < 0 then child_y_vel = child_y_vel + 0x10000 end
+                        children[#children + 1] = string.format(
+                            '{"slot":%d,"object_code":"0x%08X","routine":"0x%02X",'
+                                .. '"subtype":"0x%02X","x":"0x%04X","y":"0x%04X",'
+                                .. '"x_sub":"0x%04X","y_sub":"0x%04X","y_vel":"0x%04X",'
+                                .. '"render_flags":"0x%02X","anim":"0x%02X",'
+                                .. '"mapping_frame":"0x%02X","anim_frame":"0x%02X",'
+                                .. '"anim_frame_timer":"0x%02X","angle":"0x%02X",'
+                                .. '"obj34":"0x%04X","obj3c":"0x%04X",'
+                                .. '"parent_ptr":"0x%08X"}',
+                            slot,
+                            child_code,
+                            mainmemory.read_u8(child_addr + OFF_ROUTINE),
+                            mainmemory.read_u8(child_addr + 0x2C),
+                            mainmemory.read_u16_be(child_addr + OFF_X_POS),
+                            mainmemory.read_u16_be(child_addr + OFF_Y_POS),
+                            mainmemory.read_u16_be(child_addr + OFF_X_SUB),
+                            mainmemory.read_u16_be(child_addr + OFF_Y_SUB),
+                            child_y_vel,
+                            mainmemory.read_u8(child_addr + 0x04),
+                            mainmemory.read_u8(child_addr + 0x20),
+                            mainmemory.read_u8(child_addr + 0x22),
+                            mainmemory.read_u8(child_addr + 0x23),
+                            mainmemory.read_u8(child_addr + 0x24),
+                            mainmemory.read_u8(child_addr + OFF_ANGLE),
+                            mainmemory.read_u16_be(child_addr + 0x34),
+                            mainmemory.read_u16_be(child_addr + 0x3C),
+                            child_parent)
+                    end
+                end
+            end
+        end
+
+        write_aux(string.format(
+            '{"frame":%d,"vfc":%d,"event":"air_countdown_state",'
+                .. '"owner":"%s","fixed_slot":%d,"object_code":"0x%08X",'
+                .. '"routine":"0x%02X","subtype":"0x%02X",'
+                .. '"obj30":"0x%04X","obj36":"0x%02X","obj37":"0x%02X",'
+                .. '"obj38":"0x%02X","obj3a":"0x%04X","obj3c":"0x%04X",'
+                .. '"obj3e":"0x%04X","owner_ptr":"0x%08X",'
+                .. '"owner_resolved":"%s","owner_air_left":"0x%02X",'
+                .. '"owner_status":"0x%02X","owner_status_secondary":"0x%02X",'
+                .. '"owner_facing_left":%s,"owner_underwater":%s,'
+                .. '"rng_seed":"0x%08X","visible_children":[%s]}',
+            trace_frame, vfc,
+            fixed.owner, fixed.slot, obj_code,
+            mainmemory.read_u8(fixed.addr + OFF_ROUTINE),
+            mainmemory.read_u8(fixed.addr + 0x2C),
+            mainmemory.read_u16_be(fixed.addr + 0x30),
+            mainmemory.read_u8(fixed.addr + 0x36),
+            mainmemory.read_u8(fixed.addr + 0x37),
+            mainmemory.read_u8(fixed.addr + 0x38),
+            mainmemory.read_u16_be(fixed.addr + 0x3A),
+            mainmemory.read_u16_be(fixed.addr + 0x3C),
+            mainmemory.read_u16_be(fixed.addr + 0x3E),
+            owner_ptr,
+            owner_resolved,
+            owner_air_left,
+            owner_status,
+            owner_status_secondary,
+            tostring(owner_facing_left),
+            tostring(owner_underwater),
+            rng_seed,
+            table.concat(children, ",")))
+    end
 end
 
 -- Per-frame INTERACT STATE events. Emit one per active player capturing
@@ -2071,6 +2301,260 @@ function V618_AIZ_SHIP.register_hooks()
 end
 
 -- =====================================================================
+-- Sonic_RecordPos diagnostics (v6.21-s3k)
+-- =====================================================================
+-- Comparison-only visibility for Stat_table source writes. Tails CPU normal
+-- follow reads Stat_table[(Pos_table_index - $44) & $FF] at loc_13DD0
+-- (sonic3k.asm:26683-26700); Sonic_RecordPos writes that same index from
+-- Ctrl_1_logical (sonic3k.asm:22124-22136). These events let a regenerated
+-- trace map a delayed Tails input back to the exact ROM frame and write index.
+
+function V621_SONIC_RECORD.record_hit()
+    if not aux_file then return end
+    if not started then return end
+    local a0 = emu.getregister("M68K A0") or 0
+    if (a0 % 0x10000) ~= PLAYER_BASE then return end
+
+    V621_SONIC_RECORD.hits[#V621_SONIC_RECORD.hits + 1] = {
+        pc = emu.getregister("M68K PC") or V621_SONIC_RECORD.SONIC_RECORD_POS,
+        pos_table_index = mainmemory.read_u16_be(ADDR_POS_TABLE_INDEX) & 0xFF,
+        ctrl1_logical = mainmemory.read_u16_be(ADDR_CTRL1_LOGICAL),
+        ctrl1_locked = mainmemory.read_u8(ADDR_CTRL1_LOCKED),
+        ctrl1_raw = mainmemory.read_u16_be(ADDR_CTRL1),
+        object_control = mainmemory.read_u8(PLAYER_BASE + OFF_OBJECT_CONTROL),
+        status = mainmemory.read_u8(PLAYER_BASE + OFF_STATUS),
+        status_secondary = mainmemory.read_u8(PLAYER_BASE + OFF_STATUS_SECONDARY),
+        x = mainmemory.read_u16_be(PLAYER_BASE + OFF_X_POS),
+        y = mainmemory.read_u16_be(PLAYER_BASE + OFF_Y_POS),
+    }
+end
+
+function V621_SONIC_RECORD.format_hits()
+    local parts = {}
+    for _, hit in ipairs(V621_SONIC_RECORD.hits) do
+        parts[#parts + 1] = string.format(
+            '{"pc":"0x%05X","pos_table_index":"0x%02X",'
+                .. '"ctrl1_logical":"0x%04X","ctrl1_locked":%d,'
+                .. '"ctrl1_raw":"0x%04X","object_control":"0x%02X",'
+                .. '"status":"0x%02X","status_secondary":"0x%02X",'
+                .. '"x":"0x%04X","y":"0x%04X"}',
+            hit.pc & 0xFFFFFF,
+            hit.pos_table_index & 0xFF,
+            hit.ctrl1_logical & 0xFFFF,
+            hit.ctrl1_locked & 0xFF,
+            hit.ctrl1_raw & 0xFFFF,
+            hit.object_control & 0xFF,
+            hit.status & 0xFF,
+            hit.status_secondary & 0xFF,
+            hit.x & 0xFFFF,
+            hit.y & 0xFFFF)
+    end
+    return "[" .. table.concat(parts, ",") .. "]"
+end
+
+function V621_SONIC_RECORD.flush()
+    if not aux_file then return end
+    if #V621_SONIC_RECORD.hits == 0 then return end
+    write_aux(string.format(
+        '{"frame":%d,"vfc":%d,"event":"sonic_record_pos","hits":%s}',
+        trace_frame,
+        mainmemory.read_u16_be(ADDR_FRAMECOUNT),
+        V621_SONIC_RECORD.format_hits()))
+    V621_SONIC_RECORD.hits = {}
+end
+
+function V621_SONIC_RECORD.register_hooks()
+    if V621_SONIC_RECORD.hooks_registered then return end
+    V621_SONIC_RECORD.hooks_registered = true
+    event.onmemoryexecute(V621_SONIC_RECORD.record_hit, V621_SONIC_RECORD.SONIC_RECORD_POS)
+    print(string.format("Sonic_RecordPos hook registered: 0x%05X",
+        V621_SONIC_RECORD.SONIC_RECORD_POS))
+end
+
+-- =====================================================================
+-- Random_Number diagnostics (v6.25-s3k)
+-- =====================================================================
+-- Comparison-only visibility for RNG call order before the CNZ2 balloon
+-- phase window. The hook runs at Random_Number entry (sonic3k.asm:2992-3011);
+-- it reconstructs the ROM result and next seed from the entry seed, and
+-- records the return PC plus the active a0/a1 object register context.
+
+function V625_RNG_CALLS.u32(value)
+    return value & 0xFFFFFFFF
+end
+
+function V625_RNG_CALLS.swap_words32(value)
+    return (((value >> 16) & 0xFFFF) | ((value & 0xFFFF) << 16)) & 0xFFFFFFFF
+end
+
+function V625_RNG_CALLS.s3k_random_step(seed)
+    local d1 = seed & 0xFFFFFFFF
+    if (d1 & 0xFFFF) == 0 then
+        d1 = 0x2A6D365B
+    end
+
+    local d0 = d1
+    d1 = V625_RNG_CALLS.u32(d1 << 2)
+    d1 = V625_RNG_CALLS.u32(d1 + d0)
+    d1 = V625_RNG_CALLS.u32(d1 << 3)
+    d1 = V625_RNG_CALLS.u32(d1 + d0)
+
+    d0 = (d0 & 0xFFFF0000) | (d1 & 0xFFFF)
+    d1 = V625_RNG_CALLS.swap_words32(d1)
+    d0 = (d0 & 0xFFFF0000) | (((d0 & 0xFFFF) + (d1 & 0xFFFF)) & 0xFFFF)
+    d1 = (d1 & 0xFFFF0000) | (d0 & 0xFFFF)
+    d1 = V625_RNG_CALLS.swap_words32(d1)
+    return d0 & 0xFFFFFFFF, d1 & 0xFFFFFFFF
+end
+
+function V625_RNG_CALLS.in_window()
+    return trace_frame >= V625_RNG_CALLS.FRAME_START
+        and trace_frame <= V625_RNG_CALLS.FRAME_END
+end
+
+function V625_RNG_CALLS.is_cnz()
+    return mainmemory.read_u8(ADDR_ZONE) == 0x03
+end
+
+function V625_RNG_CALLS.object_context(register_value)
+    local ptr = register_value % 0x10000
+    local max_addr = OBJ_TABLE_START + (OBJ_TOTAL_SLOTS * OBJ_SLOT_SIZE)
+    local slot = -1
+    local object_code = 0
+    local routine = 0
+    local subtype = 0
+    local x = 0
+    local y = 0
+    if ptr >= OBJ_TABLE_START and ptr < max_addr and ((ptr - OBJ_TABLE_START) % OBJ_SLOT_SIZE) == 0 then
+        slot = math.floor((ptr - OBJ_TABLE_START) / OBJ_SLOT_SIZE)
+        object_code = mainmemory.read_u32_be(ptr)
+        routine = mainmemory.read_u8(ptr + OFF_ROUTINE)
+        subtype = mainmemory.read_u8(ptr + 0x2C)
+        x = mainmemory.read_u16_be(ptr + OFF_X_POS)
+        y = mainmemory.read_u16_be(ptr + OFF_Y_POS)
+    end
+    return {
+        ptr = ptr,
+        slot = slot,
+        object_code = object_code,
+        routine = routine,
+        subtype = subtype,
+        x = x,
+        y = y,
+    }
+end
+
+function V625_RNG_CALLS.source_label(a0ctx, caller_pc)
+    if caller_pc >= 0x31740 and caller_pc < 0x31754 then
+        return "CNZBalloon.init"
+    elseif caller_pc >= 0x31830 and caller_pc < 0x31840 then
+        return "CNZBalloon.subtype80_bubbler"
+    elseif caller_pc >= 0x184C0 and caller_pc < 0x18680 then
+        return "AirCountdown"
+    elseif caller_pc >= 0x2FA80 and caller_pc < 0x2FB50 then
+        return "Bubbler"
+    elseif a0ctx.object_code == OBJ_CNZ_BALLOON then
+        return "CNZBalloon.init"
+    elseif a0ctx.object_code == OBJ_AIR_COUNTDOWN then
+        return "AirCountdown"
+    elseif a0ctx.object_code == 0x0002F952 then
+        return "Bubbler"
+    elseif a0ctx.object_code == 0 then
+        return "unknown"
+    end
+    return string.format("object_%08X", a0ctx.object_code)
+end
+
+function V625_RNG_CALLS.record_hit()
+    if not aux_file then return end
+    if not started then return end
+    if not V625_RNG_CALLS.enabled then return end
+    if not V625_RNG_CALLS.in_window() then return end
+    if not V625_RNG_CALLS.is_cnz() then return end
+
+    local seed_before = mainmemory.read_u32_be(ADDR_RNG_SEED)
+    local result, seed_after = V625_RNG_CALLS.s3k_random_step(seed_before)
+    local sp = (emu.getregister("M68K A7") or 0) % 0x10000
+    local caller_pc = 0
+    if sp >= 0 and sp <= 0xFFFC then
+        caller_pc = mainmemory.read_u32_be(sp) & 0xFFFFFF
+    end
+    local a0_raw = emu.getregister("M68K A0") or 0
+    local a1_raw = emu.getregister("M68K A1") or 0
+    local a0ctx = V625_RNG_CALLS.object_context(a0_raw)
+    local a1ctx = V625_RNG_CALLS.object_context(a1_raw)
+
+    V625_RNG_CALLS.hits[#V625_RNG_CALLS.hits + 1] = {
+        pc = emu.getregister("M68K PC") or ADDR_RANDOM_NUMBER,
+        caller_pc = caller_pc,
+        seed_before = seed_before,
+        seed_after = seed_after,
+        result = result,
+        result_byte = result & 0xFF,
+        source = V625_RNG_CALLS.source_label(a0ctx, caller_pc),
+        a0 = a0ctx,
+        a1 = a1ctx,
+    }
+end
+
+function V625_RNG_CALLS.format_object_context(prefix, ctx)
+    return string.format(
+        '"%s_ptr":"0x%04X","%s_slot":%d,"%s_object_code":"0x%08X",'
+            .. '"%s_routine":"0x%02X","%s_subtype":"0x%02X",'
+            .. '"%s_x":"0x%04X","%s_y":"0x%04X"',
+        prefix, ctx.ptr & 0xFFFF,
+        prefix, ctx.slot,
+        prefix, ctx.object_code,
+        prefix, ctx.routine & 0xFF,
+        prefix, ctx.subtype & 0xFF,
+        prefix, ctx.x & 0xFFFF,
+        prefix, ctx.y & 0xFFFF)
+end
+
+function V625_RNG_CALLS.format_hits()
+    local parts = {}
+    for _, hit in ipairs(V625_RNG_CALLS.hits) do
+        parts[#parts + 1] = string.format(
+            '{"pc":"0x%05X","caller_pc":"0x%06X","source":%s,'
+                .. '"seed_before":"0x%08X","seed_after":"0x%08X",'
+                .. '"result":"0x%08X","result_byte":"0x%02X",%s,%s}',
+            hit.pc & 0xFFFFFF,
+            hit.caller_pc & 0xFFFFFF,
+            json_quote(hit.source),
+            hit.seed_before & 0xFFFFFFFF,
+            hit.seed_after & 0xFFFFFFFF,
+            hit.result & 0xFFFFFFFF,
+            hit.result_byte & 0xFF,
+            V625_RNG_CALLS.format_object_context("a0", hit.a0),
+            V625_RNG_CALLS.format_object_context("a1", hit.a1))
+    end
+    return "[" .. table.concat(parts, ",") .. "]"
+end
+
+function V625_RNG_CALLS.flush()
+    if not aux_file then return end
+    if #V625_RNG_CALLS.hits == 0 then return end
+    write_aux(string.format(
+        '{"frame":%d,"vfc":%d,"event":"rng_call","hits":%s}',
+        trace_frame,
+        mainmemory.read_u16_be(ADDR_FRAMECOUNT),
+        V625_RNG_CALLS.format_hits()))
+    V625_RNG_CALLS.hits = {}
+end
+
+function V625_RNG_CALLS.register_hooks()
+    if not V625_RNG_CALLS.enabled then return end
+    if V625_RNG_CALLS.hooks_registered then return end
+    V625_RNG_CALLS.hooks_registered = true
+    event.onmemoryexecute(V625_RNG_CALLS.record_hit, ADDR_RANDOM_NUMBER)
+    print(string.format(
+        "Random_Number hook registered: 0x%05X, frames %d-%d",
+        ADDR_RANDOM_NUMBER,
+        V625_RNG_CALLS.FRAME_START,
+        V625_RNG_CALLS.FRAME_END))
+end
+
+-- =====================================================================
 -- CNZ cylinder P2 execution/state diagnostics (v6.7-s3k)
 -- =====================================================================
 -- Frame-range filtered because execution hooks fire from shared platform
@@ -2247,6 +2731,106 @@ function V67_CNZ.emit_cnz_cylinder_state_per_frame()
                 mainmemory.read_u8(addr + 0x39)))
         end
     end
+end
+
+-- =====================================================================
+-- CNZ event-RAM / scroll-control diagnostics (v6.22-s3k)
+-- =====================================================================
+local V622_CNZ_EVENT_RAM = {
+    FRAME_START = 15620,
+    FRAME_END = 15735,
+    enabled = false,
+}
+
+V622_CNZ_EVENT_RAM.range = os.getenv("OGGF_S3K_CNZ_EVENT_RAM_RANGE")
+if V622_CNZ_EVENT_RAM.range and V622_CNZ_EVENT_RAM.range ~= "" then
+    V622_CNZ_EVENT_RAM.enabled = true
+    local range_start, range_end = V622_CNZ_EVENT_RAM.range:match("^(%d+)%-(%d+)$")
+    if range_start and range_end then
+        V622_CNZ_EVENT_RAM.FRAME_START = tonumber(range_start)
+        V622_CNZ_EVENT_RAM.FRAME_END = tonumber(range_end)
+    else
+        print("WARN: invalid OGGF_S3K_CNZ_EVENT_RAM_RANGE, expected <start>-<end>: "
+            .. V622_CNZ_EVENT_RAM.range)
+    end
+end
+
+function V622_CNZ_EVENT_RAM.in_window()
+    return trace_frame >= V622_CNZ_EVENT_RAM.FRAME_START
+        and trace_frame <= V622_CNZ_EVENT_RAM.FRAME_END
+end
+
+function V622_CNZ_EVENT_RAM.is_cnz_act1()
+    return mainmemory.read_u8(ADDR_ZONE) == 0x03
+        and mainmemory.read_u8(ADDR_ACT) == 0x00
+end
+
+function V622_CNZ_EVENT_RAM.build_scroll_control_slots()
+    local entries = {}
+    for slot = OBJ_DYNAMIC_START, OBJ_TOTAL_SLOTS - 1 do
+        local addr = OBJ_TABLE_START + (slot * OBJ_SLOT_SIZE)
+        local obj_code = mainmemory.read_u32_be(addr)
+        if obj_code == OBJ_CNZ_MINIBOSS_SCROLL_CONTROL then
+            entries[#entries + 1] = string.format(
+                '{"slot":%d,"addr":"0x%04X","object_code":"0x%08X",'
+                    .. '"routine":"0x%02X","routine_secondary":"0x%02X",'
+                    .. '"x":"0x%04X","y":"0x%04X","status":"0x%02X",'
+                    .. '"subtype":"0x%02X","objoff_2e":"0x%02X",'
+                    .. '"objoff_30":"0x%02X","objoff_32":"0x%02X",'
+                    .. '"objoff_34":"0x%02X","objoff_36":"0x%02X",'
+                    .. '"objoff_38":"0x%02X"}',
+                slot,
+                addr & 0xFFFF,
+                obj_code,
+                mainmemory.read_u8(addr + OFF_ROUTINE),
+                mainmemory.read_u8(addr + 0x06),
+                mainmemory.read_u16_be(addr + OFF_X_POS),
+                mainmemory.read_u16_be(addr + OFF_Y_POS),
+                mainmemory.read_u8(addr + OFF_STATUS),
+                mainmemory.read_u8(addr + 0x2C),
+                mainmemory.read_u8(addr + 0x2E),
+                mainmemory.read_u8(addr + 0x30),
+                mainmemory.read_u8(addr + 0x32),
+                mainmemory.read_u8(addr + 0x34),
+                mainmemory.read_u8(addr + 0x36),
+                mainmemory.read_u8(addr + 0x38))
+        end
+    end
+    return "[" .. table.concat(entries, ",") .. "]"
+end
+
+function V622_CNZ_EVENT_RAM.write()
+    if not aux_file then return end
+    if not started then return end
+    if not V622_CNZ_EVENT_RAM.enabled then return end
+    if not V622_CNZ_EVENT_RAM.in_window() then return end
+    if not V622_CNZ_EVENT_RAM.is_cnz_act1() then return end
+
+    local vfc = mainmemory.read_u16_be(ADDR_FRAMECOUNT)
+    write_aux(string.format(
+        '{"frame":%d,"vfc":%d,"event":"cnz_event_ram",'
+            .. '"events_bg_00_word":"0x%04X","events_bg_02_word":"0x%04X",'
+            .. '"events_bg_08_word":"0x%04X","events_bg_08_long":"0x%08X",'
+            .. '"events_bg_0c_word":"0x%04X","events_bg_0c_long":"0x%08X",'
+            .. '"events_routine_bg":"0x%04X",'
+            .. '"background_collision_flag":"0x%02X","events_fg_5":"0x%04X",'
+            .. '"camera_y":"0x%04X","camera_max_y":"0x%04X",'
+            .. '"camera_target_max_y":"0x%04X","scroll_slots":%s}',
+        trace_frame,
+        vfc,
+        mainmemory.read_u16_be(ADDR_EVENTS_BG + 0x00),
+        mainmemory.read_u16_be(ADDR_EVENTS_BG + 0x02),
+        mainmemory.read_u16_be(ADDR_EVENTS_BG + 0x08),
+        mainmemory.read_u32_be(ADDR_EVENTS_BG + 0x08),
+        mainmemory.read_u16_be(ADDR_EVENTS_BG + 0x0C),
+        mainmemory.read_u32_be(ADDR_EVENTS_BG + 0x0C),
+        mainmemory.read_u16_be(ADDR_EVENTS_ROUTINE_BG),
+        mainmemory.read_u8(ADDR_BACKGROUND_COLLISION_FLAG),
+        mainmemory.read_u16_be(ADDR_EVENTS_FG_5),
+        mainmemory.read_u16_be(ADDR_CAMERA_Y),
+        mainmemory.read_u16_be(ADDR_CAMERA_MAX_Y),
+        mainmemory.read_u16_be(ADDR_CAMERA_TARGET_MAX_Y),
+        V622_CNZ_EVENT_RAM.build_scroll_control_slots()))
 end
 
 -- =====================================================================
@@ -3823,6 +4407,13 @@ function on_frame_end()
     end
 
     if HEADLESS and started then
+        if TRACE_STOP_FRAME ~= nil and trace_frame >= TRACE_STOP_FRAME then
+            print(string.format(
+                "Reached configured trace stop frame %d. Finalising.",
+                TRACE_STOP_FRAME))
+            finished = true
+            return
+        end
         if BK2_FRAME_COUNT ~= nil and BK2_FRAME_COUNT > 0
             and (bk2_frame_offset + trace_frame) >= BK2_FRAME_COUNT then
             print(string.format(
@@ -4067,12 +4658,22 @@ function on_frame_end()
     write_object_states_per_frame(x, y, sk_present, sidekick.x, sidekick.y)
     write_interact_state_per_frame(sk_present)
     write_sidekick_interact_object_state(sk_present)
+    -- Fixed Breathing_bubbles sidecars live outside Dynamic_object_RAM in S3K
+    -- (sonic3k.constants.asm:307-312). Poll them separately so dynamic slot
+    -- pressure diagnostics can distinguish controller state from visible
+    -- Obj_AirCountdown child allocation.
+    write_air_countdown_state_per_frame()
 
     -- Focused CNZ cylinder diagnostics (v6.7 schema). State polling captures
     -- P1/P2 slot bytes after the frame. Execution hooks show P2 x/subpixel at
     -- sub_324C0 and MvSonicOnPtfm branch points during the frame.
     V67_CNZ.emit_cnz_cylinder_state_per_frame()
     V67_CNZ.flush_cnz_cylinder_hits()
+
+    -- Focused CNZ post-boss event RAM diagnostics (v6.22 schema). Captures
+    -- Events_bg+$08/$0C, Events_routine_bg, Background_collision_flag, and
+    -- Obj_CNZMinibossScrollControl state around the F15735 landing blocker.
+    V622_CNZ_EVENT_RAM.write()
 
     -- Per-frame CNZ wire cage state (v6.3 schema). Emits one cage_state
     -- event per active cage object (per OST slot containing 0x0001365C)
@@ -4113,6 +4714,17 @@ function on_frame_end()
     -- diagnostic register/camera/player context for the narrow frontier
     -- window. Never feeds replay state.
     V618_AIZ_SHIP.flush()
+
+    -- Sonic_RecordPos Stat_table source writes (v6.21-s3k). Hook callbacks
+    -- capture the Pos_table_index and Ctrl_1_logical word at the ROM write
+    -- point; the event is report-only diagnostic context for delayed Tails CPU
+    -- input, never replay state.
+    V621_SONIC_RECORD.flush()
+
+    -- Random_Number call-order diagnostics (v6.25-s3k). Hook callbacks record
+    -- ROM seed/result plus active object register context in the focused CNZ2
+    -- balloon phase window. Diagnostic-only.
+    V625_RNG_CALLS.flush()
 
     -- SolidObject_cont entry hits (v6.11-s3k). Hooks 0x1DF90 and captures
     -- (a0)/(a1)/d1/d2 plus the player's y_radius and default_y_radius so
@@ -4169,7 +4781,7 @@ elseif is_level_gated_reset_aware_profile() then
 else
     WAIT_DESC = "level gameplay (Game_Mode=0x0C, controls unlocked)"
 end
-print(string.format("S3K Trace Recorder v6.18-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
+print(string.format("S3K Trace Recorder v6.25-s3k loaded. Profile=%s. Waiting for %s...", TRACE_PROFILE, WAIT_DESC))
 
 -- Register the CNZ wire cage execution hooks. Done once at script load
 -- before the main loop runs so the memoryexecute callbacks are armed for
@@ -4185,6 +4797,8 @@ WRITE_DIAG.register_position_hooks()
 
 -- Register focused AIZ ship-loop hooks. Same lifetime model as cage hooks.
 V618_AIZ_SHIP.register_hooks()
+V621_SONIC_RECORD.register_hooks()
+V625_RNG_CALLS.register_hooks()
 
 -- Register focused Tails CPU normal-step hooks. Same lifetime model as cage hooks.
 V65.register_tails_cpu_normal_step_hooks()

@@ -258,6 +258,18 @@ public class TornadoObjectInstance extends AbstractObjectInstance
         return routine == ROUTINE_SCZ_MAIN || routine == ROUTINE_WFZ_START || routine == ROUTINE_WFZ_END;
     }
 
+    public boolean isRideStartPreludeObject() {
+        return isSczRideStartPreludeObject() || isWfzStartRideStartPreludeObject();
+    }
+
+    public boolean isSczRideStartPreludeObject() {
+        return routine == ROUTINE_SCZ_MAIN;
+    }
+
+    public boolean isWfzStartRideStartPreludeObject() {
+        return routine == ROUTINE_WFZ_START;
+    }
+
     /**
      * Native bootstrap for SCZ/WFZ level-select trace starts where the title-card
      * object prelude has already placed Sonic on the Tornado before the first

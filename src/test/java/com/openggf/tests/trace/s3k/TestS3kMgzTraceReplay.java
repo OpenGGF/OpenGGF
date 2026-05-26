@@ -37,9 +37,9 @@ public class TestS3kMgzTraceReplay extends AbstractTraceReplayTest {
     @Override
     protected ToleranceConfig tolerances() {
         // Known ring-count parity gap: MGZ trace records ring divergences
-        // alongside the engine's first-frame physics divergence (frame 0).
-        // Downgrade ring mismatches to warnings so trace tail diagnostics
-        // remain readable until ring parity is brought up.
+        // before the current physics frontier. Downgrade ring mismatches to
+        // warnings so the f4124 y_speed frontier stays visible; this does not
+        // certify ring-count parity.
         return ToleranceConfig.DEFAULT.withRingCountMode(
                 ToleranceConfig.RingCountMode.WARN_ONLY);
     }

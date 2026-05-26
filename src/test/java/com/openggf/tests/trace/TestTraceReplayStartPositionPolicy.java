@@ -114,7 +114,7 @@ class TestTraceReplayStartPositionPolicy {
     }
 
     @Test
-    void s3kGameplayTraceSeedsFrameZeroAfterSidekickTitleCardPrelude() throws Exception {
+    void s3kGameplayTraceSeedsFrameZeroAfterSidekickOnlyPrelude() throws Exception {
         TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s3k/cnz"));
 
         assertFalse(trace.preTraceObjectSnapshots().isEmpty(),
@@ -122,21 +122,22 @@ class TestTraceReplayStartPositionPolicy {
         assertFalse(TraceReplayBootstrap.shouldUseLegacyS3kAizIntroWarmup(trace));
         assertEquals(0, TraceReplayBootstrap.replaySeedTraceIndexForTraceReplay(trace));
         assertFalse(TraceReplayBootstrap.shouldSeedFrameZeroForTraceReplay(trace));
-        assertEquals(0,
+        assertEquals(1,
                 TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
-                "The old S3K sidekick title-card prelude knob is now an unconditional no-op.");
+                "S3K Sonic+Tails seed-frame traces need the single native sidekick setup tick "
+                        + "observed before the first compared row.");
         assertEquals(new TraceReplayBootstrap.ReplayStartState(1, 0),
                 TraceReplayBootstrap.applyReplayStartStateForTraceReplay(trace, null),
-                "Frame 0 is a strict seed comparison after the Tails-only prelude; "
-                        + "normal full-frame driving starts with trace frame 1.");
+                "Frame 0 is still a strict seed comparison; normal full-frame driving starts "
+                        + "with trace frame 1.");
         assertEquals(trace.metadata().bk2FrameOffset(),
                 TraceReplayBootstrap.recordingStartFrameForTraceReplay(trace),
-                "Frame 0 is seed-compared after the native sidekick prelude, so the first "
-                        + "driven row (trace frame 1) starts from the frame-0 input.");
+                "Frame 0 is seed-compared from the recorded BK2 offset, then frame 1 drives "
+                        + "with the next movie row.");
         assertEquals(1,
                 TraceReplayBootstrap.preTraceOscillationFramesForTraceReplay(trace, -1),
-                "CNZ frame 0 is seed-compared, not driven, but the ROM row has already "
-                        + "passed one OscillateNumDo tick.");
+                "Frame 0 is seed-compared, not driven, but the ROM row has already passed one "
+                        + "OscillateNumDo tick.");
         assertEquals(0,
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace),
                 "Legacy AIZ full-intro replay now drives oscillator timing natively as well.");
@@ -183,6 +184,25 @@ class TestTraceReplayStartPositionPolicy {
                 "SCZ starts on ObjB2 after the native title-card object prelude, not as a ground spawn.");
         assertTrue(TraceReplayBootstrap.usesS2TornadoRideStartForTraceReplay(wfz),
                 "WFZ starts on ObjB2 after the native title-card object prelude, not as a ground spawn.");
+    }
+
+    @Test
+    void s2SlotMachinePreludeUsesRecordedFeatureCapability() throws Exception {
+        TraceData slotMachineTrace = TraceData.load(Path.of("src/test/resources/traces/s2/cnz"));
+        TraceData tornadoTrace = TraceData.load(Path.of("src/test/resources/traces/s2/scz"));
+
+        assertTrue(slotMachineTrace.metadata().hasPerFrameCnzSlotMachineState());
+        assertEquals(4,
+                TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(slotMachineTrace),
+                "SlotMachine state traces need the native short init window before comparison.");
+        assertEquals(10,
+                TraceReplayBootstrap.zoneFeatureTitleCardPreludeStartVblankOffsetForTraceReplay(slotMachineTrace));
+        assertEquals(0,
+                TraceReplayBootstrap.zoneFeatureTitleCardPreludeFramesForTraceReplay(tornadoTrace),
+                "Traces without the slot-machine recorder schema must not receive a zone-id prelude.");
+        assertEquals(0,
+                TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(slotMachineTrace),
+                "Metadata-only replay policy must not apply Tornado object preludes to non-Tornado routes.");
     }
 
     @Test

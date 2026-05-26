@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.level.objects.RomObjectSnapshot;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -268,6 +269,21 @@ public sealed interface TraceEvent {
     }
 
     /**
+     * Per-frame hook-driven diagnostic for Player_1 {@code Sonic_RecordPos}
+     * calls. Captures the ROM table index and logical input word that will be
+     * written into {@code Stat_table} for later Tails CPU delayed reads
+     * (docs/skdisasm/sonic3k.asm:22124-22136, 26683-26700). Diagnostic only:
+     * never hydrated into engine state.
+     */
+    record SonicRecordPos(int frame, java.util.List<Hit> hits)
+        implements TraceEvent {
+
+        public record Hit(int pc, int posTableIndex, int ctrl1Logical,
+                          int ctrl1Locked, int ctrl1Raw, int objectControl,
+                          int status, int statusSecondary, int x, int y) {}
+    }
+
+    /**
      * Per-frame focused diagnostic for Tails CPU's normal follow step in S3K.
      * Captures the ROM state around {@code loc_13DD0}, the generated delayed
      * input word, and the state before/after {@code Tails_InputAcceleration_Path}
@@ -340,6 +356,90 @@ public sealed interface TraceEvent {
                           int slotThreshold, int playerX, int playerXSub,
                           int playerY, int playerYSub, int playerStatus,
                           int playerObjectControl) {}
+    }
+
+    /**
+     * Focused CNZ Act 1 post-boss event RAM diagnostic emitted by the v6.22+
+     * S3K recorder for the F15620-F15735 window. Captures the ROM-owned
+     * {@code Events_bg+$08/$0C}, {@code Events_routine_bg},
+     * {@code Background_collision_flag}, and active
+     * {@code Obj_CNZMinibossScrollControl} OST state.
+     *
+     * <p><strong>Diagnostic only:</strong> never hydrated into engine state.
+     */
+    record CnzEventRamState(
+            int frame,
+            int eventsBg00Word,
+            int eventsBg02Word,
+            int eventsBg08Word,
+            int eventsBg08Long,
+            int eventsBg0cWord,
+            int eventsBg0cLong,
+            int eventsRoutineBg,
+            int backgroundCollisionFlag,
+            int eventsFg5,
+            int cameraY,
+            int cameraMaxY,
+            int cameraTargetMaxY,
+            java.util.List<ScrollControlSlot> scrollSlots)
+        implements TraceEvent {
+
+        public record ScrollControlSlot(
+                int slot, int addr, int objectCode, int routine,
+                int routineSecondary, int x, int y, int status,
+                int subtype, int objoff2e, int objoff30,
+                int objoff32, int objoff34, int objoff36, int objoff38) {}
+    }
+
+    /**
+     * Per-frame S3K fixed {@code Breathing_bubbles} /
+     * {@code Breathing_bubbles_P2} diagnostic. These fixed in-level object
+     * slots sit after dynamic object RAM and do not consume a dynamic SST slot
+     * (docs/skdisasm/sonic3k.constants.asm:307-312). The recorder polls the
+     * fixed controller fields used by {@code Obj_AirCountdown}'s countdown and
+     * make-item paths (docs/skdisasm/sonic3k.asm:33289-33306,
+     * 33490-33610), plus any visible dynamic {@code Obj_AirCountdown}
+     * children that currently point at the same owner.
+     *
+     * <p><strong>Diagnostic only:</strong> this event exposes ROM cadence and
+     * child lifetime for reports; replay code must never hydrate engine state
+     * from it.
+     */
+    record AirCountdownState(
+            int frame, String owner, int fixedSlot, int objectCode,
+            int routine, int subtype, int obj30, int obj36, int obj37,
+            int obj38, int obj3a, int obj3c, int obj3e, int ownerPtr,
+            String ownerResolved, int ownerAirLeft, int ownerStatus,
+            int ownerStatusSecondary, boolean ownerFacingLeft,
+            boolean ownerUnderwater, int rngSeed, List<VisibleChild> visibleChildren)
+        implements TraceEvent {
+
+        public record VisibleChild(
+                int slot, int objectCode, int routine, int subtype,
+                int x, int y, int xSub, int ySub, int yVel,
+                int renderFlags, int anim, int mappingFrame,
+                int animFrame, int animFrameTimer, int angle,
+                int obj34, int obj3c, int parentPtr) {}
+    }
+
+    /**
+     * Hook-driven S3K {@code Random_Number} diagnostic emitted by the v6.25+
+     * recorder in focused RNG windows. Each hit records the ROM seed before
+     * and after the call, the raw result, return PC, and active {@code a0/a1}
+     * object register context. This is comparison-only context for tracking
+     * RNG consumption order; replay code must never hydrate engine RNG state
+     * from it.
+     */
+    record RngCall(int frame, List<Hit> hits) implements TraceEvent {
+
+        public record ObjectContext(
+                int ptr, int slot, int objectCode, int routine,
+                int subtype, int x, int y) {}
+
+        public record Hit(
+                int pc, int callerPc, String source,
+                int seedBefore, int seedAfter, int result, int resultByte,
+                ObjectContext a0, ObjectContext a1) {}
     }
 
     /**
@@ -649,6 +749,27 @@ public sealed interface TraceEvent {
                     }
                     yield new AizShipLoop(frame, hits);
                 }
+                case "sonic_record_pos" -> {
+                    java.util.List<SonicRecordPos.Hit> hits = new java.util.ArrayList<>();
+                    JsonNode hitsNode = node.get("hits");
+                    if (hitsNode != null && hitsNode.isArray()) {
+                        for (JsonNode h : hitsNode) {
+                            hits.add(new SonicRecordPos.Hit(
+                                parseHexInt(h, "pc"),
+                                parseHexInt(h, "pos_table_index"),
+                                parseHexInt(h, "ctrl1_logical"),
+                                h.has("ctrl1_locked") ? h.get("ctrl1_locked").asInt() : 0,
+                                parseHexInt(h, "ctrl1_raw"),
+                                parseHexInt(h, "object_control"),
+                                parseHexInt(h, "status"),
+                                parseHexInt(h, "status_secondary"),
+                                parseHexInt(h, "x"),
+                                parseHexInt(h, "y")
+                            ));
+                        }
+                    }
+                    yield new SonicRecordPos(frame, hits);
+                }
                 case "tails_cpu_normal_step" -> new TailsCpuNormalStep(
                     frame,
                     parseCharacter(node),
@@ -743,6 +864,119 @@ public sealed interface TraceEvent {
                         }
                     }
                     yield new CnzCylinderExecution(frame, hits);
+                }
+                case "cnz_event_ram" -> {
+                    java.util.List<CnzEventRamState.ScrollControlSlot> slots =
+                            new java.util.ArrayList<>();
+                    JsonNode slotsNode = node.get("scroll_slots");
+                    if (slotsNode != null && slotsNode.isArray()) {
+                        for (JsonNode s : slotsNode) {
+                            slots.add(new CnzEventRamState.ScrollControlSlot(
+                                    s.has("slot") ? s.get("slot").asInt() : -1,
+                                    parseHexInt(s, "addr"),
+                                    parseHexInt(s, "object_code"),
+                                    parseHexInt(s, "routine"),
+                                    parseHexInt(s, "routine_secondary"),
+                                    parseHexInt(s, "x"),
+                                    parseHexInt(s, "y"),
+                                    parseHexInt(s, "status"),
+                                    parseHexInt(s, "subtype"),
+                                    parseHexInt(s, "objoff_2e"),
+                                    parseHexInt(s, "objoff_30"),
+                                    parseHexInt(s, "objoff_32"),
+                                    parseHexInt(s, "objoff_34"),
+                                    parseHexInt(s, "objoff_36"),
+                                    parseHexInt(s, "objoff_38")
+                            ));
+                        }
+                    }
+                    yield new CnzEventRamState(
+                            frame,
+                            parseHexInt(node, "events_bg_00_word"),
+                            parseHexInt(node, "events_bg_02_word"),
+                            parseHexInt(node, "events_bg_08_word"),
+                            parseHexInt(node, "events_bg_08_long"),
+                            parseHexInt(node, "events_bg_0c_word"),
+                            parseHexInt(node, "events_bg_0c_long"),
+                            parseHexInt(node, "events_routine_bg"),
+                            parseHexInt(node, "background_collision_flag"),
+                            parseHexInt(node, "events_fg_5"),
+                            parseHexInt(node, "camera_y"),
+                            parseHexInt(node, "camera_max_y"),
+                            parseHexInt(node, "camera_target_max_y"),
+                            slots);
+                }
+                case "air_countdown_state" -> {
+                    java.util.List<AirCountdownState.VisibleChild> children =
+                            new java.util.ArrayList<>();
+                    JsonNode childrenNode = node.get("visible_children");
+                    if (childrenNode != null && childrenNode.isArray()) {
+                        for (JsonNode child : childrenNode) {
+                            children.add(new AirCountdownState.VisibleChild(
+                                    child.has("slot") ? child.get("slot").asInt() : -1,
+                                    parseHexInt(child, "object_code"),
+                                    parseHexInt(child, "routine"),
+                                    parseHexInt(child, "subtype"),
+                                    parseHexInt(child, "x"),
+                                    parseHexInt(child, "y"),
+                                    parseHexInt(child, "x_sub"),
+                                    parseHexInt(child, "y_sub"),
+                                    parseHexInt(child, "y_vel"),
+                                    parseHexInt(child, "render_flags"),
+                                    parseHexInt(child, "anim"),
+                                    parseHexInt(child, "mapping_frame"),
+                                    parseHexInt(child, "anim_frame"),
+                                    parseHexInt(child, "anim_frame_timer"),
+                                    parseHexInt(child, "angle"),
+                                    parseHexInt(child, "obj34"),
+                                    parseHexInt(child, "obj3c"),
+                                    parseHexInt(child, "parent_ptr")
+                            ));
+                        }
+                    }
+                    yield new AirCountdownState(
+                            frame,
+                            node.has("owner") ? node.get("owner").asText() : "",
+                            node.has("fixed_slot") ? node.get("fixed_slot").asInt() : -1,
+                            parseHexInt(node, "object_code"),
+                            parseHexInt(node, "routine"),
+                            parseHexInt(node, "subtype"),
+                            parseHexInt(node, "obj30"),
+                            parseHexInt(node, "obj36"),
+                            parseHexInt(node, "obj37"),
+                            parseHexInt(node, "obj38"),
+                            parseHexInt(node, "obj3a"),
+                            parseHexInt(node, "obj3c"),
+                            parseHexInt(node, "obj3e"),
+                            parseHexInt(node, "owner_ptr"),
+                            node.has("owner_resolved") ? node.get("owner_resolved").asText() : "",
+                            parseHexInt(node, "owner_air_left"),
+                            parseHexInt(node, "owner_status"),
+                            parseHexInt(node, "owner_status_secondary"),
+                            node.has("owner_facing_left") && node.get("owner_facing_left").asBoolean(),
+                            node.has("owner_underwater") && node.get("owner_underwater").asBoolean(),
+                            parseHexInt(node, "rng_seed"),
+                            children);
+                }
+                case "rng_call" -> {
+                    java.util.List<RngCall.Hit> hits = new java.util.ArrayList<>();
+                    JsonNode hitsNode = node.get("hits");
+                    if (hitsNode != null && hitsNode.isArray()) {
+                        for (JsonNode h : hitsNode) {
+                            hits.add(new RngCall.Hit(
+                                    parseHexInt(h, "pc"),
+                                    parseHexInt(h, "caller_pc"),
+                                    h.has("source") ? h.get("source").asText() : "",
+                                    parseHexInt(h, "seed_before"),
+                                    parseHexInt(h, "seed_after"),
+                                    parseHexInt(h, "result"),
+                                    parseHexInt(h, "result_byte"),
+                                    parseRngObjectContext(h, "a0"),
+                                    parseRngObjectContext(h, "a1")
+                            ));
+                        }
+                    }
+                    yield new RngCall(frame, hits);
                 }
                 case "aiz_boundary_state" -> new AizBoundaryState(
                     frame,
@@ -879,6 +1113,18 @@ public sealed interface TraceEvent {
         // sign-extended values like "0xFFFFFFFFFFFFB000". Parse as a long
         // and cast to int — only the low 32 bits are semantically used.
         return (int) Long.parseUnsignedLong(hex, 16);
+    }
+
+    private static RngCall.ObjectContext parseRngObjectContext(JsonNode node, String prefix) {
+        return new RngCall.ObjectContext(
+                parseHexInt(node, prefix + "_ptr"),
+                node.has(prefix + "_slot") ? node.get(prefix + "_slot").asInt() : -1,
+                parseHexInt(node, prefix + "_object_code"),
+                parseHexInt(node, prefix + "_routine"),
+                parseHexInt(node, prefix + "_subtype"),
+                parseHexInt(node, prefix + "_x"),
+                parseHexInt(node, prefix + "_y")
+        );
     }
 
     private static String stripHexPrefix(String value) {
