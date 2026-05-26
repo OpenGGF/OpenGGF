@@ -38,6 +38,9 @@ public enum GameMode {
     /** Master title screen for game selection (before any ROM is loaded) */
     MASTER_TITLE_SCREEN,
 
+    /** Legal disclaimer screen shown on engine startup before MASTER_TITLE_SCREEN. */
+    LEGAL_DISCLAIMER,
+
     /** Post-credits "TRY AGAIN" or "END" screen (Sonic 1) */
     TRY_AGAIN_END,
 
