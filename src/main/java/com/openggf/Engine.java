@@ -202,6 +202,8 @@ public class Engine {
 		this.gameLoop.setEditorStateSyncHandler(this::syncEditorState);
 		this.gameLoop.setMasterTitleScreenSupplier(() -> masterTitleScreen);
 		this.gameLoop.setMasterTitleExitHandler(this::exitMasterTitleScreen);
+		this.gameLoop.setLegalDisclaimerScreenSupplier(() -> legalDisclaimerScreen);
+		this.gameLoop.setLegalDisclaimerExitHandler(this::exitLegalDisclaimer);
 		this.gameLoop.setDataSelectActionHandler(this::launchGameplayFromDataSelect);
 		this.gameLoop.setReturnToMasterTitleHandler(this::returnToMasterTitleScreen);
 		this.realWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
@@ -385,9 +387,18 @@ public class Engine {
 		}
 		snapWindowToIntegerScale();
 
-		// === Check master title screen before Phase 2 ===
+		// === Check legal disclaimer / master title screen before Phase 2 ===
+		boolean showLegalDisclaimer = configService.getBoolean(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP);
 		boolean masterTitleOnStartup = configService.getBoolean(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP);
-		if (masterTitleOnStartup) {
+
+		if (showLegalDisclaimer) {
+			legalDisclaimerScreen = new com.openggf.game.LegalDisclaimerScreen(
+					graphicsManager.getFadeManager());
+			legalDisclaimerScreen.initialize();
+			gameLoop.setGameMode(GameMode.LEGAL_DISCLAIMER);
+			// master title (if enabled) or Phase 2 init is deferred to
+			// exitLegalDisclaimer once the user dismisses the screen.
+		} else if (masterTitleOnStartup) {
 			masterTitleScreen = new MasterTitleScreen(configService);
 			masterTitleScreen.initialize();
 			gameLoop.setGameMode(GameMode.MASTER_TITLE_SCREEN);
