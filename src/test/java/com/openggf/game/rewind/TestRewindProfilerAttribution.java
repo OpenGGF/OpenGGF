@@ -64,12 +64,12 @@ class TestRewindProfilerAttribution {
         List<String> beginsInOrder = prof.beginNames();
         assertTrue(beginsInOrder.contains("rewind.step"),
                 "Expected rewind.step in begin order: " + beginsInOrder);
-        assertTrue(beginsInOrder.contains("rewind.replay"),
-                "Expected rewind.replay (cold-segment expansion): " + beginsInOrder);
+        assertTrue(beginsInOrder.contains("rewind.tick"),
+                "Expected rewind.tick (cold-segment expansion): " + beginsInOrder);
         assertTrue(beginsInOrder.contains("rewind.restore"),
                 "Expected rewind.restore: " + beginsInOrder);
-        assertTrue(beginsInOrder.indexOf("rewind.step") < beginsInOrder.indexOf("rewind.replay"),
-                "rewind.step must open before rewind.replay: " + beginsInOrder);
+        assertTrue(beginsInOrder.indexOf("rewind.step") < beginsInOrder.indexOf("rewind.tick"),
+                "rewind.step must open before rewind.tick: " + beginsInOrder);
         assertNull(prof.activeSection(),
                 "No section should be active after stepBackward: transcript=" + prof.transcript());
     }
@@ -97,14 +97,14 @@ class TestRewindProfilerAttribution {
         rc.stepBackward();
 
         // After registry.restore inside the keyframe-restore lambda, the section is
-        // closed. Before rewind.replay opens, primeStepperAtFrame runs — that work
+        // closed. Before rewind.tick opens, primeStepperAtFrame runs — that work
         // must credit to rewind.step, not fall into the unattributed gap.
         List<String> transcript = prof.transcript();
         int firstRestoreEnd = transcript.indexOf("end:rewind.restore");
-        int firstReplayBegin = transcript.indexOf("begin:rewind.replay");
+        int firstReplayBegin = transcript.indexOf("begin:rewind.tick");
         assertTrue(firstRestoreEnd >= 0, "Expected first end:rewind.restore: " + transcript);
         assertTrue(firstReplayBegin > firstRestoreEnd,
-                "Expected begin:rewind.replay after first end:rewind.restore: " + transcript);
+                "Expected begin:rewind.tick after first end:rewind.restore: " + transcript);
         List<String> gap = transcript.subList(firstRestoreEnd + 1, firstReplayBegin);
         assertTrue(gap.contains("begin:rewind.step"),
                 "Expected begin:rewind.step between keyframe-restore close and replay open "
@@ -120,8 +120,8 @@ class TestRewindProfilerAttribution {
         AtomicInteger state = new AtomicInteger();
 
         // Stepper throws on the first invocation after poisoned=true. The lambda opens
-        // rewind.replay BEFORE calling engineStepper.step, so the guard assertion that
-        // begin:rewind.replay appears in the transcript is satisfied even on the first throw.
+        // rewind.tick BEFORE calling engineStepper.step, so the guard assertion that
+        // begin:rewind.tick appears in the transcript is satisfied even on the first throw.
         final boolean[] poisoned = { false };
         EngineStepper throwingStepper = (in) -> {
             if (poisoned[0]) {
@@ -145,12 +145,12 @@ class TestRewindProfilerAttribution {
         assertThrows(RuntimeException.class, rc::stepBackward,
                 "Expected stepBackward to propagate the stepper's exception");
         List<String> transcript = prof.transcript();
-        // Guard: assert the instrumentation actually opened rewind.replay before the
+        // Guard: assert the instrumentation actually opened rewind.tick before the
         // throw. Without this, the test would pass trivially before Task 5 wires the
         // section — the stepper would throw without any section ever being opened,
         // leaving activeSection == null for the wrong reason.
-        assertTrue(transcript.contains("begin:rewind.replay"),
-                "Expected rewind.replay to have been opened before the throw: " + transcript);
+        assertTrue(transcript.contains("begin:rewind.tick"),
+                "Expected rewind.tick to have been opened before the throw: " + transcript);
         assertNull(prof.activeSection(),
                 "Profiler must have no dangling active section after exception: transcript="
                         + transcript);
@@ -180,12 +180,12 @@ class TestRewindProfilerAttribution {
 
         List<String> beginsInOrder = prof.beginNames();
         assertTrue(beginsInOrder.contains("rewind.seek"), "Expected rewind.seek: " + beginsInOrder);
-        assertTrue(beginsInOrder.contains("rewind.replay"),
-                "Expected rewind.replay (forward stepping in seek): " + beginsInOrder);
+        assertTrue(beginsInOrder.contains("rewind.tick"),
+                "Expected rewind.tick (forward stepping in seek): " + beginsInOrder);
         assertTrue(beginsInOrder.contains("rewind.restore"),
                 "Expected rewind.restore: " + beginsInOrder);
-        assertTrue(beginsInOrder.indexOf("rewind.seek") < beginsInOrder.indexOf("rewind.replay"),
-                "rewind.seek must open before rewind.replay: " + beginsInOrder);
+        assertTrue(beginsInOrder.indexOf("rewind.seek") < beginsInOrder.indexOf("rewind.tick"),
+                "rewind.seek must open before rewind.tick: " + beginsInOrder);
         assertNull(prof.activeSection(),
                 "No section should be active after seekTo: transcript=" + prof.transcript());
 
@@ -218,8 +218,8 @@ class TestRewindProfilerAttribution {
         AtomicInteger state = new AtomicInteger();
 
         // Stepper throws on the first invocation after poisoned=true. The seekTo loop
-        // opens rewind.replay BEFORE calling engineStepper.step inside its try/finally,
-        // so the guard assertion that begin:rewind.replay appears in the transcript is
+        // opens rewind.tick BEFORE calling engineStepper.step inside its try/finally,
+        // so the guard assertion that begin:rewind.tick appears in the transcript is
         // satisfied even on the first throw.
         final boolean[] poisoned = { false };
         EngineStepper throwingStepper = (in) -> {
@@ -248,10 +248,10 @@ class TestRewindProfilerAttribution {
         assertThrows(RuntimeException.class, () -> rc.seekTo(4),
                 "Expected seekTo to propagate the stepper's exception");
         List<String> transcript = prof.transcript();
-        // Guard: assert rewind.replay was actually opened before the throw, otherwise
+        // Guard: assert rewind.tick was actually opened before the throw, otherwise
         // this test would pass trivially before Task 6 wires the section.
-        assertTrue(transcript.contains("begin:rewind.replay"),
-                "Expected rewind.replay to have been opened before the throw: " + transcript);
+        assertTrue(transcript.contains("begin:rewind.tick"),
+                "Expected rewind.tick to have been opened before the throw: " + transcript);
         assertNull(prof.activeSection(),
                 "Profiler must have no dangling active section after seek exception: transcript="
                         + transcript);

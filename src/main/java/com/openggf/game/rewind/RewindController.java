@@ -155,16 +155,16 @@ public final class RewindController {
             currentFrame = floor.frame();
             primeStepperAtFrame(currentFrame);
             while (currentFrame < clampedTarget) {
-                if (profiler != null) profiler.beginSection("rewind.replay");
+                if (profiler != null) profiler.beginSection("rewind.tick");
                 try {
                     Bk2FrameInput in = inputs.read(currentFrame + 1);
                     engineStepper.step(in);
                     currentFrame++;
                 } finally {
-                    if (profiler != null) profiler.endSection("rewind.replay");
+                    if (profiler != null) profiler.endSection("rewind.tick");
                 }
             }
-            // After the loop, the last endSection("rewind.replay") cleared the
+            // After the loop, the last endSection("rewind.tick") cleared the
             // active section. Re-open rewind.seek for the audio bookkeeping tail.
             if (profiler != null) profiler.beginSection("rewind.seek");
             keyframes.discardAfter(currentFrame);
@@ -203,23 +203,23 @@ public final class RewindController {
                         registry.restore(restoreSnapshot);
                         // registry.restore closed rewind.restore in its finally; re-open
                         // rewind.step so primeStepperAtFrame credits to it instead of
-                        // falling into the unattributed gap before rewind.replay opens.
+                        // falling into the unattributed gap before rewind.tick opens.
                         if (profiler != null) profiler.beginSection("rewind.step");
                         pos[0] = keyframeSnapshot;
                         primeStepperAtFrame(pos[0]);
                     },
                     () -> {
-                        if (profiler != null) profiler.beginSection("rewind.replay");
+                        if (profiler != null) profiler.beginSection("rewind.tick");
                         try {
                             Bk2FrameInput in = inputs.read(pos[0] + 1);
                             engineStepper.step(in);
                             pos[0]++;
                             // On happy path, registry.capture() opens rewind.capture which
-                            // implicitly ends rewind.replay (recording its delta) before
+                            // implicitly ends rewind.tick (recording its delta) before
                             // the finally fires. The finally then no-ops.
                             return registry.capture();
                         } finally {
-                            if (profiler != null) profiler.endSection("rewind.replay");
+                            if (profiler != null) profiler.endSection("rewind.tick");
                         }
                     });
             registry.restore(snap);
