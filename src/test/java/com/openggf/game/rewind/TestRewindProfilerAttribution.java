@@ -83,8 +83,9 @@ class TestRewindProfilerAttribution {
         InputSource inputs = new FakeInputSource(120);
         AtomicInteger state = new AtomicInteger();
 
-        // Stepper throws on the second invocation, simulating a replay-frame failure
-        // mid-segment-expansion (after at least one rewind.replay section has opened).
+        // Stepper throws on the first invocation after poisoned=true. The lambda opens
+        // rewind.replay BEFORE calling engineStepper.step, so the guard assertion that
+        // begin:rewind.replay appears in the transcript is satisfied even on the first throw.
         final boolean[] poisoned = { false };
         EngineStepper throwingStepper = (in) -> {
             if (poisoned[0]) {
