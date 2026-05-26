@@ -361,7 +361,7 @@ Expected: `Tests run: 1, Failures: 0`.
 
 - [ ] **Step 5: Run the full rewind test class**
 
-Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.*" test`
+Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.**" test`
 Expected: all tests pass (the `RewindRegistry(SectionProfiler)` signature accepts both `null` and any `SectionProfiler`, including `PerformanceProfiler`).
 
 - [ ] **Step 6: Commit**
@@ -452,7 +452,7 @@ Replace the two existing constructors (lines 25-57) with three constructors that
 
 - [ ] **Step 3: Verify compile + existing tests still pass**
 
-Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.*" test`
+Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.**" test`
 Expected: all pre-existing tests pass (the new constructor is additive).
 
 - [ ] **Step 4: Commit**
@@ -644,7 +644,7 @@ Expected: both pass.
 
 - [ ] **Step 6: Run all rewind tests**
 
-Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.*" test`
+Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.**" test`
 Expected: all pass.
 
 - [ ] **Step 7: Commit**
@@ -811,7 +811,7 @@ Expected: both pass.
 
 - [ ] **Step 5: Run all rewind tests**
 
-Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.*" test`
+Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.**" test`
 Expected: all pass.
 
 - [ ] **Step 6: Commit**
@@ -904,7 +904,7 @@ In `src/main/java/com/openggf/game/session/GameplayModeContext.java`, replace li
 Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.session.*" test`
 Expected: all pass.
 
-Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.*" test`
+Run: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.**" test`
 Expected: all pass.
 
 - [ ] **Step 3: Commit**
@@ -1046,7 +1046,7 @@ If the overlay does not show the new sections, check that `debugViewEnabled && !
 ## Final Verification Checklist
 
 - [ ] All six new tests pass: `mvn -Dmse=relaxed "-Dtest=TestRewindProfilerAttribution" test`
-- [ ] No regressions in rewind suite: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.*" test`
+- [ ] No regressions in rewind suite: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.rewind.**" test`
 - [ ] No regressions in session suite: `mvn -Dmse=relaxed "-Dtest=com.openggf.game.session.*" test`
 - [ ] `RewindBenchmark` still meets its budgets (with the `openggf.rewind.benchmark.run=true` opt-in and the S2 ROM present).
 - [ ] Both documentation files reflect the new sections.
