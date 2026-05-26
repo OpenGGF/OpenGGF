@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Comparison engine: compares engine sprite state against expected trace state
@@ -29,7 +30,10 @@ public class TraceBinder {
     private static volatile Boolean NATIVE_PRELUDE_OVERRIDE_FOR_TESTS = null;
 
     private final ToleranceConfig tolerances;
-    private final List<FrameComparison> allComparisons = new ArrayList<>();
+    // Keyed by frame number so re-comparisons of the same frame (e.g., during
+    // held-rewind segment-cache rebuilds in test mode) replace the previous
+    // entry instead of accumulating duplicates. Memory bounded by trace length.
+    private final TreeMap<Integer, FrameComparison> comparisonsByFrame = new TreeMap<>();
     private List<BootstrapDivergence> lastBootstrapDivergences = List.of();
 
     public TraceBinder(ToleranceConfig tolerances) {
@@ -184,7 +188,7 @@ public class TraceBinder {
         String engDiag = engineDiag != null ? engineDiag.format() : "";
 
         FrameComparison result = new FrameComparison(expected.frame(), fields, romDiag, engDiag);
-        allComparisons.add(result);
+        comparisonsByFrame.put(result.frame(), result);
         return result;
     }
 
@@ -194,7 +198,8 @@ public class TraceBinder {
      * {@link #compareBootstrapFrame0(TraceData, EngineSnapshot)}.
      */
     public DivergenceReport buildReport() {
-        return new DivergenceReport(allComparisons, null, lastBootstrapDivergences);
+        return new DivergenceReport(
+                new ArrayList<>(comparisonsByFrame.values()), null, lastBootstrapDivergences);
     }
 
     /**
@@ -204,7 +209,8 @@ public class TraceBinder {
      * {@link #compareBootstrapFrame0(TraceData, EngineSnapshot)}.
      */
     public DivergenceReport buildReport(TraceData trace) {
-        return new DivergenceReport(allComparisons, trace, lastBootstrapDivergences);
+        return new DivergenceReport(
+                new ArrayList<>(comparisonsByFrame.values()), trace, lastBootstrapDivergences);
     }
 
     /**
