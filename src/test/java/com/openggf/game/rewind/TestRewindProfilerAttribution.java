@@ -221,6 +221,27 @@ class TestRewindProfilerAttribution {
                         + transcript);
     }
 
+    @Test
+    void rewindControllerWorksWithoutProfiler() {
+        RewindRegistry reg = new RewindRegistry(); // no profiler
+        InMemoryKeyframeStore keyframes = new InMemoryKeyframeStore();
+        InputSource inputs = new FakeInputSource(120);
+        AtomicInteger state = new AtomicInteger();
+        EngineStepper stepper = (in) -> state.incrementAndGet();
+        reg.register(new RewindSnapshottable<Integer>() {
+            @Override public String key() { return "k"; }
+            @Override public Integer capture() { return state.get(); }
+            @Override public void restore(Integer s) { state.set(s); }
+        });
+
+        // Five-arg constructor (no profiler, no audio manager).
+        RewindController rc = new RewindController(reg, keyframes, inputs, stepper, 5);
+        for (int i = 0; i < 7; i++) rc.step();
+        rc.seekTo(3);
+        for (int i = 0; i < 2; i++) rc.stepBackward();
+        // Reaching this line with no exception is the assertion.
+    }
+
     private static final class FakeInputSource implements InputSource {
         private final int count;
         FakeInputSource(int count) { this.count = count; }
