@@ -347,6 +347,10 @@ public class MasterTitleScreen {
         // 5. Title text "OpenGGF" (centered, top) - drawn after emblem so it appears in front
         renderer.drawTexture(titleTextId, titleX, titleGlY, scaledTitleW, scaledTitleH);
 
+        // All foreground text (subtitle + game menu + nav hints) shares the font atlas,
+        // so mega-batch into a single GL draw call.
+        font.beginMegaBatch();
+
         // 6. Subtitle text, right-aligned to title's right edge - drawn after title (no overlap)
         int titleRightEdge = (int)(titleX + scaledTitleW)-8;
         int subtitleY = (int)(SCREEN_H - titleGlY) - 6;
@@ -362,12 +366,16 @@ public class MasterTitleScreen {
         font.drawTextCentered("< >  Select    Enter  Confirm", SCREEN_W, 210,
             0.6f, 0.6f, 0.7f, 0.8f);
 
+        font.endMegaBatch();
+
         // 7. Error message overlay
         if (state == State.ERROR_DISPLAY) {
             // Semi-transparent black overlay using solid white texture tinted black
+            // (separate texture; not batched with font).
             renderer.drawTexture(solidWhiteTextureId, 0, 0, SCREEN_W, SCREEN_H, 0f, 0f, 0f, 0.5f);
 
-            // Error text
+            // Error text - second batch (overlay texture sits between the two batches).
+            font.beginMegaBatch();
             GameEntry entry = GameEntry.values()[selectedIndex];
             font.drawTextCentered("ROM NOT FOUND", SCREEN_W, 90, 1f, 0.3f, 0.3f, 1f);
             font.drawTextCentered(entry.displayName, SCREEN_W, 105, 0.8f, 0.8f, 0.8f, 1f);
@@ -379,6 +387,7 @@ public class MasterTitleScreen {
                 romFile = "..." + romFile.substring(romFile.length() - 32);
             }
             font.drawTextCentered(romFile, SCREEN_W, 125, 0.5f, 0.5f, 0.5f, 0.8f);
+            font.endMegaBatch();
         }
     }
 

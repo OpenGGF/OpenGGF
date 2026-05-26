@@ -73,36 +73,42 @@ public final class TestModeTracePicker {
     private static final int HEADING_HEIGHT = 8;
 
     public void render() {
-        font.drawText("TRACE TEST MODE", 8, 6, SCALE, 1f, 1f, 1f, 1f);
-        if (entries.isEmpty()) {
-            font.drawText("No traces found.", 8, 24, SCALE, 1f, 0.5f, 0.5f, 1f);
-            font.drawText("Check TRACE_CATALOG_DIR in config.json", 8, 32, SCALE,
-                    0.8f, 0.8f, 0.8f, 1f);
-            font.drawText("(default: src/test/resources/traces)", 8, 40, SCALE,
-                    0.8f, 0.8f, 0.8f, 1f);
-            font.drawText("ESC to return to master title", 8, 56, SCALE,
-                    0.7f, 0.7f, 0.7f, 1f);
-            return;
-        }
-        int y = 18;
-        String lastGame = null;
-        for (int i = 0; i < entries.size(); i++) {
-            TraceEntry e = entries.get(i);
-            if (!e.gameId().equals(lastGame)) {
-                if (lastGame != null) y += GROUP_GAP;
-                font.drawText(gameHeading(e.gameId()), 8, y, SCALE, 1f, 1f, 0.6f, 1f);
-                y += HEADING_HEIGHT;
-                lastGame = e.gameId();
+        // Entire screen is pure text on the font atlas — mega-batch into one GL draw.
+        font.beginMegaBatch();
+        try {
+            font.drawText("TRACE TEST MODE", 8, 6, SCALE, 1f, 1f, 1f, 1f);
+            if (entries.isEmpty()) {
+                font.drawText("No traces found.", 8, 24, SCALE, 1f, 0.5f, 0.5f, 1f);
+                font.drawText("Check TRACE_CATALOG_DIR in config.json", 8, 32, SCALE,
+                        0.8f, 0.8f, 0.8f, 1f);
+                font.drawText("(default: src/test/resources/traces)", 8, 40, SCALE,
+                        0.8f, 0.8f, 0.8f, 1f);
+                font.drawText("ESC to return to master title", 8, 56, SCALE,
+                        0.7f, 0.7f, 0.7f, 1f);
+                return;
             }
-            boolean selected = (i == cursor);
-            float brightness = selected ? 1.0f : 0.6f;
-            String prefix = selected ? ">" : " ";
-            String line = prefix + " " + e.dir().getFileName();
-            font.drawText(line, 12, y, SCALE, brightness, brightness, brightness, 1f);
-            y += LINE_HEIGHT;
-        }
-        if (cursor < entries.size()) {
-            renderInfoPanel(entries.get(cursor));
+            int y = 18;
+            String lastGame = null;
+            for (int i = 0; i < entries.size(); i++) {
+                TraceEntry e = entries.get(i);
+                if (!e.gameId().equals(lastGame)) {
+                    if (lastGame != null) y += GROUP_GAP;
+                    font.drawText(gameHeading(e.gameId()), 8, y, SCALE, 1f, 1f, 0.6f, 1f);
+                    y += HEADING_HEIGHT;
+                    lastGame = e.gameId();
+                }
+                boolean selected = (i == cursor);
+                float brightness = selected ? 1.0f : 0.6f;
+                String prefix = selected ? ">" : " ";
+                String line = prefix + " " + e.dir().getFileName();
+                font.drawText(line, 12, y, SCALE, brightness, brightness, brightness, 1f);
+                y += LINE_HEIGHT;
+            }
+            if (cursor < entries.size()) {
+                renderInfoPanel(entries.get(cursor));
+            }
+        } finally {
+            font.endMegaBatch();
         }
     }
 
