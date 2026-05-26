@@ -434,7 +434,7 @@ appears under five sections:
 - `rewind.step` — `RewindController.stepBackward()` outer body
   (audio bookkeeping, segment-cache array alloc, primer calls).
 - `rewind.seek` — `RewindController.seekTo()` outer body.
-- `rewind.replay` — each `engineStepper.step(...)` call replayed during
+- `rewind.tick` — each `engineStepper.step(...)` call replayed during
   segment-cache cold expansion or seek forward-stepping.
 
 The profiler does not nest sections (`PerformanceProfiler.beginSection`

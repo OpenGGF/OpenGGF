@@ -4,15 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
-- **`RewindController.stepBackward` keyframe-restore primer work now credits to `rewind.step` instead of falling into an unattributed gap before `rewind.replay` opens.**
+- **`RewindController.stepBackward` keyframe-restore primer work now credits to `rewind.step` instead of falling into an unattributed gap before `rewind.tick` opens.**
 
 - **Performance overview and rewind contributor guide updated for new profiler sections.**
 
-- **Rewind profiler sections (`rewind.restore` / `rewind.step` / `rewind.seek` / `rewind.replay`) are now wired in production via `GameplayModeContext`.**
+- **Rewind profiler sections (`rewind.restore` / `rewind.step` / `rewind.seek` / `rewind.tick`) are now wired in production via `GameplayModeContext`.**
 
-- **`RewindController.seekTo` now attributes work to `rewind.seek` / `rewind.replay` profiler sections (exception-safe).**
+- **`RewindController.seekTo` now attributes work to `rewind.seek` / `rewind.tick` profiler sections (exception-safe).**
 
-- **`RewindController.stepBackward` now attributes work to `rewind.step` / `rewind.replay` profiler sections (exception-safe).**
+- **`RewindController.stepBackward` now attributes work to `rewind.step` / `rewind.tick` profiler sections (exception-safe).**
 
 - **`RewindRegistry.restore` now wrapped in a `rewind.restore` profiler section; registry field narrowed to `SectionProfiler` interface.**
 

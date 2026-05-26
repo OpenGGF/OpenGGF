@@ -4,7 +4,7 @@
 
 **Goal:** Attribute rewind-time allocations and time to dedicated `rewind.*` profiler sections instead of leaking them into the `update` umbrella section, so the debug performance overlay accurately shows where rewind cost actually lives.
 
-**Architecture:** Mirror the existing `rewind.capture` instrumentation pattern (`RewindRegistry.capture()` already wraps itself in `beginSection`/`endSection`). Add four sibling sections: `rewind.restore` inside `RewindRegistry.restore()`, plus `rewind.step`, `rewind.seek`, and `rewind.replay` inside `RewindController`. Because `PerformanceProfiler` sections do not nest (a new `beginSection` implicitly ends the active one), the outer wrappers re-open themselves explicitly after sub-sections close, and every `beginSection` has a paired `endSection` in a `try/finally` so exceptions never leave the profiler with a dangling active section. Production code depends on a new minimal `SectionProfiler` interface (just `beginSection` / `endSection`) instead of the concrete `PerformanceProfiler` singleton, enabling clean test doubles.
+**Architecture:** Mirror the existing `rewind.capture` instrumentation pattern (`RewindRegistry.capture()` already wraps itself in `beginSection`/`endSection`). Add four sibling sections: `rewind.restore` inside `RewindRegistry.restore()`, plus `rewind.step`, `rewind.seek`, and `rewind.tick` inside `RewindController`. Because `PerformanceProfiler` sections do not nest (a new `beginSection` implicitly ends the active one), the outer wrappers re-open themselves explicitly after sub-sections close, and every `beginSection` has a paired `endSection` in a `try/finally` so exceptions never leave the profiler with a dangling active section. Production code depends on a new minimal `SectionProfiler` interface (just `beginSection` / `endSection`) instead of the concrete `PerformanceProfiler` singleton, enabling clean test doubles.
 
 **Tech Stack:** Java 21, JUnit 5 / Jupiter, existing `PerformanceProfiler` + `MemoryStats` singleton infrastructure under `com.openggf.debug`.
 
@@ -40,7 +40,7 @@ This plan does **not** reduce the underlying allocation cost. It only fixes *att
 | File | Responsibility |
 |------|----------------|
 | `src/test/java/com/openggf/game/rewind/RecordingSectionProfiler.java` | Test-only helper. Implements `SectionProfiler`. Records a transcript of begin/end events, exposes `activeSection()` for balance assertions, exposes `clearTranscript()` for setup. |
-| `src/test/java/com/openggf/game/rewind/TestRewindProfilerAttribution.java` | Verifies `rewind.restore`, `rewind.step`, `rewind.seek`, `rewind.replay` begin/end calls fire in the expected order, are properly balanced (no dangling active section), and stay balanced through thrown exceptions. |
+| `src/test/java/com/openggf/game/rewind/TestRewindProfilerAttribution.java` | Verifies `rewind.restore`, `rewind.step`, `rewind.seek`, `rewind.tick` begin/end calls fire in the expected order, are properly balanced (no dangling active section), and stay balanced through thrown exceptions. |
 
 **Documentation files:**
 
@@ -466,15 +466,15 @@ Trailer block: `Changelog: n/a` (no behavior change yet), others `n/a`.
 
 ---
 
-## Task 5: Wrap `RewindController.stepBackward` with `rewind.step` + `rewind.replay`, exception-safe
+## Task 5: Wrap `RewindController.stepBackward` with `rewind.step` + `rewind.tick`, exception-safe
 
 **Files:**
 - Modify: `src/main/java/com/openggf/game/rewind/RewindController.java:158-195`
 - Extend: `src/test/java/com/openggf/game/rewind/TestRewindProfilerAttribution.java`
 
-Wrap the body of `stepBackward()` in a `rewind.step` outer section, and wrap each inner `engineStepper.step(...)` invocation with `rewind.replay`. Every `beginSection` has a paired `endSection` in `try/finally`, so an exception inside `engineStepper.step` or `registry.capture` cannot leave a dangling active section.
+Wrap the body of `stepBackward()` in a `rewind.step` outer section, and wrap each inner `engineStepper.step(...)` invocation with `rewind.tick`. Every `beginSection` has a paired `endSection` in `try/finally`, so an exception inside `engineStepper.step` or `registry.capture` cannot leave a dangling active section.
 
-Because sections do not nest, `registry.capture()` opening `rewind.capture` will implicitly close `rewind.replay` on the happy path — the inner `endSection("rewind.replay")` becomes a no-op in that case (it sees `activeSection == null` and returns without recording anything). On the exception path, the inner `endSection` records the partial delta and clears the active section. Net effect: `rewind.replay`'s allocation total is recorded once per replay iteration regardless of path.
+Because sections do not nest, `registry.capture()` opening `rewind.capture` will implicitly close `rewind.tick` on the happy path — the inner `endSection("rewind.tick")` becomes a no-op in that case (it sees `activeSection == null` and returns without recording anything). On the exception path, the inner `endSection` records the partial delta and clears the active section. Net effect: `rewind.tick`'s allocation total is recorded once per replay iteration regardless of path.
 
 - [ ] **Step 1: Write the failing test (happy path, hot + cold segments, plus balance)**
 
@@ -507,12 +507,12 @@ Append to `TestRewindProfilerAttribution`:
         List<String> beginsInOrder = prof.beginNames();
         assertTrue(beginsInOrder.contains("rewind.step"),
                 "Expected rewind.step in begin order: " + beginsInOrder);
-        assertTrue(beginsInOrder.contains("rewind.replay"),
-                "Expected rewind.replay (cold-segment expansion): " + beginsInOrder);
+        assertTrue(beginsInOrder.contains("rewind.tick"),
+                "Expected rewind.tick (cold-segment expansion): " + beginsInOrder);
         assertTrue(beginsInOrder.contains("rewind.restore"),
                 "Expected rewind.restore: " + beginsInOrder);
-        assertTrue(beginsInOrder.indexOf("rewind.step") < beginsInOrder.indexOf("rewind.replay"),
-                "rewind.step must open before rewind.replay: " + beginsInOrder);
+        assertTrue(beginsInOrder.indexOf("rewind.step") < beginsInOrder.indexOf("rewind.tick"),
+                "rewind.step must open before rewind.tick: " + beginsInOrder);
         assertNull(prof.activeSection(),
                 "No section should be active after stepBackward: transcript=" + prof.transcript());
     }
@@ -532,7 +532,7 @@ Append to `TestRewindProfilerAttribution`:
         AtomicInteger state = new AtomicInteger();
 
         // Stepper throws on the second invocation, simulating a replay-frame failure
-        // mid-segment-expansion (after at least one rewind.replay section has opened).
+        // mid-segment-expansion (after at least one rewind.tick section has opened).
         final boolean[] poisoned = { false };
         EngineStepper throwingStepper = (in) -> {
             if (poisoned[0]) {
@@ -556,12 +556,12 @@ Append to `TestRewindProfilerAttribution`:
         assertThrows(RuntimeException.class, rc::stepBackward,
                 "Expected stepBackward to propagate the stepper's exception");
         List<String> transcript = prof.transcript();
-        // Guard: assert the instrumentation actually opened rewind.replay before the
+        // Guard: assert the instrumentation actually opened rewind.tick before the
         // throw. Without this, the test would pass trivially before Task 5 wires the
         // section — the stepper would throw without any section ever being opened,
         // leaving activeSection == null for the wrong reason.
-        assertTrue(transcript.contains("begin:rewind.replay"),
-                "Expected rewind.replay to have been opened before the throw: " + transcript);
+        assertTrue(transcript.contains("begin:rewind.tick"),
+                "Expected rewind.tick to have been opened before the throw: " + transcript);
         assertNull(prof.activeSection(),
                 "Profiler must have no dangling active section after exception: transcript="
                         + transcript);
@@ -601,17 +601,17 @@ In `src/main/java/com/openggf/game/rewind/RewindController.java`, replace the ex
                         primeStepperAtFrame(pos[0]);
                     },
                     () -> {
-                        if (profiler != null) profiler.beginSection("rewind.replay");
+                        if (profiler != null) profiler.beginSection("rewind.tick");
                         try {
                             Bk2FrameInput in = inputs.read(pos[0] + 1);
                             engineStepper.step(in);
                             pos[0]++;
                             // On happy path, registry.capture() opens rewind.capture which
-                            // implicitly ends rewind.replay (recording its delta) before
+                            // implicitly ends rewind.tick (recording its delta) before
                             // the finally fires. The finally then no-ops.
                             return registry.capture();
                         } finally {
-                            if (profiler != null) profiler.endSection("rewind.replay");
+                            if (profiler != null) profiler.endSection("rewind.tick");
                         }
                     });
             registry.restore(snap);
@@ -635,7 +635,7 @@ In `src/main/java/com/openggf/game/rewind/RewindController.java`, replace the ex
     }
 ```
 
-Key exception-safety property: the inner `try/finally` around the replay body guarantees `endSection("rewind.replay")` is called on every path. On the happy path it no-ops (`registry.capture()` already closed the section). On the exception path it closes the section, the exception propagates, and the outer `try/finally` closes `rewind.step` if it was the active section, leaving the profiler clean.
+Key exception-safety property: the inner `try/finally` around the replay body guarantees `endSection("rewind.tick")` is called on every path. On the happy path it no-ops (`registry.capture()` already closed the section). On the exception path it closes the section, the exception propagates, and the outer `try/finally` closes `rewind.step` if it was the active section, leaving the profiler clean.
 
 - [ ] **Step 5: Run tests to verify they pass**
 
@@ -651,20 +651,20 @@ Expected: all pass.
 
 ```bash
 git add src/main/java/com/openggf/game/rewind/RewindController.java src/test/java/com/openggf/game/rewind/TestRewindProfilerAttribution.java
-git commit -m "feat: attribute RewindController.stepBackward to rewind.step + rewind.replay (exception-safe)"
+git commit -m "feat: attribute RewindController.stepBackward to rewind.step + rewind.tick (exception-safe)"
 ```
 
 Trailer block: `Changelog: updated`, others `n/a`.
 
 ---
 
-## Task 6: Wrap `RewindController.seekTo` with `rewind.seek` + `rewind.replay`, exception-safe
+## Task 6: Wrap `RewindController.seekTo` with `rewind.seek` + `rewind.tick`, exception-safe
 
 **Files:**
 - Modify: `src/main/java/com/openggf/game/rewind/RewindController.java:124-152`
 - Extend: `src/test/java/com/openggf/game/rewind/TestRewindProfilerAttribution.java`
 
-Same exception-safety pattern: `try/finally` around each `rewind.replay` window so a throwing stepper can't leak. Unlike `stepBackward`, `seekTo` does not call `registry.capture()` inside its loop, so on the happy path the `endSection("rewind.replay")` actually records the delta (it isn't pre-closed).
+Same exception-safety pattern: `try/finally` around each `rewind.tick` window so a throwing stepper can't leak. Unlike `stepBackward`, `seekTo` does not call `registry.capture()` inside its loop, so on the happy path the `endSection("rewind.tick")` actually records the delta (it isn't pre-closed).
 
 - [ ] **Step 1: Write the failing tests (happy path + exception path)**
 
@@ -695,12 +695,12 @@ Append to `TestRewindProfilerAttribution`:
 
         List<String> beginsInOrder = prof.beginNames();
         assertTrue(beginsInOrder.contains("rewind.seek"), "Expected rewind.seek: " + beginsInOrder);
-        assertTrue(beginsInOrder.contains("rewind.replay"),
-                "Expected rewind.replay (forward stepping in seek): " + beginsInOrder);
+        assertTrue(beginsInOrder.contains("rewind.tick"),
+                "Expected rewind.tick (forward stepping in seek): " + beginsInOrder);
         assertTrue(beginsInOrder.contains("rewind.restore"),
                 "Expected rewind.restore: " + beginsInOrder);
-        assertTrue(beginsInOrder.indexOf("rewind.seek") < beginsInOrder.indexOf("rewind.replay"),
-                "rewind.seek must open before rewind.replay: " + beginsInOrder);
+        assertTrue(beginsInOrder.indexOf("rewind.seek") < beginsInOrder.indexOf("rewind.tick"),
+                "rewind.seek must open before rewind.tick: " + beginsInOrder);
         assertNull(prof.activeSection(),
                 "No section should be active after seekTo: transcript=" + prof.transcript());
     }
@@ -740,10 +740,10 @@ Append to `TestRewindProfilerAttribution`:
         assertThrows(RuntimeException.class, () -> rc.seekTo(4),
                 "Expected seekTo to propagate the stepper's exception");
         List<String> transcript = prof.transcript();
-        // Guard: assert rewind.replay was actually opened before the throw, otherwise
+        // Guard: assert rewind.tick was actually opened before the throw, otherwise
         // this test would pass trivially before Task 6 wires the section.
-        assertTrue(transcript.contains("begin:rewind.replay"),
-                "Expected rewind.replay to have been opened before the throw: " + transcript);
+        assertTrue(transcript.contains("begin:rewind.tick"),
+                "Expected rewind.tick to have been opened before the throw: " + transcript);
         assertNull(prof.activeSection(),
                 "Profiler must have no dangling active section after seek exception: transcript="
                         + transcript);
@@ -780,16 +780,16 @@ In `src/main/java/com/openggf/game/rewind/RewindController.java`, replace the ex
             currentFrame = floor.frame();
             primeStepperAtFrame(currentFrame);
             while (currentFrame < clampedTarget) {
-                if (profiler != null) profiler.beginSection("rewind.replay");
+                if (profiler != null) profiler.beginSection("rewind.tick");
                 try {
                     Bk2FrameInput in = inputs.read(currentFrame + 1);
                     engineStepper.step(in);
                     currentFrame++;
                 } finally {
-                    if (profiler != null) profiler.endSection("rewind.replay");
+                    if (profiler != null) profiler.endSection("rewind.tick");
                 }
             }
-            // After the loop, the last endSection("rewind.replay") cleared the
+            // After the loop, the last endSection("rewind.tick") cleared the
             // active section. Re-open rewind.seek for the audio bookkeeping tail.
             if (profiler != null) profiler.beginSection("rewind.seek");
             keyframes.discardAfter(currentFrame);
@@ -818,7 +818,7 @@ Expected: all pass.
 
 ```bash
 git add src/main/java/com/openggf/game/rewind/RewindController.java src/test/java/com/openggf/game/rewind/TestRewindProfilerAttribution.java
-git commit -m "feat: attribute RewindController.seekTo to rewind.seek + rewind.replay (exception-safe)"
+git commit -m "feat: attribute RewindController.seekTo to rewind.seek + rewind.tick (exception-safe)"
 ```
 
 Trailer block: `Changelog: updated`, others `n/a`.
@@ -937,7 +937,7 @@ Expected: `True`. If `False`, place the S2 ROM in the working directory before c
 Run: `mvn -Dmse=relaxed "-Dtest=RewindBenchmark" "-Dopenggf.rewind.benchmark.run=true" test`
 Expected: all phases pass their mean budgets — capture ≤ 1 ms, restore ≤ 1.5 ms, seek ≤ 10 ms, per-keyframe memory ≤ 128 KB.
 
-If a budget is breached, the most likely culprit is an inner-loop `beginSection` that should be hoisted, or an extra begin/end pair that crept into the replay lambda. The wrappers in this plan add exactly two begin/end pairs per replay iteration (one outer for `rewind.step`/`rewind.seek`, one inner for `rewind.replay`); no additional pairs should appear.
+If a budget is breached, the most likely culprit is an inner-loop `beginSection` that should be hoisted, or an extra begin/end pair that crept into the replay lambda. The wrappers in this plan add exactly two begin/end pairs per replay iteration (one outer for `rewind.step`/`rewind.seek`, one inner for `rewind.tick`); no additional pairs should appear.
 
 - [ ] **Step 3: No commit needed** (verification only).
 
@@ -955,9 +955,9 @@ Append the following rows to the "Section / Site / Notes" table that starts near
 
 ```markdown
 | `rewind.restore` | `RewindRegistry.restore()` | Restore cost. Mirrors `rewind.capture`. Dominant on hot-segment held rewind. |
-| `rewind.step` | `RewindController.stepBackward()` | Outer wrapper. Catches audio bookkeeping + segment-cache array alloc + post-restore work. Re-opens itself after inner `rewind.replay`/`rewind.capture`/`rewind.restore` sections implicitly close it. |
+| `rewind.step` | `RewindController.stepBackward()` | Outer wrapper. Catches audio bookkeeping + segment-cache array alloc + post-restore work. Re-opens itself after inner `rewind.tick`/`rewind.capture`/`rewind.restore` sections implicitly close it. |
 | `rewind.seek` | `RewindController.seekTo()` | Outer wrapper for the seek path. Same re-open pattern as `rewind.step`. Used by debug/Bk2 seek paths. |
-| `rewind.replay` | `RewindController.stepBackward()` segment-expansion lambda + `RewindController.seekTo()` forward loop | Wraps each `engineStepper.step(...)` inside segment-cache cold expansion and `seekTo` forward-stepping. Surfaces the "60× game frames replayed in one visual frame" cost at backward keyframe crossings. |
+| `rewind.tick` | `RewindController.stepBackward()` segment-expansion lambda + `RewindController.seekTo()` forward loop | Wraps each `engineStepper.step(...)` inside segment-cache cold expansion and `seekTo` forward-stepping. Surfaces the "60× game frames replayed in one visual frame" cost at backward keyframe crossings. |
 ```
 
 - [ ] **Step 2: Update §2.4 "Rewind capture" paragraph**
@@ -967,7 +967,7 @@ In `PERFORMANCE_OVERVIEW_20260512.md` §2.4 ("Rewind capture"), append a paragra
 ```markdown
 **Attribution note (2026-05-26):** Held rewind no longer leaks into the
 `update` umbrella section. The cold-segment expansion path is now broken
-out into `rewind.replay` (the 60× `engineStepper.step` calls) plus
+out into `rewind.tick` (the 60× `engineStepper.step` calls) plus
 `rewind.capture` (the 60× `RewindRegistry.capture` calls), with
 `rewind.restore` and `rewind.step`/`rewind.seek` covering the rest of
 the path. Every `beginSection` has a paired `endSection` in `try/finally`,
@@ -992,7 +992,7 @@ appears under five sections:
 - `rewind.step` — `RewindController.stepBackward()` outer body
   (audio bookkeeping, segment-cache array alloc, primer calls).
 - `rewind.seek` — `RewindController.seekTo()` outer body.
-- `rewind.replay` — each `engineStepper.step(...)` call replayed during
+- `rewind.tick` — each `engineStepper.step(...)` call replayed during
   segment-cache cold expansion or seek forward-stepping.
 
 The profiler does not nest sections (`PerformanceProfiler.beginSection`
@@ -1035,7 +1035,7 @@ Launch the engine, enable the debug view + performance overlay, load any level, 
 
 Run: `java -jar target/OpenGGF-*-jar-with-dependencies.jar`
 
-Expected: overlay top-allocators panel shows `rewind.restore`, `rewind.step`, `rewind.replay`, `rewind.capture` during held rewind (instead of `update` ballooning). `update` allocation should now look comparable to normal play.
+Expected: overlay top-allocators panel shows `rewind.restore`, `rewind.step`, `rewind.tick`, `rewind.capture` during held rewind (instead of `update` ballooning). `update` allocation should now look comparable to normal play.
 
 - [ ] **Step 3: No commit needed** (verification only).
 
@@ -1066,6 +1066,6 @@ If the overlay does not show the new sections, check that `debugViewEnabled && !
 
 - **Interface vs subclass:** The first draft of this plan used a `protected` constructor on `PerformanceProfiler` to enable test subclassing. After review feedback, switched to a tiny `SectionProfiler` interface that `PerformanceProfiler` implements. The interface has exactly two methods (the two production rewind code actually uses), avoids widening the singleton-like class's API surface, and lets the test recorder implement directly with no subclass machinery.
 - **Single re-open per outer section:** `stepBackward` and `seekTo` each re-open their outer section once — after `registry.restore(snap)` / `registry.restore(floor.snapshot())` respectively — because that's the only point with measurable work to attribute between sub-sections. There's no need to re-open between `segmentCache.snapshotAt` returning and the next `registry.restore`: nothing measurable happens between them (trivial reference assignment).
-- **`rewind.replay` finally on the happy path:** Inside `stepBackward`'s segment-expansion lambda, the `finally`'s `endSection("rewind.replay")` is a no-op on success because `registry.capture()` already closed the section. It only does work on the exception path. This is intentional and matches the `MemoryStats.endSection` / `PerformanceProfiler.endSection` contract: they no-op when the active section doesn't match the requested name (`PerformanceProfiler.java:193-195`).
-- **Asymmetry between `stepBackward` and `seekTo` replay closure:** `stepBackward` relies on the implicit close from `registry.capture()`; `seekTo` records the delta explicitly because no capture follows. Both ultimately call `endSection("rewind.replay")` in `finally`. The asymmetry is intentional and called out in the in-method comments.
-- **Ordering assertions:** Tests assert that `rewind.step` opens *before* `rewind.replay` (and similar for `rewind.seek`) using `beginNames().indexOf(...)`. Combined with the `activeSection() == null` post-condition, this catches both ordering bugs and balance bugs without coupling to exact transcript contents (which could vary if `keyframeInterval` changes).
+- **`rewind.tick` finally on the happy path:** Inside `stepBackward`'s segment-expansion lambda, the `finally`'s `endSection("rewind.tick")` is a no-op on success because `registry.capture()` already closed the section. It only does work on the exception path. This is intentional and matches the `MemoryStats.endSection` / `PerformanceProfiler.endSection` contract: they no-op when the active section doesn't match the requested name (`PerformanceProfiler.java:193-195`).
+- **Asymmetry between `stepBackward` and `seekTo` replay closure:** `stepBackward` relies on the implicit close from `registry.capture()`; `seekTo` records the delta explicitly because no capture follows. Both ultimately call `endSection("rewind.tick")` in `finally`. The asymmetry is intentional and called out in the in-method comments.
+- **Ordering assertions:** Tests assert that `rewind.step` opens *before* `rewind.tick` (and similar for `rewind.seek`) using `beginNames().indexOf(...)`. Combined with the `activeSection() == null` post-condition, this catches both ordering bugs and balance bugs without coupling to exact transcript contents (which could vary if `keyframeInterval` changes).

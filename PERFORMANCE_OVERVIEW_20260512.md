@@ -33,9 +33,9 @@ Enabled in `Engine.display()` only when `debugViewEnabled && !isNativeImage() &&
 | `audio.music_stream`, `audio.sfx_stream`, `audio.upload` | `LWJGLAudioBackend.java:686, 703, 734` | Music stream `read()` (SMPS sequencer + FM synth + resampler interleaved at sample granularity inside `SmpsDriver.read()`), separate-SFX stream + mix loop, DirectBuffer fill + OpenAL upload. Names describe the wrap windows; a clean SMPS/synth/resample phase split is *not* available at this seam. |
 | `rewind.capture` | `RewindRegistry.java:54` | Snapshot cost on capture-interval frames. Called from `LiveRewindManager` after the level tick; `activeSection` is null at that point, so no truncation. |
 | `rewind.restore` | `RewindRegistry.restore()` | Restore cost. Mirrors `rewind.capture`. Dominant on hot-segment held rewind. |
-| `rewind.step` | `RewindController.stepBackward()` | Outer wrapper. Catches audio bookkeeping + segment-cache array alloc + post-restore work. Re-opens itself after inner `rewind.replay`/`rewind.capture`/`rewind.restore` sections implicitly close it. |
+| `rewind.step` | `RewindController.stepBackward()` | Outer wrapper. Catches audio bookkeeping + segment-cache array alloc + post-restore work. Re-opens itself after inner `rewind.tick`/`rewind.capture`/`rewind.restore` sections implicitly close it. |
 | `rewind.seek` | `RewindController.seekTo()` | Outer wrapper for the seek path. Same re-open pattern as `rewind.step`. Used by debug/Bk2 seek paths. |
-| `rewind.replay` | `RewindController.stepBackward()` segment-expansion lambda + `RewindController.seekTo()` forward loop | Wraps each `engineStepper.step(...)` inside segment-cache cold expansion and `seekTo` forward-stepping. Surfaces the "60× game frames replayed in one visual frame" cost at backward keyframe crossings. |
+| `rewind.tick` | `RewindController.stepBackward()` segment-expansion lambda + `RewindController.seekTo()` forward loop | Wraps each `engineStepper.step(...)` inside segment-cache cold expansion and `seekTo` forward-stepping. Surfaces the "60× game frames replayed in one visual frame" cost at backward keyframe crossings. |
 
 ### Offline harness (rewind)
 
@@ -110,7 +110,7 @@ Storage is bounded by phase 6's 128 KB/keyframe budget; capture interval is 60 f
 
 **Attribution note (2026-05-26):** Held rewind no longer leaks into the
 `update` umbrella section. The cold-segment expansion path is now broken
-out into `rewind.replay` (the 60× `engineStepper.step` calls) plus
+out into `rewind.tick` (the 60× `engineStepper.step` calls) plus
 `rewind.capture` (the 60× `RewindRegistry.capture` calls), with
 `rewind.restore` and `rewind.step`/`rewind.seek` covering the rest of
 the path. Every `beginSection` has a paired `endSection` in `try/finally`,
