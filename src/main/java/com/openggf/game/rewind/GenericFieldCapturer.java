@@ -41,6 +41,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public final class GenericFieldCapturer {
+    private static final class CodecScratch {
+        final RewindStateBuffer scalarData = new RewindStateBuffer();
+        final ArrayList<Object> opaqueValues = new ArrayList<>();
+
+        void reset() {
+            scalarData.reset();
+            opaqueValues.clear();
+        }
+    }
+
+    private static final ThreadLocal<CodecScratch> CODEC_SCRATCH = ThreadLocal.withInitial(CodecScratch::new);
+
     private static final Set<Class<?>> WRAPPER_TYPES = Set.of(
             Boolean.class,
             Byte.class,
@@ -625,10 +637,14 @@ public final class GenericFieldCapturer {
         field.setAccessible(true);
         RewindCodec codec = RewindCodecs.codecFor(field)
                 .orElseThrow(() -> new IllegalStateException("Missing rewind codec for " + FieldKey.of(field)));
-        RewindStateBuffer scalarData = new RewindStateBuffer();
-        List<Object> opaqueValues = new ArrayList<>();
-        codec.capture(field, target, scalarData, opaqueValues);
-        return new CodecFieldSnapshot(scalarData.toByteArray(), opaqueValues.toArray());
+        CodecScratch scratch = CODEC_SCRATCH.get();
+        scratch.reset();
+        try {
+            codec.capture(field, target, scratch.scalarData, scratch.opaqueValues);
+            return new CodecFieldSnapshot(scratch.scalarData.toByteArray(), scratch.opaqueValues.toArray());
+        } finally {
+            scratch.reset();
+        }
     }
 
     private static void restoreCodecField(Field field, Object target, CodecFieldSnapshot snapshot) {
