@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- fix(trace): TraceBinder now dedupes per-frame comparison results by frame number (TreeMap keyed by frame) instead of appending to an unbounded list. Fixes a memory balloon in test-mode held rewind where each SegmentCache rebuild re-compared already-compared frames and appended duplicate FrameComparison entries (and their full FieldComparison maps) to TraceBinder.allComparisons. Memory now bounded by trace length.
+
 - perf(rewind): pool capture scratch buffers and add CompositeSnapshot.owned() ownership path for the registry hot path; reduces per-frame allocations in rewind.capture / rewind.step / rewind.restore without weakening the public CompositeSnapshot immutability contract.
 
 - **`RewindController.stepBackward` keyframe-restore primer work now credits to `rewind.step` instead of falling into an unattributed gap before `rewind.tick` opens.**
