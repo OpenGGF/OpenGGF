@@ -113,23 +113,30 @@ public class SimpleDataSelectManager extends AbstractDataSelectProvider {
     @Override
     public void draw() {
         textRenderer.setProjectionMatrix(GameServices.graphics().getProjectionMatrixBuffer());
-        textRenderer.drawShadowedText(hostProfile.gameCode().toUpperCase() + " DATA SELECT",
-                TITLE_X, TITLE_Y, DebugColor.YELLOW);
-        textRenderer.drawShadowedText(headerLabel(),
-                TITLE_X, TITLE_Y + textRenderer.lineHeight(), DebugColor.CYAN);
+        // Title + header + slot rows + footer all share the font atlas (shadow draws too),
+        // so mega-batch into a single GL draw call.
+        textRenderer.beginBatch();
+        try {
+            textRenderer.drawShadowedText(hostProfile.gameCode().toUpperCase() + " DATA SELECT",
+                    TITLE_X, TITLE_Y, DebugColor.YELLOW);
+            textRenderer.drawShadowedText(headerLabel(),
+                    TITLE_X, TITLE_Y + textRenderer.lineHeight(), DebugColor.CYAN);
 
-        for (int row = 0; row < sessionController.totalRows(); row++) {
-            DebugColor color = row == menuModel().getSelectedRow() ? DebugColor.YELLOW : DebugColor.WHITE;
-            textRenderer.drawShadowedText(rowLabel(row), ROW_X,
-                    FIRST_ROW_Y + row * textRenderer.lineHeight(), color);
+            for (int row = 0; row < sessionController.totalRows(); row++) {
+                DebugColor color = row == menuModel().getSelectedRow() ? DebugColor.YELLOW : DebugColor.WHITE;
+                textRenderer.drawShadowedText(rowLabel(row), ROW_X,
+                        FIRST_ROW_Y + row * textRenderer.lineHeight(), color);
+            }
+
+            String footer = menuModel().isDeleteMode()
+                    ? "DELETE MODE: choose a slot and press jump"
+                    : sessionController.shouldCycleClearRestart()
+                    ? "Arrows move, left/right changes clear restart, jump confirms"
+                    : "Arrows move, left/right changes team, jump confirms";
+            textRenderer.drawShadowedText(footer, TITLE_X, FOOTER_Y, DebugColor.LIGHT_GRAY);
+        } finally {
+            textRenderer.endBatch();
         }
-
-        String footer = menuModel().isDeleteMode()
-                ? "DELETE MODE: choose a slot and press jump"
-                : sessionController.shouldCycleClearRestart()
-                ? "Arrows move, left/right changes clear restart, jump confirms"
-                : "Arrows move, left/right changes team, jump confirms";
-        textRenderer.drawShadowedText(footer, TITLE_X, FOOTER_Y, DebugColor.LIGHT_GRAY);
     }
 
     @Override
