@@ -1073,6 +1073,7 @@ public class AudioManager {
         this.audioProfile = null;
         this.ringLeft = true;
         this.rewindReplaySuppressionDepth = 0;
+        this.currentReplayReason = null;
         this.audioFrameOwnedExternally = false;
         this.audioFrameAdvanced = false;
         this.reverseAudioPresentationActive = false;
