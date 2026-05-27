@@ -49,6 +49,7 @@ public class AudioManager {
     private GameAudioProfile audioProfile;
     private boolean ringLeft = true;
     private int rewindReplaySuppressionDepth;
+    private AudioReplayReason currentReplayReason;
     private final AudioCommandTimeline commandTimeline = new AudioCommandTimeline();
     private DeterministicAudioRuntime deterministicAudioRuntime = NoOpDeterministicAudioRuntime.INSTANCE;
     private boolean deterministicRuntimeExplicitlyConfigured;
@@ -343,6 +344,8 @@ public class AudioManager {
     }
 
     public AudioReplayScope beginRewindReplay(int fromFrame, int targetFrame, AudioReplayReason reason) {
+        AudioReplayReason previous = currentReplayReason;
+        currentReplayReason = reason;
         rewindReplaySuppressionDepth++;
         return new AudioReplayScope() {
             private boolean closed;
@@ -356,6 +359,7 @@ public class AudioManager {
                 if (rewindReplaySuppressionDepth > 0) {
                     rewindReplaySuppressionDepth--;
                 }
+                currentReplayReason = previous;
             }
         };
     }
@@ -559,6 +563,15 @@ public class AudioManager {
     }
 
     private void replaySfx(AudioCommand.PlaySfx command) {
+        if (currentReplayReason == AudioReplayReason.REVERSE_RESYNTH
+                && (command.route() == AudioCommand.SfxRoute.FALLBACK_NAME
+                        || command.route() == AudioCommand.SfxRoute.RING_RESOLVED)) {
+            // WAV-fallback SFX would allocate new persistent OpenAL sources
+            // and play a .wav from disk. Neither is reproducible inside a
+            // held-rewind synth window. Spec edge case 9: explicitly out of
+            // scope for the faithful tape effect.
+            return;
+        }
         switch (command.route()) {
             case BASE_SMPS_ID -> {
                 if (smpsLoader != null) {
