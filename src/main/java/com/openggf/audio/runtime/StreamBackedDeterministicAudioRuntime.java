@@ -191,6 +191,21 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     }
 
     @Override
+    public AudioStream musicStreamForReverseResynth() {
+        return musicStream;
+    }
+
+    @Override
+    public AudioStream sfxStreamForReverseResynth() {
+        return sfxStream;
+    }
+
+    @Override
+    public int samplesForNextFrameForReverseResynth() {
+        return frameClock.samplesForNextFrame();
+    }
+
+    @Override
     public void clearPcmHistory() {
         reverseCursor = null;
         cancelReleaseCrossfade();
