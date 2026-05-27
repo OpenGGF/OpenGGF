@@ -6,6 +6,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
@@ -911,6 +912,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         Sonic3kPlcArtRegistry.ZoneArtPlan plan =
                 Sonic3kPlcArtRegistry.getPlan(zoneIndex, currentActIndex);
         loadStandaloneFromRegistry(plan);
+        if (zoneIndex == Sonic3kZoneIds.ZONE_CNZ) {
+            loadCnzTraversalArt();
+        }
 
         LOG.info("Reloaded standalone art for zone " + zoneIndex
                 + " act " + currentActIndex);
