@@ -2,6 +2,34 @@ package com.openggf.audio.runtime;
 
 import java.util.Arrays;
 
+/**
+ * Circular PCM history buffer used for held-rewind audio. Supports forward
+ * writes via {@link #write}, reverse reads via {@link ReverseCursor}, and
+ * historical prepends via {@link #prependBackward} (used by
+ * {@code ReverseResynthesizer} to extend the reverse window past the
+ * physical ring capacity by re-synthesising older audio).
+ *
+ * <h2>Concurrency contract (single-producer, single-consumer)</h2>
+ *
+ * <p>The ring's public methods are all {@code synchronized (this)}, and
+ * {@link ReverseCursor}'s methods synchronize on the outer
+ * {@code PcmHistoryRing.this} monitor — not on the cursor instance. This
+ * means prepend and read are mutually exclusive: a worker producer can
+ * call {@link #prependBackward} on one thread while a consumer thread
+ * calls {@link ReverseCursor#readPrevious} on the same ring, and the
+ * single monitor serialises them.
+ *
+ * <p>The lock scope is deliberately narrow — only cursor state and ring
+ * slot reads/writes. Callers MUST NOT perform any expensive work (chip
+ * emulation, I/O) while holding a method that synchronises on the ring;
+ * snapshot the needed state, release the implicit lock, and do the heavy
+ * work outside. This is critical for the reverse-resynth worker: chip
+ * emulation must not block the audio drain thread.
+ *
+ * <p>Today this is implemented with intrinsic {@code synchronized} blocks.
+ * A future migration to a lock-free SPSC structure is a contained
+ * refactor inside this class — the public API stays the same.
+ */
 public final class PcmHistoryRing {
     private static final int CHANNELS = 2;
 
@@ -18,7 +46,7 @@ public final class PcmHistoryRing {
         this.samples = new short[capacityFrames * CHANNELS];
     }
 
-    public void write(short[] source, int frames) {
+    public synchronized void write(short[] source, int frames) {
         validateBuffer(source, frames);
         for (int frame = 0; frame < frames; frame++) {
             int sourceIndex = frame * CHANNELS;
@@ -47,7 +75,8 @@ public final class PcmHistoryRing {
      *       slots whose contents the cursor has not yet read.</li>
      * </ol>
      */
-    public void prependBackward(long startAudioFrame, ReverseCursor cursor, short[] source, int frames) {
+    public synchronized void prependBackward(long startAudioFrame, ReverseCursor cursor,
+                                              short[] source, int frames) {
         if (cursor == null) {
             throw new IllegalArgumentException("cursor must not be null");
         }
@@ -74,14 +103,14 @@ public final class PcmHistoryRing {
             samples[slot] = source[i * CHANNELS];
             samples[slot + 1] = source[i * CHANNELS + 1];
         }
-        cursor.extendOldestTo(startAudioFrame);
+        cursor.extendOldestToInternal(startAudioFrame);
     }
 
-    public ReverseCursor createReverseCursor() {
+    public synchronized ReverseCursor createReverseCursor() {
         return new ReverseCursor(nextFrameIndex - 1, nextFrameIndex - storedFrames);
     }
 
-    public void commitReverseCursor(ReverseCursor cursor) {
+    public synchronized void commitReverseCursor(ReverseCursor cursor) {
         if (cursor == null) {
             return;
         }
@@ -91,7 +120,7 @@ public final class PcmHistoryRing {
         storedFrames = (int) Math.max(0, Math.min(capacityFrames, nextFrameIndex - oldestRetainedFrame));
     }
 
-    public void clear() {
+    public synchronized void clear() {
         nextFrameIndex = 0;
         storedFrames = 0;
         Arrays.fill(samples, (short) 0);
@@ -120,28 +149,34 @@ public final class PcmHistoryRing {
         }
 
         public int readPrevious(short[] target, int frames) {
-            validateBuffer(target, frames);
-            int read = 0;
-            while (read < frames && nextReadableFrame >= oldestReadableFrame) {
-                int sourceIndex = ringSlot(nextReadableFrame) * CHANNELS;
-                int targetIndex = read * CHANNELS;
-                target[targetIndex] = samples[sourceIndex];
-                target[targetIndex + 1] = samples[sourceIndex + 1];
-                nextReadableFrame--;
-                read++;
+            synchronized (PcmHistoryRing.this) {
+                validateBuffer(target, frames);
+                int read = 0;
+                while (read < frames && nextReadableFrame >= oldestReadableFrame) {
+                    int sourceIndex = ringSlot(nextReadableFrame) * CHANNELS;
+                    int targetIndex = read * CHANNELS;
+                    target[targetIndex] = samples[sourceIndex];
+                    target[targetIndex + 1] = samples[sourceIndex + 1];
+                    nextReadableFrame--;
+                    read++;
+                }
+                if (read < frames) {
+                    Arrays.fill(target, read * CHANNELS, frames * CHANNELS, (short) 0);
+                }
+                return read;
             }
-            if (read < frames) {
-                Arrays.fill(target, read * CHANNELS, frames * CHANNELS, (short) 0);
-            }
-            return read;
         }
 
         public long oldestReadableFrame() {
-            return oldestReadableFrame;
+            synchronized (PcmHistoryRing.this) {
+                return oldestReadableFrame;
+            }
         }
 
         public long nextReadableFrame() {
-            return nextReadableFrame;
+            synchronized (PcmHistoryRing.this) {
+                return nextReadableFrame;
+            }
         }
 
         /**
@@ -154,15 +189,33 @@ public final class PcmHistoryRing {
          * back off and let {@code drainPcm} make progress before retrying.
          */
         public int maxPrependableFrames() {
-            long unread = nextReadableFrame - oldestReadableFrame + 1;
-            long room = capacityFrames - unread;
-            if (room <= 0) {
-                return 0;
+            synchronized (PcmHistoryRing.this) {
+                long unread = nextReadableFrame - oldestReadableFrame + 1;
+                long room = capacityFrames - unread;
+                if (room <= 0) {
+                    return 0;
+                }
+                return (int) Math.min(room, (long) Integer.MAX_VALUE);
             }
-            return (int) Math.min(room, (long) Integer.MAX_VALUE);
         }
 
+        /**
+         * Test-only callable from outside the package. Production prepend
+         * goes through {@link PcmHistoryRing#prependBackward}, which calls
+         * {@link #extendOldestToInternal} while already holding the ring
+         * monitor.
+         */
         void extendOldestTo(long newOldest) {
+            synchronized (PcmHistoryRing.this) {
+                extendOldestToInternal(newOldest);
+            }
+        }
+
+        // Caller already holds PcmHistoryRing.this monitor (used from
+        // prependBackward). Splitting the locked vs unlocked entry points
+        // avoids the "synchronized inside synchronized" reentrant pattern
+        // and keeps the lock boundary explicit at the public seam.
+        private void extendOldestToInternal(long newOldest) {
             if (newOldest > oldestReadableFrame) {
                 throw new IllegalArgumentException(
                         "extendOldestTo must lower oldestReadableFrame; got "
