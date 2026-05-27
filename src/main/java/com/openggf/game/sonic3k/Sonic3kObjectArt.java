@@ -1760,16 +1760,41 @@ public class Sonic3kObjectArt {
      *
      * <p>ROM anchor: {@code Obj_CNZBalloon}.
      * <p>Mapping table: {@code Map_CNZBalloon} (25 frames).
-     * <p>Art tile: {@code ArtTile_CNZMisc} (palette 0).
+     * <p>Art tile: {@code ArtTile_CNZMisc} (palette 0). Frames 20-24 also
+     * reference the separately PLC-loaded {@code ArtTile_CNZBalloon} body art
+     * at {@code ArtTile_CNZMisc+$223}; the string pieces remain in CNZ misc.
      * <p>The mapping address is the final S3K lock-on offset published in
      * {@link Sonic3kConstants}; it is not the raw Sonic 3-side disassembly
      * address.
      */
     public ObjectSpriteSheet buildCnzBalloonSheet() {
-        return buildLevelArtSheetFromRom(
+        ObjectSpriteSheet sheet = buildLevelArtSheetFromRom(
                 Sonic3kConstants.MAP_CNZ_BALLOON_ADDR,
                 Sonic3kConstants.ARTTILE_CNZ_BALLOON,
                 0);
+        spliceCnzBalloonPlcArt(sheet);
+        return sheet;
+    }
+
+    private void spliceCnzBalloonPlcArt(ObjectSpriteSheet sheet) {
+        if (sheet == null) {
+            return;
+        }
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) {
+                return;
+            }
+            Pattern[] plcPatterns = loadKosinskiModuledPatterns(rom, Sonic3kConstants.ART_KOSM_CNZ_BALLOON_ADDR);
+            Pattern[] sheetPatterns = sheet.getPatterns();
+            int dest = Sonic3kConstants.ARTTILE_CNZ_BALLOON_PLC - Sonic3kConstants.ARTTILE_CNZ_BALLOON;
+            int count = Math.min(plcPatterns.length, sheetPatterns.length - dest);
+            if (count > 0) {
+                System.arraycopy(plcPatterns, 0, sheetPatterns, dest, count);
+            }
+        } catch (IOException e) {
+            LOG.warning("Failed splicing CNZ balloon PLC art: " + e.getMessage());
+        }
     }
 
     /**

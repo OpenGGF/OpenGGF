@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
 
@@ -57,6 +58,34 @@ class TestCnzHoverFanObjectInstance {
         assertEquals(0x1850, fan.getOutOfRangeReferenceX(),
                 "Obj_CNZHoverFan loc_31E36 feeds saved $30(a0) to Sprite_OnScreen_Test2 "
                         + "after moving live x_pos (docs/skdisasm/sonic3k.asm:67327-67332,67349-67350).");
+    }
+
+    @Test
+    void jumpingIntoHoverFanPreservesFanWalkAnimationInsteadOfResolvingBackToRoll() {
+        CnzHoverFanInstance fan = new CnzHoverFanInstance(
+                new ObjectSpawn(0x100, 0x100, 0x46, 0x80, 0, false, 0));
+        TestablePlayableSprite player = playerAt("sonic", 0x100, 0x100);
+        player.setAir(true);
+        player.setJumping(true);
+        player.setRolling(true);
+        player.setRollingJump(true);
+        player.setAnimationId(2);
+        player.setFlipAngle(0);
+
+        fan.setServices(new TestObjectServices());
+        fan.update(0, player);
+
+        ScriptedVelocityAnimationProfile profile = new ScriptedVelocityAnimationProfile()
+                .setIdleAnimId(5)
+                .setWalkAnimId(0)
+                .setRunAnimId(1)
+                .setRollAnimId(2)
+                .setAirAnimId(2);
+
+        assertEquals(0, player.getAnimationId(),
+                "Obj_CNZHoverFan writes anim=0 when it seeds flip motion");
+        assertEquals(null, profile.resolveAnimationId(player, 0, 3),
+                "The post-capture airborne external-force state must let fan anim=0 persist");
     }
 
     private static TestablePlayableSprite playerAt(String code, int centreX, int centreY) {

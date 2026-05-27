@@ -1259,6 +1259,7 @@ public class Sonic3kConstants {
 
     // ArtTile_CNZMisc-derived VRAM tile bases used by the CNZ traversal objects.
     public static final int ARTTILE_CNZ_BALLOON = ARTTILE_CNZ_MISC;
+    public static final int ARTTILE_CNZ_BALLOON_PLC = 0x0574; // ArtTile_CNZBalloon
     public static final int ARTTILE_CNZ_CANNON = ARTTILE_CNZ_MISC + 0x23;
     public static final int ARTTILE_CNZ_CANNON_DPLC_DEST = 0x0448;
     public static final int ARTTILE_CNZ_RISING_PLATFORM = ARTTILE_CNZ_MISC + 0x6D;
