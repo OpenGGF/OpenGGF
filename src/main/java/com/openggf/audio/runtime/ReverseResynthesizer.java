@@ -219,19 +219,24 @@ public final class ReverseResynthesizer implements Runnable {
                     s, entries, timelineCursor, gameFrame, sfxDeps, musicDeps);
 
             int samplesThisFrame = clock.samplesForNextFrame();
-            ensureScratchCapacity(samplesThisFrame);
             int needShorts = samplesThisFrame * 2;
-            Arrays.fill(musicScratch, 0, needShorts, (short) 0);
+            // SmpsDriver.read fills exactly buffer.length / 2 frames and
+            // advances the chip by the same amount. The scratch must
+            // therefore be EXACTLY needShorts long — over-sized would
+            // over-emulate, under-sized would under-emulate. We reuse the
+            // existing buffer when the size matches and zero it; otherwise
+            // we (re)allocate to the exact size.
+            musicScratch = resizeOrZeroScratch(musicScratch, needShorts);
 
             // The worker reads from its private state's drivers — not the
             // runtime's. The base helpers wrote workerState.musicDriver
             // and (potentially) workerState.sfxStream during command replay.
             if (workerState.musicDriver != null) {
-                workerState.musicDriver.read(localTrim(musicScratch, needShorts));
+                workerState.musicDriver.read(musicScratch);
             }
             if (workerState.sfxStream != null) {
-                Arrays.fill(sfxScratch, 0, needShorts, (short) 0);
-                workerState.sfxStream.read(localTrim(sfxScratch, needShorts));
+                sfxScratch = resizeOrZeroScratch(sfxScratch, needShorts);
+                workerState.sfxStream.read(sfxScratch);
                 mixSfxIntoMusic(musicScratch, sfxScratch, needShorts);
             }
 
@@ -387,24 +392,27 @@ public final class ReverseResynthesizer implements Runnable {
         return s.audioProfile().isMusicOverride(workerState.currentMusicId);
     }
 
-    private void ensureScratchCapacity(int samplesPerFrame) {
-        int needShorts = samplesPerFrame * 2;
-        if (musicScratch.length < needShorts) {
-            musicScratch = new short[needShorts];
+    /**
+     * Returns a scratch buffer that is exactly {@code needShorts} long,
+     * zeroed and ready for a fresh {@code SmpsDriver.read}. Reuses the
+     * existing buffer when its length already matches (the steady-state
+     * case once {@code samplesForNextFrame} stabilises); otherwise
+     * allocates a new buffer.
+     *
+     * <p>The previous {@code localTrim} helper silently dropped rendered
+     * audio when the existing scratch had grown larger than the current
+     * frame's need — the driver wrote into a temporary, but the surrounding
+     * code read from the now-stale outer buffer. This variant returns the
+     * exact-size buffer that subsequent {@code mixSfxIntoMusic} and
+     * {@code System.arraycopy} calls read from, so writes always reach
+     * downstream consumers.
+     */
+    private static short[] resizeOrZeroScratch(short[] existing, int needShorts) {
+        if (existing.length == needShorts) {
+            Arrays.fill(existing, (short) 0);
+            return existing;
         }
-        if (sfxScratch.length < needShorts) {
-            sfxScratch = new short[needShorts];
-        }
-    }
-
-    /** Returns the same buffer if it's exactly {@code length} long, or a
-     *  fresh buffer of that length otherwise. SmpsDriver.read consumes the
-     *  entire buffer length, so we must pass exactly the requested size. */
-    private static short[] localTrim(short[] buffer, int length) {
-        if (buffer.length == length) {
-            return buffer;
-        }
-        return new short[length];
+        return new short[needShorts];
     }
 
     private static void reverseStereoFrames(short[] buf, int frames) {
