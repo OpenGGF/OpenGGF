@@ -17,9 +17,13 @@ import com.openggf.audio.runtime.FrameAudioMode;
 import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.AudioOutputFifo;
+import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.runtime.AudioCommandDataResolver;
 import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.runtime.ReverseAudioSession;
 import com.openggf.audio.runtime.ReverseResynthesizer;
 import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
+import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsLoader;
@@ -35,6 +39,7 @@ import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -59,6 +64,12 @@ public class AudioManager {
     private boolean audioFrameAdvanced;
     private boolean reverseAudioPresentationActive;
     private AudioLogicalSnapshot preReverseSnapshot;
+
+    /** Worker spawned at {@link #beginReverseAudioPresentation} and joined
+     *  at {@link #endReverseAudioPresentation}. Null outside an active
+     *  held-rewind session. */
+    private ReverseResynthesizer reverseResynthWorker;
+    private Thread reverseResynthThread;
     private AudioKeyframeStore liveRewindAudioKeyframes;
 
     // Donor audio overlay: secondary SFX path for cross-game feature donation
@@ -682,9 +693,20 @@ public class AudioManager {
         if (backend != null) {
             backend.beginReversePresentation();
         }
+        // Task 6: build the worker session, prefill, and spawn the daemon
+        // thread. Worker uses its own private SmpsPresentationState +
+        // private clock; the live backend state is untouched by the worker.
+        startReverseResynthWorker();
     }
 
     public void endReverseAudioPresentation() {
+        // Task 6: stop the worker BEFORE the runtime commits the reverse
+        // cursor. Worker shares the cursor reference with the runtime, so
+        // an in-flight prepend racing with commitReverseCursor would mutate
+        // a cursor whose ring state has already been re-anchored.
+        // Task 7 will harden this with detach + timeout-counter; Task 6
+        // uses a plain requestStop + join.
+        stopReverseResynthWorker();
         reverseAudioPresentationActive = false;
         deterministicAudioRuntime.endReversePresentation();
         if (backend != null) {
@@ -717,6 +739,225 @@ public class AudioManager {
             }
             preReverseSnapshot = null;
         }
+    }
+
+    /**
+     * Task 6 lifecycle: build a {@link ReverseAudioSession} from current
+     * audio state, run a couple of synchronous prefill iterations, then
+     * spawn the worker daemon thread. No-op when:
+     * <ul>
+     *   <li>The runtime is not {@link StreamBackedDeterministicAudioRuntime}
+     *       (no PCM history ring to fill).</li>
+     *   <li>{@link #liveRewindAudioKeyframes} is null (no audio keyframes
+     *       to read backward through; the rewind controller hasn't
+     *       installed yet, or audio is disabled).</li>
+     *   <li>The runtime's active reverse cursor is null (the ring has no
+     *       capacity).</li>
+     * </ul>
+     */
+    private void startReverseResynthWorker() {
+        if (!(deterministicAudioRuntime instanceof StreamBackedDeterministicAudioRuntime stream)) {
+            return;
+        }
+        PcmHistoryRing ring = stream.pcmHistoryRingForReverseResynth();
+        AudioKeyframeStore keyframes = liveRewindAudioKeyframes;
+        if (ring == null || keyframes == null) {
+            return;
+        }
+        PcmHistoryRing.ReverseCursor cursor = stream.activeReverseCursor();
+        if (cursor == null) {
+            return;
+        }
+
+        int sampleRate = stream.sampleRateForReverseResynth();
+        int frameRate = configuredFrameRate();
+        SmpsSequencer.Region region = configuredRegion();
+        boolean dacInterpolate = configBoolean(SonicConfiguration.DAC_INTERPOLATE, false);
+        boolean fm6DacOff = configBoolean(SonicConfiguration.FM6_DAC_OFF, false);
+        boolean psgNoiseShift = configBoolean(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE, false);
+        SmpsSequencerConfig defaultConfig =
+                audioProfile != null ? audioProfile.getSequencerConfig() : null;
+
+        // Driver factory mirrors LWJGLAudioBackend.newConfiguredSmpsDriver
+        // but with config captured at session start so the worker doesn't
+        // re-read mutable backend state.
+        Supplier<SmpsDriver> driverFactory = () -> {
+            SmpsDriver driver = new SmpsDriver(sampleRate);
+            driver.setRegion(region);
+            driver.setDacInterpolate(dacInterpolate);
+            driver.setOutputSampleRate(sampleRate);
+            driver.setPsgNoiseShiftOnEveryToggle(psgNoiseShift);
+            return driver;
+        };
+
+        ReverseAudioSession session = new ReverseAudioSession(
+                ring,
+                keyframes.frozenView(),
+                commandTimeline.entries(), // already returns List.copyOf
+                sampleRate,
+                frameRate,
+                region,
+                sampleRate,        // burstAudioFrames: one second of audio
+                sampleRate / 2,    // headroomThresholdFrames: 500ms slack
+                createSmpsDependencyResolver(),
+                driverFactory,
+                buildAudioCommandResolver(),
+                audioProfile,
+                defaultConfig,
+                dacInterpolate,
+                fm6DacOff,
+                psgNoiseShift);
+
+        ReverseResynthesizer worker = new ReverseResynthesizer(session);
+        worker.setCursor(cursor);
+        // Best-effort prefill: try a couple of iterations synchronously so
+        // the worker has historical PCM in the ring before the first audio
+        // drain. Returns false when there's no work to do (e.g. ring full,
+        // cursor at start-of-history); we then leave the rest to the
+        // worker thread.
+        worker.runOneIterationForPrefill(cursor);
+        worker.runOneIterationForPrefill(cursor);
+
+        Thread t = new Thread(worker, "reverse-resynth");
+        t.setDaemon(true);
+        t.start();
+
+        reverseResynthWorker = worker;
+        reverseResynthThread = t;
+    }
+
+    /**
+     * Task 6 lifecycle: cooperative stop + join. Plain join with a 200ms
+     * budget; the detach + timeout-counter hardening that the worker-thread
+     * plan calls for lives in Task 7.
+     */
+    private void stopReverseResynthWorker() {
+        if (reverseResynthWorker == null) {
+            return;
+        }
+        reverseResynthWorker.requestStop();
+        if (reverseResynthThread != null) {
+            try {
+                reverseResynthThread.join(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        reverseResynthWorker = null;
+        reverseResynthThread = null;
+    }
+
+    private static SmpsSequencer.Region configuredRegion() {
+        var config = configuredServicesOrNull();
+        if (config == null) {
+            return SmpsSequencer.Region.NTSC;
+        }
+        return "PAL".equalsIgnoreCase(config.getString(SonicConfiguration.REGION))
+                ? SmpsSequencer.Region.PAL
+                : SmpsSequencer.Region.NTSC;
+    }
+
+    private static boolean configBoolean(SonicConfiguration key, boolean fallback) {
+        var config = configuredServicesOrNull();
+        return config == null ? fallback : config.getBoolean(key);
+    }
+
+    /**
+     * Builds an {@link AudioCommandDataResolver} that captures the live
+     * loaders, dacData, donor maps, and default sequencer config at
+     * session start. The captured references are immutable for the
+     * duration of the held-rewind session — donor loaders, audio profiles,
+     * etc. don't reload during reverse mode in practice.
+     */
+    private AudioCommandDataResolver buildAudioCommandResolver() {
+        SmpsLoader baseLoader = this.smpsLoader;
+        DacData baseDac = this.dacData;
+        SmpsSequencerConfig baseConfig =
+                audioProfile != null ? audioProfile.getSequencerConfig() : null;
+        Map<String, SmpsLoader> donorLoadersCopy = new HashMap<>(this.donorLoaders);
+        Map<String, DacData> donorDacCopy = new HashMap<>(this.donorDacData);
+        Map<String, SmpsSequencerConfig> donorConfigCopy = new HashMap<>(this.donorConfigs);
+
+        return new AudioCommandDataResolver() {
+            @Override
+            public MusicData resolveMusic(AudioCommand.PlayMusic command) {
+                switch (command.route()) {
+                    case BASE_SMPS -> {
+                        if (baseLoader == null || baseDac == null) {
+                            return null;
+                        }
+                        AbstractSmpsData data = baseLoader.loadMusic(command.musicId());
+                        if (data == null) {
+                            return null;
+                        }
+                        return new MusicData(data, baseDac, baseConfig,
+                                AudioSourceDescriptor.baseMusic(command.musicId()));
+                    }
+                    case DONOR_SMPS -> {
+                        SmpsLoader loader = donorLoadersCopy.get(command.donorGameId());
+                        DacData dac = donorDacCopy.get(command.donorGameId());
+                        if (loader == null || dac == null) {
+                            return null;
+                        }
+                        AbstractSmpsData data = loader.loadMusic(command.musicId());
+                        if (data == null) {
+                            return null;
+                        }
+                        return new MusicData(data, dac,
+                                donorConfigCopy.get(command.donorGameId()),
+                                AudioSourceDescriptor.donorMusic(
+                                        command.donorGameId(), command.musicId()));
+                    }
+                    case FALLBACK_WAV, SYSTEM_COMMAND -> {
+                        return null;
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public SfxData resolveSfx(AudioCommand.PlaySfx command) {
+                switch (command.route()) {
+                    case BASE_SMPS_ID -> {
+                        if (baseLoader == null || baseDac == null) {
+                            return null;
+                        }
+                        AbstractSmpsData data = baseLoader.loadSfx(command.sfxId());
+                        if (data == null) {
+                            return null;
+                        }
+                        return new SfxData(data, baseDac, baseConfig);
+                    }
+                    case BASE_SMPS_NAME -> {
+                        if (baseLoader == null || baseDac == null) {
+                            return null;
+                        }
+                        AbstractSmpsData data = baseLoader.loadSfx(command.sfxName());
+                        if (data == null) {
+                            return null;
+                        }
+                        return new SfxData(data, baseDac, baseConfig);
+                    }
+                    case DONOR_SMPS -> {
+                        SmpsLoader loader = donorLoadersCopy.get(command.donorGameId());
+                        DacData dac = donorDacCopy.get(command.donorGameId());
+                        if (loader == null || dac == null) {
+                            return null;
+                        }
+                        AbstractSmpsData data = loader.loadSfx(command.sfxId());
+                        if (data == null) {
+                            return null;
+                        }
+                        return new SfxData(data, dac,
+                                donorConfigCopy.get(command.donorGameId()));
+                    }
+                    case FALLBACK_NAME, RING_RESOLVED -> {
+                        return null;
+                    }
+                }
+                return null;
+            }
+        };
     }
 
     public void advancePausedFrameStepAudio() {
@@ -1142,6 +1383,21 @@ public class AudioManager {
         this.currentReplayReason = null;
         this.audioFrameOwnedExternally = false;
         this.audioFrameAdvanced = false;
+        // Tear down the worker if a held-rewind session was active when
+        // reset fired. requestStop + brief join; if anything is stuck we
+        // detach so the worker can't reach freed state.
+        if (reverseResynthWorker != null) {
+            reverseResynthWorker.detachSession();
+            if (reverseResynthThread != null) {
+                try {
+                    reverseResynthThread.join(50);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            reverseResynthWorker = null;
+            reverseResynthThread = null;
+        }
         this.reverseAudioPresentationActive = false;
         this.preReverseSnapshot = null;
         this.liveRewindAudioKeyframes = null;
