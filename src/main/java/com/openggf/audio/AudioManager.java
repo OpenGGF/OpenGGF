@@ -56,6 +56,7 @@ public class AudioManager {
     private boolean audioFrameOwnedExternally;
     private boolean audioFrameAdvanced;
     private boolean reverseAudioPresentationActive;
+    private AudioLogicalSnapshot preReverseSnapshot;
 
     // Donor audio overlay: secondary SFX path for cross-game feature donation
     private final Map<String, SmpsLoader> donorLoaders = new HashMap<>();
@@ -638,6 +639,7 @@ public class AudioManager {
     }
 
     public void beginReverseAudioPresentation() {
+        preReverseSnapshot = captureLogicalSnapshot();
         reverseAudioPresentationActive = true;
         deterministicAudioRuntime.beginReversePresentation();
         if (backend != null) {
@@ -650,6 +652,33 @@ public class AudioManager {
         deterministicAudioRuntime.endReversePresentation();
         if (backend != null) {
             backend.endReversePresentation();
+        }
+        if (preReverseSnapshot != null) {
+            // 1. Restore driver state (music + standalone SFX) via the normal
+            //    restoreLogicalSnapshot path. This deliberately does NOT touch
+            //    the runtime clock — see the comment on restoreLogicalSnapshot.
+            restoreLogicalSnapshot(preReverseSnapshot);
+            // 2. Separately restore the runtime clock to where it was BEFORE
+            //    held-rewind started. ReverseResynthesizer mutates the clock
+            //    on every burst (runtime.restoreClockSnapshot to a keyframe
+            //    audio-frame index, then forward-step), so at endReverse the
+            //    clock is parked at the last synthesized historical audio
+            //    frame. Without this explicit restore, forward audio after
+            //    held-rewind would resume from that historical position,
+            //    breaking audio-frame indexing.
+            //
+            //    We do this OUTSIDE restoreLogicalSnapshot so normal rewind
+            //    seeks (RewindController.seekTo, stepBackward) continue to
+            //    leave the runtime clock at its current live position — they
+            //    don't touch the clock and shouldn't be made to.
+            AudioFrameClock.Snapshot clockSnap =
+                    preReverseSnapshot.backend() != null
+                            ? preReverseSnapshot.backend().clockSnapshot()
+                            : null;
+            if (clockSnap != null) {
+                deterministicAudioRuntime.restoreClockSnapshot(clockSnap);
+            }
+            preReverseSnapshot = null;
         }
     }
 
@@ -1077,6 +1106,7 @@ public class AudioManager {
         this.audioFrameOwnedExternally = false;
         this.audioFrameAdvanced = false;
         this.reverseAudioPresentationActive = false;
+        this.preReverseSnapshot = null;
         this.deterministicAudioRuntime.clearSubmittedCommands();
         this.deterministicAudioRuntime.clearPcmHistory();
         this.commandTimeline.clear();

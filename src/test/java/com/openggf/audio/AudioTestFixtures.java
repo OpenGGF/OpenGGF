@@ -21,6 +21,7 @@ public final class AudioTestFixtures {
 
     public static final class RecordingAudioBackend extends NullAudioBackend {
         public final List<String> calls = new ArrayList<>();
+        public int restoreLogicalSnapshotCalls;
 
         public int totalCalls() {
             return calls.size();
@@ -28,6 +29,7 @@ public final class AudioTestFixtures {
 
         public void clear() {
             calls.clear();
+            restoreLogicalSnapshotCalls = 0;
         }
 
         @Override public void playMusic(int musicId) { calls.add("playMusic:" + musicId); }
@@ -49,6 +51,12 @@ public final class AudioTestFixtures {
         @Override public void update() { calls.add("update"); }
         @Override public void pause() { calls.add("pause"); }
         @Override public void resume() { calls.add("resume"); }
+        @Override public void restoreLogicalSnapshot(
+                com.openggf.audio.rewind.AudioBackendLogicalSnapshot snapshot,
+                com.openggf.audio.rewind.SmpsDriverSnapshot.DependencyResolver resolver,
+                boolean reverseActive) {
+            restoreLogicalSnapshotCalls++;
+        }
     }
 
     public static final class StubSmpsData extends AbstractSmpsData {
