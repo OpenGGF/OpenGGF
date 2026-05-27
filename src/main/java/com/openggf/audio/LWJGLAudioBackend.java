@@ -16,6 +16,8 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsPresentationReplay;
+import com.openggf.audio.driver.SmpsPresentationState;
 import com.openggf.audio.synth.Ym2612Chip;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
@@ -417,88 +419,34 @@ public class LWJGLAudioBackend implements AudioBackend {
     @Override
     public void playSfxSmps(AbstractSmpsData data, DacData dacData, float pitch,
                              SmpsSequencerConfig config) {
-        // ROM behavior: completely block SFX during override jingle and fade-in period
-        if (sfxBlocked) {
-            return;
+        // SMPS-logical mutation is delegated to SmpsPresentationReplay so the
+        // reverse-resynth worker can apply the same logic to its private
+        // presentation state without touching backend OpenAL/runtime state.
+        // The backend retains responsibility for binding the runtime SFX
+        // stream when a new standalone driver is created.
+        SmpsPresentationReplay.SfxReplayDependencies deps =
+                new SmpsPresentationReplay.SfxReplayDependencies(
+                        getSmpsOutputRate(),
+                        configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE),
+                        configService.getBoolean(SonicConfiguration.FM6_DAC_OFF),
+                        configService.getBoolean(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
+                        audioProfile,
+                        config != null ? config : requireSmpsConfig());
+        SmpsPresentationReplay.SfxApplyResult result;
+        synchronized (streamLock) {
+            SmpsPresentationState state = new SmpsPresentationState();
+            state.musicDriver = smpsDriver;
+            state.activeMusicStream = currentStream;
+            state.activeMusicSequencer = currentSmps;
+            state.sfxStream = sfxStream;
+            state.sfxBlocked = sfxBlocked;
+            result = SmpsPresentationReplay.applyToSfx(
+                    state, data, dacData, pitch, config, deps);
+            // Write back any state the replay may have updated.
+            sfxStream = state.sfxStream;
         }
-
-        SmpsSequencerConfig effectiveConfig = (config != null) ? config : requireSmpsConfig();
-
-        boolean dacInterpolate = configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE);
-        boolean fm6DacOff = configService.getBoolean(SonicConfiguration.FM6_DAC_OFF);
-
-        // Look up SFX priority from game-specific audio profile
-        int sfxPriority = (audioProfile != null) ? audioProfile.getSfxPriority(data.getId()) : 0x70;
-        boolean specialSfx = (audioProfile != null) && audioProfile.isSpecialSfx(data.getId());
-
-        // --- Continuous SFX detection (Z80: zPlaySound_Bankswitch lines 1937-1965) ---
-        // If this SFX is continuous (S3K >= 0xBC) and the same one is already playing,
-        // extend playback (set the flag) instead of restarting from scratch.
-        boolean isContinuous = (audioProfile != null) && audioProfile.isContinuousSfx(data.getId());
-        int contTrackCount = data.getChannels() + data.getPsgChannels();
-        if (isContinuous) {
-            SmpsDriver targetDriver = null;
-            if (smpsDriver != null && currentStream == smpsDriver) {
-                targetDriver = smpsDriver;
-            } else {
-                synchronized (streamLock) {
-                    if (sfxStream instanceof SmpsDriver) {
-                        targetDriver = (SmpsDriver) sfxStream;
-                    }
-                }
-            }
-            if (targetDriver != null && targetDriver.extendContinuousSfx(data.getId(), contTrackCount)) {
-                return; // Extended existing playback — no new sequencer needed
-            }
-        }
-
-        if (smpsDriver != null) {
-            // Mix into current driver
-            if (isContinuous) {
-                smpsDriver.startContinuousSfx(data.getId(), contTrackCount);
-            }
-            SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, effectiveConfig);
-            seq.setSourceDescriptor(describeSmpsSource(null, data, true));
-            seq.setSampleRate(smpsDriver.getOutputSampleRate());
-            seq.setFm6DacOff(fm6DacOff);
-            seq.setSfxMode(true);
-            seq.setPitch(pitch);
-            seq.setSfxPriority(sfxPriority);
-            seq.setSpecialSfx(specialSfx);
-            if (currentSmps != null) {
-                seq.setFallbackVoiceData(currentSmps.getSmpsData());
-            }
-            smpsDriver.addSequencer(seq, true);
-        } else {
-            // Standalone SFX driver
-            synchronized (streamLock) {
-                SmpsDriver sfxDriver;
-                if (sfxStream instanceof SmpsDriver) {
-                    sfxDriver = (SmpsDriver) sfxStream;
-                } else {
-                    sfxDriver = new SmpsDriver(getSmpsOutputRate());
-                    sfxDriver.setDacInterpolate(dacInterpolate);
-                    sfxStream = sfxDriver;
-                }
-                sfxDriver.setOutputSampleRate(getSmpsOutputRate());
-                applyPsgNoiseConfig(sfxDriver);
-                if (isContinuous) {
-                    sfxDriver.startContinuousSfx(data.getId(), contTrackCount);
-                }
-                SmpsSequencer seq = new SmpsSequencer(data, dacData, sfxDriver, effectiveConfig);
-                seq.setSourceDescriptor(describeSmpsSource(null, data, true));
-                seq.setSampleRate(sfxDriver.getOutputSampleRate());
-                seq.setFm6DacOff(fm6DacOff);
-                seq.setSfxMode(true);
-                seq.setPitch(pitch);
-                seq.setSfxPriority(sfxPriority);
-                seq.setSpecialSfx(specialSfx);
-                if (currentSmps != null) {
-                    seq.setFallbackVoiceData(currentSmps.getSmpsData());
-                }
-                sfxDriver.addSequencer(seq, true);
-                deterministicAudioRuntime.setSfxStream(sfxDriver);
-            }
+        if (result == SmpsPresentationReplay.SfxApplyResult.NEW_STANDALONE_DRIVER) {
+            deterministicAudioRuntime.setSfxStream(sfxStream);
         }
     }
 
