@@ -440,6 +440,10 @@ public class Sonic3kConstants {
     // Used by CutsceneKnux_HCZ2 to restore normal palette after cutscene.
     public static final int PAL_POINTERS_HCZ2_INDEX = 13;
 
+    // PalPointers index for ICZ2 main palette (Pal_ICZ2 → palette lines 1-3).
+    // AfterBoss_ICZ2 reloads the first line via PalLoad_Line1 after the miniboss.
+    public static final int PAL_POINTERS_ICZ2_INDEX = 21;
+
     // Pal_AIZIntroEmeralds - Emerald palette (32 bytes = 16 colors)
     public static final int PAL_AIZ_INTRO_EMERALDS_ADDR = 0x067AAA;
 
@@ -1498,6 +1502,18 @@ public class Sonic3kConstants {
     // Map_CNZMiniboss - CNZ miniboss mappings. The include file has 22 dc.w entries
     // before Frame_362F00, so the table base is 44 bytes earlier at 0x362ED4.
     public static final int MAP_CNZ_MINIBOSS_ADDR = 0x362ED4;
+
+    // ===== ICZ Miniboss (Object 0xBC) =====
+    // ROM: Obj_ICZMiniboss loads PLC $5F (sonic3k.asm:149653).
+    // PLC_5F loads ArtNem_ICZMiniboss to ArtTile_ICZMiniboss.
+    public static final int PLC_ICZ_MINIBOSS = 0x5F;
+    // Pal_ICZMiniboss - loaded by Obj_ICZMiniboss through PalLoad_Line1.
+    // Verified from the locked-on S&K side by searching the 32-byte palette data:
+    // 00 00 0E EE 0E CC 08 6C ... at ROM offset 0x0719DA.
+    public static final int PAL_ICZ_MINIBOSS_ADDR = 0x0719DA;
+    // Map_ICZMiniboss - include file has 15 dc.w entries before Frame_363362,
+    // so the table base is 0x363362 - 0x1E = 0x363344.
+    public static final int MAP_ICZ_MINIBOSS_ADDR = 0x363344;
 
     // =====================================================================
     // CNZ Act 1 miniboss state machine

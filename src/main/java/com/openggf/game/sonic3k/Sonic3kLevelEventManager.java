@@ -549,7 +549,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (aizEvents != null) {
             return aizEvents.isAct2TransitionRequested();
         }
-        return cnzEvents != null && cnzEvents.isAct2TransitionRequested();
+        if (cnzEvents != null) {
+            return cnzEvents.isAct2TransitionRequested();
+        }
+        return iczEvents != null && iczEvents.isAct2TransitionRequested();
     }
 
     /** Returns the CNZ zone events handler, or null if not in CNZ. */
@@ -1086,7 +1089,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   1 byte    mgz handler present flag
         //   228 bytes mgz state (16 booleans + 23 ints + 30 ints = 16+92+120 = 228)
         //   1 byte    icz handler present flag
-        //   24 bytes  icz state (4 booleans + 5 ints; see Sonic3kICZEvents.rewindStateBytes())
+        //   25 bytes  icz state (5 booleans + 5 ints; see Sonic3kICZEvents.rewindStateBytes())
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
         int aizSize = 20 + 15 * 4 + 4; // 84
         int hczSize = 7 + 9 * 4; // 43

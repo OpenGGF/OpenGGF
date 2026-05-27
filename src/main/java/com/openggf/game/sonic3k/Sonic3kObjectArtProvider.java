@@ -160,6 +160,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             loadCnzMinibossArtFromPlc();
             loadCnzEndBossArt();
             loadCnzTraversalArt();
+        } else if (zoneIndex == 0x05) {
+            loadSharedBossExplosionArt();
+            loadIczMinibossArtFromPlc();
         }
 
         // Level-art sheets are registered later via registerLevelArtSheets()
@@ -1251,6 +1254,31 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             }
         } catch (IOException e) {
             LOG.warning("Failed to load CNZ miniboss art from PLC: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Loads ICZ miniboss art via PLC 0x5F, matching {@code Obj_ICZMiniboss}.
+     */
+    private void loadIczMinibossArtFromPlc() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) return;
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            PlcDefinition plc = Sonic3kPlcLoader.parsePlc(rom, Sonic3kConstants.PLC_ICZ_MINIBOSS);
+            List<Pattern[]> decompressed = PlcParser.decompressAll(rom, plc);
+            if (decompressed.isEmpty() || decompressed.get(0).length == 0) {
+                LOG.warning("ICZ miniboss PLC produced no art");
+                return;
+            }
+
+            registerSheet(Sonic3kObjectArtKeys.ICZ_MINIBOSS,
+                    buildSheetFromPatterns(decompressed.get(0), reader,
+                            Sonic3kConstants.MAP_ICZ_MINIBOSS_ADDR, 1));
+            LOG.info("Loaded ICZ miniboss art via PLC 0x5F: "
+                    + decompressed.get(0).length + " tiles");
+        } catch (IOException e) {
+            LOG.warning("Failed to load ICZ miniboss art from PLC: " + e.getMessage());
         }
     }
 

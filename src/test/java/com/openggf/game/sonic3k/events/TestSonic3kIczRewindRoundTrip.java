@@ -92,7 +92,7 @@ class TestSonic3kIczRewindRoundTrip {
     void rewindStateSizeIsAtLeastTwentyFour() {
         // Locked-in contract: any future refactor that drops state must also
         // either match the byte count or update the constant deliberately.
-        assertTrue(Sonic3kICZEvents.rewindStateBytes() >= 24,
-                "ICZ rewind state must encode at minimum 4 booleans + 5 ints");
+        assertTrue(Sonic3kICZEvents.rewindStateBytes() >= 25,
+                "ICZ rewind state must encode at minimum 5 booleans + 5 ints");
     }
 }

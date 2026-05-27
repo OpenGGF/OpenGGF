@@ -61,6 +61,16 @@ public interface ObjectServices {
     Level currentLevel();
     int romZoneId();
     int currentAct();
+
+    /**
+     * Returns ROM {@code Apparent_act}. During seamless S3K act reloads this
+     * can intentionally differ from {@link #currentAct()}.
+     */
+    default int apparentAct() {
+        LevelManager manager = levelManager();
+        return manager != null ? manager.getApparentAct() : currentAct();
+    }
+
     int featureZoneId();
     int featureActId();
     ZoneFeatureProvider zoneFeatureProvider();
