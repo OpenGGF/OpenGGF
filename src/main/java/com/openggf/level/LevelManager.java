@@ -337,7 +337,11 @@ public class LevelManager {
         com.openggf.game.session.GameplayModeContext gameplayMode =
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindController() != null) {
-            gameplayMode.getRewindController().resetBufferAtCurrentFrame();
+            // Reset the rewind controller's frame counter back to 0 so
+            // the new level starts with a clean rewind-counter origin.
+            // Without this, the rewind HUD counter carries over the
+            // accumulated frame count from the previous level.
+            gameplayMode.getRewindController().resetToFrameZero();
         }
     }
 
