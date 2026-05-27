@@ -1,15 +1,21 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.save.SaveReason;
+import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.IczBigSnowPileInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
+import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+import java.io.IOException;
 
 /**
  * IceCap Zone dynamic level events.
@@ -34,6 +40,16 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private static final int ICZ1_BG_INTRO = 0;
     private static final int ICZ1_BG_SNOW_FALL = 4;
     private static final int ICZ1_BG_REFRESH = 8;
+    private static final int ICZ1_BG_REFRESH_2 = 12;
+    private static final int ICZ1_BG_NORMAL = 16;
+    private static final int ICZ1_BG_TRANSITION = 20;
+    private static final int ICZ1_TRANSITION_CAMERA_X = 0x6900;
+    private static final int ICZ1_TO_ICZ2_OFFSET_X = -0x6880;
+    private static final int ICZ1_TO_ICZ2_OFFSET_Y = 0x0100;
+    private static final int ICZ2_CAMERA_MIN_X = 0x0000;
+    private static final int ICZ2_CAMERA_MAX_X = 0x7000;
+    private static final int ICZ2_CAMERA_MIN_Y = 0x0000;
+    private static final int ICZ2_CAMERA_MAX_Y = 0x0B20;
     private static final int ICZ1_BIG_SNOW_FINAL_OFFSET = -0x012E;
     private static final int ICZ1_BIG_SNOW_ACCELERATION = 0x2400;
     private static final int ICZ1_BIG_SNOW_RUMBLE_MASK = 0x000F;
@@ -75,6 +91,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
     private int bigSnowOffsetSubpixels;
     private int bigSnowVelocity;
     private boolean bigSnowPileSpawned;
+    private boolean act2TransitionRequested;
 
     @Override
     public void init(int act) {
@@ -86,6 +103,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         bigSnowOffsetSubpixels = 0;
         bigSnowVelocity = 0;
         bigSnowPileSpawned = false;
+        act2TransitionRequested = false;
         indoorPaletteCyclingActive = initialIndoorPaletteCycleState(act);
         applyInitialBackgroundPalette(act);
         if (act == 0 && playerCharacter() == PlayerCharacter.SONIC_ALONE) {
@@ -133,12 +151,20 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         return backgroundRoutine;
     }
 
+    public void forceAct1NormalBackgroundRoutineForTest() {
+        backgroundRoutine = ICZ1_BG_NORMAL;
+    }
+
+    public boolean isAct2TransitionRequested() {
+        return act2TransitionRequested;
+    }
+
     /**
      * Number of bytes that {@link #writeRewindState(java.nio.ByteBuffer)} produces.
-     * 4 booleans (4 bytes) + 5 ints (20 bytes) = 24 bytes.
+     * 5 booleans (5 bytes) + 5 ints (20 bytes) = 25 bytes.
      */
     public static int rewindStateBytes() {
-        return 4 + 5 * 4;
+        return 5 + 5 * 4;
     }
 
     /**
@@ -151,6 +177,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         buf.put((byte) (introSpawned ? 1 : 0));
         buf.put((byte) (indoorPaletteCyclingActive ? 1 : 0));
         buf.put((byte) (bigSnowPileSpawned ? 1 : 0));
+        buf.put((byte) (act2TransitionRequested ? 1 : 0));
         buf.putInt(eventRoutine);
         buf.putInt(backgroundRoutine);
         buf.putInt(bigSnowOffset);
@@ -164,6 +191,7 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         introSpawned = buf.get() != 0;
         indoorPaletteCyclingActive = buf.get() != 0;
         bigSnowPileSpawned = buf.get() != 0;
+        act2TransitionRequested = buf.get() != 0;
         eventRoutine = buf.getInt();
         backgroundRoutine = buf.getInt();
         bigSnowOffset = buf.getInt();
@@ -219,8 +247,12 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         switch (backgroundRoutine) {
             case ICZ1_BG_INTRO -> updateAct1BackgroundIntro(frameCounter);
             case ICZ1_BG_SNOW_FALL -> updateAct1BackgroundSnowFall(frameCounter);
+            case ICZ1_BG_REFRESH -> updateAct1BackgroundRefresh();
+            case ICZ1_BG_REFRESH_2 -> updateAct1BackgroundRefresh2();
+            case ICZ1_BG_NORMAL -> updateAct1BackgroundNormal();
+            case ICZ1_BG_TRANSITION -> requestIcz2Transition();
             default -> {
-                // ICZ1 background routine 8 is the ROM's post-fall refresh/terminal state.
+                // ICZ1 unknown background stages are terminal until ported.
             }
         }
     }
@@ -253,6 +285,59 @@ public class Sonic3kICZEvents extends Sonic3kZoneEvents {
         }
         if (playerCharacter() != PlayerCharacter.KNUCKLES) {
             updateBigSnowFall(frameCounter);
+        }
+    }
+
+    private void updateAct1BackgroundRefresh() {
+        backgroundRoutine = ICZ1_BG_REFRESH_2;
+    }
+
+    private void updateAct1BackgroundRefresh2() {
+        indoorPaletteCyclingActive = true;
+        applyLine4BackgroundPalette(ICZ1_INDOOR_LINE4_COLORS_1_TO_11);
+        backgroundRoutine = ICZ1_BG_NORMAL;
+    }
+
+    private void updateAct1BackgroundNormal() {
+        if ((camera().getX() & 0xFFFF) < ICZ1_TRANSITION_CAMERA_X) {
+            return;
+        }
+        backgroundRoutine = ICZ1_BG_TRANSITION;
+        requestIcz2Transition();
+    }
+
+    private void requestIcz2Transition() {
+        if (act2TransitionRequested) {
+            return;
+        }
+        act2TransitionRequested = true;
+
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest.builder(
+                        SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(Sonic3kZoneIds.ZONE_ICZ, 1)
+                .deactivateLevelNow(false)
+                .preserveMusic(true)
+                .preserveLevelGamestate(true)
+                .showInLevelTitleCard(false)
+                .preserveOffsetCameraPosition(true)
+                .postTransitionMinX(ICZ2_CAMERA_MIN_X)
+                .postTransitionMaxX(ICZ2_CAMERA_MAX_X)
+                .postTransitionMinY(ICZ2_CAMERA_MIN_Y)
+                .postTransitionMaxY(ICZ2_CAMERA_MAX_Y)
+                .postTransitionMaxYTarget(ICZ2_CAMERA_MAX_Y)
+                .playerOffset(ICZ1_TO_ICZ2_OFFSET_X, ICZ1_TO_ICZ2_OFFSET_Y)
+                .cameraOffset(ICZ1_TO_ICZ2_OFFSET_X, ICZ1_TO_ICZ2_OFFSET_Y)
+                .build();
+
+        SessionSaveRequests.requestCurrentSessionSave(SaveReason.PROGRESSION_SAVE);
+        if (levelManager().getCurrentLevel() == null) {
+            levelManager().requestSeamlessTransition(request);
+            return;
+        }
+        try {
+            levelManager().executeActTransition(request);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to apply ICZ act transition", e);
         }
     }
 

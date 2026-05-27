@@ -34,7 +34,8 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance {
 
     public enum CleanupAction {
         NONE,
-        RESTORE_AIZ_FIRE_PALETTE
+        RESTORE_AIZ_FIRE_PALETTE,
+        RESTORE_ICZ2_OBJECT_PALETTE
     }
 
     /** ROM: Obj_EndSignControl timer = $77 (119 frames). */
@@ -170,6 +171,7 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance {
                     // No zone-specific cleanup.
                 }
                 case RESTORE_AIZ_FIRE_PALETTE -> restoreAizFirePalette();
+                case RESTORE_ICZ2_OBJECT_PALETTE -> restoreIcz2ObjectPalette();
             }
         } catch (Exception e) {
             LOG.fine("Zone cleanup action failed: " + e.getMessage());
@@ -188,6 +190,23 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance {
                 S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
                 1,
                 palData);
+    }
+
+    private void restoreIcz2ObjectPalette() throws Exception {
+        // AfterBoss_ICZ2: lea (Pal_ICZ2).l,a1 / jmp (PalLoad_Line1).l.
+        int entryAddr = Sonic3kConstants.PAL_POINTERS_ADDR
+                + Sonic3kConstants.PAL_POINTERS_ICZ2_INDEX * Sonic3kConstants.PAL_POINTER_ENTRY_SIZE;
+        int sourceAddr = services().rom().read32BitAddr(entryAddr) & 0x00FFFFFF;
+        byte[] palData = services().rom().readBytes(sourceAddr, 32);
+        S3kPaletteWriteSupport.applyLine(
+                services().paletteOwnershipRegistryOrNull(),
+                services().currentLevel(),
+                services().graphicsManager(),
+                S3kPaletteOwners.ICZ_MINIBOSS,
+                S3kPaletteOwners.PRIORITY_CUTSCENE_OVERRIDE,
+                1,
+                palData,
+                true);
     }
 
     // =========================================================================

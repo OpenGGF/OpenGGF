@@ -40,6 +40,7 @@ public final class S3kPaletteOwners {
      * can observe the explicit owner.
      */
     public static final String CNZ_MINIBOSS = "s3k.cnz.miniboss";
+    public static final String ICZ_MINIBOSS = "s3k.icz.miniboss";
     /**
      * Reserved owner ID for the Knuckles-route teleporter palette override.
      *

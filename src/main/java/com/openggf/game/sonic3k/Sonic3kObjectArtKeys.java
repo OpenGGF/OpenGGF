@@ -229,6 +229,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String ICZ_SNOWDUST = "icz_snowdust";
     public static final String ICZ_STAR_POINTER = "icz_star_pointer";
     public static final String ICZ_PENGUINATOR = "icz_penguinator";
+    public static final String ICZ_MINIBOSS = "icz_miniboss";
 
     // LBZ badniks
     public static final String SNALE_BLASTER = "lbz_snale_blaster";
