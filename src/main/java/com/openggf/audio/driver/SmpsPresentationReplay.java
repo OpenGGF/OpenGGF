@@ -12,6 +12,7 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -429,6 +430,14 @@ public final class SmpsPresentationReplay {
             SmpsDriverSnapshot.DependencyResolver resolver,
             Supplier<SmpsDriver> driverFactory,
             Runnable fadeCompleteCallback) {
+        Objects.requireNonNull(state, "state");
+        Objects.requireNonNull(snapshot, "snapshot");
+        Objects.requireNonNull(resolver, "resolver");
+        Objects.requireNonNull(driverFactory, "driverFactory");
+        // fadeCompleteCallback is only invoked when the restored music is
+        // mid-fade-in with sfxBlocked set, so it may legitimately be null
+        // for snapshots that won't trigger that branch. Document via the
+        // Javadoc; do not require non-null here.
         state.musicDriver = null;
         state.activeMusicStream = null;
         state.activeMusicSequencer = null;
