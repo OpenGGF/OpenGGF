@@ -2,12 +2,16 @@ package com.openggf.audio;
 
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
+import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
+import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.runtime.ReverseResynthesizer;
+import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
@@ -902,7 +906,34 @@ public class LWJGLAudioBackend implements AudioBackend {
             }
             deterministicAudioRuntime = runtime;
             bindRuntimePresentationStreams();
+            attachReverseResynthesizer(runtime);
         }
+    }
+
+    private void attachReverseResynthesizer(DeterministicAudioRuntime runtime) {
+        if (!(runtime instanceof StreamBackedDeterministicAudioRuntime stream)) {
+            return;
+        }
+        // Pull the ring out of the runtime so the resynth and the cursor share
+        // a single source of truth.
+        PcmHistoryRing ring = stream.pcmHistoryRingForReverseResynth();
+        AudioManager audio = AudioManager.getInstance();
+        AudioKeyframeStore keyframes = audio.audioKeyframesForReverseResynth();
+        if (ring == null || keyframes == null) {
+            // Either we have no ring (NoOp-shaped runtime) or no keyframe store
+            // yet (early boot, between live-rewind sessions, headless trace
+            // mode). Explicitly clear any previously-attached resynthesizer so
+            // a stale instance never lingers with a freed AudioKeyframeStore
+            // after Task 13's teardown re-runs attach with keyframes == null.
+            stream.setReverseResynthesizer(null);
+            return;
+        }
+        int sampleRate = stream.sampleRateForReverseResynth();
+        ReverseResynthesizer resynth = new ReverseResynthesizer(
+                ring, keyframes, audio, runtime,
+                /* burst */ sampleRate,
+                /* headroom */ sampleRate / 2);
+        stream.setReverseResynthesizer(resynth);
     }
 
     @Override

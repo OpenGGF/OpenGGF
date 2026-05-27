@@ -2,6 +2,7 @@ package com.openggf.audio;
 
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioCommandTimeline;
+import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
@@ -57,6 +58,7 @@ public class AudioManager {
     private boolean audioFrameAdvanced;
     private boolean reverseAudioPresentationActive;
     private AudioLogicalSnapshot preReverseSnapshot;
+    private AudioKeyframeStore liveRewindAudioKeyframes;
 
     // Donor audio overlay: secondary SFX path for cross-game feature donation
     private final Map<String, SmpsLoader> donorLoaders = new HashMap<>();
@@ -81,6 +83,10 @@ public class AudioManager {
 
     public AudioBackend getBackend() {
         return backend;
+    }
+
+    public AudioKeyframeStore audioKeyframesForReverseResynth() {
+        return liveRewindAudioKeyframes;
     }
 
     void setDeterministicAudioRuntime(DeterministicAudioRuntime deterministicAudioRuntime) {

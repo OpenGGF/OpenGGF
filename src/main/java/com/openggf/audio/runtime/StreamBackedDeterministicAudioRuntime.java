@@ -243,6 +243,14 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
         return frameClock.samplesForNextFrame();
     }
 
+    public PcmHistoryRing pcmHistoryRingForReverseResynth() {
+        return pcmHistory;
+    }
+
+    public int sampleRateForReverseResynth() {
+        return frameClock.sampleRate();
+    }
+
     public void setReverseResynthesizer(ReverseResynthesizer resynthesizer) {
         this.reverseResynthesizer = resynthesizer;
     }

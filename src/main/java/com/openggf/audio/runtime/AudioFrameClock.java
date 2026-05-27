@@ -41,6 +41,10 @@ public final class AudioFrameClock {
         return totalSamplesProduced;
     }
 
+    public int sampleRate() {
+        return sampleRate;
+    }
+
     public int remainder() {
         return remainder;
     }
