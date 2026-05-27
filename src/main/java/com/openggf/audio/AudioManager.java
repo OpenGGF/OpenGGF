@@ -822,6 +822,11 @@ public class AudioManager {
 
         ReverseResynthesizer worker = new ReverseResynthesizer(session);
         worker.setCursor(cursor);
+        LOGGER.info(String.format(
+                "rewind-resynth: session opened (sampleRate=%d, burst=%d frames,"
+                        + " headroom=%d frames, keyframes=%d, timeline=%d entries)",
+                sampleRate, sampleRate, sampleRate / 2,
+                session.keyframes().size(), session.frozenTimeline().size()));
         // Best-effort prefill: try a couple of iterations synchronously so
         // the worker has historical PCM in the ring before the first audio
         // drain. Returns false when there's no work to do (e.g. ring full,
@@ -894,9 +899,12 @@ public class AudioManager {
         if (reverseResynthWorker == null) {
             return;
         }
-        shutdownReverseResynthWorker(
+        boolean clean = shutdownReverseResynthWorker(
                 reverseResynthWorker, reverseResynthThread,
                 REVERSE_RESYNTH_JOIN_TIMEOUT_MILLIS);
+        LOGGER.info("rewind-resynth: session closed ("
+                + (clean ? "clean shutdown" : "timeout, detached")
+                + ", total timeouts=" + reverseResynthShutdownTimeouts + ")");
         // Whether the worker exited cleanly or had to be detached, the
         // AudioManager is done with it. A detached worker survives on its
         // own thread for one more burst boundary at most; it can never

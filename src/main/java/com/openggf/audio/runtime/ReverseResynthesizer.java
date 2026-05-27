@@ -10,6 +10,7 @@ import com.openggf.audio.rewind.AudioTimelineEntry;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 /**
  * Reverse-resynth worker that synthesises historical PCM into a
@@ -58,7 +59,13 @@ import java.util.Objects;
  */
 public final class ReverseResynthesizer implements Runnable {
 
+    private static final Logger LOGGER = Logger.getLogger(ReverseResynthesizer.class.getName());
     private static final long IDLE_SLEEP_MILLIS = 2;
+
+    /** Burst counter for the light info-level diagnostic log. Reset on
+     *  each new session (i.e. each fresh worker instance, since the
+     *  constructor binds a session). */
+    private long burstCounter;
 
     private volatile ReverseAudioSession session;
     private volatile PcmHistoryRing.ReverseCursor cursor;
@@ -101,6 +108,7 @@ public final class ReverseResynthesizer implements Runnable {
         this.session = null;
         this.cursor = null;
         this.stopping = true;
+        LOGGER.info("rewind-resynth: session detached (worker will exit at next burst boundary)");
     }
 
     /**
@@ -173,6 +181,17 @@ public final class ReverseResynthesizer implements Runnable {
                 || keyframe.backend().clockSnapshot() == null) {
             return false;
         }
+
+        long burstIndex = ++burstCounter;
+        long keyframeAudio = keyframe.backend().clockSnapshot().totalSamplesProduced();
+        LOGGER.info(String.format(
+                "rewind-resynth burst #%d: %d frames into audio[%d..%d), restoring from keyframe@gf=%d audio=%d",
+                burstIndex,
+                actualBurstFrames,
+                targetOldestAudioFrame,
+                cursor.oldestReadableFrame(),
+                keyframe.commandTimelineFrame(),
+                keyframeAudio));
 
         // Restore worker's private state from the chosen keyframe. Note
         // that this clears the override stack on workerState — the
@@ -263,6 +282,9 @@ public final class ReverseResynthesizer implements Runnable {
         // ring's prependBackward consumes source[0..1] as the newest frame.
         reverseStereoFrames(mixed, mixedOffset);
         s.ring().prependBackward(targetOldestAudioFrame, cursor, mixed, mixedOffset);
+        LOGGER.info(String.format(
+                "rewind-resynth burst #%d: prepended %d frames, cursor floor now %d",
+                burstIndex, mixedOffset, cursor.oldestReadableFrame()));
         return true;
     }
 
