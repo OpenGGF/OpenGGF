@@ -432,7 +432,11 @@ public class LWJGLAudioBackend implements AudioBackend {
                         configService.getBoolean(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
                         audioProfile,
                         config != null ? config : requireSmpsConfig());
-        SmpsPresentationReplay.SfxApplyResult result;
+        // Capture the freshly-created standalone driver under the lock so a
+        // concurrent path (e.g. stopAllSfx clearing sfxStream) can't slip in
+        // between the unlock and the runtime binding and make us bind the
+        // wrong reference.
+        AudioStream newStandaloneStream = null;
         synchronized (streamLock) {
             SmpsPresentationState state = new SmpsPresentationState();
             state.musicDriver = smpsDriver;
@@ -440,13 +444,17 @@ public class LWJGLAudioBackend implements AudioBackend {
             state.activeMusicSequencer = currentSmps;
             state.sfxStream = sfxStream;
             state.sfxBlocked = sfxBlocked;
-            result = SmpsPresentationReplay.applyToSfx(
-                    state, data, dacData, pitch, config, deps);
+            SmpsPresentationReplay.SfxApplyResult result =
+                    SmpsPresentationReplay.applyToSfx(
+                            state, data, dacData, pitch, config, deps);
             // Write back any state the replay may have updated.
             sfxStream = state.sfxStream;
+            if (result == SmpsPresentationReplay.SfxApplyResult.NEW_STANDALONE_DRIVER) {
+                newStandaloneStream = sfxStream;
+            }
         }
-        if (result == SmpsPresentationReplay.SfxApplyResult.NEW_STANDALONE_DRIVER) {
-            deterministicAudioRuntime.setSfxStream(sfxStream);
+        if (newStandaloneStream != null) {
+            deterministicAudioRuntime.setSfxStream(newStandaloneStream);
         }
     }
 
