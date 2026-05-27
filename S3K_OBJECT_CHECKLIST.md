@@ -5,8 +5,8 @@ Generated: 2026-04-19 12:00:00
 ## Summary
 
 - **Total unique objects found:** 302
-- **Implemented:** 88 (29.0%)
-- **Unimplemented:** 214 (70.6%)
+- **Implemented:** 89 (29.5%)
+- **Unimplemented:** 213 (70.5%)
 
 ## Implemented Objects
 
@@ -276,7 +276,7 @@ Generated: 2026-04-19 12:00:00
 | 0x88 | Object | CNZWaterLevelCorkFloor | 2 |  | CNZ2 |
 | 0xE0 | Object | FBZWallMissile | 2 |  | FBZ1 |
 | 0xE5 | Object | FBZSpiderCrane | 2 |  | FBZ2 |
-| 0xBC | Boss | ICZMiniboss | 2 |  | ICZ2 |
+| 0xBC | Boss | ICZMiniboss | 2 | ✅ | ICZ2 |
 | 0xAB | Object | SOZCapsuleHyudoro | 2 |  | SOZ2 |
 | 0x16 | Object | LRZWallRide | 2 |  | LRZ1, LRZ2 |
 | 0x1D | Object | LRZShootingTrigger | 2 |  | LRZ1 |
@@ -779,14 +779,14 @@ Total: 249 objects | Implemented: 24 | Unimplemented: 0
 
 #### Act 2
 
-Total: 356 objects | Implemented: 24 | Unimplemented: 5
+Total: 356 objects | Implemented: 25 | Unimplemented: 4
 
 **Badniks:**
 - [x] 0xAD Penguinator (x32) [0x10, 0x20, 0x40]
 - [x] 0xAE StarPointer (x18) [0x00, 0x02, 0x04]
 
 **Bosses:**
-- [ ] 0xBC ICZMiniboss (x2) [0x00, 0x02]
+- [x] 0xBC ICZMiniboss (x2) [0x00, 0x02]
 - [ ] 0xBD ICZEndBoss (x1) [0x00]
 
 **Objects:**
