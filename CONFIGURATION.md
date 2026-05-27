@@ -101,6 +101,9 @@ Paths are relative to the working directory (where the JAR is launched).
 | `LIVE_REWIND_TAPE_COAST_ACCELERATION` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_DECELERATION` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_MAX_STEPS` | number | `4.0` | Maximum rewind steps per visual frame for optional tape-coast rewind. Used only when tape coast is enabled. |
+| `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond the cap plays silence on develop (the audio-rewind feature branch engages the reverse resynthesizer instead). |
+| `REWIND_AUDIO_HISTORY_SECONDS` | int | `10` | Seconds of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"time"`. |
+| `REWIND_AUDIO_HISTORY_SIZE_MB` | int | `2` | Megabytes of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"size"`. Stereo 16-bit at 44.1 kHz consumes ~168 KB/s, so 2 MB is roughly 12 s at that sample rate. |
 | `TEST_MODE_ENABLED` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `TRACE_CATALOG_DIR` and plays the chosen trace back in the live engine. Dev-only. |
 | `TRACE_CATALOG_DIR` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
 
@@ -215,6 +218,9 @@ diagnostic test runs only and must remain unset in CI.
   "LIVE_REWIND_TAPE_COAST_ACCELERATION": 0.25,
   "LIVE_REWIND_TAPE_COAST_DECELERATION": 0.5,
   "LIVE_REWIND_TAPE_COAST_MAX_STEPS": 4.0,
+  "REWIND_AUDIO_HISTORY_LIMIT_TYPE": "time",
+  "REWIND_AUDIO_HISTORY_SECONDS": 10,
+  "REWIND_AUDIO_HISTORY_SIZE_MB": 2,
   "UP": "UP",
   "DOWN": "DOWN",
   "LEFT": "LEFT",

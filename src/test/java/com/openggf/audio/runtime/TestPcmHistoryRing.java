@@ -71,4 +71,34 @@ class TestPcmHistoryRing {
         assertEquals(0, history.createReverseCursor().readPrevious(target, 1));
         assertArrayEquals(new short[] {0, 0}, target);
     }
+
+    @Test
+    void capacityFramesFor_timeMode_multipliesSampleRateBySeconds() {
+        assertEquals(44100 * 10, PcmHistoryRing.capacityFramesFor(44100, "time", 10, 2));
+        assertEquals(48000 * 5, PcmHistoryRing.capacityFramesFor(48000, "TIME", 5, 99));
+    }
+
+    @Test
+    void capacityFramesFor_defaultLimitTypeFallsBackToTime() {
+        assertEquals(44100 * 10, PcmHistoryRing.capacityFramesFor(44100, null, 10, 2));
+        assertEquals(44100 * 10, PcmHistoryRing.capacityFramesFor(44100, "", 10, 2));
+        assertEquals(44100 * 10, PcmHistoryRing.capacityFramesFor(44100, "unknown", 10, 2));
+    }
+
+    @Test
+    void capacityFramesFor_sizeMode_divides16BitStereoBytesByFrame() {
+        // 1 MB / (2 channels * 2 bytes per short) = 262144 frames per MB
+        assertEquals(262144, PcmHistoryRing.capacityFramesFor(44100, "size", 999, 1));
+        assertEquals(524288, PcmHistoryRing.capacityFramesFor(44100, "size", 999, 2));
+        assertEquals(262144, PcmHistoryRing.capacityFramesFor(44100, "SIZE", 999, 1));
+    }
+
+    @Test
+    void capacityFramesFor_clampsNonPositiveInputs() {
+        // seconds and sizeMB both clamp to at least 1 before computing capacity
+        assertEquals(44100, PcmHistoryRing.capacityFramesFor(44100, "time", 0, 2));
+        assertEquals(44100, PcmHistoryRing.capacityFramesFor(44100, "time", -5, 2));
+        assertEquals(262144, PcmHistoryRing.capacityFramesFor(44100, "size", 10, 0));
+        assertEquals(262144, PcmHistoryRing.capacityFramesFor(44100, "size", 10, -1));
+    }
 }

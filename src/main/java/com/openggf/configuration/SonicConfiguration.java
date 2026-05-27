@@ -269,6 +269,31 @@ public enum SonicConfiguration {
 	LIVE_REWIND_TAPE_COAST_MAX_STEPS,
 
 	/**
+	 * How the rewind audio PCM history ring is sized. Accepted values are
+	 * {@code "time"} (cap by seconds, see {@link #REWIND_AUDIO_HISTORY_SECONDS})
+	 * or {@code "size"} (cap by megabytes, see
+	 * {@link #REWIND_AUDIO_HISTORY_SIZE_MB}). When the cap is exceeded the
+	 * oldest audio frames are overwritten; held rewind beyond that point
+	 * plays silence (or, with the audio-rewind feature branch installed,
+	 * triggers the reverse resynthesizer).
+	 */
+	REWIND_AUDIO_HISTORY_LIMIT_TYPE,
+
+	/**
+	 * Seconds of stereo PCM history kept for held-rewind playback when
+	 * {@link #REWIND_AUDIO_HISTORY_LIMIT_TYPE} is {@code "time"}.
+	 */
+	REWIND_AUDIO_HISTORY_SECONDS,
+
+	/**
+	 * Megabytes of stereo PCM history kept for held-rewind playback when
+	 * {@link #REWIND_AUDIO_HISTORY_LIMIT_TYPE} is {@code "size"}. Stereo
+	 * 16-bit at 44.1 kHz consumes roughly 168 KB per second, so 2 MB is
+	 * about 12 seconds at that rate.
+	 */
+	REWIND_AUDIO_HISTORY_SIZE_MB,
+
+	/**
 	 * Key to teleport player to the last checkpoint (debug).
 	 */
 	DEBUG_LAST_CHECKPOINT_KEY,
