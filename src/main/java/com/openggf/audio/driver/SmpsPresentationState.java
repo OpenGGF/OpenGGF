@@ -43,6 +43,15 @@ public final class SmpsPresentationState {
     /** True while a music override (e.g. 1-up jingle) is gating SFX. */
     public boolean sfxBlocked;
 
+    /** Whether the speed-shoes accelerated music mode is active. Read by
+     *  music-start to seed the new sequencer; mutated by setSpeedShoes. */
+    public boolean speedShoesEnabled;
+
+    /** Active music speed multiplier. Seeds new music sequencers and is
+     *  applied to the current sequencer when {@code setSpeedMultiplier}
+     *  fires during play. Default 1 (no multiplier). */
+    public int speedMultiplier = 1;
+
     /** Stack of music states pushed aside by music overrides; the most
      *  recently pushed entry is restored first. A caller (e.g. the live
      *  backend) may install its own {@link Deque} reference here so that

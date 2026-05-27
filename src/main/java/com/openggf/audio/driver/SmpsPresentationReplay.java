@@ -260,8 +260,8 @@ public final class SmpsPresentationReplay {
         SmpsSequencer seq = new SmpsSequencer(data, dacData, driver, config);
         seq.setSourceDescriptor(sourceDescriptor);
         seq.setSampleRate(driver.getOutputSampleRate());
-        seq.setSpeedShoes(deps.speedShoesEnabled());
-        seq.setSpeedMultiplier(deps.speedMultiplier());
+        seq.setSpeedShoes(state.speedShoesEnabled);
+        seq.setSpeedMultiplier(state.speedMultiplier);
         seq.setFm6DacOff(deps.fm6DacOff());
         // Music is the primary voice source for SFX fallback.
         seq.setFallbackVoiceData(data);
@@ -272,6 +272,50 @@ public final class SmpsPresentationReplay {
         state.activeMusicStream = driver;
 
         return new MusicApplyResult(driver, sourceDescriptor);
+    }
+
+    /**
+     * Triggers a fade-out on the active music sequencer, if any. Mirrors
+     * {@code LWJGLAudioBackend.fadeOutMusic}.
+     */
+    public static void applyToFadeOutMusic(SmpsPresentationState state, int steps, int delay) {
+        if (state.activeMusicSequencer != null) {
+            state.activeMusicSequencer.triggerFadeOut(steps, delay);
+        }
+    }
+
+    /**
+     * Updates {@link SmpsPresentationState#speedShoesEnabled} and applies it
+     * to the active music sequencer, if any. Mirrors
+     * {@code LWJGLAudioBackend.setSpeedShoes}.
+     */
+    public static void applyToSetSpeedShoes(SmpsPresentationState state, boolean enabled) {
+        state.speedShoesEnabled = enabled;
+        if (state.activeMusicSequencer != null) {
+            state.activeMusicSequencer.setSpeedShoes(enabled);
+        }
+    }
+
+    /**
+     * Updates {@link SmpsPresentationState#speedMultiplier} and applies it
+     * to the active music sequencer, if any. Mirrors
+     * {@code LWJGLAudioBackend.setSpeedMultiplier}.
+     */
+    public static void applyToSetSpeedMultiplier(SmpsPresentationState state, int multiplier) {
+        state.speedMultiplier = multiplier;
+        if (state.activeMusicSequencer != null) {
+            state.activeMusicSequencer.setSpeedMultiplier(multiplier);
+        }
+    }
+
+    /**
+     * Applies a tempo change to the active music sequencer, if any.
+     * Mirrors {@code LWJGLAudioBackend.changeMusicTempo}.
+     */
+    public static void applyToChangeMusicTempo(SmpsPresentationState state, int newDividingTiming) {
+        if (state.activeMusicSequencer != null) {
+            state.activeMusicSequencer.updateDividingTiming(newDividingTiming);
+        }
     }
 
     /**
@@ -464,8 +508,6 @@ public final class SmpsPresentationReplay {
             SmpsSequencer.Region region,
             boolean dacInterpolate,
             boolean fm6DacOff,
-            boolean psgNoiseShiftOnEveryToggle,
-            boolean speedShoesEnabled,
-            int speedMultiplier) {
+            boolean psgNoiseShiftOnEveryToggle) {
     }
 }

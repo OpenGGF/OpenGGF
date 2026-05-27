@@ -239,9 +239,7 @@ public class LWJGLAudioBackend implements AudioBackend {
                         region,
                         configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE),
                         configService.getBoolean(SonicConfiguration.FM6_DAC_OFF),
-                        configService.getBoolean(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
-                        speedShoesEnabled,
-                        speedMultiplier);
+                        configService.getBoolean(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE));
         SmpsPresentationState state = snapshotPresentationState();
         SmpsPresentationReplay.applyToMusicBase(
                 state, data, dacData, config, musicDescriptor, musicDeps);
@@ -262,6 +260,8 @@ public class LWJGLAudioBackend implements AudioBackend {
         state.activeMusicSequencer = currentSmps;
         state.sfxStream = sfxStream;
         state.sfxBlocked = sfxBlocked;
+        state.speedShoesEnabled = speedShoesEnabled;
+        state.speedMultiplier = speedMultiplier;
         state.musicStack = musicStack;
         state.currentMusicId = currentMusicId;
         state.currentMusicDescriptor = currentMusicDescriptor;
@@ -279,6 +279,8 @@ public class LWJGLAudioBackend implements AudioBackend {
         currentSmps = state.activeMusicSequencer;
         sfxStream = state.sfxStream;
         sfxBlocked = state.sfxBlocked;
+        speedShoesEnabled = state.speedShoesEnabled;
+        speedMultiplier = state.speedMultiplier;
         currentMusicId = state.currentMusicId;
         currentMusicDescriptor = state.currentMusicDescriptor;
     }
@@ -856,9 +858,11 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     @Override
     public void fadeOutMusic(int steps, int delay) {
-        // Fade only music, not SFX - delegated to the music sequencer
-        if (currentSmps != null) {
-            currentSmps.triggerFadeOut(steps, delay);
+        // Fade only music, not SFX — delegated to the music sequencer via
+        // SmpsPresentationReplay so the worker can share the same logic.
+        synchronized (streamLock) {
+            SmpsPresentationState state = snapshotPresentationState();
+            SmpsPresentationReplay.applyToFadeOutMusic(state, steps, delay);
         }
     }
 
@@ -925,30 +929,27 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     @Override
     public void setSpeedShoes(boolean enabled) {
-        this.speedShoesEnabled = enabled;
         synchronized (streamLock) {
-            if (currentSmps != null) {
-                currentSmps.setSpeedShoes(enabled);
-            }
+            SmpsPresentationState state = snapshotPresentationState();
+            SmpsPresentationReplay.applyToSetSpeedShoes(state, enabled);
+            writeBackPresentationState(state);
         }
     }
 
     @Override
     public void setSpeedMultiplier(int multiplier) {
-        this.speedMultiplier = multiplier;
         synchronized (streamLock) {
-            if (currentSmps != null) {
-                currentSmps.setSpeedMultiplier(multiplier);
-            }
+            SmpsPresentationState state = snapshotPresentationState();
+            SmpsPresentationReplay.applyToSetSpeedMultiplier(state, multiplier);
+            writeBackPresentationState(state);
         }
     }
 
     @Override
     public void changeMusicTempo(int newDividingTiming) {
         synchronized (streamLock) {
-            if (currentSmps != null) {
-                currentSmps.updateDividingTiming(newDividingTiming);
-            }
+            SmpsPresentationState state = snapshotPresentationState();
+            SmpsPresentationReplay.applyToChangeMusicTempo(state, newDividingTiming);
         }
     }
 
