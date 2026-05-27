@@ -5,12 +5,16 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Level;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -38,8 +42,8 @@ import java.util.logging.Logger;
  *       handoff for one 0x20-pixel arena row-clear signal.</li>
  *   <li>{@link #getCentreX()}/{@link #getCentreY()} mirror the boss
  *       position held in {@link com.openggf.level.objects.boss.BossStateContext}.</li>
- *   <li>{@link #appendRenderCommands(List)} remains a no-op — the real
- *       rendering lands with the full state machine in a later task.</li>
+ *   <li>{@link #appendRenderCommands(List)} renders the current raw-animation
+ *       mapping frame from the CNZ miniboss art sheet.</li>
  * </ul>
  *
  * <p>Hit count is seeded from
@@ -161,6 +165,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
      * wait timer since the fade itself is orthogonal to workstream-D.
      */
     private static final int CNZ_MINIBOSS_DEFEAT_WAIT = 0x60;
+    private static final int CNZ_MINIBOSS_LEVEL_MUSIC_FADE_TIME = 2 * 60;
     private static final int FRAME_BASE_CLOSED = 0;
     private static final int FRAME_BASE_OPEN = 6;
     /**
@@ -176,6 +181,10 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
      */
     private static final int[] ANIM_CLOSING_FRAMES = {6, 5, 4, 3, 2, 1, 0};
     private static final int[] ANIM_CLOSING_DELAYS = {3, 3, 3, 3, 3, 3, 3};
+    private static final int TOP_HIT_STUN_FRAMES = 0x20;
+    private static final int[] BOSS_FLASH_PALETTE_INDICES = {2, 3, 4, 7, 14};
+    private static final int[] BOSS_FLASH_DARK_COLORS = {0x06E0, 0x0280, 0x0040, 0x0028, 0x0642};
+    private static final int[] BOSS_FLASH_BRIGHT_COLORS = {0x0888, 0x0AAA, 0x0CCC, 0x0888, 0x0AAA};
 
     // ---- Scratch state for the ROM's $2E(a0) wait + $34(a0) post-wait handler. ----
     /**
@@ -247,6 +256,10 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
      * overlapping bit index — the ROM uses two separate byte-offsets.
      */
     private boolean statusBit6TopHit;
+    /** ROM: {@code $20(a0)} damage flash/stun counter for non-final top hits. */
+    private int topHitStunTimer;
+    private final Palette.Color[] savedBossFlashColors = new Palette.Color[BOSS_FLASH_PALETTE_INDICES.length];
+    private boolean bossFlashColorsSaved;
 
     /**
      * ROM: bit 1 of {@code $38(a0)} — top-piece "Move" signal.
@@ -284,6 +297,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
      * semantic for the engine's {@code simulateHitForTest} path.
      */
     private boolean defeatInitiated;
+    private S3kBossExplosionController defeatExplosionController;
     private boolean childrenSpawned;
     private boolean openSparkChildrenSpawned;
     private boolean diagnosticSkippedStartGate;
@@ -355,6 +369,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         // behaviour: when defeated we skip routine dispatch entirely and
         // only advance the wait timer so onEndGo() eventually runs.
         if (state.defeated) {
+            tickDefeatExplosionController();
             tickWait();
             return;
         }
@@ -386,6 +401,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
             }
         }
         tickPlayerHitCollisionRestore();
+        tickTopHitDamageAnimation();
     }
 
     @Override
@@ -405,7 +421,94 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         if (remainingHits == 0 && !defeatInitiated) {
             defeatInitiated = true;
             onDefeatStarted();
+        } else if (remainingHits > 0) {
+            startTopHitDamageAnimation();
         }
+    }
+
+    private void startTopHitDamageAnimation() {
+        // ROM CNZMiniboss_CheckTopHit non-final path:
+        //   bset #6,status(a0)
+        //   move.b #$20,$20(a0)
+        //   Play_SFX sfx_BossHit
+        state.invulnerable = true;
+        state.invulnerabilityTimer = TOP_HIT_STUN_FRAMES;
+        topHitStunTimer = TOP_HIT_STUN_FRAMES;
+        services().playSfx(Sonic3kSfx.BOSS_HIT.id);
+    }
+
+    private void tickTopHitDamageAnimation() {
+        if (topHitStunTimer <= 0) {
+            restoreBossFlashColors();
+            return;
+        }
+        applyBossFlash((topHitStunTimer & 1) == 0
+                ? BOSS_FLASH_BRIGHT_COLORS
+                : BOSS_FLASH_DARK_COLORS);
+        topHitStunTimer--;
+        state.invulnerabilityTimer = topHitStunTimer;
+        if (topHitStunTimer <= 0) {
+            state.invulnerable = false;
+            state.invulnerabilityTimer = 0;
+            restoreBossFlashColors();
+        }
+    }
+
+    private void applyBossFlash(int[] segaColors) {
+        Level level = services().currentLevel();
+        if (level == null || level.getPaletteCount() <= 1) {
+            return;
+        }
+        Palette palette = level.getPalette(1);
+        if (palette == null) {
+            return;
+        }
+        if (!bossFlashColorsSaved) {
+            for (int i = 0; i < BOSS_FLASH_PALETTE_INDICES.length; i++) {
+                Palette.Color existing = palette.getColor(BOSS_FLASH_PALETTE_INDICES[i]);
+                savedBossFlashColors[i] = new Palette.Color(existing.r, existing.g, existing.b);
+            }
+            bossFlashColorsSaved = true;
+        }
+        for (int i = 0; i < BOSS_FLASH_PALETTE_INDICES.length; i++) {
+            palette.setColor(BOSS_FLASH_PALETTE_INDICES[i], colorFromSega(segaColors[i]));
+        }
+        cachePaletteLine1(palette);
+    }
+
+    private void restoreBossFlashColors() {
+        if (!bossFlashColorsSaved) {
+            return;
+        }
+        Level level = services().currentLevel();
+        if (level == null || level.getPaletteCount() <= 1) {
+            bossFlashColorsSaved = false;
+            return;
+        }
+        Palette palette = level.getPalette(1);
+        if (palette == null) {
+            bossFlashColorsSaved = false;
+            return;
+        }
+        for (int i = 0; i < BOSS_FLASH_PALETTE_INDICES.length; i++) {
+            palette.setColor(BOSS_FLASH_PALETTE_INDICES[i], savedBossFlashColors[i]);
+        }
+        cachePaletteLine1(palette);
+        bossFlashColorsSaved = false;
+    }
+
+    private void cachePaletteLine1(Palette palette) {
+        GraphicsManager graphics = services().graphicsManager();
+        if (graphics != null && graphics.isGlInitialized()) {
+            graphics.cachePaletteTexture(palette, 1);
+        }
+    }
+
+    private static Palette.Color colorFromSega(int value) {
+        byte[] bytes = {(byte) ((value >> 8) & 0xFF), (byte) (value & 0xFF)};
+        Palette.Color color = new Palette.Color();
+        color.fromSegaFormat(bytes, 0);
+        return color;
     }
 
     @Override
@@ -819,6 +922,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         // in updateBossLogic() cover the observable "routine dispatch is
         // paused while the post-fade callback counts down" contract.
         state.defeated = true;
+        state.invulnerable = false;
+        topHitStunTimer = 0;
+        restoreBossFlashColors();
         // Forward-looking insurance for a future T8 in-place respawn: clear
         // the top-piece "Move" signal so a fresh CnzMinibossTopInstance won't
         // observe a stale `bset #1,$38(a0)` from this object's previous life
@@ -835,6 +941,30 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         // and relies on the fade/wait loop to tick it. Arm that here with a
         // conservative fade-shaped wait.
         setWait(CNZ_MINIBOSS_DEFEAT_WAIT, WaitCallback.END_GO);
+        defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
+        spawnChild(() -> new S3kBossExplosionChild(state.x, state.y));
+        spawnChild(() -> new SongFadeTransitionInstance(
+                CNZ_MINIBOSS_LEVEL_MUSIC_FADE_TIME, resolveLevelMusicId()));
+        services().playSfx(Sonic3kSfx.EXPLODE.id);
+    }
+
+    private int resolveLevelMusicId() {
+        int levelMusicId = services().getCurrentLevelMusicId();
+        return levelMusicId > 0 ? levelMusicId : Sonic3kMusic.CNZ1.id;
+    }
+
+    private void tickDefeatExplosionController() {
+        if (defeatExplosionController == null || defeatExplosionController.isFinished()) {
+            return;
+        }
+        defeatExplosionController.tick();
+        for (S3kBossExplosionController.PendingExplosion explosion
+                : defeatExplosionController.drainPendingExplosions()) {
+            spawnChild(() -> new S3kBossExplosionChild(explosion.x(), explosion.y()));
+            if (explosion.playSfx()) {
+                services().playSfx(Sonic3kSfx.EXPLODE.id);
+            }
+        }
     }
 
     /**
