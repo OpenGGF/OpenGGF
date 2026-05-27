@@ -268,7 +268,18 @@ public final class RewindController {
     private void discardAudioAfter(int frame) {
         if (audioManager != null) {
             audioManager.discardAudioCommandsAfter(frame);
-            audioKeyframes.discardAfter(frame);
+            // Audio keyframes are memoised audio state used by the
+            // ReverseResynthesizer to read backward through the timeline.
+            // During a held-rewind session we must keep them around;
+            // discarding here would leave only the game-frame-0 keyframe
+            // by the time the user rewinds back near the start, making the
+            // resynth's keyframe lookup return only that one entry and
+            // producing audio from the start of the level instead of the
+            // moment being rewound through. Forward replay re-captures
+            // overwrite any surviving entries at the same frame keys.
+            if (!audioManager.isReverseAudioPresentationActive()) {
+                audioKeyframes.discardAfter(frame);
+            }
         }
     }
 

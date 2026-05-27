@@ -678,6 +678,18 @@ public class AudioManager {
         }
     }
 
+    /**
+     * Returns true if a held-rewind audio presentation is currently active
+     * (i.e. between {@link #beginReverseAudioPresentation} and
+     * {@link #endReverseAudioPresentation}). RewindController consults this
+     * to suppress audio keyframe discard during the session, so the
+     * ReverseResynthesizer can read backward through the keyframes that
+     * forward-play captured.
+     */
+    public boolean isReverseAudioPresentationActive() {
+        return reverseAudioPresentationActive;
+    }
+
     public void beginReverseAudioPresentation() {
         preReverseSnapshot = captureLogicalSnapshot();
         reverseAudioPresentationActive = true;
