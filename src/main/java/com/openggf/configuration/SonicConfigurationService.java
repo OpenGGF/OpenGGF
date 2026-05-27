@@ -21,6 +21,8 @@ public class SonicConfigurationService {
 
 	private Map<String, Object> config;
 	private Map<String, Object> defaults = new HashMap<>();
+	private boolean loadedFromExistingFile;
+	private boolean defaultInsertedSinceLastApply;
 
 	private SonicConfigurationService() {
 		ObjectMapper mapper = new ObjectMapper();
@@ -32,6 +34,7 @@ public class SonicConfigurationService {
 			if (execConfig != null && execConfig.exists()) {
 				try {
 					config = mapper.readValue(execConfig, type);
+					loadedFromExistingFile = true;
 				} catch (IOException e) {
 					LOGGER.log(Level.WARNING, "Failed to load config.json from executable directory", e);
 				}
@@ -42,6 +45,7 @@ public class SonicConfigurationService {
 			if (file.exists()) {
 				try {
 					config = mapper.readValue(file, type);
+					loadedFromExistingFile = true;
 				} catch (IOException e) {
 					LOGGER.log(Level.WARNING, "Failed to load config.json from working directory", e);
 				}
@@ -72,11 +76,12 @@ public class SonicConfigurationService {
 		if (migrationService.migrateDeprecatedS1PreviewCoordLogKey(config)) {
 			configChanged = true;
 		}
-		if (configChanged) {
+
+		boolean defaultsInserted = applyDefaults();
+
+		if (configChanged || (loadedFromExistingFile && defaultsInserted)) {
 			saveConfig();
 		}
-
-		applyDefaults();
 	}
 
 	public int getInt(SonicConfiguration sonicConfiguration) {
@@ -231,10 +236,11 @@ public class SonicConfigurationService {
 		applyDefaults();
 	}
 
-	private void applyDefaults() {
+	private boolean applyDefaults() {
 		if (config == null) {
 			config = new HashMap<>();
 		}
+		defaultInsertedSinceLastApply = false;
 		// Fill in core defaults if missing to keep tests and headless runs stable.
 		putDefault(SonicConfiguration.SCREEN_WIDTH, 640);
 		putDefault(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
@@ -308,6 +314,7 @@ public class SonicConfigurationService {
 				config.put(SonicConfiguration.S3K_SKIP_INTROS.name(), config.get("S3K_SKIP_AIZ1_INTRO"));
 			}
 			config.remove("S3K_SKIP_AIZ1_INTRO");
+			defaultInsertedSinceLastApply = true;
 		}
 		putDefault(SonicConfiguration.S3K_SKIP_INTROS, false);
 		putDefault(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
@@ -323,13 +330,17 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CROSS_GAME_SOURCE, "s2");
 		putDefault(SonicConfiguration.TEST_MODE_ENABLED, false);
 		putDefault(SonicConfiguration.TRACE_CATALOG_DIR, "src/test/resources/traces");
+		return defaultInsertedSinceLastApply;
 	}
 
 	private void putDefault(SonicConfiguration key, Object value) {
 		if (config == null) {
 			config = new HashMap<>();
 		}
-		config.putIfAbsent(key.name(), value);
+		if (!config.containsKey(key.name())) {
+			config.put(key.name(), value);
+			defaultInsertedSinceLastApply = true;
+		}
 		defaults.put(key.name(), value);
 	}
 
