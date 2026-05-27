@@ -2,8 +2,12 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.render.PatternSpriteRenderer;
+
+import java.util.List;
 
 /**
  * S3K Obj $A5 - Batbot.
@@ -23,12 +27,26 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
     private static final int CHASE_ACCELERATION = 8;
     private static final int INITIAL_ACTIVE_X_SPEED = 0x200;
     private static final int INITIAL_MAPPING_FRAME = 2;
+    private static final int BODY_CHILD_FRAME = 3;
+    private static final int BODY_CHILD_ACTIVE_FRAME = 4;
+    private static final int BODY_CHILD_Y_OFFSET = 0x10;
+    private static final int LAMP_CHILD_FRAME = 5;
+    private static final int LAMP_CHILD_Y_OFFSET = 0x03;
+    private static final int PARENT_ANIM_DELAY = 2;
+    private static final int[] PARENT_ANIM_FRAMES = {0, 1, 2, 1};
+    private static final int[] BODY_ANIM_FRAMES = {3, 4, 3, 4, 3, 4};
+    private static final int[] BODY_ANIM_DELAYS = {0x1D, 2, 1, 2, 0x0E, 2};
 
     private enum State { INIT, WAIT, CHASE }
 
     private State state = State.INIT;
     private boolean waitingForOnscreen = true;
     private boolean deleteCurrentSpriteMarker;
+    private int parentAnimIndex = -1;
+    private int parentAnimTimer;
+    private int bodyFrame = BODY_CHILD_FRAME;
+    private int bodyAnimIndex = -1;
+    private int bodyAnimTimer;
 
     public BatbotBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Batbot", Sonic3kObjectArtKeys.CNZ_BATBOT,
@@ -88,6 +106,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
 
     private void initialize() {
         mappingFrame = INITIAL_MAPPING_FRAME;
+        bodyFrame = BODY_CHILD_FRAME;
         state = State.WAIT;
     }
 
@@ -97,6 +116,7 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
         }
         state = State.CHASE;
         xVelocity = INITIAL_ACTIVE_X_SPEED;
+        bodyFrame = BODY_CHILD_ACTIVE_FRAME;
     }
 
     private boolean isPlayerWithinActivationRange(PlayableEntity playerEntity) {
@@ -112,6 +132,34 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
             chase(playerEntity.getCentreX(), playerEntity.getCentreY());
         }
         moveWithVelocity();
+        updateParentAnimation();
+        updateBodyAnimation();
+    }
+
+    private void updateParentAnimation() {
+        parentAnimTimer--;
+        if (parentAnimTimer >= 0) {
+            return;
+        }
+        parentAnimIndex++;
+        if (parentAnimIndex >= PARENT_ANIM_FRAMES.length) {
+            parentAnimIndex = 0;
+        }
+        mappingFrame = PARENT_ANIM_FRAMES[parentAnimIndex];
+        parentAnimTimer = PARENT_ANIM_DELAY;
+    }
+
+    private void updateBodyAnimation() {
+        bodyAnimTimer--;
+        if (bodyAnimTimer >= 0) {
+            return;
+        }
+        bodyAnimIndex++;
+        if (bodyAnimIndex >= BODY_ANIM_FRAMES.length) {
+            bodyAnimIndex = 0;
+        }
+        bodyFrame = BODY_ANIM_FRAMES[bodyAnimIndex];
+        bodyAnimTimer = BODY_ANIM_DELAYS[bodyAnimIndex];
     }
 
     /**
@@ -147,6 +195,25 @@ public final class BatbotBadnikInstance extends AbstractS3kBadnikInstance {
     @Override
     public int getCollisionFlags() {
         return deleteCurrentSpriteMarker || waitingForOnscreen || state == State.INIT ? 0 : super.getCollisionFlags();
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        if (isDestroyed()) {
+            return;
+        }
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_BATBOT);
+        if (renderer == null) {
+            return;
+        }
+        boolean hFlip = !facingLeft;
+        int x = getRenderAnchorX();
+        int y = getRenderAnchorY();
+        renderer.drawFrameIndex(mappingFrame, x, y, hFlip, false);
+        if (state != State.INIT) {
+            renderer.drawFrameIndex(bodyFrame, x, y + BODY_CHILD_Y_OFFSET, hFlip, false);
+            renderer.drawFrameIndex(LAMP_CHILD_FRAME, x, y + LAMP_CHILD_Y_OFFSET, hFlip, false);
+        }
     }
 
     private boolean isDeleteSpriteIfNotInRange() {
