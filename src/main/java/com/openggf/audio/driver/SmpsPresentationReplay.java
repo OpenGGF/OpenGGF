@@ -1,7 +1,10 @@
 package com.openggf.audio.driver;
 
 import com.openggf.audio.GameAudioProfile;
+import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -9,6 +12,7 @@ import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.util.Iterator;
+import java.util.function.Supplier;
 
 /**
  * Stateless replay helper for SMPS presentation logic. Mutates a
@@ -368,6 +372,97 @@ public final class SmpsPresentationReplay {
     public static void applyToClearMusicStack(SmpsPresentationState state) {
         state.musicStack.clear();
         state.sfxBlocked = false;
+    }
+
+    /**
+     * Rehydrates {@link SmpsPresentationState} from an
+     * {@link AudioBackendLogicalSnapshot}. Mirrors the SMPS-logical portion
+     * of {@code LWJGLAudioBackend.restoreLogicalSnapshot}.
+     *
+     * <p>The helper:
+     * <ul>
+     *   <li>Resets {@code musicDriver}, {@code activeMusicStream},
+     *       {@code activeMusicSequencer}, and {@code sfxStream}.</li>
+     *   <li>Pulls {@code currentMusicDescriptor}, {@code currentMusicId},
+     *       {@code sfxBlocked}, {@code speedShoesEnabled}, and
+     *       {@code speedMultiplier} from the snapshot.</li>
+     *   <li>Clears the override stack. The snapshot's {@code overrideStack}
+     *       field is intentionally NOT restored — rewind rebuilds the
+     *       override stack via keyframe + command replay rather than via
+     *       direct restore (matching the existing backend behaviour at
+     *       {@code LWJGLAudioBackend.java}).</li>
+     *   <li>When {@code snapshot.musicDriver()} is non-null: builds a fresh
+     *       {@link SmpsDriver} via {@code driverFactory}, calls
+     *       {@code SmpsDriver.restoreSnapshot} with the resolver, wires the
+     *       new driver as the active music driver/stream and its first
+     *       music sequencer as {@code activeMusicSequencer}, and rebinds
+     *       the fade-complete callback if the restored music is mid-fade-
+     *       in while {@code sfxBlocked} is set (matches
+     *       {@code rebindFadeCompleteCallbackIfNeeded}).</li>
+     *   <li>When {@code snapshot.standaloneSfxDriver()} is non-null: builds
+     *       another fresh driver and rehydrates it as {@code sfxStream}.</li>
+     * </ul>
+     *
+     * <p>Caller responsibilities (NOT done by this helper):
+     * <ul>
+     *   <li>{@code bindRuntimePresentationStreams} after this returns.</li>
+     *   <li>{@code flushPresentationFifo} when not preserving the queue.</li>
+     *   <li>OpenAL source stop + buffer unqueue when not preserving the queue.</li>
+     *   <li>Backend-only flow-control fields ({@code pendingRestore},
+     *       {@code pendingMusicDescriptor}).</li>
+     * </ul>
+     *
+     * @param driverFactory         supplies newly-configured
+     *                              {@link SmpsDriver} instances; the live
+     *                              backend passes its
+     *                              {@code newConfiguredSmpsDriver}, the
+     *                              worker passes its own factory that
+     *                              applies the same per-session config.
+     * @param fadeCompleteCallback  invoked by the restored music driver
+     *                              when its fade-in completes (typically
+     *                              clears the caller's own
+     *                              {@code sfxBlocked} field).
+     */
+    public static void applyToRestoreFromSnapshot(
+            SmpsPresentationState state,
+            AudioBackendLogicalSnapshot snapshot,
+            SmpsDriverSnapshot.DependencyResolver resolver,
+            Supplier<SmpsDriver> driverFactory,
+            Runnable fadeCompleteCallback) {
+        state.musicDriver = null;
+        state.activeMusicStream = null;
+        state.activeMusicSequencer = null;
+        state.sfxStream = null;
+        state.currentMusicDescriptor = snapshot.currentMusic();
+        state.currentMusicId = snapshot.currentMusic() != null
+                ? snapshot.currentMusic().id() : -1;
+        state.sfxBlocked = snapshot.sfxBlocked();
+        state.speedShoesEnabled = snapshot.speedShoesEnabled();
+        state.speedMultiplier = snapshot.speedMultiplier();
+        state.musicStack.clear();
+
+        if (snapshot.musicDriver() != null) {
+            SmpsDriver driver = driverFactory.get();
+            driver.restoreSnapshot(snapshot.musicDriver(), resolver);
+            state.musicDriver = driver;
+            state.activeMusicStream = driver;
+            state.activeMusicSequencer = driver.firstMusicSequencer();
+            // Rebind the fade-complete callback if the restored music is in
+            // the middle of a fade-in and sfxBlocked is set (ROM 1-up
+            // restore semantics).
+            if (state.sfxBlocked && state.activeMusicSequencer != null) {
+                SmpsSequencerSnapshot seqSnap = state.activeMusicSequencer.captureSnapshot();
+                if (seqSnap.fade().active() && !seqSnap.fade().fadeOut()) {
+                    driver.bindMusicFadeCompleteCallback(fadeCompleteCallback);
+                }
+            }
+        }
+
+        if (snapshot.standaloneSfxDriver() != null) {
+            SmpsDriver restoredSfxDriver = driverFactory.get();
+            restoredSfxDriver.restoreSnapshot(snapshot.standaloneSfxDriver(), resolver);
+            state.sfxStream = restoredSfxDriver;
+        }
     }
 
     /**

@@ -4,7 +4,6 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.rewind.AudioBackendLogicalSnapshot;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
-import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.runtime.DeterministicAudioRuntime;
 import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
@@ -702,33 +701,18 @@ public class LWJGLAudioBackend implements AudioBackend {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
         synchronized (streamLock) {
-            currentStream = null;
-            currentSmps = null;
-            smpsDriver = null;
-            sfxStream = null;
-            currentMusicDescriptor = snapshot.currentMusic();
-            currentMusicId = snapshot.currentMusic() != null ? snapshot.currentMusic().id() : -1;
+            SmpsPresentationState state = snapshotPresentationState();
+            SmpsPresentationReplay.applyToRestoreFromSnapshot(
+                    state, snapshot, resolver,
+                    this::newConfiguredSmpsDriver,
+                    () -> sfxBlocked = false);
+            writeBackPresentationState(state);
+            // Backend-only flow-control state:
             pendingMusicDescriptor = null;
-            pendingRestore = snapshot.pendingRestore();
-            sfxBlocked = snapshot.sfxBlocked();
-            speedShoesEnabled = snapshot.speedShoesEnabled();
-            speedMultiplier = snapshot.speedMultiplier();
-
-            musicStack.clear();
+            // The original implementation reads snapshot.pendingRestore()
+            // into the field and then immediately overrides it to false.
+            // Preserve that net behaviour explicitly here.
             pendingRestore = false;
-
-            if (snapshot.musicDriver() != null) {
-                smpsDriver = newConfiguredSmpsDriver();
-                smpsDriver.restoreSnapshot(snapshot.musicDriver(), resolver);
-                currentStream = smpsDriver;
-                currentSmps = smpsDriver.firstMusicSequencer();
-                rebindFadeCompleteCallbackIfNeeded();
-            }
-            if (snapshot.standaloneSfxDriver() != null) {
-                SmpsDriver restoredSfxDriver = newConfiguredSmpsDriver();
-                restoredSfxDriver.restoreSnapshot(snapshot.standaloneSfxDriver(), resolver);
-                sfxStream = restoredSfxDriver;
-            }
             bindRuntimePresentationStreams();
             if (!preservePresentationQueue) {
                 deterministicAudioRuntime.flushPresentationFifo();
@@ -742,15 +726,6 @@ public class LWJGLAudioBackend implements AudioBackend {
                 queued--;
             }
             alSourcei(musicSource, AL_BUFFER, 0);
-        }
-    }
-
-    private void rebindFadeCompleteCallbackIfNeeded() {
-        if (sfxBlocked && smpsDriver != null && currentSmps != null) {
-            SmpsSequencerSnapshot snapshot = currentSmps.captureSnapshot();
-            if (snapshot.fade().active() && !snapshot.fade().fadeOut()) {
-            smpsDriver.bindMusicFadeCompleteCallback(() -> sfxBlocked = false);
-            }
         }
     }
 
