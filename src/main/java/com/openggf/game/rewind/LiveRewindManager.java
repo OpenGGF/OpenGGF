@@ -120,6 +120,9 @@ public final class LiveRewindManager {
                 new LiveRewindStepper(inputSource, config),
                 KEYFRAME_INTERVAL);
         rewindController = gameplayMode.getRewindController();
+        if (rewindController != null) {
+            GameServices.audio().setLiveRewindAudioKeyframes(rewindController.audioKeyframes());
+        }
         installedGameplayMode = gameplayMode;
         speedController = RewindSpeedController.fromConfig(config);
         rewinding = false;
@@ -173,5 +176,6 @@ public final class LiveRewindManager {
         speedController.reset();
         speedController = RewindSpeedController.disabled();
         rewinding = false;
+        GameServices.audio().setLiveRewindAudioKeyframes(null);
     }
 }

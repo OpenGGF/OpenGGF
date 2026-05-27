@@ -72,6 +72,10 @@ public final class RewindController {
 
     public int currentFrame() { return currentFrame; }
 
+    public AudioKeyframeStore audioKeyframes() {
+        return audioKeyframes;
+    }
+
     public int earliestAvailableFrame() {
         // v1: trace mode — earliest accessible frame is whatever the
         // earliest stored keyframe is (typically 0).

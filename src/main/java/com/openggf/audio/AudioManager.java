@@ -89,6 +89,18 @@ public class AudioManager {
         return liveRewindAudioKeyframes;
     }
 
+    public void setLiveRewindAudioKeyframes(AudioKeyframeStore store) {
+        this.liveRewindAudioKeyframes = store;
+        rebuildReverseResynthesizerForCurrentBackend();
+    }
+
+    private void rebuildReverseResynthesizerForCurrentBackend() {
+        if (backend == null) {
+            return;
+        }
+        backend.attachDeterministicAudioRuntime(deterministicAudioRuntime);
+    }
+
     void setDeterministicAudioRuntime(DeterministicAudioRuntime deterministicAudioRuntime) {
         deterministicRuntimeExplicitlyConfigured = true;
         applyDeterministicAudioRuntime(deterministicAudioRuntime);
@@ -1113,6 +1125,7 @@ public class AudioManager {
         this.audioFrameAdvanced = false;
         this.reverseAudioPresentationActive = false;
         this.preReverseSnapshot = null;
+        this.liveRewindAudioKeyframes = null;
         this.deterministicAudioRuntime.clearSubmittedCommands();
         this.deterministicAudioRuntime.clearPcmHistory();
         this.commandTimeline.clear();
