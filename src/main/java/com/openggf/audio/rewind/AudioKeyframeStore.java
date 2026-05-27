@@ -2,21 +2,40 @@ package com.openggf.audio.rewind;
 
 import com.openggf.audio.AudioManager;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.List;
 
+/**
+ * Tracks {@link AudioLogicalSnapshot}s indexed by game-frame for held-rewind.
+ *
+ * <h2>Threading</h2>
+ *
+ * <p>The store's small mutator and lookup methods are {@code synchronized}
+ * on {@code this} so concurrent capture/discard/clear from the game thread
+ * is safe alongside lookups from the reverse-resynth worker. The replay
+ * methods (e.g. {@link #replayTo}, {@link #replayToLogicalState}) do
+ * potentially-slow audio work and only acquire the monitor for the brief
+ * keyframe lookup — they release before calling into {@link AudioManager}.
+ *
+ * <p>For the worker's session, prefer {@link #frozenView}: it returns an
+ * immutable snapshot of the keyframes at session start, removing any need
+ * for the worker to synchronise with live capture/discard. Internal layout
+ * is a {@link TreeMap}; the copy is O(n) for n ≈ a few dozen keyframes per
+ * session, which is well below noise.
+ */
 public final class AudioKeyframeStore {
     private final NavigableMap<Long, AudioLogicalSnapshot> keyframes = new TreeMap<>();
 
-    public void capture(long frame, AudioManager audio) {
+    public synchronized void capture(long frame, AudioManager audio) {
         Objects.requireNonNull(audio, "audio");
         keyframes.put(frame, audio.captureLogicalSnapshot());
     }
 
-    public AudioLogicalSnapshot keyframeAtOrBefore(long frame) {
+    public synchronized AudioLogicalSnapshot keyframeAtOrBefore(long frame) {
         Map.Entry<Long, AudioLogicalSnapshot> entry = keyframes.floorEntry(frame);
         return entry != null ? entry.getValue() : null;
     }
@@ -24,7 +43,10 @@ public final class AudioKeyframeStore {
     public int replayTo(AudioManager audio, long targetFrame, AudioReplayReason reason) {
         Objects.requireNonNull(audio, "audio");
         Objects.requireNonNull(reason, "reason");
-        Map.Entry<Long, AudioLogicalSnapshot> keyframe = keyframes.floorEntry(targetFrame);
+        Map.Entry<Long, AudioLogicalSnapshot> keyframe;
+        synchronized (this) {
+            keyframe = keyframes.floorEntry(targetFrame);
+        }
         if (keyframe == null) {
             return 0;
         }
@@ -50,7 +72,10 @@ public final class AudioKeyframeStore {
 
     public int replayToLogicalState(AudioManager audio, long targetFrame) {
         Objects.requireNonNull(audio, "audio");
-        Map.Entry<Long, AudioLogicalSnapshot> keyframe = keyframes.floorEntry(targetFrame);
+        Map.Entry<Long, AudioLogicalSnapshot> keyframe;
+        synchronized (this) {
+            keyframe = keyframes.floorEntry(targetFrame);
+        }
         if (keyframe == null) {
             return 0;
         }
@@ -76,22 +101,12 @@ public final class AudioKeyframeStore {
      * the earliest captured keyframe sits at a higher audio-frame index than
      * the requested one. Audio-frame indices are read from each keyframe's
      * {@code AudioFrameClock.Snapshot.totalSamplesProduced()} value.
+     *
+     * <p>Holds the monitor while iterating the map. The worker should prefer
+     * {@link FrozenView#keyframeAtOrBeforeAudioFrame} via the session.
      */
-    public AudioLogicalSnapshot keyframeAtOrBeforeAudioFrame(long audioFrame) {
-        AudioLogicalSnapshot best = null;
-        long bestAudio = Long.MIN_VALUE;
-        for (AudioLogicalSnapshot snapshot : keyframes.values()) {
-            if (snapshot == null || snapshot.backend() == null
-                    || snapshot.backend().clockSnapshot() == null) {
-                continue;
-            }
-            long candidate = snapshot.backend().clockSnapshot().totalSamplesProduced();
-            if (candidate <= audioFrame && candidate >= bestAudio) {
-                best = snapshot;
-                bestAudio = candidate;
-            }
-        }
-        return best;
+    public synchronized AudioLogicalSnapshot keyframeAtOrBeforeAudioFrame(long audioFrame) {
+        return scanKeyframeAtOrBeforeAudioFrame(keyframes, audioFrame);
     }
 
     /**
@@ -112,6 +127,11 @@ public final class AudioKeyframeStore {
      * <p>Entries are stored in {@code AudioCommandTimeline} sorted by frame
      * (then by order within a frame). The early-exit on
      * {@code entry.frame() > atGameFrame} relies on that invariant.
+     *
+     * <p>No locking is required against this store: the method's only input
+     * map read is the {@code keyframe} parameter (already held by the
+     * caller). The timeline iteration goes against {@code audio}'s timeline,
+     * not this store.
      */
     public int replayCommandsAtGameFrame(AudioManager audio,
                                           AudioLogicalSnapshot keyframe,
@@ -142,11 +162,80 @@ public final class AudioKeyframeStore {
         return replayed;
     }
 
-    public void discardAfter(long frame) {
+    public synchronized void discardAfter(long frame) {
         keyframes.tailMap(frame, false).clear();
     }
 
-    public void clear() {
+    public synchronized void clear() {
         keyframes.clear();
+    }
+
+    /**
+     * Returns an immutable, point-in-time snapshot of the keyframes for
+     * use by code that needs to read the store without synchronising
+     * against live capture/discard — primarily the reverse-resynth worker
+     * thread for the duration of a held-rewind session.
+     *
+     * <p>The snapshot copies the underlying {@link TreeMap} structure (O(n)
+     * for n keyframes, typically a few dozen per session). The
+     * {@link AudioLogicalSnapshot} values themselves are immutable records,
+     * so they are shared rather than deep-copied.
+     */
+    public synchronized FrozenView frozenView() {
+        return new FrozenView(Collections.unmodifiableNavigableMap(new TreeMap<>(keyframes)));
+    }
+
+    private static AudioLogicalSnapshot scanKeyframeAtOrBeforeAudioFrame(
+            NavigableMap<Long, AudioLogicalSnapshot> source,
+            long audioFrame) {
+        AudioLogicalSnapshot best = null;
+        long bestAudio = Long.MIN_VALUE;
+        for (AudioLogicalSnapshot snapshot : source.values()) {
+            if (snapshot == null || snapshot.backend() == null
+                    || snapshot.backend().clockSnapshot() == null) {
+                continue;
+            }
+            long candidate = snapshot.backend().clockSnapshot().totalSamplesProduced();
+            if (candidate <= audioFrame && candidate >= bestAudio) {
+                best = snapshot;
+                bestAudio = candidate;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Immutable point-in-time view of an {@link AudioKeyframeStore}. The
+     * reverse-resynth worker holds a {@code FrozenView} for the lifetime of
+     * a held-rewind session so subsequent {@code capture} or
+     * {@code discardAfter} calls on the live store don't perturb the
+     * worker's read model.
+     *
+     * <p>Backed by an unmodifiable copy of the keyframes map; iteration is
+     * lock-free.
+     */
+    public static final class FrozenView {
+        private final NavigableMap<Long, AudioLogicalSnapshot> snapshot;
+
+        private FrozenView(NavigableMap<Long, AudioLogicalSnapshot> snapshot) {
+            this.snapshot = snapshot;
+        }
+
+        /** Same semantics as
+         *  {@link AudioKeyframeStore#keyframeAtOrBeforeAudioFrame}, against
+         *  the frozen snapshot. */
+        public AudioLogicalSnapshot keyframeAtOrBeforeAudioFrame(long audioFrame) {
+            return scanKeyframeAtOrBeforeAudioFrame(snapshot, audioFrame);
+        }
+
+        /** Count of keyframes in the frozen view. */
+        public int size() {
+            return snapshot.size();
+        }
+
+        /** True when no keyframes were captured at session start. */
+        public boolean isEmpty() {
+            return snapshot.isEmpty();
+        }
     }
 }
