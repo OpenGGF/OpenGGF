@@ -298,6 +298,7 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ACCELERATION, 0.25);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_DECELERATION, 0.5);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS, 4.0);
+		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MIN_STEPS, 0.25);
 		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE, "time");
 		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS, 60);
 		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB, 10);

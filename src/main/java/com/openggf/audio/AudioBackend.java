@@ -166,6 +166,16 @@ public interface AudioBackend {
     default void endReversePresentation() {
     }
 
+    /**
+     * Sets the playback rate while reverse presentation is active. A value of
+     * 1.0 walks the PCM history one stored frame per output frame (normal
+     * tape-rewind speed). Values above 1.0 pitch the rewound audio up; values
+     * between 0 and 1.0 produce a slow-motion rewind. Implementations that
+     * do not resample reverse PCM are free to ignore this.
+     */
+    default void setReversePlaybackRate(double rate) {
+    }
+
     default boolean supportsDeterministicRuntimePresentation() {
         return false;
     }

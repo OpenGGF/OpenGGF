@@ -49,13 +49,16 @@ public final class LiveRewindManager {
                 beginReverseFadePresentation();
             }
             rewinding = true;
-            stepBackward(speedController.stepsWhileHeld());
+            int steps = speedController.stepsWhileHeld();
+            GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
+            stepBackward(steps);
             GameServices.audio().update();
             return true;
         }
         int coastSteps = speedController.stepsAfterRelease();
         if (rewinding && coastSteps > 0) {
             if (stepBackward(coastSteps) > 0) {
+                GameServices.audio().setReversePlaybackRate(speedController.currentSpeed());
                 GameServices.audio().update();
                 return true;
             }

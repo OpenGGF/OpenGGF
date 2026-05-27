@@ -624,6 +624,13 @@ public class AudioManager {
         }
     }
 
+    public void setReversePlaybackRate(double rate) {
+        deterministicAudioRuntime.setReversePlaybackRate(rate);
+        if (backend != null) {
+            backend.setReversePlaybackRate(rate);
+        }
+    }
+
     public void advancePausedFrameStepAudio() {
         advanceRuntimeFrame(FrameAudioMode.SILENT_STEP);
     }

@@ -65,6 +65,7 @@ public class LWJGLAudioBackend implements AudioBackend {
     private DeterministicAudioRuntime deterministicAudioRuntime;
     private PcmHistoryRing pcmHistory;
     private PcmHistoryRing.ReverseCursor reverseCursor;
+    private double pendingReverseRate = 1.0;
 
     private static class MusicState {
         final AudioStream stream;
@@ -967,6 +968,9 @@ public class LWJGLAudioBackend implements AudioBackend {
     public void beginReversePresentation() {
         synchronized (streamLock) {
             reverseCursor = pcmHistory != null ? pcmHistory.createReverseCursor() : null;
+            if (reverseCursor != null) {
+                reverseCursor.setRate(pendingReverseRate);
+            }
         }
     }
 
@@ -977,6 +981,18 @@ public class LWJGLAudioBackend implements AudioBackend {
                 pcmHistory.commitReverseCursor(reverseCursor);
             }
             reverseCursor = null;
+            pendingReverseRate = 1.0;
+        }
+    }
+
+    @Override
+    public void setReversePlaybackRate(double rate) {
+        double safeRate = (Double.isNaN(rate) || rate <= 0.0) ? 1.0 : rate;
+        synchronized (streamLock) {
+            pendingReverseRate = safeRate;
+            if (reverseCursor != null) {
+                reverseCursor.setRate(safeRate);
+            }
         }
     }
 

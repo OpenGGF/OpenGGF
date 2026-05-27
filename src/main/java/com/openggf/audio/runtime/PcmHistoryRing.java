@@ -54,7 +54,7 @@ public final class PcmHistoryRing {
         if (cursor == null) {
             return;
         }
-        long newNextFrameIndex = cursor.nextReadableFrame + 1;
+        long newNextFrameIndex = cursor.committedNextFrameIndex();
         long oldestRetainedFrame = cursor.oldestReadableFrame;
         nextFrameIndex = Math.max(oldestRetainedFrame, newNextFrameIndex);
         storedFrames = (int) Math.max(0, Math.min(capacityFrames, nextFrameIndex - oldestRetainedFrame));
@@ -80,29 +80,46 @@ public final class PcmHistoryRing {
     }
 
     public final class ReverseCursor {
-        private long nextReadableFrame;
+        private double sourceFrame;
         private final long oldestReadableFrame;
+        private double rate = 1.0;
 
-        private ReverseCursor(long nextReadableFrame, long oldestReadableFrame) {
-            this.nextReadableFrame = nextReadableFrame;
+        private ReverseCursor(long initialSourceFrame, long oldestReadableFrame) {
+            this.sourceFrame = initialSourceFrame;
             this.oldestReadableFrame = oldestReadableFrame;
+        }
+
+        public void setRate(double rate) {
+            if (Double.isNaN(rate) || rate <= 0.0) {
+                this.rate = 1.0;
+                return;
+            }
+            this.rate = rate;
         }
 
         public int readPrevious(short[] target, int frames) {
             validateBuffer(target, frames);
             int read = 0;
-            while (read < frames && nextReadableFrame >= oldestReadableFrame) {
-                int sourceIndex = ringSlot(nextReadableFrame) * CHANNELS;
+            while (read < frames) {
+                long pickedFrame = (long) Math.floor(sourceFrame + 0.5);
+                if (pickedFrame < oldestReadableFrame) {
+                    break;
+                }
+                int sourceIndex = ringSlot(pickedFrame) * CHANNELS;
                 int targetIndex = read * CHANNELS;
                 target[targetIndex] = samples[sourceIndex];
                 target[targetIndex + 1] = samples[sourceIndex + 1];
-                nextReadableFrame--;
+                sourceFrame -= rate;
                 read++;
             }
             if (read < frames) {
                 Arrays.fill(target, read * CHANNELS, frames * CHANNELS, (short) 0);
             }
             return read;
+        }
+
+        long committedNextFrameIndex() {
+            return (long) Math.floor(sourceFrame + 0.5) + 1;
         }
     }
 }

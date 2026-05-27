@@ -44,6 +44,7 @@ class TestLiveRewindManagerAudioCleanup {
     void tearDown() {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_ENABLED, false);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MIN_STEPS, 0.25);
         audio.resetState();
         SessionManager.clear();
     }
@@ -86,6 +87,7 @@ class TestLiveRewindManagerAudioCleanup {
     @Test
     void tapeCoastDelaysTransientAudioCleanupUntilCoastEnds() throws Exception {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, true);
+        config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MIN_STEPS, 2.0);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ACCELERATION, 1.0);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_DECELERATION, 0.5);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS, 3.0);

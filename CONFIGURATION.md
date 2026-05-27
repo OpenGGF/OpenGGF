@@ -97,10 +97,11 @@ Paths are relative to the working directory (where the JAR is launched).
 | `EDITOR_ENABLED` | bool | `false` | Allow the experimental in-engine editor overlay to be entered from gameplay with `Shift+Tab`. |
 | `DEBUG_COLLISION_VIEW_ENABLED` | bool | `false` | Draw collision sensor rays and solid object outlines over the scene at all times. |
 | `LIVE_REWIND_ENABLED` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
-| `LIVE_REWIND_TAPE_COAST_ENABLED` | bool | `false` | Enable experimental live-rewind coast after releasing the rewind key. Disabled by default, so held rewind remains one step per visual frame. |
+| `LIVE_REWIND_TAPE_COAST_ENABLED` | bool | `false` | Enable experimental live-rewind coast after releasing the rewind key. Disabled by default, so held rewind remains one step per visual frame. When enabled, reverse audio playback is resampled to match the current rewind speed (>1.0 pitches up, <1.0 plays slow-motion). |
+| `LIVE_REWIND_TAPE_COAST_MIN_STEPS` | number | `0.25` | Initial rewind speed (in steps per visual frame) when the rewind key is first pressed. Values below 1.0 produce a slow-motion start: the speed controller's fractional accumulator spreads each physics step across multiple visual frames. Speed then accelerates toward `LIVE_REWIND_TAPE_COAST_MAX_STEPS`. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_ACCELERATION` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_DECELERATION` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
-| `LIVE_REWIND_TAPE_COAST_MAX_STEPS` | number | `4.0` | Maximum rewind steps per visual frame for optional tape-coast rewind. Used only when tape coast is enabled. |
+| `LIVE_REWIND_TAPE_COAST_MAX_STEPS` | number | `4.0` | Maximum rewind steps per visual frame for optional tape-coast rewind. Values below 1.0 cap the rewind in slow-motion. Used only when tape coast is enabled. |
 | `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond the cap plays silence on develop (the audio-rewind feature branch engages the reverse resynthesizer instead). |
 | `REWIND_AUDIO_HISTORY_SECONDS` | int | `60` | Seconds of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"time"`. |
 | `REWIND_AUDIO_HISTORY_SIZE_MB` | int | `10` | Megabytes of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"size"`. Stereo 16-bit at 48 kHz consumes ~192 KB/s, so 10 MB is roughly 54 s at that sample rate (~57 s at 44.1 kHz). |
@@ -215,6 +216,7 @@ diagnostic test runs only and must remain unset in CI.
   "DEBUG_COLLISION_VIEW_ENABLED": false,
   "LIVE_REWIND_ENABLED": false,
   "LIVE_REWIND_TAPE_COAST_ENABLED": false,
+  "LIVE_REWIND_TAPE_COAST_MIN_STEPS": 0.25,
   "LIVE_REWIND_TAPE_COAST_ACCELERATION": 0.25,
   "LIVE_REWIND_TAPE_COAST_DECELERATION": 0.5,
   "LIVE_REWIND_TAPE_COAST_MAX_STEPS": 4.0,

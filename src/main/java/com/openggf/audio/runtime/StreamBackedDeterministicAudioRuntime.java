@@ -21,6 +21,7 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     private AudioStream sfxStream;
     private Consumer<AudioCommand> commandHandler = command -> {};
     private PcmHistoryRing.ReverseCursor reverseCursor;
+    private double pendingReverseRate = 1.0;
     private boolean hasLastReverseFrame;
     private boolean reverseFrameOutputThisSession;
     private short lastReverseLeft;
@@ -149,7 +150,18 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     @Override
     public void beginReversePresentation() {
         reverseCursor = pcmHistory != null ? pcmHistory.createReverseCursor() : null;
+        if (reverseCursor != null) {
+            reverseCursor.setRate(pendingReverseRate);
+        }
         cancelReleaseCrossfade();
+    }
+
+    @Override
+    public void setReversePlaybackRate(double rate) {
+        pendingReverseRate = (Double.isNaN(rate) || rate <= 0.0) ? 1.0 : rate;
+        if (reverseCursor != null) {
+            reverseCursor.setRate(pendingReverseRate);
+        }
     }
 
     @Override
@@ -162,6 +174,7 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
             releaseCrossfadeRemaining = reverseReleaseCrossfadeFrames;
         }
         reverseFrameOutputThisSession = false;
+        pendingReverseRate = 1.0;
     }
 
     @Override

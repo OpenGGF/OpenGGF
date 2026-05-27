@@ -81,9 +81,15 @@ held, showing `LIVE REWIND` plus `REWIND <frame>`.
 
 By default live rewind steps backward one frame per visual frame while the key is
 held, with no movement after release. The experimental tape-coast layer remains
-opt-in through `LIVE_REWIND_TAPE_COAST_ENABLED`; when enabled, the acceleration,
-deceleration, and maximum per-frame steps come from the matching
-`LIVE_REWIND_TAPE_COAST_*` configuration keys.
+opt-in through `LIVE_REWIND_TAPE_COAST_ENABLED`; when enabled, the speed starts at
+`LIVE_REWIND_TAPE_COAST_MIN_STEPS`, accelerates via `LIVE_REWIND_TAPE_COAST_ACCELERATION`
+up to `LIVE_REWIND_TAPE_COAST_MAX_STEPS`, and decays via
+`LIVE_REWIND_TAPE_COAST_DECELERATION` after release. The `RewindSpeedController`
+keeps a fractional accumulator so sub-1.0 speeds produce slow-motion rewind
+(physics steps land on the visual frames where the accumulator crosses 1.0).
+`LiveRewindManager` pushes the current speed into `AudioManager.setReversePlaybackRate`
+each visual frame; the `PcmHistoryRing.ReverseCursor` then walks the stored PCM
+backward at that rate (>1.0 pitches up, <1.0 stretches into slow-mo).
 
 Live rewind records input rows after normal level ticks and replays them through the
 same `LevelFrameStep` path when rebuilding a rewound segment. Seamless level
