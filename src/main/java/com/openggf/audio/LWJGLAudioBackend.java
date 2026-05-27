@@ -371,6 +371,7 @@ public class LWJGLAudioBackend implements AudioBackend {
         // between the unlock and the runtime binding and make us bind the
         // wrong reference.
         AudioStream newStandaloneStream = null;
+        SmpsPresentationReplay.SfxApplyResult result;
         synchronized (streamLock) {
             SmpsPresentationState state = new SmpsPresentationState();
             state.musicDriver = smpsDriver;
@@ -378,14 +379,20 @@ public class LWJGLAudioBackend implements AudioBackend {
             state.activeMusicSequencer = currentSmps;
             state.sfxStream = sfxStream;
             state.sfxBlocked = sfxBlocked;
-            SmpsPresentationReplay.SfxApplyResult result =
-                    SmpsPresentationReplay.applyToSfx(
-                            state, data, dacData, pitch, config, deps);
+            result = SmpsPresentationReplay.applyToSfx(
+                    state, data, dacData, pitch, config, deps);
             // Write back any state the replay may have updated.
             sfxStream = state.sfxStream;
             if (result == SmpsPresentationReplay.SfxApplyResult.NEW_STANDALONE_DRIVER) {
                 newStandaloneStream = sfxStream;
             }
+        }
+        if (result == SmpsPresentationReplay.SfxApplyResult.BLOCKED) {
+            LOGGER.info("audio: SFX id=" + data.getId() + " dropped because sfxBlocked=true"
+                    + " (music override gating active)");
+        } else if (result == SmpsPresentationReplay.SfxApplyResult.NEW_STANDALONE_DRIVER) {
+            LOGGER.info("audio: SFX id=" + data.getId()
+                    + " created a new standalone SFX driver");
         }
         if (newStandaloneStream != null) {
             deterministicAudioRuntime.setSfxStream(newStandaloneStream);

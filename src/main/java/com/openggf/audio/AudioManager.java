@@ -1038,7 +1038,27 @@ public class AudioManager {
     }
 
     public void advanceGameplayFrameAudio() {
-        advanceRuntimeFrame(FrameAudioMode.NORMAL);
+        // During held-rewind, the game loop continues to tick (rewind drives
+        // engine state backward) but the LIVE audio engine must not produce
+        // new forward samples: doing so would write garbage chip output into
+        // both the PCM history ring (advancing nextFrameIndex past the
+        // pre-rewind point) and the outputFifo (which the audio consumer
+        // can't drain because drainPcm is in reverse-cursor mode). Across
+        // repeated rewind cycles that buildup desynchronises the ring vs
+        // the AudioFrameClock and pushes stale chip-state audio into the
+        // FIFO that's heard during pass 2 forward play — including the
+        // "SFX barely plays" symptom because the FIFO has overwritten the
+        // expected forward audio.
+        //
+        // Honour the existing FrameAudioMode.PRESENTATION_ONLY_REVERSE
+        // contract: when reverse presentation is active the runtime skips
+        // advanceFrame entirely. The reverse-resynth worker handles audio
+        // production on its own thread using private state; the live
+        // backend stays quiescent.
+        FrameAudioMode mode = reverseAudioPresentationActive
+                ? FrameAudioMode.PRESENTATION_ONLY_REVERSE
+                : FrameAudioMode.NORMAL;
+        advanceRuntimeFrame(mode);
     }
 
     private void advanceRuntimeFrame(FrameAudioMode mode) {
