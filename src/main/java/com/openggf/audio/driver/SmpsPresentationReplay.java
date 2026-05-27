@@ -8,6 +8,8 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 
+import java.util.Iterator;
+
 /**
  * Stateless replay helper for SMPS presentation logic. Mutates a
  * {@link SmpsPresentationState} in response to SMPS commands; never touches
@@ -347,6 +349,108 @@ public final class SmpsPresentationReplay {
         state.activeMusicSequencer = null;
         state.activeMusicStream = null;
         return sfxStreamCleared;
+    }
+
+    /**
+     * Outcome of {@link #applyToRestoreMusic}.
+     *
+     * @param restored        true if a saved music entry was popped and
+     *                        re-installed on the state
+     * @param triggeredFadeIn true if the restored sequencer had a fade-in
+     *                        triggered (ROM behaviour: only 1-up jingle
+     *                        restores fade in, which is signalled by
+     *                        {@link SmpsPresentationState#sfxBlocked})
+     */
+    public record RestoreResult(boolean restored, boolean triggeredFadeIn) {
+        public static final RestoreResult NONE = new RestoreResult(false, false);
+    }
+
+    /**
+     * Pops the top of {@link SmpsPresentationState#musicStack} and restores
+     * the saved music driver/sequencer/stream onto the state. Mirrors the
+     * SMPS-logical portion of {@code LWJGLAudioBackend.doRestoreMusic}.
+     *
+     * <p>Caller responsibilities (NOT done by this helper):
+     * <ul>
+     *   <li>Stopping the current OpenAL music source and unqueueing
+     *       buffers before this call (the audio source is OpenAL-side, not
+     *       SMPS state).</li>
+     *   <li>Calling {@code bindRuntimePresentationStreams} after this
+     *       returns successfully — the runtime stream binding lives in the
+     *       backend.</li>
+     *   <li>Restarting the OpenAL stream after binding.</li>
+     * </ul>
+     *
+     * <p>This helper DOES (on a successful pop):
+     * <ul>
+     *   <li>Stop the previous driver if it differs from the saved one.</li>
+     *   <li>Restore {@code musicDriver}, {@code activeMusicStream},
+     *       {@code activeMusicSequencer}, {@code currentMusicId}, and
+     *       {@code currentMusicDescriptor} on the state.</li>
+     *   <li>Apply {@code speedShoesEnabled} and refresh voices on the
+     *       restored sequencer.</li>
+     *   <li>If {@link SmpsPresentationState#sfxBlocked} was set (a 1-up
+     *       restore), wire {@code fadeCompleteCallback} as the sequencer's
+     *       fade-complete callback and trigger fade-in.</li>
+     * </ul>
+     *
+     * <p>The caller-supplied {@code fadeCompleteCallback} is invoked by
+     * {@link SmpsSequencer} when the fade finishes; it typically clears
+     * the caller's own {@code sfxBlocked} state. Because each caller owns
+     * a different {@code sfxBlocked} field (the live backend's vs the
+     * worker's), the callback must come from the caller, not be baked in
+     * here.
+     */
+    public static RestoreResult applyToRestoreMusic(
+            SmpsPresentationState state,
+            boolean speedShoesEnabled,
+            Runnable fadeCompleteCallback) {
+        MusicStackEntry saved = state.musicStack.pollFirst();
+        if (saved == null || saved.stream() == null
+                || saved.sequencer() == null || saved.driver() == null) {
+            return RestoreResult.NONE;
+        }
+
+        // Stop the previous (non-saved) driver before we swap it out.
+        if (state.musicDriver != null && state.musicDriver != saved.driver()) {
+            state.musicDriver.stopAll();
+        }
+
+        state.activeMusicStream = saved.stream();
+        state.activeMusicSequencer = saved.sequencer();
+        state.musicDriver = saved.driver();
+        state.currentMusicId = saved.musicId();
+        state.currentMusicDescriptor = saved.descriptor();
+
+        SmpsSequencer seq = state.activeMusicSequencer;
+        seq.setSpeedShoes(speedShoesEnabled);
+        seq.refreshAllVoices();
+
+        boolean triggerFadeIn = state.sfxBlocked;
+        if (triggerFadeIn) {
+            seq.setOnFadeComplete(fadeCompleteCallback);
+            seq.triggerFadeIn();
+        }
+        return new RestoreResult(true, triggerFadeIn);
+    }
+
+    /**
+     * Removes a saved override from {@link SmpsPresentationState#musicStack}
+     * by music id, scanning oldest-to-newest and removing the first match.
+     * Returns {@code true} if an entry was removed. Mirrors
+     * {@code LWJGLAudioBackend.removeSavedOverride}.
+     */
+    public static boolean removeSavedOverride(SmpsPresentationState state, int musicId) {
+        if (state.musicStack.isEmpty()) {
+            return false;
+        }
+        for (Iterator<MusicStackEntry> it = state.musicStack.iterator(); it.hasNext();) {
+            if (it.next().musicId() == musicId) {
+                it.remove();
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

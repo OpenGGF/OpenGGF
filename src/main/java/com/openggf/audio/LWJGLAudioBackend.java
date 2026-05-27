@@ -487,49 +487,43 @@ public class LWJGLAudioBackend implements AudioBackend {
     }
 
     private void doRestoreMusic() {
-        MusicStackEntry savedState = musicStack.pollFirst();
-        if (savedState == null || savedState.stream() == null || savedState.sequencer() == null
-                || savedState.driver() == null) {
+        // Peek + validate before doing any OpenAL teardown. The original
+        // implementation returned early on a malformed top-of-stack
+        // *without* stopping the source; preserve that behaviour so a
+        // pathological stack entry can't silence the currently-playing
+        // override.
+        MusicStackEntry peek = musicStack.peekFirst();
+        if (peek == null || peek.stream() == null || peek.sequencer() == null
+                || peek.driver() == null) {
             return;
         }
 
-        // Stop the current (invincibility/extra-life) music stream
+        // Stop the current (invincibility/extra-life) music stream and
+        // unqueue ALL buffers before installing the new state — the buffer
+        // purge must happen before startStream queues new buffers on top.
         alSourceStop(musicSource);
-
-        // Unqueue ALL buffers (both processed and queued) to avoid OpenAL errors
         int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
         for (int i = 0; i < queued; i++) {
             alSourceUnqueueBuffers(musicSource);
         }
 
-        // Stop the current (non-saved) smps driver
-        if (smpsDriver != null && smpsDriver != savedState.driver()) {
-            smpsDriver.stopAll();
-        }
-
-        // Restore saved state
+        SmpsPresentationReplay.RestoreResult result;
         synchronized (streamLock) {
-            currentStream = savedState.stream();
-            currentSmps = savedState.sequencer();
-            smpsDriver = savedState.driver();
-            currentMusicId = savedState.musicId();
-            currentMusicDescriptor = savedState.descriptor();
-            bindRuntimePresentationStreams();
-        }
-
-        if (currentSmps != null) {
-            // Restore speed shoes state to the saved sequencer
-            currentSmps.setSpeedShoes(speedShoesEnabled);
-            currentSmps.refreshAllVoices();
-            // ROM: only the 1-up jingle (sfxBlocked/FadeInFlag) fades in on restore.
-            // Non-blocking overrides (invincibility, Super Sonic) resume at full volume.
-            if (sfxBlocked) {
-                currentSmps.setOnFadeComplete(() -> sfxBlocked = false);
-                currentSmps.triggerFadeIn();
+            SmpsPresentationState state = snapshotPresentationState();
+            // The fade-complete callback flips THIS backend's sfxBlocked
+            // field when the restored 1-up fade finishes. The worker thread
+            // (future) would supply a callback that mutates its own state.
+            result = SmpsPresentationReplay.applyToRestoreMusic(
+                    state, speedShoesEnabled, () -> sfxBlocked = false);
+            writeBackPresentationState(state);
+            if (result.restored()) {
+                bindRuntimePresentationStreams();
             }
         }
 
-        startStream();
+        if (result.restored()) {
+            startStream();
+        }
     }
 
     private void fillBuffer(int bufferId) {
@@ -1018,17 +1012,8 @@ public class LWJGLAudioBackend implements AudioBackend {
     }
 
     private boolean removeSavedOverride(int musicId) {
-        if (musicStack.isEmpty()) {
-            return false;
-        }
-        for (Iterator<MusicStackEntry> iterator = musicStack.iterator(); iterator.hasNext();) {
-            MusicStackEntry state = iterator.next();
-            if (state.musicId() == musicId) {
-                iterator.remove();
-                return true;
-            }
-        }
-        return false;
+        SmpsPresentationState state = snapshotPresentationState();
+        return SmpsPresentationReplay.removeSavedOverride(state, musicId);
     }
 
     private static AudioSourceDescriptor describeMusic(int musicId) {

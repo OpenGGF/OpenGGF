@@ -44,9 +44,11 @@ public final class SmpsPresentationState {
     public boolean sfxBlocked;
 
     /** Stack of music states pushed aside by music overrides; the most
-     *  recently pushed entry is restored first. The backend and the worker
-     *  may share the SAME {@link Deque} reference so mutations in either
-     *  context are immediately visible to the other. */
+     *  recently pushed entry is restored first. A caller (e.g. the live
+     *  backend) may install its own {@link Deque} reference here so that
+     *  mutations performed by the helper apply directly to the caller's
+     *  stack. The reverse-resynth worker installs a fresh per-session
+     *  stack and never shares mutable state with the live backend. */
     public Deque<MusicStackEntry> musicStack = new ArrayDeque<>();
 
     /** Music id of the currently-playing music, or {@code -1} when none.
