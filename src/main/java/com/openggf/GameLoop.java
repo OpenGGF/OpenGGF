@@ -136,7 +136,6 @@ public class GameLoop {
     private Supplier<LegalDisclaimerScreen> legalDisclaimerSupplier;
     private Runnable legalDisclaimerExitHandler;
     private Consumer<com.openggf.game.dataselect.DataSelectAction> dataSelectActionHandler;
-    private long gameplayAudioFrame;
     private boolean audioUpdatedThisStep;
 
     // Special stage results screen
@@ -1022,8 +1021,7 @@ public class GameLoop {
     }
 
     private void beginGameplayAudioFrameForTick() {
-        gameplayAudioFrame++;
-        audioManager.beginGameplayAudioFrame(gameplayAudioFrame);
+        audioManager.tickGameplayAudioFrame();
     }
 
     private void advanceGameplayAudioFrameForTick(boolean doFrameStep) {

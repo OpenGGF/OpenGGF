@@ -78,6 +78,7 @@ class TestStreamBackedDrainPcmIntegration {
         ReverseAudioSession session = new ReverseAudioSession(
                 ring,
                 keyframes.frozenView(),
+                /* audioFloor */ 0L,
                 List.of(),
                 120, 60,
                 SmpsSequencer.Region.NTSC,

@@ -52,6 +52,7 @@ import java.util.function.Supplier;
 public record ReverseAudioSession(
         PcmHistoryRing ring,
         AudioKeyframeStore.FrozenView keyframes,
+        long audioFloor,
         List<AudioTimelineEntry> frozenTimeline,
         int sampleRate,
         int frameRate,
@@ -75,6 +76,10 @@ public record ReverseAudioSession(
         Objects.requireNonNull(replayDependencies, "replayDependencies");
         Objects.requireNonNull(presentationDriverFactory, "presentationDriverFactory");
         Objects.requireNonNull(commandResolver, "commandResolver");
+        if (audioFloor < 0) {
+            throw new IllegalArgumentException(
+                    "audioFloor must be non-negative, got " + audioFloor);
+        }
         // audioProfile and defaultSequencerConfig may be null on early-boot
         // sessions where the live audio profile hasn't been installed yet.
         // SmpsPresentationReplay tolerates null profile (default priorities)

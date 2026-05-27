@@ -84,6 +84,22 @@ class TestLiveRewindManagerAudioCleanup {
     }
 
     @Test
+    void holdingRewindAtEarliestFrameDoesNotStartReverseAudioPresentation() throws Exception {
+        TestEnvironment.activeGameplayMode();
+        LiveRewindManager manager = new LiveRewindManager(config);
+        RewindController controller = new TestControllerBuilder().atFrame(0);
+        installTestController(manager, controller);
+        InputHandler input = new InputHandler();
+        input.handleKeyEvent(config.getInt(SonicConfiguration.LIVE_REWIND_KEY), GLFW_PRESS);
+
+        assertTrue(manager.handleRealtimeRewindInput(GameMode.LEVEL, input));
+
+        assertFalse(audio.isReverseAudioPresentationActive(),
+                "holding rewind at frame 0 must not keep draining reverse audio");
+        assertEquals(0, controller.currentFrame());
+    }
+
+    @Test
     void tapeCoastDelaysTransientAudioCleanupUntilCoastEnds() throws Exception {
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, true);
         config.setConfigValue(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ACCELERATION, 1.0);

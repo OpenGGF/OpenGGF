@@ -228,6 +228,37 @@ public final class AudioKeyframeStore {
             return scanKeyframeAtOrBeforeAudioFrame(snapshot, audioFrame);
         }
 
+        /**
+         * Returns the earliest captured audio-frame across keyframes that
+         * have a clock snapshot — i.e. the floor below which the worker
+         * cannot legitimately synthesize audio because no chip state was
+         * captured earlier than this point. Returns {@code 0} when no
+         * keyframe has a clock snapshot (the worker shouldn't burst at
+         * all in that case).
+         *
+         * <p>The reverse-resynth worker uses this to refuse bursts whose
+         * target audio-frame range falls below the earliest available
+         * keyframe — without the clamp, the consumer can keep draining
+         * past the game state's rewind floor and the worker would keep
+         * synthesizing audio at frames the game can't actually rewind to.
+         */
+        public long earliestKeyframeAudioFrame() {
+            long earliest = Long.MAX_VALUE;
+            boolean found = false;
+            for (AudioLogicalSnapshot snap : snapshot.values()) {
+                if (snap == null || snap.backend() == null
+                        || snap.backend().clockSnapshot() == null) {
+                    continue;
+                }
+                long candidate = snap.backend().clockSnapshot().totalSamplesProduced();
+                if (candidate < earliest) {
+                    earliest = candidate;
+                    found = true;
+                }
+            }
+            return found ? earliest : 0L;
+        }
+
         /** Count of keyframes in the frozen view. */
         public int size() {
             return snapshot.size();

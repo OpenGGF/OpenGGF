@@ -207,6 +207,18 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
         }
     }
 
+    @Override
+    public void invalidatePcmHistoryAt(long nextAudioFrame) {
+        if (pcmHistory != null) {
+            pcmHistory.invalidateAt(nextAudioFrame);
+        }
+    }
+
+    @Override
+    public void resetClock() {
+        frameClock.reset();
+    }
+
     /**
      * Exposed for Task 6's lifecycle wiring: AudioManager needs the
      * history ring to build {@link ReverseAudioSession} for the worker.

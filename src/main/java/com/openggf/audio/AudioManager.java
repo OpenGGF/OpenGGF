@@ -65,6 +65,29 @@ public class AudioManager {
     private boolean reverseAudioPresentationActive;
     private AudioLogicalSnapshot preReverseSnapshot;
 
+    /**
+     * Audio frame the previous held-rewind session released at, or
+     * {@link Long#MIN_VALUE} when no rewind has been released this
+     * session. The next {@link #startReverseResynthWorker} uses this
+     * as a hard floor on the worker's burst range, preventing the
+     * worker from re-synthesising audio for frames the user has
+     * logically "rewound past + released" — those frames are stale
+     * audio the user shouldn't hear again on subsequent rewinds. The
+     * earliest captured audio keyframe is the other floor candidate;
+     * the session uses {@code max} of the two.
+     */
+    private long lastReverseReleaseClockValue = Long.MIN_VALUE;
+
+    /**
+     * Monotonic gameplay audio-tick counter. Incremented exactly once
+     * per audio-eligible gameplay tick via
+     * {@link #tickGameplayAudioFrame()}. Lives here (not in
+     * {@code GameLoop}) so {@link #resetForLevelRewindSegment} can
+     * rebase it together with the audio command timeline, PCM ring,
+     * and clock to give the level a clean frame-0 origin.
+     */
+    private long gameplayAudioFrame;
+
     /** Worker spawned at {@link #beginReverseAudioPresentation} and joined
      *  at {@link #endReverseAudioPresentation}. Null outside an active
      *  held-rewind session. */
@@ -262,6 +285,72 @@ public class AudioManager {
         // beginCommandTimelineFrame directly and remain unaffected.
         long monotonic = Math.max(frame, commandTimeline.currentFrame() + 1);
         beginCommandTimelineFrame(monotonic);
+    }
+
+    /**
+     * Increments the gameplay audio-tick counter and notifies the
+     * audio command timeline. Called exactly once per audio-eligible
+     * gameplay tick (LEVEL / BONUS_STAGE / TITLE_CARD) by
+     * {@code GameLoop.beginGameplayAudioFrameForTick}. Replaces the
+     * old pattern of {@code GameLoop} owning the counter directly so
+     * {@link #resetForLevelRewindSegment} can rebase the counter
+     * together with timeline / ring / clock at level rewind segment
+     * start.
+     */
+    public void tickGameplayAudioFrame() {
+        gameplayAudioFrame++;
+        beginGameplayAudioFrame(gameplayAudioFrame);
+    }
+
+    /** Returns the current value of the gameplay audio-tick counter. */
+    public long gameplayAudioFrame() {
+        return gameplayAudioFrame;
+    }
+
+    /**
+     * Re-anchors all gameplay-audio state at a clean frame-0 origin
+     * for the start of a level's rewind segment:
+     * <ul>
+     *   <li>{@link #gameplayAudioFrame} counter → 0.</li>
+     *   <li>{@link #commandTimeline} entries + currentFrame → empty/0.</li>
+     *   <li>Runtime's pending command queue → cleared.</li>
+     *   <li>Runtime PCM history ring → invalidated at 0.</li>
+     *   <li>Runtime audio frame clock → reset to 0 samples.</li>
+     * </ul>
+     *
+     * <p>Used by {@code LiveRewindManager.ensureInstalled} so the
+     * rewind controller's {@code currentFrame=0} and the audio
+     * timeline's {@code currentFrame=0} share a frame origin —
+     * eliminating the dual-domain mismatch that lets stale
+     * pre-level audio bleed into rewind state.
+     *
+     * <p>Audio keyframes are NOT cleared here — the caller
+     * (typically {@code RewindController.resetBufferAtCurrentFrame})
+     * owns them.
+     */
+    public void resetForLevelRewindSegment() {
+        // Drain any pending audio commands BEFORE the reset wipes the
+        // queue. This ensures commands issued just before the reset
+        // (e.g. the level's zone music PlayMusic issued by
+        // LevelManager.initAudio, which runs in the same loadLevel
+        // step batch as resetRewindBufferAfterLevelBoundary) are
+        // applied to the backend chip state before we clear the
+        // timeline. Without this, the freshly-loaded level's music
+        // never starts and any in-progress fadeout from the previous
+        // mode (e.g. level select) continues forever.
+        //
+        // The advanceFrame call writes a frame's worth of samples to
+        // the PCM ring as a side effect, but the subsequent
+        // invalidatePcmHistoryAt drops those — net cost is one
+        // extra frame of chip emulation, which is acceptable at a
+        // level-boundary one-shot.
+        deterministicAudioRuntime.advanceFrame(commandTimeline.currentFrame(), FrameAudioMode.NORMAL);
+        gameplayAudioFrame = 0;
+        commandTimeline.clear();
+        deterministicAudioRuntime.clearSubmittedCommands();
+        deterministicAudioRuntime.invalidatePcmHistoryAt(0L);
+        deterministicAudioRuntime.resetClock();
+        lastReverseReleaseClockValue = Long.MIN_VALUE;
     }
 
     public void discardAudioCommandsAfter(long frame) {
@@ -610,10 +699,12 @@ public class AudioManager {
         if (currentReplayReason == AudioReplayReason.REVERSE_RESYNTH
                 && (command.route() == AudioCommand.SfxRoute.FALLBACK_NAME
                         || command.route() == AudioCommand.SfxRoute.RING_RESOLVED)) {
-            // WAV-fallback SFX would allocate new persistent OpenAL sources
-            // and play a .wav from disk. Neither is reproducible inside a
-            // held-rewind synth window. Spec edge case 9: explicitly out of
-            // scope for the faithful tape effect.
+            if (replayResolvedNamedSfxAsSmps(command)) {
+                return;
+            }
+            // True WAV-only fallback SFX would allocate persistent OpenAL
+            // sources and play a .wav from disk. Neither is reproducible
+            // inside a held-rewind synth window.
             return;
         }
         switch (command.route()) {
@@ -661,7 +752,7 @@ public class AudioManager {
             return;
         }
         if (policy != AudioPresentationPolicy.SUPPRESSED_INTERNAL_RESTORE) {
-            endReverseAudioPresentation();
+            endReverseAudioPresentation(frame);
             deterministicAudioRuntime.flushPresentationFifo();
         }
         if (backend == null) {
@@ -711,37 +802,69 @@ public class AudioManager {
         }
     }
 
+    /**
+     * Compatibility entry for call sites that don't know the target
+     * game frame. Delegates to {@link #endReverseAudioPresentation(int)}
+     * using the current command-timeline frame, which is set by
+     * {@code RewindController.stepBackward → beginAudioFrame} during
+     * held rewind.
+     */
     public void endReverseAudioPresentation() {
-        // Task 6: stop the worker BEFORE the runtime commits the reverse
-        // cursor. Worker shares the cursor reference with the runtime, so
-        // an in-flight prepend racing with commitReverseCursor would mutate
-        // a cursor whose ring state has already been re-anchored.
-        // Task 7 will harden this with detach + timeout-counter; Task 6
-        // uses a plain requestStop + join.
+        endReverseAudioPresentation(Math.toIntExact(commandTimeline.currentFrame()));
+    }
+
+    /**
+     * Closes a held-rewind audio session anchored at
+     * {@code targetGameFrame} — the game-frame the rewind controller
+     * is leaving the user at. The audio clock + PCM ring are re-anchored
+     * at the audio frame corresponding to that game-frame, computed
+     * from the audio keyframe at-or-before it; chip drivers are left
+     * at the logical state already established by
+     * {@code RewindController.restoreAudioLogicalState(targetGameFrame)}
+     * during the last stepBackward.
+     */
+    public void endReverseAudioPresentation(int targetGameFrame) {
+        // Stop the worker BEFORE the runtime drops the cursor — the
+        // worker shares the cursor reference with the runtime, so an
+        // in-flight prepend race could otherwise mutate cursor state
+        // after the runtime has already cleared it.
         stopReverseResynthWorker();
         reverseAudioPresentationActive = false;
+
+        // The authoritative release anchor is the rewind controller's
+        // target game-frame, NOT the reverse cursor's read position.
+        // The cursor's position depends on audio-drain cadence
+        // (OpenAL buffer fills), which can drift several frames ahead
+        // of the game state under held rewind; relying on it would
+        // misalign forward audio with the visible game state.
+        long releaseClockValue = computeAudioClockAtGameFrame(targetGameFrame);
+
         deterministicAudioRuntime.endReversePresentation();
         if (backend != null) {
             backend.endReversePresentation();
         }
-        if (preReverseSnapshot != null) {
-            // 1. Restore driver state (music + standalone SFX) via the normal
-            //    restoreLogicalSnapshot path. This deliberately does NOT touch
-            //    the runtime clock — see the comment on restoreLogicalSnapshot.
+
+        // Re-anchor clock + ring at the release point. The last
+        // `stepBackward` already restored chip drivers to the
+        // target's logical state via `restoreAudioLogicalState`. We do
+        // NOT restore preReverseSnapshot here — that would jump chip +
+        // clock back to where the user pressed rewind, decoupling
+        // audio from the rewound game state and leaving the ring full
+        // of pre-rewind forward-play samples for the next reverse
+        // cursor to replay.
+        if (releaseClockValue >= 0) {
+            AudioFrameClock.Snapshot newSnap = buildClockSnapshotAt(releaseClockValue);
+            if (newSnap != null) {
+                deterministicAudioRuntime.restoreClockSnapshot(newSnap);
+            }
+            deterministicAudioRuntime.invalidatePcmHistoryAt(releaseClockValue);
+            lastReverseReleaseClockValue = releaseClockValue;
+        } else if (preReverseSnapshot != null) {
+            // Fallback when no audio keyframes are available (runtime
+            // without ring, no keyframe store installed yet): preserve
+            // historical behaviour of restoring chip + clock to
+            // pre-rewind state.
             restoreLogicalSnapshot(preReverseSnapshot);
-            // 2. Separately restore the runtime clock to where it was BEFORE
-            //    held-rewind started. ReverseResynthesizer mutates the clock
-            //    on every burst (runtime.restoreClockSnapshot to a keyframe
-            //    audio-frame index, then forward-step), so at endReverse the
-            //    clock is parked at the last synthesized historical audio
-            //    frame. Without this explicit restore, forward audio after
-            //    held-rewind would resume from that historical position,
-            //    breaking audio-frame indexing.
-            //
-            //    We do this OUTSIDE restoreLogicalSnapshot so normal rewind
-            //    seeks (RewindController.seekTo, stepBackward) continue to
-            //    leave the runtime clock at its current live position — they
-            //    don't touch the clock and shouldn't be made to.
             AudioFrameClock.Snapshot clockSnap =
                     preReverseSnapshot.backend() != null
                             ? preReverseSnapshot.backend().clockSnapshot()
@@ -749,8 +872,57 @@ public class AudioManager {
             if (clockSnap != null) {
                 deterministicAudioRuntime.restoreClockSnapshot(clockSnap);
             }
-            preReverseSnapshot = null;
         }
+        preReverseSnapshot = null;
+    }
+
+    /**
+     * Returns the audio clock value at the boundary of
+     * {@code targetGameFrame} by walking from the audio keyframe
+     * at-or-before that game-frame forward one game-frame at a time.
+     * Returns {@code -1L} when no usable keyframe is available — the
+     * caller falls back to pre-rewind restore.
+     */
+    private long computeAudioClockAtGameFrame(long targetGameFrame) {
+        if (liveRewindAudioKeyframes == null) {
+            return -1L;
+        }
+        AudioLogicalSnapshot keyframe =
+                liveRewindAudioKeyframes.keyframeAtOrBefore(targetGameFrame);
+        if (keyframe == null || keyframe.backend() == null
+                || keyframe.backend().clockSnapshot() == null) {
+            return -1L;
+        }
+        AudioFrameClock.Snapshot startSnapshot = keyframe.backend().clockSnapshot();
+        AudioFrameClock tempClock = new AudioFrameClock(
+                startSnapshot.sampleRate(), startSnapshot.frameRate());
+        tempClock.restoreSnapshot(startSnapshot);
+        long keyframeFrame = keyframe.commandTimelineFrame();
+        for (long f = keyframeFrame; f < targetGameFrame; f++) {
+            tempClock.samplesForNextFrame();
+        }
+        return tempClock.captureSnapshot().totalSamplesProduced();
+    }
+
+    /**
+     * Builds an {@link AudioFrameClock.Snapshot} carrying
+     * {@code totalSamplesProduced=value} using sample/frame rates from
+     * the captured pre-rewind clock snapshot. Returns null when no
+     * pre-rewind snapshot is available (rate metadata unknown).
+     */
+    private AudioFrameClock.Snapshot buildClockSnapshotAt(long value) {
+        AudioFrameClock.Snapshot template = preReverseSnapshot != null
+                && preReverseSnapshot.backend() != null
+                ? preReverseSnapshot.backend().clockSnapshot()
+                : null;
+        if (template == null) {
+            return null;
+        }
+        return new AudioFrameClock.Snapshot(
+                template.sampleRate(),
+                template.frameRate(),
+                value,
+                0);
     }
 
     /**
@@ -802,9 +974,21 @@ public class AudioManager {
             return driver;
         };
 
+        AudioKeyframeStore.FrozenView frozen = keyframes.frozenView();
+        // Floor the worker's burst range at the higher of the
+        // earliest captured keyframe's audio frame and the previous
+        // held-rewind release's clock value. The latter prevents the
+        // worker from re-synthesising audio for frames the user has
+        // logically "rewound past + released" — those frames are
+        // stale and shouldn't be heard again on subsequent rewinds.
+        long sessionAudioFloor = frozen.earliestKeyframeAudioFrame();
+        if (lastReverseReleaseClockValue != Long.MIN_VALUE) {
+            sessionAudioFloor = Math.max(sessionAudioFloor, lastReverseReleaseClockValue);
+        }
         ReverseAudioSession session = new ReverseAudioSession(
                 ring,
-                keyframes.frozenView(),
+                frozen,
+                sessionAudioFloor,
                 commandTimeline.entries(), // already returns List.copyOf
                 sampleRate,
                 frameRate,
@@ -820,13 +1004,26 @@ public class AudioManager {
                 fm6DacOff,
                 psgNoiseShift);
 
+        // Raise the cursor's read floor to the session's audioFloor so
+        // readPrevious zero-pads below the earliest captured keyframe.
+        // Without this the cursor would happily return forward-play
+        // samples from before any keyframe was captured — i.e. audio
+        // for game frames the rewind controller cannot actually rewind
+        // to. The worker's burst-floor clamp on its own only stops
+        // synthesis; the consumer still drains whatever was in the
+        // ring from the pre-keyframe forward play.
+        cursor.raiseOldestReadableFrameTo(session.audioFloor());
+
         ReverseResynthesizer worker = new ReverseResynthesizer(session);
         worker.setCursor(cursor);
         LOGGER.info(String.format(
                 "rewind-resynth: session opened (sampleRate=%d, burst=%d frames,"
-                        + " headroom=%d frames, keyframes=%d, timeline=%d entries)",
+                        + " headroom=%d frames, keyframes=%d, timeline=%d entries,"
+                        + " audioFloor=%d, cursorOldest=%d, cursorNext=%d)",
                 sampleRate, sampleRate, sampleRate / 2,
-                session.keyframes().size(), session.frozenTimeline().size()));
+                session.keyframes().size(), session.frozenTimeline().size(),
+                session.audioFloor(), cursor.oldestReadableFrame(),
+                cursor.nextReadableFrame()));
         // Best-effort prefill: try a couple of iterations synchronously so
         // the worker has historical PCM in the ring before the first audio
         // drain. Returns false when there's no work to do (e.g. ring full,
@@ -947,6 +1144,8 @@ public class AudioManager {
         DacData baseDac = this.dacData;
         SmpsSequencerConfig baseConfig =
                 audioProfile != null ? audioProfile.getSequencerConfig() : null;
+        Map<GameSound, Integer> soundMapCopy =
+                this.soundMap != null ? Map.copyOf(this.soundMap) : Map.of();
         Map<String, SmpsLoader> donorLoadersCopy = new HashMap<>(this.donorLoaders);
         Map<String, DacData> donorDacCopy = new HashMap<>(this.donorDacData);
         Map<String, SmpsSequencerConfig> donorConfigCopy = new HashMap<>(this.donorConfigs);
@@ -1025,12 +1224,54 @@ public class AudioManager {
                                 donorConfigCopy.get(command.donorGameId()));
                     }
                     case FALLBACK_NAME, RING_RESOLVED -> {
-                        return null;
+                        if (baseLoader == null || baseDac == null || command.sfxName() == null) {
+                            return null;
+                        }
+                        AbstractSmpsData data = baseLoader.loadSfx(command.sfxName());
+                        if (data == null) {
+                            Integer mappedId = mappedGameSoundId(command.sfxName(), soundMapCopy);
+                            if (mappedId != null) {
+                                data = baseLoader.loadSfx(mappedId);
+                            }
+                        }
+                        if (data == null) {
+                            return null;
+                        }
+                        return new SfxData(data, baseDac, baseConfig);
                     }
                 }
                 return null;
             }
         };
+    }
+
+    private static Integer mappedGameSoundId(String sfxName, Map<GameSound, Integer> soundMap) {
+        if (sfxName == null || soundMap == null || soundMap.isEmpty()) {
+            return null;
+        }
+        try {
+            return soundMap.get(GameSound.valueOf(sfxName));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private boolean replayResolvedNamedSfxAsSmps(AudioCommand.PlaySfx command) {
+        if (smpsLoader == null || dacData == null || command.sfxName() == null) {
+            return false;
+        }
+        AbstractSmpsData sfx = smpsLoader.loadSfx(command.sfxName());
+        if (sfx == null) {
+            Integer mappedId = mappedGameSoundId(command.sfxName(), soundMap);
+            if (mappedId != null) {
+                sfx = smpsLoader.loadSfx(mappedId);
+            }
+        }
+        if (sfx == null) {
+            return false;
+        }
+        backend.playSfxSmps(sfx, dacData, command.pitch());
+        return true;
     }
 
     public void advancePausedFrameStepAudio() {
@@ -1486,6 +1727,8 @@ public class AudioManager {
         this.reverseResynthShutdownTimeouts = 0;
         this.reverseAudioPresentationActive = false;
         this.preReverseSnapshot = null;
+        this.lastReverseReleaseClockValue = Long.MIN_VALUE;
+        this.gameplayAudioFrame = 0L;
         this.liveRewindAudioKeyframes = null;
         this.deterministicAudioRuntime.clearSubmittedCommands();
         this.deterministicAudioRuntime.clearPcmHistory();

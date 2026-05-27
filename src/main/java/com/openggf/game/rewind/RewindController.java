@@ -98,6 +98,25 @@ public final class RewindController {
         }
     }
 
+    /**
+     * Re-roots rewind history at frame 0 after a level/act boundary.
+     * Unlike {@link #resetBufferAtCurrentFrame}, this also rewinds the
+     * controller's {@code currentFrame} counter back to 0 so the new
+     * segment starts with a clean rewind-counter origin. Callers must
+     * separately reset the {@link InputSource} (e.g. discardAfter(0))
+     * and any companion audio state to keep the two sides aligned.
+     */
+    public void resetToFrameZero() {
+        segmentCache.invalidate();
+        keyframes.clear();
+        currentFrame = 0;
+        keyframes.put(0, registry.capture());
+        if (audioKeyframes != null) {
+            audioKeyframes.clear();
+            captureAudioKeyframe(0);
+        }
+    }
+
     /** Steps forward one frame, capturing a keyframe at the boundary. */
     public void step() {
         if (currentFrame + 1 >= inputs.frameCount()) {
@@ -190,8 +209,17 @@ public final class RewindController {
         if (currentFrame <= earliestAvailableFrame()) return false;
         int originalFrame = currentFrame;
         int target = currentFrame - 1;
-        int keyframeFrame = (target / keyframeInterval) * keyframeInterval;
-        final var floor = keyframes.latestAtOrBefore(keyframeFrame).orElseThrow();
+        // Search for the latest keyframe at or before target directly. The
+        // historical (target / keyframeInterval) * keyframeInterval floor
+        // assumed keyframes only land on interval multiples, but
+        // resetBufferAtCurrentFrame (called from LevelManager at level
+        // boundaries) puts a keyframe at the *current* frame regardless of
+        // interval alignment. After a level-boundary reset at e.g.
+        // frame 199, the earliest keyframe is 199 and the next interval
+        // multiple is 240; stepping back through (199..240) would floor
+        // the search key below 199 and fail with NoSuchElementException
+        // even though a valid floor entry exists.
+        final var floor = keyframes.latestAtOrBefore(target).orElseThrow();
         final int keyframeSnapshot = floor.frame();
         final var restoreSnapshot = floor.snapshot();
         // Use int[] wrapper to allow mutation within lambdas

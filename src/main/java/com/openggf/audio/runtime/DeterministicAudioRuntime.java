@@ -71,4 +71,16 @@ public interface DeterministicAudioRuntime {
 
     default void restoreClockSnapshot(AudioFrameClock.Snapshot snapshot) {
     }
+
+    /** Re-anchors any in-memory PCM history ring at the given audio
+     *  frame with zero stored frames, so the next reverse cursor sees
+     *  an empty readable window. No-op for runtimes without a ring. */
+    default void invalidatePcmHistoryAt(long nextAudioFrame) {
+    }
+
+    /** Resets the audio frame clock to 0 samples produced. Used by
+     *  AudioManager.resetForLevelRewindSegment to give the level a
+     *  clean audio-frame origin. No-op for runtimes without a clock. */
+    default void resetClock() {
+    }
 }

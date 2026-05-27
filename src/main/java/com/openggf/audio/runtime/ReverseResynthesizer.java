@@ -168,7 +168,15 @@ public final class ReverseResynthesizer implements Runnable {
             return false;
         }
         int requestedBurst = Math.min(s.burstAudioFrames(), maxPrependable);
-        long burstFloor = Math.max(0L, cursor.oldestReadableFrame() - requestedBurst);
+        // Clamp the burst floor to the session's audioFloor — the earliest
+        // audio frame captured in any keyframe. Without this clamp the
+        // worker can keep producing audio for frames below any available
+        // keyframe (it would just keep picking the earliest keyframe and
+        // walk forward from it), letting the consumer drain past the
+        // game-state rewind floor. With the clamp, the worker refuses to
+        // burst once the cursor reaches the floor and the consumer hears
+        // silence (readPrevious zero-pads when cursor is exhausted).
+        long burstFloor = Math.max(s.audioFloor(), cursor.oldestReadableFrame() - requestedBurst);
         int actualBurstFrames = (int) (cursor.oldestReadableFrame() - burstFloor);
         if (actualBurstFrames <= 0) {
             return false;
@@ -205,7 +213,9 @@ public final class ReverseResynthesizer implements Runnable {
                 s.presentationDriverFactory(),
                 () -> workerState.sfxBlocked = false);
 
-        long gameFrame = keyframe.commandTimelineFrame();
+        // Audio keyframes are captured after their game frame has already
+        // rendered audio, so synthesis resumes with the next game frame.
+        long gameFrame = keyframe.commandTimelineFrame() + 1;
         long audioFrame = keyframe.backend().clockSnapshot().totalSamplesProduced();
         long burstEnd = cursor.oldestReadableFrame(); // exclusive
 

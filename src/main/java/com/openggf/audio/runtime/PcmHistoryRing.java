@@ -126,6 +126,26 @@ public final class PcmHistoryRing {
         Arrays.fill(samples, (short) 0);
     }
 
+    /**
+     * Re-anchors the ring at {@code nextAudioFrame} with zero stored
+     * frames, without zeroing the underlying slot data. Subsequent
+     * {@link #write} calls begin writing at slot
+     * {@code nextAudioFrame % capacityFrames}, and a freshly-created
+     * {@link ReverseCursor} sees an empty readable window. Used at
+     * held-rewind release to invalidate the ring so the next rewind
+     * cycle only sees post-release forward-play samples, not stale
+     * samples from before the rewind began.
+     *
+     * <p>Slot data isn't zeroed because the cursor reads only within
+     * its declared window; stale bytes outside the window are
+     * unreachable. Skipping the {@code Arrays.fill} keeps this a O(1)
+     * operation suitable for the audio-thread boundary.
+     */
+    public synchronized void invalidateAt(long nextAudioFrame) {
+        nextFrameIndex = nextAudioFrame;
+        storedFrames = 0;
+    }
+
     private int ringSlot(long frameIndex) {
         return (int) Math.floorMod(frameIndex, capacityFrames);
     }
@@ -208,6 +228,28 @@ public final class PcmHistoryRing {
         void extendOldestTo(long newOldest) {
             synchronized (PcmHistoryRing.this) {
                 extendOldestToInternal(newOldest);
+            }
+        }
+
+        /**
+         * Raises {@link #oldestReadableFrame} to {@code newOldest},
+         * narrowing the readable window. Used by
+         * {@code AudioManager.startReverseResynthWorker} to clamp the
+         * cursor floor to the earliest captured audio keyframe, so
+         * {@link #readPrevious} zero-pads instead of returning ring
+         * samples from before any keyframe was captured (i.e. samples
+         * the game has no replayable state for). No-op when
+         * {@code newOldest <= oldestReadableFrame}; rejects values
+         * higher than {@link #nextReadableFrame + 1} (which would
+         * empty the readable window entirely is fine — a fully empty
+         * cursor zero-pads correctly).
+         */
+        public void raiseOldestReadableFrameTo(long newOldest) {
+            synchronized (PcmHistoryRing.this) {
+                if (newOldest <= oldestReadableFrame) {
+                    return;
+                }
+                oldestReadableFrame = newOldest;
             }
         }
 

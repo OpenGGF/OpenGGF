@@ -778,15 +778,35 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     @Override
     public void beginReversePresentation() {
-        // No-op: AudioManager.beginReverseAudioPresentation already invokes
-        // deterministicAudioRuntime.beginReversePresentation independently.
-        // The backend has no reverse-presentation state of its own
-        // post-migration.
+        // Drop forward-time PCM that OpenAL has already queued. The
+        // deterministic runtime switches to its reverse cursor before this
+        // hook, so the next stream prime will pull reverse PCM instead of
+        // letting the user hear the old forward buffer tail first.
+        if (musicSource >= 0) {
+            alSourceStop(musicSource);
+            int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
+            for (int i = 0; i < queued; i++) {
+                alSourceUnqueueBuffers(musicSource);
+            }
+        }
     }
 
     @Override
     public void endReversePresentation() {
-        // No-op: symmetric with beginReversePresentation above.
+        // Drop the AL source's queued buffers so the ~70ms tail of reverse
+        // PCM from the worker (3 × 1024-sample buffers) doesn't keep playing
+        // after the user releases held-rewind. AudioManager already flushed
+        // the runtime FIFO; here we stop the AL source and unqueue all
+        // buffers so the next updateStream() cycle re-primes cleanly from
+        // the restored runtime. Without this the consumer hears a brief
+        // reverse-audio tail every release.
+        if (musicSource >= 0) {
+            alSourceStop(musicSource);
+            int queued = alGetSourcei(musicSource, AL_BUFFERS_QUEUED);
+            for (int i = 0; i < queued; i++) {
+                alSourceUnqueueBuffers(musicSource);
+            }
+        }
     }
 
     @Override

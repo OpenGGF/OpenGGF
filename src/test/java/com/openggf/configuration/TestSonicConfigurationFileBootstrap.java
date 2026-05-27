@@ -22,6 +22,40 @@ class TestSonicConfigurationFileBootstrap {
     Path tempDir;
 
     @Test
+    void getInstance_backfillsMissingDefaultsIntoExistingFile() throws IOException {
+        String originalUserDir = System.getProperty("user.dir");
+        Path configPath = tempDir.resolve("config.json");
+
+        try {
+            Map<String, Object> sparseConfig = new java.util.HashMap<>();
+            sparseConfig.put(SonicConfiguration.UP.name(), "W");
+            OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValue(configPath.toFile(), sparseConfig);
+
+            System.setProperty("user.dir", tempDir.toString());
+            SonicConfigurationService.resetStaticInstance();
+
+            SonicConfigurationService service = SonicConfigurationService.getInstance();
+
+            Map<String, Object> persisted = OBJECT_MAPPER.readValue(configPath.toFile(), MAP_TYPE);
+            assertEquals("W", persisted.get(SonicConfiguration.UP.name()),
+                    "Existing value should be preserved");
+            assertEquals(640, ((Number) persisted.get(SonicConfiguration.SCREEN_WIDTH.name())).intValue(),
+                    "Missing default should be backfilled into the file");
+            assertEquals("DOWN", persisted.get(SonicConfiguration.DOWN.name()),
+                    "Missing key binding default should be backfilled into the file");
+            assertTrue(persisted.containsKey(SonicConfiguration.DEFAULT_ROM.name()),
+                    "Missing string default should be backfilled into the file");
+            assertEquals(service.getInt(SonicConfiguration.SCREEN_WIDTH),
+                    ((Number) persisted.get(SonicConfiguration.SCREEN_WIDTH.name())).intValue());
+        } finally {
+            if (originalUserDir != null) {
+                System.setProperty("user.dir", originalUserDir);
+            }
+            SonicConfigurationService.resetStaticInstance();
+        }
+    }
+
+    @Test
     void ensureConfigFileExists_createsDefaultConfigWhenMissing() throws IOException {
         String originalUserDir = System.getProperty("user.dir");
         Path configPath = tempDir.resolve("config.json");

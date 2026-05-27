@@ -156,6 +156,7 @@ class TestReverseResynthesizer {
         return new ReverseAudioSession(
                 ring,
                 store.frozenView(),
+                /* audioFloor */ 0L,
                 List.of(),
                 120, 60,
                 SmpsSequencer.Region.NTSC,

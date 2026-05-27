@@ -337,7 +337,16 @@ public class LevelManager {
         com.openggf.game.session.GameplayModeContext gameplayMode =
                 com.openggf.game.session.SessionManager.getCurrentGameplayMode();
         if (gameplayMode != null && gameplayMode.getRewindController() != null) {
-            gameplayMode.getRewindController().resetBufferAtCurrentFrame();
+            // Rewind controller exists from a previous level in this
+            // session — reset to frame 0 (not just rebase at the
+            // accumulated currentFrame) and re-anchor the audio domain
+            // so the new level starts both counters at 0 and shares a
+            // frame origin. Without this, the rewind HUD counter
+            // carries over from the previous level and the audio
+            // command timeline / rewind controller drift apart again.
+            com.openggf.audio.AudioManager audio = GameServices.audio();
+            audio.resetForLevelRewindSegment();
+            gameplayMode.getRewindController().resetToFrameZero();
         }
     }
 

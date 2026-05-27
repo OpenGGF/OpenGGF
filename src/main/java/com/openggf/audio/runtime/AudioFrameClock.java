@@ -37,6 +37,14 @@ public final class AudioFrameClock {
         remainder = snapshot.remainder();
     }
 
+    /** Resets the clock to fresh-boot state (0 samples, 0 remainder).
+     *  Used by AudioManager.resetForLevelRewindSegment to give the
+     *  level a clean audio-frame origin. */
+    public void reset() {
+        totalSamplesProduced = 0;
+        remainder = 0;
+    }
+
     public long totalSamplesProduced() {
         return totalSamplesProduced;
     }

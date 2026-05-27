@@ -24,10 +24,13 @@ class TestAudioManagerReverseResynthDispatch {
         audio.setBackend(backend);
         AudioTestFixtures.StubSmpsLoader loader = new AudioTestFixtures.StubSmpsLoader();
         loader.namedSfxResults.put("JUMP", new AudioTestFixtures.StubSmpsData("jump"));
+        loader.sfxResults.put(0xCC, new AudioTestFixtures.StubSmpsData("spring"));
         audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(
                 loader, 0xF0, 0xF1, GameAudioProfile.SpeedMode.FRAME_MULTIPLY));
         audio.setRom(null);
-        audio.setSoundMap(new EnumMap<>(GameSound.class));
+        EnumMap<GameSound, Integer> soundMap = new EnumMap<>(GameSound.class);
+        soundMap.put(GameSound.SPRING, 0xCC);
+        audio.setSoundMap(soundMap);
     }
 
     @AfterEach
@@ -73,6 +76,21 @@ class TestAudioManagerReverseResynthDispatch {
         }
         assertEquals(playSfxCallsBefore, countWavSfxCalls(),
                 "WAV-fallback SFX must be skipped under REVERSE_RESYNTH (spec edge case 9)");
+    }
+
+    @Test
+    void gameSoundFallbackNameResolvesToSmpsUnderReverseResynth() {
+        int smpsCallsBefore = countCallsStartingWith("playSfxSmps");
+
+        try (AudioReplayScope ignored = audio.beginRewindReplay(10, 4, AudioReplayReason.REVERSE_RESYNTH)) {
+            audio.replayTimelineCommand(new AudioCommand.PlaySfx(
+                    -1, "SPRING", AudioCommand.SfxRoute.FALLBACK_NAME, 1.0f, null));
+        }
+
+        assertEquals(smpsCallsBefore + 1, countCallsStartingWith("playSfxSmps"),
+                "REVERSE_RESYNTH must replay GameSound fallback names that resolve to ROM SMPS SFX");
+        assertEquals(0, countWavSfxCalls(),
+                "resolved GameSound fallback must not use the WAV fallback path");
     }
 
     @Test

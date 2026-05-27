@@ -88,6 +88,7 @@ class BenchmarkReverseResynthesizer {
             ReverseAudioSession session = new ReverseAudioSession(
                     ring,
                     keyframes.frozenView(),
+                    /* audioFloor */ 0L,
                     List.of(),
                     sampleRate, 60,
                     SmpsSequencer.Region.NTSC,

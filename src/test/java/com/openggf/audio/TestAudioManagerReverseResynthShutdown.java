@@ -122,6 +122,7 @@ class TestAudioManagerReverseResynthShutdown {
         ReverseAudioSession session = new ReverseAudioSession(
                 ring,
                 new AudioKeyframeStore().frozenView(),
+                /* audioFloor */ 0L,
                 List.of(),
                 120, 60,
                 SmpsSequencer.Region.NTSC,
