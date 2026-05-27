@@ -215,4 +215,76 @@ public final class SmpsPresentationReplay {
             GameAudioProfile audioProfile,
             SmpsSequencerConfig defaultConfig) {
     }
+
+    /**
+     * Outcome of {@link #applyToMusicBase}. The returned music driver is the
+     * one to be bound to the runtime music stream by the live caller.
+     */
+    public record MusicApplyResult(SmpsDriver musicDriver, SmpsSourceDescriptor sourceDescriptor) {
+    }
+
+    /**
+     * Starts a new SMPS music sequencer on a fresh driver and writes it back
+     * onto the presentation state. Mirrors the bottom half of
+     * {@code LWJGLAudioBackend.playSmps} — driver creation, region/DAC/PSG
+     * configuration, sequencer setup (speed flags, fallback voice data),
+     * and {@code addSequencer}.
+     *
+     * <p>Callers (the live backend or the resynth worker) are responsible
+     * for any prerequisite teardown (stopping a previous stream, override
+     * stack pushes) and for any follow-up bindings (runtime music stream,
+     * synthesiser config). Those are NOT SMPS-logical state and remain in
+     * the caller. This helper writes the new driver onto
+     * {@link SmpsPresentationState#musicDriver},
+     * {@link SmpsPresentationState#activeMusicStream}, and
+     * {@link SmpsPresentationState#activeMusicSequencer}.
+     */
+    public static MusicApplyResult applyToMusicBase(
+            SmpsPresentationState state,
+            AbstractSmpsData data,
+            DacData dacData,
+            SmpsSequencerConfig config,
+            AudioSourceDescriptor descriptorHint,
+            MusicReplayDependencies deps) {
+        SmpsDriver driver = new SmpsDriver(deps.outputSampleRate());
+        driver.setRegion(deps.region());
+        driver.setDacInterpolate(deps.dacInterpolate());
+        driver.setOutputSampleRate(deps.outputSampleRate());
+        driver.setPsgNoiseShiftOnEveryToggle(deps.psgNoiseShiftOnEveryToggle());
+
+        SmpsSourceDescriptor sourceDescriptor =
+                describeSourceDescriptor(descriptorHint, data, /*sfx=*/ false);
+
+        SmpsSequencer seq = new SmpsSequencer(data, dacData, driver, config);
+        seq.setSourceDescriptor(sourceDescriptor);
+        seq.setSampleRate(driver.getOutputSampleRate());
+        seq.setSpeedShoes(deps.speedShoesEnabled());
+        seq.setSpeedMultiplier(deps.speedMultiplier());
+        seq.setFm6DacOff(deps.fm6DacOff());
+        // Music is the primary voice source for SFX fallback.
+        seq.setFallbackVoiceData(data);
+        driver.addSequencer(seq, false);
+
+        state.musicDriver = driver;
+        state.activeMusicSequencer = seq;
+        state.activeMusicStream = driver;
+
+        return new MusicApplyResult(driver, sourceDescriptor);
+    }
+
+    /**
+     * Immutable per-session inputs to {@link #applyToMusicBase}. Snapshotted
+     * from config + audio profile + the current speed/region state at the
+     * start of a held-rewind session so the worker never reaches back into
+     * the live backend.
+     */
+    public record MusicReplayDependencies(
+            double outputSampleRate,
+            SmpsSequencer.Region region,
+            boolean dacInterpolate,
+            boolean fm6DacOff,
+            boolean psgNoiseShiftOnEveryToggle,
+            boolean speedShoesEnabled,
+            int speedMultiplier) {
+    }
 }

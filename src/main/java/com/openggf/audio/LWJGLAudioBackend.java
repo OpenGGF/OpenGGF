@@ -284,42 +284,48 @@ public class LWJGLAudioBackend implements AudioBackend {
             }
         }
 
-        smpsDriver = new SmpsDriver(getSmpsOutputRate());
-
-        // Configure Region
-        String regionStr = configService.getString(SonicConfiguration.REGION);
-        if ("PAL".equalsIgnoreCase(regionStr)) {
-            smpsDriver.setRegion(SmpsSequencer.Region.PAL);
-        } else {
-            smpsDriver.setRegion(SmpsSequencer.Region.NTSC);
-        }
-
-        boolean dacInterpolate = configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE);
-        smpsDriver.setDacInterpolate(dacInterpolate);
-        smpsDriver.setOutputSampleRate(getSmpsOutputRate());
-        applyPsgNoiseConfig(smpsDriver);
-
-        boolean fm6DacOff = configService.getBoolean(SonicConfiguration.FM6_DAC_OFF);
-
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
-        SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, requireSmpsConfig());
-        seq.setSourceDescriptor(describeSmpsSource(musicDescriptor, data, false));
-        seq.setSampleRate(smpsDriver.getOutputSampleRate());
-        seq.setSpeedShoes(speedShoesEnabled);
-        seq.setSpeedMultiplier(speedMultiplier);
-        seq.setFm6DacOff(fm6DacOff);
-        // Music is the primary voice source for SFX fallback
-        seq.setFallbackVoiceData(data);
-        smpsDriver.addSequencer(seq, false);
-        currentSmps = seq;
+        applyMusicBaseStart(data, dacData, requireSmpsConfig(), musicDescriptor);
         currentMusicId = musicId;
         currentMusicDescriptor = musicDescriptor;
-
         updateSynthesizerConfig();
         synchronized (streamLock) {
             deterministicAudioRuntime.setMusicStream(smpsDriver);
             currentStream = smpsDriver;
         }
+    }
+
+    /**
+     * Builds {@link MusicReplayDependencies} from current backend config and
+     * calls {@link SmpsPresentationReplay#applyToMusicBase}. Writes the new
+     * driver + sequencer back onto the backend's SMPS fields. Caller owns
+     * runtime/OpenAL binding before/after.
+     */
+    private void applyMusicBaseStart(AbstractSmpsData data, DacData dacData,
+                                      SmpsSequencerConfig config,
+                                      AudioSourceDescriptor musicDescriptor) {
+        SmpsSequencer.Region region = "PAL".equalsIgnoreCase(
+                configService.getString(SonicConfiguration.REGION))
+                ? SmpsSequencer.Region.PAL : SmpsSequencer.Region.NTSC;
+        SmpsPresentationReplay.MusicReplayDependencies musicDeps =
+                new SmpsPresentationReplay.MusicReplayDependencies(
+                        getSmpsOutputRate(),
+                        region,
+                        configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE),
+                        configService.getBoolean(SonicConfiguration.FM6_DAC_OFF),
+                        configService.getBoolean(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
+                        speedShoesEnabled,
+                        speedMultiplier);
+        SmpsPresentationState state = new SmpsPresentationState();
+        state.musicDriver = smpsDriver;
+        state.activeMusicStream = currentStream;
+        state.activeMusicSequencer = currentSmps;
+        state.sfxStream = sfxStream;
+        state.sfxBlocked = sfxBlocked;
+        SmpsPresentationReplay.applyToMusicBase(
+                state, data, dacData, config, musicDescriptor, musicDeps);
+        smpsDriver = state.musicDriver;
+        currentSmps = state.activeMusicSequencer;
     }
 
     @Override
@@ -370,35 +376,10 @@ public class LWJGLAudioBackend implements AudioBackend {
             }
         }
 
-        smpsDriver = new SmpsDriver(getSmpsOutputRate());
-
-        String regionStr = configService.getString(SonicConfiguration.REGION);
-        if ("PAL".equalsIgnoreCase(regionStr)) {
-            smpsDriver.setRegion(SmpsSequencer.Region.PAL);
-        } else {
-            smpsDriver.setRegion(SmpsSequencer.Region.NTSC);
-        }
-
-        boolean dacInterpolate = configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE);
-        smpsDriver.setDacInterpolate(dacInterpolate);
-        smpsDriver.setOutputSampleRate(getSmpsOutputRate());
-        applyPsgNoiseConfig(smpsDriver);
-
-        boolean fm6DacOff = configService.getBoolean(SonicConfiguration.FM6_DAC_OFF);
-
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
-        SmpsSequencer seq = new SmpsSequencer(data, dacData, smpsDriver, effectiveConfig);
-        seq.setSourceDescriptor(describeSmpsSource(musicDescriptor, data, false));
-        seq.setSampleRate(smpsDriver.getOutputSampleRate());
-        seq.setSpeedShoes(speedShoesEnabled);
-        seq.setSpeedMultiplier(speedMultiplier);
-        seq.setFm6DacOff(fm6DacOff);
-        seq.setFallbackVoiceData(data);
-        smpsDriver.addSequencer(seq, false);
-        currentSmps = seq;
+        applyMusicBaseStart(data, dacData, effectiveConfig, musicDescriptor);
         currentMusicId = musicId;
         currentMusicDescriptor = musicDescriptor;
-
         updateSynthesizerConfig();
         synchronized (streamLock) {
             deterministicAudioRuntime.setMusicStream(smpsDriver);
