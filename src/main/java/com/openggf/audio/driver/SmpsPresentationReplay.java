@@ -273,6 +273,83 @@ public final class SmpsPresentationReplay {
     }
 
     /**
+     * Non-override music prelude: clears the override stack, releases
+     * sfxBlocked, and tears down the standalone SFX driver. Mirrors the
+     * non-override branch of {@code LWJGLAudioBackend.playSmps} before the
+     * new music starts. The caller is responsible for OpenAL source stops
+     * and runtime SFX-stream unbinding; this helper only touches SMPS
+     * logical state.
+     */
+    public static void applyToMusicPreludeNonOverride(SmpsPresentationState state) {
+        state.musicStack.clear();
+        state.sfxBlocked = false;
+        if (state.sfxStream instanceof SmpsDriver sfxDriver) {
+            sfxDriver.stopAll();
+        }
+        state.sfxStream = null;
+    }
+
+    /**
+     * Override music prelude: optionally stops active SFX when the override
+     * is SFX-blocking (1-up), pushes the current music onto the override
+     * stack when this is a new override, and disconnects the current music
+     * driver/sequencer/stream so {@link #applyToMusicBase} can install the
+     * override's new driver. Mirrors the override branch of
+     * {@code LWJGLAudioBackend.playSmps}.
+     *
+     * <p>Caller is responsible for any OpenAL source stops and runtime
+     * SFX-stream unbinding.
+     *
+     * @param newMusicId        the music id about to be started
+     * @param isSfxBlocking     whether the new override blocks SFX (1-up)
+     * @param currentIsOverride whether the music currently playing is
+     *                          itself an override; used to decide whether
+     *                          to push a state for restore
+     * @return {@code true} if {@link SmpsPresentationState#sfxStream} was
+     *         cleared (caller should also clear the runtime SFX stream
+     *         binding)
+     */
+    public static boolean applyToMusicPreludeOverride(
+            SmpsPresentationState state,
+            int newMusicId,
+            boolean isSfxBlocking,
+            boolean currentIsOverride) {
+        boolean sfxStreamCleared = false;
+        if (isSfxBlocking) {
+            if (state.musicDriver != null) {
+                state.musicDriver.stopAllSfx();
+            }
+            if (state.sfxStream instanceof SmpsDriver sfxDriver) {
+                sfxDriver.stopAll();
+            }
+            if (state.sfxStream != null) {
+                state.sfxStream = null;
+                sfxStreamCleared = true;
+            }
+            state.sfxBlocked = true;
+        }
+        // Push current state unless re-triggering the same override.
+        if (!currentIsOverride || state.currentMusicId != newMusicId) {
+            if (state.musicDriver != null
+                    && state.activeMusicSequencer != null
+                    && state.activeMusicStream != null) {
+                state.musicStack.push(new MusicStackEntry(
+                        state.activeMusicStream,
+                        state.activeMusicSequencer,
+                        state.musicDriver,
+                        state.currentMusicId,
+                        state.currentMusicDescriptor));
+            }
+        }
+        // Disconnect the current driver/sequencer/stream so the caller can
+        // start the override on a fresh driver. Caller handles OpenAL stop.
+        state.musicDriver = null;
+        state.activeMusicSequencer = null;
+        state.activeMusicStream = null;
+        return sfxStreamCleared;
+    }
+
+    /**
      * Immutable per-session inputs to {@link #applyToMusicBase}. Snapshotted
      * from config + audio profile + the current speed/region state at the
      * start of a held-rewind session so the worker never reaches back into

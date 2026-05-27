@@ -1,7 +1,11 @@
 package com.openggf.audio.driver;
 
 import com.openggf.audio.AudioStream;
+import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.SmpsSequencer;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * Mutable container for the per-session SMPS presentation state that
@@ -38,4 +42,20 @@ public final class SmpsPresentationState {
 
     /** True while a music override (e.g. 1-up jingle) is gating SFX. */
     public boolean sfxBlocked;
+
+    /** Stack of music states pushed aside by music overrides; the most
+     *  recently pushed entry is restored first. The backend and the worker
+     *  may share the SAME {@link Deque} reference so mutations in either
+     *  context are immediately visible to the other. */
+    public Deque<MusicStackEntry> musicStack = new ArrayDeque<>();
+
+    /** Music id of the currently-playing music, or {@code -1} when none.
+     *  Used by override-push to remember which id is being saved. */
+    public int currentMusicId = -1;
+
+    /** Source descriptor for the currently-playing music, captured into
+     *  {@link MusicStackEntry} on override push so {@code restoreMusic}
+     *  can re-establish the same logical music source. */
+    public AudioSourceDescriptor currentMusicDescriptor;
 }
+

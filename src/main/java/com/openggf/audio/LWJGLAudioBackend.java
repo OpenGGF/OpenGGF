@@ -15,6 +15,7 @@ import org.lwjgl.openal.*;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 
+import com.openggf.audio.driver.MusicStackEntry;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.driver.SmpsPresentationReplay;
 import com.openggf.audio.driver.SmpsPresentationState;
@@ -65,24 +66,7 @@ public class LWJGLAudioBackend implements AudioBackend {
     private SmpsDriver smpsDriver;
     private DeterministicAudioRuntime deterministicAudioRuntime = NoOpDeterministicAudioRuntime.INSTANCE;
 
-    private static class MusicState {
-        final AudioStream stream;
-        final SmpsSequencer smps;
-        final SmpsDriver driver;
-        final int musicId;
-        final AudioSourceDescriptor descriptor;
-
-        MusicState(AudioStream stream, SmpsSequencer smps, SmpsDriver driver, int musicId,
-                   AudioSourceDescriptor descriptor) {
-            this.stream = stream;
-            this.smps = smps;
-            this.driver = driver;
-            this.musicId = musicId;
-            this.descriptor = descriptor;
-        }
-    }
-
-    private final Deque<MusicState> musicStack = new ArrayDeque<>();
+    private final Deque<MusicStackEntry> musicStack = new ArrayDeque<>();
     private int currentMusicId = -1;
     private AudioSourceDescriptor currentMusicDescriptor;
     private AudioSourceDescriptor pendingMusicDescriptor;
@@ -234,65 +218,7 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     @Override
     public void playSmps(AbstractSmpsData data, DacData dacData) {
-        int musicId = data.getId();
-        boolean isOverride = audioProfile != null && audioProfile.isMusicOverride(musicId);
-        if (isOverride) {
-            // ROM behavior: only 1-up jingle (isSfxBlockingMusic) kills active SFX.
-            // Non-blocking overrides (invincibility, Super Sonic) let SFX continue.
-            if (audioProfile.isSfxBlockingMusic(musicId)) {
-                synchronized (streamLock) {
-                    if (smpsDriver != null) {
-                        smpsDriver.stopAllSfx();
-                    }
-                    if (sfxStream instanceof SmpsDriver sfxDriver) {
-                        sfxDriver.stopAll();
-                    }
-                    sfxStream = null;
-                    deterministicAudioRuntime.clearSfxStream();
-                }
-                sfxBlocked = true;
-            }
-            // Push current state unless re-triggering the same override (e.g.
-            // collecting invincibility while already invincible).  When a
-            // *different* override starts (e.g. 1-up during invincibility), the
-            // active override must be saved so it resumes when the new one ends.
-            boolean currentIsOverride = audioProfile != null && audioProfile.isMusicOverride(currentMusicId);
-            if (!currentIsOverride || currentMusicId != musicId) {
-                pushCurrentState();
-            }
-
-            // Just disconnect the current driver from the source without stopping/clearing it.
-            alSourceStop(musicSource);
-            alSourcei(musicSource, AL_BUFFER, 0);
-            currentStream = null;
-            currentSmps = null;
-            smpsDriver = null;
-        } else {
-            stopStream();
-            // Stop music source if playing wav
-            alSourceStop(musicSource);
-            clearMusicStack();
-            // Clean up standalone SFX stream - stopStream() only handles currentStream/smpsDriver,
-            // but SFX played before any music was active use a separate sfxStream SmpsDriver.
-            // Without this, the sfxStream persists and keeps rendering into fillBuffer() indefinitely.
-            synchronized (streamLock) {
-                if (sfxStream instanceof SmpsDriver sfxDriver) {
-                    sfxDriver.stopAll();
-                }
-                sfxStream = null;
-                deterministicAudioRuntime.clearSfxStream();
-            }
-        }
-
-        AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
-        applyMusicBaseStart(data, dacData, requireSmpsConfig(), musicDescriptor);
-        currentMusicId = musicId;
-        currentMusicDescriptor = musicDescriptor;
-        updateSynthesizerConfig();
-        synchronized (streamLock) {
-            deterministicAudioRuntime.setMusicStream(smpsDriver);
-            currentStream = smpsDriver;
-        }
+        playSmpsInternal(data, dacData, requireSmpsConfig(), /*forceOverride=*/ false);
     }
 
     /**
@@ -316,64 +242,90 @@ public class LWJGLAudioBackend implements AudioBackend {
                         configService.getBoolean(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
                         speedShoesEnabled,
                         speedMultiplier);
+        SmpsPresentationState state = snapshotPresentationState();
+        SmpsPresentationReplay.applyToMusicBase(
+                state, data, dacData, config, musicDescriptor, musicDeps);
+        writeBackPresentationState(state);
+    }
+
+    /**
+     * Snapshots the backend's SMPS-logical fields into a fresh
+     * {@link SmpsPresentationState} for handing to
+     * {@link SmpsPresentationReplay}. The {@link #musicStack} reference is
+     * shared, not copied — mutations made by the helper apply directly to
+     * the backend's stack.
+     */
+    private SmpsPresentationState snapshotPresentationState() {
         SmpsPresentationState state = new SmpsPresentationState();
         state.musicDriver = smpsDriver;
         state.activeMusicStream = currentStream;
         state.activeMusicSequencer = currentSmps;
         state.sfxStream = sfxStream;
         state.sfxBlocked = sfxBlocked;
-        SmpsPresentationReplay.applyToMusicBase(
-                state, data, dacData, config, musicDescriptor, musicDeps);
+        state.musicStack = musicStack;
+        state.currentMusicId = currentMusicId;
+        state.currentMusicDescriptor = currentMusicDescriptor;
+        return state;
+    }
+
+    /**
+     * Copies SMPS-logical fields from the helper's state object back onto
+     * the backend. The {@link #musicStack} reference was shared, so no copy
+     * is needed for it.
+     */
+    private void writeBackPresentationState(SmpsPresentationState state) {
         smpsDriver = state.musicDriver;
+        currentStream = state.activeMusicStream;
         currentSmps = state.activeMusicSequencer;
+        sfxStream = state.sfxStream;
+        sfxBlocked = state.sfxBlocked;
+        currentMusicId = state.currentMusicId;
+        currentMusicDescriptor = state.currentMusicDescriptor;
     }
 
     @Override
     public void playSmps(AbstractSmpsData data, DacData dacData,
                          SmpsSequencerConfig config, boolean forceOverride) {
         SmpsSequencerConfig effectiveConfig = (config != null) ? config : requireSmpsConfig();
+        playSmpsInternal(data, dacData, effectiveConfig, forceOverride);
+    }
 
+    private void playSmpsInternal(AbstractSmpsData data, DacData dacData,
+                                   SmpsSequencerConfig effectiveConfig,
+                                   boolean forceOverride) {
         int musicId = data.getId();
         boolean isOverride = forceOverride
                 || (audioProfile != null && audioProfile.isMusicOverride(musicId));
         if (isOverride) {
-            boolean sfxBlocking = audioProfile != null && audioProfile.isSfxBlockingMusic(musicId);
             // ROM: only the 1-up jingle (isSfxBlockingMusic) kills active SFX.
             // Non-blocking overrides (invincibility, Super Sonic) let SFX continue.
-            if (sfxBlocking) {
-                synchronized (streamLock) {
-                    if (smpsDriver != null) {
-                        smpsDriver.stopAllSfx();
-                    }
-                    if (sfxStream instanceof SmpsDriver sfxDriver) {
-                        sfxDriver.stopAll();
-                    }
-                    sfxStream = null;
+            boolean sfxBlocking = audioProfile != null && audioProfile.isSfxBlockingMusic(musicId);
+            boolean currentIsOverride = audioProfile != null
+                    && audioProfile.isMusicOverride(currentMusicId);
+            synchronized (streamLock) {
+                SmpsPresentationState state = snapshotPresentationState();
+                boolean sfxStreamCleared = SmpsPresentationReplay.applyToMusicPreludeOverride(
+                        state, musicId, sfxBlocking, currentIsOverride);
+                writeBackPresentationState(state);
+                if (sfxStreamCleared) {
                     deterministicAudioRuntime.clearSfxStream();
                 }
-                sfxBlocked = true;
             }
-            // Push current state unless re-triggering the same override.
-            boolean currentIsOverride = audioProfile != null && audioProfile.isMusicOverride(currentMusicId);
-            if (!currentIsOverride || currentMusicId != musicId) {
-                pushCurrentState();
-            }
+            // Just disconnect the current driver from the source without stopping/clearing it.
             alSourceStop(musicSource);
             alSourcei(musicSource, AL_BUFFER, 0);
-            currentStream = null;
-            currentSmps = null;
-            smpsDriver = null;
         } else {
             stopStream();
             alSourceStop(musicSource);
-            clearMusicStack();
             synchronized (streamLock) {
-                if (sfxStream instanceof SmpsDriver sfxDriver) {
-                    sfxDriver.stopAll();
-                }
-                sfxStream = null;
+                SmpsPresentationState state = snapshotPresentationState();
+                SmpsPresentationReplay.applyToMusicPreludeNonOverride(state);
+                writeBackPresentationState(state);
                 deterministicAudioRuntime.clearSfxStream();
             }
+            // pendingRestore is backend-flow-control metadata, not SMPS state:
+            // the non-override-prelude helper deliberately does not touch it.
+            pendingRestore = false;
         }
 
         AudioSourceDescriptor musicDescriptor = consumePendingMusicDescriptor(musicId);
@@ -535,9 +487,9 @@ public class LWJGLAudioBackend implements AudioBackend {
     }
 
     private void doRestoreMusic() {
-        MusicState savedState = musicStack.pollFirst();
-        if (savedState == null || savedState.stream == null || savedState.smps == null
-                || savedState.driver == null) {
+        MusicStackEntry savedState = musicStack.pollFirst();
+        if (savedState == null || savedState.stream() == null || savedState.sequencer() == null
+                || savedState.driver() == null) {
             return;
         }
 
@@ -551,17 +503,17 @@ public class LWJGLAudioBackend implements AudioBackend {
         }
 
         // Stop the current (non-saved) smps driver
-        if (smpsDriver != null && smpsDriver != savedState.driver) {
+        if (smpsDriver != null && smpsDriver != savedState.driver()) {
             smpsDriver.stopAll();
         }
 
         // Restore saved state
         synchronized (streamLock) {
-            currentStream = savedState.stream;
-            currentSmps = savedState.smps;
-            smpsDriver = savedState.driver;
-            currentMusicId = savedState.musicId;
-            currentMusicDescriptor = savedState.descriptor;
+            currentStream = savedState.stream();
+            currentSmps = savedState.sequencer();
+            smpsDriver = savedState.driver();
+            currentMusicId = savedState.musicId();
+            currentMusicDescriptor = savedState.descriptor();
             bindRuntimePresentationStreams();
         }
 
@@ -721,8 +673,8 @@ public class LWJGLAudioBackend implements AudioBackend {
     public AudioBackendLogicalSnapshot captureLogicalSnapshot() {
         synchronized (streamLock) {
             List<AudioSourceDescriptor> overrides = new ArrayList<>(musicStack.size());
-            for (MusicState state : musicStack) {
-                overrides.add(state.descriptor);
+            for (MusicStackEntry state : musicStack) {
+                overrides.add(state.descriptor());
             }
             SmpsDriverSnapshot musicDriverSnapshot = smpsDriver != null ? smpsDriver.captureSnapshot() : null;
             SmpsDriverSnapshot sfxDriverSnapshot = sfxStream instanceof SmpsDriver sfxDriver
@@ -1055,7 +1007,7 @@ public class LWJGLAudioBackend implements AudioBackend {
         if (currentStream == null || currentSmps == null || smpsDriver == null) {
             return;
         }
-        musicStack.push(new MusicState(currentStream, currentSmps, smpsDriver, currentMusicId,
+        musicStack.push(new MusicStackEntry(currentStream, currentSmps, smpsDriver, currentMusicId,
                 currentMusicDescriptor));
     }
 
@@ -1069,9 +1021,9 @@ public class LWJGLAudioBackend implements AudioBackend {
         if (musicStack.isEmpty()) {
             return false;
         }
-        for (Iterator<MusicState> iterator = musicStack.iterator(); iterator.hasNext();) {
-            MusicState state = iterator.next();
-            if (state.musicId == musicId) {
+        for (Iterator<MusicStackEntry> iterator = musicStack.iterator(); iterator.hasNext();) {
+            MusicStackEntry state = iterator.next();
+            if (state.musicId() == musicId) {
                 iterator.remove();
                 return true;
             }
