@@ -71,16 +71,4 @@ public interface DeterministicAudioRuntime {
 
     default void restoreClockSnapshot(AudioFrameClock.Snapshot snapshot) {
     }
-
-    default AudioStream musicStreamForReverseResynth() {
-        return null;
-    }
-
-    default AudioStream sfxStreamForReverseResynth() {
-        return null;
-    }
-
-    default int samplesForNextFrameForReverseResynth() {
-        return 0;
-    }
 }

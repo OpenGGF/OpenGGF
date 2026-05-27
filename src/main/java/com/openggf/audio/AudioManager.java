@@ -92,26 +92,12 @@ public class AudioManager {
 
     public void setLiveRewindAudioKeyframes(AudioKeyframeStore store) {
         this.liveRewindAudioKeyframes = store;
-        rebuildReverseResynthesizerForCurrentBackend();
-    }
-
-    private void rebuildReverseResynthesizerForCurrentBackend() {
-        if (!(deterministicAudioRuntime instanceof StreamBackedDeterministicAudioRuntime stream)) {
-            return;
-        }
-        PcmHistoryRing ring = stream.pcmHistoryRingForReverseResynth();
-        if (ring == null || liveRewindAudioKeyframes == null) {
-            // No ring or no keyframe store yet — clear any previously-attached
-            // resynth so a stale instance never lingers.
-            stream.setReverseResynthesizer(null);
-            return;
-        }
-        int sampleRate = stream.sampleRateForReverseResynth();
-        ReverseResynthesizer resynth = new ReverseResynthesizer(
-                ring, liveRewindAudioKeyframes, this, deterministicAudioRuntime,
-                /* burst */ sampleRate,
-                /* headroom */ sampleRate / 2);
-        stream.setReverseResynthesizer(resynth);
+        // Task 5: the eager-resynth construction here is removed. The worker
+        // is now created by beginReverseAudioPresentation (Task 6) per
+        // held-rewind session, not preemptively per backend attach. This
+        // method retains its setter role so LiveRewindManager can plumb the
+        // keyframe store; the actual ReverseResynthesizer construction
+        // happens at session-start time.
     }
 
     void setDeterministicAudioRuntime(DeterministicAudioRuntime deterministicAudioRuntime) {
@@ -127,7 +113,6 @@ public class AudioManager {
         if (backend != null) {
             backend.attachDeterministicAudioRuntime(this.deterministicAudioRuntime);
         }
-        rebuildReverseResynthesizerForCurrentBackend();
     }
 
     private void configureDeterministicRuntimeForBackend() {

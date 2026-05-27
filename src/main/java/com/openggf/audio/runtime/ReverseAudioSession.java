@@ -1,9 +1,13 @@
 package com.openggf.audio.runtime;
 
+import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsPresentationReplay;
 import com.openggf.audio.rewind.AudioKeyframeStore;
 import com.openggf.audio.rewind.AudioTimelineEntry;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsSequencerConfig;
 
 import java.util.List;
 import java.util.Objects;
@@ -51,17 +55,31 @@ public record ReverseAudioSession(
         List<AudioTimelineEntry> frozenTimeline,
         int sampleRate,
         int frameRate,
+        SmpsSequencer.Region region,
         int burstAudioFrames,
         int headroomThresholdFrames,
         SmpsDriverSnapshot.DependencyResolver replayDependencies,
-        Supplier<SmpsDriver> presentationDriverFactory) {
+        Supplier<SmpsDriver> presentationDriverFactory,
+        AudioCommandDataResolver commandResolver,
+        GameAudioProfile audioProfile,
+        SmpsSequencerConfig defaultSequencerConfig,
+        boolean dacInterpolate,
+        boolean fm6DacOff,
+        boolean psgNoiseShiftOnEveryToggle) {
 
     public ReverseAudioSession {
         Objects.requireNonNull(ring, "ring");
         Objects.requireNonNull(keyframes, "keyframes");
         Objects.requireNonNull(frozenTimeline, "frozenTimeline");
+        Objects.requireNonNull(region, "region");
         Objects.requireNonNull(replayDependencies, "replayDependencies");
         Objects.requireNonNull(presentationDriverFactory, "presentationDriverFactory");
+        Objects.requireNonNull(commandResolver, "commandResolver");
+        // audioProfile and defaultSequencerConfig may be null on early-boot
+        // sessions where the live audio profile hasn't been installed yet.
+        // SmpsPresentationReplay tolerates null profile (default priorities)
+        // but null config means PlayMusic/PlaySfx commands cannot be
+        // replayed; that branch will skip such commands.
         if (sampleRate <= 0) {
             throw new IllegalArgumentException("sampleRate must be positive, got " + sampleRate);
         }
@@ -80,5 +98,30 @@ public record ReverseAudioSession(
         // Force-copy the timeline to be safe even if the caller passes a
         // mutable list. List.copyOf is a no-op when already immutable.
         frozenTimeline = List.copyOf(frozenTimeline);
+    }
+
+    /** Builds a {@link SmpsPresentationReplay.SfxReplayDependencies} from
+     *  the session's immutable inputs. The worker pre-builds this once and
+     *  reuses it for every SFX command in the burst. */
+    public SmpsPresentationReplay.SfxReplayDependencies buildSfxDependencies() {
+        return new SmpsPresentationReplay.SfxReplayDependencies(
+                sampleRate,
+                dacInterpolate,
+                fm6DacOff,
+                psgNoiseShiftOnEveryToggle,
+                audioProfile,
+                defaultSequencerConfig);
+    }
+
+    /** Builds a {@link SmpsPresentationReplay.MusicReplayDependencies} from
+     *  the session's immutable inputs. Speed flags now live on the
+     *  presentation state and are NOT part of the music deps record. */
+    public SmpsPresentationReplay.MusicReplayDependencies buildMusicDependencies() {
+        return new SmpsPresentationReplay.MusicReplayDependencies(
+                sampleRate,
+                region,
+                dacInterpolate,
+                fm6DacOff,
+                psgNoiseShiftOnEveryToggle);
     }
 }

@@ -21,7 +21,6 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     private AudioStream sfxStream;
     private Consumer<AudioCommand> commandHandler = command -> {};
     private PcmHistoryRing.ReverseCursor reverseCursor;
-    private ReverseResynthesizer reverseResynthesizer;
     private boolean hasLastReverseFrame;
     private boolean reverseFrameOutputThisSession;
     private short lastReverseLeft;
@@ -133,46 +132,15 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     @Override
     public int drainPcm(short[] target, int frames) {
         if (reverseCursor != null) {
-            // Loop: extend the cursor's readable window with the resynth as
-            // much as the ring's physical-slot budget allows, then read a
-            // chunk, then loop. Each readPrevious frees physical slots so the
-            // next ensureHeadroom call can extend further. Without the loop,
-            // a single ensureHeadroom call from a full-ring cursor would
-            // refuse to extend (no slots free), and readPrevious could only
-            // satisfy at most one ring-capacity worth of frames in a single
-            // drainPcm call — which is wrong when the caller's request
-            // exceeds the ring capacity.
-            int totalRead = 0;
-            while (totalRead < frames) {
-                int remaining = frames - totalRead;
-                if (reverseResynthesizer != null) {
-                    reverseResynthesizer.ensureHeadroom(reverseCursor, remaining);
-                }
-                long unread = reverseCursor.nextReadableFrame()
-                        - reverseCursor.oldestReadableFrame() + 1;
-                if (unread <= 0) {
-                    break; // history exhausted past the start-of-history floor
-                }
-                int chunk = (int) Math.min(unread, (long) remaining);
-                short[] chunkBuf = new short[chunk * 2];
-                int got = reverseCursor.readPrevious(chunkBuf, chunk);
-                if (got <= 0) {
-                    break;
-                }
-                System.arraycopy(chunkBuf, 0, target, totalRead * 2, got * 2);
-                totalRead += got;
-                if (got < chunk) {
-                    // readPrevious stopped early; nothing more available.
-                    break;
-                }
-            }
-            // Pad the unfilled tail with silence so the caller's buffer is
-            // fully written even when history runs out.
-            if (totalRead < frames) {
-                java.util.Arrays.fill(target, totalRead * 2, frames * 2, (short) 0);
-            }
-            rememberLastReverseFrame(target, totalRead);
-            return totalRead;
+            // Worker-thread plan Task 5: the resynth is no longer driven
+            // synchronously from drainPcm. ReverseResynthesizer is now a
+            // Runnable worker that prepends historical PCM to the ring on
+            // its own thread, in parallel with the audio drain consumer.
+            // drainPcm just reads what's available; readPrevious already
+            // zero-pads the tail when the cursor is exhausted.
+            int read = reverseCursor.readPrevious(target, frames);
+            rememberLastReverseFrame(target, read);
+            return read;
         }
         int read = outputFifo.drain(target, frames);
         applyReleaseCrossfade(target, read);
@@ -228,37 +196,29 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
         }
     }
 
-    @Override
-    public AudioStream musicStreamForReverseResynth() {
-        return musicStream;
-    }
-
-    @Override
-    public AudioStream sfxStreamForReverseResynth() {
-        return sfxStream;
-    }
-
-    @Override
-    public int samplesForNextFrameForReverseResynth() {
-        return frameClock.samplesForNextFrame();
-    }
-
+    /**
+     * Exposed for Task 6's lifecycle wiring: AudioManager needs the
+     * history ring to build {@link ReverseAudioSession} for the worker.
+     */
     public PcmHistoryRing pcmHistoryRingForReverseResynth() {
         return pcmHistory;
     }
 
+    /**
+     * Exposed for Task 6's lifecycle wiring: AudioManager needs the
+     * sample rate to size {@link ReverseAudioSession}.
+     */
     public int sampleRateForReverseResynth() {
         return frameClock.sampleRate();
     }
 
-    public void setReverseResynthesizer(ReverseResynthesizer resynthesizer) {
-        this.reverseResynthesizer = resynthesizer;
-    }
-
-    // Test seam: surface the active reverse cursor so integration tests can
-    // assert the cursor floor moves downward after a drainPcm/ensureHeadroom
-    // cycle. Non-test callers should not reach into the cursor directly.
-    public PcmHistoryRing.ReverseCursor getActiveReverseCursorForTest() {
+    /**
+     * Surfaces the active reverse cursor so Task 6's lifecycle wiring can
+     * bind the worker to the cursor created by
+     * {@link #beginReversePresentation}. Returns null when no
+     * reverse-presentation session is active.
+     */
+    public PcmHistoryRing.ReverseCursor activeReverseCursor() {
         return reverseCursor;
     }
 

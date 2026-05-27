@@ -1,22 +1,32 @@
 package com.openggf.audio;
 
+import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioKeyframeStore;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.runtime.AudioCommandDataResolver;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.AudioOutputFifo;
 import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.runtime.ReverseAudioSession;
 import com.openggf.audio.runtime.ReverseResynthesizer;
 import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
+import com.openggf.audio.smps.SmpsSequencer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Performance benchmark for {@link ReverseResynthesizer}. Not a parity test —
  * measures p50/p95/p99 burst duration for synthesized historical PCM windows
- * of representative sizes. The spec's open point #2 sets this as the gating
- * gate: if p95 exceeds OpenAL buffer slack, the synth must move off the
- * audio drain thread (current scope: synchronous bursts).
+ * of representative sizes.
+ *
+ * <p>Post-Task-5 the worker is no longer driven from {@code drainPcm}; this
+ * benchmark instead drives {@link ReverseResynthesizer#runOneIterationForPrefill}
+ * directly so the timed work is a single chip-emulation burst against a
+ * full ring + a frame-0 keyframe.
  *
  * <p>Run with: {@code mvn "-Dtest=BenchmarkReverseResynthesizer" test}.
  */
@@ -68,21 +78,46 @@ class BenchmarkReverseResynthesizer {
                 audio.advanceGameplayFrameAudio();
             }
 
-            // Drain to push cursor below threshold and trigger a burst.
             runtime.beginReversePresentation();
+            // Drain a chunk so the cursor has physical-slot budget for the
+            // burst we're about to time.
             short[] sink = new short[sampleRate * 2];
             runtime.drainPcm(sink, sampleRate / 2);
+            PcmHistoryRing.ReverseCursor cursor = runtime.activeReverseCursor();
 
-            ReverseResynthesizer resynth = new ReverseResynthesizer(
-                    ring, keyframes, audio, runtime, burstAudioFrames, sampleRate / 2);
-            runtime.setReverseResynthesizer(resynth);
+            ReverseAudioSession session = new ReverseAudioSession(
+                    ring,
+                    keyframes.frozenView(),
+                    List.of(),
+                    sampleRate, 60,
+                    SmpsSequencer.Region.NTSC,
+                    burstAudioFrames, sampleRate / 2,
+                    SmpsDriverSnapshot.liveReferences(),
+                    () -> new SmpsDriver(sampleRate),
+                    new NullDataResolver(),
+                    /* audioProfile */ null,
+                    /* defaultSequencerConfig */ null,
+                    false, false, false);
+            ReverseResynthesizer resynth = new ReverseResynthesizer(session);
 
             long start = System.nanoTime();
-            runtime.drainPcm(sink, sampleRate / 2);
+            resynth.runOneIterationForPrefill(cursor);
             durations[i] = System.nanoTime() - start;
 
             runtime.endReversePresentation();
         }
         return durations;
+    }
+
+    private static final class NullDataResolver implements AudioCommandDataResolver {
+        @Override
+        public MusicData resolveMusic(AudioCommand.PlayMusic command) {
+            return null;
+        }
+
+        @Override
+        public SfxData resolveSfx(AudioCommand.PlaySfx command) {
+            return null;
+        }
     }
 }
