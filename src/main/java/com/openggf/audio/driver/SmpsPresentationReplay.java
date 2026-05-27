@@ -319,6 +319,58 @@ public final class SmpsPresentationReplay {
     }
 
     /**
+     * Stops the active music driver and clears all music-active state.
+     * Mirrors the SMPS-logical portion of
+     * {@code LWJGLAudioBackend.stopStream}.
+     *
+     * <p>Caller responsibilities (NOT done here):
+     * <ul>
+     *   <li>OpenAL source stop + buffer unqueue.</li>
+     *   <li>{@code deterministicAudioRuntime.clearMusicStream} +
+     *       {@code flushPresentationFifo}.</li>
+     * </ul>
+     */
+    public static void applyToStopMusic(SmpsPresentationState state) {
+        if (state.musicDriver != null) {
+            state.musicDriver.stopAll();
+        }
+        state.musicDriver = null;
+        state.activeMusicStream = null;
+        state.activeMusicSequencer = null;
+        state.currentMusicId = -1;
+        state.currentMusicDescriptor = null;
+    }
+
+    /**
+     * Stops all SFX sequencers — both those mixed into the active music
+     * driver and any standalone SFX driver — and clears
+     * {@link SmpsPresentationState#sfxStream}. Mirrors the SMPS-logical
+     * portion of {@code LWJGLAudioBackend.stopAllSfx}.
+     *
+     * <p>Caller responsibility: {@code deterministicAudioRuntime.clearSfxStream}.
+     */
+    public static void applyToStopAllSfx(SmpsPresentationState state) {
+        if (state.musicDriver != null) {
+            state.musicDriver.stopAllSfx();
+        }
+        if (state.sfxStream instanceof SmpsDriver sfxDriver) {
+            sfxDriver.stopAll();
+        }
+        state.sfxStream = null;
+    }
+
+    /**
+     * Clears the override stack and resets the SFX-blocking flag. Mirrors
+     * the SMPS-logical portion of {@code LWJGLAudioBackend.clearMusicStack}
+     * (the backend additionally clears its {@code pendingRestore} flow-
+     * control flag, which is backend metadata rather than SMPS state).
+     */
+    public static void applyToClearMusicStack(SmpsPresentationState state) {
+        state.musicStack.clear();
+        state.sfxBlocked = false;
+    }
+
+    /**
      * Non-override music prelude: clears the override stack, releases
      * sfxBlocked, and tears down the standalone SFX driver. Mirrors the
      * non-override branch of {@code LWJGLAudioBackend.playSmps} before the

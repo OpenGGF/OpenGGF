@@ -425,17 +425,11 @@ public class LWJGLAudioBackend implements AudioBackend {
             }
             alSourcei(musicSource, AL_BUFFER, 0);
         }
-
-        currentStream = null;
-        currentSmps = null;
+        SmpsPresentationState state = snapshotPresentationState();
+        SmpsPresentationReplay.applyToStopMusic(state);
+        writeBackPresentationState(state);
         deterministicAudioRuntime.clearMusicStream();
         deterministicAudioRuntime.flushPresentationFifo();
-        if (smpsDriver != null) {
-            smpsDriver.stopAll();
-            smpsDriver = null;
-        }
-        currentMusicId = -1;
-        currentMusicDescriptor = null;
     }
 
     private void updateStream() {
@@ -836,16 +830,17 @@ public class LWJGLAudioBackend implements AudioBackend {
         alSourceStop(musicSource);
         alSourcei(musicSource, AL_BUFFER, 0);
         synchronized (streamLock) {
-            currentStream = null;
-            currentSmps = null;
-            currentMusicId = -1;
-            currentMusicDescriptor = null;
-            clearMusicStack();
-            // Also stop any playing SFX to prevent them persisting across level transitions
-            if (sfxStream instanceof SmpsDriver sfxDriver) {
-                sfxDriver.stopAll();
-            }
-            sfxStream = null;
+            SmpsPresentationState state = snapshotPresentationState();
+            // stopStream already cleared the active music; these helpers
+            // additionally clear the override stack and any standalone SFX
+            // — also stop playing SFX so they don't persist across level
+            // transitions.
+            SmpsPresentationReplay.applyToStopMusic(state);
+            SmpsPresentationReplay.applyToClearMusicStack(state);
+            SmpsPresentationReplay.applyToStopAllSfx(state);
+            writeBackPresentationState(state);
+            // pendingRestore is backend flow-control metadata, not SMPS state.
+            pendingRestore = false;
             deterministicAudioRuntime.clearSfxStream();
         }
         // Stop and cleanup WAV-based SFX sources
@@ -1007,9 +1002,11 @@ public class LWJGLAudioBackend implements AudioBackend {
     }
 
     private void clearMusicStack() {
-        musicStack.clear();
+        SmpsPresentationState state = snapshotPresentationState();
+        SmpsPresentationReplay.applyToClearMusicStack(state);
+        writeBackPresentationState(state);
+        // pendingRestore is backend flow-control metadata, not SMPS state.
         pendingRestore = false;
-        sfxBlocked = false;  // Unblock SFX when stack is cleared (e.g., level transition)
     }
 
     private boolean removeSavedOverride(int musicId) {
@@ -1164,16 +1161,10 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     @Override
     public void stopAllSfx() {
-        // Stop SFX sequencers in the active music driver (mixed into currentStream)
-        if (smpsDriver != null) {
-            smpsDriver.stopAllSfx();
-        }
-        // Stop standalone SFX stream (used when SFX played before any music started)
         synchronized (streamLock) {
-            if (sfxStream instanceof SmpsDriver sfxDriver) {
-                sfxDriver.stopAll();
-            }
-            sfxStream = null;
+            SmpsPresentationState state = snapshotPresentationState();
+            SmpsPresentationReplay.applyToStopAllSfx(state);
+            writeBackPresentationState(state);
             deterministicAudioRuntime.clearSfxStream();
         }
     }
