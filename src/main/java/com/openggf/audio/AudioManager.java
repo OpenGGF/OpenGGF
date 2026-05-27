@@ -18,6 +18,7 @@ import com.openggf.audio.runtime.NoOpDeterministicAudioRuntime;
 import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.AudioOutputFifo;
 import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.runtime.ReverseResynthesizer;
 import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -95,10 +96,22 @@ public class AudioManager {
     }
 
     private void rebuildReverseResynthesizerForCurrentBackend() {
-        if (backend == null) {
+        if (!(deterministicAudioRuntime instanceof StreamBackedDeterministicAudioRuntime stream)) {
             return;
         }
-        backend.attachDeterministicAudioRuntime(deterministicAudioRuntime);
+        PcmHistoryRing ring = stream.pcmHistoryRingForReverseResynth();
+        if (ring == null || liveRewindAudioKeyframes == null) {
+            // No ring or no keyframe store yet — clear any previously-attached
+            // resynth so a stale instance never lingers.
+            stream.setReverseResynthesizer(null);
+            return;
+        }
+        int sampleRate = stream.sampleRateForReverseResynth();
+        ReverseResynthesizer resynth = new ReverseResynthesizer(
+                ring, liveRewindAudioKeyframes, this, deterministicAudioRuntime,
+                /* burst */ sampleRate,
+                /* headroom */ sampleRate / 2);
+        stream.setReverseResynthesizer(resynth);
     }
 
     void setDeterministicAudioRuntime(DeterministicAudioRuntime deterministicAudioRuntime) {
@@ -114,6 +127,7 @@ public class AudioManager {
         if (backend != null) {
             backend.attachDeterministicAudioRuntime(this.deterministicAudioRuntime);
         }
+        rebuildReverseResynthesizerForCurrentBackend();
     }
 
     private void configureDeterministicRuntimeForBackend() {
