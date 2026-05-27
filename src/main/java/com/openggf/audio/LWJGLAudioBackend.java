@@ -191,7 +191,12 @@ public class LWJGLAudioBackend implements AudioBackend {
             LOGGER.info("Mono sources: " + monoSources + ", Stereo sources: " + stereoSources);
 
             LOGGER.info("LWJGL OpenAL Initialized. Device sample rate: " + deviceSampleRate + " Hz, Buffer Size: " + STREAM_BUFFER_SIZE);
-            pcmHistory = new PcmHistoryRing(Math.max(STREAM_BUFFER_SIZE, deviceSampleRate * 10));
+            pcmHistory = new PcmHistoryRing(Math.max(STREAM_BUFFER_SIZE,
+                    PcmHistoryRing.capacityFramesFor(
+                            deviceSampleRate,
+                            configService.getString(com.openggf.configuration.SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE),
+                            configService.getInt(com.openggf.configuration.SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS),
+                            configService.getInt(com.openggf.configuration.SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB))));
 
             // Preload SFX
             for (String sfxPath : sfxFallback.values()) {

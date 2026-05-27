@@ -18,6 +18,22 @@ public final class PcmHistoryRing {
         this.samples = new short[capacityFrames * CHANNELS];
     }
 
+    /**
+     * Resolve the ring capacity in stereo frames given user-configured
+     * REWIND_AUDIO_HISTORY_LIMIT_TYPE / SECONDS / SIZE_MB values. When
+     * {@code limitType} equals {@code "size"} the cap is computed from
+     * {@code sizeMB} (assuming 16-bit stereo samples); otherwise the cap
+     * is computed from {@code sampleRate * seconds}.
+     */
+    public static int capacityFramesFor(int sampleRate, String limitType, int seconds, int sizeMB) {
+        if ("size".equalsIgnoreCase(limitType)) {
+            long bytes = (long) Math.max(1, sizeMB) * 1024L * 1024L;
+            long frames = bytes / (CHANNELS * (long) Short.BYTES);
+            return (int) Math.max(1, Math.min(Integer.MAX_VALUE, frames));
+        }
+        return Math.max(1, sampleRate * Math.max(1, seconds));
+    }
+
     public void write(short[] source, int frames) {
         validateBuffer(source, frames);
         for (int frame = 0; frame < frames; frame++) {

@@ -106,7 +106,7 @@ public class AudioManager {
             int frameRate = configuredFrameRate();
             int minFrameCapacity = Math.max(1, sampleRate / frameRate);
             int fifoFrames = Math.max(minFrameCapacity, sampleRate * OUTPUT_FIFO_SECONDS);
-            int historyFrames = Math.max(minFrameCapacity, sampleRate * PCM_HISTORY_SECONDS);
+            int historyFrames = Math.max(minFrameCapacity, configuredPcmHistoryFrames(sampleRate));
             int crossfadeFrames = Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000);
             applyDeterministicAudioRuntime(new StreamBackedDeterministicAudioRuntime(
                     new AudioFrameClock(sampleRate, frameRate),
@@ -128,6 +128,17 @@ public class AudioManager {
             return 50;
         }
         return Math.max(1, config.getInt(SonicConfiguration.FPS));
+    }
+
+    private static int configuredPcmHistoryFrames(int sampleRate) {
+        var config = configuredServicesOrNull();
+        if (config == null) {
+            return sampleRate * PCM_HISTORY_SECONDS;
+        }
+        String limitType = config.getString(SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE);
+        int seconds = config.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS);
+        int sizeMB = config.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB);
+        return PcmHistoryRing.capacityFramesFor(sampleRate, limitType, seconds, sizeMB);
     }
 
     private static com.openggf.configuration.SonicConfigurationService configuredServicesOrNull() {
