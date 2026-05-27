@@ -70,6 +70,13 @@ public class AudioManager {
      *  held-rewind session. */
     private ReverseResynthesizer reverseResynthWorker;
     private Thread reverseResynthThread;
+
+    /** Count of held-rewind sessions whose worker thread missed the
+     *  shutdown join deadline and had to be detached. Useful diagnostic
+     *  for spotting a stuck burst — under normal conditions this stays
+     *  at 0 across many sessions. Logged at FINE per timeout to avoid
+     *  spamming on fast-toggle rewind, but exposed for telemetry/tests. */
+    private long reverseResynthShutdownTimeouts;
     private AudioKeyframeStore liveRewindAudioKeyframes;
 
     // Donor audio overlay: secondary SFX path for cross-game feature donation
@@ -690,13 +697,18 @@ public class AudioManager {
         preReverseSnapshot = captureLogicalSnapshot();
         reverseAudioPresentationActive = true;
         deterministicAudioRuntime.beginReversePresentation();
+        // Start the worker immediately after the runtime creates the
+        // reverse cursor and BEFORE the backend's reverse-presentation
+        // hook fires. The cursor belongs to the deterministic runtime;
+        // backend.beginReversePresentation is currently a no-op for LWJGL
+        // but keeping worker startup tied to the cursor's owner (the
+        // runtime) avoids future backend changes silently delaying the
+        // worker spawn. Worker uses its own private SmpsPresentationState
+        // + private clock; live backend state is untouched.
+        startReverseResynthWorker();
         if (backend != null) {
             backend.beginReversePresentation();
         }
-        // Task 6: build the worker session, prefill, and spawn the daemon
-        // thread. Worker uses its own private SmpsPresentationState +
-        // private clock; the live backend state is untouched by the worker.
-        startReverseResynthWorker();
     }
 
     public void endReverseAudioPresentation() {
@@ -826,25 +838,78 @@ public class AudioManager {
         reverseResynthThread = t;
     }
 
+    /** Default shutdown-join budget for the worker. */
+    static final long REVERSE_RESYNTH_JOIN_TIMEOUT_MILLIS = 200L;
+
     /**
-     * Task 6 lifecycle: cooperative stop + join. Plain join with a 200ms
-     * budget; the detach + timeout-counter hardening that the worker-thread
-     * plan calls for lives in Task 7.
+     * Cooperative stop + bounded join. If the worker fails to exit within
+     * {@code timeoutMillis}, calls {@link ReverseResynthesizer#detachSession}
+     * so the still-running thread observes a null session reference at its
+     * next burst boundary and exits without touching freed state, bumps
+     * the timeout counter, and logs at FINE.
+     *
+     * <p>This helper does NOT touch {@link #reverseResynthWorker} /
+     * {@link #reverseResynthThread} fields — the caller is responsible for
+     * nulling those out. Package-private so a test can exercise the
+     * timeout path with a controllable thread (the worker spawned by
+     * {@link #beginReverseAudioPresentation} is not easily made to hang).
+     *
+     * @return {@code true} when the worker exited within the deadline;
+     *         {@code false} when the timeout fired and the worker was
+     *         detached.
+     */
+    boolean shutdownReverseResynthWorker(ReverseResynthesizer worker, Thread thread,
+                                          long timeoutMillis) {
+        if (worker == null) {
+            return true;
+        }
+        worker.requestStop();
+        if (thread != null) {
+            try {
+                thread.join(timeoutMillis);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            if (thread.isAlive()) {
+                worker.detachSession();
+                reverseResynthShutdownTimeouts++;
+                LOGGER.fine("reverse-resynth worker missed " + timeoutMillis
+                        + "ms shutdown deadline; detached session so worker"
+                        + " exits at next burst boundary without touching"
+                        + " freed state (timeout count="
+                        + reverseResynthShutdownTimeouts + ")");
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Stops the live held-rewind worker (if any) and clears the
+     * {@link #reverseResynthWorker} / {@link #reverseResynthThread}
+     * references. Called from {@link #endReverseAudioPresentation} and
+     * {@link #resetState}.
      */
     private void stopReverseResynthWorker() {
         if (reverseResynthWorker == null) {
             return;
         }
-        reverseResynthWorker.requestStop();
-        if (reverseResynthThread != null) {
-            try {
-                reverseResynthThread.join(200);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
+        shutdownReverseResynthWorker(
+                reverseResynthWorker, reverseResynthThread,
+                REVERSE_RESYNTH_JOIN_TIMEOUT_MILLIS);
+        // Whether the worker exited cleanly or had to be detached, the
+        // AudioManager is done with it. A detached worker survives on its
+        // own thread for one more burst boundary at most; it can never
+        // reach AudioManager again because session/cursor were nulled
+        // inside detachSession.
         reverseResynthWorker = null;
         reverseResynthThread = null;
+    }
+
+    /** Test seam: count of held-rewind sessions whose worker missed the
+     *  shutdown join deadline. */
+    long reverseResynthShutdownTimeoutsForTest() {
+        return reverseResynthShutdownTimeouts;
     }
 
     private static SmpsSequencer.Region configuredRegion() {
@@ -1384,20 +1449,13 @@ public class AudioManager {
         this.audioFrameOwnedExternally = false;
         this.audioFrameAdvanced = false;
         // Tear down the worker if a held-rewind session was active when
-        // reset fired. requestStop + brief join; if anything is stuck we
-        // detach so the worker can't reach freed state.
-        if (reverseResynthWorker != null) {
-            reverseResynthWorker.detachSession();
-            if (reverseResynthThread != null) {
-                try {
-                    reverseResynthThread.join(50);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-            reverseResynthWorker = null;
-            reverseResynthThread = null;
-        }
+        // reset fired. resetState uses a tighter budget than the regular
+        // shutdown — tests fire it on every @AfterEach and we don't want
+        // to block them on a stuck worker.
+        shutdownReverseResynthWorker(reverseResynthWorker, reverseResynthThread, 50L);
+        reverseResynthWorker = null;
+        reverseResynthThread = null;
+        this.reverseResynthShutdownTimeouts = 0;
         this.reverseAudioPresentationActive = false;
         this.preReverseSnapshot = null;
         this.liveRewindAudioKeyframes = null;
