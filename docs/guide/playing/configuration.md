@@ -169,9 +169,14 @@ and freezes graphical fade progression to the restored rewind snapshots. The
 game resumes normal forward audio/fade presentation when the key is released.
 
 Held rewind defaults to one rewind step per visual frame and stops immediately when
-released. Experimental release coast is available only when
-`LIVE_REWIND_TAPE_COAST_ENABLED` is set to `true`; its acceleration, deceleration,
-and maximum per-frame steps use the matching `LIVE_REWIND_TAPE_COAST_*` keys.
+released. Experimental tape-coast rewind is available only when
+`LIVE_REWIND_TAPE_COAST_ENABLED` is set to `true`. With coast enabled, the rewind
+speed starts at `LIVE_REWIND_TAPE_COAST_MIN_STEPS` on press (values below 1.0 give
+a slow-motion start), accelerates while held using
+`LIVE_REWIND_TAPE_COAST_ACCELERATION` up to `LIVE_REWIND_TAPE_COAST_MAX_STEPS`,
+and decays after release using `LIVE_REWIND_TAPE_COAST_DECELERATION`. Reverse audio
+is resampled in lockstep with the current rewind speed, so fast rewind pitches up
+and slow-motion rewind plays back lower and stretched in time.
 
 ## How do I mute audio?
 

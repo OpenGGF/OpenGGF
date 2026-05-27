@@ -44,6 +44,14 @@ public interface DeterministicAudioRuntime {
     default void endReversePresentation() {
     }
 
+    /**
+     * Sets the playback rate while reverse presentation is active. A value
+     * of 1.0 walks the PCM history one stored frame per output frame.
+     * Values >1 pitch the rewound audio up; values in (0, 1) slow it down.
+     */
+    default void setReversePlaybackRate(double rate) {
+    }
+
     default void clearPcmHistory() {
     }
 

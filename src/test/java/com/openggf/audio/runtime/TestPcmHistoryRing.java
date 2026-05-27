@@ -61,6 +61,53 @@ class TestPcmHistoryRing {
     }
 
     @Test
+    void reverseCursorRateAboveOneSkipsSourceFramesPerOutputFrame() {
+        PcmHistoryRing history = new PcmHistoryRing(8);
+        history.write(new short[] {1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6}, 6);
+        PcmHistoryRing.ReverseCursor cursor = history.createReverseCursor();
+        cursor.setRate(2.0);
+
+        short[] target = new short[6];
+        int read = cursor.readPrevious(target, 3);
+
+        assertEquals(3, read);
+        // Newest frame is 6, then walk back by rate=2: pick frames 6, 4, 2.
+        assertArrayEquals(new short[] {6, 6, 4, 4, 2, 2}, target);
+    }
+
+    @Test
+    void reverseCursorRateBelowOneRepeatsSourceFramesForSlowMotion() {
+        PcmHistoryRing history = new PcmHistoryRing(4);
+        history.write(new short[] {1, 10, 2, 20, 3, 30}, 3);
+        PcmHistoryRing.ReverseCursor cursor = history.createReverseCursor();
+        cursor.setRate(0.5);
+
+        short[] target = new short[8];
+        int read = cursor.readPrevious(target, 4);
+
+        assertEquals(4, read);
+        // Newest frame is 3, advance by 0.5 each output frame: pick 3, 2.5->2, 2, 1.5->1.
+        assertArrayEquals(new short[] {3, 30, 3, 30, 2, 20, 2, 20}, target);
+    }
+
+    @Test
+    void committingRateAboveOneShrinksRingByConsumedSourceFrames() {
+        PcmHistoryRing history = new PcmHistoryRing(8);
+        history.write(new short[] {1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6}, 6);
+        PcmHistoryRing.ReverseCursor cursor = history.createReverseCursor();
+        cursor.setRate(2.0);
+        short[] target = new short[4];
+        cursor.readPrevious(target, 2); // consumes 4 source frames (6, 4 are emitted; cursor lands at srcFrame=1)
+
+        history.commitReverseCursor(cursor);
+
+        // Newest stored frame is now 2; next reverse read should start at sample {2,2}.
+        short[] resumed = new short[2];
+        assertEquals(1, history.createReverseCursor().readPrevious(resumed, 1));
+        assertArrayEquals(new short[] {2, 2}, resumed);
+    }
+
+    @Test
     void clearInvalidatesHistoryForNewCursors() {
         PcmHistoryRing history = new PcmHistoryRing(4);
         history.write(new short[] {1, 10, 2, 20}, 2);

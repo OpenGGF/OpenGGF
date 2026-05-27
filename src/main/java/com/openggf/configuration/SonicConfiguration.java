@@ -269,6 +269,15 @@ public enum SonicConfiguration {
 	LIVE_REWIND_TAPE_COAST_MAX_STEPS,
 
 	/**
+	 * Minimum live rewind steps per tick when tape-coast policy is enabled.
+	 * Values below 1.0 produce slow-motion rewind: the speed controller's
+	 * fractional accumulator stretches a single physics step across multiple
+	 * visual frames. The first held frame snaps speed to this value before
+	 * acceleration ramps it up to {@link #LIVE_REWIND_TAPE_COAST_MAX_STEPS}.
+	 */
+	LIVE_REWIND_TAPE_COAST_MIN_STEPS,
+
+	/**
 	 * How the rewind audio PCM history ring is sized. Accepted values are
 	 * {@code "time"} (cap by seconds, see {@link #REWIND_AUDIO_HISTORY_SECONDS})
 	 * or {@code "size"} (cap by megabytes, see
