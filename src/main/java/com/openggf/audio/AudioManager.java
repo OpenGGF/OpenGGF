@@ -38,7 +38,7 @@ import java.util.logging.Logger;
 
 public class AudioManager {
     private static final Logger LOGGER = Logger.getLogger(AudioManager.class.getName());
-    private static final int PCM_HISTORY_SECONDS = 10;
+    private static final int PCM_HISTORY_SECONDS = 60;
     private static final int OUTPUT_FIFO_SECONDS = 2;
     private static final int REVERSE_RELEASE_CROSSFADE_MS = 45;
     private static AudioManager instance;

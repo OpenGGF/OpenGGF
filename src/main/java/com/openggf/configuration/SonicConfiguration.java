@@ -288,8 +288,8 @@ public enum SonicConfiguration {
 	/**
 	 * Megabytes of stereo PCM history kept for held-rewind playback when
 	 * {@link #REWIND_AUDIO_HISTORY_LIMIT_TYPE} is {@code "size"}. Stereo
-	 * 16-bit at 44.1 kHz consumes roughly 168 KB per second, so 2 MB is
-	 * about 12 seconds at that rate.
+	 * 16-bit at 48 kHz consumes ~192 KB per second, so 10 MB is roughly
+	 * 54 seconds at that rate (~57 seconds at 44.1 kHz).
 	 */
 	REWIND_AUDIO_HISTORY_SIZE_MB,
 

@@ -299,8 +299,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_DECELERATION, 0.5);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_MAX_STEPS, 4.0);
 		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_LIMIT_TYPE, "time");
-		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS, 10);
-		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB, 2);
+		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS, 60);
+		putDefault(SonicConfiguration.REWIND_AUDIO_HISTORY_SIZE_MB, 10);
 		putDefaultKey(SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY, GLFW_KEY_C);
 		putDefaultKey(SonicConfiguration.LEVEL_SELECT_KEY, GLFW_KEY_F9);
 		putDefault(SonicConfiguration.TITLE_SCREEN_ON_STARTUP, true);
