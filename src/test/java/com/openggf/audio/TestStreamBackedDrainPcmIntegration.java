@@ -9,6 +9,7 @@ import com.openggf.audio.runtime.StreamBackedDeterministicAudioRuntime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -84,5 +85,66 @@ class TestStreamBackedDrainPcmIntegration {
                 "drainPcm with attached resynth should call ensureHeadroom and lower"
                         + " the cursor floor; floorBefore=" + floorBefore
                         + " floorAfter=" + floorAfter);
+    }
+
+    @Test
+    void reverseDrainExtendsPastHistoryWindowWithResynthesizer() {
+        // Setup: small 8-audio-frame history ring (at 120Hz / 60fps, that's
+        // 4 game-frames worth — each game frame produces 2 audio frames).
+        PcmHistoryRing ring = new PcmHistoryRing(8);
+        AudioFrameClock clock = new AudioFrameClock(120, 60);
+        AudioOutputFifo fifo = new AudioOutputFifo(120);
+        StreamBackedDeterministicAudioRuntime runtime =
+                new StreamBackedDeterministicAudioRuntime(clock, fifo, ring);
+        runtime.setMusicStream(new ScriptedAudioStream(
+                (short) 1, (short) 1));
+
+        // Drive AudioManager so it captures the runtime as its current.
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setDeterministicAudioRuntime(runtime);
+        audio.setBackend(new NullAudioBackend());
+
+        AudioKeyframeStore keyframes = new AudioKeyframeStore();
+        // Capture keyframe at game-frame 0 BEFORE producing any audio.
+        keyframes.capture(0L, audio);
+
+        // Produce 8 game-frames of music. Ring holds the most recent 8 audio
+        // frames (8 game-frames × 2 audio-frames/game-frame, capped at the
+        // ring's 8-frame capacity).
+        for (int i = 0; i < 8; i++) {
+            audio.advanceGameplayFrameAudio();
+        }
+
+        // Attach the resynthesizer. drainPcm will pass `frames=10` to
+        // ensureHeadroom, so the burst loop needs to produce enough older
+        // PCM to satisfy a 10-frame request even though the ring only held
+        // 8 forward frames.
+        ReverseResynthesizer resynth =
+                new ReverseResynthesizer(
+                        ring, keyframes, audio, runtime, /* burst */ 4, /* threshold */ 2);
+        runtime.setReverseResynthesizer(resynth);
+
+        runtime.beginReversePresentation();
+
+        // Drain past the original 8-frame window. Without the resynth this
+        // would return 8 (ring exhausted, rest silent). With it, we expect
+        // 10 fully populated stereo frames.
+        short[] target = new short[20];
+        int read = runtime.drainPcm(target, 10);
+        assertEquals(10, read,
+                "drainPcm must return the full requested frame count when a"
+                        + " ReverseResynthesizer is attached and a keyframe is available");
+
+        boolean allNonZero = true;
+        for (int i = 0; i < 20; i++) {
+            if (target[i] == 0) {
+                allNonZero = false;
+                break;
+            }
+        }
+        assertTrue(allNonZero,
+                "Resynthesizer should extend the reverse window past the original 8 frames;"
+                        + " drain returned target=" + java.util.Arrays.toString(target));
     }
 }
