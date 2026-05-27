@@ -8,8 +8,10 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
+import com.openggf.game.sonic3k.objects.S3kResultsScreenObjectInstance;
 import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
 import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.sprites.playable.ObjectControlState;
 import com.openggf.tests.rules.RequiresRom;
@@ -223,6 +225,33 @@ class TestS3kCnzAct1EventFlow {
         assertEquals(0x0500, GameServices.camera().getMaxYTarget() & 0xFFFF,
                 "CNZ1BGE_DoTransition copies Camera_max_Y_pos to Camera_target_max_Y_pos "
                         + "(docs/skdisasm/sonic3k.asm:107646)");
+    }
+
+    @Test
+    void cnzDoTransitionKeepsSignpostAndResultsObjectsAlive() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .startPosition((short) 0x32D0, (short) 0x04AC)
+                .startPositionIsCentre()
+                .build();
+        GameServices.camera().setFocusedSprite(fixture.sprite());
+
+        S3kSignpostInstance signpost = new S3kSignpostInstance(0x32C0, 0);
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                TestEnvironment.objectServices(),
+                () -> new S3kResultsScreenObjectInstance(
+                        com.openggf.game.PlayerCharacter.SONIC_AND_TAILS, 0));
+        GameServices.level().getObjectManager().addDynamicObject(signpost);
+        GameServices.level().getObjectManager().addDynamicObject(results);
+
+        GameServices.level().executeActTransition(cnzAct2TransitionRequest());
+
+        List<ObjectInstance> active = new ArrayList<>(GameServices.level().getObjectManager().getActiveObjects());
+        assertTrue(active.contains(signpost),
+                "CNZ1BGE_DoTransition reloads the level behind Obj_EndSign; "
+                        + "the signpost must not vanish when Obj_LevelResults starts");
+        assertTrue(active.contains(results),
+                "Obj_LevelResults must survive the CNZ Act 1 reload it requests so the results screen can show");
     }
 
     @Test
@@ -447,6 +476,24 @@ class TestS3kCnzAct1EventFlow {
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
         manager.initLevel(Sonic3kZoneIds.ZONE_CNZ, act);
         return manager.getCnzEvents();
+    }
+
+    private SeamlessLevelTransitionRequest cnzAct2TransitionRequest() {
+        return SeamlessLevelTransitionRequest.builder(
+                        SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .preserveMusic(true)
+                .preserveLevelGamestate(true)
+                .showInLevelTitleCard(false)
+                .preserveOffsetCameraPosition(true)
+                .postTransitionMinX(0x01E0)
+                .postTransitionMaxX(0x0260)
+                .postTransitionMinY(0x02E0)
+                .postTransitionMaxY(0x0500)
+                .postTransitionMaxYTarget(0x0500)
+                .playerOffset(-0x3000, 0x0200)
+                .cameraOffset(-0x3000, 0x0200)
+                .build();
     }
 
     private void advanceCnzPostBossRefresh(Sonic3kCNZEvents events, int firstFrame, int updates) {
