@@ -3,6 +3,7 @@ package com.openggf.audio;
 import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioKeyframeStore;
+import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioTimelineEntry;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.runtime.AudioCommandDataResolver;
@@ -277,6 +278,96 @@ class TestReverseResynthWorkerIntegration {
         // bound (which would be 120 frames if no resynth fired).
         assertTrue(totalDrained.get() > 0,
                 "consumer should have drained some audio during the soak window");
+    }
+
+    /**
+     * Regression: repeated rewind/play cycles must keep the
+     * {@link com.openggf.audio.runtime.AudioFrameClock} index and the
+     * {@link PcmHistoryRing}'s {@code nextFrameIndex} aligned. The
+     * pre-worker design called {@code commitReverseCursor} at
+     * end-of-reverse, which rewound the ring's logical position by the
+     * frame count the consumer had drained. With the keyframe-based
+     * worker that decouples the ring from the clock (which AudioManager
+     * restores to its pre-rewind value), so subsequent rewinds picked
+     * stale keyframes from prior play sessions and the user heard music
+     * from the wrong moment.
+     *
+     * <p>This test simulates two forward-play passes separated by a
+     * held-rewind and asserts that after the second pass ends, the ring
+     * and clock remain in lockstep — meaning a keyframe captured during
+     * the second pass has a clockSnapshot.totalSamplesProduced that
+     * matches the ring's nextFrameIndex at the same instant.
+     */
+    @Test
+    void clockAndRingStayAlignedAcrossRepeatedRewindCycles() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+
+        PcmHistoryRing ring = new PcmHistoryRing(120);
+        StreamBackedDeterministicAudioRuntime runtime = new StreamBackedDeterministicAudioRuntime(
+                new AudioFrameClock(120, 60), new AudioOutputFifo(120), ring);
+        audio.setDeterministicAudioRuntime(runtime);
+        audio.setBackend(new NullAudioBackend());
+        runtime.setMusicStream(new ScriptedAudioStream((short) 1, (short) 1));
+
+        AudioKeyframeStore store = new AudioKeyframeStore();
+        store.capture(0L, audio);
+        audio.setLiveRewindAudioKeyframes(store);
+
+        // Pass 1 forward: advance some frames, capture keyframes.
+        for (int i = 0; i < 30; i++) {
+            audio.advanceGameplayFrameAudio();
+        }
+        long clockAfterPass1 = runtime.captureClockSnapshot().totalSamplesProduced();
+
+        // Hold rewind (open the session, drain a few frames, close it).
+        audio.beginReverseAudioPresentation();
+        short[] sink = new short[40];
+        runtime.drainPcm(sink, 20);
+        audio.endReverseAudioPresentation();
+
+        // After end-of-rewind, the clock should be restored to the pre-
+        // rewind value AND the ring should still be at its pre-rewind
+        // position (no commitReverseCursor anymore).
+        long clockAfterRewind = runtime.captureClockSnapshot().totalSamplesProduced();
+        assertEquals(clockAfterPass1, clockAfterRewind,
+                "clock must restore to pre-rewind value");
+
+        // Pass 2 forward: advance more frames. Capture a keyframe at
+        // pass-2 start so we can compare its audio-frame index to the
+        // ring's nextFrameIndex.
+        store.capture(30L, audio);
+        AudioLogicalSnapshot pass2Keyframe = store.keyframeAtOrBefore(30L);
+        long pass2KeyframeAudio = pass2Keyframe.backend().clockSnapshot().totalSamplesProduced();
+
+        // The freshly-captured keyframe's audio frame must equal the
+        // current clock — which must equal the current ring nextFrameIndex
+        // (otherwise the worker would look for ring slots at offset
+        // positions from where the keyframe says they live).
+        for (int i = 0; i < 30; i++) {
+            audio.advanceGameplayFrameAudio();
+        }
+        long clockAfterPass2 = runtime.captureClockSnapshot().totalSamplesProduced();
+
+        // Now hold rewind again and check that the worker's cursor sees
+        // an audio-frame range that overlaps where pass 2's keyframes
+        // were captured. Pass 1's keyframe is at audio 0; pass 2's
+        // keyframe is at audio clockAfterPass1. If the ring and clock
+        // are aligned, the cursor's oldestReadableFrame is at
+        // clockAfterPass2 - ringCapacity = clockAfterPass2 - 120.
+        audio.beginReverseAudioPresentation();
+        PcmHistoryRing.ReverseCursor cursor = runtime.activeReverseCursor();
+        long cursorOldest = cursor.oldestReadableFrame();
+        long cursorNext = cursor.nextReadableFrame();
+        audio.endReverseAudioPresentation();
+
+        assertEquals(clockAfterPass2, cursorNext + 1,
+                "cursor.nextReadable+1 should equal current clock");
+        assertTrue(pass2KeyframeAudio >= cursorOldest
+                        && pass2KeyframeAudio <= cursorNext,
+                "pass-2 keyframe audio frame (" + pass2KeyframeAudio
+                        + ") should fall in the cursor range ["
+                        + cursorOldest + ", " + cursorNext + "]");
     }
 
     /** Builds a minimal session sufficient for the cursor-advancement

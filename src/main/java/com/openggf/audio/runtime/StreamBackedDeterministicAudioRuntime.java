@@ -160,9 +160,20 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
 
     @Override
     public void endReversePresentation() {
-        if (pcmHistory != null) {
-            pcmHistory.commitReverseCursor(reverseCursor);
-        }
+        // Deliberately NOT calling pcmHistory.commitReverseCursor(reverseCursor)
+        // here. The pre-worker design rewound the ring's nextFrameIndex by
+        // the number of frames the consumer drained during rewind, so the
+        // next rewind would "resume from where we left off". With the
+        // worker-based resynth, that rewind decouples the ring's audio-frame
+        // index from the AudioFrameClock — which AudioManager restores to
+        // its pre-rewind value at end-of-session. Across repeated
+        // rewind/play cycles the two drift apart, causing the worker's
+        // keyframeAtOrBeforeAudioFrame lookup to pick stale keyframes from
+        // prior play sessions and play music from the wrong moment. Keeping
+        // the ring index advancing monotonically (forward play continues
+        // writing past the pre-rewind position) keeps the ring's logical
+        // frames aligned with the AudioFrameClock, which keeps keyframe
+        // lookup consistent across sessions.
         reverseCursor = null;
         if (hasLastReverseFrame && reverseFrameOutputThisSession && reverseReleaseCrossfadeFrames > 0) {
             releaseCrossfadeRemaining = reverseReleaseCrossfadeFrames;
