@@ -269,6 +269,16 @@ public enum SonicConfiguration {
 	LIVE_REWIND_TAPE_COAST_MAX_STEPS,
 
 	/**
+	 * Seconds of PCM history kept in the ring buffer. Held-rewind audio
+	 * reads from this ring; once the cursor drains past the floor, the
+	 * ReverseResynthesizer re-synthesizes older audio from keyframes.
+	 * Lowering this value makes the resynth engage sooner, which is
+	 * useful for smoke-testing the resynth path without holding rewind
+	 * for the full default 10 seconds.
+	 */
+	REWIND_AUDIO_HISTORY_SECONDS,
+
+	/**
 	 * Key to teleport player to the last checkpoint (debug).
 	 */
 	DEBUG_LAST_CHECKPOINT_KEY,

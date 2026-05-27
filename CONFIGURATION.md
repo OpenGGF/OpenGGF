@@ -101,6 +101,7 @@ Paths are relative to the working directory (where the JAR is launched).
 | `LIVE_REWIND_TAPE_COAST_ACCELERATION` | number | `0.25` | Optional tape-coast acceleration in rewind steps per held frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_DECELERATION` | number | `0.5` | Optional tape-coast deceleration in rewind steps per released frame. Used only when tape coast is enabled. |
 | `LIVE_REWIND_TAPE_COAST_MAX_STEPS` | number | `4.0` | Maximum rewind steps per visual frame for optional tape-coast rewind. Used only when tape coast is enabled. |
+| `REWIND_AUDIO_HISTORY_SECONDS` | int | `10` | Seconds of PCM history kept for held-rewind audio playback. Held-rewind reads from this ring; once drained, the `ReverseResynthesizer` re-synthesizes older audio from keyframes. Lower this (e.g. `2`) for smoke-testing the resynth path without holding rewind for the full 10 seconds. |
 | `TEST_MODE_ENABLED` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `TRACE_CATALOG_DIR` and plays the chosen trace back in the live engine. Dev-only. |
 | `TRACE_CATALOG_DIR` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
 

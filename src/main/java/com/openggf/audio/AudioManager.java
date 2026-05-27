@@ -40,7 +40,7 @@ import java.util.logging.Logger;
 
 public class AudioManager {
     private static final Logger LOGGER = Logger.getLogger(AudioManager.class.getName());
-    private static final int PCM_HISTORY_SECONDS = 10;
+    private static final int REWIND_AUDIO_HISTORY_SECONDS_DEFAULT = 10;
     private static final int OUTPUT_FIFO_SECONDS = 2;
     private static final int REVERSE_RELEASE_CROSSFADE_MS = 45;
     private static AudioManager instance;
@@ -140,7 +140,7 @@ public class AudioManager {
             int frameRate = configuredFrameRate();
             int minFrameCapacity = Math.max(1, sampleRate / frameRate);
             int fifoFrames = Math.max(minFrameCapacity, sampleRate * OUTPUT_FIFO_SECONDS);
-            int historyFrames = Math.max(minFrameCapacity, sampleRate * PCM_HISTORY_SECONDS);
+            int historyFrames = Math.max(minFrameCapacity, sampleRate * configuredRewindAudioHistorySeconds());
             int crossfadeFrames = Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000);
             applyDeterministicAudioRuntime(new StreamBackedDeterministicAudioRuntime(
                     new AudioFrameClock(sampleRate, frameRate),
@@ -162,6 +162,14 @@ public class AudioManager {
             return 50;
         }
         return Math.max(1, config.getInt(SonicConfiguration.FPS));
+    }
+
+    private static int configuredRewindAudioHistorySeconds() {
+        var config = configuredServicesOrNull();
+        if (config == null) {
+            return REWIND_AUDIO_HISTORY_SECONDS_DEFAULT;
+        }
+        return Math.max(1, config.getInt(SonicConfiguration.REWIND_AUDIO_HISTORY_SECONDS));
     }
 
     private static com.openggf.configuration.SonicConfigurationService configuredServicesOrNull() {
