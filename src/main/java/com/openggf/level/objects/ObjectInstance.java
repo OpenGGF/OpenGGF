@@ -163,6 +163,23 @@ public interface ObjectInstance {
     }
 
     /**
+     * Called on a persistent dynamic object that was carried across a seamless
+     * act-transition reload, after the world has been shifted by the transition
+     * offset. Implementations should shift their world position by
+     * {@code (offsetX, offsetY)} so they stay aligned with the offset
+     * player/camera/level.
+     *
+     * <p>ROM: {@code Offset_ObjectsDuringTransition} applies the same delta to
+     * every surviving object's {@code x_pos}/{@code y_pos} that it applies to the
+     * players and camera (e.g. CNZ1BGE_DoTransition shifts the end signpost by
+     * (-$3000, +$200) so it follows the level into Act 2). Objects that compute
+     * their position from non-offset state (or are pinned to the camera) can
+     * leave this as a no-op.
+     */
+    default void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+    }
+
+    /**
      * Returns the X coordinate used by ROM-style {@code out_of_range} checks.
      * <p>
      * Most objects use their current X position, but some S1 objects store a

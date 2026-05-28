@@ -160,6 +160,65 @@ public class TestActTransitionHeadless {
         assertNotNull(GameServices.level().getCurrentLevel(), "Level should exist after transition with offsets");
     }
 
+    @Test
+    public void executeActTransitionOffsetsCarriedPersistentObjects() throws Exception {
+        // ROM Offset_ObjectsDuringTransition shifts every surviving object by the
+        // same world delta as the players/camera. The CNZ/HCZ/MGZ end signpost is a
+        // persistent dynamic object carried across the seamless reload; if it is not
+        // offset, it is stranded at its Act 1 world position and culled off-screen
+        // (the reported CNZ "signpost disappears after it stops" bug).
+        LevelManager lm = GameServices.level();
+        CarryStub carried = new CarryStub(0x1000, 0x0800);
+        lm.getObjectManager().addDynamicObject(carried);
+
+        SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
+                .builder(TransitionType.RELOAD_TARGET_LEVEL)
+                .targetZoneAct(ZONE_EHZ, ACT_2)
+                .playerOffset(0x100, -0x80)
+                .cameraOffset(0x100, -0x80)
+                .preserveMusic(true)
+                .build();
+
+        lm.executeActTransition(request);
+
+        assertTrue(lm.getObjectManager().getActiveObjects().contains(carried),
+                "Persistent dynamic objects must survive the seamless object-manager rebuild");
+        assertTrue(carried.offsetCalled,
+                "Carried persistent objects must receive the transition world offset "
+                        + "(ROM Offset_ObjectsDuringTransition)");
+        assertEquals(0x1000 + 0x100, carried.worldX,
+                "Carried object X must shift by the transition world delta");
+        assertEquals(0x0800 - 0x80, carried.worldY,
+                "Carried object Y must shift by the transition world delta");
+    }
+
+    /** Minimal persistent object that records the seamless-transition offset hook. */
+    private static final class CarryStub extends com.openggf.level.objects.AbstractObjectInstance {
+        int worldX;
+        int worldY;
+        boolean offsetCalled;
+
+        CarryStub(int x, int y) {
+            super(null, "CarryStub");
+            this.worldX = x;
+            this.worldY = y;
+        }
+
+        @Override public int getX() { return worldX; }
+        @Override public int getY() { return worldY; }
+        @Override public boolean isPersistent() { return true; }
+        @Override public boolean isHighPriority() { return false; }
+        @Override public void update(int frameCounter, com.openggf.game.PlayableEntity player) { }
+        @Override public void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand> commands) { }
+
+        @Override
+        public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+            offsetCalled = true;
+            worldX += offsetX;
+            worldY += offsetY;
+        }
+    }
+
     // ========== Zone/Act State ==========
 
     @Test

@@ -145,6 +145,19 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         return true;
     }
 
+    /**
+     * ROM: Offset_ObjectsDuringTransition shifts Obj_EndSign's position by the
+     * same delta as the players/camera during a seamless act reload (e.g. CNZ
+     * (-$3000, +$200)), so the signpost stays on screen and in Obj_EndSignAfter
+     * after the Act 1 -> Act 2 transition instead of being stranded at its old
+     * Act 1 world position (docs/skdisasm/sonic3k.asm:176262-176279, CNZ1BGE_DoTransition).
+     */
+    @Override
+    public void onCarriedAcrossSeamlessTransition(int offsetX, int offsetY) {
+        worldX += offsetX;
+        worldY += offsetY;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = resolveUpdatePlayer(playerEntity);

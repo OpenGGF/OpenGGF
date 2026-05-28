@@ -3242,6 +3242,12 @@ public class LevelManager {
         // 6. Apply coordinate offsets (ROM: Offset_ObjectsDuringTransition)
         applySeamlessOffsets(request, cam);
 
+        // 6b. ROM Offset_ObjectsDuringTransition shifts every surviving object by
+        // the same delta as the players/camera. Carried persistent objects (e.g. the
+        // end signpost in CNZ/HCZ/MGZ) must move with the world or they are stranded
+        // at their Act 1 position and culled/destroyed off-screen.
+        offsetCarriedObjectsForTransition(persistentDynamicObjects, request);
+
         // 7. Restore camera bounds from new level data
         restoreCameraBoundsForCurrentLevel(cam);
         applyPostTransitionCameraOverrides(request, cam);
@@ -3343,6 +3349,29 @@ public class LevelManager {
         Integer maxYTarget = request.postTransitionMaxYTarget();
         if (maxYTarget != null) {
             cam.setMaxYTarget((short) (int) maxYTarget);
+        }
+    }
+
+    /**
+     * Shifts persistent dynamic objects carried across a seamless reload by the
+     * transition world delta, mirroring ROM {@code Offset_ObjectsDuringTransition}.
+     * The delta matches the player offset (player/camera/object offsets are the
+     * same world shift for every S3K seamless act transition).
+     */
+    private void offsetCarriedObjectsForTransition(List<ObjectInstance> carried,
+                                                   SeamlessLevelTransitionRequest request) {
+        if (request == null || carried == null || carried.isEmpty()) {
+            return;
+        }
+        int offsetX = request.playerOffsetX();
+        int offsetY = request.playerOffsetY();
+        if (offsetX == 0 && offsetY == 0) {
+            return;
+        }
+        for (ObjectInstance instance : carried) {
+            if (instance != null && !instance.isDestroyed()) {
+                instance.onCarriedAcrossSeamlessTransition(offsetX, offsetY);
+            }
         }
     }
 
