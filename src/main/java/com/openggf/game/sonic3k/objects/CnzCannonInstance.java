@@ -6,6 +6,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectArtKeys;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
@@ -58,6 +60,9 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     private static final int STATE_READY_TO_LAUNCH = 2;
     private static final int STATE_COOLDOWN = 3;
     private static final int CAPTURE_PULL_GRAVITY = 0x38;
+    private static final int PLAYER_CAPTURE_PRIORITY = RenderPriority.MAX;
+    private static final int PLAYER_RESTORE_PRIORITY_FRAMES = 8;
+    private static final int LAUNCH_PUFF_TIMER = 0x0F;
 
     // ROM capture writes y_radius=$0E and x_radius=7.
     private static final int ROLL_X_RADIUS = 7;
@@ -67,13 +72,14 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     private static final SolidObjectParams SOLID_PARAMS =
             new SolidObjectParams(0x10, 0x29, 0x29);
 
-    private static final int LAUNCH_COOLDOWN_FRAMES = 8;
-
     private int state = STATE_IDLE;
     private int stateTimer;
     private int spinAngle;
+    private int launchPuffAngle;
     private int chamberFrame = FRAME_CHAMBER_IDLE;
     private AbstractPlayableSprite capturedPlayer;
+    private AbstractPlayableSprite releasedPlayer;
+    private int releasedPlayerPriorityTimer;
 
     public CnzCannonInstance(ObjectSpawn spawn) {
         super(spawn, "CNZCannon");
@@ -85,16 +91,31 @@ public final class CnzCannonInstance extends AbstractObjectInstance
                 ? sprite
                 : null;
 
+        updateReleasedPlayerPriority();
+
         switch (state) {
             case STATE_IDLE -> updateIdle(frameCounter, player);
             case STATE_PULLING_PLAYER -> updatePullingPlayer(player);
             case STATE_READY_TO_LAUNCH -> updateReadyToLaunch(frameCounter, player);
-            case STATE_COOLDOWN -> updateCooldown();
+            case STATE_COOLDOWN -> updateCooldown(frameCounter);
             default -> {
                 state = STATE_IDLE;
                 chamberFrame = FRAME_CHAMBER_IDLE;
                 capturedPlayer = null;
             }
+        }
+    }
+
+    private void updateReleasedPlayerPriority() {
+        if (releasedPlayer == null) {
+            return;
+        }
+        if (releasedPlayerPriorityTimer > 0) {
+            releasedPlayerPriorityTimer--;
+        }
+        if (releasedPlayerPriorityTimer <= 0) {
+            releasedPlayer.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
+            releasedPlayer = null;
         }
     }
 
@@ -150,16 +171,24 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         }
     }
 
-    private void updateCooldown() {
+    private void updateCooldown(int frameCounter) {
         advanceSpin(-1);
-        if (stateTimer > 0) {
-            stateTimer--;
+        if (stateTimer >= 0 && (frameCounter & 0x03) == 0) {
+            spawnLaunchPuff();
         }
-        if (stateTimer <= 0) {
+        stateTimer--;
+        if (stateTimer < 0) {
             state = STATE_IDLE;
             capturedPlayer = null;
             chamberFrame = FRAME_CHAMBER_IDLE;
         }
+    }
+
+    private void spawnLaunchPuff() {
+        int xOffsetVelocity = TrigLookupTable.cosHex(launchPuffAngle) << 3;
+        int yOffsetVelocity = TrigLookupTable.sinHex(launchPuffAngle) << 3;
+        spawnChild(() -> new CannonLaunchPuff(spawn.x(), spawn.y() - 0x18,
+                xOffsetVelocity, yOffsetVelocity));
     }
 
     private void advanceSpin(int frameCounter) {
@@ -179,6 +208,8 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     private void capturePlayer(AbstractPlayableSprite player) {
         capturedPlayer = player;
         short captureY = player.getCentreY();
+        spinAngle = 0;
+        chamberFrame = FRAME_CHAMBER_IDLE;
 
         // ROM: move.w #$81,object_control(a1) / bset #Status_Roll,status(a1)
         ObjectControlState.nativeBit7FullControl().applyTo(player);
@@ -198,6 +229,10 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         player.setOnObject(false);
         player.setJumping(false);
         player.setPinballMode(false);
+        player.setPriorityBucket(PLAYER_CAPTURE_PRIORITY);
+        player.setHighPriority(false);
+        releasedPlayer = null;
+        releasedPlayerPriorityTimer = 0;
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
             objectManager.clearRidingObject(player);
@@ -208,6 +243,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         int launchAngle = ((chamberFrame & 0x0F) << 4) + 0x80;
         short xSpeed = (short) (TrigLookupTable.cosHex(launchAngle) << 4);
         short ySpeed = (short) (TrigLookupTable.sinHex(launchAngle) << 4);
+        launchPuffAngle = launchAngle;
 
         // ROM launch writes the player's x_pos to the cannon and y_pos to the
         // cannon centre minus $18 before releasing control.
@@ -223,10 +259,14 @@ public final class CnzCannonInstance extends AbstractObjectInstance
         player.releaseFromObjectControl(frameCounter);
         player.setOnObject(false);
         player.setJumping(false);
+        player.setPriorityBucket(PLAYER_CAPTURE_PRIORITY);
+        player.setHighPriority(false);
 
         capturedPlayer = null;
+        releasedPlayer = player;
+        releasedPlayerPriorityTimer = PLAYER_RESTORE_PRIORITY_FRAMES;
         state = STATE_COOLDOWN;
-        stateTimer = LAUNCH_COOLDOWN_FRAMES;
+        stateTimer = LAUNCH_PUFF_TIMER;
         chamberFrame = FRAME_CHAMBER_IDLE;
     }
 
@@ -234,6 +274,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         if (state != STATE_IDLE || !contact.standing()
                 || !(playerEntity instanceof AbstractPlayableSprite player)
+                || player.isCpuControlled()
                 || player.isObjectControlled() || player.isJumping()) {
             return;
         }
@@ -305,5 +346,66 @@ public final class CnzCannonInstance extends AbstractObjectInstance
             return;
         }
         stateTimer = Math.max(0, frames);
+    }
+
+    private static final class CannonLaunchPuff extends AbstractObjectInstance {
+        private static final int PRIORITY = RenderPriority.MAX;
+        private static final int FIRST_FRAME = 1;
+        private static final int DELETE_FRAME = 5;
+        private static final int ANIM_DELAY = 3;
+
+        private int x;
+        private int y;
+        private int xSubpixel;
+        private int ySubpixel;
+        private final int xVelocity;
+        private final int yVelocity;
+        private int mappingFrame = FIRST_FRAME;
+        private int animFrameTimer = ANIM_DELAY;
+
+        private CannonLaunchPuff(int x, int y, int xVelocity, int yVelocity) {
+            super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "CNZCannonLaunchPuff");
+            this.x = x;
+            this.y = y;
+            this.xVelocity = xVelocity;
+            this.yVelocity = yVelocity;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            xSubpixel += xVelocity;
+            ySubpixel += yVelocity;
+            x += xSubpixel >> 8;
+            y += ySubpixel >> 8;
+            xSubpixel &= 0xFF;
+            ySubpixel &= 0xFF;
+            updateDynamicSpawn(x, y);
+
+            animFrameTimer--;
+            if (animFrameTimer >= 0) {
+                return;
+            }
+            animFrameTimer = ANIM_DELAY;
+            mappingFrame++;
+            if (mappingFrame == DELETE_FRAME) {
+                ObjectLifetimeOps.expireDynamic(this);
+            }
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (isDestroyed() || mappingFrame >= DELETE_FRAME) {
+                return;
+            }
+            PatternSpriteRenderer renderer = getRenderer(ObjectArtKeys.EXPLOSION);
+            if (renderer != null && renderer.isReady()) {
+                renderer.drawFrameIndex(mappingFrame, x, y, false, false);
+            }
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY;
+        }
     }
 }

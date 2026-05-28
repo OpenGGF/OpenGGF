@@ -3,6 +3,7 @@ package com.openggf.tests;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
@@ -316,6 +317,26 @@ class TestS3kCnzMinibossArenaHeadless {
     }
 
     @Test
+    void fgRefreshInvalidatesForegroundBeforeEndSignSpawns() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        var tilemaps = GameServices.level().getTilemapManager();
+        tilemaps.setForegroundTilemapDirty(false);
+        tilemaps.setBackgroundTilemapDirty(false);
+        Sonic3kCNZEvents events = getCnzEvents();
+        events.forceBackgroundRoutine(Sonic3kCNZEvents.BG_FG_REFRESH);
+
+        advanceCnzPostBossRefresh(events, fixture.frameCount(), 16);
+
+        assertEquals(Sonic3kCNZEvents.BG_FG_REFRESH_2, events.getBackgroundRoutine(),
+                "The first delayed CNZ1BGE_FGRefresh pass must complete before Obj_EndSign is allocated");
+        assertTrue(tilemaps.isForegroundTilemapDirty(),
+                "CNZ1BGE_FGRefresh copies the post-boss room BG layout back to Plane A; "
+                        + "the foreground tilemap must redraw before the signpost/results wait");
+    }
+
+    @Test
     void arenaChunkClearDoesNotPopulatePostBossLandingCellBeforeFgRefresh() {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
@@ -394,6 +415,82 @@ class TestS3kCnzMinibossArenaHeadless {
                 "Scroll-control init must mutate the first ROM BG tunnel continuation cell");
         assertTrue(dirtyCells.get(linearMapCell(mutableLevel, 1, 4, 2)),
                 "Scroll-control init must mutate the second ROM BG tunnel continuation cell");
+    }
+
+    @Test
+    void scrollControlInitInvalidatesTilemapsForVisibleBossRoomWallsAndBackground() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        var tilemaps = GameServices.level().getTilemapManager();
+        tilemaps.setForegroundTilemapDirty(false);
+        tilemaps.setBackgroundTilemapDirty(false);
+
+        CnzMinibossScrollControlInstance control = new CnzMinibossScrollControlInstance(
+                new ObjectSpawn(0x3200, 0x0280, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        control.setServices(TestEnvironment.objectServices());
+
+        control.update(0, fixture.sprite());
+
+        assertTrue(tilemaps.isForegroundTilemapDirty(),
+                "Obj_CNZMinibossScrollInit changes the live foreground wall/tunnel cells, so Plane A must redraw");
+        assertTrue(tilemaps.isBackgroundTilemapDirty(),
+                "Obj_CNZMinibossScrollInit changes the live background continuation cells, so Plane B must redraw");
+    }
+
+    @Test
+    void arenaEntryInvalidatesBossRoomTilemapsBeforePlayerLands() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        fixture.sprite().setAir(true);
+        GameServices.camera().setX((short) 0x31E0);
+        var tilemaps = GameServices.level().getTilemapManager();
+        tilemaps.setForegroundTilemapDirty(false);
+        tilemaps.setBackgroundTilemapDirty(false);
+
+        Sonic3kCNZEvents events = getCnzEvents();
+        events.update(0, 0);
+
+        assertTrue(tilemaps.isForegroundTilemapDirty(),
+                "Arena entry must redraw the boss-room foreground walls before the player lands");
+        assertTrue(tilemaps.isBackgroundTilemapDirty(),
+                "Arena entry must redraw the boss-room background before the player lands");
+    }
+
+    @Test
+    void arenaEntryDoesNotMutateScrollControlTunnelLayoutCells() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        MutableLevel mutableLevel = MutableLevel.snapshot(GameServices.level().getCurrentLevel());
+        GameServices.level().setLevel(mutableLevel);
+        byte[] before = mutableLevel.getMap().getData().clone();
+
+        GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        getCnzEvents().update(0, 0);
+
+        assertTrue(Arrays.equals(before, mutableLevel.getMap().getData()),
+                "Obj_CNZMiniboss arena entry loads PLC/palette and clamps camera, but "
+                        + "Obj_CNZMinibossScrollControl owns the live $3180/$0280 tunnel layout copy");
+    }
+
+    @Test
+    void arenaChunkClearInvalidatesVisibleForegroundTilemap() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        var tilemaps = GameServices.level().getTilemapManager();
+        tilemaps.setForegroundTilemapDirty(false);
+        tilemaps.setBackgroundTilemapDirty(false);
+        Sonic3kCNZEvents events = getCnzEvents();
+        events.setPendingArenaChunkDestruction(0x32D0, 0x0310);
+        events.forceBackgroundRoutine(Sonic3kCNZEvents.BG_BOSS);
+
+        events.update(0, 0);
+
+        assertTrue(tilemaps.isForegroundTilemapDirty(),
+                "CNZ1_ScreenEvent clears visible floor chunk descriptors and must refresh the foreground tilemap");
     }
 
     /**

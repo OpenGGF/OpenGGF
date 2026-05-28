@@ -6,6 +6,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
@@ -911,6 +912,9 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         Sonic3kPlcArtRegistry.ZoneArtPlan plan =
                 Sonic3kPlcArtRegistry.getPlan(zoneIndex, currentActIndex);
         loadStandaloneFromRegistry(plan);
+        if (zoneIndex == Sonic3kZoneIds.ZONE_CNZ) {
+            loadCnzTraversalArt();
+        }
 
         LOG.info("Reloaded standalone art for zone " + zoneIndex
                 + " act " + currentActIndex);
@@ -1344,6 +1348,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_CANNON, art.loadCnzCannonSheet(rom), art);
             registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_RISING_PLATFORM, art.buildCnzRisingPlatformSheet(), art);
             registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_TRAP_DOOR, art.buildCnzTrapDoorSheet(), art);
+            registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_LIGHT_BULB, art.buildCnzLightBulbSheet(), art);
             registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_HOVER_FAN, art.buildCnzHoverFanSheet(), art);
             // Cylinder is the last visible traversal object in this slice and
             // keeps the ROM-parsed Map_CNZCylinder sheet rather than a fallback.

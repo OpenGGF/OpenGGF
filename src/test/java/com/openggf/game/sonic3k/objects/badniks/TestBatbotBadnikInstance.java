@@ -3,18 +3,28 @@ package com.openggf.game.sonic3k.objects.badniks;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestBatbotBadnikInstance {
@@ -190,6 +200,76 @@ class TestBatbotBadnikInstance {
                 "Obj_WaitOffscreen waits for Draw_Sprite to set render_flags bit 7, not just X range");
         assertEquals(0x1078, batbot.getX());
         assertEquals(0x0428, batbot.getY());
+    }
+
+    @Test
+    void renderIncludesRomVisualChildSpritesForBodyAndLamp() {
+        putBatbotOnScreen();
+        BatbotBadnikInstance batbot = new BatbotBadnikInstance(new ObjectSpawn(0x1AF0,
+                0x0638, Sonic3kObjectIds.BATBOT, 0, 0, false, 0));
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer("cnz_batbot")).thenReturn(renderer);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+        batbot.setServices(new TestObjectServices().withLevelManager(levelManager));
+        AbstractPlayableSprite player = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+
+        batbot.update(0, player);
+        batbot.update(1, player);
+
+        batbot.appendRenderCommands(new ArrayList<GLCommand>());
+
+        verify(renderer).drawFrameIndex(2, 0x1AF0, 0x0638, false, false);
+        verify(renderer).drawFrameIndex(3, 0x1AF0, 0x0648, false, false);
+        verify(renderer).drawFrameIndex(5, 0x1AF0, 0x063B, false, false);
+    }
+
+    @Test
+    void activeBatbotAnimatesParentAndBodyFramesFromRomRawScripts() {
+        putBatbotOnScreen();
+        BatbotBadnikInstance batbot = new BatbotBadnikInstance(new ObjectSpawn(0x1AF0,
+                0x0638, Sonic3kObjectIds.BATBOT, 0, 0, false, 0));
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer("cnz_batbot")).thenReturn(renderer);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+        batbot.setServices(new TestObjectServices().withLevelManager(levelManager));
+        AbstractPlayableSprite player = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build()
+                .sprite();
+
+        player.setCentreX((short) 0x1B10);
+        player.setCentreY((short) 0x0638);
+        batbot.update(0, player);
+        batbot.update(1, player);
+        batbot.update(2, player);
+
+        batbot.appendRenderCommands(new ArrayList<GLCommand>());
+        verify(renderer).drawFrameIndex(2, 0x1AF0, 0x0638, false, false);
+        verify(renderer).drawFrameIndex(4, 0x1AF0, 0x0648, false, false);
+
+        player.setCentreX((short) 0x1C00);
+        clearInvocations(renderer);
+        batbot.update(3, player);
+        batbot.appendRenderCommands(new ArrayList<GLCommand>());
+        verify(renderer).drawFrameIndex(0, 0x1AF2, 0x0638, false, false);
+        verify(renderer).drawFrameIndex(3, 0x1AF2, 0x0648, false, false);
+
+        clearInvocations(renderer);
+        for (int frame = 4; frame <= 33; frame++) {
+            batbot.update(frame, player);
+        }
+        batbot.appendRenderCommands(new ArrayList<GLCommand>());
+        verify(renderer).drawFrameIndex(2, 0x1B2E, 0x0638, false, false);
+        verify(renderer).drawFrameIndex(4, 0x1B2E, 0x0648, false, false);
     }
 
     private static void putBatbotOnScreen() {
