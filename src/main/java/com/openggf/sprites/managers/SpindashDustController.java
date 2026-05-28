@@ -13,12 +13,26 @@ public class SpindashDustController {
     private static final int FRAME_DELAY = 1;
     private static final int TAILS_Y_OFFSET = -4;
 
+    // Water-entry/exit splash frames from the shared Sonic_Dust art
+    // (Ani_obj08 byte_12CA6: 0..9, delay 2 -> 3 ticks/frame). ROM writes
+    // anim=1 into the fixed Sonic_Dust object (sonic3k.asm:22241,22281) rather
+    // than spawning a FindFreeObj slot, so the splash rides this controller.
+    private static final int[] SPLASH_FRAMES = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    private static final int SPLASH_FRAME_DELAY = 2;
+
     private final AbstractPlayableSprite sprite;
     private final PlayerSpriteRenderer renderer;
     private int frameIndex;
     private int frameTick;
     private int currentFrame;
     private boolean activeLastTick;
+
+    private boolean splashActive;
+    private int splashX;
+    private int splashY;
+    private boolean splashFacingLeft;
+    private int splashFrameIndex;
+    private int splashTick;
 
     public SpindashDustController(AbstractPlayableSprite sprite, PlayerSpriteRenderer renderer) {
         this.sprite = sprite;
@@ -29,7 +43,29 @@ public class SpindashDustController {
         this.activeLastTick = false;
     }
 
+    /**
+     * Starts the water-entry/exit splash animation on the fixed dust object.
+     *
+     * <p>ROM: {@code Sonic_InWater}/{@code Sonic_OutWater} write
+     * {@code move.w #1<<8,anim(a6)} into the existing Sonic_Dust object. Routing
+     * the splash through this controller keeps it slot-free (no FindFreeObj),
+     * matching ROM Load_Sprites pressure.
+     *
+     * @param x          splash X (player centre)
+     * @param waterY     water-surface Y
+     * @param facingLeft whether the player faced left
+     */
+    public void triggerSplash(int x, int waterY, boolean facingLeft) {
+        splashActive = true;
+        splashX = x;
+        splashY = waterY;
+        splashFacingLeft = facingLeft;
+        splashFrameIndex = 0;
+        splashTick = SPLASH_FRAME_DELAY;
+    }
+
     public void update() {
+        updateSplash();
         boolean active = isActive();
         if (!active) {
             reset();
@@ -53,6 +89,7 @@ public class SpindashDustController {
     }
 
     public void draw() {
+        drawSplash();
         if (!isActive() || renderer == null) {
             return;
         }
@@ -63,6 +100,33 @@ public class SpindashDustController {
         }
         boolean hFlip = Direction.LEFT.equals(sprite.getDirection());
         renderer.drawFrame(currentFrame, originX, originY, hFlip, false);
+    }
+
+    /** Test/diagnostic: whether the water splash animation is currently playing. */
+    public boolean isSplashActive() {
+        return splashActive;
+    }
+
+    private void updateSplash() {
+        if (!splashActive) {
+            return;
+        }
+        splashTick--;
+        if (splashTick < 0) {
+            splashTick = SPLASH_FRAME_DELAY;
+            splashFrameIndex++;
+            if (splashFrameIndex >= SPLASH_FRAMES.length) {
+                splashActive = false;
+            }
+        }
+    }
+
+    private void drawSplash() {
+        if (!splashActive || renderer == null
+                || splashFrameIndex < 0 || splashFrameIndex >= SPLASH_FRAMES.length) {
+            return;
+        }
+        renderer.drawFrame(SPLASH_FRAMES[splashFrameIndex], splashX, splashY, splashFacingLeft, false);
     }
 
     private boolean isActive() {
