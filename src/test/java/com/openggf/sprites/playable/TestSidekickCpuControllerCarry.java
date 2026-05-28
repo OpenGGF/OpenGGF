@@ -11,6 +11,7 @@ import com.openggf.tests.SharedLevel;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,16 @@ class TestSidekickCpuControllerCarry {
     void setUp() {
         fixture = HeadlessTestFixture.builder().withSharedLevel(sharedLevel).build();
         controller = GameServices.sprites().getSidekicks().get(0).getCpuController();
+    }
+
+    @AfterEach
+    void resetSharedController() {
+        // The shared-fixture sidekick controller instance persists across tests;
+        // clear the transient-carrier marker so it doesn't leak into the
+        // SONIC_AND_TAILS follow/release tests.
+        if (controller != null) {
+            controller.setTransientCarrySidekick(false);
+        }
     }
 
     @Test
@@ -268,6 +279,88 @@ class TestSidekickCpuControllerCarry {
         assertFalse(sonic.isObjectControlled());
         assertEquals(0, controller.getReleaseCooldownForTest(),
                 "Ground release has no cooldown");
+    }
+
+    // --- solo-leader transient carrier fly-off (ROM routine $10) ---------
+
+    @Test
+    void transientCarrierEntersFlyoffOnGroundReleaseInsteadOfNormal() {
+        AbstractPlayableSprite[] pair = prepareCarry();
+        AbstractPlayableSprite sonic = pair[0];
+        controller.setTransientCarrySidekick(true);
+        controller.update(1);  // INIT -> CARRY_INIT
+        controller.update(2);  // CARRY_INIT -> CARRYING
+        assertEquals(SidekickCpuController.State.CARRYING, controller.getState());
+
+        sonic.setAir(false);   // simulate landing
+        controller.update(3);
+
+        assertEquals(SidekickCpuController.State.CARRY_FLYOFF, controller.getState(),
+                "ROM loc_14068: a solo-leader throwaway carrier routes to routine $10 "
+                        + "(fly off) on the landing drop, not routine 6 (normal follow)");
+        assertFalse(sonic.isObjectControlled(),
+                "Sonic is released from object control when the carry ends");
+    }
+
+    @Test
+    void transientCarrierFliesUpAndRightWhileOnScreen() {
+        AbstractPlayableSprite[] pair = prepareCarry();
+        AbstractPlayableSprite sonic = pair[0];
+        AbstractPlayableSprite tails = pair[1];
+        controller.setTransientCarrySidekick(true);
+        controller.update(1);
+        controller.update(2);
+        sonic.setAir(false);
+        controller.update(3);  // -> CARRY_FLYOFF
+        assertEquals(SidekickCpuController.State.CARRY_FLYOFF, controller.getState());
+
+        tails.setRenderFlagOnScreen(true);
+        short startX = tails.getCentreX();
+        short startY = tails.getCentreY();
+        controller.update(4);
+
+        assertTrue((short) tails.getCentreX() > startX,
+                "Carrier flies to the right while leaving the screen");
+        assertTrue((short) tails.getCentreY() < startY,
+                "Carrier flies upward while leaving the screen");
+        assertFalse(controller.isTransientFlyoffDespawned(),
+                "Carrier is not removed while still on-screen");
+    }
+
+    @Test
+    void transientCarrierDespawnsOnceOffScreen() {
+        AbstractPlayableSprite[] pair = prepareCarry();
+        AbstractPlayableSprite sonic = pair[0];
+        AbstractPlayableSprite tails = pair[1];
+        controller.setTransientCarrySidekick(true);
+        controller.update(1);
+        controller.update(2);
+        sonic.setAir(false);
+        controller.update(3);  // -> CARRY_FLYOFF
+
+        tails.setRenderFlagOnScreen(true);
+        controller.update(4);
+        assertFalse(controller.isTransientFlyoffDespawned(),
+                "Still on-screen: carrier keeps flying");
+
+        tails.setRenderFlagOnScreen(false);
+        controller.update(5);
+        assertTrue(controller.isTransientFlyoffDespawned(),
+                "ROM loc_140AC deletes the carrier object once render_flags reports it off-screen");
+    }
+
+    @Test
+    void nonTransientCarrierStillFollowsOnGroundRelease() {
+        AbstractPlayableSprite[] pair = prepareCarry();
+        AbstractPlayableSprite sonic = pair[0];
+        // transient flag deliberately left false (SONIC_AND_TAILS persistent Tails)
+        controller.update(1);
+        controller.update(2);
+        sonic.setAir(false);
+        controller.update(3);
+
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState(),
+                "A persistent sidekick keeps following on release (ROM routine 6), no fly-off");
     }
 
     // --- release path B: A/B/C press ------------------------------------

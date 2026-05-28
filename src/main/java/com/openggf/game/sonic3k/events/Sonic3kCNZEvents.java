@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.GameModule;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
@@ -16,10 +18,15 @@ import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
 import com.openggf.level.Block;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.Sprite;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCarryTrigger;
+import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.Tails;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -308,6 +315,66 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         postBossForegroundVisualCopied = false;
         destroyedArenaRows = 0;
         bossBackgroundMode = BossBackgroundMode.NORMAL;
+        spawnSoloLeaderCarryInTailsIfNeeded(act);
+    }
+
+    /** Unique code for the throwaway CNZ1 carry-in Tails so it never collides
+     *  with a configured "tails_p2" sidekick slot. */
+    private static final String SOLO_CARRY_TAILS_CODE = "tails_cnz_carry";
+
+    /**
+     * ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8187-8197): at CNZ Act 1 the
+     * intro carry fires for both Sonic+Tails and solo Sonic. In the solo case
+     * (Player_mode==1) the ROM still writes {@code Obj_Tails} into the Player_2
+     * slot at Sonic's position so Tails carries him in; after the drop ROM
+     * loc_14068 routes that throwaway carrier to routine $10 (fly off + self-
+     * delete) rather than the normal follow AI.
+     *
+     * <p>The engine has no Tails sprite at all in solo mode, so we spawn a
+     * temporary one here — mirroring the MGZ2 boss-transition rescue Tails
+     * pattern ({@code Sonic3kMGZEvents.ensureBossTransitionTails}) — flagged
+     * {@link SidekickCpuController#setTransientCarrySidekick(boolean)} so the
+     * controller flies it off-screen and removes it once Sonic lands.
+     */
+    private void spawnSoloLeaderCarryInTailsIfNeeded(int act) {
+        if (act != 0 || playerCharacter() != PlayerCharacter.SONIC_ALONE) {
+            return;
+        }
+        GameModule gameModule = module();
+        if (gameModule == null) {
+            return;
+        }
+        SidekickCarryTrigger carryTrigger = gameModule.getSidekickCarryTrigger();
+        if (carryTrigger == null) {
+            return;
+        }
+        SpriteManager sprites = spriteManager();
+        AbstractPlayableSprite leader = camera().getFocusedSprite();
+        if (sprites == null || leader == null) {
+            return;
+        }
+        // Don't double-spawn if a sidekick already exists (configured team) or a
+        // prior carry-in Tails is still registered (e.g. seamless re-init).
+        if (!sprites.getRegisteredSidekicks().isEmpty()) {
+            return;
+        }
+        Tails carrier = new Tails(SOLO_CARRY_TAILS_CODE,
+                (short) Math.max(0, leader.getX() - 0x20),
+                (short) (leader.getY() + 4));
+        carrier.setCpuControlled(true);
+        carrier.setAir(true);
+        SidekickCpuController controller = new SidekickCpuController(carrier, leader);
+        controller.setCarryTrigger(carryTrigger);
+        controller.setTransientCarrySidekick(true);
+        carrier.setCpuController(controller);
+        sprites.addTemporarySidekick(carrier, "tails");
+
+        // The art-load step already ran (no Tails was in the team), so upload the
+        // carrier's sprite art now — same as the MGZ2 rescue Tails path.
+        LevelManager manager = levelManager();
+        if (manager != null) {
+            manager.refreshPlayableSpriteArt();
+        }
     }
 
     /**
@@ -951,6 +1018,20 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      */
     public void setWaterTargetYRaw(int waterTargetY) {
         this.waterTargetY = waterTargetY;
+    }
+
+    /**
+     * Seeds {@code Mean_water_level} directly so the flood appears at its new
+     * height immediately instead of easing up from the off-screen start.
+     *
+     * <p>ROM: {@code loc_65C78} writes {@code Mean_water_level = Camera_Y + $100}
+     * before {@code Target_water_level = $350}, so the water is already risen by
+     * the time the player walks into it.
+     */
+    public void setWaterMeanLevel(int meanY) {
+        waterSystem().setWaterLevelDirect(levelManager().getRomZoneId(),
+                levelManager().getCurrentAct(),
+                meanY);
     }
 
     public boolean isWaterButtonArmed() {

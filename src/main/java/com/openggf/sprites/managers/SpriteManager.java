@@ -177,6 +177,22 @@ public class SpriteManager {
 	}
 
 	/**
+	 * Removes a single sidekick only if it was registered as a temporary
+	 * sidekick (via {@link #addTemporarySidekick}). No-op for permanently
+	 * registered sidekicks. Used by the CNZ1 solo-Sonic carry-in Tails, which
+	 * deletes its own throwaway carrier once it flies off-screen (ROM
+	 * {@code loc_140AC}, sonic3k.asm:26963-26969).
+	 *
+	 * @return true if the sprite was a temporary sidekick and was removed
+	 */
+	public boolean removeTemporarySidekick(AbstractPlayableSprite sprite) {
+		if (sprite == null || !temporarySidekicks.contains(sprite)) {
+			return false;
+		}
+		return removeSprite(sprite);
+	}
+
+	/**
 	 * Removes the Sprite with provided code from the SpriteManager. Returns
 	 * true if a Sprite was removed and false if none could be found.
 	 * 
