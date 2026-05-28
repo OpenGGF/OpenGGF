@@ -49,8 +49,17 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
     private int mappingFrame;
     private int animationTick;
     private int animationIndex;
+    private int storedMinX;
+    private int storedMaxX;
+    private int storedMinY;
+    private int storedMaxYTarget;
+    private boolean cameraYLocked;
+    private boolean cameraXLocked;
+    private boolean knucklesMusicStarted;
     private boolean facingRight;
     private boolean visible = true;
+
+    private static volatile CutsceneKnucklesCnz2AInstance activeInstance;
 
     public CutsceneKnucklesCnz2AInstance(ObjectSpawn spawn) {
         super(spawn, "CutsceneKnuxCNZ2A");
@@ -70,6 +79,18 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
 
     public int getRoutine() {
         return phase.ordinal() * 2;
+    }
+
+    public static CutsceneKnucklesCnz2AInstance getActiveInstance() {
+        return activeInstance;
+    }
+
+    public static void clearActiveInstanceForTests() {
+        activeInstance = null;
+    }
+
+    static void setActiveInstanceForTests(CutsceneKnucklesCnz2AInstance instance) {
+        activeInstance = instance;
     }
 
     @Override
@@ -102,14 +123,15 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
     private void routineInit() {
         AizIntroArtLoader.loadAllIntroArt(services());
         AizIntroArtLoader.applyKnucklesPalette(services());
-        services().playMusic(Sonic3kMusic.KNUCKLES.id);
 
         Camera camera = services().camera();
-        camera.setMinX((short) CAMERA_LOCK_X);
-        camera.setMaxX((short) CAMERA_LOCK_X);
-        camera.setMinY((short) CAMERA_LOCK_Y);
-        camera.setMaxYTarget((short) CAMERA_LOCK_Y);
+        storedMinX = camera.getMinX() & 0xFFFF;
+        storedMaxX = camera.getMaxX() & 0xFFFF;
+        storedMinY = camera.getMinY() & 0xFFFF;
+        storedMaxYTarget = camera.getMaxYTarget() & 0xFFFF;
 
+        services().fadeOutMusic();
+        activeInstance = this;
         timer = MUSIC_FADE_WAIT;
         phase = Phase.CAMERA_LOCK;
         mappingFrame = 0x1E;
@@ -119,8 +141,16 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
 
     private void routineCameraLock() {
         animateLoop(LAUGH_LOOP, LAUGH_DELAY);
+        updateCameraLock();
         if (timer > 0) {
             timer--;
+            return;
+        }
+        if (!knucklesMusicStarted) {
+            services().playMusic(Sonic3kMusic.KNUCKLES.id);
+            knucklesMusicStarted = true;
+        }
+        if (!cameraXLocked || !cameraYLocked) {
             return;
         }
         timer = PRE_JUMP_WAIT;
@@ -190,8 +220,43 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
         }
 
         S3kCnzEventWriteSupport.setWallGrabSuppressed(services(), false);
+        restoreStoredCameraBounds();
         services().playMusic(Sonic3kMusic.CNZ2.id);
+        activeInstance = null;
         setDestroyed(true);
+    }
+
+    private void updateCameraLock() {
+        Camera camera = services().camera();
+        int cameraY = camera.getY() & 0xFFFF;
+        if (!cameraYLocked) {
+            if (cameraY >= CAMERA_LOCK_Y) {
+                cameraYLocked = true;
+                camera.setMinY((short) CAMERA_LOCK_Y);
+                camera.setMaxYTarget((short) CAMERA_LOCK_Y);
+            } else {
+                camera.setMinY((short) cameraY);
+            }
+        }
+
+        int cameraX = camera.getX() & 0xFFFF;
+        if (!cameraXLocked) {
+            if (cameraX >= CAMERA_LOCK_X) {
+                cameraXLocked = true;
+                camera.setMinX((short) CAMERA_LOCK_X);
+                camera.setMaxX((short) CAMERA_LOCK_X);
+            } else {
+                camera.setMinX((short) cameraX);
+            }
+        }
+    }
+
+    private void restoreStoredCameraBounds() {
+        Camera camera = services().camera();
+        camera.setMinX((short) storedMinX);
+        camera.setMaxX((short) storedMaxX);
+        camera.setMinY((short) storedMinY);
+        camera.setMaxYTarget((short) storedMaxYTarget);
     }
 
     private void startJump(int newXVel, int newYVel) {

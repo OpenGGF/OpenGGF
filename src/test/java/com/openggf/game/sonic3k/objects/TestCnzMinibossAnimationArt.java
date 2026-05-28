@@ -23,9 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -115,6 +118,21 @@ class TestCnzMinibossAnimationArt {
     }
 
     @Test
+    void openCoilSparkRendersInFrontOfMinibossBase() {
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        CnzMinibossSparkInstance spark = new CnzMinibossSparkInstance(
+                new ObjectSpawn(0x323C, 0x02E0, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+
+        assertTrue(boss.getPriorityBucket() > spark.getPriorityBucket(),
+                "ObjDat_CNZMiniboss priority $0280 must draw behind ObjDat3_CNZMinibossSpark priority $0200");
+        assertTrue(boss.isHighPriority(),
+                "ObjDat_CNZMiniboss uses make_art_tile(ArtTile_CNZMiniboss,1,1)");
+        assertTrue(spark.isHighPriority(),
+                "ObjDat3_CNZMinibossSpark uses the high-priority CNZ miniboss art tile");
+    }
+
+    @Test
     void nonFinalTopHitRunsBossDamageFlashAndStun() {
         RenderHarness harness = new RenderHarness();
         CnzMinibossInstance boss = new CnzMinibossInstance(
@@ -172,6 +190,24 @@ class TestCnzMinibossAnimationArt {
 
         assertEquals(9, debrisCount,
                 "Obj_CNZMinibossEnd must create Child6_CNZMinibossMakeDebris's nine break-apart pieces");
+    }
+
+    @Test
+    void finalTopHitStopsDrawingIntactMinibossBase() {
+        RenderHarness harness = new RenderHarness();
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        boss.setServices(harness.services());
+
+        for (int i = 0; i < 4; i++) {
+            boss.simulateHitForTest();
+        }
+
+        clearInvocations(harness.renderer(), harness.renderManager());
+        boss.appendRenderCommands(new ArrayList<>());
+
+        verify(harness.renderer(), never())
+                .drawFrameIndex(anyInt(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
     }
 
     @Test

@@ -471,6 +471,21 @@ class TestS3kCnzAct1EventFlow {
         assertEquals(0x48E0, events.getCameraMaxXClamp());
     }
 
+    @Test
+    void act2KnucklesRouteEndReleasesTeleporterClamp() {
+        Sonic3kCNZEvents events = initCnzEvents(1);
+        events.beginKnucklesTeleporterRoute();
+
+        events.endKnucklesTeleporterRoute();
+
+        assertFalse(events.isKnucklesTeleporterRouteActive(),
+                "CutsceneKnux_CNZ2B clears Ctrl_1_locked and deletes itself after the camera has moved down; "
+                        + "the engine-side CNZ route clamp must be released at the same handoff");
+        assertEquals(Sonic3kCNZEvents.FG_ACT2_NORMAL, events.getForegroundRoutine());
+        assertEquals(0, events.getCameraMinXClamp());
+        assertEquals(0, events.getCameraMaxXClamp());
+    }
+
     private Sonic3kCNZEvents initCnzEvents(int act) {
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
