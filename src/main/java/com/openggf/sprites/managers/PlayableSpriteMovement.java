@@ -2343,15 +2343,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** AnglePos: Ground terrain collision (s2.asm:42534) */
 	private void doAnglePos() {
-		// ROM AnglePos returns immediately for Status_OnObj in S1/S2/S3K,
-		// leaving object-owned ground paths to the riding object.
-		if (sprite.isOnObject()) {
-			return;
-		}
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		int positiveThreshold = (featureSet != null && featureSet.fixedAnglePosThreshold())
 				? 14
 				: Math.min(getSpeedForThreshold() + 4, 14);
+		// resolveGroundAttachment handles the ROM Status_OnObj early return only
+		// when a live object support path still owns the player. Stale latches must
+		// fall through to terrain walk-off so the player cannot stand in mid-air.
 		collisionSystem().resolveGroundAttachment(sprite, positiveThreshold, this::hasObjectSupport);
 	}
 

@@ -65,7 +65,8 @@ class TestS3kIczMinibossObject {
         assertEquals(0x05F0, object.getX());
         assertEquals(0x07F0, object.getY());
         assertEquals(6, invokeInt(boss, "getCollisionProperty"));
-        assertEquals(0xC6, invokeInt(boss, "getCollisionFlags"));
+        assertEquals(0, invokeInt(boss, "getCollisionFlags"),
+                "The shared boss-camera gate runs before Obj_ICZMiniboss sets collision_flags=$C6");
         assertEquals(8, invokeInt(boss, "getOrbCountForTesting"));
         assertEquals(6, invokeInt(boss, "getShardCountForTesting"));
         assertEquals(0xBF, invokeInt(boss, "getRoutineTimerForTesting"));
@@ -83,6 +84,26 @@ class TestS3kIczMinibossObject {
         assertEquals(2, invokeInt(boss, "getOrbPaletteLineForTesting"));
         assertTrue((Boolean) boss.getClass().getMethod("isOrbVisibleForTesting", int.class).invoke(boss, 0),
                 "The ROM draws the floor snowballs while they wait for the parent arm flag");
+    }
+
+    @Test
+    void minibossTouchCollisionIsInactiveUntilSharedBossGateCompletes() throws Exception {
+        ObjectInstance instance = new Sonic3kObjectRegistry().create(
+                new ObjectSpawn(0x05F0, 0x07F0, ICZ_MINIBOSS_ID, 0, 0, false, 0));
+        AbstractObjectInstance object = (AbstractObjectInstance) instance;
+        RecordingServices services = new RecordingServices();
+        services.camera.setX((short) 0x06F0);
+        services.camera.setY((short) 0x02B8);
+        object.setServices(services);
+
+        instance.update(1, mock(PlayableEntity.class));
+
+        assertFalse((Boolean) instance.getClass().getMethod("isArenaGateCompleteForTesting").invoke(instance),
+                "The first frame has only entered the shared boss gate, not the live boss routine");
+        assertEquals(0, ((TouchResponseProvider) instance).getCollisionFlags(),
+                "Obj_ICZMiniboss does not run SetUp_ObjAttributes/collision_flags until after loc_85CA4");
+        assertEquals(null, ((TouchResponseProvider) instance).getMultiTouchRegions(),
+                "The invisible pre-gate miniboss must not expose body or orb touch regions");
     }
 
     @Test
