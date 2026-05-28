@@ -108,14 +108,6 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private static final int POST_BOSS_REFRESH_INITIAL_ROWCOUNT = 0x0F;
     private static final int POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER = POST_BOSS_REFRESH_INITIAL_ROWCOUNT;
     private static final int POST_BOSS_VERTICAL_REMAP = 0x01C0;
-    private static final int MINIBOSS_LAYOUT_CHUNK_SIZE_PIXELS = 0x80;
-    private static final int MINIBOSS_INIT_FG_SOURCE_X = 0x3180 / MINIBOSS_LAYOUT_CHUNK_SIZE_PIXELS;
-    private static final int MINIBOSS_INIT_FG_SOURCE_Y = 0x0280 / MINIBOSS_LAYOUT_CHUNK_SIZE_PIXELS;
-    private static final int MINIBOSS_INIT_FG_DEST_Y = MINIBOSS_INIT_FG_SOURCE_Y - 1;
-    private static final int MINIBOSS_INIT_BG_SOURCE_X = 4;
-    private static final int MINIBOSS_INIT_BG_SOURCE_Y = 0;
-    private static final int MINIBOSS_INIT_BG_FIRST_DEST_Y = 1;
-    private static final int MINIBOSS_INIT_BG_DEST_ROWS = 2;
 
     /**
      * Saved {@code Camera_max_X_pos} captured when the arena lock fires.
@@ -172,7 +164,6 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private boolean minibossStartReleased;
     private boolean minibossScrollControlSpawned;
     private boolean minibossLowerRouteRemapped;
-    private boolean minibossInitialTunnelLayoutMutated;
     private boolean minibossDefeatSignalForScrollControl;
 
     /** Suppresses wall-grab interactions during the miniboss path. */
@@ -260,7 +251,6 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         minibossStartReleased = false;
         minibossScrollControlSpawned = false;
         minibossLowerRouteRemapped = false;
-        minibossInitialTunnelLayoutMutated = false;
         minibossDefeatSignalForScrollControl = false;
         wallGrabSuppressed = false;
         waterTargetY = 0;
@@ -386,10 +376,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
     private void enterMinibossTunnelApproach() {
         remapLowerRouteIntoBossTunnel(camera());
-        mutateInitialMinibossTunnelLayoutOnce();
         camera().setMinY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
         wallGrabSuppressed = true;
         installMinibossPalette();
+        invalidateMinibossArenaTilemaps();
         bossBackgroundMode = BossBackgroundMode.ACT1_MINIBOSS_PATH;
         bgRoutine = BG_BOSS_START;
         LOG.info("CNZ: camera reached miniboss tunnel approach threshold");
@@ -410,7 +400,6 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         }
         Camera camera = camera();
         remapLowerRouteIntoBossTunnel(camera);
-        mutateInitialMinibossTunnelLayoutOnce();
         cameraStoredMaxXPos = camera.getMaxX();
         cameraStoredMinXPos = camera.getMinX();
         cameraStoredMinYPos = camera.getMinY();
@@ -451,6 +440,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
         // ROM sonic3k.asm:144844 — `moveq #$5D,d0; jsr Load_PLC`.
         applyPlc(Sonic3kConstants.PLC_CNZ_MINIBOSS);
+        invalidateMinibossArenaTilemaps();
 
         // ROM sonic3k.asm:144846-144847 — `lea Pal_CNZMiniboss(pc),a1; jmp
         // (PalLoad_Line1).l`. PalLoad_Line1 writes one VDP palette line
@@ -755,6 +745,12 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                     publishKnucklesTeleporterClamp();
                 }
             }
+        }
+    }
+
+    private void invalidateMinibossArenaTilemaps() {
+        if (levelManager() != null) {
+            levelManager().invalidateAllTilemaps();
         }
     }
 
@@ -1075,40 +1071,6 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         });
         zoneLayoutMutationPipeline().applyImmediately(ctx ->
                 clearArenaCollisionCell(ctx.surface(), level, snappedWorldX, snappedWorldY), context);
-    }
-
-    private void mutateInitialMinibossTunnelLayoutOnce() {
-        if (minibossInitialTunnelLayoutMutated) {
-            return;
-        }
-        Level level = levelManager() != null ? levelManager().getCurrentLevel() : null;
-        if (level == null || level.getMap() == null
-                || level.getMap().getLayerCount() <= 1
-                || zoneLayoutMutationPipelineOrNull() == null) {
-            return;
-        }
-
-        minibossInitialTunnelLayoutMutated = true;
-        LevelMutationSurface surface = LevelMutationSurface.forLevel(level);
-        LayoutMutationContext context = new LayoutMutationContext(surface, effects -> {
-            if (levelManager() != null) {
-                levelManager().applyMutationEffects(effects);
-            }
-        });
-        zoneLayoutMutationPipeline().applyImmediately(ctx -> {
-            int fgValue = level.getMap()
-                    .getValue(0, MINIBOSS_INIT_FG_SOURCE_X, MINIBOSS_INIT_FG_SOURCE_Y) & 0xFF;
-            ctx.surface().setBlockInMap(0, MINIBOSS_INIT_FG_SOURCE_X,
-                    MINIBOSS_INIT_FG_DEST_Y, fgValue);
-
-            int bgValue = level.getMap()
-                    .getValue(1, MINIBOSS_INIT_BG_SOURCE_X, MINIBOSS_INIT_BG_SOURCE_Y) & 0xFF;
-            for (int row = 0; row < MINIBOSS_INIT_BG_DEST_ROWS; row++) {
-                ctx.surface().setBlockInMap(1, MINIBOSS_INIT_BG_SOURCE_X,
-                        MINIBOSS_INIT_BG_FIRST_DEST_Y + row, bgValue);
-            }
-            return MutationEffects.redrawAllTilemaps();
-        }, context);
     }
 
     private boolean isWithinMinibossArenaMutationBounds(int snappedWorldX, int snappedWorldY) {

@@ -3,6 +3,7 @@ package com.openggf.tests;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
@@ -455,6 +456,23 @@ class TestS3kCnzMinibossArenaHeadless {
                 "Arena entry must redraw the boss-room foreground walls before the player lands");
         assertTrue(tilemaps.isBackgroundTilemapDirty(),
                 "Arena entry must redraw the boss-room background before the player lands");
+    }
+
+    @Test
+    void arenaEntryDoesNotMutateScrollControlTunnelLayoutCells() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        MutableLevel mutableLevel = MutableLevel.snapshot(GameServices.level().getCurrentLevel());
+        GameServices.level().setLevel(mutableLevel);
+        byte[] before = mutableLevel.getMap().getData().clone();
+
+        GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        getCnzEvents().update(0, 0);
+
+        assertTrue(Arrays.equals(before, mutableLevel.getMap().getData()),
+                "Obj_CNZMiniboss arena entry loads PLC/palette and clamps camera, but "
+                        + "Obj_CNZMinibossScrollControl owns the live $3180/$0280 tunnel layout copy");
     }
 
     @Test

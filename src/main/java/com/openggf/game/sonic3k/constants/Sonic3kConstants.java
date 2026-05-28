@@ -1243,6 +1243,7 @@ public class Sonic3kConstants {
     public static final int MAP_CNZ_CANNON_ADDR = 0x230A32; // Map_CNZCannon (10 frames)
     public static final int MAP_CNZ_RISING_PLATFORM_ADDR = 0x230CDC; // Map_CNZRisingPlatform (3 frames)
     public static final int MAP_CNZ_TRAP_DOOR_ADDR = 0x230DCC; // Map_CNZTrapDoor (3 frames)
+    public static final int MAP_CNZ_LIGHT_BULB_ADDR = 0x230E52; // Map_CNZLightBulb (2 frames)
     public static final int MAP_CNZ_HOVER_FAN_ADDR = 0x231010; // Map_CNZHoverFan (8 frames)
     public static final int MAP_CNZ_CYLINDER_ADDR = 0x2317B0; // Map_CNZCylinder (4 frames)
     public static final int MAP_CNZ_BUMPER_ADDR = 0x2322CE; // Map_Bumper (2 frames)
@@ -1264,6 +1265,7 @@ public class Sonic3kConstants {
     public static final int ARTTILE_CNZ_CANNON_DPLC_DEST = 0x0448;
     public static final int ARTTILE_CNZ_RISING_PLATFORM = ARTTILE_CNZ_MISC + 0x6D;
     public static final int ARTTILE_CNZ_TRAP_DOOR = ARTTILE_CNZ_MISC + 0x9F;
+    public static final int ARTTILE_CNZ_LIGHT_BULB = ARTTILE_CNZ_MISC + 0xB3;
     public static final int ARTTILE_CNZ_HOVER_FAN = ARTTILE_CNZ_MISC + 0x97;
     public static final int ARTTILE_CNZ_CYLINDER = ARTTILE_CNZ_MISC + 0x3D;
     public static final int ARTTILE_CNZ_BUMPER = ARTTILE_CNZ_MISC + 0x13;
