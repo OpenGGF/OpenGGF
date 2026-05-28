@@ -11,7 +11,11 @@ import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance;
 import com.openggf.game.sonic3k.objects.CnzMinibossTopInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
+import com.openggf.level.Block;
+import com.openggf.level.Chunk;
+import com.openggf.level.ChunkDesc;
 import com.openggf.level.MutableLevel;
+import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -22,6 +26,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Locale;
@@ -476,6 +481,60 @@ class TestS3kCnzMinibossArenaHeadless {
     }
 
     @Test
+    void bossPathSelectsBackgroundTilemapWindowFromBossBgCameraX() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        Sonic3kCNZEvents events = getCnzEvents();
+        events.forceBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_MINIBOSS_PATH);
+        var tilemaps = GameServices.level().getTilemapManager();
+        tilemaps.setBackgroundTilemapDirty(true);
+
+        var bgCameraField = GameServices.parallax().getClass().getDeclaredField("cachedBgCameraX");
+        bgCameraField.setAccessible(true);
+        bgCameraField.setInt(GameServices.parallax(), 0x260);
+
+        ensureBackgroundTilemapData();
+
+        assertEquals(0x260, tilemaps.getBgTilemapBaseX(),
+                "CNZ1_BossLevelScroll2 sets Camera_X_pos_BG_copy=Camera_X_pos-$2F80; "
+                        + "the renderer must rebuild the 64-cell Plane B window from that BG source");
+        assertEquals(64, tilemaps.getBackgroundTilemapWidthTiles(),
+                "CNZ miniboss uses a wrapped 64-cell Plane B nametable window, not the full level BG strip");
+    }
+
+    @Test
+    void bossPathBackgroundWindowOverflowsRowsInsteadOfRepeatingRowStart() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        Sonic3kCNZEvents events = getCnzEvents();
+        events.forceBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_MINIBOSS_PATH);
+        var tilemaps = GameServices.level().getTilemapManager();
+        tilemaps.setBackgroundTilemapDirty(true);
+
+        var bgCameraField = GameServices.parallax().getClass().getDeclaredField("cachedBgCameraX");
+        bgCameraField.setAccessible(true);
+        bgCameraField.setInt(GameServices.parallax(), 0x300);
+
+        ensureBackgroundTilemapData();
+
+        byte[] tilemap = tilemaps.getBackgroundTilemapData();
+        int tileOffset = (48 * 4); // source x=$480, the first chunk beyond CNZ's 9-block BG row
+        int actualR = tilemap[tileOffset] & 0xFF;
+        int actualG = tilemap[tileOffset + 1] & 0xFF;
+        int[] expected = firstTileDescriptorForBgLinearCell(9);
+        int[] wrongHorizontalWrap = firstTileDescriptorForBgLinearCell(0);
+
+        assertEquals(expected[0], actualR,
+                "CNZ boss BG source x=$480 should overflow to the next layout row, matching Get_LevelChunkColumn");
+        assertEquals(expected[1], actualG,
+                "CNZ boss BG source x=$480 should overflow to the next layout row, matching Get_LevelChunkColumn");
+        assertFalse(actualR == wrongHorizontalWrap[0] && actualG == wrongHorizontalWrap[1],
+                "The wrapped boss window must not repeat BG row 0 column 0 at source x=$480");
+    }
+
+    @Test
     void arenaChunkClearInvalidatesVisibleForegroundTilemap() {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
@@ -520,6 +579,39 @@ class TestS3kCnzMinibossArenaHeadless {
     private int linearMapCell(MutableLevel level, int layer, int x, int y) {
         return layer * level.getMap().getWidth() * level.getMap().getHeight()
                 + y * level.getMap().getWidth() + x;
+    }
+
+    private void ensureBackgroundTilemapData() throws Exception {
+        Method ensureBg = com.openggf.level.LevelManager.class.getDeclaredMethod("ensureBackgroundTilemapData");
+        ensureBg.setAccessible(true);
+        ensureBg.invoke(GameServices.level());
+    }
+
+    private int[] firstTileDescriptorForBgLinearCell(int linearCell) {
+        var level = GameServices.level().getCurrentLevel();
+        int bgCellsPerRow = 0x480 / level.getBlockPixelSize();
+        int mapX = linearCell % bgCellsPerRow;
+        int mapY = linearCell / bgCellsPerRow;
+        int blockIndex = level.getMap().getValue(1, mapX, mapY) & 0xFF;
+        Block block = level.getBlock(blockIndex);
+        ChunkDesc chunkDesc = block.getChunkDesc(0, 0);
+        Chunk chunk = level.getChunk(chunkDesc.getChunkIndex());
+        PatternDesc patternDesc = chunk.getPatternDesc(chunkDesc.getHFlip() ? 1 : 0, chunkDesc.getVFlip() ? 1 : 0);
+        int patternWord = patternDesc.get();
+        if (chunkDesc.getHFlip()) {
+            patternWord ^= 0x800;
+        }
+        if (chunkDesc.getVFlip()) {
+            patternWord ^= 0x1000;
+        }
+        PatternDesc rendered = new PatternDesc(patternWord);
+        int r = rendered.getPatternIndex() & 0xFF;
+        int g = ((rendered.getPatternIndex() >> 8) & 0x7)
+                | ((rendered.getPaletteIndex() & 0x3) << 3)
+                | (rendered.getHFlip() ? 0x20 : 0)
+                | (rendered.getVFlip() ? 0x40 : 0)
+                | (rendered.getPriority() ? 0x80 : 0);
+        return new int[]{r, g};
     }
 
     private void advanceCnzPostBossRefresh(Sonic3kCNZEvents events, int firstFrame, int updates) {

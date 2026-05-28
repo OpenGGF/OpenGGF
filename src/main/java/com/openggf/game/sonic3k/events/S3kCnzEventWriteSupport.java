@@ -118,6 +118,13 @@ public final class S3kCnzEventWriteSupport {
         }
     }
 
+    public static void endKnucklesTeleporterRoute(ObjectServices services) {
+        CnzObjectEventBridge bridge = bridgeOrNull(services);
+        if (bridge != null) {
+            bridge.endKnucklesTeleporterRoute();
+        }
+    }
+
     /**
      * Explicit teleporter-parent -> CNZ-event seam for the shared beam handoff.
      *

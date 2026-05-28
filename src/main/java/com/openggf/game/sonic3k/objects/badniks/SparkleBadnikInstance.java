@@ -135,6 +135,24 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        if (isDestroyed()) {
+            return;
+        }
+        ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager == null) {
+            return;
+        }
+        PatternSpriteRenderer renderer = renderManager.getRenderer(Sonic3kObjectArtKeys.CNZ_SPARKLE);
+        if (renderer == null || !renderer.isReady()) {
+            return;
+        }
+        // ROM render_flags bit 1 is both Sparkle's floor/ceiling phase and the sprite v-flip bit.
+        renderer.drawFrameIndex(mappingFrame, getRenderAnchorX(), getRenderAnchorY(),
+                !badnikFacingLeft(), verticalPhaseDown);
+    }
+
+    @Override
     public String traceDebugDetails() {
         return String.format("state=%s timer=%d charge=%d/%d verticalPhaseDown=%s",
                 state, timer, chargeCycles, chargeDelay, verticalPhaseDown);
@@ -183,8 +201,8 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
         private static final int COLLISION_FLAGS = 0xAB;
         private static final int PRIORITY_BUCKET = 4;
         private static final int Y_OFFSET = 0x34;
-        private static final int[] FRAMES = {2, 3, 4, 5, 2};
-        private static final int[] DELAYS = {0, 8, 8, 8, 8};
+        private static final int[] FRAMES = {2, 8, 3, 8, 4, 8, 5, 8, 2};
+        private static final int FRAME_DELAY = 0;
 
         private int currentX;
         private int currentY;
@@ -209,7 +227,7 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
                 return;
             }
             mappingFrame = FRAMES[frameIndex];
-            frameTimer = DELAYS[frameIndex];
+            frameTimer = FRAME_DELAY;
         }
 
         @Override

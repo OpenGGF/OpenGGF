@@ -956,6 +956,14 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         publishKnucklesTeleporterClamp();
     }
 
+    public void endKnucklesTeleporterRoute() {
+        knucklesTeleporterRouteActive = false;
+        teleporterBeamSpawned = false;
+        fgRoutine = FG_ACT2_NORMAL;
+        cameraMinXClamp = 0;
+        cameraMaxXClamp = 0;
+    }
+
     public boolean isKnucklesTeleporterRouteActive() {
         return knucklesTeleporterRouteActive;
     }

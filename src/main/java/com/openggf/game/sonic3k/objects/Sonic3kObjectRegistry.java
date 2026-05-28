@@ -265,6 +265,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     // ROM: Obj_CutsceneButton dispatches on subtype (0=AIZ2, 2=CNZ2, 4=HCZ2, 6=LBZ).
                     // Route to zone-specific button implementations.
+                    if (currentRomZoneId() == Sonic3kZoneIds.ZONE_CNZ && spawn.subtype() == 2) {
+                        return new Cnz2CutsceneButtonInstance(spawn);
+                    }
                     if (currentRomZoneId() == Sonic3kZoneIds.ZONE_HCZ) {
                         return new Hcz2CutsceneButtonInstance(spawn);
                     }

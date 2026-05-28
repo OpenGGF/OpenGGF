@@ -119,6 +119,17 @@ public final class CnzMinibossSparkInstance extends AbstractObjectInstance
         renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
     }
 
+    @Override
+    public boolean isHighPriority() {
+        return true;
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        // ObjDat3_CNZMinibossSpark priority word $0200.
+        return 4;
+    }
+
     private void animateRawMultiDelay() {
         if (firstAnimationTick) {
             firstAnimationTick = false;
