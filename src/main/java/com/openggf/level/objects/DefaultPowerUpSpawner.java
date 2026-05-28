@@ -131,7 +131,13 @@ public class DefaultPowerUpSpawner implements PowerUpSpawner {
                 // Sonic_Dust/Dust object, not a FindFreeObj slot. Consuming a
                 // normal ObjectManager slot here changes S3K CNZ Load_Sprites
                 // pressure (docs/s2disasm/s2.asm:36102,36132;
-                // docs/skdisasm/sonic3k.asm:22241,22281).
+                // docs/skdisasm/sonic3k.asm:22241,22281). Drive the splash through
+                // the fixed dust controller so it stays visible without a slot.
+                SpindashDustController fixedDust = aps.getSpindashDustController();
+                if (fixedDust != null && fixedDust.getRenderer() != null) {
+                    boolean facingLeft = player.getDirection() == Direction.LEFT;
+                    fixedDust.triggerSplash(player.getCentreX(), waterY, facingLeft);
+                }
                 return;
             }
             SpindashDustController dustController = aps.getSpindashDustController();
