@@ -263,6 +263,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
         int visibleCurve = state.innerTrack ? 0 : curve;
         int angle = (visibleCurve + visibleCurve) & 0xFF;
         player.setFlipAngle(angle);
+        player.setHighPriority(curve < 0x34);
 
         int cos = TrigLookupTable.cosHex(angle);
         int cosShift = cos >> 4;
@@ -280,6 +281,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
         int visibleCurve = state.innerTrack ? 0 : curve;
         int angle = (-(visibleCurve) + -(visibleCurve)) & 0xFF;
         player.setFlipAngle(angle);
+        player.setHighPriority(curve >= 0x4C);
 
         int cos = TrigLookupTable.cosHex(angle);
         int cosShift = cos >> 4;
@@ -334,6 +336,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
         player.setOnObject(false);
         player.setFlipsRemaining(0);
         player.setFlipSpeed(4);
+        player.setHighPriority(false);
     }
 
     private static final class RiderState {

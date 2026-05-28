@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
+import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -214,15 +215,15 @@ public final class CnzMinibossScrollControlInstance extends AbstractObjectInstan
         applyLayoutMutation("CNZ miniboss initial tunnel layout", surface -> {
             int fgValue = services().currentLevel().getMap()
                     .getValue(0, INIT_FG_SOURCE_X, INIT_FG_SOURCE_Y) & 0xFF;
-            surface.setBlockInMapWithoutRedraw(0, INIT_FG_SOURCE_X, INIT_FG_DEST_Y, fgValue);
+            surface.setBlockInMap(0, INIT_FG_SOURCE_X, INIT_FG_DEST_Y, fgValue);
 
             int bgValue = services().currentLevel().getMap()
                     .getValue(1, INIT_BG_SOURCE_X, INIT_BG_SOURCE_Y) & 0xFF;
             for (int row = 0; row < INIT_BG_DEST_ROWS; row++) {
-                surface.setBlockInMapWithoutRedraw(1, INIT_BG_SOURCE_X,
+                surface.setBlockInMap(1, INIT_BG_SOURCE_X,
                         INIT_BG_FIRST_DEST_Y + row, bgValue);
             }
-            return null;
+            return MutationEffects.redrawAllTilemaps();
         });
     }
 
@@ -233,9 +234,9 @@ public final class CnzMinibossScrollControlInstance extends AbstractObjectInstan
         postBossLayoutMutated = true;
         applyLayoutMutation("CNZ miniboss post-boss FG reveal", surface -> {
             for (int y = 0; y < POST_BOSS_FG_CLEAR_ROWS; y++) {
-                surface.setBlockInMapWithoutRedraw(0, POST_BOSS_FG_CLEAR_X, y, 0);
+                surface.setBlockInMap(0, POST_BOSS_FG_CLEAR_X, y, 0);
             }
-            return null;
+            return MutationEffects.foregroundRedraw();
         });
     }
 
@@ -244,19 +245,17 @@ public final class CnzMinibossScrollControlInstance extends AbstractObjectInstan
             return;
         }
         LevelMutationSurface surface = LevelMutationSurface.forLevel(services().currentLevel());
-        LayoutMutationContext context = new LayoutMutationContext(surface, ignored -> {
-            // MutableLevel tracks dirtied map cells itself; render redraw is driven
-            // by the normal frame pipeline after this object publishes scroll state.
+        LayoutMutationContext context = new LayoutMutationContext(surface, effects -> {
+            if (services().levelManager() != null) {
+                services().levelManager().applyMutationEffects(effects);
+            }
         });
-        services().zoneLayoutMutationPipeline().applyImmediatelyWithoutRedraw(ctx -> {
-            body.apply(ctx.surface());
-            return null;
-        }, context);
+        services().zoneLayoutMutationPipeline().applyImmediately(ctx -> body.apply(ctx.surface()), context);
     }
 
     @FunctionalInterface
     private interface LayoutMutationBody {
-        Void apply(LevelMutationSurface surface);
+        MutationEffects apply(LevelMutationSurface surface);
     }
 
     @Override

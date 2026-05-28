@@ -68,5 +68,33 @@ public class TestSonic3kObjectProfile {
         assertTrue(profile.getImplementedIds(icz1).contains(0xB3));
         assertFalse(profile.getImplementedIds(mhz1).contains(0xB3));
     }
+
+    @Test
+    public void cnzPlacedActorsAreMarkedImplementedForS3klLevelsOnly() {
+        Sonic3kObjectProfile profile = new Sonic3kObjectProfile();
+        List<LevelConfig> levels = profile.getLevels();
+
+        LevelConfig cnz2 = levels.stream()
+                .filter(level -> level.levelData() == LevelData.S3K_CARNIVAL_NIGHT_2)
+                .findFirst()
+                .orElseThrow();
+        LevelConfig mhz1 = levels.stream()
+                .filter(level -> level.levelData() == LevelData.S3K_MUSHROOM_HILL_1)
+                .findFirst()
+                .orElseThrow();
+
+        int[] implementedCnzIds = {
+                0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
+                0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E,
+                0x82, 0x83, 0x88, 0x89,
+                0xA3, 0xA4, 0xA5, 0xA6, 0xA7
+        };
+        for (int objectId : implementedCnzIds) {
+            assertTrue(profile.getImplementedIds(cnz2).contains(objectId),
+                    "CNZ object $" + Integer.toHexString(objectId) + " should be reported as implemented");
+            assertFalse(profile.getImplementedIds(mhz1).contains(objectId),
+                    "CNZ object $" + Integer.toHexString(objectId) + " must stay out of the SKL set");
+        }
+    }
 }
 

@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.events;
 import com.openggf.camera.Camera;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
+import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
@@ -12,7 +13,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance;
 import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
-import com.openggf.level.AbstractLevel;
 import com.openggf.level.Block;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.Level;
@@ -92,6 +92,9 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private static final int POST_BOSS_END_SIGN_X = 0x32C0;
     private static final int KNUCKLES_ROUTE_MIN_X = 0x4750;
     private static final int KNUCKLES_ROUTE_MAX_X = 0x48E0;
+    private static final int ACT2_BOSS_ARENA_Y_START_EXIT_X = 0x0940;
+    private static final int ACT2_Y_START_SKIP_X = 0x4600;
+    private static final int ACT2_OLD_BOSS_ARENA_MIN_Y = 0x0580;
     private static final int ARENA_CHUNK_CELL_SIZE = 0x20;
     private static final int CHUNK_PIXEL_SIZE = 0x10;
     private static final int POST_BOSS_COPY_SOURCE_LAYER = 1;
@@ -376,6 +379,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         camera().setMinY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
         wallGrabSuppressed = true;
         installMinibossPalette();
+        invalidateMinibossArenaTilemaps();
         bossBackgroundMode = BossBackgroundMode.ACT1_MINIBOSS_PATH;
         bgRoutine = BG_BOSS_START;
         LOG.info("CNZ: camera reached miniboss tunnel approach threshold");
@@ -436,6 +440,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
         // ROM sonic3k.asm:144844 — `moveq #$5D,d0; jsr Load_PLC`.
         applyPlc(Sonic3kConstants.PLC_CNZ_MINIBOSS);
+        invalidateMinibossArenaTilemaps();
 
         // ROM sonic3k.asm:144846-144847 — `lea Pal_CNZMiniboss(pc),a1; jmp
         // (PalLoad_Line1).l`. PalLoad_Line1 writes one VDP palette line
@@ -720,6 +725,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * sequence.
      */
     private void updateAct2Fg() {
+        updateAct2YStartLock();
         switch (fgRoutine) {
             case FG_ACT2_ENTRY -> {
                 if (knucklesTeleporterRouteActive) {
@@ -739,6 +745,29 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                     publishKnucklesTeleporterClamp();
                 }
             }
+        }
+    }
+
+    private void invalidateMinibossArenaTilemaps() {
+        if (levelManager() != null) {
+            levelManager().invalidateAllTilemaps();
+        }
+    }
+
+    private void updateAct2YStartLock() {
+        AbstractPlayableSprite player = camera().getFocusedSprite();
+        if (player == null) {
+            return;
+        }
+        int playerX = player.getCentreX() & 0xFFFF;
+        if (playerX >= ACT2_Y_START_SKIP_X) {
+            return;
+        }
+        int minY = playerX < ACT2_BOSS_ARENA_Y_START_EXIT_X
+                ? ACT2_OLD_BOSS_ARENA_MIN_Y
+                : 0;
+        if ((camera().getMinY() & 0xFFFF) != minY) {
+            camera().setMinY((short) minY);
         }
     }
 
@@ -1035,14 +1064,13 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         }
 
         LevelMutationSurface surface = LevelMutationSurface.forLevel(level);
-        LayoutMutationContext context = new LayoutMutationContext(surface, ignored -> {
-            // The affected cells are collision-only block descriptors. CNZ's
-            // explosion child owns the visible effect; no tile redraw is needed here.
+        LayoutMutationContext context = new LayoutMutationContext(surface, effects -> {
+            if (levelManager() != null) {
+                levelManager().applyMutationEffects(effects);
+            }
         });
-        zoneLayoutMutationPipeline().applyImmediatelyWithoutRedraw(ctx -> {
-            clearArenaCollisionCell(level, snappedWorldX, snappedWorldY);
-            return null;
-        }, context);
+        zoneLayoutMutationPipeline().applyImmediately(ctx ->
+                clearArenaCollisionCell(ctx.surface(), level, snappedWorldX, snappedWorldY), context);
     }
 
     private boolean isWithinMinibossArenaMutationBounds(int snappedWorldX, int snappedWorldY) {
@@ -1052,7 +1080,8 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                 && snappedWorldY < Sonic3kConstants.CNZ_MINIBOSS_TOP_ARENA_BOTTOM;
     }
 
-    private void clearArenaCollisionCell(Level level, int snappedWorldX, int snappedWorldY) {
+    private MutationEffects clearArenaCollisionCell(LevelMutationSurface surface, Level level,
+                                                   int snappedWorldX, int snappedWorldY) {
         int rawWorldX = snappedWorldX - (ARENA_CHUNK_CELL_SIZE / 2);
         int rawWorldY = snappedWorldY - (ARENA_CHUNK_CELL_SIZE / 2);
         int blockPixelSize = level.getBlockPixelSize();
@@ -1061,18 +1090,16 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         if (blockX < 0 || blockY < 0
                 || blockX >= level.getLayerWidthBlocks(0)
                 || blockY >= level.getLayerHeightBlocks(0)) {
-            return;
+            return MutationEffects.NONE;
         }
 
         int blockIndex = level.getMap().getValue(0, blockX, blockY) & 0xFF;
         if (blockIndex <= 0 || blockIndex >= level.getBlockCount()) {
-            return;
+            return MutationEffects.NONE;
         }
 
         Block block = level.getBlock(blockIndex);
-        if (level instanceof AbstractLevel abstractLevel) {
-            block.cowEnsureWritable(abstractLevel.currentEpoch());
-        }
+        int[] state = block.saveState();
 
         int chunkMask = blockPixelSize - 1;
         int chunkX = ((rawWorldX & chunkMask) / CHUNK_PIXEL_SIZE) & ~1;
@@ -1083,10 +1110,11 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                 int targetX = chunkX + x;
                 int targetY = chunkY + y;
                 if (targetX < gridSide && targetY < gridSide) {
-                    block.setChunkDesc(targetX, targetY, ChunkDesc.EMPTY);
+                    state[targetY * gridSide + targetX] = ChunkDesc.EMPTY.get();
                 }
             }
         }
+        return surface.restoreBlockState(blockIndex, state);
     }
 
     private void copyPostBossBackgroundLayoutToForeground() {
@@ -1098,13 +1126,14 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         }
 
         LevelMutationSurface surface = LevelMutationSurface.forLevel(level);
-        LayoutMutationContext context = new LayoutMutationContext(surface, ignored -> {
-            // CNZ1BGE_FGRefresh refreshes visible tiles separately; this is the
-            // collision/layout copy from BG into FG (sonic3k.asm:107527-107576).
+        LayoutMutationContext context = new LayoutMutationContext(surface, effects -> {
+            if (levelManager() != null) {
+                levelManager().applyMutationEffects(effects);
+            }
         });
-        zoneLayoutMutationPipeline().applyImmediatelyWithoutRedraw(ctx -> {
+        zoneLayoutMutationPipeline().applyImmediately(ctx -> {
             copyPostBossBackgroundLayoutToForeground(ctx.surface(), level);
-            return null;
+            return MutationEffects.foregroundRedraw();
         }, context);
         if (gameStateOrNull() != null) {
             // ROM clears Background_collision_flag after copying BG layout bytes

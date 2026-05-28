@@ -117,6 +117,20 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x5B, // MGZTopPlatform
                 0x3E, // HCZConveyorBelt
                 0x3F, // HCZConveyorSpike
+                0x41, // CNZBalloon
+                0x42, // CNZCannon
+                0x43, // CNZRisingPlatform
+                0x44, // CNZTrapDoor
+                0x45, // CNZLightBulb
+                0x46, // CNZHoverFan
+                0x47, // CNZCylinder
+                0x48, // CNZVacuumTube
+                0x49, // CNZGiantWheel
+                0x4A, // CNZBumper
+                0x4B, // CNZTriangleBumpers
+                0x4C, // CNZSpiralTube
+                0x4D, // CNZBarberPoleSprite
+                0x4E, // CNZWireCage
                 0x67, // HCZSnakeBlocks
                 0x68, // HCZSpinningColumn
                 0x69, // HCZTwistingLoop
@@ -126,6 +140,13 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x8D, // Rhinobot
                 0x8E, // MonkeyDude
                 0x8F, // CaterKillerJr
+                0x82, // CutsceneKnuckles (CNZ2 variants included)
+                0x83, // CutsceneButton
+                0x88, // CNZWaterLevelCorkFloor
+                0x89, // CNZWaterLevelButton
+                0xA3, // Clamer
+                0xA4, // Sparkle
+                0xA5, // Batbot
                 0x93, // Jawz
                 0x94, // Blastoid
                 0x95, // Buggernaut
@@ -139,6 +160,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x99, // HCZMiniboss
                 0x9A, // HCZEndBoss
                 0xA6, // CNZMiniboss (S3KL only — same id maps to DEZMiniboss in SKL)
+                0xA7, // CNZEndBoss (S3KL only — same id maps to DEZEndBoss in SKL)
                 0xAD, // Penguinator
                 0xAE, // StarPointer
                 0xAF, // ICZCrushingColumn
