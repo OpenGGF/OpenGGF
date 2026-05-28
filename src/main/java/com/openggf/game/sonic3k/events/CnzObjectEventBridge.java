@@ -26,6 +26,8 @@ public interface CnzObjectEventBridge {
     void setWaterButtonArmed(boolean value);
     boolean isWaterButtonArmed();
     void setWaterTargetY(int targetY);
+    /** ROM: {@code move.w #...,(Mean_water_level).w} — seed the surface height now. */
+    void setWaterMeanLevel(int meanY);
     /** ROM: {@code move.w #frames,(Screen_shake_flag).w} — start a timed shake. */
     void triggerScreenShake(int frames);
     void beginKnucklesTeleporterRoute();

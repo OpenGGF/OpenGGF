@@ -103,6 +103,13 @@ public final class S3kCnzEventWriteSupport {
         }
     }
 
+    public static void setWaterMeanLevel(ObjectServices services, int meanY) {
+        CnzObjectEventBridge bridge = bridgeOrNull(services);
+        if (bridge != null) {
+            bridge.setWaterMeanLevel(meanY);
+        }
+    }
+
     public static void triggerScreenShake(ObjectServices services, int frames) {
         CnzObjectEventBridge bridge = bridgeOrNull(services);
         if (bridge != null) {
