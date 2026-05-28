@@ -1305,6 +1305,15 @@ public final class Sonic3kPlcArtRegistry {
                 null
         ));
 
+        // Obj_ICZSnowPile frames $20-$22 use Map_ICZPlatforms with ArtTile_ICZMisc2.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.ICZ_PLATFORMS_MISC2,
+                Sonic3kConstants.MAP_ICZ_PLATFORMS_ADDR,
+                Sonic3kConstants.ARTTILE_ICZ_MISC2,
+                2,
+                null
+        ));
+
         // ICZ Wall/Column objects: Obj_ICZSegmentColumn uses make_art_tile($001, 2, 0).
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.ICZ_WALL_AND_COLUMN,

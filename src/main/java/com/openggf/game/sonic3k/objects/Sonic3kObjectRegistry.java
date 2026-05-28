@@ -529,6 +529,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczHarmfulIceObjectInstance(spawn);
                 });
+        factories.put(Sonic3kObjectIds.ICZ_SNOW_PILE,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new IczSnowPileObjectInstance(spawn);
+                });
         factories.put(0x3C,
                 (spawn, registry) -> new DoorObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.STILL_SPRITE,
