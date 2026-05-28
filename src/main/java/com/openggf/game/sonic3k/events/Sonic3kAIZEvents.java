@@ -182,8 +182,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     /** Wrap boundary during bombing: camera X wraps back at $4440. ROM: Events_bg+$02 initial. */
     private static final int BATTLESHIP_WRAP_X_BOMBING = 0x4440;
     /**
-     * Wrap boundary after bombing. ROM AIZ2_DoShipLoop compares against Events_bg+$02
-     * and always subtracts $200 from camera and both players on wrap.
+     * Wrap boundary after bombing. The ROM sets Events_bg+$02=$46C0 and subtracts
+     * $200, with HInt split rendering hiding the seam. Until that screen split is
+     * modeled, use a shorter visual repeat distance so the wrap lands inside the
+     * repeated forest mask instead of exposing the forest entrance.
      */
     private static final int BATTLESHIP_WRAP_X_POST_BOMBING = 0x46C0;
     /** Forest mask becomes visible once the bombship redraw reaches this camera X. */
@@ -195,6 +197,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int AIZ_END_BOSS_KNUX_LOCK_X = 0x4100;
     private static final int AIZ_END_BOSS_KNUX_LAYOUT_X = 0x4120;
     private static final int AIZ_END_BOSS_KNUX_LAYOUT_Y = 0x0640;
+    private static final int BATTLESHIP_WRAP_DIST_POST_BOMBING = 0x80;
     /** Wrap distance: ROM subtracts $200 from all positions on ship-loop wrap. */
     private static final int BATTLESHIP_WRAP_DIST = 0x200;
     /** Left clamp: player X must be >= camera X + $18 during auto-scroll. */
@@ -1617,10 +1620,12 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         cam.setMinX((short) newCameraX);
         cam.setMaxX((short) newCameraX);
 
-        // Wrap-back: when camera reaches the wrap boundary, subtract $200 from
-        // ALL positions (camera, player, active objects) for seamless looping.
+        // Wrap-back: when camera reaches the wrap boundary, subtract the active
+        // repeat distance from all positions for seamless looping.
         if (newCameraX >= battleshipWrapX) {
-            int wrapDelta = BATTLESHIP_WRAP_DIST;
+            int wrapDelta = battleshipWrapX == BATTLESHIP_WRAP_X_BOMBING
+                    ? BATTLESHIP_WRAP_DIST
+                    : BATTLESHIP_WRAP_DIST_POST_BOMBING;
             levelRepeatOffset = wrapDelta;
 
             cam.setX((short) (newCameraX - wrapDelta));

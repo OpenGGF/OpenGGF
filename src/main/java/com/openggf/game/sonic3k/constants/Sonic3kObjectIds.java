@@ -155,6 +155,10 @@ public final class Sonic3kObjectIds {
     public static final int ICZ_HARMFUL_ICE = 0xB8;
     // S3KL object table: Obj_ICZSnowPile.
     public static final int ICZ_SNOW_PILE = 0xB9;
+    // S3KL object table: Obj_ICZTensionPlatform.
+    public static final int ICZ_TENSION_PLATFORM = 0xBA;
+    // S3KL object table: Obj_ICZIceBlock.
+    public static final int ICZ_ICE_BLOCK = 0xBB;
     // S3KL object table: Obj_ICZMiniboss.
     public static final int ICZ_MINIBOSS = 0xBC;
     public static final int TUNNELBOT = 0x9E;

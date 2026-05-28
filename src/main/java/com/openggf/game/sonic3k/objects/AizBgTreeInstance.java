@@ -122,6 +122,14 @@ public class AizBgTreeInstance extends AbstractObjectInstance {
     @Override
     public boolean isHighPriority() { return false; }
 
+    /**
+     * ROM Obj_AIZ2BGTree has an explicit camera delete check and otherwise only
+     * calls Draw_Sprite. Keep the engine's generic object-window cull from
+     * retiring trees before the ROM's Camera_X_pos >= $4880 predicate.
+     */
+    @Override
+    public boolean isPersistent() { return true; }
+
     private AizZoneRuntimeState currentAizState() {
         return S3kRuntimeStates.currentAiz(services().zoneRuntimeRegistry()).orElse(null);
     }
