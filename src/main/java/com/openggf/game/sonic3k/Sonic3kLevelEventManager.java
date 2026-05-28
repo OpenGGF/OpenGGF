@@ -651,6 +651,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void setWaterMeanLevel(int meanY) {
+        if (cnzEvents != null) {
+            cnzEvents.setWaterMeanLevel(meanY);
+        }
+    }
+
+    @Override
     public void beginKnucklesTeleporterRoute() {
         if (cnzEvents != null) {
             cnzEvents.beginKnucklesTeleporterRoute();

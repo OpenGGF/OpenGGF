@@ -450,6 +450,45 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void cutsceneKnuxCnz2WallSidePushesPlayerBackToItsLeftFace() {
+        // ROM: CutsceneKnux_CNZ2A init spawns ChildObjDat_66560 -> loc_62458, an
+        // invisible SolidObjectFull2 wall (d1=$13, d2=$100) positioned at
+        // parentX-$20 / parentY-$6C that stops Sonic before he reaches Knuckles
+        // (docs/skdisasm/sonic3k.asm:129076, 129175, 134968).
+        int wallCenterX = 0x1D00 - 0x20;
+        int wallCenterY = 0x0280 - 0x6C;
+        com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance wall =
+                new com.openggf.game.sonic3k.objects.CutsceneKnuxCnz2WallInstance(
+                        new ObjectSpawn(wallCenterX, wallCenterY, 0, 0, 0, false, 0), null);
+        ObjectManager manager = buildManager(wall);
+        // ROM: an object skips SolidObject on its first frame (obRender bit 7 not
+        // yet set by DisplaySprite). Clear the engine's matching first-frame skip.
+        wall.snapshotPreUpdatePosition();
+        int halfWidth = wall.getSolidParams().halfWidth();
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useFeatureSet(PhysicsFeatureSet.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setGSpeed((short) 0x100);
+        // Running rightward into the wall's left face from a few pixels inside it,
+        // at ground level (deep in the tall solid so this resolves as a side push).
+        player.setCentreX((short) (wallCenterX - halfWidth + 6));
+        player.setCentreY((short) 0x0280);
+
+        manager.updateSolidContacts(player);
+
+        assertTrue(player.getPushing(),
+                "SolidObjectFull2 side contact must set the pushing flag");
+        assertEquals(0, player.getXSpeed());
+        assertEquals(0, player.getGSpeed());
+        assertEquals(wallCenterX - halfWidth, player.getCentreX(),
+                "SolidObject_cont shoves the player back to objX - d1; he cannot pass the wall");
+    }
+
+    @Test
     public void optedInFullSolidRightEdgeIsInclusiveLikeRomBhiCheck() {
         SolidObjectParams params = new SolidObjectParams(19, 14, 15);
         TestSolidObject object = new InclusiveRightEdgeSolidObject(100, 100, params);

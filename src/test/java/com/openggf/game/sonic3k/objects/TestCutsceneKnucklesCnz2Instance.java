@@ -68,6 +68,8 @@ class TestCutsceneKnucklesCnz2Instance {
     @Test
     void cnzCutsceneButtonPressesWaterAndPaletteRoute_notLevelTriggerRoute() {
         RecordingCnzBridge bridge = new RecordingCnzBridge();
+        Camera buttonCamera = new Camera();
+        buttonCamera.setY((short) 0x0280);
         Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(new ObjectSpawn(
                 0x1D00, 0x027C, Sonic3kObjectIds.CUTSCENE_BUTTON, 4, 0, false, 0));
         button.setServices(new TestObjectServices() {
@@ -75,7 +77,7 @@ class TestCutsceneKnucklesCnz2Instance {
             public LevelEventProvider levelEventProvider() {
                 return bridge;
             }
-        });
+        }.withCamera(buttonCamera));
         CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
                 new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
         CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(knuckles);
@@ -86,6 +88,8 @@ class TestCutsceneKnucklesCnz2Instance {
                 "Obj_CutsceneButton subtype $04 dispatches to loc_65C78: Target_water_level=$350 "
                         + "and a CNZ palette flash, not loc_65C72's Level_trigger_array+8 branch (subtype $02)");
         assertEquals(true, bridge.waterButtonArmed);
+        assertEquals(0x0280 + 0x100, bridge.waterMeanLevel,
+                "loc_65C78 seeds Mean_water_level = Camera_Y + $100 so the flood is already risen");
         assertEquals(0x14, bridge.screenShakeFrames,
                 "loc_65C78 also writes Screen_shake_flag=$14");
         assertNotNull(button.getSpawnedFlashForTest(),
@@ -118,6 +122,24 @@ class TestCutsceneKnucklesCnz2Instance {
                         + "Camera_X_pos reaching the target");
     }
 
+    @Test
+    void firstCnzCutsceneSpawnsBlockingWallAtRomChildOffset() {
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+
+        knuckles.update(0, null);
+
+        CutsceneKnuxCnz2WallInstance wall = knuckles.getSpawnedWallForTest();
+        assertNotNull(wall,
+                "CutsceneKnux_CNZ2A init creates ChildObjDat_66560 -> loc_62458, the invisible "
+                        + "SolidObjectFull2 wall that blocks Sonic (docs/skdisasm/sonic3k.asm:129076,129175,134968)");
+        assertEquals(0x1D00 - 0x20, wall.getX(),
+                "CreateChild1_Normal applies the ChildObjDat x offset -$20 (sonic3k.asm:134971,176931-176936)");
+        assertEquals(0x0280 - 0x6C, wall.getY(),
+                "CreateChild1_Normal applies the ChildObjDat y offset -$6C (sonic3k.asm:134971,176937-176942)");
+    }
+
     @AfterEach
     void tearDown() {
         CutsceneKnucklesCnz2AInstance.clearActiveInstanceForTests();
@@ -139,6 +161,7 @@ class TestCutsceneKnucklesCnz2Instance {
     private static final class RecordingCnzBridge implements LevelEventProvider, CnzObjectEventBridge {
         private boolean waterButtonArmed;
         private int waterTargetY;
+        private int waterMeanLevel;
         private int screenShakeFrames;
 
         @Override public void initLevel(int zone, int act) {}
@@ -154,6 +177,7 @@ class TestCutsceneKnucklesCnz2Instance {
         @Override public void setWaterButtonArmed(boolean value) { waterButtonArmed = value; }
         @Override public boolean isWaterButtonArmed() { return waterButtonArmed; }
         @Override public void setWaterTargetY(int targetY) { waterTargetY = targetY; }
+        @Override public void setWaterMeanLevel(int meanY) { waterMeanLevel = meanY; }
         @Override public void triggerScreenShake(int frames) { screenShakeFrames = frames; }
         @Override public void beginKnucklesTeleporterRoute() {}
         @Override public void endKnucklesTeleporterRoute() {}

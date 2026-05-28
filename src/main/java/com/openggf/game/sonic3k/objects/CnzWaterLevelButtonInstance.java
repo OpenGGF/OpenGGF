@@ -124,7 +124,8 @@ public final class CnzWaterLevelButtonInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_BUTTON);
+        // ROM: Obj_CNZWaterLevelButton uses ObjDat_CutsceneButton -> ArtTile_GrayButton.
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.BUTTON);
         if (renderer == null || !renderer.isReady()) {
             return;
         }
