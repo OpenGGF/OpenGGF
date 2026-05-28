@@ -23,8 +23,10 @@ class TestSonic3kCnzCarryTrigger {
     }
 
     @Test
-    void cnzAct1SonicAloneDoesNotFire() {
-        assertFalse(trigger.shouldEnterCarry(ZONE_CNZ, 0, PlayerCharacter.SONIC_ALONE));
+    void cnzAct1SonicAloneFires() {
+        // ROM SpawnLevelMainSprites loc_68D8 spawns a throwaway carry-in Tails for
+        // solo Sonic (Player_mode==1) at CNZ1; the trigger fires for it too.
+        assertTrue(trigger.shouldEnterCarry(ZONE_CNZ, 0, PlayerCharacter.SONIC_ALONE));
     }
 
     @Test

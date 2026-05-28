@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **Solo Sonic is now carried into Carnival Night Zone Act 1 by a throwaway Tails.**
+  Matching the ROM (`SpawnLevelMainSprites` `loc_68D8`), a temporary Tails carries
+  a sidekick-less Sonic into CNZ1; after dropping him on landing it flies up and to
+  the right and removes itself once off-screen (Tails CPU routine `$10`), instead of
+  following him. The persistent Sonic+Tails carry path is unchanged.
+
 - fix(trace): TraceBinder now dedupes per-frame comparison results by frame number (TreeMap keyed by frame) instead of appending to an unbounded list. Fixes a memory balloon in test-mode held rewind where each SegmentCache rebuild re-compared already-compared frames and appended duplicate FrameComparison entries (and their full FieldComparison maps) to TraceBinder.allComparisons. Memory now bounded by trace length.
 
 - perf(rewind): pool capture scratch buffers and add CompositeSnapshot.owned() ownership path for the registry hot path; reduces per-frame allocations in rewind.capture / rewind.step / rewind.restore without weakening the public CompositeSnapshot immutability contract.

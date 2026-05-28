@@ -6,6 +6,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
+import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayerCharacter;
@@ -16,6 +17,7 @@ import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.Direction;
+import com.openggf.sprites.managers.SpriteManager;
 
 /**
  * CPU-controlled sidekick follower with daisy-chain support.
@@ -47,6 +49,12 @@ public class SidekickCpuController {
     private static final int LEVEL_START_X_OFFSET = -0x20;
     private static final int LEVEL_START_Y_OFFSET = 4;
     private static final int DESPAWN_TIMEOUT = 300;
+    // CARRY_FLYOFF flyaway step (ROM routine $10 flies Tails up-and-right via
+    // synthetic A/B/C+Right input through Tails flight; this intro cutscene has
+    // no recorded trace, so the engine advances position directly). Up-and-right
+    // so the carrier clears the top/right of the camera within ~1s.
+    private static final int CARRY_FLYOFF_X_STEP = 6;
+    private static final int CARRY_FLYOFF_Y_STEP = 4;
     private static final int MANUAL_CONTROL_FRAMES = 600;
     private final int flyAnimId;
     private final int duckAnimId;
@@ -67,6 +75,12 @@ public class SidekickCpuController {
         MGZ_RESCUE_WAIT,       // ROM Tails_CPU_routine $12: clear Ctrl_2_logical while physics continues
         CARRY_INIT,            // ROM carry init; MGZ boss transition uses Tails_CPU_routine $14
         CARRYING,              // ROM routine 0x0E / 0x20 - per-frame carry body
+        // ROM Tails_CPU_routine $10 (loc_1408A, sonic3k.asm:26953-26972). Entered
+        // when a throwaway carrier Tails drops a solo Sonic at the CNZ1/MHZ1 intro
+        // (SpawnLevelMainSprites loc_68D8 spawns Obj_Tails into Player_2 for
+        // Player_mode==1; loc_14068 routes the landing to $10 instead of routine 6).
+        // Tails flies up-and-right off-screen, then deletes its own object slot.
+        CARRY_FLYOFF,
         CATCH_UP_FLIGHT,       // ROM routine 0x02 (Tails_Catch_Up_Flying, sonic3k.asm:26474)
         FLIGHT_AUTO_RECOVERY,  // ROM routine 0x04 (Tails_FlySwim_Unknown, sonic3k.asm:26534)
         DORMANT_MARKER,        // ROM routine 0x0A (locret_13FC0); AIZ1 intro waits off-screen
@@ -158,6 +172,21 @@ public class SidekickCpuController {
     private boolean flyingCarryingFlag;
     private boolean carryParentagePending;
     private int releaseCooldown;
+    /**
+     * True only for a throwaway carrier spawned for a solo (no-sidekick) leader's
+     * intro carry — ROM SpawnLevelMainSprites loc_68D8 writes Obj_Tails into the
+     * Player_2 slot when Player_mode==1 at CNZ1/MHZ1 (sonic3k.asm:8190-8197). When
+     * such a carrier drops its cargo on landing, ROM loc_14068 selects routine $10
+     * (fly off + self-delete) instead of routine 6 (normal follow), so the engine
+     * routes the release to {@link State#CARRY_FLYOFF} and removes the temporary
+     * sprite once it leaves the screen. Structural (set at construction), so it is
+     * not part of the rewind snapshot.
+     */
+    @RewindTransient(reason = "transient-carrier marker is structural, set when the throwaway intro Tails is spawned")
+    private boolean transientCarrySidekick;
+    /** Set once the CARRY_FLYOFF carrier has left the screen and been removed
+     *  (ROM loc_140AC clears the object pointer). Comparison/test visibility only. */
+    private boolean transientFlyoffDespawned;
     private boolean mgzCarryIntroAscend;
     private int mgzCarryFlapTimer;
     private boolean mgzReleasedChaseLatched;
@@ -231,6 +260,7 @@ public class SidekickCpuController {
             case MGZ_RESCUE_WAIT      -> clearInputs();
             case CARRY_INIT           -> updateCarryInit();
             case CARRYING             -> updateCarrying();
+            case CARRY_FLYOFF         -> updateCarryFlyoff();
             case CATCH_UP_FLIGHT      -> updateCatchUpFlight();
             case FLIGHT_AUTO_RECOVERY -> updateFlightAutoRecovery();
             case DORMANT_MARKER       -> clearInputs();
@@ -1824,6 +1854,13 @@ public class SidekickCpuController {
             leader.setYSpeed((short) -0x100);
             carryParentagePending = false;
             releaseCarry(0);
+            if (transientCarrySidekick) {
+                // ROM loc_14068 (sonic3k.asm:26944-26946): when the carried
+                // player is solo (Player_mode==1), the landing handoff writes
+                // Tails_CPU_routine=$10 instead of routine 6, so the throwaway
+                // carrier flies away rather than entering the normal follow AI.
+                enterCarryFlyoff();
+            }
             return;
         }
 
@@ -2382,6 +2419,74 @@ public class SidekickCpuController {
         } else {
             state = State.NORMAL;
             normalFrameCount = 0;
+        }
+    }
+
+    /**
+     * Enters ROM Tails_CPU_routine $10 (loc_1408A, sonic3k.asm:26953-26972) for a
+     * throwaway intro carrier that has just dropped a solo leader. Mirrors the
+     * routine's setup: keep Tails airborne with the flight animation and a topped-
+     * up double_jump_property so flight stays active while it leaves the screen.
+     */
+    private void enterCarryFlyoff() {
+        state = State.CARRY_FLYOFF;
+        transientFlyoffDespawned = false;
+        flightTimer = 0;
+        controlCounter = 0;
+        despawnCounter = 0;
+        normalFrameCount = 0;
+        jumpingFlag = false;
+        sidekick.setAir(true);
+        sidekick.setXSpeed((short) 0);
+        sidekick.setYSpeed((short) 0);
+        sidekick.setGSpeed((short) 0);
+        sidekick.setDoubleJumpProperty((byte) 0xF0);
+        sidekick.setForcedAnimationId(flyAnimId);
+        sidekick.setControlLocked(true);
+        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+    }
+
+    /**
+     * ROM Tails_CPU_routine $10 body (loc_1408A, sonic3k.asm:26953-26972). The ROM
+     * pulses A/B/C + Right into Ctrl_2 every 16 frames so Tails flaps up and to the
+     * right; once {@code render_flags} reports it off-screen, loc_140AC clears the
+     * object code pointer (deleting the slot). This is a one-shot intro cutscene
+     * with no recorded trace, so the engine drives the flyaway directly through the
+     * object-controlled flight path (matching {@link #updateCatchUpFlight()} style)
+     * and removes the temporary sprite when it leaves the camera.
+     */
+    private void updateCarryFlyoff() {
+        sidekick.setAir(true);
+        sidekick.setForcedAnimationId(flyAnimId);
+        sidekick.setDoubleJumpProperty((byte) 0xF0);
+
+        int newX = (sidekick.getCentreX() & 0xFFFF) + CARRY_FLYOFF_X_STEP;
+        int newY = (sidekick.getCentreY() & 0xFFFF) - CARRY_FLYOFF_Y_STEP;
+        sidekick.setCentreXPreserveSubpixel((short) newX);
+        sidekick.setCentreYPreserveSubpixel((short) newY);
+
+        boolean onScreen = sidekick.hasRenderFlagOnScreenState()
+                ? sidekick.isRenderFlagOnScreen()
+                : isCurrentlyVisible();
+        if (!onScreen) {
+            completeCarryFlyoffDespawn();
+        }
+    }
+
+    /**
+     * ROM loc_140AC (sonic3k.asm:26963-26969) clears the carrier's object code
+     * pointer once it is off-screen, freeing the slot. The engine removes the
+     * temporary sidekick from the {@link SpriteManager} so it never respawns.
+     */
+    private void completeCarryFlyoffDespawn() {
+        transientFlyoffDespawned = true;
+        leader = null;
+        SpriteManager spriteManager = GameServices.spritesOrNull();
+        if (spriteManager != null) {
+            // Scoped to temporary sidekicks: a throwaway carry-in carrier deletes
+            // itself, while a permanently registered sidekick (never the case for
+            // the solo carry path) is left untouched.
+            spriteManager.removeTemporarySidekick(sidekick);
         }
     }
 
@@ -3088,8 +3193,9 @@ public class SidekickCpuController {
      *   0x0A  locret_13FC0            engine State.DORMANT_MARKER (empty; used by AIZ1 intro marker)
      *   0x0C  loc_13FC2               engine State.CARRY_INIT (carry body init)
      *   0x0E  loc_13FFA               engine State.CARRYING  (carry body per-frame)
+     *   0x10  loc_1408A               engine State.CARRY_FLYOFF (solo-leader carrier fly-off + self-delete)
      *   0x12  Obj_MGZ2_BossTransition engine State.MGZ_RESCUE_WAIT
-     *   0x10-0x22  super/Knuckles/2P variants — not modelled
+     *   0x14-0x22  super/Knuckles/2P variants — not modelled
      * </pre>
      *
      * <p>Note: earlier versions of this file mapped 0x02 and 0x04 to SPAWNING and
@@ -3110,6 +3216,7 @@ public class SidekickCpuController {
             case 0x12 -> State.MGZ_RESCUE_WAIT;
             case 0x0C -> State.CARRY_INIT;
             case 0x0E, 0x20 -> State.CARRYING;
+            case 0x10 -> State.CARRY_FLYOFF;
             default -> throw new IllegalArgumentException(
                     "Unsupported ROM Tails CPU routine: 0x"
                             + Integer.toHexString(cpuRoutine));
@@ -3163,6 +3270,25 @@ public class SidekickCpuController {
     public void setCarryTrigger(SidekickCarryTrigger trigger) {
         this.carryTrigger = trigger;
         mgzReleasedChaseLatched = false;
+    }
+
+    /**
+     * Marks this controller as driving a throwaway intro carrier (ROM
+     * SpawnLevelMainSprites loc_68D8 Player_2 spawn for a solo leader). When set,
+     * the carry release routes to {@link State#CARRY_FLYOFF} and the sprite is
+     * removed once it flies off-screen, rather than entering the normal follow AI.
+     */
+    public void setTransientCarrySidekick(boolean value) {
+        this.transientCarrySidekick = value;
+    }
+
+    public boolean isTransientCarrySidekick() {
+        return transientCarrySidekick;
+    }
+
+    /** True once a CARRY_FLYOFF carrier has left the screen and been removed. */
+    public boolean isTransientFlyoffDespawned() {
+        return transientFlyoffDespawned;
     }
 
     /**
