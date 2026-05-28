@@ -97,6 +97,43 @@ class TestS3kCnzMinibossArenaHeadless {
                         + "must wait for the arena row-clear signal");
     }
 
+    /**
+     * ROM: {@code Obj_CNZMiniboss} (sonic3k.asm:144823-144840) is placed in the level
+     * but its first routine just {@code rts}-es (drawing nothing, setting nothing up)
+     * until {@code Camera_X_pos >= $31E0}, after which it locks the arena and runs a
+     * 2-second {@code Obj_Wait} before {@code Obj_CNZMinibossGo} installs the actual
+     * boss. The engine must keep the placed boss dormant until that release fires —
+     * otherwise it appears (and starts lowering) before Sonic enters the arena and
+     * before the BG scroll begins.
+     */
+    @Test
+    void minibossStaysDormantUntilStartReleased() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        Sonic3kCNZEvents events = getCnzEvents();
+        // Camera is within the arena approach window (>= $3000) but the Obj_Wait
+        // release has not fired yet (minibossStartReleased == false by default).
+        GameServices.camera().setX((short) 0x31E0);
+        assertFalse(events.isMinibossStartReleased(),
+                "Guard setup requires the boss-start release to still be pending");
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        objectManager.addDynamicObject(boss);
+
+        boss.update(0, fixture.sprite());
+        boss.update(1, fixture.sprite());
+
+        assertFalse(objectManager.getActiveObjects().stream()
+                        .anyMatch(CnzMinibossTopInstance.class::isInstance),
+                "Obj_CNZMiniboss must stay dormant (no Init, no top-piece child) until the "
+                        + "$31E0 trigger and Obj_Wait 2-second delay complete; running Init earlier "
+                        + "makes the boss appear before Sonic enters the arena "
+                        + "(docs/skdisasm/sonic3k.asm:144823-144840)");
+    }
+
     @Test
     void minibossStartCreatesProductionTopPieceAndCoilChild() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
