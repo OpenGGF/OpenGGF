@@ -901,16 +901,11 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
      *
      * <p>The engine collapses the three ROM stages into two callbacks: this
      * method performs the combined BossDefeated / Obj_CNZMinibossEnd work
-     * (flag writes + $34 arming), and {@link #onEndGo()} handles
+     * (flag writes, debris spawn, and $34 arming), and {@link #onEndGo()} handles
      * Obj_CNZMinibossEndGo. The intermediate {@code Obj_Wait} stage between
      * them is modelled by the {@link #CNZ_MINIBOSS_DEFEAT_WAIT} timer
      * because the ROM's actual intermediate fade / debris spawn is
      * orthogonal to workstream-D.
-     *
-     * <p>Debris child spawn ({@code Child6_CNZMinibossMakeDebris}, ROM
-     * line 144989) is deferred per workstream-D spec §9 — the headless
-     * tests only assert on the Boss_flag clear / wall-grab release at
-     * the end of the chain, not on the debris particles.
      */
     @Override
     protected void onDefeatStarted() {
@@ -943,9 +938,20 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         setWait(CNZ_MINIBOSS_DEFEAT_WAIT, WaitCallback.END_GO);
         defeatExplosionController = new S3kBossExplosionController(state.x, state.y, 0, services().rng());
         spawnChild(() -> new S3kBossExplosionChild(state.x, state.y));
+        spawnBreakApartDebris();
         spawnChild(() -> new SongFadeTransitionInstance(
                 CNZ_MINIBOSS_LEVEL_MUSIC_FADE_TIME, resolveLevelMusicId()));
         services().playSfx(Sonic3kSfx.EXPLODE.id);
+    }
+
+    private void spawnBreakApartDebris() {
+        // ROM sonic3k.asm:144989 + 145698:
+        // Obj_CNZMinibossEnd creates Child6_CNZMinibossMakeDebris, nine
+        // Obj_CNZMinibossDebris children with subtypes 0,2,...,$10.
+        for (int i = 0; i < 9; i++) {
+            final int index = i;
+            spawnChild(() -> new CnzMinibossDebrisChild(state.x, state.y, index));
+        }
     }
 
     private int resolveLevelMusicId() {

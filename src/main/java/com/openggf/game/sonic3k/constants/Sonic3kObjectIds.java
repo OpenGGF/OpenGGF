@@ -62,6 +62,8 @@ public final class Sonic3kObjectIds {
     public static final int CNZ_RISING_PLATFORM = 0x43;
     // S3KL object table: Obj_CNZTrapDoor.
     public static final int CNZ_TRAP_DOOR = 0x44;
+    // S3KL object table: Obj_CNZLightBulb.
+    public static final int CNZ_LIGHT_BULB = 0x45;
     // S3KL object table: Obj_CNZHoverFan.
     public static final int CNZ_HOVER_FAN = 0x46;
     // S3KL object table: Obj_CNZCylinder.

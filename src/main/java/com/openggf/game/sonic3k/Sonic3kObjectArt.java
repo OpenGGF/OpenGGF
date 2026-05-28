@@ -1891,6 +1891,20 @@ public class Sonic3kObjectArt {
     }
 
     /**
+     * Builds the CNZ Light Bulb sprite sheet.
+     *
+     * <p>ROM anchor: {@code Obj_CNZLightBulb}.
+     * <p>Mapping table: {@code Map_CNZLightBulb} (2 frames).
+     * <p>Art tile: {@code ArtTile_CNZMisc+$B3} (palette 2).
+     */
+    public ObjectSpriteSheet buildCnzLightBulbSheet() {
+        return buildLevelArtSheetFromRom(
+                Sonic3kConstants.MAP_CNZ_LIGHT_BULB_ADDR,
+                Sonic3kConstants.ARTTILE_CNZ_LIGHT_BULB,
+                2);
+    }
+
+    /**
      * Builds the CNZ Hover Fan sprite sheet.
      *
      * <p>ROM anchor: {@code Obj_CNZHoverFan}.

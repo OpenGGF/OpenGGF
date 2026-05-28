@@ -1348,6 +1348,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_CANNON, art.loadCnzCannonSheet(rom), art);
             registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_RISING_PLATFORM, art.buildCnzRisingPlatformSheet(), art);
             registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_TRAP_DOOR, art.buildCnzTrapDoorSheet(), art);
+            registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_LIGHT_BULB, art.buildCnzLightBulbSheet(), art);
             registerLevelArtSheet(Sonic3kObjectArtKeys.CNZ_HOVER_FAN, art.buildCnzHoverFanSheet(), art);
             // Cylinder is the last visible traversal object in this slice and
             // keeps the ROM-parsed Map_CNZCylinder sheet rather than a fallback.

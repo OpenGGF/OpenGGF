@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -126,6 +127,29 @@ class TestS3kSignpostInstance {
                         + "y_pos-Camera_Y_pos+$80 is within $200, even when the generic "
                         + "64px object-screen margin would reject it "
                         + "(docs/skdisasm/sonic3k.asm:176244-176277)");
+    }
+
+    @Test
+    void afterStateKeepsSignpostAliveOutsideRomRangeWhileResultsAreActive() throws Exception {
+        Camera camera = new Camera();
+        camera.setX((short) 0x3600);
+        camera.setY((short) 0x0400);
+        GameStateManager gameState = new GameStateManager();
+        gameState.setEndOfLevelActive(true);
+
+        S3kSignpostInstance signpost = new S3kSignpostInstance(0x32C0, 0);
+        signpost.setServices(new TestObjectServices()
+                .withCamera(camera)
+                .withGameState(gameState));
+        setPrivateField(signpost, "state", enumConstant(signpost, "State", "AFTER"));
+        setPrivateField(signpost, "worldY", 0x0390);
+
+        signpost.update(0, null);
+
+        assertFalse(signpost.isDestroyed(),
+                "Obj_EndSignAfter must not delete the signpost while Obj_LevelResults is active; "
+                        + "CNZ moves the camera during the post-miniboss transition, but the signpost "
+                        + "remains visible through the results screen");
     }
 
     @Test

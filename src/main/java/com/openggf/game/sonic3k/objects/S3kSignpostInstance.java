@@ -383,6 +383,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         // Spawn the results screen — pass apparentAct (ROM's Apparent_act), not
         // LevelManager.getCurrentAct(). AIZ reloads act 2 resources mid-level which
         // changes LevelManager.currentAct to 1, but Apparent_act stays 0 until results exit.
+        if (services().gameState() != null) {
+            services().gameState().setEndOfLevelActive(true);
+        }
         spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
@@ -435,12 +438,20 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
     // =========================================================================
 
     private void updateAfter() {
+        if (isResultsScreenActive()) {
+            return;
+        }
+
         Camera camera = services().camera();
         if (camera != null && !isWithinRomAfterRange(worldX, worldY, camera.getX(), camera.getY())) {
             setDestroyed(true);
             activeSignpost = null;
             LOG.fine("S3K Signpost destroyed (off-screen)");
         }
+    }
+
+    private boolean isResultsScreenActive() {
+        return services().gameState() != null && services().gameState().isEndOfLevelActive();
     }
 
     static boolean isWithinRomAfterRange(int signpostX, int signpostY, int cameraX, int cameraY) {

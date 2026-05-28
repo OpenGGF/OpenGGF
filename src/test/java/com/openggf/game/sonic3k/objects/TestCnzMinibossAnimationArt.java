@@ -156,6 +156,25 @@ class TestCnzMinibossAnimationArt {
     }
 
     @Test
+    void finalTopHitSpawnsNineBreakApartDebrisPieces() {
+        RenderHarness harness = new RenderHarness();
+        CnzMinibossInstance boss = new CnzMinibossInstance(
+                new ObjectSpawn(0x3240, 0x02B8, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        boss.setServices(harness.services());
+
+        for (int i = 0; i < 4; i++) {
+            boss.simulateHitForTest();
+        }
+
+        long debrisCount = harness.spawnedChildren().stream()
+                .filter(CnzMinibossDebrisChild.class::isInstance)
+                .count();
+
+        assertEquals(9, debrisCount,
+                "Obj_CNZMinibossEnd must create Child6_CNZMinibossMakeDebris's nine break-apart pieces");
+    }
+
+    @Test
     void finalTopHitQueuesFadeBackToAct1Music() {
         RenderHarness harness = new RenderHarness();
         CnzMinibossInstance boss = new CnzMinibossInstance(

@@ -46,12 +46,13 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
     private int chargeTimer = CHARGE_INITIAL_DELAY;
     private int chargeFrameIndex;
     private int chargeCycles;
-    private boolean fireDown;
+    private boolean verticalPhaseDown;
 
     public SparkleBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Sparkle", Sonic3kObjectArtKeys.CNZ_SPARKLE,
                 COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
         this.mappingFrame = 0;
+        this.verticalPhaseDown = (spawn.renderFlags() & 0x02) != 0;
     }
 
     @Override
@@ -108,8 +109,9 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
             return;
         }
 
-        fireDown = !fireDown;
-        currentY += fireDown ? FIRE_Y_OFFSET : -FIRE_Y_OFFSET;
+        boolean previousPhaseDown = verticalPhaseDown;
+        verticalPhaseDown = !verticalPhaseDown;
+        currentY += previousPhaseDown ? FIRE_Y_OFFSET : -FIRE_Y_OFFSET;
         state = State.FIRE_WAIT;
         timer = FIRE_WAIT;
         services().playSfx(Sonic3kSfx.LIGHTNING.id);
@@ -125,13 +127,17 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
     }
 
     boolean isFiringDown() {
-        return fireDown;
+        return verticalPhaseDown;
+    }
+
+    private boolean warningBelowParent() {
+        return verticalPhaseDown;
     }
 
     @Override
     public String traceDebugDetails() {
-        return String.format("state=%s timer=%d charge=%d/%d fireDown=%s",
-                state, timer, chargeCycles, chargeDelay, fireDown);
+        return String.format("state=%s timer=%d charge=%d/%d verticalPhaseDown=%s",
+                state, timer, chargeCycles, chargeDelay, verticalPhaseDown);
     }
 
     private abstract static class SparkleHazardChild extends AbstractObjectInstance
@@ -180,7 +186,6 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
         private static final int[] FRAMES = {2, 3, 4, 5, 2};
         private static final int[] DELAYS = {0, 8, 8, 8, 8};
 
-        private final SparkleBadnikInstance parent;
         private int currentX;
         private int currentY;
         private int frameIndex;
@@ -189,13 +194,12 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
 
         SparkleLightningWarningChild(ObjectSpawn spawn, SparkleBadnikInstance parent) {
             super(spawn, "SparkleLightningWarning");
-            this.parent = parent;
-            refreshPosition();
+            currentX = parent.getX();
+            currentY = parent.getY() + (parent.warningBelowParent() ? Y_OFFSET : -Y_OFFSET);
         }
 
         @Override
         public void update(int frameCounter, PlayableEntity playerEntity) {
-            refreshPosition();
             if (frameTimer-- > 0) {
                 return;
             }
@@ -206,11 +210,6 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
             }
             mappingFrame = FRAMES[frameIndex];
             frameTimer = DELAYS[frameIndex];
-        }
-
-        private void refreshPosition() {
-            currentX = parent.getX();
-            currentY = parent.getY() + (parent.isFiringDown() ? Y_OFFSET : -Y_OFFSET);
         }
 
         @Override

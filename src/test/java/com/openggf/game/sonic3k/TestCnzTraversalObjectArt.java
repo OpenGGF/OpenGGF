@@ -58,9 +58,12 @@ public class TestCnzTraversalObjectArt {
         assertNotNull(risingPlatform);
         assertEquals(3, risingPlatform.getFrameCount());
         ObjectSpriteSheet trapDoor = provider.getSheet("cnz_trap_door");
+        ObjectSpriteSheet lightBulb = provider.getSheet("cnz_light_bulb");
         ObjectSpriteSheet hoverFan = provider.getSheet("cnz_hover_fan");
         assertNotNull(trapDoor);
         assertEquals(3, trapDoor.getFrameCount());
+        assertNotNull(lightBulb, "CNZ Act 2 places Obj_CNZLightBulb and it should render from Map_CNZLightBulb");
+        assertEquals(2, lightBulb.getFrameCount());
         assertNotNull(hoverFan);
         assertEquals(8, hoverFan.getFrameCount());
         ObjectSpriteSheet cylinder = provider.getSheet("cnz_cylinder");
