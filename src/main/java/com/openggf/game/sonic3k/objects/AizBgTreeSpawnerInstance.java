@@ -33,11 +33,11 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance {
 
     /**
      * Tree spawn script from ROM (AIZMakeTreeScript).
-     * ROM has 17 entries but the last 2 (thresholds $50C, $557) spawn trees
-     * that fall past the physical end of the forest. On real hardware they are
-     * hidden behind opaque high-priority FG tiles (VDP priority masking);
-     * the engine's renderer does not fully replicate that masking, so we trim
-     * the script to the 15 entries whose trees are actually visible.
+     * ROM has 17 entries, followed by $FFFF. The last two thresholds ($50C,
+     * $557) spawn after Sonic has effectively passed the visible forest mask;
+     * hardware priority masking hides them behind opaque foreground tiles.
+     * Until the renderer models that per-tile priority mask, only the 15 visible
+     * entries are spawned.
      */
     private static final int[][] TREE_SCRIPT = {
             {0x000, 0x280}, {0x032, 0x380}, {0x08E, 0x280}, {0x103, 0x380},
@@ -116,6 +116,16 @@ public class AizBgTreeSpawnerInstance extends AbstractObjectInstance {
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         // No-op: spawner has no visual representation
+    }
+
+    /**
+     * ROM Obj_AIZ2MakeTree does not tail-call MarkObjGone. It remains alive until
+     * AIZMakeTreeScript reaches its terminator, even though its engine spawn anchor
+     * is not near the camera during the forest sequence.
+     */
+    @Override
+    public boolean isPersistent() {
+        return true;
     }
 
     private AizZoneRuntimeState currentAizState() {
