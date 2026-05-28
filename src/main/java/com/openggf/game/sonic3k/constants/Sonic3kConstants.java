@@ -329,6 +329,7 @@ public class Sonic3kConstants {
     public static final int ARTTILE_HCZ2_BLOCK_PLAT = 0x0028;
     public static final int ARTTILE_HCZ_TENSION_BRIDGE = ARTTILE_HCZ2_BLOCK_PLAT + 0x10; // 0x0038
     public static final int ARTTILE_CNZ_PLATFORM = 0x0430;
+    public static final int ARTTILE_ICZ_MISC2 = 0x0377;
     public static final int ARTTILE_ICZ_MISC1 = 0x03B6;
     public static final int ARTTILE_LRZ_TENSION_BRIDGE = 0x0113;
     public static final int ARTTILE_LBZ_MISC = 0x03C3;
