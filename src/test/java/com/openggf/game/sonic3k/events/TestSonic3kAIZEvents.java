@@ -18,6 +18,8 @@ import com.openggf.game.sonic3k.Sonic3kLevel;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import com.openggf.game.sonic3k.objects.AizBattleshipInstance;
+import com.openggf.game.sonic3k.objects.AizBgTreeInstance;
+import com.openggf.game.sonic3k.objects.AizBgTreeSpawnerInstance;
 import com.openggf.game.sonic3k.objects.AizCollapsingLogBridgeObjectInstance;
 import com.openggf.game.sonic3k.objects.AizEndBossInstance;
 import com.openggf.game.sonic3k.objects.AizIntroArtLoader;
@@ -786,7 +788,7 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
-    public void aiz2PostBombingShipLoopWrapsCameraAndPlayersByRomDistance() throws Exception {
+    public void aiz2PostBombingShipLoopWrapsInsideForestMask() throws Exception {
         Camera camera = GameServices.camera();
         Sonic3kAIZEvents.resetGlobalState();
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
@@ -812,16 +814,38 @@ public class TestSonic3kAIZEvents {
 
         events.updatePrePhysics(1);
 
-        assertEquals(0x44C0, camera.getX() & 0xFFFF,
-                "AIZ2_DoShipLoop subtracts $200 from Camera_X_pos when Events_bg+$02=$46C0");
-        assertEquals(0x4560, sonic.getCentreX() & 0xFFFF,
-                "sub_50318 clamps the $200-wrapped player to Camera_X_pos+$A0 before movement");
-        assertEquals(0x44D8, tails.getCentreX() & 0xFFFF,
+        assertEquals(0x4640, camera.getX() & 0xFFFF,
+                "post-bombing visual wrap should land inside the repeated forest mask, not back at the entrance");
+        assertEquals(0x46E0, sonic.getCentreX() & 0xFFFF,
+                "sub_50318 clamps the wrapped player to Camera_X_pos+$A0 before movement");
+        assertEquals(0x4658, tails.getCentreX() & 0xFFFF,
                 "AIZ2_DoShipLoop should wrap native P2, then clamp it to Camera_X_pos+$18");
-        assertEquals(0x4500, extraSidekick.getCentreX() & 0xFFFF,
+        assertEquals(0x4680, extraSidekick.getCentreX() & 0xFFFF,
                 "AIZ2_DoShipLoop should preserve all-engine sidekick participation for extra sidekicks");
-        assertEquals(0x200, events.getLevelRepeatOffset(),
-                "ROM Level_repeat_offset remains $200 on post-bombing AIZ2 ship-loop wraps");
+        assertEquals(0x80, events.getLevelRepeatOffset(),
+                "post-bombing wraps use the short hidden-forest repeat offset");
+    }
+
+    @Test
+    public void aiz2TreeSpawnerStopsBeforeRomEntriesHiddenByForestPriorityMask() throws Exception {
+        Field field = AizBgTreeSpawnerInstance.class.getDeclaredField("TREE_SCRIPT");
+        field.setAccessible(true);
+        int[][] script = (int[][]) field.get(null);
+
+        assertEquals(15, script.length,
+                "Engine-visible AIZ2 tree script should omit the two ROM entries hidden past the forest mask");
+        assertEquals(0x4CA, script[14][0], "last visible tree threshold should match AIZMakeTreeScript entry 15");
+    }
+
+    @Test
+    public void aiz2TreeObjectsUseTheirRomDeletePredicatesInsteadOfGenericCull() {
+        AizBgTreeSpawnerInstance spawner = new AizBgTreeSpawnerInstance();
+        AizBgTreeInstance tree = new AizBgTreeInstance(0x44D0);
+
+        assertTrue(spawner.isPersistent(),
+                "Obj_AIZ2MakeTree has no MarkObjGone tail; it must survive until the script terminator");
+        assertTrue(tree.isPersistent(),
+                "Obj_AIZ2BGTree deletes only at Camera_X_pos >= $4880, not the generic object window");
     }
 
     @Test
