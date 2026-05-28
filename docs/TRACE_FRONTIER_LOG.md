@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-05-28 - ICZ2 stale object grounding regression guard
+
+- Scope: local uncommitted ICZ2 stale `Status_OnObj` cleanup plus AIZ Hollow
+  Tree support-latch preservation. The first implementation broadly cleared
+  unsupported object grounding and regressed AIZ to frame 4540; latching the
+  AIZ hollow tree as the live support owner restored AIZ to its documented
+  frontier.
+- Full trace sweep:
+  `mvn -Dmse=off "-Dtest=*TraceReplay" test`
+  - Result: FAIL, 63 tests run, 21 failures, 0 errors, 0 skipped.
+  - S3K frontiers stayed at the documented frames: AIZ frame 19714
+    (`x_speed expected=0x0014 actual=0x0000`), CNZ frame 22036
+    (`y_speed expected=-06C8 actual=-0700`), MGZ frame 4124
+    (`y_speed expected=0x0000 actual=0x01AC`).
+- Focused AIZ replay:
+  `mvn -Dmse=off "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - Result: still fails at frame 19714 with 30 errors / 23 warnings, matching
+    the current logged frontier.
+- Known-green trace guard:
+  `mvn -Dmse=off "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s1.TestS1Mz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+  - PASS: 4 tests, 0 failures.
+- Focused ICZ/object-support guard:
+  `mvn -Dmse=off "-Dtest=com.openggf.tests.TestS3kIcz2StaleObjectGrounding,com.openggf.physics.TestCollisionSystemAirLanding,com.openggf.tests.TestS3kIczMinibossObject,com.openggf.level.objects.TestSolidObjectManager" test`
+  - PASS: 65 tests, 0 failures.
+
 ## 2026-05-26 - Restore S2 non-Tornado title-card object prelude (EHZ1 regression fix)
 
 - Bisected a `TestS2Ehz1TraceReplay` regression that appeared at the

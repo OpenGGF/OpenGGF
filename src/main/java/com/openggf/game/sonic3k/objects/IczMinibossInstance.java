@@ -899,6 +899,9 @@ public final class IczMinibossInstance extends AbstractBossInstance {
 
     @Override
     public int getCollisionFlags() {
+        if (!isLiveBossRoutineActive()) {
+            return 0;
+        }
         if (state.defeated || state.invulnerable || state.hitCount <= 0) {
             return 0;
         }
@@ -907,6 +910,9 @@ public final class IczMinibossInstance extends AbstractBossInstance {
 
     @Override
     public TouchRegion[] getMultiTouchRegions() {
+        if (!isLiveBossRoutineActive()) {
+            return null;
+        }
         if (state.defeated || state.hitCount <= 0) {
             return null;
         }
@@ -931,6 +937,10 @@ public final class IczMinibossInstance extends AbstractBossInstance {
             }
         }
         return regions;
+    }
+
+    private boolean isLiveBossRoutineActive() {
+        return arenaGateComplete && state.routine != ROUTINE_INIT;
     }
 
     @Override

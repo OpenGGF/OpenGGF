@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -180,6 +181,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         releaseObjectControlPending[slot] = false;
 
         player.setOnObject(true);
+        player.setLatchedSolidObject(Sonic3kObjectIds.AIZ_HOLLOW_TREE, this);
         player.setAngle((byte) 0);
         player.setYSpeed((short) 0);
         player.setObjectMappingFrameControl(true);
@@ -221,6 +223,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         // This object is logic-only and not a SolidObjectProvider, so SolidContacts would
         // otherwise clear onObject each frame. Keep this sticky while the tree ride is active.
         player.setOnObject(true);
+        player.setLatchedSolidObject(Sonic3kObjectIds.AIZ_HOLLOW_TREE, this);
         player.setObjectMappingFrameControl(true);
         player.setForcedAnimationId(Sonic3kAnimationIds.WALK);
 
@@ -294,6 +297,7 @@ public class AizHollowTreeObjectInstance extends AbstractObjectInstance {
         player.applyStandingRadii(false);
         player.setAnimationId(Sonic3kAnimationIds.RUN);
         player.setOnObject(false);
+        player.setLatchedSolidObjectId(0);
         player.setFlipsRemaining(0);
         player.setFlipSpeed(4);
         player.setForcedAnimationId(-1);
