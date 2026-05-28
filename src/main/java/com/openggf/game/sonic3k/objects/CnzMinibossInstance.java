@@ -348,6 +348,9 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         if (cnz != null && (cnz.isMinibossArenaLocked()
                 || (services().camera().getX() & 0xFFFF) >= 0x3000)) {
             if (!cnz.isMinibossStartReleased()) {
+                if (state.routine == ROUTINE_INIT) {
+                    updateInit();
+                }
                 pendingStartReleaseHandoff = true;
                 diagnosticSkippedStartGate = true;
                 return;
@@ -1588,11 +1591,25 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (state.defeated) {
+            return;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_MINIBOSS);
         if (renderer == null) {
             return;
         }
         renderer.drawFrameIndex(mappingFrame, state.x, state.y, false, false);
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        return true;
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        // ObjDat_CNZMiniboss priority word $0280.
+        return 5;
     }
 
     @Override

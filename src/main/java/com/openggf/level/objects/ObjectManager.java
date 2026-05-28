@@ -55,6 +55,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
@@ -249,7 +250,19 @@ public class ObjectManager {
                     return SkidDustObjectInstance.forRewindRecreate(
                             entry.spawn(), context.objectServices());
                 }
-            }
+            },
+            cnzMinibossChildCodec(
+                    com.openggf.game.sonic3k.objects.CnzMinibossTopInstance.class,
+                    com.openggf.game.sonic3k.objects.CnzMinibossTopInstance::new),
+            cnzMinibossChildCodec(
+                    com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance.class,
+                    com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance::new),
+            cnzMinibossChildCodec(
+                    com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance.class,
+                    com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance::new),
+            exactSpawnCodec(
+                    com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance.class,
+                    com.openggf.game.sonic3k.objects.CnzMinibossScrollControlInstance::new)
     );
 
     /**
@@ -315,6 +328,63 @@ public class ObjectManager {
                     throw new IllegalStateException(
                             "Failed to recreate dynamic rewind object " + type.getName(), e);
                 }
+            }
+        };
+    }
+
+    private static RewindDynamicObjectCodec cnzMinibossChildCodec(
+            Class<? extends AbstractObjectInstance> type,
+            Function<ObjectSpawn, ? extends AbstractObjectInstance> factory) {
+        return new RewindDynamicObjectCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == type;
+            }
+
+            @Override
+            public String className() {
+                return type.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                com.openggf.game.sonic3k.objects.CnzMinibossInstance parent =
+                        context.objectManager().findCnzMinibossParentForRewind();
+                if (parent == null) {
+                    return null;
+                }
+                AbstractObjectInstance child = factory.apply(entry.spawn());
+                if (child instanceof com.openggf.game.sonic3k.objects.CnzMinibossTopInstance top) {
+                    top.attachBossForTest(parent);
+                } else if (child instanceof com.openggf.game.sonic3k.objects.CnzMinibossCoilInstance coil) {
+                    coil.attachBossForTest(parent);
+                } else if (child instanceof com.openggf.game.sonic3k.objects.CnzMinibossSparkInstance spark) {
+                    spark.attachBossForTest(parent);
+                }
+                return child;
+            }
+        };
+    }
+
+    private static RewindDynamicObjectCodec exactSpawnCodec(
+            Class<? extends AbstractObjectInstance> type,
+            Function<ObjectSpawn, ? extends AbstractObjectInstance> factory) {
+        return new RewindDynamicObjectCodec() {
+            @Override
+            public boolean supports(ObjectInstance instance) {
+                return instance.getClass() == type;
+            }
+
+            @Override
+            public String className() {
+                return type.getName();
+            }
+
+            @Override
+            public ObjectInstance recreate(DynamicObjectRecreateContext context,
+                    com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry entry) {
+                return factory.apply(entry.spawn());
             }
         };
     }
@@ -3241,6 +3311,20 @@ public class ObjectManager {
                     && checkpoint.getCenterX() == childSpawn.x()
                     && checkpoint.getCenterY() == childSpawn.y()) {
                 return checkpoint;
+            }
+        }
+        return null;
+    }
+
+    private com.openggf.game.sonic3k.objects.CnzMinibossInstance findCnzMinibossParentForRewind() {
+        for (ObjectInstance inst : activeObjects.values()) {
+            if (inst instanceof com.openggf.game.sonic3k.objects.CnzMinibossInstance parent) {
+                return parent;
+            }
+        }
+        for (ObjectInstance inst : dynamicObjects) {
+            if (inst instanceof com.openggf.game.sonic3k.objects.CnzMinibossInstance parent) {
+                return parent;
             }
         }
         return null;

@@ -27,5 +27,6 @@ public interface CnzObjectEventBridge {
     boolean isWaterButtonArmed();
     void setWaterTargetY(int targetY);
     void beginKnucklesTeleporterRoute();
+    void endKnucklesTeleporterRoute();
     void markTeleporterBeamSpawned();
 }

@@ -11,6 +11,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
+import org.mockito.InOrder;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -76,6 +77,24 @@ class TestSparkleBadnikInstance {
     }
 
     @Test
+    void bottomSpawnDrawsVerticallyFlippedAfterTeleportingToCeiling() throws Exception {
+        List<ObjectInstance> spawned = new ArrayList<>();
+        SparkleBadnikInstance sparkle = sparkleReadyToFire(0, spawned);
+        LevelManager levelManager = mock(LevelManager.class);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.CNZ_SPARKLE)).thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+        sparkle.setServices(new SparkleTestServices(spawned).withLevelManager(levelManager));
+
+        sparkle.update(0, null);
+        sparkle.appendRenderCommands(new ArrayList<>());
+
+        verify(renderer).drawFrameIndex(0, 0x0100, 0x0100 - 0x68, false, true);
+    }
+
+    @Test
     void topSpawnChargeCreatesWarningBoltBelowParent() throws Exception {
         List<ObjectInstance> spawned = new ArrayList<>();
         SparkleBadnikInstance sparkle = new SparkleBadnikInstance(new ObjectSpawn(
@@ -96,6 +115,42 @@ class TestSparkleBadnikInstance {
                 "The warning child is positioned once from the parent's pre-toggle "
                         + "render_flags bit 1. Top-spawn Sparkle has that bit set, "
                         + "so the lightning warning appears below it.");
+    }
+
+    @Test
+    void warningBoltRawAnimationUsesGlobalZeroDelayAndFrame8Strobe() throws Exception {
+        List<ObjectInstance> spawned = new ArrayList<>();
+        SparkleBadnikInstance sparkle = new SparkleBadnikInstance(new ObjectSpawn(
+                0x0100, 0x0100, Sonic3kObjectIds.SPARKLE, 0, 0x02, false, 0));
+        sparkle.setServices(new SparkleTestServices(spawned));
+        setPrivateField(sparkle, "state", enumConstant(sparkle, "State", "CHARGE"));
+        setPrivateField(sparkle, "chargeTimer", 0);
+        setPrivateField(sparkle, "chargeDelay", 1);
+        setPrivateField(sparkle, "chargeFrameIndex", 1);
+        setPrivateField(sparkle, "chargeCycles", 11);
+
+        sparkle.update(0, null);
+
+        ObjectInstance warning = spawned.get(0);
+        LevelManager levelManager = mock(LevelManager.class);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.CNZ_SPARKLE)).thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+        ((AbstractObjectInstance) warning).setServices(
+                new TestObjectServices().withLevelManager(levelManager));
+
+        warning.appendRenderCommands(new ArrayList<>());
+        warning.update(1, null);
+        warning.appendRenderCommands(new ArrayList<>());
+        warning.update(2, null);
+        warning.appendRenderCommands(new ArrayList<>());
+
+        InOrder inOrder = org.mockito.Mockito.inOrder(renderer);
+        inOrder.verify(renderer).drawFrameIndex(2, 0x0100, 0x0100 + 0x34, false, false);
+        inOrder.verify(renderer).drawFrameIndex(8, 0x0100, 0x0100 + 0x34, false, false);
+        inOrder.verify(renderer).drawFrameIndex(3, 0x0100, 0x0100 + 0x34, false, false);
     }
 
     @Test

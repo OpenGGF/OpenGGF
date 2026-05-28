@@ -26,6 +26,7 @@ import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.render.IczBigSnowPileBackgroundEffect;
 import com.openggf.game.sonic3k.render.IczBigSnowPilePriorityMaskEffect;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.GLCommand;
@@ -119,7 +120,27 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         }
         int zoneId = levelManager.getFeatureZoneId();
         return zoneId == Sonic3kZoneIds.ZONE_MGZ
-                || zoneId == Sonic3kZoneIds.ZONE_ICZ;
+                || zoneId == Sonic3kZoneIds.ZONE_ICZ
+                || isCnzBossBackgroundWindowActive(zoneId);
+    }
+
+    private boolean isCnzBossBackgroundWindowActive(int zoneId) {
+        if (zoneId != Sonic3kZoneIds.ZONE_CNZ || !GameServices.hasRuntime()) {
+            return false;
+        }
+        CnzZoneRuntimeState state = S3kRuntimeStates.currentCnz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (state == null) {
+            return false;
+        }
+        return switch (state.bossBackgroundMode()) {
+            case ACT1_MINIBOSS_PATH, ACT1_POST_BOSS -> true;
+            case NORMAL, ACT2_KNUCKLES_TELEPORTER -> false;
+        };
+    }
+
+    @Override
+    public boolean useLinearBackgroundLayoutOverflow(int zoneIndex) {
+        return isCnzBossBackgroundWindowActive(zoneIndex);
     }
 
     @Override

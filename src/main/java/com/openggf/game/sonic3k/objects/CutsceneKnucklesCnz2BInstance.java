@@ -218,6 +218,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance {
         if (camera.getY() + 0x160 < currentY) {
             player.setControlLocked(false);
             player.clearForcedInputMask();
+            S3kCnzEventWriteSupport.endKnucklesTeleporterRoute(services());
             setDestroyed(true);
         }
     }
