@@ -1837,6 +1837,16 @@ public class LevelManager {
             tilemapManager.setCurrentBgPeriodWidth(newBgPeriodWidth);
             tilemapManager.setBackgroundTilemapDirty(true);
         }
+
+        // S3K CNZ miniboss loops a fixed BG band (CNZ1BGE_Boss); anchor/clamp the BG
+        // tilemap to that band so the looping scroll excludes the room floor below it.
+        int loopBandBaseY = zoneFeatureProvider != null
+                ? zoneFeatureProvider.backgroundLoopBandBaseY(currentZone, currentAct)
+                : -1;
+        if (loopBandBaseY != tilemapManager.getBgLoopBandBaseY()) {
+            tilemapManager.setBgLoopBandBaseY(loopBandBaseY);
+            tilemapManager.setBackgroundTilemapDirty(true);
+        }
         return fullWidthPerLineTilemap;
     }
 

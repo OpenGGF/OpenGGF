@@ -516,6 +516,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (aizEvents != null) {
             aizEvents.triggerScreenShake(frames);
         }
+        if (cnzEvents != null) {
+            cnzEvents.triggerScreenShake(frames);
+        }
     }
 
     @Override

@@ -84,15 +84,22 @@ public class TestSonic3kCnzScroll {
     @Test
     public void bgYFollowsCnzDeformMathWithShakeApplied() {
         levelEvents.initLevel(ZONE_CNZ, ACT_1);
-        camera.setShakeOffsets(0, 4);
+        // ROM: Screen_shake_flag = $14. The CNZ shake now flows from the event
+        // layer (mirroring AIZ) into the scroll handler and the shared
+        // ParallaxManager -> Camera propagation, not a direct camera write.
+        Sonic3kCNZEvents events = levelEvents.getCnzEventsForTest();
+        events.triggerScreenShake(0x14);
+        events.update(ACT_1, 0);
 
         SwScrlCnz handler = new SwScrlCnz();
-        int[] buffer = new int[M68KMath.VISIBLE_LINES];
+        int shakeY = handler.getShakeOffsetY();
+        assertNotEquals(0, shakeY, "screen shake should be active after triggering");
 
+        int[] buffer = new int[M68KMath.VISIBLE_LINES];
         int cameraY = 0x0400;
         handler.update(buffer, 0x0400, cameraY, 0, ACT_1);
 
-        int expected = ((cameraY - 4) * 13 / 128) + 4;
+        int expected = ((cameraY - shakeY) * 13 / 128) + shakeY;
         assertEquals((short) expected, handler.getVscrollFactorBG());
     }
 

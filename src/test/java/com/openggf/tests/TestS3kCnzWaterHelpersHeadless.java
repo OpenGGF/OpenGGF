@@ -4,8 +4,10 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzWaterLevelButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance;
+import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectInstance;
@@ -31,8 +33,37 @@ class TestS3kCnzWaterHelpersHeadless {
 
     @AfterEach
     void tearDown() {
+        CutsceneKnucklesCnz2AInstance.clearActiveInstanceForTests();
         SessionManager.clear();
         com.openggf.game.session.SessionManager.clear();
+    }
+
+    /**
+     * First Knuckles encounter: when the cutscene Knuckles reaches the cutscene
+     * button (Obj_CutsceneButton subtype 4 -> loc_65C78), the button raises the
+     * CNZ Act 2 water target to {@code $350} through the real WaterSystem and
+     * arms the follow-up water-level button.
+     */
+    @Test
+    void firstEncounterButtonRaisesWaterTargetTo350() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        DefaultObjectServices services = TestEnvironment.objectServices();
+
+        // Place the cutscene Knuckles on top of the button so the proximity box hits.
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(knuckles);
+
+        Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(
+                new ObjectSpawn(0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_BUTTON, 4, 0, false, 0));
+        button.setServices(services);
+        button.update(0, fixture.sprite());
+
+        assertEquals(0x0350,
+                GameServices.water().getWaterLevelTarget(Sonic3kZoneIds.ZONE_CNZ, 1),
+                "loc_65C78 sets Target_water_level=$350 through the real WaterSystem");
     }
 
     /**
