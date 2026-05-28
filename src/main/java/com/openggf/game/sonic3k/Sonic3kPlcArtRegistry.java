@@ -1167,6 +1167,19 @@ public final class Sonic3kPlcArtRegistry {
                 null
         ));
 
+        // Gray cutscene/water-level button: ArtTile_GrayButton, palette 0.
+        // ROM: Obj_CutsceneButton and Obj_CNZWaterLevelButton both use
+        // ObjDat_CutsceneButton (make_art_tile(ArtTile_GrayButton,0,1)) and load
+        // PLC_CutsceneButton, so CNZ Act 2 needs the gray button art for the
+        // first-encounter cutscene button and the follow-up water button.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.BUTTON,
+                Sonic3kConstants.MAP_BUTTON_ADDR,
+                Sonic3kConstants.ARTTILE_GRAY_BUTTON,
+                0,
+                null
+        ));
+
         // Bumper: ArtTile_CNZMisc + $13, palette 2.
         // ROM: Obj_Bumper, non-Pachinko/non-competition path.
         levelArt.add(new LevelArtEntry(
