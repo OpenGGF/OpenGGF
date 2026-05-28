@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
@@ -740,6 +741,8 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
         diagnosticArenaImpactThisFrame = true;
         diagnosticArenaImpactX = worldX;
         diagnosticArenaImpactY = worldY;
+        spawnChild(() -> new S3kBossExplosionChild(worldX, worldY));
+        services().playSfx(Sonic3kSfx.EXPLODE.id);
         S3kCnzEventWriteSupport.queueArenaChunkDestruction(
                 services(), worldX, worldY);
     }

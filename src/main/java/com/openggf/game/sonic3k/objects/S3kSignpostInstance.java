@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.camera.Camera;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -98,6 +99,9 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
 
     // Landing Y threshold relative to camera
     private static final int LAND_Y_THRESHOLD = 0x50;
+    private static final int AFTER_X_RANGE = 0x280;
+    private static final int AFTER_Y_BIAS = 0x80;
+    private static final int AFTER_Y_RANGE = 0x200;
 
     private int[] animSequence;
 
@@ -143,7 +147,7 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        AbstractPlayableSprite player = resolveUpdatePlayer(playerEntity);
         if (isDestroyed()) {
             return;
         }
@@ -379,7 +383,10 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         // Spawn the results screen — pass apparentAct (ROM's Apparent_act), not
         // LevelManager.getCurrentAct(). AIZ reloads act 2 resources mid-level which
         // changes LevelManager.currentAct to 1, but Apparent_act stays 0 until results exit.
-        spawnChild(() -> new S3kResultsScreenObjectInstance(
+        if (services().gameState() != null) {
+            services().gameState().setEndOfLevelActive(true);
+        }
+        spawnFreeChild(() -> new S3kResultsScreenObjectInstance(
                 getPlayerCharacter(), apparentAct));
         LOG.fine("S3K Signpost RESULTS -> AFTER (results instance spawned)");
         state = State.AFTER;
@@ -418,16 +425,42 @@ public class S3kSignpostInstance extends AbstractObjectInstance {
         return new ObjectPlayerQuery(() -> updatePlayer, query::sidekicks);
     }
 
+    private AbstractPlayableSprite resolveUpdatePlayer(PlayableEntity playerEntity) {
+        if (playerEntity instanceof AbstractPlayableSprite sprite) {
+            return sprite;
+        }
+        PlayableEntity queriedPlayer = services().playerQuery().mainPlayerOrNull();
+        return queriedPlayer instanceof AbstractPlayableSprite sprite ? sprite : null;
+    }
+
     // =========================================================================
     // AFTER
     // =========================================================================
 
     private void updateAfter() {
-        if (!isOnScreen(64)) {
+        if (isResultsScreenActive()) {
+            return;
+        }
+
+        Camera camera = services().camera();
+        if (camera != null && !isWithinRomAfterRange(worldX, worldY, camera.getX(), camera.getY())) {
             setDestroyed(true);
             activeSignpost = null;
             LOG.fine("S3K Signpost destroyed (off-screen)");
         }
+    }
+
+    private boolean isResultsScreenActive() {
+        return services().gameState() != null && services().gameState().isEndOfLevelActive();
+    }
+
+    static boolean isWithinRomAfterRange(int signpostX, int signpostY, int cameraX, int cameraY) {
+        int dx = ((signpostX & 0xFF80) - (cameraX & 0xFF80)) & 0xFFFF;
+        if (dx > AFTER_X_RANGE) {
+            return false;
+        }
+        int dy = (signpostY - cameraY + AFTER_Y_BIAS) & 0xFFFF;
+        return dy <= AFTER_Y_RANGE;
     }
 
     // =========================================================================

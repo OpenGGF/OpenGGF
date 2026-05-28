@@ -204,14 +204,18 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     }
 
     private void loadCnzCycles(RomByteReader reader, List<PaletteCycle> list) {
-        byte[] bumperData   = safeSlice(reader, Sonic3kConstants.ANPAL_CNZ_1_ADDR, Sonic3kConstants.ANPAL_CNZ_1_SIZE);
-        byte[] bgData       = safeSlice(reader, Sonic3kConstants.ANPAL_CNZ_3_ADDR, Sonic3kConstants.ANPAL_CNZ_3_SIZE);
+        byte[] bumperData = safeSlice(reader, Sonic3kConstants.ANPAL_CNZ_1_ADDR, Sonic3kConstants.ANPAL_CNZ_1_SIZE);
+        byte[] bumperWaterData = safeSlice(reader, Sonic3kConstants.ANPAL_CNZ_2_ADDR, Sonic3kConstants.ANPAL_CNZ_2_SIZE);
+        byte[] bgData = safeSlice(reader, Sonic3kConstants.ANPAL_CNZ_3_ADDR, Sonic3kConstants.ANPAL_CNZ_3_SIZE);
+        byte[] bgWaterData = safeSlice(reader, Sonic3kConstants.ANPAL_CNZ_4_ADDR, Sonic3kConstants.ANPAL_CNZ_4_SIZE);
         byte[] tertiaryData = safeSlice(reader, Sonic3kConstants.ANPAL_CNZ_5_ADDR, Sonic3kConstants.ANPAL_CNZ_5_SIZE);
 
         if (bumperData.length >= Sonic3kConstants.ANPAL_CNZ_1_SIZE
+                && bumperWaterData.length >= Sonic3kConstants.ANPAL_CNZ_2_SIZE
                 && bgData.length >= Sonic3kConstants.ANPAL_CNZ_3_SIZE
+                && bgWaterData.length >= Sonic3kConstants.ANPAL_CNZ_4_SIZE
                 && tertiaryData.length >= Sonic3kConstants.ANPAL_CNZ_5_SIZE) {
-            list.add(new CnzCycle(bumperData, bgData, tertiaryData));
+            list.add(new CnzCycle(bumperData, bumperWaterData, bgData, bgWaterData, tertiaryData));
         }
     }
 
@@ -746,23 +750,22 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     // Channel 1 - Bumpers/teacups (gated by Palette_cycle_counter1, period 3):
     //   AnPal_PalCNZ_1 → Normal_palette_line_4+$12 → palette[3] colors 9-11
     //   counter0 step +6, wrap at 0x60 (16 frames)
-    //   ROM also has AnPal_PalCNZ_2 for the underwater plane; this slice keeps
-    //   the normal table as the source of truth and mirrors the same write into
-    //   the underwater surface via the ownership registry.
+    //   AnPal_PalCNZ_2 → Water_palette_line_4+$12 → underwater palette[3] colors 9-11
     //
     // Channel 2 - Background (runs every frame, NOT gated by channel 1 timer):
     //   AnPal_PalCNZ_3 → Normal_palette_line_3+$12 → palette[2] colors 9-11
     //   counter2 (Palette_cycle_counters+$02) step +6, wrap at 0xB4 (30 frames)
-    //   ROM also has AnPal_PalCNZ_4 for water; we mirror the normal patch into
-    //   the underwater palette plane instead of introducing CNZ-local water code.
+    //   AnPal_PalCNZ_4 → Water_palette_line_3+$12 → underwater palette[2] colors 9-11
     //
     // Channel 3 - Tertiary (gated by Palette_cycle_counters+$08, period 2):
     //   AnPal_PalCNZ_5 → Normal_palette_line_3+$0E → palette[2] colors 7-8
     //   counter4 (Palette_cycle_counters+$04) step +4, wrap at 0x40 (16 frames)
     private static class CnzCycle extends PaletteCycle {
-        private final byte[] bumperData;    // AnPal_PalCNZ_1: 96 bytes (16 frames × 6 bytes)
-        private final byte[] bgData;        // AnPal_PalCNZ_3: 180 bytes (30 frames × 6 bytes)
-        private final byte[] tertiaryData;  // AnPal_PalCNZ_5: 64 bytes (16 frames × 4 bytes)
+        private final byte[] bumperData;      // AnPal_PalCNZ_1: 96 bytes (16 frames x 6 bytes)
+        private final byte[] bumperWaterData; // AnPal_PalCNZ_2: 96 bytes (16 frames x 6 bytes)
+        private final byte[] bgData;          // AnPal_PalCNZ_3: 180 bytes (30 frames x 6 bytes)
+        private final byte[] bgWaterData;     // AnPal_PalCNZ_4: 180 bytes (30 frames x 6 bytes)
+        private final byte[] tertiaryData;    // AnPal_PalCNZ_5: 64 bytes (16 frames x 4 bytes)
 
         // Channel 1 timer (Palette_cycle_counter1): period 3 → fires every 4 frames
         private int timer1;
@@ -775,9 +778,12 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         // Channel 3 counter (Palette_cycle_counters+$04): step +4, wrap 0x40
         private int counter4;
 
-        CnzCycle(byte[] bumperData, byte[] bgData, byte[] tertiaryData) {
+        CnzCycle(byte[] bumperData, byte[] bumperWaterData,
+                 byte[] bgData, byte[] bgWaterData, byte[] tertiaryData) {
             this.bumperData = bumperData;
+            this.bumperWaterData = bumperWaterData;
             this.bgData = bgData;
+            this.bgWaterData = bgWaterData;
             this.tertiaryData = tertiaryData;
         }
 
@@ -793,7 +799,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 if (counter0 >= 0x60) {
                     counter0 = 0;
                 }
-                submitMirroredPatch(registry, 3, 9, bumperData, d0, 6);
+                submitPairedPatch(registry, 3, 9, bumperData, bumperWaterData, d0, 6);
             }
 
             // Channel 2 (background) — always runs every frame
@@ -802,7 +808,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
             if (counter2 >= 0xB4) {
                 counter2 = 0;
             }
-            submitMirroredPatch(registry, 2, 9, bgData, d0, 6);
+            submitPairedPatch(registry, 2, 9, bgData, bgWaterData, d0, 6);
 
             // Channel 3 (tertiary) — gated by timer3
             if (timer3 > 0) {
@@ -814,38 +820,40 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 if (counter4 >= 0x40) {
                     counter4 = 0;
                 }
-                submitMirroredPatch(registry, 2, 7, tertiaryData, d1, 4);
+                submitPairedPatch(registry, 2, 7, tertiaryData, tertiaryData, d1, 4);
             }
         }
 
         /**
-         * Submits a CNZ palette patch to the ownership registry and mirrors it
-         * into the underwater surface.
-         *
-         * <p>CNZ's ROM uses paired normal/water palette tables. This engine
-         * slice keeps the normal table behavior from the existing cycle data
-         * and mirrors the same patch into the underwater plane so the shared
-         * palette registry can keep the two views synchronized without adding
-         * CNZ-local water-table code.
+         * Submits paired CNZ normal/water palette patches to the ownership registry.
          *
          * <p>The write uses {@link S3kPaletteOwners#PRIORITY_ZONE_EVENT} so it
          * sits above baseline zone cycling and below object-driven overrides,
          * matching the Task 5 ownership contract for CNZ.
          */
-        private void submitMirroredPatch(PaletteOwnershipRegistry registry,
-                                         int paletteIndex,
-                                         int startColor,
-                                         byte[] source,
-                                         int sourceOffset,
-                                         int byteCount) {
-            byte[] segaData = new byte[byteCount];
-            System.arraycopy(source, sourceOffset, segaData, 0, byteCount);
-            registry.submit(com.openggf.game.palette.PaletteWrite.normal(
+        private void submitPairedPatch(PaletteOwnershipRegistry registry,
+                                       int paletteIndex,
+                                       int startColor,
+                                       byte[] normalSource,
+                                       byte[] waterSource,
+                                       int sourceOffset,
+                                       int byteCount) {
+            byte[] normalData = new byte[byteCount];
+            byte[] waterData = new byte[byteCount];
+            System.arraycopy(normalSource, sourceOffset, normalData, 0, byteCount);
+            System.arraycopy(waterSource, sourceOffset, waterData, 0, byteCount);
+            registry.submit(PaletteWrite.normal(
                     S3kPaletteOwners.CNZ_ANPAL,
                     S3kPaletteOwners.PRIORITY_ZONE_EVENT,
                     paletteIndex,
                     startColor,
-                    segaData).mirrorToUnderwater());
+                    normalData));
+            registry.submit(PaletteWrite.underwater(
+                    S3kPaletteOwners.CNZ_ANPAL,
+                    S3kPaletteOwners.PRIORITY_ZONE_EVENT,
+                    paletteIndex,
+                    startColor,
+                    waterData));
         }
     }
 

@@ -19,6 +19,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.badniks.BloominatorBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.RhinobotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.SpikerBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
@@ -384,6 +385,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }
                     return new CnzTrapDoorInstance(spawn);
+                });
+        factories.put(Sonic3kObjectIds.CNZ_LIGHT_BULB,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new CnzLightBulbInstance(spawn);
                 });
         factories.put(Sonic3kObjectIds.CNZ_HOVER_FAN,
                 (spawn, registry) -> {
@@ -775,6 +784,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new ClamerObjectInstance(spawn);
                 });
+        factories.put(Sonic3kObjectIds.SPARKLE,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new SparkleBadnikInstance(spawn);
+                });
         factories.put(Sonic3kObjectIds.BATBOT,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
@@ -826,10 +843,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.CUTSCENE_KNUCKLES,
                 (spawn, registry) -> {
                     // ROM: Obj_CutsceneKnuckles uses subtype as longword index into
-                    // CutsceneKnuckles_Index: 0=AIZ1, 4=AIZ2, 8=HCZ2, 12=CNZ2A, etc.
+                    // CutsceneKnuckles_Index: 0=AIZ1, 4=AIZ2, 8=HCZ2, 12=CNZ2A, 16=CNZ2B, etc.
                     int subtype = spawn.subtype();
                     if (subtype == 8) {
                         return new CutsceneKnucklesHcz2Instance(spawn);
+                    }
+                    if (subtype == 12) {
+                        return new CutsceneKnucklesCnz2AInstance(spawn);
+                    }
+                    if (subtype == 16) {
+                        return new CutsceneKnucklesCnz2BInstance(spawn);
                     }
                     // Default: AIZ2 variant (handles subtypes 0 and 4)
                     return new CutsceneKnucklesAiz2Instance(spawn);

@@ -208,7 +208,7 @@ class TestS3kCnzLocalTraversalHeadless {
     }
 
     @Test
-    void trapDoorOpensFromTheROMTriggerWindowAndEventuallyCloses() {
+    void trapDoorStaysOpenWhileTheROMTriggerWindowRemainsOccupied() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
@@ -228,10 +228,18 @@ class TestS3kCnzLocalTraversalHeadless {
             trapDoor.update(frame, fixture.sprite());
         }
 
+        assertTrue(invokeBooleanHook(trapDoor, "isOpenForTest"),
+                "The trap door should stay open while the ROM trigger box remains occupied");
+        assertEquals(2, invokeIntHook(trapDoor, "getRenderFrameForTest"),
+                "The open mapping frame should remain latched while the player is underneath");
+
+        fixture.sprite().setCentreY((short) 0x0770);
+        trapDoor.update(24, fixture.sprite());
+
         assertFalse(invokeBooleanHook(trapDoor, "isOpenForTest"),
-                "The trap door should return to the closed state after the open cycle");
+                "The trap door should return to the closed state once the trigger box is clear");
         assertEquals(0, invokeIntHook(trapDoor, "getRenderFrameForTest"),
-                "The closed mapping frame should be restored after the cycle");
+                "The closed mapping frame should be restored after the trigger clears");
     }
 
     @Test

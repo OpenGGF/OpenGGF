@@ -56,6 +56,39 @@ class TestCnzBarberPoleObjectInstance {
     }
 
     @Test
+    void normalPoleTogglesPlayerPriorityAcrossFrontAndBackHalves() {
+        CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0F70, 0x0810, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+        pole.setServices(new TestObjectServices());
+
+        TestPlayableSprite sonic = new TestPlayableSprite();
+        sonic.setHeight(30);
+        sonic.applyCustomRadii(9, 15);
+        sonic.setCentreX((short) 0x0F4B);
+        sonic.setCentreY((short) 0x07B2);
+        sonic.setSubpixelRaw(0x8000, 0x0000);
+        sonic.setOnObject(true);
+        sonic.setLatchedSolidObjectId(Sonic3kObjectIds.CNZ_BARBER_POLE);
+        sonic.setAir(false);
+
+        pole.update(0, sonic);
+        sonic.setXSpeed((short) 0x0800);
+        sonic.setGSpeed((short) 0x0800);
+
+        pole.update(1, sonic);
+        assertTrue(sonic.isHighPriority(),
+                "loc_33542 sets high_priority while the normal-pole curve byte is below $34");
+
+        for (int frame = 2; frame <= 10; frame++) {
+            pole.update(frame, sonic);
+        }
+
+        assertTrue(sonic.isOnObject());
+        assertFalse(sonic.isHighPriority(),
+                "loc_33542 clears high_priority once Sonic moves onto the rear half of the pole");
+    }
+
+    @Test
     void queryOnlySidekickParticipatesInBarberPoleLatch() {
         CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
                 new ObjectSpawn(0x0100, 0x0100, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));

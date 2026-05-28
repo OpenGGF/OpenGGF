@@ -27,7 +27,7 @@ import java.util.List;
  *   <li>Uses {@code SolidObjectTop} every frame while closed/opening</li>
  *   <li>Checks both players against the 64x32 trigger box in {@code sub_30D8C}</li>
  *   <li>Plays {@code sfx_TrapDoor} when the trigger box is entered</li>
- *   <li>Animates via {@code Ani_CNZTrapDoor} and returns to the closed frame</li>
+ *   <li>Animates via {@code Ani_CNZTrapDoor} and stays open while the trigger box is occupied</li>
  * </ul>
  *
  * <p>Coordinates use the ROM x_pos/y_pos center semantics directly. The engine-side
@@ -60,28 +60,25 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        if (state == FRAME_CLOSED) {
-            checkPlayable(playerEntity);
+        boolean triggerOccupied = isTriggerOccupied(playerEntity);
 
-            for (PlayableEntity participant : services().playerQuery().playersFor(
-                    ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
-                checkPlayable(participant);
-                if (state != FRAME_CLOSED) {
-                    break;
-                }
+        for (PlayableEntity participant : services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            triggerOccupied |= isTriggerOccupied(participant);
+            if (triggerOccupied) {
+                break;
             }
         }
 
-        advanceAnimation();
-    }
-
-    private void checkPlayable(PlayableEntity entity) {
-        if (state != FRAME_CLOSED || !(entity instanceof AbstractPlayableSprite player)) {
-            return;
-        }
-        if (shouldTrigger(player)) {
+        if (state == FRAME_CLOSED && triggerOccupied) {
             startOpening();
         }
+
+        advanceAnimation(triggerOccupied);
+    }
+
+    private boolean isTriggerOccupied(PlayableEntity entity) {
+        return entity instanceof AbstractPlayableSprite player && shouldTrigger(player);
     }
 
     private boolean shouldTrigger(AbstractPlayableSprite player) {
@@ -113,7 +110,7 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
         }
     }
 
-    private void advanceAnimation() {
+    private void advanceAnimation(boolean triggerOccupied) {
         if (state == FRAME_CLOSED) {
             renderFrame = FRAME_CLOSED;
             return;
@@ -128,6 +125,11 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
             state = FRAME_OPEN;
             renderFrame = FRAME_OPEN;
             stateTimer = OPEN_STEP_FRAMES;
+            return;
+        }
+
+        if (triggerOccupied) {
+            renderFrame = FRAME_OPEN;
             return;
         }
 
