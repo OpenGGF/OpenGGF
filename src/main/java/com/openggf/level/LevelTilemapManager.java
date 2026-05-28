@@ -333,6 +333,8 @@ public class LevelTilemapManager {
                 && zoneFeatureProvider != null
                 && zoneFeatureProvider.bgWrapsHorizontally()
                 && !zoneRuntimeRequiresFullWidthBgTilemap();
+        boolean bgLinearRowOverflow = bgWrap
+                && zoneFeatureProvider.useLinearBackgroundLayoutOverflow(currentZone);
         // Use the currently selected BG period width. LevelManager may widen this
         // beyond the scroll handler's nominal period when the renderer needs the
         // full BG strip instead of a 64-cell wrapped cache (for example MGZ2
@@ -368,7 +370,9 @@ public class LevelTilemapManager {
 
                 // Query the BG map at the offset position (wrapping handled by blockLookup)
                 int queryX = x + bgXQueryOffset;
-                Block block = blockLookup.lookup(layerIndex, queryX, y);
+                Block block = bgLinearRowOverflow
+                        ? lookupBackgroundBlockWithLinearRowOverflow(level, queryX, y, blockPixelSize)
+                        : blockLookup.lookup(layerIndex, queryX, y);
                 if (block == null) {
                     writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
                     continue;
@@ -418,6 +422,24 @@ public class LevelTilemapManager {
         }
 
         return new TilemapData(data, widthTiles, heightTiles);
+    }
+
+    private Block lookupBackgroundBlockWithLinearRowOverflow(Level level, int x, int y, int blockPixelSize) {
+        Map map = level.getMap();
+        int layerWidthCells = Math.max(1, getLayerLevelWidthPx((byte) 1) / blockPixelSize);
+        int layerHeightCells = Math.max(1, getLayerLevelHeightPx((byte) 1) / blockPixelSize);
+        int layerCellCount = layerWidthCells * layerHeightCells;
+        int wrappedY = ((y % (layerHeightCells * blockPixelSize)) + layerHeightCells * blockPixelSize)
+                % (layerHeightCells * blockPixelSize);
+        int linearCell = (wrappedY / blockPixelSize) * layerWidthCells + Math.floorDiv(x, blockPixelSize);
+        linearCell = ((linearCell % layerCellCount) + layerCellCount) % layerCellCount;
+        int mapX = linearCell % layerWidthCells;
+        int mapY = linearCell / layerWidthCells;
+        int blockIndex = map.getValue(1, mapX, mapY) & 0xFF;
+        if (blockIndex >= level.getBlockCount()) {
+            return null;
+        }
+        return level.getBlock(blockIndex);
     }
 
     // -----------------------------------------------------------------------

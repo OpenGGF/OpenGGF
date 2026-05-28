@@ -655,6 +655,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     @Override
+    public void endKnucklesTeleporterRoute() {
+        if (cnzEvents != null) {
+            cnzEvents.endKnucklesTeleporterRoute();
+        }
+    }
+
+    @Override
     public void markTeleporterBeamSpawned() {
         if (cnzEvents != null) {
             cnzEvents.markTeleporterBeamSpawned();

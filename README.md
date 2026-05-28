@@ -155,6 +155,10 @@ The merged CNZ cutscene and object parity branch fills in the Act 2 Knuckles
 cutscenes, Sparkle and Batbot behavior, CNZ cannon/balloon/trap-door fixes,
 Act 1 miniboss arena graphics and defeat flow, and CNZ palette/scroll follow-up
 coverage.
+The follow-up CNZ miniboss merge tightens the Act 1 boss-room background window,
+wrapped Plane B tile selection, boss/electricity render ordering, defeat
+dismantle coverage, Sparkle floor/ceiling behavior, and Act 2 Knuckles button
+cutscene handling.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?

@@ -7,12 +7,15 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.objects.CnzMinibossInstance;
+import com.openggf.game.sonic3k.objects.CnzMinibossTopInstance;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collection;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -60,6 +63,44 @@ class TestS3kCnzMinibossHeadless {
         assertTrue(boss.isPresent(), "CNZ miniboss instance must exist after the ROM two-second release wait");
         assertTrue(boss.get().getCurrentRoutine() >= 2,
                 "Boss must leave routine 0 (Init) after Obj_CNZMinibossGo releases the start routine");
+    }
+
+    @Test
+    void arenaEntryInitializesBossAndTopBeforeReleaseWait() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        GameServices.camera().setY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
+
+        fixture.stepFrame(false, false, false, false, false);
+
+        Optional<CnzMinibossInstance> boss = findBoss();
+        assertTrue(boss.isPresent(),
+                "CNZ miniboss instance must exist as soon as the arena entry gate locks the camera");
+        assertEquals(2, boss.get().getCurrentRoutine(),
+                "Obj_CNZMinibossInit must run before the event release gate parks the fight start");
+        assertTrue(activeObjects().stream().anyMatch(CnzMinibossTopInstance.class::isInstance),
+                "Obj_CNZMinibossInit must create the visible spinning top child before release wait ends");
+    }
+
+    @Test
+    void rewindRestoreKeepsVisibleMinibossTopChild() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
+        GameServices.camera().setY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
+        fixture.stepFrame(false, false, false, false, false);
+
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        var rewind = objectManager.rewindSnapshottable();
+        var snapshot = rewind.capture();
+
+        rewind.restore(snapshot);
+
+        assertTrue(activeObjects().stream().anyMatch(CnzMinibossTopInstance.class::isInstance),
+                "Rewind restore must recreate the dynamic top child instead of dropping the visible spinning top");
     }
 
     @Test
@@ -146,5 +187,13 @@ class TestS3kCnzMinibossHeadless {
                 .filter(CnzMinibossInstance.class::isInstance)
                 .map(CnzMinibossInstance.class::cast)
                 .findFirst();
+    }
+
+    private static Collection<ObjectInstance> activeObjects() {
+        ObjectManager mgr = GameServices.level().getObjectManager();
+        if (mgr == null) {
+            return java.util.List.of();
+        }
+        return mgr.getActiveObjects();
     }
 }

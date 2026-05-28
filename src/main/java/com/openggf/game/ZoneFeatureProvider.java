@@ -201,6 +201,14 @@ public interface ZoneFeatureProvider {
     }
 
     /**
+     * Whether wrapped background tilemap builds should emulate the ROM's raw
+     * layout-row pointer overflow instead of wrapping X within the same row.
+     */
+    default boolean useLinearBackgroundLayoutOverflow(int zoneIndex) {
+        return false;
+    }
+
+    /**
      * Whether the intro ocean phase is currently active (e.g. AIZ intro in S3K).
      * When active, the BG plane wraps at VDP width instead of full layout width.
      *

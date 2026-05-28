@@ -894,6 +894,17 @@ public final class CnzMinibossTopInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isHighPriority() {
+        return true;
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        // ObjDat3_CNZMinibossTop priority word $0200.
+        return 4;
+    }
+
+    @Override
     public String traceDebugDetails() {
         return String.format(
                 "r=%02X v=%04X,%04X sub=%02X,%02X map=%02X raw=%s d=%02X l=%02X af=%02X ft=%02X main=%d/%d br=%s base=%s pb=%s impact=%s@%04X,%04X parentOff=%04X,%04X solid=%s/%s hist=%s",
