@@ -127,25 +127,25 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         if (sprite.isSliding() && !sprite.getAir() && slideAnimId >= 0) {
             return slideAnimId;
         }
-        // ROM: rolling/jump state writes AniIDSonAni_Roll directly. A non-zero
-        // flip_angle only diverts the walk/run animation handler into tumble
-        // frames; it does not keep externally-set animations like Float2 active
-        // once Sonic is rolling.
-        if (sprite.getRolling()) {
-            return rollAnimId;
-        }
         if (sprite.getAir()) {
             // ROM: Sonic_MdAir/Sonic_MdJump do NOT call Sonic_Move, so the anim
             // field is never overwritten while airborne. Only the ground routine
             // (Sonic_MdNormal) calls Sonic_Move which selects walk/run/idle anim.
-            // When jumping=false and rolling=false, the player was placed into
-            // the air by an external force (fan updraft, walking off edge, spring
-            // after springing flag clears). In these cases, let whatever animation
-            // was last set persist — matching ROM behavior.
-            if (!sprite.isJumping() && !sprite.getRolling()) {
+            // When jumping=false and roll-jump=false, the player was placed into
+            // the air by an external force. S3K CNZ hover fans clear those bits
+            // but leave Status_Roll alone, so the object-written walk animation
+            // must persist instead of resolving back to roll.
+            if (!sprite.isJumping() && !sprite.getRollingJump()) {
                 return null;
             }
-            return airAnimId;
+            // ROM: rolling/jump state writes AniIDSonAni_Roll directly. A non-zero
+            // flip_angle only diverts the walk/run animation handler into tumble
+            // frames; it does not keep externally-set animations like Float2 active
+            // once Sonic is actively rolling/jumping.
+            return sprite.getRolling() ? rollAnimId : airAnimId;
+        }
+        if (sprite.getRolling()) {
+            return rollAnimId;
         }
         if (sprite.getLookingUp() && lookUpAnimId >= 0) {
             return lookUpAnimId;

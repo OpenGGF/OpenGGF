@@ -6,6 +6,7 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.GameServices;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
@@ -20,6 +21,7 @@ import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TestObjectServices;
@@ -39,6 +41,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -51,6 +54,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCnzMinibossTopPhysics {
@@ -481,6 +485,33 @@ class TestCnzMinibossTopPhysics {
                 "CNZMiniboss_BlockExplosion only publishes impact coordinates and the explosion child; "
                         + "base lowering waits for the Events_bg+$04 arena-row signal "
                         + "(sonic3k.asm:145204-145224, 107388-107414, 145508-145515)");
+    }
+
+    @Test
+    void arenaCollisionSpawnsBossExplosionAnimationAndSfxAtSnappedBlockCentre() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        CapturingTopImpactServices services = new CapturingTopImpactServices(
+                GameServices.level().getObjectManager(),
+                GameServices.module().getLevelEventProvider());
+        CnzMinibossTopInstance top = new CnzMinibossTopInstance(
+                new ObjectSpawn(0x3240, 0x0300, Sonic3kObjectIds.CNZ_MINIBOSS, 0, 0, false, 0));
+        top.setServices(services);
+
+        top.forceArenaCollisionForTest(0x32D0, 0x0310);
+        top.update(0, null);
+
+        assertTrue(services.playedSfx.contains(Sonic3kSfx.EXPLODE.id),
+                "CNZMiniboss_BlockExplosion creates Obj_CreateBossExplosion subtype 6, whose controller plays sfx_Explode");
+        ObjectInstance explosion = services.spawnedChildren.stream()
+                .filter(S3kBossExplosionChild.class::isInstance)
+                .findFirst()
+                .orElse(null);
+        assertNotNull(explosion,
+                "CNZMiniboss_BlockExplosion must spawn the visible boss explosion animation child");
+        assertEquals(0x32D0, explosion.getX());
+        assertEquals(0x0310, explosion.getY());
     }
 
     @Test
@@ -962,5 +993,38 @@ class TestCnzMinibossTopPhysics {
                 return "Test";
             }
         }, 0, null, table, null, camera, objectServices);
+    }
+
+    private static final class CapturingTopImpactServices extends TestObjectServices {
+        private final ObjectManager objectManager;
+        private final com.openggf.game.LevelEventProvider levelEventProvider;
+        private final List<Integer> playedSfx = new ArrayList<>();
+        private final List<ObjectInstance> spawnedChildren = new ArrayList<>();
+
+        private CapturingTopImpactServices(ObjectManager objectManager,
+                                           com.openggf.game.LevelEventProvider levelEventProvider) {
+            this.objectManager = mock(ObjectManager.class);
+            this.levelEventProvider = levelEventProvider;
+            doAnswer(invocation -> {
+                ObjectInstance child = invocation.getArgument(0);
+                spawnedChildren.add(child);
+                return null;
+            }).when(this.objectManager).addDynamicObjectAfterCurrent(any());
+        }
+
+        @Override
+        public ObjectManager objectManager() {
+            return objectManager;
+        }
+
+        @Override
+        public com.openggf.game.LevelEventProvider levelEventProvider() {
+            return levelEventProvider;
+        }
+
+        @Override
+        public void playSfx(int soundId) {
+            playedSfx.add(soundId);
+        }
     }
 }

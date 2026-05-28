@@ -1379,6 +1379,16 @@ public class ObjectManager {
         return cachedActiveObjects;
     }
 
+    public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
+        List<ObjectInstance> snapshot = new ArrayList<>();
+        for (ObjectInstance instance : dynamicObjects) {
+            if (instance != null && !instance.isDestroyed() && instance.isPersistent()) {
+                snapshot.add(instance);
+            }
+        }
+        return snapshot;
+    }
+
     /**
      * Runs post-player hooks for legacy object-order modules after the main
      * playable update has completed for the current frame.

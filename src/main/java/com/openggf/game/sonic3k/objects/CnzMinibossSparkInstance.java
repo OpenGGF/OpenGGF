@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -11,6 +12,7 @@ import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
+import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
@@ -25,6 +27,16 @@ public final class CnzMinibossSparkInstance extends AbstractObjectInstance
         implements TouchResponseProvider {
     private static final int COLLISION_FLAGS = 0x92;
     private static final int SHIELD_REACTION_LIGHTNING_IMMUNITY = 1 << 5;
+    private static final int[][] SPARK_FRAMES = {
+            {0x0A, 0x11, 0x0B, 0x11},
+            {0x11, 0x0F, 0x11, 0x10, 0x11},
+            {0x0A, 0x11, 0x0B, 0x11}
+    };
+    private static final int[][] SPARK_DELAYS = {
+            {0, 7, 0, 7},
+            {0, 0, 7, 0, 0x09},
+            {0, 7, 0, 0x0B}
+    };
     private static final TouchResponseProfile TOUCH_RESPONSE_PROFILE = new TouchResponseProfile(
             TouchCategoryDecodeMode.NORMAL,
             false,
@@ -39,9 +51,20 @@ public final class CnzMinibossSparkInstance extends AbstractObjectInstance
     private CnzMinibossInstance boss;
     private int parentOffsetX;
     private int parentOffsetY;
+    private final int[] frames;
+    private final int[] delays;
+    private int mappingFrame;
+    private int rawAnimPairIndex;
+    private int rawAnimTimer;
+    private boolean firstAnimationTick = true;
 
     public CnzMinibossSparkInstance(ObjectSpawn spawn) {
         super(spawn, "CNZMinibossSpark");
+        int scriptIndex = Math.min((spawn.subtype() & 0xFF) >> 1, SPARK_FRAMES.length - 1);
+        frames = SPARK_FRAMES[scriptIndex];
+        delays = SPARK_DELAYS[scriptIndex];
+        mappingFrame = frames[0];
+        rawAnimTimer = delays[0];
     }
 
     public void attachBossForTest(CnzMinibossInstance boss) {
@@ -59,6 +82,7 @@ public final class CnzMinibossSparkInstance extends AbstractObjectInstance
             return;
         }
         refreshChildPosition();
+        animateRawMultiDelay();
     }
 
     private void refreshChildPosition() {
@@ -88,7 +112,29 @@ public final class CnzMinibossSparkInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        // CNZ miniboss spark art rendering is outside the headless touch slice.
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_MINIBOSS);
+        if (renderer == null) {
+            return;
+        }
+        renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
+    }
+
+    private void animateRawMultiDelay() {
+        if (firstAnimationTick) {
+            firstAnimationTick = false;
+            return;
+        }
+        rawAnimTimer--;
+        if (rawAnimTimer >= 0) {
+            return;
+        }
+
+        rawAnimPairIndex++;
+        if (rawAnimPairIndex >= frames.length) {
+            rawAnimPairIndex = 0;
+        }
+        mappingFrame = frames[rawAnimPairIndex];
+        rawAnimTimer = delays[rawAnimPairIndex];
     }
 
     @Override

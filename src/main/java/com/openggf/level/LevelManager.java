@@ -42,6 +42,7 @@ import com.openggf.graphics.RenderContext;
 import com.openggf.level.render.BackgroundRenderer;
 import com.openggf.level.objects.DefaultObjectServices;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -3220,9 +3221,13 @@ public class LevelManager {
             levelGamestate = gameModule.createLevelState();
         }
 
+        List<ObjectInstance> persistentDynamicObjects = objectManager != null
+                ? objectManager.snapshotPersistentDynamicObjectsForTransition()
+                : List.of();
+
         // 6. Rebuild managers with new act's spawn data
         // (ROM: Load_Level swaps obj/ring pointers, then clears Dynamic_object_RAM + Ring_status_table)
-        rebuildManagersForActTransition(cam);
+        rebuildManagersForActTransition(cam, persistentDynamicObjects);
 
         // 6. Apply coordinate offsets (ROM: Offset_ObjectsDuringTransition)
         applySeamlessOffsets(request, cam);
@@ -3389,7 +3394,7 @@ public class LevelManager {
      * reconstruct both managers so they reference {@code level.getObjects()}
      * and {@code level.getRings()} from the newly loaded act.
      */
-    private void rebuildManagersForActTransition(Camera cam) {
+    private void rebuildManagersForActTransition(Camera cam, List<ObjectInstance> persistentDynamicObjects) {
         int cameraX = cam.getX();
 
         // Rebuild ObjectManager with the new act's object spawns
@@ -3430,6 +3435,13 @@ public class LevelManager {
         reregisterPlayerDynamicObjects(cam.getFocusedSprite());
         for (AbstractPlayableSprite sidekick : spriteManager.getSidekicks()) {
             reregisterPlayerDynamicObjects(sidekick);
+        }
+        if (persistentDynamicObjects != null) {
+            for (ObjectInstance object : persistentDynamicObjects) {
+                if (object != null && !object.isDestroyed()) {
+                    objectManager.addDynamicObject(object);
+                }
+            }
         }
     }
 
