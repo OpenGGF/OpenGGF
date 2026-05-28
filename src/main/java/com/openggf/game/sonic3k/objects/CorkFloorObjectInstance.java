@@ -117,10 +117,10 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         this.hFlip = (spawn.renderFlags() & 0x01) != 0;
         this.config = resolveConfig(subtype);
 
-        if (subtype == 0) {
-            this.mode = Mode.BREAK_FROM_BELOW;
-        } else if (config.iczPlaneMode && (subtype & 0x10) == 0) {
+        if (config.iczPlaneMode && (subtype & 0x10) == 0) {
             this.mode = Mode.ICZ_PLANE_SWITCH;
+        } else if (subtype == 0) {
+            this.mode = Mode.BREAK_FROM_BELOW;
         } else {
             this.mode = Mode.ROLL_TO_BREAK;
         }
@@ -186,12 +186,10 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
         }
 
         if (rollingBreakPlayer != null) {
-            if (mode == Mode.ICZ_PLANE_SWITCH) {
-                applyPlaneSwitch(rollingBreakPlayer);
-            }
-
             rollingBreakPlayer.setRolling(true);
-            rollingBreakPlayer.setYSpeed((short) ROLL_BREAK_LAUNCH_YVEL);
+            if (mode != Mode.ICZ_PLANE_SWITCH) {
+                rollingBreakPlayer.setYSpeed((short) ROLL_BREAK_LAUNCH_YVEL);
+            }
             rollingBreakPlayer.setAir(true);
             rollingBreakPlayer.setOnObject(false);
 
@@ -231,8 +229,10 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
 
         if (result.standingNow()) {
             playerStanding = true;
-            if (preContactRollAnimation && rollingBreakPlayer == null) {
+            if (preContactRollAnimation && canRollBreak(player) && rollingBreakPlayer == null) {
                 rollingBreakPlayer = player;
+            } else if (mode == Mode.ICZ_PLANE_SWITCH) {
+                applyPlaneSwitch(player);
             }
         }
 
@@ -250,6 +250,13 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
             player.setTopSolidBit((byte) 0x0C);
             player.setLrbSolidBit((byte) 0x0D);
         }
+    }
+
+    private boolean canRollBreak(AbstractPlayableSprite player) {
+        if (mode != Mode.ICZ_PLANE_SWITCH) {
+            return true;
+        }
+        return (subtype & 0x80) != 0 || (player.getTopSolidBit() & 0xFF) == 0x0E;
     }
 
     private void performBreak(AbstractPlayableSprite player) {
@@ -273,8 +280,8 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
 
         try {
             ObjectManager om = getObjectManager();
-            if (om != null) {
-                om.clearRidingObject(null);
+            if (om != null && player != null) {
+                om.clearRidingObject(player);
             }
         } catch (Exception e) {
             // Safe fallback.
