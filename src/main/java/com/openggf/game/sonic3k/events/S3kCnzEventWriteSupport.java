@@ -103,6 +103,13 @@ public final class S3kCnzEventWriteSupport {
         }
     }
 
+    public static void triggerScreenShake(ObjectServices services, int frames) {
+        CnzObjectEventBridge bridge = bridgeOrNull(services);
+        if (bridge != null) {
+            bridge.triggerScreenShake(frames);
+        }
+    }
+
     public static void beginKnucklesTeleporterRoute(ObjectServices services) {
         CnzObjectEventBridge bridge = bridgeOrNull(services);
         if (bridge != null) {

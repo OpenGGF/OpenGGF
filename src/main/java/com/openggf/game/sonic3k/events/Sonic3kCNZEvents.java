@@ -54,6 +54,13 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /** CNZ1_BackgroundEvent stage 24. */
     public static final int BG_DO_TRANSITION = 0x18;
 
+    /**
+     * BG-layout Y that {@code CNZ1BGE_Boss} fills Plane B from when looping the boss-room
+     * background ({@code move.w #$200,d1} at docs/skdisasm/sonic3k.asm:107504). The looping
+     * carnival tunnel band starts here; the room floor sits below it.
+     */
+    public static final int CNZ_BOSS_BG_LOOP_BAND_BASE_Y = 0x200;
+
     /** CNZ2_ScreenEvent stage 0. */
     public static final int FG_ACT2_ENTRY = 0x00;
     /** CNZ2_ScreenEvent stage 4. */
@@ -175,6 +182,19 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /** Bridge flag for the Act 1 water button helper. */
     private boolean waterButtonArmed;
 
+    /**
+     * Timed screen-shake countdown.
+     *
+     * <p>ROM: {@code Screen_shake_flag} written {@code #$14} by the CNZ cutscene
+     * button ({@code loc_65C78}) and the vacuum-tube button ({@code loc_65CAC}).
+     * Positive values drive the timed {@code ShakeScreen_Setup} countdown that
+     * indexes {@link #SCREEN_SHAKE_ARRAY}. Mirrors the AIZ implementation so the
+     * shake routes through the shared {@code ParallaxManager} -> {@code Camera}
+     * shake plumbing and the CNZ scroll handler.
+     */
+    private int screenShakeTimer;
+    private int screenShakeOffsetY;
+
     /** Boss ownership mirror used by later slices. */
     private boolean bossFlag;
 
@@ -211,6 +231,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private int arenaClearHistoryCount;
     private int postBossFgRefreshRowsRemaining;
     private int postBossFgRefresh2RowsRemaining;
+    private boolean postBossForegroundVisualCopied;
     /**
      * Accumulated destroyed arena height in pixels.
      *
@@ -255,6 +276,8 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         wallGrabSuppressed = false;
         waterTargetY = 0;
         waterButtonArmed = false;
+        screenShakeTimer = 0;
+        screenShakeOffsetY = 0;
         bossFlag = false;
         bossFlagPrev = false;
         cameraStoredMaxXPos = 0;
@@ -282,12 +305,23 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         arenaClearHistoryCount = 0;
         postBossFgRefreshRowsRemaining = -1;
         postBossFgRefresh2RowsRemaining = -1;
+        postBossForegroundVisualCopied = false;
         destroyedArenaRows = 0;
         bossBackgroundMode = BossBackgroundMode.NORMAL;
     }
 
+    /**
+     * ROM: {@code ScreenShakeArray} — signed byte Y offsets indexed by the
+     * {@code Screen_shake_flag} countdown. Amplitude tapers from ±5 down to ±1
+     * as the timer runs out. Shared with the AIZ timed-shake pattern.
+     */
+    private static final int[] SCREEN_SHAKE_ARRAY = {
+            1, -1, 1, -1, 2, -2, 2, -2, 3, -3, 3, -3, 4, -4, 4, -4, 5, -5, 5, -5
+    };
+
     @Override
     public void update(int act, int frameCounter) {
+        tickScreenShake();
         if (act == 0) {
             updateAct1Bg(frameCounter);
             updateMinibossStartRelease();
@@ -361,13 +395,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                 if (!minibossArenaLocked && camX >= Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X) {
                     enterMinibossArena();
                 }
-        if (eventsFg5) {
-            eventsFg5 = false;
-            bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
-            bgRoutine = BG_FG_REFRESH;
-            postBossFgRefreshRowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
-            LOG.info("CNZ: post-boss handoff entered");
-        }
+                if (eventsFg5) {
+                    enterPostBossForegroundRefresh();
+                    LOG.info("CNZ: post-boss handoff entered");
+                }
             }
             case ACT1_POST_BOSS -> handleAfterBossStage();
             case ACT2_KNUCKLES_TELEPORTER -> updateAct2Fg();
@@ -556,7 +587,12 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         if (!eventsFg5) {
             return;
         }
+        enterPostBossForegroundRefresh();
+    }
+
+    private void enterPostBossForegroundRefresh() {
         eventsFg5 = false;
+        bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
         bgRoutine = BG_FG_REFRESH;
         // ROM loc_51D6E primes Draw_delayed_rowcount=$F and falls through to
         // CNZ1BGE_FGRefresh. The engine observes this handoff after object
@@ -580,6 +616,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
             return;
         }
         copyPostBossBackgroundLayoutToForeground();
+        clearPostBossBackgroundCollisionFlag();
         remapPostBossTunnelToForeground();
         postBossFgRefresh2RowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
         bgRoutine = BG_FG_REFRESH_2;
@@ -801,6 +838,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         this.bgRoutine = routine;
         if (routine == BG_FG_REFRESH) {
             this.postBossFgRefreshRowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
+            this.postBossForegroundVisualCopied = false;
         } else if (routine == BG_FG_REFRESH_2) {
             this.postBossFgRefresh2RowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
         }
@@ -917,6 +955,36 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
 
     public boolean isWaterButtonArmed() {
         return waterButtonArmed;
+    }
+
+    /**
+     * ROM: {@code move.w #$14,(Screen_shake_flag).w} in {@code loc_65C78}.
+     * Starts the timed screen shake driven through {@link #tickScreenShake()}.
+     */
+    public void triggerScreenShake(int frames) {
+        screenShakeTimer = frames;
+    }
+
+    /**
+     * Current vertical shake offset. Read by {@link CnzZoneRuntimeState} so the
+     * CNZ scroll handler and the shared {@code ParallaxManager} -> {@code Camera}
+     * shake propagation move the foreground, sprites, and background in sync.
+     */
+    public int getScreenShakeOffsetY() {
+        return screenShakeOffsetY;
+    }
+
+    private void tickScreenShake() {
+        if (screenShakeTimer <= 0) {
+            screenShakeOffsetY = 0;
+            return;
+        }
+        screenShakeTimer--;
+        // ROM ShakeScreen_Setup (positive flag): index ScreenShakeArray by the
+        // remaining countdown so the amplitude tapers off.
+        screenShakeOffsetY = screenShakeTimer < SCREEN_SHAKE_ARRAY.length
+                ? SCREEN_SHAKE_ARRAY[screenShakeTimer]
+                : 0;
     }
 
     public void setWaterButtonArmed(boolean waterButtonArmed) {
@@ -1126,6 +1194,9 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     }
 
     private void copyPostBossBackgroundLayoutToForeground() {
+        if (postBossForegroundVisualCopied) {
+            return;
+        }
         Level level = levelManager() != null ? levelManager().getCurrentLevel() : null;
         if (level == null || level.getMap() == null
                 || level.getMap().getLayerCount() <= POST_BOSS_COPY_SOURCE_LAYER
@@ -1143,6 +1214,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
             copyPostBossBackgroundLayoutToForeground(ctx.surface(), level);
             return MutationEffects.foregroundRedraw();
         }, context);
+        postBossForegroundVisualCopied = true;
+    }
+
+    private void clearPostBossBackgroundCollisionFlag() {
         if (gameStateOrNull() != null) {
             // ROM clears Background_collision_flag after copying BG layout bytes
             // into FG collision (sonic3k.asm:107556-107563).

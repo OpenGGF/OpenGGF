@@ -27,6 +27,7 @@ import com.openggf.game.sonic3k.render.IczBigSnowPileBackgroundEffect;
 import com.openggf.game.sonic3k.render.IczBigSnowPilePriorityMaskEffect;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
+import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.GLCommand;
@@ -125,22 +126,46 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
     }
 
     private boolean isCnzBossBackgroundWindowActive(int zoneId) {
-        if (zoneId != Sonic3kZoneIds.ZONE_CNZ || !GameServices.hasRuntime()) {
+        if (zoneId != Sonic3kZoneIds.ZONE_CNZ) {
+            return false;
+        }
+        return isCnzBossBackgroundWindowActive();
+    }
+
+    private boolean isCnzBossBackgroundWindowActive() {
+        if (getFeatureZoneId() != Sonic3kZoneIds.ZONE_CNZ || !GameServices.hasRuntime()) {
             return false;
         }
         CnzZoneRuntimeState state = S3kRuntimeStates.currentCnz(GameServices.zoneRuntimeRegistry()).orElse(null);
         if (state == null) {
             return false;
         }
-        return switch (state.bossBackgroundMode()) {
-            case ACT1_MINIBOSS_PATH, ACT1_POST_BOSS -> true;
-            case NORMAL, ACT2_KNUCKLES_TELEPORTER -> false;
-        };
+        return state.bossBackgroundScrollActive();
     }
 
     @Override
     public boolean useLinearBackgroundLayoutOverflow(int zoneIndex) {
-        return isCnzBossBackgroundWindowActive(zoneIndex);
+        return isCnzBossBackgroundWindowActive();
+    }
+
+    /**
+     * CNZ {@code CNZ1BGE_Boss} (docs/skdisasm/sonic3k.asm:107498-107507) is the only
+     * CNZ background phase that locks Plane B to a fixed 16-chunk band drawn from
+     * layout Y={@code $200} and loops it via the VDP vertical scroll; the surrounding
+     * {@code BossStart}/{@code AfterBoss}/refresh phases scroll the full layout via
+     * {@code DrawBGAsYouMove}. Anchor the loop band only while the BG routine is
+     * {@code BG_BOSS} so the looping carnival band excludes the room floor below it.
+     */
+    @Override
+    public int backgroundLoopBandBaseY(int zoneIndex, int actIndex) {
+        if (getFeatureZoneId() != Sonic3kZoneIds.ZONE_CNZ || !GameServices.hasRuntime()) {
+            return -1;
+        }
+        CnzZoneRuntimeState state = S3kRuntimeStates.currentCnz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (state == null || state.backgroundRoutine() != Sonic3kCNZEvents.BG_BOSS) {
+            return -1;
+        }
+        return Sonic3kCNZEvents.CNZ_BOSS_BG_LOOP_BAND_BASE_Y;
     }
 
     @Override

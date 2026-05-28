@@ -28,6 +28,18 @@ public final class CnzZoneRuntimeState implements S3kZoneRuntimeState {
         return events.getBossBackgroundMode();
     }
 
+    public boolean bossBackgroundScrollActive() {
+        int routine = events.getBackgroundRoutine();
+        if (routine >= Sonic3kCNZEvents.BG_BOSS_START
+                && routine <= Sonic3kCNZEvents.BG_DO_TRANSITION) {
+            return true;
+        }
+        return switch (events.getBossBackgroundMode()) {
+            case ACT1_MINIBOSS_PATH, ACT1_POST_BOSS -> true;
+            case NORMAL, ACT2_KNUCKLES_TELEPORTER -> false;
+        };
+    }
+
     /**
      * ROM-facing FG routine mirror. CNZ stores this locally on the zone-events
      * instance rather than relying on {@code AbstractLevelEventManager}'s shared
@@ -87,5 +99,10 @@ public final class CnzZoneRuntimeState implements S3kZoneRuntimeState {
 
     public int waterTargetY() {
         return events.getWaterTargetY();
+    }
+
+    /** Current CNZ timed screen-shake vertical offset (ROM Screen_shake_flag). */
+    public int screenShakeOffsetY() {
+        return events.getScreenShakeOffsetY();
     }
 }

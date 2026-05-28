@@ -267,11 +267,21 @@ class TestS3kCnzMinibossArenaHeadless {
         events.update(0, fixture.frameCount());
 
         assertEquals(Sonic3kCNZEvents.BG_FG_REFRESH, events.getBackgroundRoutine(),
-                "CNZ1BGE_FGRefresh must not copy foreground collision until "
+                "CNZ1BGE_FGRefresh keeps the delayed refresh active until "
                         + "Draw_PlaneVertSingleBottomUp drives Draw_delayed_rowcount below zero "
                         + "(docs/skdisasm/sonic3k.asm:103436-103452,107527-107539)");
         assertTrue(GameServices.gameState().isBackgroundCollisionFlag(),
                 "Background_collision_flag stays active during the delayed post-boss refresh");
+        for (int row = 0; row < source.length; row++) {
+            for (int column = 0; column < source[row].length; column++) {
+                int differentValue = source[row][column] == 0 ? 1 : 0;
+                assertEquals(differentValue,
+                        mutableLevel.getMap().getValue(0, 0x3180 / 0x80 + column,
+                                0x0280 / 0x80 + row) & 0xFF,
+                        "CNZ1BGE_FGRefresh must not copy foreground collision until "
+                                + "Draw_delayed_rowcount underflows");
+            }
+        }
 
         advanceCnzPostBossRefresh(events, fixture.frameCount() + 1, 15);
 
@@ -490,9 +500,7 @@ class TestS3kCnzMinibossArenaHeadless {
         var tilemaps = GameServices.level().getTilemapManager();
         tilemaps.setBackgroundTilemapDirty(true);
 
-        var bgCameraField = GameServices.parallax().getClass().getDeclaredField("cachedBgCameraX");
-        bgCameraField.setAccessible(true);
-        bgCameraField.setInt(GameServices.parallax(), 0x260);
+        publishCnzBossBgCameraX(0x260);
 
         ensureBackgroundTilemapData();
 
@@ -501,6 +509,60 @@ class TestS3kCnzMinibossArenaHeadless {
                         + "the renderer must rebuild the 64-cell Plane B window from that BG source");
         assertEquals(64, tilemaps.getBackgroundTilemapWidthTiles(),
                 "CNZ miniboss uses a wrapped 64-cell Plane B nametable window, not the full level BG strip");
+    }
+
+    @Test
+    void bossPathBackgroundWindowDoesNotModuloBossSourceXByContiguousWidth() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        Sonic3kCNZEvents events = getCnzEvents();
+        events.forceBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_MINIBOSS_PATH);
+        var tilemaps = GameServices.level().getTilemapManager();
+        tilemaps.setBackgroundTilemapDirty(true);
+
+        publishCnzBossBgCameraX(0x260);
+
+        ensureBackgroundTilemapData();
+
+        byte[] tilemap = tilemaps.getBackgroundTilemapData();
+        int actualR = tilemap[0] & 0xFF;
+        int actualG = tilemap[1] & 0xFF;
+        int[] expected = firstTileDescriptorForBgSourcePixel(0x260, 0);
+        int[] wrongModuloSource = firstTileDescriptorForBgSourcePixel(0x060, 0);
+
+        assertEquals(expected[0], actualR,
+                "CNZ boss Plane B must start at the raw Camera_X_pos_BG_copy source, not at source % 512");
+        assertEquals(expected[1], actualG,
+                "CNZ boss Plane B must start at the raw Camera_X_pos_BG_copy source, not at source % 512");
+        assertFalse(actualR == wrongModuloSource[0] && actualG == wrongModuloSource[1],
+                "The boss BG window must not wrap $260 back to $060 before reading layout cells");
+    }
+
+    @Test
+    void postBossRefreshRoutinesKeepBossBackgroundWindowActive() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        Sonic3kCNZEvents events = getCnzEvents();
+        events.forceBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT2_KNUCKLES_TELEPORTER);
+        var provider = GameServices.module().getZoneFeatureProvider();
+
+        events.forceBackgroundRoutine(Sonic3kCNZEvents.BG_AFTER_BOSS);
+        assertTrue(provider.bgWrapsHorizontally(),
+                "CNZ1BGE_AfterBoss still calls CNZ1_BossLevelScroll2 and must keep the boss BG window");
+
+        events.forceBackgroundRoutine(Sonic3kCNZEvents.BG_FG_REFRESH);
+        assertTrue(provider.bgWrapsHorizontally(),
+                "CNZ1BGE_FGRefresh still calls CNZ1_BossLevelScroll2 and must not visibly jump to normal BG");
+
+        events.forceBackgroundRoutine(Sonic3kCNZEvents.BG_FG_REFRESH_2);
+        assertTrue(provider.bgWrapsHorizontally(),
+                "CNZ1BGE_FGRefresh2 still calls CNZ1_BossLevelScroll2 while the second delayed draw completes");
+
+        events.forceBackgroundRoutine(Sonic3kCNZEvents.BG_DO_TRANSITION);
+        assertTrue(provider.bgWrapsHorizontally(),
+                "CNZ1BGE_DoTransition still calls CNZ1_BossLevelScroll2 before requesting the act reload");
     }
 
     @Test
@@ -513,9 +575,7 @@ class TestS3kCnzMinibossArenaHeadless {
         var tilemaps = GameServices.level().getTilemapManager();
         tilemaps.setBackgroundTilemapDirty(true);
 
-        var bgCameraField = GameServices.parallax().getClass().getDeclaredField("cachedBgCameraX");
-        bgCameraField.setAccessible(true);
-        bgCameraField.setInt(GameServices.parallax(), 0x300);
+        publishCnzBossBgCameraX(0x300);
 
         ensureBackgroundTilemapData();
 
@@ -532,6 +592,52 @@ class TestS3kCnzMinibossArenaHeadless {
                 "CNZ boss BG source x=$480 should overflow to the next layout row, matching Get_LevelChunkColumn");
         assertFalse(actualR == wrongHorizontalWrap[0] && actualG == wrongHorizontalWrap[1],
                 "The wrapped boss window must not repeat BG row 0 column 0 at source x=$480");
+    }
+
+    /**
+     * ROM anchor: {@code CNZ1BGE_Boss} (docs/skdisasm/sonic3k.asm:107498-107507) fills the
+     * looping boss-room Plane B from a FIXED BG-layout Y of {@code $200} for {@code $10} (16)
+     * chunks = 256px, then loops that band purely via the VDP vertical scroll register
+     * ({@code Camera_Y_pos_BG_copy}). The CNZ BG layout is 9x9 blocks: the looping carnival
+     * tunnel sits in block rows 0-6 while the room FLOOR lives in block rows 7-8
+     * (layout Y {@code $380}+). If the boss BG window keeps the full 144-tile layout height,
+     * the growing scroll loops over the whole layout and drags the floor into view. Clamping
+     * the boss loop band to the ROM's 256px / 32-tile height (anchored at Y={@code $200})
+     * structurally excludes the floor.
+     */
+    @Test
+    void bossPathLoopsBackgroundBandFromRomLayoutY200AndExcludesFloor() throws Exception {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
+                .build();
+        Sonic3kCNZEvents events = getCnzEvents();
+        events.forceBossBackgroundMode(Sonic3kCNZEvents.BossBackgroundMode.ACT1_MINIBOSS_PATH);
+        events.forceBackgroundRoutine(Sonic3kCNZEvents.BG_BOSS);
+        var tilemaps = GameServices.level().getTilemapManager();
+        tilemaps.setBackgroundTilemapDirty(true);
+
+        publishCnzBossBgCameraX(0x260);
+
+        ensureBackgroundTilemapData();
+
+        assertEquals(32, tilemaps.getBackgroundTilemapHeightTiles(),
+                "CNZ1BGE_Boss loops a $10 (16) chunk = 256px = 32-tile Plane B band; the boss BG "
+                        + "window must clamp its height to that band so the scroll wraps inside it "
+                        + "and never reaches the layout-row 7-8 floor at Y=$380+");
+        assertEquals(64, tilemaps.getBackgroundTilemapWidthTiles(),
+                "The boss BG band must keep the 64-cell wrapped Plane B width window");
+
+        // Tilemap row 0 anchors at layout Y=$200, and the band is exactly 256px tall. The
+        // room floor sits at layout block rows 7-8 (Y=$380+), which is 0x80+ pixels below
+        // the $200..$300 band, so the 32-tile clamp structurally keeps the floor out of the
+        // looping scroll. (Before the fix the band kept the full 144-tile BG height, so the
+        // looping scroll reached the floor.)
+        byte[] tilemap = tilemaps.getBackgroundTilemapData();
+        int[] anchor = firstTileDescriptorForBgSourcePixel(0x260, 0x200);
+        assertEquals(anchor[0], tilemap[0] & 0xFF,
+                "CNZ1BGE_Boss anchors the looped band at layout Y=$200; tilemap row 0 must read it");
+        assertEquals(anchor[1], tilemap[1] & 0xFF,
+                "CNZ1BGE_Boss anchors the looped band at layout Y=$200; tilemap row 0 must read it");
     }
 
     @Test
@@ -587,6 +693,12 @@ class TestS3kCnzMinibossArenaHeadless {
         ensureBg.invoke(GameServices.level());
     }
 
+    private void publishCnzBossBgCameraX(int bgCameraX) {
+        GameServices.camera().setX((short) (0x2F80 + bgCameraX));
+        GameServices.parallax().update(Sonic3kZoneIds.ZONE_CNZ, 0,
+                GameServices.camera(), 0, GameServices.parallax().getVscrollFactorBG());
+    }
+
     private int[] firstTileDescriptorForBgLinearCell(int linearCell) {
         var level = GameServices.level().getCurrentLevel();
         int bgCellsPerRow = 0x480 / level.getBlockPixelSize();
@@ -597,6 +709,42 @@ class TestS3kCnzMinibossArenaHeadless {
         ChunkDesc chunkDesc = block.getChunkDesc(0, 0);
         Chunk chunk = level.getChunk(chunkDesc.getChunkIndex());
         PatternDesc patternDesc = chunk.getPatternDesc(chunkDesc.getHFlip() ? 1 : 0, chunkDesc.getVFlip() ? 1 : 0);
+        int patternWord = patternDesc.get();
+        if (chunkDesc.getHFlip()) {
+            patternWord ^= 0x800;
+        }
+        if (chunkDesc.getVFlip()) {
+            patternWord ^= 0x1000;
+        }
+        PatternDesc rendered = new PatternDesc(patternWord);
+        int r = rendered.getPatternIndex() & 0xFF;
+        int g = ((rendered.getPatternIndex() >> 8) & 0x7)
+                | ((rendered.getPaletteIndex() & 0x3) << 3)
+                | (rendered.getHFlip() ? 0x20 : 0)
+                | (rendered.getVFlip() ? 0x40 : 0)
+                | (rendered.getPriority() ? 0x80 : 0);
+        return new int[]{r, g};
+    }
+
+    private int[] firstTileDescriptorForBgSourcePixel(int sourceX, int sourceY) {
+        var level = GameServices.level().getCurrentLevel();
+        int blockPixelSize = level.getBlockPixelSize();
+        int layerWidthCells = Math.max(1, level.getLayerWidthBlocks(1));
+        int layerHeightCells = Math.max(1, level.getLayerHeightBlocks(1));
+        int layerCellCount = layerWidthCells * layerHeightCells;
+        int linearCell = Math.floorDiv(sourceY, blockPixelSize) * layerWidthCells
+                + Math.floorDiv(sourceX, blockPixelSize);
+        linearCell = Math.floorMod(linearCell, layerCellCount);
+        int mapX = linearCell % layerWidthCells;
+        int mapY = linearCell / layerWidthCells;
+        int blockIndex = level.getMap().getValue(1, mapX, mapY) & 0xFF;
+        Block block = level.getBlock(blockIndex);
+        int chunkX = Math.floorMod(sourceX, blockPixelSize) / 16;
+        int chunkY = Math.floorMod(sourceY, blockPixelSize) / 16;
+        ChunkDesc chunkDesc = block.getChunkDesc(chunkX, chunkY);
+        Chunk chunk = level.getChunk(chunkDesc.getChunkIndex());
+        PatternDesc patternDesc = chunk.getPatternDesc(chunkDesc.getHFlip() ? 1 : 0,
+                chunkDesc.getVFlip() ? 1 : 0);
         int patternWord = patternDesc.get();
         if (chunkDesc.getHFlip()) {
             patternWord ^= 0x800;

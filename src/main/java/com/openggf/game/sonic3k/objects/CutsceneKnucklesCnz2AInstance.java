@@ -89,7 +89,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
         activeInstance = null;
     }
 
-    static void setActiveInstanceForTests(CutsceneKnucklesCnz2AInstance instance) {
+    public static void setActiveInstanceForTests(CutsceneKnucklesCnz2AInstance instance) {
         activeInstance = instance;
     }
 
