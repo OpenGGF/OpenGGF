@@ -315,7 +315,14 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         postBossForegroundVisualCopied = false;
         destroyedArenaRows = 0;
         bossBackgroundMode = BossBackgroundMode.NORMAL;
-        spawnSoloLeaderCarryInTailsIfNeeded(act);
+        // NOTE: the solo-Sonic carry-in Tails is NOT spawned here. init() runs in
+        // the engine's initLevelEvents load step, which is immediately followed by
+        // the spawnSidekicks step whose first action is
+        // SpriteManager.removeTemporarySidekicks() — that would delete the carrier
+        // before the first gameplay frame. The carrier is instead spawned from
+        // Sonic3kLevelEventManager.applyZonePlayerState() (the ROM
+        // SpawnLevelMainSprites loc_68D8 location, which runs AFTER sidekick
+        // placement). See spawnSoloLeaderCarryInTailsIfNeeded().
     }
 
     /** Unique code for the throwaway CNZ1 carry-in Tails so it never collides
@@ -335,8 +342,18 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
      * pattern ({@code Sonic3kMGZEvents.ensureBossTransitionTails}) — flagged
      * {@link SidekickCpuController#setTransientCarrySidekick(boolean)} so the
      * controller flies it off-screen and removes it once Sonic lands.
+     *
+     * <p><b>Call site:</b> invoked from
+     * {@code Sonic3kLevelEventManager.applyZonePlayerState()} (the engine's
+     * initZonePlayerState load step), NOT from {@link #init(int)}. The ROM spawns
+     * the throwaway Tails inside {@code SpawnLevelMainSprites} (loc_68D8), which
+     * runs after {@code SpawnLevelMainSprites_SpawnPlayers} has placed the
+     * sidekicks. The engine mirrors that: the spawnSidekicks load step (which
+     * begins with {@code SpriteManager.removeTemporarySidekicks()}) runs between
+     * initLevelEvents and initZonePlayerState, so spawning the temporary carrier
+     * during init() would let the very next step delete it before gameplay.
      */
-    private void spawnSoloLeaderCarryInTailsIfNeeded(int act) {
+    public void spawnSoloLeaderCarryInTailsIfNeeded(int act) {
         if (act != 0 || playerCharacter() != PlayerCharacter.SONIC_ALONE) {
             return;
         }

@@ -2,6 +2,8 @@ package com.openggf.sprites.playable;
 
 import java.util.Objects;
 
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.GameSound;
 import com.openggf.camera.Camera;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.CanonicalAnimation;
@@ -48,12 +50,6 @@ public class SidekickCpuController {
     private static final int LEVEL_START_X_OFFSET = -0x20;
     private static final int LEVEL_START_Y_OFFSET = 4;
     private static final int DESPAWN_TIMEOUT = 300;
-    // CARRY_FLYOFF flyaway step (ROM routine $10 flies Tails up-and-right via
-    // synthetic A/B/C+Right input through Tails flight; this intro cutscene has
-    // no recorded trace, so the engine advances position directly). Up-and-right
-    // so the carrier clears the top/right of the camera within ~1s.
-    private static final int CARRY_FLYOFF_X_STEP = 6;
-    private static final int CARRY_FLYOFF_Y_STEP = 4;
     private static final int MANUAL_CONTROL_FRAMES = 600;
     private final int flyAnimId;
     private final int duckAnimId;
@@ -1809,6 +1805,16 @@ public class SidekickCpuController {
             return;
         }
 
+        // ROM routine $E with Flying_carrying_Sonic_flag clear: a throwaway solo
+        // carrier that dropped Sonic mid-air (jump-out / external velocity / hurt)
+        // stays in routine $E and runs the loc_14534 cooldown/regrab loop — Tails
+        // keeps flying and either re-grabs Sonic or, once Sonic lands, transitions
+        // to routine $10 (fly off). It never enters the NORMAL follow AI.
+        if (transientCarrySidekick && !flyingCarryingFlag) {
+            updateTransientReleasedCarry();
+            return;
+        }
+
         // 1. Hurt/dead (Sonic routine >= 4)
         if (leader.isHurt() || leader.getDead()) {
             carryParentagePending = false;
@@ -1854,10 +1860,10 @@ public class SidekickCpuController {
             carryParentagePending = false;
             releaseCarry(0);
             if (transientCarrySidekick) {
-                // ROM loc_14068 (sonic3k.asm:26944-26946): when the carried
-                // player is solo (Player_mode==1), the landing handoff writes
-                // Tails_CPU_routine=$10 instead of routine 6, so the throwaway
-                // carrier flies away rather than entering the normal follow AI.
+                // ROM loc_14016: when Sonic lands while being carried, the routine
+                // goes STRAIGHT to $10 (fly off) — not the loc_14534 cooldown/regrab
+                // loop that a mid-air jump-off enters. Override releaseCarry()'s
+                // released sub-state with the fly-off transition.
                 enterCarryFlyoff();
             }
             return;
@@ -1941,12 +1947,74 @@ public class SidekickCpuController {
             }
         }
 
-        if (canMgzRegrabLeader()) {
+        if (canRegrabLeaderInPickupRange()) {
             pickupLeaderForCarry();
             flyingCarryingFlag = true;
             carryParentagePending = true;
             mgzReleasedChaseLatched = false;
             return;
+        }
+    }
+
+    /**
+     * ROM routine $E body with {@code Flying_carrying_Sonic_flag} clear, for the
+     * solo-leader throwaway carrier (sonic3k.asm loc_13FFA -> loc_14016 ->
+     * Tails_Carry_Sonic -> loc_14534). After Sonic is dropped mid-air (jump-out,
+     * external velocity change, or carrier hurt), Tails stays in routine $E:
+     *
+     * <ul>
+     *   <li>loc_14016: if Sonic has landed, the routine transitions to $10 (fly
+     *       off) regardless of the carry flag — handled here by entering
+     *       {@link State#CARRY_FLYOFF}.</li>
+     *   <li>loc_13FFA: a Right pulse on the carry cadence keeps Tails drifting.</li>
+     *   <li>loc_14534: the cooldown byte counts down; once it reaches zero the
+     *       loc_14542 proximity test can re-grab Sonic (sub_1459E) and resume the
+     *       carry.</li>
+     * </ul>
+     *
+     * The throwaway carrier therefore never enters the NORMAL follow AI: its only
+     * exits are a regrab (back to CARRYING) or, once Sonic lands, the fly-off.
+     */
+    private void updateTransientReleasedCarry() {
+        sidekick.setAir(true);
+        sidekick.setDoubleJumpProperty((byte) 0xF0);
+        sidekick.setForcedAnimationId(flyAnimId);
+
+        // ROM loc_14016: a landed Sonic ends the carry routine -> routine $10.
+        if (leader == null || !leader.getAir()) {
+            enterCarryFlyoff();
+            return;
+        }
+
+        // ROM loc_13FFA: pulse Right on the carry cadence so Tails keeps drifting.
+        if ((frameCounter & carryTrigger.carryInputInjectMask()) == 0) {
+            inputRight = true;
+        }
+
+        // ROM loc_14534: while the cooldown byte is nonzero, decrement and wait.
+        // It only falls through to the regrab test on the frame it reaches zero.
+        if (releaseCooldown > 0) {
+            releaseCooldown--;
+            if (releaseCooldown > 0) {
+                return;
+            }
+        }
+
+        // ROM loc_14542: proximity test -> sub_1459E re-parents Sonic and the
+        // carry resumes (Flying_carrying_Sonic_flag set again), playing sfx_Grab.
+        if (canRegrabLeaderInPickupRange()) {
+            pickupLeaderForCarry();
+            playGrabSfx();
+            flyingCarryingFlag = true;
+            carryParentagePending = true;
+        }
+    }
+
+    /** ROM loc_14542: {@code moveq #sfx_Grab,d0 / jsr Play_SFX} on a successful regrab. */
+    private void playGrabSfx() {
+        AudioManager audioManager = sidekick.currentAudioManager();
+        if (audioManager != null) {
+            audioManager.playSfx(GameSound.GRAB);
         }
     }
 
@@ -1969,7 +2037,7 @@ public class SidekickCpuController {
         }
     }
 
-    private boolean canMgzRegrabLeader() {
+    private boolean canRegrabLeaderInPickupRange() {
         int dxWindow = signedWord(leader.getCentreX() - sidekick.getCentreX() + 0x10);
         if (dxWindow < 0 || dxWindow >= 0x20) {
             return false;
@@ -2415,6 +2483,22 @@ public class SidekickCpuController {
             state = State.CARRYING;
             sidekick.setAir(true);
             sidekick.setDoubleJumpProperty((byte) 0xF0);
+        } else if (transientCarrySidekick) {
+            // ROM Tails_Carry_Sonic jump-out / external-velocity / hurt release
+            // (loc_1445A/loc_14460/loc_14466) clears Flying_carrying_Sonic_flag and
+            // sets the cooldown byte but leaves Tails in routine $E. Tails keeps
+            // flying and runs the loc_14534 cooldown/regrab loop
+            // (updateTransientReleasedCarry) until Sonic lands -> routine $10
+            // fly-off, or returns to pickup range -> regrab. The throwaway carrier
+            // never enters the NORMAL follow AI. (The landing branch in
+            // updateCarrying overrides this with enterCarryFlyoff(), matching
+            // loc_14016's direct $10 transition when Sonic touches down.)
+            flyingCarryingFlag = false;
+            carryParentagePending = false;
+            state = State.CARRYING;
+            sidekick.setAir(true);
+            sidekick.setDoubleJumpProperty((byte) 0xF0);
+            sidekick.setForcedAnimationId(flyAnimId);
         } else {
             state = State.NORMAL;
             normalFrameCount = 0;
@@ -2435,14 +2519,21 @@ public class SidekickCpuController {
         despawnCounter = 0;
         normalFrameCount = 0;
         jumpingFlag = false;
+        flyingCarryingFlag = false;
+        carryParentagePending = false;
+        // ROM routine $10 (loc_1408A) does NOT object-control Tails or write its
+        // position; Tails stays FLYING (double_jump_flag persists from the carry)
+        // with the flight timer (double_jump_property) topped up, and normal
+        // Tails_FlyingSwimming physics moves it — driven by the synthetic Ctrl_2
+        // pulses injected in updateCarryFlyoff(). Mirror the carry's flight state
+        // (setControlLocked(false), no object-control) so the flyaway runs at
+        // flight pace instead of a fixed per-frame position step.
         sidekick.setAir(true);
-        sidekick.setXSpeed((short) 0);
-        sidekick.setYSpeed((short) 0);
-        sidekick.setGSpeed((short) 0);
+        sidekick.setDoubleJumpFlag(1);
         sidekick.setDoubleJumpProperty((byte) 0xF0);
+        sidekick.setControlLocked(false);
         sidekick.setForcedAnimationId(flyAnimId);
-        sidekick.setControlLocked(true);
-        ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
+        ObjectControlState.none().applyTo(sidekick);
     }
 
     /**
@@ -2455,15 +2546,24 @@ public class SidekickCpuController {
      * and removes the temporary sprite when it leaves the camera.
      */
     private void updateCarryFlyoff() {
+        // ROM loc_1408A (sonic3k.asm:26953-26972): each frame clear Ctrl_2_logical
+        // and top up the flight timer; then every 16 frames (andi.b #$F) pulse
+        // A/B/C + Right into Ctrl_2 so Tails flaps up and drifts right through the
+        // normal Tails_FlyingSwimming flight physics. There is no direct position
+        // write — the old fixed +6px/-4px-per-frame step made the carrier shoot
+        // off far faster than the ROM's flight-paced bob.
         sidekick.setAir(true);
         sidekick.setForcedAnimationId(flyAnimId);
         sidekick.setDoubleJumpProperty((byte) 0xF0);
 
-        int newX = (sidekick.getCentreX() & 0xFFFF) + CARRY_FLYOFF_X_STEP;
-        int newY = (sidekick.getCentreY() & 0xFFFF) - CARRY_FLYOFF_Y_STEP;
-        sidekick.setCentreXPreserveSubpixel((short) newX);
-        sidekick.setCentreYPreserveSubpixel((short) newY);
+        if ((frameCounter & 0xF) == 0) {
+            inputJump = true;        // A/B/C — flight flap (upward thrust)
+            inputJumpPress = true;
+            inputRight = true;       // drift right
+        }
 
+        // ROM loc_140AC: once render_flags reports the carrier off-screen, clear
+        // its object pointer (delete the slot).
         boolean onScreen = sidekick.hasRenderFlagOnScreenState()
                 ? sidekick.isRenderFlagOnScreen()
                 : isCurrentlyVisible();

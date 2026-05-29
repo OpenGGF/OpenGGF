@@ -1402,7 +1402,16 @@ public final class RewindCodecs {
         RewindIdentityTable identityTable = context.requireIdentityTable();
         PlayerRefId id = identityTable.encodePlayer(player);
         if (id == null) {
-            throw new IllegalStateException("RewindIdentityTable has no registered id for player reference " + player + ".");
+            // The rewind identity space is team-slot based (main player + the
+            // current sidekicks). A reference to a player that is NOT in the active
+            // team is a dangling reference to a sprite that has left the team —
+            // e.g. a throwaway carry-in / rescue Tails (transientCarrySidekick) that
+            // flew off-screen and was removed while an object still held a touch /
+            // solid-contact reference to it. Such a player cannot be represented in
+            // a keyframe (no slot) and could not be resolved on restore anyway, so
+            // encode it as a null reference rather than failing the capture. The
+            // matching read path (readPlayerRef) decodes nullRef back to null.
+            return PlayerRefId.nullRef();
         }
         return id;
     }

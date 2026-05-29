@@ -4,6 +4,24 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **Fixed the CNZ1 solo-Sonic carry-in Tails: it now actually carries, flies off correctly, and survives rewind.**
+  Four issues, all root-caused against `sonic3k.asm`:
+  (1) *Sonic dropped from the sky.* The throwaway carrier was spawned in `Sonic3kCNZEvents.init()`
+  (the `initLevelEvents` load step), which the immediately-following `spawnSidekicks` step deleted
+  via `removeTemporarySidekicks()`. Moved the spawn to `applyZonePlayerState()` (the ROM
+  `SpawnLevelMainSprites loc_68D8` location, which runs after sidekick placement in every load path).
+  (2) *Fly-off shot off at extreme speed.* `updateCarryFlyoff` advanced position by a fixed +6px/-4px
+  per frame; ROM routine `$10` (`loc_1408A`) pulses A/B/C+Right every 16 frames and lets normal
+  `Tails_FlyingSwimming` physics carry it off at flight pace. Now mirrors the ROM.
+  (3) *Jumping off left Tails following with full AI.* Jump-off/latch/hurt releases routed the
+  throwaway carrier to `NORMAL`; ROM keeps it in routine `$E`'s `loc_14534` cooldown/regrab loop
+  (re-grabbing Sonic in pickup range, playing `sfx_Grab`) until he lands → routine `$10` fly-off,
+  never follow AI. Modelled faithfully. The `Tails_Carry_Sonic` A/B/C jump-out itself is ROM-accurate.
+  (4) *Rewind keyframe capture crashed* (`RewindIdentityTable has no registered id for player reference`)
+  once the carrier flew off while an object it had touched still referenced it. A captured reference to
+  a player outside the team-slot rewind space is now encoded as a null/dangling reference instead of
+  throwing (general fix for any removable/temporary player).
+
 - **Repaired nine guard/functional test failures from the recent S3K CNZ/ICZ/AIZ bring-up.**
   All root-caused without zone/route/frame carve-outs: restored the slide-launch roll
   animation (`ScriptedVelocityAnimationProfile` now gates the airborne external-force
