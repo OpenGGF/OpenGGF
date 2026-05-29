@@ -15,6 +15,7 @@
 - `src/main/java/com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java` — restore `$200` wrap; add `isBattleshipForestLoopActive()`, `getForestLoopBgWrapPeriod()`, `getForestLoopBgOrigin()`; remove `$80` constant.
 - `src/main/java/com/openggf/game/sonic3k/runtime/AizZoneRuntimeState.java` — delegate the three new signals (mirrors existing delegations).
 - `src/main/java/com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java` — add a narrow AIZ clause to `bgWrapsHorizontally()` (mirror `isCnzBossBackgroundWindowActive`).
+- `src/main/java/com/openggf/game/sonic3k/scroll/SwScrlAiz.java` — override `getBgCameraX()` to publish a camera-derived BG window X during the forest loop (mirror `SwScrlMgz`'s `lastBgCameraX`); without this the window base never updates and the normalization is dead.
 - `src/main/java/com/openggf/level/LevelTilemapManager.java` — extract a pure query-offset helper and use the origin-anchored modulo when the AIZ forest loop is active.
 - `src/main/java/com/openggf/level/LevelManager.java` — set `currentBgPeriodWidth` to the loop period during the loop (in `applyBackgroundTilemapWindowSelection`).
 - `src/test/java/com/openggf/tests/TestS3kAiz2SidekickBoundsSync.java` — reinstate exact `0x44C0` wrap assertion.
@@ -31,12 +32,12 @@ This task produces three concrete values that later tasks encode, and decides wh
 - Temporary instrumentation only (reverted before commit): `Sonic3kAIZEvents.java`, `LevelTilemapManager.java`.
 - Findings note: append to the design spec or a scratch note.
 
-- [ ] **Step 1: Add temporary logging across a wrap frame.** In `Sonic3kAIZEvents.updateBattleshipAutoScroll` (around line 1625, the wrap branch) and in `LevelTilemapManager` (around line 365, where `bgXQueryOffset` is computed), add temporary `LOG.info` lines printing `getBgCameraX()`, `bgTilemapBaseX`, `bgXQueryOffset`, `currentBgPeriodWidth`, `bgContiguousWidthPx`, `battleshipSmoothScrollX`, and the sampled source `mapX`.
+- [ ] **Step 1: Add temporary instrumentation (logging + a throwaway window override).** AIZ does not publish a BG window X today (`SwScrlAiz` does not override `getBgCameraX()`, so `ParallaxManager.getBgCameraX()` is the default `Integer.MIN_VALUE` and `bgTilemapBaseX` stays 0). To *observe* the intended jumping-window behavior in this spike, temporarily add a `SwScrlAiz.getBgCameraX()` override returning the camera X during the loop (this is the same override Task 4 will add permanently; here it is throwaway). Then add temporary `LOG.info` lines in `Sonic3kAIZEvents.updateBattleshipAutoScroll` (around line 1625, the wrap branch) and in `LevelTilemapManager` (around line 365, where `bgXQueryOffset` is computed) printing `getBgCameraX()`, `bgTilemapBaseX`, `bgXQueryOffset`, `currentBgPeriodWidth`, `bgContiguousWidthPx`, `battleshipSmoothScrollX`, and the sampled source `mapX`.
 
-- [ ] **Step 2: Drive a headless AIZ2 post-bombing run.** Reuse the `HeadlessTestFixture` AIZ2 setup from `TestS3kAiz2SidekickBoundsSync`. Force the post-bombing state (`onBattleshipComplete()` so `battleshipWrapX == 0x46C0`), then step frames through at least one `$200` wrap with the *current* `$80` build, and capture the log.
+- [ ] **Step 2: Drive a headless AIZ2 post-bombing run.** Reuse the `HeadlessTestFixture` AIZ2 setup from `TestS3kAiz2SidekickBoundsSync`. Force the post-bombing state with the side-effect-free setters (`setBattleshipAutoScrollActiveRaw(true)` + `setBattleshipWrapX(0x46C0)`), then step frames through at least one `$200` wrap with the *current* `$80` build, and capture the log.
 
 Run: `mvn -Dmse=off "-Dsurefire.forkCount=1" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.TestS3kAiz2SidekickBoundsSync" test "-DfailIfNoTests=false"`
-Expected: log shows `bgTilemapBaseX` jumping by the wrap distance while `battleshipSmoothScrollX` stays continuous (confirms the window/deform phase break).
+Expected: with the throwaway override present, the log shows `bgTilemapBaseX` jumping by the wrap distance while `battleshipSmoothScrollX` stays continuous (confirms the window must be camera-derived and the source-query normalization is what keeps it seamless). This validates the window source for Task 4's permanent override.
 
 - [ ] **Step 3: Determine PERIOD and ORIGIN.** Inspect the AIZ2 level-2 (BG) map data for the forest region: find the horizontal repeat period of the forest strip in source-layout pixels (`FOREST_LOOP_BG_PERIOD`, expected `0x200`) and the source-X at which that repeat begins (`FOREST_LOOP_BG_ORIGIN`). Cross-check against the ROM Plane B forest fill. Record both literal values in the findings note.
 
@@ -352,7 +353,20 @@ Expected: FAIL — `bgWrapsHorizontally()` returns false for AIZ during the loop
 
 Add imports if missing: `com.openggf.game.sonic3k.runtime.AizZoneRuntimeState` (S3kRuntimeStates is already imported for the CNZ clause).
 
-- [ ] **Step 4: Verify the full-width path does not suppress the loop wrap.** Per the Task 1 findings, confirm `zoneRuntimeRequiresFullWidthBgTilemap()` does not return true during the post-bombing loop (it covers the AIZ intro). If it would, add the loop-phase exclusion here. Add an assertion to the test that during the loop the BG build path actually takes `bgWrap == true` — extend Step 1's test:
+- [ ] **Step 4: Publish a camera-derived BG window X from `SwScrlAiz`.** `bgWrapsHorizontally() == true` alone does nothing: `LevelManager.applyBackgroundTilemapWindowSelection()` only updates `bgTilemapBaseX` when `getBgCameraX() != Integer.MIN_VALUE`, and `SwScrlAiz` (extends `AbstractZoneScrollHandler`) does not override it, so it stays `Integer.MIN_VALUE` and the window/normalization never engage. Add an override mirroring `SwScrlMgz` (which returns a maintained `lastBgCameraX`). In `SwScrlAiz.java`, add a field and set it in the per-frame scroll/deform method: when `aizState != null && aizState.isBattleshipForestLoopActive()`, set `lastBgCameraX = cameraX` (camera-derived, so it jumps by `$200` on renormalization — confirmed the correct source in Task 1); otherwise set `lastBgCameraX = Integer.MIN_VALUE`. Then:
+
+```java
+    private int lastBgCameraX = Integer.MIN_VALUE;
+
+    @Override
+    public int getBgCameraX() {
+        return lastBgCameraX;
+    }
+```
+
+This keeps the window source decision inside the AIZ scroll handler (the owning boundary). The continuous per-line deform still uses `getBattleshipSmoothScrollX()`; the source-query normalization (Task 5) reconciles the jumping window with it.
+
+- [ ] **Step 5: Verify the full-width path does not suppress the loop wrap.** Per the Task 1 findings, confirm `zoneRuntimeRequiresFullWidthBgTilemap()` does not return true during the post-bombing loop (it covers the AIZ intro). If it would, add the loop-phase exclusion here. Add an assertion to the test that during the loop the BG build path actually takes `bgWrap == true` — extend Step 1's test:
 
 ```java
         // The wrapped path must be reachable: a tilemap rebuild during the loop
@@ -364,22 +378,24 @@ Add imports if missing: `com.openggf.game.sonic3k.runtime.AizZoneRuntimeState` (
 
 If `backgroundTilemapForcedFullWidthForTest()` does not exist, add a small package-visible test accessor on `LevelManager` that returns whether the last BG build used the full-width path (derived from `zoneRuntimeRequiresFullWidthBgTilemap()`), rather than asserting on private state.
 
-- [ ] **Step 5: Run the test to verify it passes.**
+- [ ] **Step 6: Run the test to verify it passes.**
 
 Run: `mvn -Dmse=off "-Dsurefire.forkCount=1" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.game.sonic3k.TestSonic3kAizBgWrapActivation" test "-DfailIfNoTests=false"`
 Expected: PASS.
 
-- [ ] **Step 6: Commit.**
+- [ ] **Step 7: Commit.**
 
 ```bash
-git add src/main/java/com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java src/test/java/com/openggf/game/sonic3k/TestSonic3kAizBgWrapActivation.java
+git add src/main/java/com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java src/main/java/com/openggf/game/sonic3k/scroll/SwScrlAiz.java src/test/java/com/openggf/game/sonic3k/TestSonic3kAizBgWrapActivation.java
 # include LevelManager.java if a test accessor was added
 git commit -m "feat(s3k): enable wrapped-BG build path for AIZ2 forest loop
 
 Adds a narrow AIZ clause to bgWrapsHorizontally() (active only during
-isBattleshipForestLoopActive()), mirroring the CNZ-boss precedent, so the BG
-source-loop normalization is actually exercised. Verifies the AIZ intro
-full-width path does not suppress the loop wrap.
+isBattleshipForestLoopActive()), mirroring the CNZ-boss precedent, and a
+SwScrlAiz.getBgCameraX() override that publishes a camera-derived BG window X
+during the loop (mirroring SwScrlMgz) so bgTilemapBaseX actually updates.
+Without both, the BG source-loop normalization is dead code. Verifies the AIZ
+intro full-width path does not suppress the loop wrap.
 
 Changelog: n/a
 Guide: n/a
@@ -594,6 +610,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -625,14 +642,22 @@ class TestS3kAiz2ForestLoopSeam {
         GameServices.camera().setX((short) (0x46C0 - 0x10));
         GameServices.level().recomputeParallaxAfterRewindRestore();
         GameServices.level().ensureBackgroundTilemapData();
+        int baseBefore = GameServices.level().getTilemapManager().getBgTilemapBaseX();
         int[] before = GameServices.level().bgVisibleSourceColumnsForTest();
 
         // Renormalize the camera back by the ROM $200 (as AIZ2_DoShipLoop does).
         GameServices.camera().setX((short) (0x46C0 - 0x10 - 0x200));
         GameServices.level().recomputeParallaxAfterRewindRestore();
         GameServices.level().ensureBackgroundTilemapData();
+        int baseAfter = GameServices.level().getTilemapManager().getBgTilemapBaseX();
         int[] after = GameServices.level().bgVisibleSourceColumnsForTest();
 
+        // Guard against a false pass: the window base must actually move by $200
+        // (16px-aligned) — i.e. the window IS jumping with the camera renormalization,
+        // not stuck at a stale/default value that would make both samples trivially equal.
+        assertEquals(0x200, baseBefore - baseAfter,
+                "BG window base must jump by the ROM $200 across the wrap (proves the window is live, not stale)");
+        // ...while the normalized source columns the jumping window maps to stay identical.
         assertArrayEquals(before, after,
                 "Forest BG source columns must be identical across the $200 wrap (no seam)");
     }
