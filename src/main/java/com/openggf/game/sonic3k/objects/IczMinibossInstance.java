@@ -12,6 +12,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.TouchResponseProvider.TouchRegion;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -937,6 +938,20 @@ public final class IczMinibossInstance extends AbstractBossInstance {
             }
         }
         return regions;
+    }
+
+    /**
+     * The miniboss exposes multiple touch regions (body + orbs) via
+     * {@link #getMultiTouchRegions()}, so it declares its touch policy
+     * explicitly instead of relying on the implicit default. It uses the
+     * engine's standard multi-region enemy derivation — normal decode,
+     * standard-enemy kill bounce, main-full/sidekick-hurt-only actor context,
+     * and stop-after-first-overlap-for-main — matching the ROM's per-region
+     * hit handling for a body-plus-satellites boss.
+     */
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TouchResponseProfile.fromProvider(this, multiRegionSource);
     }
 
     private boolean isLiveBossRoutineActive() {

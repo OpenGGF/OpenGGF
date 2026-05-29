@@ -19,6 +19,7 @@ import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Regression for S3K CPU sidekick bounds during dynamic camera resize.
@@ -104,9 +105,16 @@ public class TestS3kAiz2SidekickBoundsSync {
 
         events.updatePrePhysics(ACT_2);
 
-        assertEquals(0x44C0, fixture.camera().getMaxX() & 0xFFFF,
-                "AIZ2_DoShipLoop wraps Camera_max_X_pos before Process_Sprites");
-        assertEquals(0x44C0, controller.getMaxXBound(Integer.MIN_VALUE) & 0xFFFF,
+        // AIZ2_DoShipLoop advances Camera_X by 4 to the wrap boundary (0x46C0) and
+        // wraps it back before Process_Sprites, so the post-wrap camera max X must
+        // drop below that boundary. The exact wrap distance is a documented visual
+        // approximation while the ROM HInt screen split is unmodeled
+        // (Sonic3kAIZEvents.BATTLESHIP_WRAP_DIST_POST_BOMBING), so this regression
+        // asserts the boundary *sync*, not a fixed wrap value.
+        int wrappedCameraMaxX = fixture.camera().getMaxX() & 0xFFFF;
+        assertTrue(wrappedCameraMaxX < 0x46C0,
+                "AIZ2_DoShipLoop must wrap Camera_max_X_pos back before Process_Sprites");
+        assertEquals(wrappedCameraMaxX, controller.getMaxXBound(Integer.MIN_VALUE) & 0xFFFF,
                 "S3K sidekick boundary mirror must be refreshed immediately after the pre-physics camera wrap");
     }
 

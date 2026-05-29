@@ -348,9 +348,12 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
         if (cnz != null && (cnz.isMinibossArenaLocked()
                 || (services().camera().getX() & 0xFFFF) >= 0x3000)) {
             if (!cnz.isMinibossStartReleased()) {
-                if (state.routine == ROUTINE_INIT) {
-                    updateInit();
-                }
+                // ROM Obj_CNZMiniboss stays fully dormant during the camera-lock
+                // approach and the Obj_Wait 2-second delay (sonic3k.asm:144824-144840):
+                // it renders nothing and does NOT set up the boss sprite until
+                // Obj_CNZMinibossGo installs Obj_CNZMinibossStart after the wait.
+                // Running updateInit() here made the boss appear (and start lowering)
+                // before Sonic entered the arena and before the BG scroll began.
                 pendingStartReleaseHandoff = true;
                 diagnosticSkippedStartGate = true;
                 return;
@@ -1591,7 +1594,7 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (state.defeated) {
+        if (state.defeated || isDormantBeforeStart()) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.CNZ_MINIBOSS);
@@ -1599,6 +1602,22 @@ public final class CnzMinibossInstance extends AbstractBossInstance {
             return;
         }
         renderer.drawFrameIndex(mappingFrame, state.x, state.y, false, false);
+    }
+
+    /**
+     * True while the boss is still in the ROM {@code Obj_CNZMiniboss}/{@code Obj_Wait}
+     * dormant phase: the placed object exists but has not yet been triggered by the
+     * camera reaching the arena ({@code $31E0}) and the 2-second wait completing
+     * (minibossStartReleased). In that phase the ROM draws nothing
+     * (sonic3k.asm:144823-144840), so neither should we. Once {@link #updateInit()}
+     * runs (routine advances past INIT, children spawned) the boss is visible.
+     */
+    private boolean isDormantBeforeStart() {
+        if (state.routine != ROUTINE_INIT || childrenSpawned) {
+            return false;
+        }
+        Sonic3kCNZEvents cnz = getCnzEvents();
+        return cnz != null && !cnz.isMinibossStartReleased();
     }
 
     @Override

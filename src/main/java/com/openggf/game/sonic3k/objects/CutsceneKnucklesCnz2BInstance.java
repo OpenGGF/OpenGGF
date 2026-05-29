@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 
 import java.util.List;
 
@@ -196,7 +197,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance {
         }
 
         if (player != null) {
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.clearForcedInputMask();
         }
         S3kCnzEventWriteSupport.beginKnucklesTeleporterRoute(services());

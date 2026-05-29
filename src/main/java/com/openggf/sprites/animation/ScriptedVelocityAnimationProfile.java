@@ -135,7 +135,10 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             // the air by an external force. S3K CNZ hover fans clear those bits
             // but leave Status_Roll alone, so the object-written walk animation
             // must persist instead of resolving back to roll.
-            if (!sprite.isJumping() && !sprite.getRollingJump()) {
+            // Exception: a slide launch (status_secondary.sliding) keeps the player
+            // in id_Roll on the way up — jumping off a water slide carries the roll
+            // animation into the air even though jump/roll-jump are clear.
+            if (!sprite.isJumping() && !sprite.getRollingJump() && !sprite.isSliding()) {
                 return null;
             }
             // ROM: rolling/jump state writes AniIDSonAni_Roll directly. A non-zero

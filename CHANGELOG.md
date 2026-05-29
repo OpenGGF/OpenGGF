@@ -4,6 +4,48 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **Fixed the CNZ1 solo-Sonic carry-in Tails: it now actually carries, flies off correctly, and survives rewind.**
+  Four issues, all root-caused against `sonic3k.asm`:
+  (1) *Sonic dropped from the sky.* The throwaway carrier was spawned in `Sonic3kCNZEvents.init()`
+  (the `initLevelEvents` load step), which the immediately-following `spawnSidekicks` step deleted
+  via `removeTemporarySidekicks()`. Moved the spawn to `applyZonePlayerState()` (the ROM
+  `SpawnLevelMainSprites loc_68D8` location, which runs after sidekick placement in every load path).
+  (2) *Fly-off shot off at extreme speed.* `updateCarryFlyoff` advanced position by a fixed +6px/-4px
+  per frame; ROM routine `$10` (`loc_1408A`) pulses A/B/C+Right every 16 frames and lets normal
+  `Tails_FlyingSwimming` physics carry it off at flight pace. Now mirrors the ROM.
+  (3) *Jumping off left Tails following with full AI.* Jump-off/latch/hurt releases routed the
+  throwaway carrier to `NORMAL`; ROM keeps it in routine `$E`'s `loc_14534` cooldown/regrab loop
+  (re-grabbing Sonic in pickup range, playing `sfx_Grab`) until he lands → routine `$10` fly-off,
+  never follow AI. Modelled faithfully. The `Tails_Carry_Sonic` A/B/C jump-out itself is ROM-accurate.
+  (4) *Rewind keyframe capture crashed* (`RewindIdentityTable has no registered id for player reference`)
+  once the carrier flew off while an object it had touched still referenced it. A captured reference to
+  a player outside the team-slot rewind space is now encoded as a null/dangling reference instead of
+  throwing (general fix for any removable/temporary player).
+
+- **Repaired nine guard/functional test failures from the recent S3K CNZ/ICZ/AIZ bring-up.**
+  All root-caused without zone/route/frame carve-outs: restored the slide-launch roll
+  animation (`ScriptedVelocityAnimationProfile` now gates the airborne external-force
+  null on `!isSliding()`, so a water-slide jump keeps `id_Roll` while the CNZ hover-fan
+  walk animation still persists); registered the CNZ/ICZ miniboss
+  `defeatExplosionController` fields in the central `DefaultObjectRewindPolicies` map
+  (`DEFERRED`, matching every sibling boss) and baselined two ICZ structural-parent
+  `@RewindTransient` pointers; refactored three object-physics-standardization
+  violations to the standard contracts (`ObjectControlState.none()`, explicit
+  `IczMiniboss.getTouchResponseProfile`, `ObjectPlayerQuery` for native P2); moved the
+  throwaway carry-in Tails despawn out of `SidekickCpuController` (no more
+  `GameServices`) into a post-update sweep in `SpriteManager`; extended the ArchUnit
+  freeze store for the established `LiveRewindManager` audio and `ObjectManager`
+  CNZ-miniboss rewind-recreation patterns; and corrected the CNZ miniboss headless
+  tests to ROM-accurate dormancy timing (`Obj_CNZMiniboss`/`Obj_Wait`,
+  `sonic3k.asm:144823-144895`). Verified trace-neutral against the committed AIZ/CNZ/MGZ
+  trace frontiers.
+
+- **Solo Sonic is now carried into Carnival Night Zone Act 1 by a throwaway Tails.**
+  Matching the ROM (`SpawnLevelMainSprites` `loc_68D8`), a temporary Tails carries
+  a sidekick-less Sonic into CNZ1; after dropping him on landing it flies up and to
+  the right and removes itself once off-screen (Tails CPU routine `$10`), instead of
+  following him. The persistent Sonic+Tails carry path is unchanged.
+
 - fix(trace): TraceBinder now dedupes per-frame comparison results by frame number (TreeMap keyed by frame) instead of appending to an unbounded list. Fixes a memory balloon in test-mode held rewind where each SegmentCache rebuild re-compared already-compared frames and appended duplicate FrameComparison entries (and their full FieldComparison maps) to TraceBinder.allComparisons. Memory now bounded by trace length.
 
 - perf(rewind): pool capture scratch buffers and add CompositeSnapshot.owned() ownership path for the registry hot path; reduces per-frame allocations in rewind.capture / rewind.step / rewind.restore without weakening the public CompositeSnapshot immutability contract.

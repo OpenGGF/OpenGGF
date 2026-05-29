@@ -1507,6 +1507,25 @@ public class Sonic3kConstants {
     // before Frame_362F00, so the table base is 44 bytes earlier at 0x362ED4.
     public static final int MAP_CNZ_MINIBOSS_ADDR = 0x362ED4;
 
+    // ===== CNZ Act 2 lights-off / water flash (loc_62480) =====
+    /**
+     * Pal_CNZFlash (Levels/CNZ/Palettes/Flash.bin) — 128 bytes = two 64-byte
+     * flash variants. Variant A at +0, variant B at +0x40. Each variant is two
+     * VDP palette lines (32 bytes -> engine palette index 2 "Normal_palette_line_3",
+     * next 32 bytes -> engine palette index 3 "Normal_palette_line_4").
+     *
+     * <p>S&amp;K-side match at 0x66932; the 0x28C7B4 sibling is the S3 half and
+     * must not be referenced from the engine.
+     */
+    public static final int PAL_CNZ_FLASH_ADDR = 0x66932;
+    public static final int PAL_CNZ_FLASH_SIZE = 128;
+    /**
+     * Pal_CNZ (Levels/CNZ/Palettes/Main.bin), S&amp;K-side at 0xA8FBC (96 bytes).
+     * loc_62480's restore branch copies {@code Pal_CNZ+$20} (64 bytes) back into
+     * Normal_palette_line_3 to turn the lights back on.
+     */
+    public static final int PAL_CNZ_ADDR = 0xA8FBC;
+
     // ===== ICZ Miniboss (Object 0xBC) =====
     // ROM: Obj_ICZMiniboss loads PLC $5F (sonic3k.asm:149653).
     // PLC_5F loads ArtNem_ICZMiniboss to ArtTile_ICZMiniboss.

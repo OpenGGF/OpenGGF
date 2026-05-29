@@ -66,7 +66,7 @@ class TestS3kCnzMinibossHeadless {
     }
 
     @Test
-    void arenaEntryInitializesBossAndTopBeforeReleaseWait() {
+    void arenaEntryKeepsBossDormantUntilReleaseWaitCompletes() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 0)
                 .build();
@@ -78,10 +78,15 @@ class TestS3kCnzMinibossHeadless {
         Optional<CnzMinibossInstance> boss = findBoss();
         assertTrue(boss.isPresent(),
                 "CNZ miniboss instance must exist as soon as the arena entry gate locks the camera");
-        assertEquals(2, boss.get().getCurrentRoutine(),
-                "Obj_CNZMinibossInit must run before the event release gate parks the fight start");
-        assertTrue(activeObjects().stream().anyMatch(CnzMinibossTopInstance.class::isInstance),
-                "Obj_CNZMinibossInit must create the visible spinning top child before release wait ends");
+        // ROM Obj_CNZMiniboss (sonic3k.asm:144823-144895) locks the arena at
+        // Camera_X_pos >= $31E0, fades the music and runs a 2-second Obj_Wait, but
+        // does NOT set up the sprite or create the top child until the wait elapses
+        // and Obj_CNZMinibossGo -> Obj_CNZMinibossStart -> Obj_CNZMinibossInit fires.
+        // One frame past the trigger the boss must therefore still be dormant.
+        assertEquals(0, boss.get().getCurrentRoutine(),
+                "Obj_CNZMinibossInit must NOT run until the 2-second Obj_Wait release completes");
+        assertFalse(activeObjects().stream().anyMatch(CnzMinibossTopInstance.class::isInstance),
+                "The spinning top child is only created by Obj_CNZMinibossInit after the release wait");
     }
 
     @Test
@@ -91,7 +96,14 @@ class TestS3kCnzMinibossHeadless {
                 .build();
         GameServices.camera().setX((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X);
         GameServices.camera().setY((short) Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_Y);
-        fixture.stepFrame(false, false, false, false, false);
+        // Run past the 2-second Obj_Wait release so Obj_CNZMinibossInit has created
+        // the dynamic spinning top child (ROM sonic3k.asm:144885-144895) before we
+        // exercise the rewind capture/restore recreation path.
+        for (int i = 0; i < 123; i++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertTrue(activeObjects().stream().anyMatch(CnzMinibossTopInstance.class::isInstance),
+                "Precondition: the spinning top child should exist once the fight has started");
 
         ObjectManager objectManager = GameServices.level().getObjectManager();
         var rewind = objectManager.rewindSnapshottable();

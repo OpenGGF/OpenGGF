@@ -34,6 +34,10 @@ public class LevelTilemapManager {
     // The background tilemap wraps at this width for Sonic 2's redraw-style pipeline.
     static final int VDP_BG_PLANE_WIDTH_PX = 512;
     private static final int VDP_BG_PLANE_HEIGHT_TILES = 32; // VDP 64x32 nametable
+    // Height of a fixed BG loop band (in pixels), matching the VDP plane B height.
+    // S3K CNZ1BGE_Boss fills Plane B with $10 (16) chunks = 256px and loops that band
+    // via the VDP vertical scroll register (docs/skdisasm/sonic3k.asm:107498-107507).
+    static final int BG_LOOP_BAND_HEIGHT_PX = VDP_BG_PLANE_HEIGHT_TILES * Pattern.PATTERN_HEIGHT;
 
     // --- Dependencies ---
     private LevelGeometry geometry;
@@ -49,6 +53,11 @@ public class LevelTilemapManager {
     // X offset (in pixels, 512-aligned) for BG tilemap building.
     // Wide BG maps (> 512px) need tiles from the correct region, not always from position 0.
     private int bgTilemapBaseX = 0;
+    // Base Y (in BG-layout pixels) for a fixed-height BG loop band, or -1 when the
+    // full BG height is built. S3K CNZ's miniboss (CNZ1BGE_Boss) sets this to $200
+    // so the boss-room BG loops only the 256px carnival band and never reaches the
+    // room floor below it.
+    private int bgLoopBandBaseY = -1;
     private int currentBgPeriodWidth = VDP_BG_PLANE_WIDTH_PX;
 
     // --- Foreground tilemap data ---
@@ -351,28 +360,40 @@ public class LevelTilemapManager {
         // so that large camera X positions map back to valid BG columns (not empty map regions).
         int bgXQueryOffset = 0;
         int bgContiguousWidthPx = geometry.bgContiguousWidthPx();
-        if (layerIndex == 1 && bgWrap && bgContiguousWidthPx > 0) {
+        if (layerIndex == 1 && bgWrap && bgLinearRowOverflow) {
+            bgXQueryOffset = bgTilemapBaseX;
+        } else if (layerIndex == 1 && bgWrap && bgContiguousWidthPx > 0) {
             bgXQueryOffset = ((bgTilemapBaseX % bgContiguousWidthPx) + bgContiguousWidthPx)
                     % bgContiguousWidthPx;
         }
 
+        // S3K CNZ miniboss (CNZ1BGE_Boss) loops a fixed 256px BG band drawn from layout
+        // Y=$200; the carnival tunnel repeats inside it while the room floor lives below.
+        // Build only that band (Y-anchored at bgLoopBandBaseY) so the looping scroll wraps
+        // inside it and never reaches the floor. Other layers/zones build the full height.
+        boolean bgLoopBand = layerIndex == 1 && bgWrap && bgLoopBandBaseY >= 0;
+        int bgYQueryOffset = bgLoopBand ? bgLoopBandBaseY : 0;
+        int builtHeight = bgLoopBand ? BG_LOOP_BAND_HEIGHT_PX : levelHeight;
+
         int widthTiles = levelWidth / Pattern.PATTERN_WIDTH;
-        int heightTiles = levelHeight / Pattern.PATTERN_HEIGHT;
+        int heightTiles = builtHeight / Pattern.PATTERN_HEIGHT;
         byte[] data = new byte[widthTiles * heightTiles * 4];
 
         int chunkWidth = LevelConstants.CHUNK_WIDTH;
         int chunkHeight = LevelConstants.CHUNK_HEIGHT;
 
-        for (int y = 0; y < levelHeight; y += chunkHeight) {
+        for (int y = 0; y < builtHeight; y += chunkHeight) {
             int chunkY = y / chunkHeight;
+            // queryY anchors the BG loop band at its base layout Y (0 for normal builds).
+            int queryY = y + bgYQueryOffset;
             for (int x = 0; x < levelWidth; x += chunkWidth) {
                 int chunkX = x / chunkWidth;
 
                 // Query the BG map at the offset position (wrapping handled by blockLookup)
                 int queryX = x + bgXQueryOffset;
                 Block block = bgLinearRowOverflow
-                        ? lookupBackgroundBlockWithLinearRowOverflow(level, queryX, y, blockPixelSize)
-                        : blockLookup.lookup(layerIndex, queryX, y);
+                        ? lookupBackgroundBlockWithLinearRowOverflow(level, queryX, queryY, blockPixelSize)
+                        : blockLookup.lookup(layerIndex, queryX, queryY);
                 if (block == null) {
                     writeEmptyChunk(data, widthTiles, heightTiles, chunkX, chunkY);
                     continue;
@@ -380,7 +401,7 @@ public class LevelTilemapManager {
 
                 // xBlockBit uses the query position to select the correct chunk within the block.
                 int xBlockBit = (queryX % blockPixelSize) / chunkWidth;
-                int yBlockBit = (y % blockPixelSize) / chunkHeight;
+                int yBlockBit = (queryY % blockPixelSize) / chunkHeight;
                 ChunkDesc chunkDesc = block.getChunkDesc(xBlockBit, yBlockBit);
                 int chunkIndex = chunkDesc.getChunkIndex();
 
@@ -889,6 +910,14 @@ public class LevelTilemapManager {
 
     public void setBgTilemapBaseX(int bgTilemapBaseX) {
         this.bgTilemapBaseX = bgTilemapBaseX;
+    }
+
+    public int getBgLoopBandBaseY() {
+        return bgLoopBandBaseY;
+    }
+
+    public void setBgLoopBandBaseY(int bgLoopBandBaseY) {
+        this.bgLoopBandBaseY = bgLoopBandBaseY;
     }
 
     public int getCurrentBgPeriodWidth() {

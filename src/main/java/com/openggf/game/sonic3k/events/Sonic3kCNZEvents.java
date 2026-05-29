@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.GameModule;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.mutation.MutationEffects;
@@ -16,10 +18,15 @@ import com.openggf.game.sonic3k.objects.S3kSignpostInstance;
 import com.openggf.level.Block;
 import com.openggf.level.ChunkDesc;
 import com.openggf.level.Level;
+import com.openggf.level.LevelManager;
 import com.openggf.level.SeamlessLevelTransitionRequest;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.Sprite;
+import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCarryTrigger;
+import com.openggf.sprites.playable.SidekickCpuController;
+import com.openggf.sprites.playable.Tails;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -53,6 +60,13 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     public static final int BG_FG_REFRESH_2 = 0x14;
     /** CNZ1_BackgroundEvent stage 24. */
     public static final int BG_DO_TRANSITION = 0x18;
+
+    /**
+     * BG-layout Y that {@code CNZ1BGE_Boss} fills Plane B from when looping the boss-room
+     * background ({@code move.w #$200,d1} at docs/skdisasm/sonic3k.asm:107504). The looping
+     * carnival tunnel band starts here; the room floor sits below it.
+     */
+    public static final int CNZ_BOSS_BG_LOOP_BAND_BASE_Y = 0x200;
 
     /** CNZ2_ScreenEvent stage 0. */
     public static final int FG_ACT2_ENTRY = 0x00;
@@ -175,6 +189,19 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     /** Bridge flag for the Act 1 water button helper. */
     private boolean waterButtonArmed;
 
+    /**
+     * Timed screen-shake countdown.
+     *
+     * <p>ROM: {@code Screen_shake_flag} written {@code #$14} by the CNZ cutscene
+     * button ({@code loc_65C78}) and the vacuum-tube button ({@code loc_65CAC}).
+     * Positive values drive the timed {@code ShakeScreen_Setup} countdown that
+     * indexes {@link #SCREEN_SHAKE_ARRAY}. Mirrors the AIZ implementation so the
+     * shake routes through the shared {@code ParallaxManager} -> {@code Camera}
+     * shake plumbing and the CNZ scroll handler.
+     */
+    private int screenShakeTimer;
+    private int screenShakeOffsetY;
+
     /** Boss ownership mirror used by later slices. */
     private boolean bossFlag;
 
@@ -211,6 +238,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     private int arenaClearHistoryCount;
     private int postBossFgRefreshRowsRemaining;
     private int postBossFgRefresh2RowsRemaining;
+    private boolean postBossForegroundVisualCopied;
     /**
      * Accumulated destroyed arena height in pixels.
      *
@@ -255,6 +283,8 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         wallGrabSuppressed = false;
         waterTargetY = 0;
         waterButtonArmed = false;
+        screenShakeTimer = 0;
+        screenShakeOffsetY = 0;
         bossFlag = false;
         bossFlagPrev = false;
         cameraStoredMaxXPos = 0;
@@ -282,12 +312,100 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         arenaClearHistoryCount = 0;
         postBossFgRefreshRowsRemaining = -1;
         postBossFgRefresh2RowsRemaining = -1;
+        postBossForegroundVisualCopied = false;
         destroyedArenaRows = 0;
         bossBackgroundMode = BossBackgroundMode.NORMAL;
+        // NOTE: the solo-Sonic carry-in Tails is NOT spawned here. init() runs in
+        // the engine's initLevelEvents load step, which is immediately followed by
+        // the spawnSidekicks step whose first action is
+        // SpriteManager.removeTemporarySidekicks() — that would delete the carrier
+        // before the first gameplay frame. The carrier is instead spawned from
+        // Sonic3kLevelEventManager.applyZonePlayerState() (the ROM
+        // SpawnLevelMainSprites loc_68D8 location, which runs AFTER sidekick
+        // placement). See spawnSoloLeaderCarryInTailsIfNeeded().
     }
+
+    /** Unique code for the throwaway CNZ1 carry-in Tails so it never collides
+     *  with a configured "tails_p2" sidekick slot. */
+    private static final String SOLO_CARRY_TAILS_CODE = "tails_cnz_carry";
+
+    /**
+     * ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8187-8197): at CNZ Act 1 the
+     * intro carry fires for both Sonic+Tails and solo Sonic. In the solo case
+     * (Player_mode==1) the ROM still writes {@code Obj_Tails} into the Player_2
+     * slot at Sonic's position so Tails carries him in; after the drop ROM
+     * loc_14068 routes that throwaway carrier to routine $10 (fly off + self-
+     * delete) rather than the normal follow AI.
+     *
+     * <p>The engine has no Tails sprite at all in solo mode, so we spawn a
+     * temporary one here — mirroring the MGZ2 boss-transition rescue Tails
+     * pattern ({@code Sonic3kMGZEvents.ensureBossTransitionTails}) — flagged
+     * {@link SidekickCpuController#setTransientCarrySidekick(boolean)} so the
+     * controller flies it off-screen and removes it once Sonic lands.
+     *
+     * <p><b>Call site:</b> invoked from
+     * {@code Sonic3kLevelEventManager.applyZonePlayerState()} (the engine's
+     * initZonePlayerState load step), NOT from {@link #init(int)}. The ROM spawns
+     * the throwaway Tails inside {@code SpawnLevelMainSprites} (loc_68D8), which
+     * runs after {@code SpawnLevelMainSprites_SpawnPlayers} has placed the
+     * sidekicks. The engine mirrors that: the spawnSidekicks load step (which
+     * begins with {@code SpriteManager.removeTemporarySidekicks()}) runs between
+     * initLevelEvents and initZonePlayerState, so spawning the temporary carrier
+     * during init() would let the very next step delete it before gameplay.
+     */
+    public void spawnSoloLeaderCarryInTailsIfNeeded(int act) {
+        if (act != 0 || playerCharacter() != PlayerCharacter.SONIC_ALONE) {
+            return;
+        }
+        GameModule gameModule = module();
+        if (gameModule == null) {
+            return;
+        }
+        SidekickCarryTrigger carryTrigger = gameModule.getSidekickCarryTrigger();
+        if (carryTrigger == null) {
+            return;
+        }
+        SpriteManager sprites = spriteManager();
+        AbstractPlayableSprite leader = camera().getFocusedSprite();
+        if (sprites == null || leader == null) {
+            return;
+        }
+        // Don't double-spawn if a sidekick already exists (configured team) or a
+        // prior carry-in Tails is still registered (e.g. seamless re-init).
+        if (!sprites.getRegisteredSidekicks().isEmpty()) {
+            return;
+        }
+        Tails carrier = new Tails(SOLO_CARRY_TAILS_CODE,
+                (short) Math.max(0, leader.getX() - 0x20),
+                (short) (leader.getY() + 4));
+        carrier.setCpuControlled(true);
+        carrier.setAir(true);
+        SidekickCpuController controller = new SidekickCpuController(carrier, leader);
+        controller.setCarryTrigger(carryTrigger);
+        controller.setTransientCarrySidekick(true);
+        carrier.setCpuController(controller);
+        sprites.addTemporarySidekick(carrier, "tails");
+
+        // The art-load step already ran (no Tails was in the team), so upload the
+        // carrier's sprite art now — same as the MGZ2 rescue Tails path.
+        LevelManager manager = levelManager();
+        if (manager != null) {
+            manager.refreshPlayableSpriteArt();
+        }
+    }
+
+    /**
+     * ROM: {@code ScreenShakeArray} — signed byte Y offsets indexed by the
+     * {@code Screen_shake_flag} countdown. Amplitude tapers from ±5 down to ±1
+     * as the timer runs out. Shared with the AIZ timed-shake pattern.
+     */
+    private static final int[] SCREEN_SHAKE_ARRAY = {
+            1, -1, 1, -1, 2, -2, 2, -2, 3, -3, 3, -3, 4, -4, 4, -4, 5, -5, 5, -5
+    };
 
     @Override
     public void update(int act, int frameCounter) {
+        tickScreenShake();
         if (act == 0) {
             updateAct1Bg(frameCounter);
             updateMinibossStartRelease();
@@ -361,13 +479,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
                 if (!minibossArenaLocked && camX >= Sonic3kConstants.CNZ_MINIBOSS_ARENA_MIN_X) {
                     enterMinibossArena();
                 }
-        if (eventsFg5) {
-            eventsFg5 = false;
-            bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
-            bgRoutine = BG_FG_REFRESH;
-            postBossFgRefreshRowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
-            LOG.info("CNZ: post-boss handoff entered");
-        }
+                if (eventsFg5) {
+                    enterPostBossForegroundRefresh();
+                    LOG.info("CNZ: post-boss handoff entered");
+                }
             }
             case ACT1_POST_BOSS -> handleAfterBossStage();
             case ACT2_KNUCKLES_TELEPORTER -> updateAct2Fg();
@@ -556,7 +671,12 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         if (!eventsFg5) {
             return;
         }
+        enterPostBossForegroundRefresh();
+    }
+
+    private void enterPostBossForegroundRefresh() {
         eventsFg5 = false;
+        bossBackgroundMode = BossBackgroundMode.ACT1_POST_BOSS;
         bgRoutine = BG_FG_REFRESH;
         // ROM loc_51D6E primes Draw_delayed_rowcount=$F and falls through to
         // CNZ1BGE_FGRefresh. The engine observes this handoff after object
@@ -580,6 +700,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
             return;
         }
         copyPostBossBackgroundLayoutToForeground();
+        clearPostBossBackgroundCollisionFlag();
         remapPostBossTunnelToForeground();
         postBossFgRefresh2RowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
         bgRoutine = BG_FG_REFRESH_2;
@@ -801,6 +922,7 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         this.bgRoutine = routine;
         if (routine == BG_FG_REFRESH) {
             this.postBossFgRefreshRowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
+            this.postBossForegroundVisualCopied = false;
         } else if (routine == BG_FG_REFRESH_2) {
             this.postBossFgRefresh2RowsRemaining = POST_BOSS_REFRESH_FRAME_ENTRY_REMAINDER;
         }
@@ -915,8 +1037,52 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         this.waterTargetY = waterTargetY;
     }
 
+    /**
+     * Seeds {@code Mean_water_level} directly so the flood appears at its new
+     * height immediately instead of easing up from the off-screen start.
+     *
+     * <p>ROM: {@code loc_65C78} writes {@code Mean_water_level = Camera_Y + $100}
+     * before {@code Target_water_level = $350}, so the water is already risen by
+     * the time the player walks into it.
+     */
+    public void setWaterMeanLevel(int meanY) {
+        waterSystem().setWaterLevelDirect(levelManager().getRomZoneId(),
+                levelManager().getCurrentAct(),
+                meanY);
+    }
+
     public boolean isWaterButtonArmed() {
         return waterButtonArmed;
+    }
+
+    /**
+     * ROM: {@code move.w #$14,(Screen_shake_flag).w} in {@code loc_65C78}.
+     * Starts the timed screen shake driven through {@link #tickScreenShake()}.
+     */
+    public void triggerScreenShake(int frames) {
+        screenShakeTimer = frames;
+    }
+
+    /**
+     * Current vertical shake offset. Read by {@link CnzZoneRuntimeState} so the
+     * CNZ scroll handler and the shared {@code ParallaxManager} -> {@code Camera}
+     * shake propagation move the foreground, sprites, and background in sync.
+     */
+    public int getScreenShakeOffsetY() {
+        return screenShakeOffsetY;
+    }
+
+    private void tickScreenShake() {
+        if (screenShakeTimer <= 0) {
+            screenShakeOffsetY = 0;
+            return;
+        }
+        screenShakeTimer--;
+        // ROM ShakeScreen_Setup (positive flag): index ScreenShakeArray by the
+        // remaining countdown so the amplitude tapers off.
+        screenShakeOffsetY = screenShakeTimer < SCREEN_SHAKE_ARRAY.length
+                ? SCREEN_SHAKE_ARRAY[screenShakeTimer]
+                : 0;
     }
 
     public void setWaterButtonArmed(boolean waterButtonArmed) {
@@ -1126,6 +1292,9 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
     }
 
     private void copyPostBossBackgroundLayoutToForeground() {
+        if (postBossForegroundVisualCopied) {
+            return;
+        }
         Level level = levelManager() != null ? levelManager().getCurrentLevel() : null;
         if (level == null || level.getMap() == null
                 || level.getMap().getLayerCount() <= POST_BOSS_COPY_SOURCE_LAYER
@@ -1143,6 +1312,10 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
             copyPostBossBackgroundLayoutToForeground(ctx.surface(), level);
             return MutationEffects.foregroundRedraw();
         }, context);
+        postBossForegroundVisualCopied = true;
+    }
+
+    private void clearPostBossBackgroundCollisionFlag() {
         if (gameStateOrNull() != null) {
             // ROM clears Background_collision_flag after copying BG layout bytes
             // into FG collision (sonic3k.asm:107556-107563).

@@ -7,6 +7,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Level;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
@@ -58,6 +60,13 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
     private boolean knucklesMusicStarted;
     private boolean facingRight;
     private boolean visible = true;
+    private CutsceneKnuxCnz2WallInstance blockingWall;
+
+    // ROM ChildObjDat_66560: the blocking wall child is placed at parentX-$20,
+    // parentY-$6C (docs/skdisasm/sonic3k.asm:134971, applied by CreateChild1_Normal
+    // at :176931-176942).
+    private static final int WALL_OFFSET_X = -0x20;
+    private static final int WALL_OFFSET_Y = -0x6C;
 
     private static volatile CutsceneKnucklesCnz2AInstance activeInstance;
 
@@ -85,11 +94,15 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
         return activeInstance;
     }
 
+    public CutsceneKnuxCnz2WallInstance getSpawnedWallForTest() {
+        return blockingWall;
+    }
+
     public static void clearActiveInstanceForTests() {
         activeInstance = null;
     }
 
-    static void setActiveInstanceForTests(CutsceneKnucklesCnz2AInstance instance) {
+    public static void setActiveInstanceForTests(CutsceneKnucklesCnz2AInstance instance) {
         activeInstance = instance;
     }
 
@@ -137,6 +150,14 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
         mappingFrame = 0x1E;
         animationTick = 0;
         animationIndex = 0;
+
+        // ROM loc_622E4: CreateChild1_Normal(ChildObjDat_66560) spawns the invisible
+        // SolidObjectFull2 wall (loc_62458) that blocks Sonic from running past
+        // Knuckles for the duration of the cutscene.
+        int wallX = getSpawn().x() + WALL_OFFSET_X;
+        int wallY = getSpawn().y() + WALL_OFFSET_Y;
+        blockingWall = spawnChild(() ->
+                new CutsceneKnuxCnz2WallInstance(buildSpawnAt(wallX, wallY), this));
     }
 
     private void routineCameraLock() {
@@ -221,7 +242,17 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
 
         S3kCnzEventWriteSupport.setWallGrabSuppressed(services(), false);
         restoreStoredCameraBounds();
+        // ROM loc_44D6E: lea (Pal_CNZ).l,a1; jsr (PalLoad_Line1).l — restore the
+        // zone palette into line 1 so rings/objects lose the Knuckles cutscene
+        // colors (otherwise line 1 keeps Pal_CutsceneKnux and rings look red).
+        restoreLevelPaletteLine1();
         services().playMusic(Sonic3kMusic.CNZ2.id);
+        if (blockingWall != null) {
+            // ROM loc_62458 deletes the wall child once the parent's destroyed
+            // status bit is set; mirror that immediately on cutscene completion.
+            blockingWall.setDestroyed(true);
+            blockingWall = null;
+        }
         activeInstance = null;
         setDestroyed(true);
     }
@@ -249,6 +280,27 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
                 camera.setMinX((short) cameraX);
             }
         }
+    }
+
+    /**
+     * Restores palette line 1 to the level's own palette after the cutscene.
+     *
+     * <p>{@code AizIntroArtLoader.applyKnucklesPalette} overwrote only the GPU
+     * texture for line 1 with {@code Pal_CutsceneKnux}; the level's
+     * {@code getPalette(1)} is untouched. Re-caching it restores the ring/object
+     * colors. ROM: {@code loc_44D6E} reloads {@code Pal_CNZ} via
+     * {@code PalLoad_Line1}.
+     */
+    private void restoreLevelPaletteLine1() {
+        GraphicsManager gm = services().graphicsManager();
+        if (gm == null || !gm.isGlInitialized()) {
+            return;
+        }
+        Level level = services().currentLevel();
+        if (level == null || level.getPaletteCount() <= 1) {
+            return;
+        }
+        gm.cachePaletteTexture(level.getPalette(1), 1);
     }
 
     private void restoreStoredCameraBounds() {

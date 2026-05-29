@@ -177,6 +177,22 @@ public class SpriteManager {
 	}
 
 	/**
+	 * Removes a single sidekick only if it was registered as a temporary
+	 * sidekick (via {@link #addTemporarySidekick}). No-op for permanently
+	 * registered sidekicks. Used by the CNZ1 solo-Sonic carry-in Tails, which
+	 * deletes its own throwaway carrier once it flies off-screen (ROM
+	 * {@code loc_140AC}, sonic3k.asm:26963-26969).
+	 *
+	 * @return true if the sprite was a temporary sidekick and was removed
+	 */
+	public boolean removeTemporarySidekick(AbstractPlayableSprite sprite) {
+		if (sprite == null || !temporarySidekicks.contains(sprite)) {
+			return false;
+		}
+		return removeSprite(sprite);
+	}
+
+	/**
 	 * Removes the Sprite with provided code from the SpriteManager. Returns
 	 * true if a Sprite was removed and false if none could be found.
 	 * 
@@ -455,8 +471,29 @@ public class SpriteManager {
 					activePlayableUpdate = null;
 				}
 			}
+			sweepFlyoffDespawnedTemporarySidekicks();
 		} finally {
 			endPlayableFrame();
+		}
+	}
+
+	/**
+	 * Removes throwaway carry-in sidekicks (e.g. the CNZ1 solo-Sonic Tails)
+	 * once their CPU controller has flown off-screen and flagged itself for
+	 * despawn (ROM {@code loc_140AC}, sonic3k.asm:26963-26969). Run after the
+	 * playable update loop so the roster is mutated outside iteration; the
+	 * controller only sets the flag and never reaches back into global services
+	 * to mutate the roster.
+	 */
+	private void sweepFlyoffDespawnedTemporarySidekicks() {
+		if (temporarySidekicks.isEmpty()) {
+			return;
+		}
+		for (AbstractPlayableSprite sidekick : new ArrayList<>(temporarySidekicks)) {
+			SidekickCpuController controller = sidekick.getCpuController();
+			if (controller != null && controller.isTransientFlyoffDespawned()) {
+				removeTemporarySidekick(sidekick);
+			}
 		}
 	}
 

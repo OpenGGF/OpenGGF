@@ -16,8 +16,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCutsceneKnucklesCnz2Instance {
@@ -54,24 +56,28 @@ class TestCutsceneKnucklesCnz2Instance {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_CNZ);
 
         ObjectInstance button = registry.create(new ObjectSpawn(
-                0x1CE0, 0x0214, Sonic3kObjectIds.CUTSCENE_BUTTON, 2, 0, false, 0));
+                0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_BUTTON, 4, 0, false, 0));
 
         assertInstanceOf(Cnz2CutsceneButtonInstance.class, button,
-                "Obj_CutsceneButton subtype $02 is the CNZ2 Knuckles cutscene trigger "
-                        + "(docs/skdisasm/sonic3k.asm:133916-133973), not the AIZ-only handler");
+                "Obj_CutsceneButton subtype $04 is the CNZ2 first-encounter button "
+                        + "(off_65C40[$04] -> loc_65C78, docs/skdisasm/sonic3k.asm:133916-133994); "
+                        + "the CNZ2 layout places it at X=$1E00 with subtype $04 "
+                        + "(Levels/CNZ/Object Pos/2.bin), not the AIZ-only handler");
     }
 
     @Test
     void cnzCutsceneButtonPressesWaterAndPaletteRoute_notLevelTriggerRoute() {
         RecordingCnzBridge bridge = new RecordingCnzBridge();
+        Camera buttonCamera = new Camera();
+        buttonCamera.setY((short) 0x0280);
         Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(new ObjectSpawn(
-                0x1D00, 0x027C, Sonic3kObjectIds.CUTSCENE_BUTTON, 2, 0, false, 0));
+                0x1D00, 0x027C, Sonic3kObjectIds.CUTSCENE_BUTTON, 4, 0, false, 0));
         button.setServices(new TestObjectServices() {
             @Override
             public LevelEventProvider levelEventProvider() {
                 return bridge;
             }
-        });
+        }.withCamera(buttonCamera));
         CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
                 new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
         CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(knuckles);
@@ -79,9 +85,17 @@ class TestCutsceneKnucklesCnz2Instance {
         button.update(0, null);
 
         assertEquals(0x0350, bridge.waterTargetY,
-                "Obj_CutsceneButton subtype $02 dispatches to loc_65C78: Target_water_level=$350 "
-                        + "and a CNZ palette flash, not loc_65C72's Level_trigger_array+8 branch");
+                "Obj_CutsceneButton subtype $04 dispatches to loc_65C78: Target_water_level=$350 "
+                        + "and a CNZ palette flash, not loc_65C72's Level_trigger_array+8 branch (subtype $02)");
         assertEquals(true, bridge.waterButtonArmed);
+        assertEquals(0x0280 + 0x100, bridge.waterMeanLevel,
+                "loc_65C78 seeds Mean_water_level = Camera_Y + $100 so the flood is already risen");
+        assertEquals(0x14, bridge.screenShakeFrames,
+                "loc_65C78 also writes Screen_shake_flag=$14");
+        assertNotNull(button.getSpawnedFlashForTest(),
+                "loc_65C78 spawns the loc_62480 lights-off flash child (subtype 0, no restore)");
+        assertFalse(button.getSpawnedFlashForTest().restoresAfterForTest(),
+                "the cutscene button's flash leaves the dark palette in place (lights stay off)");
     }
 
     @Test
@@ -108,6 +122,24 @@ class TestCutsceneKnucklesCnz2Instance {
                         + "Camera_X_pos reaching the target");
     }
 
+    @Test
+    void firstCnzCutsceneSpawnsBlockingWallAtRomChildOffset() {
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+
+        knuckles.update(0, null);
+
+        CutsceneKnuxCnz2WallInstance wall = knuckles.getSpawnedWallForTest();
+        assertNotNull(wall,
+                "CutsceneKnux_CNZ2A init creates ChildObjDat_66560 -> loc_62458, the invisible "
+                        + "SolidObjectFull2 wall that blocks Sonic (docs/skdisasm/sonic3k.asm:129076,129175,134968)");
+        assertEquals(0x1D00 - 0x20, wall.getX(),
+                "CreateChild1_Normal applies the ChildObjDat x offset -$20 (sonic3k.asm:134971,176931-176936)");
+        assertEquals(0x0280 - 0x6C, wall.getY(),
+                "CreateChild1_Normal applies the ChildObjDat y offset -$6C (sonic3k.asm:134971,176937-176942)");
+    }
+
     @AfterEach
     void tearDown() {
         CutsceneKnucklesCnz2AInstance.clearActiveInstanceForTests();
@@ -129,6 +161,8 @@ class TestCutsceneKnucklesCnz2Instance {
     private static final class RecordingCnzBridge implements LevelEventProvider, CnzObjectEventBridge {
         private boolean waterButtonArmed;
         private int waterTargetY;
+        private int waterMeanLevel;
+        private int screenShakeFrames;
 
         @Override public void initLevel(int zone, int act) {}
         @Override public void update() {}
@@ -143,6 +177,8 @@ class TestCutsceneKnucklesCnz2Instance {
         @Override public void setWaterButtonArmed(boolean value) { waterButtonArmed = value; }
         @Override public boolean isWaterButtonArmed() { return waterButtonArmed; }
         @Override public void setWaterTargetY(int targetY) { waterTargetY = targetY; }
+        @Override public void setWaterMeanLevel(int meanY) { waterMeanLevel = meanY; }
+        @Override public void triggerScreenShake(int frames) { screenShakeFrames = frames; }
         @Override public void beginKnucklesTeleporterRoute() {}
         @Override public void endKnucklesTeleporterRoute() {}
         @Override public void markTeleporterBeamSpawned() {}
