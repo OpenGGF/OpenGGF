@@ -1,27 +1,5 @@
 # Trace Frontier Log
 
-## 2026-05-29 - AIZ2 faithful $200 battleship wrap + forest-only BG loop
-
-- Scope: replaced the `$80` post-bombing wrap approximation with the ROM `$200`
-  camera/object wrap, and made the AIZ2 BG loop only the `$200` forest window
-  during the battleship loop (excluding the empty `$200-$400` BG filler). See
-  `docs/superpowers/specs/2026-05-29-aiz2-battleship-wrap-seam-design.md` (Rev 2)
-  and the plan of the same date.
-- `TestS3kAizTraceReplay#replayMatchesTrace`
-  (`mvn -Dmse=off "-Dsurefire.forkCount=1" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test`):
-  - **Frontier first-error frame unchanged: frame 8941** (`camera_y`
-    expected=`0x02C1` actual=`0x02B8`).
-  - **Error count improved 243 -> 32** (warnings 23 unchanged): restoring the ROM
-    `$200` wrap corrects camera/player/object coordinates through the battleship
-    section, eliminating most downstream mismatches. No new earlier mismatch was
-    introduced (acceptance criterion met).
-- Baseline before the change (same tree, pre-commit): frame 8941, 243 errors / 23
-  warnings.
-- Note: the on-screen seamlessness of the forest loop is validated only by the
-  headless BG-window guard (`TestSonic3kAizBgWrapActivation`: period `$200`,
-  forest-only columns, stable across the `$200` wrap); visual confirmation
-  (stable-retro AIZ2 reference vs engine) is a recommended follow-up.
-
 ## 2026-05-29 - Failing-test cleanup verified trace-neutral
 
 - Scope: fixed 9 failing non-trace test classes on committed `develop`
