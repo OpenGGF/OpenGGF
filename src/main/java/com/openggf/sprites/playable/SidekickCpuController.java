@@ -3402,6 +3402,12 @@ public class SidekickCpuController {
             return false;
         }
         return flyingCarryingFlag
+                // ROM routine $10 (loc_1408A) keeps the throwaway carrier in
+                // Tails_FlyingSwimming: the A/B/C flaps injected by
+                // updateCarryFlyoff drive the same Tails_Move_FlySwim ascent
+                // (applyFlyingCarryVerticalVelocity) as the carry, so it flies up
+                // instead of sinking under plain +0x08 flight gravity.
+                || state == State.CARRY_FLYOFF
                 || (state == State.CARRYING
                 && carryTrigger != null
                 && carryTrigger.usesMgzBossTransitionControl());
