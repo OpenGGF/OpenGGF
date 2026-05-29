@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
@@ -242,11 +243,12 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
         List<PlayableEntity> players = new ArrayList<>(2);
         ObjectServices services = tryServices();
         if (services != null) {
-            for (PlayableEntity sidekick : services.sidekicks()) {
-                if (sidekick != null && !sidekick.getDead()) {
-                    players.add(sidekick);
-                    break;
-                }
+            // Native P2 (sidekick) is processed before P1, matching the ROM's
+            // player loop order. Routed through the shared ObjectPlayerQuery
+            // contract instead of a raw services.sidekicks() iteration.
+            PlayableEntity nativeP2 = ObjectPlayerQuery.from(services).nativeP2OrNull();
+            if (nativeP2 != null && !nativeP2.getDead()) {
+                players.add(nativeP2);
             }
         }
         if (mainPlayer != null && !mainPlayer.getDead()) {

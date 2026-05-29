@@ -264,9 +264,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> new Sonic3kButtonObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.CUTSCENE_BUTTON,
                 (spawn, registry) -> {
-                    // ROM: Obj_CutsceneButton dispatches on subtype (0=AIZ2, 2=CNZ2, 4=HCZ2, 6=LBZ).
-                    // Route to zone-specific button implementations.
-                    if (currentRomZoneId() == Sonic3kZoneIds.ZONE_CNZ && spawn.subtype() == 2) {
+                    // ROM: Obj_CutsceneButton dispatches on subtype via off_65C40
+                    // (sonic3k.asm:133947): $00 -> loc_65C56, $02 -> loc_65C72,
+                    // $04 -> loc_65C78 (CNZ water/geyser/flash), $06 -> loc_65CAC
+                    // (CNZ vacuum tubes). The CNZ2 layout (Levels/CNZ/Object Pos/2.bin)
+                    // places the first-encounter button at X=$1E00 with subtype $04
+                    // and the second-encounter (vacuum-tube) button at X=$4780 with
+                    // subtype $06. Route the first-encounter water/flash button here.
+                    if (currentRomZoneId() == Sonic3kZoneIds.ZONE_CNZ && spawn.subtype() == 4) {
                         return new Cnz2CutsceneButtonInstance(spawn);
                     }
                     if (currentRomZoneId() == Sonic3kZoneIds.ZONE_HCZ) {

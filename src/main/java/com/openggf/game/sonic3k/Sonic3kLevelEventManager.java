@@ -399,6 +399,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 && getPlayerCharacter() == PlayerCharacter.SONIC_ALONE) {
             IczSnowboardIntroInstance.applyInitialPlayerLock(GameServices.camera().getFocusedSprite());
         }
+        // ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8187-8197): at CNZ Act 1
+        // a throwaway Player_2 Tails is spawned to carry solo Sonic in. This runs
+        // after the spawnSidekicks load step (which clears temporary sidekicks),
+        // so the carrier survives. The handler self-gates on act 0 + SONIC_ALONE.
+        if (currentZone == Sonic3kZoneIds.ZONE_CNZ && cnzEvents != null) {
+            cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
+        }
         // TODO: LRZ1 non-Knuckles, SSZ falling intros (same loc_68A6 path)
     }
 
@@ -515,6 +522,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public void triggerScreenShake(int frames) {
         if (aizEvents != null) {
             aizEvents.triggerScreenShake(frames);
+        }
+        if (cnzEvents != null) {
+            cnzEvents.triggerScreenShake(frames);
         }
     }
 
@@ -644,6 +654,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public void setWaterTargetY(int targetY) {
         if (cnzEvents != null) {
             cnzEvents.setWaterTargetY(targetY);
+        }
+    }
+
+    @Override
+    public void setWaterMeanLevel(int meanY) {
+        if (cnzEvents != null) {
+            cnzEvents.setWaterMeanLevel(meanY);
         }
     }
 

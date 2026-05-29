@@ -122,7 +122,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
     }
 
     private void tryLatchNormal(AbstractPlayableSprite player, RiderState state) {
-        if (player.isOnObject() && player.getLatchedSolidObjectId() != Sonic3kObjectIds.CNZ_BARBER_POLE) {
+        if (player.isOnObject() && !isLatchedToSameOrientationPole(player)) {
             return;
         }
 
@@ -144,7 +144,7 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
     }
 
     private void tryLatchMirrored(AbstractPlayableSprite player, RiderState state) {
-        if (player.isOnObject() && player.getLatchedSolidObjectId() != Sonic3kObjectIds.CNZ_BARBER_POLE) {
+        if (player.isOnObject() && !isLatchedToSameOrientationPole(player)) {
             return;
         }
 
@@ -165,8 +165,31 @@ public final class CnzBarberPoleObjectInstance extends AbstractObjectInstance {
         latch(player, state, track, inner, 0xE0);
     }
 
+    /**
+     * ROM {@code loc_33472} / {@code loc_336A0} reach the on-object re-latch
+     * store only after {@code movea.w interact(a1),a3; cmpi.l #loc_33376,(a3)}
+     * (normal) or {@code #loc_335A8} (mirrored) confirm the currently latched
+     * object is a pole sharing this pole's routine — i.e. the same orientation
+     * (docs/skdisasm/sonic3k.asm:69438-69440, 69649-69651). At a CNZ2 X
+     * crossing the two poles have opposite orientation, so neither steals the
+     * other's rider and the player passes through the crossing pole.
+     */
+    private boolean isLatchedToSameOrientationPole(AbstractPlayableSprite player) {
+        return player.getLatchedSolidObjectInstance() instanceof CnzBarberPoleObjectInstance pole
+                && pole.mirrored == this.mirrored;
+    }
+
     private boolean canLatch(AbstractPlayableSprite player) {
         if (player.isObjectControlled() || player.isHurt() || player.getDead()) {
+            return false;
+        }
+        if (player.isDebugMode()) {
+            /*
+             * ROM sub_33392 / sub_335C4 return at tst.w (Debug_placement_mode).w
+             * before storing any latch (docs/skdisasm/sonic3k.asm:69385-69386,
+             * 69597-69598): poles never grab a player while debug movement mode
+             * is active.
+             */
             return false;
         }
         return !player.getAir() || player.getYSpeed() >= 0;

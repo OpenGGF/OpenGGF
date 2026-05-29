@@ -209,6 +209,21 @@ public interface ZoneFeatureProvider {
     }
 
     /**
+     * Base Y (in BG-layout pixels) at which the background loops a fixed-height
+     * band instead of scrolling the full BG layout, or a negative value (default)
+     * when no loop band is active.
+     *
+     * <p>S3K CNZ's miniboss uses this for {@code CNZ1BGE_Boss}
+     * (docs/skdisasm/sonic3k.asm:107498-107507), which fills Plane B from layout
+     * Y={@code $200} for {@code $10} (16) chunks and loops that 256px band via the
+     * VDP vertical scroll. Anchoring/clamping the loop to that band keeps the
+     * room floor (which sits below the band) out of the looping scroll.
+     */
+    default int backgroundLoopBandBaseY(int zoneIndex, int actIndex) {
+        return -1;
+    }
+
+    /**
      * Whether the intro ocean phase is currently active (e.g. AIZ intro in S3K).
      * When active, the BG plane wraps at VDP width instead of full layout width.
      *

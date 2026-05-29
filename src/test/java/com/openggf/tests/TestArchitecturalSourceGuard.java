@@ -69,6 +69,11 @@ class TestArchitecturalSourceGuard {
             "com/openggf/game/sonic3k/objects/Aiz2BossEndSequenceController.java",
             "com/openggf/game/sonic3k/objects/AizEmeraldScatterInstance.java",
             "com/openggf/game/sonic3k/objects/AizHollowTreeObjectInstance.java",
+            // Cnz2CutsceneButtonInstance compares the cutscene Knuckles NPC's
+            // object position (knuckles.getX/getY) against the button's proximity
+            // box — object-to-object, not a player top-left hazard. Same pattern as
+            // the allowlisted Hcz2CutsceneButtonInstance / S3kCutsceneButtonObjectInstance.
+            "com/openggf/game/sonic3k/objects/Cnz2CutsceneButtonInstance.java",
             "com/openggf/game/sonic3k/objects/Hcz2CutsceneButtonInstance.java",
             "com/openggf/game/sonic3k/objects/HCZLargeFanObjectInstance.java",
             "com/openggf/game/sonic3k/objects/PachinkoFlipperObjectInstance.java",

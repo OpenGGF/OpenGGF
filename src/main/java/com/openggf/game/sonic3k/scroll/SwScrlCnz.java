@@ -56,10 +56,7 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
             return false;
         }
 
-        return switch (state.bossBackgroundMode()) {
-            case ACT1_MINIBOSS_PATH, ACT1_POST_BOSS -> true;
-            case NORMAL, ACT2_KNUCKLES_TELEPORTER -> false;
-        };
+        return state.bossBackgroundScrollActive();
     }
 
     private void writeBossScroll(int[] horizScrollBuf,
@@ -162,8 +159,20 @@ public class SwScrlCnz extends AbstractZoneScrollHandler {
         return GameServices.zoneRuntimeRegistry().currentAs(CnzZoneRuntimeState.class).orElse(null);
     }
 
+    /**
+     * CNZ vertical screen-shake offset (ROM {@code Screen_shake_flag}). Sourced
+     * from the CNZ event layer so it is in sync for the BG/FG scroll fold-in here
+     * and the {@code ParallaxManager} -> {@code Camera} propagation (which moves
+     * the foreground and sprites). The CNZ event {@code update()} ticks the shake
+     * before rendering each frame, so reading it twice in one frame is stable.
+     */
     private int resolveShakeOffsetY() {
-        Camera camera = GameServices.cameraOrNull();
-        return camera != null ? camera.getShakeOffsetY() : 0;
+        CnzZoneRuntimeState state = cnzRuntimeState();
+        return state != null ? state.screenShakeOffsetY() : 0;
+    }
+
+    @Override
+    public int getShakeOffsetY() {
+        return resolveShakeOffsetY();
     }
 }

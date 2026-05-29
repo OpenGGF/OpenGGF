@@ -53,7 +53,12 @@ class TestRewindArchitectureGuard {
     private static final Map<String, Integer> OBJECT_REWIND_ANNOTATION_BASELINE = Map.of(
             "src/main/java/com/openggf/level/objects/ShieldObjectInstance.java#@RewindTransient", 3,
             "src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java#@RewindTransient", 1,
-            "src/main/java/com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java#@RewindTransient", 1
+            "src/main/java/com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java#@RewindTransient", 1,
+            // Structural parent pointers on inner particle/support child classes: the parent
+            // reference is object-graph structure rebuilt when the parent re-spawns its
+            // children, not rewindable state. Same triage precedent as the entries above.
+            "src/main/java/com/openggf/game/sonic3k/objects/IczSnowPileObjectInstance.java#@RewindTransient", 1,
+            "src/main/java/com/openggf/game/sonic3k/objects/IczTensionPlatformObjectInstance.java#@RewindTransient", 1
     );
 
     private static final Set<String> REWIND_REGISTRY_PRODUCTION_ALLOWLIST = Set.of(

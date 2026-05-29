@@ -655,8 +655,10 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
     // ROM: AnPal_HCZ1 (sonic3k.asm line 3287), timer period 7
     // AnPal_PalHCZ1 → palette 2 colors 3-6 (Normal_palette_line_3+$06/$0A)
     //   counter0 & 0x18 for data index, counter0 += 8, wraps at 0x20 (cycles 0,8,16,24)
-    // Also writes to Water_palette_line_3+$06/$0A (underwater palette sync).
-    //   TODO: sync to underwater palette
+    // ROM also writes the SAME table to Water_palette_line_3+$06/$0A. Because the
+    // normal and water sources are identical (unlike CNZ's separate water tables),
+    // the cycle uses PaletteWrite.mirrorToUnderwater() to sync both surfaces.
+    // (Covered by TestS3kPaletteOwnershipRegistryIntegration#hczCycleMirrorsWaterColorsIntoUnderwaterPalette.)
     // HCZ1_Resize secondary behavior: checks camera position each tick and writes 3 colors
     //   to palette[3] colors 8-10 (Normal_palette_line_4+$10) for cave entry/exit lighting.
     private static class HczCycle extends PaletteCycle {

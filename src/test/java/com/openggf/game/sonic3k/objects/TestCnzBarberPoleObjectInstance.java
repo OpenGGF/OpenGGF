@@ -12,6 +12,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,7 +41,7 @@ class TestCnzBarberPoleObjectInstance {
         tails.setCentreY((short) 0x07B2);
         tails.setSubpixelRaw(0x8000, 0x8600);
         tails.setOnObject(true);
-        tails.setLatchedSolidObjectId(Sonic3kObjectIds.CNZ_BARBER_POLE);
+        tails.setLatchedSolidObject(Sonic3kObjectIds.CNZ_BARBER_POLE, pole);
         tails.setAir(false);
 
         pole.update(0x0638, tails);
@@ -68,7 +69,7 @@ class TestCnzBarberPoleObjectInstance {
         sonic.setCentreY((short) 0x07B2);
         sonic.setSubpixelRaw(0x8000, 0x0000);
         sonic.setOnObject(true);
-        sonic.setLatchedSolidObjectId(Sonic3kObjectIds.CNZ_BARBER_POLE);
+        sonic.setLatchedSolidObject(Sonic3kObjectIds.CNZ_BARBER_POLE, pole);
         sonic.setAir(false);
 
         pole.update(0, sonic);
@@ -86,6 +87,55 @@ class TestCnzBarberPoleObjectInstance {
         assertTrue(sonic.isOnObject());
         assertFalse(sonic.isHighPriority(),
                 "loc_33542 clears high_priority once Sonic moves onto the rear half of the pole");
+    }
+
+    @Test
+    void crossingPoleOfOppositeOrientationDoesNotStealRider() {
+        // ROM loc_33472 (sonic3k.asm:69439) checks cmpi.l #loc_33376,(a3): the
+        // normal-pole re-latch path only fires when interact(a1) is itself a
+        // normal pole. At a CNZ2 X crossing the other pole is mirrored
+        // (routine loc_335A8), so the normal pole must not steal the rider --
+        // Sonic passes through the crossing pole instead of being blocked.
+        CnzBarberPoleObjectInstance normalPole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0F70, 0x0810, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+        normalPole.setServices(new TestObjectServices());
+        CnzBarberPoleObjectInstance mirroredPole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0F70, 0x0810, Sonic3kObjectIds.CNZ_BARBER_POLE, 1, 0, false, 0));
+
+        TestPlayableSprite sonic = new TestPlayableSprite();
+        sonic.setHeight(30);
+        sonic.applyCustomRadii(9, 15);
+        sonic.setCentreX((short) 0x0F4B);
+        sonic.setCentreY((short) 0x07B2);
+        sonic.setSubpixelRaw(0x8000, 0x8600);
+        sonic.setOnObject(true);
+        sonic.setLatchedSolidObject(Sonic3kObjectIds.CNZ_BARBER_POLE, mirroredPole);
+        sonic.setAir(false);
+
+        normalPole.update(0x0638, sonic);
+
+        assertEquals(mirroredPole, sonic.getLatchedSolidObjectInstance(),
+                "the crossing mirrored pole's rider must not be re-latched by the normal pole");
+    }
+
+    @Test
+    void debugPlacementModeBlocksBarberPoleLatch() {
+        // ROM sub_33392 / sub_335C4 return at tst.w (Debug_placement_mode).w
+        // (sonic3k.asm:69385-69386, 69597-69598): poles never grab a player in
+        // debug movement mode.
+        CnzBarberPoleObjectInstance pole = new CnzBarberPoleObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, Sonic3kObjectIds.CNZ_BARBER_POLE, 0, 0, false, 0));
+        pole.setServices(new TestObjectServices());
+
+        TestPlayableSprite sonic = new TestPlayableSprite();
+        sonic.setCentreX((short) 0x0100);
+        sonic.setCentreY((short) 0x00C9);
+        sonic.setDebugMode(true);
+
+        pole.update(0, sonic);
+
+        assertFalse(sonic.isOnObject(), "debug placement mode must not latch the player to the pole");
+        assertNotEquals(Sonic3kObjectIds.CNZ_BARBER_POLE, sonic.getLatchedSolidObjectId());
     }
 
     @Test

@@ -23,9 +23,14 @@ public final class Sonic3kCnzCarryTrigger implements SidekickCarryTrigger {
 
     @Override
     public boolean shouldEnterCarry(int zoneId, int actId, PlayerCharacter playerMode) {
+        // ROM loc_13A32 reads only Current_zone_and_act; the carry intro fires for
+        // both Sonic+Tails (Player_mode 0) and solo Sonic (Player_mode 1). In the
+        // solo case SpawnLevelMainSprites loc_68D8 spawns a throwaway Player_2 Tails
+        // whose controller is flagged transient so it flies off after the drop.
         return zoneId == ZONE_CNZ
                 && actId == 0
-                && playerMode == PlayerCharacter.SONIC_AND_TAILS;
+                && (playerMode == PlayerCharacter.SONIC_AND_TAILS
+                        || playerMode == PlayerCharacter.SONIC_ALONE);
     }
 
     @Override

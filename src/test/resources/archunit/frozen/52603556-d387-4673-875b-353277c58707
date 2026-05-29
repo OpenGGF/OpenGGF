@@ -9,3 +9,5 @@ Method <com.openggf.game.rewind.LiveRewindManager.handleRealtimeRewindInput(com.
 Method <com.openggf.game.rewind.LiveRewindStepper.step(com.openggf.debug.playback.Bk2FrameInput)> calls method <com.openggf.game.GameServices.cameraOrNull()> in (LiveRewindStepper.java:27)
 Method <com.openggf.game.rewind.LiveRewindStepper.step(com.openggf.debug.playback.Bk2FrameInput)> calls method <com.openggf.game.GameServices.levelOrNull()> in (LiveRewindStepper.java:26)
 Method <com.openggf.game.rewind.LiveRewindStepper.step(com.openggf.debug.playback.Bk2FrameInput)> calls method <com.openggf.game.GameServices.spritesOrNull()> in (LiveRewindStepper.java:25)
+Method <com.openggf.game.rewind.LiveRewindManager.handleRealtimeRewindInput(com.openggf.game.GameMode, com.openggf.control.InputHandler)> calls method <com.openggf.game.GameServices.audio()> in (LiveRewindManager.java:61)
+Method <com.openggf.game.rewind.LiveRewindManager.handleRealtimeRewindInput(com.openggf.game.GameMode, com.openggf.control.InputHandler)> calls method <com.openggf.game.GameServices.audio()> in (LiveRewindManager.java:62)

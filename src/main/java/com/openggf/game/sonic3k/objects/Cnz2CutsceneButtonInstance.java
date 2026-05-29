@@ -28,10 +28,15 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance {
     private static final int RANGE_TOP = -0x18;
     private static final int RANGE_BOTTOM = 0x30;
     private static final int CNZ2_CUTSCENE_WATER_TARGET_Y = 0x0350;
+    /** ROM: {@code Mean_water_level = Camera_Y_pos + $100} in loc_65C78. */
+    private static final int CNZ2_CUTSCENE_WATER_MEAN_OFFSET = 0x0100;
+    /** ROM: {@code move.w #$14,(Screen_shake_flag).w} in loc_65C78. */
+    private static final int CNZ2_SCREEN_SHAKE_FRAMES = 0x14;
 
     private final int x;
     private final int y;
     private boolean pressed;
+    private CnzLightsFlashChildInstance spawnedFlash;
 
     public Cnz2CutsceneButtonInstance(ObjectSpawn spawn) {
         super(spawn, "CutsceneButtonCNZ2");
@@ -77,11 +82,36 @@ public final class Cnz2CutsceneButtonInstance extends AbstractObjectInstance {
         int dx = knuckles.getX() - x;
         int dy = knuckles.getY() - y;
         if (dx >= RANGE_LEFT && dx < RANGE_RIGHT && dy >= RANGE_TOP && dy < RANGE_BOTTOM) {
-            pressed = true;
-            S3kCnzEventWriteSupport.setWaterButtonArmed(services(), true);
-            S3kCnzEventWriteSupport.setWaterTargetY(services(), CNZ2_CUTSCENE_WATER_TARGET_Y);
-            services().playSfx(Sonic3kSfx.GEYSER.id);
+            press();
         }
+    }
+
+    /**
+     * ROM: {@code loc_65C78}. Sets the rising water target, arms the follow-up
+     * water-level button ({@code _unkFAA3}), plays {@code sfx_Geyser}, and spawns
+     * the lights-off palette flash child ({@code loc_62480}) with subtype 0 — so
+     * the dark variant stays in place and the lights remain off until the player
+     * presses the water-level button.
+     *
+     */
+    private void press() {
+        pressed = true;
+        // ROM loc_65C78: move.w #$14,(Screen_shake_flag).w
+        S3kCnzEventWriteSupport.triggerScreenShake(services(), CNZ2_SCREEN_SHAKE_FRAMES);
+        // ROM: Mean_water_level = Camera_Y_pos + $100 — seed the surface so the
+        // flood is already risen, then ease the target up to $350.
+        int meanY = (services().camera().getY() & 0xFFFF) + CNZ2_CUTSCENE_WATER_MEAN_OFFSET;
+        S3kCnzEventWriteSupport.setWaterMeanLevel(services(), meanY);
+        S3kCnzEventWriteSupport.setWaterButtonArmed(services(), true);
+        S3kCnzEventWriteSupport.setWaterTargetY(services(), CNZ2_CUTSCENE_WATER_TARGET_Y);
+        services().playSfx(Sonic3kSfx.GEYSER.id);
+        // ROM spawns the flash child with subtype 0 (no restore -> lights stay off).
+        spawnedFlash = spawnChild(() -> new CnzLightsFlashChildInstance(buildSpawnAt(x, y), false));
+    }
+
+    /** Test seam: the lights-off flash child spawned on press, or null. */
+    CnzLightsFlashChildInstance getSpawnedFlashForTest() {
+        return spawnedFlash;
     }
 
     @Override

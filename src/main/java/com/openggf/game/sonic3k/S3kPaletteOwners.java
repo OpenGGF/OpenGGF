@@ -50,11 +50,30 @@ public final class S3kPaletteOwners {
      * a CNZ-local side channel.
      */
     public static final String CNZ_TELEPORTER = "s3k.cnz.teleporter";
+    /**
+     * Owner ID for the CNZ Act 2 lights-off / water flash effect.
+     *
+     * <p>ROM: {@code loc_62480} writes {@code Pal_CNZFlash} into
+     * {@code Normal_palette_line_3} (engine palette lines 2 and 3) across six
+     * flicker steps. The cutscene button leaves the dark variant in place
+     * (lights off); the water-level button restores {@code Pal_CNZ+$20} (lights
+     * on). The write uses {@link #PRIORITY_LIGHTS_FLASH}, below the zone cycle,
+     * because ROM runs {@code AnimatePalettes} after object updates, so the CNZ
+     * bumper/background color cycling (colors 7-11) still wins over the flash —
+     * the bumpers keep glowing while the rest of the line goes dark.
+     */
+    public static final String CNZ_LIGHTS_FLASH = "s3k.cnz.lightsFlash";
 
     public static final String HPZ_ZONE_CYCLE = "s3k.hpz.zoneCycle";
     public static final String HPZ_MASTER_EMERALD = "s3k.hpz.masterEmerald";
     public static final String HPZ_PALETTE_CONTROL = "s3k.hpz.paletteControl";
 
+    /**
+     * Below {@link #PRIORITY_ZONE_CYCLE} so the CNZ AnPal color cycling (applied
+     * after object updates in ROM) still wins on its colors. See
+     * {@link #CNZ_LIGHTS_FLASH}.
+     */
+    public static final int PRIORITY_LIGHTS_FLASH = 90;
     public static final int PRIORITY_ZONE_CYCLE = 100;
     public static final int PRIORITY_ZONE_EVENT = 150;
     public static final int PRIORITY_OBJECT_OVERRIDE = 200;
