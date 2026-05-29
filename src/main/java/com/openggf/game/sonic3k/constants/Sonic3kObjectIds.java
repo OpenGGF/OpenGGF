@@ -161,6 +161,8 @@ public final class Sonic3kObjectIds {
     public static final int ICZ_ICE_BLOCK = 0xBB;
     // S3KL object table: Obj_ICZMiniboss.
     public static final int ICZ_MINIBOSS = 0xBC;
+    // S3KL object table: Obj_ICZEndBoss.
+    public static final int ICZ_END_BOSS = 0xBD;
     public static final int TUNNELBOT = 0x9E;
     public static final int HCZ_MINIBOSS = 0x99;
     public static final int HCZ_END_BOSS = 0x9A;

@@ -551,10 +551,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         // to the pre-boss area (ROM: loc_694D4 uses Obj_IncLevEndXGradual).
         var cam = services().camera();
         cam.setFrozen(false);
+        boolean iczAct2EndBossHandoff = zone == 0x05 && act == 1;
         if (!aizAct1MinibossTitleHandoff && !Aiz2BossEndSequenceState.isCutsceneOverrideObjectsActive()) {
             var level = services().currentLevel();
             if (level != null) {
-                cam.setMinX((short) level.getMinX());
+                if (!iczAct2EndBossHandoff) {
+                    cam.setMinX((short) level.getMinX());
+                }
                 cam.setMaxX((short) level.getMaxX());
                 cam.setMinY((short) level.getMinY());
                 cam.setMaxY((short) level.getMaxY());

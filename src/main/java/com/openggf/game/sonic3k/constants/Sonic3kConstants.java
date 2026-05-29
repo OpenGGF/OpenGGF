@@ -1519,6 +1519,17 @@ public class Sonic3kConstants {
     // so the table base is 0x363362 - 0x1E = 0x363344.
     public static final int MAP_ICZ_MINIBOSS_ADDR = 0x363344;
 
+    // ===== ICZ End Boss (Object 0xBD) =====
+    // ROM: Obj_ICZEndBoss loads PLC $70 (sonic3k.asm:150580).
+    // PLC_70 loads ArtNem_ICZEndBoss to ArtTile_ICZEndBoss plus shared assets.
+    public static final int PLC_ICZ_END_BOSS = 0x70;
+    // Pal_ICZEndBoss - loaded through PalLoad_Line1 after the PLC request.
+    // The 32-byte palette binclude immediately precedes byte_723D0.
+    public static final int PAL_ICZ_END_BOSS_ADDR = 0x0723B0;
+    // Map_ICZEndBoss - include file has 25 dc.w entries before Frame_362CE6,
+    // so the table base is 0x362CE6 - 0x32 = 0x362CB4.
+    public static final int MAP_ICZ_END_BOSS_ADDR = 0x362CB4;
+
     // =====================================================================
     // CNZ Act 1 miniboss state machine
     // ROM refs (all sonic3k.asm, S&K-side):

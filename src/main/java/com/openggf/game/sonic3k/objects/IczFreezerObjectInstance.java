@@ -394,7 +394,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
         private int breakTimer = BREAK_TIMER;
         private boolean landedOnTerrain;
 
-        private FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int parentX, boolean hFlip) {
+        public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int parentX, boolean hFlip) {
             super(new ObjectSpawn(capturedPlayer.getCentreX(), capturedPlayer.getCentreY(),
                     OBJECT_ID, 0, hFlip ? 1 : 0, false, capturedPlayer.getCentreY()), "ICZFreezerFrozenPlayer");
             this.capturedPlayer = capturedPlayer;

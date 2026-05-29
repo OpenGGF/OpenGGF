@@ -164,6 +164,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         } else if (zoneIndex == 0x05) {
             loadSharedBossExplosionArt();
             loadIczMinibossArtFromPlc();
+            loadIczEndBossArtFromPlc();
         }
 
         // Level-art sheets are registered later via registerLevelArtSheets()
@@ -1283,6 +1284,45 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                     + decompressed.get(0).length + " tiles");
         } catch (IOException e) {
             LOG.warning("Failed to load ICZ miniboss art from PLC: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Loads ICZ end-boss art via PLC 0x70, matching {@code Obj_ICZEndBoss}.
+     */
+    private void loadIczEndBossArtFromPlc() {
+        try {
+            Rom rom = GameServices.rom().getRom();
+            if (rom == null) return;
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            PlcDefinition plc = Sonic3kPlcLoader.parsePlc(rom, Sonic3kConstants.PLC_ICZ_END_BOSS);
+            List<Pattern[]> decompressed = PlcParser.decompressAll(rom, plc);
+            if (decompressed.isEmpty() || decompressed.get(0).length == 0) {
+                LOG.warning("ICZ end boss PLC produced no art");
+                return;
+            }
+
+            registerSheet(Sonic3kObjectArtKeys.ICZ_END_BOSS,
+                    buildSheetFromPatterns(decompressed.get(0), reader,
+                            Sonic3kConstants.MAP_ICZ_END_BOSS_ADDR, 1));
+
+            if (decompressed.size() >= 2 && decompressed.get(1).length > 0
+                    && sheets.get(Sonic3kObjectArtKeys.ROBOTNIK_SHIP) == null) {
+                registerSheet(Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                        buildSheetFromPatterns(decompressed.get(1), reader,
+                                Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0));
+            }
+
+            if (decompressed.size() >= 3 && decompressed.get(2).length > 0
+                    && sheets.get(ObjectArtKeys.BOSS_EXPLOSION) == null) {
+                registerSheet(ObjectArtKeys.BOSS_EXPLOSION,
+                        buildSheetFromPatterns(decompressed.get(2), reader,
+                                Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, 0));
+            }
+            LOG.info("Loaded ICZ end boss art via PLC 0x70: "
+                    + decompressed.get(0).length + " tiles");
+        } catch (IOException e) {
+            LOG.warning("Failed to load ICZ end boss art from PLC: " + e.getMessage());
         }
     }
 

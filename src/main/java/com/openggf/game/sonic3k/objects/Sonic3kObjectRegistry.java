@@ -23,6 +23,7 @@ import com.openggf.game.sonic3k.objects.badniks.SparkleBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.StarPointerBadnikInstance;
 import com.openggf.game.sonic3k.objects.bosses.CnzEndBossInstance;
 import com.openggf.game.sonic3k.objects.bosses.HczEndBossInstance;
+import com.openggf.game.sonic3k.objects.bosses.IczEndBossInstance;
 import com.openggf.level.objects.AbstractObjectRegistry;
 import com.openggf.level.objects.ObjectSlotLayout;
 import com.openggf.level.objects.PlaceholderObjectInstance;
@@ -842,6 +843,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }
                     return new IczMinibossInstance(spawn);
+                });
+        factories.put(Sonic3kObjectIds.ICZ_END_BOSS,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new IczEndBossInstance(spawn);
                 });
         factories.put(Sonic3kObjectIds.MGZ_MINIBOSS,
                 (spawn, registry) -> {
