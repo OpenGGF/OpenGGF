@@ -443,12 +443,23 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance implements 
 
         private void breakOpen(int frameCounter) {
             if (capturedPlayer != null) {
-                capturedPlayer.applyHurt(getX(), DamageCause.SPIKE);
+                applyBreakDamage(frameCounter);
                 capturedPlayer.releaseFromObjectControl(frameCounter);
                 capturedPlayer.setInvulnerableFrames(POST_BREAK_INVULNERABILITY);
             }
             spawnDebris();
             setDestroyed(true);
+        }
+
+        private void applyBreakDamage(int frameCounter) {
+            boolean hadRings = capturedPlayer.getRingCount() > 0;
+            if (hadRings && !capturedPlayer.hasShield() && !capturedPlayer.suppressesLostRingSpawnOnHurt()) {
+                ObjectServices services = tryServices();
+                if (services != null) {
+                    services.spawnLostRings(capturedPlayer, frameCounter);
+                }
+            }
+            capturedPlayer.applyHurtOrDeath(getX(), DamageCause.SPIKE, hadRings);
         }
 
         private void spawnDebris() {

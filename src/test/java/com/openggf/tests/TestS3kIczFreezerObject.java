@@ -4,6 +4,8 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplaySessionFactory;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.LevelGamestate;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -117,12 +119,15 @@ class TestS3kIczFreezerObject {
 
     @Test
     void captureCloudFreezesPlayerThenBlockReleasesWithHurtAndInvulnerability() {
+        installLevelGamestate();
+
         RecordingServices services = new RecordingServices();
         IczFreezerObjectInstance freezer = createFreezer(services,
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
         freezer.setServices(services);
 
         TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0204, (short) 0x0134);
+        player.setRingCount(10);
         IczFreezerObjectInstance.CaptureCloud cloud =
                 freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
         cloud.setServices(services);
@@ -149,6 +154,38 @@ class TestS3kIczFreezerObject {
         assertEquals(120, player.getInvulnerableFrames());
         assertTrue(block.isDestroyed());
         assertEquals(12, block.debrisSpawnedForTesting());
+    }
+
+    @Test
+    void frozenPlayerBlockReleaseSpendsRingsThroughLostRingPathWhenShieldless() {
+        installLevelGamestate();
+
+        RecordingServices services = new RecordingServices();
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0204, (short) 0x0134);
+        player.setRingCount(10);
+        IczFreezerObjectInstance.CaptureCloud cloud =
+                freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
+        cloud.setServices(services);
+
+        for (int frame = 0; frame <= 32; frame++) {
+            cloud.update(frame, player);
+        }
+
+        IczFreezerObjectInstance.FrozenPlayerBlock block = cloud.frozenBlockForTesting();
+        block.setServices(services);
+        for (int frame = 32; frame <= 160; frame++) {
+            block.update(frame, player);
+        }
+
+        assertTrue(player.isHurt(), "Freeze break damage should put shieldless Sonic into hurt state");
+        assertEquals(0, player.getRingCount(),
+                "Freeze break damage should spend rings like ordinary touch damage");
+        assertEquals(List.of(160), services.lostRingSpawnFrames,
+                "Freeze break damage should spawn lost rings before applying hurt");
     }
 
     @Test
@@ -353,6 +390,17 @@ class TestS3kIczFreezerObject {
                 mode.getSpriteManager(), levelManager);
     }
 
+    private static void installLevelGamestate() {
+        var mode = SessionManager.openGameplaySession(new Sonic3kGameModule());
+        GameplaySessionFactory.attachManagers(mode, EngineServices.current());
+        LevelGamestate levelState = new LevelGamestate();
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getLevelGamestate()).thenReturn(levelState);
+        mode.attachLevelManagers(mode.getWaterSystem(), mode.getParallaxManager(),
+                mode.getTerrainCollisionManager(), mode.getCollisionSystem(),
+                mode.getSpriteManager(), levelManager);
+    }
+
     private static byte[] filled(int value) {
         byte[] data = new byte[SolidTile.TILE_SIZE_IN_ROM];
         java.util.Arrays.fill(data, (byte) value);
@@ -374,6 +422,7 @@ class TestS3kIczFreezerObject {
 
     private static final class RecordingServices extends StubObjectServices {
         private final List<Integer> playedSfx = new ArrayList<>();
+        private final List<Integer> lostRingSpawnFrames = new ArrayList<>();
 
         private RecordingServices() {
             withPlayerQuery(new ObjectPlayerQuery(() -> null, List::of));
@@ -382,6 +431,14 @@ class TestS3kIczFreezerObject {
         @Override
         public void playSfx(int soundId) {
             playedSfx.add(soundId);
+        }
+
+        @Override
+        public void spawnLostRings(PlayableEntity player, int frameCounter) {
+            lostRingSpawnFrames.add(frameCounter);
+            if (player instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
+                sprite.setRingCount(0);
+            }
         }
     }
 
