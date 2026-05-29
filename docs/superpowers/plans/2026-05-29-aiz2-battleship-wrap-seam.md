@@ -139,6 +139,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```java
 package com.openggf.game.sonic3k.events;
 
+import com.openggf.game.sonic3k.Sonic3kLoadBootstrap;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -148,7 +149,7 @@ class TestSonic3kAizForestLoopSignals {
 
     @Test
     void forestLoopActiveOnlyDuringPostBombingAutoScroll() {
-        Sonic3kAIZEvents events = new Sonic3kAIZEvents();
+        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
 
         // Not active when auto-scroll is off.
         events.setBattleshipAutoScrollActiveRaw(false);
@@ -170,7 +171,7 @@ class TestSonic3kAizForestLoopSignals {
 
     @Test
     void forestLoopPeriodAndOriginAreExposed() {
-        Sonic3kAIZEvents events = new Sonic3kAIZEvents();
+        Sonic3kAIZEvents events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
         assertEquals(0x200, events.getForestLoopBgWrapPeriod(),
                 "Forest loop BG period is the ROM $200");
         // FOREST_LOOP_BG_ORIGIN literal comes from Task 1 findings.
@@ -266,6 +267,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 package com.openggf.game.sonic3k;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
@@ -294,8 +296,10 @@ class TestSonic3kAizBgWrapActivation {
                 (Sonic3kZoneFeatureProvider) GameServices.module().getZoneFeatureProvider();
         AizZoneRuntimeState aiz =
                 S3kRuntimeStates.currentAiz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        // getLevelEventProvider() returns the Sonic3kLevelEventManager; the AIZ
+        // handler is reached via getAizEvents().
         Sonic3kAIZEvents events =
-                (Sonic3kAIZEvents) GameServices.module().getLevelEventProvider();
+                ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getAizEvents();
 
         events.setBattleshipAutoScrollActiveRaw(false);
         assertFalse(provider.bgWrapsHorizontally(),
@@ -493,7 +497,7 @@ with:
         }
 ```
 
-- [ ] **Step 6: Add the provider hooks (default -1; AIZ loop returns period/origin).** In `ZoneFeatureProvider` interface, add default methods returning `-1`:
+- [ ] **Step 6: Add the provider hooks (default -1; AIZ loop returns period/origin).** In the `ZoneFeatureProvider` interface (`src/main/java/com/openggf/game/ZoneFeatureProvider.java`, package `com.openggf.game`, next to `backgroundLoopBandBaseY` at ~line 222), add default methods:
 
 ```java
     default int backgroundLoopSourcePeriod(int zoneIndex, int actIndex) { return -1; }
@@ -538,7 +542,7 @@ Expected: PASS.
 - [ ] **Step 9: Commit.**
 
 ```bash
-git add src/main/java/com/openggf/level/LevelTilemapManager.java src/main/java/com/openggf/level/LevelManager.java src/main/java/com/openggf/level/resources/ZoneFeatureProvider.java src/main/java/com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java src/test/java/com/openggf/level/TestForestLoopQueryOffset.java
+git add src/main/java/com/openggf/level/LevelTilemapManager.java src/main/java/com/openggf/level/LevelManager.java src/main/java/com/openggf/game/ZoneFeatureProvider.java src/main/java/com/openggf/game/sonic3k/Sonic3kZoneFeatureProvider.java src/test/java/com/openggf/level/TestForestLoopQueryOffset.java
 git commit -m "feat(s3k): origin-anchored BG source-loop normalization for AIZ2 forest
 
 Normalizes the BG source-layout query to an origin-anchored \$200 period during
@@ -557,7 +561,10 @@ Skills: n/a
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
 
-> Note: confirm the exact `ZoneFeatureProvider` interface file path during implementation (it lives under `com.openggf.level.resources`); adjust the `git add` path accordingly.
+> Note: `Sonic3kZoneFeatureProvider` implements the `ZoneFeatureProvider`
+> interface at `src/main/java/com/openggf/game/ZoneFeatureProvider.java` (package
+> `com.openggf.game`) — the same interface that already declares
+> `backgroundLoopBandBaseY`.
 
 ---
 
@@ -573,6 +580,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 package com.openggf.tests;
 
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.tests.rules.RequiresRom;
@@ -595,7 +603,7 @@ class TestS3kAiz2ForestLoopSeam {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 1)
                 .build();
         Sonic3kAIZEvents events =
-                (Sonic3kAIZEvents) GameServices.module().getLevelEventProvider();
+                ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getAizEvents();
 
         // Enter the post-bombing forest loop and place the camera just below the wrap boundary.
         events.onBattleshipComplete();          // wrapX -> $46C0
