@@ -1,7 +1,26 @@
 # AIZ2 Battleship Background Wrap Seam — Faithful Fix Design (Rev 2)
 
 **Date:** 2026-05-29
-**Status:** Design (revised after composition investigation; pending re-review)
+**Status:** IMPLEMENTED THEN REVERTED — failed visual validation. See "Outcome" below.
+
+> **Outcome (2026-05-29):** Rev 2 was implemented and reverted. Visual validation
+> (running the engine) showed the **static background forest loses elements during
+> the battleship/forest loop**. Root cause of the mis-fix: the empirical BG dump
+> read columns 4–7 (`$200–$400`) as "empty filler" because they hold only block
+> `0xbf` at one row — but `0xbf` is a **visible forest treeline band**, so the
+> forest BG actually spans the full `$400`, not the first `$200`. Looping at
+> `$200` (origin 0) therefore dropped the cols 4–7 forest band. The headless seam
+> guard could not catch this: it asserted the looped window was forest-*only*
+> (no filler), not forest-*complete* (no missing forest) — a near-tautology given
+> the normalization. **Lessons for any reattempt:** (1) the AIZ2 forest period is
+> not `$200`; do not treat sparse single-row blocks as filler — verify what each
+> block renders. (2) This is a visual fix; a headless guard that the chosen
+> mechanism satisfies by construction is not validation. Wire real visual
+> validation (stable-retro AIZ2 reference vs engine, the `s3k-zone-validate`
+> skill) before reattempting. The `$80` approximation + its
+> `S3K_KNOWN_DISCREPANCIES` entry were restored.
+
+**Original status:** Design (revised after composition investigation; pending re-review)
 **Scope:** S3K Angel Island Zone Act 2 (Flying Battery battleship auto-scroll → end-boss approach)
 
 > **Rev 2 note:** The original design (Rev 1) proposed making the BG tilemap
