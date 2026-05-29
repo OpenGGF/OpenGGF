@@ -39,12 +39,13 @@ public final class AizTransitionRenderFeature implements SpecialRenderEffect, Ad
     private boolean loggedFirstRender;
 
     public void onZoneInit(int zoneIndex, int actIndex) {
-        // No-op; zone/act are read from LevelManager during render.
+        if (zoneIndex != Sonic3kZoneIds.ZONE_AIZ || actIndex == 0) {
+            fireCurtainRenderer.reset();
+        }
     }
 
     public void reset() {
         loggedFirstRender = false;
-        fireCurtainRenderer.reset();
     }
 
     public boolean shouldEnableForegroundHeatHaze(int zoneIndex, int actIndex, int cameraX) {
