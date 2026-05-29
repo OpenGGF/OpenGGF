@@ -1167,17 +1167,18 @@ public final class Sonic3kPlcArtRegistry {
                 null
         ));
 
-        // Gray cutscene/water-level button: ArtTile_GrayButton, palette 0.
+        // Gray cutscene/water-level button: ArtNem_GrayButton, palette 0.
         // ROM: Obj_CutsceneButton and Obj_CNZWaterLevelButton both use
-        // ObjDat_CutsceneButton (make_art_tile(ArtTile_GrayButton,0,1)) and load
-        // PLC_CutsceneButton, so CNZ Act 2 needs the gray button art for the
-        // first-encounter cutscene button and the follow-up water button.
-        levelArt.add(new LevelArtEntry(
+        // ObjDat_CutsceneButton and load PLC_CutsceneButton, so this is
+        // standalone PLC art rather than CNZ level art at ArtTile_GrayButton.
+        standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.BUTTON,
-                Sonic3kConstants.MAP_BUTTON_ADDR,
-                Sonic3kConstants.ARTTILE_GRAY_BUTTON,
+                Sonic3kConstants.ART_NEM_GRAY_BUTTON_ADDR,
+                CompressionType.NEMESIS,
                 0,
-                null
+                Sonic3kConstants.MAP_BUTTON_ADDR,
+                0,
+                -1
         ));
 
         // Bumper: ArtTile_CNZMisc + $13, palette 2.

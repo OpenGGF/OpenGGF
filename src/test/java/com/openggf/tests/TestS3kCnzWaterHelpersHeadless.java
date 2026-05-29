@@ -56,6 +56,7 @@ class TestS3kCnzWaterHelpersHeadless {
         // Place the cutscene Knuckles on top of the button so the proximity box hits.
         CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
                 new ObjectSpawn(0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.forceButtonImpactForTest();
         CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(knuckles);
 
         Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(
