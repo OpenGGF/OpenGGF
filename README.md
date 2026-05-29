@@ -163,6 +163,8 @@ The latest develop sync repairs CNZ1 solo carry-in Tails, CNZ barber-pole
 handoff, CNZ2 cutscene water/lights/wall behavior, water splash dust routing,
 and documents the reverted AIZ2 battleship wrap-seam attempt and follow-up
 lessons.
+This merge keeps the local HCZ/ICZ branch line synchronized with those develop
+updates while preserving the reverted AIZ2 wrap behavior.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?
