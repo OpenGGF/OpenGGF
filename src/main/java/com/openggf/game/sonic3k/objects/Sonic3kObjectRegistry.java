@@ -270,8 +270,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     // (CNZ vacuum tubes). The CNZ2 layout (Levels/CNZ/Object Pos/2.bin)
                     // places the first-encounter button at X=$1E00 with subtype $04
                     // and the second-encounter (vacuum-tube) button at X=$4780 with
-                    // subtype $06. Route the first-encounter water/flash button here.
-                    if (currentRomZoneId() == Sonic3kZoneIds.ZONE_CNZ && spawn.subtype() == 4) {
+                    // subtype $06. Route both CNZ2 cutscene button variants here.
+                    if (currentRomZoneId() == Sonic3kZoneIds.ZONE_CNZ
+                            && (spawn.subtype() == 4 || spawn.subtype() == 6)) {
                         return new Cnz2CutsceneButtonInstance(spawn);
                     }
                     if (currentRomZoneId() == Sonic3kZoneIds.ZONE_HCZ) {

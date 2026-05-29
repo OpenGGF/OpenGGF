@@ -60,6 +60,7 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
     private boolean knucklesMusicStarted;
     private boolean facingRight;
     private boolean visible = true;
+    private boolean buttonImpactReached;
     private CutsceneKnuxCnz2WallInstance blockingWall;
 
     // ROM ChildObjDat_66560: the blocking wall child is placed at parentX-$20,
@@ -104,6 +105,14 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
 
     public static void setActiveInstanceForTests(CutsceneKnucklesCnz2AInstance instance) {
         activeInstance = instance;
+    }
+
+    public boolean hasReachedButtonImpact() {
+        return buttonImpactReached;
+    }
+
+    public void forceButtonImpactForTest() {
+        buttonImpactReached = true;
     }
 
     @Override
@@ -208,6 +217,9 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance {
             return;
         }
         if (bounceIndex == 1) {
+            // ROM CutsceneKnux_CNZ2A reaches Obj_CutsceneButton during the
+            // second landing, after the rightward approach and leftward hop.
+            buttonImpactReached = true;
             bounceIndex = 2;
             xVel = 0x0100;
             yVel = -0x0400;

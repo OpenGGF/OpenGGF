@@ -6,20 +6,27 @@ import com.openggf.game.LevelEventProvider;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.events.CnzObjectEventBridge;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.TestEnvironment;
+import com.openggf.tests.TestablePlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestCutsceneKnucklesCnz2Instance {
@@ -66,6 +73,19 @@ class TestCutsceneKnucklesCnz2Instance {
     }
 
     @Test
+    void registryRoutesCnzVacuumTubeButtonSubtypeToCnzHandler() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_CNZ);
+
+        ObjectInstance button = registry.create(new ObjectSpawn(
+                0x4780, 0x0728, Sonic3kObjectIds.CUTSCENE_BUTTON, 6, 0, false, 0));
+
+        assertInstanceOf(Cnz2CutsceneButtonInstance.class, button,
+                "Obj_CutsceneButton subtype $06 is the CNZ2 second-encounter button "
+                        + "(off_65C40[$06] -> loc_65CAC, docs/skdisasm/sonic3k.asm:133951-134019); "
+                        + "it must spawn the vacuum tubes instead of falling through to the AIZ cutscene button");
+    }
+
+    @Test
     void cnzCutsceneButtonPressesWaterAndPaletteRoute_notLevelTriggerRoute() {
         RecordingCnzBridge bridge = new RecordingCnzBridge();
         Camera buttonCamera = new Camera();
@@ -80,6 +100,7 @@ class TestCutsceneKnucklesCnz2Instance {
         }.withCamera(buttonCamera));
         CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
                 new ObjectSpawn(0x1D00, 0x0280, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.forceButtonImpactForTest();
         CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(knuckles);
 
         button.update(0, null);
@@ -96,6 +117,59 @@ class TestCutsceneKnucklesCnz2Instance {
                 "loc_65C78 spawns the loc_62480 lights-off flash child (subtype 0, no restore)");
         assertFalse(button.getSpawnedFlashForTest().restoresAfterForTest(),
                 "the cutscene button's flash leaves the dark palette in place (lights stay off)");
+    }
+
+    @Test
+    void firstCnzCutsceneButtonWaitsForSecondLandingImpact() {
+        RecordingCnzBridge bridge = new RecordingCnzBridge();
+        Camera buttonCamera = new Camera();
+        buttonCamera.setY((short) 0x0280);
+        Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(new ObjectSpawn(
+                0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_BUTTON, 4, 0, false, 0));
+        button.setServices(new TestObjectServices() {
+            @Override
+            public LevelEventProvider levelEventProvider() {
+                return bridge;
+            }
+        }.withCamera(buttonCamera));
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        CutsceneKnucklesCnz2AInstance.setActiveInstanceForTests(knuckles);
+
+        button.update(0, null);
+
+        assertEquals(0, bridge.waterTargetY,
+                "The first CNZ2 button must not trigger from proximity during Knuckles' first rightward jump");
+
+        knuckles.forceButtonImpactForTest();
+        button.update(1, null);
+
+        assertEquals(0x0350, bridge.waterTargetY,
+                "The button fires once CutsceneKnux_CNZ2A reaches the second-landing button impact");
+    }
+
+    @Test
+    void cnzVacuumTubeButtonSpawnsTubeControllersFromRomAction() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+
+        CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x4780, 0x072C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 16, 0, false, 0));
+        knuckles.setServices(TestEnvironment.objectServices());
+        knuckles.update(0, fixture.sprite());
+
+        Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(
+                new ObjectSpawn(0x4780, 0x0728, Sonic3kObjectIds.CUTSCENE_BUTTON, 6, 0, false, 0));
+        button.setServices(TestEnvironment.objectServices());
+        button.update(0, fixture.sprite());
+
+        long tubeCount = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(CnzVacuumTubeInstance.class::isInstance)
+                .count();
+        assertTrue(tubeCount >= 2,
+                "Obj_CutsceneButton subtype $06 dispatches to loc_65CAC, which allocates "
+                        + "the two Obj_CNZVacuumTube controllers at $4740/$0828 and $4740/$0A28");
     }
 
     @Test
@@ -140,9 +214,67 @@ class TestCutsceneKnucklesCnz2Instance {
                 "CreateChild1_Normal applies the ChildObjDat y offset -$6C (sonic3k.asm:134971,176937-176942)");
     }
 
+    @Test
+    void secondCnzCutsceneExitDoesNotEnterPlayableKnucklesTeleporterRoute() throws Exception {
+        RecordingCnzBridge bridge = new RecordingCnzBridge();
+        Camera camera = new Camera();
+        camera.setY((short) 0x0600);
+        camera.setMinX((short) 0x4300);
+        camera.setMaxX((short) 0x5000);
+        AbstractObjectInstance.updateCameraBounds(0x4700, 0x0600, 0x4840, 0x06E0, 0);
+
+        CutsceneKnucklesCnz2BInstance knuckles = new CutsceneKnucklesCnz2BInstance(
+                new ObjectSpawn(0x45C0, 0x0720, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 16, 0, false, 0));
+        knuckles.setServices(new TestObjectServices() {
+            @Override
+            public com.openggf.game.LevelEventProvider levelEventProvider() {
+                return bridge;
+            }
+        }.withCamera(camera));
+        setPrivateEnumField(knuckles, "phase", "EXIT_RIGHT");
+        setPrivateIntField(knuckles, "currentX", 0x4900);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x4760, (short) 0x0700);
+        player.setObjectControlled(true);
+        player.setControlLocked(true);
+
+        knuckles.update(0, player);
+        knuckles.update(1, player);
+
+        assertEquals(0, bridge.beginTeleporterRouteCalls,
+                "CutsceneKnux_CNZ2B loc_625E2 restores Sonic/Tails control and level music; "
+                        + "the $4750-$48E0 teleporter clamp belongs only to CNZ2_ScreenEvent after Player_mode==3");
+        assertEquals(0x4300, camera.getMinX() & 0xFFFF,
+                "The Sonic/Tails rival-Knuckles handoff must leave the current camera min X alone");
+        assertEquals(0x5000, camera.getMaxX() & 0xFFFF,
+                "The Sonic/Tails rival-Knuckles handoff must not install the playable-Knuckles teleporter max X");
+        assertFalse(player.isObjectControlled(),
+                "loc_625E2 clears Player_1 object_control before loc_6261A starts forcing left");
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT, player.getForcedInputMask(),
+                "loc_6261A writes left into Ctrl_1_logical so Sonic/Tails walks into the vacuum tube");
+    }
+
     @AfterEach
     void tearDown() {
         CutsceneKnucklesCnz2AInstance.clearActiveInstanceForTests();
+        CutsceneKnucklesCnz2BInstance.clearActiveInstanceForTests();
+        AbstractObjectInstance.resetCameraBoundsForTests();
+    }
+
+    private static void setPrivateEnumField(Object target, String fieldName, String enumConstant)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        Enum<?> value = Enum.valueOf((Class<? extends Enum>) field.getType(), enumConstant);
+        field.set(target, value);
+    }
+
+    private static void setPrivateIntField(Object target, String fieldName, int value)
+            throws ReflectiveOperationException {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(target, value);
     }
 
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {
@@ -163,6 +295,7 @@ class TestCutsceneKnucklesCnz2Instance {
         private int waterTargetY;
         private int waterMeanLevel;
         private int screenShakeFrames;
+        private int beginTeleporterRouteCalls;
 
         @Override public void initLevel(int zone, int act) {}
         @Override public void update() {}
@@ -179,7 +312,7 @@ class TestCutsceneKnucklesCnz2Instance {
         @Override public void setWaterTargetY(int targetY) { waterTargetY = targetY; }
         @Override public void setWaterMeanLevel(int meanY) { waterMeanLevel = meanY; }
         @Override public void triggerScreenShake(int frames) { screenShakeFrames = frames; }
-        @Override public void beginKnucklesTeleporterRoute() {}
+        @Override public void beginKnucklesTeleporterRoute() { beginTeleporterRouteCalls++; }
         @Override public void endKnucklesTeleporterRoute() {}
         @Override public void markTeleporterBeamSpawned() {}
     }

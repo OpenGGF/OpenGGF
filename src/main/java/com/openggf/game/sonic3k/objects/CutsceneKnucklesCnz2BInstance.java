@@ -4,7 +4,6 @@ import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
-import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -24,8 +23,6 @@ import java.util.List;
 public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance {
     private static final int TRIGGER_X = 0x4728;
     private static final int WALK_RIGHT_STOP_X = 0x4760;
-    private static final int ROUTE_CAMERA_MIN_X = 0x4750;
-    private static final int ROUTE_CAMERA_MAX_X = 0x48E0;
     private static final int PRE_JUMP_WAIT = 0x1F;
     private static final int POST_JUMP_WAIT = 0x7F;
     private static final int JUMP_X_VEL = -0x0100;
@@ -54,6 +51,8 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance {
     private boolean bounced;
     private boolean visible = true;
 
+    private static volatile CutsceneKnucklesCnz2BInstance activeInstance;
+
     public CutsceneKnucklesCnz2BInstance(ObjectSpawn spawn) {
         super(spawn, "CutsceneKnuxCNZ2B");
         this.currentX = spawn.x();
@@ -72,6 +71,14 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance {
 
     public int getRoutine() {
         return phase.ordinal() * 2;
+    }
+
+    public static CutsceneKnucklesCnz2BInstance getActiveInstance() {
+        return activeInstance;
+    }
+
+    public static void clearActiveInstanceForTests() {
+        activeInstance = null;
     }
 
     @Override
@@ -114,6 +121,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance {
             player.clearForcedInputMask();
             player.setControlLocked(true);
         }
+        activeInstance = this;
         phase = Phase.WAIT_FOR_PLAYER_JUMP;
     }
 
@@ -200,9 +208,6 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance {
             ObjectControlState.none().applyTo(player);
             player.clearForcedInputMask();
         }
-        S3kCnzEventWriteSupport.beginKnucklesTeleporterRoute(services());
-        services().camera().setMinX((short) ROUTE_CAMERA_MIN_X);
-        services().camera().setMaxX((short) ROUTE_CAMERA_MAX_X);
         services().playMusic(Sonic3kMusic.CNZ2.id);
         phase = Phase.FORCE_PLAYER_LEFT;
     }
@@ -219,7 +224,7 @@ public class CutsceneKnucklesCnz2BInstance extends AbstractObjectInstance {
         if (camera.getY() + 0x160 < currentY) {
             player.setControlLocked(false);
             player.clearForcedInputMask();
-            S3kCnzEventWriteSupport.endKnucklesTeleporterRoute(services());
+            activeInstance = null;
             setDestroyed(true);
         }
     }
