@@ -6,7 +6,6 @@ import com.openggf.camera.Camera;
 import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.GameModule;
-import com.openggf.game.GameServices;
 import com.openggf.game.LevelEventProvider;
 import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.PlayerCharacter;
@@ -2481,13 +2480,10 @@ public class SidekickCpuController {
     private void completeCarryFlyoffDespawn() {
         transientFlyoffDespawned = true;
         leader = null;
-        SpriteManager spriteManager = GameServices.spritesOrNull();
-        if (spriteManager != null) {
-            // Scoped to temporary sidekicks: a throwaway carry-in carrier deletes
-            // itself, while a permanently registered sidekick (never the case for
-            // the solo carry path) is left untouched.
-            spriteManager.removeTemporarySidekick(sidekick);
-        }
+        // The owning SpriteManager observes this flag after running the
+        // controller and removes the throwaway carrier from its temporary
+        // sidekick roster (see SpriteManager.update). The controller does not
+        // reach back into global services to mutate the sprite roster.
     }
 
     private void applyManualControl() {

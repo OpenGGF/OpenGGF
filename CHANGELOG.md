@@ -4,6 +4,24 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **Repaired nine guard/functional test failures from the recent S3K CNZ/ICZ/AIZ bring-up.**
+  All root-caused without zone/route/frame carve-outs: restored the slide-launch roll
+  animation (`ScriptedVelocityAnimationProfile` now gates the airborne external-force
+  null on `!isSliding()`, so a water-slide jump keeps `id_Roll` while the CNZ hover-fan
+  walk animation still persists); registered the CNZ/ICZ miniboss
+  `defeatExplosionController` fields in the central `DefaultObjectRewindPolicies` map
+  (`DEFERRED`, matching every sibling boss) and baselined two ICZ structural-parent
+  `@RewindTransient` pointers; refactored three object-physics-standardization
+  violations to the standard contracts (`ObjectControlState.none()`, explicit
+  `IczMiniboss.getTouchResponseProfile`, `ObjectPlayerQuery` for native P2); moved the
+  throwaway carry-in Tails despawn out of `SidekickCpuController` (no more
+  `GameServices`) into a post-update sweep in `SpriteManager`; extended the ArchUnit
+  freeze store for the established `LiveRewindManager` audio and `ObjectManager`
+  CNZ-miniboss rewind-recreation patterns; and corrected the CNZ miniboss headless
+  tests to ROM-accurate dormancy timing (`Obj_CNZMiniboss`/`Obj_Wait`,
+  `sonic3k.asm:144823-144895`). Verified trace-neutral against the committed AIZ/CNZ/MGZ
+  trace frontiers.
+
 - **Solo Sonic is now carried into Carnival Night Zone Act 1 by a throwaway Tails.**
   Matching the ROM (`SpawnLevelMainSprites` `loc_68D8`), a temporary Tails carries
   a sidekick-less Sonic into CNZ1; after dropping him on landing it flies up and to
