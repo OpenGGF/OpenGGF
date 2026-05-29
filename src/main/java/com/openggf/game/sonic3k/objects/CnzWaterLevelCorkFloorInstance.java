@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.S3kCnzEventWriteSupport;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -25,8 +26,10 @@ public final class CnzWaterLevelCorkFloorInstance extends AbstractObjectInstance
      * ROM: {@code move.w #$958,(Target_water_level).w}.
      */
     private static final int FIRST_WATER_TARGET_Y = 0x0958;
+    private static final int CORK_FLOOR_CHILD_SUBTYPE = 1;
 
     private boolean floorReleasedForTest;
+    private CorkFloorObjectInstance corkFloor;
 
     public CnzWaterLevelCorkFloorInstance(ObjectSpawn spawn) {
         super(spawn, "CNZWaterLevelCorkFloor");
@@ -40,12 +43,22 @@ public final class CnzWaterLevelCorkFloorInstance extends AbstractObjectInstance
         floorReleasedForTest = true;
     }
 
+    public CorkFloorObjectInstance getCorkFloorForTest() {
+        return corkFloor;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity player) {
-        if (!floorReleasedForTest) {
+        if (corkFloor == null) {
+            ObjectSpawn childSpawn = new ObjectSpawn(
+                    spawn.x(), spawn.y(), Sonic3kObjectIds.CORK_FLOOR,
+                    CORK_FLOOR_CHILD_SUBTYPE, spawn.renderFlags(), false, spawn.y());
+            corkFloor = spawnChild(() -> new CorkFloorObjectInstance(childSpawn));
+        }
+
+        if (!floorReleasedForTest && !corkFloor.isBroken()) {
             return;
         }
-        floorReleasedForTest = false;
 
         /**
          * ROM: the helper arms the later button path at the same time it raises

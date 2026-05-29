@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.Cnz2CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzWaterLevelButtonInstance;
 import com.openggf.game.sonic3k.objects.CnzWaterLevelCorkFloorInstance;
+import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CutsceneKnucklesCnz2AInstance;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.DefaultObjectServices;
@@ -19,6 +20,7 @@ import com.openggf.tests.rules.SonicGame;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Headless coverage for the CNZ water-helper objects added in Task 7.
@@ -64,6 +66,58 @@ class TestS3kCnzWaterHelpersHeadless {
         assertEquals(0x0350,
                 GameServices.water().getWaterLevelTarget(Sonic3kZoneIds.ZONE_CNZ, 1),
                 "loc_65C78 sets Target_water_level=$350 through the real WaterSystem");
+    }
+
+    @Test
+    void firstEncounterCutscenePressesButtonFromRomLayoutPath() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        DefaultObjectServices services = TestEnvironment.objectServices();
+        GameServices.camera().setX((short) 0x1D00);
+        GameServices.camera().setY((short) 0x0280);
+
+        CutsceneKnucklesCnz2AInstance knuckles = new CutsceneKnucklesCnz2AInstance(
+                new ObjectSpawn(0x1DE0, 0x032C, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 12, 0, false, 0));
+        knuckles.setServices(services);
+        Cnz2CutsceneButtonInstance button = new Cnz2CutsceneButtonInstance(
+                new ObjectSpawn(0x1E00, 0x0338, Sonic3kObjectIds.CUTSCENE_BUTTON, 4, 0, false, 0));
+        button.setServices(services);
+
+        for (int frame = 0; frame < 420; frame++) {
+            knuckles.update(frame, fixture.sprite());
+            button.update(frame, fixture.sprite());
+            GameServices.water().update();
+            if (GameServices.water().getWaterLevelTarget(Sonic3kZoneIds.ZONE_CNZ, 1) == 0x0350) {
+                return;
+            }
+        }
+
+        assertEquals(0x0350,
+                GameServices.water().getWaterLevelTarget(Sonic3kZoneIds.ZONE_CNZ, 1),
+                "CutsceneKnux_CNZ2A should press Obj_CutsceneButton subtype $04 from the real CNZ2 layout positions");
+    }
+
+    @Test
+    void corkFloorWrapperObservesBrokenChildAndStartsWaterRecede() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_CNZ, 1)
+                .build();
+        DefaultObjectServices services = TestEnvironment.objectServices();
+
+        CnzWaterLevelCorkFloorInstance helper = new CnzWaterLevelCorkFloorInstance(
+                new ObjectSpawn(0x1A60, 0x04E0, Sonic3kObjectIds.CNZ_WATER_LEVEL_CORK_FLOOR, 1, 0, false, 0));
+        helper.setServices(services);
+        helper.update(0, fixture.sprite());
+        CorkFloorObjectInstance child = helper.getCorkFloorForTest();
+        assertNotNull(child, "Obj_CNZWaterLevelCorkFloor should spawn and watch the real CorkFloor child");
+        child.forceBreakForTest();
+        helper.update(1, fixture.sprite());
+
+        assertEquals(0x0958,
+                GameServices.water().getWaterLevelTarget(Sonic3kZoneIds.ZONE_CNZ, 1),
+                "Obj_CNZWaterLevelCorkFloor should observe the real CorkFloor child breaking "
+                        + "and start the $0958 recede path before the player reaches the $1E8F/$05E0 room");
     }
 
     /**

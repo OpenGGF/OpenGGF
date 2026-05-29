@@ -131,6 +131,14 @@ public class CorkFloorObjectInstance extends AbstractObjectInstance
                 : config.velTable;
     }
 
+    public boolean isBroken() {
+        return broken;
+    }
+
+    public void forceBreakForTest() {
+        broken = true;
+    }
+
     @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(config.halfWidth + 0x0B, config.halfHeight, config.halfHeight + 1);
