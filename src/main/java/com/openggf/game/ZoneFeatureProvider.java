@@ -224,17 +224,6 @@ public interface ZoneFeatureProvider {
     }
 
     /**
-     * Horizontal BG source-loop period in pixels, or {@code -1} for none. When a
-     * zone/phase loops only a sub-window of its BG source horizontally (e.g. the
-     * S3K AIZ2 battleship forest loop = the first {@code $200}), the wrapped BG
-     * tilemap period is pinned to this value so the rest of the layout (e.g. the
-     * empty filler beyond the forest) is excluded from the loop.
-     */
-    default int backgroundLoopSourcePeriod(int zoneIndex, int actIndex) {
-        return -1;
-    }
-
-    /**
      * Whether the intro ocean phase is currently active (e.g. AIZ intro in S3K).
      * When active, the BG plane wraps at VDP width instead of full layout width.
      *

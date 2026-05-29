@@ -28,8 +28,6 @@ public final class AizZoneRuntimeState implements S3kZoneRuntimeState {
     public boolean isBossFlagActive() { return events.isBossFlag(); }
     public boolean isPostFireHazeActive() { return events.isPostFireHazeActive(); }
     public boolean isBattleshipForestFrontPhaseActive() { return events.isBattleshipForestFrontPhaseActive(); }
-    public boolean isBattleshipForestLoopActive() { return events.isBattleshipForestLoopActive(); }
-    public int getForestLoopBgWrapPeriod() { return events.getForestLoopBgWrapPeriod(); }
     public boolean isFireTransitionScrollActive() { return events.isFireTransitionScrollActive(); }
     public int getFireTransitionBgX() { return events.getFireTransitionBgX(); }
     public int getFireTransitionBgY() { return events.getFireTransitionBgY(); }

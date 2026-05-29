@@ -788,7 +788,7 @@ public class TestSonic3kAIZEvents {
     }
 
     @Test
-    public void aiz2PostBombingShipLoopWrapsByTheRom200() throws Exception {
+    public void aiz2PostBombingShipLoopWrapsInsideForestMask() throws Exception {
         Camera camera = GameServices.camera();
         Sonic3kAIZEvents.resetGlobalState();
         var events = new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL);
@@ -814,20 +814,16 @@ public class TestSonic3kAIZEvents {
 
         events.updatePrePhysics(1);
 
-        // Post-bombing AIZ2_DoShipLoop subtracts the full ROM $200 (the seam is gone
-        // because the BG loops only the $200 forest window during this phase, not
-        // because of a shortened wrap). Camera 0x46BC -> +4 -> 0x46C0 -> -$200 = 0x44C0.
-        assertEquals(0x44C0, camera.getX() & 0xFFFF,
-                "post-bombing wrap subtracts the ROM $200 from Camera_X_pos");
-        // sub_50318 clamps within [camX+$18, camX+$A0]; camX after wrap = 0x44C0.
-        assertEquals(0x4560, sonic.getCentreX() & 0xFFFF,
-                "wrapped player (0x4562) clamps to Camera_X_pos+$A0 = 0x4560");
-        assertEquals(0x44D8, tails.getCentreX() & 0xFFFF,
-                "wrapped native P2 (0x44C8) clamps up to Camera_X_pos+$18 = 0x44D8");
-        assertEquals(0x4500, extraSidekick.getCentreX() & 0xFFFF,
-                "extra sidekick wraps by $200 (0x4700 -> 0x4500) and stays within the margins");
-        assertEquals(0x200, events.getLevelRepeatOffset(),
-                "post-bombing wraps use the ROM $200 repeat offset");
+        assertEquals(0x4640, camera.getX() & 0xFFFF,
+                "post-bombing visual wrap should land inside the repeated forest mask, not back at the entrance");
+        assertEquals(0x46E0, sonic.getCentreX() & 0xFFFF,
+                "sub_50318 clamps the wrapped player to Camera_X_pos+$A0 before movement");
+        assertEquals(0x4658, tails.getCentreX() & 0xFFFF,
+                "AIZ2_DoShipLoop should wrap native P2, then clamp it to Camera_X_pos+$18");
+        assertEquals(0x4680, extraSidekick.getCentreX() & 0xFFFF,
+                "AIZ2_DoShipLoop should preserve all-engine sidekick participation for extra sidekicks");
+        assertEquals(0x80, events.getLevelRepeatOffset(),
+                "post-bombing wraps use the short hidden-forest repeat offset");
     }
 
     @Test

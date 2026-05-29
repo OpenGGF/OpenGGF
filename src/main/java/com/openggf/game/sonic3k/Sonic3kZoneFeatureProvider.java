@@ -122,33 +122,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
         int zoneId = levelManager.getFeatureZoneId();
         return zoneId == Sonic3kZoneIds.ZONE_MGZ
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
-                || isCnzBossBackgroundWindowActive(zoneId)
-                || isAizForestLoopBackgroundWindowActive(zoneId);
-    }
-
-    /**
-     * AIZ2 battleship forest loop: during this phase the BG loops only the $200
-     * forest window, so the wrapped-BG build path is enabled (and the period is
-     * pinned to the forest window via {@link #backgroundLoopSourcePeriod}). Mirrors
-     * the phase-scoped {@link #isCnzBossBackgroundWindowActive(int)} precedent.
-     */
-    private boolean isAizForestLoopBackgroundWindowActive(int zoneId) {
-        if (zoneId != Sonic3kZoneIds.ZONE_AIZ || !GameServices.hasRuntime()) {
-            return false;
-        }
-        return S3kRuntimeStates.currentAiz(GameServices.zoneRuntimeRegistry())
-                .map(AizZoneRuntimeState::isBattleshipForestLoopActive)
-                .orElse(false);
-    }
-
-    @Override
-    public int backgroundLoopSourcePeriod(int zoneIndex, int actIndex) {
-        if (!isAizForestLoopBackgroundWindowActive(getFeatureZoneId())) {
-            return -1;
-        }
-        return S3kRuntimeStates.currentAiz(GameServices.zoneRuntimeRegistry())
-                .map(AizZoneRuntimeState::getForestLoopBgWrapPeriod)
-                .orElse(-1);
+                || isCnzBossBackgroundWindowActive(zoneId);
     }
 
     private boolean isCnzBossBackgroundWindowActive(int zoneId) {
