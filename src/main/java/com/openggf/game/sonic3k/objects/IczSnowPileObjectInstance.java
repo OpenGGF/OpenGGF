@@ -89,6 +89,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
     private boolean destroyedByTrigger;
     private int snowdustTimer;
     private int activeSnowdustCount;
+    private boolean snowdustStopped;
 
     public IczSnowPileObjectInstance(ObjectSpawn spawn) {
         super(spawn, "ICZSnowPile");
@@ -161,6 +162,11 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
     }
 
     private void updateSnowdustEmitter() {
+        if (snowdustStopped) {
+            setDestroyed(true);
+            return;
+        }
+
         Camera camera = tryCamera();
         if (camera != null) {
             x = camera.getX();
@@ -180,7 +186,7 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
             return;
         }
         activeSnowdustCount++;
-        spawnChild(() -> new SnowdustParticle(this, spec));
+        spawnFreeChild(() -> new SnowdustParticle(this, spec));
     }
 
     private Camera tryCamera() {
@@ -218,6 +224,18 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
         if (activeSnowdustCount > 0) {
             activeSnowdustCount--;
         }
+    }
+
+    public boolean isSnowdustEmitter() {
+        return variant == 0x18;
+    }
+
+    public void stopSnowdustEmitter() {
+        if (!isSnowdustEmitter()) {
+            return;
+        }
+        snowdustStopped = true;
+        setDestroyed(true);
     }
 
     private List<PlayableEntity> nativePlayersP2ThenP1(PlayableEntity mainPlayer) {
@@ -263,6 +281,11 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
     @Override
     public boolean isHighPriority() {
         return variant == 0x08 || variant == 0x10;
+    }
+
+    @Override
+    public boolean isPersistent() {
+        return variant == 0x18;
     }
 
     @Override
@@ -364,6 +387,9 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
         private final SubpixelMotion.State motion;
         private final int mappingFrame;
         private final int priorityBucket;
+        private boolean enteredScreen;
+        private boolean flickerBit;
+        private boolean drawThisFrame = true;
 
         private SnowdustParticle(IczSnowPileObjectInstance parent, SnowdustSpec spec) {
             super(new ObjectSpawn(spec.x(), spec.y(), OBJECT_ID, 0, 0, false, spec.y()), "ICZSnowdustParticle");
@@ -376,10 +402,28 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
         @Override
         public void update(int frameCounter, PlayableEntity player) {
             SubpixelMotion.moveSprite2(motion);
-            if (!isOnScreen()) {
-                parent.onSnowdustExpired();
-                setDestroyed(true);
+            boolean onScreen = isOnScreen();
+            if (!enteredScreen) {
+                if (onScreen) {
+                    enteredScreen = true;
+                    drawThisFrame = false;
+                } else {
+                    drawThisFrame = true;
+                }
+                return;
             }
+
+            if (!onScreen) {
+                expire();
+                return;
+            }
+            drawThisFrame = !flickerBit;
+            flickerBit = !flickerBit;
+        }
+
+        private void expire() {
+            parent.onSnowdustExpired();
+            setDestroyed(true);
         }
 
         @Override
@@ -399,6 +443,9 @@ public class IczSnowPileObjectInstance extends AbstractObjectInstance {
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
+            if (!drawThisFrame) {
+                return;
+            }
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.ICZ_PLATFORMS);
             if (renderer != null) {
                 renderer.drawFrameIndex(mappingFrame, motion.x, motion.y, false, false, DRAW_PALETTE);

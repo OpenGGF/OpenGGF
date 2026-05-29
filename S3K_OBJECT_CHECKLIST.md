@@ -5,8 +5,8 @@ Generated: 2026-04-19 12:00:00
 ## Summary
 
 - **Total unique objects found:** 302
-- **Implemented:** 89 (29.5%)
-- **Unimplemented:** 213 (70.5%)
+- **Implemented:** 92 (30.5%)
+- **Unimplemented:** 210 (69.5%)
 
 ## Implemented Objects
 
@@ -100,6 +100,10 @@ Generated: 2026-04-19 12:00:00
 | 0xB6 | ICZIceCube | 32 |  | ICZ1, ICZ2 |
 | 0xB7 | ICZIceSpikes | 31 |  | ICZ1, ICZ2 |
 | 0xB8 | ICZHarmfulIce | 69 |  | ICZ1, ICZ2 |
+| 0xB9 | ICZSnowPile | 28 |  | ICZ2 |
+| 0xBA | ICZTensionPlatform | 9 |  | ICZ2 |
+| 0xBB | ICZIceBlock | 5 |  | ICZ2 |
+| 0xBC | ICZMiniboss | 2 | ✅ | ICZ2 |
 
 ## Unimplemented Objects (By Usage)
 
@@ -143,7 +147,6 @@ Generated: 2026-04-19 12:00:00
 | 0x49 | Object | SOZSolidSprites | 30 |  | SOZ1, SOZ2 |
 | 0x99 | Badnik | Fireworm | 29 |  | LRZ1, LRZ2 |
 | 0xA5 | Badnik | Batbot | 28 |  | CNZ1, CNZ2 |
-| 0xB9 | Object | ICZSnowPile | 28 |  | ICZ2 |
 | 0xA3 | Badnik | Clamer | 27 |  | CNZ1, CNZ2 |
 | 0x8E | Badnik | Dragonfly | 27 |  | MHZ1, MHZ2 |
 | 0x1B | Object | LRZFireballLauncher | 27 |  | LRZ1 |
@@ -217,7 +220,6 @@ Generated: 2026-04-19 12:00:00
 | 0x60 | Object | DEZBumperWall | 10 |  | DEZ1 |
 | 0x4A | Object | DEZFloatingPlatform | 10 |  | DEZ2 |
 | 0x70 | Object | FBZWireCageStationary | 9 |  | FBZ1 |
-| 0xBA | Object | ICZTensionPlatform | 9 |  | ICZ2 |
 | 0x22 | Object | LBZAlarm | 9 |  | LBZ1 |
 | 0x37 | Object | LRZSpikeBallLauncher | 9 |  | LRZ2 |
 | 0x53 | Object | DEZConveyorPad | 9 |  | DEZ1, DEZ2 |
@@ -253,7 +255,6 @@ Generated: 2026-04-19 12:00:00
 | 0x00 | Object | Ring | 5 |  | MGZ2, FBZ2, SSZ2 |
 | 0x42 | Object | CNZCannon | 5 |  | CNZ1, CNZ2 |
 | 0xD0 | Object | FBZSpringPlunger | 5 |  | FBZ1 |
-| 0xBB | Object | ICZIceBlock | 5 |  | ICZ2 |
 | 0x21 | Object | LBZGateLaser | 5 |  | LBZ2 |
 | 0x0C | Object | MHZSwingBarVertical | 5 |  | MHZ1, MHZ2 |
 | 0x74 | Object | SSZRetractingSpring | 5 |  | SSZ1 |
@@ -276,7 +277,6 @@ Generated: 2026-04-19 12:00:00
 | 0x88 | Object | CNZWaterLevelCorkFloor | 2 |  | CNZ2 |
 | 0xE0 | Object | FBZWallMissile | 2 |  | FBZ1 |
 | 0xE5 | Object | FBZSpiderCrane | 2 |  | FBZ2 |
-| 0xBC | Boss | ICZMiniboss | 2 | ✅ | ICZ2 |
 | 0xAB | Object | SOZCapsuleHyudoro | 2 |  | SOZ2 |
 | 0x16 | Object | LRZWallRide | 2 |  | LRZ1, LRZ2 |
 | 0x1D | Object | LRZShootingTrigger | 2 |  | LRZ1 |
@@ -779,7 +779,7 @@ Total: 249 objects | Implemented: 24 | Unimplemented: 0
 
 #### Act 2
 
-Total: 356 objects | Implemented: 25 | Unimplemented: 4
+Total: 356 objects | Implemented: 28 | Unimplemented: 1
 
 **Badniks:**
 - [x] 0xAD Penguinator (x32) [0x10, 0x20, 0x40]
@@ -812,9 +812,9 @@ Total: 356 objects | Implemented: 25 | Unimplemented: 4
 - [x] 0xB6 ICZIceCube (x21) [0x00]
 - [x] 0xB7 ICZIceSpikes (x22) [0x00, 0x02]
 - [x] 0xB8 ICZHarmfulIce (x14) [0x00]
-- [ ] 0xB9 ICZSnowPile (x28) [5 subtypes]
-- [ ] 0xBA ICZTensionPlatform (x9) [0x00]
-- [ ] 0xBB ICZIceBlock (x5) [0x00]
+- [x] 0xB9 ICZSnowPile (x28) [5 subtypes]
+- [x] 0xBA ICZTensionPlatform (x9) [0x00]
+- [x] 0xBB ICZIceBlock (x5) [0x00]
 
 ### Launch Base Zone
 

@@ -9,6 +9,7 @@ import com.openggf.game.ZoneRegistry;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.camera.Camera;
+import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,26 @@ class TestS3kResultsScreenObjectInstance {
         assertEquals(1, services.apparentAct,
                 "Act 1 results exit must update Apparent_act to Act 2 before title-card handoff "
                         + "(docs/skdisasm/sonic3k.asm:62708-62720)");
+    }
+
+    @Test
+    void iczActTwoExitKeepsBossLeftCameraLockWhenRestoringLevelBounds() throws Exception {
+        IczExitRecordingServices services = new IczExitRecordingServices();
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                services,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_ALONE, 1));
+        results.setServices(services);
+
+        Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+        onExitReady.setAccessible(true);
+        onExitReady.invoke(results);
+
+        assertEquals(0x4560, services.camera.getMinX() & 0xFFFF,
+                "ICZ2's capsule handoff leaves Camera_min_X_pos at the post-boss lock instead of restoring level start");
+        assertEquals(0x7000, services.camera.getMaxX() & 0xFFFF,
+                "The right edge should still be released to the full level/end bounds for the results exit");
+        assertEquals(0x0000, services.camera.getMinY() & 0xFFFF);
+        assertEquals(0x0800, services.camera.getMaxY() & 0xFFFF);
     }
 
     private static final class TransitionRecordingServices extends TestObjectServices {
@@ -178,6 +199,43 @@ class TestS3kResultsScreenObjectInstance {
         @Override
         public TitleCardProvider titleCardProvider() {
             return titleCard;
+        }
+    }
+
+    private static final class IczExitRecordingServices extends TestObjectServices {
+        private final Camera camera = new Camera();
+        private final GameStateManager gameState = mock(GameStateManager.class);
+        private final Level level = mock(Level.class);
+
+        private IczExitRecordingServices() {
+            camera.setMinX((short) 0x4560);
+            camera.setMaxX((short) 0x44C0);
+            camera.setMinY((short) 0x05F8);
+            camera.setMaxY((short) 0x05F8);
+            when(level.getMinX()).thenReturn(0);
+            when(level.getMaxX()).thenReturn(0x7000);
+            when(level.getMinY()).thenReturn(0);
+            when(level.getMaxY()).thenReturn(0x0800);
+        }
+
+        @Override
+        public int romZoneId() {
+            return 0x05;
+        }
+
+        @Override
+        public Camera camera() {
+            return camera;
+        }
+
+        @Override
+        public GameStateManager gameState() {
+            return gameState;
+        }
+
+        @Override
+        public Level currentLevel() {
+            return level;
         }
     }
 

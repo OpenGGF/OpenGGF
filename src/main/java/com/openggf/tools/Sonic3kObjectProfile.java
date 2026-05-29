@@ -176,7 +176,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xB9, // ICZSnowPile
                 0xBA, // ICZTensionPlatform
                 0xBB, // ICZIceBlock
-                0xBC  // ICZMiniboss
+                0xBC, // ICZMiniboss
+                0xBD  // ICZEndBoss
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
 
