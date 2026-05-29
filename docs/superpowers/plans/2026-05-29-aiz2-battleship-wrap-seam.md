@@ -49,6 +49,11 @@ Expected: log shows `bgTilemapBaseX` jumping by the wrap distance while `battles
 Run: `git diff --stat`
 Expected: no changes.
 
+- [ ] **Step 7: Capture the AIZ trace baseline on pristine HEAD.** Tasks 2-6 commit behavioral changes, so a `git stash` later cannot reconstruct the pre-change baseline. Capture it now, while HEAD is unchanged, and record the first-error frame/field and error count in the findings note. Also record the current HEAD commit SHA (`git rev-parse HEAD`) so the baseline run is reproducible in a separate checkout if needed.
+
+Run: `mvn -Dmse=off "-Dsurefire.forkCount=1" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+Expected: records the baseline first-error frame (currently f8941) — this is the comparison point for Task 7.
+
 ---
 
 ## Task 2: Restore the ROM `$200` post-bombing wrap
@@ -605,17 +610,26 @@ class TestS3kAiz2ForestLoopSeam {
         Sonic3kAIZEvents events =
                 ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider()).getAizEvents();
 
-        // Enter the post-bombing forest loop and place the camera just below the wrap boundary.
-        events.onBattleshipComplete();          // wrapX -> $46C0
+        // Enter the post-bombing forest loop using the raw wrapX setter (as the
+        // other AIZ2 tests do). Do NOT call onBattleshipComplete() here: it has
+        // object-spawn side effects (AizBossSmallInstance, AizBgTreeSpawnerInstance)
+        // unrelated to the BG loop state under test.
         events.setBattleshipAutoScrollActiveRaw(true);
+        events.setBattleshipWrapX(0x46C0);
         assertTrue(events.isBattleshipForestLoopActive(), "precondition: forest loop active");
 
+        // getBgCameraX() is cached and only refreshed by parallax update, so after
+        // each camera move call recomputeParallaxAfterRewindRestore() (which runs
+        // parallaxManager.update) before rebuilding the BG tilemap — otherwise the
+        // rebuild compares stale window state.
         GameServices.camera().setX((short) (0x46C0 - 0x10));
+        GameServices.level().recomputeParallaxAfterRewindRestore();
         GameServices.level().ensureBackgroundTilemapData();
         int[] before = GameServices.level().bgVisibleSourceColumnsForTest();
 
         // Renormalize the camera back by the ROM $200 (as AIZ2_DoShipLoop does).
         GameServices.camera().setX((short) (0x46C0 - 0x10 - 0x200));
+        GameServices.level().recomputeParallaxAfterRewindRestore();
         GameServices.level().ensureBackgroundTilemapData();
         int[] after = GameServices.level().bgVisibleSourceColumnsForTest();
 
@@ -665,15 +679,18 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify (if frontier moves): `docs/TRACE_FRONTIER_LOG.md`
 
-- [ ] **Step 1: Baseline the AIZ frontier without the change.** `git stash` the working tree, run the AIZ trace, record first-error frame; `git stash pop`.
+- [ ] **Step 1: Recall the pre-change baseline from Task 1 Step 7.** Use the
+  baseline first-error frame/field recorded on pristine HEAD in Task 1 (currently
+  f8941). Do **not** attempt a `git stash` baseline here — Tasks 2-6 are committed,
+  so stashing cannot reconstruct the pre-change state. If the Task 1 baseline was
+  not recorded, reproduce it by checking out the recorded pre-change SHA in a
+  throwaway worktree (`git worktree add ../aiz-baseline <SHA>`) and running the AIZ
+  trace there.
 
-Run (stashed): `mvn -Dmse=off "-Dsurefire.forkCount=1" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
-Expected: records the baseline first-error frame (currently f8941).
+- [ ] **Step 2: Run the AIZ trace with the change (current HEAD).**
 
-- [ ] **Step 2: Run the AIZ trace with the change.**
-
-Run: same command, unstashed.
-Expected: a first-error frame. Acceptance: **no new earlier mismatch than baseline unless explained by the intended ROM-faithful `$200` wrap change.** Moving later (or unchanged) is fine; moving earlier requires the divergence be attributable to the `$200` coordinate change (inspect the first-error field/frame).
+Run: `mvn -Dmse=off "-Dsurefire.forkCount=1" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace" test "-DfailIfNoTests=false"`
+Expected: a first-error frame. Acceptance: **no new earlier mismatch than the Task 1 baseline unless explained by the intended ROM-faithful `$200` wrap change.** Moving later (or unchanged) is fine; moving earlier requires the divergence be attributable to the `$200` coordinate change (inspect the first-error field/frame).
 
 - [ ] **Step 3: Update the frontier log if it moved.** If the first-error frame/field changed, append a dated entry to `docs/TRACE_FRONTIER_LOG.md` with the command, commit/worktree context, pass/fail, error count, and first-error frame/field, plus the `$200`-wrap explanation. If unchanged, no edit needed.
 
