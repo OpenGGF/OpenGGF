@@ -244,6 +244,13 @@ public class HczEndBossInstance extends AbstractBossInstance {
     }
 
     @Override
+    public boolean isPersistent() {
+        // ROUTINE_FLEE runs off-screen for 0x77 frames before loc_6B0E8 clears
+        // Boss_flag, widens the camera, and spawns Obj_EggCapsule.
+        return state.routine == ROUTINE_FLEE;
+    }
+
+    @Override
     protected int getBossHitSfxId() {
         return Sonic3kSfx.BOSS_HIT.id;
     }
