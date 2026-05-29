@@ -283,4 +283,51 @@ class TestS3kCnzSoloCarryInHeadless {
                     "Rewind capture must not throw for the throwaway carry-in Tails (frame " + frame + ")");
         }
     }
+
+    /**
+     * Rewinding back into the carry intro after the carrier has flown off and
+     * been removed must re-create it (so the leader is not left object-controlled
+     * with no carrier present).
+     */
+    @Test
+    void rewindRestoreRecreatesDespawnedCarrier() {
+        Sonic3kLevelEventManager manager =
+                (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        manager.initLevel(ZONE_CNZ, ACT_1);
+        GameServices.level().spawnSidekicks(S3K_SIDEKICK_X_OFFSET, S3K_SIDEKICK_Y_OFFSET);
+        manager.applyZonePlayerState();
+        SidekickCpuController controller =
+                GameServices.sprites().getRegisteredSidekicks().get(0).getCpuController();
+        AbstractPlayableSprite sonic = fixture.sprite();
+
+        // Advance into the carry, capture a keyframe while the carrier is alive.
+        for (int i = 0; i < 10; i++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size());
+        assertTrue(sonic.isObjectControlled(), "Precondition: Sonic is being carried");
+        short carriedY = sonic.getCentreY();
+        var keyframe = fixture.gameplayMode().getRewindRegistry().capture();
+
+        // Run right so Sonic lands and the camera leaves the carrier behind -> despawn.
+        for (int i = 0; i < 800 && !controller.isTransientFlyoffDespawned(); i++) {
+            fixture.stepFrame(false, false, false, true, false);
+        }
+        assertTrue(controller.isTransientFlyoffDespawned(),
+                "Precondition: the carrier flew off and was removed");
+        assertEquals(0, GameServices.sprites().getRegisteredSidekicks().size());
+
+        // Restore the keyframe — the carrier must be re-created and Sonic's carried
+        // state restored.
+        fixture.gameplayMode().getRewindRegistry().restore(keyframe);
+        assertEquals(1, GameServices.sprites().getRegisteredSidekicks().size(),
+                "Rewinding into the carry must re-create the throwaway carrier");
+        AbstractPlayableSprite restoredCarrier = GameServices.sprites().getRegisteredSidekicks().get(0);
+        assertTrue(restoredCarrier.getCpuController().isTransientCarrySidekick(),
+                "Re-created carrier must still be flagged as the throwaway carrier");
+        assertTrue(sonic.isObjectControlled(),
+                "Sonic's carried state is restored alongside the re-created carrier");
+        assertEquals(carriedY, sonic.getCentreY(),
+                "Sonic's position is rolled back to the captured carry frame");
+    }
 }

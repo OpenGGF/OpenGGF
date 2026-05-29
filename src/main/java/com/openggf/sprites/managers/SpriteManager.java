@@ -52,6 +52,18 @@ public class SpriteManager {
 	private final Map<AbstractPlayableSprite, String> sidekickCharacterNames = new IdentityHashMap<>();
 	private final Set<AbstractPlayableSprite> temporarySidekicks =
 			Collections.newSetFromMap(new IdentityHashMap<>());
+	/**
+	 * Re-creation factories for temporary sidekicks (e.g. the CNZ1 throwaway
+	 * carry-in Tails), keyed by sprite code. A temporary sidekick can be removed
+	 * mid-level (it flew off and self-deleted), but a rewind keyframe captured
+	 * while it was alive still references it. On restore (or held-rewind scrub)
+	 * the snapshot may contain a temporary-sidekick code that is no longer live;
+	 * the factory rebuilds the fully-wired sprite so its per-sprite rewind state
+	 * can be reapplied. Survives {@link #removeTemporarySidekick}/removal (only a
+	 * full {@link #clearAllSprites()} drops it) so rewind can recreate it later.
+	 */
+	private final Map<String, java.util.function.Supplier<AbstractPlayableSprite>>
+			temporarySidekickRecreators = new java.util.HashMap<>();
 
 	private static final SensorConfiguration[][] MOVEMENT_MAPPING_ARRAY = createMovementMappingArray();
 
@@ -167,6 +179,23 @@ public class SpriteManager {
 		}
 	}
 
+	/**
+	 * Adds a temporary sidekick along with a factory that can rebuild it from
+	 * scratch (fully wired: sprite + CPU controller + behavior) keyed by code.
+	 * Used by mid-level throwaway sidekicks (e.g. the CNZ1 carry-in Tails) so a
+	 * rewind keyframe captured while it was alive can recreate it after it has
+	 * flown off and been removed. The factory must return a CPU-controlled sprite
+	 * with the same {@code getCode()}; it is invoked during rewind restore and the
+	 * snapshot's per-sprite state is reapplied afterward.
+	 */
+	public void addTemporarySidekick(AbstractPlayableSprite sprite, String characterName,
+			java.util.function.Supplier<AbstractPlayableSprite> recreator) {
+		addTemporarySidekick(sprite, characterName);
+		if (sprite.isCpuControlled() && recreator != null) {
+			temporarySidekickRecreators.put(sprite.getCode(), recreator);
+		}
+	}
+
 	public void removeTemporarySidekicks() {
 		if (temporarySidekicks.isEmpty()) {
 			return;
@@ -212,6 +241,7 @@ public class SpriteManager {
 		sidekicks.clear();
 		sidekickCharacterNames.clear();
 		temporarySidekicks.clear();
+		temporarySidekickRecreators.clear();
 		bucketsDirty = true;
 	}
 
@@ -1375,6 +1405,21 @@ public class SpriteManager {
 				for (AbstractPlayableSprite sidekick : new ArrayList<>(temporarySidekicks)) {
 					if (!snapshotCodes.contains(sidekick.getCode())) {
 						removeSprite(sidekick);
+					}
+				}
+				// Recreate any temporary sidekick that the keyframe still contains
+				// but that has since been removed (e.g. the CNZ1 carry-in Tails that
+				// flew off). Without this, rewinding back into the carry intro would
+				// leave the leader object-controlled with no carrier present. The
+				// factory fully wires and registers the sprite; its per-sprite state
+				// is reapplied by the restore loop below.
+				for (com.openggf.game.rewind.snapshot.SpriteManagerSnapshot.SpriteEntry entry : s.sprites()) {
+					if (getSprite(entry.code()) == null) {
+						java.util.function.Supplier<AbstractPlayableSprite> recreator =
+								temporarySidekickRecreators.get(entry.code());
+						if (recreator != null) {
+							recreator.get();
+						}
 					}
 				}
 				for (Sprite sprite : sprites.values()) {

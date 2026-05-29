@@ -4,6 +4,18 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **CNZ1 carry-in Tails follow-ups: fly-off now actually rises, and rewinding back into the carry re-creates the carrier.**
+  (1) The throwaway carrier sank to the floor and drifted right instead of flying off, because the Tails
+  flight-ascent flap (`Tails_Move_FlySwim`, in `applyFlyingCarryVerticalVelocity`) is gated by
+  `usesFlyingCarryMovement()`, which excluded the `CARRY_FLYOFF` state — so the injected A/B/C flaps did
+  nothing and only +0x08 descent gravity applied. `usesFlyingCarryMovement()` now includes `CARRY_FLYOFF`,
+  so routine `$10` rises (≈1px/frame up, slow rightward drift) and leaves the screen.
+  (2) Rewinding back into the carry after the carrier flew off left Sonic object-controlled with no carrier:
+  `SpriteManager`'s rewind restore removed temporary sidekicks missing from the snapshot but never re-created
+  one that the snapshot still contained. `SpriteManager` now keeps a per-code re-creation factory
+  (`addTemporarySidekick(sprite, name, recreator)`) that survives removal, and rebuilds the carrier on restore
+  before reapplying its state; `Sonic3kCNZEvents` registers the carry-in Tails factory.
+
 - **Fixed the CNZ1 solo-Sonic carry-in Tails: it now actually carries, flies off correctly, and survives rewind.**
   Four issues, all root-caused against `sonic3k.asm`:
   (1) *Sonic dropped from the sky.* The throwaway carrier was spawned in `Sonic3kCNZEvents.init()`

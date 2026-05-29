@@ -358,22 +358,40 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
             return;
         }
         GameModule gameModule = module();
-        if (gameModule == null) {
-            return;
-        }
-        SidekickCarryTrigger carryTrigger = gameModule.getSidekickCarryTrigger();
-        if (carryTrigger == null) {
+        if (gameModule == null || gameModule.getSidekickCarryTrigger() == null) {
             return;
         }
         SpriteManager sprites = spriteManager();
-        AbstractPlayableSprite leader = camera().getFocusedSprite();
-        if (sprites == null || leader == null) {
+        if (sprites == null || camera().getFocusedSprite() == null) {
             return;
         }
         // Don't double-spawn if a sidekick already exists (configured team) or a
         // prior carry-in Tails is still registered (e.g. seamless re-init).
         if (!sprites.getRegisteredSidekicks().isEmpty()) {
             return;
+        }
+        AbstractPlayableSprite carrier = buildSoloCarryInTails();
+        if (carrier == null) {
+            return;
+        }
+        // Register with a re-creation factory so a rewind keyframe captured while
+        // the carrier is alive can rebuild it after it has flown off and been
+        // removed (ROM routine $10 self-delete). Without it, rewinding back into
+        // the carry would leave Sonic object-controlled with no carrier.
+        sprites.addTemporarySidekick(carrier, "tails", this::recreateSoloCarryInTails);
+        refreshSoloCarryInTailsArt();
+    }
+
+    /** Builds and fully wires (but does NOT register) the throwaway carry-in Tails. */
+    private AbstractPlayableSprite buildSoloCarryInTails() {
+        GameModule gameModule = module();
+        if (gameModule == null) {
+            return null;
+        }
+        SidekickCarryTrigger carryTrigger = gameModule.getSidekickCarryTrigger();
+        AbstractPlayableSprite leader = camera() != null ? camera().getFocusedSprite() : null;
+        if (carryTrigger == null || leader == null) {
+            return null;
         }
         Tails carrier = new Tails(SOLO_CARRY_TAILS_CODE,
                 (short) Math.max(0, leader.getX() - 0x20),
@@ -384,8 +402,27 @@ public class Sonic3kCNZEvents extends Sonic3kZoneEvents {
         controller.setCarryTrigger(carryTrigger);
         controller.setTransientCarrySidekick(true);
         carrier.setCpuController(controller);
-        sprites.addTemporarySidekick(carrier, "tails");
+        return carrier;
+    }
 
+    /**
+     * Rewind re-creation factory (see {@code SpriteManager.addTemporarySidekick}
+     * with a recreator): rebuilds, registers, and re-uploads art for the carry-in
+     * Tails when a restored keyframe still references it. Returns the registered
+     * carrier (its per-sprite rewind state is reapplied by the caller), or null.
+     */
+    private AbstractPlayableSprite recreateSoloCarryInTails() {
+        SpriteManager sprites = spriteManager();
+        AbstractPlayableSprite carrier = buildSoloCarryInTails();
+        if (sprites == null || carrier == null) {
+            return null;
+        }
+        sprites.addTemporarySidekick(carrier, "tails");
+        refreshSoloCarryInTailsArt();
+        return carrier;
+    }
+
+    private void refreshSoloCarryInTailsArt() {
         // The art-load step already ran (no Tails was in the team), so upload the
         // carrier's sprite art now — same as the MGZ2 rescue Tails path.
         LevelManager manager = levelManager();
