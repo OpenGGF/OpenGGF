@@ -98,6 +98,10 @@ public class LevelManager {
     private int cachedBgWidthPx;           // Full map width for BG layer (used for block lookups)
     int cachedBgContiguousWidthPx; // Contiguous BG data width from column 0 (for bgTilemapBaseX wrapping)
     private int cachedBgHeightPx;
+    // Tracks the BG horizontal-wrap state across frames so the BG tilemap is rebuilt
+    // when a zone/phase enters or leaves the wrapped-BG window (e.g. the AIZ2 forest
+    // loop) without a base or period change to otherwise mark it dirty.
+    private Boolean lastBgWrapsHorizontally;
     Game game;
     GameModule gameModule;
     private int sidekickPatternBankCursor = 0;
@@ -133,6 +137,30 @@ public class LevelManager {
     /** Returns the tilemap lifecycle delegate. */
     public LevelTilemapManager getTilemapManager() {
         return tilemapManager;
+    }
+
+    /**
+     * Test helper: the BG source-layout block columns the most recent BG tilemap
+     * build actually sampled, derived from the recorded build query offset/width
+     * and wrapped at the BG layer width exactly as {@code getBlockAtPosition} does.
+     * Returns the distinct columns in build order. Empty if no BG build has run.
+     */
+    public int[] bgVisibleSourceColumnsForTest() {
+        if (tilemapManager == null) {
+            return new int[0];
+        }
+        int offset = tilemapManager.getLastBgBuildQueryOffsetPx();
+        int width = tilemapManager.getLastBgBuildWidthPx();
+        if (offset < 0 || width <= 0 || blockPixelSize <= 0) {
+            return new int[0];
+        }
+        int layerWidthPx = getCachedLayerWidthPx((byte) 1);
+        java.util.LinkedHashSet<Integer> cols = new java.util.LinkedHashSet<>();
+        for (int px = offset; px < offset + width; px += blockPixelSize) {
+            int wrapped = ((px % layerWidthPx) + layerWidthPx) % layerWidthPx;
+            cols.add(wrapped / blockPixelSize);
+        }
+        return cols.stream().mapToInt(Integer::intValue).toArray();
     }
 
     GraphicsManager graphicsManager;
@@ -1789,7 +1817,7 @@ public class LevelManager {
     }
 
 
-    void ensureBackgroundTilemapData() {
+    public void ensureBackgroundTilemapData() {
         if (tilemapManager != null) {
             int bgCameraX = parallaxManager != null ? parallaxManager.getBgCameraX() : Integer.MIN_VALUE;
             applyBackgroundTilemapWindowSelection(bgCameraX);
@@ -1815,6 +1843,23 @@ public class LevelManager {
         int newBgPeriodWidth = parallaxManager != null
                 ? parallaxManager.getBgPeriodWidth()
                 : LevelTilemapManager.VDP_BG_PLANE_WIDTH_PX;
+        // A zone/phase that loops only a sub-window of its BG source (e.g. the AIZ2
+        // forest loop = first $200) pins the period to that window so the wrapped
+        // cache excludes the rest of the layout.
+        if (zoneFeatureProvider != null) {
+            int loopSourcePeriod = zoneFeatureProvider.backgroundLoopSourcePeriod(currentZone, currentAct);
+            if (loopSourcePeriod > 0) {
+                newBgPeriodWidth = loopSourcePeriod;
+            }
+        }
+        // Rebuild the BG tilemap when the horizontal-wrap state flips (enter/leave a
+        // wrapped-BG window). For AIZ the window base stays 0 and the period is
+        // unchanged, so neither branch below would mark it dirty on its own.
+        boolean bgWrapsNow = zoneFeatureProvider != null && zoneFeatureProvider.bgWrapsHorizontally();
+        if (lastBgWrapsHorizontally == null || lastBgWrapsHorizontally != bgWrapsNow) {
+            lastBgWrapsHorizontally = bgWrapsNow;
+            tilemapManager.setBackgroundTilemapDirty(true);
+        }
         if (fullWidthPerLineTilemap) {
             if (tilemapManager.getBgTilemapBaseX() != 0) {
                 tilemapManager.setBgTilemapBaseX(0);
@@ -1898,6 +1943,7 @@ public class LevelManager {
             cachedBgWidthPx = getLayerLevelWidthPx((byte) 1);  // Full map width (matches reference)
             cachedBgContiguousWidthPx = computeActualBgDataWidthPx();  // For bgTilemapBaseX wrapping
             cachedBgHeightPx = getLayerLevelHeightPx((byte) 1);
+            lastBgWrapsHorizontally = null;  // re-evaluate BG wrap state on the next frame
         } else {
             cachedFgWidthPx = blockPixelSize;
             cachedFgHeightPx = blockPixelSize;
