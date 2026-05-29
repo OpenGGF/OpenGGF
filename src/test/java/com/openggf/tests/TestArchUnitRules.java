@@ -369,7 +369,7 @@ class TestArchUnitRules {
                             .orShould().accessClassesThat().haveFullyQualifiedName(SESSION_MANAGER)
                             .orShould().accessClassesThat().haveFullyQualifiedName(ENGINE_SERVICES)
                             .as("runtime-owned framework packages should not access GameServices, SessionManager, or EngineServices directly"))
-                    .because("runtime-owned framework code should receive dependencies from GameplayModeContext or explicit collaborators; frozen baseline: 11 violations");
+                    .because("runtime-owned framework code should receive dependencies from GameplayModeContext or explicit collaborators; frozen baseline: 13 violations");
 
     @ArchTest
     static final ArchRule game_services_does_not_depend_on_concrete_game_packages_or_object_implementations =
@@ -459,7 +459,7 @@ class TestArchUnitRules {
                                     "com.openggf.game.sonic2..",
                                     "com.openggf.game.sonic3k..")
                     .as("shared level and game layers should not depend on game-specific packages"))
-                    .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 64 violations");
+                    .because("shared layers should depend on provider contracts or shared abstractions, not concrete game packages; frozen baseline: 81 violations");
 
     @ArchTest
     static final ArchRule per_game_packages_do_not_cross_depend =

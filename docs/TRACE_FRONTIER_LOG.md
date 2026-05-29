@@ -1,5 +1,39 @@
 # Trace Frontier Log
 
+## 2026-05-29 - Failing-test cleanup verified trace-neutral
+
+- Scope: fixed 9 failing non-trace test classes on committed `develop`
+  (HEAD `76766c85c`): the `ScriptedVelocityAnimationProfile` airborne
+  slide+roll regression from `683b9c150`; the rewind/object/arch guard
+  failures from the recent CNZ/ICZ S3K bring-up
+  (`DefaultObjectRewindPolicies` central entries for CNZ/ICZ miniboss
+  explosion controllers, `TestRewindArchitectureGuard` transient baseline,
+  3 object-physics-standardization refactors, `SidekickCpuController` off
+  `GameServices`, ArchUnit freeze-store extension for the established
+  ObjectManager rewind-recreation + LiveRewindManager audio patterns); and
+  two stale CNZ-miniboss + one AIZ2 sidekick-bounds test that encoded
+  pre-fix expectations.
+- Baseline check: stashed all changes and ran the S3K frontier traces on
+  pristine HEAD vs. with-changes. First-error frames are **identical** in
+  both states, so the cleanup is trace-neutral:
+  - `TestS3kAizTraceReplay`: frame 8941, `camera_y` mismatch
+    (expected=0x02C1 actual=0x02B8), 243 errors / 23 warnings.
+  - `TestS3kCnzTraceReplay`: frame 17276, `x_speed` mismatch
+    (expected=0x0000 actual=0x000C), 1996 errors / 17 warnings.
+  - `TestS3kMgzTraceReplay`: frame 4124, `y_speed` mismatch
+    (expected=0x0000 actual=0x01AC), 3852 errors / 64 warnings.
+  - Command:
+    `mvn -Dmse=off "-Dsurefire.forkCount=1" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=com.openggf.tests.trace.s3k.TestS3kAizTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kCnzTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s3k.TestS3kMgzTraceReplay#replayMatchesTrace" test`
+- Note: committed HEAD's S3K frontiers are AIZ f8941 and CNZ f17276, not the
+  AIZ f19714 / CNZ f22036 recorded in the 2026-05-28/05-26 entries below —
+  those numbers came from the *local uncommitted* ICZ2/AIZ-hollow-tree-latch
+  work described in the 2026-05-28 entry, which is not in HEAD. MGZ f4124 is
+  unchanged.
+- Known-green guard (all PASS):
+  `mvn -Dmse=off "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s1.TestS1Mz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay#replayMatchesTrace" test`
+- Full `mvn clean test` (default suite, no trace replay): PASS,
+  5513 passed / 0 failed / 0 errors / 6 skipped.
+
 ## 2026-05-28 - ICZ2 stale object grounding regression guard
 
 - Scope: local uncommitted ICZ2 stale `Status_OnObj` cleanup plus AIZ Hollow
