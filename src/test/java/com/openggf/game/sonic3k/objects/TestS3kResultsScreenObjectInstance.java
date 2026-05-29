@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestS3kResultsScreenObjectInstance {
@@ -79,6 +80,23 @@ class TestS3kResultsScreenObjectInstance {
         assertEquals(1, services.apparentAct,
                 "Act 1 results exit must update Apparent_act to Act 2 before title-card handoff "
                         + "(docs/skdisasm/sonic3k.asm:62708-62720)");
+    }
+
+    @Test
+    void hczAndMgzSeamlessActOneExitSetsTransitionReadyFlag() throws Exception {
+        for (int zone : List.of(0x01, 0x02)) {
+            ActTransitionRecordingServices services = new ActTransitionRecordingServices(zone, Sonic3kMusic.HCZ2.id);
+            S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(
+                    services,
+                    () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 0));
+            results.setServices(services);
+
+            Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+            onExitReady.setAccessible(true);
+            onExitReady.invoke(results);
+
+            verify(services.gameState).setEndOfLevelFlag(true);
+        }
     }
 
     @Test
