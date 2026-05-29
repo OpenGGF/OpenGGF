@@ -201,6 +201,8 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int AIZ_END_BOSS_KNUX_LAYOUT_Y = 0x0640;
     /** Wrap distance: ROM subtracts $200 from all positions on ship-loop wrap. */
     private static final int BATTLESHIP_WRAP_DIST = 0x200;
+    /** AIZ2 forest loop BG period: the forest occupies BG cols 0-3 = the first $200. */
+    public static final int FOREST_LOOP_BG_PERIOD = 0x200;
     /** Left clamp: player X must be >= camera X + $18 during auto-scroll. */
     private static final int PLAYER_LEFT_MARGIN = 0x18;
     /** Right clamp: player X must be <= camera X + $A0 during auto-scroll. */
@@ -1737,6 +1739,25 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     /** True when the battleship auto-scroll loop is active. */
     public boolean isBattleshipAutoScrollActive() {
         return battleshipAutoScrollActive;
+    }
+
+    /**
+     * True only while the post-bombing forest loop is running: auto-scroll active
+     * AND the wrap boundary has moved to the post-bombing {@code $46C0} (set by
+     * {@link #onBattleshipComplete()}). Deliberately narrower than
+     * {@link #isBattleshipForestFrontPhaseActive()} (a display-bucket predicate
+     * spanning {@code $4380..$4880}) so the BG-loop override is scoped to the loop
+     * only — during this phase the AIZ2 BG loops just the {@code $200} forest
+     * window (BG cols 0-3), excluding the empty {@code $200-$400} filler.
+     */
+    public boolean isBattleshipForestLoopActive() {
+        return battleshipAutoScrollActive
+                && battleshipWrapX == BATTLESHIP_WRAP_X_POST_BOMBING;
+    }
+
+    /** BG source-loop period for the AIZ2 forest loop (the forest occupies the first {@code $200}). */
+    public int getForestLoopBgWrapPeriod() {
+        return FOREST_LOOP_BG_PERIOD;
     }
 
     /**
