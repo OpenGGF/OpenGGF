@@ -4,6 +4,17 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **AIZ2 battleship background loop is now seamless at the true ROM $200 wrap.**
+  Restored the ROM `AIZ2_DoShipLoop` `$200` camera/object renormalization (was a
+  `$80` visual approximation) and made the AIZ2 background loop only the `$200`
+  forest window during the battleship sequence, so the empty filler beyond it is
+  no longer scrolled into view. A composition trace of the renderer/shader showed
+  the engine's BG deform uses continuous `smoothScrollX` and the window base is
+  fixed at 0, so the fix loops the forest via the wrapped-BG period rather than
+  moving the window. AIZ trace error count dropped 243→32 (frontier frame
+  unchanged). Removes the former "AIZ2 Battleship Post-Bombing Wrap Distance" S3K
+  known-discrepancy.
+
 - **Repaired nine guard/functional test failures from the recent S3K CNZ/ICZ/AIZ bring-up.**
   All root-caused without zone/route/frame carve-outs: restored the slide-launch roll
   animation (`ScriptedVelocityAnimationProfile` now gates the airborne external-force
