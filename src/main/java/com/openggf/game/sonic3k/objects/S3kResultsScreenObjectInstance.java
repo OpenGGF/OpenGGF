@@ -570,9 +570,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
 
         services().gameState().setEndOfLevelActive(false);
 
-        if (isAct2OrSpecial) {
+        if (isAct2OrSpecial || hasSeamlessTransition) {
             // ROM loc_2DCF8 sets End_of_level_flag directly for Act 2/Sky
             // Sanctuary/LRZ boss results (sonic3k.asm:62693-62705).
+            // For HCZ/MGZ Act 1, the engine's BG event handlers use the same
+            // flag as their post-results gate before executeActTransition()
+            // resets gameplay state for the reloaded act.
             services().gameState().setEndOfLevelFlag(true);
         }
 
