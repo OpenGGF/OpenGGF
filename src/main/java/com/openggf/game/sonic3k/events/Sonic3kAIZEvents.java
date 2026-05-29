@@ -183,9 +183,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int BATTLESHIP_WRAP_X_BOMBING = 0x4440;
     /**
      * Wrap boundary after bombing. The ROM sets Events_bg+$02=$46C0 and subtracts
-     * $200, with HInt split rendering hiding the seam. Until that screen split is
-     * modeled, use a shorter visual repeat distance so the wrap lands inside the
-     * repeated forest mask instead of exposing the forest entrance.
+     * the full $200 ({@link #BATTLESHIP_WRAP_DIST}). The wrap is seamless because
+     * the AIZ2 background loops only the $200 forest window during this phase (see
+     * {@link #isBattleshipForestLoopActive()} and the AIZ clause in
+     * {@code Sonic3kZoneFeatureProvider.bgWrapsHorizontally()}); the empty
+     * $200-$400 BG filler is never built, so there is no exposed seam to hide.
      */
     private static final int BATTLESHIP_WRAP_X_POST_BOMBING = 0x46C0;
     /** Forest mask becomes visible once the bombship redraw reaches this camera X. */
@@ -197,7 +199,6 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
     private static final int AIZ_END_BOSS_KNUX_LOCK_X = 0x4100;
     private static final int AIZ_END_BOSS_KNUX_LAYOUT_X = 0x4120;
     private static final int AIZ_END_BOSS_KNUX_LAYOUT_Y = 0x0640;
-    private static final int BATTLESHIP_WRAP_DIST_POST_BOMBING = 0x80;
     /** Wrap distance: ROM subtracts $200 from all positions on ship-loop wrap. */
     private static final int BATTLESHIP_WRAP_DIST = 0x200;
     /** Left clamp: player X must be >= camera X + $18 during auto-scroll. */
@@ -1623,9 +1624,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         // Wrap-back: when camera reaches the wrap boundary, subtract the active
         // repeat distance from all positions for seamless looping.
         if (newCameraX >= battleshipWrapX) {
-            int wrapDelta = battleshipWrapX == BATTLESHIP_WRAP_X_BOMBING
-                    ? BATTLESHIP_WRAP_DIST
-                    : BATTLESHIP_WRAP_DIST_POST_BOMBING;
+            int wrapDelta = BATTLESHIP_WRAP_DIST; // ROM AIZ2_DoShipLoop subtracts $200 in both phases
             levelRepeatOffset = wrapDelta;
 
             cam.setX((short) (newCameraX - wrapDelta));
@@ -1852,10 +1851,10 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
      * and all bombs have been dropped. Spawns the small Eggman craft.
      */
     public void onBattleshipComplete() {
-        // ROM: AIZ2SE_EndRefresh sets Events_bg+$02 = $46C0.
-        // This moves the wrap into the forested area right before the boss arena.
-        // In the ROM, the HInt screen-split hides the terrain seam at the wrap point;
-        // without it there's a slight visual discontinuity, but the loop location is correct.
+        // ROM: AIZ2SE_EndRefresh sets Events_bg+$02 = $46C0, moving the wrap into the
+        // forested area before the boss arena. The full ROM $200 wrap is seamless
+        // because the BG loops only the $200 forest window during this phase (the
+        // empty $200-$400 filler is excluded); see isBattleshipForestLoopActive().
         battleshipWrapX = BATTLESHIP_WRAP_X_POST_BOMBING;
 
         var objManager = levelManager().getObjectManager();
