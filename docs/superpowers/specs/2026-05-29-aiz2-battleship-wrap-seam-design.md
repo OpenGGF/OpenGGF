@@ -182,7 +182,21 @@ non-`$200` data.
    - `getForestLoopBgWrapPeriod()` — the verified period from Phase 1 (`$200`).
    - `getForestLoopBgOrigin()` — the verified world-X loop origin from Phase 1,
      so the source-query normalization anchors correctly.
-3. **Normalize the BG source query to the loop period.** The override must act on
+3. **Route AIZ through the wrapped-BG build path during the loop.** The
+   period/origin math in `LevelTilemapManager` only runs when `bgWrap` is true,
+   which requires `Sonic3kZoneFeatureProvider.bgWrapsHorizontally()` — currently
+   MGZ, ICZ, and CNZ-boss only, **not AIZ** (`Sonic3kZoneFeatureProvider.java:117`,
+   `LevelTilemapManager.java:341`). Without this step the new math is dead code.
+   Add a narrow AIZ clause to `bgWrapsHorizontally()` that is true only while
+   `isBattleshipForestLoopActive()`, mirroring the existing phase-scoped
+   `isCnzBossBackgroundWindowActive(zoneId)` precedent in the same method (so this
+   stays a feature-provider boundary decision, not a `zone == AIZ` branch in
+   shared code). Also verify `zoneRuntimeRequiresFullWidthBgTilemap()` — which
+   forces full-width BG for the AIZ *intro* — does **not** fire during the
+   post-bombing loop phase and suppress the wrap (`LevelTilemapManager.java:344`);
+   the intro and the loop are distinct phases, but the implementer must confirm
+   the loop phase reaches `bgWrap == true`.
+4. **Normalize the BG source query to the loop period.** The override must act on
    the **source-layout query**, not merely the cache period. In the
    `LevelManager.applyBackgroundTilemapWindowSelection()` /
    `LevelTilemapManager` BG-build path (alongside the MGZ state-8 and CNZ
@@ -200,7 +214,7 @@ non-`$200` data.
    override is strictly scoped to the looping phase; all other AIZ phases (intro,
    fire, forest handoff, normal) keep the existing `bgContiguousWidthPx`-wrapped
    source query untouched.
-4. **Cleanup.** Delete the `$80` constant and post-bombing tuning; remove the
+5. **Cleanup.** Delete the `$80` constant and post-bombing tuning; remove the
    `docs/S3K_KNOWN_DISCREPANCIES.md` "AIZ2 Battleship Post-Bombing Wrap Distance"
    entry (and its TOC line); add a CHANGELOG entry.
 
