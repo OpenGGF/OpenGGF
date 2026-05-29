@@ -76,12 +76,6 @@ public class HczEndBossInstance extends AbstractBossInstance {
     private static final int ST_LOCK_X_LEFT = 0x4000;
     private static final int ST_LOCK_X_RIGHT = 0x4050;
 
-    /**
-     * ROM: loc_85CE6 adds $60 to the lock Y target when checking approach-from-below.
-     * If Camera_Y is within this tolerance of the target, snap immediately.
-     */
-    private static final int APPROACH_FROM_BELOW_Y_TOLERANCE = 0x60;
-
     // =========================================================================
     // Arena bounds — Knuckles (ROM: word_6AEA6)
     // =========================================================================
@@ -135,13 +129,8 @@ public class HczEndBossInstance extends AbstractBossInstance {
     // =========================================================================
     private int waitTimer = -1;
     private WaitCallback waitCallback = WaitCallback.NONE;
-    private boolean arenaYLocked;
-    private boolean arenaXLocked;
     private boolean customFlashDirty;
-    private boolean cameraLockComplete;
-    private int musicWaitTimer = -1;
-    private boolean approachFromBelow;   // ROM: bit 7 of $27(a0)
-    private boolean approachFromRight;   // ROM: bit 6 of $27(a0)
+    private S3kSharedBossCameraGate cameraGate;
 
     // Movement state (Task 6)
     private int swingVelocity;
@@ -189,16 +178,15 @@ public class HczEndBossInstance extends AbstractBossInstance {
         state.renderFlags = 0;
         waitTimer = -1;
         waitCallback = WaitCallback.NONE;
-        arenaYLocked = false;
-        arenaXLocked = false;
         customFlashDirty = false;
-        cameraLockComplete = false;
-        musicWaitTimer = -1;
+        if (cameraGate == null) {
+            cameraGate = new S3kSharedBossCameraGate();
+        } else {
+            cameraGate.reset();
+        }
         propellerActive = false;
         bladeFireSignal = false;
         defeatSignal = false;
-        approachFromBelow = false;
-        approachFromRight = false;
         defeatExplosionController = null;
         swingVelocity = 0;
         swingDown = false;
@@ -332,29 +320,25 @@ public class HczEndBossInstance extends AbstractBossInstance {
         // Set Boss_flag on HCZ events
         setBossFlag(true);
 
-        // ROM: Check_CameraInRange sets approach-direction bits in $27(a0)
-        var camera = services().camera();
-        approachFromBelow = (camera.getY() > targetLockYTop);
-        approachFromRight = (camera.getX() > targetLockXLeft);
-
         // Fade out current music
         services().fadeOutMusic();
 
         // Load boss palette to palette line 1
         loadBossPalette();
 
-        // Wait 120 frames, then play boss music
-        musicWaitTimer = BOSS_MUSIC_WAIT;
-
         // Begin camera lock — Y first, then X
         state.routine = ROUTINE_DESCEND;
         state.yVel = 0;
         state.xVel = 0;
 
-        // Start gradual camera lock (Y boundaries first)
-        arenaYLocked = false;
-        arenaXLocked = false;
-        cameraLockComplete = false;
+        cameraGate.begin(
+                services().camera(),
+                new S3kSharedBossCameraGate.LockBounds(
+                        targetLockYTop,
+                        targetLockYBottom,
+                        targetLockXLeft,
+                        targetLockXRight),
+                BOSS_MUSIC_WAIT);
 
         LOG.info("HCZ End Boss: triggered, starting camera lock");
     }
@@ -370,87 +354,18 @@ public class HczEndBossInstance extends AbstractBossInstance {
      * min and max when the camera reaches the target zone. Y and X run
      * in parallel. Completion requires music played + Y locked + X locked.
      *
-     * <p>Approach direction (set in updateInit from Check_CameraInRange):
-     * <ul>
-     *   <li>approachFromBelow (bit 7): camera Y > targetLockYTop at trigger</li>
-     *   <li>approachFromRight (bit 6): camera X > targetLockXLeft at trigger</li>
-     * </ul>
+     * <p>Approach direction, music wait, and axis completion are handled by
+     * {@link S3kSharedBossCameraGate} using the same bits as the ROM helper.
      */
     private void updateCameraLock() {
-        if (cameraLockComplete) {
+        if (cameraGate.isComplete()) {
             return;
         }
-
-        // Music wait timer: play boss music after delay (ROM: bit 0 of $27)
-        if (musicWaitTimer >= 0) {
-            musicWaitTimer--;
-            if (musicWaitTimer < 0) {
-                services().playMusic(Sonic3kMusic.BOSS.id);
-                services().gameState().setCurrentBossId(Sonic3kObjectIds.HCZ_END_BOSS);
-            }
-        }
-
-        var camera = services().camera();
-
-        // Y lock — follow camera, snap when reached (ROM: loc_85CC6–loc_85CF2)
-        if (!arenaYLocked) {
-            int cameraY = camera.getY();
-            if (!approachFromBelow) {
-                // Approaching from above (bit 7 clear): follow camera downward
-                // ROM: cmp.w _unkFAB0,d0 / bhs.s snap
-                if (cameraY >= targetLockYTop) {
-                    // Snap: set min_Y and target_max_Y
-                    camera.setMinY((short) targetLockYTop);
-                    camera.setMaxYTarget((short) targetLockYBottom);
-                    arenaYLocked = true;
-                } else {
-                    // Follow: prevent upscroll past current position
-                    camera.setMinY((short) cameraY);
-                }
-            } else {
-                // Approaching from below (bit 7 set): ROM loc_85CE6
-                // ROM adds $60 tolerance: if Camera_Y <= target + $60, snap immediately.
-                // No "follow" step — ROM just skips Y entirely if too far below.
-                int snapThreshold = targetLockYBottom + APPROACH_FROM_BELOW_Y_TOLERANCE;
-                if (cameraY <= snapThreshold) {
-                    // Close enough — snap
-                    camera.setMinY((short) targetLockYTop);
-                    camera.setMaxYTarget((short) targetLockYBottom);
-                    arenaYLocked = true;
-                }
-                // else: too far below, do nothing (ROM: bhi.s loc_85D06 — skip Y)
-            }
-        }
-
-        // X lock — runs in parallel with Y (ROM: bit 2 of $27)
-        if (!arenaXLocked) {
-            int cameraX = camera.getX();
-            if (!approachFromRight) {
-                // Approaching from left: follow camera rightward
-                if (cameraX >= targetLockXLeft) {
-                    // Snap
-                    camera.setMinX((short) targetLockXLeft);
-                    camera.setMaxX((short) targetLockXRight);
-                    arenaXLocked = true;
-                } else {
-                    camera.setMinX((short) cameraX);
-                }
-            } else {
-                // Approaching from right: follow camera leftward
-                if (cameraX <= targetLockXRight) {
-                    // Snap
-                    camera.setMinX((short) targetLockXLeft);
-                    camera.setMaxX((short) targetLockXRight);
-                    arenaXLocked = true;
-                } else {
-                    camera.setMaxX((short) cameraX);
-                }
-            }
-        }
-
-        // Check completion: music played + Y locked + X locked (ROM: $27 bits 0,1,2 = 7)
-        if (musicWaitTimer < 0 && arenaYLocked && arenaXLocked) {
-            cameraLockComplete = true;
+        boolean complete = cameraGate.update(services().camera(), () -> {
+            services().playMusic(Sonic3kMusic.BOSS.id);
+            services().gameState().setCurrentBossId(Sonic3kObjectIds.HCZ_END_BOSS);
+        });
+        if (complete) {
             onCameraLockComplete();
         }
     }
