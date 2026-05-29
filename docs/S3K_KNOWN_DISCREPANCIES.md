@@ -18,7 +18,6 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 5. [Save System](#save-system)
 6. [Tails Flying-With-Cargo Physics](#tails-flying-with-cargo-physics)
 7. [HCZ Object Mappings: Removal of `docs/` Runtime Reads](#hcz-object-mappings-removal-of-docs-runtime-reads)
-8. [AIZ2 Battleship Post-Bombing Wrap Distance](#aiz2-battleship-post-bombing-wrap-distance)
 
 ---
 
@@ -285,26 +284,3 @@ This is not a behavioral discrepancy from the ROM — sprite output is identical
 ### Verification
 
 `TestSonic3kLevelLoading` and `TestSonic3kBootstrapResolver` continue to pass. The `loadMappingsFromAsmInclude` helper and the three `Path` constants pointing under `docs/` have been removed from `Sonic3kObjectArtProvider`.
-
----
-
-## AIZ2 Battleship Post-Bombing Wrap Distance
-
-**Location:** `Sonic3kAIZEvents.java` (`BATTLESHIP_WRAP_DIST_POST_BOMBING`, `updateBattleshipAutoScroll`)
-**ROM Reference:** `sonic3k.asm` `AIZ2_DoShipLoop` (camera auto-scroll + `Level_repeat_offset` wrap-back); `Events_bg+$02` post-bombing wrap boundary `$46C0`.
-
-### Original Implementation
-
-During the AIZ Act 2 Flying Battery auto-scroll, `AIZ2_DoShipLoop` advances the camera and, once `Camera_X_pos` reaches the active wrap boundary, subtracts `$200` from the camera, both players, and all bombing-sequence objects (`Level_repeat_offset = $200`) so the looping background repeats seamlessly. After the bombing phase the wrap boundary moves to `$46C0` but the subtracted distance stays `$200`; the visible seam is hidden by the ROM's HInt screen-split rendering.
-
-### Our Implementation
-
-The engine subtracts the full ROM `$200` during the bombing phase (`BATTLESHIP_WRAP_DIST`), but uses a shorter `$80` distance (`BATTLESHIP_WRAP_DIST_POST_BOMBING`) for the post-bombing wrap so the loop lands inside the repeated forest mask instead of exposing the forest entrance. The engine does not yet model the AIZ2 HInt screen split that the ROM uses to hide the seam at the true `$200` distance.
-
-### Rationale
-
-This is a deliberate visual approximation, not a physics change: it only affects how far the background/camera wrap back during the late battleship loop, chosen so the seam stays hidden without the HInt split. When the per-line/per-cell screen split is modeled via `AdvancedRenderModeController` / `ScrollEffectComposer`, the post-bombing distance should be restored to the ROM `$200` and this entry removed. Because the wrap distance is an evolving visual approximation, `TestS3kAiz2SidekickBoundsSync` asserts that the sidekick boundary mirror tracks the live `Camera_max_X_pos` after the wrap rather than pinning a fixed wrap value.
-
-### Verification
-
-`TestS3kAiz2SidekickBoundsSync` passes (boundary-sync assertion). The AIZ trace replay frontier (`TestS3kAizTraceReplay`) is unaffected by this entry's documentation.
