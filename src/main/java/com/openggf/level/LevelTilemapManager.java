@@ -59,6 +59,9 @@ public class LevelTilemapManager {
     // room floor below it.
     private int bgLoopBandBaseY = -1;
     private int currentBgPeriodWidth = VDP_BG_PLANE_WIDTH_PX;
+    // Actual source query offset/width used by the most recent BG tilemap build.
+    private int lastBgBuildQueryOffsetPx = -1;
+    private int lastBgBuildWidthPx = -1;
 
     // --- Foreground tilemap data ---
     private byte[] foregroundTilemapData;
@@ -365,6 +368,13 @@ public class LevelTilemapManager {
         } else if (layerIndex == 1 && bgWrap && bgContiguousWidthPx > 0) {
             bgXQueryOffset = ((bgTilemapBaseX % bgContiguousWidthPx) + bgContiguousWidthPx)
                     % bgContiguousWidthPx;
+        }
+
+        if (layerIndex == 1) {
+            // Record the actual source query offset/width this BG build used, so tests
+            // and diagnostics can read the real built window (not a recomputed formula).
+            lastBgBuildQueryOffsetPx = bgXQueryOffset;
+            lastBgBuildWidthPx = levelWidth;
         }
 
         // S3K CNZ miniboss (CNZ1BGE_Boss) loops a fixed 256px BG band drawn from layout
@@ -922,6 +932,16 @@ public class LevelTilemapManager {
 
     public int getCurrentBgPeriodWidth() {
         return currentBgPeriodWidth;
+    }
+
+    /** Source-layout X offset (px) the last BG tilemap build queried from. -1 before any build. */
+    public int getLastBgBuildQueryOffsetPx() {
+        return lastBgBuildQueryOffsetPx;
+    }
+
+    /** Width (px) of the last BG tilemap build window. -1 before any build. */
+    public int getLastBgBuildWidthPx() {
+        return lastBgBuildWidthPx;
     }
 
     public void setCurrentBgPeriodWidth(int currentBgPeriodWidth) {
