@@ -20,6 +20,18 @@ public interface DataSelectProvider {
     /** Draw the data select screen. */
     void draw();
 
+    /**
+     * Sets the projection-space viewport width for widescreen centering.
+     *
+     * <p>The data-select background tiles to fill the full viewport width; all
+     * other content is centred by {@code (viewportWidth - 320) / 2}. At native
+     * width 320 the offset is 0 — byte-identical. Default implementation is a
+     * no-op (native behaviour).
+     */
+    default void setViewportWidth(int width) {
+        // default: no-op (native 320)
+    }
+
     /** Set the OpenGL clear color for the data select background. */
     void setClearColor();
 

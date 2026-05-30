@@ -269,15 +269,22 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         if (fadeAlpha > 0.0f) {
             GraphicsManager graphics = GameServices.graphics();
             if (graphics != null && !graphics.isHeadlessMode()) {
+                // Use projectionWidth for the fade overlay so it covers the full viewport.
+                int vpWidth = graphics.getProjectionWidth();
                 graphics.registerCommand(new GLCommand(
                         GLCommand.CommandType.RECTI,
                         -1,
                         GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                         0.0f, 0.0f, 0.0f, fadeAlpha,
-                        0, 0, 320, 224
+                        0, 0, vpWidth, 224
                 ));
             }
         }
+    }
+
+    @Override
+    public void setViewportWidth(int width) {
+        renderer.setViewportWidth(width);
     }
 
     @Override

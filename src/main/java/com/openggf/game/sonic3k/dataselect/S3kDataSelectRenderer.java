@@ -84,6 +84,9 @@ public class S3kDataSelectRenderer {
     private static final int SCREEN_HEIGHT = 224;
     private static final int SCREEN_TILE_WIDTH = 40;
     private static final int SCREEN_TILE_HEIGHT = 28;
+
+    // Widescreen support — default 320 (native); set by setViewportWidth() before each draw.
+    private int viewportWidth = SCREEN_WIDTH;
     private static final int PLANE_WIDTH_TILES = 128;
     private static final int PLANE_HEIGHT_TILES = 32;
     private static final int CARD_TILE_WIDTH = 10;
@@ -140,15 +143,18 @@ public class S3kDataSelectRenderer {
         }
 
         ensureCached(graphics, assets);
-        int cameraX = objectState.selectorState().cameraX();
+        // Widescreen: shift all content right by xOffset() by subtracting xOffset() from cameraX
+        // (since screen-space X = worldX - effectiveCameraX). The menu background is expanded
+        // by tiling instead. xOffset() == 0 at native 320 — byte-identical.
+        int cameraX = objectState.selectorState().cameraX() - xOffset();
         boolean prevBatchingEnabled = graphics.isBatchingEnabled();
         boolean prevInstancedBatchingEnabled = graphics.isInstancedBatchingEnabled();
         graphics.setBatchingEnabled(true);
         graphics.setInstancedBatchingEnabled(true);
         try {
             graphics.beginPatternBatch();
-            renderScreenTilemap(graphics, assets.getMenuBackgroundLayoutWords(),
-                    SCREEN_TILE_WIDTH, SCREEN_TILE_HEIGHT);
+            renderScreenTilemapTiled(graphics, assets.getMenuBackgroundLayoutWords(),
+                    SCREEN_TILE_WIDTH, SCREEN_TILE_HEIGHT, viewportWidth);
             flushLayer(graphics);
 
             graphics.beginPatternBatch();
@@ -217,6 +223,23 @@ public class S3kDataSelectRenderer {
         }
         Palette.Color color = backdrop.getColor(0);
         glClearColor(color.rFloat(), color.gFloat(), color.bFloat(), 1.0f);
+    }
+
+    /**
+     * Sets the projection-space viewport width for widescreen support.
+     *
+     * <p>The data-select menu background tiles to fill the full viewport width.
+     * All other content (save cards, title, selector) is centred by shifting
+     * their effective camera origin by {@code (viewportWidth - 320) / 2}.
+     * At native width 320 the offset is 0 — byte-identical output.
+     */
+    public void setViewportWidth(int width) {
+        this.viewportWidth = Math.max(SCREEN_WIDTH, width);
+    }
+
+    /** Horizontal pixel offset for centering native-320 content. Returns 0 at native 320. */
+    private int xOffset() {
+        return (viewportWidth - SCREEN_WIDTH) / 2;
     }
 
     public void reset() {
@@ -716,6 +739,42 @@ public class S3kDataSelectRenderer {
     private void renderScreenTilemap(GraphicsManager graphics, int[] words, int width, int height) {
         renderTilemap(graphics, words, width, height,
                 SCREEN_SPACE_WORLD_ORIGIN, SCREEN_SPACE_WORLD_ORIGIN);
+    }
+
+    /**
+     * Renders the menu-background tilemap tiled horizontally to fill {@code viewportWidth}.
+     *
+     * <p>At native width 320 (= {@code width} × 8) this draws exactly {@code width} columns
+     * starting at X=0, identical to {@link #renderScreenTilemap} — byte-identical output.
+     * At widescreen widths additional tile columns are appended by wrapping the source column
+     * index modulo {@code width}, matching the MenuBackgroundRenderer.renderTiled pattern.
+     */
+    private void renderScreenTilemapTiled(GraphicsManager graphics, int[] words,
+                                          int width, int height, int vpWidth) {
+        if (words == null || words.length == 0) {
+            return;
+        }
+        int originY = SCREEN_SPACE_WORLD_ORIGIN - 128;  // = 0
+        int tileColumns = (vpWidth + 7) / 8;
+        for (int row = 0; row < height; row++) {
+            for (int col = 0; col < tileColumns; col++) {
+                int srcCol = col % width;
+                int index = row * width + srcCol;
+                if (index >= words.length) {
+                    continue;
+                }
+                int word = words[index];
+                if (word == 0) {
+                    continue;
+                }
+                reusableDesc.set(word);
+                if (reusableDesc.getPatternIndex() == 0) {
+                    continue;
+                }
+                graphics.renderPatternWithId(DATA_SELECT_PATTERN_BASE + reusableDesc.getPatternIndex(),
+                        reusableDesc, col * 8, originY + row * 8);
+            }
+        }
     }
 
     private void renderPlaneOverlayTilemap(GraphicsManager graphics, int[] words, int width, int height,

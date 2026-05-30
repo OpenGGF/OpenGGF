@@ -1582,6 +1582,10 @@ public class Engine {
 			camera.setY((short) 0);
 			DataSelectProvider dataSelect = gameLoop.getDataSelectProvider();
 			if (dataSelect != null) {
+				// Pass the full projection width so the data select can expand the background
+				// and centre the save-card content within a wider viewport (widescreen support).
+				// At native 320 this is a no-op — setViewportWidth(320) returns offset 0.
+				dataSelect.setViewportWidth((int) realWidth);
 				dataSelect.draw();
 			}
 		} else if (getCurrentGameMode() == GameMode.ENDING_CUTSCENE) {
