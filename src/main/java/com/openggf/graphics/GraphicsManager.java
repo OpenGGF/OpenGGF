@@ -2,6 +2,8 @@ package com.openggf.graphics;
 
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.color.DisplayColorConverter;
 import com.openggf.graphics.color.DisplayColorProfile;
@@ -262,9 +264,10 @@ public class GraphicsManager {
 		this.fadeShaderProgram = new ShaderProgram(ShaderProgram.FULLSCREEN_VERTEX_SHADER, FADE_SHADER_PATH);
 		this.shadowShaderProgram = new ShaderProgram(BASIC_VERTEX_SHADER_PATH, SHADOW_SHADER_PATH);
 		this.shadowShaderProgram.cacheUniformLocations();
-		this.tilemapGpuRenderer = new TilemapGpuRenderer();
+		SonicConfigurationService cfg = GameServices.configuration();
+		this.tilemapGpuRenderer = new TilemapGpuRenderer(cfg.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
 		this.tilemapGpuRenderer.init(TILEMAP_SHADER_PATH);
-		this.instancedPatternRenderer = new InstancedPatternRenderer(this, GameServices.configuration());
+		this.instancedPatternRenderer = new InstancedPatternRenderer(this, cfg);
 		this.instancedPatternRenderer.init(INSTANCED_VERTEX_SHADER_PATH, pixelShaderPath, WATER_SHADER_PATH);
 
 		syncRuntimeManagedReferences();

@@ -1,8 +1,5 @@
 package com.openggf.graphics;
 
-import com.openggf.configuration.SonicConfiguration;
-import com.openggf.game.GameServices;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -33,14 +30,24 @@ public class TilemapGpuRenderer {
     private final VScrollBuffer columnVScrollBuffer;
     private final QuadRenderer quadRenderer = new QuadRenderer();
 
-    public TilemapGpuRenderer() {
-        int screenWidth;
-        try {
-            screenWidth = GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
-        } catch (Exception e) {
-            screenWidth = 320;
-        }
+    /**
+     * Construct with the configured viewport width.
+     * Column count scales as ceil(screenWidth/16): 20 at native 320px.
+     * The caller (GraphicsManager) reads the configured width and injects it here
+     * so this low-level class stays free of GameServices / SonicConfiguration.
+     *
+     * @param screenWidth viewport width in pixels (e.g. 320 for native)
+     */
+    public TilemapGpuRenderer(int screenWidth) {
         columnVScrollBuffer = new VScrollBuffer(columnCount(screenWidth));
+    }
+
+    /**
+     * No-arg constructor for tests or callers without access to config.
+     * Defaults to native 320px (20 vscroll columns).
+     */
+    public TilemapGpuRenderer() {
+        this(320);
     }
 
     private static int columnCount(int width) {
