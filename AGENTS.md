@@ -32,7 +32,7 @@ S3K playable vertical-slice parity. Close AIZ → HCZ route blockers first, then
 
 ## Branch Documentation Policy
 
-Git hooks in `.githooks/` and CI enforce the branch policy below. Configure the repo once with `git config core.hooksPath .githooks` so local commits use the tracked hooks. The hook entrypoints dispatch through `.githooks/run-policy`: on Windows they call `validate-policy.ps1`, and on macOS/Linux they call `validate-policy.sh`.
+Git hooks in `.githooks/` and CI enforce the branch policy below. A Maven build auto-installs them during the `validate` phase by pointing `core.hooksPath` at `.githooks` (the `install-git-hooks` antrun execution in `pom.xml`); run `git config core.hooksPath .githooks` manually only if you commit without building first. The hook entrypoints dispatch through `.githooks/run-policy`: on Windows they call `validate-policy.ps1`, and on macOS/Linux they call `validate-policy.sh`.
 
 - Every non-`master` branch commit must include these trailers (each starting with `updated` or `n/a`): `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`.
 - `prepare-commit-msg` auto-appends the trailer block on non-merge commits. Do not delete it; fill it in.
