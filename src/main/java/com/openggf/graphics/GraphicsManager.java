@@ -3,6 +3,8 @@ package com.openggf.graphics;
 import com.openggf.Engine;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.graphics.color.DisplayColorConverter;
+import com.openggf.graphics.color.DisplayColorProfile;
 import com.openggf.graphics.pipeline.UiRenderPipeline;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
@@ -40,8 +42,12 @@ public class GraphicsManager {
 	private final Queue<PendingRenderThreadTask<?>> pendingRenderThreadTasks = new ConcurrentLinkedQueue<>();
 
 	private final Map<String, Integer> paletteTextureMap = new HashMap<>(); // Map for palette textures
+	private final Map<Integer, Palette> paletteSourceMap = new HashMap<>();
 	private Integer combinedPaletteTextureId;
 	private int currentPaletteTextureHeight = 0;
+	private DisplayColorProfile displayColorProfile = DisplayColorProfile.RAW_RGB;
+	private Palette[] lastUnderwaterPalettes;
+	private Palette lastUnderwaterNormalLine0;
 	private PatternAtlas patternAtlas;
 	private com.openggf.debug.PerformanceProfiler profiler;
 	// Lazily allocated to avoid LWJGL native library loading in headless tests
@@ -373,6 +379,38 @@ public class GraphicsManager {
 		return underwaterPaletteUploadBuffer;
 	}
 
+	public void setDisplayColorProfile(DisplayColorProfile displayColorProfile) {
+		this.displayColorProfile = displayColorProfile != null ? displayColorProfile : DisplayColorProfile.RAW_RGB;
+	}
+
+	public DisplayColorProfile getDisplayColorProfile() {
+		return displayColorProfile;
+	}
+
+	void writePaletteColor(ByteBuffer buffer, Palette.Color color, int colorIndex) {
+		int[] rgb = DisplayColorConverter.toRgbBytes(color, displayColorProfile);
+		buffer.put((byte) rgb[0]);
+		buffer.put((byte) rgb[1]);
+		buffer.put((byte) rgb[2]);
+		buffer.put((byte) (colorIndex == 0 ? 0 : 255));
+	}
+
+	int[] paletteUploadRgbaForTest(Palette.Color color, int colorIndex) {
+		ByteBuffer buffer = ByteBuffer.allocate(4);
+		writePaletteColor(buffer, color, colorIndex);
+		buffer.flip();
+		return new int[] {
+				Byte.toUnsignedInt(buffer.get()),
+				Byte.toUnsignedInt(buffer.get()),
+				Byte.toUnsignedInt(buffer.get()),
+				Byte.toUnsignedInt(buffer.get())
+		};
+	}
+
+	Palette getCachedPaletteSourceForTest(int paletteId) {
+		return paletteSourceMap.get(paletteId);
+	}
+
 	/**
 	 * Flush all registered commands.
 	 * Uses shake-adjusted camera positions so sprites shake in sync with FG tiles.
@@ -529,6 +567,7 @@ public class GraphicsManager {
 	}
 
 	public void cachePaletteTexture(Palette palette, int paletteId) {
+		paletteSourceMap.put(paletteId, palette);
 		if (headlessMode) {
 			// In headless mode, just record that the palette was cached
 			paletteTextureMap.put("palette_" + paletteId, -1);
@@ -580,14 +619,7 @@ public class GraphicsManager {
 		paletteBuffer.clear();
 		for (int i = 0; i < COLORS_PER_PALETTE; i++) {
 			Palette.Color color = palette.getColor(i);
-			paletteBuffer.put((byte) Byte.toUnsignedInt(color.r));
-			paletteBuffer.put((byte) Byte.toUnsignedInt(color.g));
-			paletteBuffer.put((byte) Byte.toUnsignedInt(color.b));
-			if (i == 0) {
-				paletteBuffer.put((byte) 0);
-			} else {
-				paletteBuffer.put((byte) 255);
-			}
+			writePaletteColor(paletteBuffer, color, i);
 		}
 		paletteBuffer.flip();
 
@@ -998,6 +1030,8 @@ public class GraphicsManager {
 	}
 
 	public void cacheUnderwaterPaletteTexture(Palette[] palettes, Palette normalLine0) {
+		lastUnderwaterPalettes = palettes;
+		lastUnderwaterNormalLine0 = normalLine0;
 		if (headlessMode)
 			return;
 
@@ -1042,14 +1076,7 @@ public class GraphicsManager {
 					try {
 						if (p != null) {
 							Palette.Color color = p.getColor(i);
-							paletteBuffer.put((byte) Byte.toUnsignedInt(color.r));
-							paletteBuffer.put((byte) Byte.toUnsignedInt(color.g));
-							paletteBuffer.put((byte) Byte.toUnsignedInt(color.b));
-							if (i == 0) {
-								paletteBuffer.put((byte) 0);
-							} else {
-								paletteBuffer.put((byte) 255);
-							}
+							writePaletteColor(paletteBuffer, color, i);
 						} else {
 							// Empty/Black for missing palette lines
 							paletteBuffer.put((byte) 0).put((byte) 0).put((byte) 0).put((byte) 0);
@@ -1066,6 +1093,18 @@ public class GraphicsManager {
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 16, totalLines, 0, GL_RGBA, GL_UNSIGNED_BYTE, paletteBuffer);
 		} finally {
 			MemoryUtil.memFree(paletteBuffer);
+		}
+	}
+
+	public void refreshAllPaletteTextures() {
+		List<Map.Entry<Integer, Palette>> cachedPalettes = new ArrayList<>(paletteSourceMap.entrySet());
+		for (Map.Entry<Integer, Palette> entry : cachedPalettes) {
+			if (entry.getValue() != null) {
+				cachePaletteTexture(entry.getValue(), entry.getKey());
+			}
+		}
+		if (lastUnderwaterPalettes != null) {
+			cacheUnderwaterPaletteTexture(lastUnderwaterPalettes, lastUnderwaterNormalLine0);
 		}
 	}
 
@@ -1098,6 +1137,8 @@ public class GraphicsManager {
 		combinedPaletteTextureId = null;
 		currentPaletteTextureHeight = 0;
 		underwaterPaletteTextureId = null;
+		lastUnderwaterPalettes = null;
+		lastUnderwaterNormalLine0 = null;
 		if (paletteUploadBuffer != null) {
 			MemoryUtil.memFree(paletteUploadBuffer);
 			paletteUploadBuffer = null;
@@ -1129,6 +1170,7 @@ public class GraphicsManager {
 			currentPaletteTextureHeight = 0;
 		}
 		paletteTextureMap.clear();
+		paletteSourceMap.clear();
 		commands.clear();
 	}
 

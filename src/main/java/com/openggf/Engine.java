@@ -22,6 +22,7 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugOption;
+import com.openggf.debug.DebugColor;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.debug.DebugRenderer;
@@ -54,6 +55,7 @@ import com.openggf.game.sonic1.Sonic1GameModule.S1DataSelectImageWarmup;
 import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
 import com.openggf.data.Rom;
 import com.openggf.physics.Direction;
+import com.openggf.graphics.color.DisplayColorProfileController;
 
 import java.io.IOException;
 import java.nio.IntBuffer;
@@ -105,6 +107,7 @@ public class Engine {
 	// Match the rest of the debug overlay — no drop shadow.
 	private final PixelFontTextRenderer traceHudTextRenderer =
 		new PixelFontTextRenderer(PixelFontVariant.PIXEL_FONT_NO_SHADOW);
+	private DisplayColorProfileController displayColorProfileController;
 
 	private static volatile DebugState debugState = DebugState.NONE;
 	private static volatile DebugOption debugOption = DebugOption.A;
@@ -365,6 +368,7 @@ public class Engine {
 		try {
 			graphicsManager.init(RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
 			graphicsManager.setEngine(this);
+			displayColorProfileController = DisplayColorProfileController.fromConfig(configService, graphicsManager);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -1321,6 +1325,9 @@ public class Engine {
 		}
 
 		profiler.beginSection("update");
+		if (displayColorProfileController != null) {
+			displayColorProfileController.update(inputHandler);
+		}
 		update();
 		profiler.endSection("update");
 
@@ -1334,6 +1341,8 @@ public class Engine {
 		if (uiPipeline != null) {
 			uiPipeline.renderFadePass();
 		}
+
+		renderDisplayColorProfileNotification();
 
 		// Trace Test Mode HUD: drawn AFTER the fade pass so counters and
 		// TRACE COMPLETE remain readable during fade-to-black teardown.
@@ -1400,6 +1409,20 @@ public class Engine {
 
 		profiler.endFrame();
 		overlayStateReady = false;
+	}
+
+	private void renderDisplayColorProfileNotification() {
+		if (displayColorProfileController == null) {
+			return;
+		}
+		String text = displayColorProfileController.notificationText();
+		if (text == null) {
+			return;
+		}
+		float scale = 1.0f;
+		int y = 224 - traceHudTextRenderer.lineHeight(scale) - 4;
+		traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+		traceHudTextRenderer.drawShadowedText(text, 4, y, DebugColor.YELLOW, scale);
 	}
 
 	/**

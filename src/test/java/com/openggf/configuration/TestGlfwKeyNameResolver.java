@@ -78,6 +78,13 @@ class TestGlfwKeyNameResolver {
         assertTrue(GlfwKeyNameResolver.resolve("UNKNOWN").isEmpty());
     }
 
+    @Test
+    void resolve_hashAlias_returnsWorld1() {
+        OptionalInt result = GlfwKeyNameResolver.resolve("#");
+        assertTrue(result.isPresent(), "Expected '#' to resolve to the UK hash key alias");
+        assertEquals(GLFW_KEY_WORLD_1, result.getAsInt());
+    }
+
     // --- nameOf() tests ---
 
     @Test

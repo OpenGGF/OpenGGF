@@ -76,6 +76,9 @@ public class SonicConfigurationService {
 		if (migrationService.migrateDeprecatedS1PreviewCoordLogKey(config)) {
 			configChanged = true;
 		}
+		if (migrationService.migrateDeprecatedDisplayColorProfileToggleKey(config)) {
+			configChanged = true;
+		}
 
 		boolean defaultsInserted = applyDefaults();
 
@@ -251,6 +254,8 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
 		putDefault(SonicConfiguration.EDITOR_ENABLED, false);
 		putDefault(SonicConfiguration.DEBUG_COLLISION_VIEW_ENABLED, false);
+		putDefault(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
+		putDefaultKey(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY, GLFW_KEY_V);
 		putDefault(SonicConfiguration.DAC_INTERPOLATE, true);
 		putDefault(SonicConfiguration.FM6_DAC_OFF, true); // Default true for Sonic 2 parity
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);

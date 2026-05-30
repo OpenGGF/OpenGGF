@@ -21,6 +21,8 @@ Common values are shown in the tables below.
 | `SCREEN_HEIGHT` | int | `448` | Actual window height in OS pixels. |
 | `SCALE` | double | `1.0` | Additional rendering scale factor applied on top of the window dimensions. |
 | `FPS` | int | `60` | Target frames per second. Affects game speed — use `60` for NTSC, `50` for PAL. |
+| `DISPLAY_COLOR_PROFILE` | string | `"RAW_RGB"` | Palette presentation profile. `"RAW_RGB"` keeps the current direct 8-bit expansion, `"MD_ANALOG"` applies a darker Mega Drive-style analog ramp, and `"NTSC_SOFT"` applies the analog ramp plus mild desaturation. |
+| `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | key | `V` | Runtime key used to cycle display color profiles. The selected profile is saved to `config.json` and shown briefly in the bottom-left corner. |
 
 ---
 
@@ -86,8 +88,6 @@ Paths are relative to the working directory (where the JAR is launched).
 | `AUDIO_INTERNAL_RATE_OUTPUT` | bool | `false` | Output audio at the YM2612 internal sample rate (~53 kHz) rather than the system rate. Useful for bit-accurate captures; may cause issues on some audio drivers. |
 | `PSG_NOISE_SHIFT_EVERY_TOGGLE` | bool | `true` | PSG noise LFSR clock behaviour. `true` = shift on every polarity toggle (MAME-style, brighter noise); `false` = shift on positive edges only (Genesis Plus GX / libvgm style, darker noise). |
 | `FM6_DAC_OFF` | bool | `true` | Silence FM channel 6 whenever a DAC note is active. Matches the SMPSPlay parity hack used in Sonic 2; prevents FM bleed audible during percussion. |
-
----
 
 ## Debug
 
@@ -211,6 +211,8 @@ diagnostic test runs only and must remain unset in CI.
   "FM6_DAC_OFF": true,
   "AUDIO_INTERNAL_RATE_OUTPUT": false,
   "PSG_NOISE_SHIFT_EVERY_TOGGLE": true,
+  "DISPLAY_COLOR_PROFILE": "RAW_RGB",
+  "DISPLAY_COLOR_PROFILE_TOGGLE_KEY": "V",
   "DEBUG_VIEW_ENABLED": true,
   "EDITOR_ENABLED": false,
   "DEBUG_COLLISION_VIEW_ENABLED": false,

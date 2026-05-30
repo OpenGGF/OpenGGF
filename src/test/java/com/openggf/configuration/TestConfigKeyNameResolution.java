@@ -65,4 +65,10 @@ class TestConfigKeyNameResolution {
         assertEquals("D", configService.getDefaultValue(SonicConfiguration.DEBUG_MODE_KEY));
         assertEquals("UP", configService.getDefaultValue(SonicConfiguration.UP));
     }
+
+    @Test
+    void defaults_includeDisplayColorProfileSettings() {
+        assertEquals("RAW_RGB", configService.getDefaultValue(SonicConfiguration.DISPLAY_COLOR_PROFILE));
+        assertEquals("V", configService.getDefaultValue(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY));
+    }
 }

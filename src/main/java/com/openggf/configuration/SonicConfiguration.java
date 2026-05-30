@@ -116,6 +116,17 @@ public enum SonicConfiguration {
 	AUDIO_ENABLED,
 
 	/**
+	 * Display-only color profile used when converting Mega Drive palette colors
+	 * for presentation.
+	 */
+	DISPLAY_COLOR_PROFILE,
+
+	/**
+	 * Key to cycle the display color profile at runtime.
+	 */
+	DISPLAY_COLOR_PROFILE_TOGGLE_KEY,
+
+	/**
 	 * Region (NTSC/PAL) for audio timing.
 	 */
 	REGION,

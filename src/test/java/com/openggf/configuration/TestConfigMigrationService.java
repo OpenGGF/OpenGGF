@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_APOSTROPHE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F8;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_V;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_WORLD_1;
 
 class TestConfigMigrationService {
@@ -61,5 +62,34 @@ class TestConfigMigrationService {
 
         assertFalse(service.migrateDeprecatedS1PreviewCoordLogKey(config));
         assertEquals(83, config.get(SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY.name()));
+    }
+
+    @Test
+    void migrateDeprecatedDisplayColorProfileToggleKey_rewritesUnreliableHashBindings() {
+        Map<String, Object> config = new HashMap<>();
+        ConfigMigrationService service = new ConfigMigrationService();
+
+        config.put(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name(), GLFW_KEY_WORLD_1);
+        assertTrue(service.migrateDeprecatedDisplayColorProfileToggleKey(config));
+        assertEquals(GLFW_KEY_V, config.get(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name()));
+
+        config.put(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name(), "WORLD_1");
+        assertTrue(service.migrateDeprecatedDisplayColorProfileToggleKey(config));
+        assertEquals("V", config.get(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name()));
+
+        config.put(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name(), "#");
+        assertTrue(service.migrateDeprecatedDisplayColorProfileToggleKey(config));
+        assertEquals("V", config.get(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name()));
+    }
+
+    @Test
+    void migrateDeprecatedDisplayColorProfileToggleKey_preservesCustomBinding() {
+        Map<String, Object> config = new HashMap<>();
+        config.put(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name(), "G");
+
+        ConfigMigrationService service = new ConfigMigrationService();
+
+        assertFalse(service.migrateDeprecatedDisplayColorProfileToggleKey(config));
+        assertEquals("G", config.get(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name()));
     }
 }

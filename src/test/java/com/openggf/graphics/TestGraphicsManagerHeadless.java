@@ -1,13 +1,10 @@
 package com.openggf.graphics;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
+import com.openggf.graphics.color.DisplayColorProfile;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 
@@ -141,6 +138,30 @@ public class TestGraphicsManagerHeadless {
         // Combined palette texture ID should be null in headless mode
         // (we use dummy tracking via paletteTextureMap)
         assertNull(graphicsManager.getCombinedPaletteTextureId(), "Combined palette texture should be null in headless mode");
+    }
+
+    @Test
+    public void testHeadlessPaletteCachingRetainsSourceForRefresh() {
+        graphicsManager.initHeadless();
+        Palette palette = createTestPalette();
+        palette.setColor(1, new Palette.Color((byte) 255, (byte) 146, (byte) 73));
+
+        graphicsManager.cachePaletteTexture(palette, 2);
+        graphicsManager.refreshAllPaletteTextures();
+
+        assertSame(palette, graphicsManager.getCachedPaletteSourceForTest(2));
+    }
+
+    @Test
+    public void testPaletteUploadBytesUseSelectedDisplayProfile() {
+        Palette.Color color = new Palette.Color((byte) 255, (byte) 255, (byte) 255);
+
+        graphicsManager.setDisplayColorProfile(DisplayColorProfile.MD_ANALOG);
+
+        assertArrayEquals(new int[] {238, 238, 238, 255},
+                graphicsManager.paletteUploadRgbaForTest(color, 1));
+        assertArrayEquals(new int[] {238, 238, 238, 0},
+                graphicsManager.paletteUploadRgbaForTest(color, 0));
     }
 
     // ==================== Flush Tests ====================
