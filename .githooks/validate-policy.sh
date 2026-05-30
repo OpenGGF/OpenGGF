@@ -321,6 +321,45 @@ validate_skills_trailer() {
     esac
 }
 
+# A feat/fix/perf commit that touches engine source (src/main/) is almost always
+# changelog-worthy. The base trailer gate only checks staged<->trailer consistency,
+# so it cannot catch a wrong `Changelog: n/a`. This requires such commits to either
+# set `Changelog: updated` or justify the skip with a reason, e.g. `Changelog: n/a: test-only helper`.
+changelog_justified() {
+    rest=$(printf '%s' "$1" | sed -E 's/^[[:space:]]*[nN]\/[aA]//')
+    rest=$(printf '%s' "$rest" | sed -E 's/^[[:space:]:,_-]+//')
+    rest=$(printf '%s' "$rest" | sed -E 's/[[:space:]]+$//')
+    [ -n "$rest" ]
+}
+
+validate_changelog_justification() {
+    message=$1
+    files=$2
+
+    subject=$(printf '%s\n' "$message" | sed -n '1p')
+    case "$subject" in
+        feat:*|feat\(*|feat!*|fix:*|fix\(*|fix!*|perf:*|perf\(*|perf!*) ;;
+        *) return 0 ;;
+    esac
+
+    if ! has_prefix "$files" "src/main/"; then
+        return 0
+    fi
+
+    value=$(trailer_value "Changelog" "$message")
+    if [ -z "$value" ]; then
+        return 0
+    fi
+
+    if [ "$(decision_kind "$value")" != "na" ]; then
+        return 0
+    fi
+
+    if ! changelog_justified "$value"; then
+        append_error "\`Changelog\` is \`n/a\` on a \`${subject%%:*}\` commit touching \`src/main/\`. Set \`Changelog: updated\` (and stage CHANGELOG.md) or justify the skip, e.g. \`Changelog: n/a: <reason>\`."
+    fi
+}
+
 validate_non_master_commit_message() {
     message=$1
     files=$2
@@ -328,6 +367,7 @@ validate_non_master_commit_message() {
 
     validate_file_size_policy "$files" staged
     validate_exact_trailer "$message" "$files" "Changelog" "CHANGELOG.md" "CHANGELOG.md"
+    validate_changelog_justification "$message" "$files"
     validate_prefix_trailer "$message" "$files" "Guide" "docs/guide/" "docs/guide/"
     validate_exact_trailer "$message" "$files" "Known-Discrepancies" "docs/KNOWN_DISCREPANCIES.md" "docs/KNOWN_DISCREPANCIES.md"
     validate_exact_trailer "$message" "$files" "S3K-Known-Discrepancies" "docs/S3K_KNOWN_DISCREPANCIES.md" "docs/S3K_KNOWN_DISCREPANCIES.md"
@@ -459,6 +499,7 @@ validate_ci_pr() {
 
         validate_file_size_policy "$files" commit "$commit"
         validate_exact_trailer "$message" "$files" "Changelog" "CHANGELOG.md" "CHANGELOG.md"
+        validate_changelog_justification "$message" "$files"
         validate_prefix_trailer "$message" "$files" "Guide" "docs/guide/" "docs/guide/"
         validate_exact_trailer "$message" "$files" "Known-Discrepancies" "docs/KNOWN_DISCREPANCIES.md" "docs/KNOWN_DISCREPANCIES.md"
         validate_exact_trailer "$message" "$files" "S3K-Known-Discrepancies" "docs/S3K_KNOWN_DISCREPANCIES.md" "docs/S3K_KNOWN_DISCREPANCIES.md"
