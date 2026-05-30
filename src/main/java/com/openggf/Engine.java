@@ -1352,17 +1352,22 @@ public class Engine {
 			uiPipeline.renderFadePass();
 		}
 
-		renderDisplayColorProfileNotification();
+		if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+		try {
+			renderDisplayColorProfileNotification();
 
-		// Trace Test Mode HUD: drawn AFTER the fade pass so counters and
-		// TRACE COMPLETE remain readable during fade-to-black teardown.
-		TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-		if (traceSession != null) {
-			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-			traceSession.render(traceHudTextRenderer);
-		} else if (gameLoop != null) {
-			traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
-			gameLoop.renderLiveRewindHud(traceHudTextRenderer);
+			// Trace Test Mode HUD: drawn AFTER the fade pass so counters and
+			// TRACE COMPLETE remain readable during fade-to-black teardown.
+			TraceSessionLauncher traceSession = TraceSessionLauncher.active();
+			if (traceSession != null) {
+				traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+				traceSession.render(traceHudTextRenderer);
+			} else if (gameLoop != null) {
+				traceHudTextRenderer.setProjectionMatrix(getProjectionMatrixBuffer());
+				gameLoop.renderLiveRewindHud(traceHudTextRenderer);
+			}
+		} finally {
+			if (uiPipeline != null) uiPipeline.endSafeArea();
 		}
 		if (getCurrentGameMode() == GameMode.CREDITS_DEMO) {
 			EndingProvider provider = gameLoop.getEndingProvider();
@@ -1466,6 +1471,7 @@ public class Engine {
 	}
 
 	public void draw() {
+		var uiPipeline = graphicsManager.getUiRenderPipeline();
 		if (getCurrentGameMode() == GameMode.LEGAL_DISCLAIMER) {
 			if (camera != null) {
 				camera.setX((short) 0);
@@ -1473,7 +1479,12 @@ public class Engine {
 			}
 			if (legalDisclaimerScreen != null) {
 				legalDisclaimerScreen.setProjectionMatrix(getProjectionMatrixBuffer());
-				legalDisclaimerScreen.draw();
+				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+				try {
+					legalDisclaimerScreen.draw();
+				} finally {
+					if (uiPipeline != null) uiPipeline.endSafeArea();
+				}
 			}
 			return;
 		}
@@ -1484,7 +1495,12 @@ public class Engine {
 			}
 			if (masterTitleScreen != null) {
 				masterTitleScreen.setProjectionMatrix(getProjectionMatrixBuffer());
-				masterTitleScreen.draw();
+				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+				try {
+					masterTitleScreen.draw();
+				} finally {
+					if (uiPipeline != null) uiPipeline.endSafeArea();
+				}
 			}
 			return;
 		}
@@ -1517,23 +1533,28 @@ public class Engine {
 				camera.setX((short) 0);
 				camera.setY((short) 0);
 
-				graphicsManager.beginPatternBatch();
+				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+				try {
+					graphicsManager.beginPatternBatch();
 
-				resultsCommands.clear();
-				resultsScreen.appendRenderCommands(resultsCommands);
+					resultsCommands.clear();
+					resultsScreen.appendRenderCommands(resultsCommands);
 
-				// Flush pattern batch (PatternSpriteRenderer renders through the
-				// instanced batch system, not through the GLCommand list)
-				graphicsManager.flushPatternBatch();
+					// Flush pattern batch (PatternSpriteRenderer renders through the
+					// instanced batch system, not through the GLCommand list)
+					graphicsManager.flushPatternBatch();
 
-				// Also register any GLCommand-based rendering (S2 results screen)
-				if (!resultsCommands.isEmpty()) {
-					graphicsManager.registerCommand(new GLCommandGroup(
-							GL_LINES, resultsCommands));
+					// Also register any GLCommand-based rendering (S2 results screen)
+					if (!resultsCommands.isEmpty()) {
+						graphicsManager.registerCommand(new GLCommandGroup(
+								GL_LINES, resultsCommands));
+					}
+
+					// Execute all queued commands in screen space (camera at 0,0)
+					graphicsManager.flushScreenSpace();
+				} finally {
+					if (uiPipeline != null) uiPipeline.endSafeArea();
 				}
-
-				// Execute all queued commands in screen space (camera at 0,0)
-				graphicsManager.flushScreenSpace();
 			}
 		} else if (getCurrentGameMode() == GameMode.TITLE_SCREEN) {
 			// Render title screen
@@ -1541,7 +1562,12 @@ public class Engine {
 			camera.setY((short) 0);
 			TitleScreenProvider titleScreen = gameLoop.getTitleScreenProvider();
 			if (titleScreen != null) {
-				titleScreen.draw();
+				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+				try {
+					titleScreen.draw();
+				} finally {
+					if (uiPipeline != null) uiPipeline.endSafeArea();
+				}
 			}
 		} else if (getCurrentGameMode() == GameMode.LEVEL_SELECT) {
 			// Render level select screen
@@ -1549,7 +1575,12 @@ public class Engine {
 			camera.setY((short) 0);
 			LevelSelectProvider levelSelect = gameLoop.getLevelSelectProvider();
 			if (levelSelect != null) {
-				levelSelect.draw();
+				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+				try {
+					levelSelect.draw();
+				} finally {
+					if (uiPipeline != null) uiPipeline.endSafeArea();
+				}
 			}
 		} else if (getCurrentGameMode() == GameMode.DATA_SELECT) {
 			// Render data select screen
@@ -1557,7 +1588,12 @@ public class Engine {
 			camera.setY((short) 0);
 			DataSelectProvider dataSelect = gameLoop.getDataSelectProvider();
 			if (dataSelect != null) {
-				dataSelect.draw();
+				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+				try {
+					dataSelect.draw();
+				} finally {
+					if (uiPipeline != null) uiPipeline.endSafeArea();
+				}
 			}
 		} else if (getCurrentGameMode() == GameMode.ENDING_CUTSCENE) {
 			// Ending cutscene: render DEZ background during sky phases, then cutscene sprites
@@ -1598,7 +1634,12 @@ public class Engine {
 			camera.setY((short) 0);
 			EndingProvider provider = gameLoop.getEndingProvider();
 			if (provider != null) {
-				provider.draw();
+				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+				try {
+					provider.draw();
+				} finally {
+					if (uiPipeline != null) uiPipeline.endSafeArea();
+				}
 			}
 		} else if (getCurrentGameMode() == GameMode.TITLE_CARD) {
 			levelManager.drawWithSpritePriority(spriteManager);
@@ -1608,8 +1649,13 @@ public class Engine {
 
 			TitleCardProvider titleCardProvider = gameLoop.getTitleCardProvider();
 			if (titleCardProvider != null) {
-				titleCardProvider.draw();
-				graphicsManager.flushScreenSpace();
+				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+				try {
+					titleCardProvider.draw();
+					graphicsManager.flushScreenSpace();
+				} finally {
+					if (uiPipeline != null) uiPipeline.endSafeArea();
+				}
 			}
 		} else if (!debugViewEnabled) {
 			levelManager.drawWithSpritePriority(spriteManager);
@@ -1618,8 +1664,13 @@ public class Engine {
 			if (levelTitleCardProvider != null && levelTitleCardProvider.isOverlayActive()) {
 				graphicsManager.flush();
 				graphicsManager.resetForFixedFunction();
-				levelTitleCardProvider.draw();
-				graphicsManager.flushScreenSpace();
+				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+				try {
+					levelTitleCardProvider.draw();
+					graphicsManager.flushScreenSpace();
+				} finally {
+					if (uiPipeline != null) uiPipeline.endSafeArea();
+				}
 			}
 		} else {
 			switch (debugState) {
@@ -1632,8 +1683,13 @@ public class Engine {
 			if (debugTitleCardProvider != null && debugTitleCardProvider.isOverlayActive()) {
 				graphicsManager.flush();
 				graphicsManager.resetForFixedFunction();
-				debugTitleCardProvider.draw();
-				graphicsManager.flushScreenSpace();
+				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
+				try {
+					debugTitleCardProvider.draw();
+					graphicsManager.flushScreenSpace();
+				} finally {
+					if (uiPipeline != null) uiPipeline.endSafeArea();
+				}
 			}
 		}
 	}
