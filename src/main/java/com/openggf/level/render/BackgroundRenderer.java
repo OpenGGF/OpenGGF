@@ -1,5 +1,6 @@
 package com.openggf.level.render;
 
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.HScrollBuffer;
@@ -94,7 +95,8 @@ public class BackgroundRenderer {
         hScrollBuffer.init();
         vScrollBuffer = new VScrollBuffer();
         vScrollBuffer.init();
-        vScrollColumnBuffer = new VScrollBuffer(20);
+        vScrollColumnBuffer = new VScrollBuffer(columnCount(
+                GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS)));
         vScrollColumnBuffer.init();
 
         // Load parallax shader
@@ -322,6 +324,10 @@ public class BackgroundRenderer {
             vScrollColumnBuffer.unbind(3);
         }
         glActiveTexture(GL_TEXTURE0);
+    }
+
+    private static int columnCount(int width) {
+        return (width + 15) / 16;
     }
 
     /**

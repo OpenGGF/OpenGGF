@@ -1,6 +1,7 @@
 package com.openggf.level;
 
 import com.openggf.camera.Camera;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameModule;
@@ -30,12 +31,29 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     private final int[] hScroll = new int[VISIBLE_LINES];
     // Optional per-line BG VScroll deltas (added on top of vscrollFactorBG).
     private final short[] vScrollPerLineBG = new short[VISIBLE_LINES];
-    // Optional per-column BG VScroll deltas (20 columns in H40 mode).
-    private static final int BG_VSCROLL_COLUMN_COUNT = 20;
-    private final short[] vScrollPerColumnBG = new short[BG_VSCROLL_COLUMN_COUNT];
-    // Optional per-column FG VScroll values (20 columns in H40 mode).
-    private static final int FG_VSCROLL_COLUMN_COUNT = 20;
-    private final short[] vScrollPerColumnFG = new short[FG_VSCROLL_COLUMN_COUNT];
+    // Per-column VScroll buffer size: ceil(screenWidth / 16). 20 at native 320px.
+    private final int BG_VSCROLL_COLUMN_COUNT;
+    private final short[] vScrollPerColumnBG;
+    private final int FG_VSCROLL_COLUMN_COUNT;
+    private final short[] vScrollPerColumnFG;
+
+    public ParallaxManager() {
+        int screenWidth;
+        try {
+            screenWidth = GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+        } catch (Exception e) {
+            screenWidth = 320;
+        }
+        BG_VSCROLL_COLUMN_COUNT = columnCount(screenWidth);
+        FG_VSCROLL_COLUMN_COUNT = columnCount(screenWidth);
+        vScrollPerColumnBG = new short[BG_VSCROLL_COLUMN_COUNT];
+        vScrollPerColumnFG = new short[FG_VSCROLL_COLUMN_COUNT];
+    }
+
+    private static int columnCount(int width) {
+        return (width + 15) / 16;
+    }
+
     private boolean hasPerLineVScrollBG = false;
     private boolean hasPerColumnVScrollBG = false;
     private boolean hasPerColumnVScrollFG = false;
@@ -180,7 +198,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
     /**
      * Optional per-column BG VScroll values for shader-based column distortion effects.
      *
-     * @return 20-entry per-column VScroll array, or null when not active
+     * @return per-column VScroll array (ceil(screenWidth/16) entries), or null when not active
      */
     public short[] getVScrollPerColumnBGForShader() {
         return hasPerColumnVScrollBG ? vScrollPerColumnBG : null;
@@ -191,7 +209,7 @@ public class ParallaxManager implements RewindSnapshottable<ParallaxSnapshot> {
      * Used by the S3K Gumball bonus stage to make machine body tiles drift with the
      * gumball machine object.
      *
-     * @return 20-entry per-column FG VScroll array, or null when not active
+     * @return per-column FG VScroll array (ceil(screenWidth/16) entries), or null when not active
      */
     public short[] getVScrollPerColumnFGForShader() {
         return hasPerColumnVScrollFG ? vScrollPerColumnFG : null;

@@ -1,5 +1,8 @@
 package com.openggf.graphics;
 
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.game.GameServices;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -27,8 +30,22 @@ public class TilemapGpuRenderer {
     private final TilemapTexture foregroundTexture = new TilemapTexture();
     private final PatternLookupBuffer patternLookup = new PatternLookupBuffer();
     private final HScrollBuffer foregroundLineScrollBuffer = new HScrollBuffer(true);
-    private final VScrollBuffer columnVScrollBuffer = new VScrollBuffer(20);
+    private final VScrollBuffer columnVScrollBuffer;
     private final QuadRenderer quadRenderer = new QuadRenderer();
+
+    public TilemapGpuRenderer() {
+        int screenWidth;
+        try {
+            screenWidth = GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
+        } catch (Exception e) {
+            screenWidth = 320;
+        }
+        columnVScrollBuffer = new VScrollBuffer(columnCount(screenWidth));
+    }
+
+    private static int columnCount(int width) {
+        return (width + 15) / 16;
+    }
 
     // Dummy 1x1 textures used as fallback when no real texture is available.
     // This prevents macOS OpenGL driver warnings about unbound samplers.
@@ -165,7 +182,7 @@ public class TilemapGpuRenderer {
 
     /**
      * Enable per-column vertical scroll for the next render() call.
-     * Uses 20 columns (H40 mode), matching the Mega Drive 2-cell column mode.
+     * Column count scales with viewport width: ceil(screenWidth/16) — 20 at native 320px.
      * Automatically resets after render().
      */
     public void enablePerColumnVScroll(short[] columnVScroll) {
