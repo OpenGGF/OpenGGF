@@ -759,9 +759,10 @@ public class AudioManager {
             return;
         }
 
+        float effectivePitch = audioProfile != null ? audioProfile.adjustSfxPitch(sound, pitch) : pitch;
         boolean played = false;
         if (soundMap != null && soundMap.containsKey(sound)) {
-            played = playSfx(soundMap.get(sound), pitch);
+            played = playSfx(soundMap.get(sound), effectivePitch);
         }
         if (!played) {
             DonorSfxBinding binding = donorSoundBindings.get(sound);
@@ -775,14 +776,14 @@ public class AudioManager {
                                 binding.sfxId(),
                                 sound.name(),
                                 AudioCommand.SfxRoute.DONOR_SMPS,
-                                pitch,
+                                effectivePitch,
                                 binding.gameId()));
                         SmpsSequencerConfig donorConfig = donorConfigs.get(binding.gameId());
                         if (sendLiveBackendCommands()) {
                             if (donorConfig != null) {
-                                backend.playSfxSmps(sfx, dData, pitch, donorConfig);
+                                backend.playSfxSmps(sfx, dData, effectivePitch, donorConfig);
                             } else {
-                                backend.playSfxSmps(sfx, dData, pitch);
+                                backend.playSfxSmps(sfx, dData, effectivePitch);
                             }
                         }
                         played = true;
@@ -795,9 +796,9 @@ public class AudioManager {
                     ? AudioCommand.SfxRoute.RING_RESOLVED
                     : AudioCommand.SfxRoute.FALLBACK_NAME;
             recordTimelineCommand(new AudioCommand.PlaySfx(
-                    -1, sound.name(), route, pitch, null));
+                    -1, sound.name(), route, effectivePitch, null));
             if (sendLiveBackendCommands()) {
-                backend.playSfx(sound.name(), pitch);
+                backend.playSfx(sound.name(), effectivePitch);
             }
         }
     }

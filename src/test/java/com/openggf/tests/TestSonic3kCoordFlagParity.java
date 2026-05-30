@@ -243,6 +243,92 @@ public class TestSonic3kCoordFlagParity {
     }
 
     @Test
+    public void spindashRevAddsPersistentRevCounterToTranspose() {
+        byte[] fmTrack = {
+                (byte) 0xFF, 0x07, // Reset shared spindash rev counter
+                (byte) 0xE9,       // key offset += 0, rev becomes 1
+                (byte) 0xE9,       // key offset += 1, rev becomes 2
+                (byte) 0xE9,       // key offset += 2
+                (byte) 0xF2
+        };
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
+        seq.read(new short[20000]);
+
+        SmpsSequencer.Track fm = findTrack(seq, SmpsSequencer.TrackType.FM);
+        assertEquals(3, fm.keyOffset, "E9 should add the persistent spindash rev value to track transpose");
+    }
+
+    @Test
+    public void s3kTempoZeroStillReportsTickBoundariesForHybridDriver() {
+        byte[] fmTrack = {
+                (byte) 0xF0, 0x2A, 0x01, 0x29, 0x00,
+                (byte) 0xAD, 0x3C,
+                (byte) 0xF2
+        };
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null, null, 0);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, new CaptureSynth(), Sonic3kSmpsSequencerConfig.CONFIG);
+        seq.read(new short[2]);
+
+        assertTrue(seq.getSamplesUntilNextTempoFrame() < Integer.MAX_VALUE,
+                "S3K tempo 0 still ticks every video frame and must not batch indefinitely");
+        assertTrue(seq.getSamplesUntilNextObservableEvent() < Integer.MAX_VALUE,
+                "Hybrid rendering must see pending per-frame modulation updates in tempo-0 songs");
+    }
+
+    @Test
+    public void tiedS3kModulationChangeDoesNotResetLiveAccumulator() {
+        byte[] fmTrack = {
+                (byte) 0xF0, 0x01, 0x01, 0x1A, 0x01,
+                (byte) 0xBD, 0x18, // nC5
+                (byte) 0xE7,       // smpsNoAttack
+                (byte) 0xF0, 0x00, 0x00, 0x00, 0x00,
+                0x02,              // tied duration continuation
+                (byte) 0xF2
+        };
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
+        seq.read(new short[40000]);
+
+        int baseC5A4 = (5 << 3) | ((644 >> 8) & 0x07);
+        int lastA4 = -1;
+        for (FmWrite write : synth.fmWrites) {
+            if (write.reg == 0xA4) {
+                lastA4 = write.val;
+            }
+        }
+
+        assertTrue(lastA4 > baseC5A4,
+                "F0 00 00 00 00 before a tied continuation must not drop the live S3K pitch ramp to base");
+    }
+
+    @Test
+    public void tiedS3kModulationChangeDoesNotAlterLiveRampParameters() {
+        byte[] unchangedRamp = {
+                (byte) 0xF0, 0x01, 0x01, 0x1A, 0x01,
+                (byte) 0xBD, 0x18, // nC5
+                (byte) 0xE7,       // smpsNoAttack
+                0x10,              // tied duration continuation
+                (byte) 0xF2
+        };
+        byte[] deferredRampChange = {
+                (byte) 0xF0, 0x01, 0x01, 0x1A, 0x01,
+                (byte) 0xBD, 0x18, // nC5
+                (byte) 0xE7,       // smpsNoAttack
+                (byte) 0xF0, 0x00, 0x00, 0x00, 0x00,
+                0x10,              // tied duration continuation
+                (byte) 0xF2
+        };
+
+        int unchangedFinalPacked = finalFmPackedFrequency(unchangedRamp);
+        int deferredFinalPacked = finalFmPackedFrequency(deferredRampChange);
+
+        assertEquals(unchangedFinalPacked, deferredFinalPacked,
+                "S3K F0 before a tied continuation must defer all live modulation changes until an attacked note");
+    }
+
+    @Test
     public void globalVoicePointerUsesGlobalVoiceTableInZ80AddressedSongs() {
         byte[] songData = new byte[0x1900];
         setLe16(songData, 0x00, 0x17D8); // Global voice table pointer in S3K Z80 RAM
@@ -361,12 +447,17 @@ public class TestSonic3kCoordFlagParity {
 
     private static Sonic3kSmpsData createMusicData(int channels, int psgChannels, byte[] fmTrack, byte[] psgTrack,
             Map<Integer, byte[]> psgEnvelopes, Map<Integer, byte[]> modEnvelopes) {
+        return createMusicData(channels, psgChannels, fmTrack, psgTrack, psgEnvelopes, modEnvelopes, 0x80);
+    }
+
+    private static Sonic3kSmpsData createMusicData(int channels, int psgChannels, byte[] fmTrack, byte[] psgTrack,
+            Map<Integer, byte[]> psgEnvelopes, Map<Integer, byte[]> modEnvelopes, int tempo) {
         byte[] data = new byte[0x240];
         setLe16(data, 0x00, 0x100); // voice table pointer
         data[0x02] = (byte) channels;
         data[0x03] = (byte) psgChannels;
         data[0x04] = 0x01; // dividing timing
-        data[0x05] = (byte) 0x80; // tempo
+        data[0x05] = (byte) tempo;
 
         // FM/DAC entries (4 bytes each): ptr, transpose, volume
         for (int i = 0; i < channels; i++) {
@@ -422,6 +513,27 @@ public class TestSonic3kCoordFlagParity {
             }
         }
         throw new AssertionError("Missing track type: " + type);
+    }
+
+    private static int finalFmPackedFrequency(byte[] fmTrack) {
+        CaptureSynth synth = new CaptureSynth();
+        Sonic3kSmpsData smps = createMusicData(2, 0, fmTrack, null, null);
+        SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
+        seq.read(new short[60000]);
+
+        int high = -1;
+        int low = -1;
+        for (FmWrite write : synth.fmWrites) {
+            if (write.reg == 0xA4) {
+                high = write.val;
+            } else if (write.reg == 0xA0) {
+                low = write.val;
+            }
+        }
+        if (high < 0 || low < 0) {
+            throw new AssertionError("No final FM frequency write captured");
+        }
+        return (high << 8) | low;
     }
 
     private static void setLe16(byte[] data, int offset, int value) {

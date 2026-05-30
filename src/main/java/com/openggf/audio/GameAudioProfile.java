@@ -94,6 +94,14 @@ public interface GameAudioProfile {
     }
 
     /**
+     * Allows a game profile to normalize high-level SFX pitch requests before
+     * they are routed to SMPS or fallback playback.
+     */
+    default float adjustSfxPitch(GameSound sound, float requestedPitch) {
+        return requestedPitch;
+    }
+
+    /**
      * Handle a game-specific system command (e.g., fade out, stop all).
      * Called early in {@code AudioManager.playMusic()} dispatch.
      *

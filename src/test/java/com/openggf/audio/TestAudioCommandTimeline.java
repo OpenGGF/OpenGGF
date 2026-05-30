@@ -88,6 +88,28 @@ class TestAudioCommandTimeline {
     }
 
     @Test
+    void gameAudioProfileCanNormalizeGameSoundPitchBeforeRouting() {
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(new AudioTestFixtures.StubSmpsLoader()) {
+            @Override
+            public java.util.Map<GameSound, Integer> getSoundMap() {
+                return java.util.Map.of(GameSound.SPINDASH_CHARGE, 0xAB);
+            }
+
+            @Override
+            public float adjustSfxPitch(GameSound sound, float requestedPitch) {
+                return sound == GameSound.SPINDASH_CHARGE ? 1.0f : requestedPitch;
+            }
+        });
+        audio.setSoundMap(audio.getAudioProfile().getSoundMap());
+        audio.beginCommandTimelineFrame(5);
+
+        audio.playSfx(GameSound.SPINDASH_CHARGE, 1.25f);
+
+        AudioCommand.PlaySfx command = (AudioCommand.PlaySfx) audio.commandTimeline().entries().get(0).command();
+        assertEquals(1.0f, command.pitch());
+    }
+
+    @Test
     void recordsRingAlternationAsResolvedLeftRightCommands() {
         audio.setSoundMap(new EnumMap<>(GameSound.class));
         audio.beginCommandTimelineFrame(7);

@@ -244,6 +244,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         public int modDelta;
         public int modSteps;
         public int modStepsFull;
+        public int modPendingDelayInit;
+        public int modPendingRate;
+        public int modPendingDelta;
+        public int modPendingSteps;
+        public int modPendingStepsFull;
         public int modRateCounter;
         public int modStepCounter;
         public short modAccumulator;
@@ -825,7 +830,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
      * @return Number of samples until next tempo frame, or Integer.MAX_VALUE if no tempo
      */
     public int getSamplesUntilNextTempoFrame() {
-        if (tempoWeight == 0 || samplesPerFrame <= 0) {
+        if ((tempoWeight == 0 && !ticksEveryFrameWithZeroTempo()) || samplesPerFrame <= 0) {
             return Integer.MAX_VALUE;
         }
         double remaining = samplesPerFrame - sampleCounter;
@@ -882,7 +887,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         if (ticks <= 0) {
             return 0;
         }
-        if (tempoWeight == 0 || samplesPerFrame <= 0) {
+        if ((tempoWeight == 0 && !ticksEveryFrameWithZeroTempo()) || samplesPerFrame <= 0) {
             return Integer.MAX_VALUE;
         }
 
@@ -900,6 +905,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
         }
         return (int) Math.ceil(total);
+    }
+
+    private boolean ticksEveryFrameWithZeroTempo() {
+        return config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW;
     }
 
     private void tick() {
@@ -1487,21 +1496,17 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
     private void handleModulation(Track t) {
         if (t.pos + 4 <= data.length) {
-            t.modDelayInit = data[t.pos++] & 0xFF;
-            t.modDelay = t.modDelayInit;
+            t.modPendingDelayInit = data[t.pos++] & 0xFF;
             int rate = data[t.pos++] & 0xFF;
-            t.modRate = (rate == 0) ? 256 : rate;
-            t.modDelta = data[t.pos++];
+            t.modPendingRate = (rate == 0) ? 256 : rate;
+            t.modPendingDelta = data[t.pos++];
             int steps = data[t.pos++] & 0xFF;
-            t.modStepsFull = steps;
+            t.modPendingStepsFull = steps;
             // Z80 driver (S2): srl a (halve). 68k driver (S1): no halving.
-            t.modSteps = config.isHalveModSteps() ? steps / 2 : steps;
+            t.modPendingSteps = config.isHalveModSteps() ? steps / 2 : steps;
 
-            t.modRateCounter = t.modRate;
-            t.modStepCounter = t.modSteps;
-            t.modAccumulator = 0;
-            t.modCurrentDelta = t.modDelta;
             t.customModEnabled = true;
+            prepareCustomModulation(t);
             t.modEnvId = 0;
             t.modEnvData = null;
             t.modEnvPos = 0;
@@ -1523,6 +1528,19 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         t.modEnvCache = 0;
         t.modEnvHold = false;
         t.modAccumulator = 0;
+    }
+
+    private void prepareCustomModulation(Track t) {
+        t.modDelayInit = t.modPendingDelayInit;
+        t.modRate = t.modPendingRate;
+        t.modDelta = t.modPendingDelta;
+        t.modSteps = t.modPendingSteps;
+        t.modStepsFull = t.modPendingStepsFull;
+        t.modDelay = t.modDelayInit;
+        t.modRateCounter = t.modRate;
+        t.modStepCounter = t.modSteps;
+        t.modAccumulator = 0;
+        t.modCurrentDelta = t.modDelta;
     }
 
     private void resetModEnvelopeState(Track t) {
@@ -1739,11 +1757,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.baseBlock = block;
 
             if (t.customModEnabled && !preventAttack) {
-                t.modDelay = t.modDelayInit;
-                t.modRateCounter = t.modRate;
-                t.modStepCounter = t.modSteps;
-                t.modAccumulator = 0;
-                t.modCurrentDelta = t.modDelta;
+                prepareCustomModulation(t);
             }
 
             int packed = (block << 11) | fnum;
@@ -1819,11 +1833,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
 
             if (t.customModEnabled && !preventAttack) {
-                t.modDelay = t.modDelayInit;
-                t.modRateCounter = t.modRate;
-                t.modStepCounter = t.modSteps;
-                t.modAccumulator = 0;
-                t.modCurrentDelta = t.modDelta;
+                prepareCustomModulation(t);
             }
 
             // S2 (ModAlgo 68k_a) applies modulation before PSG volume write; S1 (ModAlgo 68k) does not.
@@ -1888,11 +1898,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             t.baseBlock = block;
 
             if (t.customModEnabled && !preventAttack) {
-                t.modDelay = t.modDelayInit;
-                t.modRateCounter = t.modRate;
-                t.modStepCounter = t.modSteps;
-                t.modAccumulator = 0;
-                t.modCurrentDelta = t.modDelta;
+                prepareCustomModulation(t);
             }
 
             int hwCh = t.channelId;
@@ -1931,11 +1937,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             }
 
             if (t.customModEnabled && !preventAttack) {
-                t.modDelay = t.modDelayInit;
-                t.modRateCounter = t.modRate;
-                t.modStepCounter = t.modSteps;
-                t.modAccumulator = 0;
-                t.modCurrentDelta = t.modDelta;
+                prepareCustomModulation(t);
             }
             if (t.modEnabled && config.isApplyModOnNote()) {
                 applyModulation(t);
@@ -2834,6 +2836,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 track.modDelta,
                 track.modSteps,
                 track.modStepsFull,
+                track.modPendingDelayInit,
+                track.modPendingRate,
+                track.modPendingDelta,
+                track.modPendingSteps,
+                track.modPendingStepsFull,
                 track.modRateCounter,
                 track.modStepCounter,
                 track.modAccumulator,
@@ -2906,6 +2913,11 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         track.modDelta = snapshot.modDelta();
         track.modSteps = snapshot.modSteps();
         track.modStepsFull = snapshot.modStepsFull();
+        track.modPendingDelayInit = snapshot.modPendingDelayInit();
+        track.modPendingRate = snapshot.modPendingRate();
+        track.modPendingDelta = snapshot.modPendingDelta();
+        track.modPendingSteps = snapshot.modPendingSteps();
+        track.modPendingStepsFull = snapshot.modPendingStepsFull();
         track.modRateCounter = snapshot.modRateCounter();
         track.modStepCounter = snapshot.modStepCounter();
         track.modAccumulator = snapshot.modAccumulator();

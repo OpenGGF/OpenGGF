@@ -130,6 +130,14 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     @Override
+    public float adjustSfxPitch(GameSound sound, float requestedPitch) {
+        if (sound == GameSound.SPINDASH_CHARGE) {
+            return 1.0f;
+        }
+        return requestedPitch;
+    }
+
+    @Override
     public SpeedMode getSpeedMode() {
         return SpeedMode.FRAME_MULTIPLY;
     }
