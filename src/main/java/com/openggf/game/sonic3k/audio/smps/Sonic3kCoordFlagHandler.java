@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.audio.smps;
 import com.openggf.audio.smps.CoordFlagContext;
 import com.openggf.audio.smps.CoordFlagHandler;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
 import java.util.logging.Logger;
 import com.openggf.game.GameServices;
@@ -27,6 +28,13 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
     private static final Logger LOGGER = Logger.getLogger(Sonic3kCoordFlagHandler.class.getName());
 
     private int spindashRevCounter = 0;
+
+    @Override
+    public void onSfxStart(int sfxId) {
+        if (sfxId != Sonic3kSfx.SPINDASH.id && sfxId < Sonic3kSfx.SLIDE_SKID_LOUD.id) {
+            spindashRevCounter = 0;
+        }
+    }
 
     @Override
     public boolean handleFlag(CoordFlagContext ctx, SmpsSequencer.Track t, int cmd) {

@@ -292,6 +292,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         boolean modStepInEffect;
         boolean modStepChanged;
         int modStepDelta;
+        boolean forceModulationWrite;
 
         // Mutable result fields for stepModEnvelope() – avoids per-tick allocation
         boolean modEnvStepInEffect;
@@ -346,6 +347,10 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         int z80Start = smpsData.getZ80StartAddress();
 
         if (smpsData instanceof SmpsSfxData sfxData) {
+            CoordFlagHandler handler = config.getCoordFlagHandler();
+            if (handler != null) {
+                handler.onSfxStart(smpsData.getId());
+            }
             initSfxTracks(sfxData, z80Start);
             setSfxMode(true);
             return;
@@ -1794,6 +1799,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             applyFmPanAmsFms(t);
             // S2 (ModAlgo 68k_a) applies modulation before note-on; S1 (ModAlgo 68k) does not.
             if (t.modEnabled && config.isApplyModOnNote()) {
+                t.forceModulationWrite = true;
                 applyModulation(t);
             }
 
@@ -1838,6 +1844,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
             // S2 (ModAlgo 68k_a) applies modulation before PSG volume write; S1 (ModAlgo 68k) does not.
             if (t.modEnabled && config.isApplyModOnNote()) {
+                t.forceModulationWrite = true;
                 applyModulation(t);
             }
 
@@ -1911,6 +1918,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             writeFmFreq(port, ch, fnum, block);
             applyFmPanAmsFms(t);
             if (t.modEnabled && config.isApplyModOnNote()) {
+                t.forceModulationWrite = true;
                 applyModulation(t);
             }
             if (!preventAttack) {
@@ -1940,6 +1948,7 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                 prepareCustomModulation(t);
             }
             if (t.modEnabled && config.isApplyModOnNote()) {
+                t.forceModulationWrite = true;
                 applyModulation(t);
             }
 
@@ -2301,7 +2310,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
         }
 
         int freqDelta = t.modStepDelta + t.modEnvStepDelta;
-        boolean changed = t.modStepChanged || t.modEnvStepChanged;
+        boolean changed = t.modStepChanged || t.modEnvStepChanged || t.forceModulationWrite;
+        t.forceModulationWrite = false;
         if (!changed) {
             return;
         }
@@ -2349,38 +2359,50 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             return;
         }
 
+        if (config.getModAlgo() == SmpsSequencerConfig.ModAlgo.MOD_Z80) {
+            boolean accumulatorChanged = false;
+            if (t.modRateCounter > 0) {
+                t.modRateCounter--;
+            }
+            if (t.modRateCounter == 0) {
+                t.modRateCounter = t.modPendingRate;
+                t.modAccumulator += t.modCurrentDelta;
+                t.modAccumulator = (short) t.modAccumulator; // 16-bit signed wrap
+                accumulatorChanged = true;
+            }
+
+            // Z80 zDoModulation decrements ModulationSteps on every sustain tick,
+            // after applying the current accumulated delta to the note frequency.
+            t.modStepCounter = (t.modStepCounter - 1) & 0xFF;
+            if (t.modStepCounter == 0) {
+                t.modStepCounter = t.modPendingStepsFull; // reload from current ModData[0x03]
+                t.modCurrentDelta = -t.modCurrentDelta;
+            }
+
+            t.modStepInEffect = true;
+            t.modStepChanged = accumulatorChanged;
+            t.modStepDelta = t.modAccumulator;
+            return;
+        }
+
         if (t.modRateCounter > 0) {
             t.modRateCounter--;
         }
 
         if (t.modRateCounter == 0) {
-            t.modRateCounter = t.modRate;
+            t.modRateCounter = t.modPendingRate;
 
-            if (config.getModAlgo() == SmpsSequencerConfig.ModAlgo.MOD_Z80) {
-                // S3K (MODALGO_Z80): post-decrement with 8-bit wrap, then check.
-                // dec (ix+zModStepCount) ; jr nz,.no_reversal
-                t.modStepCounter = (t.modStepCounter - 1) & 0xFF;
-                if (t.modStepCounter == 0) {
-                    t.modStepCounter = t.modStepsFull; // reload from RAW (ModData[0x03])
-                    t.modCurrentDelta = -t.modCurrentDelta;
-                    t.modStepInEffect = true;
-                    t.modStepChanged = false;
-                    t.modStepDelta = t.modAccumulator;
-                    return;
-                }
-            } else {
-                // S1/S2 (MODALGO_68K): pre-check, then decrement.
-                // ld a,(ix+zModStepCount) ; or a ; jr nz,.calcfreq
-                if (t.modStepCounter == 0) {
-                    t.modStepCounter = t.modStepsFull; // reload from RAW (ModData[0x03])
-                    t.modCurrentDelta = -t.modCurrentDelta;
-                    t.modStepInEffect = true;
-                    t.modStepChanged = false;
-                    t.modStepDelta = t.modAccumulator;
-                    return;
-                }
-                t.modStepCounter--;
+            // S1/S2 (MODALGO_68K): pre-check, then decrement.
+            // ld a,(ix+zModStepCount) ; or a ; jr nz,.calcfreq
+            if (t.modStepCounter == 0) {
+                t.modStepCounter = t.modPendingStepsFull; // reload from current ModData[0x03]
+                t.modCurrentDelta = -t.modCurrentDelta;
+                t.modStepInEffect = true;
+                t.modStepChanged = false;
+                t.modStepDelta = t.modAccumulator;
+                return;
             }
+            t.modStepCounter--;
 
             t.modAccumulator += t.modCurrentDelta;
             t.modAccumulator = (short) t.modAccumulator; // 16-bit signed wrap
