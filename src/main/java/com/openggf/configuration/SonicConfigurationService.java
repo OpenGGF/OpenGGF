@@ -209,9 +209,21 @@ public class SonicConfigurationService {
 	 * therefore a derived value here, not a user setting; a manual
 	 * SCREEN_WIDTH_PIXELS in config.json is superseded by the preset. Idempotent.
 	 * Height pixels stay 224.
+	 *
+	 * <p>When {@code TEST_MODE_ENABLED} is {@code true} the aspect is always
+	 * forced to {@code NATIVE_4_3} regardless of the persisted value.
+	 * Trace replay tests and the test-mode trace picker are parity-critical and
+	 * only valid at 320×224; a developer's widescreen {@code DISPLAY_ASPECT}
+	 * must never leak into those runs.
 	 */
 	public void resolveDisplayAspect() {
 		WidescreenAspect aspect = WidescreenAspect.parse(getString(SonicConfiguration.DISPLAY_ASPECT));
+		if (getBoolean(SonicConfiguration.TEST_MODE_ENABLED)) {
+			if (aspect != WidescreenAspect.NATIVE_4_3) {
+				LOGGER.info("TEST_MODE_ENABLED: forcing DISPLAY_ASPECT to NATIVE_4_3 (320x224) for this run.");
+			}
+			aspect = WidescreenAspect.NATIVE_4_3;
+		}
 		boolean autosize = getBoolean(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE);
 		int currentWindowW = persistedInt(SonicConfiguration.SCREEN_WIDTH, 640);
 		int currentWindowH = persistedInt(SonicConfiguration.SCREEN_HEIGHT, 448);
@@ -300,6 +312,13 @@ public class SonicConfigurationService {
 		config = new HashMap<>();
 		defaults = new HashMap<>();
 		applyDefaults();
+		// Re-derive SCREEN_WIDTH_PIXELS (and related) from the freshly-set
+		// DISPLAY_ASPECT=NATIVE_4_3 default so any widescreen value left in
+		// transientResolved from the singleton constructor is discarded.
+		// Without this call a developer's ULTRA_21_9 config.json would leave
+		// SCREEN_WIDTH_PIXELS=528 in the overlay even after the test harness
+		// calls resetToDefaults(), silently widening trace and headless test runs.
+		resolveDisplayAspect();
 	}
 
 	private boolean applyDefaults() {

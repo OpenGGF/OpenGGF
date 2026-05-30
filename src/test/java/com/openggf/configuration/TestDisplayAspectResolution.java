@@ -50,6 +50,15 @@ class TestDisplayAspectResolution {
     }
 
     @Test
+    void testModeForcesNativeRegardlessOfAspect() {
+        SonicConfigurationService cfg = SonicConfigurationService.createStandalone();
+        cfg.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "ULTRA_21_9");
+        cfg.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, true);
+        cfg.resolveDisplayAspect();
+        assertEquals(320, cfg.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
+    }
+
+    @Test
     void switchingFromWidescreenAutosizeToPreserveClearsDerivedWindow() {
         SonicConfigurationService cfg = SonicConfigurationService.createStandalone();
         cfg.setConfigValue(SonicConfiguration.SCREEN_WIDTH, 1024);
