@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -85,13 +86,10 @@ class TestObjectViewportWindowWidth {
 
     /**
      * Native: object whose chunk-aligned distance from (screenX - 128) is exactly 640
-     * must be IN range (bhi is unsigned strictly-greater-than, so <= 640 stays).
-     * Camera at X=0, screenAligned = (0 - 128) & 0xFF80 = 0xFF80.
-     * objAligned = 0x0280 (640).  dist = (0x0280 - 0xFF80) & 0xFFFF = 0x0300... wait,
-     * that is wrong. Let me use camera at X=128 so screenAligned = 0.
-     * Camera left = 128: screenAligned = (128 - 128) & 0xFF80 = 0.
-     * objAligned for x=640: 640 & 0xFF80 = 0x0280 = 640. dist = 640 - 0 = 640.
-     * 640 <= 640 → in range.
+     * must be IN range (bhi is unsigned strictly-greater-than, so {@code <= 640} stays).
+     * Camera left = 128: screenAligned = (128 - 128) &amp; 0xFF80 = 0.
+     * objAligned for x=640: 640 &amp; 0xFF80 = 0x0280 = 640. dist = 640 - 0 = 640.
+     * 640 &lt;= 640 → in range.
      */
     @Test
     void isInRange_native_exactlyAtLimit_isInRange() {
@@ -224,5 +222,30 @@ class TestObjectViewportWindowWidth {
         SimpleObject obj = new SimpleObject(321, 0); // dx = 321; was invisible under old 320 check
         assertTrue(obj.checkChkObjectVisible(),
                 "At widescreen width 528, dx=321 (just past old native limit) must be visible");
+    }
+
+    // -------------------------------------------------------------------------
+    // ObjectManager.outOfRangeLimit — pure function (native and widescreen)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Native: 128 + 320 + 192 = 640.
+     * Reproduces the ROM {@code cmpi.w #$280,d0} constant exactly.
+     */
+    @Test
+    void outOfRangeLimit_native320_returns640() {
+        assertEquals(640, ObjectManager.outOfRangeLimit(320),
+                "Native viewport width 320 must yield the ROM constant 640");
+    }
+
+    /**
+     * Widescreen ULTRA_21_9 (528 px): 128 + 528 + 192 = 848.
+     * The despawn window widens with the viewport to prevent visible objects
+     * near the right edge from being incorrectly removed.
+     */
+    @Test
+    void outOfRangeLimit_widescreen528_returns848() {
+        assertEquals(848, ObjectManager.outOfRangeLimit(528),
+                "ULTRA_21_9 viewport width 528 must yield 848 (128 + 528 + 192)");
     }
 }

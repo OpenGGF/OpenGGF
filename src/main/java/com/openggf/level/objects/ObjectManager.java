@@ -2369,6 +2369,24 @@ public class ObjectManager {
     }
 
     /**
+     * Pure-function limit for the S1 {@code out_of_range} macro:
+     * {@code 128 (behind-camera) + viewportWidth (screen) + 192 (ahead)}.
+     * <p>
+     * At native viewport width (320 px, {@code DISPLAY_ASPECT = NATIVE_4_3}) this
+     * returns exactly {@code 640}, reproducing the ROM {@code cmpi.w #$280,d0}
+     * constant bit-for-bit.  At widescreen widths the limit widens with the
+     * configured viewport so objects near the visible right edge are not
+     * incorrectly despawned (declared divergence — see
+     * docs/KNOWN_DISCREPANCIES.md "Object Despawn and Visibility Windows", entry #14).
+     * <p>
+     * Used by {@link #isOutOfRangeS1} and mirrored in
+     * {@link AbstractObjectInstance#isInRange()}.
+     */
+    static int outOfRangeLimit(int viewportWidth) {
+        return 128 + viewportWidth + 192;
+    }
+
+    /**
      * ROM parity: S1 {@code out_of_range} macro (Macros.asm line 261).
      * <p>
      * Computes unsigned 16-bit distance between object and screen position:
@@ -2376,16 +2394,21 @@ public class ObjectManager {
      *   d0 = obX & 0xFF80
      *   d1 = (v_screenposx - 128) & 0xFF80
      *   distance = (d0 - d1) & 0xFFFF   (unsigned 16-bit)
-     *   out_of_range when distance > 640  (bhi = unsigned greater)
+     *   out_of_range when distance > limit  (bhi = unsigned greater)
      * </pre>
-     * 640 = 128 + 320 + 192 pixels (behind-camera + screen width + ahead).
+     * The {@code limit} is {@link #outOfRangeLimit}{@code (camera.getWidth())}: at
+     * native viewport width (320 px) this equals the ROM constant 640
+     * ({@code 128 + 320 + 192}); at widescreen widths the limit widens with the
+     * configured viewport so objects near the visible right edge are not incorrectly
+     * despawned (declared divergence — see KNOWN_DISCREPANCIES.md entry #14
+     * "Object Despawn and Visibility Windows").
      * Catches both left (negative wraps to large unsigned) and right out of range.
      */
-    private static boolean isOutOfRangeS1(int objX, int cameraX) {
+    private boolean isOutOfRangeS1(int objX, int cameraX) {
         int objRounded = objX & 0xFF80;
         int screenRounded = (cameraX - 128) & 0xFF80;
         int distance = (objRounded - screenRounded) & 0xFFFF;
-        return distance > 640;
+        return distance > outOfRangeLimit(camera.getWidth());
     }
 
     /**
