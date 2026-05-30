@@ -66,6 +66,46 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
 
+    // Widescreen helpers ---------------------------------------------------
+
+    /**
+     * Returns the current projection viewport width in game pixels.
+     * At native 320 this equals SCREEN_WIDTH exactly.
+     * Uses GraphicsManager.getProjectionWidth() which is propagated each frame
+     * by Engine — same approach as AbstractResultsScreen.xOffset().
+     */
+    private int viewportWidth() {
+        try {
+            int w = GameServices.graphics().getProjectionWidth();
+            return w > 0 ? w : SCREEN_WIDTH;
+        } catch (Exception ignored) {
+            return SCREEN_WIDTH;
+        }
+    }
+
+    /**
+     * Horizontal offset that shifts the native-320 content block to the centre
+     * of the current viewport.  Zero at native (byte-identical); positive at
+     * wider resolutions.
+     */
+    private int xOffset() {
+        return (viewportWidth() - SCREEN_WIDTH) / 2;
+    }
+
+    /**
+     * Number of 8-px tile columns to fill the viewport.
+     * Includes one extra column on each side so the sub-tile H-scroll offset
+     * never leaves a visible gap.  At native 320 this equals 42 (matching the
+     * existing literal), so the background is byte-identical at native width.
+     *
+     * <p>Package-visible for unit tests.
+     */
+    public static int bgTileColumns(int viewportWidth) {
+        return (viewportWidth + 7) / 8 + 2;
+    }
+
+    // End widescreen helpers -----------------------------------------------
+
     // Sprite rendering
     private PatternSpriteRenderer sonicSpriteRenderer;
     private PatternSpriteRenderer creditTextSpriteRenderer;
@@ -415,7 +455,9 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
             int subTileX = bgPixelPos & 7;
             int startTileX = bgPixelPos >> 3;
 
-            for (int screenTile = 0; screenTile < 42; screenTile++) {
+            // bgTileColumns() returns 42 at native 320 — byte-identical at native width.
+            int tileColumns = bgTileColumns(viewportWidth());
+            for (int screenTile = 0; screenTile < tileColumns; screenTile++) {
                 int mapTileX = startTileX + screenTile;
                 // Wrap horizontally within the nametable
                 mapTileX = ((mapTileX % mapWidth) + mapWidth) % mapWidth;
@@ -526,8 +568,9 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         gm.beginPatternBatch();
 
         // TitleSonic sprite (only visible when not in delay state)
+        // xOffset() == 0 at native 320 — byte-identical at native width.
         if (sonicRoutine >= 4 && sonicSpriteRenderer != null && sonicSpriteRenderer.isReady()) {
-            int screenX = SONIC_X - 128; // VDP to screen coords
+            int screenX = xOffset() + SONIC_X - 128; // VDP to screen coords, centred in viewport
             int screenY = sonicScreenY - 128;
             sonicSpriteRenderer.drawFrameIndex(sonicAnimFrame, screenX, screenY);
         }
@@ -554,6 +597,8 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         gm.flushPatternBatch();
 
         // Fade overlay for FADE_IN state
+        // Width extended to viewportWidth() so the fade covers the full viewport at any
+        // resolution. At native 320 viewportWidth() == SCREEN_WIDTH — byte-identical.
         if (state == State.FADE_IN) {
             float fadeAmount = 1.0f - (float) fadeTimer / FADE_DURATION;
             if (fadeAmount > 0.0f) {
@@ -562,7 +607,7 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
                         -1,
                         GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                         0.0f, 0.0f, 0.0f, fadeAmount,
-                        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                        0, 0, viewportWidth(), SCREEN_HEIGHT
                 ));
             }
         }
@@ -580,11 +625,12 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         }
 
         // Render "SONIC TEAM PRESENTS" as a single sprite mapping at screen center
+        // Object center position: x=0x120, y=0xF0 (VDP coords) → screen x=160, y=112.
+        // At widescreen we place the sprite at the viewport mid-point so it stays centred.
+        // At native 320 viewportWidth()/2 == 160 — byte-identical.
         if (creditTextSpriteRenderer != null && creditTextSpriteRenderer.isReady()) {
             gm.beginPatternBatch();
-            // Object center position: x=0x120, y=0xF0 (VDP coords) → screen x=160, y=112
-            // Frame index 0 within the credit text sprite sheet (which only has 1 frame)
-            creditTextSpriteRenderer.drawFrameIndex(0, 160, 112);
+            creditTextSpriteRenderer.drawFrameIndex(0, viewportWidth() / 2, 112);
             gm.flushPatternBatch();
         }
 
@@ -595,13 +641,15 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         } else if (state == State.INTRO_TEXT_FADE_OUT) {
             fadeAmount = (float) introTextTimer / INTRO_TEXT_FADE_DURATION;
         }
+        // Fade rect extends to viewportWidth() so side-bars are also covered.
+        // At native 320 viewportWidth() == SCREEN_WIDTH — byte-identical.
         if (fadeAmount > 0.0f) {
             gm.registerCommand(new GLCommand(
                     GLCommand.CommandType.RECTI,
                     -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                     0.0f, 0.0f, 0.0f, fadeAmount,
-                    0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                    0, 0, viewportWidth(), SCREEN_HEIGHT
             ));
         }
     }
@@ -631,7 +679,8 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
 
         // Plane A logo starts at VDP nametable offset $206 in a 64-wide plane:
         // $206 / $80 = row 4, ($206 % $80) / 2 = col 3 → pixel (24, 32)
-        int startPixelX = 24;
+        // At native 320 xOffset() == 0, so startPixelX == 24 — byte-identical.
+        int startPixelX = xOffset() + 24;
         int startPixelY = 32;
 
         int clampedEnd = Math.min(endRow, mapHeight);
@@ -718,7 +767,8 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
     private void drawTMSymbol(GraphicsManager gm) {
         dataLoader.cacheTmToGpu(gm);
 
-        int baseX = TM_X;
+        // xOffset() == 0 at native 320 — byte-identical at native width.
+        int baseX = xOffset() + TM_X;
         int baseY = TM_Y;
 
         // TM is 1 piece: 2 tiles wide, 1 tile tall, at tile 0 (relative to TM patterns)
@@ -897,7 +947,8 @@ public class Sonic1TitleScreenManager implements TitleScreenProvider {
         // the normal draw() — Sonic is invisible during the initial delay.
         gm.beginPatternBatch();
         if (sonicRoutine >= 4 && sonicSpriteRenderer != null && sonicSpriteRenderer.isReady()) {
-            int screenX = SONIC_X - 128;
+            // xOffset() == 0 at native 320 — byte-identical at native width.
+            int screenX = xOffset() + SONIC_X - 128;
             int screenY = sonicScreenY - 128;
             sonicSpriteRenderer.drawFrameIndex(sonicAnimFrame, screenX, screenY);
         }
