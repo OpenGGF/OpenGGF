@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Player right-boundary now tracks viewport width.** Extracted boundary math into `RightBoundary.compute()` and replaced the hardcoded `SCREEN_WIDTH = 320` in `PlayableSpriteMovement.doLevelBoundary()` with `camera.getWidth()`. At native 320px width the ROM-accurate `+$128` / `+$128 + $40` constants are reproduced exactly; widescreen viewports widen the boundary to the configured viewport width (declared divergence, see KNOWN_DISCREPANCIES.md).
+
 - **Added display aspect config surface (experimental).** Three new config keys wire the widescreen foundation into the configuration layer: `DISPLAY_ASPECT` selects a preset pixel width (`NATIVE_4_3` / `WIDE_16_10` / `WIDE_16_9` / `ULTRA_21_9` / `SUPER_32_9`), `DISPLAY_WINDOW_AUTOSIZE` controls whether the OS window is derived from the preset at 2x baseline, and `WIDESCREEN_DEADZONE_MODE` prepares the camera deadzone policy for wide layouts. Derived pixel/window values are resolved into a non-persisted in-memory overlay so they are never written to `config.json`. Only `NATIVE_4_3` is fully supported; widescreen rendering (UI pillarbox, extended parallax) is not yet complete.
 
 - **Added an in-game level editor MVP.** Toggle into an edit mode mid-play, paint chunks with the mouse, undo/redo strokes via `Block.saveState()/restoreState()`, and persist edits through the editor save envelope. Editor enter/exit uses teardown+rebuild while `WorldSession` survives, re-applying `MutableLevel` edits on resume.
