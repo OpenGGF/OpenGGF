@@ -108,7 +108,7 @@ Paths are relative to the working directory (where the JAR is launched).
 | `REWIND_AUDIO_HISTORY_LIMIT_TYPE` | string | `"time"` | How the rewind audio PCM history ring is capped. `"time"` caps by `REWIND_AUDIO_HISTORY_SECONDS`; `"size"` caps by `REWIND_AUDIO_HISTORY_SIZE_MB`. Held rewind beyond the cap plays silence on develop (the audio-rewind feature branch engages the reverse resynthesizer instead). |
 | `REWIND_AUDIO_HISTORY_SECONDS` | int | `60` | Seconds of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"time"`. |
 | `REWIND_AUDIO_HISTORY_SIZE_MB` | int | `10` | Megabytes of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"size"`. Stereo 16-bit at 48 kHz consumes ~192 KB/s, so 10 MB is roughly 54 s at that sample rate (~57 s at 44.1 kHz). |
-| `TEST_MODE_ENABLED` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `TRACE_CATALOG_DIR` and plays the chosen trace back in the live engine. Dev-only. |
+| `TEST_MODE_ENABLED` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `TRACE_CATALOG_DIR` and plays the chosen trace back in the live engine. Dev-only. **When `true`, `DISPLAY_ASPECT` is always forced to `NATIVE_4_3` (320×224) regardless of its configured value** — trace replay and test-mode runs are parity-critical and must always run at 320×224. |
 | `TRACE_CATALOG_DIR` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
 
 ### Level Editor (experimental)
