@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## Unreleased
 
+- **Display color profiles can now be cycled at runtime.**
+  The renderer supports raw RGB, darker Mega Drive analog, and softened NTSC-style
+  palette presentation profiles. Press `V` by default to cycle them; the selection is
+  persisted to `config.json` and confirmed briefly in the bottom-left corner.
+
 - **CNZ1 carry-in Tails follow-ups: fly-off now actually rises, and rewinding back into the carry re-creates the carrier.**
   (1) The throwaway carrier sank to the floor and drifted right instead of flying off, because the Tails
   flight-ascent flap (`Tails_Move_FlySwim`, in `applyFlyingCarryVerticalVelocity`) is gated by

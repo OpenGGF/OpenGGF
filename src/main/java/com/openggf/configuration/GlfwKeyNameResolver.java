@@ -8,6 +8,8 @@ import java.util.OptionalInt;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_WORLD_1;
+
 /**
  * Resolves human-readable key name strings (e.g. "Q", "SPACE", "LEFT_SHIFT")
  * to GLFW integer key codes and vice versa. Uses reflection on
@@ -61,6 +63,8 @@ public final class GlfwKeyNameResolver {
                         .log(Level.WARNING, "Failed to build GLFW key name map via reflection; "
                                 + "all key name lookups will return empty", e);
             }
+
+            ntc.put("#", GLFW_KEY_WORLD_1);
 
             NAME_TO_CODE = Map.copyOf(ntc);
             CODE_TO_NAME = Map.copyOf(ctn);

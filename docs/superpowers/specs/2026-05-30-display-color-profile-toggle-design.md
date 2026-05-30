@@ -8,9 +8,10 @@ OpenGGF currently expands Mega Drive CRAM values directly to full-range RGB, so 
 
 - Keep the raw ROM/CRAM palette semantics intact.
 - Add a display-only color profile layer for final RGB presentation.
-- Allow cycling profiles with a configurable keybind, defaulting to the `#` key where GLFW exposes it.
+- Allow cycling profiles with a configurable keybind, defaulting to the plain `V` key.
 - Save the selected profile back to `config.json` immediately after a runtime toggle.
 - Keep the feature usable outside debug mode because it is a presentation preference, not a cheat.
+- Show a short bottom-left confirmation message when the profile changes so the user can tell the keypress worked.
 
 ## Non-Goals
 
@@ -26,11 +27,11 @@ Add two `SonicConfiguration` entries:
 | Key | Type | Default | Purpose |
 |-----|------|---------|---------|
 | `DISPLAY_COLOR_PROFILE` | string | `RAW_RGB` | Last selected color presentation profile |
-| `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | key name | `WORLD_1` | Runtime key used to cycle profiles |
+| `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` | key name | `V` | Runtime key used to cycle profiles |
 
 `DISPLAY_COLOR_PROFILE` should accept known enum names case-insensitively and fall back to `RAW_RGB` with a warning on invalid values.
 
-The `#` default needs care because GLFW key names vary by keyboard layout. On UK keyboards, `#` is commonly represented by one of the non-US/world keys rather than a printable `#` name. Default the config to `WORLD_1` and add an explicit `"#"` alias in `GlfwKeyNameResolver` that maps to the same key code. This is a new alias mechanism for the resolver; today it only reflects `GLFW_KEY_*` constants and strips prefixes. The binding remains editable in `config.json` for layouts where `WORLD_1` is not reachable.
+The original `#` candidate is keyboard-layout dependent because GLFW can report that physical key as a non-US/world key or another layout-specific code. Use `V` as the default instead, and migrate generated `WORLD_1`/`"#"` bindings to `V` so existing configs do not stay on the unreliable key. The binding remains editable in `config.json`.
 
 ## Profiles
 
@@ -63,6 +64,16 @@ The refresh mechanism should be explicit in `GraphicsManager`, not delegated to 
 
 The toggle should be global during normal rendered modes and should not require `DEBUG_VIEW_ENABLED`.
 
+## Runtime Confirmation Text
+
+On a successful profile toggle, show a bottom-left screen-space message for about 2 seconds. The message should use the human-readable profile label:
+
+- `Color: Raw RGB`
+- `Color: MD Analog`
+- `Color: NTSC Soft`
+
+Render the message through the existing post-fade pixel-font HUD path so it stays readable and does not depend on `DEBUG_VIEW_ENABLED`. Place it inside the game viewport near the lower-left corner, above the bottom edge with a small margin. The message should only appear after a profile change; it should not be a permanent HUD element. If the configured key is unbound or not recognised and no toggle occurs, no message is shown.
+
 ## Input Behavior
 
 Use `InputHandler.isKeyPressed(...)` for edge-triggered cycling. The key should be resolved through the existing named-key config path, so users can replace the default with another GLFW key name or numeric code.
@@ -75,10 +86,11 @@ Add focused tests for:
 
 - Invalid `DISPLAY_COLOR_PROFILE` values falling back to `RAW_RGB`.
 - Profile cycling order and persistence via `setConfigValue(...)`.
+- Toggle notification text and timer behavior after a profile change.
 - Color conversion output for representative CRAM levels, including white, midtones, and saturated primaries.
 - Normal and underwater palette texture upload using converted bytes while leaving `Palette.fromSegaFormat(...)` unchanged.
 - `GraphicsManager.refreshAllPaletteTextures()` re-emitting all retained palette lines after a profile change.
-- `GlfwKeyNameResolver` alias handling for `"#"` mapping to `WORLD_1`.
+- Config migration from old `WORLD_1`/`"#"` display-toggle defaults to `V`.
 
 Rendering screenshot comparison is useful later, but the first implementation can be covered by deterministic conversion and config tests.
 
@@ -88,5 +100,6 @@ Update the playing/configuration guide to document:
 
 - The available display color profiles.
 - The runtime toggle key.
+- The bottom-left confirmation text.
 - The fact that the selected profile is saved to `config.json`.
-- The keyboard-layout caveat for the default `#` binding.
+- Why `V` is the default instead of the layout-dependent `#` binding.

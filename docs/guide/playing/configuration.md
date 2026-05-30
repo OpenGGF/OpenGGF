@@ -186,6 +186,22 @@ and slow-motion rewind plays back lower and stretched in time.
 }
 ```
 
+## How do I make colors less bright?
+
+The default display profile is the raw RGB expansion of Mega Drive palette values. You can
+select a darker analog-style presentation, or a slightly softer NTSC-style presentation:
+
+```json
+{
+  "DISPLAY_COLOR_PROFILE": "MD_ANALOG"
+}
+```
+
+Accepted values are `"RAW_RGB"`, `"MD_ANALOG"`, and `"NTSC_SOFT"`. During play, press
+`V` to cycle profiles; the selected profile is saved to `config.json` and a short
+confirmation appears in the bottom-left corner. The key can be rebound with
+`DISPLAY_COLOR_PROFILE_TOGGLE_KEY`.
+
 ## How do I switch between NTSC and PAL?
 
 ```json

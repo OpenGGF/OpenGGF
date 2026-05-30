@@ -6,6 +6,7 @@ import java.util.logging.Logger;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_APOSTROPHE;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F8;
+import static org.lwjgl.glfw.GLFW.GLFW_KEY_V;
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_WORLD_1;
 
 /**
@@ -44,6 +45,7 @@ public class ConfigMigrationService {
         SonicConfiguration.TRACE_REWIND_KEY,
         SonicConfiguration.LIVE_REWIND_KEY,
         SonicConfiguration.DEBUG_LAST_CHECKPOINT_KEY,
+        SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY,
         SonicConfiguration.CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY
     );
 
@@ -113,6 +115,43 @@ public class ConfigMigrationService {
         LOGGER.info("[ConfigMigration] Migrated CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY: "
                 + keyCode + " -> " + GLFW_KEY_APOSTROPHE);
         return true;
+    }
+
+    /**
+     * Migrates the display color-profile toggle off the layout-dependent '#'
+     * binding. GLFW reports that key differently across keyboard layouts, so the
+     * default is now the plain V key.
+     *
+     * @param config The config map to migrate (modified in place)
+     * @return true if the key binding was updated
+     */
+    public boolean migrateDeprecatedDisplayColorProfileToggleKey(Map<String, Object> config) {
+        String key = SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY.name();
+        Object value = config.get(key);
+        if (value instanceof Number number) {
+            int keyCode = number.intValue();
+            if (keyCode != GLFW_KEY_WORLD_1) {
+                return false;
+            }
+            config.put(key, GLFW_KEY_V);
+            LOGGER.info("[ConfigMigration] Migrated DISPLAY_COLOR_PROFILE_TOGGLE_KEY: "
+                    + keyCode + " -> " + GLFW_KEY_V);
+            return true;
+        }
+        if (value instanceof String text) {
+            String normalized = text.trim().toUpperCase();
+            if (!normalized.equals("#")
+                    && !normalized.equals("WORLD_1")
+                    && !normalized.equals("GLFW_KEY_WORLD_1")
+                    && !normalized.equals("KEY_WORLD_1")) {
+                return false;
+            }
+            config.put(key, "V");
+            LOGGER.info("[ConfigMigration] Migrated DISPLAY_COLOR_PROFILE_TOGGLE_KEY: "
+                    + text + " -> V");
+            return true;
+        }
+        return false;
     }
 
     private Integer getIntValue(Map<String, Object> config, String key) {
