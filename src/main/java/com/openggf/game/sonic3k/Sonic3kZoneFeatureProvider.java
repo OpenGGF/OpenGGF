@@ -574,13 +574,9 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
 
     @Override
     public float getWaterlineOffset(int zoneIndex, int actIndex) {
-        // HCZ uses ROM-driven background strip updates and explicit wave-splash
-        // sprites at Water_level itself; keeping the generic S2-style -8 split
-        // creates a visible seam between the shader boundary and HCZ's art.
-        if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
-            return 0.0f;
-        }
-        return -8.0f;
+        // S3K Handle_Onscreen_Water_Height uses Water_level - Camera_Y_pos
+        // directly; object placement and foreground masking must align to that.
+        return 0.0f;
     }
 
     @Override
