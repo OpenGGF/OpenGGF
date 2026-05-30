@@ -1494,13 +1494,17 @@ public class Engine {
 				camera.setY((short) 0);
 			}
 			if (masterTitleScreen != null) {
+				// Pass the full projection width so the master title can expand the
+				// background/clouds to the viewport while centering foreground elements.
+				// The projection matrix maps [0, realWidth] x [0, 224] to the viewport,
+				// so realWidth is the coordinate-space width of the full viewport.
+				// At native 320 this is a no-op (setViewportWidth(320) == default).
+				masterTitleScreen.setViewportWidth((int) realWidth);
 				masterTitleScreen.setProjectionMatrix(getProjectionMatrixBuffer());
-				if (uiPipeline != null) uiPipeline.beginSafeArea(viewportWidth, (int) realHeight);
-				try {
-					masterTitleScreen.draw();
-				} finally {
-					if (uiPipeline != null) uiPipeline.endSafeArea();
-				}
+				// Note: no beginSafeArea wrapping — MasterTitleScreen uses its own
+				// TexturedQuadRenderer with its own shader uniform, so the
+				// GraphicsManager safe-area override has no effect on it.
+				masterTitleScreen.draw();
 			}
 			return;
 		}

@@ -28,11 +28,17 @@ import static org.lwjgl.opengl.GL11.*;
 /**
  * Master title screen shown on startup for game selection.
  * Runs before any ROM is loaded, using its own PNG-based rendering path.
+ *
+ * <p>Widescreen layout: the background and clouds fill the full projection width
+ * ({@link #setViewportWidth(int)} driven by Engine's {@code realWidth}). All foreground
+ * elements (emblem, title text, subtitle, game menu, nav hints, error overlay) are
+ * centered on the viewport midpoint so they remain visually centered at any width.
+ * At native width 320 every value collapses to the original literals — byte-identical.
  */
 public class MasterTitleScreen {
 
     private static final Logger LOGGER = Logger.getLogger(MasterTitleScreen.class.getName());
-    private static final int SCREEN_W = 320;
+    static final int SCREEN_W = 320;
     private static final int SCREEN_H = 224;
 
     // Short labels for the menu (fit within 320px when laid out horizontally)
@@ -76,15 +82,15 @@ public class MasterTitleScreen {
             this.height = height;
         }
 
-        void update() {
+        void update(int vpWidth) {
             x += speed;
             // Wrap when fully off the right edge
-            if (x > SCREEN_W) {
+            if (x > vpWidth) {
                 x = -width;
             }
             // Wrap when fully off the left edge (negative speed)
             if (x + width < 0) {
-                x = SCREEN_W;
+                x = vpWidth;
             }
         }
     }
@@ -117,6 +123,14 @@ public class MasterTitleScreen {
 
     private final List<CloudSprite> clouds = new ArrayList<>();
     private final SonicConfigurationService configService;
+
+    /**
+     * Projection width supplied by Engine each frame. Defaults to SCREEN_W (320)
+     * so the screen behaves identically to native when no explicit width is set.
+     * At widescreen (e.g. 400, 528) the background/clouds expand to fill the full
+     * width while foreground elements stay centered.
+     */
+    private int viewportWidth = SCREEN_W;
 
     private boolean gameSelected = false;
 
@@ -216,7 +230,7 @@ public class MasterTitleScreen {
 
         // Update cloud animation
         for (CloudSprite cloud : clouds) {
-            cloud.update();
+            cloud.update(viewportWidth);
         }
 
         if (state == State.FADE_IN) {
@@ -312,35 +326,38 @@ public class MasterTitleScreen {
 
         if (tracePicker != null) {
             // Paint solid black behind the picker so the regular master-title
-            // artwork doesn't bleed through.
-            renderer.drawTexture(solidWhiteTextureId, 0, 0, SCREEN_W, SCREEN_H,
+            // artwork doesn't bleed through. Fill the full projection width.
+            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H,
                     0f, 0f, 0f, 1f);
             tracePicker.render();
             return;
         }
 
-        // 1. Background (full screen)
-        renderer.drawTexture(bgTextureId, 0, 0, SCREEN_W, SCREEN_H);
+        // 1. Background — fills the full projection width so it expands at widescreen.
+        //    At native 320 this is identical to the original drawTexture(bg, 0, 0, 320, 224).
+        renderer.drawTexture(bgTextureId, 0, 0, viewportWidth, SCREEN_H);
 
-        // 2. Clouds (behind emblem)
+        // 2. Clouds (behind emblem) — cloud x/y already tracks viewportWidth via update().
         for (CloudSprite cloud : clouds) {
             float glY = SCREEN_H - cloud.y - cloud.height;
             renderer.drawTexture(cloud.textureId, cloud.x, glY, cloud.width, cloud.height,
                 1f, 1f, 1f, 0.85f);
         }
 
-        // 3. Compute title text position (needed for emblem placement)
+        // 3. Compute title text position (needed for emblem placement).
+        //    Foreground elements are centered on viewportWidth/2.
+        //    At native 320: centerX(w, 320) == (320-w)/2 == existing literal. Byte-identical.
         float titleScale = 0.35f;
         int scaledTitleW = (int)(titleTextWidth * titleScale);
         int scaledTitleH = (int)(titleTextHeight * titleScale);
-        float titleX = (SCREEN_W - scaledTitleW) / 2f;
+        float titleX = centerX(scaledTitleW, viewportWidth);
         float titleGlY = SCREEN_H - 10 - scaledTitleH; // 10px from top
 
         // 4. Emblem (centered, below title text) - drawn before title so title appears in front
         float emblemScale = 0.7f;
         int scaledEmblemW = (int)(emblemWidth * emblemScale);
         int scaledEmblemH = (int)(emblemHeight * emblemScale);
-        float emblemX = (SCREEN_W - scaledEmblemW) / 2f;
+        float emblemX = centerX(scaledEmblemW, viewportWidth);
         float emblemGlY = titleGlY - scaledEmblemH + 12;
         renderer.drawTexture(emblemTextureId, emblemX, emblemGlY, scaledEmblemW, scaledEmblemH);
 
@@ -351,7 +368,8 @@ public class MasterTitleScreen {
         // so mega-batch into a single GL draw call.
         font.beginMegaBatch();
 
-        // 6. Subtitle text, right-aligned to title's right edge - drawn after title (no overlap)
+        // 6. Subtitle text, right-aligned to title's right edge - drawn after title (no overlap).
+        //    titleX is already centered on viewportWidth, so the right edge auto-follows.
         int titleRightEdge = (int)(titleX + scaledTitleW)-8;
         int subtitleY = (int)(SCREEN_H - titleGlY) - 6;
         int line1X = titleRightEdge - font.measureWidth("Open-Source");
@@ -359,26 +377,27 @@ public class MasterTitleScreen {
         font.drawText("Open-Source", line1X, subtitleY-8, 0.8f, 0.8f, 0.8f, 0.9f);
         font.drawText("Sonic Engine", line2X, subtitleY + 2, 0.8f, 0.8f, 0.8f, 0.9f);
 
-        // 5. Game selection menu at bottom
+        // 7. Game selection menu at bottom — centered on viewportWidth.
         drawGameMenu();
 
-        // 6. Navigation hints
-        font.drawTextCentered("< >  Select    Enter  Confirm", SCREEN_W, 210,
+        // 8. Navigation hints — centered on viewportWidth.
+        font.drawTextCentered("< >  Select    Enter  Confirm", viewportWidth, 210,
             0.6f, 0.6f, 0.7f, 0.8f);
 
         font.endMegaBatch();
 
-        // 7. Error message overlay
+        // 9. Error message overlay — semi-transparent overlay fills full width;
+        //    error text is centered on viewportWidth.
         if (state == State.ERROR_DISPLAY) {
             // Semi-transparent black overlay using solid white texture tinted black
             // (separate texture; not batched with font).
-            renderer.drawTexture(solidWhiteTextureId, 0, 0, SCREEN_W, SCREEN_H, 0f, 0f, 0f, 0.5f);
+            renderer.drawTexture(solidWhiteTextureId, 0, 0, viewportWidth, SCREEN_H, 0f, 0f, 0f, 0.5f);
 
             // Error text - second batch (overlay texture sits between the two batches).
             font.beginMegaBatch();
             GameEntry entry = GameEntry.values()[selectedIndex];
-            font.drawTextCentered("ROM NOT FOUND", SCREEN_W, 90, 1f, 0.3f, 0.3f, 1f);
-            font.drawTextCentered(entry.displayName, SCREEN_W, 105, 0.8f, 0.8f, 0.8f, 1f);
+            font.drawTextCentered("ROM NOT FOUND", viewportWidth, 90, 1f, 0.3f, 0.3f, 1f);
+            font.drawTextCentered(entry.displayName, viewportWidth, 105, 0.8f, 0.8f, 0.8f, 1f);
 
             String romFile = configService.getString(entry.romConfigKey);
             if (romFile == null || romFile.isEmpty()) {
@@ -386,7 +405,7 @@ public class MasterTitleScreen {
             } else if (romFile.length() > 35) {
                 romFile = "..." + romFile.substring(romFile.length() - 32);
             }
-            font.drawTextCentered(romFile, SCREEN_W, 125, 0.5f, 0.5f, 0.5f, 0.8f);
+            font.drawTextCentered(romFile, viewportWidth, 125, 0.5f, 0.5f, 0.5f, 0.8f);
             font.endMegaBatch();
         }
     }
@@ -403,7 +422,9 @@ public class MasterTitleScreen {
         }
         totalWidth += spacing * (entries.length - 1);
 
-        int startX = (SCREEN_W - totalWidth) / 2;
+        // Center the menu block on the viewport midpoint.
+        // At native 320: (320 - totalWidth) / 2 == original literal.
+        int startX = (viewportWidth - totalWidth) / 2;
         int menuY = 190;
         int cursorX = startX;
 
@@ -464,6 +485,29 @@ public class MasterTitleScreen {
         this.state = State.CONFIRMING;
         playConfirmSound();
         this.gameSelected = true;
+    }
+
+    /**
+     * Sets the projection (viewport) width for widescreen-aware layout.
+     * Must be called each frame before {@link #draw()} when the engine is
+     * running at a width other than native 320. At native width (320) this is
+     * a no-op because the default already equals SCREEN_W.
+     *
+     * @param width projection width in pixels (e.g. 320, 400, 528)
+     */
+    public void setViewportWidth(int width) {
+        this.viewportWidth = Math.max(SCREEN_W, width);
+    }
+
+    /**
+     * Returns the horizontal center of an element of {@code elementWidth} pixels
+     * within a viewport of {@code vpWidth} pixels.
+     *
+     * <p>At native width (vpWidth == 320) this collapses to the existing literals:
+     * {@code (320 - w) / 2}.
+     */
+    static float centerX(int elementWidth, int vpWidth) {
+        return (vpWidth - elementWidth) / 2f;
     }
 
     public void setProjectionMatrix(float[] projectionMatrix) {
