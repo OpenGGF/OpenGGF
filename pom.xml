@@ -295,6 +295,35 @@
                 </executions>
             </plugin>
 
+            <!-- Install the repo's tracked commit-policy hooks for local development.
+                 Points git at .githooks so the documentation/changelog gate runs on
+                 local commits without each contributor configuring it by hand. Runs
+                 early on every build; idempotent; a no-op outside a git checkout
+                 (failonerror=false) so source-tarball/offline builds are unaffected. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>install-git-hooks</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <exec executable="git" dir="${project.basedir}" failonerror="false">
+                                    <arg value="config"/>
+                                    <arg value="core.hooksPath"/>
+                                    <arg value=".githooks"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
