@@ -136,6 +136,11 @@ public class GraphicsManager {
 	 */
 	private float[] projectionMatrixBuffer;
 
+	/** Reusable JOML matrix for safe-area projection computation (avoids per-call allocation). */
+	private final org.joml.Matrix4f safeAreaMatrix = new org.joml.Matrix4f();
+	/** Reusable float buffer to receive the safe-area matrix for shader upload. */
+	private final float[] safeAreaBuffer = new float[16];
+
 	/**
 	 * Headless mode flag. When true, GL operations are skipped.
 	 * This enables testing game logic without requiring an OpenGL context.
@@ -1332,6 +1337,35 @@ public class GraphicsManager {
 			return engine.getProjectionMatrixBuffer();
 		}
 		return null;
+	}
+
+	/**
+	 * Push a centered-320 safe-area projection for the configured viewport width.
+	 * At native width (320) the safe-area ortho equals the scene ortho [0, 320] — a no-op.
+	 * <p>
+	 * Callers MUST pair every call to this method with a call to
+	 * {@link #endSafeAreaProjection()} before {@code UiRenderPipeline.renderFadePass()}
+	 * so the fade pass runs at the full viewport projection, not the safe-area.
+	 *
+	 * @param viewportWidth       physical viewport width in pixels
+	 * @param viewportHeightPixels physical viewport height in pixels
+	 */
+	public void beginSafeAreaProjection(int viewportWidth, int viewportHeightPixels) {
+		safeAreaMatrix.identity().ortho2D(
+				com.openggf.graphics.pipeline.SafeAreaProjection.orthoLeft(viewportWidth),
+				com.openggf.graphics.pipeline.SafeAreaProjection.orthoRight(viewportWidth),
+				0f, viewportHeightPixels);
+		safeAreaMatrix.get(safeAreaBuffer);
+		setProjectionMatrixBuffer(safeAreaBuffer);
+	}
+
+	/**
+	 * Restore the engine's scene projection by clearing the local override.
+	 * Must be called after safe-area UI drawing and BEFORE
+	 * {@code UiRenderPipeline.renderFadePass()} so the fade runs at the full viewport.
+	 */
+	public void endSafeAreaProjection() {
+		setProjectionMatrixBuffer(null);
 	}
 
 	/**

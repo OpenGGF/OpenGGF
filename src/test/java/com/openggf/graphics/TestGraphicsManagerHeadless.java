@@ -239,6 +239,52 @@ public class TestGraphicsManagerHeadless {
         assertFalse(second.isHeadlessMode(), "New instance should have default headless mode");
     }
 
+    // ==================== Safe-Area Projection Tests ====================
+
+    @Test
+    public void testBeginSafeAreaProjectionNativeWidthIsNoOp() {
+        // At native width (320) safe-area ortho == scene ortho: left=0, right=320.
+        // Matrix: ortho2D(0, 320, 0, 224) — identical to the default scene projection.
+        graphicsManager.initHeadless();
+        graphicsManager.beginSafeAreaProjection(320, 224);
+        float[] buf = graphicsManager.getProjectionMatrixBuffer();
+        assertNotNull(buf, "beginSafeAreaProjection should set projection buffer");
+        assertEquals(16, buf.length, "projection buffer should be 16 floats");
+        // For ortho2D(left=0, right=320, bottom=0, top=224):
+        // m[0] (col 0, row 0) = 2/(right-left) = 2/320 = 0.00625
+        assertEquals(2f / 320f, buf[0], 1e-6f, "m[0] should be 2/320 at native width");
+        // m[5] (col 1, row 1) = 2/(top-bottom) = 2/224
+        assertEquals(2f / 224f, buf[5], 1e-6f, "m[5] should be 2/224");
+        // m[12] (col 3, row 0) = -(right+left)/(right-left) = -1.0
+        assertEquals(-1f, buf[12], 1e-6f, "m[12] translation should be -1 at native width");
+    }
+
+    @Test
+    public void testBeginSafeAreaProjectionWiderViewportCenters() {
+        // At 400 px wide: pad = (400-320)/2 = 40, left = -40, right = 360.
+        graphicsManager.initHeadless();
+        graphicsManager.beginSafeAreaProjection(400, 224);
+        float[] buf = graphicsManager.getProjectionMatrixBuffer();
+        assertNotNull(buf, "beginSafeAreaProjection should set projection buffer");
+        // m[0] = 2/(360-(-40)) = 2/400 = 0.005
+        assertEquals(2f / 400f, buf[0], 1e-6f, "m[0] should be 2/(right-left) = 2/400 at 400px width");
+        // m[12] = -(right+left)/(right-left) = -(360 + (-40))/400 = -320/400 = -0.8
+        float expectedTranslation = -(360f + (-40f)) / 400f;
+        assertEquals(expectedTranslation, buf[12], 1e-6f, "m[12] translation should center the 320-wide safe area in 400px");
+    }
+
+    @Test
+    public void testEndSafeAreaProjectionClearsOverride() {
+        graphicsManager.initHeadless();
+        graphicsManager.beginSafeAreaProjection(400, 224);
+        assertNotNull(graphicsManager.getProjectionMatrixBuffer(), "buffer should be set after begin");
+        graphicsManager.endSafeAreaProjection();
+        // After end, local override is null; getProjectionMatrixBuffer falls back to Engine
+        // (null here because no engine set in headless) — so result is null.
+        assertNull(graphicsManager.getProjectionMatrixBuffer(),
+                "endSafeAreaProjection should clear the local override");
+    }
+
     // ==================== Batching Enable/Disable Tests ====================
 
     @Test

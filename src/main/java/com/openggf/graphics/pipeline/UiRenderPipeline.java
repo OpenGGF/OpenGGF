@@ -50,6 +50,29 @@ public class UiRenderPipeline {
     }
 
     /**
+     * Begin a centered-320 safe-area projection scope for UI drawing.
+     * At native width (320) this is a no-op. At wider viewports it pillarboxes UI
+     * to the central 320-pixel column.
+     * <p>
+     * Callers MUST call {@link #endSafeArea()} BEFORE {@link #renderFadePass()} so the
+     * fade pass runs at the full viewport projection, not the safe-area.
+     *
+     * @param viewportWidth        physical viewport width in pixels
+     * @param viewportHeightPixels physical viewport height in pixels
+     */
+    public void beginSafeArea(int viewportWidth, int viewportHeightPixels) {
+        graphicsManager.beginSafeAreaProjection(viewportWidth, viewportHeightPixels);
+    }
+
+    /**
+     * End the safe-area projection scope, restoring the engine's scene projection.
+     * Must be called after all safe-area UI drawing and BEFORE {@link #renderFadePass()}.
+     */
+    public void endSafeArea() {
+        graphicsManager.endSafeAreaProjection();
+    }
+
+    /**
      * Render the overlay phase (HUD and similar elements).
      * Call after scene rendering but before fade.
      *
