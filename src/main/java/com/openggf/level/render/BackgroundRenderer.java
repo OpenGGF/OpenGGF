@@ -104,7 +104,12 @@ public class BackgroundRenderer {
         parallaxShader.cacheUniformLocations();
         quadRenderer.init();
 
-        // Create FBO for background tile rendering
+        // Create FBO for background tile rendering.
+        // Size the initial allocation to the configured viewport width so that at
+        // native (320) the FBO starts at 320px and at widescreen presets it starts
+        // at the wider configured width. ensureCapacity() (called every frame) will
+        // grow the FBO further if a zone's BG period exceeds this initial size.
+        fboAllocWidth = GameServices.configuration().getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
         createFBO(fboAllocWidth, fboAllocHeight);
 
         initialized = true;
