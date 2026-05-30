@@ -51,6 +51,26 @@ class TestDiscordIpcPresenceClient {
     }
 
     @Test
+    void update_reusesStableStartTimestampAcrossActivityUpdates() throws IOException {
+        FakeTransport transport = new FakeTransport();
+        DiscordIpcPresenceClient client = new DiscordIpcPresenceClient(() -> transport);
+
+        client.connect();
+        client.update(new PresencePayload("OpenGGF - Sonic 2",
+                "Emerald Hill Zone Act 1 as Sonic - 0:01"));
+        client.update(new PresencePayload("OpenGGF - Sonic 2",
+                "Emerald Hill Zone Act 1 as Sonic - 0:16"));
+
+        JsonNode first = MAPPER.readTree(transport.frames.get(1).json);
+        JsonNode second = MAPPER.readTree(transport.frames.get(2).json);
+        long firstStart = first.at("/args/activity/timestamps/start").asLong();
+        long secondStart = second.at("/args/activity/timestamps/start").asLong();
+
+        assertTrue(firstStart > 0);
+        assertEquals(firstStart, secondStart);
+    }
+
+    @Test
     void clear_sendsSetActivityWithNullActivity() throws IOException {
         FakeTransport transport = new FakeTransport();
         DiscordIpcPresenceClient client = new DiscordIpcPresenceClient(() -> transport);

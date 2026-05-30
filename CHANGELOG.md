@@ -6,6 +6,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **Added opt-in Discord Rich Presence.** When enabled, OpenGGF publishes menu and gameplay status through the local Discord desktop client, including game, character/team, zone/act, and timer details subject to privacy toggles. Presence remains disabled by default and includes distinct master-title, game title-screen, level-select, data-select, and gameplay states.
 
+- **Fixed Discord Rich Presence elapsed-time resets.** Activity updates now reuse a stable Discord `timestamps.start` value so Discord's own "time playing" display no longer resets when OpenGGF refreshes gameplay/menu details.
+
 - **Added safe-area projection scope to the UI render pipeline.** `GraphicsManager.beginSafeAreaProjection/endSafeAreaProjection` pushes a centered-320 ortho override using the existing `projectionMatrixBuffer` local-override path; `UiRenderPipeline.beginSafeArea/endSafeArea` expose the scope to callers. At native 320 px width pad=0, making this a no-op. Callers must call `endSafeArea()` before `renderFadePass()` so the fade pass runs at the full viewport.
 
 - **TEST_MODE_ENABLED forces NATIVE_4_3 (320×224) resolution.** When `TEST_MODE_ENABLED=true`, `resolveDisplayAspect()` overrides any configured `DISPLAY_ASPECT` with `NATIVE_4_3`. Trace replay tests and the test-mode trace picker are parity-critical and only valid at 320×224; a developer's widescreen `DISPLAY_ASPECT` (e.g. `ULTRA_21_9`) must never leak into those runs. `resetToDefaults()` now also re-invokes `resolveDisplayAspect()` so any widescreen value loaded into the transient overlay during singleton construction is cleared when the test harness resets config.
