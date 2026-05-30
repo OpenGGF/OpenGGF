@@ -531,22 +531,7 @@ public class Sonic1ElevatorObjectInstance extends AbstractObjectInstance
     public boolean isPersistent() {
         // Disasm: out_of_range.w DeleteObject,elev_origX(a0)
         // Uses stored original X (not current X) for range check
-        return !isDestroyed() && isOrigXOnScreen();
-    }
-
-    /**
-     * Range check using original X position, matching the disassembly's
-     * out_of_range.w macro applied to elev_origX.
-     */
-    private boolean isOrigXOnScreen() {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = origX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
+        return !isDestroyed() && isInRangeAt(origX);
     }
 
     // ---- Debug rendering ----

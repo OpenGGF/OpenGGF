@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 
-import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.graphics.GLCommand;
@@ -81,9 +80,6 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
 
     /** Animation speed for head anims (from Ani_Geyser: dc.b 2). */
     private static final int ANIM_SPEED = 3; // speed byte 2 -> every 3 frames
-
-    /** out_of_range compare distance: #128+320+192. */
-    private static final int OUT_OF_RANGE_DISTANCE = 128 + 320 + 192;
 
     // Animation frames for head pieces
     /** Anim 5 (.bubble4): frames {0x11, 0x12} - geyser head bubbles. */
@@ -328,7 +324,7 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
         updateHeadAnimation();
 
         // Geyser_ChkDel: out_of_range.w DeleteObject
-        if (!isWithinOutOfRangeWindow(currentX)) {
+        if (!isInRangeAt(currentX)) {
             setDestroyed(true);
         }
     }
@@ -422,7 +418,7 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
         displayFrame = columnAnimFrame + frameBase;
 
         // Geyser_ChkDel: out_of_range.w DeleteObject
-        if (!isWithinOutOfRangeWindow(currentX)) {
+        if (!isInRangeAt(currentX)) {
             setDestroyed(true);
         }
     }
@@ -499,22 +495,7 @@ public class Sonic1LavaGeyserObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean isPersistent() {
-        return !isDestroyed() && isWithinOutOfRangeWindow(currentX);
-    }
-
-    /**
-     * ROM out_of_range macro (Macros.asm):
-     * round both X positions to $80 and compare against 128+320+192.
-     */
-    private boolean isWithinOutOfRangeWindow(int objectX) {
-        Camera camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= OUT_OF_RANGE_DISTANCE;
+        return !isDestroyed() && isInRangeAt(currentX);
     }
 
     // ========================================================================

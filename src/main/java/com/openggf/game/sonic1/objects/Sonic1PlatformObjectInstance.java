@@ -242,7 +242,7 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         // out_of_range uses objoff_32 (spawn X), not current X
-        return !isDestroyed() && isOnScreenX(baseX, 320);
+        return !isDestroyed() && isInRangeAt(baseX);
     }
 
     /**
@@ -491,20 +491,4 @@ public class Sonic1PlatformObjectInstance extends AbstractObjectInstance
         return camera != null ? camera.getMaxY() : 0x700;
     }
 
-    /**
-     * Check if the object is within out-of-range distance from camera using spawn X.
-     * Matches the S1 out_of_range macro: round both positions to $80, compare distance
-     * against 128+320+192 = 640.
-     */
-    private boolean isOnScreenX(int objectX, int range) {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        // out_of_range: cmpi.w #128+320+192,d0 / bhi.s exit
-        return distance <= (128 + 320 + 192);
-    }
 }

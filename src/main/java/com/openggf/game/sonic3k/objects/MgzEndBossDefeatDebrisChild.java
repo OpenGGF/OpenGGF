@@ -60,8 +60,8 @@ public class MgzEndBossDefeatDebrisChild extends AbstractObjectInstance {
         int cameraY = services().camera().getY();
         int x = getX();
         int y = getY();
-        if (x < cameraX - OFFSCREEN_MARGIN || x > cameraX + 320 + OFFSCREEN_MARGIN
-                || y < cameraY - OFFSCREEN_MARGIN || y > cameraY + 224 + OFFSCREEN_MARGIN) {
+        if (x < cameraX - OFFSCREEN_MARGIN || x > cameraX + viewportWidth() + OFFSCREEN_MARGIN
+                || y < cameraY - OFFSCREEN_MARGIN || y > cameraY + viewportHeight() + OFFSCREEN_MARGIN) {
             setDestroyed(true);
         }
     }

@@ -113,7 +113,11 @@ class TestSonic1MovingBlockObjectInstance {
         };
 
         Camera camera = mock(Camera.class);
-        when(camera.getX()).thenReturn((short) 0);
+        // Place the camera near the block (origX ~0x107D) so it is in the
+        // out_of_range window — in-game the camera follows the player riding it.
+        // ObjectManager.update() syncs cameraBounds from this camera each frame,
+        // and the width-driven out_of_range check reads those bounds.
+        when(camera.getX()).thenReturn((short) 0x1000);
         when(camera.getY()).thenReturn((short) 0);
         when(camera.getWidth()).thenReturn((short) 320);
         when(camera.getHeight()).thenReturn((short) 224);

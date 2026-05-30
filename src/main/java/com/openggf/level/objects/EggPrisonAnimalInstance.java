@@ -260,7 +260,7 @@ public class EggPrisonAnimalInstance extends AbstractObjectInstance {
             return true;
         }
         int cameraX = camera.getX();
-        int screenWidth = 320;
+        int screenWidth = viewportWidth();
         return currentX >= cameraX - margin && currentX <= cameraX + screenWidth + margin;
     }
 

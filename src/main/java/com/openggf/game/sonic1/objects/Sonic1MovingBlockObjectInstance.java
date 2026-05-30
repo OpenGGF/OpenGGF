@@ -273,7 +273,7 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         // out_of_range.w DeleteObject,mblock_origX(a0)
-        return !isDestroyed() && isInRange(origX);
+        return !isDestroyed() && isInRangeAt(origX);
     }
 
     @Override
@@ -580,18 +580,4 @@ public class Sonic1MovingBlockObjectInstance extends AbstractObjectInstance
         y = fallMotion.y;
     }
 
-    /**
-     * Check if the object is within out-of-range distance from camera using the given X.
-     * Matches the S1 out_of_range macro behavior.
-     */
-    private boolean isInRange(int objectX) {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
-    }
 }

@@ -682,12 +682,12 @@ public class CutsceneKnucklesAiz1Instance extends AbstractObjectInstance {
         }
         int cameraX = services().camera().getX();
         int relX = currentX - cameraX;
-        if (relX + RENDER_FLAG_WIDTH < 0 || relX - RENDER_FLAG_WIDTH >= 320) {
+        if (relX + RENDER_FLAG_WIDTH < 0 || relX - RENDER_FLAG_WIDTH >= viewportWidth()) {
             return false;
         }
         int cameraY = services().camera().getY();
         int relY = currentY - cameraY;
-        return relY + RENDER_FLAG_HEIGHT >= 0 && relY - RENDER_FLAG_HEIGHT < 224;
+        return relY + RENDER_FLAG_HEIGHT >= 0 && relY - RENDER_FLAG_HEIGHT < viewportHeight();
     }
 
 }

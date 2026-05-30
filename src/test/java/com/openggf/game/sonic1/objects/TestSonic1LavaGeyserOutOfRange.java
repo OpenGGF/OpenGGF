@@ -144,6 +144,10 @@ public class TestSonic1LavaGeyserOutOfRange {
         assertTrue(body.isPersistent(), "Body piece should remain persistent when X is in range, even if Y is off-screen");
 
         GameServices.camera().setX((short) 0x600);
+        // Sync the shared camera bounds to the moved camera (the engine does this
+        // every frame via ObjectManager.updateCameraBounds); the width-driven
+        // out_of_range check reads cameraBounds, not camera.getX() directly.
+        AbstractObjectInstance.updateCameraBounds(0x600, 0, 0x600 + 320, 224, 0);
 
         assertFalse(body.isPersistent(), "Body piece should become non-persistent when X leaves out_of_range window");
     }
