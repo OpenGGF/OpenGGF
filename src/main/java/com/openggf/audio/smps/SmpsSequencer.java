@@ -2351,15 +2351,16 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             return;
         }
 
-        if (t.modDelay > 0) {
-            t.modDelay--;
-            t.modStepInEffect = true;
-            t.modStepChanged = false;
-            t.modStepDelta = t.modAccumulator;
-            return;
-        }
-
         if (config.getModAlgo() == SmpsSequencerConfig.ModAlgo.MOD_Z80) {
+            t.modDelay = (t.modDelay - 1) & 0xFF;
+            if (t.modDelay != 0) {
+                t.modStepInEffect = true;
+                t.modStepChanged = false;
+                t.modStepDelta = t.modAccumulator;
+                return;
+            }
+            t.modDelay = 1;
+
             boolean accumulatorChanged = false;
             if (t.modRateCounter > 0) {
                 t.modRateCounter--;
@@ -2381,6 +2382,14 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
 
             t.modStepInEffect = true;
             t.modStepChanged = accumulatorChanged;
+            t.modStepDelta = t.modAccumulator;
+            return;
+        }
+
+        if (t.modDelay > 0) {
+            t.modDelay--;
+            t.modStepInEffect = true;
+            t.modStepChanged = false;
             t.modStepDelta = t.modAccumulator;
             return;
         }
