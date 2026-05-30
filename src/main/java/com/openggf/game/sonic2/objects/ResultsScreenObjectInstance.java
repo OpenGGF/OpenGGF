@@ -174,8 +174,9 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen {
             return;
         }
 
-        // Screen-space rendering - convert screen coords to world coords
-        int worldBaseX = camera.getX();
+        // Screen-space rendering - convert screen coords to world coords.
+        // xOffset() is (viewportWidth - 320) / 2; 0 at native 320 (byte-identical).
+        int worldBaseX = camera.getX() + xOffset();
         int worldBaseY = camera.getY();
 
         // All elements use ROM-accurate 16 pixels/frame slide speed
@@ -333,7 +334,7 @@ public class ResultsScreenObjectInstance extends AbstractResultsScreen {
             return;
         }
 
-        int worldBaseX = camera.getX();
+        int worldBaseX = camera.getX() + xOffset();
         int worldBaseY = camera.getY();
 
         // All elements use ROM-accurate 16 pixels/frame slide, starting at frame 0
