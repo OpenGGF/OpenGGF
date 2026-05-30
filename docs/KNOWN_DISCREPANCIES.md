@@ -24,6 +24,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 11. [S2 CPZ Visual Water Surface Oscillation](#s2-cpz-visual-water-surface-oscillation)
 12. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table)
 13. [Widescreen Right-Boundary Widening](#widescreen-right-boundary-widening)
+14. [Object Despawn and Visibility Windows](#object-despawn-and-visibility-windows)
 
 ---
 
@@ -724,3 +725,60 @@ Widescreen is a declared non-parity extension (see spec section "Parity Divergen
 ### Removal Condition
 
 This entry should remain as long as widescreen `DISPLAY_ASPECT` presets are supported. It would only be removed if the engine reverted to a fixed 320px viewport assumption.
+
+---
+
+## Object Despawn and Visibility Windows
+
+**Location:** `AbstractObjectInstance.isInRange()`, `AbstractObjectInstance.isChkObjectVisible()`
+**ROM Reference:** `Macros.asm` (`out_of_range` macro: `cmpi.w #128+320+192,d0`); `docs/s1disasm/_incObj/sub ChkObjectVisible.asm`
+
+### Original Implementation
+
+**`out_of_range` despawn:** The ROM chunk-aligns the object X and the camera-left-minus-128 position, subtracts them (16-bit unsigned wrap), and compares against a single compile-time constant: `128 + 320 + 192 = 640` (`$280`). Any object whose distance exceeds 640 pixel-widths is deleted.
+
+**`ChkObjectVisible` visibility:** The ROM subtracts the camera X from the object X (`move.w $10(a0),d0` / `sub.w (v_screenposx).w,d0`) and rejects the object if `dx` is outside `[0, 320)`, and similarly for Y / `[0, 224)`.
+
+Both constants encode the native Mega Drive screen dimensions: 320 × 224 pixels.
+
+### Our Implementation
+
+Both limits are derived from the cached `cameraBounds` rectangle rather than hardcoded constants:
+
+```java
+// isInRange — despawn window scales with viewport width
+int viewportWidth = cameraBounds.right() - cameraBounds.left();
+return dist <= (128 + viewportWidth + 192);
+
+// isChkObjectVisible — visibility rectangle scales with viewport
+int viewportWidth  = cameraBounds.right()  - cameraBounds.left();
+int viewportHeight = cameraBounds.bottom() - cameraBounds.top();
+if (dx < 0 || dx >= viewportWidth)  return false;
+return dy >= 0 && dy < viewportHeight;
+```
+
+`cameraBounds` is updated once per frame by `ObjectManager.updateCameraBounds()` from `camera.getX() / getY() / getWidth() / getHeight()`, so the window always matches the configured viewport.
+
+### Parity at Native Width
+
+At `DISPLAY_ASPECT = NATIVE_4_3` (viewport width 320, height 224):
+
+| Check | Engine limit | ROM literal | Match |
+|-------|-------------|-------------|-------|
+| `isInRange` | 128 + 320 + 192 = 640 | `$280` = 640 | exact |
+| `isChkObjectVisible` X | `[0, 320)` | `[0, 320)` | exact |
+| `isChkObjectVisible` Y | `[0, 224)` | `[0, 224)` | exact |
+
+`TestObjectViewportWindowWidth` pins this parity with dedicated native-width test cases.
+
+### Rationale
+
+At widescreen viewport widths (e.g. `ULTRA_21_9` = 528 px) the ROM's hardcoded 640 despawn distance is smaller than the distance from the camera to the visible right edge of the widened viewport (~656 px), causing objects near the right edge to be incorrectly deleted mid-screen. Similarly, `ChkObjectVisible` with `dx >= 320` would report objects past the native right edge as invisible even though they are fully in view. Scaling both checks with `viewportWidth` is the correct design decision for the widescreen extension. This follows the same pattern as the [Widescreen Right-Boundary Widening](#widescreen-right-boundary-widening) entry above.
+
+### Verification
+
+`TestObjectViewportWindowWidth` covers all four cases: native `isInRange` at 640 and just past, widescreen `isInRange` at 768 (in range) and 896 (out of range); native `isChkObjectVisible` at dx/dy just inside and at exclusive bounds; widescreen `isChkObjectVisible` at dx=321/400 (visible past old 320 limit) and dx=528 (invisible at exclusive widescreen bound).
+
+### Removal Condition
+
+This entry should remain as long as widescreen `DISPLAY_ASPECT` presets are supported. It would only be removed if the engine reverted to a fixed 320 × 224 viewport assumption.
