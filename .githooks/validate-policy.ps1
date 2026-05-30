@@ -297,11 +297,48 @@ function Validate-SkillsTrailer([string]$Message, [string[]]$Files) {
     }
 }
 
+# A feat/fix/perf commit that touches engine source (src/main/) is almost always
+# changelog-worthy. The base trailer gate only checks staged<->trailer consistency,
+# so it cannot catch a wrong `Changelog: n/a`. This requires such commits to either
+# set `Changelog: updated` or justify the skip with a reason, e.g. `Changelog: n/a: test-only helper`.
+function Test-ChangelogJustified([string]$Value) {
+    $rest = $Value
+    $rest = [System.Text.RegularExpressions.Regex]::Replace($rest, '^\s*n/a', '', 'IgnoreCase')
+    $rest = [System.Text.RegularExpressions.Regex]::Replace($rest, '^[\s:,_-]+', '')
+    return -not [string]::IsNullOrWhiteSpace($rest.Trim())
+}
+
+function Validate-ChangelogJustification([string]$Message, [string[]]$Files) {
+    $subject = ($Message -split "`r?`n")[0]
+    if ($subject -notmatch '^(feat|fix|perf)(\(.+\))?!?:') {
+        return
+    }
+
+    if (-not (Test-HasPrefix $Files "src/main/")) {
+        return
+    }
+
+    $value = Get-TrailerValue "Changelog" $Message
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        return
+    }
+
+    if ((Get-DecisionKind $value) -ne "na") {
+        return
+    }
+
+    if (-not (Test-ChangelogJustified $value)) {
+        $type = ($subject -split '[:(!]')[0]
+        Add-ValidationError "``Changelog`` is ``n/a`` on a ``$type`` commit touching ``src/main/``. Set ``Changelog: updated`` (and stage CHANGELOG.md) or justify the skip, e.g. ``Changelog: n/a: <reason>``."
+    }
+}
+
 function Validate-NonMasterCommitMessage([string]$Message, [string[]]$Files) {
     Reset-ValidationErrors
 
     Validate-FileSizePolicyForFiles $Files { param($path) Get-StagedBlobSize $path }
     Validate-ExactTrailer $Message $Files "Changelog" "CHANGELOG.md" "CHANGELOG.md"
+    Validate-ChangelogJustification $Message $Files
     Validate-PrefixTrailer $Message $Files "Guide" "docs/guide/" "docs/guide/"
     Validate-ExactTrailer $Message $Files "Known-Discrepancies" "docs/KNOWN_DISCREPANCIES.md" "docs/KNOWN_DISCREPANCIES.md"
     Validate-ExactTrailer $Message $Files "S3K-Known-Discrepancies" "docs/S3K_KNOWN_DISCREPANCIES.md" "docs/S3K_KNOWN_DISCREPANCIES.md"
@@ -421,6 +458,7 @@ function Validate-CiPr([string]$BaseSha, [string]$HeadSha, [string]$BaseRef, [st
         Reset-ValidationErrors
         Validate-FileSizePolicyForFiles $files { param($path) Get-CommitBlobSize $commit $path }
         Validate-ExactTrailer $message $files "Changelog" "CHANGELOG.md" "CHANGELOG.md"
+        Validate-ChangelogJustification $message $files
         Validate-PrefixTrailer $message $files "Guide" "docs/guide/" "docs/guide/"
         Validate-ExactTrailer $message $files "Known-Discrepancies" "docs/KNOWN_DISCREPANCIES.md" "docs/KNOWN_DISCREPANCIES.md"
         Validate-ExactTrailer $message $files "S3K-Known-Discrepancies" "docs/S3K_KNOWN_DISCREPANCIES.md" "docs/S3K_KNOWN_DISCREPANCIES.md"
