@@ -22,14 +22,35 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
     protected final Set<T> active = new LinkedHashSet<>();
     protected final Collection<T> activeUnmodifiable = Collections.unmodifiableCollection(active);
     protected final Map<T, Integer> spawnIndexMap = new IdentityHashMap<>();
-    private final int loadAhead;
+    private final int extraAhead;
+    private final int loadAheadFixed; // legacy fixed value when no width supplier is given
+    private final java.util.function.IntSupplier widthSupplier; // null => use loadAheadFixed
     private final int unloadBehind;
 
+    /** Legacy fixed-window constructor (used only by NATIVE-equivalent callers / tests). */
     protected AbstractPlacementManager(List<T> spawns, int loadAhead, int unloadBehind) {
+        this(spawns, loadAhead, unloadBehind, null, 0);
+    }
+
+    /**
+     * Width-driven constructor. The load-ahead window is computed at query time
+     * as {@code widthSupplier.getAsInt() + extraAhead}, so the spawn window
+     * follows the configured viewport width. At native width (320) with the
+     * standard extraAhead (320) this equals the legacy 0x280 (640) window.
+     */
+    protected AbstractPlacementManager(List<T> spawns, int extraAhead, int unloadBehind,
+            java.util.function.IntSupplier widthSupplier) {
+        this(spawns, 0, unloadBehind, widthSupplier, extraAhead);
+    }
+
+    private AbstractPlacementManager(List<T> spawns, int loadAheadFixed, int unloadBehind,
+            java.util.function.IntSupplier widthSupplier, int extraAhead) {
         ArrayList<T> sorted = new ArrayList<>(spawns);
         sorted.sort(Comparator.comparingInt(SpawnPoint::x));
         this.spawns = Collections.unmodifiableList(sorted);
-        this.loadAhead = loadAhead;
+        this.loadAheadFixed = loadAheadFixed;
+        this.extraAhead = extraAhead;
+        this.widthSupplier = widthSupplier;
         this.unloadBehind = unloadBehind;
         for (int i = 0; i < this.spawns.size(); i++) {
             spawnIndexMap.put(this.spawns.get(i), i);
@@ -87,7 +108,7 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
     }
 
     protected int getLoadAhead() {
-        return loadAhead;
+        return widthSupplier != null ? widthSupplier.getAsInt() + extraAhead : loadAheadFixed;
     }
 
     protected int getUnloadBehind() {
@@ -103,6 +124,11 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
      *   <li>Backward: {@code (cameraX & 0xFF80) - 0x80}</li>
      *   <li>Forward:  {@code (cameraX & 0xFF80) + 0x280}</li>
      * </ul>
+     * The {@code 0x280} forward extent is the native-width baseline; the actual
+     * forward window now scales with {@link #getLoadAhead()} (viewport-driven:
+     * {@code width + extraAhead}), so it equals {@code 0x280} only at native
+     * width (320) and widens for wider viewports.
+     * <p>
      * Using raw cameraX shifts the window right by up to 127px, causing
      * objects on the left side to fall outside the spawn range.
      */
@@ -115,7 +141,7 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
 
     protected int getWindowEnd(int cameraX) {
         int chunkAligned = cameraX & CHUNK_ALIGN_MASK;
-        return chunkAligned + loadAhead;
+        return chunkAligned + getLoadAhead();
     }
 
     protected int lowerBound(int value) {
