@@ -15,13 +15,29 @@ import org.junit.jupiter.api.Test;
 class TestWidescreenNativeRegression {
 
     @Test
-    void defaultConfigResolvesToNativeDimensions() {
+    void nativeAspectResolvesToNativeDimensions() {
+        // Pin the NATIVE_4_3 path explicitly — do NOT rely on the ambient
+        // config.json, which a developer may have set to a widescreen preset.
         SonicConfigurationService cfg = SonicConfigurationService.createStandalone();
+        cfg.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        cfg.setConfigValue(SonicConfiguration.SCREEN_WIDTH, 640);
+        cfg.setConfigValue(SonicConfiguration.SCREEN_HEIGHT, 448);
         cfg.resolveDisplayAspect();
         assertEquals(320, cfg.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
         assertEquals(224, cfg.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS));
         assertEquals(640, cfg.getInt(SonicConfiguration.SCREEN_WIDTH));
         assertEquals(448, cfg.getInt(SonicConfiguration.SCREEN_HEIGHT));
+    }
+
+    @Test
+    void testModeForcesNativeEvenWithWidescreenConfig() {
+        // The parity safeguard: TEST_MODE_ENABLED forces native regardless of a
+        // widescreen DISPLAY_ASPECT in the ambient config — protecting trace tests.
+        SonicConfigurationService cfg = SonicConfigurationService.createStandalone();
+        cfg.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "ULTRA_21_9");
+        cfg.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, true);
+        cfg.resolveDisplayAspect();
+        assertEquals(320, cfg.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS));
     }
 
     @Test
