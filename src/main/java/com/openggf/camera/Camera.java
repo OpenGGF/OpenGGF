@@ -1,5 +1,6 @@
 package com.openggf.camera;
 
+import com.openggf.configuration.DeadzoneMode;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
@@ -67,6 +68,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 	private short width;
 	private short height;
+	private DeadzoneMode deadzoneMode = DeadzoneMode.PROPORTIONAL;
 
 	// ROM: Camera_Y_pos_bias - vertical position target for camera centering
 	// Default is (224/2)-16 = 96 (0x60). Used as center point for scroll windows.
@@ -108,6 +110,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public Camera(SonicConfigurationService configService) {
 		width = configService.getShort(SonicConfiguration.SCREEN_WIDTH_PIXELS);
 		height = configService.getShort(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
+		deadzoneMode = DeadzoneMode.parse(
+				configService.getString(SonicConfiguration.WIDESCREEN_DEADZONE_MODE));
 	}
 
 	public void updatePosition() {
@@ -124,7 +128,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			// sonic3k.asm:38241. ROM places the sprite at screen-x=160 (right edge
 			// of the 144-160 horizontal scroll deadzone), not the deadzone
 			// midpoint at 152.
-			x = (short) (focusedSprite.getCentreX() - 160);
+			x = (short) (focusedSprite.getCentreX() - DeadzoneGeometry.rightEdge(width));
 			y = (short) (focusedSprite.getCentreY() - 96);
 
 			// Apply bounds clamping.
@@ -331,15 +335,17 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		short cameraStepCap = fastScrollCap;
 
 		// Horizontal scroll logic (ROM: ScrollHoriz / MoveCameraX).
-		if (focusedSpriteRealX < 144) {
-			short difference = (short) (focusedSpriteRealX - 144);
+		int deadzoneLeft = DeadzoneGeometry.leftEdge(width, deadzoneMode);
+		int deadzoneRight = DeadzoneGeometry.rightEdge(width);
+		if (focusedSpriteRealX < deadzoneLeft) {
+			short difference = (short) (focusedSpriteRealX - deadzoneLeft);
 			if (difference < -cameraStepCap) {
 				nextX -= cameraStepCap;
 			} else {
 				nextX += difference;
 			}
-		} else if (focusedSpriteRealX > 160) {
-			short difference = (short) (focusedSpriteRealX - 160);
+		} else if (focusedSpriteRealX > deadzoneRight) {
+			short difference = (short) (focusedSpriteRealX - deadzoneRight);
 			if (difference > cameraStepCap) {
 				nextX += cameraStepCap;
 			} else {
