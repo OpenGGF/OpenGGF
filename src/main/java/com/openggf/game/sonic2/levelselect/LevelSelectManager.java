@@ -342,14 +342,17 @@ public class LevelSelectManager implements LevelSelectProvider {
 
         gm.beginPatternBatch();
         if (renderMenuBack) {
-            menuBackgroundRenderer.render(
+            // Background expands to fill the full viewport width (tiled horizontally).
+            // Do NOT apply xOffset() — the background is not centered, it fills everything.
+            // At native width 320 this is identical to the previous centered draw.
+            menuBackgroundRenderer.renderTiled(
                     gm,
                     menuBackgroundDataLoader.getMenuBackMappings(),
                     menuBackgroundDataLoader.getMenuBackWidth(),
                     menuBackgroundDataLoader.getMenuBackHeight(),
                     LevelSelectConstants.PATTERN_BASE,
                     LevelSelectConstants.MENU_BACK_OFFSET,
-                    xOffset()
+                    viewportWidth
             );
         }
 
