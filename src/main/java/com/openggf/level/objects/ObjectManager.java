@@ -488,7 +488,8 @@ public class ObjectManager {
         this.camera = camera;
         this.objectServices = objectServices;
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
-        this.placement = new Placement(spawns);
+        this.placement = new Placement(spawns,
+                camera != null ? camera::getWidth : com.openggf.level.spawn.PlacementViewportWidth::current);
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
         this.execOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
         this.usedSlots = new BitSet(slotLayout.dynamicSlotCount());
@@ -3355,7 +3356,8 @@ public class ObjectManager {
         private static final Logger LOGGER = Logger.getLogger(Placement.class.getName());
         // ROM: ObjectsManager_GoingForward (s2.asm) uses addi.w #$280,d6 for forward load range.
         // Behind-window unload range is one chunk ($80) for forward movement.
-        private static final int LOAD_AHEAD = 0x280;
+        // At native width (320) EXTRA_AHEAD (0x140=320) + width (320) = 0x280 (640) = legacy window.
+        private static final int EXTRA_AHEAD = 0x140; // 320; native -> 0x280 (640) window
         private static final int UNLOAD_BEHIND = 0x80;
         private static final int CHUNK_MASK = 0xFF80;
         /** ROM: OPL_Next advances v_opl_screen by one chunk (0x80) per frame. */
@@ -3455,8 +3457,8 @@ public class ObjectManager {
         // Used to clear objState bit when the object is normally unloaded.
         private final IdentityHashMap<ObjectSpawn, Integer> spawnToCounter = new IdentityHashMap<>();
 
-        Placement(List<ObjectSpawn> spawns) {
-            super(spawns, LOAD_AHEAD, UNLOAD_BEHIND);
+        Placement(List<ObjectSpawn> spawns, java.util.function.IntSupplier widthSupplier) {
+            super(spawns, EXTRA_AHEAD, UNLOAD_BEHIND, widthSupplier);
         }
 
         /**
@@ -3685,8 +3687,8 @@ public class ObjectManager {
             }
 
             // First OPL_Next forward scan: load objects from right cursor to
-            // cameraChunk + LOAD_AHEAD, assigning counter values.
-            int windowEnd = cameraChunk + LOAD_AHEAD;
+            // cameraChunk + getLoadAhead(), assigning counter values.
+            int windowEnd = cameraChunk + getLoadAhead();
             while (cursorIndex < spawns.size()
                     && spawns.get(cursorIndex).x() < windowEnd) {
                 spawnForwardEntry(cursorIndex);
@@ -3733,7 +3735,7 @@ public class ObjectManager {
 
             int cameraChunk = toCoarseChunk(cameraX);
             if (counterBasedRespawn
-                    && Math.abs((long) cameraX - lastCameraX) > (LOAD_AHEAD + UNLOAD_BEHIND)) {
+                    && Math.abs((long) cameraX - lastCameraX) > (getLoadAhead() + UNLOAD_BEHIND)) {
                 // Engine-specific catch-up for teleports/manual camera jumps.
                 // The ROM only advances one 0x80 chunk at a time because camera
                 // movement is continuous, but tests/editor flows can relocate the
@@ -3826,7 +3828,7 @@ public class ObjectManager {
                 }
             }
 
-            int windowEnd = cameraChunk + LOAD_AHEAD;
+            int windowEnd = cameraChunk + getLoadAhead();
             while (cursorIndex < spawns.size()
                     && spawns.get(cursorIndex).x() < windowEnd) {
                 spawnForwardEntry(cursorIndex);
@@ -4176,11 +4178,11 @@ public class ObjectManager {
 
         /**
          * Forward scan with counters (ROM: loc_D9F6 forward path, loc_DA02 loop).
-         * Advances the right cursor to cameraChunk + LOAD_AHEAD, spawning
+         * Advances the right cursor to cameraChunk + getLoadAhead(), spawning
          * new objects entering from the right.
          */
         private void spawnForwardCountered(int oplChunk) {
-            int windowEnd = oplChunk + LOAD_AHEAD;
+            int windowEnd = oplChunk + getLoadAhead();
             while (cursorIndex < spawns.size()
                     && spawns.get(cursorIndex).x() < windowEnd) {
                 spawnForwardEntry(cursorIndex);
@@ -4320,7 +4322,7 @@ public class ObjectManager {
          * out_of_range check in syncActiveSpawnsUnload.
          */
         private void trimRightCountered(int oplChunk) {
-            int rightEdge = oplChunk + LOAD_AHEAD;
+            int rightEdge = oplChunk + getLoadAhead();
             // ROM: `cmp.w -6(a0),d6; bgt.s stop` → continues when rightEdge <= prev.x
             while (cursorIndex > 0) {
                 ObjectSpawn prev = spawns.get(cursorIndex - 1);
@@ -4476,7 +4478,7 @@ public class ObjectManager {
             }
             {
                 int oldWindowEnd = getWindowEnd(lastCameraX);
-                int newWindowEnd = postChunk + LOAD_AHEAD;
+                int newWindowEnd = postChunk + getLoadAhead();
                 for (int i = cursorIndex; i < spawns.size(); i++) {
                     int sx = spawns.get(i).x();
                     if (sx >= newWindowEnd) {

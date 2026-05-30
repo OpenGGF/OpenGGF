@@ -495,14 +495,15 @@ public class CNZBumperManager {
     }
 
     private static final class Placement extends AbstractPlacementManager<CNZBumperSpawn> {
-        private static final int LOAD_AHEAD = 640;
+        private static final int EXTRA_AHEAD = 320; // native -> 640 window
         private static final int UNLOAD_BEHIND = 768;
 
         private int lastWindowStart = -1;
         private int lastWindowEnd = -1;
 
         private Placement(List<CNZBumperSpawn> bumpers) {
-            super(bumpers, LOAD_AHEAD, UNLOAD_BEHIND);
+            super(bumpers, EXTRA_AHEAD, UNLOAD_BEHIND,
+                    com.openggf.level.spawn.PlacementViewportWidth::current);
         }
 
         private void update(int cameraX) {

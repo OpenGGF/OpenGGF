@@ -867,7 +867,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
     }
 
     private static final class RingPlacement extends AbstractPlacementManager<RingSpawn> {
-        private static final int LOAD_AHEAD = 0x280;
+        private static final int EXTRA_AHEAD = 0x140; // 320; native -> 0x280 window
         private static final int UNLOAD_BEHIND = 0x300;
         private static final int NO_SPARKLE = -1;
 
@@ -877,7 +877,8 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         private int lastCameraX = Integer.MIN_VALUE;
 
         private RingPlacement(List<RingSpawn> spawns) {
-            super(spawns, LOAD_AHEAD, UNLOAD_BEHIND);
+            super(spawns, EXTRA_AHEAD, UNLOAD_BEHIND,
+                    com.openggf.level.spawn.PlacementViewportWidth::current);
             this.sparkleStartFrames = new int[this.spawns.size()];
             Arrays.fill(this.sparkleStartFrames, NO_SPARKLE);
         }
