@@ -11,6 +11,17 @@ public class MenuBackgroundRenderer {
 
     public void render(GraphicsManager graphicsManager, int[] mappings, int width, int height,
                        int patternBase, int patternOffset) {
+        render(graphicsManager, mappings, width, height, patternBase, patternOffset, 0);
+    }
+
+    /**
+     * Renders the menu background map with an optional horizontal pixel offset.
+     *
+     * <p>The {@code xOffset} parameter is used for widescreen centering: at native
+     * width 320 the offset is 0 and all tile positions are unchanged.
+     */
+    public void render(GraphicsManager graphicsManager, int[] mappings, int width, int height,
+                       int patternBase, int patternOffset, int xOffset) {
         if (graphicsManager == null || mappings == null || mappings.length == 0) {
             return;
         }
@@ -30,7 +41,7 @@ public class MenuBackgroundRenderer {
                 int adjusted = flags | (patternIndex & 0x7FF);
                 reusableDesc.set(adjusted);
                 int patternId = patternBase + patternIndex;
-                graphicsManager.renderPatternWithId(patternId, reusableDesc, tx * 8, ty * 8);
+                graphicsManager.renderPatternWithId(patternId, reusableDesc, xOffset + tx * 8, ty * 8);
             }
         }
     }

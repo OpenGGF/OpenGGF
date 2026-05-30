@@ -56,6 +56,9 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
     private int fadeTimer = 0;
     private static final int FADE_DURATION = 16;
 
+    /** Projection-space viewport width; default 320 (native). */
+    private int viewportWidth = SCREEN_WIDTH;
+
     public Sonic1LevelSelectManager() {
         this(null);
     }
@@ -73,6 +76,27 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
 
     private SonicConfigurationService configuration() {
         return configService != null ? configService : GameServices.configuration();
+    }
+
+    /**
+     * Sets the projection-space viewport width for widescreen centering.
+     *
+     * <p>The level select content is always 320 px wide. At widths greater than 320
+     * the content is shifted right by {@code (viewportWidth - 320) / 2} so it stays
+     * visually centered. At native width 320 the offset is 0 — byte-identical.
+     */
+    @Override
+    public void setViewportWidth(int width) {
+        this.viewportWidth = Math.max(SCREEN_WIDTH, width);
+    }
+
+    /**
+     * Returns the horizontal pixel offset to apply to all rendered elements so that
+     * the 320-px-wide content block is centered within the current viewport.
+     * Returns 0 at native width 320.
+     */
+    private int xOffset() {
+        return (viewportWidth - SCREEN_WIDTH) / 2;
     }
 
     @Override
@@ -298,7 +322,7 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
                     -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                     0.0f, 0.0f, 0.0f, fadeAmount,
-                    0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                    0, 0, viewportWidth, SCREEN_HEIGHT
             ));
         }
     }
@@ -308,10 +332,11 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
      * Selected line uses highlight palette, others use normal palette.
      */
     private void drawMenuText(GraphicsManager gm) {
+        int xOff = xOffset();
         for (int line = 0; line < MENU_ENTRY_COUNT; line++) {
             int paletteIndex = (line == selectedIndex) ? HIGHLIGHT_PALETTE_INDEX : NORMAL_PALETTE_INDEX;
             int y = TEXT_START_Y + line * LINE_SPACING;
-            drawTextLine(gm, MENU_TEXT[line], TEXT_START_X, y, paletteIndex);
+            drawTextLine(gm, MENU_TEXT[line], xOff + TEXT_START_X, y, paletteIndex);
         }
     }
 
@@ -350,8 +375,9 @@ public class Sonic1LevelSelectManager implements LevelSelectProvider {
         int paletteIndex = (selectedIndex == MENU_ENTRY_COUNT - 1)
                 ? HIGHLIGHT_PALETTE_INDEX : NORMAL_PALETTE_INDEX;
 
-        drawHexDigit(gm, highNibble, SOUND_TEST_X, SOUND_TEST_Y, paletteIndex);
-        drawHexDigit(gm, lowNibble, SOUND_TEST_X + 8, SOUND_TEST_Y, paletteIndex);
+        int xOff = xOffset();
+        drawHexDigit(gm, highNibble, xOff + SOUND_TEST_X, SOUND_TEST_Y, paletteIndex);
+        drawHexDigit(gm, lowNibble, xOff + SOUND_TEST_X + 8, SOUND_TEST_Y, paletteIndex);
     }
 
     /**
