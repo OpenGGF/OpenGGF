@@ -701,8 +701,14 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * ROM-accurate {@code ChkObjectVisible} check.
      * <p>
      * Returns true if the object position falls within the exact screen rectangle:
-     * {@code 0 <= (obX - cameraX) < 320} AND {@code 0 <= (obY - cameraY) < 224}.
+     * {@code 0 <= (obX - cameraX) < viewportWidth} AND {@code 0 <= (obY - cameraY) < viewportHeight}.
      * No margin, exclusive upper bounds (matching {@code bge.s .offscreen}).
+     * <p>
+     * At native viewport width (320 px, {@code DISPLAY_ASPECT = NATIVE_4_3}) this is
+     * byte-identical to the ROM: {@code 0 <= dx < 320} and {@code 0 <= dy < 224}.
+     * At widescreen widths the rectangle widens to match the configured viewport
+     * (declared divergence — see docs/KNOWN_DISCREPANCIES.md "Object Despawn and
+     * Visibility Windows").
      * <p>
      * Used by objects that call {@code ChkObjectVisible} in the ROM
      * (lava ball maker, gargoyle, invisible barriers).
@@ -710,10 +716,12 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * Reference: docs/s1disasm/_incObj/sub ChkObjectVisible.asm
      */
     protected boolean isChkObjectVisible() {
+        int viewportWidth = cameraBounds.right() - cameraBounds.left();
+        int viewportHeight = cameraBounds.bottom() - cameraBounds.top();
         int dx = getX() - cameraBounds.left();
-        if (dx < 0 || dx >= 320) return false;
+        if (dx < 0 || dx >= viewportWidth) return false;
         int dy = getY() - cameraBounds.top();
-        return dy >= 0 && dy < 224;
+        return dy >= 0 && dy < viewportHeight;
     }
 
     /**
@@ -727,18 +735,26 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      *   subi.w  #128,d1
      *   andi.w  #$FF80,d1           ; chunk-align (screenX - 128)
      *   sub.w   d1,d0
-     *   cmpi.w  #128+320+192,d0     ; 640 = total range
+     *   cmpi.w  #128+320+192,d0     ; 640 = total range at native 320 px width
      *   bhi     exit
      * </pre>
+     * The {@code 320} in the ROM constant is the native screen width.  At native
+     * viewport width ({@code DISPLAY_ASPECT = NATIVE_4_3}, viewportWidth = 320)
+     * the limit evaluates to exactly 640, reproducing the ROM constant bit-for-bit.
+     * At widescreen widths the limit widens to {@code 128 + viewportWidth + 192}
+     * so objects near the visible right edge are not incorrectly despawned
+     * (declared divergence — see docs/KNOWN_DISCREPANCIES.md "Object Despawn and
+     * Visibility Windows").
      *
      * @return true if object is within range (should NOT be deleted)
      */
     protected boolean isInRange() {
+        int viewportWidth = cameraBounds.right() - cameraBounds.left();
         int objAligned = getX() & 0xFF80;
         int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
         // ROM does a 16-bit sub.w followed by unsigned bhi, so preserve wrap semantics.
         int dist = (objAligned - screenAligned) & 0xFFFF;
-        return dist <= (128 + 320 + 192);
+        return dist <= (128 + viewportWidth + 192);
     }
 
     /**
