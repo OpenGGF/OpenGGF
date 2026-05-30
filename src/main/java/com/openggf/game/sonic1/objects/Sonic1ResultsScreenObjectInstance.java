@@ -518,7 +518,9 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen {
         // Convert VDP X coordinates to world coordinates.
         // VDP X has +128 offset; screen X = VDP X - 128; world X = camera.getX() + screenX.
         // Since our elemCurrentX stores VDP coords, world X = camera.getX() + (vdpX - 128).
-        int worldXBase = camera.getX() - 128;
+        // xOffset() shifts the whole content block right for widescreen centering.
+        // xOffset() == 0 at native 320 (byte-identical).
+        int worldXBase = camera.getX() - 128 + xOffset();
 
         // Draw order: oval first (behind), then text elements on top.
         // On the VDP, earlier sprites in the link table render in front of later ones.
@@ -702,7 +704,8 @@ public class Sonic1ResultsScreenObjectInstance extends AbstractResultsScreen {
      */
     private void appendPlaceholderRenderCommands(List<GLCommand> commands, Camera camera) {
         int worldBaseY = camera.getY();
-        int worldXBase = camera.getX() - 128;
+        // xOffset() shifts the whole content block right for widescreen centering; 0 at native 320.
+        int worldXBase = camera.getX() - 128 + xOffset();
 
         // Convert VDP X to screen-relative for placeholder boxes
         // "SONIC HAS" - blue

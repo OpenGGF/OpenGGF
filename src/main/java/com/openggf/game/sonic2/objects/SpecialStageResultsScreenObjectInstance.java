@@ -54,6 +54,9 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_CENTER_X = SCREEN_WIDTH / 2;
 
+    // Widescreen support — default 320 (native); Engine sets this before each draw.
+    private int viewportWidth = SCREEN_WIDTH;
+
     // Y positions for text elements (screen coordinates, Y increases downward)
     // From Obj6F_SubObjectMetaData in s2.asm
     private static final int TITLE_Y = 42;           // "SPECIAL STAGE" / "CHAOS EMERALD"
@@ -203,6 +206,23 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
     private ObjectServices services() {
         return services;
+    }
+
+    /**
+     * Sets the projection-space viewport width for widescreen centering.
+     * At native width 320 {@link #xOffset()} returns 0 — byte-identical output.
+     */
+    @Override
+    public void setViewportWidth(int width) {
+        this.viewportWidth = Math.max(SCREEN_WIDTH, width);
+    }
+
+    /**
+     * Horizontal pixel offset to apply to every X position so that native-320
+     * content is centred within the current viewport. Returns 0 at native 320.
+     */
+    private int xOffset() {
+        return (viewportWidth - SCREEN_WIDTH) / 2;
     }
 
     /**
@@ -788,13 +808,17 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         // Use ROM art if available, otherwise fall back to placeholders
         boolean useRomArt = artLoaded && combinedPatterns != null;
 
+        // Widescreen: shift the entire native-320 content block right by xOffset()
+        // so it is centred within the viewport. xOffset() == 0 at native 320 — byte-identical.
+        final int xOff = xOffset();
+
         // All elements use ROM-accurate 16 pixels/frame slide speed
         // From Obj6F_SubObjectMetaData in s2.asm - all elements start sliding at frame 0
 
         // "SPECIAL STAGE" title - slides from right (only shown when emerald NOT collected)
         // start=320+128=448, target=160, distance=288
         int titleOffset = getSlideOffset(288);
-        int titleX = SCREEN_CENTER_X + titleOffset;
+        int titleX = xOff + SCREEN_CENTER_X + titleOffset;
         if (!gotEmerald) {
             if (useRomArt) {
                 renderMappingFrame(Sonic2SpecialStageResultsMappings.FRAME_SPECIAL_STAGE,
@@ -810,7 +834,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         if (gotEmerald && state < STATE_SUPER_SONIC_DISPLAY) {
             // "Sonic got a" slides from left: start=-128, target=160, distance=288
             int gotTextOffset = getSlideOffset(288);
-            int gotTextX = SCREEN_CENTER_X - gotTextOffset;
+            int gotTextX = xOff + SCREEN_CENTER_X - gotTextOffset;
 
             if (totalEmeraldCount >= 7) {
                 // "SONIC HAS ALL THE" + "CHAOS EMERALDS"
@@ -845,9 +869,9 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         // Hide during Super Sonic message sequence
         if (state < STATE_SUPER_SONIC_DISPLAY) {
             if (useRomArt) {
-                renderEmeralds(0, 0, slideAlpha);
+                renderEmeralds(xOff, 0, slideAlpha);
             } else {
-                renderEmeraldsPlaceholder(commands, 0, 0, slideAlpha);
+                renderEmeraldsPlaceholder(commands, xOff, 0, slideAlpha);
             }
         }
 
@@ -869,7 +893,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
             // Line 1: Y=136 - "SCORE" - distance = 528 (688 - 160)
             int scoreOffset = getSlideOffset(528);
-            int scoreX = SCREEN_CENTER_X + scoreOffset;
+            int scoreX = xOff + SCREEN_CENTER_X + scoreOffset;
             renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_EMERALD_BONUS,
                     scoreX, SCORE_LINE_Y);
             // Numbers always visible with the label
@@ -877,7 +901,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
             // Line 2: Y=152 - "SONIC RINGS" - distance = 544 (704 - 160)
             int ringsOffset = getSlideOffset(544);
-            int ringsX = SCREEN_CENTER_X + ringsOffset;
+            int ringsX = xOff + SCREEN_CENTER_X + ringsOffset;
             renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_RING_BONUS,
                     ringsX, SONIC_RINGS_Y);
             // Numbers always visible with the label
@@ -886,7 +910,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             // Line 3: Y=184 - "GEMS BONUS" - distance = 576 (736 - 160)
             if (gotEmerald) {
                 int gemsOffset = getSlideOffset(576);
-                int gemsX = SCREEN_CENTER_X + gemsOffset;
+                int gemsX = xOff + SCREEN_CENTER_X + gemsOffset;
                 renderMappingFrameWithoutNumbers(Sonic2SpecialStageResultsMappings.FRAME_PERFECT_BONUS,
                         gemsX, GEMS_BONUS_Y);
                 // Numbers always visible with the label
@@ -897,15 +921,15 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             int scoreOffset = getSlideOffset(528);
             int ringsOffset = getSlideOffset(544);
 
-            renderPlaceholderText(commands, SCREEN_CENTER_X + scoreOffset, SCORE_LINE_Y,
+            renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + scoreOffset, SCORE_LINE_Y,
                     "SCORE: " + totalBonus, 1.0f, 1.0f, 0.5f);
 
-            renderPlaceholderText(commands, SCREEN_CENTER_X + ringsOffset, SONIC_RINGS_Y,
+            renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + ringsOffset, SONIC_RINGS_Y,
                     "SONIC RINGS: " + displayedRingCount, 1.0f, 1.0f, 0.5f);
 
             if (gotEmerald) {
                 int gemsOffset = getSlideOffset(576);
-                renderPlaceholderText(commands, SCREEN_CENTER_X + gemsOffset, GEMS_BONUS_Y,
+                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X + gemsOffset, GEMS_BONUS_Y,
                         "GEMS BONUS: " + emeraldBonus, 0.5f, 1.0f, 0.5f);
             }
         }
@@ -915,18 +939,18 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             if (useRomArt) {
                 // Render all three messages at their respective Y positions
                 renderMappingFrame(Sonic2SpecialStageResultsMappings.FRAME_NOW_SONIC_CAN,
-                        SCREEN_CENTER_X, NOW_SONIC_CAN_Y);
+                        xOff + SCREEN_CENTER_X, NOW_SONIC_CAN_Y);
                 renderMappingFrame(Sonic2SpecialStageResultsMappings.FRAME_CHANGE_INTO,
-                        SCREEN_CENTER_X, CHANGE_INTO_Y);
+                        xOff + SCREEN_CENTER_X, CHANGE_INTO_Y);
                 renderMappingFrame(Sonic2SpecialStageResultsMappings.FRAME_SUPER_SONIC,
-                        SCREEN_CENTER_X, SUPER_SONIC_Y);
+                        xOff + SCREEN_CENTER_X, SUPER_SONIC_Y);
             } else {
                 // Placeholder text for all three messages
-                renderPlaceholderText(commands, SCREEN_CENTER_X, NOW_SONIC_CAN_Y,
+                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X, NOW_SONIC_CAN_Y,
                         "NOW SONIC CAN", 1.0f, 0.8f, 0.0f);
-                renderPlaceholderText(commands, SCREEN_CENTER_X, CHANGE_INTO_Y,
+                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X, CHANGE_INTO_Y,
                         "CHANGE INTO", 1.0f, 0.8f, 0.0f);
-                renderPlaceholderText(commands, SCREEN_CENTER_X, SUPER_SONIC_Y,
+                renderPlaceholderText(commands, xOff + SCREEN_CENTER_X, SUPER_SONIC_Y,
                         "SUPER SONIC", 1.0f, 0.8f, 0.0f);
             }
         }

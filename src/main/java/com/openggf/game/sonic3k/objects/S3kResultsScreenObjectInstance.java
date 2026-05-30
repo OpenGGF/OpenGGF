@@ -788,7 +788,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen {
         var camera = services().camera();
         if (camera == null) return;
 
-        int baseX = camera.getX();
+        // xOffset() is (viewportWidth - 320) / 2; 0 at native 320 (byte-identical).
+        int baseX = camera.getX() + xOffset();
         int baseY = camera.getY();
 
         for (ResultsElement elem : elements) {
