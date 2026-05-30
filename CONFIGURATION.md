@@ -108,6 +108,25 @@ Paths are relative to the working directory (where the JAR is launched).
 | `TEST_MODE_ENABLED` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `TRACE_CATALOG_DIR` and plays the chosen trace back in the live engine. Dev-only. |
 | `TRACE_CATALOG_DIR` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
 
+### Level Editor (experimental)
+
+The in-engine level editor (see `EDITOR_ENABLED`) uses **hardcoded** key/mouse bindings — not configurable in `config.json`. While playing with `EDITOR_ENABLED` true, press `Shift+Tab` to toggle gameplay (playtest) ↔ editor.
+
+| Input | Action |
+|-------|--------|
+| `Shift+Tab` | Toggle editor / playtest mode |
+| Arrows | Move world cursor / nudge selection |
+| `Tab` | Cycle focused region |
+| `Space` | Apply primary action (place selected block) |
+| `E` | Eyedrop block under cursor |
+| `L` | Toggle active layer (FG / BG) |
+| `Enter` / `Escape` | Descend / ascend the hierarchy |
+| `Ctrl+Z` / `Ctrl+Y` / `Ctrl+S` | Undo / Redo / Save |
+| Left mouse (drag) | Paint selected block (one undoable stroke) |
+| Right mouse | Eyedrop hovered tile |
+
+Bindings live in `EditorInputHandler` and are not affected by the Key Bindings entries above.
+
 ---
 
 ## Key Bindings
