@@ -294,6 +294,11 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   includes the harmful ice object registration and object coverage. Future S3K work should close
   whole playable slices first: traversal blockers, event flow, object coverage, visual parity,
   trace blockers, and rewind-relevant state before lower-impact decorative backlog items.
+- **Display and audio polish:** The renderer now has runtime-cycleable display color profiles
+  (`RAW_RGB`, `MD_ANALOG`, and `NTSC_SOFT`) with persisted configuration and player-facing
+  documentation. The same branch tightens S3K SMPS pitch ramp, modulation wait/freeze, and
+  1-up music restore timing, and fixes foreground-mask water alignment against the rendered
+  viewport.
 - **Trace replay and diagnostics:** S1, S2, and S3K trace replay tooling now has stronger recorder
   schemas, comparison-only aux streams, compressed fixtures, and focused workflows for parity fixes.
   The gameplay rewind stack can also be enabled during ordinary live play with `LIVE_REWIND_ENABLED`,
