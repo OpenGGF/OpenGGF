@@ -254,6 +254,19 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Widescreen foundation + Discord Rich Presence (2026-05-30).** New `DISPLAY_ASPECT` presets
+  (NATIVE_4_3 / 16:10 / 16:9 / 21:9 / 32:9, height fixed at 224) make the gameplay/config layer
+  width-driven: camera deadzone+snap, player/MGZ boundaries, all spawn-placement windows, and the
+  full object despawn/visibility surface (32 S1/S2/S3K object sites) scale with the configured
+  width, with `NATIVE_4_3` kept byte-for-byte identical and pinned by a native-regression test.
+  `TEST_MODE_ENABLED` and headless trace runs are forced to 320x224 so parity traces never run wide.
+  The in-level scene renders wide (vscroll columns and background FBO are viewport-driven) and the
+  master title screen is widescreen-aware. The deliberate divergences (right-boundary / despawn
+  windows) are logged in `KNOWN_DISCREPANCIES.md`. Widescreen UI surface centering and
+  title/special-stage backgrounds remain an experimental follow-up (the projection-swap compositor
+  was reverted in favour of per-surface width-aware coordinates; see
+  `docs/superpowers/specs/2026-05-30-widescreen-rendering-design.md`). Also adds opt-in Discord Rich
+  Presence (gameplay state, timer, zone/act) behind `DISCORD_RICH_PRESENCE_*` config flags.
 - **S2 native-prelude trace replay (2026-05-15).** Engine title-card phase now ticks objects and
   player physics natively (ROM-faithful `TitleCard_Main` for S1/S2/S3K with per-game gating).
   New `TraceBinder.compareBootstrapFrame0` + `BootstrapDivergence` infrastructure asserts engine
