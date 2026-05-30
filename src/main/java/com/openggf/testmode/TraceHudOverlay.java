@@ -78,7 +78,7 @@ public final class TraceHudOverlay {
     private static final int COMPLETE_BANNER_Y = 110;
     private static final int TOP_Y = 120;
     private static final int RIGHT_MARGIN = 4;
-    private static final int SCREEN_WIDTH = 320;
+    private static final int NATIVE_WIDTH = 320;
 
     public void render(PixelFontTextRenderer text) {
         text.beginBatch();
@@ -152,8 +152,13 @@ public final class TraceHudOverlay {
                     String hint = "<- -> Cycle Cameras";
                     int mainW = text.measureWidth(main, SCALE);
                     int hintW = text.measureWidth(hint, SCALE);
-                    int mainX = SCREEN_WIDTH - RIGHT_MARGIN - mainW;
-                    int hintX = SCREEN_WIDTH - RIGHT_MARGIN - hintW;
+                    // Right-anchor the camera-focus block against the actual projection width
+                    // so it stays in the top-right corner at any viewport width.
+                    // Falls back to NATIVE_WIDTH (320) when GraphicsManager is unavailable
+                    // (e.g. headless tests). At native 320 the value is unchanged.
+                    int projW = projectionWidth();
+                    int mainX = projW - RIGHT_MARGIN - mainW;
+                    int hintX = projW - RIGHT_MARGIN - hintW;
                     text.drawShadowedText(main, mainX, TOP_Y, DebugColor.LIGHT_GRAY, SCALE);
                     text.drawShadowedText(hint, hintX, TOP_Y + LINE_HEIGHT, DebugColor.GRAY, SCALE);
                 }
@@ -161,6 +166,24 @@ public final class TraceHudOverlay {
         } finally {
             text.endBatch();
         }
+    }
+
+    /**
+     * Returns the current projection-space width of the viewport.
+     * Used to right-anchor the camera-focus label block in the top-right corner.
+     * Falls back to {@link #NATIVE_WIDTH} (320) when the graphics service is unavailable
+     * (e.g. headless tests). At native 320 the returned value equals NATIVE_WIDTH.
+     */
+    private static int projectionWidth() {
+        try {
+            com.openggf.graphics.GraphicsManager gm = GameServices.graphics();
+            if (gm != null) {
+                return gm.getProjectionWidth();
+            }
+        } catch (Exception ignored) {
+            // GraphicsManager may not be available in all test contexts.
+        }
+        return NATIVE_WIDTH;
     }
 
     private static char bit(int mask, int flag, char letter) {
