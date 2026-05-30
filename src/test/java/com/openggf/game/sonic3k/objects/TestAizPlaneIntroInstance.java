@@ -11,6 +11,9 @@ import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.TestEnvironment;
 
+import java.lang.reflect.Field;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TestAizPlaneIntroInstance {
@@ -49,6 +52,16 @@ public class TestAizPlaneIntroInstance {
     @Test
     public void waveSpawnIntervalIs5Frames() {
         assertEquals(5, AizPlaneIntroInstance.WAVE_SPAWN_INTERVAL);
+    }
+
+    @Test
+    public void introWaveUsesRomSelfDeleteInsteadOfObjectManagerOutOfRange() {
+        AizIntroWaveChild wave = new AizIntroWaveChild(
+                new ObjectSpawn(0x120, 0x48, 0, 0, 0, false, 0), intro);
+
+        assertTrue(wave.isPersistent(),
+                "AIZ intro waves store screen-space X and self-delete at x < $60; "
+                        + "ObjectManager's world-space out_of_range check must not cull them");
     }
 
     @Test
@@ -147,6 +160,46 @@ public class TestAizPlaneIntroInstance {
 
         assertTrue(intro.getRoutine() >= 24, "Intro routine should progress past Knuckles trigger gate with focused fallback");
         assertTrue(focusedPlayer.getCentreX() > 0x40, "Focused player should advance rightward after intro scroll gate opens");
+    }
+
+    @Test
+    public void waveSpawnsContinueThroughFinalWaitAndKnucklesMonitor() throws Exception {
+        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) 0x40);
+        player.setCentreY((short) 0x420);
+        camera.setFocusedSprite(player);
+
+        int frame = 0;
+        while (frame < 1500 && intro.getRoutine() < 20) {
+            intro.update(frame++, player);
+        }
+        assertEquals(20, intro.getRoutine(), "setup should reach the final pre-Knuckles wait");
+
+        int beforeFinalWait = activeWaveCount(intro);
+        for (int i = 0; i < AizPlaneIntroInstance.WAVE_SPAWN_INTERVAL + 1; i++) {
+            intro.update(frame++, player);
+        }
+        assertTrue(activeWaveCount(intro) > beforeFinalWait,
+                "ROM Obj_Wait keeps firing the wave callback during routine $14");
+
+        while (frame < 1600 && intro.getRoutine() < 22) {
+            intro.update(frame++, player);
+        }
+        assertEquals(22, intro.getRoutine(), "setup should reach the Knuckles monitor wait");
+
+        int beforeMonitor = activeWaveCount(intro);
+        for (int i = 0; i < AizPlaneIntroInstance.WAVE_SPAWN_INTERVAL + 1; i++) {
+            player.setCentreX((short) 0x800);
+            intro.update(frame++, player);
+        }
+        assertTrue(activeWaveCount(intro) > beforeMonitor,
+                "ROM Obj_Wait keeps firing the wave callback while waiting for the Knuckles trigger");
+    }
+
+    private static int activeWaveCount(AizPlaneIntroInstance intro) throws Exception {
+        Field field = AizPlaneIntroInstance.class.getDeclaredField("activeWaves");
+        field.setAccessible(true);
+        return ((List<?>) field.get(intro)).size();
     }
 }
 
