@@ -29,11 +29,15 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE;
  */
 public class SimpleDataSelectManager extends AbstractDataSelectProvider {
 
+    private static final int NATIVE_WIDTH = 320;
     private static final int TITLE_X = 24;
     private static final int TITLE_Y = 20;
     private static final int ROW_X = 24;
     private static final int FIRST_ROW_Y = 56;
     private static final int FOOTER_Y = 196;
+
+    // Widescreen support — default 320 (native); Engine sets this before each draw.
+    private int viewportWidth = NATIVE_WIDTH;
 
     private final DataSelectHostProfile hostProfile;
     private final SaveManager saveManager;
@@ -51,6 +55,16 @@ public class SimpleDataSelectManager extends AbstractDataSelectProvider {
         this.saveManager = new SaveManager(saveRoot);
         this.config = config;
         attachSessionController(controller);
+    }
+
+    @Override
+    public void setViewportWidth(int width) {
+        this.viewportWidth = Math.max(NATIVE_WIDTH, width);
+    }
+
+    /** Horizontal pixel offset to apply to every X position; returns 0 at native 320. */
+    private int xOffset() {
+        return (viewportWidth - NATIVE_WIDTH) / 2;
     }
 
     @Override
@@ -115,16 +129,19 @@ public class SimpleDataSelectManager extends AbstractDataSelectProvider {
         textRenderer.setProjectionMatrix(GameServices.graphics().getProjectionMatrixBuffer());
         // Title + header + slot rows + footer all share the font atlas (shadow draws too),
         // so mega-batch into a single GL draw call.
+        // xOffset() shifts all X positions right to centre native-320 content in wider viewports.
+        // xOffset() == 0 at native 320 — byte-identical.
+        int xOff = xOffset();
         textRenderer.beginBatch();
         try {
             textRenderer.drawShadowedText(hostProfile.gameCode().toUpperCase() + " DATA SELECT",
-                    TITLE_X, TITLE_Y, DebugColor.YELLOW);
+                    xOff + TITLE_X, TITLE_Y, DebugColor.YELLOW);
             textRenderer.drawShadowedText(headerLabel(),
-                    TITLE_X, TITLE_Y + textRenderer.lineHeight(), DebugColor.CYAN);
+                    xOff + TITLE_X, TITLE_Y + textRenderer.lineHeight(), DebugColor.CYAN);
 
             for (int row = 0; row < sessionController.totalRows(); row++) {
                 DebugColor color = row == menuModel().getSelectedRow() ? DebugColor.YELLOW : DebugColor.WHITE;
-                textRenderer.drawShadowedText(rowLabel(row), ROW_X,
+                textRenderer.drawShadowedText(rowLabel(row), xOff + ROW_X,
                         FIRST_ROW_Y + row * textRenderer.lineHeight(), color);
             }
 
@@ -133,7 +150,7 @@ public class SimpleDataSelectManager extends AbstractDataSelectProvider {
                     : sessionController.shouldCycleClearRestart()
                     ? "Arrows move, left/right changes clear restart, jump confirms"
                     : "Arrows move, left/right changes team, jump confirms";
-            textRenderer.drawShadowedText(footer, TITLE_X, FOOTER_Y, DebugColor.LIGHT_GRAY);
+            textRenderer.drawShadowedText(footer, xOff + TITLE_X, FOOTER_Y, DebugColor.LIGHT_GRAY);
         } finally {
             textRenderer.endBatch();
         }
