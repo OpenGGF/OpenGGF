@@ -424,6 +424,9 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.CROSS_GAME_SOURCE, "s2");
 		putDefault(SonicConfiguration.TEST_MODE_ENABLED, false);
 		putDefault(SonicConfiguration.TRACE_CATALOG_DIR, "src/test/resources/traces");
+		putDefault(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED, false);
+		putDefault(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_TIMER, true);
+		putDefault(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_ZONE, true);
 		return defaultInsertedSinceLastApply;
 	}
 
