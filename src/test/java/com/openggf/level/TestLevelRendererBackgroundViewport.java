@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestLevelRendererBackgroundViewport {
@@ -28,5 +29,16 @@ class TestLevelRendererBackgroundViewport {
                         + "pendingBgTilePassRenderHeight,\\s+"
                         + "pendingBgTilePassBgTilemapWorldOffsetX,.*"),
                 "The background tile pass renders into the BG FBO; its tilemap shader viewport must be the FBO viewport, not the cached screen viewport.");
+    }
+
+    @Test
+    void highPriorityForegroundMaskUsesForegroundVScrollOrigin() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
+        String normalizedSource = source.replace("\r\n", "\n");
+
+        assertTrue(normalizedSource.contains("float fgWorldOffsetY = lm.parallaxManager.getVscrollFactorFG();"),
+                "The high-priority mask must use the same foreground VScroll origin as the visible Plane A pass.");
+        assertFalse(normalizedSource.contains("float fgWorldOffsetY = camera.getYWithShake();"),
+                "Using camera Y for the mask shifts low-priority sprite occlusion away from visible foreground tiles.");
     }
 }

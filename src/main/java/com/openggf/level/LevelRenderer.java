@@ -1179,7 +1179,9 @@ public final class LevelRenderer {
         int screenW = lm.cachedScreenWidth;
         int screenH = lm.cachedScreenHeight;
         float fgWorldOffsetX = camera.getXWithShake();
-        float fgWorldOffsetY = camera.getYWithShake();
+        // The mask must use the same Plane A origin as the visible foreground pass;
+        // S3K scroll handlers can decouple foreground VScroll from camera Y.
+        float fgWorldOffsetY = lm.parallaxManager.getVscrollFactorFG();
 
         pendingFboScreenW = screenW;
         pendingFboScreenH = screenH;

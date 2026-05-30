@@ -148,6 +148,22 @@ public class TestSonic3kZoneFeatureProvider {
                 player, new SensorResult((byte) 0xFF, (byte) 0, 0x95, Direction.DOWN)));
     }
 
+    @Test
+    public void s3kWaterlineSplitUsesRomWaterLevelDirectly() {
+        Sonic3kZoneFeatureProvider provider = new Sonic3kZoneFeatureProvider();
+
+        assertEquals(0.0f, provider.getWaterlineOffset(Sonic3kZoneIds.ZONE_AIZ, 1),
+                "S3K Handle_Onscreen_Water_Height uses Water_level directly");
+        assertEquals(0.0f, provider.getWaterlineOffset(Sonic3kZoneIds.ZONE_HCZ, 0),
+                "S3K Handle_Onscreen_Water_Height uses Water_level directly");
+        assertEquals(0.0f, provider.getWaterlineOffset(Sonic3kZoneIds.ZONE_CNZ, 1),
+                "S3K Handle_Onscreen_Water_Height uses Water_level directly");
+        assertEquals(0.0f, provider.getWaterlineOffset(Sonic3kZoneIds.ZONE_ICZ, 1),
+                "S3K Handle_Onscreen_Water_Height uses Water_level directly");
+        assertEquals(0.0f, provider.getWaterlineOffset(Sonic3kZoneIds.ZONE_LBZ, 1),
+                "S3K Handle_Onscreen_Water_Height uses Water_level directly");
+    }
+
     private static final class TestZoneFeatureProvider extends Sonic3kZoneFeatureProvider {
         private AizZoneRuntimeState aizState;
         private int featureZoneId = Sonic3kZoneIds.ZONE_AIZ;
