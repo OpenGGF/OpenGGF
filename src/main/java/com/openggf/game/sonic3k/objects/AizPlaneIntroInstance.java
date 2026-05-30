@@ -948,6 +948,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
 
     private void routine20Wait(AbstractPlayableSprite player) {
         superSonicPaletteAnim();
+        tickWaveSpawn();
 
         secondaryTimer--;
         if (secondaryTimer < 0) {
@@ -981,6 +982,8 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance {
 
             LOG.fine("Routine 22: spawned Knuckles");
             advanceRoutine();
+        } else {
+            tickWaveSpawn();
         }
     }
 
