@@ -23,6 +23,8 @@ public class SonicConfigurationService {
 	private Map<String, Object> defaults = new HashMap<>();
 	private boolean loadedFromExistingFile;
 	private boolean defaultInsertedSinceLastApply;
+	// Derived (non-persisted) display values; read before `config`, never saved.
+	private final Map<String, Object> transientResolved = new HashMap<>();
 
 	private SonicConfigurationService() {
 		ObjectMapper mapper = new ObjectMapper();
@@ -85,6 +87,7 @@ public class SonicConfigurationService {
 		if (configChanged || (loadedFromExistingFile && defaultsInserted)) {
 			saveConfig();
 		}
+		resolveDisplayAspect();
 	}
 
 	public int getInt(SonicConfiguration sonicConfiguration) {
@@ -180,6 +183,10 @@ public class SonicConfigurationService {
 	}
 
 	public Object getConfigValue(SonicConfiguration sonicConfiguration) {
+		Object overlay = transientResolved.get(sonicConfiguration.name());
+		if (overlay != null) {
+			return overlay;
+		}
 		if (config != null && config.containsKey(sonicConfiguration.name())) {
 			return config.get(sonicConfiguration.name());
 		}
@@ -192,6 +199,62 @@ public class SonicConfigurationService {
 	 */
 	Object getDefaultValue(SonicConfiguration key) {
 		return defaults.get(key.name());
+	}
+
+	/**
+	 * Resolves DISPLAY_ASPECT into the derived SCREEN_WIDTH_PIXELS (and, when
+	 * DISPLAY_WINDOW_AUTOSIZE is true with a widescreen preset,
+	 * SCREEN_WIDTH/SCREEN_HEIGHT). Derived values are stored in an in-memory
+	 * overlay only and are NEVER written to config.json. SCREEN_WIDTH_PIXELS is
+	 * therefore a derived value here, not a user setting; a manual
+	 * SCREEN_WIDTH_PIXELS in config.json is superseded by the preset. Idempotent.
+	 * Height pixels stay 224.
+	 */
+	public void resolveDisplayAspect() {
+		WidescreenAspect aspect = WidescreenAspect.parse(getString(SonicConfiguration.DISPLAY_ASPECT));
+		boolean autosize = getBoolean(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE);
+		int currentWindowW = persistedInt(SonicConfiguration.SCREEN_WIDTH, 640);
+		int currentWindowH = persistedInt(SonicConfiguration.SCREEN_HEIGHT, 448);
+		DisplayWindowPolicy.Resolved resolved =
+				DisplayWindowPolicy.resolve(aspect, autosize, currentWindowW, currentWindowH);
+		// Pixel dimensions are always derived; height pixels are always 224 (the
+		// aspect system never changes vertical resolution, so any persisted
+		// SCREEN_HEIGHT_PIXELS is intentionally superseded).
+		transientResolved.put(SonicConfiguration.SCREEN_WIDTH_PIXELS.name(), resolved.pixelWidth());
+		transientResolved.put(SonicConfiguration.SCREEN_HEIGHT_PIXELS.name(), 224);
+		if (resolved.windowWidth() != currentWindowW || resolved.windowHeight() != currentWindowH) {
+			// Widescreen preset with autosize derived a new window; overlay it.
+			transientResolved.put(SonicConfiguration.SCREEN_WIDTH.name(), resolved.windowWidth());
+			transientResolved.put(SonicConfiguration.SCREEN_HEIGHT.name(), resolved.windowHeight());
+			LOGGER.info("Display aspect " + aspect + " -> " + resolved.pixelWidth() + "x224, window "
+					+ resolved.windowWidth() + "x" + resolved.windowHeight()
+					+ " (in-memory only); set DISPLAY_WINDOW_AUTOSIZE=false to keep a custom window.");
+		} else {
+			// Window unchanged (NATIVE, autosize off, or already matching): clear any
+			// stale derived window so reads fall through to the persisted config.
+			transientResolved.remove(SonicConfiguration.SCREEN_WIDTH.name());
+			transientResolved.remove(SonicConfiguration.SCREEN_HEIGHT.name());
+			if (aspect != WidescreenAspect.NATIVE_4_3) {
+				LOGGER.info("Display aspect " + aspect + " -> " + resolved.pixelWidth()
+						+ "x224 (window preserved).");
+			}
+		}
+	}
+
+	/** Reads an int from the persisted {@code config} map only, bypassing the transient overlay. */
+	private int persistedInt(SonicConfiguration key, int fallback) {
+		Object v = (config != null) ? config.get(key.name()) : null;
+		if (v instanceof Number n) {
+			return n.intValue();
+		}
+		if (v != null) {
+			try {
+				return Integer.parseInt(v.toString());
+			} catch (NumberFormatException ignored) {
+				// fall through
+			}
+		}
+		return fallback;
 	}
 
 	public void setConfigValue(SonicConfiguration key, Object value) {
@@ -256,6 +319,9 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DEBUG_COLLISION_VIEW_ENABLED, false);
 		putDefault(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
 		putDefaultKey(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY, GLFW_KEY_V);
+		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+		putDefault(SonicConfiguration.WIDESCREEN_DEADZONE_MODE, "PROPORTIONAL");
+		putDefault(SonicConfiguration.DISPLAY_WINDOW_AUTOSIZE, true);
 		putDefault(SonicConfiguration.DAC_INTERPOLATE, true);
 		putDefault(SonicConfiguration.FM6_DAC_OFF, true); // Default true for Sonic 2 parity
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);
