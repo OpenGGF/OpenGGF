@@ -202,6 +202,37 @@ Accepted values are `"RAW_RGB"`, `"MD_ANALOG"`, and `"NTSC_SOFT"`. During play, 
 confirmation appears in the bottom-left corner. The key can be rebound with
 `DISPLAY_COLOR_PROFILE_TOGGLE_KEY`.
 
+## How do I use a wider display aspect? (experimental)
+
+> **This feature is experimental and incomplete.** Widescreen rendering — UI pillarboxing,
+> extended parallax columns, and camera deadzone scaling — is not finished. Only
+> `NATIVE_4_3` (the default 320×224 resolution) is fully supported. Setting a widescreen
+> preset will change the logical pixel width but may produce missing art at the sides,
+> stretched HUD elements, or other visual artifacts.
+
+To try a widescreen preset anyway:
+
+```json
+{
+  "DISPLAY_ASPECT": "WIDE_16_9"
+}
+```
+
+Available presets:
+
+| Value | Pixel width | Notes |
+|-------|-------------|-------|
+| `"NATIVE_4_3"` | 320 | Default; fully supported |
+| `"WIDE_16_10"` | 352 | Experimental |
+| `"WIDE_16_9"` | 400 | Experimental |
+| `"ULTRA_21_9"` | 528 | Experimental |
+| `"SUPER_32_9"` | 800 | Experimental |
+
+By default (`DISPLAY_WINDOW_AUTOSIZE: true`), the OS window is automatically sized to
+twice the preset pixel width (e.g. `WIDE_16_9` → 800×448). To keep a custom window size,
+set `DISPLAY_WINDOW_AUTOSIZE` to `false` and configure `SCREEN_WIDTH`/`SCREEN_HEIGHT`
+manually.
+
 ## How do I switch between NTSC and PAL?
 
 ```json

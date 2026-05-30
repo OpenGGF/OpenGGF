@@ -126,6 +126,13 @@ public enum SonicConfiguration {
 	 */
 	DISPLAY_COLOR_PROFILE_TOGGLE_KEY,
 
+	/** Display aspect preset (NATIVE_4_3, WIDE_16_10, WIDE_16_9, ULTRA_21_9, SUPER_32_9). Resolves to SCREEN_WIDTH_PIXELS; height stays 224. */
+	DISPLAY_ASPECT,
+	/** Camera horizontal deadzone behaviour on wide screens: CENTER_SCALED keeps the native 16px deadzone band; PROPORTIONAL scales the band width with the screen width. */
+	WIDESCREEN_DEADZONE_MODE,
+	/** When true, the display window is derived from DISPLAY_ASPECT at the 2x baseline; when false, SCREEN_WIDTH/SCREEN_HEIGHT are used verbatim. */
+	DISPLAY_WINDOW_AUTOSIZE,
+
 	/**
 	 * Region (NTSC/PAL) for audio timing.
 	 */
