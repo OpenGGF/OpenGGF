@@ -320,13 +320,18 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
 
         gm.beginPatternBatch();
 
-        // Render Plane B background (SONICMILES repeating text pattern, palette line 3)
+        // Render Plane B background (SONICMILES repeating text pattern, palette line 3).
+        // Background expands to fill the full viewport width (tiled horizontally).
+        // Do NOT apply xOffset() — background fills everything, not just the centered 320 box.
+        // At native width 320 this is identical to the previous centered draw.
         int[] bgLayout = dataLoader.getBackgroundLayout();
         if (bgLayout != null && bgLayout.length > 0) {
-            renderTilemap(gm, bgLayout, dataLoader.getBackgroundWidth(), dataLoader.getBackgroundHeight());
+            renderBackgroundTilemap(gm, bgLayout,
+                    dataLoader.getBackgroundWidth(), dataLoader.getBackgroundHeight());
         }
 
-        // Render Plane A foreground (level select tilemap — zone names, icons, borders)
+        // Render Plane A foreground (level select tilemap — zone names, icons, borders).
+        // Foreground stays centered via xOffset().
         int[] screenLayout = dataLoader.getScreenLayout();
         if (screenLayout != null && screenLayout.length > 0) {
             renderTilemap(gm, screenLayout,
@@ -363,6 +368,9 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
 
     /**
      * Renders a tilemap decoded from Enigma mappings (Plane A foreground).
+     *
+     * <p>The foreground is always 320 px wide and centered within the viewport
+     * via {@link #xOffset()}.
      */
     private void renderTilemap(GraphicsManager gm, int[] map, int width, int height) {
         int xOff = xOffset();
@@ -376,6 +384,39 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
                 reusableDesc.set(word);
                 int patternId = Sonic3kLevelSelectConstants.PATTERN_BASE + reusableDesc.getPatternIndex();
                 gm.renderPatternWithId(patternId, reusableDesc, xOff + tx * 8, ty * 8);
+            }
+        }
+    }
+
+    /**
+     * Renders the Plane B background tilemap tiled across the full viewport width.
+     *
+     * <p>The background pattern has period {@code width} tiles (= 320 px at native).
+     * At widescreen widths the pattern is wrapped/repeated horizontally so that the
+     * entire viewport is filled from {@code x=0} to {@code x=viewportWidth}.
+     * No {@link #xOffset()} is applied — the background expands, it does not center.
+     *
+     * <p>Native parity: when {@code viewportWidth == 320} this draws exactly
+     * {@code width} columns from {@code x=0}, identical to calling
+     * {@link #renderTilemap} with {@code xOffset()==0}.
+     */
+    private void renderBackgroundTilemap(GraphicsManager gm, int[] map, int width, int height) {
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+        // Number of tile columns needed to cover the full viewport width (round up).
+        int tileColumns = (viewportWidth + 7) / 8;
+        for (int ty = 0; ty < height; ty++) {
+            for (int col = 0; col < tileColumns; col++) {
+                // Wrap source column to tile the pattern horizontally.
+                int tx = col % width;
+                int idx = ty * width + tx;
+                if (idx >= map.length) continue;
+                int word = map[idx];
+                if (word == 0) continue;
+                reusableDesc.set(word);
+                int patternId = Sonic3kLevelSelectConstants.PATTERN_BASE + reusableDesc.getPatternIndex();
+                gm.renderPatternWithId(patternId, reusableDesc, col * 8, ty * 8);
             }
         }
     }
