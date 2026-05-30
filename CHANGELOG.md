@@ -9,6 +9,17 @@ All notable changes to the OpenGGF project are documented in this file.
   palette presentation profiles. Press `V` by default to cycle them; the selection is
   persisted to `config.json` and confirmed briefly in the bottom-left corner.
 
+- **S3K SMPS pitch, modulation, and resume timing now match the driver more closely.**
+  Pitch ramps now restore signed accumulated pitch state through audio rewind snapshots,
+  S3K modulation wait timing advances on the ROM's delayed cadence, spindash modulation
+  continues during the freeze window, and 1-up music restore timing waits for the game
+  audio profile's resume delay instead of restarting too early.
+
+- **S3K foreground mask water alignment now uses the rendered viewport origin.**
+  The foreground mask water fill follows the same background viewport math as the level
+  renderer, preventing the water overlay from drifting when the camera/view origin is
+  shifted.
+
 - **CNZ1 carry-in Tails follow-ups: fly-off now actually rises, and rewinding back into the carry re-creates the carrier.**
   (1) The throwaway carrier sank to the floor and drifted right instead of flying off, because the Tails
   flight-ascent flap (`Tails_Move_FlySwim`, in `applyFlyingCarryVerticalVelocity`) is gated by
