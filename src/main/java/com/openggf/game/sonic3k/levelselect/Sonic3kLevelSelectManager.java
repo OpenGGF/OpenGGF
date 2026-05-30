@@ -62,6 +62,9 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
     /** Palette line used for icon rendering (separate from highlight line 3) */
     private static final int ICON_RENDER_PALETTE = 2;
 
+    /** Projection-space viewport width; default 320 (native). */
+    private int viewportWidth = Sonic3kLevelSelectConstants.SCREEN_WIDTH;
+
     public Sonic3kLevelSelectManager() {
     }
 
@@ -70,6 +73,27 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
             instance = new Sonic3kLevelSelectManager();
         }
         return instance;
+    }
+
+    /**
+     * Sets the projection-space viewport width for widescreen centering.
+     *
+     * <p>The level select content is always 320 px wide (one VDP plane). At widths
+     * greater than 320 the content is shifted right by {@code (viewportWidth - 320) / 2}
+     * so it stays visually centered. At native width 320 the offset is 0 — byte-identical.
+     */
+    @Override
+    public void setViewportWidth(int width) {
+        this.viewportWidth = Math.max(Sonic3kLevelSelectConstants.SCREEN_WIDTH, width);
+    }
+
+    /**
+     * Returns the horizontal pixel offset to apply to all rendered elements so that
+     * the 320-px-wide content block is centered within the current viewport.
+     * Returns 0 at native width 320.
+     */
+    private int xOffset() {
+        return (viewportWidth - Sonic3kLevelSelectConstants.SCREEN_WIDTH) / 2;
     }
 
     @Override
@@ -332,7 +356,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
                     -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                     0.0f, 0.0f, 0.0f, fadeAmount,
-                    0, 0, Sonic3kLevelSelectConstants.SCREEN_WIDTH, Sonic3kLevelSelectConstants.SCREEN_HEIGHT
+                    0, 0, viewportWidth, Sonic3kLevelSelectConstants.SCREEN_HEIGHT
             ));
         }
     }
@@ -341,6 +365,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
      * Renders a tilemap decoded from Enigma mappings (Plane A foreground).
      */
     private void renderTilemap(GraphicsManager gm, int[] map, int width, int height) {
+        int xOff = xOffset();
         for (int ty = 0; ty < height; ty++) {
             int baseIndex = ty * width;
             for (int tx = 0; tx < width; tx++) {
@@ -350,7 +375,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
                 if (word == 0) continue;
                 reusableDesc.set(word);
                 int patternId = Sonic3kLevelSelectConstants.PATTERN_BASE + reusableDesc.getPatternIndex();
-                gm.renderPatternWithId(patternId, reusableDesc, tx * 8, ty * 8);
+                gm.renderPatternWithId(patternId, reusableDesc, xOff + tx * 8, ty * 8);
             }
         }
     }
@@ -402,7 +427,7 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
         int adjusted = (flags & ~0x6000) | ((Sonic3kLevelSelectConstants.HIGHLIGHT_PALETTE_INDEX & 0x3) << 13) | patternIndex;
         highlightDesc.set(adjusted);
         int patternId = Sonic3kLevelSelectConstants.PATTERN_BASE + patternIndex;
-        gm.renderPatternWithId(patternId, highlightDesc, col * 8, row * 8);
+        gm.renderPatternWithId(patternId, highlightDesc, xOffset() + col * 8, row * 8);
     }
 
     /**
@@ -412,7 +437,8 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
      */
     private void drawSoundTestValue(GraphicsManager gm, int paletteIndex) {
         // VRAM offset $846: row = $846/128 = 16, col = ($846%128)/2 = 35
-        int x = 35 * 8;
+        // Shifted by xOffset() for widescreen centering
+        int x = xOffset() + 35 * 8;
         int y = 16 * 8;
 
         int highNibble = (soundTestValue >> 4) & 0xF;
@@ -444,8 +470,8 @@ public class Sonic3kLevelSelectManager implements LevelSelectProvider {
         int iconIdx = Sonic3kLevelSelectConstants.ICON_TABLE[selectedIndex];
         if (iconIdx < 0 || iconIdx >= 15) return;
 
-        // Icon position: pixel (216, 176) from VRAM offset $B36
-        int iconX = 216;
+        // Icon position: pixel (216, 176) from VRAM offset $B36, shifted for widescreen
+        int iconX = xOffset() + 216;
         int iconY = 176;
 
         int[] iconMappings = dataLoader.getIconMappings();

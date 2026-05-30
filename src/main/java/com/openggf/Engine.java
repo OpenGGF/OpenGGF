@@ -1559,6 +1559,10 @@ public class Engine {
 			camera.setY((short) 0);
 			LevelSelectProvider levelSelect = gameLoop.getLevelSelectProvider();
 			if (levelSelect != null) {
+				// Pass the full projection width so the level select can center its
+				// 320-px-wide content block within a wider viewport (widescreen support).
+				// At native 320 this is a no-op — setViewportWidth(320) returns offset 0.
+				levelSelect.setViewportWidth((int) realWidth);
 				levelSelect.draw();
 			}
 		} else if (getCurrentGameMode() == GameMode.DATA_SELECT) {
