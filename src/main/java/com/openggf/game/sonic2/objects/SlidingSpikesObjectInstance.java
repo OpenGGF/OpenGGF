@@ -404,8 +404,8 @@ public class SlidingSpikesObjectInstance extends AbstractObjectInstance
         }
         int camX = camera.getX();
         int camY = camera.getY();
-        int screenWidth = 320;
-        int screenHeight = 224;
+        int screenWidth = viewportWidth();
+        int screenHeight = viewportHeight();
 
         return x >= camX - margin && x <= camX + screenWidth + margin
             && y >= camY - margin && y <= camY + screenHeight + margin;

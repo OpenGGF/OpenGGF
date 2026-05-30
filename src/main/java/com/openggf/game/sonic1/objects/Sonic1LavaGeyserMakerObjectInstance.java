@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 
-import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -75,9 +74,6 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance 
 
     /** Sonic Y proximity check range: subi.w #$170,d1. */
     private static final int PROXIMITY_RANGE = 0x170;
-
-    /** out_of_range compare distance: #128+320+192. */
-    private static final int OUT_OF_RANGE_DISTANCE = 128 + 320 + 192;
 
     /** Debug color for geyser maker (dark orange). */
     private static final DebugColor DEBUG_COLOR = new DebugColor(200, 100, 0);
@@ -346,24 +342,9 @@ public class Sonic1LavaGeyserMakerObjectInstance extends AbstractObjectInstance 
     }
 
     private void checkOutOfRange() {
-        if (!isWithinOutOfRangeWindow(spawn.x())) {
+        if (!isInRangeAt(spawn.x())) {
             setDestroyed(true);
         }
-    }
-
-    /**
-     * ROM out_of_range macro (Macros.asm):
-     * round both X positions to $80 and compare against 128+320+192.
-     */
-    private boolean isWithinOutOfRangeWindow(int objectX) {
-        Camera camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= OUT_OF_RANGE_DISTANCE;
     }
 
     // ========================================================================

@@ -988,20 +988,10 @@ public class Sonic1PushBlockObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isOutOfRangeCurrentX() {
-        return isOutOfRangeS1(x);
+        return !isInRangeAt(x);
     }
 
     private boolean isOutOfRangeSpawnX() {
-        return isOutOfRangeS1(spawnX);
-    }
-
-    private boolean isOutOfRangeS1(int referenceX) {
-        if (services().camera() == null) {
-            return false;
-        }
-        int objRounded = referenceX & 0xFF80;
-        int screenRounded = (services().camera().getX() - 128) & 0xFF80;
-        int distance = (objRounded - screenRounded) & 0xFFFF;
-        return distance > 640;
+        return !isInRangeAt(spawnX);
     }
 }

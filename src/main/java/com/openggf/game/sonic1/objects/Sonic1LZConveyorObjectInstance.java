@@ -370,7 +370,7 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
             return !spawnerDone;
         }
         // Platform: out_of_range uses objoff_30 (base X)
-        return isOnScreenX(baseX, 320);
+        return isInRangeAt(baseX);
     }
 
     // ---- Spawner mode ----
@@ -666,21 +666,6 @@ public class Sonic1LZConveyorObjectInstance extends AbstractObjectInstance
     }
 
     // ---- Utility methods ----
-
-    /**
-     * Check if the object is within out-of-range distance from camera.
-     * Matches the S1 out_of_range.s macro with objoff_30 as the reference X.
-     */
-    private boolean isOnScreenX(int objectX, int range) {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
-    }
 
     @Override
     public boolean isHighPriority() {

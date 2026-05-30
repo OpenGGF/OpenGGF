@@ -173,8 +173,8 @@ public class AnimalObjectInstance extends AbstractObjectInstance {
         Camera camera = services().camera();
         int cameraX = camera.getX();
         int cameraY = camera.getY();
-        int screenWidth = 320;
-        int screenHeight = 224;
+        int screenWidth = viewportWidth();
+        int screenHeight = viewportHeight();
         if (currentX < cameraX - margin || currentX > cameraX + screenWidth + margin)
             return false;
         if (currentY < cameraY - margin || currentY > cameraY + screenHeight + margin)

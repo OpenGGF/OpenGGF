@@ -355,7 +355,7 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
         if (fireSpawned && !isOnScreenX(platformWidth)) {
             cleanupFlames();
         }
-        return isOnScreenX(baseX, 320);
+        return isInRangeAt(baseX);
     }
 
     // --- Movement ---
@@ -525,20 +525,6 @@ public class Sonic1LargeGrassyPlatformObjectInstance extends AbstractObjectInsta
     }
 
     // --- Helpers ---
-
-    /**
-     * Check if the object is within out-of-range distance from camera using spawn X.
-     */
-    private boolean isOnScreenX(int objectX, int range) {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
-    }
 
     /**
      * LGrass_DelFlames: Clean up flame children when platform goes offscreen.

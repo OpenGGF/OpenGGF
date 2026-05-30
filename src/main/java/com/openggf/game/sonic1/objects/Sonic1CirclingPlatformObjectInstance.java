@@ -235,15 +235,7 @@ public class Sonic1CirclingPlatformObjectInstance extends AbstractObjectInstance
      * out_of_range.w macro applied to circ_origX.
      */
     private boolean isOrigXOnScreen() {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = origX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        // out_of_range: cmpi.w #128+320+192,d0 / bhi.s exit
-        return distance <= (128 + 320 + 192);
+        return isInRangeAt(origX);
     }
 
     // ---- Debug rendering ----

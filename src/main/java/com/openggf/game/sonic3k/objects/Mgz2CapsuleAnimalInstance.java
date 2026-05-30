@@ -172,8 +172,8 @@ public class Mgz2CapsuleAnimalInstance extends AbstractObjectInstance {
         int cameraX = camera.getX();
         int cameraY = camera.getY();
         return currentX >= cameraX - margin
-                && currentX <= cameraX + 320 + margin
+                && currentX <= cameraX + viewportWidth() + margin
                 && currentY >= cameraY - margin
-                && currentY <= cameraY + 224 + margin;
+                && currentY <= cameraY + viewportHeight() + margin;
     }
 }

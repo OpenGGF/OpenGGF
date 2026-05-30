@@ -3,7 +3,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.SolidCheckpointBatch;
 
-import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -248,7 +247,7 @@ public class Sonic1LabyrinthBlockObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         // out_of_range.w DeleteObject,lblk_origX(a0)
-        return !isDestroyed() && isInRange(origX);
+        return !isDestroyed() && isInRangeAt(origX);
     }
 
     @Override
@@ -601,20 +600,5 @@ public class Sonic1LabyrinthBlockObjectInstance extends AbstractObjectInstance
         int zoneId = services().featureZoneId();
         int actId = services().featureActId();
         return waterSystem.getVisualWaterLevelY(zoneId, actId);
-    }
-
-    /**
-     * Check if the object is within out-of-range distance from camera.
-     * Matches ROM's out_of_range.w macro.
-     */
-    private boolean isInRange(int objectX) {
-        Camera camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
     }
 }

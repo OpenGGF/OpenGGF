@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 
-import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic1.Sonic1ConveyorState;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
@@ -765,14 +764,7 @@ public class Sonic1SpinConveyorObjectInstance extends AbstractObjectInstance
      * Matches the S1 out_of_range.s macro with objoff_30 as the reference X.
      */
     private boolean isBaseXOnScreen(int objectX) {
-        Camera camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
+        return isInRangeAt(objectX);
     }
 
     @Override

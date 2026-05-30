@@ -261,7 +261,7 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
             return false;
         }
         // out_of_range.w uses spawn X; checks d1 against #$2A0 (standard S1 range)
-        return isOnScreenX(spawn.x(), 320);
+        return isInRangeAt(spawn.x());
     }
 
     /**
@@ -482,20 +482,5 @@ public class Sonic1GlassBlockObjectInstance extends AbstractObjectInstance
             ObjectLifetimeOps.assignFindNextFreeChildSlot(services().objectManager(), child, mySlot);
             return child;
         });
-    }
-
-    /**
-     * Check if the object is within out-of-range distance from camera using given X.
-     * Matches the S1 out_of_range macro.
-     */
-    private boolean isOnScreenX(int objectX, int range) {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
     }
 }

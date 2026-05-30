@@ -332,8 +332,8 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
         // Check if lock is off screen
         Camera camera = services().camera();
         if (camera != null) {
-            int screenRight = camera.getX() + 320 + 64;
-            int screenBottom = camera.getY() + 224 + 64;
+            int screenRight = camera.getX() + viewportWidth() + 64;
+            int screenBottom = camera.getY() + viewportHeight() + 64;
             if (lockX > screenRight || lockY > screenBottom) {
                 lockVisible = false;
             }

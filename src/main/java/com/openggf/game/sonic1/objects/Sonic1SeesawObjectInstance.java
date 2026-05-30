@@ -389,18 +389,7 @@ public class Sonic1SeesawObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         // From main object loop: uses see_origX for range check
-        return !isDestroyed() && isOrigXOnScreen();
-    }
-
-    private boolean isOrigXOnScreen() {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = origX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
+        return !isDestroyed() && isInRangeAt(origX);
     }
 
     // ---- Debug rendering ----

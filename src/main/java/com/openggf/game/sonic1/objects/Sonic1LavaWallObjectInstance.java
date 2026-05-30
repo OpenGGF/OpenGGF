@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 
-import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -147,9 +146,6 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
 
     /** Trailing piece mapping frame index. From: move.b #4,obFrame(a1). */
     private static final int TRAIL_FRAME = 4;
-
-    /** Out-of-range distance (ROM: 128+320+192 for wide out_of_range check). */
-    private static final int OUT_OF_RANGE_DISTANCE = 128 + 320 + 192;
 
     /** Debug color (deep orange-red for lava). */
     private static final DebugColor DEBUG_COLOR = new DebugColor(255, 80, 0);
@@ -365,7 +361,7 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
 
         // Out-of-range check: only when NOT moving (lwall_flag == 0)
         if (!moveFlag) {
-            if (!isWithinOutOfRangeWindow(currentX)) {
+            if (!isInRangeAt(currentX)) {
                 handleOutOfRange();
             }
         }
@@ -420,21 +416,6 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
         x32 += xVel32 << 8;
         currentX = x32 >> 16;
         motion.xSub = x32 & 0xFFFF;
-    }
-
-    /**
-     * ROM out_of_range macro: round both X positions to $80 boundaries
-     * and compare distance against 128+320+192.
-     */
-    private boolean isWithinOutOfRangeWindow(int objectX) {
-        Camera camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= OUT_OF_RANGE_DISTANCE;
     }
 
     // ========================================================================
@@ -530,7 +511,7 @@ public class Sonic1LavaWallObjectInstance extends AbstractObjectInstance
         if (moveFlag || (role == Role.TRAIL && mainWall != null && mainWall.moveFlag)) {
             return true;
         }
-        return isWithinOutOfRangeWindow(currentX);
+        return isInRangeAt(currentX);
     }
 
     // ========================================================================

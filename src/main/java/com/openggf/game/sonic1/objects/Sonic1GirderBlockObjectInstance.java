@@ -1,7 +1,6 @@
 package com.openggf.game.sonic1.objects;
 import com.openggf.game.PlayableEntity;
 
-import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -208,7 +207,7 @@ public class Sonic1GirderBlockObjectInstance extends AbstractObjectInstance
     public boolean isPersistent() {
         // out_of_range.s .delete,gird_origX(a0)
         // Uses original X position for range check (not current position)
-        return !isDestroyed() && isInRange(origX);
+        return !isDestroyed() && isInRangeAt(origX);
     }
 
     @Override
@@ -298,20 +297,5 @@ public class Sonic1GirderBlockObjectInstance extends AbstractObjectInstance
                 y = motion.y;
             }
         }
-    }
-
-    /**
-     * Checks if the object is within out-of-range distance from camera using the given X.
-     * Matches the S1 out_of_range macro behavior.
-     */
-    private boolean isInRange(int objectX) {
-        Camera camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
     }
 }

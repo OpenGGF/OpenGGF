@@ -297,7 +297,7 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isPersistent() {
         // out_of_range.w DeleteObject,fb_origX(a0)
-        return !isDestroyed() && isInRange(origX);
+        return !isDestroyed() && isInRangeAt(origX);
     }
 
     @Override
@@ -665,17 +665,4 @@ public class Sonic1FloatingBlockObjectInstance extends AbstractObjectInstance
         };
     }
 
-    /**
-     * Check if the object is within out-of-range distance from camera.
-     */
-    private boolean isInRange(int objectX) {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = objectX & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
-    }
 }

@@ -278,14 +278,7 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isBaseXOnScreen() {
-        var camera = services().camera();
-        if (camera == null) {
-            return true;
-        }
-        int objRounded = spawn.x() & 0xFF80;
-        int camRounded = (camera.getX() - 128) & 0xFF80;
-        int distance = (objRounded - camRounded) & 0xFFFF;
-        return distance <= (128 + 320 + 192);
+        return isInRangeAt(spawn.x());
     }
 
     // ---- Debug rendering ----
