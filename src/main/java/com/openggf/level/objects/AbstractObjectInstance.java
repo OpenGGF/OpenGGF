@@ -698,6 +698,42 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Configured viewport width in pixels (cameraBounds is updated each frame from
+     * camera.getWidth()). Returns 320 at native (NATIVE_4_3), 528 at ULTRA_21_9.
+     */
+    protected int viewportWidth() {
+        return cameraBounds.right() - cameraBounds.left();
+    }
+
+    /**
+     * Configured viewport height in pixels. Returns 224 (fixed across all aspect ratios).
+     */
+    protected int viewportHeight() {
+        return cameraBounds.bottom() - cameraBounds.top();
+    }
+
+    /**
+     * ROM out_of_range despawn check for an arbitrary object X (chunk-aligned),
+     * width-driven: limit = 128 + viewportWidth() + 192 (= 640 at native 320).
+     * <p>
+     * Use this for objects that test a custom coordinate (spawnX/origX/baseX)
+     * rather than {@link #getX()}. Matches the S1/S2 {@code out_of_range} macro
+     * (Macros.asm) exactly when called with {@code getX()}.
+     * <p>
+     * See docs/KNOWN_DISCREPANCIES.md entry #14 (Object Despawn and Visibility Windows).
+     *
+     * @param objectX the X coordinate to check (typically a custom spawnX/origX/baseX)
+     * @return true if the coordinate is within range (should NOT be deleted)
+     */
+    protected boolean isInRangeAt(int objectX) {
+        int objAligned = objectX & 0xFF80;
+        int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
+        // ROM does a 16-bit sub.w followed by unsigned bhi, so preserve wrap semantics.
+        int dist = (objAligned - screenAligned) & 0xFFFF;
+        return dist <= (128 + viewportWidth() + 192);
+    }
+
+    /**
      * ROM-accurate {@code ChkObjectVisible} check.
      * <p>
      * Returns true if the object position falls within the exact screen rectangle:
@@ -716,12 +752,10 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * Reference: docs/s1disasm/_incObj/sub ChkObjectVisible.asm
      */
     protected boolean isChkObjectVisible() {
-        int viewportWidth = cameraBounds.right() - cameraBounds.left();
-        int viewportHeight = cameraBounds.bottom() - cameraBounds.top();
         int dx = getX() - cameraBounds.left();
-        if (dx < 0 || dx >= viewportWidth) return false;
+        if (dx < 0 || dx >= viewportWidth()) return false;
         int dy = getY() - cameraBounds.top();
-        return dy >= 0 && dy < viewportHeight;
+        return dy >= 0 && dy < viewportHeight();
     }
 
     /**
@@ -749,12 +783,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      * @return true if object is within range (should NOT be deleted)
      */
     protected boolean isInRange() {
-        int viewportWidth = cameraBounds.right() - cameraBounds.left();
-        int objAligned = getX() & 0xFF80;
-        int screenAligned = (cameraBounds.left() - 128) & 0xFF80;
-        // ROM does a 16-bit sub.w followed by unsigned bhi, so preserve wrap semantics.
-        int dist = (objAligned - screenAligned) & 0xFFFF;
-        return dist <= (128 + viewportWidth + 192);
+        return isInRangeAt(getX());
     }
 
     /**
