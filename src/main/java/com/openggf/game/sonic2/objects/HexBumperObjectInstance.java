@@ -297,11 +297,13 @@ public class HexBumperObjectInstance extends AbstractObjectInstance
         return isRomOutOfRange(minX, cameraX) && isRomOutOfRange(maxX, cameraX);
     }
 
-    private static boolean isRomOutOfRange(int objectX, int cameraX) {
+    private boolean isRomOutOfRange(int objectX, int cameraX) {
         int objRounded = objectX & 0xFF80;
         int screenRounded = (cameraX - 128) & 0xFF80;
         int distance = (objRounded - screenRounded) & 0xFFFF;
-        return distance > 0x280;
+        // 0x280 (640) = 128 + 320 + 192 at native; width-driven for widescreen
+        // (viewportWidth() is 320 at NATIVE_4_3). See KNOWN_DISCREPANCIES entry #14.
+        return distance > (128 + viewportWidth() + 192);
     }
 
     @Override
