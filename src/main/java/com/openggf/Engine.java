@@ -368,7 +368,10 @@ public class Engine {
 		try {
 			graphicsManager.init(RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
 			graphicsManager.setEngine(this);
-			displayColorProfileController = DisplayColorProfileController.fromConfig(configService, graphicsManager);
+			displayColorProfileController = DisplayColorProfileController.fromConfig(
+					configService,
+					graphicsManager,
+					this::refreshDisplayPalettes);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
@@ -425,6 +428,13 @@ public class Engine {
 		}
 
 		lastFrameTime = System.nanoTime();
+	}
+
+	private void refreshDisplayPalettes() {
+		LevelManager activeLevelManager = GameServices.levelOrNull();
+		if (activeLevelManager != null) {
+			activeLevelManager.reloadLevelPalettes();
+		}
 	}
 
 	/**

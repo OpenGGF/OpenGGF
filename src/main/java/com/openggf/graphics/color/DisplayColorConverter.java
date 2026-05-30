@@ -1,18 +1,12 @@
 package com.openggf.graphics.color;
 
-import com.openggf.level.Palette;
-
 public final class DisplayColorConverter {
     private static final int[] MD_ANALOG_RAMP = {0, 18, 42, 72, 126, 162, 202, 238};
 
     private DisplayColorConverter() {
     }
 
-    public static int[] toRgbBytes(Palette.Color color, DisplayColorProfile profile) {
-        int r = Byte.toUnsignedInt(color.r);
-        int g = Byte.toUnsignedInt(color.g);
-        int b = Byte.toUnsignedInt(color.b);
-
+    public static int[] toRgbBytes(int r, int g, int b, DisplayColorProfile profile) {
         return switch (profile) {
             case RAW_RGB -> new int[] {r, g, b};
             case MD_ANALOG -> new int[] {analog(r), analog(g), analog(b)};

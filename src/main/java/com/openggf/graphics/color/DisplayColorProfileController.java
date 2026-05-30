@@ -40,9 +40,11 @@ public final class DisplayColorProfileController {
     }
 
     public static DisplayColorProfileController fromConfig(SonicConfigurationService configService,
-                                                           GraphicsManager graphicsManager) {
+                                                           GraphicsManager graphicsManager,
+                                                           Runnable refreshPalettes) {
         Objects.requireNonNull(configService, "configService");
         Objects.requireNonNull(graphicsManager, "graphicsManager");
+        Objects.requireNonNull(refreshPalettes, "refreshPalettes");
 
         DisplayColorProfile profile = DisplayColorProfile.parse(
                 configService.getString(SonicConfiguration.DISPLAY_COLOR_PROFILE));
@@ -56,7 +58,7 @@ public final class DisplayColorProfileController {
                     configService.saveConfig();
                 },
                 graphicsManager::setDisplayColorProfile,
-                graphicsManager::refreshAllPaletteTextures);
+                refreshPalettes);
     }
 
     public void update(InputHandler inputHandler) {

@@ -141,27 +141,13 @@ public class TestGraphicsManagerHeadless {
     }
 
     @Test
-    public void testHeadlessPaletteCachingRetainsSourceForRefresh() {
-        graphicsManager.initHeadless();
-        Palette palette = createTestPalette();
-        palette.setColor(1, new Palette.Color((byte) 255, (byte) 146, (byte) 73));
-
-        graphicsManager.cachePaletteTexture(palette, 2);
-        graphicsManager.refreshAllPaletteTextures();
-
-        assertSame(palette, graphicsManager.getCachedPaletteSourceForTest(2));
-    }
-
-    @Test
     public void testPaletteUploadBytesUseSelectedDisplayProfile() {
-        Palette.Color color = new Palette.Color((byte) 255, (byte) 255, (byte) 255);
-
         graphicsManager.setDisplayColorProfile(DisplayColorProfile.MD_ANALOG);
 
         assertArrayEquals(new int[] {238, 238, 238, 255},
-                graphicsManager.paletteUploadRgbaForTest(color, 1));
+                graphicsManager.paletteUploadRgbaForTest(255, 255, 255, 1));
         assertArrayEquals(new int[] {238, 238, 238, 0},
-                graphicsManager.paletteUploadRgbaForTest(color, 0));
+                graphicsManager.paletteUploadRgbaForTest(255, 255, 255, 0));
     }
 
     // ==================== Flush Tests ====================
