@@ -131,7 +131,6 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
     /** ROM: loc_51656 resets Camera_min_X to $6000 high (open left bound). */
     private static final int DEFAULT_CAMERA_MIN_X = 0x0000;
     /** Match the standard player right-boundary margin against the live viewport while quake locks are active. */
-    private static final int SCREEN_WIDTH = 320;
     private static final int PLAYER_RIGHT_SCREEN_MARGIN = 24;
 
     // ========================================================================
@@ -552,7 +551,7 @@ public class Sonic3kMGZEvents extends Sonic3kZoneEvents {
         if (!isQuakeSequenceActive() || player.isObjectControlled()) {
             return;
         }
-        int rightBoundary = (camera().getX() & 0xFFFF) + SCREEN_WIDTH - PLAYER_RIGHT_SCREEN_MARGIN;
+        int rightBoundary = (camera().getX() & 0xFFFF) + camera().getWidth() - PLAYER_RIGHT_SCREEN_MARGIN;
         if ((player.getCentreX() & 0xFFFF) < rightBoundary) {
             return;
         }
