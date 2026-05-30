@@ -1025,6 +1025,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
     }
 
     private void processTempoFrame() {
+        processFade();
+
         if (tempoWeight == 0 && config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
             return;
         }
@@ -1043,7 +1045,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     }
                 }
             }
-            processFade();
             tick();
             if (sfxMode) {
                 maxTicks--;
@@ -1059,10 +1060,8 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             tempoAccumulator += tempoWeight;
             if (tempoAccumulator >= tempoModBase) {
                 tempoAccumulator -= tempoModBase;
-                processFade();
                 tick();
                 for (int m = 1; m < speedMultiplier; m++) {
-                    processFade();
                     tick();
                 }
                 if (sfxMode) {
@@ -1081,7 +1080,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
             // independent of music tempo. Without this, tempoWeight=tempoModBase
             // causes overflow every frame → SFX never ticks.
             if (sfxMode) {
-                processFade();
                 tick();
                 maxTicks--;
                 if (maxTicks <= 0) {
@@ -1097,7 +1095,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                     // Overflow → skip this frame (delay)
                 } else {
                     // No overflow → tick normally
-                    processFade();
                     tick();
                 }
                 // S3K speed-up: timeout-based double update (ROM: zDoSpeedUp)
@@ -1110,7 +1107,6 @@ public class SmpsSequencer implements AudioStream, CoordFlagContext {
                         if (tempoAccumulator >= tempoModBase) {
                             tempoAccumulator -= tempoModBase;
                         } else {
-                            processFade();
                             tick();
                         }
                     } else {

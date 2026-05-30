@@ -63,6 +63,14 @@ public interface GameAudioProfile {
     }
 
     /**
+     * Returns true if SFX should remain blocked while the previous music fades
+     * back in after a blocking override ends.
+     */
+    default boolean blocksSfxDuringMusicRestoreFadeIn() {
+        return true;
+    }
+
+    /**
      * Returns the priority for a given sound ID. Higher values = higher priority.
      * Used for SFX channel arbitration.
      */
