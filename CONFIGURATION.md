@@ -110,6 +110,9 @@ Paths are relative to the working directory (where the JAR is launched).
 | `REWIND_AUDIO_HISTORY_SIZE_MB` | int | `10` | Megabytes of stereo PCM history kept for held-rewind playback when `REWIND_AUDIO_HISTORY_LIMIT_TYPE` is `"size"`. Stereo 16-bit at 48 kHz consumes ~192 KB/s, so 10 MB is roughly 54 s at that sample rate (~57 s at 44.1 kHz). |
 | `TEST_MODE_ENABLED` | bool | `false` | Replace the master-title game-select with the Trace Test Mode picker that lists every trace in `TRACE_CATALOG_DIR` and plays the chosen trace back in the live engine. Dev-only. **When `true`, `DISPLAY_ASPECT` is always forced to `NATIVE_4_3` (320×224) regardless of its configured value** — trace replay and test-mode runs are parity-critical and must always run at 320×224. |
 | `TRACE_CATALOG_DIR` | string | `"src/test/resources/traces"` | Directory scanned by `TraceCatalog` when `TEST_MODE_ENABLED` is true. Resolved against `user.dir`. |
+| `DISCORD_RICH_PRESENCE_ENABLED` | bool | `false` | Opt in to publishing OpenGGF menu/gameplay status through the local Discord desktop client. Disabled by default for privacy and no-ops when Discord is unavailable. |
+| `DISCORD_RICH_PRESENCE_SHOW_TIMER` | bool | `true` | Include the current level timer in Discord Rich Presence gameplay status when presence is enabled. |
+| `DISCORD_RICH_PRESENCE_SHOW_ZONE` | bool | `true` | Include the current zone and act in Discord Rich Presence gameplay status when presence is enabled. |
 
 ### Level Editor (experimental)
 
@@ -239,6 +242,9 @@ diagnostic test runs only and must remain unset in CI.
   "EDITOR_ENABLED": false,
   "DEBUG_COLLISION_VIEW_ENABLED": false,
   "LIVE_REWIND_ENABLED": false,
+  "DISCORD_RICH_PRESENCE_ENABLED": false,
+  "DISCORD_RICH_PRESENCE_SHOW_TIMER": true,
+  "DISCORD_RICH_PRESENCE_SHOW_ZONE": true,
   "LIVE_REWIND_TAPE_COAST_ENABLED": false,
   "LIVE_REWIND_TAPE_COAST_MIN_STEPS": 0.25,
   "LIVE_REWIND_TAPE_COAST_ACCELERATION": 0.25,

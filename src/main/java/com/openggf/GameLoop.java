@@ -62,6 +62,11 @@ import com.openggf.game.save.SessionSaveRequests;
 import com.openggf.game.session.ActiveGameplayTeamResolver;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.integration.presence.PresenceFormatter;
+import com.openggf.integration.presence.PresenceManager;
+import com.openggf.integration.presence.RuntimePresenceSnapshotProvider;
+import com.openggf.integration.presence.discord.DiscordIpcPresenceClient;
+import com.openggf.integration.presence.discord.DiscordIpcTransports;
 import com.openggf.testmode.TraceCameraFocusController;
 
 import java.io.IOException;
@@ -117,6 +122,7 @@ public class GameLoop {
     private final PlaybackDebugManager playbackDebugManager;
     private final LiveRewindManager liveRewindManager;
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
+    private final PresenceManager presenceManager;
 
     // The active session-owned gameplay mode. Cached fields above are sourced from this context.
     private GameplayModeContext gameplayMode;
@@ -224,6 +230,14 @@ public class GameLoop {
         this.profiler = this.engineServices.profiler();
         this.playbackDebugManager = this.engineServices.playbackDebug();
         this.liveRewindManager = new LiveRewindManager(configService);
+        this.presenceManager = new PresenceManager(
+                configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED),
+                configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_TIMER),
+                configService.getBoolean(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_ZONE),
+                new RuntimePresenceSnapshotProvider(this, configService),
+                new PresenceFormatter(),
+                new DiscordIpcPresenceClient(DiscordIpcTransports.defaultFactory()),
+                System::currentTimeMillis);
         refreshRuntimeBindings();
     }
 
@@ -430,7 +444,12 @@ public class GameLoop {
             stepInternal();
         } finally {
             runAfterStepMasterTitleLaunchCallbackIfPresent();
+            presenceManager.tick();
         }
+    }
+
+    public void closePresence() {
+        presenceManager.close();
     }
 
     private void stepInternal() {

@@ -440,6 +440,21 @@ public enum SonicConfiguration {
 	 * Directory scanned by TraceCatalog when TEST_MODE_ENABLED is true.
 	 * Resolved against user.dir. Default "src/test/resources/traces".
 	 */
-	TRACE_CATALOG_DIR;
+	TRACE_CATALOG_DIR,
+
+	/**
+	 * Enables opt-in Discord Rich Presence updates through the desktop client.
+	 */
+	DISCORD_RICH_PRESENCE_ENABLED,
+
+	/**
+	 * Shows the level timer in Discord Rich Presence gameplay state text.
+	 */
+	DISCORD_RICH_PRESENCE_SHOW_TIMER,
+
+	/**
+	 * Shows the zone and act in Discord Rich Presence gameplay state text.
+	 */
+	DISCORD_RICH_PRESENCE_SHOW_ZONE;
 
 }

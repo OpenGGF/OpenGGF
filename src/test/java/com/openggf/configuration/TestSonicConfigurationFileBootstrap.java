@@ -85,6 +85,9 @@ class TestSonicConfigurationFileBootstrap {
             assertEquals(Boolean.FALSE, savedConfig.get(SonicConfiguration.LEVEL_SELECT_ON_STARTUP.name()));
             assertEquals(Boolean.TRUE, savedConfig.get(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP.name()));
             assertTrue(savedConfig.containsKey(SonicConfiguration.DEBUG_VIEW_ENABLED.name()));
+            assertEquals(Boolean.FALSE, savedConfig.get(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED.name()));
+            assertEquals(Boolean.TRUE, savedConfig.get(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_TIMER.name()));
+            assertEquals(Boolean.TRUE, savedConfig.get(SonicConfiguration.DISCORD_RICH_PRESENCE_SHOW_ZONE.name()));
         } finally {
             if (originalUserDir != null) {
                 System.setProperty("user.dir", originalUserDir);
