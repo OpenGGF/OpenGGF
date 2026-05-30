@@ -2223,7 +2223,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (camera == null) return;
 
 		// ROM uses center coordinates for x_pos, so boundary offsets are calibrated for center
-		final int SCREEN_WIDTH = 320, SONIC_WIDTH = 24, LEFT_OFFSET = 16, RIGHT_EXTRA = 64;
+		final int SONIC_WIDTH = 24, LEFT_OFFSET = 16, RIGHT_EXTRA = 64;
 
 		// ROM: move.l obX(a0),d1 / ext.l d0 / asl.l #8,d0 / add.l d0,d1 / swap d1
 		// Uses 32-bit position (pixel:16 | subpixel:16) + velocity << 8.
@@ -2241,15 +2241,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		int leftBoundary = minX + LEFT_OFFSET;
-		int rightBoundary = maxX + SCREEN_WIDTH - SONIC_WIDTH;
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		// S3K Player_Boundary_Sides/Tails_Check_Screen_Boundaries use
 		// Camera_max_X_pos+$128 directly, with no normal-play +$40 extension
-		// (sonic3k.asm:23183-23186, 28418-28421).
-		boolean usesRomMaxPlus128 = featureSet != null && featureSet.levelBoundaryRightStrict();
-		if (!usesRomMaxPlus128 && !gameState().isBossFightActive() && !gameState().isEndOfLevelActive()) {
-			rightBoundary += RIGHT_EXTRA;
-		}
+		// (sonic3k.asm:23183-23186, 28418-28421). At native viewport width (320)
+		// this reproduces +$128 / +$128+$40 exactly; widescreen widens the
+		// boundary to the configured viewport width (declared divergence,
+		// see docs/KNOWN_DISCREPANCIES.md).
+		boolean strict = (featureSet != null && featureSet.levelBoundaryRightStrict())
+				|| gameState().isBossFightActive() || gameState().isEndOfLevelActive();
+		int rightBoundary = RightBoundary.compute(maxX, camera.getWidth(), SONIC_WIDTH, RIGHT_EXTRA, strict);
 
 		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s
 		// (>=), while S3K uses blo.s (>), gated by PhysicsFeatureSet.

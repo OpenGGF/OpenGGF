@@ -23,6 +23,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 10. [S2 Logical-Input Latch Disabled During Control Lock](#s2-logical-input-latch-disabled-during-control-lock)
 11. [S2 CPZ Visual Water Surface Oscillation](#s2-cpz-visual-water-surface-oscillation)
 12. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table)
+13. [Widescreen Right-Boundary Widening](#widescreen-right-boundary-widening)
 
 ---
 
@@ -680,3 +681,46 @@ REV01 wind-tunnel bug emulation removes the remaining LZ3 y divergence.
 ### Removal Condition
 
 Remove this entry once each listed test has been diagnosed (root-cause identified in the engine), fixed at the source, and is consistently green against the recorded ROM trace.
+
+---
+
+## Widescreen Right-Boundary Widening
+
+**Location:** `RightBoundary.java`, `PlayableSpriteMovement.doLevelBoundary()`
+**ROM Reference:** `sonic3k.asm:23183-23186` (`Player_Boundary_Sides`, strict path: `Camera_max_X_pos + $128`); `s2.asm:36907-36909` (normal path: `Camera_max_X_pos + $128 + $40`)
+
+### Original Implementation
+
+The ROM computes the right-edge clamp from `Camera_max_X_pos` plus a fixed pixel offset relative to a fixed 320px screen width:
+
+- **Strict path** (S3K `Player_Boundary_Sides`, boss fight, end-of-level): `Camera_max_X_pos + $128` (= `maxX + 320 - 24`)
+- **Normal path** (S1/S2/S3K non-strict ground/air): `Camera_max_X_pos + $128 + $40` (= `maxX + 320 - 24 + 64`)
+
+The `$128` constant encodes `SCREEN_WIDTH - SONIC_WIDTH = 320 - 24 = 296`.
+
+### Our Implementation
+
+The boundary is computed via `RightBoundary.compute(maxX, camera.getWidth(), SONIC_WIDTH, RIGHT_EXTRA, strict)`:
+
+```java
+public static int compute(int maxX, int viewportWidth, int spriteWidth,
+        int rightExtra, boolean strict) {
+    int boundary = maxX + viewportWidth - spriteWidth;
+    if (!strict) boundary += rightExtra;
+    return boundary;
+}
+```
+
+At native viewport width (`camera.getWidth() == 320`, i.e. `DISPLAY_ASPECT = NATIVE_4_3`) this produces `maxX + 296` / `maxX + 360`, identical to the ROM `+$128` / `+$128 + $40` constants. When a widescreen `DISPLAY_ASPECT` is active (e.g. `WIDE_16_9` → 480px), `camera.getWidth()` returns the configured width, and the right boundary widens to keep the player reachable at the visible right edge.
+
+### Rationale
+
+Widescreen is a declared non-parity extension (see spec section "Parity Divergence: Right-Boundary Widening" in `docs/superpowers/specs/2026-05-30-widescreen-support-design.md`). Keeping the hardcoded `SCREEN_WIDTH = 320` constant would clamp the player 160px before the right edge of a 16:9 viewport — an unplayable experience. Widening the boundary to match the configured viewport width is the correct design decision for the extension. At `NATIVE_4_3` (320px) the ROM value is reproduced exactly, so native-resolution parity is unchanged.
+
+### Verification
+
+`TestRightBoundary` covers all three cases: native strict (`+$128`), native normal (`+$128 + $40`), and widescreen widening for both strict and normal modes.
+
+### Removal Condition
+
+This entry should remain as long as widescreen `DISPLAY_ASPECT` presets are supported. It would only be removed if the engine reverted to a fixed 320px viewport assumption.
