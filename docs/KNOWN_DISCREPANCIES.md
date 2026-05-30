@@ -711,7 +711,7 @@ public static int compute(int maxX, int viewportWidth, int spriteWidth,
 }
 ```
 
-At native viewport width (`camera.getWidth() == 320`, i.e. `DISPLAY_ASPECT = NATIVE_4_3`) this produces `maxX + 296` / `maxX + 360`, identical to the ROM `+$128` / `+$128 + $40` constants. When a widescreen `DISPLAY_ASPECT` is active (e.g. `WIDE_16_9` → 480px), `camera.getWidth()` returns the configured width, and the right boundary widens to keep the player reachable at the visible right edge.
+At native viewport width (`camera.getWidth() == 320`, i.e. `DISPLAY_ASPECT = NATIVE_4_3`) this produces `maxX + 296` / `maxX + 360`, identical to the ROM `+$128` / `+$128 + $40` constants. When a widescreen `DISPLAY_ASPECT` is active (e.g. `WIDE_16_9` → 400px), `camera.getWidth()` returns the configured width, and the right boundary widens to keep the player reachable at the visible right edge.
 
 ### Rationale
 
