@@ -666,10 +666,15 @@ public class LWJGLAudioBackend implements AudioBackend {
             // Restore speed shoes state to the saved sequencer
             currentSmps.setSpeedShoes(speedShoesEnabled);
             currentSmps.refreshAllVoices();
-            // ROM: only the 1-up jingle (sfxBlocked/FadeInFlag) fades in on restore.
-            // Non-blocking overrides (invincibility, Super Sonic) resume at full volume.
+            // ROM: only the 1-up jingle fades in on restore. S1/S2 keep SFX
+            // blocked through FadeInFlag; S3K clears zFadeToPrevFlag when
+            // zFadeInToPrevious starts and allows new SFX on the next driver cycle.
             if (sfxBlocked) {
-                currentSmps.setOnFadeComplete(() -> sfxBlocked = false);
+                if (audioProfile == null || audioProfile.blocksSfxDuringMusicRestoreFadeIn()) {
+                    currentSmps.setOnFadeComplete(() -> sfxBlocked = false);
+                } else {
+                    sfxBlocked = false;
+                }
                 currentSmps.triggerFadeIn();
             }
         }

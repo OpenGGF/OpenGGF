@@ -98,6 +98,11 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     @Override
+    public boolean blocksSfxDuringMusicRestoreFadeIn() {
+        return false;
+    }
+
+    @Override
     public int getSuperSonicMusicId() {
         return Sonic3kMusic.INVINCIBILITY.id;
     }
