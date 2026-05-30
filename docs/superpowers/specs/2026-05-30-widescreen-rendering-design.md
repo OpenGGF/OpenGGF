@@ -32,6 +32,10 @@ The safe-area projection maps native content `x∈[0,320]` to screen `x∈[pad, 
 
 **Why projection-swap, not scissor:** all geometry flows through the shared `ProjectionMatrix` uniform (`shader_basic.vert`); swapping the matrix re-centers every renderer (HUD, title, results) with zero per-renderer change. Scissor only clips — it can't re-center content authored at `x=0`.
 
+> **⚠️ Learned in practice (2026-05-30):** the projection-swap compositor (R1.1–R1.3) was IMPLEMENTED and then REVERTED. Although the safe-area matrix is provably correct in isolation (headless-tested), in the live engine it (a) left several surfaces *left-aligned* (the pattern-batch projection upload is cached per-command via `stateInitialized`, so the override often isn't re-read) and (b) horizontally *distorted* others — symptoms that only appear at runtime and could not be root-caused headlessly. The primitives (`SafeAreaProjection`, `GraphicsManager.beginSafeAreaProjection`, `UiRenderPipeline.beginSafeArea`) are retained but **no longer called**.
+>
+> **Revised recommended approach: per-surface width-aware coordinates ("Approach B"), proven on the Master Title Screen** (`setViewportWidth(int)` + `centerX(elementWidth, viewportWidth)` for foreground; draw background at `0..viewportWidth`). It is more verbose (per surface) but reliable and visually verifiable surface-by-surface. The R1 phase below should be re-planned around Approach B, OR the projection-swap fixed with live GL-state diagnostics first. This work needs **live visual iteration** (run the app at a widescreen preset + observe); it is not headless-debuggable.
+
 ## Per-surface treatment (from the widescreen audit)
 
 22 surfaces were classified. Mechanically there are three treatments: **PILLARBOX/CENTER** (render through the safe-area projection — identical mechanism, the only difference is whether a backdrop fills the side bars), and **EXPAND** (render through the scene projection and widen the content), and **MIXED** (background EXPAND pass + foreground CENTER pass).
