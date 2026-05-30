@@ -37,6 +37,7 @@ Git hooks in `.githooks/` and CI enforce the branch policy below. Configure the 
 - Every non-`master` branch commit must include these trailers (each starting with `updated` or `n/a`): `Changelog`, `Guide`, `Known-Discrepancies`, `S3K-Known-Discrepancies`, `Agent-Docs`, `Configuration-Docs`, `Skills`.
 - `prepare-commit-msg` auto-appends the trailer block on non-merge commits. Do not delete it; fill it in.
 - Each trailer maps to a file/dir (e.g. `Changelog` → `CHANGELOG.md`, `Agent-Docs` → both `AGENTS.md` and `CLAUDE.md`, `Skills` → both `.agents/skills/` and `.claude/skills/`). If the mapped files are staged, the trailer must not say `n/a`. See `.githooks/run-policy` for the authoritative mapping.
+- **Changelog justification on engine changes:** A `feat`/`fix`/`perf` commit that touches `src/main/` must either set `Changelog: updated` (and stage `CHANGELOG.md`) or justify the skip with an explicit reason after `n/a`, e.g. `Changelog: n/a: test-only helper`. A bare `Changelog: n/a` on such a commit is rejected by the `commit-msg` hook and CI (`validate_changelog_justification`). The base trailer gate only checks staged↔trailer consistency, so this extra check exists to catch a wrong `n/a` on a changelog-worthy engine change. Commits with other subjects, or that don't touch `src/main/`, are unaffected.
 - When merging a non-`master` branch into `develop`, stage a `README.md` update summarizing the branch change in the release/change log section. Hooks and CI block the merge otherwise.
 - Treat the trailers as explicit attestation for the "where relevant" judgment. Do not use `--no-verify` to bypass the policy.
 
@@ -133,15 +134,24 @@ Gameplay state is split by lifetime across three layers in `com.openggf.game.ses
 
 Editor entry/exit tears down and rebuilds the mode context while `WorldSession` survives; `MutableLevel` mutations survive via `LevelManager.restoreInheritedLevel()`. The old `GameRuntime` / `RuntimeManager` façade is retired — prefer explicit dependencies from `GameplayModeContext`, `GameServices`, or `ObjectServices`. See `docs/superpowers/specs/2026-04-07-runtime-ownership-migration-design.md` for the full design.
 
+### Level Editor (`com.openggf.editor` + `GameMode.EDITOR`)
+
+The in-engine level editor MVP lives in `com.openggf.editor`: `LevelEditorController`, `EditorInputHandler`, `EditorMouseTransform`, `EditorHistory` (+ `commands.*` for undoable strokes), `persistence.EditorSaveManager` / `EditorSaveEnvelope` / `EditorSavePayload`, and `render.EditorToolbarRenderer`. A `GameMode.EDITOR` is integrated into `Engine` and `SessionManager`. While playing with `EDITOR_ENABLED`, toggle into edit mode mid-play, paint chunks with the mouse, undo/redo strokes via `Block.saveState()` / `restoreState()`, and persist edits through the editor save envelope. Editor enter/exit rides the teardown+rebuild session path above (the `WorldSession` survives and `MutableLevel` edits are re-applied on resume). The editor's in-mode key/mouse bindings are hardcoded in `EditorInputHandler` — see `CONFIGURATION.md`.
+
 ### Runtime-Shared Framework Stack
 
 `GameplayModeContext` hosts shared registries/controllers used to normalize zone-specific logic across games: `ZoneRuntimeRegistry` (typed zone state), `PaletteOwnershipRegistry` (palette-write arbitration + underwater mirroring), `AnimatedTileChannelGraph` (animated tile channels), `ZoneLayoutMutationPipeline` (live layout edits + redraw sequencing), `SpecialRenderEffectRegistry` (staged extra render passes), `AdvancedRenderModeController` (per-line/per-cell scroll overrides). Scroll/deform reuse lives in `level.scroll.compose` around `ScrollEffectComposer` / `DeformationPlan` / `WaterlineBlendComposer`. Prefer plugging into these rather than adding new zone-local registries.
+
+- **Camera honors the ROM `Fast_V_scroll_flag`.** The vertical camera-tracking cap is raised when the player rides a platform that sets the ROM `Fast_V_scroll_flag` (e.g. the ICZ path-follow / ridden moving platforms). This is ROM-state-driven, not a zone carve-out — model the flag, not the zone.
+- **`ZoneRuntimeState.requiresFullWidthBgTilemap()`.** `LevelTilemapManager` consumes this generic `ZoneRuntimeState` default method to decide on a full-width background tilemap, instead of probing `GameStateManager` directly (introduced when the HTZ earthquake overlay migrated into `SpecialRenderEffectRegistry`). Express new such needs as `ZoneRuntimeState` predicates rather than manager lookups.
 
 ## Consolidated Subsystems
 
 Manager classes consolidated for reduced complexity:
 
 - **`LevelManager`** decomposed into `LevelTilemapManager` (chunks/blocks/VRAM), `LevelTransitionCoordinator` (act transitions, warps, seamless), `LevelDebugRenderer`, plus `LevelGeometry` / `LevelDebugContext` records. `MutableLevel` provides snapshot/mutation/dirty-region tracking processed per-frame via `LevelFrameStep.processDirtyRegions()`.
+  - **Level-mutation routing rule:** Gameplay-path tile edits (code under `game/sonic1|2|3k`, `level/objects`) must route through `ZoneLayoutMutationPipeline` / a `LevelMutationSurface` — never direct `getMap().setValue(...)`. Enforced by the CI test `TestNoDirectMapMutationsInGameplay`. Editor commands and initial layout decoders (e.g. `Sonic3kLevel`) are exempt.
+  - **Level snapshot copy-on-write epoch:** `AbstractLevel.snapshotEpoch` + `cowEnsureWritable` clone `Block.chunkDescs` / `Chunk.patternDescs` / `Map.data` on first write per epoch so rewind snapshots stay isolated from later live edits. Integrated through `DirectLevelMutationSurface.setBlockInMap`.
 - **`ObjectManager`** holds inner classes `Placement` (spawn windowing), `SolidContacts` (riding/landing/ceiling/side), `TouchResponses` (enemy bounce/hurt), `PlaneSwitchers`. Injects `ObjectServices` into all objects at construction.
 - **`RingManager`** holds `RingPlacement` (collection/sparkle/spawn), `RingRenderer` (cached patterns), `LostRingPool` (lost ring physics).
 - **`PlayableSpriteController`** (owned by `AbstractPlayableSprite`) coordinates `PlayableSpriteMovement`, `PlayableSpriteAnimation`, `SpindashDustController`, `DrowningController`.
@@ -252,6 +262,8 @@ AudioManager.getInstance().playSfx(sfxId);  // PROHIBITED
 ### Object Behavior Contracts
 
 New object/boss/badnik/trace work should use the shared object-control and profile vocabulary rather than one-off flags: `ObjectControlState` (control bits + derived predicates), `ObjectPlayerQuery`/`ObjectPlayerParticipationPolicy` (which players a routine targets), `NativePositionOps` (playable-sprite `x_pos`/`y_pos` writes), `ObjectLifetimeOps` (destruction/offscreen/respawn/slot transfer). Canonical behavior profiles live under `com.openggf.game.profiles.*`; `level.objects` hosts execution + compatibility adapters. Raw setters and direct `setDestroyed(true)` are legacy compatibility — do not grow guard baselines for new implementations without documenting the exact reason.
+
+**ENEMY touch responses poll every frame.** `ObjectManager.TouchResponses` callbacks for ENEMY-category contacts fire continuously every frame while the overlap persists (matching the ROM `Touch_Loop`), not only on the first frame of overlap. SPECIAL/monitor contacts remain edge-triggered. New badnik / damaging-object code should not add consumed-once "already hit" latches for the enemy touch path — rely on the per-frame poll.
 
 ### Child Object Spawning
 Use `spawnChild(() -> new ChildObject(spawn, params))` so slot ownership, parent/child lifecycle, and remembered-spawn stay on the shared lifetime path. Direct `ObjectManager.addDynamicObject(...)` is reserved for manager/framework bridge code with focused tests.

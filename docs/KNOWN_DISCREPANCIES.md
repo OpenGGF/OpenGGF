@@ -22,6 +22,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 9. [HCZ Conveyor Belt Rolling State Clear](#hcz-conveyor-belt-rolling-state-clear)
 10. [S2 Logical-Input Latch Disabled During Control Lock](#s2-logical-input-latch-disabled-during-control-lock)
 11. [S2 CPZ Visual Water Surface Oscillation](#s2-cpz-visual-water-surface-oscillation)
+12. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table)
 
 ---
 
@@ -558,6 +559,49 @@ The `-8` recentring has been the engine's behaviour since `WaterSystem` was firs
 ### Removal Condition
 
 Remove this entry if the engine is ever re-aligned to the ROM's `lsr.w #1` formula. That would require either biasing every base water level returned from `WaterDataProvider.getStartingWaterLevel` (and every `DynamicWaterHandler` target write) down by 4 pixels, or changing the visual contract so callers expect a one-sided 0..+8 bob layered on top of a slightly higher mean.
+
+---
+
+## S2 Music Offsets Resolved from Hardcoded REV01 Table
+
+**Location:** `Sonic2SmpsLoader.findMusicOffset` / `Sonic2SmpsLoader.musicMap`
+**ROM Reference:** `docs/s2disasm/sound/_smps2asm_inc.asm` (`zMasterPlaylist` flag table + per-bank `MusicPoint` pointer tables, inside the Saxman-compressed Z80 driver blob)
+
+### Original Implementation
+
+The ROM resolves a music ID to its SMPS data through the Z80 sound driver's `zMasterPlaylist` flag table and the per-bank pointer tables (`MusicPoint` entries) it references. That structure only exists in readable form *after* the Saxman-compressed Z80 driver blob has been decompressed into Z80 RAM at runtime — the bytes sitting in 68K ROM are still compressed. The driver indexes `zMasterPlaylist` by the requested song ID to pick a bank and pointer.
+
+### Our Implementation
+
+`Sonic2SmpsLoader.findMusicOffset(musicId)` resolves song offsets from a hardcoded `Sonic2Music`-ID → REV01-ROM-offset map (`musicMap`) instead of reading `zMasterPlaylist` / `MusicPoint` from ROM:
+
+```java
+public int findMusicOffset(int musicId) {
+    Integer mapped = musicMap.get(musicId);
+    if (mapped != null) {
+        return mapped;
+    }
+    // ...
+}
+```
+
+The offsets in `musicMap` were discovered empirically and verified against REV01.
+
+### Rationale
+
+1. **The ROM table is compressed at rest.** `zMasterPlaylist` and the per-bank `MusicPoint` pointer tables live inside the Saxman-compressed Z80 driver blob in 68K ROM. The previous ROM-driven implementation parsed those compressed bytes directly and could not yield correct offsets; the table is only readable after a runtime Z80 decompression.
+
+2. **Engine IDs are intentionally shifted.** The engine's `Sonic2Music` IDs are systematically shifted relative to the disassembly's `zMasterPlaylist` entry order (e.g. `EMERALD_HILL.id == 0x81` loads the EHZ track, but `zMasterPlaylist[0]` / disasm id `0x81` is `Mus_2PResult`). Even a properly Z80-decompressed lookup would disagree with the engine's intended track for most IDs.
+
+3. **No audible difference.** Both paths reference the same underlying SMPS music data — only the lookup source differs. The hardcoded REV01 map is authoritative until both problems above are solved.
+
+### Verification
+
+The hardcoded `musicMap` covers every `Sonic2Music` entry, and the offsets are the empirically-verified REV01 ROM addresses used by the engine and the sound-test debug tool (`SoundTestApp`). Playback matches the original game's track-to-ID assignments.
+
+### Removal Condition
+
+Remove this entry once the S2 driver's `zMasterPlaylist` / `MusicPoint` tables are read through a runtime Z80 decompression path **and** the `Sonic2Music` ID shift is reconciled with the disassembly entry order, so `findMusicOffset` can resolve offsets from ROM data rather than the hardcoded REV01 map.
 
 ---
 

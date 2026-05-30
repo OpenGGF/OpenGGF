@@ -2,7 +2,87 @@
 
 All notable changes to the OpenGGF project are documented in this file.
 
-## Unreleased
+## v0.6.prerelease (Current development snapshot)
+
+- **Added an in-game level editor MVP.** Toggle into an edit mode mid-play, paint chunks with the mouse, undo/redo strokes via `Block.saveState()/restoreState()`, and persist edits through the editor save envelope. Editor enter/exit uses teardown+rebuild while `WorldSession` survives, re-applying `MutableLevel` edits on resume.
+
+- **Added the deterministic rewind/playback framework.** New snapshot registry (`RewindSnapshottable`/`CompositeSnapshot`/`RewindRegistry`), in-memory keyframe store, segment cache (O(1) backward step), and `RewindController`/`PlaybackController`, with per-subsystem snapshot adapters (level, object manager, camera, game state, RNG, timers, fade, parallax, water, palette/zone/animated-tile/render registries, level-event managers, RingManager). Generic per-object/sprite field capture, optimized ring and level snapshotting, and trace-mode rewind playback wiring were layered on top, including follow-history buffers and `SidekickCpuController` state so the CPU sidekick resumes identical behavior after seek/replay.
+
+- **Added config-gated live rewind.** Hold-to-rewind gameplay playback with an on-screen HUD overlay and dedicated input handler/stepper, gated behind a new configuration flag. The rewind HUD counter resets to 0 at level/act/zone boundaries, and a `stepBackward` crash when the earliest keyframe fell off the keyframe-interval grid after a boundary reset was fixed.
+
+- **Added audio rewind runtime delivery.** A deterministic audio runtime (PCM/FIFO history rings, audio command timeline, and chip/SMPS snapshots) so sound replays correctly during gameplay rewind.
+
+- **Rewind: slow-motion (sub-1.0) step rates and speed-matched reverse audio.** Tape-coast rewind supports sub-1.0 step rates for slow-motion rewind (`LIVE_REWIND_TAPE_COAST_MIN_STEPS` floor) and resamples reverse audio playback to match the current rewind speed.
+
+- **Rewind audio: configurable PCM history cap with larger defaults.** The PCM history cap is now user-configurable by time or size via `REWIND_AUDIO_HISTORY_LIMIT_TYPE` / `REWIND_AUDIO_HISTORY_SECONDS` / `REWIND_AUDIO_HISTORY_SIZE_MB`, and the default limits were raised from 10 s / 2 MB to 60 s / 10 MB.
+
+- **Completed the runtime session migration.** Retired the `GameRuntime` and `RuntimeManager` façades; gameplay-state ownership flows through `EngineServices`, `SessionManager`, and `GameplayModeContext`.
+
+- **Implemented the S3K Ice Cap Zone object set.** ICZ ice block (top-solid), ice cube, snow pile (zone variants/art), tension platform, breakable wall, Freezer, harmful ice hazard, crushing column (ROM-sized trigger footprint), stalagtite, and ice spikes, registering the corresponding S3KL object ids.
+
+- **Implemented the S3K ICZ path-follow platform and swinging platform.** The path-follow platform at its terminal right-wall stop spawns the revealed spring, displaces Sonic off the platform, and deletes the block after the route completes; ridden moving platforms use the ROM `Fast_V_scroll_flag` fast vertical camera cap. The ICZ swinging platform (object 0xB4) has ROM-accurate swing motion, solid collision, and palette-correct rendering.
+
+- **Implemented the S3K Ice Cap Zone minibosses/bosses.** ICZ1 miniboss (ROM-backed art, post-boss palette cleanup, ICZ1→ICZ2 transition gated on `Apparent_act`) and the ICZ2 end boss (egg capsule, snow-pile interaction) on a shared S3K boss camera-gate.
+
+- **S3K ICZ opening-sequence and background parity.** ICZ scroll handler, opening mountain palette setup, snowboard intro event shell, ROM-gated palette cycling (holds line 4 until the indoor flag is active), animated BG tile uploads, and indoor/outdoor palette event writes. Post-snowboard wall-crash handoff with falling big snow pile, jump-escape collision, lock-on background snow rendering, sprite-priority masking, and segment-column shatter debris. Fixed the snowboard intro title-card handoff and board-launch height (Sonic pinned to the ROM-computed terrain-arc point before board-bounce velocities).
+
+- **Implemented S3K badniks: Penguinator and StarPointer.** Both with ROM-accurate behavior/art and registered object ids.
+
+- **Completed the S3K CNZ Act 2 first-Knuckles cutscene.** Pre-seeded flood water level, button screen-shake, end-of-cutscene palette restore, and an invisible blocking wall holding Sonic during the scene; fixed the button-press chain, the water recede (so `Obj_CNZWaterLevelCorkFloor` observes the real CorkFloor child before setting the recede target), and aligned CNZ Act 2 palette cycling and BG scroll with the ROM. Added CNZ actors (CutsceneKnuckles CNZ2 A/B, Batbot/Sparkle badnik, water-level/cutscene button objects, `CnzLightsFlashChild`).
+
+- **S3K CNZ miniboss and traversal-object parity.** The CNZ miniboss stays dormant until the arena trigger (`Camera_X >= $31E0`) and 2-second `Obj_Wait`, matching `Obj_CNZMiniboss`; its looping BG band is clamped to the ROM's 256px height. Restored the miniboss act-transition flow (scroll control, top/spark behavior, signpost handoff) and repaired CNZ traversal objects (barber pole crossing handoff, cannon, scripted-velocity animation, debug-mode latch gating, lightbulb, trap-door open-hold, sparkle phases, signpost/results lifetime).
+
+- **S3K AIZ route fixes.** Fire-curtain effect survives the seamless AIZ1→AIZ2 reload while clearing stale cache on AIZ1 start / AIZ exit; post-bombing AIZ2 forest-loop wrap lands inside the forest mask and AIZ2 tree objects persist until their ROM delete predicates. Fixed the collapsing fire-log bridge top landing boundary/top-solid gating, AIZ end-boss active-collision timing, AIZ object placement-window rewind after the ship loop, sidekick boundaries after the battleship camera-bounds wrap, and ship-bomb touch response. The AIZ2 battleship auto-scroll now runs in a pre-physics phase with a temporary camera scroll-lock freeze (ROM `SpecialEvents`-before-`Process_Sprites` ordering), and the AIZ2 resize state machine runs before the screen-event handoff.
+
+- **S3K AIZ physics parity.** Ground-wall push only sets `Status_Push` when the player faces into the contacted wall (S3K), water-exit y-velocity doubling is skipped on fast upward exits (S2/S3K), and the CPU sidekick follow/push logic was reworked to match ROM ordering — gated by new `PhysicsFeatureSet` flags, not zone carve-outs.
+
+- **Fixed the S3K spindash release sound effect** so the release plays `sfx_Dash` instead of reusing the spindash charge SFX.
+
+- **Fixed music being delayed at level start after a non-gameplay window** (e.g. title → level select → level) by clamping the gameplay audio frame to forward-only progression so backlogged audio commands drain immediately.
+
+- **Newly added default config keys are backfilled into an existing `config.json` on load.**
+
+- **Fixed the S3K end signpost so it persists into Act 2 across the seamless act reload** (offset by the transition world delta) for CNZ/HCZ/MGZ.
+
+- **Fixed S3K ICZ frozen-block break damage** — shieldless freeze release spends rings via the hurt/death path; shielded damage only strips the shield. Also fixed stale object grounding in ICZ2, kept the AIZ hollow tree as live support, gated ICZ miniboss touch regions until the live routine starts, and fixed the ICZ2 CorkFloor roll break.
+
+- **Fixed the S3K HCZ2 end-boss defeat handoff lifetime** and the S3K seamless results-screen transition gate.
+
+- **S3K MGZ route fixes** — MGZ2 end-boss parity (drilling Robotnik art/PLC + events), swinging-platform despawn, object trace parity (dash trigger, swinging platform, monitor, spring, Bubbles badnik), air-roll/sidekick air-collision physics parity (new `PhysicsFeatureSet` flag), and MGZ2 rescue-Tails cleanup.
+
+- **S2 sidekick death now uses the deferred-despawn flow (`Obj02_Dead`).** Gated by `PhysicsFeatureSet.sidekickDeathUsesDeferredDespawn`.
+
+- **Touch-response framework: ENEMY-category callbacks now poll continuously every frame** (ROM `Touch_Loop`) instead of firing only on first overlap; SPECIAL/monitor contacts remain edge-triggered.
+
+- **Sidekick CPU control tracks the delayed jump-press bit separately from held buttons** (`getJumpPressHistory`).
+
+- **Improved Sonic 2 Sky Chase Zone parity** (SCZ object placement, Turtloid projectile, Tornado ride input timing, object hurt/platform landing).
+
+- **Fixed Sonic 2 OOZ oil-surface landing to match ROM `PlatformObject_ChkYRange`** (per-player submersion state, ROM-accurate landing window/snap/inertia).
+
+- **Restored the S2/S3K water enter/exit splash** via the fixed `Sonic_Dust` object (new slot-free splash mode).
+
+- **Switching display color profiles now updates on-screen colors live** (reloads active level palettes via `Engine.refreshDisplayPalettes` / `LevelManager.reloadLevelPalettes`).
+
+- **Fixed S3K AutoSpin tunnel landings** to preserve the `spin_dash_flag` mirror (S2 pinball landings still clear the pinball-mode mirror). New `PhysicsFeatureSet` flag.
+
+- **Gated embedded monitor content (icon) timing to match ROM** across S2 and S3K monitors.
+
+- **Spindash release no longer resets the camera position history** (only the horizontal scroll-frame offset), reproducing the ROM's old-position camera jerk (S2/S3K).
+
+- **Keep moving CNZ hex bumpers alive based on range bounds** rather than unloading prematurely.
+
+- **Fixed CNZ cylinder traversal so the CPU sidekick is recaptured correctly.**
+
+- **Fixed players getting stuck on the master title screen** after returning from a trace/gameplay session (clears the stale runtime `FadeManager` reference).
+
+- **Fixed an object-slot/memory leak** where air-unseat latches for permanently destroyed spawnless dynamic objects were never evicted.
+
+- **Object slot inventory now resets together with placement state** for deterministic spawn windowing.
+
+- **Aligned object solid-contact parity hooks** across `ObjectManager` and `SolidObjectProvider`/`SolidObjectListener`.
+
+- **Performance: menu and disclaimer text now mega-batch into a single GL text draw per frame** (master title, trace picker, simple data-select, legal disclaimer).
 
 - **Display color profiles can now be cycled at runtime.**
   The renderer supports raw RGB, darker Mega Drive analog, and softened NTSC-style
@@ -94,22 +174,17 @@ All notable changes to the OpenGGF project are documented in this file.
   White text on black, 5-second readability gate, any-key dismiss, fade-in/out/master-title-fade-in
   transitions. Toggle with the new `SHOW_LEGAL_DISCLAIMER_ON_STARTUP` config key (default `true`).
 
-### v0.6.prerelease (Current development snapshot)
-
-- **S3K route parity, object physics, and trace replay preparation.**
-  The latest development pass expands S3K route coverage across AIZ, CNZ, MGZ, and
-  related object/event paths: fixed-air countdown state, sidekick-follow context,
-  CNZ miniboss/top/cylinder/bumper/barber-pole behavior, AIZ boss/end-sequence
-  behavior, signposts/results flow, object rewind snapshots, and additional object
-  physics contracts now have focused regression coverage. Shared solid/touch/object
-  control code gained tighter participation, riding, camera-bound, ring, collision,
-  and rewind handling to support those route slices without game-specific engine
-  hacks. Trace replay tooling now records richer per-frame diagnostics, keeps trace
+- **Trace replay tooling and shared object-code groundwork for the S3K route slices.**
+  Trace replay tooling now records richer per-frame diagnostics, keeps trace
   comparison read-only, removes S2 bootstrap zone carve-outs in favour of recorder
-  capabilities or live object semantics, restores S2 native-prelude sidekick timing
-  from ROM-visible title-card history, and documents the no-zone-carveout rule in
-  agent docs and mirrored trace-replay skills. Full non-trace test suite passes;
-  current trace frontier state is recorded in `docs/TRACE_FRONTIER_LOG.md`.
+  capabilities or live object semantics, and restores S2 native-prelude sidekick
+  timing from ROM-visible title-card history; the no-zone-carveout rule is documented
+  in agent docs and mirrored trace-replay skills. Shared solid/touch/object control
+  code gained tighter participation, riding, camera-bound, ring, collision, and rewind
+  handling to support the AIZ/CNZ/MGZ/ICZ route slices above without game-specific
+  engine hacks. (Specific zone, object, and boss work is itemized in the entries
+  above.) Full non-trace test suite passes; current trace frontier state is recorded
+  in `docs/TRACE_FRONTIER_LOG.md`.
 
 - **Object physics standardization final cleanup pass.**
   Follow-up cleanup moved additional object-control call sites onto `ObjectControlState`,
