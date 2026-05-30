@@ -123,7 +123,11 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 return true;
 
             case 0xE9: // SPINDASH_REV (SDREV_INC) - no params in S3K!
-                spindashRevCounter++;
+                int updatedTranspose = (t.keyOffset + spindashRevCounter) & 0xFF;
+                t.keyOffset = (byte) updatedTranspose;
+                if (updatedTranspose != 0x10) {
+                    spindashRevCounter = (spindashRevCounter + 1) & 0xFF;
+                }
                 return true;
 
             case 0xEA: // PLAY_DAC - play DAC sample
@@ -181,19 +185,20 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0xF0: // MOD_SETUP - modulation setup (4 params: delay, rate, delta, steps)
                 if (t.pos + 3 < data.length) {
-                    t.modDelayInit = data[t.pos++] & 0xFF;
-                    t.modDelay = t.modDelayInit;
+                    t.modPendingDelayInit = data[t.pos++] & 0xFF;
                     int rate = data[t.pos++] & 0xFF;
-                    t.modRate = (rate == 0) ? 256 : rate;
-                    t.modDelta = data[t.pos++]; // signed
+                    t.modPendingRate = (rate == 0) ? 256 : rate;
+                    t.modPendingDelta = data[t.pos++]; // signed
                     int steps = data[t.pos++] & 0xFF;
-                    t.modStepsFull = steps;
+                    t.modPendingStepsFull = steps;
                     // S3K uses Z80 driver: halve mod steps (srl a)
-                    t.modSteps = steps / 2;
-                    t.modRateCounter = t.modRate;
-                    t.modStepCounter = t.modSteps;
-                    t.modAccumulator = 0;
-                    t.modCurrentDelta = t.modDelta;
+                    t.modPendingSteps = steps / 2;
+                    // The Z80 driver's cfModulation only updates the modulation data
+                    // pointer and arms bit 7 of ModulationCtrl. Live counters and the
+                    // accumulator are copied/reset later by zPrepareModulation, which
+                    // explicitly skips no-attack/tied notes. S3K uses this in the title
+                    // sweep and spindash charge to change modulation data without
+                    // dropping an already-rising pitch back to the base note.
                     t.customModEnabled = true;
                     t.modEnvId = 0;
                     t.modEnvData = null;
