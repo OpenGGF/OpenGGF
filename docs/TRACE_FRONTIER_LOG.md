@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 native object prelude fallback moves MTZ3 frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed clean test "-Dtest=com.openggf.trace.TestPreludeFramesKnobsZero" -DfailIfNoTests=false`
+  - PASS: 9 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 233 to frame 764.
+  - New frontier: frame 764 `x_speed` expected `0x0197`, actual `-0x0200`; Sonic is hurt by Shellcracker claw ObjA0 at `(0x0617,0x01EB)` while the ROM is still riding Obj6E.
+- Findings:
+  - The previous frame-233 Slicer body bounce was caused by suppressing the generic S2 title-card object prelude whenever the broad S2 Tornado metadata predicate matched.
+  - `TraceReplaySessionBootstrap` already uses the live ObjB2 shape to select the route-specific Tornado object prelude. When no live Tornado prelude is active, normal native S2 routes need the generic 26 object ticks.
+  - This keeps the bootstrap rule generic: no MTZ/Slicer timing offset, no trace hydration, and no route carve-out.
+
 ## 2026-05-31 - S2 MTZ3 Slicer orientation audit
 
 - Branch: `feature/ai-s2-mtz-parity`
