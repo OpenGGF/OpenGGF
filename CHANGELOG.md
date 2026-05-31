@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Twin Stompers trace parity.** MTZ Twin Stompers
+  Obj64 now enters the engine contact window with the ROM-equivalent initial
+  main-tick phase for its 8 px/tick piston motion, keeping its solid surface
+  aligned through the frame-1744 contact. Focused Obj64 coverage passes; the
+  MTZ3 trace frontier moves to a later frame-1979 Cog/sidekick interaction.
+
 - **Advanced Sonic 2 MTZ3 Obj6B platform trace parity.** MTZ Platform Obj6B
   now uses the ROM `y_pos.w:y_sub.w` 16.16 accumulator for falling and bouncy
   movement, preserves `y_sub` across word-only Y writes, and arms subtype-7
