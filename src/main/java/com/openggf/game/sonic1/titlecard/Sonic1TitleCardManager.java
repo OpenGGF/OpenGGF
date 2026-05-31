@@ -56,8 +56,30 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
     /** Pattern base ID for S1 title card art (high to avoid conflicts with S2's 0x40000) */
     private static final int PATTERN_BASE = 0x50000;
 
+    /** Native game width (320-pixel frame everything is authored for). */
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
+
+    /**
+     * Returns the configured viewport width in game pixels.
+     * At native 320 equals SCREEN_WIDTH exactly (xOffset == 0 — byte-identical).
+     */
+    private int viewportWidth() {
+        try {
+            int w = GameServices.graphics().getProjectionWidth();
+            return w > 0 ? w : SCREEN_WIDTH;
+        } catch (Exception ignored) {
+            return SCREEN_WIDTH;
+        }
+    }
+
+    /**
+     * Horizontal offset to centre the 320-wide title-card composition in the
+     * configured viewport.  Zero at native 320 — byte-identical.
+     */
+    private int xOffset() {
+        return (viewportWidth() - SCREEN_WIDTH) / 2;
+    }
 
     /** Duration of PalFadeIn_Alt: palette fades from black to full color over 22 frames */
     private static final int PALETTE_FADE_FRAMES = 22;
@@ -290,11 +312,13 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
             }
 
             if (bgAlpha > 0f) {
+                // Span the full viewport so no level bleeds through on wider screens.
+                // viewportWidth()==SCREEN_WIDTH at native 320 — byte-identical.
                 graphicsManager.registerCommand(new GLCommand(
                         GLCommand.CommandType.RECTI, -1,
                         GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                         0.0f, 0.0f, 0.0f, bgAlpha,
-                        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT));
+                        0, 0, viewportWidth(), SCREEN_HEIGHT));
             }
         }
 
@@ -325,7 +349,9 @@ public class Sonic1TitleCardManager implements TitleCardProvider {
         }
 
         TitleCardMappings.SpritePiece[] pieces = Sonic1TitleCardMappings.getFrame(frameIndex);
-        int centerX = element.getCurrentX();
+        // xOffset() centres the 320-wide composition in the viewport.
+        // At native 320 xOffset()==0 — byte-identical.
+        int centerX = element.getCurrentX() + xOffset();
         int centerY = element.getY();
 
         // Render pieces in reverse order so that earlier pieces (higher VDP sprite
