@@ -14,8 +14,11 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance;
+import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
 import com.openggf.game.sonic2.objects.badniks.SpinyBadnikInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -634,6 +637,50 @@ class TestSonic2TriggerParticipation {
 
         assertEquals("ATTACKING", field(spiny, "state").toString(),
                 "Spiny should resolve closest P2 candidates through ObjectPlayerQuery");
+    }
+
+    @Test
+    void mtzSlicerThrowUsesClosestNativePlayerByRomX() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0x0F00, 0, 0x1100, 0x0200, 0);
+        TestablePlayableSprite main = player("sonic", 0x0F90, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1010, 0x1000);
+        SlicerBadnikInstance slicer = new SlicerBadnikInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.SLICER, 0, 0, false, 0));
+        slicer.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        try {
+            slicer.update(0, main);
+
+            assertFalse("THROW_WINDUP".equals(field(slicer, "state").toString()),
+                    "ObjA1 must run Obj_GetOrientationToPlayer against nearest native P1/P2, not always P1");
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    @Test
+    void mtzSlicerPincerHomesTowardClosestNativePlayerByRomX() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0x0F00, 0, 0x1100, 0x0200, 0);
+        TestablePlayableSprite main = player("sonic", 0x0F00, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1010, 0x1000);
+        SlicerPincerInstance pincer = new SlicerPincerInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.SLICER_PINCERS, 0, 0, false, 0),
+                null,
+                0x1000,
+                0x1000,
+                0,
+                false,
+                0x78);
+        pincer.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        try {
+            pincer.update(0, main);
+
+            assertEquals(0x10, intField(pincer, "xVelocity"),
+                    "ObjA2 homing should accelerate toward nearest native P1/P2 by ROM X");
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
     }
 
     @Test

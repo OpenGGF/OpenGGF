@@ -1,5 +1,20 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Slicer orientation audit
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed clean test "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#mtzSlicerThrowUsesClosestNativePlayerByRomX+mtzSlicerPincerHomesTowardClosestNativePlayerByRomX" -DfailIfNoTests=false`
+  - PASS: 2 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result remains fail at frame 233: `y_speed` expected `0x03A8`, actual `-0x03A8`.
+- Findings:
+  - ObjA1/ObjA2 now use the shared `ObjectPlayerQuery` native P1/P2 nearest-X policy for the ROM `Obj_GetOrientationToPlayer` behavior; this was a real Slicer parity gap but did not move the trace frontier.
+  - ObjA2 pincer child spawns now carry object id `0xA2` instead of inheriting the parent ObjA1 spawn id.
+  - The remaining MTZ3 frame-233 mismatch is consistent with object title-card prelude/placement alignment: ROM has the first Slicer already advanced from placement `0x0230` to `0x0229.C000` before trace frame 0, then reaches throw windup at `(0x01FA,0x01F0)`. The engine still reaches the contact path with the Slicer body at `(0x0200,0x01EF)`, so the next investigation should stay in the generic S2 native-prelude object placement/update path rather than adding a Slicer or MTZ-specific timing offset.
+
 ## 2026-05-31 - S2 MTZ parity metadata/event-state pass trace verification
 
 - Branch: `feature/ai-s2-mtz-parity`
