@@ -1,5 +1,30 @@
 # Trace Frontier Log
 
+## 2026-06-01 - S2 MTZ3 Obj74/Obj69 live-y-radius lower-bound frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestInvisibleBlockObjectInstance,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#nutSolidBottomBoundsUseLiveRollingRadius" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 5143 to frame 5180.
+  - New frontier: frame 5180 `camera_x` expected `0x12FE`, actual `0x12FF`;
+    Sonic now preserves airborne speed through the Obj74/Obj69 lower-bound
+    checks and diverges later around Obj37 spawn/hurt/on-object state.
+- Findings:
+  - Obj74 `SolidObject_Always` and Obj69's `SolidObject` tail both reach the
+    shared S2 `SolidObject_cont` lower-Y reject calculation. That routine adds
+    the live `y_radius(a1)` to `d2` and then doubles `d2`, so rolling players
+    use the smaller rolling radius for the lower half instead of the standing
+    radius.
+  - Obj74 also uses `SolidObject_Always_SingleCharacter`; when its own standing
+    bit is stale and the player is already airborne, the helper clears support
+    and returns `d4=0` without entering side resolution.
+  - No trace state is hydrated, and the remaining frontier points at the next
+    Obj37/hurt/camera interaction after these false side contacts are removed.
+
 ## 2026-05-31 - S2 MTZ3 Obj69 nut x-subpixel frontier
 
 - Branch: `feature/ai-s2-mtz-parity`
