@@ -89,6 +89,16 @@ public class Sonic2MTZEvents extends Sonic2ZoneEvents {
                 // ROM: cmpi.w #$400,(Camera_Y_pos).w / blo.s +
                 //      move.w #$400,(Camera_Min_Y_pos).w
                 if (camera().getY() >= 0x400) {
+                    // ROM LevEvents_MTZ3_Routine4 (s2.asm:20537-20540):
+                    //   cmpi.w #$400,(Camera_Y_pos).w / blo.s +
+                    //   move.w #$400,(Camera_Min_Y_pos).w
+                    //   move.w #$400,(Tails_Min_Y_pos).w
+                    // ROM writes BOTH the camera floor and Tails_Min_Y_pos. The engine's
+                    // setSidekickBounds(minX,maxX,maxY) maps its 3rd arg to Tails_MAX_Y_pos
+                    // (see Sonic2ZoneEventHandler) and exposes no Tails_Min_Y_pos setter, so
+                    // we set only the camera floor here. Do NOT call setSidekickBounds(...,0x400)
+                    // for this routine: that would clamp Tails_MAX_Y (wrong bound), not the
+                    // Tails_Min_Y floor the ROM intends. Tails min-Y floor parity is a known gap.
                     camera().setMinY((short) 0x400);
                 }
                 // ROM: addq.b #1,(Boss_spawn_delay).w
@@ -103,15 +113,14 @@ public class Sonic2MTZEvents extends Sonic2ZoneEvents {
                 }
             }
             case 8 -> {
-                // Routine 8 (s2.asm:20553-20556): Prevent backtracking during boss fight
-                // ROM: move.w (Camera_X_pos).w,(Camera_Min_X_pos).w
-                //      move.w (Camera_Max_X_pos).w,(Tails_Max_X_pos).w
-                //      move.w (Camera_X_pos).w,(Tails_Min_X_pos).w
-                short cameraX = camera().getX();
-                if (cameraX > camera().getMinX()) {
-                    camera().setMinX(cameraX);
-                }
-                syncSidekickBoundsToCamera();
+                // ROM LevEvents_MTZ3_Routine5 (s2.asm:20542-20544):
+                //   move.w (Camera_X_pos).w,(Camera_Min_X_pos).w
+                //   rts
+                // A single, UNCONDITIONAL write of Camera_Min_X_pos = Camera_X_pos.
+                // There is no guard (min-X may follow the camera back) and no Tails
+                // bound write in this routine. During the boss the camera is pinned at
+                // $2AB0 (locked in Routine2), so in real play this is effectively a no-op.
+                camera().setMinX(camera().getX());
             }
             default -> {
                 // No more routines

@@ -154,6 +154,10 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
             return;
         }
         updatePosition();
+        // ROM Obj6E (loc_28432/284BC, s2.asm) marks the object gone via the coarse-camera
+        // window (((spawnX & 0xFF80) - Camera_X_pos_coarse) unsigned > 0x280). The shared
+        // ObjectManager despawn (despawnOutOfRangeObjects / isWithinSpawnWindow) already
+        // applies that exact window to every dynamic object, so no per-object despawn here.
     }
 
     /**
@@ -273,7 +277,8 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
                 frame.pieces(),
                 x, y,
                 0,  // Base pattern index (level art starts at tile 0)
-                -1, // Use palette from piece
+                3,  // Palette line 3: make_art_tile(ArtTile_ArtKos_LevelArt,3,0) (s2.asm:54482).
+                    // Obj6E pieces declare palette 0; the ROM art_tile forces line 3.
                 false, false,
                 (patternIndex, pieceHFlip, pieceVFlip, paletteIndex, px, py) -> {
                     int descIndex = patternIndex & 0x7FF;

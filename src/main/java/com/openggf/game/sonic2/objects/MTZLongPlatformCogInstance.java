@@ -99,6 +99,12 @@ public class MTZLongPlatformCogInstance extends AbstractObjectInstance {
 
         // s2.asm lines 52723-52724: andi.w #7,d0; move.b byte_26EBA(pc,d0.w),mapping_frame
         mappingFrame = COG_FRAMES[d0 & 7];
+
+        // ROM cog tail (JmpTo19_MarkObjGone, s2.asm:52729) marks the cog gone via the
+        // coarse-camera spawn window. The shared ObjectManager despawn path
+        // (despawnOutOfRangeObjects / isWithinSpawnWindow, ((spawnX & 0xFF80) -
+        // Camera_X_pos_coarse) unsigned > 0x280) already covers every dynamic object,
+        // so no per-object DeleteObject is added here.
     }
 
     @Override
