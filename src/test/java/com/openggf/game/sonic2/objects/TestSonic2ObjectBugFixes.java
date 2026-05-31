@@ -5,6 +5,7 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.PlayableEntity;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -15,6 +16,7 @@ import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -22,6 +24,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -136,6 +140,41 @@ class TestSonic2ObjectBugFixes {
 
         assertEquals(0x0BC0, platform.getOutOfRangeReferenceX(),
                 "Obj6E loc_28466 checks objoff_34, not moving x_pos(a0), for MarkObjGone");
+    }
+
+    @Test
+    void s2SpikesUseLiveRollingRadiusForBottomOverlap() {
+        SpikeObjectInstance spikes = new SpikeObjectInstance(
+                new ObjectSpawn(0x0C40, 0x0650, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),
+                "Spikes");
+
+        assertTrue(spikes.fullSolidBottomOverlapUsesCurrentYRadiusOnly(null),
+                "Obj36 SolidObject_cont doubles live y_radius(a1), so rolling underside contact must not use stand radius");
+    }
+
+    @Test
+    void spikeTouchChkHurt2RewindsCurrentYVelocityBeforeHurt() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.getPreContactYSpeed()).thenReturn((short) 0xFE30);
+        SpikeObjectInstance spikes = new SpikeObjectInstance(
+                new ObjectSpawn(0x0C40, 0x0650, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),
+                "Spikes");
+        spikes.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+        PlayableEntity tails = mock(PlayableEntity.class);
+        when(tails.isCpuControlled()).thenReturn(true);
+        when(tails.getYSpeed()).thenReturn((short) 0xFE68);
+
+        spikes.onSolidContact(tails, new SolidContact(false, false, true, false, false), 0);
+
+        InOrder order = inOrder(tails);
+        order.verify(tails).move((short) 0, (short) 0x0198);
+        order.verify(tails).applyHurt(0x0C40);
+        verify(objectManager, never()).getPreContactYSpeed();
     }
 
     @Test
