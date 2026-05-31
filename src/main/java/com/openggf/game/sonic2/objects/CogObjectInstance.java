@@ -33,12 +33,12 @@ import java.util.List;
  * <p>
  * <b>Structure:</b>
  * 8 teeth, each with 3-byte position entries (x_offset, y_offset, mapping_frame).
- * 4 rotation steps × 8 teeth = 32 position entries in Obj70_Positions table.
- * The rotation phase (objoff_36) cycles 0 → $18 → $30 → $48 → 0 (or reverse).
+ * 4 rotation steps x 8 teeth = 32 position entries in Obj70_Positions table.
+ * The rotation phase (objoff_36) cycles 0 -> $18 -> $30 -> $48 -> 0 (or reverse).
  * Each tooth has an objoff_34 offset (0,3,6,...,21) into the position table.
  * <p>
  * <b>Per-frame collision sizes from byte_28706:</b>
- * Most frames use 16×16, but frames 7/9 use 16×12 and frame 8 uses 16×8
+ * Most frames use 16x16, but frames 7/9 use 16x12 and frame 8 uses 16x8
  * (the tooth appears thinner when rotated to top/bottom position).
  */
 public class CogObjectInstance extends AbstractObjectInstance
@@ -63,7 +63,7 @@ public class CogObjectInstance extends AbstractObjectInstance
     private static final int PRIORITY = 4;
 
     // Obj70_Positions table (s2.asm lines 54741-54778)
-    // 4 rotation steps × 8 teeth × 3 bytes (x_offset, y_offset, mapping_frame)
+    // 4 rotation steps x 8 teeth x 3 bytes (x_offset, y_offset, mapping_frame)
     // Values are signed bytes for x/y offsets.
     private static final byte[] POSITIONS = {
             // Step 0 (phase offset 0x00)
@@ -183,9 +183,11 @@ public class CogObjectInstance extends AbstractObjectInstance
         }
 
         // ROM Obj70_Main (s2.asm:54662-54665): move.b (Level_frame_counter+1).w,d0;
-        // andi.w #$F,d0; bne loc_286CA. The +1 phase offset means rotation advances when
-        // the global frame counter's low nibble is 0xF, NOT 0x0 — match it exactly.
-        if (((frameCounter + 1) & 0x0F) == 0) {
+        // andi.w #$F,d0; bne loc_286CA. On 68k, +1 reads the low byte of the word
+        // label, so this must sample the level frame counter, not the object update
+        // VBlank argument passed through the engine's object dispatcher.
+        int levelFrameCounter = services().levelManager().getFrameCounter();
+        if ((levelFrameCounter & 0x0F) == 0) {
             advanceRotation();
         }
 
@@ -195,10 +197,10 @@ public class CogObjectInstance extends AbstractObjectInstance
     /**
      * Advances the rotation phase and wraps the position offsets.
      * <p>
-     * CW (normal): phase advances by $18, wraps at $60 → 0.
+     * CW (normal): phase advances by $18, wraps at $60 -> 0.
      * When phase wraps, each tooth's offset advances by 3.
      * <p>
-     * CCW (x_flip): phase decreases by $18, wraps below 0 → $48.
+     * CCW (x_flip): phase decreases by $18, wraps below 0 -> $48.
      * When phase wraps, each tooth's offset decreases by 3.
      * <p>
      * Disassembly: s2.asm lines 54666-54686
@@ -322,9 +324,9 @@ public class CogObjectInstance extends AbstractObjectInstance
         // Verified against obj70.asm (Obj70_MapUnc_28786): all 32 mapping entries point
         // to the same Map_obj70_0040, a single 32x32 spritePiece (tile 0) with hFlip=0,
         // vFlip=0. There are no per-piece flip bits to honor, so drawFrameIndex(...,false,
-        // false) is correct — per-tooth orientation comes entirely from the position table,
+        // false) is correct - per-tooth orientation comes entirely from the position table,
         // not art flips. (Central ObjectManager despawn covers off-screen removal; Obj70
-        // needs no per-object coarse-camera DeleteObject — see s2.asm:54717-54725.)
+        // needs no per-object coarse-camera DeleteObject - see s2.asm:54717-54725.)
         for (int i = 0; i < NUM_TEETH; i++) {
             renderer.drawFrameIndex(toothFrame[i], toothX[i], toothY[i], false, false);
         }

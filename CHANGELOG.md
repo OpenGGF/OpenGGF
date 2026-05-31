@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Cog rotation trace parity.** MTZ Cog Obj70 now
+  gates rotation from the ROM `Level_frame_counter` low byte instead of the
+  engine object-dispatch VBlank argument, matching `move.b
+  (Level_frame_counter+1).w,d0` without a route or frame carve-out. The MTZ3
+  trace frontier moves from the frame-1982 sidekick Cog velocity reversal to a
+  later frame-2031 Cog/platform push ordering mismatch.
+
 - **Advanced Sonic 2 MTZ3 Cog/sidekick push parity.** Multi-piece solid
   objects now run the same object-owned `SolidObject_TestClearPush` cleanup as
   single-piece solids when a prior side contact stops pushing the player. This

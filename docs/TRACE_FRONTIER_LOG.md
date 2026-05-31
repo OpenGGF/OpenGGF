@@ -1,5 +1,25 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj70 frame-counter rotation moves Cog frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 1982 to frame 2031.
+  - New frontier: frame 2031 `x` expected `0x081D`, actual `0x0812`; the
+    engine now gets through the prior sidekick Cog velocity reversal, then
+    diverges during the next Cog/platform push ordering interaction.
+- Findings:
+  - Obj70 uses `move.b (Level_frame_counter+1).w,d0` before masking with
+    `#$F`. On 68k this reads the low byte at `Level_frame_counter+1`; it is not
+    arithmetic `frameCounter + 1`.
+  - The engine object update argument is the dispatcher VBlank counter, so the
+    Cog must sample `LevelManager.getFrameCounter()` to match the ROM rotation
+    gate.
+  - This keeps the fix in Obj70's ROM-state model and does not hydrate from
+    trace data or add MTZ/frame/route-specific compensation.
+
 ## 2026-05-31 - S2 MTZ3 multi-piece push cleanup moves Cog frontier
 
 - Branch: `feature/ai-s2-mtz-parity`
