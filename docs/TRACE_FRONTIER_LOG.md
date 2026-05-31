@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj6B/dead-sidekick wrap frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 3718 to frame 4280.
+  - New frontier: frame 4280 `y` expected `0x03E8`, actual `0x03EC`;
+    Sonic is four pixels low and not on object while the ROM has just latched
+    `Status_OnObj` near monitor/barrier objects after the sidekick dead-fall
+    path now survives the earlier wrap boundary.
+- Findings:
+  - Obj6B stores its initial `x_pos` in `objoff_34` and passes that saved base
+    X to `MarkObjGone2` after movement and `SolidObject`, so the engine's
+    shared out-of-range reference hook must use the base X instead of the
+    moving platform `x_pos`.
+  - S2 `Obj02_Dead` and the S3K Tails dead path run dead-fall movement without
+    applying the normal `Screen_Y_wrap_value` mask. The engine had both a
+    movement-level and SpriteManager frame-level wrap pass, so the same
+    deferred-death predicate now gates both.
+  - No trace state is hydrated, and the remaining frontier points at Sonic
+    landing/contact timing around frame 4280.
+
 ## 2026-05-31 - S2 MTZ3 Obj36 crush-death frontier
 
 - Branch: `feature/ai-s2-mtz-parity`

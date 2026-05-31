@@ -888,6 +888,11 @@ public class SidekickCpuController {
         return deferredDespawnDeadFallContinuingThisFrame;
     }
 
+    public boolean deadFallBypassesScreenYWrapValue() {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        return fs != null && fs.sidekickDeathUsesDeferredDespawn();
+    }
+
     /**
      * S2 can also enter Tails' routine-6 dead fall through generic damage /
      * crush paths that set the sprite's {@code dead} flag without routing the

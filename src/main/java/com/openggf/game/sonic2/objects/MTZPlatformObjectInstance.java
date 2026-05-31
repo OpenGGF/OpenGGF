@@ -121,6 +121,13 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public int getOutOfRangeReferenceX() {
+        // Obj6B_Main passes objoff_34(a0), not moving x_pos(a0), to MarkObjGone2
+        // after the movement and SolidObject calls (s2.asm:53944-53967).
+        return baseX;
+    }
+
+    @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
         return SolidRoutineProfile.fromProvider(this);
     }
