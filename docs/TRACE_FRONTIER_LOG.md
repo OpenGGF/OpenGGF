@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj6B bouncy-platform parity moves frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: `TestSonic2ObjectBugFixes` reports 7 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 1311 to frame 1744.
+  - New frontier: frame 1744 `x` expected `0x0606`, actual `0x0605`; the nearby active object is Obj64 MTZ Twin Stompers at `(0x0620,0x05B8)` in the ROM versus `(0x0620,0x05C8)` in the engine, with a one-pixel camera/player X phase mismatch.
+- Findings:
+  - The frame-1311 mismatch was Obj6B subtype 7, not the type-5 trigger-fall path.
+  - Obj6B type 7 must arm `objoff_38` from the standing bit as soon as the shared solid pass establishes contact, so the following object dispatch runs `ObjectMove` on the ROM schedule.
+  - Obj6B falling/bouncy movement now uses the ROM `y_pos.w:y_sub.w` 16.16 accumulator and preserves `y_sub` across `move.w y_pos` writes.
+
 ## 2026-05-31 - S2 MTZ3 Shellcracker and spin-tube parity moves frontier
 
 - Branch: `feature/ai-s2-mtz-parity`
