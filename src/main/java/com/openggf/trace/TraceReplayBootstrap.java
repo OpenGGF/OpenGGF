@@ -392,16 +392,14 @@ public final class TraceReplayBootstrap {
      * the comparison loop begins or every S2 trace diverges within ~100-200
      * frames from compounded post-title-card object/player state drift.
      *
-     * <p>Tornado routes (SCZ) use {@link #s2TornadoTitleCardPreludeFramesForTraceReplay}
-     * which gates the same prelude on the live ObjB2 routine/subtype; this
-     * method returns 0 for them so the Tornado-specific bootstrap stays the
-     * sole authority for that route. Returns 0 for non-S2 traces, traces
-     * without sidekicks, and legacy traces (lua_script_version &lt; 9.2-s2).
+     * <p>The caller must only use this when the live object manager did not
+     * select a route-specific Tornado object prelude. The metadata-level
+     * {@link #usesS2TornadoRideStartForTraceReplay(TraceData)} predicate is
+     * intentionally broad because the live ObjB2 shape is the real authority;
+     * treating that predicate alone as "Tornado active" suppresses the generic
+     * title-card ticks for normal S2 routes such as MTZ.
      */
     public static int s2GenericObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
-        if (usesS2TornadoRideStartForTraceReplay(trace)) {
-            return 0;
-        }
         return resolveS2TitleCardPreludeFrames(trace);
     }
 

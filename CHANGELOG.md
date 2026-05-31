@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Fixed Sonic 2 trace object-title prelude fallback.** Native Sonic 2
+  trace bootstrap now applies the generic 26 title-card object ticks whenever
+  the live object manager does not select the route-specific Tornado ObjB2
+  prelude, instead of treating the broad Tornado metadata predicate as the
+  authority. This moves the MTZ3 trace frontier from the frame-233 Slicer
+  contact to the later frame-764 Shellcracker/claw platform interaction.
+
 - **Tightened Sonic 2 Slicer player-orientation parity.** MTZ Slicer
   (ObjA1) and its pincer projectile (ObjA2) now route
   `Obj_GetOrientationToPlayer` through the shared native P1/P2 player-query
