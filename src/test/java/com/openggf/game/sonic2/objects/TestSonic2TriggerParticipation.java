@@ -75,6 +75,16 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void barrierSolidBottomBoundsUseLiveRollingRadius() {
+        BarrierObjectInstance barrier = new BarrierObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BARRIER, 1, 0, false, 0),
+                "Barrier");
+
+        assertTrue(barrier.fullSolidBottomOverlapUsesCurrentYRadiusOnly(null),
+                "Obj2D must use S2 SolidObject's live y_radius lower bound");
+    }
+
+    @Test
     void wfzPaletteSwitcherUsesQueryOnlySidekickCrossing() {
         TestablePlayableSprite main = player("sonic", 0x0800, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x0FF0, 0x1000);
