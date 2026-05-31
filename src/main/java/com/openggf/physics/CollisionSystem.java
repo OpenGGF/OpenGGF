@@ -463,6 +463,78 @@ public class CollisionSystem {
     private int getTerrainHeadroomDistance(AbstractPlayableSprite sprite, int hexAngle) {
         int overheadAngle = (hexAngle + 0x80) & 0xFF;
         int quadrant = (overheadAngle + 0x20) & 0xC0;
+        var levelManager = sprite.currentLevelManager();
+        if (levelManager != null && levelManager.getCurrentLevel() != null) {
+            return scanCalcRoomOverHead(sprite, quadrant);
+        }
+
+        return fallbackSensorHeadroomDistance(sprite, quadrant);
+    }
+
+    private int scanCalcRoomOverHead(AbstractPlayableSprite sprite, int quadrant) {
+        CalcRoomOverHeadProbe[] probes = describeCalcRoomOverHeadProbes(sprite, quadrant);
+        if (probes.length == 0) {
+            return Integer.MAX_VALUE;
+        }
+
+        int minDistance = Integer.MAX_VALUE;
+        for (CalcRoomOverHeadProbe probe : probes) {
+            int distance = scanHeadroomProbe(sprite, probe);
+            minDistance = Math.min(minDistance, distance);
+        }
+        return minDistance;
+    }
+
+    static CalcRoomOverHeadProbe[] describeCalcRoomOverHeadProbes(AbstractPlayableSprite sprite, int quadrant) {
+        int xRadius = sprite.getXRadius();
+        int yRadius = sprite.getYRadius();
+
+        return switch (quadrant) {
+            case 0x00 -> new CalcRoomOverHeadProbe[] {
+                    new CalcRoomOverHeadProbe(Direction.DOWN, xRadius, yRadius, 0, 0, sprite.getTopSolidBit()),
+                    new CalcRoomOverHeadProbe(Direction.DOWN, -xRadius, yRadius, 0, 0, sprite.getTopSolidBit())
+            };
+            case 0x40 -> {
+                int probeX = sprite.getCentreX() - yRadius;
+                int xorDelta = (probeX ^ 0x0F) - probeX;
+                yield new CalcRoomOverHeadProbe[] {
+                        new CalcRoomOverHeadProbe(Direction.LEFT, -yRadius, -xRadius, xorDelta, 0, sprite.getLrbSolidBit()),
+                        new CalcRoomOverHeadProbe(Direction.LEFT, -yRadius, xRadius, xorDelta, 0, sprite.getLrbSolidBit())
+                };
+            }
+            case 0x80 -> {
+                int probeY = sprite.getCentreY() - yRadius;
+                int xorDelta = (probeY ^ 0x0F) - probeY;
+                // S1 Sonic_FindCeiling and S2/S3K Sonic_CheckCeiling probe
+                // x_pos +/- x_radius, then eori.w #$F the y coordinate before
+                // calling FindFloor upward. Reusing ordinary ceiling sensors
+                // misses that nibble flip at tile edges.
+                yield new CalcRoomOverHeadProbe[] {
+                        new CalcRoomOverHeadProbe(Direction.UP, xRadius, -yRadius, 0, xorDelta, sprite.getLrbSolidBit()),
+                        new CalcRoomOverHeadProbe(Direction.UP, -xRadius, -yRadius, 0, xorDelta, sprite.getLrbSolidBit())
+                };
+            }
+            case 0xC0 -> new CalcRoomOverHeadProbe[] {
+                    new CalcRoomOverHeadProbe(Direction.RIGHT, yRadius, -xRadius, 0, 0, sprite.getLrbSolidBit()),
+                    new CalcRoomOverHeadProbe(Direction.RIGHT, yRadius, xRadius, 0, 0, sprite.getLrbSolidBit())
+            };
+            default -> new CalcRoomOverHeadProbe[0];
+        };
+    }
+
+    private int scanHeadroomProbe(AbstractPlayableSprite sprite, CalcRoomOverHeadProbe probe) {
+        calcRoomProbe.sprite = sprite;
+        SensorResult result = calcRoomProbe.scanWorld(
+                probe.globalDirection(),
+                (short) probe.worldOffsetX(),
+                (short) probe.worldOffsetY(),
+                (short) probe.dx(),
+                (short) probe.dy(),
+                probe.solidityBit());
+        return result != null ? result.distance() : Integer.MAX_VALUE;
+    }
+
+    private int fallbackSensorHeadroomDistance(AbstractPlayableSprite sprite, int quadrant) {
 
         Sensor[] pushSensors = sprite.getPushSensors();
         Sensor[] sensors = switch (quadrant) {
@@ -1001,6 +1073,14 @@ public class CollisionSystem {
                                        short offsetX,
                                        short offsetY,
                                        short dynamicYOffset) {
+    }
+
+    static record CalcRoomOverHeadProbe(Direction globalDirection,
+                                        int worldOffsetX,
+                                        int worldOffsetY,
+                                        int dx,
+                                        int dy,
+                                        int solidityBit) {
     }
 
 }

@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 jump headroom and vertical wrap move frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit commands:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.tests.physics.CollisionSystemTest#testCalcRoomOverHeadCeilingProbeAppliesRomNibbleFlip" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+  `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s2VerticalWrapMasksYAfterControl,com.openggf.sprites.managers.TestPlayableSpriteMovement#s3kVerticalWrapPreservesYSubpixelLikeRomWordMask" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from the post-Cog jump/headroom
+    mismatch to frame 2362.
+  - New frontier: frame 2362 `tails_y_speed` expected `0x0000`, actual
+    `0x09C8`; Sonic/player state now matches through the prior jump and S2
+    vertical wrap, but Tails misses a wrapped Obj6B platform landing.
+- Findings:
+  - ROM `Sonic_Jump`/`Tails_Jump` call `CalcRoomOverHead` before allowing
+    jumps. The shared headroom gate now performs the same explicit terrain
+    probes using `x_pos`/`y_pos` radii, direction-specific solidity bits, and
+    the ceiling/left-wall `eori #$F` nibble-flip offsets instead of routing
+    through ordinary sensor scans.
+  - S2 masks playable `y_pos` with `$7FF` after control and hurt movement when
+    `Camera_Min_Y_pos == -$100`. The camera wrap helper now applies the active
+    vertical-wrap mask to playable positions independently of the S1/S2 render
+    visibility margin flag.
+  - The remaining frontier is a shared solid-object/sidekick platform-contact
+    issue around MTZ Obj6B under vertical wrap. No trace state is hydrated, and
+    the changes avoid route/frame carve-outs.
+
 ## 2026-05-31 - S2 MTZ3 Obj70 slot order moves ride-exit frontier
 
 - Branch: `feature/ai-s2-mtz-parity`

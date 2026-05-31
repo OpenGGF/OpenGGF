@@ -717,9 +717,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
-	 * Applies the S3K {@code Screen_Y_wrap_value} mask to a playable object's ROM
-	 * {@code y_pos} equivalent when vertical wrapping is active.
+	 * Applies the ROM screen-Y wrap mask to a playable object's {@code y_pos}
+	 * equivalent when vertical wrapping is active.
 	 * <p>ROM references:
+	 * {@code docs/s2disasm/s2.asm:35945-35948} (Sonic control),
+	 * {@code docs/s2disasm/s2.asm:37829-37832} (Sonic hurt),
+	 * {@code docs/s2disasm/s2.asm:40675-40678} (Tails hurt),
 	 * {@code docs/skdisasm/sonic3k.asm:21989-21992} (Sonic),
 	 * {@code docs/skdisasm/sonic3k.asm:25708-25711} (Tails/player display path),
 	 * {@code docs/skdisasm/sonic3k.asm:26233-26236} (Tails control).
@@ -728,10 +731,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public boolean applyScreenYWrapValue(AbstractPlayableSprite sprite) {
 		if (!verticalWrapEnabled || sprite == null) {
-			return false;
-		}
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		if (fs == null || !fs.useScreenYWrapValueForVisibility()) {
 			return false;
 		}
 		short before = sprite.getCentreY();

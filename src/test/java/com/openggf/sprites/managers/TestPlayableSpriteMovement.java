@@ -193,6 +193,25 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void s2VerticalWrapMasksYAfterControl() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic2GameModule());
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                Camera camera = GameServices.camera();
+                camera.setMinY((short) -0x100);
+                camera.setMaxY((short) 0x0800);
+                camera.setVerticalWrapEnabled(true, 0x0800);
+
+                mockSprite.setCentreY((short) 0x0805);
+                mockSprite.setSubpixelRaw(0x9400, 0xC900);
+
+                assertTrue(camera.applyScreenYWrapValue(mockSprite));
+                assertEquals((short) 0x0005, mockSprite.getCentreY(),
+                                "S2 Obj01_Control masks y_pos with $7FF when Camera_Min_Y_pos is -$100");
+                assertEquals(0xC900, mockSprite.getYSubpixelRaw(),
+                                "S2 andi.w #$7FF,y_pos(a0) preserves y_sub");
+        }
+
+        @Test
         public void s3kCameraUpdateWrapPreservesFocusedSpriteYSubpixelLikeRomWordMask() throws Exception {
                 GameModuleRegistry.setCurrent(new Sonic3kGameModule());
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
