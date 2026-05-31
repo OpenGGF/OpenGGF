@@ -7,6 +7,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidRoutineKind;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
@@ -103,10 +104,69 @@ class TestSonic2ObjectBugFixes {
                 longProfile.carriesAirborneRiderAfterExitPlatform());
     }
 
+    @Test
+    void mtzPlatformType5StandingContactPreservesYSubpixelWhenArmingFall() throws Exception {
+        MTZPlatformObjectInstance platform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x0460, 0x04EC, Sonic2ObjectIds.MTZ_PLATFORM, 0x05, 0, false, 0),
+                "MTZPlatform");
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0460, (short) 0x052C);
+        setIntField(platform, "yFixed", (0x04EC << 16) | 0xF000);
+
+        platform.update(0, player);
+        assertEquals(5, intField(platform, "moveType"));
+
+        platform.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+
+        assertEquals(6, intField(platform, "moveType"),
+                "Obj6B must consume the standing bit as soon as the shared solid pass establishes it");
+        assertEquals(platform.getY() << 16 | 0xF000, intField(platform, "yFixed"),
+                "Obj6B type 5 uses move.w y_pos and must preserve y_sub for the following ObjectMove");
+    }
+
+    @Test
+    void mtzPlatformFallingUsesRomSixteenBitSubpixelCarry() throws Exception {
+        MTZPlatformObjectInstance platform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x0460, 0x04EC, Sonic2ObjectIds.MTZ_PLATFORM, 0x06, 0, false, 0),
+                "MTZPlatform");
+        platform.setServices(new StubObjectServices());
+        setIntField(platform, "yFixed", (0x052C << 16) | 0xF000);
+        setIntField(platform, "y", 0x052C);
+        setIntField(platform, "yVel", 0x0010);
+
+        platform.update(0, new TestablePlayableSprite("sonic", (short) 0x0460, (short) 0x052C));
+
+        assertEquals(0x052D, platform.getY(),
+                "ROM loc_27EE2 adds y_vel<<8 to y_pos.w:y_sub.w, so the preserved low word can carry");
+        assertEquals(0x0018, intField(platform, "yVel"));
+    }
+
+    @Test
+    void mtzPlatformBouncyContactArmsBounceBeforeNextDispatch() throws Exception {
+        MTZPlatformObjectInstance platform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x0460, 0x052C, Sonic2ObjectIds.MTZ_PLATFORM, 0x07, 0, false, 0),
+                "MTZPlatform");
+        platform.setServices(new StubObjectServices());
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x0460, (short) 0x050C);
+
+        platform.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+        platform.update(1, player);
+
+        assertEquals(8, intField(platform, "bounceAccel"),
+                "ROM Obj6B type 7 consumes the standing bit before the following ObjectMove dispatch");
+        assertEquals(8, intField(platform, "yVel"),
+                "The first post-contact bouncy dispatch must run ObjectMove with old y_vel then add objoff_38");
+    }
+
     private static int intField(Object target, String fieldName) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.getInt(target);
+    }
+
+    private static void setIntField(Object target, String fieldName, int value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.setInt(target, value);
     }
 
     private static final class ZoneActServices extends StubObjectServices {

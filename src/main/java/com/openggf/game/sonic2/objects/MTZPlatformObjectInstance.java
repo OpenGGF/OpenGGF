@@ -74,7 +74,7 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     private int y;
     private int baseX;      // objoff_34 - Original X position
     private int baseY;      // objoff_30 - Original Y position
-    private int yFixed;     // 16.8 fixed-point Y for falling/bouncing
+    private int yFixed;     // ROM y_pos.w:y_sub.w 16.16 fixed-point Y for falling/bouncing
     private int yVel;       // Y velocity for falling/bouncing
 
     // Subtype configuration
@@ -136,6 +136,16 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (contact.standing() || contact.touchTop()) {
             contactStanding = true;
+            if (moveType == 5) {
+                // ROM Obj6B type 5 tests the object's persisted standing bits.
+                // In this engine those bits are established by the shared solid
+                // contact pass, so consume the transition at the object boundary
+                // that receives the standing signal.
+                moveType = 6;
+            }
+            if (moveType == 7 && bounceAccel == 0) {
+                bounceAccel = 8;
+            }
         }
     }
 
@@ -227,7 +237,7 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         baseY = spawn.y();
         x = baseX;
         y = baseY;
-        yFixed = baseY << 8;
+        yFixed = baseY << 16;
 
         // Movement type from bits 0-3 (clamped to 0-11)
         moveType = spawn.subtype() & 0x0F;
@@ -302,7 +312,7 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         }
 
         x = baseX;
-        y = baseY - oscValue;
+        setYWordPreserveSubpixel(baseY - oscValue);
     }
 
     /**
@@ -310,12 +320,11 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
      */
     private void applyTriggerFall(boolean standing) {
         int oscValue = OscillationManager.getByte(0) & 0xFF;
-        y = baseY + (oscValue >> 1);
+        setYWordPreserveSubpixel(baseY + (oscValue >> 1));
         x = baseX;
 
         if (standing) {
             moveType = 6;
-            yFixed = y << 8;
         }
     }
 
@@ -323,9 +332,9 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
      * Movement type 6: Falling platform.
      */
     private void applyFalling() {
-        yFixed += yVel;
-        y = yFixed >> 8;
-        yVel += 8;
+        yFixed += ((int) (short) yVel) << 8;
+        y = yFixed >> 16;
+        yVel = (short) (yVel + 8);
         x = baseX;
 
         Camera camera = services().camera();
@@ -334,7 +343,7 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         // ROM loc_27EE2 (s2.asm:54057-54061): when y_pos passes Camera_Max_Y + screen_height
         // (224), set subtype=0 (immobile) and STOP — the platform keeps falling out of view.
         // Do NOT reset y_pos or recycle the platform (the old moveType=5 + y reset was wrong).
-        if (y > maxY) {
+        if ((y & 0xFFFF) > (maxY & 0xFFFF)) {
             moveType = 0;
         }
     }
@@ -352,20 +361,18 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        yFixed += yVel;
-        y = (yFixed >> 8) & 0x7FF;
+        yFixed += ((int) (short) yVel) << 8;
+        setYWordPreserveSubpixel((yFixed >> 16) & 0x7FF);
 
-        if (yVel == 0x2A8) {
+        if (((short) yVel) == 0x2A8) {
             bounceAccel = -bounceAccel;
         }
 
-        yVel += bounceAccel;
+        yVel = (short) (yVel + bounceAccel);
 
-        if (yVel == 0) {
+        if (((short) yVel) == 0) {
             moveType = 0;
             bounceAccel = 0;
-            y = baseY;
-            yFixed = baseY << 8;
         }
     }
 
@@ -409,6 +416,11 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
                 y = baseY - radius + d0;
             }
         }
+    }
+
+    private void setYWordPreserveSubpixel(int value) {
+        y = value & 0xFFFF;
+        yFixed = ((value & 0xFFFF) << 16) | (yFixed & 0xFFFF);
     }
 
     @Override

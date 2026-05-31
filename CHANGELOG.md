@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Obj6B platform trace parity.** MTZ Platform Obj6B
+  now uses the ROM `y_pos.w:y_sub.w` 16.16 accumulator for falling and bouncy
+  movement, preserves `y_sub` across word-only Y writes, and arms subtype-7
+  bounce acceleration from the shared solid standing signal before the next
+  `ObjectMove` dispatch. Focused Obj6B regression coverage passes; the MTZ3
+  trace frontier moves from the frame-1311 platform/camera Y lag to a later
+  frame-1744 Twin Stompers/player X mismatch.
+
 - **Advanced Sonic 2 MTZ3 object trace parity.** Shellcracker claw ObjA0 now
   defers its first active tick until the frame after ROM-style child-slot init,
   and MTZ Spin Tube Obj67 now preserves native playable subpixels on word
