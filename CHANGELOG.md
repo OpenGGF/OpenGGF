@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Obj74/Obj69 lower-bound trace parity.**
+  MTZ Invisible Block Obj74 and Nut Obj69 now use S2 `SolidObject_cont`'s
+  live-`y_radius(a1)` lower overlap bound, preventing rolling-air players from
+  hitting false side contacts below these solids. Obj74 also opts into the
+  `SolidObject_Always` stale airborne standing-bit no-contact path. Focused
+  Obj74/Obj69 coverage passes; the MTZ3 trace frontier moves from frame 5143
+  to a later frame-5180 Obj37/hurt/camera mismatch.
+
 - **Advanced Sonic 2 MTZ3 Obj69 nut trace parity.**
   MTZ Nut Obj69 now mirrors the ROM's native `move.w x_pos(a0),x_pos(a1)`
   writes by preserving the player's `x_sub` byte when snapping Sonic to the

@@ -110,6 +110,17 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void nutSolidBottomBoundsUseLiveRollingRadius() {
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x13C0, 0x064C, Sonic2ObjectIds.NUT, 0x15, 0, false, 0),
+                "Nut");
+
+        assertTrue(nut.fullSolidBottomOverlapUsesCurrentYRadiusOnly(null),
+                "Obj69 SolidObject tail doubles live y_radius(a1), so rolling lower-half contact "
+                        + "must not use stand radius");
+    }
+
+    @Test
     void wfzPaletteSwitcherUsesQueryOnlySidekickCrossing() {
         TestablePlayableSprite main = player("sonic", 0x0800, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x0FF0, 0x1000);

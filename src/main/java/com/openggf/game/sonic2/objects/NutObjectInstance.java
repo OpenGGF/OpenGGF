@@ -165,6 +165,15 @@ public class NutObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
+        // Obj69 tail-calls the shared S2 SolidObject helper with d1=$2B,
+        // d2=$C, d3=$D (docs/s2disasm/s2.asm:53532-53539). SolidObject_cont
+        // builds both vertical reject halves from live y_radius(a1)
+        // (docs/s2disasm/s2.asm:35156-35169).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
