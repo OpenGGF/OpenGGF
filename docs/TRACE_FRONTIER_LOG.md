@@ -1,5 +1,34 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj70 riding snap moves Cog frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed clean test "-Dtest=com.openggf.level.objects.TestSolidObjectManager#multiPieceRiderCarryDoesNotReapplyNewLandingSnapOnSamePiece,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzCogRotationUsesRomVisibleLevelFrameCounter" -DfailIfNoTests=false`
+  - PASS: 2 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2031 to frame 2032.
+  - New frontier: frame 2032 `tails_g_speed` expected `0x000C`, actual
+    `0x0000`; the frame-2031 Cog X/Y contact now matches, and the remaining
+    mismatch is sidekick push/ground-speed state after the continued Cog ride.
+- Findings:
+  - The ROM Obj70 source reads `move.b (Level_frame_counter+1).w,d0`. On 68k,
+    `+1` selects the low byte of the word label, but `LevelManager` exposes the
+    previous completed level frame until its late-frame `update()`, after
+    object dispatch. Obj70 therefore needs the next engine-visible counter to
+    match the ROM-visible low byte during object execution.
+  - ROM Obj70 represents each cog tooth as a separate object slot. During a
+    continued ride, the currently ridden slot takes the standing-bit branch,
+    calls `MvSonicOnPtfm`, and returns before `SolidObject_Landed`.
+  - The engine's aggregated `MultiPieceSolidProvider` path was carrying the
+    rider and then processing the same piece again as a new landing, applying
+    the extra `subq #1` snap. The shared solid path now skips the already
+    handled riding piece and still checks sibling pieces.
+  - This stays in object/runtime state: no trace hydration, no route/frame
+    carve-out, and no MTZ-specific framework branch.
+
 ## 2026-05-31 - S2 MTZ3 Obj70 frame-counter rotation moves Cog frontier
 
 - Branch: `feature/ai-s2-mtz-parity`

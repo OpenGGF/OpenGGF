@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Cog riding trace parity.** MTZ Cog Obj70 now
+  samples the ROM-visible level-frame low byte despite the engine storing the
+  previous completed level frame until late-frame update, and the shared
+  multi-piece solid path now skips the already handled riding piece instead of
+  reapplying `SolidObject_Landed` after `MvSonicOnPtfm`. Focused Obj70 and
+  solid-object coverage passes; the MTZ3 trace frontier moves from the
+  frame-2031 Cog/platform X/Y mismatch to a later frame-2032 sidekick ground
+  speed mismatch.
+
 - **Advanced Sonic 2 MTZ3 Cog rotation trace parity.** MTZ Cog Obj70 now
   gates rotation from the ROM `Level_frame_counter` low byte instead of the
   engine object-dispatch VBlank argument, matching `move.b
