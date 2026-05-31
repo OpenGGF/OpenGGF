@@ -7,6 +7,7 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidRoutineKind;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -82,6 +84,37 @@ class TestSonic2ObjectBugFixes {
                 "MTZ Act 3 subtype-5 conveyor must stop at the first MTZ3 stop point");
         assertEquals(0x1CC0, platform.getX(),
                 "Regression setup should land exactly on the first MTZ3 stop point");
+    }
+
+    @Test
+    void mtzLongPlatformProximityChecksNativeSidekick() throws Exception {
+        MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x0AA0, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x13, 0, false, 0x076C));
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0A40, (short) 0x076E);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0x0A85, (short) 0x076E);
+        tails.setCpuControlled(true);
+        platform.setServices(new StubObjectServices().withPlayerQuery(
+                new ObjectPlayerQuery(() -> sonic, () -> List.of(tails))));
+        setIntField(platform, "currentDist", 0x40);
+        setIntField(platform, "x", 0x0A60);
+
+        platform.update(0, sonic);
+
+        assertEquals(0x40, intField(platform, "currentDist"),
+                "Obj65 loc_26D94 checks Sidekick after MainCharacter before retracting");
+        assertEquals(0x0A60, platform.getX(),
+                "A native P2/Tails inside the proximity box must keep the fully extended platform stationary");
+    }
+
+    @Test
+    void mtzLongPlatformLandingWidthUsesRomWidthPixels() {
+        MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x0B20, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x13, 1, false, 0x276C));
+
+        assertEquals(0x25, platform.getSolidParams().halfWidth(),
+                "Obj65 passes width_pixels+$5 to SolidObject");
+        assertEquals(0x20, platform.getTopLandingHalfWidth(null, platform.getSolidParams().halfWidth()),
+                "SolidObject_Landed re-reads Obj65 width_pixels, not the common width_pixels+$B default");
     }
 
     @Test

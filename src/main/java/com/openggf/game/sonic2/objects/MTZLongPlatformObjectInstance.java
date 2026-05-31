@@ -11,6 +11,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
@@ -21,6 +22,7 @@ import com.openggf.level.render.SpritePieceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.util.LazyMappingHolder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -81,6 +83,8 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
 
     // Proximity detection speed: addi.w #$10,objoff_3A(a0) / subi.w #$10
     private static final int PROXIMITY_SPEED = 0x10;
+    private static final ObjectPlayerParticipationPolicy PROXIMITY_PARTICIPANTS =
+            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
     // Proximity detection offsets when NOT x-flipped (s2.asm lines 52606-52607)
     private static final int PROX_LEFT_NORMAL = -0x20;
@@ -154,6 +158,13 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         // From s2.asm lines 52457-52463: d1=width+5, d2=y_radius, d3=y_radius+1
         int halfWidth = widthPixels + 5;
         return new SolidObjectParams(halfWidth, yRadius, yRadius + 1);
+    }
+
+    @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // SolidObject_Landed re-reads width_pixels(a0). Obj65 is unusual because
+        // Obj65_Main passes width_pixels+$5 into SolidObject, not width_pixels+$B.
+        return widthPixels;
     }
 
     @Override
@@ -522,11 +533,17 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         int top = y + PROX_TOP;
         int bottom = y + PROX_BOTTOM;
 
-        // Check if any player is in the detection zone
-        int playerX = player.getCentreX();
-        int playerY = player.getCentreY();
-        boolean playerInZone = playerX >= left && playerX < right
-                && playerY >= top && playerY < bottom;
+        // Obj65 loc_26D94 checks MainCharacter and Sidekick in sequence before deciding
+        // whether to extend/retract, so a native P2/Tails presence keeps the platform armed.
+        boolean playerInZone = false;
+        for (PlayableEntity participant : proximityParticipants(player)) {
+            if (participant instanceof AbstractPlayableSprite candidate
+                    && candidate.getCentreX() >= left && candidate.getCentreX() < right
+                    && candidate.getCentreY() >= top && candidate.getCentreY() < bottom) {
+                playerInZone = true;
+                break;
+            }
+        }
 
         if (playerInZone) {
             // Extend (s2.asm lines 52647-52651)
@@ -552,6 +569,17 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
             d0 = -d0 + 0x40;
         }
         x = baseX - d0;
+    }
+
+    private List<PlayableEntity> proximityParticipants(AbstractPlayableSprite updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PROXIMITY_PARTICIPANTS);
+        if (updatePlayer == null || participants.contains(updatePlayer)) {
+            return participants;
+        }
+        ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+        withUpdatePlayer.add(updatePlayer);
+        withUpdatePlayer.addAll(participants);
+        return withUpdatePlayer;
     }
 
     /**
