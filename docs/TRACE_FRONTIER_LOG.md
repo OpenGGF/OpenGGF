@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj70 inclusive right edge moves frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Diagnostic trace regeneration:
+  `powershell -NoProfile -ExecutionPolicy Bypass -File tools\bizhawk\record_s2_level_select_traces.ps1 -RomPath "C:\Users\farre\IdeaProjects\sonic-engine\Sonic The Hedgehog 2 (W) (REV01) [!].gen" -MoviesDir "C:\Users\farre\IdeaProjects\sonic-engine\docs\BizHawk-2.11-win-x64\Movies" -Only mtz3`
+  - PASS: regenerated `src/test/resources/traces/s2/mtz3` with recorder
+    `9.8-s2` and diagnostic per-frame Tails CPU state.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2032 to frame 2111.
+  - New frontier: frame 2111 `air` expected `1`, actual `0`; the engine now
+    matches the prior frame-2032 sidekick ground-speed state and reaches a
+    later Cog ride-exit mismatch.
+- Findings:
+  - Regenerated ROM CPU diagnostics show that frame 2032 Tails sees delayed
+    Sonic status `0x20` (`Status_Push`) and writes right input via
+    `Ctrl_2_Held_Logical=0x08`, which produces the expected
+    `tails_g_speed=0x000C`.
+  - The remaining engine mismatch was not a sidekick CPU shortcut. ROM
+    `SolidObject_cont` uses `bhi.w SolidObject_TestClearPush` after comparing
+    `relX` with `width*2`, so the right edge is inclusive for new contact.
+  - Obj70 now advertises that ROM edge rule through the existing solid-provider
+    hook. This stays object/data driven and does not hydrate state from trace
+    diagnostics or add route/frame carve-outs.
+
 ## 2026-05-31 - S2 MTZ3 Obj70 riding snap moves Cog frontier
 
 - Branch: `feature/ai-s2-mtz-parity`

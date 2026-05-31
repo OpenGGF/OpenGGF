@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Cog edge-contact trace parity.** MTZ Cog Obj70
+  now preserves the ROM `SolidObject_cont` right-edge contact rule, accepting
+  `relX == width*2` and only rejecting values beyond that edge. The S2 trace
+  recorder also emits diagnostic per-frame Tails CPU state for sidekick
+  investigations. The MTZ3 trace frontier moves from the frame-2032 sidekick
+  ground-speed mismatch to a later frame-2111 Cog ride-exit mismatch.
+
 - **Advanced Sonic 2 MTZ3 Cog riding trace parity.** MTZ Cog Obj70 now
   samples the ROM-visible level-frame low byte despite the engine storing the
   previous completed level frame until late-frame update, and the shared
