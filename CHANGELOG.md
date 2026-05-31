@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Cog slot-order trace parity.** MTZ Cog Obj70 now
+  advertises its ROM multi-slot solid ordering through the shared multi-piece
+  solid framework, letting earlier teeth side-push Sonic before the currently
+  ridden tooth runs its continued-riding exit check. The MTZ3 trace frontier
+  moves from the frame-2111 Cog ride-exit mismatch to a later frame-2152
+  movement-lock speed mismatch.
+
 - **Advanced Sonic 2 MTZ3 Cog edge-contact trace parity.** MTZ Cog Obj70
   now preserves the ROM `SolidObject_cont` right-edge contact rule, accepting
   `relX == width*2` and only rejecting values beyond that edge. The S2 trace

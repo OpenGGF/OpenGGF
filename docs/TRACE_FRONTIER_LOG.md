@@ -1,5 +1,29 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj70 slot order moves ride-exit frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2111 to frame 2152.
+  - New frontier: frame 2152 `y_speed` expected `0x0002`, actual `0x0000`;
+    the player position/status/angle now match through the prior Cog ride exit,
+    but the engine still carries a movement lock while the ROM has resumed
+    walking speed.
+- Findings:
+  - ROM Obj70 creates one SST slot per tooth and each tooth calls
+    `SolidObject` in allocation order. At frame 2111, an earlier tooth slot can
+    side-push Sonic before the later ridden tooth's standing-bit branch runs
+    its `ExitPlatform` bounds check.
+  - The engine represents Obj70 as one aggregate multi-piece object, so the
+    shared multi-piece solid path now exposes an opt-in ordering hook for
+    ROM-slot aggregate objects. Obj70 uses that hook to resolve earlier pieces
+    before the currently ridden piece and then continues processing later
+    sibling pieces.
+  - This keeps the fix in object/runtime state and avoids trace hydration,
+    route/frame carve-outs, or MTZ-specific branches in the shared solid path.
+
 ## 2026-05-31 - S2 MTZ3 Obj70 inclusive right edge moves frontier
 
 - Branch: `feature/ai-s2-mtz-parity`
