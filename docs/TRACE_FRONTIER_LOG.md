@@ -6650,3 +6650,38 @@ Stompers contact mismatch is cleared. The new owner is later sidekick
 interaction near the MTZ cog cluster (`Obj70` around `@0800,0680` and
 neighboring cog children); main player state and camera match at the first
 error.
+
+## 2026-06-01 - S2 MTZ3 VBlank diagnostic split and Obj6C landing parity (MTZ3 f5180 -> f6477)
+
+- Worktree: `feature/ai-s2-mtz-parity`.
+- Focused guards:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.TestTraceExecutionModel#s2VblankSplitUsesFollowingVisualDiagnosticsOnly" test -DfailIfNoTests=false`
+  - PASS: 1 test, 0 failures.
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzConveyorUsesPlatformObjectD3ForLandingSnap" test -DfailIfNoTests=false`
+  - PASS: 1 test, 0 failures.
+- MTZ3 replay:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: advanced from frame 5180
+    `camera_x expected=0x12FE actual=0x12FF` to frame 6477
+    `x_speed expected=0x0200 actual=0x020E`.
+  - New count: 911 errors / 0 warnings.
+
+### Root Cause
+
+The S1/S2 Lua recorder can emit a full gameplay row immediately followed by a
+VBlank-only row with the same gameplay counter and unchanged gameplay state.
+Headless replay observes the VBlank-updated camera/ring diagnostics with the
+gameplay step, so the comparator now merges only those visual diagnostics from
+the following VBlank row for comparison. Separately, MTZ Conveyor Obj6C passes
+`d3=8` directly to the ROM `PlatformObject` helper; the engine's `+1`
+ground-half-height adjustment snapped Sonic one pixel too high during the
+frame-6067 landing window.
+
+### New MTZ3 Frontier (frame 6477)
+
+`x_speed mismatch (expected=0200, actual=020E)`. The prior frame-5180
+camera-diagnostic artifact and frame-6067 Obj6C landing mismatch are cleared.
+The new owner is the Slicer pincer hurt-contact window: ROM has Sonic entering
+routine 4 with rings lost near ObjA1/ObjA2 at `@1718,0348` / `@16D8,0321`,
+while the engine misses the pincer contact and remains in normal gameplay
+routine with seven rings.

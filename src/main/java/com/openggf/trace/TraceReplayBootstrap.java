@@ -518,6 +518,42 @@ public final class TraceReplayBootstrap {
         return phase == TraceExecutionPhase.FULL_LEVEL_FRAME;
     }
 
+    /**
+     * Returns the frame values that should be compared after a replay step.
+     *
+     * <p>S1/S2 traces are sampled by Lua once per emulator frame, while the ROM
+     * can expose a full Level_MainLoop row followed by a VBlank-only row with
+     * the same gameplay counter and unchanged player state. In that split, the
+     * first row owns gameplay state and the following row owns VBlank-updated
+     * diagnostics such as camera position and ring count. The engine's
+     * headless step presents those VBlank diagnostics together with the
+     * gameplay step, so compare gameplay fields from {@code current} and
+     * visual diagnostics from the immediately following VBlank-only row.
+     */
+    public static TraceFrame frameForGameplayComparison(TraceData trace,
+                                                        int currentIndex,
+                                                        TraceFrame previous,
+                                                        TraceFrame current,
+                                                        TraceExecutionPhase currentPhase) {
+        if (trace == null || current == null
+                || currentPhase != TraceExecutionPhase.FULL_LEVEL_FRAME
+                || currentIndex + 1 >= trace.frameCount()) {
+            return current;
+        }
+
+        TraceFrame next = trace.getFrame(currentIndex + 1);
+        TraceExecutionPhase nextPhase = phaseForReplay(trace, current, next);
+        if (nextPhase != TraceExecutionPhase.VBLANK_ONLY
+                || !current.stateEquals(next)
+                || current.gameplayFrameCounter() != next.gameplayFrameCounter()
+                || current.cameraX() < 0 || current.cameraY() < 0
+                || next.cameraX() < 0 || next.cameraY() < 0) {
+            return current;
+        }
+
+        return current.withVisualDiagnosticsFrom(next);
+    }
+
     private static void recordSeedFrameInputHistory(AbstractPlayableSprite sprite, int inputMask) {
         if (sprite == null) {
             return;
