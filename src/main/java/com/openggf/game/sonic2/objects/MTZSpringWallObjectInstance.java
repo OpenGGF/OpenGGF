@@ -84,6 +84,13 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj66 calls the solid routines before its explicit coarse-X DeleteObject
+        // tail, so it must not be skipped by the engine's shared offscreen gate.
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return true;

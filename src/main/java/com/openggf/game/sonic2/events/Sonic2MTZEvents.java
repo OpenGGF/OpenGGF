@@ -93,13 +93,8 @@ public class Sonic2MTZEvents extends Sonic2ZoneEvents {
                     //   cmpi.w #$400,(Camera_Y_pos).w / blo.s +
                     //   move.w #$400,(Camera_Min_Y_pos).w
                     //   move.w #$400,(Tails_Min_Y_pos).w
-                    // ROM writes BOTH the camera floor and Tails_Min_Y_pos. The engine's
-                    // setSidekickBounds(minX,maxX,maxY) maps its 3rd arg to Tails_MAX_Y_pos
-                    // (see Sonic2ZoneEventHandler) and exposes no Tails_Min_Y_pos setter, so
-                    // we set only the camera floor here. Do NOT call setSidekickBounds(...,0x400)
-                    // for this routine: that would clamp Tails_MAX_Y (wrong bound), not the
-                    // Tails_Min_Y floor the ROM intends. Tails min-Y floor parity is a known gap.
                     camera().setMinY((short) 0x400);
+                    setSidekickBounds(null, null, 0x400, null);
                 }
                 // ROM: addq.b #1,(Boss_spawn_delay).w
                 //      cmpi.b #$5A,(Boss_spawn_delay).w / blo.s ++

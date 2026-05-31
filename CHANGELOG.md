@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Tightened Sonic 2 Metropolis Zone parity bookkeeping.** MTZ dynamic boss
+  objects (Obj53/Obj54) are now marked implemented in the S2 object discovery
+  profile, Obj66 spring walls bypass the shared offscreen solid gate like their
+  ROM routine, and MTZ3 routine 6 preserves the ROM write to `Tails_Min_Y_pos`
+  in sidekick rewind state without feeding that write-only value into movement.
+  The MTZ trace frontier log now records the remaining Slicer, conveyor, and
+  sidekick gaps separately from implemented object/boss coverage.
+
 - **Sonic 2 Metropolis Zone object/badnik/boss parity pass.** Closed disassembly-verified gaps across the MTZ slice: the Shellcracker claw (ObjA0) gained its enemy touch hitbox ($9A); the MTZ boss (Obj54) now spawns its laser projectile (Obj54_Laser subtype 4) and its shield orbs (Obj53) detach, bounce, and burst on hits with ROM-accurate break-away physics; Obj65/6A/6B/6E/70 platforms render from their real Kosinski level-art mappings on the correct palette line instead of a CPZ stair-block substitute; the cog uses its own mappings (0x26F04); Spin Tube (Obj67) and Nut (Obj69) drive both the main character and sidekick; Twin Stompers (Obj64) use the ROM coarse-X despawn window; Lava Bubble (Obj71) ping-pongs its animation via SWITCH; child spawns route through `spawnChild`; and the MTZ background scroll tracks through `BackgroundCamera`. MTZ3 boss-arena events match `LevEvents_MTZ3` (unconditional min-X follow in routine 5). Pre-existing MTZ trace frontiers (sidekick CPU / platform sub-pixel carry) are unchanged by this work.
 
 - **Completed Sonic 2 Wing Fortress Zone parity.** WFZ now has ROM-backed
