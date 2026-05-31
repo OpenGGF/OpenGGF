@@ -184,10 +184,10 @@ public class CogObjectInstance extends AbstractObjectInstance
 
         // ROM Obj70_Main (s2.asm:54662-54665): move.b (Level_frame_counter+1).w,d0;
         // andi.w #$F,d0; bne loc_286CA. On 68k, +1 reads the low byte of the word
-        // label, so this must sample the level frame counter, not the object update
-        // VBlank argument passed through the engine's object dispatcher.
+        // label. LevelManager stores the previous completed frame until its late-frame
+        // update(), so object code must use the next visible level counter here.
         int levelFrameCounter = services().levelManager().getFrameCounter();
-        if ((levelFrameCounter & 0x0F) == 0) {
+        if (((levelFrameCounter + 1) & 0x0F) == 0) {
             advanceRotation();
         }
 

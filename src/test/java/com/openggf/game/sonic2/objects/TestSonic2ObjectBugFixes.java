@@ -5,6 +5,7 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidContact;
@@ -174,6 +175,30 @@ class TestSonic2ObjectBugFixes {
         assertEquals(0x05B0, stomper.getY(),
                 "The following Obj64_Main dispatch continues the ROM 8 px/tick extension cadence");
         assertEquals(0x10, intField(stomper, "extension"));
+    }
+
+    @Test
+    void mtzCogRotationUsesRomVisibleLevelFrameCounter() {
+        LevelManager levelManager = mock(LevelManager.class);
+        CogObjectInstance cog = new CogObjectInstance(
+                new ObjectSpawn(0x0800, 0x0680, Sonic2ObjectIds.COG, 0x00, 0, false, 0),
+                "Cog");
+        cog.setServices(new StubObjectServices() {
+            @Override
+            public LevelManager levelManager() {
+                return levelManager;
+            }
+        });
+
+        when(levelManager.getFrameCounter()).thenReturn(0x07EE);
+        cog.update(0x6CC1, new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0600));
+        assertEquals(0x0800, cog.getPieceX(0),
+                "Stored LevelManager frame $07EE corresponds to ROM-visible $07EF, so Obj70 must not rotate yet");
+
+        when(levelManager.getFrameCounter()).thenReturn(0x07EF);
+        cog.update(0x6CC2, new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0600));
+        assertEquals(0x080D, cog.getPieceX(0),
+                "ROM-visible Level_frame_counter $07F0 advances Obj70 to the next tooth phase");
     }
 
     private static int intField(Object target, String fieldName) throws Exception {

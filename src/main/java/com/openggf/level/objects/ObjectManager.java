@@ -6437,8 +6437,11 @@ public class ObjectManager {
                 return null;
             }
 
+            SolidContact ridingContact = null;
+            int alreadyHandledRidingPieceIndex = -1;
             if (instance == ridingObject) {
-                SolidContact ridingContact = processInlineRidingObject(
+                alreadyHandledRidingPieceIndex = ridingPieceIndex;
+                ridingContact = processInlineRidingObject(
                         player, instance, provider, ridingX, ridingY, ridingPieceIndex);
                 if (!(provider instanceof MultiPieceSolidProvider)) {
                     return ridingContact;
@@ -6468,7 +6471,8 @@ public class ObjectManager {
 
             if (provider instanceof MultiPieceSolidProvider multiPiece) {
                 MultiPieceContactResult result = processMultiPieceCollision(
-                        player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
+                        player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer(),
+                        alreadyHandledRidingPieceIndex);
                 if (result.pushing()) {
                     player.setPushing(true);
                     setObjectPushingBit(player, instance);
@@ -6484,7 +6488,7 @@ public class ObjectManager {
                     clearGroundWallSuppressionForNormalSolidSupport(player, instance);
                     inlineSupportedPlayers.add(player);
                 }
-                return result.aggregateContact();
+                return combineSolidContacts(ridingContact, result.aggregateContact());
             }
 
             SolidObjectParams params = provider.getSolidParams();
@@ -7292,8 +7296,10 @@ public class ObjectManager {
                 }
 
                 if (provider instanceof MultiPieceSolidProvider multiPiece) {
+                    int alreadyHandledPieceIndex = instance == ridingMaintained ? ridingPieceIndex : -1;
                     MultiPieceContactResult result = processMultiPieceCollision(
-                            player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
+                            player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer(),
+                            alreadyHandledPieceIndex);
                     if (result.pushing()) {
                         player.setPushing(true);
                         // ROM: s2.asm:35220-35226 — also set pushing bit on the object
@@ -7311,8 +7317,11 @@ public class ObjectManager {
                         nextRidingY = result.ridingY();
                         nextRidingPieceIndex = result.pieceIndex();
                     }
-                    if (result.aggregateContact() != null && instance instanceof SolidObjectListener listener) {
-                        listener.onSolidContact(player, result.aggregateContact(), frameCounter);
+                    SolidContact combinedContact = combineSolidContacts(
+                            instance == ridingMaintained ? SolidContact.STANDING : null,
+                            result.aggregateContact());
+                    if (combinedContact != null && instance instanceof SolidObjectListener listener) {
+                        listener.onSolidContact(player, combinedContact, frameCounter);
                     }
                     continue;
                 }
@@ -7426,7 +7435,7 @@ public class ObjectManager {
 
         private MultiPieceContactResult processMultiPieceCollision(PlayableEntity player,
                 MultiPieceSolidProvider multiPiece, ObjectInstance instance, int frameCounter,
-                boolean useStickyBuffer) {
+                boolean useStickyBuffer, int alreadyHandledRidingPieceIndex) {
             int pieceCount = multiPiece.getPieceCount();
 
             boolean anyStanding = false;
@@ -7441,6 +7450,9 @@ public class ObjectManager {
             SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
 
             for (int i = 0; i < pieceCount; i++) {
+                if (i == alreadyHandledRidingPieceIndex) {
+                    continue;
+                }
                 SolidObjectParams params = multiPiece.getPieceParams(i);
                 int pieceX = multiPiece.getPieceX(i);
                 int pieceY = multiPiece.getPieceY(i);
@@ -7495,6 +7507,24 @@ public class ObjectManager {
             return new MultiPieceContactResult(
                     anyStanding, anyPushing, standingPieceX, standingPieceY,
                     standingPieceIndex, aggregateContact);
+        }
+
+        private SolidContact combineSolidContacts(SolidContact first, SolidContact second) {
+            if (first == null) {
+                return second;
+            }
+            if (second == null) {
+                return first;
+            }
+            boolean secondSide = second.touchSide();
+            return new SolidContact(
+                    first.standing() || second.standing(),
+                    first.touchSide() || second.touchSide(),
+                    first.touchBottom() || second.touchBottom(),
+                    first.touchTop() || second.touchTop(),
+                    first.pushing() || second.pushing(),
+                    secondSide ? second.sideDistX() : first.sideDistX(),
+                    secondSide ? second.movingInto() : first.movingInto());
         }
 
         /**
