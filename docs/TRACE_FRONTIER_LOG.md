@@ -6225,3 +6225,33 @@ launch mismatch is cleared. The new owner is still CNZ2 balloon phase/touch
 timing around the `@1308,05E8` / `@12F8,0645` balloon cluster; engine is now
 touching/popping the `@1308,05E8` balloon at f22036 while ROM has already
 observed one gravity step after the corresponding launch.
+
+## 2026-05-31 - S2 MTZ3 Twin Stompers phase parity (MTZ3 f1744 -> f1979)
+
+- Worktree: `feature/ai-s2-mtz-parity`.
+- Focused guard:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: `TestSonic2ObjectBugFixes` reports 8 tests, 0 failures.
+- MTZ3 replay:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: advanced from frame 1744
+    `x expected=0x0606 actual=0x0605` with Obj64 at `@0620,05C8`
+    while ROM had `@0620,05B8`, to frame 1979
+    `tails_x_speed expected=-0022 actual=-0085`.
+
+### Root Cause
+
+Obj64 movement itself matched the ROM routine (`objoff_3A` changes by 8,
+`objoff_36` waits at `$5A`, and `x_flip` selects the inverted offset), but the
+engine instance entered the first player/object contact window two Obj64 main
+ticks behind the ROM. Priming those two mode-1 ticks during construction keeps
+the piston at the ROM surface height before the frame-1744 contact without
+feeding trace state back into the object.
+
+### New MTZ3 Frontier (frame 1979)
+
+`tails_x_speed mismatch (expected=-0022, actual=-0085)`. The prior Twin
+Stompers contact mismatch is cleared. The new owner is later sidekick
+interaction near the MTZ cog cluster (`Obj70` around `@0800,0680` and
+neighboring cog children); main player state and camera match at the first
+error.

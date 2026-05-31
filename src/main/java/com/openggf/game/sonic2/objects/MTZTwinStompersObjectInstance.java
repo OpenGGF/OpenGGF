@@ -119,7 +119,6 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
     private boolean extending;         // objoff_38: false=retracting, true=extending
     private int extension;             // objoff_3A: current extension amount (0 to maxTravel)
     private int timer;                 // objoff_36: countdown timer
-
     public MTZTwinStompersObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
 
@@ -159,6 +158,15 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
         extending = false;
         extension = 0;
         timer = 0;
+
+        if (moveMode == 1) {
+            // S2 placement materializes new objects between slot-loop passes.
+            // Prime the two Obj64_Main ticks that the ROM has consumed before
+            // this moving solid first participates in the following frame's
+            // player/object contact window.
+            updateStomperMovement();
+            updateStomperMovement();
+        }
 
         updateDynamicSpawn(baseX, currentY);
     }
@@ -290,6 +298,17 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
             d0 = -d0 + FLIP_OFFSET;
         }
         currentY = baseY + d0;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("ext=%02X max=%02X timer=%04X dir=%d flip=%d base=%04X",
+                extension & 0xFFFF,
+                maxTravel & 0xFFFF,
+                timer & 0xFFFF,
+                extending ? 1 : 0,
+                xFlip ? 1 : 0,
+                baseY & 0xFFFF);
     }
 
     @Override
