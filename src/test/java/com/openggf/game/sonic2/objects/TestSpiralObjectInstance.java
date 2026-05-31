@@ -9,6 +9,7 @@ import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -203,6 +204,55 @@ class TestSpiralObjectInstance {
                 "AnglePos support should honor active non-solid controller latches");
     }
 
+    @Test
+    void mtzCylinderCaptureUsesRomOverlapSnap() {
+        SpiralObjectInstance cylinder = newCylinder();
+        TestablePlayableSprite sonic = playerAt("sonic", 0x0B82, 0x03EC);
+        sonic.setAir(false);
+        sonic.setOnObject(false);
+        sonic.setXSpeed((short) 0x0599);
+        sonic.setYSpeed((short) 0x0123);
+        sonic.setGSpeed((short) 0);
+
+        cylinder.update(4280, sonic);
+
+        assertTrue(sonic.isOnObject(), "Obj06_Cylinder should latch Sonic via RideObject_SetRide");
+        assertFalse(sonic.getAir(), "Obj06_Cylinder capture keeps Sonic grounded");
+        assertEquals(0x03E8, sonic.getCentreY() & 0xFFFF,
+                "Obj06_Cylinder should apply y += overlap + 3 before setting ride");
+        assertEquals(0, sonic.getYSpeed(), "RideObject_SetRide clears y_vel");
+        assertEquals(0x0599, sonic.getGSpeed() & 0xFFFF,
+                "RideObject_SetRide copies x_vel into inertia");
+        assertTrue(sonic.isFlipTurned(), "Obj06_Cylinder sets flip_turned on capture");
+        assertEquals(Sonic2AnimationIds.WALK.id(), sonic.getAnimationId(),
+                "Obj06_Cylinder writes walk/run animation word with walk in anim(a1)");
+    }
+
+    @Test
+    void mtzCylinderRidingUsesCosineYOffsetAndAdvancesAngle() {
+        SpiralObjectInstance cylinder = newCylinder();
+        TestablePlayableSprite sonic = playerAt("sonic", 0x0B82, 0x03EC);
+        sonic.setAir(false);
+        sonic.setOnObject(false);
+        sonic.setXSpeed((short) 0x0599);
+
+        cylinder.update(4280, sonic);
+        sonic.setCentreX((short) 0x0B88);
+        cylinder.update(4281, sonic);
+
+        assertEquals(0x03E8, sonic.getCentreY() & 0xFFFF,
+                "Obj06_Cylinder angle 0 uses CalcSine d1/cosine, placing Sonic at y+$28");
+        assertEquals(0, sonic.getFlipAngle() & 0xFF,
+                "Obj06_Cylinder writes the current cylinder angle before incrementing it");
+
+        sonic.setCentreX((short) 0x0B8E);
+        cylinder.update(4282, sonic);
+
+        assertEquals(0x03E7, sonic.getCentreY() & 0xFFFF,
+                "Obj06_Cylinder increments its angle by 4 for the next frame's cosine offset");
+        assertEquals(4, sonic.getFlipAngle() & 0xFF);
+    }
+
     private static SpiralObjectInstance newSpiral() {
         return newSpiral(new TestObjectServices());
     }
@@ -213,6 +263,14 @@ class TestSpiralObjectInstance {
                 "Spiral");
         spiral.setServices(services);
         return spiral;
+    }
+
+    private static SpiralObjectInstance newCylinder() {
+        SpiralObjectInstance cylinder = new SpiralObjectInstance(
+                new ObjectSpawn(0x0C40, 0x03C0, Sonic2ObjectIds.SPIRAL, 0x80, 0, false, 0),
+                "Spiral");
+        cylinder.setServices(new TestObjectServices());
+        return cylinder;
     }
 
     private static TestablePlayableSprite playerAt(String code, int centreX, int centreY) {

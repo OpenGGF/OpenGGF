@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj06 cylinder frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSpiralObjectInstance" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 4280 to frame 4656.
+  - New frontier: frame 4656 `x_speed` expected `0x03D8`, actual `0x0000`;
+    Sonic is airborne and rolling at the same y as the ROM, but the engine has
+    just zeroed horizontal velocity near Obj2D/Obj6B terrain while the ROM
+    continues its airborne acceleration.
+- Findings:
+  - Obj06 negative subtypes branch to `Obj06_Cylinder`, not the EHZ spiral
+    path. The cylinder path has its own shallow-overlap capture window,
+    `RideObject_SetRide` latch, `flip_turned` write, animation write, and
+    per-player cylinder angle state.
+  - The active cylinder rider path uses the cosine value returned by
+    `CalcSine` (`d1`), scaled by `$2800`, then writes `flip_angle` before
+    incrementing the cylinder angle by 4 each frame.
+  - No trace state is hydrated, and the remaining frontier points at generic
+    airborne wall/collision handling after the Obj06 cylinder contact now
+    matches longer.
+
 ## 2026-05-31 - S2 MTZ3 Obj6B/dead-sidekick wrap frontier
 
 - Branch: `feature/ai-s2-mtz-parity`
