@@ -153,6 +153,14 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     public int getY() {
         return y;
     }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        // Obj65 loc_26C1C checks objoff_34, not the moving x_pos(a0), before
+        // calling DeleteObject (docs/s2disasm/s2.asm:52469-52484).
+        return baseX;
+    }
+
     @Override
     public SolidObjectParams getSolidParams() {
         // From s2.asm lines 52457-52463: d1=width+5, d2=y_radius, d3=y_radius+1
@@ -215,12 +223,9 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         executeMovement(frameCounter, player);
         updateDynamicSpawn(x, y);
-        // ROM loc_26C1C tail (s2.asm:52469-52484) marks the object gone + clears its
-        // respawn bit when ((objoff_34 & 0xFF80) - Camera_X_pos_coarse) as unsigned 16-bit
-        // exceeds 0x280. ObjectManager.despawnOutOfRangeObjects() applies this exact
-        // coarse-camera window to every dynamic (non-always-active) object via
-        // isWithinSpawnWindow() and clears the respawn flag in markObjectGone(), so no
-        // per-object despawn is added here.
+        // ROM loc_26C1C tail (s2.asm:52469-52484) marks the object gone + clears
+        // its respawn bit from objoff_34; getOutOfRangeReferenceX exposes that
+        // anchor to the shared ObjectManager out_of_range path.
     }
 
     @Override

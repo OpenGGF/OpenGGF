@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Obj65 deletion-anchor trace parity.**
+  MTZ Long Platform Obj65 now reports its stored `objoff_34` base X to the
+  shared out-of-range despawn path, matching the ROM's special MarkObjGone tail
+  instead of using the platform's moving `x_pos`. Focused Obj65 coverage passes;
+  the MTZ3 trace frontier moves from frame 2616 to a later frame-3488 Sonic
+  LargeRotPform landing mismatch.
+
 - **Advanced Sonic 2 MTZ3 Obj65 long-platform trace parity.**
   MTZ Long Platform Obj65 now keeps subtype-3 proximity extension armed when
   either native playable participant, including Tails/sidekick, occupies the
