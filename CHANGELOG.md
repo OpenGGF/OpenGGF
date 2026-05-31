@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Obj65 long-platform trace parity.**
+  MTZ Long Platform Obj65 now keeps subtype-3 proximity extension armed when
+  either native playable participant, including Tails/sidekick, occupies the
+  ROM detection box, and its landing width now follows the unusual
+  `width_pixels` re-read used by `SolidObject_Landed`. Focused Obj65 coverage
+  passes; the MTZ3 trace frontier moves from frame 2543 to a later frame-2616
+  sidekick ride/despawn mismatch.
+
 - **Advanced Sonic 2 MTZ3 wrapped render-flag and spring-wall trace parity.**
   Playable render-flag visibility now applies the active vertical-wrap mask to
   relative display Y, matching S2 `BuildSprites_ApproxYCheck` while preserving

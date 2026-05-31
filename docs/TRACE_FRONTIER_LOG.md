@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj65 long-platform frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit commands:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2543 to frame 2616.
+  - New frontier: frame 2616 `tails_air` expected `0`, actual `1`; Tails
+    matches through frame 2615 while riding the right Obj65, then the engine
+    moves Tails to the sidekick placeholder position `0x4000,0` while the ROM
+    keeps Tails at `0x0ACB,0x0750` on object slot `0x39`.
+- Findings:
+  - Obj65 subtype-3 proximity checks MainCharacter and Sidekick before
+    retracting. The engine previously sampled only the update player, so a
+    fully extended platform retracted even when native Tails occupied the ROM
+    detection box.
+  - Obj65 passes `width_pixels+$5` into `SolidObject`, but
+    `SolidObject_Landed` re-reads `width_pixels(a0)` for top landing bounds.
+    The object now exposes that landing width through the existing solid
+    provider hook.
+  - No trace state is hydrated, and the remaining frontier points at generic
+    sidekick ride/despawn handling after the Obj65 contact now matches longer.
+
 ## 2026-05-31 - S2 MTZ3 wrapped render flag and Obj66 edge frontier
 
 - Branch: `feature/ai-s2-mtz-parity`
