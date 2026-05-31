@@ -303,6 +303,13 @@ public class CogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM SolidObject_cont accepts relX == width*2; only relX > width*2
+        // branches out via `bhi.w SolidObject_TestClearPush` (s2.asm:35150-35158).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return !isDestroyed();
