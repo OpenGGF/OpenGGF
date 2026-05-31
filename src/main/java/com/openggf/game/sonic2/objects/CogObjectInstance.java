@@ -291,6 +291,15 @@ public class CogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean resolvesEarlierPiecesBeforeRidingPiece() {
+        // ROM Obj70 creates one SST slot per tooth, then each slot calls
+        // SolidObject in allocation order (s2.asm:54617-54651, 54691-54703).
+        // Earlier teeth can side-push Sonic before the ridden tooth's
+        // standing-bit branch performs its ExitPlatform bounds check.
+        return true;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         // Default params (used if getPieceParams not called)
         return new SolidObjectParams(0x10, 0x10, 0x10);

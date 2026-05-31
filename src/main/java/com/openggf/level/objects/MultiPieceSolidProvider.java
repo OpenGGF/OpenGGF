@@ -42,6 +42,19 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     }
 
     /**
+     * Whether sibling pieces before the currently ridden piece should resolve
+     * contact before the continued-riding exit/carry branch.
+     * <p>
+     * Most aggregate objects are native engine groupings and keep the historical
+     * "ride first, siblings after" order. Objects that compress several ROM SST
+     * slots into one engine instance can opt in so earlier ROM slots can apply
+     * side/push contact before a later slot runs its standing-bit exit check.
+     */
+    default boolean resolvesEarlierPiecesBeforeRidingPiece() {
+        return false;
+    }
+
+    /**
      * Called when a piece makes contact with the player.
      * Allows the object to track which pieces are being touched.
      *
