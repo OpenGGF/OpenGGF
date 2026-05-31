@@ -126,6 +126,32 @@ public class CollisionSystemTest {
     }
 
     @Test
+    public void testCalcRoomOverHeadCeilingProbeAppliesRomNibbleFlip() {
+        AbstractPlayableSprite player = Mockito.mock(AbstractPlayableSprite.class);
+        Mockito.when(player.getCentreX()).thenReturn((short) 0x0893);
+        Mockito.when(player.getCentreY()).thenReturn((short) 0x07A2);
+        Mockito.when(player.getXRadius()).thenReturn((short) 9);
+        Mockito.when(player.getYRadius()).thenReturn((short) 19);
+        Mockito.when(player.getLrbSolidBit()).thenReturn((byte) 0x0E);
+
+        Object[] probes = describeCalcRoomOverHeadProbes(player, 0x80);
+
+        assertEquals(2, probes.length);
+        assertEquals(Direction.UP, readProbeDirection(probes[0], "globalDirection"));
+        assertEquals(9, readProbeInt(probes[0], "worldOffsetX"));
+        assertEquals(-19, readProbeInt(probes[0], "worldOffsetY"));
+        assertEquals(0, readProbeInt(probes[0], "dx"));
+        assertEquals(-15, readProbeInt(probes[0], "dy"),
+                "Sonic_CheckCeiling eori.w #$F turns y=$078F into y=$0780 at this edge");
+        assertEquals(0x0E, readProbeInt(probes[0], "solidityBit"));
+
+        assertEquals(Direction.UP, readProbeDirection(probes[1], "globalDirection"));
+        assertEquals(-9, readProbeInt(probes[1], "worldOffsetX"));
+        assertEquals(-19, readProbeInt(probes[1], "worldOffsetY"));
+        assertEquals(-15, readProbeInt(probes[1], "dy"));
+    }
+
+    @Test
     public void testNullSpriteHandledGracefully() {
         collisionSystem.step(null, new Sensor[0], new Sensor[0]);
         assertTrue(trace.getEvents().isEmpty());
@@ -594,6 +620,17 @@ public class CollisionSystemTest {
             return method.invoke(null, angle, gSpeed);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Failed to invoke describeCalcRoomInFrontProbe", e);
+        }
+    }
+
+    private static Object[] describeCalcRoomOverHeadProbes(AbstractPlayableSprite player, int quadrant) {
+        try {
+            Method method = CollisionSystem.class.getDeclaredMethod(
+                    "describeCalcRoomOverHeadProbes", AbstractPlayableSprite.class, int.class);
+            method.setAccessible(true);
+            return (Object[]) method.invoke(null, player, quadrant);
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Failed to invoke describeCalcRoomOverHeadProbes", e);
         }
     }
 

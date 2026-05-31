@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 jump and vertical-wrap trace parity.** Shared
+  playable jump headroom checks now use ROM-style `CalcRoomOverHead` terrain
+  probes, including the ceiling/left-wall nibble-flip offsets, instead of
+  ordinary sensor scans. Playable `y_pos` masking now also follows the active
+  camera vertical-wrap range without changing S1/S2 render visibility margins.
+  Focused headroom and wrap tests pass; the MTZ3 trace frontier moves from the
+  post-Cog jump/headroom mismatch to a later frame-2362 Tails Obj6B landing
+  mismatch.
+
 - **Tightened shared slope-repel move-lock ordering.** Active `move_lock`
   now decrements before the engine's object-support guard suppresses fresh
   slope-slip arming, matching the ROM `Sonic_SlopeRepel`/`Tails_SlopeRepel`
