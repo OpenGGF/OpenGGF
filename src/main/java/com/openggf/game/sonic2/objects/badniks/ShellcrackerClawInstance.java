@@ -87,6 +87,7 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance
     private int timer;
     private int retractTimer; // objoff_2B - separate timer for retraction
     private int animFrame;
+    private boolean initRoutinePending;
 
     public ShellcrackerClawInstance(ObjectSpawn parentSpawn, ShellcrackerBadnikInstance parent,
                                     int x, int y, int pieceIndex, boolean facingRight) {
@@ -114,11 +115,19 @@ public class ShellcrackerClawInstance extends AbstractObjectInstance
         // Set initial delay from table
         this.timer = INITIAL_DELAYS[index];
         this.state = State.INITIAL_DELAY;
+        this.initRoutinePending = true;
     }
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        if (initRoutinePending) {
+            // ROM ObjA0_Init performs setup and ends at JmpTo39_MarkObjGone
+            // (s2.asm:75123-75142). Same-frame spawned child slots therefore do
+            // not enter loc_381AC active logic until the next ExecuteObjects pass.
+            initRoutinePending = false;
+            return;
+        }
         // ROM: loc_381AC checks parent alive before processing sub-states
         if (state != State.FALLING && !checkParentAlive()) {
             // Parent died - now in FALLING state, process it

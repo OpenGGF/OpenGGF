@@ -15,6 +15,7 @@ import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -280,8 +281,8 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance {
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.setControlLocked(true);
 
-        // ROM: move.b #AniIDSonAni_Roll,anim(a1)
-        player.setRolling(true);
+        // ROM: move.b #AniIDSonAni_Roll,anim(a1). Obj67 does not set the
+        // status.player.rolling bit; it only changes the animation.
         player.setAnimationId(Sonic2AnimationIds.ROLL);
 
         // ROM: move.w #$800,inertia(a1)
@@ -298,8 +299,8 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance {
         player.setAir(true);
 
         // ROM: move.w x_pos(a0),x_pos(a1) / move.w y_pos(a0),y_pos(a1)
-        player.setCentreX((short) objX);
-        player.setCentreY((short) objY);
+        NativePositionOps.writeXPosPreserveSubpixel(player, objX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, objY);
 
         // ROM: bclr #high_priority_bit,art_tile(a1)
         player.setHighPriority(false);
@@ -335,7 +336,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance {
 
         // ROM: move.w y_pos(a0),d2 / sub.w d0,d2 / move.w d2,y_pos(a1)
         int objY = spawn.y();
-        player.setCentreY((short) (objY - sineValue));
+        NativePositionOps.writeYPosPreserveSubpixel(player, objY - sineValue);
 
         // ROM: cmpi.b #$80,1(a4) / bne.s +
         if (cs.sineAngle != SINE_TRANSITION_ANGLE) {
@@ -387,16 +388,16 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance {
             // ROM: lea (a2,d0.w),a2 - jump to end of path data
             // Position player at last waypoint
             int lastIdx = cs.path.length - 2;
-            player.setCentreX((short) cs.path[lastIdx]);
-            player.setCentreY((short) cs.path[lastIdx + 1]);
+            NativePositionOps.writeXPosPreserveSubpixel(player, cs.path[lastIdx]);
+            NativePositionOps.writeYPosPreserveSubpixel(player, cs.path[lastIdx + 1]);
 
             // ROM: subq.w #8,a2 - back up one waypoint
             cs.pathIndex = lastIdx - 2;
         } else {
             // ROM: move.w (a2)+,d4 / move.w d4,x_pos(a1) / move.w (a2)+,d5 / move.w d5,y_pos(a1)
             // Position player at first waypoint
-            player.setCentreX((short) cs.path[0]);
-            player.setCentreY((short) cs.path[1]);
+            NativePositionOps.writeXPosPreserveSubpixel(player, cs.path[0]);
+            NativePositionOps.writeYPosPreserveSubpixel(player, cs.path[1]);
             cs.pathIndex = 2;
         }
 
@@ -422,8 +423,8 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance {
         // ROM: movea.l 6(a4),a2 / move.w (a2)+,d4 / move.w d4,x_pos(a1) / move.w (a2)+,d5 / move.w d5,y_pos(a1)
         int waypointX = cs.path[cs.pathIndex];
         int waypointY = cs.path[cs.pathIndex + 1];
-        player.setCentreX((short) waypointX);
-        player.setCentreY((short) waypointY);
+        NativePositionOps.writeXPosPreserveSubpixel(player, waypointX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, waypointY);
 
         // ROM: tst.b subtype(a0) / bpl.s + / subq.w #8,a2
         if (cs.pathReverse) {
@@ -467,7 +468,7 @@ public class MTZSpinTubeObjectInstance extends AbstractObjectInstance {
     private void exitTube(CharacterState cs, AbstractPlayableSprite player) {
         // ROM: andi.w #$7FF,y_pos(a1)
         int y = player.getCentreY() & 0x7FF;
-        player.setCentreY((short) y);
+        NativePositionOps.writeYPosPreserveSubpixel(player, y);
 
         // ROM: clr.b (a4)
         cs.state = 0;
