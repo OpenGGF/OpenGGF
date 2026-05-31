@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj6E base-anchor frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 3488 to frame 3603.
+  - New frontier: frame 3603 `tails_x_speed` expected `0xFDF1`, actual
+    `0xFE00`; the engine applies Tails hurt/roll-exit one frame before the ROM
+    near Obj36 upside-down spikes.
+- Findings:
+  - Obj6E's normal and indentation routines both check `objoff_34(a0)` against
+    the coarse camera delete window, not the platform's moving `x_pos(a0)`.
+  - The existing ObjectManager out-of-range reference hook handles this without
+    a per-frame, route, or zone exception, so Obj6E now exposes its stored base
+    X through that shared path.
+  - No trace state is hydrated, and the remaining frontier points at
+    Tails/Obj36 upside-down spike solid hurt timing.
+
 ## 2026-05-31 - S2 MTZ3 Obj65 deletion-anchor frontier
 
 - Branch: `feature/ai-s2-mtz-parity`

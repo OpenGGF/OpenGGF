@@ -147,6 +147,14 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
     public int getY() {
         return y;
     }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        // Obj6E loc_28466/loc_284EA checks objoff_34, not the moving x_pos(a0),
+        // before DeleteObject (docs/s2disasm/s2.asm:54526-54543,54572-54589).
+        return baseX;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -154,10 +162,9 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
             return;
         }
         updatePosition();
-        // ROM Obj6E (loc_28432/284BC, s2.asm) marks the object gone via the coarse-camera
-        // window (((spawnX & 0xFF80) - Camera_X_pos_coarse) unsigned > 0x280). The shared
-        // ObjectManager despawn (despawnOutOfRangeObjects / isWithinSpawnWindow) already
-        // applies that exact window to every dynamic object, so no per-object despawn here.
+        // ROM Obj6E (loc_28466/loc_284EA, s2.asm) marks the object gone via
+        // objoff_34; getOutOfRangeReferenceX exposes that anchor to the shared
+        // ObjectManager out_of_range path.
     }
 
     /**
