@@ -1,5 +1,27 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj36 crush-death frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 3617 to frame 3718.
+  - New frontier: frame 3718 `y_speed` expected `0x0000`, actual `0x0390`;
+    Sonic remains airborne/falling in the engine while the ROM lands on an
+    Obj6E/Obj6B platform cluster and clears air/rolling/on-object state.
+- Findings:
+  - Obj36 can call `SolidObject_Squash` and `KillCharacter` before it reaches
+    `Touch_ChkHurt2`. ROM `Touch_ChkHurt2` skips when the player's routine is
+    already >= 4, so the shared spike callback must not overwrite the death
+    state with hurt knockback after a solid-object crush kill.
+  - No trace state is hydrated, and the remaining frontier points at generic
+    platform landing/contact state after the Obj36 sidekick death path now
+    matches longer.
+
 ## 2026-05-31 - S2 MTZ3 Obj36 spike-contact frontier
 
 - Branch: `feature/ai-s2-mtz-parity`

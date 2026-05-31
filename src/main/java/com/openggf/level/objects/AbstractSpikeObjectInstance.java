@@ -72,6 +72,11 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
         if (!shouldHurt(contact)) {
             return;
         }
+        if (player.getDead()) {
+            // SolidObject_Squash can call KillCharacter before Obj36 reaches Touch_ChkHurt2;
+            // the ROM helper then skips players whose routine is already >= 4.
+            return;
+        }
         if (player.getInvulnerable()) {
             return;
         }

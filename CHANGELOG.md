@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Obj36 crush-death trace parity.**
+  The shared spike hurt callback now preserves a prior `SolidObject_Squash`
+  kill instead of overwriting it with `Touch_ChkHurt2` knockback, matching the
+  ROM helper's routine >= 4 guard. Focused Obj36 coverage passes; the MTZ3
+  trace frontier moves from frame 3617 to a later frame-3718 Sonic platform
+  landing mismatch.
+
 - **Advanced Sonic 2 MTZ3 Obj36 spike-contact trace parity.**
   S2 spikes now expose the ROM `SolidObject_cont` rolling-radius lower bound
   for upside-down contact checks, and the shared spike hurt path applies
