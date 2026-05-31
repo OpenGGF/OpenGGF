@@ -182,9 +182,10 @@ public class CogObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM: move.b (Level_frame_counter+1).w,d0 / andi.w #$F,d0 / bne.s loc_286CA
-        // Advance rotation every 16 frames
-        if ((frameCounter & 0x0F) == 0) {
+        // ROM Obj70_Main (s2.asm:54662-54665): move.b (Level_frame_counter+1).w,d0;
+        // andi.w #$F,d0; bne loc_286CA. The +1 phase offset means rotation advances when
+        // the global frame counter's low nibble is 0xF, NOT 0x0 — match it exactly.
+        if (((frameCounter + 1) & 0x0F) == 0) {
             advanceRotation();
         }
 
@@ -318,6 +319,12 @@ public class CogObjectInstance extends AbstractObjectInstance
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.MTZ_WHEEL);
         if (renderer == null) return;
 
+        // Verified against obj70.asm (Obj70_MapUnc_28786): all 32 mapping entries point
+        // to the same Map_obj70_0040, a single 32x32 spritePiece (tile 0) with hFlip=0,
+        // vFlip=0. There are no per-piece flip bits to honor, so drawFrameIndex(...,false,
+        // false) is correct — per-tooth orientation comes entirely from the position table,
+        // not art flips. (Central ObjectManager despawn covers off-screen removal; Obj70
+        // needs no per-object coarse-camera DeleteObject — see s2.asm:54717-54725.)
         for (int i = 0; i < NUM_TEETH; i++) {
             renderer.drawFrameIndex(toothFrame[i], toothX[i], toothY[i], false, false);
         }

@@ -1,10 +1,14 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.debug.DebugRenderContext;
+import com.openggf.game.sonic2.S2SpriteDataLoader;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -14,7 +18,10 @@ import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpritePieceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.util.LazyMappingHolder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -98,6 +105,9 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
 
     // Phase wrap threshold: s2.asm:53846 -- cmpi.b #6*4,objoff_38.
     private static final int PHASE_WRAP_THRESHOLD = 24;
+
+    /** Shared Obj65_a level-art mappings for MTZ rendering, lazily loaded from ROM. */
+    private static final LazyMappingHolder MAPPINGS = new LazyMappingHolder();
 
     // Position state (16.8 fixed point for subpixel accuracy).
     private int x;
@@ -292,6 +302,10 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         } else {
             // Standing-state edge detection (lines 53756-53783): activation
             // triggers when prev_standing was set but current is clear.
+            // ROM masks status with standing_mask (BOTH p1_standing and p2_standing),
+            // so the walk-off edge fires for EITHER player. isPlayerStandingOnUs()
+            // wraps isAnyPlayerRiding(), which is the exact equivalent — no per-player
+            // edge tracking is required.
             if (!playerStanding && prevStandingFlags != 0) {
                 activated = true;
             }
@@ -441,13 +455,46 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Only MCZ uses the wooden-crate Nemesis art (ArtNem_Crate). MTZ uses
-        // level art (ArtTile_ArtKos_LevelArt at mapping_frame=1) which we do
-        // not yet render -- the platform is treated as invisible for now.
         if (isMtz) {
+            // MTZ Obj6A renders the shared Obj65_a level-art mappings at mapping_frame 1
+            // (s2.asm:53688-53695: Obj65_Obj6A_Obj6B_MapUnc_26EC8, ArtKos_LevelArt line 3,
+            // mapping_frame=1) against level art (base tile 0) on VDP palette line 3.
+            List<SpriteMappingFrame> mappings = MAPPINGS.get(
+                    Sonic2Constants.MAP_UNC_MTZ_PLATFORM_LEVELART_ADDR,
+                    S2SpriteDataLoader::loadMappingFrames, "Obj65a");
+            int frame = 1;
+            if (mappings.isEmpty() || frame >= mappings.size()) {
+                return;
+            }
+            SpriteMappingFrame mapFrame = mappings.get(frame);
+            if (mapFrame == null || mapFrame.pieces().isEmpty()) {
+                return;
+            }
+            GraphicsManager graphicsManager = services().graphicsManager();
+            if (graphicsManager == null) {
+                return;
+            }
+            SpritePieceRenderer.renderPieces(
+                    mapFrame.pieces(),
+                    x, y,
+                    0,   // level art starts at tile 0
+                    3,   // palette line 3
+                    xFlip, yFlip,
+                    (patternIndex, pieceHFlip, pieceVFlip, paletteIndex, px, py) -> {
+                        int descIndex = patternIndex & 0x7FF;
+                        if (pieceHFlip) {
+                            descIndex |= 0x800;
+                        }
+                        if (pieceVFlip) {
+                            descIndex |= 0x1000;
+                        }
+                        descIndex |= (paletteIndex & 0x3) << 13;
+                        graphicsManager.renderPattern(new PatternDesc(descIndex), px, py);
+                    });
             return;
         }
 
+        // MCZ uses the wooden-crate Nemesis art (ArtNem_Crate).
         PatternSpriteRenderer renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.MCZ_CRATE);
         if (renderer != null && renderer.isReady()) {
             renderer.drawFrameIndex(0, x, y, xFlip, yFlip);

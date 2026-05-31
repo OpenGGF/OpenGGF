@@ -3,9 +3,14 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.camera.Camera;
 import com.openggf.game.OscillationManager;
+import com.openggf.game.sonic2.S2SpriteDataLoader;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -15,7 +20,10 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpritePieceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.util.LazyMappingHolder;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -57,6 +65,9 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
 
     // Circular motion radii for types 8-11
     private static final int[] CIRCULAR_RADII = {0x10, 0x30, 0x50, 0x70};
+
+    /** Shared Obj65_a level-art mappings for MTZ rendering, lazily loaded from ROM. */
+    private static final LazyMappingHolder MAPPINGS = new LazyMappingHolder();
 
     // Position tracking
     private int x;
@@ -138,18 +149,62 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         ObjectRenderManager renderManager = services().renderManager();
-        PatternSpriteRenderer renderer = null;
-
-        if (renderManager != null) {
-            renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.CPZ_STAIR_BLOCK);
+        if (renderManager == null) {
+            return;
         }
 
-        if (renderer != null && renderer.isReady()) {
-            // Frame 2 in the CPZ_STAIR_BLOCK sheet is the single 32x32 block, hand-crafted
-            // in Sonic2ObjectArt.createCPZStairBlockMappings(). Multiple Obj6B instances are
-            // placed at the same location with different subtypes to create the multi-block effect.
-            renderer.drawFrameIndex(2, x, y, xFlip, false);
+        // Flip from status (objoff_2E low bits): bit0 = x_flip, bit1 = y_flip.
+        boolean yFlip = (flipState & 0x02) != 0;
+
+        // ROM Obj6B selects mappings/art by zone (s2.asm:53911-53916):
+        //   CPZ (cmpi.b #chemical_plant_zone): Obj6B_MapUnc_2800E + ArtNem_CPZStairBlock
+        //   otherwise (MTZ): Obj65_Obj6A_Obj6B_MapUnc_26EC8 + ArtKos_LevelArt line 3
+        // This is per-object zone routing at the owning object boundary, mirroring the
+        // ROM's own Current_Zone branch — not a zone carve-out in shared engine code.
+        if (services().currentZone() == Sonic2ZoneConstants.ROM_ZONE_CPZ) {
+            // CPZ stair-block: dedicated Nemesis sheet (single 32x32 block = sheet frame 2).
+            PatternSpriteRenderer renderer =
+                    renderManager.getRenderer(Sonic2ObjectArtKeys.CPZ_STAIR_BLOCK);
+            if (renderer != null && renderer.isReady()) {
+                renderer.drawFrameIndex(2, x, y, xFlip, yFlip);
+            }
+            return;
         }
+
+        // MTZ: render the shared Obj65_a level-art mappings against level art
+        // (ArtTile_ArtKos_LevelArt, base tile 0) on VDP palette line 3.
+        // mapping_frame from Obj6B_Properties (s2.asm:53928) -> SUBTYPE_PROPERTIES[*][2].
+        List<SpriteMappingFrame> mappings = MAPPINGS.get(
+                Sonic2Constants.MAP_UNC_MTZ_PLATFORM_LEVELART_ADDR,
+                S2SpriteDataLoader::loadMappingFrames, "Obj65a");
+        if (mappings.isEmpty() || mappingFrame >= mappings.size()) {
+            return;
+        }
+        SpriteMappingFrame mapFrame = mappings.get(mappingFrame);
+        if (mapFrame == null || mapFrame.pieces().isEmpty()) {
+            return;
+        }
+        GraphicsManager graphicsManager = services().graphicsManager();
+        if (graphicsManager == null) {
+            return;
+        }
+        SpritePieceRenderer.renderPieces(
+                mapFrame.pieces(),
+                x, y,
+                0,   // level art starts at tile 0
+                3,   // palette line 3
+                xFlip, yFlip,
+                (patternIndex, pieceHFlip, pieceVFlip, paletteIndex, px, py) -> {
+                    int descIndex = patternIndex & 0x7FF;
+                    if (pieceHFlip) {
+                        descIndex |= 0x800;
+                    }
+                    if (pieceVFlip) {
+                        descIndex |= 0x1000;
+                    }
+                    descIndex |= (paletteIndex & 0x3) << 13;
+                    graphicsManager.renderPattern(new PatternDesc(descIndex), px, py);
+                });
     }
 
     private void init() {
@@ -162,6 +217,9 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
 
         widthPixels = SUBTYPE_PROPERTIES[propsIndex][0];
         yRadius = SUBTYPE_PROPERTIES[propsIndex][1];
+        // ROM Obj6B_Init (s2.asm:53925-53928) reads width_pixels, y_radius AND mapping_frame
+        // from Obj6B_Properties (3rd byte of the 4-byte entry). Properties entry 0 = {32,12,1},
+        // entry 1 = {16,16,0}. So the mapping_frame comes straight from the table.
         mappingFrame = SUBTYPE_PROPERTIES[propsIndex][2];
 
         // Store base positions
@@ -273,11 +331,11 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         Camera camera = services().camera();
         int maxY = camera != null ? camera.getMaxY() + 224 : baseY + 500;
 
+        // ROM loc_27EE2 (s2.asm:54057-54061): when y_pos passes Camera_Max_Y + screen_height
+        // (224), set subtype=0 (immobile) and STOP — the platform keeps falling out of view.
+        // Do NOT reset y_pos or recycle the platform (the old moveType=5 + y reset was wrong).
         if (y > maxY) {
-            moveType = 5;
-            yVel = 0;
-            y = baseY;
-            yFixed = baseY << 8;
+            moveType = 0;
         }
     }
 

@@ -300,11 +300,8 @@ public class ShellcrackerBadnikInstance extends AbstractBadnikInstance {
      * All pieces positioned at (x + offset, y - 8).
      */
     private void spawnClawPieces() {
-        var objectManager = services().objectManager();
-        if (objectManager == null) return;
-
         for (int i = 0; i < CLAW_PIECE_COUNT; i++) {
-            int pieceIndex = i * 2; // d1 = 0, 2, 4, 6, 8, 10, 12, 14
+            final int pieceIndex = i * 2; // d1 = 0, 2, 4, 6, 8, 10, 12, 14
 
             // Calculate X offset
             // ROM: move.w #-$14,d2
@@ -319,12 +316,17 @@ public class ShellcrackerBadnikInstance extends AbstractBadnikInstance {
                 xOff += CLAW_SPAWN_X_EXTRA;
             }
 
-            int pieceX = currentX + xOff;
-            int pieceY = currentY + CLAW_SPAWN_Y_OFFSET;
+            // ROM (s2.asm:75284-75296) copies the body's ROM-center x_pos/y_pos to each
+            // claw. Badnik currentX/currentY are already ROM-center coords (the same
+            // values used by the currentX - player.getCentreX() detection checks above),
+            // so they map directly onto the child's spawn position — no center
+            // adjustment needed.
+            final int pieceX = currentX + xOff;
+            final int pieceY = currentY + CLAW_SPAWN_Y_OFFSET;
 
-            ShellcrackerClawInstance claw = new ShellcrackerClawInstance(
-                    spawn, this, pieceX, pieceY, pieceIndex, !facingLeft);
-            objectManager.addDynamicObject(claw);
+            // ROM (s2.asm:75271-75301): 8x ObjA0 spawned as children of the body.
+            spawnChild(() -> new ShellcrackerClawInstance(
+                    spawn, this, pieceX, pieceY, pieceIndex, !facingLeft));
         }
     }
 

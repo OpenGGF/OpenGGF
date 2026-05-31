@@ -214,9 +214,6 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance {
      * Each pincer is an independent homing projectile (ObjA2).
      */
     private void spawnPincers() {
-        var objectManager = services().objectManager();
-        if (objectManager == null) return;
-
         int[][] offsets = {
             { PINCER_0_X_OFFSET, 0 },
             { PINCER_1_X_OFFSET, 0 }
@@ -228,15 +225,15 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance {
             if (!facingLeft) {
                 xOff = -xOff;
             }
-            int pincerX = currentX + xOff;
-            int pincerY = currentY + offset[1];
+            final int pincerX = currentX + xOff;
+            final int pincerY = currentY + offset[1];
 
             // ROM: move.w #-$200,d0 / btst #render_flags.x_flip / beq.s + / neg.w d0
-            int pincerXVel = facingLeft ? -PINCER_INIT_X_VEL : PINCER_INIT_X_VEL;
+            final int pincerXVel = facingLeft ? -PINCER_INIT_X_VEL : PINCER_INIT_X_VEL;
 
-            SlicerPincerInstance pincer = new SlicerPincerInstance(
-                    spawn, this, pincerX, pincerY, pincerXVel, !facingLeft, PINCER_HOMING_TIMER);
-            objectManager.addDynamicObject(pincer);
+            // ROM (s2.asm:75496-75502): 2x ObjA2 spawned as children of the body.
+            spawnChild(() -> new SlicerPincerInstance(
+                    spawn, this, pincerX, pincerY, pincerXVel, !facingLeft, PINCER_HOMING_TIMER));
         }
     }
 

@@ -90,10 +90,12 @@ public class SpikyBlockObjectInstance extends AbstractObjectInstance
                 false,
                 spawn.rawYWord());
 
-        SpikyBlockSpikeInstance spike = new SpikyBlockSpikeInstance(
-                childSpawn, "SpikyBlock-Spike", initialDirection, initialPosition);
-
-        services().objectManager().addDynamicObject(spike);
+        // ROM: Obj68_Init (s2.asm:53258) spawns the spike via
+        // AllocateObjectAfterCurrent. Route through spawnChild (the engine's
+        // child-spawn helper) rather than calling addDynamicObject directly,
+        // per the object-spawning contract in CLAUDE.md.
+        spawnChild(() -> new SpikyBlockSpikeInstance(
+                childSpawn, "SpikyBlock-Spike", initialDirection, initialPosition));
     }
 
     @Override

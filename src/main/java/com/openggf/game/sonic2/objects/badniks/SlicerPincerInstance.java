@@ -112,8 +112,9 @@ public class SlicerPincerInstance extends AbstractObjectInstance
      * When timer expires, transitions to falling phase.
      */
     private void updateHoming(AbstractPlayableSprite player) {
-        // ROM: _btst #render_flags.on_screen / _beq.w JmpTo65_DeleteObject
-        if (!isOnScreenX(32)) {
+        // ROM: _btst #render_flags.on_screen / _beq.w JmpTo65_DeleteObject (s2.asm:75451-75452)
+        // No margin — mirror the ROM on_screen flag (matches SlicerBadnikInstance).
+        if (!isOnScreenX()) {
             setDestroyed(true);
             return;
         }

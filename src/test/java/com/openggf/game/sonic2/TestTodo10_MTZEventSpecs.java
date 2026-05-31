@@ -256,13 +256,13 @@ public class TestTodo10_MTZEventSpecs {
 
     /**
      * MTZ3 Routine 8: Track camera position (boss active).
-     * ROM reference: LevEvents_MTZ3_Routine5 (s2.asm:20552-20556)
+     * ROM reference: LevEvents_MTZ3_Routine5 (s2.asm:20542-20544)
      * <pre>
      *   move.w (Camera_X_pos).w,(Camera_Min_X_pos).w
-     *   move.w (Camera_Max_X_pos).w,(Tails_Max_X_pos).w
-     *   move.w (Camera_X_pos).w,(Tails_Min_X_pos).w
      *   rts
      * </pre>
+     * The routine is a single UNCONDITIONAL assignment of Camera_Min_X_pos to the
+     * current Camera_X_pos. There is no ratchet/guard and no Tails bound write.
      */
     @Test
     public void testMTZ3Routine8_TracksCamera() {
@@ -275,12 +275,17 @@ public class TestTodo10_MTZEventSpecs {
     }
 
     @Test
-    public void testMTZ3Routine8_DoesNotRetreatMinX() {
+    public void testMTZ3Routine8_MinXFollowsCameraUnconditionally() {
+        // ROM Routine5 (s2.asm:20543) writes Camera_Min_X_pos = Camera_X_pos with no
+        // guard, so min-X follows the camera even when the camera is behind the old
+        // min-X. (In real play the camera is pinned at $2AB0 during the boss, so this
+        // never actually retreats; the unit test exercises the raw assignment.)
         events.setEventRoutine(8);
         cam.setMinX((short) 0x2B00);
         cam.setX((short) 0x2A00);  // camera behind current minX
         events.update(2, 0);
-        assertEquals((short) 0x2B00, cam.getMinX(), "MinX should not retreat behind current value");
+        assertEquals((short) 0x2A00, cam.getMinX(),
+                "MinX should follow Camera_X unconditionally (ROM has no ratchet)");
     }
 
     /**
