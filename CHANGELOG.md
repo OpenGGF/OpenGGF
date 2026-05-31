@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Tightened shared slope-repel move-lock ordering.** Active `move_lock`
+  now decrements before the engine's object-support guard suppresses fresh
+  slope-slip arming, matching the ROM `Sonic_SlopeRepel`/`Tails_SlopeRepel`
+  branch order and covering the object-supported countdown case with a focused
+  movement test. The MTZ3 trace still fails at the known frame-2152 movement
+  lock mismatch.
+
 - **Advanced Sonic 2 MTZ3 Cog slot-order trace parity.** MTZ Cog Obj70 now
   advertises its ROM multi-slot solid ordering through the shared multi-piece
   solid framework, letting earlier teeth side-push Sonic before the currently

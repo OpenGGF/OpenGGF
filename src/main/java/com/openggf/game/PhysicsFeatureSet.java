@@ -74,10 +74,11 @@ public record PhysicsFeatureSet(
          *  when inertia/ground_vel is zero (s1disasm/_incObj/01 Sonic.asm:1043-1044,
          *  s2.asm:37369-37370,40224-40225). */
         boolean slopeResistStartsFromRest,
-        /** Whether Sonic_SlopeRepel checks isOnObject before applying slope slip.
-         *  S2/S3K: true — btst #sta_onObj,status(a0) / bne.s return (s2.asm:37432).
-         *  S1: false — no isOnObject check (s1disasm/_incObj/01 Sonic.asm:1107-1135).
-         *  When false, slope repel can trigger while standing on object surfaces. */
+        /** Whether engine object support suppresses arming a fresh slope slip.
+         *  The ROM slope-repel routines decrement active move_lock before angle
+         *  slip evaluation (s2.asm:37458-37479,40313-40334;
+         *  sonic3k.asm:23909-23948). The guard only prevents stale terrain angles
+         *  from starting a new slip while an object owns ground contact. */
         boolean slopeRepelChecksOnObject,
         /** Whether slope repel uses S3K's shallow-slope kick instead of S1/S2's
          *  immediate fall/ground_vel clear.

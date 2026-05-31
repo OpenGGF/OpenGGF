@@ -1966,6 +1966,27 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void testSlopeRepelMoveLockCountsDownWhileObjectSupported() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                mockSprite.setAir(false);
+                mockSprite.setOnObject(true);
+                mockSprite.setStickToConvex(false);
+                mockSprite.setAngle((byte) 0x40);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setMoveLockTimer(3);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doSlopeRepel");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals(2, mockSprite.getMoveLockTimer(),
+                                "Sonic_SlopeRepel should decrement active move_lock before object-support slip suppression");
+                assertEquals(0, mockSprite.getGSpeed(),
+                                "Object support should still suppress arming a fresh slope slip from stale terrain angle");
+                assertFalse(mockSprite.getAir(), "Object support should not create a new airborne slope slip");
+        }
+
+        @Test
         public void testS3kLandingPreservesRollingInPinballMode() throws Exception {
                 setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_3K);
                 mockSprite.setRolling(true);
