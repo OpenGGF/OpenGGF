@@ -143,6 +143,17 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzPlatformOutOfRangeUsesStoredBaseX() throws Exception {
+        MTZPlatformObjectInstance platform = new MTZPlatformObjectInstance(
+                new ObjectSpawn(0x0BC0, 0x0630, Sonic2ObjectIds.MTZ_PLATFORM, 0x02, 1, false, 0x2630),
+                "MTZPlatform");
+        setIntField(platform, "x", 0x0B63);
+
+        assertEquals(0x0BC0, platform.getOutOfRangeReferenceX(),
+                "Obj6B_Main checks objoff_34, not moving x_pos(a0), for MarkObjGone2");
+    }
+
+    @Test
     void s2SpikesUseLiveRollingRadiusForBottomOverlap() {
         SpikeObjectInstance spikes = new SpikeObjectInstance(
                 new ObjectSpawn(0x0C40, 0x0650, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),

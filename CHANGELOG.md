@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Obj6B and dead-sidekick trace parity.**
+  MTZ Platform Obj6B now reports its stored `objoff_34` base X to the shared
+  out-of-range despawn path, matching the ROM delete check after platform
+  movement. CPU sidekick dead-fall frames that use the S2/S3K deferred-death
+  path now bypass the normal `Screen_Y_wrap_value` mask in both movement and
+  frame-level wrap passes. Focused Obj6B and movement coverage passes; the MTZ3
+  trace frontier moves from frame 3718 to a later frame-4280 Sonic landing
+  mismatch.
+
 - **Advanced Sonic 2 MTZ3 Obj36 crush-death trace parity.**
   The shared spike hurt callback now preserves a prior `SolidObject_Squash`
   kill instead of overwriting it with `Touch_ChkHurt2` knockback, matching the

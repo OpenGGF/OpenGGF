@@ -1280,6 +1280,14 @@ public class SpriteManager {
 	}
 
 	private static void applyScreenYWrapValueAfterControl(AbstractPlayableSprite playable) {
+		SidekickCpuController cpu = playable != null ? playable.getCpuController() : null;
+		if (playable != null
+				&& playable.isCpuControlled()
+				&& playable.getDead()
+				&& cpu != null
+				&& cpu.deadFallBypassesScreenYWrapValue()) {
+			return;
+		}
 		Camera camera = GameServices.cameraOrNull();
 		if (camera != null) {
 			camera.applyScreenYWrapValue(playable);

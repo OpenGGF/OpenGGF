@@ -521,6 +521,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void applyScreenYWrapValueAfterControl() {
+		SidekickCpuController cpu = sprite.getCpuController();
+		if (sprite.isCpuControlled()
+				&& sprite.getDead()
+				&& cpu != null
+				&& cpu.deadFallBypassesScreenYWrapValue()) {
+			// S2 Obj02_Dead and the S3K Tails dead path run dead-fall movement directly,
+			// without the normal Screen_Y_wrap_value mask used by control/hurt paths.
+			return;
+		}
 		Camera camera = camera();
 		if (camera != null) {
 			camera.applyScreenYWrapValue(sprite);
