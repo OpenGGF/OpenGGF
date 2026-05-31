@@ -178,6 +178,24 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void spikeTouchChkHurt2SkipsAfterSolidObjectCrushDeath() {
+        SpikeObjectInstance spikes = new SpikeObjectInstance(
+                new ObjectSpawn(0x0C40, 0x0650, Sonic2ObjectIds.SPIKES, 0x30, 2, false, 0x4650),
+                "Spikes");
+        spikes.setServices(new StubObjectServices());
+        PlayableEntity tails = mock(PlayableEntity.class);
+        when(tails.getDead()).thenReturn(true);
+        when(tails.isCpuControlled()).thenReturn(true);
+        when(tails.getYSpeed()).thenReturn((short) 0xFE68);
+
+        spikes.onSolidContact(tails, new SolidContact(false, false, true, false, false), 0);
+
+        verify(tails, never()).move((short) 0, (short) 0x0198);
+        verify(tails, never()).applyHurt(0x0C40);
+        verify(tails, never()).applyHurtOrDeath(0x0C40, true, false);
+    }
+
+    @Test
     void mtzPlatformsExposeFullSolidRoutineProfiles() {
         MTZPlatformObjectInstance platform = new MTZPlatformObjectInstance(
                 new ObjectSpawn(0x1000, 0x0300, Sonic2ObjectIds.MTZ_PLATFORM, 0x00, 0, false, 0),
