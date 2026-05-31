@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Tightened Sonic 2 Slicer player-orientation parity.** MTZ Slicer
+  (ObjA1) and its pincer projectile (ObjA2) now route
+  `Obj_GetOrientationToPlayer` through the shared native P1/P2 player-query
+  framework instead of assuming the main player, and pincer child spawns now
+  carry the ROM ObjA2 identity rather than inheriting the parent ObjA1 id.
+  The MTZ3 trace frontier still fails at the known frame-233 Slicer contact;
+  the remaining gap is object title-card prelude/placement alignment, not a
+  Slicer target-selection carve-out.
+
 - **Tightened Sonic 2 Metropolis Zone parity bookkeeping.** MTZ dynamic boss
   objects (Obj53/Obj54) are now marked implemented in the S2 object discovery
   profile, Obj66 spring walls bypass the shared offscreen solid gate like their
