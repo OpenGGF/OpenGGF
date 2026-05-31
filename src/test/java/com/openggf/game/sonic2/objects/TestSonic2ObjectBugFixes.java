@@ -118,6 +118,16 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzLongPlatformOutOfRangeUsesStoredBaseX() throws Exception {
+        MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
+                new ObjectSpawn(0x0B20, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x13, 1, false, 0x276C));
+        setIntField(platform, "x", 0x0AE0);
+
+        assertEquals(0x0B20, platform.getOutOfRangeReferenceX(),
+                "Obj65 loc_26C1C checks objoff_34, not moving x_pos(a0), for MarkObjGone");
+    }
+
+    @Test
     void mtzPlatformsExposeFullSolidRoutineProfiles() {
         MTZPlatformObjectInstance platform = new MTZPlatformObjectInstance(
                 new ObjectSpawn(0x1000, 0x0300, Sonic2ObjectIds.MTZ_PLATFORM, 0x00, 0, false, 0),

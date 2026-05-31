@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj65 deletion-anchor frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit commands:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2616 to frame 3488.
+  - New frontier: frame 3488 `y_speed` expected `0x0000`, actual `0x04F8`;
+    Sonic remains airborne in the engine while the ROM lands on a nearby Obj6E
+    LargeRotPform and clears rolling/on-air state.
+- Findings:
+  - Obj65's tail does not call generic MarkObjGone with moving `x_pos(a0)`.
+    It masks `objoff_34(a0)` against the coarse camera window before deleting
+    the slot and clearing the respawn bit.
+  - The engine's shared out-of-range path already supports object-provided
+    reference coordinates, so Obj65 now exposes its stored base X through that
+    hook instead of adding a per-frame or trace-specific exception.
+  - No trace state is hydrated, and the remaining frontier points at Obj6E
+    LargeRotPform placement/contact parity around Sonic landing.
+
 ## 2026-05-31 - S2 MTZ3 Obj65 long-platform frontier
 
 - Branch: `feature/ai-s2-mtz-parity`
