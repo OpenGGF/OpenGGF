@@ -2359,17 +2359,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Sonic_SlopeRepel: Slip/fall check (s2.asm:37432) */
 	private void doSlopeRepel() {
 		if (sprite.isStickToConvex()) return;
-		// S2/S3K: btst #sta_onObj,status(a0) / bne.s return — skip when on object.
-		// S1: NO isOnObject check — slope repel applies even on object surfaces.
+		int activeMoveLock = sprite.getMoveLockTimer();
+		if (activeMoveLock > 0) {
+			// ROM checks/decrements move_lock before evaluating the angle slip
+			// branch (S2 Sonic_SlopeRepel s2.asm:37458-37479; S2
+			// Tails_SlopeRepel s2.asm:40313-40334; S3K Player_SlopeRepel
+			// sonic3k.asm:23909-23948). AnglePos may have returned early
+			// because Status_OnObj was set, but SlopeRepel is still called by
+			// the ground/roll dispatcher, so a prior terrain-slip lock burns
+			// down while the player rides an object.
+			sprite.setMoveLockTimer(activeMoveLock - 1);
+			return;
+		}
+		// Engine object-support aggregation can leave a non-flat terrain angle while
+		// an object owns ground contact. Preserve the existing guard against arming
+		// a fresh slope slip from that stale terrain angle; the ROM move_lock
+		// countdown has already run above.
 		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
 		boolean checksOnObject = (fs == null || fs.slopeRepelChecksOnObject());
 		if (checksOnObject && (sprite.isOnObject() || collisionSystem().hasObjectSupport(sprite))) return;
-
-		int moveLock = sprite.getMoveLockTimer();
-		if (moveLock > 0) {
-			sprite.setMoveLockTimer(moveLock - 1);
-			return;
-		}
 
 		int angle = sprite.getAngle() & 0xFF;
 		boolean s3kSlipKick = fs != null && fs.slopeRepelUsesS3kSlipKick();
