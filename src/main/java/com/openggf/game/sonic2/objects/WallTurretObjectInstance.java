@@ -5,11 +5,10 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -67,6 +66,8 @@ public class WallTurretObjectInstance extends AbstractObjectInstance {
             { -0x11, 0x10, -0x01, 0x01 },  // frame 1: angled left  (0xEF = -17, 0xFF = -1)
             {  0x11, 0x10, 0x01, 0x01 },  // frame 2: angled right
     };
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     // State
     private int currentX;
@@ -86,7 +87,7 @@ public class WallTurretObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        PlayableEntity player = closestOrientationPlayer(playerEntity);
         switch (routine) {
             case 2:
                 updateIdle(player);
@@ -111,7 +112,7 @@ public class WallTurretObjectInstance extends AbstractObjectInstance {
      *   cmpi.w  #$C0,d2     ; check if within range
      *   blo.s   ++          ; branch to activate if in range
      */
-    private void updateIdle(AbstractPlayableSprite player) {
+    private void updateIdle(PlayableEntity player) {
         if (!isOnScreen(480)) {
             return;
         }
@@ -168,7 +169,7 @@ public class WallTurretObjectInstance extends AbstractObjectInstance {
      *   lsr.w   #1,d6       ; d6 = 0 or 1
      *   addq.w  #1,d6       ; d6 = 1 (left) or 2 (right)
      */
-    private void updateTracking(AbstractPlayableSprite player) {
+    private void updateTracking(PlayableEntity player) {
         if (player == null) {
             return;
         }
@@ -227,11 +228,6 @@ public class WallTurretObjectInstance extends AbstractObjectInstance {
      *   move.b  (a2)+,y_vel(a1)       ; high byte of y velocity
      */
     private void fireProjectile() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
         int frameIdx = Math.max(0, Math.min(mappingFrame, 2));
         int[] spawnData = PROJECTILE_SPAWN_DATA[frameIdx];
 
@@ -241,9 +237,16 @@ public class WallTurretObjectInstance extends AbstractObjectInstance {
         int projXVel = spawnData[2] * 256;
         int projYVel = spawnData[3] * 256;
 
-        WallTurretShotInstance shot = new WallTurretShotInstance(
-                spawn, projX, projY, projXVel, projYVel);
-        objectManager.addDynamicObject(shot);
+        spawnChild(() -> new WallTurretShotInstance(
+                spawn, projX, projY, projXVel, projYVel));
+    }
+
+    private PlayableEntity closestOrientationPlayer(PlayableEntity updatePlayer) {
+        var nearest = services().playerQuery().nearestByRomX(PLAYER_PARTICIPATION, currentX);
+        if (nearest.player() != null) {
+            return nearest.player();
+        }
+        return updatePlayer;
     }
 
     @Override

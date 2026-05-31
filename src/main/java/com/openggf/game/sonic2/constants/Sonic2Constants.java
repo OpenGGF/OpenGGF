@@ -783,6 +783,7 @@ public class Sonic2Constants {
     // SmallMetalPform (Object 0xBD) - ascending/descending metal platform from WFZ
     // ROM Reference: s2.asm lines 79938-80074 (ObjBD code)
     public static final int ART_NEM_WFZ_BELT_PLATFORM_ADDR = 0x8DD0C; // ArtNem_WfzBeltPlatform (verified via RomOffsetFinder)
+    public static final int ART_NEM_WFZ_UNUSED_BADNIK_ADDR = 0x8DDF6; // ArtNem_WfzUnusedBadnik (ObjBF, verified via RomOffsetFinder)
 
     // LateralCannon (Object 0xBE) - retracting platform from WFZ
     // ROM Reference: s2.asm lines 80080-80170 (ObjBE code)
@@ -1000,7 +1001,14 @@ public class Sonic2Constants {
     public static final int MAP_UNC_CLOUD_ADDR = 0x3B32C;            // ObjB3_MapUnc_3B32C
     public static final int MAP_UNC_VPROPELLER_ADDR = 0x3B3BE;       // ObjB4_MapUnc_3B3BE
     public static final int MAP_UNC_HPROPELLER_ADDR = 0x3B548;       // ObjB5_MapUnc_3B548
-    public static final int MAP_UNC_MTZ_COG_ADDR = 0x26EC8;          // Obj65_Obj6A_Obj6B_MapUnc_26EC8
+    // Obj65 standalone/child cog mappings (Obj65_MapUnc_26F04 = obj65_b.asm, 3 frames).
+    // Used by MTZLongPlatformCogInstance with ArtNem_MtzCog (s2.asm:52402/52436/52754).
+    public static final int MAP_UNC_MTZ_COG_ADDR = 0x26F04;          // Obj65_MapUnc_26F04 (obj65_b)
+    // Shared Obj65/Obj6A/Obj6B MTZ moving-platform level-art mappings
+    // (Obj65_Obj6A_Obj6B_MapUnc_26EC8 = obj65_a.asm, 4 frames), rendered against level art
+    // (ArtTile_ArtKos_LevelArt) on VDP palette line 3. Used by Obj65 (s2.asm:52381),
+    // Obj6A MTZ (s2.asm:53688), and Obj6B MTZ (s2.asm:53911).
+    public static final int MAP_UNC_MTZ_PLATFORM_LEVELART_ADDR = 0x26EC8; // Obj65_Obj6A_Obj6B_MapUnc_26EC8 (obj65_a)
     public static final int MAP_UNC_BUTTON_ADDR = 0x24D96;           // Obj47_MapUnc_24D96
     public static final int MAP_UNC_MTZ_FLOOR_SPIKE_ADDR = 0x27750;  // Obj68_Obj6D_MapUnc_27750
     public static final int MAP_UNC_MTZ_SPIKE_BLOCK_ADDR = MAP_UNC_MTZ_FLOOR_SPIKE_ADDR; // Same table (Obj68)
@@ -1017,8 +1025,8 @@ public class Sonic2Constants {
     public static final int MAP_UNC_MTZ_NUT_ADDR = 0x27A26;          // Obj69_MapUnc_27A26
     public static final int MAP_UNC_MTZ_LAVA_BUBBLE_A_ADDR = 0x11396; // Obj71_MapUnc_11396
     public static final int MAP_UNC_MTZ_LAVA_BUBBLE_B_ADDR = 0x11576; // Obj71_MapUnc_11576 (MTZ lava bubble)
-    public static final int MAP_UNC_OBJBB_ADDR = 0x3BBA0;            // ObjBB_MapUnc_3BBA0 (WFZ Thrust)
-    public static final int MAP_UNC_OBJBF_ADDR = 0x3BEE0;            // ObjBF_MapUnc_3BEE0 (WFZ BreakPanels)
+    public static final int MAP_UNC_OBJBB_ADDR = 0x3BBA0;            // ObjBB_MapUnc_3BBA0 (removed WFZ unknown object)
+    public static final int MAP_UNC_OBJBF_ADDR = 0x3BEE0;            // ObjBF_MapUnc_3BEE0 (WFZStick / unused badnik)
 
     public static final int[][] START_POSITIONS = {
             { 0x0060, 0x028F }, // 0 Emerald Hill 1 (EHZ_1.bin)

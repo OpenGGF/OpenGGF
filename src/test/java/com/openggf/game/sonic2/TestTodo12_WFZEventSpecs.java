@@ -5,6 +5,7 @@ import com.openggf.tests.TestEnvironment;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.events.Sonic2WFZEvents;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -265,6 +266,10 @@ public class TestTodo12_WFZEventSpecs {
         cam.setY((short) 0x400);
         events.update(0, 1);
         assertEquals((short) 0x2880, cam.getMinX(), "MinX should be locked at $2880 when both thresholds met");
+        assertEquals(2, events.getWfzSubRoutine(), "Secondary routine should advance to S2 after boss PLC trigger");
+        assertEquals(Sonic2Constants.PLC_WFZ_BOSS, events.getLastRequestedPlcIdForTest(),
+                "WFZ boss PLC should be requested at the boss arena threshold");
+        assertEquals(1, events.getPlcRequestCountForTest(), "Only the boss PLC should have been requested");
     }
 
     /**
@@ -288,8 +293,13 @@ public class TestTodo12_WFZEventSpecs {
         // (secondary routine 2 -> 4, locks controls)
         cam.setY((short) 0x500);
         events.update(0, 2);
-        // After this, secondary routine should be 4 (no-op)
-        // No additional camera changes expected from secondary
+        assertEquals(4, events.getWfzSubRoutine(), "Secondary routine should advance to no-op S4");
+        assertEquals(Sonic2Constants.PLC_TORNADO, events.getLastRequestedPlcIdForTest(),
+                "Tornado PLC should be requested when control lock triggers");
+        assertEquals(2, events.getPlcRequestCountForTest(), "Boss and Tornado PLCs should each be requested once");
+
+        events.update(0, 3);
+        assertEquals(2, events.getPlcRequestCountForTest(), "S4 no-op should not request additional PLCs");
     }
 
     /**
@@ -314,6 +324,7 @@ public class TestTodo12_WFZEventSpecs {
         assertEquals(0, events.getBgXOffset(), "BG offsets should be initialized");
         // Secondary: camera X >= $2880 and Y >= $400 -> lock minX
         assertEquals((short) 0x2880, cam.getMinX(), "Secondary should lock minX at $2880");
+        assertEquals(Sonic2Constants.PLC_WFZ_BOSS, events.getLastRequestedPlcIdForTest());
     }
 
     /**

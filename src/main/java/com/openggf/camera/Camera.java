@@ -46,6 +46,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// This is separate from horizScrollDelayFrames which only affects horizontal scroll.
 	private boolean frozen = false;
 	private boolean deferHorizontalBoundaryClampOnce = false;
+	private boolean deferMaxYWriteUntilAfterUpdate = false;
+	private short deferredMaxYValue = 0;
 
 	// ROM: Level_started_flag.
 	// Used by HUD/start-state flow and intro/cutscene sequencing.
@@ -138,12 +140,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			x = clampAxisWithWrap(x, minX, maxX);
 			y = clampAxisWithWrap(y, minY, maxY);
 			fastVerticalScrollRequested = false;
+			applyDeferredMaxYWrite();
 			return;
 		}
 
 		// Full camera freeze (death, cutscenes) - don't update X or Y at all
 		if (frozen) {
 			fastVerticalScrollRequested = false;
+			applyDeferredMaxYWrite();
 			return;
 		}
 
@@ -172,6 +176,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		} else {
 			focusedSpriteRealY = (short) (focusedSprite.getCentreY() - y);
 		}
+
+		short yBeforeVerticalScroll = y;
 
 		// ROM: s2.asm:18121-18132 - Rolling height compensation
 		// When rolling, Sonic's center shifts down by ~5px due to height change.
@@ -286,10 +292,19 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// camera to a different position than Sonic was wrapped to.
 		// Normal (non-wrap) frames still clamp, which handles pit death in SBZ2
 		// where v_limitbtm2=$510 constrains the camera even though wrapping is active.
-		if (!lastFrameWrapped) {
+		if (!lastFrameWrapped && y != yBeforeVerticalScroll) {
 			y = clampAxisWithWrap(y, minY, maxY);
 		}
 		fastVerticalScrollRequested = false;
+		applyDeferredMaxYWrite();
+	}
+
+	private void applyDeferredMaxYWrite() {
+		if (!deferMaxYWriteUntilAfterUpdate) {
+			return;
+		}
+		setMaxY(deferredMaxYValue);
+		deferMaxYWriteUntilAfterUpdate = false;
 	}
 
 	private void wrapFocusedSpriteYPositionWord() {
@@ -779,6 +794,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
+	 * Defers an object-side max-Y boundary write until the current camera step has
+	 * consumed the previous boundary. This matches ROM paths where an object
+	 * routine runs after ScrollVerti for the visible frame.
+	 */
+	public void setMaxYAfterNextUpdate(short maxY) {
+		this.deferredMaxYValue = maxY;
+		this.deferMaxYWriteUntilAfterUpdate = true;
+	}
+
+	/**
 	 * Sets maxY target for smooth easing.
 	 * Current maxY will ease toward this value at 2px/frame.
 	 * ROM: Camera_Max_Y_pos_target
@@ -979,6 +1004,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		horizScrollDelayFrames = 0;
 		frozen = false;
 		deferHorizontalBoundaryClampOnce = false;
+		deferMaxYWriteUntilAfterUpdate = false;
+		deferredMaxYValue = 0;
 		levelStarted = true;
 		focusedSprite = null;
 		yPosBias = DEFAULT_Y_BIAS;
@@ -1026,7 +1053,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				x, y, minX, minY, maxX, maxY,
 				shakeOffsetX, shakeOffsetY,
 				minXTarget, minYTarget, maxXTarget, maxYTarget,
-				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce, levelStarted,
+				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce,
+				deferMaxYWriteUntilAfterUpdate, deferredMaxYValue, levelStarted,
 				verticalWrapEnabled, verticalWrapRange, verticalWrapMask,
 				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap);
 	}
@@ -1049,6 +1077,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		horizScrollDelayFrames = snapshot.horizScrollDelayFrames();
 		frozen = snapshot.frozen();
 		deferHorizontalBoundaryClampOnce = snapshot.deferHorizontalBoundaryClampOnce();
+		deferMaxYWriteUntilAfterUpdate = snapshot.deferMaxYWriteUntilAfterUpdate();
+		deferredMaxYValue = snapshot.deferredMaxYValue();
 		levelStarted = snapshot.levelStarted();
 		verticalWrapEnabled = snapshot.verticalWrapEnabled();
 		verticalWrapRange = snapshot.verticalWrapRange();

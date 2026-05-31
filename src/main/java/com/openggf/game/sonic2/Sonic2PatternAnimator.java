@@ -40,7 +40,6 @@ class Sonic2PatternAnimator implements AnimatedPatternManager, RewindSnapshottab
         OOZ(10),
         MCZ(11),
         CNZ(12),
-        CNZ_2P(12), // Assumed shared
         CPZ(13),
         DEZ(14),
         ARZ(15),

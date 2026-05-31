@@ -104,12 +104,28 @@ public class TestSonic2PlcParser {
         }
     }
 
+    @Test
+    public void testWfzRuntimePlcsHaveArtDispatchRegistrations() throws IOException {
+        assertPlcEntriesRegisteredForRuntimeDispatch(Sonic2Constants.PLC_WFZ_BOSS);
+        assertPlcEntriesRegisteredForRuntimeDispatch(Sonic2Constants.PLC_TORNADO);
+    }
+
     private Set<Integer> collectAddresses(PlcDefinition plc) {
         Set<Integer> addrs = new HashSet<>();
         for (PlcEntry entry : plc.entries()) {
             addrs.add(entry.romAddr());
         }
         return addrs;
+    }
+
+    private void assertPlcEntriesRegisteredForRuntimeDispatch(int plcId) throws IOException {
+        PlcDefinition plc = Sonic2PlcLoader.parsePlc(rom, plcId);
+        assertFalse(plc.entries().isEmpty(), "WFZ runtime PLC " + plcId + " should contain art entries");
+        for (PlcEntry entry : plc.entries()) {
+            assertNotNull(Sonic2PlcArtRegistry.lookup(entry.romAddr()),
+                    String.format("WFZ runtime PLC %d entry 0x%06X should dispatch through Sonic2PlcArtRegistry",
+                            plcId, entry.romAddr()));
+        }
     }
 }
 

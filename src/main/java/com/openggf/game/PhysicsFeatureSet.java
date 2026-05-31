@@ -899,7 +899,7 @@ public record PhysicsFeatureSet(
             false /* slopeResistAppliesAtZeroInertia: S2 Sonic_SlopeResist/Tails_SlopeResist (s2.asm:37394-37395, 40249-40250) return unconditionally on tst.w inertia(a0)/beq when stationary. Required for EHZ trace F3644 Tails-on-loop divergence. */,
             false /* permanentRespawnTableLatch: S2 ObjectsManager_Main only latches remembered spawns (s2.asm:33402 tst.b 2(a0); bpl.s +); non-remembered spawns re-trigger when cursor passes */,
             true /* objectsExecuteAfterPlayerPhysics: S2 DUAL_PATH uses post-physics object ordering with inline solid checkpoints */,
-            0 /* speedShoesTimerPrePhysicsExtraTicks: S2 Obj01_ChkShoes clears on the display-time decrement that reaches zero (s2.asm:36008-36025); CNZ F4216 must run at normal acceleration */,
+            1 /* speedShoesTimerPrePhysicsExtraTicks: S2 Obj01_ChkShoes runs from Sonic_Display after movement (s2.asm:36008-36025), while the engine timer updates before LevelFrameStep; WFZ trace f4719 consumes the final $18 accel frame before clearing */,
             134 /* shieldObjectFixedSlotIndex: S2 Sonic_Shield follows the 112 dynamic slots at object slot 134 (s2.constants.asm:1139-1164; s2.asm:25786) */,
             136 /* invincibilityStarsFixedSlotIndex: S2 Sonic_InvincibilityStars starts at object slot 136 (s2.constants.asm:1166; s2.asm:25814) */,
             false /* touchResponseUsesRenderFlagYGate: S2 Touch_Loop (s2.asm ~84502-84551) walks active objects without consulting the render flag; preserve pre-Task-3 X-only baseline */,

@@ -91,10 +91,19 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
 
     @Override
     public boolean isDestroyed() {
-        if (parent == null || parent.isDestroyed()) {
+        if (destroyWhenParentDestroyed() && (parent == null || parent.isDestroyed())) {
             setDestroyed(true);
         }
         return super.isDestroyed();
+    }
+
+    /**
+     * Most boss child components are owned by the boss lifetime. A few ROM
+     * bosses allocate independent child object slots that run their own delete
+     * routines after the parent is gone; those children can opt out.
+     */
+    protected boolean destroyWhenParentDestroyed() {
+        return true;
     }
 
     @Override

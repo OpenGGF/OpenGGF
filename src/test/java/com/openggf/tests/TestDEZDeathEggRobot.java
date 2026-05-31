@@ -7,14 +7,17 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.objects.bosses.Sonic2DeathEggRobotInstance;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.boss.BossChildComponent;
+import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -486,6 +491,61 @@ public class TestDEZDeathEggRobot {
         int[] yBuf = (int[]) yBufField.get(sensor);
         assertEquals(4, xBuf.length, "xVelBuffer should have 4 elements (3-frame delay)");
         assertEquals(4, yBuf.length, "yVelBuffer should have 4 elements (3-frame delay)");
+    }
+
+    @Test
+    public void bombDetonationRendersObj58BossExplosionFrames() throws Exception {
+        Class<?> bombClass = null;
+        for (Class<?> inner : Sonic2DeathEggRobotInstance.class.getDeclaredClasses()) {
+            if (inner.getSimpleName().equals("BombChild")) {
+                bombClass = inner;
+                break;
+            }
+        }
+        assertNotNull(bombClass, "BombChild inner class should exist");
+
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer bossExplosionRenderer = mock(PatternSpriteRenderer.class);
+        when(bossExplosionRenderer.isReady()).thenReturn(true);
+        when(renderManager.getBossExplosionRenderer()).thenReturn(bossExplosionRenderer);
+
+        ObjectServices renderServices = new TestObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+
+            @Override
+            public void playSfx(int soundId) {
+                // no-op
+            }
+        };
+        boss.setServices(renderServices);
+
+        java.lang.reflect.Constructor<?> ctor = bombClass.getDeclaredConstructor(
+                Sonic2DeathEggRobotInstance.class, int.class, int.class, int.class, int.class);
+        ctor.setAccessible(true);
+        setConstructionContext(renderServices);
+        AbstractObjectInstance bomb;
+        try {
+            bomb = (AbstractObjectInstance) ctor.newInstance(boss, 0x700, 0x120, 0, 0);
+        } finally {
+            clearConstructionContext();
+        }
+        bomb.setServices(renderServices);
+
+        Field detonatingField = bombClass.getDeclaredField("detonating");
+        detonatingField.setAccessible(true);
+        detonatingField.setBoolean(bomb, true);
+        Field frameField = bombClass.getDeclaredField("detonateFrame");
+        frameField.setAccessible(true);
+        frameField.setInt(bomb, 3);
+
+        bomb.appendRenderCommands(List.of());
+
+        verify(renderManager).getBossExplosionRenderer();
+        verify(renderManager, never()).getRenderer(com.openggf.game.sonic2.Sonic2ObjectArtKeys.DEZ_BOSS);
+        verify(bossExplosionRenderer).drawFrameIndex(3, 0x700, 0x120, false, false);
     }
 
     // ========================================================================

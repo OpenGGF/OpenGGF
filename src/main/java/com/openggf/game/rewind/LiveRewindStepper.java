@@ -30,6 +30,7 @@ final class LiveRewindStepper implements RewindSeekAwareEngineStepper {
         }
         Bk2FrameInput previous = inputs.read(Math.max(0, input.frameIndex() - 1));
         var replayInput = new RewindFrameInputHandler(config, input, previous);
+        sprites.publishHeldInputForLevelEvents(replayInput);
         LevelFrameStep.execute(level, camera, () -> sprites.update(replayInput));
     }
 

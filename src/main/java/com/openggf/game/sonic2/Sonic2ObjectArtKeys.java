@@ -114,6 +114,7 @@ public final class Sonic2ObjectArtKeys {
 
     // WFZ Badniks
     public static final String CLUCKER = "clucker";
+    public static final String WFZ_STICK = "wfz_stick";
 
     // CNZ Badniks
     public static final String CRAWL = "crawl";
@@ -129,6 +130,8 @@ public final class Sonic2ObjectArtKeys {
 
     // MTZ/MCZ Objects
     public static final String BUTTON = "button";
+    public static final String MTZ_PLATFORM = CPZ_STAIR_BLOCK;
+    public static final String MTZ_OBJ6A_6B = CPZ_STAIR_BLOCK;
     public static final String MTZ_COG = "mtz_cog";
     public static final String MTZ_NUT = "mtz_nut";
     public static final String MTZ_FLOOR_SPIKE = "mtz_floor_spike";
@@ -151,6 +154,8 @@ public final class Sonic2ObjectArtKeys {
 
     // WFZ Objects
     public static final String WFZ_HOOK = "wfz_hook";
+    public static final String WFZ_UNKNOWN = "wfz_unknown";
+    public static final String WFZ_PLATFORM = "wfz_platform";
     public static final String WFZ_TILT_PLATFORM = "wfz_tilt_platform";
     public static final String WFZ_BELT_PLATFORM = "wfz_belt_platform";
     public static final String WFZ_GUN_PLATFORM = "wfz_gun_platform";

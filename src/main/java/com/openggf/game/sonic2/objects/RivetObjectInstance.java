@@ -109,6 +109,7 @@ public class RivetObjectInstance extends AbstractObjectInstance
     // Tracks the player's animation state each frame (ROM: objoff_30)
     // ROM stores MainCharacter+anim here to check rolling state
     private boolean playerWasRolling;
+    private AbstractPlayableSprite lastNativeMainPlayer;
 
     public RivetObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -117,17 +118,16 @@ public class RivetObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (busted) {
             return;
         }
 
         // ROM: ObjC2_Main (s2.asm line 80588)
         // move.b (MainCharacter+anim).w,objoff_30(a0)
-        // Store player's rolling state each frame for checking in onSolidContact
-        if (player != null) {
-            playerWasRolling = player.getRolling();
-        }
+        // Store native P1's rolling state each frame for checking in onSolidContact.
+        AbstractPlayableSprite player = nativeMainPlayer(playerEntity);
+        lastNativeMainPlayer = player;
+        playerWasRolling = player != null && player.getRolling();
     }
 
     // ========================================================================
@@ -162,6 +162,15 @@ public class RivetObjectInstance extends AbstractObjectInstance
             return;
         }
 
+        // ROM ObjC2 only checks MainCharacter and has no Sidekick branch.
+        PlayableEntity nativeMain = services().playerQuery().mainPlayerOrNull();
+        if (nativeMain == null) {
+            nativeMain = lastNativeMainPlayer;
+        }
+        if (nativeMain != player) {
+            return;
+        }
+
         // ROM: ObjC2_Bust (s2.asm line 80600)
         // cmpi.b #2,objoff_30(a0) - check if player was rolling (anim == 2)
         // bne.s + (skip if not rolling)
@@ -170,6 +179,14 @@ public class RivetObjectInstance extends AbstractObjectInstance
         }
 
         bustRivet(player);
+    }
+
+    private AbstractPlayableSprite nativeMainPlayer(PlayableEntity updatePlayer) {
+        PlayableEntity main = services().playerQuery().mainPlayerOrNull();
+        if (main instanceof AbstractPlayableSprite sprite) {
+            return sprite;
+        }
+        return updatePlayer instanceof AbstractPlayableSprite sprite ? sprite : null;
     }
 
     /**

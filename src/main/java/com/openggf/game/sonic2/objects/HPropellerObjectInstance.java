@@ -11,6 +11,7 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import com.openggf.debug.DebugColor;
@@ -359,7 +360,7 @@ public class HPropellerObjectInstance extends AbstractObjectInstance {
         lastPushedPlayer = true;
 
         // ROM: add.w d1,y_pos(a1)
-        player.setY((short) (player.getY() + push));
+        NativePositionOps.writeYPosPreserveSubpixel(player, player.getCentreY() + push);
 
         // ROM: bset #status.player.in_air,status(a1)
         player.setAir(true);
