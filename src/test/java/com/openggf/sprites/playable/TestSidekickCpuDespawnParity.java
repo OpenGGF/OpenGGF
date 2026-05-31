@@ -9,6 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.PerObjectRewindSnapshot.SidekickCpuRewindExtra;
 import com.openggf.physics.Direction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -101,6 +102,30 @@ class TestSidekickCpuDespawnParity {
         public void appendRenderCommands(List<GLCommand> commands) {
             // No rendering needed for this test sentinel.
         }
+    }
+
+    @Test
+    void levelBoundsPreserveWriteOnlyMinYAcrossRewind() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.setLevelBounds(null, null, 0x0400, null);
+
+        assertEquals(0x0400, controller.getMinYBound(0x0123),
+                "S2 Tails_Min_Y_pos is write-only in the ROM, but the engine should still preserve the value");
+
+        SidekickCpuRewindExtra snapshot = controller.captureRewindState();
+        controller.setLevelBounds(0x1111, 0x2222, 0x0333, 0x0444);
+        controller.restoreRewindState(snapshot);
+
+        assertEquals(0x0400, controller.getMinYBound(Integer.MIN_VALUE),
+                "Sidekick min-Y bound should round-trip through rewind snapshots");
+        assertEquals(Integer.MIN_VALUE, controller.getMinXBound(Integer.MIN_VALUE),
+                "Unwritten min-X bound should remain unset");
+        assertEquals(Integer.MIN_VALUE, controller.getMaxYBound(Integer.MIN_VALUE),
+                "Unwritten max-Y bound should remain unset");
     }
 
     @Test

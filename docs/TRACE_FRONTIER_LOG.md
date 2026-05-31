@@ -1,5 +1,17 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ parity metadata/event-state pass trace verification
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Command: `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+- Result: fail, 3 trace failures; no committed trace-code fix in this pass.
+  - MTZ1: frame 375 `tails_air` expected 1 actual 0; matches the existing Tails despawn/`Tails_interact_ID` diagnostic gap below.
+  - MTZ2: frame 305 `y` expected `0x05EB` actual `0x05EA`; matches the existing 1 px Obj6C conveyor landing residual below.
+  - MTZ3: frame 233 `y_speed` expected `0x03A8` actual `-0x03A8`; current isolated worktree exposes an earlier Slicer contact mismatch than the older f765 sidekick frontier recorded below. The engine destroys ObjA1 at `(0x0200,0x01EF)` while the trace has ObjA1 routine 8 at `(0x01FA,0x01F0)`, so the next owner should inspect Slicer movement/activation timing and touch overlap before revisiting the later sidekick-air frontier.
+
+The code changes in this pass are limited to static parity bookkeeping and ROM-state preservation: S2 object discovery now marks MTZ dynamic boss IDs `0x53`/`0x54` implemented, Obj66 opts out of the shared offscreen solid gate, and MTZ3 routine 6 mirrors the ROM write to `Tails_Min_Y_pos` in sidekick rewind state. `docs/s2disasm/s2.constants.asm` notes `Tails_Min_Y_pos` is only written, so the new min-Y field is intentionally not consumed by movement.
+
 ## 2026-05-31 - S2 WFZ trace frontier closed
 
 - Scope: local S2 WFZ parity work on the existing branch. The WFZ level-select

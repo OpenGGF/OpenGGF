@@ -9,6 +9,9 @@ import com.openggf.game.sonic2.events.Sonic2MTZEvents;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.physics.Direction;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -43,6 +46,31 @@ public class TestTodo10_MTZEventSpecs {
 
     private Sonic2MTZEvents events;
     private Camera cam;
+
+    static class TestableSidekick extends AbstractPlayableSprite {
+        TestableSidekick() {
+            super("tails_p2", (short) 0, (short) 0);
+        }
+
+        @Override
+        public void draw() {}
+
+        @Override
+        public void defineSpeeds() {
+            runHeight = 38;
+            rollHeight = 28;
+            standXRadius = 9;
+            standYRadius = 19;
+            rollXRadius = 7;
+            rollYRadius = 14;
+            setWidth(18);
+            setHeight(runHeight);
+            setDirection(Direction.RIGHT);
+        }
+
+        @Override
+        protected void createSensorLines() {}
+    }
 
     @SuppressWarnings("unchecked")
     private static void setConstructionContext(ObjectServices services) {
@@ -217,19 +245,27 @@ public class TestTodo10_MTZEventSpecs {
      */
     @Test
     public void testMTZ3Routine6_LocksMinYWhenAboveThreshold() {
+        TestableSidekick tails = addCpuSidekick();
         events.setEventRoutine(6);
         cam.setY((short) 0x400);
         events.update(2, 0);
         assertEquals((short) 0x400, cam.getMinY(), "MinY should be locked at $400 when camera Y >= $400");
+        assertEquals(0x400, tails.getCpuController().getMinYBound(Integer.MIN_VALUE),
+                "MTZ3 should also mirror the ROM Tails_Min_Y_pos write");
+        assertEquals(Integer.MIN_VALUE, tails.getCpuController().getMaxYBound(Integer.MIN_VALUE),
+                "Routine 6 writes Tails_Min_Y_pos, not Tails_Max_Y_pos");
     }
 
     @Test
     public void testMTZ3Routine6_DoesNotLockMinYBelowThreshold() {
+        TestableSidekick tails = addCpuSidekick();
         events.setEventRoutine(6);
         cam.setY((short) 0x300);
         short minYBefore = cam.getMinY();
         events.update(2, 0);
         assertEquals(minYBefore, cam.getMinY(), "MinY should not change when camera Y < $400");
+        assertEquals(Integer.MIN_VALUE, tails.getCpuController().getMinYBound(Integer.MIN_VALUE),
+                "Tails_Min_Y_pos should not change before the camera reaches the threshold");
     }
 
     @Test
@@ -314,6 +350,14 @@ public class TestTodo10_MTZEventSpecs {
             events.update(2, 3 + i);
         }
         assertEquals(8, events.getEventRoutine());
+    }
+
+    private TestableSidekick addCpuSidekick() {
+        TestableSidekick tails = new TestableSidekick();
+        tails.setCpuControlled(true);
+        tails.setCpuController(new SidekickCpuController(tails, null));
+        GameServices.sprites().addSprite(tails);
+        return tails;
     }
 }
 

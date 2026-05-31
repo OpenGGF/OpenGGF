@@ -134,9 +134,13 @@ public abstract class Sonic2ZoneEvents {
     }
 
     protected void setSidekickBounds(Integer minX, Integer maxX, Integer maxY) {
+        setSidekickBounds(minX, maxX, null, maxY);
+    }
+
+    protected void setSidekickBounds(Integer minX, Integer maxX, Integer minY, Integer maxY) {
         for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) {
             if (sidekick.getCpuController() != null) {
-                sidekick.getCpuController().setLevelBounds(minX, maxX, maxY);
+                sidekick.getCpuController().setLevelBounds(minX, maxX, minY, maxY);
             }
         }
     }
