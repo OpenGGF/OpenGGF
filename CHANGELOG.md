@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Cog/sidekick push parity.** Multi-piece solid
+  objects now run the same object-owned `SolidObject_TestClearPush` cleanup as
+  single-piece solids when a prior side contact stops pushing the player. This
+  clears stale sidekick `Status_Push` state after MTZ Cog contacts without
+  route or frame carve-outs; focused solid-object coverage passes and the MTZ3
+  trace frontier moves to the next frame-1982 Cog/sidekick velocity reversal.
+
 - **Advanced Sonic 2 MTZ3 Twin Stompers trace parity.** MTZ Twin Stompers
   Obj64 now enters the engine contact window with the ROM-equivalent initial
   main-tick phase for its 8 px/tick piston motion, keeping its solid surface
