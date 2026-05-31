@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 wrapped render-flag and spring-wall trace parity.**
+  Playable render-flag visibility now applies the active vertical-wrap mask to
+  relative display Y, matching S2 `BuildSprites_ApproxYCheck` while preserving
+  the existing S1/S2 32 px visibility band. MTZ Spring Wall Obj66 now advertises
+  the ROM `SolidObject_cont` inclusive right edge used by its
+  `SolidObject_Always_SingleCharacter` path. Focused camera and Obj66 tests
+  pass; the MTZ3 trace frontier moves from frame 2362 to a later frame-2543
+  Tails platform/side-contact mismatch.
+
 - **Advanced Sonic 2 MTZ3 jump and vertical-wrap trace parity.** Shared
   playable jump headroom checks now use ROM-style `CalcRoomOverHead` terrain
   probes, including the ceiling/left-wall nibble-flip offsets, instead of

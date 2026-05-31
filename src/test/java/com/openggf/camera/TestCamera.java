@@ -348,6 +348,19 @@ public class TestCamera {
         assertFalse(camera.isOnScreen(offscreenSprite), "Sprite right of camera should not be on screen");
     }
 
+    @Test
+    public void testWrappedPlayableRenderFlagVisibilityUsesRelativeYMask() {
+        camera.setX((short) 0x0840);
+        camera.setY((short) 0x07DE);
+        camera.setVerticalWrapEnabled(true, 0x0800);
+        when(mockSprite.getRenderCentreX()).thenReturn((short) 0x08B7);
+        when(mockSprite.getRenderCentreY()).thenReturn((short) 0x0051);
+        when(mockSprite.getRenderFlagWidthPixels()).thenReturn(0x18);
+
+        assertTrue(camera.isVisibleForRenderFlag(mockSprite),
+                "S2 BuildSprites_ApproxYCheck masks relative Y with $7FF before the 32px render-flag band");
+    }
+
     // ==================== Increment Tests ====================
 
     @Test
