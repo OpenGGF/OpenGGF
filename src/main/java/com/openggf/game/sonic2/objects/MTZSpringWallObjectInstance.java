@@ -91,6 +91,15 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj66 calls SolidObject_Always_SingleCharacter, which falls into
+        // SolidObject_cont's X gate. S2 rejects the right edge with `bhi`,
+        // not `bhs`, so relX == width*2 still reaches the side-bounce path
+        // (s2.asm:34898-34913, 35153-35157).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return true;

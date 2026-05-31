@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 wrapped render flag and Obj66 edge frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit commands:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.camera.TestCamera#testWrappedPlayableRenderFlagVisibilityUsesRelativeYMask" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestMTZSpringWallObjectInstance" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2362 to frame 2543.
+  - New frontier: frame 2543 `tails_x_speed` expected `-045A`, actual
+    `0x0000`; the engine now matches the wrapped Obj6B sidekick landing and
+    the later Obj66 spring-wall bounce timing, then diverges on a Tails
+    platform/side-contact interaction.
+- Findings:
+  - S2 `BuildSprites_ApproxYCheck` masks relative display Y with `$7FF` before
+    applying its 32 px render-flag band. The camera render-flag helper now
+    applies the active vertical-wrap mask while leaving the existing
+    game-specific margin selection intact.
+  - Obj66 calls `SolidObject_Always_SingleCharacter`, which reaches the same
+    `SolidObject_cont` X gate as ordinary solids. That gate rejects values
+    beyond the right edge with `bhi`, so `relX == width*2` remains a valid side
+    contact. Obj66 now exposes that rule through the existing solid-provider
+    hook instead of a frame or route carve-out.
+  - No trace state is hydrated, and the remaining frontier is a generic
+    sidekick/platform contact discrepancy to diagnose through ROM-backed object
+    state.
+
 ## 2026-05-31 - S2 MTZ3 jump headroom and vertical wrap move frontier
 
 - Branch: `feature/ai-s2-mtz-parity`
