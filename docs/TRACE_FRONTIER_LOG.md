@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 multi-piece push cleanup moves Cog frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed clean test "-Dtest=com.openggf.level.objects.TestSolidObjectManager" -DfailIfNoTests=false`
+  - PASS: `TestSolidObjectManager` reports 39 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 1979 to frame 1982.
+  - New frontier: frame 1982 `tails_g_speed` expected `0xFF80`, actual `0x006A`; Tails and the cog match through frames 1979-1981, then the ROM reverses Tails's ground velocity during the next Cog interaction while the engine continues along the existing slope vector.
+- Findings:
+  - The frame-1979 mismatch was stale sidekick `Status_Push`: the shared multi-piece solid path set the object-owned pushing bit, but unlike single-piece `SolidObject` handling it never cleared that bit when the piece stopped pushing.
+  - Multi-piece solids now run the same object-owned `SolidObject_TestClearPush` cleanup as single-piece solids in both inline and post-resolution contact paths.
+  - This keeps the fix in the shared solid framework used by Obj70-style multi-piece solids; it does not hydrate from trace state or add MTZ/frame/route-specific compensation.
+
 ## 2026-05-31 - S2 MTZ3 Obj6B bouncy-platform parity moves frontier
 
 - Branch: `feature/ai-s2-mtz-parity`

@@ -6473,6 +6473,9 @@ public class ObjectManager {
                     player.setPushing(true);
                     setObjectPushingBit(player, instance);
                     provider.setPlayerPushing(player, true);
+                } else if (clearObjectPushingBit(player, instance)) {
+                    player.setPushing(false);
+                    provider.setPlayerPushing(player, false);
                 }
                 if (result.standing()) {
                     ridingStates.put(player, new RidingState(
@@ -7296,6 +7299,11 @@ public class ObjectManager {
                         // ROM: s2.asm:35220-35226 — also set pushing bit on the object
                         setObjectPushingBit(player, instance);
                         provider.setPlayerPushing(player, true);
+                    } else if (clearObjectPushingBit(player, instance)) {
+                        // ROM SolidObject_TestClearPush clears the player's Status_Push
+                        // only when this object's own pushing bit was set.
+                        player.setPushing(false);
+                        provider.setPlayerPushing(player, false);
                     }
                     if (result.standing()) {
                         nextRidingObject = instance;
