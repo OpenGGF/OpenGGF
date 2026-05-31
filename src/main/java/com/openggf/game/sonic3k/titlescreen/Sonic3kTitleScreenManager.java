@@ -64,6 +64,34 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     private static final int MAP_HEIGHT = 28;
 
     // -----------------------------------------------------------------------
+    // Widescreen helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Returns the current projection viewport width in game pixels.
+     * At native 320 this equals SCREEN_WIDTH exactly.
+     */
+    private int viewportWidth() {
+        try {
+            int w = GameServices.graphics().getProjectionWidth();
+            return w > 0 ? w : SCREEN_WIDTH;
+        } catch (Exception ignored) {
+            return SCREEN_WIDTH;
+        }
+    }
+
+    /**
+     * Horizontal offset that shifts the native-320 content block to the centre
+     * of the current viewport.  Zero at native (byte-identical); positive at
+     * wider resolutions.
+     *
+     * <p>Package-visible for unit tests.
+     */
+    int xOffset() {
+        return (viewportWidth() - SCREEN_WIDTH) / 2;
+    }
+
+    // -----------------------------------------------------------------------
     // Internal phase state machine
     // -----------------------------------------------------------------------
 
@@ -1053,6 +1081,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
 
         int animPatternBase = dataLoader.getAnimPatternBase();
+        // xOffset() is 0 at native 320 — byte-identical at native width.
+        int ox = xOffset();
 
         gm.beginPatternBatch();
         int mapSize = MAP_WIDTH * MAP_HEIGHT;
@@ -1069,7 +1099,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                 // Extract pattern fields from nametable word
                 int tileIndex = word & 0x7FF;
                 reusableDesc.set(word);
-                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, col * 8, row * 8);
+                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, ox + col * 8, row * 8);
             }
         }
         gm.flushPatternBatch();
@@ -1077,6 +1107,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Apply fade overlay for SEGA fade-in only.
         // PAL_TRANSITION uses actual per-color palette modification (not an overlay)
         // so the SEGA text stays white while the background goes dark.
+        // Width extended to viewportWidth() so side-bars are covered at widescreen;
+        // at native 320 viewportWidth() == SCREEN_WIDTH — byte-identical.
         if (phase == Phase.SEGA_FADE_IN) {
             float fadeAmount = 1.0f - (float) phaseTimer / SEGA_FADE_DURATION;
             if (fadeAmount > 0.0f) {
@@ -1084,7 +1116,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                         GLCommand.CommandType.RECTI, -1,
                         GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                         0.0f, 0.0f, 0.0f, fadeAmount,
-                        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                        0, 0, viewportWidth(), SCREEN_HEIGHT
                 ));
             }
         }
@@ -1098,6 +1130,8 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         int[] nametable = dataLoader.getAnimationMapping(FINAL_FRAME_INDEX);
         if (nametable != null && nametable.length > 0) {
             int animPatternBase = dataLoader.getAnimPatternBase();
+            // xOffset() is 0 at native 320 — byte-identical at native width.
+            int ox = xOffset();
             gm.beginPatternBatch();
             for (int row = 0; row < MAP_HEIGHT; row++) {
                 for (int col = 0; col < MAP_WIDTH; col++) {
@@ -1111,20 +1145,22 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                     }
                     int tileIndex = word & 0x7FF;
                     reusableDesc.set(word);
-                    gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, col * 8, row * 8);
+                    gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, ox + col * 8, row * 8);
                 }
             }
             gm.flushPatternBatch();
         }
 
-        // White flash overlay, fading out
+        // White flash overlay, fading out.
+        // Width extended to viewportWidth() so side-bars are also covered;
+        // at native 320 viewportWidth() == SCREEN_WIDTH — byte-identical.
         float flashAlpha = 1.0f - (float) phaseTimer / WHITE_FLASH_DURATION;
         if (flashAlpha > 0.0f) {
             gm.registerCommand(new GLCommand(
                     GLCommand.CommandType.RECTI, -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                     1.0f, 1.0f, 1.0f, flashAlpha,
-                    0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                    0, 0, viewportWidth(), SCREEN_HEIGHT
             ));
         }
     }
@@ -1137,14 +1173,16 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Draw the interactive scene underneath
         drawInteractivePhase(gm);
 
-        // Black overlay, fading in
+        // Black overlay, fading in.
+        // Width extended to viewportWidth() so side-bars are also covered;
+        // at native 320 viewportWidth() == SCREEN_WIDTH — byte-identical.
         float fadeAlpha = (float) phaseTimer / EXIT_FADE_DURATION;
         if (fadeAlpha > 0.0f) {
             gm.registerCommand(new GLCommand(
                     GLCommand.CommandType.RECTI, -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                     0.0f, 0.0f, 0.0f, Math.min(1.0f, fadeAlpha),
-                    0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                    0, 0, viewportWidth(), SCREEN_HEIGHT
             ));
         }
     }
@@ -1153,12 +1191,15 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * Draws the interactive phase: background plane, foreground plane, and all sprites.
      */
     private void drawInteractivePhase(GraphicsManager gm) {
-        // 1. Render Plane B (background)
+        // xOffset() is 0 at native 320 — byte-identical at native width.
+        int ox = xOffset();
+
+        // 1. Render Plane B (background) — pillarboxed/centered (fixed 40×28, no H-scroll wrap)
         renderPlaneB(gm);
 
         // 2. Render Tails plane sprite (no priority, renders behind Plane A)
         if (tailsPlaneSprite.active && tailsPlaneRenderer != null && tailsPlaneRenderer.isReady()) {
-            int tailsScreenX = tailsPlaneVdpX - 128;
+            int tailsScreenX = ox + tailsPlaneVdpX - 128;
             int tailsVdpY = tailsPlaneGoingRight ? 0xC0 : 0xD0;
             int tailsScreenY = tailsVdpY - 128;
             gm.beginPatternBatch();
@@ -1167,7 +1208,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
             gm.flushPatternBatch();
         }
 
-        // 3. Render Plane A (final Sonic frame, shifted by vScroll)
+        // 3. Render Plane A (final Sonic frame, shifted by vScroll) — centered
         renderPlaneA(gm);
 
         // 4. Render sprites in VDP priority order (back to front in painter's algorithm).
@@ -1179,9 +1220,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         gm.beginPatternBatch();
 
         // Sonic finger wag — priority $180, drawn BEHIND the banner
-        // VDP x=$148, y=($DC - vScroll)
+        // VDP x=$148, y=($DC - vScroll); ox centres on the viewport.
         if (sonicFingerSprite.active && sonicAnimRenderer != null && sonicAnimRenderer.isReady()) {
-            int fingerScreenX = 0x148 - 128; // 200
+            int fingerScreenX = ox + 0x148 - 128; // native: 200
             int fingerScreenY = 0xDC - vScroll - 128;
             sonicAnimRenderer.drawFrameIndex(sonicFingerSprite.mappingFrame,
                     fingerScreenX, fingerScreenY);
@@ -1190,7 +1231,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // Sonic wink — priority $180, drawn BEHIND the banner
         // VDP x=$F8, y=($C8 - vScroll)
         if (sonicWinkSprite.active && sonicAnimRenderer != null && sonicAnimRenderer.isReady()) {
-            int winkScreenX = 0xF8 - 128; // 120
+            int winkScreenX = ox + 0xF8 - 128; // native: 120
             int winkScreenY = 0xC8 - vScroll - 128;
             sonicAnimRenderer.drawFrameIndex(sonicWinkSprite.mappingFrame,
                     winkScreenX, winkScreenY);
@@ -1198,13 +1239,13 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
         // Banner — priority $80, drawn IN FRONT of finger/wink
         if (bannerSprite.active && bannerRenderer != null && bannerRenderer.isReady()) {
-            int bannerScreenX = 0x120 - 128; // VDP $120 -> screen 160
+            int bannerScreenX = ox + 0x120 - 128; // native: 160
             int bannerScreenY = getBannerScreenY();
             bannerRenderer.drawFrameIndex(0, bannerScreenX, bannerScreenY);
 
             // TM symbol — VDP x=$188, y=$EC (fixed position)
             if (tmSprite.active && bannerSettled) {
-                int tmScreenX = 0x188 - 128; // 264
+                int tmScreenX = ox + 0x188 - 128; // native: 264
                 int tmScreenY = 0xEC - 128;  // 108
                 bannerRenderer.drawFrameIndex(1, tmScreenX, tmScreenY);
             }
@@ -1212,14 +1253,14 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
         // & KNUCKLES — priority $80
         if (andKnucklesSprite.active && andKnucklesRenderer != null && andKnucklesRenderer.isReady()) {
-            int andKnucklesScreenX = 0x120 - 128;
+            int andKnucklesScreenX = ox + 0x120 - 128; // native: 160
             int andKnucklesScreenY = getAndKnucklesScreenY();
             andKnucklesRenderer.drawFrameIndex(0, andKnucklesScreenX, andKnucklesScreenY);
         }
 
         // Menu selection — VDP x=$F0, y=$140
         if (selectionSprite.active && selectionRenderer != null && selectionRenderer.isReady()) {
-            int selScreenX = 0xF0 - 128; // 112
+            int selScreenX = ox + 0xF0 - 128; // native: 112
             int selScreenY = 0x140 - 128; // 192
             selectionRenderer.drawFrameIndex(selectionSprite.mappingFrame,
                     selScreenX, selScreenY);
@@ -1227,7 +1268,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
         // Copyright text — VDP x=$158, y=$14C
         if (copyrightSprite.active && copyrightRenderer != null && copyrightRenderer.isReady()) {
-            int copyScreenX = 0x158 - 128; // 216
+            int copyScreenX = ox + 0x158 - 128; // native: 216
             int copyScreenY = 0x14C - 128; // 204
             copyrightRenderer.drawFrameIndex(0, copyScreenX, copyScreenY);
         }
@@ -1251,6 +1292,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
 
         int animPatternBase = dataLoader.getAnimPatternBase();
+        // Plane B is a fixed 40×28 picture with no H-scroll — pillarbox/center.
+        // xOffset() is 0 at native 320 — byte-identical at native width.
+        int ox = xOffset();
 
         gm.beginPatternBatch();
         for (int row = 0; row < MAP_HEIGHT; row++) {
@@ -1265,7 +1309,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                 }
                 int tileIndex = word & 0x7FF;
                 reusableDesc.set(word);
-                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, col * 8, row * 8);
+                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, ox + col * 8, row * 8);
             }
         }
         gm.flushPatternBatch();
@@ -1282,6 +1326,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
 
         int animPatternBase = dataLoader.getAnimPatternBase();
+        // Center the foreground plane on the viewport.
+        // xOffset() is 0 at native 320 — byte-identical at native width.
+        int ox = xOffset();
 
         gm.beginPatternBatch();
         for (int row = 0; row < MAP_HEIGHT; row++) {
@@ -1297,7 +1344,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                 }
                 int tileIndex = word & 0x7FF;
                 reusableDesc.set(word);
-                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, col * 8, drawY);
+                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, ox + col * 8, drawY);
             }
         }
         gm.flushPatternBatch();
