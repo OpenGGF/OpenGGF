@@ -13,6 +13,7 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -334,7 +335,7 @@ public class NutObjectInstance extends AbstractObjectInstance
         if ((dx & 0xFFFF) < ALIGN_THRESHOLD) {
             // Aligned - snap player X to nut X and advance to screwing
             // ROM: move.w x_pos(a0),x_pos(a1) / addq.b #2,(a4)
-            player.setCentreX((short) x);
+            NativePositionOps.writeXPosPreserveSubpixel(player, x);
             ps.mode = MODE_SCREWING;
         }
     }
@@ -356,7 +357,7 @@ public class NutObjectInstance extends AbstractObjectInstance
             accumulator += dx;
 
             // Snap player X to nut center
-            player.setCentreX((short) x);
+            NativePositionOps.writeXPosPreserveSubpixel(player, x);
 
             // Calculate vertical position from accumulator
             // ROM: asr.w #3,d0 / move.w d0,d1
@@ -395,7 +396,7 @@ public class NutObjectInstance extends AbstractObjectInstance
             accumulator += dx;
 
             // Snap player X to nut center
-            player.setCentreX((short) x);
+            NativePositionOps.writeXPosPreserveSubpixel(player, x);
 
             // Calculate vertical position from accumulator
             int shifted = accumulator >> 3;

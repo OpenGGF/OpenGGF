@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj69 nut x-subpixel frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#nutNativeXSnapsPreservePlayerSubpixel" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 4793 to frame 5143.
+  - New frontier: frame 5143 `g_speed` expected `0xFF10`, actual `0x0000`;
+    Sonic's position and subpixel now match through the Obj69 nut snap, but the
+    engine later zeroes airborne horizontal/ground speed during an Obj74
+    invisible-block side contact near `x=$1340,y=$052C`.
+- Findings:
+  - Obj69 align and screw modes write `move.w x_pos(a0),x_pos(a1)` without
+    touching `x_sub(a1)`. The engine had used `setCentreX`, which cleared the
+    player's `x_sub` and produced the frame-4793 subpixel mismatch.
+  - The fix routes Obj69's player X snap through `NativePositionOps` so only
+    the native `x_pos` word changes, preserving the ROM subpixel byte.
+  - No trace state is hydrated, and the remaining frontier points at generic
+    SolidObject side-contact handling for Obj74 rather than Obj69.
+
 ## 2026-05-31 - S2 MTZ3 Obj06 cylinder frontier
 
 - Branch: `feature/ai-s2-mtz-parity`

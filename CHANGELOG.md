@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Obj69 nut trace parity.**
+  MTZ Nut Obj69 now mirrors the ROM's native `move.w x_pos(a0),x_pos(a1)`
+  writes by preserving the player's `x_sub` byte when snapping Sonic to the
+  nut center during align and screw movement. Focused Obj69 coverage passes;
+  the MTZ3 trace frontier moves from frame 4793 to a later frame-5143
+  airborne invisible-block side-contact mismatch.
+
 - **Advanced Sonic 2 MTZ3 Obj06 cylinder trace parity.**
   S2 Obj06 now implements its negative-subtype MTZ cylinder mode instead of
   treating every placement as the EHZ spiral path. The cylinder capture snap,
