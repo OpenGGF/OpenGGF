@@ -52,8 +52,30 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
     // synchronously, so we use the full 90-frame hold but run the fade in the last 22.
     private static final int BONUS_BG_FADE_FRAMES = 22;
 
+    /** Native game width (320-pixel frame everything is authored for). */
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
+
+    /**
+     * Returns the configured viewport width in game pixels.
+     * At native 320 equals SCREEN_WIDTH exactly (xOffset == 0 — byte-identical).
+     */
+    private int viewportWidth() {
+        try {
+            int w = GameServices.graphics().getProjectionWidth();
+            return w > 0 ? w : SCREEN_WIDTH;
+        } catch (Exception ignored) {
+            return SCREEN_WIDTH;
+        }
+    }
+
+    /**
+     * Horizontal offset to centre the 320-wide title-card composition in the
+     * configured viewport.  Zero at native 320 — byte-identical.
+     */
+    private int xOffset() {
+        return (viewportWidth() - SCREEN_WIDTH) / 2;
+    }
 
     // Pattern base ID for GPU caching (high to avoid conflicts)
     private static final int PATTERN_BASE = 0x50000;
@@ -292,6 +314,9 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
         // ROM: Pal_FadeFromBlack runs simultaneously with the title card wait.
         if (!inLevelMode &&
                 (state == Sonic3kTitleCardState.SLIDE_IN || state == Sonic3kTitleCardState.DISPLAY)) {
+            // Span the full viewport so no level bleeds through on wider screens.
+            // viewportWidth()==SCREEN_WIDTH at native 320 — byte-identical.
+            int vw = viewportWidth();
             if (bonusMode && state == Sonic3kTitleCardState.DISPLAY && bonusFadeProgress > 0f) {
                 // Per-channel subtractive fade matching FadeManager.updateFadeFromBlack()
                 // B fades first (0→1/3), then G (1/3→2/3), then R (2/3→1)
@@ -304,14 +329,14 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
                     gm.registerCommand(new GLCommand(
                             GLCommand.CommandType.RECTI, -1, GLCommand.BlendType.SUBTRACTIVE,
                             darkR, darkG, darkB, 1.0f,
-                            0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                            0, 0, vw, SCREEN_HEIGHT
                     ));
                 }
             } else {
                 gm.registerCommand(new GLCommand(
                         GLCommand.CommandType.RECTI, -1,
                         0.0f, 0.0f, 0.0f,
-                        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                        0, 0, vw, SCREEN_HEIGHT
                 ));
             }
         }
@@ -669,7 +694,9 @@ public class Sonic3kTitleCardManager implements TitleCardProvider {
 
         int frameIndex = elemFrame[elemIdx];
         TitleCardMappings.SpritePiece[] pieces = Sonic3kTitleCardMappings.getFrame(frameIndex);
-        int centerX = elemX[elemIdx];
+        // xOffset() centres the 320-wide composition in the viewport.
+        // At native 320 xOffset()==0 — byte-identical.
+        int centerX = elemX[elemIdx] + xOffset();
         int centerY = elemY[elemIdx];
 
         // Render back-to-front: VDP sprites earlier in the mapping have higher

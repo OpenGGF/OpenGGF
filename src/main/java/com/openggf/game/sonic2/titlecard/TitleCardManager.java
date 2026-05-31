@@ -62,9 +62,30 @@ public class TitleCardManager implements TitleCardProvider {
      */
     private static final int TEXT_WAIT_DURATION = 0x2D;  // 45 frames
 
-    /** Screen dimensions */
+    /** Native game width (320-pixel frame everything is authored for). */
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
+
+    /**
+     * Returns the configured viewport width in game pixels.
+     * At native 320 equals SCREEN_WIDTH exactly (xOffset == 0 — byte-identical).
+     */
+    private int viewportWidth() {
+        try {
+            int w = GameServices.graphics().getProjectionWidth();
+            return w > 0 ? w : SCREEN_WIDTH;
+        } catch (Exception ignored) {
+            return SCREEN_WIDTH;
+        }
+    }
+
+    /**
+     * Horizontal offset to centre the 320-wide title-card composition in the
+     * configured viewport.  Zero at native 320 — byte-identical.
+     */
+    private int xOffset() {
+        return (viewportWidth() - SCREEN_WIDTH) / 2;
+    }
 
     /** Pattern base ID for title card art (high ID to avoid conflicts) */
     private static final int PATTERN_BASE = PatternAtlasRange.TITLE_CARDS.base();
@@ -682,11 +703,13 @@ public class TitleCardManager implements TitleCardProvider {
         // Once exit begins (EXIT_LEFT_SWOOSH and beyond), the level becomes visible
         // behind the remaining title card elements, matching the original behavior.
         if (state == TitleCardState.SLIDE_IN) {
+            // Span the full viewport so no level bleeds through on wider screens.
+            // xOffset()==0 at native 320 — byte-identical.
             graphicsManager.registerCommand(new GLCommand(
                     GLCommand.CommandType.RECTI,
                     -1,
                     0.0f, 0.0f, 0.0f,  // Black
-                    0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                    0, 0, viewportWidth(), SCREEN_HEIGHT
             ));
         }
 
@@ -725,8 +748,12 @@ public class TitleCardManager implements TitleCardProvider {
      * The red block follows the left swoosh animation.
      */
     private void drawBackgroundPlanes(GraphicsManager graphicsManager) {
-        // Draw blue top block - covers Y=0 to Y=152 (above yellow bar)
-        // Animates vertically from above screen
+        int vw = viewportWidth();
+        int xOff = xOffset();
+
+        // Draw blue top block - covers Y=0 to Y=152 (above yellow bar).
+        // Spans the full viewport width so no level bleeds through on wider screens.
+        // xOff==0 at native 320 — byte-identical.
         if (blueBackgroundElement != null && blueBackgroundElement.isVisible()) {
             int blueY = blueBackgroundElement.getCurrentY();
             int blueTop = blueY;
@@ -739,22 +766,22 @@ public class TitleCardManager implements TitleCardProvider {
                         GLCommand.CommandType.RECTI,
                         -1,
                         48.0f/255.0f, 87.0f/255.0f, 206.0f/255.0f,  // Title card blue
-                        0, blueTop, SCREEN_WIDTH, blueBottom
+                        0, blueTop, vw, blueBottom
                 ));
             }
         }
 
-        // Draw yellow bottom block - extends from Y=152 to bottom of screen (Y=224)
-        // This is the yellow area that "SONIC THE HEDGEHOG" text sits on
-        // Yellow covers full width when bar is at target, slides off with bar during exit
+        // Draw yellow bottom block - extends from Y=152 to bottom of screen (Y=224).
+        // Yellow covers full viewport width when bar is at target, follows bar during exit.
+        // xOff==0 at native 320 — byte-identical.
         if (bottomBarElement != null && bottomBarElement.isVisible()) {
             int barX = bottomBarElement.getCurrentX();
-            int targetX = 232;  // Bar's target X position
-            int barWidth = 0x48;  // 72 pixels
+            int targetX = 232;  // Bar's target X position (in 320-space)
 
             // Yellow left edge:
             // - When bar is at/past target: left edge at 0 (full width)
-            // - When bar is moving out (past target going right): left edge follows bar
+            // - When bar is moving out (past target going right): left edge follows bar.
+            //   barX and targetX are both in 320-space so the delta is viewport-independent.
             int yellowLeft;
             if (barX <= targetX) {
                 // Bar is at or approaching target - full yellow coverage
@@ -764,13 +791,13 @@ public class TitleCardManager implements TitleCardProvider {
                 yellowLeft = barX - targetX;
             }
 
-            // Yellow right edge always extends past screen
-            int yellowRight = SCREEN_WIDTH + 50;
+            // Yellow right edge always extends past the viewport
+            int yellowRight = vw + 50;
             int yellowTop = 152;
             int yellowBottom = SCREEN_HEIGHT;
 
-            // Only draw if visible on screen
-            if (yellowLeft < SCREEN_WIDTH) {
+            // Only draw if visible (yellowLeft is viewport-independent, compare vs vw)
+            if (yellowLeft < vw) {
                 graphicsManager.registerCommand(new GLCommand(
                         GLCommand.CommandType.RECTI,
                         -1,
@@ -780,10 +807,11 @@ public class TitleCardManager implements TitleCardProvider {
             }
         }
 
-        // Draw red left block - from X=0 to swoosh position, full height
-        // This is the solid red background behind the red triangles
+        // Draw red left block - from X=0 to the swoosh's screen position, full height.
+        // The swoosh's screen X = currentX (320-space) + xOff.
+        // At native xOff==0 so redRight = currentX — byte-identical.
         if (leftSwooshElement != null && leftSwooshElement.isVisible()) {
-            int redRight = leftSwooshElement.getCurrentX();
+            int redRight = leftSwooshElement.getCurrentX() + xOff;
 
             // Only draw if visible on screen
             if (redRight > 0) {
@@ -801,6 +829,9 @@ public class TitleCardManager implements TitleCardProvider {
 
     /**
      * Renders a single element using its mapping frame.
+     *
+     * <p>xOffset() centres the 320-wide composition in the viewport.
+     * At native 320 xOffset()==0 — byte-identical.
      */
     private void renderElement(GraphicsManager graphicsManager, TitleCardElement element) {
         if (!artLoaded || combinedPatterns == null) {
@@ -814,7 +845,8 @@ public class TitleCardManager implements TitleCardProvider {
         }
         TitleCardMappings.SpritePiece[] pieces = TitleCardMappings.getFrame(frameIndex);
 
-        int centerX = element.getCurrentX();
+        // xOffset() == 0 at native 320 — byte-identical.
+        int centerX = element.getCurrentX() + xOffset();
         int centerY = element.getY();
 
         for (TitleCardMappings.SpritePiece piece : pieces) {
