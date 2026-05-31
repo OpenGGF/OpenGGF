@@ -1,5 +1,32 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Obj36 spike-contact frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 3603 to frame 3617.
+  - New frontier: frame 3617 `tails_x_speed` expected `0x0000`, actual
+    `0xFE00`; Tails now matches through the upside-down Obj36 hurt/contact
+    frame and later diverges while entering the sidekick platform/hurt-state
+    path near Obj6E/Obj6B/Obj36.
+- Findings:
+  - S2 Obj36 calls `SolidObject`, and S2 `SolidObject_cont` computes the
+    lower Y reject bound by doubling the live `y_radius(a1)`, so rolling
+    underside spike checks must use the smaller rolling radius. This differs
+    from S3K's default-y-radius lower bound and is exposed through the object
+    hook rather than a game/zone branch.
+  - `Touch_ChkHurt2` subtracts the current `y_vel(a1)<<8` before
+    `HurtCharacter`. Because Obj36 calls it after `SolidObject`, the velocity
+    is the post-solid value, not ObjectManager's pre-contact diagnostic
+    snapshot.
+  - No trace state is hydrated, and the remaining frontier points at generic
+    sidekick platform/hurt state after the Obj36 contact now matches longer.
+
 ## 2026-05-31 - S2 MTZ3 Obj6E base-anchor frontier
 
 - Branch: `feature/ai-s2-mtz-parity`

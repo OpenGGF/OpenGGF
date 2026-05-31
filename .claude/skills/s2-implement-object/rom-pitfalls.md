@@ -1671,6 +1671,39 @@ frame 305.
 
 ---
 
+## P38 — `SolidObject` contact mutates velocity before hurt helpers read it
+
+**Symptom.** Upside-down spikes or similar full-solid hazards hurt the player
+at the right frame, but the post-hurt Y/subpixel or knockback state is off by
+1-2 pixels. Trace context often shows the engine using a "pre-contact" velocity
+while the ROM has already zeroed or changed that velocity inside the solid
+routine.
+
+**Root cause.** S2 Obj36 calls `SolidObject` first, then checks the returned
+touch mask and calls `Touch_ChkHurt2`. `SolidObject_cont` / inside-contact
+branches may mutate `y_vel(a1)` before returning. `Touch_ChkHurt2` reads the
+current `y_vel(a1)`, not a saved pre-solid value, then subtracts
+`y_vel<<8` from `y_pos` before `HurtCharacter`.
+
+**What to check.** When an object calls `SolidObject` or
+`SolidObject_Always*` before a hurt/helper routine, preserve the ROM call
+order. Do not feed hurt helpers an ObjectManager pre-contact snapshot unless
+the ROM saved one explicitly. Also check S2 `SolidObject_cont` lower-Y bounds:
+it doubles the live `y_radius(a1)`, so rolling underside contact can differ
+from ports that reuse a standing/default radius.
+
+**ROM citation.** S2 Obj36 upside-down spike path
+(`docs/s2disasm/s2.asm:29260-29283`) calls `SolidObject` before
+`Touch_ChkHurt2`; `Touch_ChkHurt2` subtracts current `y_vel<<8`
+(`docs/s2disasm/s2.asm:29297-29312`). S2 `SolidObject_cont` doubles live
+`y_radius(a1)` for its lower-Y reject bound
+(`docs/s2disasm/s2.asm:35156-35169`).
+
+**Originating commit.** Fix S2 MTZ3 Obj36 spike contact/hurt ordering -- MTZ3
+frontier advances from frame 3603 to frame 3617.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
