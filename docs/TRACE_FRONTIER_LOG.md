@@ -1,5 +1,265 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 WFZ trace frontier closed
+
+- Scope: local S2 WFZ parity work on the existing branch. The WFZ level-select
+  replay now matches the reference trace end-to-end.
+- Main fixes: S2 speed-shoes timer phase compensation; held-input publication
+  before S2 level events; WFZ wind tunnel and control-lock pre-physics
+  ordering; ObjCC Breakable Plating contact latching; ObjC0 Speed Launcher
+  rider-mask latching; ObjBD/ObjBE platform profile geometry; WFZ boss child
+  slot/lifecycle, laser, defeat, and deferred camera-bound behavior; WFZ
+  Tornado start/end cutscene docking, persistent helper children, invisible
+  grabber touch latch, and DEZ transition alignment. Follow-up audit removed
+  the WFZ event PLC placeholders by requesting ROM PLCs 0x3E/0x3F at the
+  secondary-event thresholds and added rewind coverage for WFZ BG scroll state
+  plus `WFZ_LevEvent_Subrout`. A later PLC audit registered the WFZ boss,
+  Robotnik, and fiery-explosion PLC entries so the event-triggered PLC path
+  can dispatch `PLCID_WfzBoss` directly instead of relying only on WFZ zone-init
+  boss-art registration. The WFZ-to-DEZ target audit also filled the ObjC6
+  running exhaust child (`subtype $AA`) that the ROM spawns while Eggman runs
+  to the Death Egg Robot cockpit, and routes ObjC6's wait-state proximity
+  check through the closest main/sidekick player like `Obj_GetOrientationToPlayer`.
+  ObjC7 now routes its stomp and defeat rumble writes into `SwScrl_DEZ`'s
+  ROM `DEZ_Shake_Timer`/ripple path and renders bomb detonation with the
+  ROM-backed Obj58 fiery-explosion mappings. The WFZ Tornado cutscene path now
+  routes playable native-position writes through `NativePositionOps` instead
+  of the legacy raw preserve-subpixel setters.
+- Focused WFZ trace:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: prints `All frames match trace. No divergences.`
+- WFZ object/boss/cutscene regression group:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestWFZBoss,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay,com.openggf.game.sonic2.objects.TestTornadoObjectInstance" test`
+  - PASS: 45 tests, 0 failures. Trace output includes runtime parsing of
+    `PLC 0x3E` and `PLC 0x3F` before `All frames match trace. No divergences.`
+- WFZ event/rewind specs:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestTodo12_WFZEventSpecs,com.openggf.game.sonic2.TestSonic2LevelEventRewindSnapshot" test`
+  - PASS: 24 tests, 0 failures.
+- WFZ ROM art audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestTodo21_23_MissingArtSheets" test`
+  - PASS: 11 tests, 0 failures. Obj19 WFZ platform now builds from
+    `ArtNem_WfzFloatingPlatform`/`Obj19_MapUnc_2222A`, dispatches through
+    the PLC registry as `wfz_platform`, and the WFZ trace loads 45 renderers
+    for zone 6 instead of the previous 42. WFZ Robotnik now composes the
+    ROM PLC art blocks at `$0500`/`$0518`/`$0564` and shifts
+    `ObjC6_MapUnc_3D0EE` mappings out of absolute VRAM tile space. ObjBF
+    WFZStick now builds from the ROM's `ArtNem_WfzUnusedBadnik` /
+    `ObjBF_MapUnc_3BEE0` data and dispatches through the PLC registry as
+    `wfz_stick`. ObjBB now builds from the shared WFZ hook tile base
+    (`ArtTile_ArtNem_Unknown = $03FA`) and its own `ObjBB_MapUnc_3BBA0`
+    removed-object mappings as `wfz_unknown`.
+- WFZ runtime PLC dispatch audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestSonic2PlcParser#testWfzRuntimePlcsHaveArtDispatchRegistrations" test`
+  - PASS: 1 test, 0 failures. ROM parsing reports `PLC 0x3E: 5 entries`
+    and `PLC 0x3F: 3 entries`; each entry now has a `Sonic2PlcArtRegistry`
+    dispatch target for runtime event requests.
+- WFZ palette ownership audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestSonic2PaletteOwnershipIntegration" test`
+  - PASS: 9 tests, 0 failures. WFZ now has direct ownership/ROM-byte
+    verification for `PalCycle_WFZ`: fire/belt writes to normal palette line
+    3 colors 7-10, cycle 1 writes color 14, cycle 2 writes color 15, and
+    `WFZ_SCZ_Fire_Toggle` selects the conveyor palette with the ROM's
+    five-frame delay.
+- WFZ scroll-table audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.scroll.TestSwScrlWfz" test`
+  - PASS: 4 tests, 0 failures. The test locks `SwScrl_WFZ` table loading to
+    the ROM bytes at `$C8CA`/`$C916`, verifies the normal table's `$980`
+    line-count coverage and the transition table's `$A00` coverage for every
+    reachable `Camera_BG_Y_pos & $7FF` visible span, and guards the `$2700`
+    ship-threshold table switch.
+- WFZ ObjB7 vertical laser audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestVerticalLaserObjectInstance,com.openggf.game.sonic2.TestSonic2WfzObjectProfile" test`
+  - PASS: 7 tests, 0 failures. ObjB7 now has a registry/profile constant
+    path for the WFZ debug/runtime ID, the profile guard covers every concrete
+    WFZ debug/runtime/pointer-table factory except Obj25 rings (handled by
+    the ring manager), and the ObjB6 child-spawn path now records ObjB7
+    identity instead of inheriting the tilting platform's object id.
+- WFZ ObjB8 wall-turret projectile audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wallTurretShotUsesRomObj98SubtypeIdentity+wallTurretFireSpawnsObj98ProjectileChild" test`
+  - PASS: 2 tests, 0 failures. ObjB8 now spawns its shot through the child
+    allocation path with ROM Obj98 identity and subtype `$8E`, matching
+    `ObjB8`'s `ObjID_Projectile` / `ObjB8_SubObjData2` handoff instead of
+    inheriting the parent turret object id.
+- WFZ ObjB8 wall-turret projectile animation audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wallTurretShotUsesRomObj98SubtypeIdentity,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 2 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.` ObjB8 shot animation now follows
+    ROM `AnimateSprite` startup: newly allocated Obj98 begins with
+    `anim_frame=0`, so the first `Obj98_WallTurretShotMove` update displays
+    script frame 3 before later advancing to frame 4.
+- WFZ ObjB8 wall-turret closest-player audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wallTurretFireSpawnsObj98ProjectileChild+wallTurretDetectsClosestQueryOnlySidekick+wallTurretAimsAndFiresAtClosestQueryOnlySidekick" test`
+  - PASS: 3 tests, 0 failures. ObjB8 detection and aiming now use
+    `ObjectPlayerQuery.nearestByRomX`, matching `Obj_GetOrientationToPlayer`'s
+    MainCharacter/Sidekick horizontal-distance selection before applying the
+    below-player and aiming gates.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 32 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjB9 laser render-flag audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestLaserObjectInstance" test`
+  - PASS: 2 tests, 0 failures. ObjB9 now waits on the ROM render-bounds
+    equivalent for `render_flags.on_screen`, using `width_pixels=$60` and the
+    BuildSprites approximate 32px Y margin, so the intro laser activates when
+    its wide sprite overlaps the viewport rather than when its center point
+    enters the viewport.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestLaserObjectInstance,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 3 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjB5 horizontal-propeller native-position audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#hPropellerPushesQueryOnlySidekick" test`
+  - PASS: 1 test, 0 failures. ObjB5 now applies its upward push through
+    `NativePositionOps.writeYPosPreserveSubpixel`, matching the ROM's
+    `add.w d1,y_pos(a1)` centre-coordinate write while preserving the
+    existing ObjectPlayerQuery sidekick participation path.
+- WFZ ObjB4 vertical-propeller SFX/collision audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestVPropellerObjectInstance" test`
+  - PASS: 2 tests, 0 failures. ObjB4 now gates the helicopter SFX on
+    `(Vint_runcount+3) & $1F`, matching the ROM's byte read instead of
+    playing on raw frame-counter multiples, and the y-flip collision-clear
+    path is covered.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestVPropellerObjectInstance,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 3 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjBF unused badnik audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.badniks.TestWFZStickBadnikInstance" test`
+  - PASS: 2 tests, 0 failures. ObjBF is registered as `Sonic2ObjectIds.WFZ_STICK`
+    and animates through the ROM `0,1,2,$FF` loop with collision size index 4.
+- WFZ ObjBB removed-object audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.badniks.TestWFZUnknownBadnikInstance,com.openggf.game.sonic2.TestTodo21_23_MissingArtSheets#testWFZUnknownSheetBuildsFromHookTileBaseAndObjBBMappings,com.openggf.game.sonic2.TestSonic2WfzObjectProfile" test`
+  - PASS: 7 tests, 0 failures. ObjBB is registered as
+    `Sonic2ObjectIds.WFZ_UNKNOWN`, keeps the ROM's collision size index `$09`,
+    and renders the single removed-object mapping frame without movement.
+- WFZ ObjBC ship-fire BG-offset audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestWFZShipFireObjectInstance,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 3 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.` ObjBC now reads
+    `Camera_BG_X_offset` from the WFZ event state (`Sonic2WFZEvents`) with a
+    parallax fallback only for non-WFZ/test contexts, so the flame position and
+    `$380` delete threshold follow the same ROM-owned state as `SwScrl_WFZ`
+    and the WFZ Tornado docking logic.
+- WFZ ObjBC ship-fire init-frame audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestWFZShipFireObjectInstance,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 3 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.` ObjBC now preserves the ROM's
+    init frame split (`LoadSubObject`, save `x_pos` to `objoff_2C`, then
+    `rts`) before the BG-offset/delete/flicker main routine runs.
+- WFZ ObjC2 rivet native-player audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wfzRivetBustIsNativeMainCharacterOnly+wfzRivetStillBustsForRollingNativeMainCharacter" test`
+  - PASS: 2 tests, 0 failures. ObjC2 now stores and consumes the ROM
+    `MainCharacter+anim` slot for the rolling bust check; sidekick solid
+    contact stays solid but cannot open the ship passage because the ROM
+    routine has no Sidekick branch.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 28 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjC1 breakable-plating native-player audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wfzBreakablePlatingTouchSignalIsNativeMainCharacterOnly+wfzBreakablePlatingNativeMainTouchStillGrabs" test`
+  - PASS: 2 tests, 0 failures. ObjC1 now treats Touch_Special's
+    `collision_property` signal as native-P1-only before entering the grab
+    routine, matching the ROM branch that checks and manipulates only
+    `MainCharacter`.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 30 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjC3/ObjC4 Tornado smoke audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestTornadoSmokeObjectInstance,com.openggf.game.sonic2.TestSonic2WfzObjectProfile" test`
+  - PASS: 7 tests, 0 failures. ObjC3 and ObjC4 are now registered constants
+    and factories, with ObjC4 sharing the ObjC3 routine, using explosion art,
+    drifting at `-$100/-$100`, advancing every eight ticks, and deleting when
+    `mapping_frame` reaches 5.
+- WFZ Tornado native-position cleanup audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionPlayableNativePositionRawPreserveSubpixelWriteFilesDoNotGrow+objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 3 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+  `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard,com.openggf.game.sonic2.objects.TestTornadoObjectInstance" test`
+  - PARTIAL: `TestTornadoObjectInstance` passes 14 tests, but the full guard
+    still reports unrelated existing violations in MTZ/S3K object files.
+    `TornadoObjectInstance` was removed from the legacy raw native-position
+    write allowlist.
+- WFZ Obj80 sidekick audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation" test`
+  - PASS: 23 tests, 0 failures. Obj80 Moving Vine / WFZ Hook now routes
+    both native interaction slots through `ObjectPlayerQuery`, matching the
+    ROM's `MainCharacter` then `Sidekick` calls into `Obj80_Action`.
+- WFZ ObjD9 invisible-grab sidekick/native-position audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wfzGrabObjectGrabsQueryOnlySidekickAsNativeP2+wfzGrabObjectReleasesQueryOnlySidekickWithDirectionCooldown" test`
+  - PASS: 2 tests, 0 failures. ObjD9 now routes MainCharacter/Sidekick
+    interaction through `ObjectPlayerQuery`, drives the native-P2
+    `objoff_31/objoff_33` grab and cooldown bytes from sidekick participants,
+    and writes the hang snap through `NativePositionOps` for the ROM
+    `move.w y_pos(a0),y_pos(a1)` centre-coordinate write.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 34 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjBE/ObjD9 render-bounds audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wfzGrabObjectUsesRomRenderWidth+lateralCannonUsesRomRenderWidth+wfzGrabObjectGrabsQueryOnlySidekickAsNativeP2+lateralCannonDropsQueryOnlyRidingSidekickOnRetract" test`
+  - PASS: 4 tests, 0 failures. ObjBE and ObjD9 now expose their ROM
+    `width_pixels=$18` values through `getOnScreenHalfWidth()` instead of
+    inheriting the shared `$10` default used by smaller objects.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 36 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ remaining SubObjData render-bounds audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestVerticalLaserObjectInstance,com.openggf.game.sonic2.objects.TestVPropellerObjectInstance,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wallTurretShotUsesRomObj98SubtypeIdentity,com.openggf.game.sonic2.objects.badniks.TestWFZStickBadnikInstance,com.openggf.game.sonic2.objects.badniks.TestWFZUnknownBadnikInstance" test`
+  - PASS: 10 tests, 0 failures. ObjB7, ObjB8 shot, ObjB4, ObjBF, and
+    ObjBB now expose their ROM `width_pixels` (`$18`, `4`, `4`, `4`, and
+    `$0C`) through `getOnScreenHalfWidth()` instead of inheriting the shared
+    `$10` default.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 36 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ object checklist audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestSonic2WfzObjectProfile" test`
+  - PASS: 7 tests, 0 failures. The ROM-backed `ObjectDiscoveryTool` scan
+    reports Wing Fortress Act 1 as `Implemented: 25 | Unimplemented: 0`;
+    ObjC5 WFZBoss is now included in `Sonic2ObjectProfile` implemented IDs.
+    The immediate WFZ-to-DEZ target now also has concrete ObjC6/ObjC7
+    factories/profile coverage, and Death Egg Act 1 reports
+    `Implemented: 3 | Unimplemented: 0`.
+  `mvn "-Dmse=off" exec:java "-Dexec.mainClass=com.openggf.tools.ObjectDiscoveryTool" "-Dexec.args=--game s2 --output target/s2-object-checklist.md"`
+  - PASS: Sonic 2 report now has 120 implemented / 2 unimplemented globally,
+    with the remaining unimplemented objects outside WFZ/DEZ.
+- WFZ-to-DEZ target boss object audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestSonic2WfzObjectProfile,com.openggf.tests.TestDEZEggman,com.openggf.tests.TestDEZDeathEggRobot" test`
+  - PASS: 64 tests, 0 failures. ObjC6 is now registered from the ROM layout
+    path via `Sonic2ObjectRegistry`, and ObjC6/ObjC7 are counted as
+    implemented by `Sonic2ObjectProfile` for the transition target. ObjC6's
+    wait-state player check now uses the closest main/sidekick participant.
+    ObjC7's bomb detonation renders Obj58 boss-explosion frames instead of
+    the robot bomb frame.
+- WFZ-to-DEZ ObjC7 DEZ shake audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.scroll.TestSwScrlDez,com.openggf.tests.TestDEZDeathEggRobot" test`
+  - PASS: 38 tests, 0 failures. `SwScrl_DEZ` now consumes the ROM
+    `DEZ_Shake_Timer`, applies `SwScrl_RippleData` X/Y offsets to shake
+    camera copies and FG/BG VScroll, and counts down/clears the timer after
+    the final ripple frame. ObjC7 writes `$40` on stomp landing and `$1000`
+    during the defeat/ending rumble.
+- WFZ-to-DEZ ObjC6 exhaust puff audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestDEZEggman" test`
+  - PASS: 21 tests, 0 failures. ObjC6 State4 now spawns subtype `$AA`
+    exhaust puff children on the ROM timer underflow, with mapping frame 5,
+    `x_vel=-$100`, `y_pos-=$18`, `objoff_2A=$08`, and the ROM's
+    gravity-before-move State4 update/delete order. The same test class covers
+    sidekick-triggered `Obj_GetOrientationToPlayer` proximity selection.
+- Supporting focused checks:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 30 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay,com.openggf.tests.TestWFZBoss,com.openggf.tests.TestDEZEggman,com.openggf.tests.TestDEZDeathEggRobot,com.openggf.game.sonic2.objects.TestTornadoObjectInstance,com.openggf.game.sonic2.objects.TestTornadoSmokeObjectInstance,com.openggf.game.sonic2.objects.TestVerticalLaserObjectInstance,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.game.sonic2.objects.badniks.TestWFZStickBadnikInstance,com.openggf.game.sonic2.objects.badniks.TestWFZUnknownBadnikInstance,com.openggf.game.sonic2.TestTodo21_23_MissingArtSheets,com.openggf.game.sonic2.TestTodo12_WFZEventSpecs,com.openggf.game.sonic2.TestSonic2LevelEventRewindSnapshot,com.openggf.game.sonic2.TestSonic2WfzObjectProfile,com.openggf.game.sonic2.TestSonic2PaletteOwnershipIntegration,com.openggf.game.sonic2.scroll.TestSwScrlWfz,com.openggf.game.sonic2.scroll.TestSwScrlDez,com.openggf.game.sonic2.TestSonic2PlcParser#testWfzRuntimePlcsHaveArtDispatchRegistrations,com.openggf.game.TestZoneEventRuntimeAccessGuard,com.openggf.tests.TestArchitecturalSourceGuard" test`
+  - PASS: 203 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay,com.openggf.tests.TestWFZBoss,com.openggf.tests.TestDEZEggman,com.openggf.tests.TestDEZDeathEggRobot,com.openggf.game.sonic2.objects.TestTornadoObjectInstance,com.openggf.game.sonic2.objects.TestTornadoSmokeObjectInstance,com.openggf.game.sonic2.objects.TestVerticalLaserObjectInstance,com.openggf.game.sonic2.objects.TestVPropellerObjectInstance,com.openggf.game.sonic2.objects.TestWFZShipFireObjectInstance,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.game.sonic2.objects.badniks.TestWFZStickBadnikInstance,com.openggf.game.sonic2.objects.badniks.TestWFZUnknownBadnikInstance,com.openggf.game.sonic2.TestTodo21_23_MissingArtSheets,com.openggf.game.sonic2.TestTodo12_WFZEventSpecs,com.openggf.game.sonic2.TestSonic2LevelEventRewindSnapshot,com.openggf.game.sonic2.TestSonic2WfzObjectProfile,com.openggf.game.sonic2.TestSonic2PaletteOwnershipIntegration,com.openggf.game.sonic2.scroll.TestSwScrlWfz,com.openggf.game.sonic2.scroll.TestSwScrlDez,com.openggf.game.sonic2.TestSonic2PlcParser#testWfzRuntimePlcsHaveArtDispatchRegistrations,com.openggf.game.TestZoneEventRuntimeAccessGuard,com.openggf.tests.TestArchitecturalSourceGuard" test`
+  - PASS: 220 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.TestPhysicsProfile#testSpeedShoesTimerPhaseCompensation_PerGame" test`
+  - PASS: 1 test, 0 failures.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#cnzConveyorWidthUsesRomByteShiftWrap+cnzConveyorShiftsNativePositionWhenInsideWrappedBounds" test`
+  - PASS: 2 tests, 0 failures.
+- Known-green trace guard:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s1.TestS1Mz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay" test "-DfailIfNoTests=false"`
+  - PASS: 4 tests, 0 failures; all print `All frames match trace. No divergences.`
+
 ## 2026-05-29 - Failing-test cleanup verified trace-neutral
 
 - Scope: fixed 9 failing non-trace test classes on committed `develop`

@@ -1,6 +1,9 @@
 package com.openggf.game.sonic2.events;
 
-import java.util.logging.Logger;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+import java.nio.ByteBuffer;
 
 /**
  * Wing Fortress Zone events.
@@ -24,7 +27,7 @@ import java.util.logging.Logger;
  *   S4: No-op
  */
 public class Sonic2WFZEvents extends Sonic2ZoneEvents {
-    private static final Logger LOGGER = Logger.getLogger(Sonic2WFZEvents.class.getName());
+    public static final int SNAPSHOT_BYTES = Integer.BYTES * 8;
 
     // =========================================================================
     // Primary routine trigger thresholds
@@ -110,6 +113,9 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
     /** WFZ_LevEvent_Subrout: secondary routine counter */
     private int wfzSubRoutine;
 
+    private int lastRequestedPlcId = -1;
+    private int plcRequestCount;
+
     public Sonic2WFZEvents() {
     }
 
@@ -124,6 +130,8 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
         bgXPosDiff = 0;
         bgYPosDiff = 0;
         wfzSubRoutine = 0;
+        lastRequestedPlcId = -1;
+        plcRequestCount = 0;
     }
 
     /**
@@ -156,6 +164,56 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
     /** Returns WFZ_BG_Y_Speed (0.8 fixed point). */
     public int getBgYSpeed() {
         return bgYSpeed;
+    }
+
+    public int getWfzSubRoutine() {
+        return wfzSubRoutine;
+    }
+
+    public void setWfzSubRoutine(int wfzSubRoutine) {
+        this.wfzSubRoutine = wfzSubRoutine;
+    }
+
+    public int getLastRequestedPlcIdForTest() {
+        return lastRequestedPlcId;
+    }
+
+    public int getPlcRequestCountForTest() {
+        return plcRequestCount;
+    }
+
+    public void setBgXOffsetForTest(int bgXOffset) {
+        this.bgXOffset = bgXOffset;
+    }
+
+    public void setBgYOffsetForTest(int bgYOffset) {
+        this.bgYOffset = bgYOffset;
+    }
+
+    public void setBgYSpeedForTest(int bgYSpeed) {
+        this.bgYSpeed = bgYSpeed;
+    }
+
+    public void captureSnapshot(ByteBuffer buf) {
+        buf.putInt(bgXOffset);
+        buf.putInt(bgYOffset);
+        buf.putInt(bgYSpeed);
+        buf.putInt(bgXPos);
+        buf.putInt(bgYPos);
+        buf.putInt(bgXPosDiff);
+        buf.putInt(bgYPosDiff);
+        buf.putInt(wfzSubRoutine);
+    }
+
+    public void restoreSnapshot(ByteBuffer buf) {
+        bgXOffset = buf.getInt();
+        bgYOffset = buf.getInt();
+        bgYSpeed = buf.getInt();
+        bgXPos = buf.getInt();
+        bgYPos = buf.getInt();
+        bgXPosDiff = buf.getInt();
+        bgYPosDiff = buf.getInt();
+        wfzSubRoutine = buf.getInt();
     }
 
     // =========================================================================
@@ -330,6 +388,12 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
         }
     }
 
+    public void updatePrePhysicsControlLock() {
+        if (wfzSubRoutine == 2) {
+            secondaryRoutine2_controlLock();
+        }
+    }
+
     /**
      * Secondary S0: Boss PLC trigger.
      * ROM: LevEvents_WFZ_Routine5 (s2.asm)
@@ -351,7 +415,7 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
         wfzSubRoutine += 2;
 
         // ROM: moveq #PLCID_WfzBoss,d0 / jsrto JmpTo2_LoadPLC
-        LOGGER.fine("WFZ boss PLC (PLCID_WfzBoss) not yet loaded");
+        requestPlc(Sonic2Constants.PLC_WFZ_BOSS);
 
         // ROM: move.w #$2880,(Camera_Min_X_pos).w
         camera().setMinX((short) BOSS_PLC_TRIGGER_X);
@@ -373,6 +437,23 @@ public class Sonic2WFZEvents extends Sonic2ZoneEvents {
         wfzSubRoutine += 2;
 
         // ROM: st.b (Control_Locked).w + moveq #PLCID_Tornado,d0 / jsrto JmpTo2_LoadPLC
-        LOGGER.fine("WFZ control lock + Tornado PLC not yet implemented");
+        lockPlayerInputWithCurrentLogicalState();
+        requestPlc(Sonic2Constants.PLC_TORNADO);
+    }
+
+    private void lockPlayerInputWithCurrentLogicalState() {
+        AbstractPlayableSprite player = camera().getFocusedSprite();
+        if (player == null) {
+            return;
+        }
+        int mask = player.getLogicalInputState();
+        player.setControlLocked(true);
+        player.setForcedInputMask(mask);
+    }
+
+    private void requestPlc(int plcId) {
+        lastRequestedPlcId = plcId;
+        plcRequestCount++;
+        requestSonic2Plc(plcId);
     }
 }

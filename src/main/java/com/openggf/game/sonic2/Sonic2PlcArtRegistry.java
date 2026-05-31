@@ -58,7 +58,11 @@ public final class Sonic2PlcArtRegistry {
         reg(Sonic2Constants.ART_NEM_NUMBERS_ADDR,
                 ObjectArtKeys.POINTS, Sonic2ObjectArt::loadPointsSheet);
         // EggPrison (PLC 64) is loaded manually in provider — not via registry dispatch.
-        // Boss explosion (PLCStdWtr) and Super Sonic stars are loaded manually in provider.
+        // Boss explosion (PLCStdWtr/WFZ boss PLC) and Super Sonic stars are loaded manually in provider.
+        // Keep the fiery explosion registered as well so event-triggered boss PLCs
+        // can dispatch the ROM PLC list directly when requested at runtime.
+        reg(Sonic2Constants.ART_NEM_FIERY_EXPLOSION_ADDR,
+                Sonic2ObjectArtKeys.BOSS_EXPLOSION, Sonic2ObjectArt::loadBossExplosionSheet);
 
         // ===== EHZ zone objects =====
         // TODO: loadWaterfallSheet() does not exist yet on Sonic2ObjectArt — uncomment when extracted
@@ -247,15 +251,24 @@ public final class Sonic2PlcArtRegistry {
                 Sonic2ObjectArtKeys.WFZ_RIVET, Sonic2ObjectArt::loadWfzRivetSheet);
         reg(Sonic2Constants.ART_NEM_WFZ_BELT_PLATFORM_ADDR,
                 Sonic2ObjectArtKeys.WFZ_BELT_PLATFORM, Sonic2ObjectArt::loadWFZBeltPlatformSheet);
+        reg(Sonic2Constants.ART_NEM_WFZ_UNUSED_BADNIK_ADDR,
+                Sonic2ObjectArtKeys.WFZ_STICK, Sonic2ObjectArt::loadWfzStickSheet);
         reg(Sonic2Constants.ART_NEM_WFZ_TILT_PLATFORMS_ADDR,
                 Sonic2ObjectArtKeys.WFZ_TILT_PLATFORM, Sonic2ObjectArt::loadWFZTiltPlatformSheet);
         reg(Sonic2Constants.ART_NEM_WFZ_CONVEYOR_BELT_WHEEL_ADDR,
                 Sonic2ObjectArtKeys.WFZ_CONVEYOR_BELT_WHEEL, Sonic2ObjectArt::loadWFZConveyorBeltWheelSheet);
         reg(Sonic2Constants.ART_NEM_WFZ_SCRATCH_ADDR,
                 Sonic2ObjectArtKeys.CLUCKER, Sonic2ObjectArt::loadCluckerSheet);
-        // TODO: loadWfzFloatingPlatformSheet() does not exist yet on Sonic2ObjectArt — uncomment when extracted
-        // reg(Sonic2Constants.ART_NEM_WFZ_PLATFORM_ADDR,
-        //         "wfz_floating_platform", Sonic2ObjectArt::loadWfzFloatingPlatformSheet);
+        reg(Sonic2Constants.ART_NEM_WFZ_PLATFORM_ADDR,
+                Sonic2ObjectArtKeys.WFZ_PLATFORM, Sonic2ObjectArt::loadWfzFloatingPlatformSheet);
+        reg(Sonic2Constants.ART_NEM_WFZ_BOSS_ADDR,
+                Sonic2ObjectArtKeys.WFZ_BOSS, Sonic2ObjectArt::loadWFZBossSheet);
+        reg(Sonic2Constants.ART_NEM_ROBOTNIK_RUNNING_ADDR,
+                Sonic2ObjectArtKeys.WFZ_ROBOTNIK, Sonic2ObjectArt::loadWFZRobotnikSheet);
+        reg(Sonic2Constants.ART_NEM_ROBOTNIK_UPPER_ADDR,
+                Sonic2ObjectArtKeys.WFZ_ROBOTNIK, Sonic2ObjectArt::loadWFZRobotnikSheet);
+        reg(Sonic2Constants.ART_NEM_ROBOTNIK_LOWER_ADDR,
+                Sonic2ObjectArtKeys.WFZ_ROBOTNIK, Sonic2ObjectArt::loadWFZRobotnikSheet);
 
         // ===== SCZ zone objects =====
         reg(Sonic2Constants.ART_NEM_NEBULA_ADDR,

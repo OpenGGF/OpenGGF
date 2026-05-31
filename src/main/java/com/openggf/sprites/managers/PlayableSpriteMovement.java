@@ -381,7 +381,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// - obj_control and hurt block input in ALL states
 		boolean groundedControlLock = !sprite.getAir() && (moveLocked || sprite.getSpringing());
 		if (groundedControlLock || objControlLocked || sprite.isHurt()) {
-			left = false;
+			if (!sprite.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT)) {
+				left = false;
+			}
 			if (!sprite.isForceInputRight()) {
 				right = false;
 			}
@@ -393,7 +395,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Block jumping ONLY when obj_control is set (not move_lock)
 		// ROM: obj_control bit 0 skips the entire movement routine including Sonic_Jump
 		// ROM: move_lock only blocks Sonic_Move/Sonic_RollSpeed, NOT Sonic_Jump
-		if (objControlLocked) {
+		if (objControlLocked && !sprite.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP)) {
 			jump = false;
 		}
 

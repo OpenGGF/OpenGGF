@@ -930,6 +930,37 @@ public class Sonic2ObjectArt {
     }
 
     /**
+     * Load ObjBB removed WFZ unknown object sheet.
+     * ROM: ObjBB_SubObjData uses ObjBB_MapUnc_3BBA0 with
+     * make_art_tile(ArtTile_ArtNem_Unknown,1,0). ArtTile_ArtNem_Unknown is
+     * $03FA, the same tile base as ArtTile_ArtNem_WfzHook.
+     */
+    public ObjectSpriteSheet loadWfzUnknownSheet() {
+        Pattern[] patterns = safeLoadNemesisPatterns(
+                Sonic2Constants.ART_NEM_WFZ_HOOK_ADDR, "WFZUnknown");
+        if (patterns.length == 0) {
+            return null;
+        }
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBB_ADDR);
+        return new ObjectSpriteSheet(patterns, mappings, 1, 1);
+    }
+
+    /**
+     * Load WFZ floating platform sheet (Obj19 / WFZPlatform).
+     * ROM: ArtNem_WfzFloatingPlatform + Obj19_MapUnc_2222A,
+     * make_art_tile(ArtTile_ArtNem_WfzFloatingPlatform,1,1).
+     */
+    public ObjectSpriteSheet loadWfzFloatingPlatformSheet() {
+        Pattern[] patterns = safeLoadNemesisPatterns(
+                Sonic2Constants.ART_NEM_WFZ_PLATFORM_ADDR, "WFZFloatingPlatform");
+        if (patterns.length == 0) {
+            return null;
+        }
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJ19_ADDR);
+        return new ObjectSpriteSheet(patterns, mappings, 1, 1);
+    }
+
+    /**
      * Load Tornado main sheet (ObjB2 subtype $50/$52/$54).
      * ROM: ArtNem_Tornado + ObjB2_MapUnc_3AFF2, palette line 0.
      */
@@ -1015,6 +1046,23 @@ public class Sonic2ObjectArt {
         List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBD_ADDR);
         // Palette line 3 = index 2 in engine (palette 0 is universal)
         return new ObjectSpriteSheet(patterns, mappings, 2, 1);
+    }
+
+    // ========== WFZ Stick / unused badnik (Object 0xBF) ==========
+
+    /**
+     * Load ObjBF WFZStick sprite sheet.
+     * ROM: ArtNem_WfzUnusedBadnik at 0x8DDF6, mappings ObjBF_MapUnc_3BEE0,
+     * make_art_tile(ArtTile_ArtNem_WfzUnusedBadnik,3,1).
+     */
+    public ObjectSpriteSheet loadWfzStickSheet() {
+        Pattern[] patterns = safeLoadNemesisPatterns(
+                Sonic2Constants.ART_NEM_WFZ_UNUSED_BADNIK_ADDR, "WfzUnusedBadnik");
+        if (patterns.length == 0) {
+            return null;
+        }
+        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_OBJBF_ADDR);
+        return new ObjectSpriteSheet(patterns, mappings, 3, 1);
     }
 
     // ========== WFZ Laser (Object 0xB9) ==========
@@ -3116,26 +3164,40 @@ public class Sonic2ObjectArt {
 
     /**
      * Load WFZ Robotnik sprite sheet.
-     * ROM: ArtNem_Eggpod_1 at 0x8E886, tile base $0500, palette line 0.
-     * 8 frames from ObjC6_MapUnc_3D0EE.
-     *
-     * TODO: ROM Robotnik in WFZ (ObjC5 subtype $A0) uses Ani_objC5_objC6 which references
-     * ObjC5_SubObjData4 with ArtTile_ArtKos_LevelArt ($0000) as the tile base. The mapping
-     * frames contain absolute tile indices ($500+) because the art is loaded into specific
-     * VRAM positions by the PLC system (PLCID_WfzBoss). This Nemesis-based approach loads
-     * the art directly and uses relative tile indices, which may produce slightly different
-     * visuals. When the PLC system is fully implemented, this should be converted to use
-     * KosinskiM-compressed level art tiles with absolute VRAM tile indices matching the ROM.
+     * ROM: ObjC6_SubObjData2 uses ObjC6_MapUnc_3D0EE with ArtTile_ArtKos_LevelArt ($0000).
+     * PLCID_WfzBoss loads the Robotnik art blocks at absolute VRAM tile positions:
+     * Upper=$0500, Running=$0518, Lower=$0564. The sheet is therefore composed from those
+     * ROM Nemesis blocks and mappings are shifted by -$0500.
      *
      * @return sprite sheet for WFZ Robotnik, or null on failure
      */
     public ObjectSpriteSheet loadWFZRobotnikSheet() {
         Pattern[] patterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_ROBOTNIK_UPPER_ADDR, "WfzRobotnik");
-        if (patterns.length == 0) {
+        Pattern[] runningPatterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_ROBOTNIK_RUNNING_ADDR, "WfzRobotnikRunning");
+        Pattern[] lowerPatterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_ROBOTNIK_LOWER_ADDR, "WfzRobotnikLower");
+        if (patterns.length == 0 && runningPatterns.length == 0 && lowerPatterns.length == 0) {
             return null;
         }
-        List<SpriteMappingFrame> mappings = loadMappingFrames(Sonic2Constants.MAP_UNC_WFZ_ROBOTNIK_ADDR);
-        return new ObjectSpriteSheet(patterns, mappings, 0, 1);
+
+        int runningOffset = 0x0518 - 0x0500;
+        int lowerOffset = 0x0564 - 0x0500;
+        int combinedSize = lowerOffset + lowerPatterns.length;
+        Pattern[] combined = new Pattern[combinedSize];
+        for (int i = 0; i < combinedSize; i++) {
+            combined[i] = new Pattern();
+        }
+
+        System.arraycopy(patterns, 0, combined, 0, Math.min(patterns.length, combinedSize));
+        if (runningOffset + runningPatterns.length <= combinedSize) {
+            System.arraycopy(runningPatterns, 0, combined, runningOffset, runningPatterns.length);
+        }
+        if (lowerOffset + lowerPatterns.length <= combinedSize) {
+            System.arraycopy(lowerPatterns, 0, combined, lowerOffset, lowerPatterns.length);
+        }
+
+        List<SpriteMappingFrame> mappings = loadMappingFramesWithTileOffset(
+                Sonic2Constants.MAP_UNC_WFZ_ROBOTNIK_ADDR, -0x0500);
+        return new ObjectSpriteSheet(combined, mappings, 0, 1);
     }
 
     /**

@@ -1,7 +1,13 @@
 package com.openggf.game.sonic2;
 import org.junit.jupiter.api.Test;
 import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.game.sonic2.objects.CPZPlatformObjectInstance;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.NemesisReader;
@@ -98,6 +104,80 @@ public class TestTodo21_23_MissingArtSheets {
         assertTrue(tileCount >= 8, "WFZ platform should have at least 8 tiles");
     }
 
+    @Test
+    public void testWFZPlatformSheetBuildsAndRegistersForPlcDispatch() throws IOException {
+        Rom rom = com.openggf.tests.TestEnvironment.currentRom();
+        Sonic2ObjectArt art = new Sonic2ObjectArt(rom, RomByteReader.fromRom(rom));
+
+        ObjectSpriteSheet sheet = art.loadWfzFloatingPlatformSheet();
+
+        assertNotNull(sheet, "WFZ Obj19 platform sheet should be built from ROM art and Obj19 mappings");
+        assertTrue(sheet.getPatterns().length >= 8, "WFZ Obj19 platform sheet should contain platform tiles");
+        assertTrue(sheet.getFrameCount() >= 4, "WFZ Obj19 platform sheet should reuse Obj19's four size frames");
+        assertEquals(1, sheet.getPaletteIndex(),
+                "ROM uses make_art_tile(ArtTile_ArtNem_WfzFloatingPlatform,1,1)");
+        assertEquals(Sonic2ObjectArtKeys.WFZ_PLATFORM,
+                Sonic2PlcArtRegistry.lookup(Sonic2Constants.ART_NEM_WFZ_PLATFORM_ADDR).key(),
+                "WFZ platform PLC art should dispatch to the WFZ-specific sheet");
+    }
+
+    @Test
+    public void testObj19SelectsWFZPlatformArtInWFZ() {
+        assertEquals(Sonic2ObjectArtKeys.WFZ_PLATFORM,
+                CPZPlatformObjectInstance.artKeyForRomZone(Sonic2ZoneConstants.ROM_ZONE_WFZ));
+        assertEquals(Sonic2ObjectArtKeys.CPZ_PLATFORM,
+                CPZPlatformObjectInstance.artKeyForRomZone(Sonic2ZoneConstants.ROM_ZONE_CPZ));
+    }
+
+    @Test
+    public void testWFZRobotnikSheetBuildsCombinedPlcArt() throws IOException {
+        Rom rom = com.openggf.tests.TestEnvironment.currentRom();
+        Sonic2ObjectArt art = new Sonic2ObjectArt(rom, RomByteReader.fromRom(rom));
+
+        ObjectSpriteSheet sheet = art.loadWFZRobotnikSheet();
+
+        assertNotNull(sheet, "WFZ Robotnik sheet should be built from ROM PLC art blocks");
+        assertEquals(8, sheet.getFrameCount(), "Ani_objC5_objC6 references the 8 ObjC6 mapping frames");
+        assertTrue(sheet.getPatterns().length > 0x64,
+                "WFZ Robotnik sheet should include the lower-body block at VRAM tile $0564");
+        assertMappedTilesAvailable(sheet);
+        assertTrue(sheet.getFrame(6).pieces().stream().anyMatch(piece -> piece.tileIndex() >= 0x18),
+                "WFZ Robotnik running frames should resolve into the running art block at tile $0518");
+    }
+
+    @Test
+    public void testWFZStickSheetBuildsFromUnusedBadnikRomArt() throws IOException {
+        Rom rom = com.openggf.tests.TestEnvironment.currentRom();
+        Sonic2ObjectArt art = new Sonic2ObjectArt(rom, RomByteReader.fromRom(rom));
+
+        ObjectSpriteSheet sheet = art.loadWfzStickSheet();
+
+        assertNotNull(sheet, "ObjBF WFZStick sheet should be built from ROM art");
+        assertEquals(3, sheet.getFrameCount(), "Ani_objBF references the three ObjBF mapping frames");
+        assertTrue(sheet.getPatterns().length >= 12,
+                "ObjBF art should provide all three 1x4 stick frames");
+        assertMappedTilesAvailable(sheet);
+        assertEquals(Sonic2ObjectArtKeys.WFZ_STICK,
+                Sonic2PlcArtRegistry.lookup(Sonic2Constants.ART_NEM_WFZ_UNUSED_BADNIK_ADDR).key(),
+                "ObjBF art should dispatch through the PLC registry");
+    }
+
+    @Test
+    public void testWFZUnknownSheetBuildsFromHookTileBaseAndObjBBMappings() throws IOException {
+        Rom rom = com.openggf.tests.TestEnvironment.currentRom();
+        Sonic2ObjectArt art = new Sonic2ObjectArt(rom, RomByteReader.fromRom(rom));
+
+        ObjectSpriteSheet sheet = art.loadWfzUnknownSheet();
+
+        assertNotNull(sheet, "ObjBB removed unknown sheet should be built from ROM hook art");
+        assertEquals(1, sheet.getFrameCount(), "ObjBB_MapUnc_3BBA0 has one mapping frame");
+        assertTrue(sheet.getPatterns().length >= 20,
+                "ObjBB mappings reference tiles through index 19 from the $03FA hook tile base");
+        assertMappedTilesAvailable(sheet);
+        assertEquals(1, sheet.getPaletteIndex(),
+                "ObjBB_SubObjData uses make_art_tile(ArtTile_ArtNem_Unknown,1,0)");
+    }
+
     /**
      * Verify OOZ Platform art (alternate zone art for Obj19) also decompresses.
      * ROM reference: ArtNem_OOZElevator
@@ -133,6 +213,19 @@ public class TestTodo21_23_MissingArtSheets {
     @Test
     public void testWaterfallArtTileBase() {
         assertEquals(0x39E, Sonic2Constants.ART_TILE_EHZ_WATERFALL, "EHZ waterfall art tile base should be $39E");
+    }
+
+    private static void assertMappedTilesAvailable(ObjectSpriteSheet sheet) {
+        for (int frameIndex = 0; frameIndex < sheet.getFrameCount(); frameIndex++) {
+            SpriteMappingFrame frame = sheet.getFrame(frameIndex);
+            for (SpriteMappingPiece piece : frame.pieces()) {
+                int tileCount = piece.widthTiles() * piece.heightTiles();
+                assertTrue(piece.tileIndex() >= 0,
+                        "Frame " + frameIndex + " should not reference a negative tile index");
+                assertTrue(piece.tileIndex() + tileCount <= sheet.getPatterns().length,
+                        "Frame " + frameIndex + " should resolve every mapped tile inside the combined sheet");
+            }
+        }
     }
 }
 

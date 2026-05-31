@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Completed Sonic 2 Wing Fortress Zone parity.** WFZ now has ROM-backed
+  object, badnik, boss, PLC/art, palette, scroll, rewind, intro Tornado
+  cutscene, and WFZ-to-DEZ transition coverage, with the WFZ level-select
+  trace replay matching end-to-end.
+
 - **Added opt-in Discord Rich Presence.** When enabled, OpenGGF publishes menu and gameplay status through the local Discord desktop client, including game, character/team, zone/act, and timer details subject to privacy toggles. Presence remains disabled by default and includes distinct master-title, game title-screen, level-select, data-select, and gameplay states.
 
 - **Fixed Discord Rich Presence elapsed-time resets.** Activity updates now reuse a stable Discord `timestamps.start` value so Discord's own "time playing" display no longer resets when OpenGGF refreshes gameplay/menu details.

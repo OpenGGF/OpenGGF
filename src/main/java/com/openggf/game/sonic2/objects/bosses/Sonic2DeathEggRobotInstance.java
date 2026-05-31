@@ -6,6 +6,8 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.game.sonic2.scroll.SwScrlDez;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -138,7 +140,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     private static final int DEFEAT_ENDING_PLAYER_X = 0xEC0;
     /** ROM: Initial robot follow-offset behind player (ObjC7_SetupEnding) */
     private static final int INITIAL_ROBOT_FOLLOW_OFFSET = 0x20;
-    /** ROM: Fade duration before credits transition (approx $16 = 22 frames) */
+    /** ROM: Fade duration before credits transition ($16 = 22 frames) */
     private static final int FADE_DURATION = 0x16;
     /** Break-apart velocities for 8 body parts (from ObjC7_BreakSpeeds, s2.asm:83258-83267) */
     static final int[][] BREAK_VELOCITIES = {
@@ -781,16 +783,8 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
                 if (actionTimer < 0) {
                     attackPhase = 0x0A;
                     state.yVel = 0;
-                    // Screen shake on stomp landing
-                    // TODO: ROM uses a 64-frame oscillating ripple table for screen shake,
-                    //       not a static offset. Camera currently has no timed/oscillating
-                    //       shake API. Using static offset as stub until Camera supports
-                    //       duration-based shake (ROM: ObjC7 stomp sets $40 frames of
-                    //       oscillating Y shake via the ripple/shake system).
-                    Camera camera = services().camera();
-                    if (camera != null) {
-                        camera.setShakeOffsets(0, 4);
-                    }
+                    // ROM: Screen_Shaking_Flag=1, DEZ_Shake_Timer=$40.
+                    triggerDezScreenShake(0x40);
                     if (jet != null) {
                         jet.setJetRoutine(6);
                     }
@@ -970,8 +964,8 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             Camera camera = services().camera();
             if (camera != null) {
                 camera.setMaxX((short) DEFEAT_CAMERA_MAX_X);
-                // TODO: ROM sets (Vint_Count_addr+2).w = $1000 for persistent screen rumble.
-                // Camera has no timed/persistent shake API yet.
+                // ROM: Screen_Shaking_Flag=1, DEZ_Shake_Timer=$1000.
+                triggerDezScreenShake(0x1000);
             }
         }
     }
@@ -999,7 +993,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
             defeatFrameCounter = 0;
 
             // ROM: set screen shake flag and DEZ shake timer ($1000)
-            camera.setShakeOffsets(0, 4);
+            triggerDezScreenShake(0x1000);
 
             if (head != null) {
                 head.setDestroyed(true);
@@ -1376,7 +1370,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
      */
     private void clampPlayerToGround(AbstractPlayableSprite player) {
         // Use the defeat floor Y as the maximum safe ground level.
-        // The player's centre Y at the arena floor is approximately at DEFEAT_FLOOR_Y.
+        // The player's centre Y at the arena floor is represented by DEFEAT_FLOOR_Y.
         // If the player's Y exceeds this by more than a small margin, they've fallen
         // off the level geometry — clamp them back.
         int maxSafeY = DEFEAT_FLOOR_Y + 0x20; // small margin for normal ground height variation
@@ -1452,7 +1446,7 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
     /**
      * Signal that Eggman has boarded the cockpit (called by Sonic2DEZEggmanInstance).
      * ROM: ObjC7 head child polls (DEZ_Eggman).w for status.npc.p1_standing bit.
-     * This flag replaces the timer-based stub in HeadChild.isEggmanBoarded().
+     * This flag mirrors the status bit polled by HeadChild.isEggmanBoarded().
      */
     public void setEggmanBoarded() {
         this.eggmanBoardedFlag = true;
@@ -1460,6 +1454,18 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
 
     /** Eggman boarding flag, set by Sonic2DEZEggmanInstance when jump starts */
     private boolean eggmanBoardedFlag = false;
+
+    private void triggerDezScreenShake(int frames) {
+        if (services().gameState() != null) {
+            services().gameState().setScreenShakeActive(true);
+        }
+        if (services().parallaxManager() == null) {
+            return;
+        }
+        if (services().parallaxManager().getHandler(Sonic2ZoneConstants.ZONE_DEZ) instanceof SwScrlDez dez) {
+            dez.triggerScreenShake(frames);
+        }
+    }
 
     boolean consumeFrontPunchTrigger() {
         boolean val = frontPunchTriggered;
@@ -2231,14 +2237,12 @@ public class Sonic2DeathEggRobotInstance extends AbstractBossInstance {
         public void appendRenderCommands(List<GLCommand> commands) {
             ObjectRenderManager renderManager = ((Sonic2DeathEggRobotInstance) parent).services().renderManager();
             if (renderManager == null) return;
-            PatternSpriteRenderer renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.DEZ_BOSS);
+            PatternSpriteRenderer renderer = detonating
+                    ? renderManager.getBossExplosionRenderer()
+                    : renderManager.getRenderer(Sonic2ObjectArtKeys.DEZ_BOSS);
             if (renderer == null || !renderer.isReady()) return;
             if (detonating) {
-                // ROM uses FieryExplosion (Obj58) mappings during detonation.
-                // Frame 0x0F from ObjC7_MapUnc_3E5F8 is the explosion frame.
-                // TODO: Use proper Obj58 explosion mappings when available.
-                //       For now, use FRAME_BOMB as placeholder during detonation.
-                renderer.drawFrameIndex(FRAME_BOMB, currentX, currentY, false, false);
+                renderer.drawFrameIndex(detonateFrame, currentX, currentY, false, false);
             } else {
                 renderer.drawFrameIndex(FRAME_BOMB, currentX, currentY, false, false);
             }

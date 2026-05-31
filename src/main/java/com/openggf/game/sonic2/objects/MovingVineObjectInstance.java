@@ -10,11 +10,13 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -43,6 +45,8 @@ import java.util.logging.Logger;
 public class MovingVineObjectInstance extends AbstractObjectInstance {
 
     private static final Logger LOGGER = Logger.getLogger(MovingVineObjectInstance.class.getName());
+    private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
+            ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
     /**
      * Zone variant configuration.
@@ -195,7 +199,6 @@ public class MovingVineObjectInstance extends AbstractObjectInstance {
     }
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) {
             return;
         }
@@ -211,12 +214,26 @@ public class MovingVineObjectInstance extends AbstractObjectInstance {
 
         // 3. Process player interactions
         // ROM: Obj80_Action processes each player via a2 pointer
-        // Note: We only have one player in current engine, but structure supports two
-        processPlayerInteraction(player, false);  // Player 1 (MainCharacter)
-        // TODO: Player 2 (Sidekick) when multiplayer is implemented
+        List<PlayableEntity> participants = interactionParticipants(playerEntity);
+        for (int i = 0; i < participants.size(); i++) {
+            if (participants.get(i) instanceof AbstractPlayableSprite player) {
+                processPlayerInteraction(player, i != 0);
+            }
+        }
 
         // 4. Update dynamic spawn for collision system
         updateDynamicSpawn(spawn.x(), currentY);
+    }
+
+    private List<PlayableEntity> interactionParticipants(PlayableEntity updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
+        if (updatePlayer != null && !participants.contains(updatePlayer)) {
+            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+            withUpdatePlayer.add(updatePlayer);
+            withUpdatePlayer.addAll(participants);
+            return withUpdatePlayer;
+        }
+        return participants;
     }
 
     /**

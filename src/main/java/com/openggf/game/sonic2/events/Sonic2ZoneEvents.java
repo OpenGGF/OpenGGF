@@ -5,7 +5,9 @@ import com.openggf.audio.AudioManager;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.game.GameStateManager;
+import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.mutation.ZoneLayoutMutationPipeline;
+import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.level.LevelManager;
 import com.openggf.level.ParallaxManager;
 import com.openggf.level.WaterSystem;
@@ -143,5 +145,23 @@ public abstract class Sonic2ZoneEvents {
         Camera cam = camera();
         setSidekickBounds((int) cam.getMinX(), (int) cam.getMaxX(),
                 (int) Math.max(cam.getMaxY(), cam.getMaxYTarget()));
+    }
+
+    protected void requestSonic2Plc(int plcId) {
+        try {
+            if (!GameServices.hasRuntime()) {
+                return;
+            }
+            LevelManager levelManager = GameServices.levelOrNull();
+            if (levelManager == null || levelManager.getCurrentLevel() == null) {
+                return;
+            }
+            ObjectArtProvider provider = GameServices.module().getObjectArtProvider();
+            if (provider instanceof Sonic2ObjectArtProvider sonic2Provider) {
+                sonic2Provider.requestPlc(plcId);
+            }
+        } catch (RuntimeException | IOException e) {
+            LOGGER.fine(() -> "S2 PLC request " + plcId + " deferred: " + e.getMessage());
+        }
     }
 }

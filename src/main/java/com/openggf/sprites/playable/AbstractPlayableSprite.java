@@ -3021,6 +3021,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.logicalJumpPressState = false;
         }
 
+        public int getLogicalInputState() {
+                return logicalInputState & 0xFFFF;
+        }
+
         /**
          * Returns whether the player is actively pressing a movement direction this frame,
          * after all control lock filtering. Used by animation to match ROM behavior.
