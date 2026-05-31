@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 trace replay VBlank diagnostics and Obj6C parity.**
+  S1/S2 trace replay now compares gameplay rows against the following
+  VBlank-only row's visual diagnostics when the recorder splits those phases,
+  matching the headless engine's frame presentation without hydrating trace
+  state. MTZ Conveyor Obj6C also uses the ROM `PlatformObject` `d3` value
+  directly for landing height. Focused trace-model and Obj6C coverage passes;
+  the MTZ3 trace frontier moves from frame 5180 to a later frame-6477 Slicer
+  pincer hurt-contact mismatch.
+
 - **Advanced Sonic 2 MTZ3 Obj74/Obj69 lower-bound trace parity.**
   MTZ Invisible Block Obj74 and Nut Obj69 now use S2 `SolidObject_cont`'s
   live-`y_radius(a1)` lower overlap bound, preventing rolling-air players from

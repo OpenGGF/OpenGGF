@@ -122,6 +122,16 @@ class TestSonic2ObjectBugFixes {
     }
 
     @Test
+    void mtzConveyorUsesPlatformObjectD3ForLandingSnap() {
+        ConveyorObjectInstance conveyor = new ConveyorObjectInstance(
+                new ObjectSpawn(0x1720, 0x0519, Sonic2ObjectIds.CONVEYOR, 0x01, 0, false, 0),
+                "Conveyor");
+
+        assertEquals(8, conveyor.getSolidParams().groundHalfHeight(),
+                "Obj6C_Main passes d3=8 to PlatformObject for both ChkYRange and MvSonicOnPtfm");
+    }
+
+    @Test
     void mtzLongPlatformOutOfRangeUsesStoredBaseX() throws Exception {
         MTZLongPlatformObjectInstance platform = new MTZLongPlatformObjectInstance(
                 new ObjectSpawn(0x0B20, 0x076C, Sonic2ObjectIds.MTZ_LONG_PLATFORM, 0x13, 1, false, 0x276C));
