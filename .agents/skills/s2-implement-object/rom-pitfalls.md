@@ -1704,6 +1704,35 @@ frontier advances from frame 3603 to frame 3617.
 
 ---
 
+## P39 -- Same object ID can dispatch to different objects by subtype/routine
+
+**Symptom.** A placement with an already-implemented object ID does nothing, or
+uses the wrong movement/contact math, even though the engine has a class for
+that ID. Trace context shows the ROM object ID matches the engine object ID, but
+the ROM routine byte and nearby state do not match the implemented path.
+
+**Root cause.** S2 objects often multiplex distinct behaviours under one ID.
+Obj06 is both the EHZ spiral and the MTZ cylinder: `Obj06_Init` branches to
+`Obj06_Cylinder` when the subtype is negative, setting `routine=4`, while
+non-negative subtypes follow the spiral-path controller. Treating every Obj06
+placement as a spiral leaves MTZ cylinder placements invisible to the player.
+
+**What to check.** During init-porting, do not stop once the object ID maps to a
+class. Read the init routine's subtype branches and routine writes, then make
+sure each branch has an engine mode. For sine/cosine helpers, also preserve the
+ROM return register: `CalcSine` returns sine in `d0` and cosine in `d1`; a path
+that multiplies `d1` must use cosine, not sine.
+
+**ROM citation.** S2 Obj06 init/cylinder path (`docs/s2disasm/s2.asm:46720-46811`,
+`s2.asm:46853-46931`): negative subtype branches to `Obj06_Cylinder`; the
+active rider path calls `CalcSine` and multiplies `d1` by `$2800` for the
+vertical offset.
+
+**Originating commit.** Fix S2 MTZ3 Obj06 cylinder mode -- MTZ3 frontier
+advances from frame 4280 to frame 4656.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

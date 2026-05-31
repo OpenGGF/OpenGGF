@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Obj06 cylinder trace parity.**
+  S2 Obj06 now implements its negative-subtype MTZ cylinder mode instead of
+  treating every placement as the EHZ spiral path. The cylinder capture snap,
+  ride latch, inertia seed, flip angle, and cosine-based y orbit now follow
+  the ROM path. Focused Obj06 coverage passes; the MTZ3 trace frontier moves
+  from frame 4280 to a later frame-4656 airborne wall/collision mismatch.
+
 - **Advanced Sonic 2 MTZ3 Obj6B and dead-sidekick trace parity.**
   MTZ Platform Obj6B now reports its stored `objoff_34` base X to the shared
   out-of-range despawn path, matching the ROM delete check after platform
