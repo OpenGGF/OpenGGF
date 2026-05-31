@@ -1733,6 +1733,35 @@ advances from frame 4280 to frame 4656.
 
 ---
 
+## P40 -- Native `x_pos` / `y_pos` writes must preserve the sibling subpixel byte
+
+**Symptom.** Player integer position matches ROM after an object snaps or carries
+the player, but `x_sub` or `y_sub` diverges. The next movement frame then drifts
+by one or more pixels because ROM kept the existing subpixel residue while the
+engine cleared it.
+
+**Root cause.** ROM object code often writes only the native position word:
+`move.w x_pos(a0),x_pos(a1)` or `move.w y_pos(a0),y_pos(a1)`. That changes the
+integer word and leaves the adjacent subpixel byte/word untouched. Engine code
+that uses `setCentreX(...)` / `setCentreY(...)` for a playable sprite rewrites a
+higher-level coordinate and can clear or recompute the subpixel state.
+
+**What to check.** When porting object code that writes `x_pos(a1)` or
+`y_pos(a1)` directly to a playable sprite, use `NativePositionOps`:
+`writeXPosPreserveSubpixel`, `writeYPosPreserveSubpixel`, or the corresponding
+add helpers. Reserve raw centre setters for code paths where ROM also resets the
+subpixel half or where the target is an object-local/non-playable coordinate.
+
+**ROM citation.** S2 Obj69 Nut align and screw modes
+(`docs/s2disasm/s2.asm:53566-53568`, `s2.asm:53579-53582`,
+`s2.asm:53626-53629`) write `move.w x_pos(a0),x_pos(a1)` while leaving
+`x_sub(a1)` intact.
+
+**Originating commit.** Fix S2 MTZ3 Obj69 nut x_pos snap preserves player
+x_sub -- MTZ3 frontier advances from frame 4793 to frame 5143.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

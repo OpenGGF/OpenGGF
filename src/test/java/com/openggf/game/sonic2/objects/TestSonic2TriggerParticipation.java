@@ -85,6 +85,31 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void nutNativeXSnapsPreservePlayerSubpixel() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        main.setSubpixelRaw(0xCF00, 0x1C00);
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x1000, 0x1020, Sonic2ObjectIds.NUT, 0, 0, false, 0),
+                "Nut");
+        nut.setServices(new QueryOnlyPlayerServices(main, List.of()));
+
+        nut.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+        nut.update(0, main);
+
+        assertEquals(0x1000, main.getCentreX());
+        assertEquals(0xCF00, main.getXSubpixelRaw(),
+                "Obj69 align writes only x_pos(a1), preserving x_sub");
+
+        main.setCentreXPreserveSubpixel((short) 0x1002);
+        nut.onSolidContact(main, new SolidContact(true, false, false, true, false), 1);
+        nut.update(1, main);
+
+        assertEquals(0x1000, main.getCentreX());
+        assertEquals(0xCF00, main.getXSubpixelRaw(),
+                "Obj69 screw movement writes only x_pos(a1), preserving x_sub");
+    }
+
+    @Test
     void wfzPaletteSwitcherUsesQueryOnlySidekickCrossing() {
         TestablePlayableSprite main = player("sonic", 0x0800, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x0FF0, 0x1000);
