@@ -1,5 +1,21 @@
 # Trace Frontier Log
 
+## 2026-05-31 - S2 MTZ3 Shellcracker and spin-tube parity moves frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.game.sonic2.objects.badniks.TestShellcrackerClawInstance,com.openggf.game.sonic2.objects.TestMTZSpinTubeObjectInstance" test -DfailIfNoTests=false`
+  - PASS: focused Shellcracker claw and MTZ spin-tube tests.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 764 to frame 1311.
+  - New frontier: frame 1311 `y` expected `0x050D`, actual `0x050C`; the player subpixels now match the ROM, and the remaining mismatch tracks a one-pixel Obj6B MTZ platform/camera vertical phase lag.
+- Findings:
+  - ObjA0 Shellcracker claw child slots need the same init-pass delay as the ROM `ObjA0_Init` path before entering active claw logic.
+  - Obj67 Spin Tube writes playable native position words without clearing subpixels and sets `AniIDSonAni_Roll` without setting `status.player.rolling`.
+  - The next MTZ3 investigation should inspect Obj6B platform oscillator/update ordering against `Obj6B_Types`, not add player, route, frame, or trace-specific compensation.
+
 ## 2026-05-31 - S2 native object prelude fallback moves MTZ3 frontier
 
 - Branch: `feature/ai-s2-mtz-parity`

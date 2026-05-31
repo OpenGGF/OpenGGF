@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 object trace parity.** Shellcracker claw ObjA0 now
+  defers its first active tick until the frame after ROM-style child-slot init,
+  and MTZ Spin Tube Obj67 now preserves native playable subpixels on word
+  `x_pos`/`y_pos` writes while changing only the roll animation, not the
+  rolling status bit. Focused object tests pass; the MTZ3 trace frontier moves
+  from the frame-764 Shellcracker/claw interaction to a later frame-1311 Obj6B
+  platform vertical-phase mismatch.
+
 - **Fixed Sonic 2 trace object-title prelude fallback.** Native Sonic 2
   trace bootstrap now applies the generic 26 title-card object ticks whenever
   the live object manager does not select the route-specific Tornado ObjB2
