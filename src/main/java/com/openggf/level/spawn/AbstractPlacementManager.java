@@ -107,8 +107,51 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
         return -1;
     }
 
+    /** Parity baseline viewport width. Load-ahead at this width reproduces the legacy window. */
+    static final int NATIVE_VIEWPORT_WIDTH = 320;
+
+    /**
+     * Minimum load-ahead beyond the visible screen at widescreen widths (one
+     * chunk, 128px). The forward spawn fires on each chunk-boundary crossing
+     * (the camera is ~chunk-aligned at that moment), so this is the practical
+     * pre-load lead in pixels — about 8 frames at typical scroll speeds, enough
+     * to avoid pop-in.
+     */
+    static final int WIDESCREEN_LOAD_LEAD = 0x80;
+
+    /**
+     * Forward load-ahead window width.
+     *
+     * <p>At native width this is {@code 320 + extraAhead} (the legacy {@code 0x280}
+     * window with the standard {@code extraAhead} of 320). At widescreen the window
+     * grows only by the <em>minimum</em> needed to pre-load objects before they
+     * enter the wider screen ({@code viewportWidth + 128}), NOT by the full
+     * {@code extraAhead} margin on top of the wider screen.
+     *
+     * <p>Rationale: the number of objects held live at once is the window width ×
+     * object density, and the per-game object slot pool is a <em>fixed</em>
+     * ROM-sized table ({@code ObjectSlotLayout}: S1=96, S2=112, S3K=89). The
+     * original {@code viewportWidth + extraAhead} window grew so far past native
+     * that dense areas overran the pool, so {@code allocateSlot()} returned -1 and
+     * the spawn was silently dropped — objects intermittently failing to load when
+     * scrolling right at widescreen (all games). Capping the load-ahead keeps the
+     * live count close to native so the pool no longer overruns. The despawn and
+     * visibility windows stay full-width, so objects on the wider screen are not
+     * culled (the original right-edge despawn bug stays fixed).
+     *
+     * <p>At native ({@code viewportWidth == 320}) this returns exactly the legacy
+     * value — byte-identical.
+     */
+    static int loadAheadFor(int viewportWidth, int extraAhead) {
+        int nativeBaseline = NATIVE_VIEWPORT_WIDTH + extraAhead;
+        int widthDriven = viewportWidth + WIDESCREEN_LOAD_LEAD;
+        return Math.max(nativeBaseline, widthDriven);
+    }
+
     protected int getLoadAhead() {
-        return widthSupplier != null ? widthSupplier.getAsInt() + extraAhead : loadAheadFixed;
+        return widthSupplier != null
+                ? loadAheadFor(widthSupplier.getAsInt(), extraAhead)
+                : loadAheadFixed;
     }
 
     protected int getUnloadBehind() {
@@ -125,9 +168,10 @@ public abstract class AbstractPlacementManager<T extends SpawnPoint> {
      *   <li>Forward:  {@code (cameraX & 0xFF80) + 0x280}</li>
      * </ul>
      * The {@code 0x280} forward extent is the native-width baseline; the actual
-     * forward window now scales with {@link #getLoadAhead()} (viewport-driven:
-     * {@code width + extraAhead}), so it equals {@code 0x280} only at native
-     * width (320) and widens for wider viewports.
+     * forward window scales with {@link #getLoadAhead()}, which equals
+     * {@code 0x280} at native width (320) and widens only by the minimum lead
+     * needed for wider viewports (see {@link #loadAheadFor}) so the fixed object
+     * slot pool is not overrun.
      * <p>
      * Using raw cameraX shifts the window right by up to 127px, causing
      * objects on the left side to fall outside the spawn range.
