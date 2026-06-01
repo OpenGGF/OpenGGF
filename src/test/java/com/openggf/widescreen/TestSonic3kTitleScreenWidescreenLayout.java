@@ -17,11 +17,12 @@ import org.junit.jupiter.api.Test;
  *       viewport mid-point.</li>
  * </ol>
  *
- * <p>The S3K title screen uses only PILLARBOX/CENTER strategy — no tiling — because:
+ * <p>Strategy per surface:
  * <ul>
- *   <li>Animation phases: fixed 40×28 nametable pictures with no art beyond 320px.</li>
- *   <li>Interactive Plane B: fixed 40×28 Enigma-decoded background with no H-scroll wrap.</li>
- *   <li>Interactive Plane A &amp; sprites: foreground centred via xOffset().</li>
+ *   <li>Animation phases: PILLARBOX — fixed 40×28 nametable pictures with no art beyond 320px.</li>
+ *   <li>Interactive Plane B (sea/sky): EDGE-EXTEND — out-of-frame screen columns clamp to the
+ *       edge nametable column so the open sea/sky fills the viewport.</li>
+ *   <li>Interactive Plane A &amp; sprites: CENTER — foreground centred via xOffset().</li>
  * </ul>
  */
 class TestSonic3kTitleScreenWidescreenLayout {
@@ -174,34 +175,71 @@ class TestSonic3kTitleScreenWidescreenLayout {
     }
 
     // -------------------------------------------------------------------------
-    // Plane B (background) — pillarboxed, not tiled
-    // Verify the first and last tile columns stay within the fixed 40×8 = 320px block.
+    // Plane B (sea/sky background) — edge-extended to fill the viewport.
+    // For a screen column s, the sampled nametable column is clamp(s - colOffset,
+    // 0, 39) and it draws at screenX = s*8. colOffset = xOffset/8, and the number
+    // of screen columns spans the whole viewport.
     // -------------------------------------------------------------------------
 
-    @Test
-    void planeBTile_atNative_firstColumnIsZero() {
-        int ox = xOffset(NATIVE_WIDTH);
-        assertEquals(0, ox + 0 * 8,
-                "Plane B first tile X must be 0 at native 320");
+    private static final int MAP_WIDTH = 40;
+
+    /** Mirrors renderPlaneB(): nametable column sampled for a given screen column. */
+    private static int planeBSampledColumn(int screenCol, int viewportWidth) {
+        int colOffset = xOffset(viewportWidth) / 8;
+        int ntCol = screenCol - colOffset;
+        if (ntCol < 0) {
+            return 0;
+        }
+        if (ntCol >= MAP_WIDTH) {
+            return MAP_WIDTH - 1;
+        }
+        return ntCol;
+    }
+
+    private static int planeBScreenColumns(int viewportWidth) {
+        return (viewportWidth + 7) / 8;
     }
 
     @Test
-    void planeBTile_atNative_lastColumnIs312() {
-        int ox = xOffset(NATIVE_WIDTH);
-        // 39th column (0-indexed): 39 * 8 = 312
-        assertEquals(312, ox + 39 * 8,
-                "Plane B last tile X must be 312 at native 320");
+    void planeB_atNative_isByteIdentical() {
+        // colOffset 0, exactly 40 columns: screen column == nametable column, x == col*8.
+        assertEquals(40, planeBScreenColumns(NATIVE_WIDTH),
+                "Plane B must span exactly 40 columns at native 320");
+        for (int s = 0; s < 40; s++) {
+            assertEquals(s, planeBSampledColumn(s, NATIVE_WIDTH),
+                    "Plane B screen column must equal nametable column at native, s=" + s);
+        }
     }
 
     @Test
-    void planeBTile_at640_isCentred() {
-        int ox = xOffset(640); // 160
-        // The 320px picture block runs from ox (160) to ox+319 (479),
-        // centred in the 640px viewport.
-        assertEquals(160, ox,
-                "Plane B x-origin must be 160 at viewport width 640");
-        // Last tile: ox + 39*8 = 160 + 312 = 472
-        assertEquals(472, ox + 39 * 8,
-                "Plane B last tile X must be 472 at viewport width 640");
+    void planeB_at640_fillsViewportWithClampedEdges() {
+        int vw = 640;
+        // 80 screen columns cover the full 640px viewport.
+        assertEquals(80, planeBScreenColumns(vw));
+        // Left band (screen cols 0..19) all sample edge column 0 (open sea/sky).
+        assertEquals(0, planeBSampledColumn(0, vw), "left band samples edge column 0");
+        assertEquals(0, planeBSampledColumn(19, vw), "left band samples edge column 0");
+        // Centred frame: screen col 20 -> nametable col 0, screen col 59 -> col 39.
+        assertEquals(0, planeBSampledColumn(20, vw), "centred frame starts at nametable col 0");
+        assertEquals(39, planeBSampledColumn(59, vw), "centred frame ends at nametable col 39");
+        // Right band (screen cols 60..79) all sample edge column 39.
+        assertEquals(39, planeBSampledColumn(60, vw), "right band samples edge column 39");
+        assertEquals(39, planeBSampledColumn(79, vw), "right band samples edge column 39");
+    }
+
+    @Test
+    void planeB_centredFrameMatchesXOffset() {
+        // The in-frame columns draw at exactly the same screen X as the centred
+        // foreground: screenCol*8 == xOffset + ntCol*8.
+        int vw = 480;
+        int ox = xOffset(vw); // 80
+        int colOffset = ox / 8; // 10
+        for (int ntCol = 0; ntCol < MAP_WIDTH; ntCol++) {
+            int screenCol = ntCol + colOffset;
+            assertEquals(ox + ntCol * 8, screenCol * 8,
+                    "in-frame Plane B column must align with centred foreground, ntCol=" + ntCol);
+            assertEquals(ntCol, planeBSampledColumn(screenCol, vw),
+                    "in-frame screen column must sample its own nametable column, ntCol=" + ntCol);
+        }
     }
 }

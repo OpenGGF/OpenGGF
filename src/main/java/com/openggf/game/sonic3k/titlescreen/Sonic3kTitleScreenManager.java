@@ -1194,7 +1194,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // xOffset() is 0 at native 320 — byte-identical at native width.
         int ox = xOffset();
 
-        // 1. Render Plane B (background) — pillarboxed/centered (fixed 40×28, no H-scroll wrap)
+        // 1. Render Plane B (background) — sea/sky edge-extended to fill the viewport
         renderPlaneB(gm);
 
         // 2. Render Tails plane sprite (no priority, renders behind Plane A)
@@ -1284,6 +1284,14 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * Renders Plane B (background) for the interactive phase.
      * NOT affected by vScroll — on VDP, V_scroll_value is written to VSRAM
      * word 0 (Plane A only). Plane B has its own V_scroll (word 1) which stays at 0.
+     *
+     * <p><b>Widescreen:</b> rather than pillarbox the fixed 40×28 picture, the
+     * open sea/sky at the picture edges is extended to fill the whole viewport.
+     * Out-of-frame screen columns clamp to the nearest edge nametable column
+     * (column 0 on the left band, column 39 on the right band), so the horizon,
+     * water and sky run edge to edge while the centred foreground (Plane A and
+     * the overlay sprites) stays put. At native 320 the centred frame exactly
+     * fills the viewport (colOffset 0, 40 columns) — byte-identical.
      */
     private void renderPlaneB(GraphicsManager gm) {
         int[] bgMap = dataLoader.getBackgroundMapping();
@@ -1292,14 +1300,26 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         }
 
         int animPatternBase = dataLoader.getAnimPatternBase();
-        // Plane B is a fixed 40×28 picture with no H-scroll — pillarbox/center.
-        // xOffset() is 0 at native 320 — byte-identical at native width.
-        int ox = xOffset();
+        int vw = viewportWidth();
+        // Screen column at which nametable column 0 begins (centred frame origin).
+        // xOffset() is a multiple of 8 for every aspect preset, so this is exact.
+        int colOffset = xOffset() / 8;
+        // Screen columns needed to cover the whole viewport width.
+        int totalCols = (vw + 7) / 8;
 
         gm.beginPatternBatch();
         for (int row = 0; row < MAP_HEIGHT; row++) {
-            for (int col = 0; col < MAP_WIDTH; col++) {
-                int idx = row * MAP_WIDTH + col;
+            for (int screenCol = 0; screenCol < totalCols; screenCol++) {
+                // Map this screen column to a nametable column, clamping the side
+                // bands to the edge columns so the open sea/sky tiles repeat out
+                // to fill the viewport.
+                int ntCol = screenCol - colOffset;
+                if (ntCol < 0) {
+                    ntCol = 0;
+                } else if (ntCol >= MAP_WIDTH) {
+                    ntCol = MAP_WIDTH - 1;
+                }
+                int idx = row * MAP_WIDTH + ntCol;
                 if (idx >= bgMap.length) {
                     continue;
                 }
@@ -1309,7 +1329,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
                 }
                 int tileIndex = word & 0x7FF;
                 reusableDesc.set(word);
-                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, ox + col * 8, row * 8);
+                gm.renderPatternWithId(animPatternBase + tileIndex, reusableDesc, screenCol * 8, row * 8);
             }
         }
         gm.flushPatternBatch();
