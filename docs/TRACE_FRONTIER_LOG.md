@@ -1,5 +1,116 @@
 # Trace Frontier Log
 
+## 2026-06-01 - S3K speed-shoes diagnosis: per-frame model is pickup-relative; byte timer blocked on frame-counter phase
+
+- Branch: `feature/ai-s2-mtz-parity`; Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Diagnosed why the per-frame approximation uniquely holds S3K CNZ f17276 while
+  the ROM-accurate every-8th-frame byte timer regresses it (see prior entry).
+- Method: temporary `SHOE_PICKUP`/`SHOE_EXPIRE` logging on the committed
+  per-frame model (which matches the CNZ trace through f17276), single run:
+  - `SHOE_PICKUP frameCounter=5369`, `SHOE_EXPIRE frameCounter=6569` — expiry is
+    exactly **pickup + 1200** (pickup-relative). Trace divergence sits at trace
+    frame 6566 / gameplay_frame_counter 6567, inside the shoes window.
+  - Decimation-8 (ALIGN=1, gate `(fc+1)&7==0`): first decrement fc=5375, expiry
+    `5375+149*8 = 6567` — a 1198-frame span, 2 frames early; that gap yields the
+    `x_speed +0x18` divergence at gfc 6567.
+- Root cause: the trace expiry is pickup-relative; the per-frame timer is
+  pickup-relative and phase-independent (immune), whereas the every-8th-frame
+  timer is global-grid quantized and sensitive to the engine frame-counter grid
+  phase at the decrement read point. Matching the trace would need gate
+  `fc&7==1` (ALIGN=7), contradicting the principled ALIGN=1 from the AIZ-bridge
+  calibration — i.e. the pre-physics `TimerManager.update()` reads the counter
+  ~2 frames off the `Sonic_Display`/object-update grid phase ROM uses.
+- Conclusion: byte timer remains blocked on frame-counter phase fidelity at the
+  read point (not granularity). Diagnostic logging reverted; committed per-frame
+  model retained (CNZ stays f17276). Full analysis + refined next steps in
+  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
+
+## 2026-06-01 - S3K speed-shoes byte-timer (every-8th-frame) attempt: regresses CNZ, reverted
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Implemented the design in
+  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`:
+  `PhysicsFeatureSet.speedShoesTimerDecimation` (S1/S2 `1`, S3K `8`),
+  `SpeedShoesTimer` duration `ROM_DURATION_FRAMES/decimation` (150 for S3K) with
+  the decrement gated on `(frameCounter + 1) & (decimation-1) == 0`. `ALIGN=1`
+  derived from the `(frameCounter+3)&7` gate in `AizFlippingBridgeObjectInstance`.
+- Guard: `mvn -q -Dmse=relaxed "-Ds3k.rom.path=..." "-Dtest=...TestS3kCnzTraceReplay#replayMatchesTrace,...TestS3kAizTraceReplay#replayMatchesTrace,...TestS3kMgzTraceReplay#replayMatchesTrace" test`
+  - AIZ: held f8941 (camera_y). MGZ: held f4124 (y_speed).
+  - **CNZ: regressed f17276 -> f6566** (x_speed expected `0x0368`, actual
+    `0x0380`; `+0x18` = one boosted-accel frame — shoes mistimed). Re-test after
+    ruling out a null-level fallback bug: unchanged f6566, so the level manager
+    is available/advancing at the read point and the regression is genuine.
+  - Unit tests passed; S1/S2 byte-identical (decimation 1).
+- Conclusion: the per-frame approximation is load-bearing for the CNZ trace. The
+  ROM-accurate every-8th-frame gate diverges immediately at f6566 (not a small
+  expiry shift), implying the trace-replay frame-counter phase at the speed-shoes
+  read point does not match ROM `Level_frame_counter` the way the AIZ
+  object-update gate does. Granularity is necessary but not sufficient; phase
+  fidelity at the read point must be diagnosed first. Reverted to the committed
+  per-frame model (CNZ stays f17276). Findings recorded in the design spec's
+  "Implementation status" section.
+
+## 2026-06-01 - S2 speed-shoes timing: CNZ tradeoff + display-phase ordering attempt (reverted)
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+
+### CNZ error-count tradeoff from the WFZ speed-shoes change
+
+Commit `3251a7988 feat(s2): complete WFZ parity` raised
+`PhysicsFeatureSet.SONIC_2.speedShoesTimerPrePhysicsExtraTicks` from `0` to `1`.
+The engine ticks the per-frame speed-shoes word timer in the pre-physics
+`TimerManager.update()` (GameLoop:592 / HeadlessTestRunner.stepFrame), one frame
+before player movement, whereas ROM `Obj01_ChkShoes` decrements
+`speedshoes_time` in `Sonic_Display` after movement (s2.asm:36008-36025). The
+`+1` extends the timer duration by one frame so the player still gets the
+ROM-correct count of boosted (`$18` accel / `$C00` top-speed) movement frames.
+
+Measured both values (commit HEAD; `-Ds2.rom.path` set):
+`mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" test`
+
+| value | CNZ (`TestS2CnzLevelSelectTraceReplay`) | WFZ (`TestS2WfzLevelSelectTraceReplay`) |
+|-------|------|------|
+| `0` (pre-`3251a7988`) | 94 errors, first error f3906 `tails_y` 0x06C0 vs 0x06C1 | 587 errors, first error f4719 `x_speed` 0x08D6 vs 0x08E2 |
+| `1` (committed) | 199 errors, first error f3906 (same field) | 277 errors, first error **f8863** `camera_x` 0x1D09 vs 0x1D0B |
+
+`1` is the ROM-correct boosted-frame count: it advances the WFZ frontier
+f4719 -> f8863 and halves WFZ errors. It also raises CNZ's error count
+94 -> 199 while leaving CNZ's first-error **frame unchanged at f3906**. That
+f3906 `tails_y` off-by-one is a pre-existing, speed-shoes-unrelated bug;
+`0` produced fewer downstream CNZ mismatches only because it ran one fewer
+boosted frame than ROM (the *less* accurate behaviour) and coincidentally
+aligned better past f3906. The CNZ error-count rise is therefore an artifact of
+the unrelated f3906 frontier, not evidence that `0` is correct. Net of the
+change: WFZ frontier advanced, CNZ frontier held, no S2 trace newly broken
+(`TestS2Ehz1TraceReplay` and its regression variants still pass).
+
+### Ordering follow-up: display-phase speed-shoes tick (implemented, validated, REVERTED)
+
+To remove the `+1` compensation constant, attempted modelling the ROM ordering
+directly: a `DisplayPhaseTimer` marker skipped by the pre-physics
+`TimerManager.update()` and ticked from `AbstractPlayableSprite.tickStatus()`
+(the engine's `Sonic_Display` analog, post-movement, where invincibility/spring
+countdowns already live), with `speedShoesTimerPrePhysicsExtraTicks` removed.
+
+- S1/S2 result: behaviourally identical to the `+1` constant, as expected
+  (the `+1` is movement-equivalent to post-movement ticking). CNZ 199 @ f3906,
+  WFZ 277 @ f8863, MTZ3 995 @ f6913, EHZ1 + regression variants PASS.
+- **S3K regression (reason for revert):** S3K's speed-shoes timer is a *byte*
+  timer decremented every 8th level frame
+  (sonic3k.asm:22067-22078,40815-40825), which the shared `SpeedShoesTimer`
+  approximates as a per-frame 0x4B0 counter. Uniformly moving the tick to
+  display time misaligns that S3K approximation:
+  `TestS3kCnzTraceReplay#replayMatchesTrace` regressed **f17276 -> f6568**
+  (1952 -> 3852 errors; `-Ds3k.rom.path` set). Baseline f17276 confirmed by
+  re-running at committed HEAD without the change.
+- Decision: reverted. The S2 `+1` constant is retained (movement-equivalent to
+  ROM `Obj01_ChkShoes`). A correct cross-game ordering fix must first model
+  S3K's every-8th-frame byte-timer granularity; until then, pre-physics ticking
+  with the per-game `speedShoesTimerPrePhysicsExtraTicks` compensation is the
+  lower-risk state. The pre/post-movement timing is not S3K's actual error.
+
 ## 2026-06-01 - S2 MTZ3 ObjA2 pincer spawn-tick frontier
 
 - Branch: `feature/ai-s2-mtz-parity`
