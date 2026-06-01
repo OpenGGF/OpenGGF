@@ -304,6 +304,15 @@ public class TitleCardManager implements TitleCardProvider {
         } else {
             actNumberElement = null;
         }
+
+        // Extend each element's off-screen entry/exit endpoint so the composition
+        // slides fully on/off a wider-than-320 viewport. Zero at native 320 —
+        // byte-identical. Without this, the centred (xOffset-shifted) elements and
+        // the red/yellow blocks that follow them never clear the side bands.
+        int edgeMargin = Math.max(0, viewportWidth() - SCREEN_WIDTH);
+        for (TitleCardElement element : elements) {
+            element.setEdgeMargin(edgeMargin);
+        }
     }
 
     /**
