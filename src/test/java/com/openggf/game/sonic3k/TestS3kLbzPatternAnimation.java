@@ -17,6 +17,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -54,6 +55,24 @@ class TestS3kLbzPatternAnimation {
                 new TileRange(0x160, 0x16F),
                 new TileRange(0x350, 0x364),
                 new TileRange(0x365, 0x36C));
+    }
+
+    @Test
+    void lbz1ScrollPhaseUsesCurrentDeformCameraStateWhenParallaxCacheIsStale() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(0x06, 0)
+                .build();
+
+        fixture.camera().setFrozen(true);
+        fixture.camera().setX((short) 0x0300);
+        Field bgCameraField = GameServices.parallax().getClass().getDeclaredField("cachedBgCameraX");
+        bgCameraField.setAccessible(true);
+        bgCameraField.setInt(GameServices.parallax(), 0x000A);
+
+        Sonic3kPatternAnimator animator = resolvePatternAnimator();
+
+        assertEquals(0x08, animator.computeLbz1ScrollPhase(),
+                "AnimateTiles_LBZ1 phase should use current-frame Events_bg+$10 and Camera_X_pos_BG_copy");
     }
 
     @Test
