@@ -1,12 +1,16 @@
 package com.openggf.sprites.managers;
 
 /**
- * Pure computation of the player's right level-boundary clamp.
- * At native viewport width (320) this reproduces the ROM values exactly:
- * strict -&gt; maxX + 0x128, normal -&gt; maxX + 0x128 + 0x40. The 0x128 is a
- * native-width coincidence (320 - 24 = 0x128), not an inherent property of the
- * formula. At wider viewport widths the boundary widens with the configured
- * width (declared divergence, see docs/KNOWN_DISCREPANCIES.md).
+ * Pure computation of the player's right level-boundary clamp:
+ * {@code maxX + designWidth - spriteWidth} (plus {@code rightExtra} when not strict).
+ *
+ * <p>Callers pass the level's <em>design</em> width (the native 320), NOT the render
+ * viewport: the boundary tracks the level's right wall ({@code Camera_Max_X_pos + 320}),
+ * which is fixed by level design and independent of {@code DISPLAY_ASPECT}. Widening
+ * it by a wider viewport would let the player walk past the wall into the void beyond a
+ * camera lock and fall to their death. At {@code designWidth == 320} this reproduces the
+ * ROM values exactly: strict -&gt; {@code maxX + 0x128}, normal -&gt; {@code maxX + 0x128 + 0x40}
+ * ({@code 0x128 = 320 - 24}).
  */
 public final class RightBoundary {
 
