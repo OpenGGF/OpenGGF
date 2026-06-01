@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **CNZ conveyor (Obj72) width wraps to a byte.** `Obj72_Init` computes the
+  conveyor half-width with `lsl.b #4,d0` and stores it via `move.b` into a byte
+  field (s2.asm:54812-54817), so `(subtype & $7F) << 4` truncates to 8 bits.
+  `CNZConveyorBeltObjectInstance` now applies `& 0xFF`, matching ROM: a subtype
+  with bit 7 set such as WFZ's `$90` wraps to zero width (no player push)
+  instead of `0x100`. Resolves the S2 WFZ level-select trace frontier (was
+  frame 8863 `camera_x`, now passes); S2 CNZ/CNZ2 frontiers unchanged.
+
 - **ROM-accurate S3K speed-shoes byte timer (every-8th-frame).**
   Modeled Sonic 3&K's speed-shoes expiry at its true ROM granularity: a byte
   timer counting from `(20*60)/8 = 150`, decremented only on every 8th level

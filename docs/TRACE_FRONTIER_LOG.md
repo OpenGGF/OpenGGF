@@ -1,5 +1,20 @@
 # Trace Frontier Log
 
+## 2026-06-01 - S2 WFZ trace PASSES: CNZ conveyor Obj72 byte-width wrap
+
+- Branch: `feature/ai-s2-mtz-parity`; Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Root cause: `Obj72_Init` builds the conveyor half-width with `lsl.b #4,d0`
+  (a byte shift) and `move.b d0,objoff_38(a0)` (s2.asm:54812-54817), so
+  `(subtype & $7F) << 4` truncates to 8 bits. `CNZConveyorBeltObjectInstance`
+  was missing the truncation, so WFZ's `$90`-subtype conveyor got width `0x100`
+  and pushed the player instead of being zero-width. Fix: `& 0xFF`.
+- Guard: `mvn -q -Dmse=relaxed "-Ds2.rom.path=..." "-Dtest=...TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,...TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,...TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" test`
+  - **WFZ: now PASSES** (was frame 8863 `camera_x`).
+  - CNZ: unchanged at frame 3906 `tails_y` (199 errors).
+  - CNZ2: unchanged at frame 1490 `tails_y_speed` (1293 errors).
+  - Unit: `TestSonic2TriggerParticipation` 40/40 (incl.
+    `cnzConveyorWidthUsesRomByteShiftWrap`).
+
 ## 2026-06-01 - S3K speed-shoes byte-timer LANDED (every-8th-frame, ALIGN=7), no regression
 
 - Branch: `feature/ai-s2-mtz-parity`; Worktree: `.worktrees/feature-ai-s2-mtz-parity`
