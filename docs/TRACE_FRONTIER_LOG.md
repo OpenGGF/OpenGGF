@@ -1,5 +1,31 @@
 # Trace Frontier Log
 
+## 2026-06-01 - S3K speed-shoes byte-timer LANDED (every-8th-frame, ALIGN=7), no regression
+
+- Branch: `feature/ai-s2-mtz-parity`; Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Implemented `PhysicsFeatureSet.speedShoesTimerDecimation` (S1/S2 `1`, S3K `8`)
+  and a decimation/phase-gated `SpeedShoesTimer` (S3K byte timer from 150,
+  decremented on aligned level frames). Decrement gate
+  `(frameCounter + 7) & (decimation-1) == 0`.
+- The diagnosis (prior entry) found the per-frame model matches because it is
+  pickup-relative; the byte timer is global-grid quantized and needs the right
+  phase. The key correction: the engine frame counter at the pre-physics timer
+  read point leads ROM `Level_frame_counter` (read in `Sonic_Display`) by 2
+  (mod 8), so ROM's `Level_frame_counter & 7 == 7` maps to engine
+  `frameCounter & 7 == 1` (ALIGN 7). The earlier ALIGN=1 came from the
+  `AizFlippingBridge` `(frameCounter+3)&7` gate, which only drives an SFX (not a
+  compared trace field), so it was never a valid phase reference.
+- Validation (`-Dmse=off`, ROM paths set):
+  - S3K (no regression, all baseline): CNZ f17276 (1952 err), AIZ f8941 (789 err),
+    MGZ f4124 (3852 err). The +2 offset holding across all three confirms it is a
+    constant seed-phase property, not a per-trace fit.
+  - S1/S2 byte-identical (decimation 1): `TestS2WfzLevelSelectTraceReplay` holds
+    f8863, `TestS2Ehz1TraceReplay` PASS, `TestS1Ghz1TraceReplay` PASS.
+  - Unit: `TestSpeedShoesTimer`, `TestPhysicsProfile`,
+    `TestHybridPhysicsFeatureSet` PASS.
+- Full analysis in
+  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
+
 ## 2026-06-01 - S3K speed-shoes diagnosis: per-frame model is pickup-relative; byte timer blocked on frame-counter phase
 
 - Branch: `feature/ai-s2-mtz-parity`; Worktree: `.worktrees/feature-ai-s2-mtz-parity`

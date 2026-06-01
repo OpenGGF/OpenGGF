@@ -4,6 +4,18 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **ROM-accurate S3K speed-shoes byte timer (every-8th-frame).**
+  Modeled Sonic 3&K's speed-shoes expiry at its true ROM granularity: a byte
+  timer counting from `(20*60)/8 = 150`, decremented only on every 8th level
+  frame (`Sonic_ChkShoes`, sonic3k.asm:22072-22078), gated via a new
+  `PhysicsFeatureSet.speedShoesTimerDecimation` flag (S1/S2 `1`, S3K `8`). The
+  decrement aligns to the global level frame counter; the engine counter leads
+  ROM `Level_frame_counter` by a constant 2 (mod 8) at the timer read point, so
+  the gate uses `(frameCounter + 7) & (decimation-1) == 0`. S1/S2 stay
+  byte-identical (per-frame word timer). No trace regression: S3K CNZ f17276,
+  AIZ f8941, MGZ f4124 hold at baseline; S2 WFZ f8863, EHZ1, and S1 GHZ1 are
+  unaffected. See `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
+
 - **Advanced Sonic 2 MTZ3 Slicer pincer spawn timing parity.**
   Same-frame child execution now has an object-level opt-out for children whose
   Java constructors already model the ROM routine-0 init pass. Slicer ObjA2
