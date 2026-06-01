@@ -735,7 +735,7 @@ public final class LevelRenderer {
         short[] vScrollColumnData = lm.parallaxManager.getVScrollPerColumnBGForShader();
 
         int bgCameraX = lm.parallaxManager.getBgCameraX();
-        boolean mgzStateEightPerLineTilemap = lm.applyBackgroundTilemapWindowSelection(bgCameraX);
+        boolean fullWidthPerLineTilemap = lm.applyBackgroundTilemapWindowSelection(bgCameraX);
         // Side-effect-only: tilemap manager has been refreshed.
 
         lm.ensureBackgroundTilemapData();
@@ -770,24 +770,21 @@ public final class LevelRenderer {
             vdpWrapWidthTiles = 64.0f;
             nametableBaseTile = lm.zoneFeatureProvider.getVdpNametableBase(
                     lm.currentZone, lm.currentAct, camera.getX(), lm.tilemapManager.getBackgroundTilemapWidthTiles());
-        } else if (mgzStateEightPerLineTilemap) {
-            // MGZ2 state 8 still uses Draw_BG on hardware, but the 64-cell plane is
-            // refreshed incrementally as the camera advances. Our rebuild-from-scratch
-            // renderer cannot represent that with a single wrapped 512px cache window.
-            // Instead, render the full contiguous MGZ BG strip with per-line HScroll
-            // applied during the tile pass so clouds and the locked floor band can
-            // coexist without cache-window seams.
+        } else if (fullWidthPerLineTilemap) {
+            // Some S3K background routines use Draw_BG-style per-band column
+            // refreshes. Render the full contiguous BG strip with per-line
+            // HScroll applied during the tile pass so the renderer samples Plane B
+            // directly at the ROM scroll coordinate instead of shifting a cached
+            // 512px snapshot in a second pass.
             bgPeriodWidthPixels = lm.cachedScreenWidth;
             bgTilemapWorldOffsetX = 0;
             shaderScrollMidpoint = 0;
             shaderExtraBuffer = 0;
             perLineScrollActive = true;
-            // MGZ2 BG layout rows 0-3 only populate cols 0-7 with the "real"
-            // cloud background; rows 4-6 hold the wider fake-floor strip. Wrapping
-            // the upper rows inside their populated cloud span avoids exposing empty
-            // high-X layout columns while preserving the floor rows below.
-            upperBandWrapHeightPx = 4.0f * lm.blockPixelSize;
-            upperBandWrapWidthTiles = (8.0f * lm.blockPixelSize) / Pattern.PATTERN_WIDTH;
+            upperBandWrapHeightPx = lm.zoneFeatureProvider.backgroundUpperBandWrapHeightPx(
+                    lm.currentZone, lm.currentAct, lm.blockPixelSize);
+            upperBandWrapWidthTiles = lm.zoneFeatureProvider.backgroundUpperBandWrapWidthTiles(
+                    lm.currentZone, lm.currentAct, lm.blockPixelSize);
         }
         // Cap BG period at the scroll handler's required width.
         // Zones with a single BG scroll speed cap at VDP nametable width (512px).

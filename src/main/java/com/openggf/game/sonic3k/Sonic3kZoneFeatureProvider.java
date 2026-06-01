@@ -32,6 +32,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
+import com.openggf.level.Pattern;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -173,10 +174,34 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
                                                        int actIndex,
                                                        int bgCameraX,
                                                        int cachedBgContiguousWidthPx) {
-        return zoneIndex == Sonic3kZoneIds.ZONE_MGZ
-                && actIndex == 1
-                && bgCameraX != Integer.MIN_VALUE
+        boolean hasScrollableBgWindow = bgCameraX != Integer.MIN_VALUE
                 && cachedBgContiguousWidthPx > VDP_BG_PLANE_WIDTH_PX;
+        if (!hasScrollableBgWindow) {
+            return false;
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_MGZ && actIndex == 1) {
+            return true;
+        }
+        // LBZ1_BackgroundEvent uses Draw_BG with LBZ1_BGDrawArray, so Plane B
+        // columns are effectively selected per deform band rather than through a
+        // single cached 512px BG snapshot plus a later HScroll pass.
+        return zoneIndex == Sonic3kZoneIds.ZONE_LBZ && actIndex == 0;
+    }
+
+    @Override
+    public float backgroundUpperBandWrapHeightPx(int zoneIndex, int actIndex, int blockPixelSize) {
+        if (zoneIndex == Sonic3kZoneIds.ZONE_MGZ && actIndex == 1) {
+            return 4.0f * blockPixelSize;
+        }
+        return 0.0f;
+    }
+
+    @Override
+    public float backgroundUpperBandWrapWidthTiles(int zoneIndex, int actIndex, int blockPixelSize) {
+        if (zoneIndex == Sonic3kZoneIds.ZONE_MGZ && actIndex == 1) {
+            return (8.0f * blockPixelSize) / Pattern.PATTERN_WIDTH;
+        }
+        return 0.0f;
     }
 
     @Override
