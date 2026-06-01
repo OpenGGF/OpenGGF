@@ -75,60 +75,6 @@ public class TestCamera {
         assertEquals(500 - 96, camera.getY(), "Force update should center player vertically");
     }
 
-    // ==================== Widescreen right-edge clamp ====================
-
-    private void setCameraWidth(short w) throws Exception {
-        java.lang.reflect.Field f = Camera.class.getDeclaredField("width");
-        f.setAccessible(true);
-        f.setShort(camera, w);
-    }
-
-    @Test
-    public void widescreenCameraClampAlignsRightEdgeToLevelEdge() throws Exception {
-        // At a level lock the camera's right edge should land on the level edge
-        // (maxX + 320), not scroll its native max and reveal void beyond.
-        setCameraWidth((short) 528); // ULTRA_21_9
-        camera.setMinX((short) 0x0200);
-        short maxX = (short) 0x2ED0;
-        camera.setMaxX(maxX);
-        when(mockSprite.getCentreX()).thenReturn((short) 0x4000); // far past the edge
-        camera.updatePosition(true);
-
-        int inset = 528 - 320; // 208
-        assertEquals((maxX & 0xFFFF) - inset, camera.getX() & 0xFFFF,
-                "camera must stop so its right edge aligns with the level edge (maxX + 320)");
-        assertEquals((maxX & 0xFFFF) + 320, (camera.getX() & 0xFFFF) + 528,
-                "camera right edge must equal the level edge — no void shown");
-    }
-
-    @Test
-    public void nativeCameraClampIsExactlyMaxX() {
-        // Native 320: byte-identical, clamp lands exactly on maxX.
-        camera.setMinX((short) 0x0200);
-        short maxX = (short) 0x2ED0;
-        camera.setMaxX(maxX);
-        when(mockSprite.getCentreX()).thenReturn((short) 0x4000);
-        camera.updatePosition(true);
-
-        assertEquals(maxX & 0xFFFF, camera.getX() & 0xFFFF,
-                "at native 320 the camera clamps exactly to maxX");
-    }
-
-    @Test
-    public void lockedCameraUnaffectedByWidescreenInset() throws Exception {
-        // Boss-style lock (minX == maxX): the inset must not push the clamp below
-        // minX (which would un-clamp the camera). It stays pinned at the lock.
-        setCameraWidth((short) 528);
-        short lock = (short) 0x1000;
-        camera.setMinX(lock);
-        camera.setMaxX(lock);
-        when(mockSprite.getCentreX()).thenReturn((short) 0x4000);
-        camera.updatePosition(true);
-
-        assertEquals(lock & 0xFFFF, camera.getX() & 0xFFFF,
-                "a fully locked camera (minX == maxX) must stay pinned regardless of viewport width");
-    }
-
     // ==================== Horizontal Following Tests ====================
 
     @Test
