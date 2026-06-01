@@ -584,6 +584,20 @@ public class Sonic3kTitleScreenDataLoader {
     }
 
     /**
+     * Returns the frame-D (final scene) pattern array — the same patterns the
+     * interactive Plane B background indexes into. Used to sample a representative
+     * background colour for the widescreen side bands.
+     *
+     * @return frame D patterns, or null if not loaded
+     */
+    public Pattern[] getFrameDPatterns() {
+        if (animPatterns == null || FRAME_COUNT < 1) {
+            return null;
+        }
+        return animPatterns[FRAME_COUNT - 1]; // Frame D is the last entry
+    }
+
+    /**
      * Returns the virtual pattern ID base for animation frame art.
      *
      * @return {@link #ANIM_PATTERN_BASE}
