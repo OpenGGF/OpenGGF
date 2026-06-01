@@ -109,6 +109,13 @@ public class SlicerPincerInstance extends AbstractObjectInstance
         }
     }
 
+    @Override
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        // ObjA1_LoadPincers creates ObjA2 in routine 0; the constructor already
+        // applies that setup, so the first ObjA2_Main tick begins next frame.
+        return true;
+    }
+
     /**
      * Routine 2 (ObjA2_Main): Homing phase.
      * Accelerates toward player, capped at MAX_SPEED.

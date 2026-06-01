@@ -4,6 +4,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Advanced Sonic 2 MTZ3 Slicer pincer spawn timing parity.**
+  Same-frame child execution now has an object-level opt-out for children whose
+  Java constructors already model the ROM routine-0 init pass. Slicer ObjA2
+  pincers use it so their first homing tick begins on the next object pass,
+  matching `ObjA1_LoadPincers`/`ObjA2` timing. Focused child-slot coverage
+  passes; the MTZ3 trace frontier moves from frame 6477 to a later frame-6913
+  ground-speed mismatch.
+
 - **Advanced Sonic 2 MTZ3 trace replay VBlank diagnostics and Obj6C parity.**
   S1/S2 trace replay now compares gameplay rows against the following
   VBlank-only row's visual diagnostics when the recorder splits those phases,

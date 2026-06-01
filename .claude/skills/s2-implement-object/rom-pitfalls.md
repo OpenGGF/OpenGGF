@@ -1735,6 +1735,36 @@ advances from frame 4280 to frame 4656.
 
 ## P40 -- Native `x_pos` / `y_pos` writes must preserve the sibling subpixel byte
 
+---
+
+## P41 -- Constructor-modeled child init must not also run main routine on the spawn frame
+
+**Symptom.** A child projectile or helper object is positionally correct at
+spawn but drifts into contact one frame early or late. Trace diagnostics show
+the child exists in the ROM and engine on the same frame, but the engine has
+already applied the child's routine-2 movement while the ROM is still running
+routine 0 initialization.
+
+**Root cause.** ROM `FindNextFreeObj` / `AllocateObjectAfterCurrent` inserts a
+child into the SST. If that slot is later in the current object pass, the ROM
+does reach the new object on the same frame, but its `routine=0` init code runs
+first and then returns. Java ports often apply that routine-0 setup in the
+constructor, so allowing a same-frame `update()` makes the first engine update
+represent the ROM's next-frame routine-2 code.
+
+**What to check.** For any child whose constructor fills fields that ROM writes
+in the child's routine-0 label, compare the child init routine with its main
+routine. If the constructor already models routine 0 and `update()` starts at
+routine 2, override `skipsSameFrameUpdateAfterSpawn()` so the first main update
+waits until the next object pass. Do not disable same-frame execution globally;
+ordinary children still need ROM slot-order execution when their Java update
+models the same routine the ROM reaches.
+
+**ROM citation.** `docs/s2disasm/s2.asm:75496-75520` (`ObjA1_LoadPincers`) and
+`docs/s2disasm/s2.asm:75451-75475` (`ObjA2_Main`).
+
+**Originating commit.** `fix(s2): defer constructor-initialized child main ticks`.
+
 **Symptom.** Player integer position matches ROM after an object snaps or carries
 the player, but `x_sub` or `y_sub` diverges. The next movement frame then drifts
 by one or more pixels because ROM kept the existing subpixel residue while the

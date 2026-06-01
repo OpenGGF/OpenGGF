@@ -1,5 +1,35 @@
 # Trace Frontier Log
 
+## 2026-06-01 - S2 MTZ3 ObjA2 pincer spawn-tick frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused guard:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.level.objects.TestObjectManagerChildSlotAllocation" test -DfailIfNoTests=false`
+  - PASS: `TestObjectManagerChildSlotAllocation` reports 6 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 6477 to frame 6913.
+  - New frontier: frame 6913 `g_speed` expected `0xFFFF`, actual `0xFFF0`;
+    the prior Slicer ObjA2 pincer contact now matches and Sonic keeps the ROM
+    hurt/ring-loss timeline through that room.
+
+### Root Cause
+
+S2 `ObjA1_LoadPincers` allocates ObjA2 children after the Slicer body. If the
+new child is reached later in the same object pass, the ROM executes ObjA2
+routine 0 initialization on that pass; ObjA2's routine 2 homing movement begins
+on the next pass. The Java `SlicerPincerInstance` constructor already performs
+the routine-0 setup, so same-frame execution made the first engine update
+represent ObjA2_Main one pass too early. `AbstractObjectInstance` now exposes a
+default-off `skipsSameFrameUpdateAfterSpawn()` hook so constructor-initialized
+objects can preserve ROM init/update timing while ordinary children keep the
+existing same-frame `FindNextFreeObj` behavior.
+
+No trace state is hydrated, and the remaining frontier points at a later
+ground-speed mismatch around Slicer/terrain interaction rather than the prior
+ObjA2 hurt-contact window.
+
 ## 2026-06-01 - S2 MTZ3 Obj74/Obj69 live-y-radius lower-bound frontier
 
 - Branch: `feature/ai-s2-mtz-parity`
