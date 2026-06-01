@@ -692,6 +692,29 @@ public class DebugRenderer {
                         glyphBatch.drawTextOutlined(line, startX, y, DebugColor.WHITE, PANEL_FONT);
                         y -= lineHeight;
                 }
+
+                // Live dynamic-object slot usage vs the fixed ROM-sized pool.
+                // White normally; orange when nearing the limit (>= 90%); red when
+                // full (allocateSlot() failing -> new spawns are dropped).
+                ObjectManager objManager =
+                        getLevelManager() != null ? getLevelManager().getObjectManager() : null;
+                if (objManager != null) {
+                        int live = objManager.getActiveObjectSlotCount();
+                        int peak = objManager.getPeakObjectSlotCount();
+                        int cap = objManager.getObjectSlotCapacity();
+                        DebugColor objColor = DebugColor.WHITE;
+                        if (cap > 0) {
+                                if (live >= cap) {
+                                        objColor = DebugColor.RED;
+                                } else if (live >= (cap * 9) / 10) {
+                                        objColor = DebugColor.ORANGE;
+                                }
+                        }
+                        glyphBatch.drawTextOutlined(
+                                        "Objs: " + live + "/" + cap + " peak " + peak,
+                                        startX, y, objColor, PANEL_FONT);
+                        y -= lineHeight;
+                }
         }
 
         private void renderTouchResponsePanel(AbstractPlayableSprite sprite) {

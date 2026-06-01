@@ -1521,6 +1521,25 @@ public class ObjectManager {
         return frameCounter;
     }
 
+    /**
+     * Number of dynamic object slots currently occupied (live objects this frame).
+     * Compare against {@link #getObjectSlotCapacity()} — when it reaches capacity,
+     * {@code allocateSlot()} fails and new spawns are dropped.
+     */
+    public int getActiveObjectSlotCount() {
+        return usedSlots.cardinality();
+    }
+
+    /** Peak occupied dynamic object slots since the last {@link #reset(int)}. */
+    public int getPeakObjectSlotCount() {
+        return peakSlotCount;
+    }
+
+    /** Total dynamic object slot capacity — the fixed ROM-sized pool for this game. */
+    public int getObjectSlotCapacity() {
+        return execOrder.length;
+    }
+
     public Collection<ObjectSpawn> getActiveSpawns() {
         return placement.getActiveSpawns();
     }
