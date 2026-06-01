@@ -201,22 +201,6 @@ public interface ZoneFeatureProvider {
     }
 
     /**
-     * Optional local-Y height for a full-width per-line BG tilemap path whose
-     * upper band wraps inside a narrower source span.
-     */
-    default float backgroundUpperBandWrapHeightPx(int zoneIndex, int actIndex, int blockPixelSize) {
-        return 0.0f;
-    }
-
-    /**
-     * Optional source width, in 8x8 tiles, for the upper-band wrap described by
-     * {@link #backgroundUpperBandWrapHeightPx(int, int, int)}.
-     */
-    default float backgroundUpperBandWrapWidthTiles(int zoneIndex, int actIndex, int blockPixelSize) {
-        return 0.0f;
-    }
-
-    /**
      * Whether wrapped background tilemap builds should emulate the ROM's raw
      * layout-row pointer overflow instead of wrapping X within the same row.
      */

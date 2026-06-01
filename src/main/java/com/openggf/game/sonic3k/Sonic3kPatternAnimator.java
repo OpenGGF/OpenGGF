@@ -1219,7 +1219,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     int computeLbz1ScrollPhase() {
         int cameraX = getCameraX();
         int eventsBg10 = asrWordValue(cameraX, 5) + 0x0A;
-        int bgCameraX = resolveLbzBgCameraX(asrWordValue(cameraX, 4) + 0x0A);
+        int bgCameraX = asrWordValue(cameraX, 4) + 0x0A;
         return (eventsBg10 - bgCameraX) & 0x1F;
     }
 

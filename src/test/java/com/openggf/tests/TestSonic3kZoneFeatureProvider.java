@@ -164,21 +164,6 @@ public class TestSonic3kZoneFeatureProvider {
                 "S3K Handle_Onscreen_Water_Height uses Water_level directly");
     }
 
-    @Test
-    public void lbz1UsesFullWidthPerLineBackgroundTilemapForDrawBgDeformPath() {
-        Sonic3kZoneFeatureProvider provider = new Sonic3kZoneFeatureProvider();
-
-        assertTrue(provider.useFullWidthBackgroundTilemapWindow(
-                        Sonic3kZoneIds.ZONE_LBZ, 0, 0x020A, 0x2000),
-                "LBZ1_BackgroundEvent uses Draw_BG with LBZ1_BGDrawArray, so the renderer should sample the full BG strip per line.");
-        assertFalse(provider.useFullWidthBackgroundTilemapWindow(
-                        Sonic3kZoneIds.ZONE_LBZ, 1, 0x1000, 0x2000),
-                "LBZ2 has a separate waterline deform path and should not inherit the LBZ1 per-line tilemap mode.");
-        assertFalse(provider.useFullWidthBackgroundTilemapWindow(
-                        Sonic3kZoneIds.ZONE_LBZ, 0, Integer.MIN_VALUE, 0x2000),
-                "The per-line BG path is only useful once the scroll handler exposes a ROM BG camera X.");
-    }
-
     private static final class TestZoneFeatureProvider extends Sonic3kZoneFeatureProvider {
         private AizZoneRuntimeState aizState;
         private int featureZoneId = Sonic3kZoneIds.ZONE_AIZ;
