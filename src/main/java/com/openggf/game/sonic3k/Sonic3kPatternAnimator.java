@@ -9,6 +9,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.objects.AizPlaneIntroInstance;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
@@ -661,6 +662,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 && lbz1ScrollCapData != null;
     }
 
+    boolean shouldRunLbz1AlarmScriptChannel(AniPlcScriptState script) {
+        return isLbzAlarmAnimationActive() || script.getFrameIndex() != 1;
+    }
+
     boolean shouldRunLbz2ScrollChannel() {
         return actIndex == 1 && lbz2ScrollData != null;
     }
@@ -719,6 +724,20 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
     void updateLbz1ScrollTilesForGraph() {
         updateLbz1ScrollTiles();
+    }
+
+    int computeLbz1AlarmScriptPhase(AniPlcScriptState script, int channelFrameCounter) {
+        if (isLbzAlarmAnimationActive()) {
+            return channelFrameCounter;
+        }
+        return script.getFrameIndex() == 1 ? -1 : 0;
+    }
+
+    void updateLbz1AlarmScriptForGraph(AniPlcScriptState script) {
+        if (!isLbzAlarmAnimationActive()) {
+            script.restoreCounters(0, 0);
+        }
+        tickScript(script);
     }
 
     void updateLbz2ScrollTilesForGraph() {
@@ -1214,6 +1233,14 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
     int computeLbzSharedPhase(int channelFrameCounter) {
         return (channelFrameCounter >>> 2) & 0x0F;
+    }
+
+    private boolean isLbzAlarmAnimationActive() {
+        if (!GameServices.hasRuntime()) {
+            return false;
+        }
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        return state != null && state.isAlarmAnimationActive();
     }
 
     int computeLbz1ScrollPhase() {

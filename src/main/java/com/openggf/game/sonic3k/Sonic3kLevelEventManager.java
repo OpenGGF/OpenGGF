@@ -21,6 +21,7 @@ import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
@@ -261,6 +262,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new HczZoneRuntimeState(act, playerCharacter, hczEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_MGZ && mgzEvents != null) {
             registry.install(new MgzZoneRuntimeState(act, playerCharacter, mgzEvents));
+        } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
+            registry.install(new LbzZoneRuntimeState(act, playerCharacter));
         } else {
             registry.clear();
         }
@@ -627,6 +630,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     state instanceof HczZoneRuntimeState hczState && hczState.isBackedBy(hczEvents);
             case Sonic3kZoneIds.ZONE_MGZ ->
                     state instanceof MgzZoneRuntimeState mgzState && mgzState.isBackedBy(mgzEvents);
+            case Sonic3kZoneIds.ZONE_LBZ -> state instanceof LbzZoneRuntimeState;
             default -> false;
         };
     }

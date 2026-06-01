@@ -210,6 +210,17 @@ final class S3kAnimatedTileChannels {
             String prefix = actIndex == 0 && i >= regularScriptCount
                     ? "s3k.lbz1.spec." + (i - regularScriptCount)
                     : "s3k.lbz" + (actIndex + 1) + ".script." + i;
+            if (actIndex == 0 && i < regularScriptCount) {
+                channels.add(new AnimatedTileChannel(
+                        prefix,
+                        () -> owner.shouldRunLbz1AlarmScriptChannel(script),
+                        ctx -> owner.computeLbz1AlarmScriptPhase(script, ctx.frameCounter()),
+                        scriptDestination(script),
+                        AnimatedTileCachePolicy.ALWAYS,
+                        ctx -> owner.updateLbz1AlarmScriptForGraph(script)
+                ));
+                continue;
+            }
             channels.add(new AnimatedTileChannel(
                     prefix,
                     owner::shouldRunScriptChannels,

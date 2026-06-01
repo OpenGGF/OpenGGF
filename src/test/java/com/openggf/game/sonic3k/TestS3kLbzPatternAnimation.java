@@ -4,6 +4,8 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 import com.openggf.game.animation.AnimatedTileChannel;
+import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
 import com.openggf.level.animation.AnimatedPatternManager;
@@ -17,6 +19,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -53,7 +56,32 @@ class TestS3kLbzPatternAnimation {
         Sonic3kPatternAnimator animator = resolvePatternAnimator();
         assertRangesChangeAfterUpdates(animator, 4,
                 new TileRange(0x160, 0x16F),
-                new TileRange(0x350, 0x364),
+                new TileRange(0x350, 0x364));
+    }
+
+    @Test
+    void lbz1AlarmTilesAnimateOnlyWhileAlarmStateIsActive() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(0x06, 0)
+                .build();
+
+        Sonic3kPatternAnimator animator = resolvePatternAnimator();
+        Level level = GameServices.level().getCurrentLevel();
+        assertNotNull(level, "Level must be loaded");
+
+        TileRange alarmTiles = new TileRange(0x365, 0x36C);
+        byte[] inactiveBefore = snapshotRange(level, alarmTiles.startTile(), alarmTiles.endTileInclusive());
+        for (int i = 0; i < 4; i++) {
+            animator.update();
+        }
+        assertArrayEquals(inactiveBefore,
+                snapshotRange(level, alarmTiles.startTile(), alarmTiles.endTileInclusive()),
+                "LBZ1 alarm AniPLC script must stay on its resting frame while Anim_Counters+4 is clear");
+
+        LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry())
+                .orElseThrow(() -> new AssertionError("Expected LBZ runtime state"));
+        state.setAlarmAnimationActive(true);
+        assertRangesChangeAfterUpdates(animator, 4,
                 new TileRange(0x365, 0x36C));
     }
 
