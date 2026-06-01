@@ -48,9 +48,11 @@ public class CNZConveyorBeltObjectInstance extends AbstractObjectInstance {
         this.heightPixels = (subtype & 0x80) != 0 ? HEIGHT_ENLARGED : HEIGHT_NORMAL;
 
         // andi.b #$7F,d0
-        // lsl.b  #4,d0
-        // move.b d0,objoff_38(a0)
-        this.widthPixels = (subtype & 0x7F) << 4;
+        // lsl.b  #4,d0                  ; BYTE shift: result truncates to 8 bits
+        // move.b d0,objoff_38(a0)       ; stored in a byte field
+        // The lsl.b is a byte operation, so e.g. subtype $90 -> ($10 << 4) & $FF
+        // = 0, wrapping the conveyor width to zero (s2.asm:54812-54817 Obj72_Init).
+        this.widthPixels = ((subtype & 0x7F) << 4) & 0xFF;
 
         // move.w #2,objoff_36(a0)
         // btst   #status.npc.x_flip,status(a0)
