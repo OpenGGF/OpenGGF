@@ -32,10 +32,11 @@ import java.util.Arrays;
  * skips entries based on Camera_BG_Y_pos to find the first visible segment,
  * then fills 224 scanlines from the active segments.
  *
- * The normal array is missing data for the last $80 lines compared to the
- * transition array. In the original ROM, this causes the lower clouds to
- * read data from the start of SwScrl_HTZ. We reproduce this behavior by
- * falling through to a default layer (0) when the array runs out.
+ * The normal array differs from the transition array and the disassembly notes
+ * that the ROM would continue into SwScrl_HTZ if the segment reader exhausted
+ * it. With the ROM's masked BG Y range and 224 visible lines, the shipped
+ * normal table still covers every reachable visible span, so the guard path below
+ * is only a malformed-table guard.
  */
 public class SwScrlWfz extends AbstractZoneScrollHandler {
 
@@ -195,8 +196,8 @@ public class SwScrlWfz extends AbstractZoneScrollHandler {
                     bgScroll = M68KMath.negWord(layerScrollWord[layerIndex]);
                     arrayPos += 2;
                 } else {
-                    // Array exhausted - in original ROM this reads past the array into
-                    // SwScrl_HTZ code bytes. We fall back to the static BG layer.
+                    // Malformed table guard. The ROM-backed WFZ arrays cover all
+                    // reachable 224-line spans selected by BG Y & $7FF.
                     linesInCurrentSeg = M68KMath.VISIBLE_LINES; // Won't run out again
                     bgScroll = M68KMath.negWord(layerScrollWord[LAYER_STATIC_BG]);
                 }

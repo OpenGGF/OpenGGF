@@ -16,6 +16,7 @@ public final class Sonic3kBootstrapResolver {
     // ROM source of truth: sonic3k.asm:38174-38177 (Level_FromSavedGame override)
     // move.w #$40,(Player_1+x_pos).w / move.w #$420,(Player_1+y_pos).w
     private static final int[] AIZ1_INTRO_START_POS = new int[]{0x40, 0x420};
+    private static final int[] LBZ1_INTRO_START_POS = new int[]{0x00B0, 0x0650};
 
     private Sonic3kBootstrapResolver() {
     }
@@ -44,6 +45,7 @@ public final class Sonic3kBootstrapResolver {
     /** Per-zone intro start positions. Returns null if zone has no intro. */
     private static int[] getIntroStartPosition(int zone, int act) {
         if (zone == Sonic3kZoneIds.ZONE_AIZ && act == 0) return AIZ1_INTRO_START_POS.clone();
+        if (zone == Sonic3kZoneIds.ZONE_LBZ && act == 0) return LBZ1_INTRO_START_POS.clone();
         // Future zones: add entries here
         return null;
     }

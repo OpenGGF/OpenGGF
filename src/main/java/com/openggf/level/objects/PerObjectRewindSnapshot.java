@@ -280,6 +280,7 @@ public record PerObjectRewindSnapshot(
             boolean jumpingFlag,
             int minXBound,
             int maxXBound,
+            int minYBound,
             int maxYBound,
             int lastInteractObjectId,
             int normalFrameCount,

@@ -200,6 +200,9 @@ public abstract class AbstractTraceReplayTest {
                     if (!TraceReplayBootstrap.shouldCompareGameplayStateForReplay(phase)) {
                         continue;
                     }
+                    TraceFrame comparisonExpected =
+                            TraceReplayBootstrap.frameForGameplayComparison(
+                                    trace, i, previous, expected, phase);
 
                     // ROM stores centre coordinates at $D008/$D00C. With startPositionIsCentre(),
                     // the sprite's xPixel/yPixel are set to the correct top-left position,
@@ -213,7 +216,7 @@ public abstract class AbstractTraceReplayTest {
                             ? "sidekick"
                             : meta.recordedSidekicks().getFirst();
                     String romDiag = combineDiagnostics(
-                            expected.hasExtendedData() ? expected.formatDiagnostics() : "",
+                            comparisonExpected.hasExtendedData() ? comparisonExpected.formatDiagnostics() : "",
                             formatCharacterDiagnostics(secondaryCharacterLabel, expected.sidekick()));
                     romDiag = combineDiagnostics(
                             romDiag,
@@ -221,7 +224,7 @@ public abstract class AbstractTraceReplayTest {
                     String engineDiagText = combineDiagnostics(
                             engineDiag.format(),
                             formatCharacterDiagnostics(secondaryCharacterLabel, actualSidekick));
-                    binder.compareFrame(expected,
+                    binder.compareFrame(comparisonExpected,
                         sprite.getCentreX(), sprite.getCentreY(),
                         sprite.getXSpeed(), sprite.getYSpeed(), sprite.getGSpeed(),
                         sprite.getAngle(),

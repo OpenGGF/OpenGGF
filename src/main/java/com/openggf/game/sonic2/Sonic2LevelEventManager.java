@@ -44,6 +44,12 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
     public static final int ZONE_DEZ = 10;
 
     private static final Logger LOGGER = Logger.getLogger(Sonic2LevelEventManager.class.getName());
+    private static final int HANDLER_BYTES = 11 * 8;
+    private static final int HTZ_EXTRA_BYTES = 22;
+    private static final int CPZ_EXTRA_BYTES = 1;
+    private static final int CNZ_EXTRA_BYTES = 16;
+    private static final int LEGACY_EXTRA_BYTES = HANDLER_BYTES + HTZ_EXTRA_BYTES + CPZ_EXTRA_BYTES + CNZ_EXTRA_BYTES;
+    private static final int EXTRA_BYTES = LEGACY_EXTRA_BYTES + Sonic2WFZEvents.SNAPSHOT_BYTES;
 
     /** Cached player character resolved from config (lazy init). */
     private PlayerCharacter resolvedPlayerCharacter;
@@ -215,6 +221,10 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         return cnzEvents;
     }
 
+    public Sonic2WFZEvents getWfzEvents() {
+        return wfzEvents;
+    }
+
     // =========================================================================
     // RewindSnapshottable extra-state hooks (C.3)
     // =========================================================================
@@ -233,8 +243,8 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
 
     @Override
     protected byte[] captureExtra() {
-        // 11 handlers × 8 bytes + HTZ (22) + CPZ (1) + CNZ (16) = 127 bytes
-        ByteBuffer buf = ByteBuffer.allocate(11 * 8 + 22 + 1 + 16);
+        // 11 handlers × 8 bytes + HTZ (22) + CPZ (1) + CNZ (16) + WFZ (32)
+        ByteBuffer buf = ByteBuffer.allocate(EXTRA_BYTES);
         writeHandler(buf, ehzEvents);
         writeHandler(buf, cpzEvents);
         writeHandler(buf, htzEvents);
@@ -261,12 +271,14 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         buf.putInt(cnzEvents.getCnzLeftWallY());
         buf.putInt(cnzEvents.getCnzRightWallX());
         buf.putInt(cnzEvents.getCnzRightWallY());
+        // WFZ extra
+        wfzEvents.captureSnapshot(buf);
         return buf.array();
     }
 
     @Override
     protected void restoreExtra(byte[] extra) {
-        if (extra == null || extra.length < 11 * 8 + 22 + 1 + 16) {
+        if (extra == null || extra.length < LEGACY_EXTRA_BYTES) {
             return;
         }
         ByteBuffer buf = ByteBuffer.wrap(extra);
@@ -296,5 +308,9 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         cnzEvents.setCnzLeftWallY(buf.getInt());
         cnzEvents.setCnzRightWallX(buf.getInt());
         cnzEvents.setCnzRightWallY(buf.getInt());
+        // WFZ extra was added after the original S2 event snapshot schema.
+        if (buf.remaining() >= Sonic2WFZEvents.SNAPSHOT_BYTES) {
+            wfzEvents.restoreSnapshot(buf);
+        }
     }
 }

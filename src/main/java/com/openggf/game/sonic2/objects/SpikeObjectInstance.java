@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractSpikeObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -42,5 +43,13 @@ public class SpikeObjectInstance extends AbstractSpikeObjectInstance {
         } catch (Exception e) {
             // Prevent audio failure from breaking game logic.
         }
+    }
+
+    @Override
+    public boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
+        // S2 Obj36 calls SolidObject, whose lower reject bound doubles the live
+        // y_radius(a1), so rolling players use the smaller rolling radius on
+        // both halves (docs/s2disasm/s2.asm:35156-35169).
+        return true;
     }
 }

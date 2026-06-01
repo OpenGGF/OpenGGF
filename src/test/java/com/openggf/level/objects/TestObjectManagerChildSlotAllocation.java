@@ -62,6 +62,42 @@ public class TestObjectManagerChildSlotAllocation {
     }
 
     @Test
+    public void childOptingOutOfSameFrameUpdate_waitsUntilNextFrameButSkipsTouch() {
+        ObjectManager[] holder = new ObjectManager[1];
+        ObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return holder[0];
+            }
+        };
+        Camera camera = mock(Camera.class);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        when(camera.isVerticalWrapEnabled()).thenReturn(false);
+        ObjectManager manager = new ObjectManager(
+                List.of(), null, 0, null, null,
+                GraphicsManager.getInstance(), camera, services);
+        holder[0] = manager;
+
+        OptOutParentObject parent =
+                new OptOutParentObject(new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+        manager.addDynamicObjectAtSlot(parent, 40);
+
+        manager.update(0, null, null, 1);
+
+        assertNotNull(parent.child);
+        assertTrue(parent.child.getSlotIndex() > parent.getSlotIndex());
+        assertEquals(0, parent.child.updateCount);
+        assertTrue(parent.child.isSkipTouchThisFrame());
+
+        manager.update(0, null, null, 2);
+
+        assertEquals(1, parent.child.updateCount);
+    }
+
+    @Test
     public void childSpawnedAfterLastSlot_isDiscardedLikeAllocateObjectAfterCurrentFailure() {
         ObjectManager[] holder = new ObjectManager[1];
         ObjectServices services = new StubObjectServices() {
@@ -235,6 +271,47 @@ public class TestObjectManagerChildSlotAllocation {
 
         private ChildObject(ObjectSpawn spawn) {
             super(spawn, "Child");
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            updateCount++;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static final class OptOutParentObject extends AbstractObjectInstance {
+        private OptOutChildObject child;
+
+        private OptOutParentObject(ObjectSpawn spawn) {
+            super(spawn, "OptOutParent");
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+            if (child == null) {
+                child = spawnChild(() -> new OptOutChildObject(buildSpawnAt(spawn.x(), spawn.y())));
+            }
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static final class OptOutChildObject extends AbstractObjectInstance {
+        private int updateCount;
+
+        private OptOutChildObject(ObjectSpawn spawn) {
+            super(spawn, "OptOutChild");
+        }
+
+        @Override
+        protected boolean skipsSameFrameUpdateAfterSpawn() {
+            return true;
         }
 
         @Override

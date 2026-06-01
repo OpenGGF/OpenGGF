@@ -58,6 +58,9 @@
 -- level-select BK2s. Those movies can cross from act 1 into act 2, but the
 -- recorder used to finalise at the first non-level transition and therefore
 -- only captured the first controllable segment.
+-- v9.8-s2 changes: emit diagnostic per-frame Tails CPU state, including
+-- Ctrl_2_Logical and the delayed Sonic history word/status consumed by
+-- TailsCPU_Normal.
 --
 -- v9.3-s2: traces from this recorder version onward are bootstrap-comparable
 -- against the post-universal-title-card engine (ADR-1, design spec 2026-05-15)
@@ -65,7 +68,7 @@
 -- (see v9.3-s2 change note above for context).
 -- The bootstrap-comparator eligibility is derived from this version string by
 -- TraceMetadata.nativePreludeMode() — no separate JSON flag is emitted.
-local LUA_SCRIPT_VERSION = "9.7-s2"
+local LUA_SCRIPT_VERSION = "9.8-s2"
 
 -- Output directory (relative to BizHawk working dir)
 local OUTPUT_DIR = "trace_output/"
@@ -88,6 +91,8 @@ local SOURCE_BK2 = os.getenv("OGGF_BK2_BASENAME") or ""
 local ADDR_GAME_MODE       = 0xF600
 local ADDR_CTRL1           = 0xF604   -- byte: Ctrl_1_Held (raw held input)
 local ADDR_CTRL1_DUP       = 0xF602   -- byte: Ctrl_1_Held_Logical
+local ADDR_CTRL2           = 0xF606   -- byte: Ctrl_2_Held (raw held input)
+local ADDR_CTRL2_LOGICAL   = 0xF66A   -- byte: Ctrl_2_Held_Logical
 local ADDR_RING_COUNT      = 0xFE20   -- word: Ring_count
 local ADDR_CAMERA_X        = 0xEE00   -- long: Camera_X_pos
 local ADDR_CAMERA_Y        = 0xEE04   -- long: Camera_Y_pos
@@ -481,7 +486,7 @@ local function write_metadata()
     meta_file:write('  "lua_script_version": "' .. LUA_SCRIPT_VERSION .. '",\n')
     meta_file:write('  "trace_schema": 8,\n')
     meta_file:write('  "csv_version": 6,\n')
-    meta_file:write('  "aux_schema_extras": ["cnz_slot_machine_state_per_frame"],\n')
+    meta_file:write('  "aux_schema_extras": ["cnz_slot_machine_state_per_frame", "cpu_state_per_frame"],\n')
     meta_file:write('  "trace_profile": "' .. json_escape(TRACE_PROFILE) .. '",\n')
     meta_file:write('  "bizhawk_version": "2.11",\n')
     meta_file:write('  "genesis_core": "Genplus-gx",\n')
@@ -716,6 +721,48 @@ local function write_tails_cpu_snapshot()
         mainmemory.read_u16_be(ADDR_TAILS_CPU_TARGET_Y),
         mainmemory.read_u8(ADDR_TAILS_INTERACT_ID),
         mainmemory.read_u8(ADDR_TAILS_CPU_JUMPING)))
+end
+
+local function write_tails_cpu_per_frame()
+    if not aux_file then return end
+
+    local delay = (0x10 << 2) + 4
+    local record_index = mainmemory.read_u16_be(ADDR_SONIC_POS_RECORD_INDEX) & 0xFF
+    local delayed_index = (record_index - delay) & 0xFF
+
+    write_aux(string.format(
+        '{"frame":%d,"vfc":%d,"event":"cpu_state","character":"tails",'
+            .. '"interact":"0x%04X","idle_timer":%d,"flight_timer":%d,'
+            .. '"cpu_routine":%d,"target_x":"0x%04X","target_y":"0x%04X",'
+            .. '"auto_fly_timer":0,"auto_jump_flag":%d,'
+            .. '"ctrl2_held":"0x%02X","ctrl2_pressed":"0x%02X",'
+            .. '"ctrl2_raw_held":"0x%02X","ctrl1_logical":"0x%04X",'
+            .. '"pos_table_index":"0x%02X","delayed_index":"0x%02X",'
+            .. '"delayed_x":"0x%04X","delayed_y":"0x%04X",'
+            .. '"delayed_input":"0x%04X","delayed_status":"0x%02X",'
+            .. '"tails_status":"0x%02X","tails_interact":"0x%02X","tails_inertia":"0x%04X"}',
+        trace_frame,
+        mainmemory.read_u16_be(ADDR_FRAMECOUNT),
+        mainmemory.read_u8(ADDR_TAILS_INTERACT_ID),
+        mainmemory.read_u16_be(ADDR_TAILS_CONTROL_COUNTER),
+        mainmemory.read_u16_be(ADDR_TAILS_RESPAWN_COUNTER),
+        mainmemory.read_u16_be(ADDR_TAILS_CPU_ROUTINE),
+        mainmemory.read_u16_be(ADDR_TAILS_CPU_TARGET_X),
+        mainmemory.read_u16_be(ADDR_TAILS_CPU_TARGET_Y),
+        mainmemory.read_u8(ADDR_TAILS_CPU_JUMPING),
+        mainmemory.read_u8(ADDR_CTRL2_LOGICAL),
+        mainmemory.read_u8(ADDR_CTRL2_LOGICAL + 1),
+        mainmemory.read_u8(ADDR_CTRL2),
+        mainmemory.read_u16_be(ADDR_CTRL1_DUP),
+        record_index,
+        delayed_index,
+        mainmemory.read_u16_be(ADDR_SONIC_POS_RECORD_BUF + delayed_index),
+        mainmemory.read_u16_be(ADDR_SONIC_POS_RECORD_BUF + delayed_index + 2),
+        mainmemory.read_u16_be(ADDR_SONIC_STAT_RECORD_BUF + delayed_index),
+        mainmemory.read_u8(ADDR_SONIC_STAT_RECORD_BUF + delayed_index + 2),
+        mainmemory.read_u8(SIDEKICK_BASE + OFF_STATUS),
+        mainmemory.read_u8(SIDEKICK_BASE + OFF_STAND_ON_OBJ),
+        mainmemory.read_u16_be(SIDEKICK_BASE + OFF_INERTIA)))
 end
 
 -- Scan all object slots (1-127). Log appearances, disappearances, proximity,
@@ -1171,6 +1218,7 @@ local function on_frame_end()
     check_mode_changes("sonic", PLAYER_BASE, prev_character_state.sonic, status, routine)
     check_mode_changes("tails", SIDEKICK_BASE, prev_character_state.tails,
         sidekick.status, sidekick.routine)
+    write_tails_cpu_per_frame()
     write_cnz_slot_machine_state()
 
     if trace_frame % SNAPSHOT_INTERVAL == 0

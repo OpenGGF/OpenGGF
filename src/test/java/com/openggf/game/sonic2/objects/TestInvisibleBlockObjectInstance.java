@@ -32,4 +32,26 @@ class TestInvisibleBlockObjectInstance {
         assertTrue(block.bypassesOffscreenSolidGate(),
                 "Obj74 calls SolidObject_Always, which resolves even when offscreen");
     }
+
+    @Test
+    void solidObjectAlwaysAirborneStaleStandingBitReturnsNoContact() {
+        InvisibleBlockObjectInstance block = new InvisibleBlockObjectInstance(
+                new ObjectSpawn(0x13C0, 0x05AC, Sonic2ObjectIds.INVISIBLE_BLOCK, 0x33, 0, false, 0),
+                "InvisibleBlock");
+
+        assertTrue(block.airborneStaleStandingBitReturnsNoContact(null),
+                "SolidObject_Always_SingleCharacter clears stale support and returns d4=0 "
+                        + "when this object's standing bit is set and the player is airborne");
+    }
+
+    @Test
+    void solidObjectAlwaysUsesLiveYRadiusForBottomOverlap() {
+        InvisibleBlockObjectInstance block = new InvisibleBlockObjectInstance(
+                new ObjectSpawn(0x13C0, 0x05AC, Sonic2ObjectIds.INVISIBLE_BLOCK, 0x71, 0, false, 0),
+                "InvisibleBlock");
+
+        assertTrue(block.fullSolidBottomOverlapUsesCurrentYRadiusOnly(null),
+                "Obj74 SolidObject_cont doubles live y_radius(a1), so rolling lower-half contact "
+                        + "must use the rolling radius");
+    }
 }

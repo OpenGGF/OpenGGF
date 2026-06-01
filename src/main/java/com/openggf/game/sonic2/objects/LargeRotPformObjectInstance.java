@@ -147,6 +147,14 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
     public int getY() {
         return y;
     }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        // Obj6E loc_28466/loc_284EA checks objoff_34, not the moving x_pos(a0),
+        // before DeleteObject (docs/s2disasm/s2.asm:54526-54543,54572-54589).
+        return baseX;
+    }
+
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
@@ -154,6 +162,9 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
             return;
         }
         updatePosition();
+        // ROM Obj6E (loc_28466/loc_284EA, s2.asm) marks the object gone via
+        // objoff_34; getOutOfRangeReferenceX exposes that anchor to the shared
+        // ObjectManager out_of_range path.
     }
 
     /**
@@ -273,7 +284,8 @@ public class LargeRotPformObjectInstance extends AbstractObjectInstance
                 frame.pieces(),
                 x, y,
                 0,  // Base pattern index (level art starts at tile 0)
-                -1, // Use palette from piece
+                3,  // Palette line 3: make_art_tile(ArtTile_ArtKos_LevelArt,3,0) (s2.asm:54482).
+                    // Obj6E pieces declare palette 0; the ROM art_tile forces line 3.
                 false, false,
                 (patternIndex, pieceHFlip, pieceVFlip, paletteIndex, px, py) -> {
                     int descIndex = patternIndex & 0x7FF;

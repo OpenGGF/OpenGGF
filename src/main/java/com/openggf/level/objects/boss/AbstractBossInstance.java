@@ -104,7 +104,7 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
 
     private void updateChildren(int frameCounter, PlayableEntity player) {
         childComponents.removeIf(BossChildComponent::isDestroyed);
-        for (BossChildComponent child : childComponents) {
+        for (BossChildComponent child : List.copyOf(childComponents)) {
             child.update(frameCounter, player);
         }
     }

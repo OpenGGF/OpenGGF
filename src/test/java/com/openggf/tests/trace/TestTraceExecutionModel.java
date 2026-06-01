@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestTraceExecutionModel {
@@ -79,6 +80,32 @@ class TestTraceExecutionModel {
         assertEquals(previous.gameplayFrameCounter() + 1, current.gameplayFrameCounter());
         assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME,
                 TraceReplayBootstrap.phaseForReplay(trace, previous, current));
+    }
+
+    @Test
+    void s2VblankSplitUsesFollowingVisualDiagnosticsOnly() throws Exception {
+        TraceData trace = TraceData.load(Path.of("src/test/resources/traces/s2/mtz3"));
+        TraceFrame previous = trace.getFrame(5179);
+        TraceFrame current = trace.getFrame(5180);
+        TraceFrame next = trace.getFrame(5181);
+        TraceExecutionPhase phase = TraceReplayBootstrap.phaseForReplay(trace, previous, current);
+
+        assertEquals(TraceExecutionPhase.FULL_LEVEL_FRAME, phase);
+        assertEquals(TraceExecutionPhase.VBLANK_ONLY,
+                TraceReplayBootstrap.phaseForReplay(trace, current, next));
+        assertEquals(current.gameplayFrameCounter(), next.gameplayFrameCounter());
+        assertEquals(current.x(), next.x());
+        assertEquals(current.y(), next.y());
+        assertNotEquals(current.cameraY(), next.cameraY());
+
+        TraceFrame comparison = TraceReplayBootstrap.frameForGameplayComparison(
+                trace, 5180, previous, current, phase);
+
+        assertEquals(current.x(), comparison.x());
+        assertEquals(current.y(), comparison.y());
+        assertEquals(next.cameraX(), comparison.cameraX());
+        assertEquals(next.cameraY(), comparison.cameraY());
+        assertEquals(next.rings(), comparison.rings());
     }
 
     @Test

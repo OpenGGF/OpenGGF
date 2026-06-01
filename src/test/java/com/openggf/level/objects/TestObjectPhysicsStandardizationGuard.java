@@ -92,7 +92,6 @@ class TestObjectPhysicsStandardizationGuard {
             "com/openggf/game/sonic2/objects/SpeedLauncherObjectInstance.java",
             "com/openggf/game/sonic2/objects/SpiralObjectInstance.java",
             "com/openggf/game/sonic2/objects/SpringObjectInstance.java",
-            "com/openggf/game/sonic2/objects/TornadoObjectInstance.java",
             "com/openggf/game/sonic3k/events/Sonic3kAIZEvents.java",
             "com/openggf/game/sonic3k/events/Sonic3kCNZEvents.java",
             "com/openggf/game/sonic3k/events/Sonic3kMGZEvents.java",
