@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Fixed S3K LBZ2 background wrap width.** Launch Base Zone Act 2 now sizes the background render period from the active ROM-derived HScroll spread instead of falling back to the 512px VDP plane width, preventing the Death Egg background from visibly looping halfway across the structure.
+
 - **Implemented S3K LBZ Alarm and Flybot767.** Launch Base Zone alarm triggers now expose the ROM `Anim_Counters+4` state so the LBZ1 alarm tiles animate only while the alarm is active, and object `$22` now spawns the newly implemented Flybot767 badnik with ROM-backed art, mappings, DPLC remapping, and chase/dive/rebound behavior.
 
 - **Added S3K Launch Base Zone palette/parallax/animated-tile bring-up.** LBZ now routes to a dedicated S3K scroll handler with ROM-derived LBZ1 and LBZ2 background deformation, including LBZ2 waterline lookup data from the user ROM. LBZ AniPLC scripts and direct animated-tile uploads now replace the placeholder pattern tiles in the foreground and background, and LBZ1's animated background strip derives its phase from current-frame deform state to avoid stale-cache jitter.
