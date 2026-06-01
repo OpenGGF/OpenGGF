@@ -118,6 +118,7 @@ public class HeadlessTestRunner {
         setKeyState(p2JumpKey, (p2Mask & AbstractPlayableSprite.INPUT_JUMP) != 0);
         setKeyState(p2StartKey, p2Start);
 
+        GameServices.sprites().publishHeldInputForLevelEvents(inputHandler);
         LevelFrameStep.execute(levelManager, GameServices.camera(),
                 () -> GameServices.sprites().update(inputHandler));
         inputHandler.update();

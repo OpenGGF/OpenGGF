@@ -392,16 +392,14 @@ public final class TraceReplayBootstrap {
      * the comparison loop begins or every S2 trace diverges within ~100-200
      * frames from compounded post-title-card object/player state drift.
      *
-     * <p>Tornado routes (SCZ) use {@link #s2TornadoTitleCardPreludeFramesForTraceReplay}
-     * which gates the same prelude on the live ObjB2 routine/subtype; this
-     * method returns 0 for them so the Tornado-specific bootstrap stays the
-     * sole authority for that route. Returns 0 for non-S2 traces, traces
-     * without sidekicks, and legacy traces (lua_script_version &lt; 9.2-s2).
+     * <p>The caller must only use this when the live object manager did not
+     * select a route-specific Tornado object prelude. The metadata-level
+     * {@link #usesS2TornadoRideStartForTraceReplay(TraceData)} predicate is
+     * intentionally broad because the live ObjB2 shape is the real authority;
+     * treating that predicate alone as "Tornado active" suppresses the generic
+     * title-card ticks for normal S2 routes such as MTZ.
      */
     public static int s2GenericObjectTitleCardPreludeFramesForTraceReplay(TraceData trace) {
-        if (usesS2TornadoRideStartForTraceReplay(trace)) {
-            return 0;
-        }
         return resolveS2TitleCardPreludeFrames(trace);
     }
 
@@ -518,6 +516,42 @@ public final class TraceReplayBootstrap {
 
     public static boolean shouldCompareGameplayStateForReplay(TraceExecutionPhase phase) {
         return phase == TraceExecutionPhase.FULL_LEVEL_FRAME;
+    }
+
+    /**
+     * Returns the frame values that should be compared after a replay step.
+     *
+     * <p>S1/S2 traces are sampled by Lua once per emulator frame, while the ROM
+     * can expose a full Level_MainLoop row followed by a VBlank-only row with
+     * the same gameplay counter and unchanged player state. In that split, the
+     * first row owns gameplay state and the following row owns VBlank-updated
+     * diagnostics such as camera position and ring count. The engine's
+     * headless step presents those VBlank diagnostics together with the
+     * gameplay step, so compare gameplay fields from {@code current} and
+     * visual diagnostics from the immediately following VBlank-only row.
+     */
+    public static TraceFrame frameForGameplayComparison(TraceData trace,
+                                                        int currentIndex,
+                                                        TraceFrame previous,
+                                                        TraceFrame current,
+                                                        TraceExecutionPhase currentPhase) {
+        if (trace == null || current == null
+                || currentPhase != TraceExecutionPhase.FULL_LEVEL_FRAME
+                || currentIndex + 1 >= trace.frameCount()) {
+            return current;
+        }
+
+        TraceFrame next = trace.getFrame(currentIndex + 1);
+        TraceExecutionPhase nextPhase = phaseForReplay(trace, current, next);
+        if (nextPhase != TraceExecutionPhase.VBLANK_ONLY
+                || !current.stateEquals(next)
+                || current.gameplayFrameCounter() != next.gameplayFrameCounter()
+                || current.cameraX() < 0 || current.cameraY() < 0
+                || next.cameraX() < 0 || next.cameraY() < 0) {
+            return current;
+        }
+
+        return current.withVisualDiagnosticsFrom(next);
     }
 
     private static void recordSeedFrameInputHistory(AbstractPlayableSprite sprite, int inputMask) {

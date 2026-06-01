@@ -166,6 +166,10 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
      * When timer reaches 0: convert to explosion + spawn 5 projectiles.
      */
     private void updateMoving() {
+        // ROM loc_38A2C (s2.asm:75838-75844): subq.w #1,objoff_2A(a0) / bmi.s →
+        // explode. The counter is decremented first; only when it BECOMES negative
+        // (i.e. underflows past 0) does the Asteron explode. The frame where the
+        // counter reaches 0 still runs ObjectMove + AnimateSprite.
         moveTimer--;
         if (moveTimer < 0) {
             explode();
@@ -180,6 +184,10 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
         SubpixelMotion.moveSprite2(motionState);
         currentX = motionState.x;
         currentY = motionState.y;
+
+        // ROM also calls AnimateSprite on this frame (Ani_objA4). Animation is
+        // driven centrally by updateAnimation() while state == MOVING, so the
+        // reaching-0 frame still advances the animation.
     }
 
     /**
@@ -189,7 +197,6 @@ public class AsteronBadnikInstance extends AbstractBadnikInstance {
      */
     private void explode() {
         // Destroy self (the Asteron becomes an explosion)
-        setDestroyed(true);
         setDestroyed(true);
 
         var objectManager = services().objectManager();

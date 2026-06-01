@@ -381,7 +381,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// - obj_control and hurt block input in ALL states
 		boolean groundedControlLock = !sprite.getAir() && (moveLocked || sprite.getSpringing());
 		if (groundedControlLock || objControlLocked || sprite.isHurt()) {
-			left = false;
+			if (!sprite.isForcedInputActive(AbstractPlayableSprite.INPUT_LEFT)) {
+				left = false;
+			}
 			if (!sprite.isForceInputRight()) {
 				right = false;
 			}
@@ -393,7 +395,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Block jumping ONLY when obj_control is set (not move_lock)
 		// ROM: obj_control bit 0 skips the entire movement routine including Sonic_Jump
 		// ROM: move_lock only blocks Sonic_Move/Sonic_RollSpeed, NOT Sonic_Jump
-		if (objControlLocked) {
+		if (objControlLocked && !sprite.isForcedInputActive(AbstractPlayableSprite.INPUT_JUMP)) {
 			jump = false;
 		}
 
@@ -519,6 +521,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void applyScreenYWrapValueAfterControl() {
+		SidekickCpuController cpu = sprite.getCpuController();
+		if (sprite.isCpuControlled()
+				&& sprite.getDead()
+				&& cpu != null
+				&& cpu.deadFallBypassesScreenYWrapValue()) {
+			// S2 Obj02_Dead and the S3K Tails dead path run dead-fall movement directly,
+			// without the normal Screen_Y_wrap_value mask used by control/hurt paths.
+			return;
+		}
 		Camera camera = camera();
 		if (camera != null) {
 			camera.applyScreenYWrapValue(sprite);
@@ -2357,17 +2368,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** Sonic_SlopeRepel: Slip/fall check (s2.asm:37432) */
 	private void doSlopeRepel() {
 		if (sprite.isStickToConvex()) return;
-		// S2/S3K: btst #sta_onObj,status(a0) / bne.s return — skip when on object.
-		// S1: NO isOnObject check — slope repel applies even on object surfaces.
+		int activeMoveLock = sprite.getMoveLockTimer();
+		if (activeMoveLock > 0) {
+			// ROM checks/decrements move_lock before evaluating the angle slip
+			// branch (S2 Sonic_SlopeRepel s2.asm:37458-37479; S2
+			// Tails_SlopeRepel s2.asm:40313-40334; S3K Player_SlopeRepel
+			// sonic3k.asm:23909-23948). AnglePos may have returned early
+			// because Status_OnObj was set, but SlopeRepel is still called by
+			// the ground/roll dispatcher, so a prior terrain-slip lock burns
+			// down while the player rides an object.
+			sprite.setMoveLockTimer(activeMoveLock - 1);
+			return;
+		}
+		// Engine object-support aggregation can leave a non-flat terrain angle while
+		// an object owns ground contact. Preserve the existing guard against arming
+		// a fresh slope slip from that stale terrain angle; the ROM move_lock
+		// countdown has already run above.
 		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
 		boolean checksOnObject = (fs == null || fs.slopeRepelChecksOnObject());
 		if (checksOnObject && (sprite.isOnObject() || collisionSystem().hasObjectSupport(sprite))) return;
-
-		int moveLock = sprite.getMoveLockTimer();
-		if (moveLock > 0) {
-			sprite.setMoveLockTimer(moveLock - 1);
-			return;
-		}
 
 		int angle = sprite.getAngle() & 0xFF;
 		boolean s3kSlipKick = fs != null && fs.slopeRepelUsesS3kSlipKick();

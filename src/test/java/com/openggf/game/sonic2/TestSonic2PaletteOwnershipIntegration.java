@@ -29,6 +29,9 @@ class TestSonic2PaletteOwnershipIntegration {
     private static final String CNZ_BOSS_CYCLE_1_OWNER = "s2.cnz.bossCycle1";
     private static final String CNZ_BOSS_CYCLE_2_OWNER = "s2.cnz.bossCycle2";
     private static final String CNZ_BOSS_CYCLE_3_OWNER = "s2.cnz.bossCycle3";
+    private static final String WFZ_FIRE_BELT_OWNER = "s2.wfz.fireBeltCycle";
+    private static final String WFZ_CYCLE_1_OWNER = "s2.wfz.cycle1";
+    private static final String WFZ_CYCLE_2_OWNER = "s2.wfz.cycle2";
 
     @Test
     void ehzCycleSubmitsPaletteOwnershipClaimsThroughRuntimeRegistry() {
@@ -142,6 +145,87 @@ class TestSonic2PaletteOwnershipIntegration {
         assertEquals(CNZ_BOSS_CYCLE_1_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 1, 4));
         assertEquals(CNZ_BOSS_CYCLE_2_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 1, 14));
         assertEquals(CNZ_BOSS_CYCLE_3_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 1, 15));
+    }
+
+    @Test
+    void wfzPaletteCyclesSubmitAllRomTargetSlots() {
+        loadZone(Sonic2ZoneConstants.ZONE_WFZ, 0);
+
+        PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistry();
+        registry.beginFrame();
+
+        GameServices.gameState().setWfzFireToggle(false);
+        updateAnimatedPaletteManager();
+
+        assertEquals(WFZ_FIRE_BELT_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 2, 7));
+        assertEquals(WFZ_FIRE_BELT_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 2, 8));
+        assertEquals(WFZ_FIRE_BELT_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 2, 9));
+        assertEquals(WFZ_FIRE_BELT_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 2, 10));
+        assertEquals(WFZ_CYCLE_1_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 2, 14));
+        assertEquals(WFZ_CYCLE_2_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 2, 15));
+    }
+
+    @Test
+    void wfzFireCycleResolvesFromRomFirePaletteWhenToggleIsClear() {
+        loadZone(Sonic2ZoneConstants.ZONE_WFZ, 0);
+
+        PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistry();
+        Palette[] livePalettes = livePalettes();
+        registry.beginFrame();
+
+        GameServices.gameState().setWfzFireToggle(false);
+        updateAnimatedPaletteManager();
+
+        clearColors(livePalettes[2], 7, 8, 9, 10, 14, 15);
+        registry.resolveInto(livePalettes, null, null, null);
+
+        byte[] fireData = romSlice(Sonic2Constants.CYCLING_PAL_WFZ_FIRE_ADDR,
+                Sonic2Constants.CYCLING_PAL_WFZ_FIRE_LEN);
+        byte[] wfz1Data = romSlice(Sonic2Constants.CYCLING_PAL_WFZ1_ADDR,
+                Sonic2Constants.CYCLING_PAL_WFZ1_LEN);
+        byte[] wfz2Data = romSlice(Sonic2Constants.CYCLING_PAL_WFZ2_ADDR,
+                Sonic2Constants.CYCLING_PAL_WFZ2_LEN);
+
+        assertColorWord(livePalettes[2], 7, fireData, 0);
+        assertColorWord(livePalettes[2], 8, fireData, 2);
+        assertColorWord(livePalettes[2], 9, fireData, 4);
+        assertColorWord(livePalettes[2], 10, fireData, 6);
+        assertColorWord(livePalettes[2], 14, wfz1Data, 0);
+        assertColorWord(livePalettes[2], 15, wfz2Data, 0);
+    }
+
+    @Test
+    void wfzBeltToggleUsesConveyorPaletteAndFiveFrameDelay() {
+        loadZone(Sonic2ZoneConstants.ZONE_WFZ, 0);
+
+        PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistry();
+        Palette[] livePalettes = livePalettes();
+        GameServices.gameState().setWfzFireToggle(true);
+
+        registry.beginFrame();
+        updateAnimatedPaletteManager();
+
+        clearColors(livePalettes[2], 7, 8, 9, 10);
+        registry.resolveInto(livePalettes, null, null, null);
+
+        byte[] beltData = romSlice(Sonic2Constants.CYCLING_PAL_WFZ_BELT_ADDR,
+                Sonic2Constants.CYCLING_PAL_WFZ_BELT_LEN);
+        assertColorWord(livePalettes[2], 7, beltData, 0);
+        assertColorWord(livePalettes[2], 8, beltData, 2);
+        assertColorWord(livePalettes[2], 9, beltData, 4);
+        assertColorWord(livePalettes[2], 10, beltData, 6);
+
+        for (int frame = 0; frame < 5; frame++) {
+            registry.beginFrame();
+            updateAnimatedPaletteManager();
+            assertEquals("none", registry.ownerAt(PaletteSurface.NORMAL, 2, 7),
+                    "WFZ conveyor palette should wait five full frames before the next submission");
+        }
+
+        registry.beginFrame();
+        updateAnimatedPaletteManager();
+
+        assertEquals(WFZ_FIRE_BELT_OWNER, registry.ownerAt(PaletteSurface.NORMAL, 2, 7));
     }
 
     private static void loadZone(int zone, int act) {

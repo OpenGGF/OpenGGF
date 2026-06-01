@@ -162,6 +162,9 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         if (sheets.containsKey(Sonic2ObjectArtKeys.MTZ_FLOOR_SPIKE)) {
             registerSheet(Sonic2ObjectArtKeys.MTZ_SPIKE, artLoader.loadMTZSpikeSheet());
         }
+        if (sheets.containsKey(Sonic2ObjectArtKeys.WFZ_HOOK)) {
+            registerSheet(Sonic2ObjectArtKeys.WFZ_UNKNOWN, artLoader.loadWfzUnknownSheet());
+        }
 
         // === Zone-specific overrides ===
         // HTZ barrier uses zone-specific art instead of CPZ ConstructionStripes
@@ -226,6 +229,18 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
                 registerSheet(registration.key(), sheet);
             }
         }
+    }
+
+    /**
+     * Loads a Sonic 2 PLC on demand, matching runtime event-triggered PLC requests.
+     * Re-requesting an already loaded PLC is harmless because individual art keys
+     * are skipped when present.
+     */
+    public void requestPlc(int plcId) throws IOException {
+        ensureArtLoader();
+        Rom rom = GameServices.rom().getRom();
+        loadPlcEntries(rom, plcId);
+        loadEpoch++;
     }
 
     /**

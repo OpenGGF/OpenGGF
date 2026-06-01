@@ -72,9 +72,15 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
         if (!shouldHurt(contact)) {
             return;
         }
+        if (player.getDead()) {
+            // SolidObject_Squash can call KillCharacter before Obj36 reaches Touch_ChkHurt2;
+            // the ROM helper then skips players whose routine is already >= 4.
+            return;
+        }
         if (player.getInvulnerable()) {
             return;
         }
+        rewindPlayerYBeforeHurt(player);
         // ROM: Hurt_Sidekick - CPU Tails only gets knockback, no ring scatter or death
         if (player.isCpuControlled()) {
             player.applyHurt(currentX);
@@ -193,6 +199,16 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
 
     protected boolean isUpsideDown() {
         return (spawn.renderFlags() & 0x2) != 0;
+    }
+
+    protected void rewindPlayerYBeforeHurt(PlayableEntity player) {
+        short ySpeed = player.getYSpeed();
+        if (ySpeed != 0) {
+            // ROM Touch_ChkHurt2/sub_24280 subtract y_vel<<8 from y_pos before
+            // HurtCharacter (docs/s2disasm/s2.asm:29297-29312;
+            // docs/skdisasm/sonic3k.asm:49211-49220).
+            player.move((short) 0, (short) -ySpeed);
+        }
     }
 
     // ---- Dimension lookup ----

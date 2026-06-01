@@ -118,6 +118,8 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     private int subPixelX;
     private final Set<PlayableEntity> standingPlayers =
             Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<PlayableEntity> accelerationRiders =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     private final SolidObjectParams solidParams;
 
@@ -191,7 +193,6 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite rider = firstStandingPlayer(player);
         if (rider != null) {
             onStandingIdle(rider);
-            standingPlayers.clear();
         }
     }
 
@@ -207,7 +208,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
     private void forEachStandingPlayer(AbstractPlayableSprite main, java.util.function.Consumer<AbstractPlayableSprite> action) {
         for (PlayableEntity participant : playerParticipants(main)) {
-            if (standingPlayers.contains(participant)) {
+            if (standingPlayers.contains(participant) || accelerationRiders.contains(participant)) {
                 action.accept((AbstractPlayableSprite) participant);
             }
         }
@@ -280,6 +281,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         // ROM: Check standing_mask and launch each standing player
         forEachStandingPlayer(player, this::launchPlayerIfStanding);
         standingPlayers.clear();
+        accelerationRiders.clear();
     }
 
     /**
@@ -287,7 +289,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
      * ROM: loc_3C020 (s2.asm lines 80329-80333)
      */
     private void launchPlayerIfStanding(AbstractPlayableSprite player) {
-        if (!wasStandingAtStateEntry(player)) {
+        if (!wasStandingAtStateEntry(player) && !accelerationRiders.contains(player)) {
             return;
         }
 
@@ -310,7 +312,6 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         // The SolidContacts system handles keeping the player on the platform surface.
         // The ROM explicitly syncs player X to platform X and clears their velocity.
         forEachStandingPlayer(player, this::syncPlayer);
-        clearIfNoLongerStanding(player);
     }
 
     /**
@@ -400,6 +401,9 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
     @Override
     public void onSolidContactCleared(PlayableEntity player, int frameCounter) {
+        if (state == STATE_ACCELERATING) {
+            return;
+        }
         standingPlayers.remove(player);
     }
 
@@ -412,6 +416,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
     private void onStandingIdle(AbstractPlayableSprite player) {
         // ROM: addq.b #2,routine_secondary(a0)
         state = STATE_ACCELERATING;
+        accelerationRiders.clear();
 
         // ROM: move.w #$C00,x_vel(a0)
         xVel = INITIAL_X_VELOCITY;
@@ -456,6 +461,7 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
 
         // ROM: move.w x_pos(a0),x_pos(a1)
         player.setCentreXPreserveSubpixel((short) currentX);
+        accelerationRiders.add(player);
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null) {
             objectManager.refreshRidingTrackingPosition(this);

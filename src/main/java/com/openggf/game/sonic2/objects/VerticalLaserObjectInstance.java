@@ -2,13 +2,13 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
-import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
 
@@ -67,7 +67,7 @@ public class VerticalLaserObjectInstance extends AbstractObjectInstance
     private static ObjectSpawn createLaserSpawn(ObjectSpawn parent, int x, int y) {
         return new ObjectSpawn(
                 x, y,
-                parent.objectId(),
+                Sonic2ObjectIds.VERTICAL_LASER,
                 0x72, // ObjB7 subtype
                 parent.renderFlags(),
                 false, // Don't track respawn for dynamic children
@@ -76,7 +76,6 @@ public class VerticalLaserObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
-        AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // ObjB7_Init runs on first frame (routine 0 -> routine 2)
         if (!initialized) {
             initialized = true;
@@ -121,6 +120,11 @@ public class VerticalLaserObjectInstance extends AbstractObjectInstance
     @Override
     public int getPriorityBucket() {
         return RenderPriority.clamp(PRIORITY);
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return WIDTH_PIXELS;
     }
 
     @Override
