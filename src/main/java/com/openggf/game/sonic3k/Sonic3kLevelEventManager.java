@@ -21,6 +21,7 @@ import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
@@ -35,7 +36,10 @@ import com.openggf.game.sonic3k.objects.CutsceneKnucklesHcz2Instance;
 import com.openggf.game.sonic3k.objects.HCZConveyorBeltObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
+import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
 import com.openggf.camera.Camera;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
@@ -261,6 +265,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new HczZoneRuntimeState(act, playerCharacter, hczEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_MGZ && mgzEvents != null) {
             registry.install(new MgzZoneRuntimeState(act, playerCharacter, mgzEvents));
+        } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
+            registry.install(new LbzZoneRuntimeState(act, playerCharacter));
         } else {
             registry.clear();
         }
@@ -399,6 +405,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 && getPlayerCharacter() == PlayerCharacter.SONIC_ALONE) {
             IczSnowboardIntroInstance.applyInitialPlayerLock(GameServices.camera().getFocusedSprite());
         }
+        if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
+            spawnLbz1GroundLaunchIntro(false);
+        }
         // ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8187-8197): at CNZ Act 1
         // a throwaway Player_2 Tails is spawned to carry solo Sonic in. This runs
         // after the spawnSidekicks load step (which clears temporary sidekicks),
@@ -407,6 +416,34 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             cnzEvents.spawnSoloLeaderCarryInTailsIfNeeded(currentAct);
         }
         // TODO: LRZ1 non-Knuckles, SSZ falling intros (same loc_68A6 path)
+    }
+
+    public void applyZonePlayerStateAfterTitleCard() {
+        applyZonePlayerState();
+        if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
+            spawnLbz1GroundLaunchIntro(true);
+        }
+    }
+
+    private void spawnLbz1GroundLaunchIntro(boolean armImmediately) {
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        if (objectManager == null) {
+            return;
+        }
+        for (ObjectInstance object : objectManager.getActiveObjects()) {
+            if (object instanceof Lbz1GroundLaunchIntroInstance intro && !intro.isDestroyed()) {
+                if (armImmediately) {
+                    intro.applyInitialHoldForLevelStart();
+                }
+                return;
+            }
+        }
+        ObjectSpawn spawn = new ObjectSpawn(0, 0, 0, 0, 0, false, 0);
+        Lbz1GroundLaunchIntroInstance intro =
+                objectManager.createDynamicObject(() -> new Lbz1GroundLaunchIntroInstance(spawn));
+        if (intro != null && armImmediately) {
+            intro.applyInitialHoldForLevelStart();
+        }
     }
 
     /**
@@ -627,6 +664,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     state instanceof HczZoneRuntimeState hczState && hczState.isBackedBy(hczEvents);
             case Sonic3kZoneIds.ZONE_MGZ ->
                     state instanceof MgzZoneRuntimeState mgzState && mgzState.isBackedBy(mgzEvents);
+            case Sonic3kZoneIds.ZONE_LBZ -> state instanceof LbzZoneRuntimeState;
             default -> false;
         };
     }

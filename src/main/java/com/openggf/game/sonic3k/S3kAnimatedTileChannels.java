@@ -163,6 +163,77 @@ final class S3kAnimatedTileChannels {
         return channels;
     }
 
+    static List<AnimatedTileChannel> buildLbzChannels(Sonic3kPatternAnimator owner,
+                                                      List<AniPlcScriptState> scripts,
+                                                      int actIndex,
+                                                      int regularScriptCount) {
+        List<AnimatedTileChannel> channels = new ArrayList<>(scripts.size() + 3);
+        channels.add(new AnimatedTileChannel(
+                "s3k.lbz.shared",
+                owner::shouldRunLbzSharedChannel,
+                ctx -> owner.computeLbzSharedPhase(ctx.frameCounter()),
+                new DestinationPlan(0x160, 0x16F),
+                AnimatedTileCachePolicy.ON_PHASE_CHANGE,
+                ctx -> owner.updateLbzSharedTilesForGraph(ctx.frameCounter())
+        ));
+
+        if (actIndex == 0) {
+            channels.add(new AnimatedTileChannel(
+                    "s3k.lbz1.scroll",
+                    owner::shouldRunLbz1CustomChannels,
+                    ctx -> owner.computeLbz1ScrollPhase(),
+                    new DestinationPlan(0x350, 0x364),
+                    AnimatedTileCachePolicy.ON_PHASE_CHANGE,
+                    ctx -> owner.updateLbz1ScrollTilesForGraph()
+            ));
+        } else {
+            channels.add(new AnimatedTileChannel(
+                    "s3k.lbz2.scroll",
+                    owner::shouldRunLbz2ScrollChannel,
+                    ctx -> owner.computeLbz2ScrollPhase(),
+                    new DestinationPlan(0x2E3, 0x2E4),
+                    AnimatedTileCachePolicy.ON_PHASE_CHANGE,
+                    ctx -> owner.updateLbz2ScrollTilesForGraph()
+            ));
+            channels.add(new AnimatedTileChannel(
+                    "s3k.lbz2.waterline",
+                    owner::shouldRunLbz2WaterlineChannel,
+                    ctx -> owner.computeLbz2WaterlinePhase(),
+                    new DestinationPlan(0x2C3, 0x2E2),
+                    AnimatedTileCachePolicy.ON_PHASE_CHANGE,
+                    ctx -> owner.updateLbz2WaterlineTilesForGraph()
+            ));
+        }
+
+        for (int i = 0; i < scripts.size(); i++) {
+            AniPlcScriptState script = scripts.get(i);
+            String prefix = actIndex == 0 && i >= regularScriptCount
+                    ? "s3k.lbz1.spec." + (i - regularScriptCount)
+                    : "s3k.lbz" + (actIndex + 1) + ".script." + i;
+            if (actIndex == 0 && i < regularScriptCount) {
+                channels.add(new AnimatedTileChannel(
+                        prefix,
+                        () -> owner.shouldRunLbz1AlarmScriptChannel(script),
+                        ctx -> owner.computeLbz1AlarmScriptPhase(script, ctx.frameCounter()),
+                        scriptDestination(script),
+                        AnimatedTileCachePolicy.ALWAYS,
+                        ctx -> owner.updateLbz1AlarmScriptForGraph(script)
+                ));
+                continue;
+            }
+            channels.add(new AnimatedTileChannel(
+                    prefix,
+                    owner::shouldRunScriptChannels,
+                    ctx -> ctx.frameCounter(),
+                    scriptDestination(script),
+                    AnimatedTileCachePolicy.ALWAYS,
+                    ctx -> owner.tickScript(script)
+            ));
+        }
+
+        return channels;
+    }
+
     private static DestinationPlan scriptDestination(AniPlcScriptState script) {
         int startTile = script.destinationTileIndex();
         if (script.tilesPerFrame() <= 1) {

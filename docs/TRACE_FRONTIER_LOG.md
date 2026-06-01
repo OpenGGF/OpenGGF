@@ -912,6 +912,26 @@ The code changes in this pass are limited to static parity bookkeeping and ROM-s
   `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s1.TestS1Mz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay" test "-DfailIfNoTests=false"`
   - PASS: 4 tests, 0 failures; all print `All frames match trace. No divergences.`
 
+## 2026-06-01 - LBZ1 ground-launch intro trace-neutral check
+
+- Scope: S3K Launch Base Zone Act 1 startup now uses the ROM buried start
+  position plus `Obj_LevelIntro_PlayerLaunchFromGround` timing: the controller
+  waits for title-card handoff, holds player control for 30 live gameplay
+  frames, applies `y_vel=-$0B00`, selects Sonic animation `$10`, and releases
+  once `y_pos<$05C0`.
+- Full trace replay comparison used a targeted stash baseline on current
+  `develop`: with the LBZ changes stashed, then with the changes restored.
+  Both serialized runs produced the same aggregate result:
+  - `mvn -Dmse=off -Dsurefire.forkCount=1 '-Dtest=*TraceReplay' test -DfailIfNoTests=false`
+  - Result in both states: FAIL, 63 tests run, 23 failures, 0 errors, 0
+    skipped.
+- Current S3K frontier frames remain unchanged from the committed 2026-05-29
+  entry: AIZ frame 8941 (`camera_y` mismatch), CNZ frame 17276 (`x_speed`
+  mismatch), and MGZ frame 4124 (`y_speed` mismatch).
+- Note: the older 2026-05-28 full-sweep count of 21 failures was not the
+  current `develop` baseline for this check; the stashed pre-change baseline
+  already reported 23 failures.
+
 ## 2026-05-29 - Failing-test cleanup verified trace-neutral
 
 - Scope: fixed 9 failing non-trace test classes on committed `develop`

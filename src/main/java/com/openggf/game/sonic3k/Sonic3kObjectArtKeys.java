@@ -239,6 +239,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String ORBINAUT = "lbz_orbinaut";
     public static final String RIBOT = "lbz_ribot";
     public static final String CORKEY = "lbz_corkey";
+    public static final String FLYBOT_767 = "lbz_flybot_767";
 
     // MHZ badniks
     public static final String MADMOLE = "mhz_madmole";
