@@ -8,7 +8,34 @@ shoes at ROM-accurate display time uniformly across S1/S2/S3K, and then retire
 the `speedShoesTimerPrePhysicsExtraTicks` compensation field without regressing
 the S3K CNZ trace frontier.
 
-## Implementation status (2026-06-01): attempted, reverted
+## Implementation status (2026-06-01): RESOLVED — implemented
+
+Landed: `PhysicsFeatureSet.speedShoesTimerDecimation` (S1/S2 `1`, S3K `8`) and a
+`SpeedShoesTimer` that counts from `ROM_DURATION_FRAMES / decimation` (150 for
+S3K) and decrements only on aligned level frames. The decrement gate uses
+`(frameCounter + 7) & (decimation-1) == 0` (`LEVEL_FRAME_PHASE_OFFSET = 7`).
+
+The phase offset is the crux: the engine `LevelManager` frame counter, read at the
+pre-physics `TimerManager.update()` point, leads ROM `Level_frame_counter` (as
+read in `Sonic_Display`) by **2 (mod 8)** — a constant seed-phase offset. ROM
+decrements on `Level_frame_counter & 7 == 7`, which maps to engine
+`frameCounter & 7 == 1`, i.e. ALIGN 7. The earlier ALIGN=1 was wrong because it
+was derived from the `AizFlippingBridge` `(frameCounter+3)&7` gate, which only
+drives an **SFX** — a field trace replay does NOT compare, so that calibration
+was never validated. The CNZ speed-shoes phase IS validated (via x_speed).
+
+Validation (ROM paths set): all three S3K trace frontiers hold at baseline with
+no regression — CNZ f17276 (1952 err), AIZ f8941 (789 err), MGZ f4124 (3852 err).
+S1/S2 are byte-identical (decimation 1): WFZ holds f8863, EHZ1 passes, GHZ1
+passes. Unit guards pass: `TestSpeedShoesTimer`, `TestPhysicsProfile`,
+`TestHybridPhysicsFeatureSet`. The +2 offset holding across CNZ/AIZ/MGZ confirms
+it is a genuine constant seed-phase property, not a per-trace fit.
+
+The byte timer still decrements at the pre-physics tick site (not display time);
+removing `speedShoesTimerPrePhysicsExtraTicks` and unifying to display-time
+ticking remains optional future cleanup, now unblocked.
+
+### Earlier attempt (superseded by the above)
 
 A first implementation of this design was built and validated, then reverted:
 `speedShoesTimerDecimation` (S1/S2 `1`, S3K `8`) on `PhysicsFeatureSet`,

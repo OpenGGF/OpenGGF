@@ -272,6 +272,16 @@ public class TestPhysicsProfile {
                 "S3K clears speed shoes from Sonic_Display before the next movement frame consumes acceleration");
     }
 
+    @Test
+    public void testSpeedShoesTimerDecimation_PerGame() {
+        // S1/S2 use a per-frame word timer; S3K a byte timer decremented every
+        // 8th level frame (sonic3k.asm:22072-22078).
+        assertEquals(1, PhysicsFeatureSet.SONIC_1.speedShoesTimerDecimation(), "S1 per-frame word timer");
+        assertEquals(1, PhysicsFeatureSet.SONIC_2.speedShoesTimerDecimation(), "S2 per-frame word timer");
+        assertEquals(8, PhysicsFeatureSet.SONIC_3K.speedShoesTimerDecimation(),
+                "S3K byte timer decremented every 8th level frame");
+    }
+
     // ========================================
     // PhysicsProvider implementations
     // ========================================

@@ -557,7 +557,8 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
                 baseFeatureSet.invincibilityStarsFixedSlotIndex(), // invincibilityStarsFixedSlotIndex (from base game)
                 baseFeatureSet.touchResponseUsesRenderFlagYGate(), // touchResponseUsesRenderFlagYGate (from base game)
                 baseFeatureSet.sidekickDeathUsesDeferredDespawn(), // sidekickDeathUsesDeferredDespawn (from base game)
-                baseFeatureSet.rightWallDeepProbePreservesPenetration() // rightWallDeepProbePreservesPenetration (from base game)
+                baseFeatureSet.rightWallDeepProbePreservesPenetration(), // rightWallDeepProbePreservesPenetration (from base game)
+                baseFeatureSet.speedShoesTimerDecimation() // speedShoesTimerDecimation (from base game)
         );
     }
 
