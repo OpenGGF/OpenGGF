@@ -1346,6 +1346,12 @@ public class Sonic3kConstants {
     public static final int MAP_RIBOT_ADDR = 0x3604B8;
     public static final int ART_KOSM_CORKEY_ADDR = 0x377DFC;
     public static final int MAP_CORKEY_ADDR = 0x3605C2;
+    // Obj_Flybot767 (sonic3k.asm:191981), LockOn data include.
+    // Map, DPLC, and ArtUnc_Flybot767 verified by S&K-side ROM byte search.
+    public static final int ART_UNC_FLYBOT_767_ADDR = 0x377EBE;
+    public static final int ART_UNC_FLYBOT_767_SIZE = 4896;
+    public static final int MAP_FLYBOT_767_ADDR = 0x36065A;
+    public static final int DPLC_FLYBOT_767_ADDR = 0x3607EC;
 
     // ===== MHZ Badnik Art =====
     public static final int ART_KOSM_MADMOLE_ADDR = 0x165F02;

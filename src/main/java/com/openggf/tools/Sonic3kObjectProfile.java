@@ -107,6 +107,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x3A, // HCZHandLauncher
                 0x3B, // HCZWaterWall
                 0x20, // MGZLBZSmashingPillar (alt slot)
+                0x22, // LBZAlarm
                 0x52, // MGZLBZSmashingPillar
                 0x53, // MGZSwingingPlatform
                 0x55, // MGZHeadTrigger
@@ -177,7 +178,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xBA, // ICZTensionPlatform
                 0xBB, // ICZIceBlock
                 0xBC, // ICZMiniboss
-                0xBD  // ICZEndBoss
+                0xBD, // ICZEndBoss
+                0xC2  // Flybot767
         ));
         S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
 
