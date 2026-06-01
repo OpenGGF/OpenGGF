@@ -16,6 +16,10 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * background state and remains a future event integration pass.
  */
 public class SwScrlLbz extends AbstractZoneScrollHandler {
+    private static final int DEFAULT_BG_PERIOD_WIDTH = 512;
+    private static final int VISIBLE_SCREEN_WIDTH_PX = 320;
+    private static final int MAX_BG_PERIOD_WIDTH = 8192;
+
     private static final int[] LBZ1_BG_DEFORM = {
             0xD0, 0x18, 8, 8, 0x7FFF
     };
@@ -56,6 +60,7 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
     private int cloudAccumulator;
     private int lastBgCameraX = Integer.MIN_VALUE;
     private int screenShakeOffset;
+    private int currentBgPeriodWidth = DEFAULT_BG_PERIOD_WIDTH;
 
     public SwScrlLbz() {
         this(null);
@@ -96,9 +101,15 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
         }
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
+        currentBgPeriodWidth = computeBgPeriodWidth(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
+    }
+
+    @Override
+    public int getBgPeriodWidth() {
+        return currentBgPeriodWidth;
     }
 
     private void updateAct1(int cameraX, int cameraY, short fgScroll) {
@@ -324,5 +335,29 @@ public class SwScrlLbz extends AbstractZoneScrollHandler {
 
     private static int asrSignedWord(int value, int shift) {
         return ((short) value) >> shift;
+    }
+
+    private static int computeBgPeriodWidth(int[] packedHScroll) {
+        int minBgScroll = Integer.MAX_VALUE;
+        int maxBgScroll = Integer.MIN_VALUE;
+        for (int packed : packedHScroll) {
+            int bgScroll = (short) packed;
+            if (bgScroll < minBgScroll) {
+                minBgScroll = bgScroll;
+            }
+            if (bgScroll > maxBgScroll) {
+                maxBgScroll = bgScroll;
+            }
+        }
+        if (minBgScroll == Integer.MAX_VALUE) {
+            return DEFAULT_BG_PERIOD_WIDTH;
+        }
+
+        int requiredWidth = VISIBLE_SCREEN_WIDTH_PX + (maxBgScroll - minBgScroll);
+        int width = DEFAULT_BG_PERIOD_WIDTH;
+        while (width < requiredWidth && width < MAX_BG_PERIOD_WIDTH) {
+            width <<= 1;
+        }
+        return Math.min(width, MAX_BG_PERIOD_WIDTH);
     }
 }
