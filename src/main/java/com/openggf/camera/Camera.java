@@ -135,7 +135,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			// If max < min, treat the upper bound as wrapped/unbounded for this signed domain.
 			// SCZ ObjB2 writes Camera_Max_X_pos = Camera_X_pos - $40, which can transiently
 			// produce max < min at low X in this engine representation.
-			x = clampAxisWithWrap(x, minX, maxX);
+			x = clampAxisWithWrap(x, minX, horizontalMaxClamp());
 			y = clampAxisWithWrap(y, minY, maxY);
 			fastVerticalScrollRequested = false;
 			return;
@@ -278,7 +278,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 
 		// Clamp to boundaries (ROM: ScrollHoriz lines 18077-18092, ScrollVerti similar)
 		if (!deferHorizontalClampThisFrame) {
-			x = clampAxisWithWrap(x, minX, maxX);
+			x = clampAxisWithWrap(x, minX, horizontalMaxClamp());
 		}
 		// ROM: After a vertical wrap, DeformLayers.asm branches directly to loc_6724
 		// (the store), skipping the normal boundary clamp. This is critical because
@@ -353,7 +353,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			}
 		}
 
-		return applyBoundaryClamp ? clampAxisWithWrap(nextX, minX, maxX) : nextX;
+		return applyBoundaryClamp ? clampAxisWithWrap(nextX, minX, horizontalMaxClamp()) : nextX;
 	}
 
 	/**
@@ -375,6 +375,30 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			return max;
 		}
 		return value;
+	}
+
+	/** Native (H40) viewport width — the level-design screen width. */
+	private static final int NATIVE_VIEWPORT_WIDTH = 320;
+
+	/**
+	 * Horizontal clamp upper bound for the camera's top-left X, adjusted so the
+	 * camera's RIGHT edge never scrolls past the level's right edge
+	 * ({@code maxX + 320}) on a wider-than-native viewport — at a level lock the
+	 * level edge lands on the screen's right edge instead of leaving void beyond
+	 * it. At native width this equals {@code maxX} (byte-identical).
+	 *
+	 * <p>The result never drops below {@code minX}, so a fully locked camera where
+	 * {@code minX == maxX} (e.g. a boss arena) is unaffected; a wrapped/unbounded
+	 * range ({@code maxX < minX}, e.g. SCZ {@code Camera_X_pos - $40}) is left
+	 * as-is. {@link #getMaxX()} still returns the stored native {@code maxX}, so the
+	 * player's right level-boundary clamp is unchanged.
+	 */
+	private short horizontalMaxClamp() {
+		if (maxX < minX) {
+			return maxX;
+		}
+		int inset = Math.max(0, width - NATIVE_VIEWPORT_WIDTH);
+		return (short) Math.max(minX, maxX - inset);
 	}
 
 	/**
