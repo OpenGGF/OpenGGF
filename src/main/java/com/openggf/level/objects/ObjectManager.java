@@ -1652,7 +1652,9 @@ public class ObjectManager {
             if (execIdx < execOrder.length && execIdx > currentExecSlot) {
                 object.snapshotPreUpdatePosition();
                 aoi2.setSkipTouchThisFrame(true);
-                execOrder[execIdx] = object;
+                if (!aoi2.skipsSameFrameUpdateAfterSpawn()) {
+                    execOrder[execIdx] = object;
+                }
             }
         }
         bucketsDirty = true;
