@@ -284,6 +284,43 @@ public class TestPlayableSpriteMovement {
                 assertEquals(0, mockSprite.getGSpeed(), "S2 equality clamp should clear gSpeed");
         }
 
+        @Test
+        public void rightLevelBoundaryIsViewportIndependentAtWidescreen() throws Exception {
+                // Regression: the right level boundary is the level's design edge
+                // (Camera_Max_X_pos + 320), not the render viewport. Widening it by a
+                // widescreen viewport let the player walk past the level's right wall
+                // into the void beyond a camera lock and fall to their death.
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                Camera camera = GameServices.camera();
+                // Simulate an ULTRA_21_9 (528px) viewport on the gameplay camera.
+                Field widthField = Camera.class.getDeclaredField("width");
+                widthField.setAccessible(true);
+                widthField.setShort(camera, (short) 528);
+
+                camera.setMinX((short) 0x0200);
+                int maxX = 0x2ED0;
+                camera.setMaxX((short) maxX);
+                GameServices.gameState().setCurrentBossId(0);
+
+                // Native S2 non-strict right boundary = maxX + 320 - 24 + 64.
+                int nativeBoundary = maxX + 320 - 24 + 64;
+                // Place the player PAST the native edge but well within the old
+                // viewport-widened boundary (maxX + 528 - 24 + 64). The buggy code
+                // would not clamp here, letting the player into the void.
+                mockSprite.setCentreX((short) (nativeBoundary + 40));
+                mockSprite.setSubpixelRaw(0, 0);
+                mockSprite.setXSpeed((short) 0);
+                mockSprite.setGSpeed((short) 0);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doLevelBoundary");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals(nativeBoundary, mockSprite.getCentreX() & 0xFFFF,
+                                "right boundary must clamp to the native level edge regardless of viewport "
+                                + "width (else the player walks past the level wall into the void)");
+        }
+
         // ====================================================================
         // Bottom level-boundary kill plane (centre-Y vs top-left)
         //

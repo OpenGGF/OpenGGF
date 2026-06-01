@@ -2224,6 +2224,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// ROM uses center coordinates for x_pos, so boundary offsets are calibrated for center
 		final int SONIC_WIDTH = 24, LEFT_OFFSET = 16, RIGHT_EXTRA = 64;
+		// The right level boundary is the level's design edge — Camera_Max_X_pos +
+		// the NATIVE screen width (320) — NOT the render viewport. camera.getMaxX()
+		// is the native ROM scroll limit (level_edge - 320), so widening this by a
+		// wider viewport would let the player walk past the level's right wall into
+		// the void beyond a camera lock and fall to their death where no level
+		// exists. Must stay native regardless of DISPLAY_ASPECT.
+		final int LEVEL_DESIGN_WIDTH = 320;
 
 		// ROM: move.l obX(a0),d1 / ext.l d0 / asl.l #8,d0 / add.l d0,d1 / swap d1
 		// Uses 32-bit position (pixel:16 | subpixel:16) + velocity << 8.
@@ -2244,13 +2251,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		PhysicsFeatureSet featureSet = sprite.getPhysicsFeatureSet();
 		// S3K Player_Boundary_Sides/Tails_Check_Screen_Boundaries use
 		// Camera_max_X_pos+$128 directly, with no normal-play +$40 extension
-		// (sonic3k.asm:23183-23186, 28418-28421). At native viewport width (320)
-		// this reproduces +$128 / +$128+$40 exactly; widescreen widens the
-		// boundary to the configured viewport width (declared divergence,
-		// see docs/KNOWN_DISCREPANCIES.md).
+		// (sonic3k.asm:23183-23186, 28418-28421). This reproduces +$128 / +$128+$40
+		// exactly: $128 = 320 - 24 = LEVEL_DESIGN_WIDTH - SONIC_WIDTH. The boundary
+		// is viewport-independent — it tracks the level's right wall, not the screen.
 		boolean strict = (featureSet != null && featureSet.levelBoundaryRightStrict())
 				|| gameState().isBossFightActive() || gameState().isEndOfLevelActive();
-		int rightBoundary = RightBoundary.compute(maxX, camera.getWidth(), SONIC_WIDTH, RIGHT_EXTRA, strict);
+		int rightBoundary = RightBoundary.compute(maxX, LEVEL_DESIGN_WIDTH, SONIC_WIDTH, RIGHT_EXTRA, strict);
 
 		// ROM comparison: left is always bhi.s (<). S1/S2 right uses bls.s
 		// (>=), while S3K uses blo.s (>), gated by PhysicsFeatureSet.

@@ -23,7 +23,7 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 10. [S2 Logical-Input Latch Disabled During Control Lock](#s2-logical-input-latch-disabled-during-control-lock)
 11. [S2 CPZ Visual Water Surface Oscillation](#s2-cpz-visual-water-surface-oscillation)
 12. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table)
-13. [Widescreen Right-Boundary Widening](#widescreen-right-boundary-widening)
+13. [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge)
 14. [Object Despawn and Visibility Windows](#object-despawn-and-visibility-windows)
 
 ---
@@ -685,46 +685,29 @@ Remove this entry once each listed test has been diagnosed (root-cause identifie
 
 ---
 
-## Widescreen Right-Boundary Widening
+## Right-Boundary Is Viewport-Independent (Level Edge)
 
 **Location:** `RightBoundary.java`, `PlayableSpriteMovement.doLevelBoundary()`
 **ROM Reference:** `sonic3k.asm:23183-23186` (`Player_Boundary_Sides`, strict path: `Camera_max_X_pos + $128`); `s2.asm:36907-36909` (normal path: `Camera_max_X_pos + $128 + $40`)
 
-### Original Implementation
+### Behavior
 
-The ROM computes the right-edge clamp from `Camera_max_X_pos` plus a fixed pixel offset relative to a fixed 320px screen width:
+The player's right level-boundary clamp is the level's design edge: `Camera_max_X_pos` plus a fixed offset relative to the **native** 320px screen width — NOT the render viewport.
 
 - **Strict path** (S3K `Player_Boundary_Sides`, boss fight, end-of-level): `Camera_max_X_pos + $128` (= `maxX + 320 - 24`)
 - **Normal path** (S1/S2/S3K non-strict ground/air): `Camera_max_X_pos + $128 + $40` (= `maxX + 320 - 24 + 64`)
 
-The `$128` constant encodes `SCREEN_WIDTH - SONIC_WIDTH = 320 - 24 = 296`.
+`camera.getMaxX()` holds the native ROM `Camera_Max_X_pos` (the level's right scroll limit, e.g. EHZ `0x2940`), so `maxX + 320` is the level's right wall. `RightBoundary.compute` is called with the fixed `LEVEL_DESIGN_WIDTH = 320`, so the clamp lands at the wall at **every** `DISPLAY_ASPECT` — fully reproducing the ROM `+$128` / `+$128 + $40` values. This is NOT a divergence: native and widescreen produce identical boundaries.
 
-### Our Implementation
+### Why it must not widen
 
-The boundary is computed via `RightBoundary.compute(maxX, camera.getWidth(), SONIC_WIDTH, RIGHT_EXTRA, strict)`:
+An earlier widescreen pass computed the boundary with `camera.getWidth()` instead of the native width, so at a wider viewport the clamp moved right with the screen (e.g. ULTRA_21_9 → `maxX + 528 - 24` = level edge + 184). Because the level geometry only exists up to `maxX + 320`, this let the player **walk past the level's right wall into the void beyond a camera lock and fall to their death** where no level exists. The boundary tracks the level's wall, not the screen, so it stays native regardless of viewport.
 
-```java
-public static int compute(int maxX, int viewportWidth, int spriteWidth,
-        int rightExtra, boolean strict) {
-    int boundary = maxX + viewportWidth - spriteWidth;
-    if (!strict) boundary += rightExtra;
-    return boundary;
-}
-```
-
-At native viewport width (`camera.getWidth() == 320`, i.e. `DISPLAY_ASPECT = NATIVE_4_3`) this produces `maxX + 296` / `maxX + 360`, identical to the ROM `+$128` / `+$128 + $40` constants. When a widescreen `DISPLAY_ASPECT` is active (e.g. `WIDE_16_9` → 400px), `camera.getWidth()` returns the configured width, and the right boundary widens to keep the player reachable at the visible right edge.
-
-### Rationale
-
-Widescreen is a declared non-parity extension (see spec section "Parity Divergence: Right-Boundary Widening" in `docs/superpowers/specs/2026-05-30-widescreen-support-design.md`). Keeping the hardcoded `SCREEN_WIDTH = 320` constant would clamp the player 160px before the right edge of a 16:9 viewport — an unplayable experience. Widening the boundary to match the configured viewport width is the correct design decision for the extension. At `NATIVE_4_3` (320px) the ROM value is reproduced exactly, so native-resolution parity is unchanged.
+A known cosmetic consequence at widescreen: when the camera is locked at `maxX`, the wider screen renders past the level edge (`maxX + 320 .. maxX + viewportWidth`) as empty space, and the player stops before reaching the visible right edge. That is the safe trade-off; aligning the locked-camera framing to the level edge is a possible future enhancement.
 
 ### Verification
 
-`TestRightBoundary` covers all three cases: native strict (`+$128`), native normal (`+$128 + $40`), and widescreen widening for both strict and normal modes.
-
-### Removal Condition
-
-This entry should remain as long as widescreen `DISPLAY_ASPECT` presets are supported. It would only be removed if the engine reverted to a fixed 320px viewport assumption.
+`TestRightBoundary` pins the pure-function math; `TestPlayableSpriteMovement.rightLevelBoundaryIsViewportIndependentAtWidescreen` drives `doLevelBoundary` with a 528px camera and asserts the clamp still lands at the native level edge.
 
 ---
 
@@ -775,7 +758,7 @@ At `DISPLAY_ASPECT = NATIVE_4_3` (viewport width 320, height 224):
 
 ### Rationale
 
-At widescreen viewport widths (e.g. `ULTRA_21_9` = 528 px) the ROM's hardcoded 640 despawn distance is smaller than the distance from the camera to the visible right edge of the widened viewport (~656 px), causing objects near the right edge to be incorrectly deleted mid-screen. Similarly, `ChkObjectVisible` with `dx >= 320` would report objects past the native right edge as invisible even though they are fully in view. Scaling both checks with `viewportWidth` is the correct design decision for the widescreen extension. This follows the same pattern as the [Widescreen Right-Boundary Widening](#widescreen-right-boundary-widening) entry above.
+At widescreen viewport widths (e.g. `ULTRA_21_9` = 528 px) the ROM's hardcoded 640 despawn distance is smaller than the distance from the camera to the visible right edge of the widened viewport (~656 px), causing objects near the right edge to be incorrectly deleted mid-screen. Similarly, `ChkObjectVisible` with `dx >= 320` would report objects past the native right edge as invisible even though they are fully in view. Scaling both checks with `viewportWidth` is the correct design decision for the widescreen extension — an object genuinely in view on the wider screen must not be culled or despawned. Note this is the opposite of the [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge) entry above: despawn/visibility track what is *on screen* (so they widen), whereas the right level boundary tracks the *level's wall* (so it stays native).
 
 ### Verification
 
