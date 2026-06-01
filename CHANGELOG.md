@@ -4,6 +4,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Fixed the S3K LBZ1 ground-launch intro.** Sonic now starts from the ROM's
+  buried Launch Base Zone Act 1 position, waits until the title card hands off
+  to live gameplay, then springs upward once with the ROM spring animation held
+  through the emergence.
+
 - **Fixed S3K LBZ2 background wrap width.** Launch Base Zone Act 2 now sizes the background render period from the active ROM-derived HScroll spread instead of falling back to the 512px VDP plane width, preventing the Death Egg background from visibly looping halfway across the structure.
 
 - **Implemented S3K LBZ Alarm and Flybot767.** Launch Base Zone alarm triggers now expose the ROM `Anim_Counters+4` state so the LBZ1 alarm tiles animate only while the alarm is active, and object `$22` now spawns the newly implemented Flybot767 badnik with ROM-backed art, mappings, DPLC remapping, and chase/dive/rebound behavior.
