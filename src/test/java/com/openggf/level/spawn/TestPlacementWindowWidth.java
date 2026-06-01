@@ -26,9 +26,22 @@ class TestPlacementWindowWidth {
     }
 
     @Test
-    void widescreenWindowScalesWithWidth() {
+    void moderateWidescreenStaysAtNativeWindow() {
+        // The load-ahead is capped to the minimum lead (width + 128), so for
+        // widths up to the 512 crossover the native 640 window still holds —
+        // keeping the live-object count (and thus slot-pool usage) at native.
         TestPlacement p = new TestPlacement(320, 0x80, () -> 400);
-        assertEquals(720, p.loadAhead());
-        assertEquals(720, p.windowEnd(0));
+        assertEquals(640, p.loadAhead());
+        assertEquals(640, p.windowEnd(0));
+    }
+
+    @Test
+    void ultrawideGrowsByMinimumLeadOnly() {
+        // ULTRA_21_9 (528): load-ahead = width + 128 = 656, not width + 320 = 848.
+        // This keeps the window (128 + 656 = 784) within ~2% of native so the
+        // fixed object slot pool is not overrun in dense areas.
+        TestPlacement p = new TestPlacement(320, 0x80, () -> 528);
+        assertEquals(656, p.loadAhead());
+        assertEquals(656, p.windowEnd(0));
     }
 }
