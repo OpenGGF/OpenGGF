@@ -46,6 +46,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// This is separate from horizScrollDelayFrames which only affects horizontal scroll.
 	private boolean frozen = false;
 	private boolean deferHorizontalBoundaryClampOnce = false;
+	private boolean deferMaxYWriteUntilAfterUpdate = false;
+	private short deferredMaxYValue = 0;
 
 	// ROM: Level_started_flag.
 	// Used by HUD/start-state flow and intro/cutscene sequencing.
@@ -138,12 +140,14 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			x = clampAxisWithWrap(x, minX, maxX);
 			y = clampAxisWithWrap(y, minY, maxY);
 			fastVerticalScrollRequested = false;
+			applyDeferredMaxYWrite();
 			return;
 		}
 
 		// Full camera freeze (death, cutscenes) - don't update X or Y at all
 		if (frozen) {
 			fastVerticalScrollRequested = false;
+			applyDeferredMaxYWrite();
 			return;
 		}
 
@@ -172,6 +176,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		} else {
 			focusedSpriteRealY = (short) (focusedSprite.getCentreY() - y);
 		}
+
+		short yBeforeVerticalScroll = y;
 
 		// ROM: s2.asm:18121-18132 - Rolling height compensation
 		// When rolling, Sonic's center shifts down by ~5px due to height change.
@@ -286,10 +292,19 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		// camera to a different position than Sonic was wrapped to.
 		// Normal (non-wrap) frames still clamp, which handles pit death in SBZ2
 		// where v_limitbtm2=$510 constrains the camera even though wrapping is active.
-		if (!lastFrameWrapped) {
+		if (!lastFrameWrapped && y != yBeforeVerticalScroll) {
 			y = clampAxisWithWrap(y, minY, maxY);
 		}
 		fastVerticalScrollRequested = false;
+		applyDeferredMaxYWrite();
+	}
+
+	private void applyDeferredMaxYWrite() {
+		if (!deferMaxYWriteUntilAfterUpdate) {
+			return;
+		}
+		setMaxY(deferredMaxYValue);
+		deferMaxYWriteUntilAfterUpdate = false;
 	}
 
 	private void wrapFocusedSpriteYPositionWord() {
@@ -544,10 +559,11 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * With the default {@code Screen_Y_wrap_value = 0xFFFF}, this is equivalent
 	 * to {@code relY in [-24, 248)} — i.e., Y margin = {@code height_pixels = 24}
 	 * symmetrically, NOT 32.
-	 * <p>S1/S2 don't have a {@code Screen_Y_wrap_value} mechanism and the ROM
-	 * routines use slightly different margins. Gate the S3K-specific 24-margin
-	 * via {@link com.openggf.game.PhysicsFeatureSet#useScreenYWrapValueForVisibility()}
-	 * so existing S1/S2 traces keep their 32-margin behaviour.
+	 * <p>S2 {@code BuildSprites_ApproxYCheck} also masks the relative display Y
+	 * coordinate with {@code $7FF} before the same 32-pixel margin check
+	 * ({@code docs/s2disasm/s2.asm:30399-30403}). Keep the game-specific margin
+	 * choice separate from the active camera wrap mask so S1/S2 retain their
+	 * 32-pixel band while wrapped players still refresh {@code render_flags.on_screen}.
 	 */
 	public boolean isVisibleForRenderFlag(AbstractPlayableSprite sprite) {
 		int widthPixels = sprite.getRenderFlagWidthPixels();
@@ -559,6 +575,10 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
 		boolean useS3kMargin = fs != null && fs.useScreenYWrapValueForVisibility();
 		int yMargin = useS3kMargin ? widthPixels : 32;
+		if (verticalWrapEnabled) {
+			int wrappedRelY = relY & verticalWrapMask;
+			return wrappedRelY < height + yMargin || wrappedRelY >= verticalWrapRange - yMargin;
+		}
 		return relY >= -yMargin && relY < height + yMargin;
 	}
 
@@ -702,9 +722,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
-	 * Applies the S3K {@code Screen_Y_wrap_value} mask to a playable object's ROM
-	 * {@code y_pos} equivalent when vertical wrapping is active.
+	 * Applies the ROM screen-Y wrap mask to a playable object's {@code y_pos}
+	 * equivalent when vertical wrapping is active.
 	 * <p>ROM references:
+	 * {@code docs/s2disasm/s2.asm:35945-35948} (Sonic control),
+	 * {@code docs/s2disasm/s2.asm:37829-37832} (Sonic hurt),
+	 * {@code docs/s2disasm/s2.asm:40675-40678} (Tails hurt),
 	 * {@code docs/skdisasm/sonic3k.asm:21989-21992} (Sonic),
 	 * {@code docs/skdisasm/sonic3k.asm:25708-25711} (Tails/player display path),
 	 * {@code docs/skdisasm/sonic3k.asm:26233-26236} (Tails control).
@@ -713,10 +736,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public boolean applyScreenYWrapValue(AbstractPlayableSprite sprite) {
 		if (!verticalWrapEnabled || sprite == null) {
-			return false;
-		}
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		if (fs == null || !fs.useScreenYWrapValueForVisibility()) {
 			return false;
 		}
 		short before = sprite.getCentreY();
@@ -776,6 +795,16 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	public void setMaxY(short maxY) {
 		this.maxY = maxY;
 		this.maxYTarget = maxY;
+	}
+
+	/**
+	 * Defers an object-side max-Y boundary write until the current camera step has
+	 * consumed the previous boundary. This matches ROM paths where an object
+	 * routine runs after ScrollVerti for the visible frame.
+	 */
+	public void setMaxYAfterNextUpdate(short maxY) {
+		this.deferredMaxYValue = maxY;
+		this.deferMaxYWriteUntilAfterUpdate = true;
 	}
 
 	/**
@@ -979,6 +1008,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		horizScrollDelayFrames = 0;
 		frozen = false;
 		deferHorizontalBoundaryClampOnce = false;
+		deferMaxYWriteUntilAfterUpdate = false;
+		deferredMaxYValue = 0;
 		levelStarted = true;
 		focusedSprite = null;
 		yPosBias = DEFAULT_Y_BIAS;
@@ -1026,7 +1057,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 				x, y, minX, minY, maxX, maxY,
 				shakeOffsetX, shakeOffsetY,
 				minXTarget, minYTarget, maxXTarget, maxYTarget,
-				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce, levelStarted,
+				maxYChanging, horizScrollDelayFrames, frozen, deferHorizontalBoundaryClampOnce,
+				deferMaxYWriteUntilAfterUpdate, deferredMaxYValue, levelStarted,
 				verticalWrapEnabled, verticalWrapRange, verticalWrapMask,
 				lastFrameWrapped, wrapDeltaY, yPosBias, fastScrollCap);
 	}
@@ -1049,6 +1081,8 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		horizScrollDelayFrames = snapshot.horizScrollDelayFrames();
 		frozen = snapshot.frozen();
 		deferHorizontalBoundaryClampOnce = snapshot.deferHorizontalBoundaryClampOnce();
+		deferMaxYWriteUntilAfterUpdate = snapshot.deferMaxYWriteUntilAfterUpdate();
+		deferredMaxYValue = snapshot.deferredMaxYValue();
 		levelStarted = snapshot.levelStarted();
 		verticalWrapEnabled = snapshot.verticalWrapEnabled();
 		verticalWrapRange = snapshot.verticalWrapRange();

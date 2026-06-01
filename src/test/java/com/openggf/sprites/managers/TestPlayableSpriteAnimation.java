@@ -79,6 +79,27 @@ public class TestPlayableSpriteAnimation {
                 "S1 should still select the push animation when Status_Push is set");
     }
 
+    @Test
+    public void scriptedSwitchDoesNotRunOnFirstDisplayedFrame() {
+        TestablePlayableSprite sprite = createSprite(PhysicsFeatureSet.SONIC_3K);
+        SpriteAnimationSet animations = new SpriteAnimationSet();
+        animations.addScript(0, new SpriteAnimationScript(0,
+                List.of(7), SpriteAnimationEndAction.LOOP, 0));
+        animations.addScript(0x10, new SpriteAnimationScript(0x2F,
+                List.of(0x8E), SpriteAnimationEndAction.SWITCH, 0));
+        sprite.setAnimationSet(animations);
+        sprite.setObjectControlled(true);
+        sprite.setAnimationId(0x10);
+        sprite.forceAnimationRestart();
+
+        sprite.getAnimationManager().update(0);
+
+        assertEquals(0x10, sprite.getAnimationId(),
+                "A one-frame $FD script must hold its frame for its delay before switching.");
+        assertEquals(0x8E, sprite.getMappingFrame(),
+                "The first update should display the scripted frame, not immediately fall through.");
+    }
+
     private static TestablePlayableSprite createSprite(PhysicsFeatureSet featureSet) {
         TestablePlayableSprite sprite = new TestablePlayableSprite("tails", (short) 0, (short) 0);
         sprite.setPhysicsFeatureSetForTest(featureSet);

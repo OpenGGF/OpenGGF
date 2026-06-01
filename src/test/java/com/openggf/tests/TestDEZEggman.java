@@ -2,15 +2,22 @@ package com.openggf.tests;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import com.openggf.game.sonic2.objects.bosses.Sonic2DEZEggmanInstance;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.TestObjectServices;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 /**
  * Unit tests for the DEZ Eggman transition object (ObjC6 State2).
@@ -194,6 +201,97 @@ public class TestDEZEggman {
         assertEquals(6, getIntField("routineSecondary"), "Should transition to RUN state after timer goes negative");
     }
 
+    @Test
+    public void waitStateUsesClosestSidekickForRomOrientationCheck() {
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x300, (short) 0x168);
+        TestablePlayableSprite sidekick = new TestablePlayableSprite("tails", (short) 0x410, (short) 0x168);
+        eggman.setServices(new TestObjectServices() {
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> main, () -> List.of(sidekick));
+            }
+        });
+
+        eggman.update(0, main); // Init -> Wait
+        eggman.update(1, main);
+
+        assertEquals(4, getIntField("routineSecondary"),
+                "Obj_GetOrientationToPlayer should trigger from the closest sidekick when main is outside range");
+        assertEquals(1, getIntField("currentFrame"), "Triggered wait state should show the surprised frame");
+        assertEquals(0x18, getIntField("timer"), "Triggered wait state should load the ROM pause timer");
+    }
+
+    @Test
+    public void runStateSpawnsExhaustPuffWhenTimerUnderflows() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        eggman.setServices(new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+
+        setIntField("routineSecondary", 6); // STATE_RUN
+        setIntField("currentX", 0x500);
+        setIntField("currentY", 0x168);
+        setIntField("xFixed", 0x500 << 16);
+        setIntField("yFixed", 0x168 << 16);
+        setIntField("xVel", 0x200);
+        setIntField("puffTimer", 0);
+
+        eggman.update(0, null);
+
+        ArgumentCaptor<ObjectInstance> captor = ArgumentCaptor.forClass(ObjectInstance.class);
+        verify(objectManager).addDynamicObjectAfterCurrent(captor.capture());
+        ObjectInstance puff = captor.getValue();
+
+        assertEquals("ExhaustPuff", puff.getClass().getSimpleName(), "ROM should spawn ObjC6 subtype $AA exhaust child");
+        assertEquals(0xC6, puff.getSpawn().objectId(), "Exhaust child should stay ObjC6");
+        assertEquals(0xAA, puff.getSpawn().subtype(), "Exhaust child subtype should be $AA");
+        assertEquals(0x500, puff.getX(), "Exhaust child should spawn at Eggman's pre-move X");
+        assertEquals(0x150, puff.getY(), "ROM subtracts $18 from Eggman's Y when spawning exhaust");
+        assertEquals(5, getIntField(puff, "currentFrame"), "Exhaust child uses ObjC6 mapping frame 5");
+        assertEquals(-0x100, getIntField(puff, "xVel"), "ROM initializes exhaust x_vel to -$100");
+        assertEquals(0, getIntField(puff, "yVel"), "ROM initializes exhaust y_vel to 0");
+        assertEquals(8, getIntField(puff, "timer"), "ROM initializes exhaust timer to 8");
+        assertEquals(0x20, getIntField("puffTimer"), "Parent puff timer should reload to $20 after spawning");
+    }
+
+    @Test
+    public void exhaustPuffUsesRomState4GravityBeforeMoveAndTimerDeletion() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        eggman.setServices(new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+
+        setIntField("routineSecondary", 6); // STATE_RUN
+        setIntField("currentX", 0x500);
+        setIntField("currentY", 0x168);
+        setIntField("xFixed", 0x500 << 16);
+        setIntField("yFixed", 0x168 << 16);
+        setIntField("xVel", 0x200);
+        setIntField("puffTimer", 0);
+        eggman.update(0, null);
+
+        ArgumentCaptor<ObjectInstance> captor = ArgumentCaptor.forClass(ObjectInstance.class);
+        verify(objectManager).addDynamicObjectAfterCurrent(captor.capture());
+        ObjectInstance puff = captor.getValue();
+
+        puff.update(1, null);
+        assertEquals(0x4FF, puff.getX(), "First State4 update moves exhaust left by one pixel");
+        assertEquals(0x150, puff.getY(), "Gravity-before-move adds only $10 subpixels, so integer Y remains");
+        assertEquals(0x10, getIntField(puff, "yVel"), "State4 adds $10 to y_vel before ObjectMove");
+        assertEquals(7, getIntField(puff, "timer"), "State4 decrements objoff_2A before movement");
+
+        setIntField(puff, "timer", 0);
+        puff.update(2, null);
+        assertTrue(puff.isDestroyed(), "Exhaust child deletes when timer decrement goes negative");
+        assertEquals(0x4FF, puff.getX(), "Deletion frame should not apply movement");
+    }
+
     // ========================================================================
     // REFLECTION HELPERS
     // ========================================================================
@@ -209,10 +307,24 @@ public class TestDEZEggman {
     }
 
     private void setIntField(String fieldName, int value) {
+        setIntField(eggman, fieldName, value);
+    }
+
+    private static int getIntField(Object target, String fieldName) {
         try {
-            Field field = Sonic2DEZEggmanInstance.class.getDeclaredField(fieldName);
+            Field field = target.getClass().getDeclaredField(fieldName);
             field.setAccessible(true);
-            field.setInt(eggman, value);
+            return field.getInt(target);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to read field: " + fieldName, e);
+        }
+    }
+
+    private static void setIntField(Object target, String fieldName, int value) {
+        try {
+            Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.setInt(target, value);
         } catch (Exception e) {
             throw new RuntimeException("Failed to set field: " + fieldName, e);
         }

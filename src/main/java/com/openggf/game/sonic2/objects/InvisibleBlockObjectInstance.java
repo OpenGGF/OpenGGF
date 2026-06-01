@@ -60,6 +60,23 @@ public class InvisibleBlockObjectInstance extends BoxObjectInstance
     }
 
     @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // S2 SolidObject_Always_SingleCharacter clears this object's stale
+        // standing bit and returns d4=0 when the player is already airborne,
+        // without falling into SolidObject_cont side resolution
+        // (docs/s2disasm/s2.asm:34874-34893).
+        return true;
+    }
+
+    @Override
+    public boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
+        // Obj74 falls through to S2 SolidObject_cont for new contacts.
+        // That helper adds the live y_radius(a1) to d2, then doubles d2 for
+        // the lower reject bound (docs/s2disasm/s2.asm:35156-35169).
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity,
                                SolidContact contact, int frameCounter) {
         // No special behavior - standard collision handled by ObjectManager

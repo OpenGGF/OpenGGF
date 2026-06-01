@@ -18,6 +18,7 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import com.openggf.debug.DebugColor;
+import com.openggf.game.solid.PlayerSolidContactResult;
 import java.util.List;
 
 /**
@@ -210,6 +211,8 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
         // Animation state
         private int animFrameIndex;  // index into UNFOLD_FRAMES or FOLD_FRAMES
         private int animDelayCounter;
+        private String lastSolidResult = "none";
+        private String lastSolidGeometry = "geom=none";
 
         /**
          * Create a child platform instance.
@@ -267,7 +270,7 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
             switch (state) {
                 case INIT -> updateInit();
                 case UNFOLD -> updateUnfold();
-                case MOVE -> updateMove(frameCounter);
+                case MOVE -> updateMove(frameCounter, player);
                 case FOLD -> updateFold();
                 case DELETE -> updateDelete();
             }
@@ -313,7 +316,7 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
         // ROM: Timer countdown, ObjectMove (Y velocity only), PlatformObject
         // ================================================================
 
-        private void updateMove(int frameCounter) {
+        private void updateMove(int frameCounter, AbstractPlayableSprite player) {
             // subq.w #1,objoff_2A(a0) / bmi.s loc_3BCC0
             moveTimer--;
             if (moveTimer < 0) {
@@ -337,7 +340,31 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
             ySubpixel = (int) (yPos32 & 0xFFFF);
 
             // ROM: loc_3BCDE calls ObjectMove, then PlatformObject immediately.
-            services().solidExecution().resolveSolidNowAll();
+            var batch = services().solidExecution().resolveSolidNowAll();
+            PlayerSolidContactResult result = batch.perPlayer().get(player);
+            int maxTop = SOLID_HALF_HEIGHT_AIR + player.getYRadius();
+            int relX = player.getCentreX() - currentX + SOLID_HALF_WIDTH;
+            int relY = player.getCentreY() - currentY + 4 + maxTop;
+            lastSolidGeometry = String.format("geom p=(%04X,%04X) r=(%d,%d) rel=(%d,%d) maxTop=%d",
+                    player.getCentreX() & 0xFFFF,
+                    player.getCentreY() & 0xFFFF,
+                    player.getXRadius(),
+                    player.getYRadius(),
+                    relX,
+                    relY,
+                    maxTop);
+            lastSolidResult = result == null
+                    ? "missing"
+                    : String.format("%s stand=%s prev=%s preVel=(%04X,%04X) postVel=(%04X,%04X) air=%s on=%s",
+                            result.kind(),
+                            result.standingNow(),
+                            result.standingLastFrame(),
+                            result.preContact().xSpeed() & 0xFFFF,
+                            result.preContact().ySpeed() & 0xFFFF,
+                            result.postContact().xSpeed() & 0xFFFF,
+                            result.postContact().ySpeed() & 0xFFFF,
+                            result.postContact().air(),
+                            result.postContact().onObject());
         }
 
         // ================================================================
@@ -391,6 +418,24 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
         }
 
         @Override
+        public boolean usesCollisionHalfWidthForTopLanding() {
+            // ObjBD passes d1=$23 directly to PlatformObject; it is not an obActWid+$B full-solid width.
+            return true;
+        }
+
+        @Override
+        public boolean usesGroundHalfHeightForTopSolidContact() {
+            // ObjBD loc_3BCDE passes d3=5 as PlatformObject's surface height for new landings.
+            return true;
+        }
+
+        @Override
+        public boolean seedsNewRideCarryFromPreUpdateX() {
+            // ObjBD saves x_pos before ObjectMove and passes it through d4 to PlatformObject.
+            return true;
+        }
+
+        @Override
         public SolidExecutionMode solidExecutionMode() {
             return SolidExecutionMode.MANUAL_CHECKPOINT;
         }
@@ -410,13 +455,15 @@ public class SmallMetalPformObjectInstance extends AbstractObjectInstance {
 
         @Override
         public String traceDebugDetails() {
-            return String.format("state=%s frame=%d timer=%d yv=%04X ysub=%04X flip=%d",
+            return String.format("state=%s frame=%d timer=%d yv=%04X ysub=%04X flip=%d %s solid=%s",
                     state.name(),
                     mappingFrame,
                     moveTimer,
                     yVelocity & 0xFFFF,
                     ySubpixel & 0xFFFF,
-                    xFlipped ? 1 : 0);
+                    xFlipped ? 1 : 0,
+                    lastSolidGeometry,
+                    lastSolidResult);
         }
 
         // ================================================================

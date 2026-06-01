@@ -80,6 +80,8 @@ class TestPreludeFramesKnobsZero {
                 "S2 native-prelude sidekick timing is a game-level title-card execution rule.");
         assertEquals(0, TraceReplayBootstrap.levelObjectTitleCardPreludeFramesForTraceReplay(trace),
                 "S2 level-object metadata knob stays zero; Tornado object preludes need live ObjB2 shape.");
+        assertEquals(26, TraceReplayBootstrap.s2GenericObjectTitleCardPreludeFramesForTraceReplay(trace),
+                "Normal S2 routes fall back to generic title-card object ticks when no live Tornado prelude is active.");
     }
 
     @Test

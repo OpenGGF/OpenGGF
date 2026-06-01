@@ -96,6 +96,13 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
         updateAction(frameCounter);
         updatePosition();
         updateDynamicSpawn(currentX, currentY);
+        // ROM Obj68_Spike (s2.asm:53302) ends with MarkObjGone2 keyed on
+        // spikearoundblock_initial_x_pos (the block's anchor X), not the spike's
+        // extended currentX — so the spike does not despawn early when it pokes
+        // off-screen. This object intentionally performs no self off-screen
+        // despawn: that culling is owned centrally by ObjectManager.Placement,
+        // and the spike's initialX anchor is preserved in this.initialX for the
+        // central check (currentX never replaces it).
     }
 
     /**

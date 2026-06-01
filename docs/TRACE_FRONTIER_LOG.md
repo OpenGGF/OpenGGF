@@ -1,5 +1,937 @@
 # Trace Frontier Log
 
+## 2026-06-01 - S2 WFZ trace PASSES: CNZ conveyor Obj72 byte-width wrap
+
+- Branch: `feature/ai-s2-mtz-parity`; Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Root cause: `Obj72_Init` builds the conveyor half-width with `lsl.b #4,d0`
+  (a byte shift) and `move.b d0,objoff_38(a0)` (s2.asm:54812-54817), so
+  `(subtype & $7F) << 4` truncates to 8 bits. `CNZConveyorBeltObjectInstance`
+  was missing the truncation, so WFZ's `$90`-subtype conveyor got width `0x100`
+  and pushed the player instead of being zero-width. Fix: `& 0xFF`.
+- Guard: `mvn -q -Dmse=relaxed "-Ds2.rom.path=..." "-Dtest=...TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,...TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace,...TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" test`
+  - **WFZ: now PASSES** (was frame 8863 `camera_x`).
+  - CNZ: unchanged at frame 3906 `tails_y` (199 errors).
+  - CNZ2: unchanged at frame 1490 `tails_y_speed` (1293 errors).
+  - Unit: `TestSonic2TriggerParticipation` 40/40 (incl.
+    `cnzConveyorWidthUsesRomByteShiftWrap`).
+
+## 2026-06-01 - S3K speed-shoes byte-timer LANDED (every-8th-frame, ALIGN=7), no regression
+
+- Branch: `feature/ai-s2-mtz-parity`; Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Implemented `PhysicsFeatureSet.speedShoesTimerDecimation` (S1/S2 `1`, S3K `8`)
+  and a decimation/phase-gated `SpeedShoesTimer` (S3K byte timer from 150,
+  decremented on aligned level frames). Decrement gate
+  `(frameCounter + 7) & (decimation-1) == 0`.
+- The diagnosis (prior entry) found the per-frame model matches because it is
+  pickup-relative; the byte timer is global-grid quantized and needs the right
+  phase. The key correction: the engine frame counter at the pre-physics timer
+  read point leads ROM `Level_frame_counter` (read in `Sonic_Display`) by 2
+  (mod 8), so ROM's `Level_frame_counter & 7 == 7` maps to engine
+  `frameCounter & 7 == 1` (ALIGN 7). The earlier ALIGN=1 came from the
+  `AizFlippingBridge` `(frameCounter+3)&7` gate, which only drives an SFX (not a
+  compared trace field), so it was never a valid phase reference.
+- Validation (`-Dmse=off`, ROM paths set):
+  - S3K (no regression, all baseline): CNZ f17276 (1952 err), AIZ f8941 (789 err),
+    MGZ f4124 (3852 err). The +2 offset holding across all three confirms it is a
+    constant seed-phase property, not a per-trace fit.
+  - S1/S2 byte-identical (decimation 1): `TestS2WfzLevelSelectTraceReplay` holds
+    f8863, `TestS2Ehz1TraceReplay` PASS, `TestS1Ghz1TraceReplay` PASS.
+  - Unit: `TestSpeedShoesTimer`, `TestPhysicsProfile`,
+    `TestHybridPhysicsFeatureSet` PASS.
+- Full analysis in
+  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
+
+## 2026-06-01 - S3K speed-shoes diagnosis: per-frame model is pickup-relative; byte timer blocked on frame-counter phase
+
+- Branch: `feature/ai-s2-mtz-parity`; Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Diagnosed why the per-frame approximation uniquely holds S3K CNZ f17276 while
+  the ROM-accurate every-8th-frame byte timer regresses it (see prior entry).
+- Method: temporary `SHOE_PICKUP`/`SHOE_EXPIRE` logging on the committed
+  per-frame model (which matches the CNZ trace through f17276), single run:
+  - `SHOE_PICKUP frameCounter=5369`, `SHOE_EXPIRE frameCounter=6569` — expiry is
+    exactly **pickup + 1200** (pickup-relative). Trace divergence sits at trace
+    frame 6566 / gameplay_frame_counter 6567, inside the shoes window.
+  - Decimation-8 (ALIGN=1, gate `(fc+1)&7==0`): first decrement fc=5375, expiry
+    `5375+149*8 = 6567` — a 1198-frame span, 2 frames early; that gap yields the
+    `x_speed +0x18` divergence at gfc 6567.
+- Root cause: the trace expiry is pickup-relative; the per-frame timer is
+  pickup-relative and phase-independent (immune), whereas the every-8th-frame
+  timer is global-grid quantized and sensitive to the engine frame-counter grid
+  phase at the decrement read point. Matching the trace would need gate
+  `fc&7==1` (ALIGN=7), contradicting the principled ALIGN=1 from the AIZ-bridge
+  calibration — i.e. the pre-physics `TimerManager.update()` reads the counter
+  ~2 frames off the `Sonic_Display`/object-update grid phase ROM uses.
+- Conclusion: byte timer remains blocked on frame-counter phase fidelity at the
+  read point (not granularity). Diagnostic logging reverted; committed per-frame
+  model retained (CNZ stays f17276). Full analysis + refined next steps in
+  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
+
+## 2026-06-01 - S3K speed-shoes byte-timer (every-8th-frame) attempt: regresses CNZ, reverted
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Implemented the design in
+  `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`:
+  `PhysicsFeatureSet.speedShoesTimerDecimation` (S1/S2 `1`, S3K `8`),
+  `SpeedShoesTimer` duration `ROM_DURATION_FRAMES/decimation` (150 for S3K) with
+  the decrement gated on `(frameCounter + 1) & (decimation-1) == 0`. `ALIGN=1`
+  derived from the `(frameCounter+3)&7` gate in `AizFlippingBridgeObjectInstance`.
+- Guard: `mvn -q -Dmse=relaxed "-Ds3k.rom.path=..." "-Dtest=...TestS3kCnzTraceReplay#replayMatchesTrace,...TestS3kAizTraceReplay#replayMatchesTrace,...TestS3kMgzTraceReplay#replayMatchesTrace" test`
+  - AIZ: held f8941 (camera_y). MGZ: held f4124 (y_speed).
+  - **CNZ: regressed f17276 -> f6566** (x_speed expected `0x0368`, actual
+    `0x0380`; `+0x18` = one boosted-accel frame — shoes mistimed). Re-test after
+    ruling out a null-level fallback bug: unchanged f6566, so the level manager
+    is available/advancing at the read point and the regression is genuine.
+  - Unit tests passed; S1/S2 byte-identical (decimation 1).
+- Conclusion: the per-frame approximation is load-bearing for the CNZ trace. The
+  ROM-accurate every-8th-frame gate diverges immediately at f6566 (not a small
+  expiry shift), implying the trace-replay frame-counter phase at the speed-shoes
+  read point does not match ROM `Level_frame_counter` the way the AIZ
+  object-update gate does. Granularity is necessary but not sufficient; phase
+  fidelity at the read point must be diagnosed first. Reverted to the committed
+  per-frame model (CNZ stays f17276). Findings recorded in the design spec's
+  "Implementation status" section.
+
+## 2026-06-01 - S2 speed-shoes timing: CNZ tradeoff + display-phase ordering attempt (reverted)
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+
+### CNZ error-count tradeoff from the WFZ speed-shoes change
+
+Commit `3251a7988 feat(s2): complete WFZ parity` raised
+`PhysicsFeatureSet.SONIC_2.speedShoesTimerPrePhysicsExtraTicks` from `0` to `1`.
+The engine ticks the per-frame speed-shoes word timer in the pre-physics
+`TimerManager.update()` (GameLoop:592 / HeadlessTestRunner.stepFrame), one frame
+before player movement, whereas ROM `Obj01_ChkShoes` decrements
+`speedshoes_time` in `Sonic_Display` after movement (s2.asm:36008-36025). The
+`+1` extends the timer duration by one frame so the player still gets the
+ROM-correct count of boosted (`$18` accel / `$C00` top-speed) movement frames.
+
+Measured both values (commit HEAD; `-Ds2.rom.path` set):
+`mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2CnzLevelSelectTraceReplay#replayMatchesTrace,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay#replayMatchesTrace" test`
+
+| value | CNZ (`TestS2CnzLevelSelectTraceReplay`) | WFZ (`TestS2WfzLevelSelectTraceReplay`) |
+|-------|------|------|
+| `0` (pre-`3251a7988`) | 94 errors, first error f3906 `tails_y` 0x06C0 vs 0x06C1 | 587 errors, first error f4719 `x_speed` 0x08D6 vs 0x08E2 |
+| `1` (committed) | 199 errors, first error f3906 (same field) | 277 errors, first error **f8863** `camera_x` 0x1D09 vs 0x1D0B |
+
+`1` is the ROM-correct boosted-frame count: it advances the WFZ frontier
+f4719 -> f8863 and halves WFZ errors. It also raises CNZ's error count
+94 -> 199 while leaving CNZ's first-error **frame unchanged at f3906**. That
+f3906 `tails_y` off-by-one is a pre-existing, speed-shoes-unrelated bug;
+`0` produced fewer downstream CNZ mismatches only because it ran one fewer
+boosted frame than ROM (the *less* accurate behaviour) and coincidentally
+aligned better past f3906. The CNZ error-count rise is therefore an artifact of
+the unrelated f3906 frontier, not evidence that `0` is correct. Net of the
+change: WFZ frontier advanced, CNZ frontier held, no S2 trace newly broken
+(`TestS2Ehz1TraceReplay` and its regression variants still pass).
+
+### Ordering follow-up: display-phase speed-shoes tick (implemented, validated, REVERTED)
+
+To remove the `+1` compensation constant, attempted modelling the ROM ordering
+directly: a `DisplayPhaseTimer` marker skipped by the pre-physics
+`TimerManager.update()` and ticked from `AbstractPlayableSprite.tickStatus()`
+(the engine's `Sonic_Display` analog, post-movement, where invincibility/spring
+countdowns already live), with `speedShoesTimerPrePhysicsExtraTicks` removed.
+
+- S1/S2 result: behaviourally identical to the `+1` constant, as expected
+  (the `+1` is movement-equivalent to post-movement ticking). CNZ 199 @ f3906,
+  WFZ 277 @ f8863, MTZ3 995 @ f6913, EHZ1 + regression variants PASS.
+- **S3K regression (reason for revert):** S3K's speed-shoes timer is a *byte*
+  timer decremented every 8th level frame
+  (sonic3k.asm:22067-22078,40815-40825), which the shared `SpeedShoesTimer`
+  approximates as a per-frame 0x4B0 counter. Uniformly moving the tick to
+  display time misaligns that S3K approximation:
+  `TestS3kCnzTraceReplay#replayMatchesTrace` regressed **f17276 -> f6568**
+  (1952 -> 3852 errors; `-Ds3k.rom.path` set). Baseline f17276 confirmed by
+  re-running at committed HEAD without the change.
+- Decision: reverted. The S2 `+1` constant is retained (movement-equivalent to
+  ROM `Obj01_ChkShoes`). A correct cross-game ordering fix must first model
+  S3K's every-8th-frame byte-timer granularity; until then, pre-physics ticking
+  with the per-game `speedShoesTimerPrePhysicsExtraTicks` compensation is the
+  lower-risk state. The pre/post-movement timing is not S3K's actual error.
+
+## 2026-06-01 - S2 MTZ3 ObjA2 pincer spawn-tick frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused guard:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.level.objects.TestObjectManagerChildSlotAllocation" test -DfailIfNoTests=false`
+  - PASS: `TestObjectManagerChildSlotAllocation` reports 6 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 6477 to frame 6913.
+  - New frontier: frame 6913 `g_speed` expected `0xFFFF`, actual `0xFFF0`;
+    the prior Slicer ObjA2 pincer contact now matches and Sonic keeps the ROM
+    hurt/ring-loss timeline through that room.
+
+### Root Cause
+
+S2 `ObjA1_LoadPincers` allocates ObjA2 children after the Slicer body. If the
+new child is reached later in the same object pass, the ROM executes ObjA2
+routine 0 initialization on that pass; ObjA2's routine 2 homing movement begins
+on the next pass. The Java `SlicerPincerInstance` constructor already performs
+the routine-0 setup, so same-frame execution made the first engine update
+represent ObjA2_Main one pass too early. `AbstractObjectInstance` now exposes a
+default-off `skipsSameFrameUpdateAfterSpawn()` hook so constructor-initialized
+objects can preserve ROM init/update timing while ordinary children keep the
+existing same-frame `FindNextFreeObj` behavior.
+
+No trace state is hydrated, and the remaining frontier points at a later
+ground-speed mismatch around Slicer/terrain interaction rather than the prior
+ObjA2 hurt-contact window.
+
+## 2026-06-01 - S2 MTZ3 Obj74/Obj69 live-y-radius lower-bound frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestInvisibleBlockObjectInstance,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#nutSolidBottomBoundsUseLiveRollingRadius" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 5143 to frame 5180.
+  - New frontier: frame 5180 `camera_x` expected `0x12FE`, actual `0x12FF`;
+    Sonic now preserves airborne speed through the Obj74/Obj69 lower-bound
+    checks and diverges later around Obj37 spawn/hurt/on-object state.
+- Findings:
+  - Obj74 `SolidObject_Always` and Obj69's `SolidObject` tail both reach the
+    shared S2 `SolidObject_cont` lower-Y reject calculation. That routine adds
+    the live `y_radius(a1)` to `d2` and then doubles `d2`, so rolling players
+    use the smaller rolling radius for the lower half instead of the standing
+    radius.
+  - Obj74 also uses `SolidObject_Always_SingleCharacter`; when its own standing
+    bit is stale and the player is already airborne, the helper clears support
+    and returns `d4=0` without entering side resolution.
+  - No trace state is hydrated, and the remaining frontier points at the next
+    Obj37/hurt/camera interaction after these false side contacts are removed.
+
+## 2026-05-31 - S2 MTZ3 Obj69 nut x-subpixel frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#nutNativeXSnapsPreservePlayerSubpixel" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 4793 to frame 5143.
+  - New frontier: frame 5143 `g_speed` expected `0xFF10`, actual `0x0000`;
+    Sonic's position and subpixel now match through the Obj69 nut snap, but the
+    engine later zeroes airborne horizontal/ground speed during an Obj74
+    invisible-block side contact near `x=$1340,y=$052C`.
+- Findings:
+  - Obj69 align and screw modes write `move.w x_pos(a0),x_pos(a1)` without
+    touching `x_sub(a1)`. The engine had used `setCentreX`, which cleared the
+    player's `x_sub` and produced the frame-4793 subpixel mismatch.
+  - The fix routes Obj69's player X snap through `NativePositionOps` so only
+    the native `x_pos` word changes, preserving the ROM subpixel byte.
+  - No trace state is hydrated, and the remaining frontier points at generic
+    SolidObject side-contact handling for Obj74 rather than Obj69.
+
+## 2026-05-31 - S2 MTZ3 Obj06 cylinder frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSpiralObjectInstance" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 4280 to frame 4656.
+  - New frontier: frame 4656 `x_speed` expected `0x03D8`, actual `0x0000`;
+    Sonic is airborne and rolling at the same y as the ROM, but the engine has
+    just zeroed horizontal velocity near Obj2D/Obj6B terrain while the ROM
+    continues its airborne acceleration.
+- Findings:
+  - Obj06 negative subtypes branch to `Obj06_Cylinder`, not the EHZ spiral
+    path. The cylinder path has its own shallow-overlap capture window,
+    `RideObject_SetRide` latch, `flip_turned` write, animation write, and
+    per-player cylinder angle state.
+  - The active cylinder rider path uses the cosine value returned by
+    `CalcSine` (`d1`), scaled by `$2800`, then writes `flip_angle` before
+    incrementing the cylinder angle by 4 each frame.
+  - No trace state is hydrated, and the remaining frontier points at generic
+    airborne wall/collision handling after the Obj06 cylinder contact now
+    matches longer.
+
+## 2026-05-31 - S2 MTZ3 Obj6B/dead-sidekick wrap frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 3718 to frame 4280.
+  - New frontier: frame 4280 `y` expected `0x03E8`, actual `0x03EC`;
+    Sonic is four pixels low and not on object while the ROM has just latched
+    `Status_OnObj` near monitor/barrier objects after the sidekick dead-fall
+    path now survives the earlier wrap boundary.
+- Findings:
+  - Obj6B stores its initial `x_pos` in `objoff_34` and passes that saved base
+    X to `MarkObjGone2` after movement and `SolidObject`, so the engine's
+    shared out-of-range reference hook must use the base X instead of the
+    moving platform `x_pos`.
+  - S2 `Obj02_Dead` and the S3K Tails dead path run dead-fall movement without
+    applying the normal `Screen_Y_wrap_value` mask. The engine had both a
+    movement-level and SpriteManager frame-level wrap pass, so the same
+    deferred-death predicate now gates both.
+  - No trace state is hydrated, and the remaining frontier points at Sonic
+    landing/contact timing around frame 4280.
+
+## 2026-05-31 - S2 MTZ3 Obj36 crush-death frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 3617 to frame 3718.
+  - New frontier: frame 3718 `y_speed` expected `0x0000`, actual `0x0390`;
+    Sonic remains airborne/falling in the engine while the ROM lands on an
+    Obj6E/Obj6B platform cluster and clears air/rolling/on-object state.
+- Findings:
+  - Obj36 can call `SolidObject_Squash` and `KillCharacter` before it reaches
+    `Touch_ChkHurt2`. ROM `Touch_ChkHurt2` skips when the player's routine is
+    already >= 4, so the shared spike callback must not overwrite the death
+    state with hurt knockback after a solid-object crush kill.
+  - No trace state is hydrated, and the remaining frontier points at generic
+    platform landing/contact state after the Obj36 sidekick death path now
+    matches longer.
+
+## 2026-05-31 - S2 MTZ3 Obj36 spike-contact frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 3603 to frame 3617.
+  - New frontier: frame 3617 `tails_x_speed` expected `0x0000`, actual
+    `0xFE00`; Tails now matches through the upside-down Obj36 hurt/contact
+    frame and later diverges while entering the sidekick platform/hurt-state
+    path near Obj6E/Obj6B/Obj36.
+- Findings:
+  - S2 Obj36 calls `SolidObject`, and S2 `SolidObject_cont` computes the
+    lower Y reject bound by doubling the live `y_radius(a1)`, so rolling
+    underside spike checks must use the smaller rolling radius. This differs
+    from S3K's default-y-radius lower bound and is exposed through the object
+    hook rather than a game/zone branch.
+  - `Touch_ChkHurt2` subtracts the current `y_vel(a1)<<8` before
+    `HurtCharacter`. Because Obj36 calls it after `SolidObject`, the velocity
+    is the post-solid value, not ObjectManager's pre-contact diagnostic
+    snapshot.
+  - No trace state is hydrated, and the remaining frontier points at generic
+    sidekick platform/hurt state after the Obj36 contact now matches longer.
+
+## 2026-05-31 - S2 MTZ3 Obj6E base-anchor frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 3488 to frame 3603.
+  - New frontier: frame 3603 `tails_x_speed` expected `0xFDF1`, actual
+    `0xFE00`; the engine applies Tails hurt/roll-exit one frame before the ROM
+    near Obj36 upside-down spikes.
+- Findings:
+  - Obj6E's normal and indentation routines both check `objoff_34(a0)` against
+    the coarse camera delete window, not the platform's moving `x_pos(a0)`.
+  - The existing ObjectManager out-of-range reference hook handles this without
+    a per-frame, route, or zone exception, so Obj6E now exposes its stored base
+    X through that shared path.
+  - No trace state is hydrated, and the remaining frontier points at
+    Tails/Obj36 upside-down spike solid hurt timing.
+
+## 2026-05-31 - S2 MTZ3 Obj65 deletion-anchor frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit commands:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2616 to frame 3488.
+  - New frontier: frame 3488 `y_speed` expected `0x0000`, actual `0x04F8`;
+    Sonic remains airborne in the engine while the ROM lands on a nearby Obj6E
+    LargeRotPform and clears rolling/on-air state.
+- Findings:
+  - Obj65's tail does not call generic MarkObjGone with moving `x_pos(a0)`.
+    It masks `objoff_34(a0)` against the coarse camera window before deleting
+    the slot and clearing the respawn bit.
+  - The engine's shared out-of-range path already supports object-provided
+    reference coordinates, so Obj65 now exposes its stored base X through that
+    hook instead of adding a per-frame or trace-specific exception.
+  - No trace state is hydrated, and the remaining frontier points at Obj6E
+    LargeRotPform placement/contact parity around Sonic landing.
+
+## 2026-05-31 - S2 MTZ3 Obj65 long-platform frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit commands:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2543 to frame 2616.
+  - New frontier: frame 2616 `tails_air` expected `0`, actual `1`; Tails
+    matches through frame 2615 while riding the right Obj65, then the engine
+    moves Tails to the sidekick placeholder position `0x4000,0` while the ROM
+    keeps Tails at `0x0ACB,0x0750` on object slot `0x39`.
+- Findings:
+  - Obj65 subtype-3 proximity checks MainCharacter and Sidekick before
+    retracting. The engine previously sampled only the update player, so a
+    fully extended platform retracted even when native Tails occupied the ROM
+    detection box.
+  - Obj65 passes `width_pixels+$5` into `SolidObject`, but
+    `SolidObject_Landed` re-reads `width_pixels(a0)` for top landing bounds.
+    The object now exposes that landing width through the existing solid
+    provider hook.
+  - No trace state is hydrated, and the remaining frontier points at generic
+    sidekick ride/despawn handling after the Obj65 contact now matches longer.
+
+## 2026-05-31 - S2 MTZ3 wrapped render flag and Obj66 edge frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit commands:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.camera.TestCamera#testWrappedPlayableRenderFlagVisibilityUsesRelativeYMask" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+  `mvn -q -Dmse=off "-Dtest=com.openggf.game.sonic2.objects.TestMTZSpringWallObjectInstance" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2362 to frame 2543.
+  - New frontier: frame 2543 `tails_x_speed` expected `-045A`, actual
+    `0x0000`; the engine now matches the wrapped Obj6B sidekick landing and
+    the later Obj66 spring-wall bounce timing, then diverges on a Tails
+    platform/side-contact interaction.
+- Findings:
+  - S2 `BuildSprites_ApproxYCheck` masks relative display Y with `$7FF` before
+    applying its 32 px render-flag band. The camera render-flag helper now
+    applies the active vertical-wrap mask while leaving the existing
+    game-specific margin selection intact.
+  - Obj66 calls `SolidObject_Always_SingleCharacter`, which reaches the same
+    `SolidObject_cont` X gate as ordinary solids. That gate rejects values
+    beyond the right edge with `bhi`, so `relX == width*2` remains a valid side
+    contact. Obj66 now exposes that rule through the existing solid-provider
+    hook instead of a frame or route carve-out.
+  - No trace state is hydrated, and the remaining frontier is a generic
+    sidekick/platform contact discrepancy to diagnose through ROM-backed object
+    state.
+
+## 2026-05-31 - S2 MTZ3 jump headroom and vertical wrap move frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit commands:
+  `mvn -q -Dmse=off "-Dtest=com.openggf.tests.physics.CollisionSystemTest#testCalcRoomOverHeadCeilingProbeAppliesRomNibbleFlip" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+  `mvn -q -Dmse=off "-Dtest=com.openggf.sprites.managers.TestPlayableSpriteMovement#s2VerticalWrapMasksYAfterControl,com.openggf.sprites.managers.TestPlayableSpriteMovement#s3kVerticalWrapPreservesYSubpixelLikeRomWordMask" test -DfailIfNoTests=false`
+  - PASS: command exited 0.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from the post-Cog jump/headroom
+    mismatch to frame 2362.
+  - New frontier: frame 2362 `tails_y_speed` expected `0x0000`, actual
+    `0x09C8`; Sonic/player state now matches through the prior jump and S2
+    vertical wrap, but Tails misses a wrapped Obj6B platform landing.
+- Findings:
+  - ROM `Sonic_Jump`/`Tails_Jump` call `CalcRoomOverHead` before allowing
+    jumps. The shared headroom gate now performs the same explicit terrain
+    probes using `x_pos`/`y_pos` radii, direction-specific solidity bits, and
+    the ceiling/left-wall `eori #$F` nibble-flip offsets instead of routing
+    through ordinary sensor scans.
+  - S2 masks playable `y_pos` with `$7FF` after control and hurt movement when
+    `Camera_Min_Y_pos == -$100`. The camera wrap helper now applies the active
+    vertical-wrap mask to playable positions independently of the S1/S2 render
+    visibility margin flag.
+  - The remaining frontier is a shared solid-object/sidekick platform-contact
+    issue around MTZ Obj6B under vertical wrap. No trace state is hydrated, and
+    the changes avoid route/frame carve-outs.
+
+## 2026-05-31 - S2 MTZ3 Obj70 slot order moves ride-exit frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2111 to frame 2152.
+  - New frontier: frame 2152 `y_speed` expected `0x0002`, actual `0x0000`;
+    the player position/status/angle now match through the prior Cog ride exit,
+    but the engine still carries a movement lock while the ROM has resumed
+    walking speed.
+- Findings:
+  - ROM Obj70 creates one SST slot per tooth and each tooth calls
+    `SolidObject` in allocation order. At frame 2111, an earlier tooth slot can
+    side-push Sonic before the later ridden tooth's standing-bit branch runs
+    its `ExitPlatform` bounds check.
+  - The engine represents Obj70 as one aggregate multi-piece object, so the
+    shared multi-piece solid path now exposes an opt-in ordering hook for
+    ROM-slot aggregate objects. Obj70 uses that hook to resolve earlier pieces
+    before the currently ridden piece and then continues processing later
+    sibling pieces.
+  - This keeps the fix in object/runtime state and avoids trace hydration,
+    route/frame carve-outs, or MTZ-specific branches in the shared solid path.
+
+## 2026-05-31 - S2 MTZ3 Obj70 inclusive right edge moves frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Diagnostic trace regeneration:
+  `powershell -NoProfile -ExecutionPolicy Bypass -File tools\bizhawk\record_s2_level_select_traces.ps1 -RomPath "C:\Users\farre\IdeaProjects\sonic-engine\Sonic The Hedgehog 2 (W) (REV01) [!].gen" -MoviesDir "C:\Users\farre\IdeaProjects\sonic-engine\docs\BizHawk-2.11-win-x64\Movies" -Only mtz3`
+  - PASS: regenerated `src/test/resources/traces/s2/mtz3` with recorder
+    `9.8-s2` and diagnostic per-frame Tails CPU state.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2032 to frame 2111.
+  - New frontier: frame 2111 `air` expected `1`, actual `0`; the engine now
+    matches the prior frame-2032 sidekick ground-speed state and reaches a
+    later Cog ride-exit mismatch.
+- Findings:
+  - Regenerated ROM CPU diagnostics show that frame 2032 Tails sees delayed
+    Sonic status `0x20` (`Status_Push`) and writes right input via
+    `Ctrl_2_Held_Logical=0x08`, which produces the expected
+    `tails_g_speed=0x000C`.
+  - The remaining engine mismatch was not a sidekick CPU shortcut. ROM
+    `SolidObject_cont` uses `bhi.w SolidObject_TestClearPush` after comparing
+    `relX` with `width*2`, so the right edge is inclusive for new contact.
+  - Obj70 now advertises that ROM edge rule through the existing solid-provider
+    hook. This stays object/data driven and does not hydrate state from trace
+    diagnostics or add route/frame carve-outs.
+
+## 2026-05-31 - S2 MTZ3 Obj70 riding snap moves Cog frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed clean test "-Dtest=com.openggf.level.objects.TestSolidObjectManager#multiPieceRiderCarryDoesNotReapplyNewLandingSnapOnSamePiece,com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzCogRotationUsesRomVisibleLevelFrameCounter" -DfailIfNoTests=false`
+  - PASS: 2 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 2031 to frame 2032.
+  - New frontier: frame 2032 `tails_g_speed` expected `0x000C`, actual
+    `0x0000`; the frame-2031 Cog X/Y contact now matches, and the remaining
+    mismatch is sidekick push/ground-speed state after the continued Cog ride.
+- Findings:
+  - The ROM Obj70 source reads `move.b (Level_frame_counter+1).w,d0`. On 68k,
+    `+1` selects the low byte of the word label, but `LevelManager` exposes the
+    previous completed level frame until its late-frame `update()`, after
+    object dispatch. Obj70 therefore needs the next engine-visible counter to
+    match the ROM-visible low byte during object execution.
+  - ROM Obj70 represents each cog tooth as a separate object slot. During a
+    continued ride, the currently ridden slot takes the standing-bit branch,
+    calls `MvSonicOnPtfm`, and returns before `SolidObject_Landed`.
+  - The engine's aggregated `MultiPieceSolidProvider` path was carrying the
+    rider and then processing the same piece again as a new landing, applying
+    the extra `subq #1` snap. The shared solid path now skips the already
+    handled riding piece and still checks sibling pieces.
+  - This stays in object/runtime state: no trace hydration, no route/frame
+    carve-out, and no MTZ-specific framework branch.
+
+## 2026-05-31 - S2 MTZ3 Obj70 frame-counter rotation moves Cog frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 1982 to frame 2031.
+  - New frontier: frame 2031 `x` expected `0x081D`, actual `0x0812`; the
+    engine now gets through the prior sidekick Cog velocity reversal, then
+    diverges during the next Cog/platform push ordering interaction.
+- Findings:
+  - Obj70 uses `move.b (Level_frame_counter+1).w,d0` before masking with
+    `#$F`. On 68k this reads the low byte at `Level_frame_counter+1`; it is not
+    arithmetic `frameCounter + 1`.
+  - The engine object update argument is the dispatcher VBlank counter, so the
+    Cog must sample `LevelManager.getFrameCounter()` to match the ROM rotation
+    gate.
+  - This keeps the fix in Obj70's ROM-state model and does not hydrate from
+    trace data or add MTZ/frame/route-specific compensation.
+
+## 2026-05-31 - S2 MTZ3 multi-piece push cleanup moves Cog frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed clean test "-Dtest=com.openggf.level.objects.TestSolidObjectManager" -DfailIfNoTests=false`
+  - PASS: `TestSolidObjectManager` reports 39 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 1979 to frame 1982.
+  - New frontier: frame 1982 `tails_g_speed` expected `0xFF80`, actual `0x006A`; Tails and the cog match through frames 1979-1981, then the ROM reverses Tails's ground velocity during the next Cog interaction while the engine continues along the existing slope vector.
+- Findings:
+  - The frame-1979 mismatch was stale sidekick `Status_Push`: the shared multi-piece solid path set the object-owned pushing bit, but unlike single-piece `SolidObject` handling it never cleared that bit when the piece stopped pushing.
+  - Multi-piece solids now run the same object-owned `SolidObject_TestClearPush` cleanup as single-piece solids in both inline and post-resolution contact paths.
+  - This keeps the fix in the shared solid framework used by Obj70-style multi-piece solids; it does not hydrate from trace state or add MTZ/frame/route-specific compensation.
+
+## 2026-05-31 - S2 MTZ3 Obj6B bouncy-platform parity moves frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: `TestSonic2ObjectBugFixes` reports 7 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 1311 to frame 1744.
+  - New frontier: frame 1744 `x` expected `0x0606`, actual `0x0605`; the nearby active object is Obj64 MTZ Twin Stompers at `(0x0620,0x05B8)` in the ROM versus `(0x0620,0x05C8)` in the engine, with a one-pixel camera/player X phase mismatch.
+- Findings:
+  - The frame-1311 mismatch was Obj6B subtype 7, not the type-5 trigger-fall path.
+  - Obj6B type 7 must arm `objoff_38` from the standing bit as soon as the shared solid pass establishes contact, so the following object dispatch runs `ObjectMove` on the ROM schedule.
+  - Obj6B falling/bouncy movement now uses the ROM `y_pos.w:y_sub.w` 16.16 accumulator and preserves `y_sub` across `move.w y_pos` writes.
+
+## 2026-05-31 - S2 MTZ3 Shellcracker and spin-tube parity moves frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.game.sonic2.objects.badniks.TestShellcrackerClawInstance,com.openggf.game.sonic2.objects.TestMTZSpinTubeObjectInstance" test -DfailIfNoTests=false`
+  - PASS: focused Shellcracker claw and MTZ spin-tube tests.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 764 to frame 1311.
+  - New frontier: frame 1311 `y` expected `0x050D`, actual `0x050C`; the player subpixels now match the ROM, and the remaining mismatch tracks a one-pixel Obj6B MTZ platform/camera vertical phase lag.
+- Findings:
+  - ObjA0 Shellcracker claw child slots need the same init-pass delay as the ROM `ObjA0_Init` path before entering active claw logic.
+  - Obj67 Spin Tube writes playable native position words without clearing subpixels and sets `AniIDSonAni_Roll` without setting `status.player.rolling`.
+  - The next MTZ3 investigation should inspect Obj6B platform oscillator/update ordering against `Obj6B_Types`, not add player, route, frame, or trace-specific compensation.
+
+## 2026-05-31 - S2 native object prelude fallback moves MTZ3 frontier
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed clean test "-Dtest=com.openggf.trace.TestPreludeFramesKnobsZero" -DfailIfNoTests=false`
+  - PASS: 9 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: fail, but the first error moved from frame 233 to frame 764.
+  - New frontier: frame 764 `x_speed` expected `0x0197`, actual `-0x0200`; Sonic is hurt by Shellcracker claw ObjA0 at `(0x0617,0x01EB)` while the ROM is still riding Obj6E.
+- Findings:
+  - The previous frame-233 Slicer body bounce was caused by suppressing the generic S2 title-card object prelude whenever the broad S2 Tornado metadata predicate matched.
+  - `TraceReplaySessionBootstrap` already uses the live ObjB2 shape to select the route-specific Tornado object prelude. When no live Tornado prelude is active, normal native S2 routes need the generic 26 object ticks.
+  - This keeps the bootstrap rule generic: no MTZ/Slicer timing offset, no trace hydration, and no route carve-out.
+
+## 2026-05-31 - S2 MTZ3 Slicer orientation audit
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Focused unit command:
+  `mvn -q -Dmse=relaxed clean test "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#mtzSlicerThrowUsesClosestNativePlayerByRomX+mtzSlicerPincerHomesTowardClosestNativePlayerByRomX" -DfailIfNoTests=false`
+  - PASS: 2 tests, 0 failures.
+- Focused trace command:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result remains fail at frame 233: `y_speed` expected `0x03A8`, actual `-0x03A8`.
+- Findings:
+  - ObjA1/ObjA2 now use the shared `ObjectPlayerQuery` native P1/P2 nearest-X policy for the ROM `Obj_GetOrientationToPlayer` behavior; this was a real Slicer parity gap but did not move the trace frontier.
+  - ObjA2 pincer child spawns now carry object id `0xA2` instead of inheriting the parent ObjA1 spawn id.
+  - The remaining MTZ3 frame-233 mismatch is consistent with object title-card prelude/placement alignment: ROM has the first Slicer already advanced from placement `0x0230` to `0x0229.C000` before trace frame 0, then reaches throw windup at `(0x01FA,0x01F0)`. The engine still reaches the contact path with the Slicer body at `(0x0200,0x01EF)`, so the next investigation should stay in the generic S2 native-prelude object placement/update path rather than adding a Slicer or MTZ-specific timing offset.
+
+## 2026-05-31 - S2 MTZ parity metadata/event-state pass trace verification
+
+- Branch: `feature/ai-s2-mtz-parity`
+- Worktree: `.worktrees/feature-ai-s2-mtz-parity`
+- Command: `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2MtzLevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz2LevelSelectTraceReplay,com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+- Result: fail, 3 trace failures; no committed trace-code fix in this pass.
+  - MTZ1: frame 375 `tails_air` expected 1 actual 0; matches the existing Tails despawn/`Tails_interact_ID` diagnostic gap below.
+  - MTZ2: frame 305 `y` expected `0x05EB` actual `0x05EA`; matches the existing 1 px Obj6C conveyor landing residual below.
+  - MTZ3: frame 233 `y_speed` expected `0x03A8` actual `-0x03A8`; current isolated worktree exposes an earlier Slicer contact mismatch than the older f765 sidekick frontier recorded below. The engine destroys ObjA1 at `(0x0200,0x01EF)` while the trace has ObjA1 routine 8 at `(0x01FA,0x01F0)`, so the next owner should inspect Slicer movement/activation timing and touch overlap before revisiting the later sidekick-air frontier.
+
+The code changes in this pass are limited to static parity bookkeeping and ROM-state preservation: S2 object discovery now marks MTZ dynamic boss IDs `0x53`/`0x54` implemented, Obj66 opts out of the shared offscreen solid gate, and MTZ3 routine 6 mirrors the ROM write to `Tails_Min_Y_pos` in sidekick rewind state. `docs/s2disasm/s2.constants.asm` notes `Tails_Min_Y_pos` is only written, so the new min-Y field is intentionally not consumed by movement.
+
+## 2026-05-31 - S2 WFZ trace frontier closed
+
+- Scope: local S2 WFZ parity work on the existing branch. The WFZ level-select
+  replay now matches the reference trace end-to-end.
+- Main fixes: S2 speed-shoes timer phase compensation; held-input publication
+  before S2 level events; WFZ wind tunnel and control-lock pre-physics
+  ordering; ObjCC Breakable Plating contact latching; ObjC0 Speed Launcher
+  rider-mask latching; ObjBD/ObjBE platform profile geometry; WFZ boss child
+  slot/lifecycle, laser, defeat, and deferred camera-bound behavior; WFZ
+  Tornado start/end cutscene docking, persistent helper children, invisible
+  grabber touch latch, and DEZ transition alignment. Follow-up audit removed
+  the WFZ event PLC placeholders by requesting ROM PLCs 0x3E/0x3F at the
+  secondary-event thresholds and added rewind coverage for WFZ BG scroll state
+  plus `WFZ_LevEvent_Subrout`. A later PLC audit registered the WFZ boss,
+  Robotnik, and fiery-explosion PLC entries so the event-triggered PLC path
+  can dispatch `PLCID_WfzBoss` directly instead of relying only on WFZ zone-init
+  boss-art registration. The WFZ-to-DEZ target audit also filled the ObjC6
+  running exhaust child (`subtype $AA`) that the ROM spawns while Eggman runs
+  to the Death Egg Robot cockpit, and routes ObjC6's wait-state proximity
+  check through the closest main/sidekick player like `Obj_GetOrientationToPlayer`.
+  ObjC7 now routes its stomp and defeat rumble writes into `SwScrl_DEZ`'s
+  ROM `DEZ_Shake_Timer`/ripple path and renders bomb detonation with the
+  ROM-backed Obj58 fiery-explosion mappings. The WFZ Tornado cutscene path now
+  routes playable native-position writes through `NativePositionOps` instead
+  of the legacy raw preserve-subpixel setters.
+- Focused WFZ trace:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: prints `All frames match trace. No divergences.`
+- WFZ object/boss/cutscene regression group:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestWFZBoss,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay,com.openggf.game.sonic2.objects.TestTornadoObjectInstance" test`
+  - PASS: 45 tests, 0 failures. Trace output includes runtime parsing of
+    `PLC 0x3E` and `PLC 0x3F` before `All frames match trace. No divergences.`
+- WFZ event/rewind specs:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestTodo12_WFZEventSpecs,com.openggf.game.sonic2.TestSonic2LevelEventRewindSnapshot" test`
+  - PASS: 24 tests, 0 failures.
+- WFZ ROM art audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestTodo21_23_MissingArtSheets" test`
+  - PASS: 11 tests, 0 failures. Obj19 WFZ platform now builds from
+    `ArtNem_WfzFloatingPlatform`/`Obj19_MapUnc_2222A`, dispatches through
+    the PLC registry as `wfz_platform`, and the WFZ trace loads 45 renderers
+    for zone 6 instead of the previous 42. WFZ Robotnik now composes the
+    ROM PLC art blocks at `$0500`/`$0518`/`$0564` and shifts
+    `ObjC6_MapUnc_3D0EE` mappings out of absolute VRAM tile space. ObjBF
+    WFZStick now builds from the ROM's `ArtNem_WfzUnusedBadnik` /
+    `ObjBF_MapUnc_3BEE0` data and dispatches through the PLC registry as
+    `wfz_stick`. ObjBB now builds from the shared WFZ hook tile base
+    (`ArtTile_ArtNem_Unknown = $03FA`) and its own `ObjBB_MapUnc_3BBA0`
+    removed-object mappings as `wfz_unknown`.
+- WFZ runtime PLC dispatch audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestSonic2PlcParser#testWfzRuntimePlcsHaveArtDispatchRegistrations" test`
+  - PASS: 1 test, 0 failures. ROM parsing reports `PLC 0x3E: 5 entries`
+    and `PLC 0x3F: 3 entries`; each entry now has a `Sonic2PlcArtRegistry`
+    dispatch target for runtime event requests.
+- WFZ palette ownership audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestSonic2PaletteOwnershipIntegration" test`
+  - PASS: 9 tests, 0 failures. WFZ now has direct ownership/ROM-byte
+    verification for `PalCycle_WFZ`: fire/belt writes to normal palette line
+    3 colors 7-10, cycle 1 writes color 14, cycle 2 writes color 15, and
+    `WFZ_SCZ_Fire_Toggle` selects the conveyor palette with the ROM's
+    five-frame delay.
+- WFZ scroll-table audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.scroll.TestSwScrlWfz" test`
+  - PASS: 4 tests, 0 failures. The test locks `SwScrl_WFZ` table loading to
+    the ROM bytes at `$C8CA`/`$C916`, verifies the normal table's `$980`
+    line-count coverage and the transition table's `$A00` coverage for every
+    reachable `Camera_BG_Y_pos & $7FF` visible span, and guards the `$2700`
+    ship-threshold table switch.
+- WFZ ObjB7 vertical laser audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestVerticalLaserObjectInstance,com.openggf.game.sonic2.TestSonic2WfzObjectProfile" test`
+  - PASS: 7 tests, 0 failures. ObjB7 now has a registry/profile constant
+    path for the WFZ debug/runtime ID, the profile guard covers every concrete
+    WFZ debug/runtime/pointer-table factory except Obj25 rings (handled by
+    the ring manager), and the ObjB6 child-spawn path now records ObjB7
+    identity instead of inheriting the tilting platform's object id.
+- WFZ ObjB8 wall-turret projectile audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wallTurretShotUsesRomObj98SubtypeIdentity+wallTurretFireSpawnsObj98ProjectileChild" test`
+  - PASS: 2 tests, 0 failures. ObjB8 now spawns its shot through the child
+    allocation path with ROM Obj98 identity and subtype `$8E`, matching
+    `ObjB8`'s `ObjID_Projectile` / `ObjB8_SubObjData2` handoff instead of
+    inheriting the parent turret object id.
+- WFZ ObjB8 wall-turret projectile animation audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wallTurretShotUsesRomObj98SubtypeIdentity,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 2 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.` ObjB8 shot animation now follows
+    ROM `AnimateSprite` startup: newly allocated Obj98 begins with
+    `anim_frame=0`, so the first `Obj98_WallTurretShotMove` update displays
+    script frame 3 before later advancing to frame 4.
+- WFZ ObjB8 wall-turret closest-player audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wallTurretFireSpawnsObj98ProjectileChild+wallTurretDetectsClosestQueryOnlySidekick+wallTurretAimsAndFiresAtClosestQueryOnlySidekick" test`
+  - PASS: 3 tests, 0 failures. ObjB8 detection and aiming now use
+    `ObjectPlayerQuery.nearestByRomX`, matching `Obj_GetOrientationToPlayer`'s
+    MainCharacter/Sidekick horizontal-distance selection before applying the
+    below-player and aiming gates.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 32 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjB9 laser render-flag audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestLaserObjectInstance" test`
+  - PASS: 2 tests, 0 failures. ObjB9 now waits on the ROM render-bounds
+    equivalent for `render_flags.on_screen`, using `width_pixels=$60` and the
+    BuildSprites approximate 32px Y margin, so the intro laser activates when
+    its wide sprite overlaps the viewport rather than when its center point
+    enters the viewport.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestLaserObjectInstance,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 3 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjB5 horizontal-propeller native-position audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#hPropellerPushesQueryOnlySidekick" test`
+  - PASS: 1 test, 0 failures. ObjB5 now applies its upward push through
+    `NativePositionOps.writeYPosPreserveSubpixel`, matching the ROM's
+    `add.w d1,y_pos(a1)` centre-coordinate write while preserving the
+    existing ObjectPlayerQuery sidekick participation path.
+- WFZ ObjB4 vertical-propeller SFX/collision audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestVPropellerObjectInstance" test`
+  - PASS: 2 tests, 0 failures. ObjB4 now gates the helicopter SFX on
+    `(Vint_runcount+3) & $1F`, matching the ROM's byte read instead of
+    playing on raw frame-counter multiples, and the y-flip collision-clear
+    path is covered.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestVPropellerObjectInstance,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 3 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjBF unused badnik audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.badniks.TestWFZStickBadnikInstance" test`
+  - PASS: 2 tests, 0 failures. ObjBF is registered as `Sonic2ObjectIds.WFZ_STICK`
+    and animates through the ROM `0,1,2,$FF` loop with collision size index 4.
+- WFZ ObjBB removed-object audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.badniks.TestWFZUnknownBadnikInstance,com.openggf.game.sonic2.TestTodo21_23_MissingArtSheets#testWFZUnknownSheetBuildsFromHookTileBaseAndObjBBMappings,com.openggf.game.sonic2.TestSonic2WfzObjectProfile" test`
+  - PASS: 7 tests, 0 failures. ObjBB is registered as
+    `Sonic2ObjectIds.WFZ_UNKNOWN`, keeps the ROM's collision size index `$09`,
+    and renders the single removed-object mapping frame without movement.
+- WFZ ObjBC ship-fire BG-offset audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestWFZShipFireObjectInstance,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 3 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.` ObjBC now reads
+    `Camera_BG_X_offset` from the WFZ event state (`Sonic2WFZEvents`) with a
+    parallax fallback only for non-WFZ/test contexts, so the flame position and
+    `$380` delete threshold follow the same ROM-owned state as `SwScrl_WFZ`
+    and the WFZ Tornado docking logic.
+- WFZ ObjBC ship-fire init-frame audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestWFZShipFireObjectInstance,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 3 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.` ObjBC now preserves the ROM's
+    init frame split (`LoadSubObject`, save `x_pos` to `objoff_2C`, then
+    `rts`) before the BG-offset/delete/flicker main routine runs.
+- WFZ ObjC2 rivet native-player audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wfzRivetBustIsNativeMainCharacterOnly+wfzRivetStillBustsForRollingNativeMainCharacter" test`
+  - PASS: 2 tests, 0 failures. ObjC2 now stores and consumes the ROM
+    `MainCharacter+anim` slot for the rolling bust check; sidekick solid
+    contact stays solid but cannot open the ship passage because the ROM
+    routine has no Sidekick branch.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 28 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjC1 breakable-plating native-player audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wfzBreakablePlatingTouchSignalIsNativeMainCharacterOnly+wfzBreakablePlatingNativeMainTouchStillGrabs" test`
+  - PASS: 2 tests, 0 failures. ObjC1 now treats Touch_Special's
+    `collision_property` signal as native-P1-only before entering the grab
+    routine, matching the ROM branch that checks and manipulates only
+    `MainCharacter`.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 30 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjC3/ObjC4 Tornado smoke audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestTornadoSmokeObjectInstance,com.openggf.game.sonic2.TestSonic2WfzObjectProfile" test`
+  - PASS: 7 tests, 0 failures. ObjC3 and ObjC4 are now registered constants
+    and factories, with ObjC4 sharing the ObjC3 routine, using explosion art,
+    drifting at `-$100/-$100`, advancing every eight ticks, and deleting when
+    `mapping_frame` reaches 5.
+- WFZ Tornado native-position cleanup audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard#productionPlayableNativePositionRawPreserveSubpixelWriteFilesDoNotGrow+objectManagerUsesNativePositionOpsForPlayablePreserveSubpixelWrites,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 3 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+  `mvn "-Dmse=off" "-Dtest=com.openggf.level.objects.TestObjectPhysicsStandardizationGuard,com.openggf.game.sonic2.objects.TestTornadoObjectInstance" test`
+  - PARTIAL: `TestTornadoObjectInstance` passes 14 tests, but the full guard
+    still reports unrelated existing violations in MTZ/S3K object files.
+    `TornadoObjectInstance` was removed from the legacy raw native-position
+    write allowlist.
+- WFZ Obj80 sidekick audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation" test`
+  - PASS: 23 tests, 0 failures. Obj80 Moving Vine / WFZ Hook now routes
+    both native interaction slots through `ObjectPlayerQuery`, matching the
+    ROM's `MainCharacter` then `Sidekick` calls into `Obj80_Action`.
+- WFZ ObjD9 invisible-grab sidekick/native-position audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wfzGrabObjectGrabsQueryOnlySidekickAsNativeP2+wfzGrabObjectReleasesQueryOnlySidekickWithDirectionCooldown" test`
+  - PASS: 2 tests, 0 failures. ObjD9 now routes MainCharacter/Sidekick
+    interaction through `ObjectPlayerQuery`, drives the native-P2
+    `objoff_31/objoff_33` grab and cooldown bytes from sidekick participants,
+    and writes the hang snap through `NativePositionOps` for the ROM
+    `move.w y_pos(a0),y_pos(a1)` centre-coordinate write.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 34 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ ObjBE/ObjD9 render-bounds audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wfzGrabObjectUsesRomRenderWidth+lateralCannonUsesRomRenderWidth+wfzGrabObjectGrabsQueryOnlySidekickAsNativeP2+lateralCannonDropsQueryOnlyRidingSidekickOnRetract" test`
+  - PASS: 4 tests, 0 failures. ObjBE and ObjD9 now expose their ROM
+    `width_pixels=$18` values through `getOnScreenHalfWidth()` instead of
+    inheriting the shared `$10` default used by smaller objects.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 36 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ remaining SubObjData render-bounds audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestVerticalLaserObjectInstance,com.openggf.game.sonic2.objects.TestVPropellerObjectInstance,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#wallTurretShotUsesRomObj98SubtypeIdentity,com.openggf.game.sonic2.objects.badniks.TestWFZStickBadnikInstance,com.openggf.game.sonic2.objects.badniks.TestWFZUnknownBadnikInstance" test`
+  - PASS: 10 tests, 0 failures. ObjB7, ObjB8 shot, ObjB4, ObjBF, and
+    ObjBB now expose their ROM `width_pixels` (`$18`, `4`, `4`, `4`, and
+    `$0C`) through `getOnScreenHalfWidth()` instead of inheriting the shared
+    `$10` default.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 36 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+- WFZ object checklist audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestSonic2WfzObjectProfile" test`
+  - PASS: 7 tests, 0 failures. The ROM-backed `ObjectDiscoveryTool` scan
+    reports Wing Fortress Act 1 as `Implemented: 25 | Unimplemented: 0`;
+    ObjC5 WFZBoss is now included in `Sonic2ObjectProfile` implemented IDs.
+    The immediate WFZ-to-DEZ target now also has concrete ObjC6/ObjC7
+    factories/profile coverage, and Death Egg Act 1 reports
+    `Implemented: 3 | Unimplemented: 0`.
+  `mvn "-Dmse=off" exec:java "-Dexec.mainClass=com.openggf.tools.ObjectDiscoveryTool" "-Dexec.args=--game s2 --output target/s2-object-checklist.md"`
+  - PASS: Sonic 2 report now has 120 implemented / 2 unimplemented globally,
+    with the remaining unimplemented objects outside WFZ/DEZ.
+- WFZ-to-DEZ target boss object audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.TestSonic2WfzObjectProfile,com.openggf.tests.TestDEZEggman,com.openggf.tests.TestDEZDeathEggRobot" test`
+  - PASS: 64 tests, 0 failures. ObjC6 is now registered from the ROM layout
+    path via `Sonic2ObjectRegistry`, and ObjC6/ObjC7 are counted as
+    implemented by `Sonic2ObjectProfile` for the transition target. ObjC6's
+    wait-state player check now uses the closest main/sidekick participant.
+    ObjC7's bomb detonation renders Obj58 boss-explosion frames instead of
+    the robot bomb frame.
+- WFZ-to-DEZ ObjC7 DEZ shake audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.scroll.TestSwScrlDez,com.openggf.tests.TestDEZDeathEggRobot" test`
+  - PASS: 38 tests, 0 failures. `SwScrl_DEZ` now consumes the ROM
+    `DEZ_Shake_Timer`, applies `SwScrl_RippleData` X/Y offsets to shake
+    camera copies and FG/BG VScroll, and counts down/clears the timer after
+    the final ripple frame. ObjC7 writes `$40` on stomp landing and `$1000`
+    during the defeat/ending rumble.
+- WFZ-to-DEZ ObjC6 exhaust puff audit:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.TestDEZEggman" test`
+  - PASS: 21 tests, 0 failures. ObjC6 State4 now spawns subtype `$AA`
+    exhaust puff children on the ROM timer underflow, with mapping frame 5,
+    `x_vel=-$100`, `y_pos-=$18`, `objoff_2A=$08`, and the ROM's
+    gravity-before-move State4 update/delete order. The same test class covers
+    sidekick-triggered `Obj_GetOrientationToPlayer` proximity selection.
+- Supporting focused checks:
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay" test`
+  - PASS: 30 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay,com.openggf.tests.TestWFZBoss,com.openggf.tests.TestDEZEggman,com.openggf.tests.TestDEZDeathEggRobot,com.openggf.game.sonic2.objects.TestTornadoObjectInstance,com.openggf.game.sonic2.objects.TestTornadoSmokeObjectInstance,com.openggf.game.sonic2.objects.TestVerticalLaserObjectInstance,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.game.sonic2.objects.badniks.TestWFZStickBadnikInstance,com.openggf.game.sonic2.objects.badniks.TestWFZUnknownBadnikInstance,com.openggf.game.sonic2.TestTodo21_23_MissingArtSheets,com.openggf.game.sonic2.TestTodo12_WFZEventSpecs,com.openggf.game.sonic2.TestSonic2LevelEventRewindSnapshot,com.openggf.game.sonic2.TestSonic2WfzObjectProfile,com.openggf.game.sonic2.TestSonic2PaletteOwnershipIntegration,com.openggf.game.sonic2.scroll.TestSwScrlWfz,com.openggf.game.sonic2.scroll.TestSwScrlDez,com.openggf.game.sonic2.TestSonic2PlcParser#testWfzRuntimePlcsHaveArtDispatchRegistrations,com.openggf.game.TestZoneEventRuntimeAccessGuard,com.openggf.tests.TestArchitecturalSourceGuard" test`
+  - PASS: 203 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+  `mvn "-Dmse=off" "-Dtest=com.openggf.tests.trace.s2.TestS2WfzLevelSelectTraceReplay,com.openggf.tests.TestWFZBoss,com.openggf.tests.TestDEZEggman,com.openggf.tests.TestDEZDeathEggRobot,com.openggf.game.sonic2.objects.TestTornadoObjectInstance,com.openggf.game.sonic2.objects.TestTornadoSmokeObjectInstance,com.openggf.game.sonic2.objects.TestVerticalLaserObjectInstance,com.openggf.game.sonic2.objects.TestVPropellerObjectInstance,com.openggf.game.sonic2.objects.TestWFZShipFireObjectInstance,com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation,com.openggf.game.sonic2.objects.badniks.TestWFZStickBadnikInstance,com.openggf.game.sonic2.objects.badniks.TestWFZUnknownBadnikInstance,com.openggf.game.sonic2.TestTodo21_23_MissingArtSheets,com.openggf.game.sonic2.TestTodo12_WFZEventSpecs,com.openggf.game.sonic2.TestSonic2LevelEventRewindSnapshot,com.openggf.game.sonic2.TestSonic2WfzObjectProfile,com.openggf.game.sonic2.TestSonic2PaletteOwnershipIntegration,com.openggf.game.sonic2.scroll.TestSwScrlWfz,com.openggf.game.sonic2.scroll.TestSwScrlDez,com.openggf.game.sonic2.TestSonic2PlcParser#testWfzRuntimePlcsHaveArtDispatchRegistrations,com.openggf.game.TestZoneEventRuntimeAccessGuard,com.openggf.tests.TestArchitecturalSourceGuard" test`
+  - PASS: 220 tests, 0 failures; the WFZ trace prints
+    `All frames match trace. No divergences.`
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.TestPhysicsProfile#testSpeedShoesTimerPhaseCompensation_PerGame" test`
+  - PASS: 1 test, 0 failures.
+  `mvn "-Dmse=off" "-Dtest=com.openggf.game.sonic2.objects.TestSonic2TriggerParticipation#cnzConveyorWidthUsesRomByteShiftWrap+cnzConveyorShiftsNativePositionWhenInsideWrappedBounds" test`
+  - PASS: 2 tests, 0 failures.
+- Known-green trace guard:
+  `mvn "-Dmse=off" "-Dsurefire.forkCount=1" "-Dtest=com.openggf.tests.trace.s1.TestS1Ghz1TraceReplay,com.openggf.tests.trace.s1.TestS1Mz1TraceReplay,com.openggf.tests.trace.s2.TestS2Ehz1TraceReplay,com.openggf.tests.trace.s2.TestS2SczLevelSelectTraceReplay" test "-DfailIfNoTests=false"`
+  - PASS: 4 tests, 0 failures; all print `All frames match trace. No divergences.`
+
+## 2026-06-01 - LBZ1 ground-launch intro trace-neutral check
+
+- Scope: S3K Launch Base Zone Act 1 startup now uses the ROM buried start
+  position plus `Obj_LevelIntro_PlayerLaunchFromGround` timing: the controller
+  waits for title-card handoff, holds player control for 30 live gameplay
+  frames, applies `y_vel=-$0B00`, selects Sonic animation `$10`, and releases
+  once `y_pos<$05C0`.
+- Full trace replay comparison used a targeted stash baseline on current
+  `develop`: with the LBZ changes stashed, then with the changes restored.
+  Both serialized runs produced the same aggregate result:
+  - `mvn -Dmse=off -Dsurefire.forkCount=1 '-Dtest=*TraceReplay' test -DfailIfNoTests=false`
+  - Result in both states: FAIL, 63 tests run, 23 failures, 0 errors, 0
+    skipped.
+- Current S3K frontier frames remain unchanged from the committed 2026-05-29
+  entry: AIZ frame 8941 (`camera_y` mismatch), CNZ frame 17276 (`x_speed`
+  mismatch), and MGZ frame 4124 (`y_speed` mismatch).
+- Note: the older 2026-05-28 full-sweep count of 21 failures was not the
+  current `develop` baseline for this check; the stashed pre-change baseline
+  already reported 23 failures.
+
 ## 2026-05-29 - Failing-test cleanup verified trace-neutral
 
 - Scope: fixed 9 failing non-trace test classes on committed `develop`
@@ -5890,3 +6822,68 @@ launch mismatch is cleared. The new owner is still CNZ2 balloon phase/touch
 timing around the `@1308,05E8` / `@12F8,0645` balloon cluster; engine is now
 touching/popping the `@1308,05E8` balloon at f22036 while ROM has already
 observed one gravity step after the corresponding launch.
+
+## 2026-05-31 - S2 MTZ3 Twin Stompers phase parity (MTZ3 f1744 -> f1979)
+
+- Worktree: `feature/ai-s2-mtz-parity`.
+- Focused guard:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes" test -DfailIfNoTests=false`
+  - PASS: `TestSonic2ObjectBugFixes` reports 8 tests, 0 failures.
+- MTZ3 replay:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: advanced from frame 1744
+    `x expected=0x0606 actual=0x0605` with Obj64 at `@0620,05C8`
+    while ROM had `@0620,05B8`, to frame 1979
+    `tails_x_speed expected=-0022 actual=-0085`.
+
+### Root Cause
+
+Obj64 movement itself matched the ROM routine (`objoff_3A` changes by 8,
+`objoff_36` waits at `$5A`, and `x_flip` selects the inverted offset), but the
+engine instance entered the first player/object contact window two Obj64 main
+ticks behind the ROM. Priming those two mode-1 ticks during construction keeps
+the piston at the ROM surface height before the frame-1744 contact without
+feeding trace state back into the object.
+
+### New MTZ3 Frontier (frame 1979)
+
+`tails_x_speed mismatch (expected=-0022, actual=-0085)`. The prior Twin
+Stompers contact mismatch is cleared. The new owner is later sidekick
+interaction near the MTZ cog cluster (`Obj70` around `@0800,0680` and
+neighboring cog children); main player state and camera match at the first
+error.
+
+## 2026-06-01 - S2 MTZ3 VBlank diagnostic split and Obj6C landing parity (MTZ3 f5180 -> f6477)
+
+- Worktree: `feature/ai-s2-mtz-parity`.
+- Focused guards:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.TestTraceExecutionModel#s2VblankSplitUsesFollowingVisualDiagnosticsOnly" test -DfailIfNoTests=false`
+  - PASS: 1 test, 0 failures.
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.game.sonic2.objects.TestSonic2ObjectBugFixes#mtzConveyorUsesPlatformObjectD3ForLandingSnap" test -DfailIfNoTests=false`
+  - PASS: 1 test, 0 failures.
+- MTZ3 replay:
+  `mvn -q -Dmse=relaxed "-Dtest=com.openggf.tests.trace.s2.TestS2Mtz3LevelSelectTraceReplay" test -DfailIfNoTests=false`
+  - Result: advanced from frame 5180
+    `camera_x expected=0x12FE actual=0x12FF` to frame 6477
+    `x_speed expected=0x0200 actual=0x020E`.
+  - New count: 911 errors / 0 warnings.
+
+### Root Cause
+
+The S1/S2 Lua recorder can emit a full gameplay row immediately followed by a
+VBlank-only row with the same gameplay counter and unchanged gameplay state.
+Headless replay observes the VBlank-updated camera/ring diagnostics with the
+gameplay step, so the comparator now merges only those visual diagnostics from
+the following VBlank row for comparison. Separately, MTZ Conveyor Obj6C passes
+`d3=8` directly to the ROM `PlatformObject` helper; the engine's `+1`
+ground-half-height adjustment snapped Sonic one pixel too high during the
+frame-6067 landing window.
+
+### New MTZ3 Frontier (frame 6477)
+
+`x_speed mismatch (expected=0200, actual=020E)`. The prior frame-5180
+camera-diagnostic artifact and frame-6067 Obj6C landing mismatch are cleared.
+The new owner is the Slicer pincer hurt-contact window: ROM has Sonic entering
+routine 4 with rings lost near ObjA1/ObjA2 at `@1718,0348` / `@16D8,0321`,
+while the engine misses the pincer contact and remains in normal gameplay
+routine with seven rings.

@@ -167,7 +167,7 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
 
     /** Collision params: half-width = width_pixels, d3 = 8. */
     private static final SolidObjectParams SOLID_PARAMS =
-            new SolidObjectParams(WIDTH_PIXELS, Y_RADIUS, Y_RADIUS + 1);
+            new SolidObjectParams(WIDTH_PIXELS, Y_RADIUS, Y_RADIUS);
 
     public ConveyorObjectInstance(ObjectSpawn spawn, String name) {
         this(spawn, name, spawn.x(), spawn.y());
@@ -192,9 +192,11 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
 
         int subtype = spawn.subtype();
 
-        // Determine path table from upper nibble: (subtype >> 3) & 0x1E gives word offset
-        // into off_28252, then load path from that table
-        int pathIndex = (subtype >> 4) & 0x07;
+        // Determine path table from upper bits. ROM (s2.asm:54227-54233):
+        //   lsr.w #3,d0 / andi.w #$1E,d0  => word offset into off_28252.
+        // As a table index (word entries) that is ((subtype>>3)&0x1E)/2
+        //   = (subtype>>4)&0x0F  (full nibble, not masked to 0x07).
+        int pathIndex = (subtype >> 4) & 0x0F;
         if (pathIndex >= PATH_WAYPOINTS.length) {
             pathIndex = 0;
         }
@@ -359,12 +361,33 @@ public class ConveyorObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // Obj6C_Main (line 54300): save old x, move, then PlatformObject
+        // Obj6C_Main (s2.asm:54304-54311): save old x_pos to the stack, run the
+        // waypoint check + ObjectMove, then pass the PRE-MOVE x_pos as d4 to
+        // JmpTo5_PlatformObject. The shared PlatformObject ride code uses that
+        // pre-move x to carry a standing player by the platform's per-frame x
+        // displacement (these pulley platforms move diagonally, so the rider
+        // must follow horizontally as well as vertically).
+        //
+        // The engine's top-solid ride carry is owned centrally by the solid
+        // system (ObjectManager.SolidContacts / continued-riding carry), which
+        // tracks the riding object's frame-to-frame position delta. The capture
+        // here mirrors the ROM's stack save so the pre-move x is available if a
+        // future change needs to route an explicit horizontal carry through this
+        // object; the central solid carry already follows the moving platform.
+        int prevX = x;
+
         // loc_2817E: check if arrived at target, advance waypoint if so
         checkAndAdvanceWaypoint();
 
         // ObjectMove: apply velocity to position
         applyVelocity();
+
+        // Per-frame horizontal displacement (pre-move x -> post-move x). Mirrors
+        // the ROM d4 = pre-move x_pos handed to PlatformObject. Kept as a local
+        // so the intent is explicit; rider X is carried by the central solid
+        // system, not written directly here (avoids double-applying the delta).
+        @SuppressWarnings("unused")
+        int frameXDelta = x - prevX;
 
         // Off-screen despawn check using base position (objoff_30)
         // From disassembly: (objoff_30 & $FF80) - Camera_X_pos_coarse > $280

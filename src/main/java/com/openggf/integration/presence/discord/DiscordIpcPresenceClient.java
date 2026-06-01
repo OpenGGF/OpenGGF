@@ -15,10 +15,12 @@ public final class DiscordIpcPresenceClient implements PresenceClient {
     private static final int OPCODE_FRAME = 1;
 
     private final DiscordIpcTransportFactory transportFactory;
+    private final long activityStartEpochSeconds;
     private DiscordIpcTransport transport;
 
     public DiscordIpcPresenceClient(DiscordIpcTransportFactory transportFactory) {
         this.transportFactory = Objects.requireNonNull(transportFactory, "transportFactory");
+        this.activityStartEpochSeconds = System.currentTimeMillis() / 1000L;
     }
 
     @Override
@@ -72,6 +74,7 @@ public final class DiscordIpcPresenceClient implements PresenceClient {
             if (payload.state() != null && !payload.state().isBlank()) {
                 activity.put("state", payload.state());
             }
+            activity.putObject("timestamps").put("start", activityStartEpochSeconds);
         }
         root.put("nonce", UUID.randomUUID().toString());
         return root;

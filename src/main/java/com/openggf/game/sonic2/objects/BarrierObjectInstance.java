@@ -223,6 +223,15 @@ public class BarrierObjectInstance extends AbstractObjectInstance implements Sol
     }
 
     @Override
+    public boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
+        // Obj2D calls the shared S2 SolidObject helper (s2.asm:117D6-117E8).
+        // SolidObject_cont builds both vertical reject halves from live
+        // y_radius(a1) after adding it to d2 (s2.asm:35156-35169), so rolling
+        // players use the smaller rolling radius on the lower bound too.
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Solid collision is handled by ObjectManager

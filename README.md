@@ -165,6 +165,12 @@ and documents the reverted AIZ2 battleship wrap-seam attempt and follow-up
 lessons.
 This merge keeps the local HCZ/ICZ branch line synchronized with those develop
 updates while preserving the reverted AIZ2 wrap behavior.
+The S2 Metropolis/Wing Fortress parity branch lands MTZ object/badnik/boss and
+WFZ parity passes, advances the MTZ3 trace frontier through a series of
+ROM-state-driven fixes, adds a ROM-accurate S3K speed-shoes byte timer
+(every-8th-frame decrement) gated on the level frame counter, and wraps the CNZ
+conveyor (Obj72) width to a byte so the WFZ level-select trace replay now passes
+end to end, with no S1/S2 or S3K trace regressions.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?
@@ -254,6 +260,19 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **Widescreen rendering + gameplay-at-width fixes (2026-06-01).** The follow-up to the widescreen
+  foundation: the menu/title UI surfaces now render correctly at width using per-surface width-aware
+  coordinates (the reverted projection-swap compositor is not used). Level select (with tiled animated
+  background), results, data select, the trace HUD, the S1/S2/S3K title screens, and the S1/S2/S3K
+  title cards are centred or background-extended, with `NATIVE_4_3` kept byte-identical and pinned by
+  unit tests. The S2 title screen's curved lower-logo occlusion and per-scanline water ripple clip
+  correctly via a projection-width-aware scissor. Three gameplay-at-width bugs were also fixed: objects
+  no longer intermittently fail to load when scrolling right (the spawn load-ahead is capped so the
+  fixed ROM-sized object slot pool stops overrunning in dense areas), the player no longer walks past a
+  level's right edge into the void at a camera lock (the right boundary tracks the level wall, not the
+  viewport), and a debug-overlay readout shows live/peak object-slot usage vs the pool. Special-stage
+  and bonus-stage widescreen handling remains a follow-up. See `KNOWN_DISCREPANCIES.md` and
+  `docs/superpowers/specs/2026-05-30-widescreen-rendering-design.md`.
 - **Widescreen foundation + Discord Rich Presence (2026-05-30).** New `DISPLAY_ASPECT` presets
   (NATIVE_4_3 / 16:10 / 16:9 / 21:9 / 32:9, height fixed at 224) make the gameplay/config layer
   width-driven: camera deadzone+snap, player/MGZ boundaries, all spawn-placement windows, and the

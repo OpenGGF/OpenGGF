@@ -718,6 +718,7 @@ public class GameLoop {
                 beginGameplayAudioFrameForTick();
                 if (tcpCard.shouldRunPlayerPhysics()) {
                     // S2: full title-card frame step.
+                    spriteManager.publishHeldInputForLevelEvents(inputHandler);
                     LevelFrameStep.execute(levelManager, camera, () -> spriteManager.update(inputHandler),
                             (name, step) -> {
                                 profiler.beginSection(name);
@@ -875,6 +876,7 @@ public class GameLoop {
                 boolean skipGameplay = playbackDebugManager.shouldSkipCurrentGameplayTick();
                 if (!skipGameplay) {
                     // Canonical level tick sequence — see LevelFrameStep for ordering rationale.
+                    spriteManager.publishHeldInputForLevelEvents(inputHandler);
                     LevelFrameStep.execute(levelManager, camera, () -> spriteManager.update(inputHandler),
                             (name, step) -> {
                                 profiler.beginSection(name);
@@ -966,6 +968,7 @@ public class GameLoop {
             boolean freezeForBonusExit = bonusStageTransitionPending;
             if (!freezeForBonusExit) {
                 beginGameplayAudioFrameForTick();
+                spriteManager.publishHeldInputForLevelEvents(inputHandler);
                 LevelFrameStep.execute(levelManager, camera, () -> {
                     spriteManager.update(inputHandler);
                 }, (name, step) -> {
@@ -2354,7 +2357,7 @@ public class GameLoop {
             // Re-apply zone-specific player state (airborne intros like HCZ1, MGZ1)
             LevelEventProvider levelEvents = GameServices.module().getLevelEventProvider();
             if (levelEvents instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager s3kEvents) {
-                s3kEvents.applyZonePlayerState();
+                s3kEvents.applyZonePlayerStateAfterTitleCard();
             }
             LOGGER.info("Exited Title Card, starting level");
         }
@@ -3497,6 +3500,7 @@ public class GameLoop {
 
         // Run level physics — follows LevelFrameStep canonical order (steps 1-4),
         // but steps 5-6 are conditional on scroll-freeze state during ending fadeout.
+        spriteManager.publishHeldInputForLevelEvents(inputHandler);
         levelManager.updateZoneFeaturesPrePhysics();
         if (levelManager.objectsExecuteAfterPlayerPhysics()) {
             spriteManager.update(inputHandler);

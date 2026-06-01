@@ -6,9 +6,12 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.game.rewind.snapshot.LevelEventSnapshot;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic2.events.Sonic2WFZEvents;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -122,5 +125,51 @@ class TestSonic2LevelEventRewindSnapshot {
         assertEquals(12, cnz.getCnzLeftWallY());
         assertEquals(84, cnz.getCnzRightWallX());
         assertEquals(12, cnz.getCnzRightWallY());
+    }
+
+    @Test
+    void roundTripWfzScrollAndSecondaryRoutineState() {
+        Sonic2LevelEventManager mgr = new Sonic2LevelEventManager();
+        mgr.initLevel(Sonic2LevelEventManager.ZONE_WFZ, 0);
+        Sonic2WFZEvents wfz = mgr.getWfzEvents();
+        wfz.setBgXOffsetForTest(0x456);
+        wfz.setBgYOffsetForTest(0x1234);
+        wfz.setBgYSpeedForTest(0x380);
+        wfz.setWfzSubRoutine(2);
+
+        LevelEventSnapshot snap = mgr.capture();
+
+        mgr.initLevel(Sonic2LevelEventManager.ZONE_WFZ, 0);
+        mgr.restore(snap);
+
+        assertEquals(0x456, wfz.getBgXOffset());
+        assertEquals(0x1234, wfz.getBgYOffset());
+        assertEquals(0x380, wfz.getBgYSpeed());
+        assertEquals(2, wfz.getWfzSubRoutine());
+    }
+
+    @Test
+    void restoreAcceptsLegacySnapshotWithoutWfzExtraBytes() {
+        Sonic2LevelEventManager mgr = new Sonic2LevelEventManager();
+        mgr.initLevel(Sonic2LevelEventManager.ZONE_WFZ, 0);
+        mgr.getWfzEvents().setWfzSubRoutine(2);
+        LevelEventSnapshot snap = mgr.capture();
+        byte[] legacyExtra = Arrays.copyOf(snap.extra(), snap.extra().length - Sonic2WFZEvents.SNAPSHOT_BYTES);
+
+        mgr.initLevel(Sonic2LevelEventManager.ZONE_WFZ, 0);
+        mgr.restore(new LevelEventSnapshot(
+                snap.currentZone(),
+                snap.currentAct(),
+                snap.eventRoutineFg(),
+                snap.eventRoutineBg(),
+                snap.frameCounter(),
+                snap.timerFrames(),
+                snap.bossActive(),
+                snap.eventDataFg(),
+                snap.eventDataBg(),
+                legacyExtra));
+
+        assertEquals(0, mgr.getWfzEvents().getWfzSubRoutine(),
+                "Legacy snapshots restore generic handler state but leave WFZ-specific extras at init defaults");
     }
 }

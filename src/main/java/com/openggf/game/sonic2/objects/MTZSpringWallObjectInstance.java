@@ -3,6 +3,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.level.objects.SpringHelper;
 
 import com.openggf.audio.GameSound;
+import com.openggf.camera.Camera;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.graphics.GLCommand;
@@ -83,9 +84,56 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj66 calls the solid routines before its explicit coarse-X DeleteObject
+        // tail, so it must not be skipped by the engine's shared offscreen gate.
+        return true;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // Obj66 calls SolidObject_Always_SingleCharacter, which falls into
+        // SolidObject_cont's X gate. S2 rejects the right edge with `bhi`,
+        // not `bhs`, so relX == width*2 still reaches the side-bounce path
+        // (s2.asm:34898-34913, 35153-35157).
+        return true;
+    }
+
+    @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         return true;
+    }
+
+    @Override
+    public void update(int frameCounter, PlayableEntity playerEntity) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        // ROM Obj66 (loc_2702C, s2.asm:52839-52844) performs an explicit coarse-X
+        // DeleteObject after the per-player solid/bounce passes:
+        //   move.w x_pos(a0),d0
+        //   andi.w #$FF80,d0              ; chunk-align object X
+        //   sub.w  (Camera_X_pos_coarse).w,d0
+        //   cmpi.w #$280,d0              ; 640px coarse cutoff
+        //   bhi.w  JmpTo33_DeleteObject
+        // Camera_X_pos_coarse = (Camera_X_pos - 128) chunk-aligned
+        // (s2.constants.asm:1619), modeled as ((camera.getX() - 128) & 0xFF80) to
+        // match the established port in TornadoObjectInstance / ConveyorObjectInstance.
+        // This is the same explicit delete the twin stompers (Obj64) use; the
+        // spring wall otherwise has no despawn path of its own. ROM uses
+        // DeleteObject (not MarkObjGone), so we use setDestroyed(true), which also
+        // clears the re-spawnable flag (DeleteObject does not leave a respawn slot).
+        Camera camera = services().camera();
+        if (camera != null) {
+            int objChunk = spawn.x() & 0xFF80;
+            int camChunk = (camera.getX() - 128) & 0xFF80;
+            int d0 = (objChunk - camChunk) & 0xFFFF;
+            if (d0 > 0x280) {
+                setDestroyed(true);
+            }
+        }
     }
 
     @Override
@@ -221,7 +269,11 @@ public class MTZSpringWallObjectInstance extends AbstractObjectInstance
         SpringHelper.applyCollisionLayerBits(player, subtype);
 
         // From disassembly: bclr #p1_pushing_bit,status(a0) / bclr #p2_pushing_bit,status(a0)
-        //                    bclr #status.player.pushing,status(a1)
+        //   if fixBugs (REV01): bclr #status.player.rolljumping,status(a1)
+        //   bclr #status.player.pushing,status(a1)   (s2.asm:52916-52923)
+        // The REV01 fix clears the roll-jumping flag so the player's controls are
+        // unlocked and they cannot get stuck after the spring-wall bounce.
+        player.setRollingJump(false);
         player.setPushing(false);
 
         // From disassembly: move.w #SndID_Spring,d0 / jmp (PlaySound).l

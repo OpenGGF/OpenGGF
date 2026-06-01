@@ -450,6 +450,62 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void multiPieceSideContactClearsPushingWhenThisObjectNoLongerPushes() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setGSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+
+        manager.updateSolidContacts(player);
+        assertTrue(player.getPushing());
+        assertTrue(object.lastPushingState);
+
+        player.setCentreX((short) 40);
+        manager.updateSolidContacts(player);
+
+        assertFalse(player.getPushing(),
+                "SolidObject_TestClearPush clears Status_Push only for the object that owned the push bit");
+        assertFalse(object.lastPushingState);
+        assertEquals(2, object.pushingStateChanges);
+    }
+
+    @Test
+    public void multiPieceRiderCarryDoesNotReapplyNewLandingSnapOnSamePiece() {
+        SolidObjectParams params = new SolidObjectParams(16, 8, 8);
+        MutableMultiPieceSolidObject object = new MutableMultiPieceSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(38);
+        player.setAir(true);
+        player.setYSpeed((short) 0x100);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - params.groundHalfHeight() - player.getYRadius()));
+
+        manager.updateSolidContacts(player);
+        assertTrue(player.isOnObject());
+        assertEquals(100 - params.groundHalfHeight() - player.getYRadius() - 1,
+                player.getCentreY(),
+                "Initial SolidObject_Landed contact includes the ROM subq #1 snap");
+
+        object.setY(104);
+        manager.updateSolidContacts(player);
+
+        assertEquals(104 - params.groundHalfHeight() - player.getYRadius(),
+                player.getCentreY(),
+                "Continued multi-piece riding must use MvSonicOnPtfm and skip the same piece's new-landing snap");
+    }
+
+    @Test
     public void cutsceneKnuxCnz2WallSidePushesPlayerBackToItsLeftFace() {
         // ROM: CutsceneKnux_CNZ2A init spawns ChildObjDat_66560 -> loc_62458, an
         // invisible SolidObjectFull2 wall (d1=$13, d2=$100) positioned at
@@ -1313,6 +1369,71 @@ public class TestSolidObjectManager {
         @Override
         public SolidRoutineProfile getSolidRoutineProfile() {
             return profile;
+        }
+    }
+
+    private static final class TestMultiPieceSolidObject extends TestSolidObject
+            implements MultiPieceSolidProvider {
+        private boolean lastPushingState;
+        private int pushingStateChanges;
+
+        private TestMultiPieceSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+        }
+
+        @Override
+        public int getPieceCount() {
+            return 1;
+        }
+
+        @Override
+        public int getPieceX(int pieceIndex) {
+            return getX();
+        }
+
+        @Override
+        public int getPieceY(int pieceIndex) {
+            return getY();
+        }
+
+        @Override
+        public void setPlayerPushing(PlayableEntity player, boolean pushing) {
+            lastPushingState = pushing;
+            pushingStateChanges++;
+        }
+    }
+
+    private static final class MutableMultiPieceSolidObject extends TestSolidObject
+            implements MultiPieceSolidProvider {
+        private int y;
+
+        private MutableMultiPieceSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params);
+            this.y = y;
+        }
+
+        private void setY(int y) {
+            this.y = y;
+        }
+
+        @Override
+        public int getY() {
+            return y;
+        }
+
+        @Override
+        public int getPieceCount() {
+            return 1;
+        }
+
+        @Override
+        public int getPieceX(int pieceIndex) {
+            return getX();
+        }
+
+        @Override
+        public int getPieceY(int pieceIndex) {
+            return getY();
         }
     }
 

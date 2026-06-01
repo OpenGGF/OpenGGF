@@ -283,6 +283,15 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Some object classes model the ROM's routine-0 initialization in their Java
+     * constructor. When spawned mid-pass, their first update would then represent
+     * routine 2 and must wait until the next ExecuteObjects pass.
+     */
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        return false;
+    }
+
+    /**
      * Returns this object's slot index in the Object Status Table (0-127).
      * <p>
      * Use {@code 127 - getSlotIndex()} to compute the ROM's d7 register value

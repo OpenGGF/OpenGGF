@@ -1671,6 +1671,127 @@ frame 305.
 
 ---
 
+## P38 — `SolidObject` contact mutates velocity before hurt helpers read it
+
+**Symptom.** Upside-down spikes or similar full-solid hazards hurt the player
+at the right frame, but the post-hurt Y/subpixel or knockback state is off by
+1-2 pixels. Trace context often shows the engine using a "pre-contact" velocity
+while the ROM has already zeroed or changed that velocity inside the solid
+routine.
+
+**Root cause.** S2 Obj36 calls `SolidObject` first, then checks the returned
+touch mask and calls `Touch_ChkHurt2`. `SolidObject_cont` / inside-contact
+branches may mutate `y_vel(a1)` before returning. `Touch_ChkHurt2` reads the
+current `y_vel(a1)`, not a saved pre-solid value, then subtracts
+`y_vel<<8` from `y_pos` before `HurtCharacter`.
+
+**What to check.** When an object calls `SolidObject` or
+`SolidObject_Always*` before a hurt/helper routine, preserve the ROM call
+order. Do not feed hurt helpers an ObjectManager pre-contact snapshot unless
+the ROM saved one explicitly. Also check S2 `SolidObject_cont` lower-Y bounds:
+it doubles the live `y_radius(a1)`, so rolling underside contact can differ
+from ports that reuse a standing/default radius.
+
+**ROM citation.** S2 Obj36 upside-down spike path
+(`docs/s2disasm/s2.asm:29260-29283`) calls `SolidObject` before
+`Touch_ChkHurt2`; `Touch_ChkHurt2` subtracts current `y_vel<<8`
+(`docs/s2disasm/s2.asm:29297-29312`). S2 `SolidObject_cont` doubles live
+`y_radius(a1)` for its lower-Y reject bound
+(`docs/s2disasm/s2.asm:35156-35169`).
+
+**Originating commit.** Fix S2 MTZ3 Obj36 spike contact/hurt ordering -- MTZ3
+frontier advances from frame 3603 to frame 3617.
+
+---
+
+## P39 -- Same object ID can dispatch to different objects by subtype/routine
+
+**Symptom.** A placement with an already-implemented object ID does nothing, or
+uses the wrong movement/contact math, even though the engine has a class for
+that ID. Trace context shows the ROM object ID matches the engine object ID, but
+the ROM routine byte and nearby state do not match the implemented path.
+
+**Root cause.** S2 objects often multiplex distinct behaviours under one ID.
+Obj06 is both the EHZ spiral and the MTZ cylinder: `Obj06_Init` branches to
+`Obj06_Cylinder` when the subtype is negative, setting `routine=4`, while
+non-negative subtypes follow the spiral-path controller. Treating every Obj06
+placement as a spiral leaves MTZ cylinder placements invisible to the player.
+
+**What to check.** During init-porting, do not stop once the object ID maps to a
+class. Read the init routine's subtype branches and routine writes, then make
+sure each branch has an engine mode. For sine/cosine helpers, also preserve the
+ROM return register: `CalcSine` returns sine in `d0` and cosine in `d1`; a path
+that multiplies `d1` must use cosine, not sine.
+
+**ROM citation.** S2 Obj06 init/cylinder path (`docs/s2disasm/s2.asm:46720-46811`,
+`s2.asm:46853-46931`): negative subtype branches to `Obj06_Cylinder`; the
+active rider path calls `CalcSine` and multiplies `d1` by `$2800` for the
+vertical offset.
+
+**Originating commit.** Fix S2 MTZ3 Obj06 cylinder mode -- MTZ3 frontier
+advances from frame 4280 to frame 4656.
+
+---
+
+## P40 -- Native `x_pos` / `y_pos` writes must preserve the sibling subpixel byte
+
+---
+
+## P41 -- Constructor-modeled child init must not also run main routine on the spawn frame
+
+**Symptom.** A child projectile or helper object is positionally correct at
+spawn but drifts into contact one frame early or late. Trace diagnostics show
+the child exists in the ROM and engine on the same frame, but the engine has
+already applied the child's routine-2 movement while the ROM is still running
+routine 0 initialization.
+
+**Root cause.** ROM `FindNextFreeObj` / `AllocateObjectAfterCurrent` inserts a
+child into the SST. If that slot is later in the current object pass, the ROM
+does reach the new object on the same frame, but its `routine=0` init code runs
+first and then returns. Java ports often apply that routine-0 setup in the
+constructor, so allowing a same-frame `update()` makes the first engine update
+represent the ROM's next-frame routine-2 code.
+
+**What to check.** For any child whose constructor fills fields that ROM writes
+in the child's routine-0 label, compare the child init routine with its main
+routine. If the constructor already models routine 0 and `update()` starts at
+routine 2, override `skipsSameFrameUpdateAfterSpawn()` so the first main update
+waits until the next object pass. Do not disable same-frame execution globally;
+ordinary children still need ROM slot-order execution when their Java update
+models the same routine the ROM reaches.
+
+**ROM citation.** `docs/s2disasm/s2.asm:75496-75520` (`ObjA1_LoadPincers`) and
+`docs/s2disasm/s2.asm:75451-75475` (`ObjA2_Main`).
+
+**Originating commit.** `fix(s2): defer constructor-initialized child main ticks`.
+
+**Symptom.** Player integer position matches ROM after an object snaps or carries
+the player, but `x_sub` or `y_sub` diverges. The next movement frame then drifts
+by one or more pixels because ROM kept the existing subpixel residue while the
+engine cleared it.
+
+**Root cause.** ROM object code often writes only the native position word:
+`move.w x_pos(a0),x_pos(a1)` or `move.w y_pos(a0),y_pos(a1)`. That changes the
+integer word and leaves the adjacent subpixel byte/word untouched. Engine code
+that uses `setCentreX(...)` / `setCentreY(...)` for a playable sprite rewrites a
+higher-level coordinate and can clear or recompute the subpixel state.
+
+**What to check.** When porting object code that writes `x_pos(a1)` or
+`y_pos(a1)` directly to a playable sprite, use `NativePositionOps`:
+`writeXPosPreserveSubpixel`, `writeYPosPreserveSubpixel`, or the corresponding
+add helpers. Reserve raw centre setters for code paths where ROM also resets the
+subpixel half or where the target is an object-local/non-playable coordinate.
+
+**ROM citation.** S2 Obj69 Nut align and screw modes
+(`docs/s2disasm/s2.asm:53566-53568`, `s2.asm:53579-53582`,
+`s2.asm:53626-53629`) write `move.w x_pos(a0),x_pos(a1)` while leaving
+`x_sub(a1)` intact.
+
+**Originating commit.** Fix S2 MTZ3 Obj69 nut x_pos snap preserves player
+x_sub -- MTZ3 frontier advances from frame 4793 to frame 5143.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root

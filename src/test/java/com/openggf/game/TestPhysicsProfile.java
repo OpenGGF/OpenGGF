@@ -266,10 +266,20 @@ public class TestPhysicsProfile {
     public void testSpeedShoesTimerPhaseCompensation_PerGame() {
         assertEquals(0, PhysicsFeatureSet.SONIC_1.speedShoesTimerPrePhysicsExtraTicks(),
                 "S1 word timer clears on the display-time decrement that reaches zero");
-        assertEquals(0, PhysicsFeatureSet.SONIC_2.speedShoesTimerPrePhysicsExtraTicks(),
-                "S2 word timer clears on the display-time decrement that reaches zero");
+        assertEquals(1, PhysicsFeatureSet.SONIC_2.speedShoesTimerPrePhysicsExtraTicks(),
+                "S2 display-time decrement happens after movement, while the engine timer updates before movement");
         assertEquals(0, PhysicsFeatureSet.SONIC_3K.speedShoesTimerPrePhysicsExtraTicks(),
                 "S3K clears speed shoes from Sonic_Display before the next movement frame consumes acceleration");
+    }
+
+    @Test
+    public void testSpeedShoesTimerDecimation_PerGame() {
+        // S1/S2 use a per-frame word timer; S3K a byte timer decremented every
+        // 8th level frame (sonic3k.asm:22072-22078).
+        assertEquals(1, PhysicsFeatureSet.SONIC_1.speedShoesTimerDecimation(), "S1 per-frame word timer");
+        assertEquals(1, PhysicsFeatureSet.SONIC_2.speedShoesTimerDecimation(), "S2 per-frame word timer");
+        assertEquals(8, PhysicsFeatureSet.SONIC_3K.speedShoesTimerDecimation(),
+                "S3K byte timer decremented every 8th level frame");
     }
 
     // ========================================

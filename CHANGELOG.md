@@ -14,7 +14,240 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **Widescreen title-card exit clearance.** Title-card elements (S1 zone/act/oval sprites and the S2 red swoosh / yellow bar) now fully clear the screen on exit at widescreen widths: `TitleCardElement.setEdgeMargin()` extends each off-screen entry/exit endpoint outward by `viewportWidth - 320` so the centred composition slides on and off the real viewport edges rather than parking back inside the side bands. The S2 colour blocks follow the swoosh/bar automatically. At native 320 px this is byte-identical (edge margin 0). The S3K title screen remains centred (pillarboxed) — its fixed 40×28 sea/sky picture does not tile cleanly (edge-tiling smeared the clouds) — but the side bands are now filled with a single flat colour sampled from the picture's top-left tile, so they read as sky instead of black bars.
 
+- **CNZ conveyor (Obj72) width wraps to a byte.** `Obj72_Init` computes the
+  conveyor half-width with `lsl.b #4,d0` and stores it via `move.b` into a byte
+  field (s2.asm:54812-54817), so `(subtype & $7F) << 4` truncates to 8 bits.
+  `CNZConveyorBeltObjectInstance` now applies `& 0xFF`, matching ROM: a subtype
+  with bit 7 set such as WFZ's `$90` wraps to zero width (no player push)
+  instead of `0x100`. Resolves the S2 WFZ level-select trace frontier (was
+  frame 8863 `camera_x`, now passes); S2 CNZ/CNZ2 frontiers unchanged.
+
+- **ROM-accurate S3K speed-shoes byte timer (every-8th-frame).**
+  Modeled Sonic 3&K's speed-shoes expiry at its true ROM granularity: a byte
+  timer counting from `(20*60)/8 = 150`, decremented only on every 8th level
+  frame (`Sonic_ChkShoes`, sonic3k.asm:22072-22078), gated via a new
+  `PhysicsFeatureSet.speedShoesTimerDecimation` flag (S1/S2 `1`, S3K `8`). The
+  decrement aligns to the global level frame counter; the engine counter leads
+  ROM `Level_frame_counter` by a constant 2 (mod 8) at the timer read point, so
+  the gate uses `(frameCounter + 7) & (decimation-1) == 0`. S1/S2 stay
+  byte-identical (per-frame word timer). No trace regression: S3K CNZ f17276,
+  AIZ f8941, MGZ f4124 hold at baseline; S2 WFZ f8863, EHZ1, and S1 GHZ1 are
+  unaffected. See `docs/superpowers/specs/2026-06-01-s3k-speed-shoes-byte-timer-design.md`.
+
+- **Advanced Sonic 2 MTZ3 Slicer pincer spawn timing parity.**
+  Same-frame child execution now has an object-level opt-out for children whose
+  Java constructors already model the ROM routine-0 init pass. Slicer ObjA2
+  pincers use it so their first homing tick begins on the next object pass,
+  matching `ObjA1_LoadPincers`/`ObjA2` timing. Focused child-slot coverage
+  passes; the MTZ3 trace frontier moves from frame 6477 to a later frame-6913
+  ground-speed mismatch.
+
+- **Advanced Sonic 2 MTZ3 trace replay VBlank diagnostics and Obj6C parity.**
+  S1/S2 trace replay now compares gameplay rows against the following
+  VBlank-only row's visual diagnostics when the recorder splits those phases,
+  matching the headless engine's frame presentation without hydrating trace
+  state. MTZ Conveyor Obj6C also uses the ROM `PlatformObject` `d3` value
+  directly for landing height. Focused trace-model and Obj6C coverage passes;
+  the MTZ3 trace frontier moves from frame 5180 to a later frame-6477 Slicer
+  pincer hurt-contact mismatch.
+
+- **Advanced Sonic 2 MTZ3 Obj74/Obj69 lower-bound trace parity.**
+  MTZ Invisible Block Obj74 and Nut Obj69 now use S2 `SolidObject_cont`'s
+  live-`y_radius(a1)` lower overlap bound, preventing rolling-air players from
+  hitting false side contacts below these solids. Obj74 also opts into the
+  `SolidObject_Always` stale airborne standing-bit no-contact path. Focused
+  Obj74/Obj69 coverage passes; the MTZ3 trace frontier moves from frame 5143
+  to a later frame-5180 Obj37/hurt/camera mismatch.
+
+- **Advanced Sonic 2 MTZ3 Obj69 nut trace parity.**
+  MTZ Nut Obj69 now mirrors the ROM's native `move.w x_pos(a0),x_pos(a1)`
+  writes by preserving the player's `x_sub` byte when snapping Sonic to the
+  nut center during align and screw movement. Focused Obj69 coverage passes;
+  the MTZ3 trace frontier moves from frame 4793 to a later frame-5143
+  airborne invisible-block side-contact mismatch.
+
+- **Advanced Sonic 2 MTZ3 Obj06 cylinder trace parity.**
+  S2 Obj06 now implements its negative-subtype MTZ cylinder mode instead of
+  treating every placement as the EHZ spiral path. The cylinder capture snap,
+  ride latch, inertia seed, flip angle, and cosine-based y orbit now follow
+  the ROM path. Focused Obj06 coverage passes; the MTZ3 trace frontier moves
+  from frame 4280 to a later frame-4656 airborne wall/collision mismatch.
+
+- **Advanced Sonic 2 MTZ3 Obj6B and dead-sidekick trace parity.**
+  MTZ Platform Obj6B now reports its stored `objoff_34` base X to the shared
+  out-of-range despawn path, matching the ROM delete check after platform
+  movement. CPU sidekick dead-fall frames that use the S2/S3K deferred-death
+  path now bypass the normal `Screen_Y_wrap_value` mask in both movement and
+  frame-level wrap passes. Focused Obj6B and movement coverage passes; the MTZ3
+  trace frontier moves from frame 3718 to a later frame-4280 Sonic landing
+  mismatch.
+
+- **Advanced Sonic 2 MTZ3 Obj36 crush-death trace parity.**
+  The shared spike hurt callback now preserves a prior `SolidObject_Squash`
+  kill instead of overwriting it with `Touch_ChkHurt2` knockback, matching the
+  ROM helper's routine >= 4 guard. Focused Obj36 coverage passes; the MTZ3
+  trace frontier moves from frame 3617 to a later frame-3718 Sonic platform
+  landing mismatch.
+
+- **Advanced Sonic 2 MTZ3 Obj36 spike-contact trace parity.**
+  S2 spikes now expose the ROM `SolidObject_cont` rolling-radius lower bound
+  for upside-down contact checks, and the shared spike hurt path applies
+  `Touch_ChkHurt2`'s y-velocity rewind from the current post-solid player
+  velocity before hurt knockback. Focused Obj36 coverage passes; the MTZ3
+  trace frontier moves from frame 3603 to a later frame-3617 sidekick platform
+  ride/hurt-state mismatch.
+
+- **Advanced Sonic 2 MTZ3 Obj6E base-anchor trace parity.**
+  MTZ LargeRotPform Obj6E now reports its stored `objoff_34` base X to the
+  shared out-of-range despawn path, matching the ROM's coarse-camera delete
+  check instead of using the platform's orbiting `x_pos`. Focused Obj6E
+  coverage passes; the MTZ3 trace frontier moves from frame 3488 to a later
+  frame-3603 Tails upside-down spike hurt timing mismatch.
+
+- **Advanced Sonic 2 MTZ3 Obj65 deletion-anchor trace parity.**
+  MTZ Long Platform Obj65 now reports its stored `objoff_34` base X to the
+  shared out-of-range despawn path, matching the ROM's special MarkObjGone tail
+  instead of using the platform's moving `x_pos`. Focused Obj65 coverage passes;
+  the MTZ3 trace frontier moves from frame 2616 to a later frame-3488 Sonic
+  LargeRotPform landing mismatch.
+
+- **Advanced Sonic 2 MTZ3 Obj65 long-platform trace parity.**
+  MTZ Long Platform Obj65 now keeps subtype-3 proximity extension armed when
+  either native playable participant, including Tails/sidekick, occupies the
+  ROM detection box, and its landing width now follows the unusual
+  `width_pixels` re-read used by `SolidObject_Landed`. Focused Obj65 coverage
+  passes; the MTZ3 trace frontier moves from frame 2543 to a later frame-2616
+  sidekick ride/despawn mismatch.
+
+- **Advanced Sonic 2 MTZ3 wrapped render-flag and spring-wall trace parity.**
+  Playable render-flag visibility now applies the active vertical-wrap mask to
+  relative display Y, matching S2 `BuildSprites_ApproxYCheck` while preserving
+  the existing S1/S2 32 px visibility band. MTZ Spring Wall Obj66 now advertises
+  the ROM `SolidObject_cont` inclusive right edge used by its
+  `SolidObject_Always_SingleCharacter` path. Focused camera and Obj66 tests
+  pass; the MTZ3 trace frontier moves from frame 2362 to a later frame-2543
+  Tails platform/side-contact mismatch.
+
+- **Advanced Sonic 2 MTZ3 jump and vertical-wrap trace parity.** Shared
+  playable jump headroom checks now use ROM-style `CalcRoomOverHead` terrain
+  probes, including the ceiling/left-wall nibble-flip offsets, instead of
+  ordinary sensor scans. Playable `y_pos` masking now also follows the active
+  camera vertical-wrap range without changing S1/S2 render visibility margins.
+  Focused headroom and wrap tests pass; the MTZ3 trace frontier moves from the
+  post-Cog jump/headroom mismatch to a later frame-2362 Tails Obj6B landing
+  mismatch.
+
+- **Tightened shared slope-repel move-lock ordering.** Active `move_lock`
+  now decrements before the engine's object-support guard suppresses fresh
+  slope-slip arming, matching the ROM `Sonic_SlopeRepel`/`Tails_SlopeRepel`
+  branch order and covering the object-supported countdown case with a focused
+  movement test. The MTZ3 trace still fails at the known frame-2152 movement
+  lock mismatch.
+
+- **Advanced Sonic 2 MTZ3 Cog slot-order trace parity.** MTZ Cog Obj70 now
+  advertises its ROM multi-slot solid ordering through the shared multi-piece
+  solid framework, letting earlier teeth side-push Sonic before the currently
+  ridden tooth runs its continued-riding exit check. The MTZ3 trace frontier
+  moves from the frame-2111 Cog ride-exit mismatch to a later frame-2152
+  movement-lock speed mismatch.
+
+- **Advanced Sonic 2 MTZ3 Cog edge-contact trace parity.** MTZ Cog Obj70
+  now preserves the ROM `SolidObject_cont` right-edge contact rule, accepting
+  `relX == width*2` and only rejecting values beyond that edge. The S2 trace
+  recorder also emits diagnostic per-frame Tails CPU state for sidekick
+  investigations. The MTZ3 trace frontier moves from the frame-2032 sidekick
+  ground-speed mismatch to a later frame-2111 Cog ride-exit mismatch.
+
+- **Advanced Sonic 2 MTZ3 Cog riding trace parity.** MTZ Cog Obj70 now
+  samples the ROM-visible level-frame low byte despite the engine storing the
+  previous completed level frame until late-frame update, and the shared
+  multi-piece solid path now skips the already handled riding piece instead of
+  reapplying `SolidObject_Landed` after `MvSonicOnPtfm`. Focused Obj70 and
+  solid-object coverage passes; the MTZ3 trace frontier moves from the
+  frame-2031 Cog/platform X/Y mismatch to a later frame-2032 sidekick ground
+  speed mismatch.
+
+- **Advanced Sonic 2 MTZ3 Cog rotation trace parity.** MTZ Cog Obj70 now
+  gates rotation from the ROM `Level_frame_counter` low byte instead of the
+  engine object-dispatch VBlank argument, matching `move.b
+  (Level_frame_counter+1).w,d0` without a route or frame carve-out. The MTZ3
+  trace frontier moves from the frame-1982 sidekick Cog velocity reversal to a
+  later frame-2031 Cog/platform push ordering mismatch.
+
+- **Advanced Sonic 2 MTZ3 Cog/sidekick push parity.** Multi-piece solid
+  objects now run the same object-owned `SolidObject_TestClearPush` cleanup as
+  single-piece solids when a prior side contact stops pushing the player. This
+  clears stale sidekick `Status_Push` state after MTZ Cog contacts without
+  route or frame carve-outs; focused solid-object coverage passes and the MTZ3
+  trace frontier moves to the next frame-1982 Cog/sidekick velocity reversal.
+
+- **Advanced Sonic 2 MTZ3 Twin Stompers trace parity.** MTZ Twin Stompers
+  Obj64 now enters the engine contact window with the ROM-equivalent initial
+  main-tick phase for its 8 px/tick piston motion, keeping its solid surface
+  aligned through the frame-1744 contact. Focused Obj64 coverage passes; the
+  MTZ3 trace frontier moves to a later frame-1979 Cog/sidekick interaction.
+
+- **Advanced Sonic 2 MTZ3 Obj6B platform trace parity.** MTZ Platform Obj6B
+  now uses the ROM `y_pos.w:y_sub.w` 16.16 accumulator for falling and bouncy
+  movement, preserves `y_sub` across word-only Y writes, and arms subtype-7
+  bounce acceleration from the shared solid standing signal before the next
+  `ObjectMove` dispatch. Focused Obj6B regression coverage passes; the MTZ3
+  trace frontier moves from the frame-1311 platform/camera Y lag to a later
+  frame-1744 Twin Stompers/player X mismatch.
+
+- **Advanced Sonic 2 MTZ3 object trace parity.** Shellcracker claw ObjA0 now
+  defers its first active tick until the frame after ROM-style child-slot init,
+  and MTZ Spin Tube Obj67 now preserves native playable subpixels on word
+  `x_pos`/`y_pos` writes while changing only the roll animation, not the
+  rolling status bit. Focused object tests pass; the MTZ3 trace frontier moves
+  from the frame-764 Shellcracker/claw interaction to a later frame-1311 Obj6B
+  platform vertical-phase mismatch.
+
+- **Fixed Sonic 2 trace object-title prelude fallback.** Native Sonic 2
+  trace bootstrap now applies the generic 26 title-card object ticks whenever
+  the live object manager does not select the route-specific Tornado ObjB2
+  prelude, instead of treating the broad Tornado metadata predicate as the
+  authority. This moves the MTZ3 trace frontier from the frame-233 Slicer
+  contact to the later frame-764 Shellcracker/claw platform interaction.
+
+- **Tightened Sonic 2 Slicer player-orientation parity.** MTZ Slicer
+  (ObjA1) and its pincer projectile (ObjA2) now route
+  `Obj_GetOrientationToPlayer` through the shared native P1/P2 player-query
+  framework instead of assuming the main player, and pincer child spawns now
+  carry the ROM ObjA2 identity rather than inheriting the parent ObjA1 id.
+  The MTZ3 trace frontier still fails at the known frame-233 Slicer contact;
+  the remaining gap is object title-card prelude/placement alignment, not a
+  Slicer target-selection carve-out.
+
+- **Tightened Sonic 2 Metropolis Zone parity bookkeeping.** MTZ dynamic boss
+  objects (Obj53/Obj54) are now marked implemented in the S2 object discovery
+  profile, Obj66 spring walls bypass the shared offscreen solid gate like their
+  ROM routine, and MTZ3 routine 6 preserves the ROM write to `Tails_Min_Y_pos`
+  in sidekick rewind state without feeding that write-only value into movement.
+  The MTZ trace frontier log now records the remaining Slicer, conveyor, and
+  sidekick gaps separately from implemented object/boss coverage.
+
+- **Sonic 2 Metropolis Zone object/badnik/boss parity pass.** Closed disassembly-verified gaps across the MTZ slice: the Shellcracker claw (ObjA0) gained its enemy touch hitbox ($9A); the MTZ boss (Obj54) now spawns its laser projectile (Obj54_Laser subtype 4) and its shield orbs (Obj53) detach, bounce, and burst on hits with ROM-accurate break-away physics; Obj65/6A/6B/6E/70 platforms render from their real Kosinski level-art mappings on the correct palette line instead of a CPZ stair-block substitute; the cog uses its own mappings (0x26F04); Spin Tube (Obj67) and Nut (Obj69) drive both the main character and sidekick; Twin Stompers (Obj64) use the ROM coarse-X despawn window; Lava Bubble (Obj71) ping-pongs its animation via SWITCH; child spawns route through `spawnChild`; and the MTZ background scroll tracks through `BackgroundCamera`. MTZ3 boss-arena events match `LevEvents_MTZ3` (unconditional min-X follow in routine 5). Pre-existing MTZ trace frontiers (sidekick CPU / platform sub-pixel carry) are unchanged by this work.
+
+- **Completed Sonic 2 Wing Fortress Zone parity.** WFZ now has ROM-backed
+  object, badnik, boss, PLC/art, palette, scroll, rewind, intro Tornado
+  cutscene, and WFZ-to-DEZ transition coverage, with the WFZ level-select
+  trace replay matching end-to-end.
+
+- **Fixed the S3K LBZ1 ground-launch intro.** Sonic now starts from the ROM's
+  buried Launch Base Zone Act 1 position, waits until the title card hands off
+  to live gameplay, then springs upward once with the ROM spring animation held
+  through the emergence.
+
+- **Fixed S3K LBZ2 background wrap width.** Launch Base Zone Act 2 now sizes the background render period from the active ROM-derived HScroll spread instead of falling back to the 512px VDP plane width, preventing the Death Egg background from visibly looping halfway across the structure.
+
+- **Implemented S3K LBZ Alarm and Flybot767.** Launch Base Zone alarm triggers now expose the ROM `Anim_Counters+4` state so the LBZ1 alarm tiles animate only while the alarm is active, and object `$22` now spawns the newly implemented Flybot767 badnik with ROM-backed art, mappings, DPLC remapping, and chase/dive/rebound behavior.
+
+- **Added S3K Launch Base Zone palette/parallax/animated-tile bring-up.** LBZ now routes to a dedicated S3K scroll handler with ROM-derived LBZ1 and LBZ2 background deformation, including LBZ2 waterline lookup data from the user ROM. LBZ AniPLC scripts and direct animated-tile uploads now replace the placeholder pattern tiles in the foreground and background, and LBZ1's animated background strip derives its phase from current-frame deform state to avoid stale-cache jitter.
+
 - **Added opt-in Discord Rich Presence.** When enabled, OpenGGF publishes menu and gameplay status through the local Discord desktop client, including game, character/team, zone/act, and timer details subject to privacy toggles. Presence remains disabled by default and includes distinct master-title, game title-screen, level-select, data-select, and gameplay states.
+
+- **Fixed Discord Rich Presence elapsed-time resets.** Activity updates now reuse a stable Discord `timestamps.start` value so Discord's own "time playing" display no longer resets when OpenGGF refreshes gameplay/menu details.
 
 - **Added safe-area projection scope to the UI render pipeline.** `GraphicsManager.beginSafeAreaProjection/endSafeAreaProjection` pushes a centered-320 ortho override using the existing `projectionMatrixBuffer` local-override path; `UiRenderPipeline.beginSafeArea/endSafeArea` expose the scope to callers. At native 320 px width pad=0, making this a no-op. Callers must call `endSafeArea()` before `renderFadePass()` so the fade pass runs at the full viewport.
 

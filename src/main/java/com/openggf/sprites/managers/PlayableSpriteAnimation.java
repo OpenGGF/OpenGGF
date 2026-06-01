@@ -280,39 +280,49 @@ public class PlayableSpriteAnimation {
         }
 
         int duration = sprite.getAnimationTick() - 1;
-        boolean advanceFrame = duration < 0;
-        if (advanceFrame) {
-            duration = delay;
+        if (duration >= 0) {
+            sprite.setAnimationTick(duration);
+            return;
         }
+
+        duration = delay;
         sprite.setAnimationTick(duration);
 
         int frameIndex = sprite.getAnimationFrameIndex();
-        if (frameIndex < 0 || frameIndex >= script.frames().size()) {
+        if (frameIndex < 0) {
             frameIndex = 0;
             sprite.setAnimationFrameIndex(0);
         }
+        if (frameIndex >= script.frames().size()) {
+            if (!processEndAction(script)) {
+                return;
+            }
+            frameIndex = sprite.getAnimationFrameIndex();
+            if (frameIndex < 0 || frameIndex >= script.frames().size()) {
+                frameIndex = 0;
+                sprite.setAnimationFrameIndex(0);
+            }
+        }
         int mappingFrame = script.frames().get(frameIndex) + frameOffset;
         sprite.setMappingFrame(mappingFrame);
-
-        if (advanceFrame) {
-            advanceFrameIndex(script);
-        }
+        sprite.setAnimationFrameIndex(frameIndex + 1);
     }
 
-    private void advanceFrameIndex(SpriteAnimationScript script) {
-        int frameIndex = sprite.getAnimationFrameIndex() + 1;
-        if (frameIndex < script.frames().size()) {
-            sprite.setAnimationFrameIndex(frameIndex);
-            return;
-        }
+    private boolean processEndAction(SpriteAnimationScript script) {
         switch (script.endAction()) {
-            case HOLD -> sprite.setAnimationFrameIndex(script.frames().size() - 1);
-            case LOOP_BACK -> sprite.setAnimationFrameIndex(resolveLoopBackIndex(script));
+            case HOLD -> {
+                sprite.setAnimationFrameIndex(script.frames().size() - 1);
+                return true;
+            }
+            case LOOP_BACK -> {
+                sprite.setAnimationFrameIndex(resolveLoopBackIndex(script));
+                return true;
+            }
             case SWITCH -> {
                 int nextAnimId = script.endParam();
                 if (nextAnimId == sprite.getAnimationId()) {
                     sprite.setAnimationFrameIndex(0);
-                    return;
+                    return true;
                 }
                 // ROM ACCURACY: Check if the profile wants the CURRENT animation to continue.
                 // In the original game, $FD only sets 'anim' but not 'prev_anim'. If the
@@ -328,15 +338,21 @@ public class PlayableSpriteAnimation {
                     if (desired != null && desired == sprite.getAnimationId()) {
                         // Profile wants current animation - HOLD on last frame instead of switching
                         sprite.setAnimationFrameIndex(script.frames().size() - 1);
-                        return;
+                        return true;
                     }
                 }
                 sprite.setAnimationId(nextAnimId);
                 resetScriptState();
-                return;
+                return false;
             }
-            case LOOP -> sprite.setAnimationFrameIndex(0);
-            default -> sprite.setAnimationFrameIndex(0);
+            case LOOP -> {
+                sprite.setAnimationFrameIndex(0);
+                return true;
+            }
+            default -> {
+                sprite.setAnimationFrameIndex(0);
+                return true;
+            }
         }
     }
 

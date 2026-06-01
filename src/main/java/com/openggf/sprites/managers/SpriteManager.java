@@ -329,6 +329,23 @@ public class SpriteManager {
 		this.frameCounter = value;
 	}
 
+	public void publishHeldInputForLevelEvents(InputHandler handler) {
+		if (handler == null) {
+			return;
+		}
+		boolean suppressInput = inputSuppressed || playbackInputSuppressed;
+		boolean up = !suppressInput && handler.isKeyDown(upKey);
+		boolean down = !suppressInput && handler.isKeyDown(downKey);
+		boolean left = !suppressInput && handler.isKeyDown(leftKey);
+		boolean right = !suppressInput && handler.isKeyDown(rightKey);
+		for (Sprite sprite : getAllSprites()) {
+			if (sprite instanceof AbstractPlayableSprite playable && !playable.isCpuControlled()) {
+				playable.applyQueuedControlStateForFrameStart();
+				playable.setDirectionalInputPressed(up, down, left, right);
+			}
+		}
+	}
+
 	public void update(InputHandler handler) {
 		frameCounter++;
 		// Note: bucketsDirty is already marked in addSprite()/removeSprite(),
@@ -1263,6 +1280,14 @@ public class SpriteManager {
 	}
 
 	private static void applyScreenYWrapValueAfterControl(AbstractPlayableSprite playable) {
+		SidekickCpuController cpu = playable != null ? playable.getCpuController() : null;
+		if (playable != null
+				&& playable.isCpuControlled()
+				&& playable.getDead()
+				&& cpu != null
+				&& cpu.deadFallBypassesScreenYWrapValue()) {
+			return;
+		}
 		Camera camera = GameServices.cameraOrNull();
 		if (camera != null) {
 			camera.applyScreenYWrapValue(playable);

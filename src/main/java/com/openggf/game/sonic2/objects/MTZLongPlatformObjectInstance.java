@@ -2,22 +2,27 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.ButtonVineTriggerManager;
-import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.S2SpriteDataLoader;
+import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.SolidObjectListener;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SolidRoutineProfile;
-import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpritePieceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.util.LazyMappingHolder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -78,6 +83,8 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
 
     // Proximity detection speed: addi.w #$10,objoff_3A(a0) / subi.w #$10
     private static final int PROXIMITY_SPEED = 0x10;
+    private static final ObjectPlayerParticipationPolicy PROXIMITY_PARTICIPANTS =
+            ObjectPlayerParticipationPolicy.NATIVE_P1_P2;
 
     // Proximity detection offsets when NOT x-flipped (s2.asm lines 52606-52607)
     private static final int PROX_LEFT_NORMAL = -0x20;
@@ -103,6 +110,9 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
      */
     private static int mtzPlatformCogX;
 
+    /** Shared Obj65_a level-art mappings (4 frames), lazily loaded from ROM. */
+    private static final LazyMappingHolder MAPPINGS = new LazyMappingHolder();
+
     // Position tracking
     private int x;
     private int y;
@@ -125,6 +135,9 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
 
     // Standing detection
     private boolean contactStanding;
+    // Step-on advance (sub-type 4) uses the ROM p1_standing_bit, which tracks ONLY the
+    // main character (s2.asm:52676). Track main-character standing separately.
+    private boolean contactStandingMain;
 
     public MTZLongPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "MTZLongPlatform");
@@ -140,11 +153,26 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     public int getY() {
         return y;
     }
+
+    @Override
+    public int getOutOfRangeReferenceX() {
+        // Obj65 loc_26C1C checks objoff_34, not the moving x_pos(a0), before
+        // calling DeleteObject (docs/s2disasm/s2.asm:52469-52484).
+        return baseX;
+    }
+
     @Override
     public SolidObjectParams getSolidParams() {
         // From s2.asm lines 52457-52463: d1=width+5, d2=y_radius, d3=y_radius+1
         int halfWidth = widthPixels + 5;
         return new SolidObjectParams(halfWidth, yRadius, yRadius + 1);
+    }
+
+    @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // SolidObject_Landed re-reads width_pixels(a0). Obj65 is unusual because
+        // Obj65_Main passes width_pixels+$5 into SolidObject, not width_pixels+$B.
+        return widthPixels;
     }
 
     @Override
@@ -182,6 +210,11 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (contact.standing() || contact.touchTop()) {
             contactStanding = true;
+            // p1_standing_bit reflects only the main (non-CPU) character; a CPU sidekick
+            // standing on the platform must not set it.
+            if (player != null && !player.isCpuControlled()) {
+                contactStandingMain = true;
+            }
         }
     }
 
@@ -190,23 +223,50 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         executeMovement(frameCounter, player);
         updateDynamicSpawn(x, y);
+        // ROM loc_26C1C tail (s2.asm:52469-52484) marks the object gone + clears
+        // its respawn bit from objoff_34; getOutOfRangeReferenceX exposes that
+        // anchor to the shared ObjectManager out_of_range path.
     }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        ObjectRenderManager renderManager = services().renderManager();
-        PatternSpriteRenderer renderer = null;
-        if (renderManager != null) {
-            // Platform uses level art tiles. CPZ_STAIR_BLOCK sheet provides compatible mappings:
-            // Sheet frame 0 = 4-block platform (obj65 frame 0/2/3)
-            // Sheet frame 1 = 2-block platform (obj65 frame 1)
-            renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.CPZ_STAIR_BLOCK);
+        // Obj65 renders the real Obj65_a level-art mappings (4 frames) against the
+        // zone's level art (ArtTile_ArtKos_LevelArt, base tile 0) on VDP palette
+        // line 3 (s2.asm:52381-52382 make_art_tile(ArtTile_ArtKos_LevelArt,3,0)).
+        // mapping_frame = d0/4 computed in init() (s2.asm:52394), range 0..3.
+        int frame = Math.max(0, Math.min(mappingFrame, 3));
+
+        List<SpriteMappingFrame> mappings = MAPPINGS.get(
+                Sonic2Constants.MAP_UNC_MTZ_PLATFORM_LEVELART_ADDR,
+                S2SpriteDataLoader::loadMappingFrames, "Obj65a");
+        if (mappings.isEmpty() || frame >= mappings.size()) {
+            return;
         }
-        if (renderer != null && renderer.isReady()) {
-            // Map propsIndex to sheet frame: index 1 -> frame 1, all others -> frame 0
-            int sheetFrame = (mappingFrame == 1) ? 1 : 0;
-            renderer.drawFrameIndex(sheetFrame, x, y, xFlip, false);
+        SpriteMappingFrame mapFrame = mappings.get(frame);
+        if (mapFrame == null || mapFrame.pieces().isEmpty()) {
+            return;
         }
+        GraphicsManager graphicsManager = services().graphicsManager();
+        if (graphicsManager == null) {
+            return;
+        }
+        SpritePieceRenderer.renderPieces(
+                mapFrame.pieces(),
+                x, y,
+                0,   // level art starts at tile 0
+                3,   // palette line 3
+                xFlip, false,
+                (patternIndex, pieceHFlip, pieceVFlip, paletteIndex, px, py) -> {
+                    int descIndex = patternIndex & 0x7FF;
+                    if (pieceHFlip) {
+                        descIndex |= 0x800;
+                    }
+                    if (pieceVFlip) {
+                        descIndex |= 0x1000;
+                    }
+                    descIndex |= (paletteIndex & 0x3) << 13;
+                    graphicsManager.renderPattern(new PatternDesc(descIndex), px, py);
+                });
     }
 
     /**
@@ -308,11 +368,6 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
     }
 
     private void spawnChildCog() {
-        ObjectManager objManager = services().objectManager();
-        if (objManager == null) {
-            return;
-        }
-
         // Calculate child position (s2.asm lines 52423-52430)
         int childX = spawn.x() - 0x4C; // addi.w #-$4C,x_pos(a1)
         int childY = spawn.y() + 0x14;  // addi.w #$14,y_pos(a1)
@@ -329,9 +384,11 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
             childXFlip = true; // bset #render_flags.x_flip
         }
 
-        MTZLongPlatformCogInstance cog = new MTZLongPlatformCogInstance(
-                childX, childY, childXFlip, this);
-        objManager.addDynamicObject(cog);
+        // Spawn via the shared child-spawn path (s2.asm AllocateObjectAfterCurrent).
+        final int fChildX = childX;
+        final boolean fChildXFlip = childXFlip;
+        spawnChild(() -> new MTZLongPlatformCogInstance(
+                fChildX, childY, fChildXFlip, this));
     }
 
     private void executeMovement(int frameCounter, AbstractPlayableSprite player) {
@@ -481,11 +538,17 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         int top = y + PROX_TOP;
         int bottom = y + PROX_BOTTOM;
 
-        // Check if any player is in the detection zone
-        int playerX = player.getCentreX();
-        int playerY = player.getCentreY();
-        boolean playerInZone = playerX >= left && playerX < right
-                && playerY >= top && playerY < bottom;
+        // Obj65 loc_26D94 checks MainCharacter and Sidekick in sequence before deciding
+        // whether to extend/retract, so a native P2/Tails presence keeps the platform armed.
+        boolean playerInZone = false;
+        for (PlayableEntity participant : proximityParticipants(player)) {
+            if (participant instanceof AbstractPlayableSprite candidate
+                    && candidate.getCentreX() >= left && candidate.getCentreX() < right
+                    && candidate.getCentreY() >= top && candidate.getCentreY() < bottom) {
+                playerInZone = true;
+                break;
+            }
+        }
 
         if (playerInZone) {
             // Extend (s2.asm lines 52647-52651)
@@ -513,15 +576,29 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         x = baseX - d0;
     }
 
+    private List<PlayableEntity> proximityParticipants(AbstractPlayableSprite updatePlayer) {
+        List<PlayableEntity> participants = services().playerQuery().playersFor(PROXIMITY_PARTICIPANTS);
+        if (updatePlayer == null || participants.contains(updatePlayer)) {
+            return participants;
+        }
+        ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
+        withUpdatePlayer.add(updatePlayer);
+        withUpdatePlayer.addAll(participants);
+        return withUpdatePlayer;
+    }
+
     /**
      * Subtype 4: Step-on advance (loc_26E3C).
      * Increments subtype when player stands on it.
      */
     private void moveStepOnAdvance(int frameCounter) {
-        // s2.asm lines 52676-52679: btst #p1_standing_bit,status(a0); beq +; addq.b #1,subtype
-        boolean standing = contactStanding;
+        // s2.asm lines 52676-52684: btst #p1_standing_bit,status(a0); beq +; addq.b #1,subtype.
+        // p1_standing_bit reflects ONLY the main character, so advance solely on the main
+        // character standing — a riding sidekick must not trigger the step-on.
+        boolean mainStanding = contactStandingMain;
         contactStanding = false;
-        if (standing) {
+        contactStandingMain = false;
+        if (mainStanding) {
             moveSubtype++;
         }
     }
