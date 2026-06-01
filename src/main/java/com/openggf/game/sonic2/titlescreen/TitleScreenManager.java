@@ -118,6 +118,52 @@ public class TitleScreenManager implements TitleScreenProvider {
         return configService != null ? configService : GameServices.configuration();
     }
 
+    // -----------------------------------------------------------------------
+    // Widescreen helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Current projection viewport width in game pixels (320 native, wider in
+     * widescreen). Falls back to {@link #SCREEN_WIDTH} when headless.
+     */
+    private int viewportWidth() {
+        try {
+            int w = GameServices.graphics().getProjectionWidth();
+            return w > 0 ? w : SCREEN_WIDTH;
+        } catch (Exception ignored) {
+            return SCREEN_WIDTH;
+        }
+    }
+
+    /**
+     * Horizontal offset that centres the 320-wide foreground (logo, sprites,
+     * text) in the viewport. Zero at native 320 — byte-identical. The background
+     * plane (Plane B) is instead extended to fill the full width, so it does not
+     * use this offset.
+     */
+    private int xOffset() {
+        return (viewportWidth() - SCREEN_WIDTH) / 2;
+    }
+
+    /**
+     * Maps a projection-space X span {@code [mdX, mdX+mdW)} to a window-space
+     * scissor span {@code [x, x+width)} using the active viewport. Returns null
+     * when the span is fully clipped. Pure function — unit-tested.
+     *
+     * @param projWidth the live projection width the viewport represents
+     */
+    public static int[] scissorXSpan(int mdX, int mdW, int projWidth, int vpX, int vpW) {
+        int clippedX = Math.max(0, mdX);
+        int clippedX2 = Math.min(projWidth, mdX + mdW);
+        if (clippedX2 <= clippedX) {
+            return null;
+        }
+        float scaleX = (float) vpW / projWidth;
+        int x = vpX + (int) Math.floor(clippedX * scaleX);
+        int width = Math.max(1, (int) Math.ceil((clippedX2 - clippedX) * scaleX));
+        return new int[] {x, width};
+    }
+
     // Animation frame sequences (from Ani_obj0E in disassembly)
     // Ani_obj0E_Sonic: duration=1, frames: 5, 6, 7, end ($FA)
     // (Skipping frame 8 per fixBugs - it's a prototype frame missing the right arm)
@@ -855,7 +901,7 @@ public class TitleScreenManager implements TitleScreenProvider {
                     -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                     0.0f, 0.0f, 0.0f, emblemDarkness,
-                    0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                    0, 0, viewportWidth(), SCREEN_HEIGHT
             ));
         }
 
@@ -868,7 +914,7 @@ public class TitleScreenManager implements TitleScreenProvider {
                         -1,
                         GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                         1.0f, 1.0f, 1.0f, flashAlpha,
-                        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                        0, 0, viewportWidth(), SCREEN_HEIGHT
                 ));
             }
         }
@@ -925,7 +971,7 @@ public class TitleScreenManager implements TitleScreenProvider {
                         -1,
                         GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                         0.0f, 0.0f, 0.0f, fadeAmount,
-                        0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                        0, 0, viewportWidth(), SCREEN_HEIGHT
                 ));
             }
         }
@@ -984,7 +1030,7 @@ public class TitleScreenManager implements TitleScreenProvider {
                     -1,
                     GLCommand.BlendType.ONE_MINUS_SRC_ALPHA,
                     0.0f, 0.0f, 0.0f, fadeAmount,
-                    0, 0, SCREEN_WIDTH, SCREEN_HEIGHT
+                    0, 0, viewportWidth(), SCREEN_HEIGHT
             ));
         }
     }
@@ -1048,7 +1094,7 @@ public class TitleScreenManager implements TitleScreenProvider {
      * </ul>
      */
     private void drawCreditTextLine(GraphicsManager gm, String text, int startCol, int row) {
-        int x = startCol * 8;
+        int x = startCol * 8 + xOffset(); // centre the credit text (0 at native)
         int y = row * 8;
 
         reusableDesc.set(0); // Clear: no flip, palette 0, no priority
@@ -1121,7 +1167,7 @@ public class TitleScreenManager implements TitleScreenProvider {
      * Draws a sprite at its VDP position (subtracting 128 for screen coords).
      */
     private void drawSprite(AnimatedSprite sprite) {
-        int screenX = sprite.x - 128;
+        int screenX = sprite.x - 128 + xOffset(); // centre with the logo (0 at native)
         int screenY = sprite.y - 128;
         spriteRenderer.drawFrameIndex(sprite.mappingFrame, screenX, screenY);
     }
@@ -1156,7 +1202,7 @@ public class TitleScreenManager implements TitleScreenProvider {
             return;
         }
 
-        int screenX = sprite.x - 128;
+        int screenX = sprite.x - 128 + xOffset(); // centre with the logo (0 at native)
         int screenY = sprite.y - 128;
         List<? extends SpriteFramePiece> pieces = frame.pieces();
 
@@ -1184,12 +1230,20 @@ public class TitleScreenManager implements TitleScreenProvider {
         int tileScrollOffset = pixelScroll >> 3;
         int subTileOffset = pixelScroll & 7;
 
+        // Number of screen tile columns needed to fill the viewport. At native
+        // 320 this is 40 — byte-identical; wider viewports reveal more of the
+        // 64-tile-wide plane (Plane B is the background and fills the screen
+        // rather than being centred).
+        int screenCols = (viewportWidth() + 7) / 8;
+
         for (int ty = 0; ty < 24 && ty * 8 < SCREEN_HEIGHT; ty++) {
             if (ty < SCROLL_START_ROW) {
-                // Static rows: render cols 0-39 directly
+                // Static rows: render columns left to right, wrapping into the
+                // 64-wide plane so the extra widescreen columns are filled.
                 int baseIndex = ty * planeWidth;
-                for (int tx = 0; tx < 40; tx++) {
-                    int idx = baseIndex + tx;
+                for (int tx = 0; tx < screenCols; tx++) {
+                    int planeTile = ((tx % planeWidth) + planeWidth) % planeWidth;
+                    int idx = baseIndex + planeTile;
                     if (idx < 0 || idx >= map.length) {
                         continue;
                     }
@@ -1204,7 +1258,7 @@ public class TitleScreenManager implements TitleScreenProvider {
             } else {
                 // Scrolling rows (20-23): scroll with camera, no ripple
                 int baseIndex = ty * planeWidth;
-                for (int screenTile = -1; screenTile < 41; screenTile++) {
+                for (int screenTile = -1; screenTile < screenCols + 1; screenTile++) {
                     int planeTile = screenTile - tileScrollOffset;
                     planeTile = ((planeTile % planeWidth) + planeWidth) % planeWidth;
 
@@ -1247,6 +1301,9 @@ public class TitleScreenManager implements TitleScreenProvider {
         // Base scroll for scrolling rows
         int pixelScroll = -(cameraX) >> 2;
 
+        // Number of screen tile columns to fill the viewport (40 at native 320).
+        int screenCols = (viewportWidth() + 7) / 8;
+
         // Ripple index, wrapped
         int currentRippleIndex = rippleIndex & 0x1F;
 
@@ -1286,7 +1343,7 @@ public class TitleScreenManager implements TitleScreenProvider {
             gm.beginPatternBatch();
 
             int baseIndex = ty * planeWidth;
-            for (int screenTile = -1; screenTile < 41; screenTile++) {
+            for (int screenTile = -1; screenTile < screenCols + 1; screenTile++) {
                 int planeTile = screenTile - lineTileScroll;
                 planeTile = ((planeTile % planeWidth) + planeWidth) % planeWidth;
 
@@ -1324,6 +1381,7 @@ public class TitleScreenManager implements TitleScreenProvider {
 
         int width = dataLoader.getPlaneAWidth();   // 40
         int height = dataLoader.getPlaneAHeight();  // 28
+        int ox = xOffset(); // centre the 320-wide logo (0 at native)
 
         for (int ty = 0; ty < height && ty * 8 < SCREEN_HEIGHT; ty++) {
             int baseIndex = ty * width;
@@ -1338,7 +1396,7 @@ public class TitleScreenManager implements TitleScreenProvider {
                 }
                 reusableDesc.set(word);
                 int patternId = TitleScreenDataLoader.PATTERN_BASE + reusableDesc.getPatternIndex();
-                gm.renderPatternWithId(patternId, reusableDesc, tx * 8, ty * 8);
+                gm.renderPatternWithId(patternId, reusableDesc, tx * 8 + ox, ty * 8);
             }
         }
     }
@@ -1357,7 +1415,10 @@ public class TitleScreenManager implements TitleScreenProvider {
 
         int width = dataLoader.getPlaneAWidth();   // 40
         int height = dataLoader.getPlaneAHeight();  // 28
+        int ox = xOffset(); // logo is centred, so shift the occlusion with it
 
+        // mdX iterates the logo's own 320-wide space; the curve centre stays at
+        // the logo centre. Scissor/draw are shifted into projection space by ox.
         for (int mdX = 0; mdX < SCREEN_WIDTH; mdX += LOGO_OCCLUSION_COLUMN_WIDTH) {
             int mdW = Math.min(LOGO_OCCLUSION_COLUMN_WIDTH, SCREEN_WIDTH - mdX);
             int startY = getLogoOcclusionStartPixel(mdX + (mdW >> 1));
@@ -1370,7 +1431,7 @@ public class TitleScreenManager implements TitleScreenProvider {
                 continue;
             }
 
-            if (!enableMdScissorRect(gm, mdX, startY, mdW, SCREEN_HEIGHT - startY)) {
+            if (!enableMdScissorRect(gm, mdX + ox, startY, mdW, SCREEN_HEIGHT - startY)) {
                 continue;
             }
 
@@ -1384,6 +1445,7 @@ public class TitleScreenManager implements TitleScreenProvider {
     }
 
     private void renderPlaneAColumn(GraphicsManager gm, int[] map, int width, int height, int tx, int startTileRow) {
+        int ox = xOffset(); // centre the 320-wide logo (0 at native)
         for (int ty = startTileRow; ty < height && ty * 8 < SCREEN_HEIGHT; ty++) {
             int idx = ty * width + tx;
             if (idx < 0 || idx >= map.length) {
@@ -1395,20 +1457,24 @@ public class TitleScreenManager implements TitleScreenProvider {
             }
             reusableDesc.set(word);
             int patternId = TitleScreenDataLoader.PATTERN_BASE + reusableDesc.getPatternIndex();
-            gm.renderPatternWithId(patternId, reusableDesc, tx * 8, ty * 8);
+            gm.renderPatternWithId(patternId, reusableDesc, tx * 8 + ox, ty * 8);
         }
     }
 
+    /**
+     * Enables a GL scissor for a projection-space rectangle. {@code mdX} is in
+     * projection space (0..viewportWidth), so the X axis is mapped against the
+     * live projection width — not a hardcoded 320 — so the curved occlusion
+     * clips correctly at widescreen. The Y axis is unchanged (height is fixed).
+     */
     private boolean enableMdScissorRect(GraphicsManager gm, int mdX, int mdY, int mdW, int mdH) {
         if (mdW <= 0 || mdH <= 0) {
             return false;
         }
 
-        int clippedX = Math.max(0, mdX);
         int clippedY = Math.max(0, mdY);
-        int clippedX2 = Math.min(SCREEN_WIDTH, mdX + mdW);
         int clippedY2 = Math.min(SCREEN_HEIGHT, mdY + mdH);
-        if (clippedX2 <= clippedX || clippedY2 <= clippedY) {
+        if (clippedY2 <= clippedY) {
             return false;
         }
 
@@ -1416,15 +1482,17 @@ public class TitleScreenManager implements TitleScreenProvider {
         int vpY = gm.getViewportY();
         int vpW = gm.getViewportWidth();
         int vpH = gm.getViewportHeight();
-        float scaleX = (float) vpW / SCREEN_WIDTH;
-        float scaleY = (float) vpH / SCREEN_HEIGHT;
 
-        int scissorX = vpX + (int) Math.floor(clippedX * scaleX);
-        int scissorW = Math.max(1, (int) Math.ceil((clippedX2 - clippedX) * scaleX));
+        int[] xSpan = scissorXSpan(mdX, mdW, viewportWidth(), vpX, vpW);
+        if (xSpan == null) {
+            return false;
+        }
+
+        float scaleY = (float) vpH / SCREEN_HEIGHT;
         int scissorY = vpY + (int) Math.floor((SCREEN_HEIGHT - clippedY2) * scaleY);
         int scissorH = Math.max(1, (int) Math.ceil((clippedY2 - clippedY) * scaleY));
 
-        gm.enableScissor(scissorX, scissorY, scissorW, scissorH);
+        gm.enableScissor(xSpan[0], scissorY, xSpan[1], scissorH);
         return true;
     }
 
