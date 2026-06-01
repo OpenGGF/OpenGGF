@@ -1195,9 +1195,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         // xOffset() is 0 at native 320 — byte-identical at native width.
         int ox = xOffset();
 
-        // 0. Fill the widescreen side bands with the picture's own per-row edge
-        //    colour so the sky/sea gradient runs to the viewport edge instead of
-        //    leaving black bars. No-op at native 320 (no bands).
+        // 0. Fill the widescreen side bands with a flat colour from the picture's
+        //    top-left tile so they read as sky rather than black bars. No-op at
+        //    native 320 (no bands).
         drawBackgroundBands(gm);
 
         // 1. Render Plane B (background) — centred over the bands.
@@ -1294,10 +1294,9 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
      * <p><b>Widescreen:</b> the fixed 40×28 picture is centred (pillarboxed).
      * Edge-tiling the picture to fill the viewport was tried but smeared the
      * cloud/skyline edge columns. Instead {@link #drawBackgroundBands} fills the
-     * side bands with the picture's own per-row edge colour (sampled, not tiled)
-     * so the sky/sea gradient continues to the viewport edge without smearing.
-     * At native 320 the centred frame exactly fills the viewport (xOffset 0) —
-     * byte-identical.
+     * side bands with a single flat colour from the picture's top-left tile, so
+     * they read as sky rather than black bars. At native 320 the centred frame
+     * exactly fills the viewport (xOffset 0) — byte-identical.
      */
     private void renderPlaneB(GraphicsManager gm) {
         int[] bgMap = dataLoader.getBackgroundMapping();
@@ -1329,72 +1328,54 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     }
 
     /**
-     * Fills the widescreen side bands (outside the centred 320 frame) with the
-     * background picture's own edge colour, sampled once per row, so the sky/sea
-     * gradient continues to the viewport edge instead of leaving black bars.
-     *
-     * <p>A single representative colour per row is sampled from the row's edge
-     * tile (left band ← column 0, right band ← column 39) and drawn as a flat
-     * 8px-tall rectangle. Sampling one colour rather than repeating the whole
-     * tile keeps clouds from smearing horizontally while still matching the
-     * picture's vertical gradient. No-op at native 320 (no bands).
+     * Fills the widescreen side bands (outside the centred 320 frame) with a
+     * single flat colour taken from the picture's top-left tile, so the bands
+     * read as sky instead of black bars. One colour for the whole band avoids
+     * the cloud smear that tiling or per-row sampling produced. No-op at native
+     * 320 (no bands).
      */
     private void drawBackgroundBands(GraphicsManager gm) {
         int ox = xOffset();
         if (ox <= 0) {
             return; // native width — no side bands
         }
+        float[] c = topLeftBackgroundColor();
+        if (c == null) {
+            return;
+        }
+        int vw = viewportWidth();
+        int rightStart = ox + MAP_WIDTH * 8;
+        // Left band and right band, full viewport height, behind everything.
+        gm.registerCommand(new GLCommand(GLCommand.CommandType.RECTI, -1,
+                c[0], c[1], c[2], 0, 0, ox, SCREEN_HEIGHT));
+        gm.registerCommand(new GLCommand(GLCommand.CommandType.RECTI, -1,
+                c[0], c[1], c[2], rightStart, 0, vw, SCREEN_HEIGHT));
+    }
+
+    /**
+     * Resolves the flat side-band colour from the background picture's top-left
+     * tile (its corner pixel through the frame-D palette).
+     *
+     * @return {0..1, 0..1, 0..1} float RGB, or null if the tile is transparent
+     *         or unavailable (bands left to the clear colour)
+     */
+    private float[] topLeftBackgroundColor() {
         int[] bgMap = dataLoader.getBackgroundMapping();
         byte[] palD = dataLoader.getFrameDPaletteData();
         Pattern[] pats = dataLoader.getFrameDPatterns();
         if (bgMap == null || bgMap.length == 0 || palD == null || pats == null) {
-            return;
-        }
-
-        int vw = viewportWidth();
-        int rightStart = ox + MAP_WIDTH * 8;
-        for (int row = 0; row < MAP_HEIGHT; row++) {
-            int y0 = row * 8;
-            int y1 = y0 + 8;
-
-            float[] left = edgeBandColor(bgMap, pats, palD, row, 0);
-            if (left != null) {
-                gm.registerCommand(new GLCommand(GLCommand.CommandType.RECTI, -1,
-                        left[0], left[1], left[2], 0, y0, ox, y1));
-            }
-
-            float[] right = edgeBandColor(bgMap, pats, palD, row, MAP_WIDTH - 1);
-            if (right != null) {
-                gm.registerCommand(new GLCommand(GLCommand.CommandType.RECTI, -1,
-                        right[0], right[1], right[2], rightStart, y0, vw, y1));
-            }
-        }
-    }
-
-    /**
-     * Samples a single representative RGB colour from the edge tile of one
-     * background row, used to fill that row's widescreen side band.
-     *
-     * @return {0..1, 0..1, 0..1} float RGB, or null if the edge tile is
-     *         transparent or unavailable (band left to the clear colour)
-     */
-    private float[] edgeBandColor(int[] bgMap, Pattern[] pats, byte[] palD, int row, int col) {
-        int idx = row * MAP_WIDTH + col;
-        if (idx < 0 || idx >= bgMap.length) {
             return null;
         }
-        int word = bgMap[idx];
+        int word = bgMap[0]; // top-left tile
         if (word == 0) {
-            return null; // transparent edge tile
+            return null; // transparent corner
         }
         int tileIndex = word & 0x7FF;
         if (tileIndex >= pats.length || pats[tileIndex] == null) {
             return null;
         }
         int palLine = (word >> 13) & 0x3;
-        // Sample the pixel column nearest the picture's outer edge, mid-tile height.
-        int px = (col == 0) ? 0 : 7;
-        int colorIndex = pats[tileIndex].getPixel(px, 4) & 0x0F;
+        int colorIndex = pats[tileIndex].getPixel(0, 0) & 0x0F;
         int off = palLine * Palette.PALETTE_SIZE_IN_ROM + colorIndex * 2;
         if (off < 0 || off + 1 >= palD.length) {
             return null;
