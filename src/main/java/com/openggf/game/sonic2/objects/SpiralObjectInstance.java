@@ -2,12 +2,14 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
@@ -96,6 +98,7 @@ public class SpiralObjectInstance extends AbstractObjectInstance {
     // ROM: status(a0) stores separate standing bits for Sonic and Tails.
     private final Set<AbstractPlayableSprite> ridingPlayers =
             Collections.newSetFromMap(new IdentityHashMap<>(2));
+    private final IdentityHashMap<AbstractPlayableSprite, Integer> cylinderAngles = new IdentityHashMap<>(2);
 
     public SpiralObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -127,6 +130,11 @@ public class SpiralObjectInstance extends AbstractObjectInstance {
     }
 
     private void tryActivate(int frameCounter, AbstractPlayableSprite player) {
+        if (isCylinder()) {
+            tryActivateCylinder(frameCounter, player);
+            return;
+        }
+
         int dx = player.getCentreX() - spawn.x();
 
         // ROM: btst #status.player.in_air,status(a1) / bne.w return_215BE
@@ -178,6 +186,36 @@ public class SpiralObjectInstance extends AbstractObjectInstance {
         engagePlayer(frameCounter, player);
     }
 
+    private void tryActivateCylinder(int frameCounter, AbstractPlayableSprite player) {
+        int dx = player.getCentreX() - spawn.x();
+        // Obj06_Cylinder accepts -$C0 <= x_pos delta < $C0
+        // (docs/s2disasm/s2.asm:46859-46864).
+        if (dx < -0xC0 || dx >= 0xC0) {
+            return;
+        }
+
+        int playerBottom = player.getCentreY() + player.getYRadius() + 4;
+        int delta = spawn.y() + 60 - playerBottom;
+        // The ROM uses BHI after subtracting the foot position, then BLO after
+        // cmpi.w #-$10, so only a shallow overlap from -$10 through -1 captures.
+        if (delta >= 0 || delta < -0x10) {
+            return;
+        }
+        if (player.getDead()) {
+            return;
+        }
+
+        int snappedCenterY = player.getCentreY() + delta + 3;
+        player.setCentreYPreserveSubpixel((short) snappedCenterY);
+        player.setFlipTurned(true);
+        engagePlayer(frameCounter, player);
+        player.setAnimationId(Sonic2AnimationIds.WALK);
+        cylinderAngles.put(player, 0);
+        if (player.getGSpeed() == 0) {
+            player.setGSpeed((short) 1);
+        }
+    }
+
     private void engagePlayer(int frameCounter, AbstractPlayableSprite player) {
         ObjectManager objectManager = services().objectManager();
         if (objectManager != null
@@ -216,6 +254,11 @@ public class SpiralObjectInstance extends AbstractObjectInstance {
     }
 
     private void updateRidingPlayer(int frameCounter, AbstractPlayableSprite player) {
+        if (isCylinder()) {
+            updateCylinderRider(frameCounter, player);
+            return;
+        }
+
         boolean latchedToThisSpiral = player.getLatchedSolidObjectId() == Sonic2ObjectIds.SPIRAL
                 && player.getLatchedSolidObjectInstance() == this;
         if (latchedToThisSpiral) {
@@ -266,14 +309,72 @@ public class SpiralObjectInstance extends AbstractObjectInstance {
         player.markSpiralActive(frameCounter);
     }
 
+    private void updateCylinderRider(int frameCounter, AbstractPlayableSprite player) {
+        boolean latchedToThisCylinder = player.getLatchedSolidObjectId() == Sonic2ObjectIds.SPIRAL
+                && player.getLatchedSolidObjectInstance() == this;
+        if (latchedToThisCylinder) {
+            player.setOnObject(true);
+        }
+
+        int angle = cylinderAngles.getOrDefault(player, 0) & 0xFF;
+        if (player.getAir()) {
+            int releaseAngle = (angle + 0x20) & 0xFF;
+            if (releaseAngle < 0x40) {
+                player.setYSpeed((short) (player.getYSpeed() >> 1));
+            } else {
+                player.setYSpeed((short) 0);
+            }
+            fallOff(player, true);
+            return;
+        }
+
+        int offset = player.getCentreX() - spawn.x() + 0xC0;
+        if (offset < 0 || offset >= 0x180) {
+            fallOff(player, true);
+            return;
+        }
+        if (!player.isOnObject()) {
+            return;
+        }
+
+        ObjectManager objectManager = services().objectManager();
+        if (objectManager != null) {
+            objectManager.markObjectSupportThisFrame(player);
+        }
+
+        int cosine = TrigLookupTable.cosHex(angle);
+        int yOffset = (cosine * 0x2800) >> 16;
+        int targetCenterY = spawn.y() + yOffset;
+        targetCenterY -= player.getYRadius() - 0x13;
+        player.setCentreYPreserveSubpixel((short) targetCenterY);
+        player.setFlipAngle(angle);
+        cylinderAngles.put(player, (angle + 4) & 0xFF);
+        if (player.getGSpeed() == 0) {
+            player.setGSpeed((short) 1);
+        }
+        player.markSpiralActive(frameCounter);
+    }
+
     private void fallOff(AbstractPlayableSprite player) {
+        fallOff(player, false);
+    }
+
+    private void fallOff(AbstractPlayableSprite player, boolean setAir) {
         ridingPlayers.remove(player);
+        cylinderAngles.remove(player);
         player.setOnObject(false);
+        if (setAir) {
+            player.setAir(true);
+        }
         if (player.getLatchedSolidObjectId() == Sonic2ObjectIds.SPIRAL) {
             player.setLatchedSolidObjectId(0);
         }
         player.setFlipsRemaining(0);
         player.setFlipSpeed(4);
+    }
+
+    private boolean isCylinder() {
+        return (spawn.subtype() & 0x80) != 0;
     }
 
     @Override

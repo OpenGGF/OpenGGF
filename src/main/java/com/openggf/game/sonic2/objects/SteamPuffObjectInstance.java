@@ -30,8 +30,13 @@ import java.util.List;
 public class SteamPuffObjectInstance extends AbstractObjectInstance
         implements TouchResponseProvider {
 
-    // ROM: move.b #$18,width_pixels(a1) at loc_2674C (s2.asm line 52111)
-    // Used by MarkObjGone for off-screen culling in ROM; not consumed by engine base class
+    // ROM: move.b #$18,width_pixels(a1) at loc_2674C (s2.asm line 52111).
+    // In the ROM this width feeds the MarkObjGone off-screen culling test. The
+    // engine culls dynamic objects centrally (ObjectManager.Placement) and the
+    // puff exposes no per-object width hook (it implements only
+    // TouchResponseProvider, not a width/solid provider), so there is nothing to
+    // wire this into. Retained as documentation of the ROM value; behaviour is
+    // unchanged. Suppression is intentional — no consumer exists to remove it.
     @SuppressWarnings("unused")
     private static final int WIDTH_PIXELS = 0x18;
 

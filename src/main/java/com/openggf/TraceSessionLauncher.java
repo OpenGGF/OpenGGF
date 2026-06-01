@@ -544,6 +544,7 @@ public final class TraceSessionLauncher {
                 player.setForcedJumpPress(pressed != 0);
             }
             sprites.setPlaybackInputSuppressed(true);
+            sprites.publishHeldInputForLevelEvents(loop.getInputHandler());
             LevelFrameStep.execute(level, camera, () -> sprites.update(loop.getInputHandler()));
         }
 

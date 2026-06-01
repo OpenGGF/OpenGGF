@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -86,13 +87,19 @@ public class CPZPlatformObjectInstance extends AbstractObjectInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.CPZ_PLATFORM);
+        PatternSpriteRenderer renderer = getRenderer(artKeyForRomZone(services().currentZone()));
         if (renderer == null) return;
 
         boolean hFlip = xFlip;
         boolean vFlip = false;
 
         renderer.drawFrameIndex(mappingFrame, x, y, hFlip, vFlip);
+    }
+
+    public static String artKeyForRomZone(int romZone) {
+        return romZone == Sonic2ZoneConstants.ROM_ZONE_WFZ
+                ? Sonic2ObjectArtKeys.WFZ_PLATFORM
+                : Sonic2ObjectArtKeys.CPZ_PLATFORM;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.objects;
 
+import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.DebugOverlayManager;
@@ -118,7 +119,6 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
     private boolean extending;         // objoff_38: false=retracting, true=extending
     private int extension;             // objoff_3A: current extension amount (0 to maxTravel)
     private int timer;                 // objoff_36: countdown timer
-
     public MTZTwinStompersObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
 
@@ -159,6 +159,15 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
         extension = 0;
         timer = 0;
 
+        if (moveMode == 1) {
+            // S2 placement materializes new objects between slot-loop passes.
+            // Prime the two Obj64_Main ticks that the ROM has consumed before
+            // this moving solid first participates in the following frame's
+            // player/object contact window.
+            updateStomperMovement();
+            updateStomperMovement();
+        }
+
         updateDynamicSpawn(baseX, currentY);
     }
 
@@ -173,7 +182,10 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
     }
     @Override
     public SolidObjectParams getSolidParams() {
-        // s2.asm:52260-52267: d1 = width_pixels + $B, d2 = objoff_2E, d3 = objoff_2E + 1
+        // s2.asm:52264-52270: d1 = width_pixels + $B, d2 = objoff_2E, d3 = objoff_2E + 1.
+        // ROM gates this JmpTo9_SolidObject call on render_flags.on_screen
+        // (s2.asm:52262); the engine's solid-contact pass applies the equivalent
+        // on-screen gate (isWithinSolidContactBounds), so no extra gating is needed here.
         int halfWidth = widthPixels + 0x0B;
         return new SolidObjectParams(halfWidth, collisionYRadius, collisionYRadius + 1);
     }
@@ -198,19 +210,49 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed()) return;
 
-        // Despawn check: s2.asm:52269-52273
-        // Uses objoff_34 (baseX), checks against camera with 0x280 threshold
-        if (!isOnScreen(128)) {
-            setDestroyed(true);
-            return;
-        }
-
+        // ROM Obj64_Main (s2.asm:52254-52278) runs the movement mode first, then
+        // (gated on render_flags.on_screen) JmpTo9_SolidObject, then the
+        // coarse-X delete test. Solid participation is provided to the engine via
+        // SolidObjectProvider (getSolidParams), so movement runs here first.
+        //
         // Push old x_pos (for SolidObject delta): s2.asm:52251
-        // Execute movement mode: s2.asm:52252-52256
+        // Execute movement mode: s2.asm:52252-52260
         if (moveMode == 1) {
             updateStomperMovement();
         }
         // Mode 0 is just rts (no movement)
+
+        // SOLID-PASS GATE DIVERGENCE: the ROM only calls JmpTo9_SolidObject when
+        // render_flags.on_screen is set (s2.asm:52262-52271). The engine resolves
+        // solid contacts through ObjectManager.SolidContacts driven by the
+        // SolidObjectProvider interface, which already skips objects whose render
+        // box has scrolled off-screen (see AbstractObjectInstance.isWithinSolidContactBounds).
+        // That gate is functionally equivalent to the ROM's on_screen check, so no
+        // explicit gating is added here; doing so from update() would not affect the
+        // engine's separate solid-contact pass.
+
+        // Despawn check: ROM coarse-X delete test (s2.asm:52273-52277).
+        //   move.w objoff_34(a0),d0     ; baseX (spawn X)
+        //   andi.w #$FF80,d0            ; chunk-align object X
+        //   sub.w  (Camera_X_pos_coarse).w,d0
+        //   cmpi.w #$280,d0             ; 640px coarse cutoff
+        //   bhi.s  JmpTo31_DeleteObject
+        // Camera_X_pos_coarse is defined as (Camera_X_pos - 128) chunk-aligned
+        // (s2.constants.asm:1619), so the engine models it as
+        // ((camera.getX() - 128) & 0xFF80) — matching the established port in
+        // TornadoObjectInstance / ConveyorObjectInstance. No left margin in the
+        // ROM (the previous isOnScreen(128) added a spurious 128px margin and
+        // used a symmetric viewport test).
+        Camera camera = services().camera();
+        if (camera != null) {
+            int objChunk = baseX & 0xFF80;
+            int camChunk = (camera.getX() - 128) & 0xFF80;
+            int d0 = (objChunk - camChunk) & 0xFFFF;
+            if (d0 > 0x280) {
+                setDestroyed(true);
+                return;
+            }
+        }
 
         updateDynamicSpawn(baseX, currentY);
     }
@@ -256,6 +298,17 @@ public class MTZTwinStompersObjectInstance extends AbstractObjectInstance
             d0 = -d0 + FLIP_OFFSET;
         }
         currentY = baseY + d0;
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("ext=%02X max=%02X timer=%04X dir=%d flip=%d base=%04X",
+                extension & 0xFFFF,
+                maxTravel & 0xFFFF,
+                timer & 0xFFFF,
+                extending ? 1 : 0,
+                xFlip ? 1 : 0,
+                baseY & 0xFFFF);
     }
 
     @Override

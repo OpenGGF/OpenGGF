@@ -123,6 +123,7 @@ public class SidekickCpuController {
     private boolean jumpingFlag;
     private int minXBound = Integer.MIN_VALUE;
     private int maxXBound = Integer.MIN_VALUE;
+    private int minYBound = Integer.MIN_VALUE;
     private int maxYBound = Integer.MIN_VALUE;
     private int lastInteractObjectId;
     private int normalFrameCount;
@@ -885,6 +886,11 @@ public class SidekickCpuController {
      */
     public boolean isDeferredDespawnDeadFallContinuingThisFrame() {
         return deferredDespawnDeadFallContinuingThisFrame;
+    }
+
+    public boolean deadFallBypassesScreenYWrapValue() {
+        PhysicsFeatureSet fs = sidekick.getPhysicsFeatureSet();
+        return fs != null && fs.sidekickDeathUsesDeferredDespawn();
     }
 
     /**
@@ -3342,16 +3348,27 @@ public class SidekickCpuController {
         return maxXBound == Integer.MIN_VALUE ? fallback : maxXBound;
     }
 
+    public int getMinYBound(int fallback) {
+        return minYBound == Integer.MIN_VALUE ? fallback : minYBound;
+    }
+
     public int getMaxYBound(int fallback) {
         return maxYBound == Integer.MIN_VALUE ? fallback : maxYBound;
     }
 
     public void setLevelBounds(Integer minX, Integer maxX, Integer maxY) {
+        setLevelBounds(minX, maxX, null, maxY);
+    }
+
+    public void setLevelBounds(Integer minX, Integer maxX, Integer minY, Integer maxY) {
         if (minX != null) {
             minXBound = minX;
         }
         if (maxX != null) {
             maxXBound = maxX;
+        }
+        if (minY != null) {
+            minYBound = minY;
         }
         if (maxY != null) {
             maxYBound = maxY;
@@ -3430,6 +3447,7 @@ public class SidekickCpuController {
                 jumpingFlag,
                 minXBound,
                 maxXBound,
+                minYBound,
                 maxYBound,
                 lastInteractObjectId,
                 normalFrameCount,
@@ -3483,6 +3501,7 @@ public class SidekickCpuController {
         jumpingFlag = snapshot.jumpingFlag();
         minXBound = snapshot.minXBound();
         maxXBound = snapshot.maxXBound();
+        minYBound = snapshot.minYBound();
         maxYBound = snapshot.maxYBound();
         lastInteractObjectId = snapshot.lastInteractObjectId();
         normalFrameCount = snapshot.normalFrameCount();
@@ -3593,6 +3612,7 @@ public class SidekickCpuController {
         lastInteractObjectId = 0;
         minXBound = Integer.MIN_VALUE;
         maxXBound = Integer.MIN_VALUE;
+        minYBound = Integer.MIN_VALUE;
         maxYBound = Integer.MIN_VALUE;
         clearInputs();
         sidekick.setForcedAnimationId(-1);

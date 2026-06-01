@@ -5,11 +5,15 @@ import com.openggf.level.objects.AbstractBadnikInstance;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.objects.PatrolMovementHelper;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -123,13 +127,13 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance {
     private void updateWalking(AbstractPlayableSprite player) {
         // ROM: _btst #render_flags.on_screen,render_flags(a0) / _beq.s loc_3841C
         // isOnScreenX() matches ROM's on_screen render flag (camera X bounds check via MarkObjGone)
-        if (isOnScreenX() && player != null) {
+        AbstractPlayableSprite target = closestNativeOrientationTarget(player);
+        if (isOnScreenX() && target != null) {
             // ROM: bsr.w Obj_GetOrientationToPlayer
-            // Returns d0 = 0 if player is right, 2 if player is left
-            // Returns d1 = 0 if player is below, 2 if player is above
-            // d2 = x distance (obj - player), d3 = y distance (obj - player)
-            int dx = currentX - player.getCentreX();
-            int dy = currentY - player.getCentreY();
+            // Selects nearest MainCharacter/Sidekick by ROM X distance, then
+            // returns d0/d1/d2/d3 relative to that selected player.
+            int dx = currentX - target.getCentreX();
+            int dy = currentY - target.getCentreY();
 
             // Obj_GetOrientationToPlayer: d0 = 0 if dx >= 0 (player LEFT), 2 if dx < 0 (player RIGHT)
             // ObjA1_Main: if x_flip set (facing right), subq.w #2,d0
@@ -181,6 +185,24 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance {
         animFrame = walkAnimToggle ? 2 : 0;
     }
 
+    private AbstractPlayableSprite closestNativeOrientationTarget(AbstractPlayableSprite fallback) {
+        ObjectServices svc = tryServices();
+        if (svc == null) {
+            return fallback;
+        }
+        ObjectPlayerQuery query;
+        try {
+            query = svc.playerQuery();
+        } catch (UnsupportedOperationException e) {
+            return fallback;
+        }
+        ObjectPlayerQuery.NearestPlayerX nearest = query.nearestByRomX(
+                ObjectPlayerParticipationPolicy.NATIVE_P1_P2,
+                currentX,
+                candidate -> candidate instanceof AbstractPlayableSprite);
+        return nearest.player() instanceof AbstractPlayableSprite sprite ? sprite : fallback;
+    }
+
     /**
      * Routine 4 (loc_38466): Count down timer, then reverse direction.
      */
@@ -214,9 +236,6 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance {
      * Each pincer is an independent homing projectile (ObjA2).
      */
     private void spawnPincers() {
-        var objectManager = services().objectManager();
-        if (objectManager == null) return;
-
         int[][] offsets = {
             { PINCER_0_X_OFFSET, 0 },
             { PINCER_1_X_OFFSET, 0 }
@@ -228,15 +247,23 @@ public class SlicerBadnikInstance extends AbstractBadnikInstance {
             if (!facingLeft) {
                 xOff = -xOff;
             }
-            int pincerX = currentX + xOff;
-            int pincerY = currentY + offset[1];
+            final int pincerX = currentX + xOff;
+            final int pincerY = currentY + offset[1];
 
             // ROM: move.w #-$200,d0 / btst #render_flags.x_flip / beq.s + / neg.w d0
-            int pincerXVel = facingLeft ? -PINCER_INIT_X_VEL : PINCER_INIT_X_VEL;
+            final int pincerXVel = facingLeft ? -PINCER_INIT_X_VEL : PINCER_INIT_X_VEL;
+            ObjectSpawn pincerSpawn = new ObjectSpawn(
+                    pincerX,
+                    pincerY,
+                    Sonic2ObjectIds.SLICER_PINCERS,
+                    spawn.subtype(),
+                    spawn.renderFlags(),
+                    false,
+                    pincerY);
 
-            SlicerPincerInstance pincer = new SlicerPincerInstance(
-                    spawn, this, pincerX, pincerY, pincerXVel, !facingLeft, PINCER_HOMING_TIMER);
-            objectManager.addDynamicObject(pincer);
+            // ROM (s2.asm:75496-75502): 2x ObjA2 spawned as children of the body.
+            spawnChild(() -> new SlicerPincerInstance(
+                    pincerSpawn, this, pincerX, pincerY, pincerXVel, !facingLeft, PINCER_HOMING_TIMER));
         }
     }
 

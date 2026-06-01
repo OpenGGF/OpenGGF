@@ -14,6 +14,7 @@ import com.openggf.physics.CollisionSystem;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.physics.TerrainCollisionManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.tests.FullReset;
 import com.openggf.tests.SingletonResetExtension;
@@ -190,6 +191,51 @@ public class TestPlayableSpriteMovement {
                                 "S3K Screen_Y_wrap_value masks only the high y_pos word");
                 assertEquals(0xD000, mockSprite.getYSubpixelRaw(),
                                 "S3K and.w d0,y_pos(a0) preserves the low y_sub word");
+        }
+
+        @Test
+        public void s2VerticalWrapMasksYAfterControl() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic2GameModule());
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                Camera camera = GameServices.camera();
+                camera.setMinY((short) -0x100);
+                camera.setMaxY((short) 0x0800);
+                camera.setVerticalWrapEnabled(true, 0x0800);
+
+                mockSprite.setCentreY((short) 0x0805);
+                mockSprite.setSubpixelRaw(0x9400, 0xC900);
+
+                assertTrue(camera.applyScreenYWrapValue(mockSprite));
+                assertEquals((short) 0x0005, mockSprite.getCentreY(),
+                                "S2 Obj01_Control masks y_pos with $7FF when Camera_Min_Y_pos is -$100");
+                assertEquals(0xC900, mockSprite.getYSubpixelRaw(),
+                                "S2 andi.w #$7FF,y_pos(a0) preserves y_sub");
+        }
+
+        @Test
+        public void s2DeadCpuSidekickDoesNotApplyScreenYWrapDuringObj02Dead() throws Exception {
+                GameModuleRegistry.setCurrent(new Sonic2GameModule());
+                Camera camera = GameServices.camera();
+                camera.setMinY((short) -0x100);
+                camera.setMaxY((short) 0x0800);
+                camera.setVerticalWrapEnabled(true, 0x0800);
+
+                Tails tails = new Tails("tails_p2", (short) 0x0C07, (short) 0x0805);
+                setPhysicsFeatureSetForTest(tails, PhysicsFeatureSet.SONIC_2);
+                tails.setCpuControlled(true);
+                tails.setDead(true);
+                tails.setAir(true);
+                tails.setYSpeed((short) 0x0000);
+                tails.setSubpixelRaw(0x8000, 0xC900);
+                new SidekickCpuController(tails, mockSprite);
+
+                new PlayableSpriteMovement(tails)
+                                .handleMovement(false, false, false, false, false, false, false, false);
+
+                assertEquals(0x0800, tails.getCentreY() & 0x0800,
+                                "S2 Obj02_Dead runs ObjectMoveAndFall without masking y_pos by Screen_Y_wrap_value");
+                assertEquals(0xC900, tails.getYSubpixelRaw(),
+                                "ObjectMoveAndFall must preserve 16:16 subpixel carry while bypassing the wrap mask");
         }
 
         @Test
@@ -1963,6 +2009,27 @@ public class TestPlayableSpriteMovement {
                 assertEquals(0x1E, mockSprite.getMoveLockTimer(),
                                 "Player_SlopeRepel should arm move_lock before setting air");
                 assertTrue(mockSprite.getAir(), "Steep slip range should put the player airborne");
+        }
+
+        @Test
+        public void testSlopeRepelMoveLockCountsDownWhileObjectSupported() throws Exception {
+                setPhysicsFeatureSetForTest(PhysicsFeatureSet.SONIC_2);
+                mockSprite.setAir(false);
+                mockSprite.setOnObject(true);
+                mockSprite.setStickToConvex(false);
+                mockSprite.setAngle((byte) 0x40);
+                mockSprite.setGSpeed((short) 0);
+                mockSprite.setMoveLockTimer(3);
+
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("doSlopeRepel");
+                method.setAccessible(true);
+                method.invoke(manager);
+
+                assertEquals(2, mockSprite.getMoveLockTimer(),
+                                "Sonic_SlopeRepel should decrement active move_lock before object-support slip suppression");
+                assertEquals(0, mockSprite.getGSpeed(),
+                                "Object support should still suppress arming a fresh slope slip from stale terrain angle");
+                assertFalse(mockSprite.getAir(), "Object support should not create a new airborne slope slip");
         }
 
         @Test

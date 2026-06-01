@@ -4,6 +4,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
@@ -132,7 +134,16 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
      * @param spawnY initial Y position (ROM layout: $168)
      */
     public Sonic2DEZEggmanInstance(int spawnX, int spawnY) {
-        super(new ObjectSpawn(spawnX, spawnY, 0xC6, 0xA6, 0, false, 0), "DEZ Eggman");
+        this(new ObjectSpawn(spawnX, spawnY, 0xC6, 0xA6, 0, false, 0));
+    }
+
+    /**
+     * Create ObjC6 from the ROM object layout.
+     */
+    public Sonic2DEZEggmanInstance(ObjectSpawn spawn) {
+        super(spawn, "DEZ Eggman");
+        int spawnX = spawn.x();
+        int spawnY = spawn.y();
         this.currentX = spawnX;
         this.currentY = spawnY;
         this.xFixed = spawnX << 16;
@@ -218,12 +229,9 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
      * When triggered, show surprised frame and set pause timer.
      */
     private void updateWaitPlayer(AbstractPlayableSprite player) {
-        if (player == null) return;
+        int dx = closestPlayerDeltaX(player);
+        if (dx == Integer.MAX_VALUE) return;
 
-        int dx = currentX - player.getCentreX();
-        // TODO: ROM's Obj_GetOrientationToPlayer considers both players and picks
-        // the closest. When 2P/sidekick support is added, also check the secondary
-        // character and use the smaller |dx|.
         // ROM: addi.w #$5C,d2 / cmpi.w #$B8,d2 / blo.s
         // This checks if (dx + $5C) unsigned < $B8, equivalent to |dx| < $5C
         int shifted = dx + PROXIMITY_RADIUS;
@@ -233,6 +241,20 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
             timer = PAUSE_TIMER;
             currentFrame = FRAME_SURPRISED;
         }
+    }
+
+    private int closestPlayerDeltaX(AbstractPlayableSprite updatePlayer) {
+        ObjectPlayerQuery query = services().playerQuery();
+        ObjectPlayerQuery effectiveQuery = new ObjectPlayerQuery(
+                () -> query.mainPlayerOrNull() != null ? query.mainPlayerOrNull() : updatePlayer,
+                query::sidekicks);
+        ObjectPlayerQuery.NearestPlayerX nearest = effectiveQuery.nearestByRomX(
+                ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS,
+                currentX);
+        if (nearest.player() == null) {
+            return updatePlayer != null ? currentX - updatePlayer.getCentreX() : Integer.MAX_VALUE;
+        }
+        return currentX - nearest.player().getCentreX();
     }
 
     /**
@@ -301,9 +323,7 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
         puffTimer--;
         if (puffTimer < 0) {
             puffTimer = 0x20;
-            // TODO: ROM spawns exhaust puff child (ObjC6 subtype $AA, frame 5,
-            // x_vel=-$100, y_offset=-$18, timer=$08 [9 frames, bmi at -1],
-            // y_vel=0 with gravity $10/frame)
+            spawnChild(() -> new ExhaustPuff(currentX, currentY - 0x18));
         }
 
         // Apply movement (ObjectMove)
@@ -389,6 +409,95 @@ public class Sonic2DEZEggmanInstance extends AbstractObjectInstance {
 
         // Eggman always faces right (running away from player)
         renderer.drawFrameIndex(currentFrame, currentX, currentY, false, false);
+    }
+
+    // ========================================================================
+    // EXHAUST PUFF INNER CLASS (ObjC6 subtype $AA)
+    // ========================================================================
+
+    /**
+     * Exhaust puff emitted by Eggman during the run to the Death Egg Robot.
+     * ROM: loc_3D00C creates ObjC6 subtype $AA, mapping frame 5,
+     * x_vel=-$100, y_pos-= $18, objoff_2A=$08. ObjC6_State4 decrements the
+     * timer, deletes on BMI, then applies +$10 y velocity before ObjectMove.
+     */
+    static class ExhaustPuff extends AbstractObjectInstance {
+
+        private static final int FRAME_EXHAUST_PUFF = 5;
+        private static final int INITIAL_X_VEL = -0x100;
+        private static final int INITIAL_Y_VEL = 0;
+        private static final int INITIAL_TIMER = 8;
+
+        private int currentX;
+        private int currentY;
+        private int xFixed;
+        private int yFixed;
+        private int xVel;
+        private int yVel;
+        private int timer;
+        private final int currentFrame;
+
+        ExhaustPuff(int x, int y) {
+            super(new ObjectSpawn(x, y, 0xC6, 0xAA, 0, false, 0), "DEZ Eggman Exhaust Puff");
+            this.currentX = x;
+            this.currentY = y;
+            this.xFixed = x << 16;
+            this.yFixed = y << 16;
+            this.xVel = INITIAL_X_VEL;
+            this.yVel = INITIAL_Y_VEL;
+            this.timer = INITIAL_TIMER;
+            this.currentFrame = FRAME_EXHAUST_PUFF;
+        }
+
+        @Override
+        public int getX() {
+            return currentX;
+        }
+
+        @Override
+        public int getY() {
+            return currentY;
+        }
+
+        @Override
+        public boolean isPersistent() {
+            return true;
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return 5;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity playerEntity) {
+            if (isDestroyed()) return;
+
+            timer--;
+            if (timer < 0) {
+                setDestroyed(true);
+                return;
+            }
+
+            yVel += GRAVITY;
+            xFixed += (xVel << 8);
+            yFixed += (yVel << 8);
+            currentX = xFixed >> 16;
+            currentY = yFixed >> 16;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (isDestroyed()) return;
+
+            ObjectRenderManager renderManager = services().renderManager();
+            if (renderManager == null) return;
+
+            PatternSpriteRenderer renderer = renderManager.getRenderer(Sonic2ObjectArtKeys.DEZ_EGGMAN);
+            if (renderer == null || !renderer.isReady()) return;
+
+            renderer.drawFrameIndex(currentFrame, currentX, currentY, false, false);
+        }
     }
 
     // ========================================================================

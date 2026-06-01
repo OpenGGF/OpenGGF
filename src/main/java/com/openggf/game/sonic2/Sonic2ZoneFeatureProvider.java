@@ -9,7 +9,9 @@ import com.openggf.game.render.SpecialRenderEffect;
 import com.openggf.game.render.SpecialRenderEffectContext;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.render.SpecialRenderEffectStage;
+import com.openggf.game.LevelEventProvider;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.sonic2.objects.CPZPylonObjectInstance;
 import com.openggf.game.sonic2.render.HtzEarthquakeBgOverlayEffect;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
@@ -62,6 +64,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     private WaterSurfaceManager waterSurfaceManager;
     private int currentZone = -1;
     private int currentAct = -1;
+    private boolean wfzWindTunnelActive;
 
     // Deferred slot machine renders (queued during object phase, rendered after tilemap)
     // Each entry: {worldX, worldY, offsetX, offsetY} - offset values are from cage to display
@@ -350,6 +353,60 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
             // on the same frame the slot routine goes inactive.
             cnzSlotMachineManager.update();
         }
+        if (zoneIndex == Sonic2ZoneConstants.ROM_ZONE_WFZ) {
+            updateWfzPrePhysicsLevelEvents();
+            updateWfzWindTunnel(player);
+        } else {
+            wfzWindTunnelActive = false;
+        }
+    }
+
+    private void updateWfzPrePhysicsLevelEvents() {
+        LevelEventProvider provider = GameServices.module().getLevelEventProvider();
+        if (provider instanceof Sonic2LevelEventManager events) {
+            events.getWfzEvents().updatePrePhysicsControlLock();
+        }
+    }
+
+    private void updateWfzWindTunnel(AbstractPlayableSprite player) {
+        if (player == null) {
+            wfzWindTunnelActive = false;
+            return;
+        }
+
+        int x = player.getCentreX() & 0xFFFF;
+        int y = player.getCentreY() & 0xFFFF;
+        if (player.isObjectControlled()
+                || player.isHurt()
+                || player.getDead()
+                || !isInsideWfzWindTunnel(x, y)) {
+            if (wfzWindTunnelActive) {
+                player.setAnimationId(Sonic2AnimationIds.WALK);
+            }
+            wfzWindTunnelActive = false;
+            return;
+        }
+
+        // ROM WindTunnel (s2.asm:5474-5524): this level-event routine runs
+        // before Obj01_Control. It nudges the player left, forces airborne
+        // wind velocity, then normal airborne input immediately adjusts x_vel.
+        wfzWindTunnelActive = true;
+        player.shiftX(-4);
+        player.setXSpeed((short) -0x400);
+        player.setYSpeed((short) 0);
+        player.setAnimationId(Sonic2AnimationIds.FLOAT2);
+        player.setAir(true);
+        if (player.isUpPressed()) {
+            player.shiftY(-1);
+        }
+        if (player.isDownPressed()) {
+            player.shiftY(1);
+        }
+    }
+
+    private boolean isInsideWfzWindTunnel(int x, int y) {
+        return (x >= 0x1510 && x < 0x1AF0 && y >= 0x0400 && y < 0x0580)
+                || (x >= 0x20F0 && x < 0x2500 && y >= 0x0618 && y < 0x0680);
     }
 
     @Override
@@ -382,6 +439,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
         }
         cpzPylon = null;
         waterSurfaceManager = null;
+        wfzWindTunnelActive = false;
         currentZone = -1;
         currentAct = -1;
     }

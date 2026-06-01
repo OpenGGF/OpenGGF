@@ -33,12 +33,12 @@ import java.util.List;
  * <p>
  * <b>Structure:</b>
  * 8 teeth, each with 3-byte position entries (x_offset, y_offset, mapping_frame).
- * 4 rotation steps × 8 teeth = 32 position entries in Obj70_Positions table.
- * The rotation phase (objoff_36) cycles 0 → $18 → $30 → $48 → 0 (or reverse).
+ * 4 rotation steps x 8 teeth = 32 position entries in Obj70_Positions table.
+ * The rotation phase (objoff_36) cycles 0 -> $18 -> $30 -> $48 -> 0 (or reverse).
  * Each tooth has an objoff_34 offset (0,3,6,...,21) into the position table.
  * <p>
  * <b>Per-frame collision sizes from byte_28706:</b>
- * Most frames use 16×16, but frames 7/9 use 16×12 and frame 8 uses 16×8
+ * Most frames use 16x16, but frames 7/9 use 16x12 and frame 8 uses 16x8
  * (the tooth appears thinner when rotated to top/bottom position).
  */
 public class CogObjectInstance extends AbstractObjectInstance
@@ -63,7 +63,7 @@ public class CogObjectInstance extends AbstractObjectInstance
     private static final int PRIORITY = 4;
 
     // Obj70_Positions table (s2.asm lines 54741-54778)
-    // 4 rotation steps × 8 teeth × 3 bytes (x_offset, y_offset, mapping_frame)
+    // 4 rotation steps x 8 teeth x 3 bytes (x_offset, y_offset, mapping_frame)
     // Values are signed bytes for x/y offsets.
     private static final byte[] POSITIONS = {
             // Step 0 (phase offset 0x00)
@@ -182,9 +182,12 @@ public class CogObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // ROM: move.b (Level_frame_counter+1).w,d0 / andi.w #$F,d0 / bne.s loc_286CA
-        // Advance rotation every 16 frames
-        if ((frameCounter & 0x0F) == 0) {
+        // ROM Obj70_Main (s2.asm:54662-54665): move.b (Level_frame_counter+1).w,d0;
+        // andi.w #$F,d0; bne loc_286CA. On 68k, +1 reads the low byte of the word
+        // label. LevelManager stores the previous completed frame until its late-frame
+        // update(), so object code must use the next visible level counter here.
+        int levelFrameCounter = services().levelManager().getFrameCounter();
+        if (((levelFrameCounter + 1) & 0x0F) == 0) {
             advanceRotation();
         }
 
@@ -194,10 +197,10 @@ public class CogObjectInstance extends AbstractObjectInstance
     /**
      * Advances the rotation phase and wraps the position offsets.
      * <p>
-     * CW (normal): phase advances by $18, wraps at $60 → 0.
+     * CW (normal): phase advances by $18, wraps at $60 -> 0.
      * When phase wraps, each tooth's offset advances by 3.
      * <p>
-     * CCW (x_flip): phase decreases by $18, wraps below 0 → $48.
+     * CCW (x_flip): phase decreases by $18, wraps below 0 -> $48.
      * When phase wraps, each tooth's offset decreases by 3.
      * <p>
      * Disassembly: s2.asm lines 54666-54686
@@ -288,6 +291,15 @@ public class CogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean resolvesEarlierPiecesBeforeRidingPiece() {
+        // ROM Obj70 creates one SST slot per tooth, then each slot calls
+        // SolidObject in allocation order (s2.asm:54617-54651, 54691-54703).
+        // Earlier teeth can side-push Sonic before the ridden tooth's
+        // standing-bit branch performs its ExitPlatform bounds check.
+        return true;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         // Default params (used if getPieceParams not called)
         return new SolidObjectParams(0x10, 0x10, 0x10);
@@ -297,6 +309,13 @@ public class CogObjectInstance extends AbstractObjectInstance
     public boolean isTopSolidOnly() {
         // Obj70 uses SolidObject (JmpTo16_SolidObject), fully solid from all sides
         return false;
+    }
+
+    @Override
+    public boolean usesInclusiveRightEdge() {
+        // ROM SolidObject_cont accepts relX == width*2; only relX > width*2
+        // branches out via `bhi.w SolidObject_TestClearPush` (s2.asm:35150-35158).
+        return true;
     }
 
     @Override
@@ -318,6 +337,12 @@ public class CogObjectInstance extends AbstractObjectInstance
         PatternSpriteRenderer renderer = getRenderer(Sonic2ObjectArtKeys.MTZ_WHEEL);
         if (renderer == null) return;
 
+        // Verified against obj70.asm (Obj70_MapUnc_28786): all 32 mapping entries point
+        // to the same Map_obj70_0040, a single 32x32 spritePiece (tile 0) with hFlip=0,
+        // vFlip=0. There are no per-piece flip bits to honor, so drawFrameIndex(...,false,
+        // false) is correct - per-tooth orientation comes entirely from the position table,
+        // not art flips. (Central ObjectManager despawn covers off-screen removal; Obj70
+        // needs no per-object coarse-camera DeleteObject - see s2.asm:54717-54725.)
         for (int i = 0; i < NUM_TEETH; i++) {
             renderer.drawFrameIndex(toothFrame[i], toothX[i], toothY[i], false, false);
         }

@@ -102,7 +102,8 @@ public class TestHybridPhysicsFeatureSet {
                 8,      // invincibilityStarsFixedSlotIndex - S1 v_starsobj1 at slot 8
                 true,   // touchResponseUsesRenderFlagYGate - S1 ReactToItem reads obRender bit 7 cleared by BuildSprites Y-band
                 false,  // sidekickDeathUsesDeferredDespawn - S1 has no Tails CPU
-                false   // rightWallDeepProbePreservesPenetration - S1 baseline
+                false,  // rightWallDeepProbePreservesPenetration - S1 baseline
+                1       // speedShoesTimerDecimation - S1 per-frame word timer
         );
 
         // Verify spindash is enabled (donor contribution)

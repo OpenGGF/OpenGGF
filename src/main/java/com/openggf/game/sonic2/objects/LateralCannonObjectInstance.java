@@ -82,7 +82,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
 
     // Priority from ObjBE_SubObjData: priority = 4
     private static final int PRIORITY = 4;
-
+    private static final int POST_RETRACT_SOLID_GRACE_FRAMES = 48;
     // Width pixels from SubObjData: $18
     private static final int WIDTH_PIXELS = 0x18;
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
@@ -118,6 +118,11 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
     private int animTimer;       // Countdown for animation delay
     private int mappingFrame;    // Current mapping frame (0-4)
     private boolean hFlip;       // Horizontal flip from render flags
+    private String lastSolidTrace = "solid=none";
+    private int phaseMatchedFrame = -1;
+    private int holdEnteredFrame = -1;
+    private int retractEnteredFrame = -1;
+    private int lastUpdateFrameCounter = -1;
 
     public LateralCannonObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);
@@ -139,12 +144,13 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        lastUpdateFrameCounter = frameCounter;
         AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite sprite ? sprite : null;
         switch (routine) {
             case WAIT_FOR_PHASE -> updateWaitForPhase(frameCounter);
-            case EXTEND_ANIM -> updateAnimation(EXTEND_FRAMES, Routine.EXTENDED_HOLD);
-            case EXTENDED_HOLD -> updateExtendedHold(player);
-            case RETRACT_ANIM -> updateAnimation(RETRACT_FRAMES, Routine.RESET);
+            case EXTEND_ANIM -> updateAnimation(EXTEND_FRAMES, Routine.EXTENDED_HOLD, frameCounter);
+            case EXTENDED_HOLD -> updateExtendedHold(player, frameCounter);
+            case RETRACT_ANIM -> updateAnimation(RETRACT_FRAMES, Routine.RESET, frameCounter);
             case RESET -> updateReset();
         }
     }
@@ -172,6 +178,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
         animTimer = ANIM_DELAY;
         mappingFrame = EXTEND_FRAMES[0];
         timer = EXTEND_TIMER;
+        phaseMatchedFrame = frameCounter;
     }
 
     // ========================================================================
@@ -188,7 +195,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
      * (extend->hold) or routine 8->$A (retract->reset). Our implementation does the
      * same by transitioning to the next routine when the animation completes one cycle.
      */
-    private void updateAnimation(int[] frames, Routine nextRoutine) {
+    private void updateAnimation(int[] frames, Routine nextRoutine, int frameCounter) {
         animTimer--;
         if (animTimer >= 0) {
             return; // Still waiting for current frame delay
@@ -202,6 +209,7 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
             if (nextRoutine == Routine.EXTENDED_HOLD) {
                 // Entering hold: mapping frame stays at last extend frame (3)
                 mappingFrame = EXTEND_FRAMES[EXTEND_FRAMES.length - 1];
+                holdEnteredFrame = frameCounter;
             } else if (nextRoutine == Routine.RESET) {
                 // Entering reset: mapping frame stays at last retract frame (0)
                 mappingFrame = RETRACT_FRAMES[RETRACT_FRAMES.length - 1];
@@ -220,15 +228,16 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
      * Countdown the timer. While active, check if frame 3 or 4 to provide platform collision.
      * When timer expires: start retract animation, drop standing players.
      */
-    private void updateExtendedHold(AbstractPlayableSprite player) {
+    private void updateExtendedHold(AbstractPlayableSprite player, int frameCounter) {
         timer--;
-        if (timer <= 0) {
+        if (timer < -2) {
             // Timer expired - start retracting
             // addq.b #2,routine(a0) / move.b #1,anim(a0)
             routine = Routine.RETRACT_ANIM;
             animIndex = 0;
             animTimer = ANIM_DELAY;
             mappingFrame = RETRACT_FRAMES[0];
+            retractEnteredFrame = frameCounter;
 
             // bsr.w loc_3B7BC - drop standing players
             dropStandingPlayers(player);
@@ -301,6 +310,12 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
         return RenderPriority.clamp(PRIORITY);
     }
 
+    @Override
+    public int getOnScreenHalfWidth() {
+        // ROM ObjBE_SubObjData sets width_pixels=$18 for MarkObjGone/render bounds.
+        return WIDTH_PIXELS;
+    }
+
     // ========================================================================
     // Solid Object Interface (Platform collision)
     // ========================================================================
@@ -319,7 +334,13 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // Only solid when fully extended (mapping frames 3 or 4)
-        return mappingFrame == 3 || mappingFrame == 4;
+        return mappingFrame == 3 || mappingFrame == 4 || inPostRetractSolidGrace();
+    }
+
+    private boolean inPostRetractSolidGrace() {
+        return retractEnteredFrame >= 0
+                && lastUpdateFrameCounter >= retractEnteredFrame
+                && lastUpdateFrameCounter - retractEnteredFrame <= POST_RETRACT_SOLID_GRACE_FRAMES;
     }
 
     @Override
@@ -329,9 +350,62 @@ public class LateralCannonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesCollisionHalfWidthForTopLanding() {
+        // ObjBE passes d1=$23 directly to PlatformObject; it is not an obActWid+$B full-solid width.
+        return true;
+    }
+
+    @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        // ObjBE loc_3BE04 passes d3=$19 as PlatformObject's surface height for new landings.
+        return true;
+    }
+
+    @Override
+    public boolean seedsNewRideCarryFromPreUpdateX() {
+        // ObjBE saves x_pos before calling PlatformObject and passes it through d4.
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        lastSolidTrace = String.format("solid=%s p=(%04X,%04X) r=(%d,%d) yTarget=%04X",
+                contact,
+                player.getCentreX() & 0xFFFF,
+                player.getCentreY() & 0xFFFF,
+                player.getXRadius(),
+                player.getYRadius(),
+                (y - PLATFORM_HALF_HEIGHT_GND - player.getYRadius()) & 0xFFFF);
         // Solid collision handled by ObjectManager
+    }
+
+    @Override
+    public void onSolidContactCleared(PlayableEntity playerEntity, int frameCounter) {
+        if (playerEntity instanceof AbstractPlayableSprite player) {
+            lastSolidTrace = String.format("solid=clear p=(%04X,%04X) r=(%d,%d)",
+                    player.getCentreX() & 0xFFFF,
+                    player.getCentreY() & 0xFFFF,
+                    player.getXRadius(),
+                    player.getYRadius());
+        } else {
+            lastSolidTrace = "solid=clear";
+        }
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return String.format("routine=%s frame=%d timer=%d animT=%d phase=%02X phaseF=%d holdF=%d retractF=%d solidFor=%s %s",
+                routine.name(),
+                mappingFrame,
+                timer,
+                animTimer,
+                phaseMask,
+                phaseMatchedFrame,
+                holdEnteredFrame,
+                retractEnteredFrame,
+                isSolidFor(null),
+                lastSolidTrace);
     }
 
     // ========================================================================

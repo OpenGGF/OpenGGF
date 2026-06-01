@@ -13,8 +13,12 @@ import com.openggf.game.solid.PreContactState;
 import com.openggf.game.solid.SolidCheckpointBatch;
 import com.openggf.game.solid.SolidExecutionRegistry;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
+import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
+import com.openggf.game.sonic2.objects.badniks.SlicerBadnikInstance;
+import com.openggf.game.sonic2.objects.badniks.SlicerPincerInstance;
 import com.openggf.game.sonic2.objects.badniks.SpinyBadnikInstance;
 import com.openggf.game.sonic2.objects.bosses.Sonic2ARZBossInstance;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -32,6 +36,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -67,6 +72,52 @@ class TestSonic2TriggerParticipation {
 
         assertEquals(0x0FF8, barrier.getY(),
                 "Barrier should rise when a query participant enters its detection zone");
+    }
+
+    @Test
+    void barrierSolidBottomBoundsUseLiveRollingRadius() {
+        BarrierObjectInstance barrier = new BarrierObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BARRIER, 1, 0, false, 0),
+                "Barrier");
+
+        assertTrue(barrier.fullSolidBottomOverlapUsesCurrentYRadiusOnly(null),
+                "Obj2D must use S2 SolidObject's live y_radius lower bound");
+    }
+
+    @Test
+    void nutNativeXSnapsPreservePlayerSubpixel() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        main.setSubpixelRaw(0xCF00, 0x1C00);
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x1000, 0x1020, Sonic2ObjectIds.NUT, 0, 0, false, 0),
+                "Nut");
+        nut.setServices(new QueryOnlyPlayerServices(main, List.of()));
+
+        nut.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+        nut.update(0, main);
+
+        assertEquals(0x1000, main.getCentreX());
+        assertEquals(0xCF00, main.getXSubpixelRaw(),
+                "Obj69 align writes only x_pos(a1), preserving x_sub");
+
+        main.setCentreXPreserveSubpixel((short) 0x1002);
+        nut.onSolidContact(main, new SolidContact(true, false, false, true, false), 1);
+        nut.update(1, main);
+
+        assertEquals(0x1000, main.getCentreX());
+        assertEquals(0xCF00, main.getXSubpixelRaw(),
+                "Obj69 screw movement writes only x_pos(a1), preserving x_sub");
+    }
+
+    @Test
+    void nutSolidBottomBoundsUseLiveRollingRadius() {
+        NutObjectInstance nut = new NutObjectInstance(
+                new ObjectSpawn(0x13C0, 0x064C, Sonic2ObjectIds.NUT, 0x15, 0, false, 0),
+                "Nut");
+
+        assertTrue(nut.fullSolidBottomOverlapUsesCurrentYRadiusOnly(null),
+                "Obj69 SolidObject tail doubles live y_radius(a1), so rolling lower-half contact "
+                        + "must not use stand radius");
     }
 
     @Test
@@ -125,6 +176,28 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void speedLauncherUsesLatchedStandingMaskOnDestinationFrame() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        main.setOnObject(true);
+        SpeedLauncherObjectInstance launcher = new SpeedLauncherObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0xC0, 0x01, 0, false, 0),
+                "SpeedLauncher");
+        launcher.setServices(new QueryOnlyPlayerServices(main, List.of()));
+        launcher.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+
+        launcher.update(0, main);
+        main.setOnObject(false);
+        launcher.onSolidContactCleared(main, 1);
+
+        launcher.update(1, main);
+
+        assertTrue(main.getAir(),
+                "ObjC0 must launch from its latched standing bit before PlatformObject refreshes it");
+        assertEquals(0xF380, main.getXSpeed() & 0xFFFF);
+        assertEquals(0xFC00, main.getYSpeed() & 0xFFFF);
+    }
+
+    @Test
     void hPropellerPushesQueryOnlySidekick() {
         OscillationManager.reset();
         TestablePlayableSprite main = player("sonic", 0x1800, 0x1000);
@@ -137,8 +210,111 @@ class TestSonic2TriggerParticipation {
 
         assertTrue(tails.getAir(),
                 "Horizontal propeller should use ObjectPlayerQuery participants for push checks");
+        assertEquals(0x0FAF, tails.getCentreY() & 0xFFFF,
+                "ObjB5 adds the computed push to native y_pos, not sprite top-left bounds");
         assertEquals(Sonic2AnimationIds.FLOAT2.id(), tails.getAnimationId());
         assertEquals(0, tails.getYSpeed());
+    }
+
+    @Test
+    void wallTurretShotUsesRomObj98SubtypeIdentity() throws Exception {
+        ObjectSpawn parentSpawn = new ObjectSpawn(
+                0x0100, 0x0080, Sonic2ObjectIds.WALL_TURRET, 0x74, 0, false, 0);
+        WallTurretShotInstance shot = new WallTurretShotInstance(
+                parentSpawn, 0x0100, 0x0098, 0, 0x0100);
+
+        assertEquals(Sonic2ObjectIds.PROJECTILE, shot.getSpawn().objectId(),
+                "ObjB8 should allocate Obj98 for its wall-turret shot child");
+        assertEquals(0x8E, shot.getSpawn().subtype(),
+                "ObjB8 writes subtype $8E so Obj98 loads ObjB8_SubObjData2");
+        assertEquals(4, shot.getOnScreenHalfWidth(),
+                "ObjB8_SubObjData2 sets the projectile width_pixels to 4");
+        assertEquals(3, intField(shot, "mappingFrame"),
+                "ObjB8 parent initializes the projectile mapping_frame to 3");
+
+        shot.update(0, null);
+        assertEquals(3, intField(shot, "mappingFrame"),
+                "ROM AnimateSprite reads script frame 3 on the first Obj98_WallTurretShotMove update");
+        shot.update(1, null);
+        shot.update(2, null);
+        assertEquals(3, intField(shot, "mappingFrame"),
+                "Ani_WallTurretShot duration 2 keeps frame 3 for two wait ticks");
+        shot.update(3, null);
+        assertEquals(4, intField(shot, "mappingFrame"),
+                "Ani_WallTurretShot advances to frame 4 after the duration expires");
+    }
+
+    @Test
+    void wallTurretFireSpawnsObj98ProjectileChild() {
+        TestablePlayableSprite main = player("sonic", 0x0100, 0x00C0);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of());
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        WallTurretObjectInstance turret = objectManager.createDynamicObject(
+                () -> new WallTurretObjectInstance(
+                        new ObjectSpawn(0x0100, 0x0080, Sonic2ObjectIds.WALL_TURRET, 0x74, 0, false, 0),
+                        "WallTurret"));
+
+        turret.update(0, main);
+        turret.update(1, main);
+        turret.update(2, main);
+
+        WallTurretShotInstance shot = objectManager.getActiveObjects().stream()
+                .filter(WallTurretShotInstance.class::isInstance)
+                .map(WallTurretShotInstance.class::cast)
+                .findFirst()
+                .orElseThrow();
+
+        assertInstanceOf(WallTurretShotInstance.class, shot);
+        assertEquals(Sonic2ObjectIds.PROJECTILE, shot.getSpawn().objectId());
+        assertEquals(0x8E, shot.getSpawn().subtype());
+        assertEquals(0x0100, shot.getX(), "Centered turret shot should spawn at ObjB8 byte_3BA2A X offset 0");
+        assertEquals(0x0098, shot.getY(), "Centered turret shot should spawn at ObjB8 byte_3BA2A Y offset $18");
+    }
+
+    @Test
+    void wallTurretDetectsClosestQueryOnlySidekick() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x0200, 0x00C0);
+        TestablePlayableSprite tails = player("tails", 0x0130, 0x00C0);
+        WallTurretObjectInstance turret = new WallTurretObjectInstance(
+                new ObjectSpawn(0x0100, 0x0080, Sonic2ObjectIds.WALL_TURRET, 0x74, 0, false, 0),
+                "WallTurret");
+        turret.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        turret.update(0, main);
+
+        assertEquals(4, intField(turret, "routine"),
+                "ObjB8 uses Obj_GetOrientationToPlayer, which chooses the nearest MainCharacter/Sidekick by X");
+        assertEquals(2, intField(turret, "fireTimer"));
+    }
+
+    @Test
+    void wallTurretAimsAndFiresAtClosestQueryOnlySidekick() {
+        TestablePlayableSprite main = player("sonic", 0x0200, 0x00C0);
+        TestablePlayableSprite tails = player("tails", 0x0130, 0x00C0);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of(tails));
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        WallTurretObjectInstance turret = objectManager.createDynamicObject(
+                () -> new WallTurretObjectInstance(
+                        new ObjectSpawn(0x0100, 0x0080, Sonic2ObjectIds.WALL_TURRET, 0x74, 0, false, 0),
+                        "WallTurret"));
+
+        turret.update(0, main);
+        turret.update(1, main);
+        turret.update(2, main);
+
+        WallTurretShotInstance shot = objectManager.getActiveObjects().stream()
+                .filter(WallTurretShotInstance.class::isInstance)
+                .map(WallTurretShotInstance.class::cast)
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals(0x0111, shot.getX(),
+                "ObjB8 should aim right when the closest Obj_GetOrientationToPlayer participant is right of the turret");
+        assertEquals(0x0090, shot.getY());
     }
 
     @Test
@@ -176,6 +352,79 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void movingVineGrabsQueryOnlySidekick() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1088);
+        QueryOnlyPlayerServices services = new QueryOnlyPlayerServices(main, List.of(tails));
+        ObjectManager objectManager = new ObjectManager(
+                List.of(), null, 0, null, null, null, null, services);
+        services.withObjectManager(objectManager);
+        MovingVineObjectInstance vine = objectManager.createDynamicObject(
+                () -> new MovingVineObjectInstance(
+                        new ObjectSpawn(0x1000, 0x1000, 0x80, 0, 0, false, 0),
+                        "MovingVine"));
+
+        vine.update(0, main);
+
+        assertTrue(tails.isObjectControlled(),
+                "Moving Vine should use ObjectPlayerQuery participants for grab checks");
+        assertRomObjControlBitOneState(tails, "Moving Vine obj_control=1");
+        assertEquals(Sonic2AnimationIds.HANG2.id(), tails.getAnimationId());
+        assertTrue((boolean) field(vine, "player2Grabbed"),
+                "Obj80 native P2 grab byte must be driven by sidekick participants");
+    }
+
+    @Test
+    void wfzGrabObjectGrabsQueryOnlySidekickAsNativeP2() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1008);
+        GrabObjectInstance grab = new GrabObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.GRAB, 0, 0, false, 0),
+                "Grab");
+        grab.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        grab.update(0, main);
+
+        assertFalse(main.isObjectControlled());
+        assertRomObjControlBitOneState(tails, "ObjD9 native P2 grab");
+        assertEquals(0x1000, tails.getCentreY() & 0xFFFF,
+                "ObjD9 writes object y_pos directly to player y_pos");
+        assertEquals(Sonic2AnimationIds.HANG2.id(), tails.getAnimationId());
+        assertTrue((boolean) field(grab, "player2Grabbed"),
+                "ObjD9 objoff_31 must be driven by the sidekick participant");
+    }
+
+    @Test
+    void wfzGrabObjectUsesRomRenderWidth() {
+        GrabObjectInstance grab = new GrabObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.GRAB, 0, 0, false, 0),
+                "Grab");
+
+        assertEquals(0x18, grab.getOnScreenHalfWidth(),
+                "ObjD9_Init sets width_pixels=$18 for MarkObjGone3/render bounds");
+    }
+
+    @Test
+    void wfzGrabObjectReleasesQueryOnlySidekickWithDirectionCooldown() throws Exception {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1008);
+        GrabObjectInstance grab = new GrabObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.GRAB, 0, 0, false, 0),
+                "Grab");
+        grab.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        grab.update(0, main);
+        tails.setJumpInputPressed(true, true);
+        tails.setDirectionalInputPressed(false, false, true, false);
+        grab.update(1, main);
+
+        assertFalse(tails.isObjectControlled());
+        assertEquals(0xFD00, tails.getYSpeed() & 0xFFFF);
+        assertFalse((boolean) field(grab, "player2Grabbed"));
+        assertEquals(60, intField(grab, "player2ReleaseDelay"));
+    }
+
+    @Test
     void breakablePlatingGrabUsesRomObjControlBitOneState() throws Exception {
         TestablePlayableSprite player = player("sonic", 0x1000, 0x1000);
         BreakablePlatingObjectInstance plating = new BreakablePlatingObjectInstance(
@@ -188,6 +437,40 @@ class TestSonic2TriggerParticipation {
         grabPlayer.invoke(plating, player);
 
         assertRomObjControlBitOneState(player, "Breakable Plating obj_control=1");
+    }
+
+    @Test
+    void wfzBreakablePlatingTouchSignalIsNativeMainCharacterOnly() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        BreakablePlatingObjectInstance plating = new BreakablePlatingObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_PLATING, 0, 0, false, 0),
+                "BreakablePlating");
+        plating.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        plating.onTouchResponse(tails, null, 0);
+        plating.update(0, main);
+
+        assertFalse(main.isObjectControlled(),
+                "ObjC1 reads MainCharacter after collision_property; Sidekick touch must not grab P1");
+        assertFalse(tails.isObjectControlled(),
+                "ObjC1 has no Sidekick grab branch");
+    }
+
+    @Test
+    void wfzBreakablePlatingNativeMainTouchStillGrabs() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        BreakablePlatingObjectInstance plating = new BreakablePlatingObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.BREAKABLE_PLATING, 0, 0, false, 0),
+                "BreakablePlating");
+        plating.setServices(new QueryOnlyPlayerServices(main, List.of()));
+
+        plating.onTouchResponse(main, null, 0);
+        plating.update(0, main);
+
+        assertRomObjControlBitOneState(main, "Breakable Plating native P1 grab");
+        assertEquals(0x0FEC, main.getCentreX() & 0xFFFF);
+        assertEquals(Sonic2AnimationIds.HANG.id(), main.getAnimationId());
     }
 
     @Test
@@ -299,6 +582,78 @@ class TestSonic2TriggerParticipation {
     }
 
     @Test
+    void lateralCannonUsesRomRenderWidth() {
+        LateralCannonObjectInstance cannon = new LateralCannonObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.LATERAL_CANNON, 0, 0, false, 0),
+                "LateralCannon");
+
+        assertEquals(0x18, cannon.getOnScreenHalfWidth(),
+                "ObjBE_SubObjData sets width_pixels=$18 for MarkObjGone/render bounds");
+    }
+
+    @Test
+    void wfzRivetBustIsNativeMainCharacterOnly() {
+        TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
+        tails.setRolling(true);
+        RivetObjectInstance rivet = new RivetObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.RIVET, 0, 0, false, 0),
+                "Rivet");
+        rivet.setServices(new QueryOnlyPlayerServices(main, List.of(tails)).withCamera(focusedCamera(main)));
+
+        rivet.update(0, main);
+        rivet.onSolidContact(tails, new SolidContact(true, false, false, true, false), 0);
+
+        assertFalse(rivet.isDestroyed(),
+                "ObjC2 reads MainCharacter+anim and has no Sidekick bust path");
+    }
+
+    @Test
+    void wfzRivetStillBustsForRollingNativeMainCharacter() {
+        TestablePlayableSprite main = player("sonic", 0x1000, 0x1000);
+        main.setRolling(true);
+        RivetObjectInstance rivet = new RivetObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.RIVET, 0, 0, false, 0),
+                "Rivet");
+        rivet.setServices(new QueryOnlyPlayerServices(main, List.of()).withCamera(focusedCamera(main)));
+
+        rivet.update(0, main);
+        rivet.onSolidContact(main, new SolidContact(true, false, false, true, false), 0);
+
+        assertTrue(rivet.isDestroyed(),
+                "ObjC2 should still bust when native P1 is rolling on the rivet");
+        assertTrue(main.getAir());
+        assertFalse(main.isOnObject());
+    }
+
+    @Test
+    void cnzConveyorWidthUsesRomByteShiftWrap() {
+        TestablePlayableSprite player = player("sonic", 0x1D9F, 0x061F);
+        player.setAir(false);
+        CNZConveyorBeltObjectInstance conveyor = new CNZConveyorBeltObjectInstance(
+                new ObjectSpawn(0x1DFA, 0x0620, 0x72, 0x90, 0, false, 0),
+                "CNZConveyorBelt");
+
+        conveyor.update(0, player);
+
+        assertEquals(0x1D9F, player.getCentreX() & 0xFFFF,
+                "Obj72 stores (subtype & $7F) << 4 into a byte; WFZ subtype $90 wraps width to zero");
+    }
+
+    @Test
+    void cnzConveyorShiftsNativePositionWhenInsideWrappedBounds() {
+        TestablePlayableSprite player = player("sonic", 0x100F, 0x0FF0);
+        player.setAir(false);
+        CNZConveyorBeltObjectInstance conveyor = new CNZConveyorBeltObjectInstance(
+                new ObjectSpawn(0x1000, 0x1000, 0x72, 0x01, 0, false, 0),
+                "CNZConveyorBelt");
+
+        conveyor.update(0, player);
+
+        assertEquals(0x1011, player.getCentreX() & 0xFFFF);
+    }
+
+    @Test
     void seesawAssignsQueryOnlySidekickToNativeP2StandingSlot() {
         TestablePlayableSprite main = player("sonic", 0x1400, 0x1000);
         TestablePlayableSprite tails = player("tails", 0x1000, 0x1000);
@@ -328,6 +683,50 @@ class TestSonic2TriggerParticipation {
 
         assertEquals("ATTACKING", field(spiny, "state").toString(),
                 "Spiny should resolve closest P2 candidates through ObjectPlayerQuery");
+    }
+
+    @Test
+    void mtzSlicerThrowUsesClosestNativePlayerByRomX() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0x0F00, 0, 0x1100, 0x0200, 0);
+        TestablePlayableSprite main = player("sonic", 0x0F90, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1010, 0x1000);
+        SlicerBadnikInstance slicer = new SlicerBadnikInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.SLICER, 0, 0, false, 0));
+        slicer.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        try {
+            slicer.update(0, main);
+
+            assertFalse("THROW_WINDUP".equals(field(slicer, "state").toString()),
+                    "ObjA1 must run Obj_GetOrientationToPlayer against nearest native P1/P2, not always P1");
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    @Test
+    void mtzSlicerPincerHomesTowardClosestNativePlayerByRomX() throws Exception {
+        AbstractObjectInstance.updateCameraBounds(0x0F00, 0, 0x1100, 0x0200, 0);
+        TestablePlayableSprite main = player("sonic", 0x0F00, 0x1000);
+        TestablePlayableSprite tails = player("tails", 0x1010, 0x1000);
+        SlicerPincerInstance pincer = new SlicerPincerInstance(
+                new ObjectSpawn(0x1000, 0x1000, Sonic2ObjectIds.SLICER_PINCERS, 0, 0, false, 0),
+                null,
+                0x1000,
+                0x1000,
+                0,
+                false,
+                0x78);
+        pincer.setServices(new QueryOnlyPlayerServices(main, List.of(tails)));
+
+        try {
+            pincer.update(0, main);
+
+            assertEquals(0x10, intField(pincer, "xVelocity"),
+                    "ObjA2 homing should accelerate toward nearest native P1/P2 by ROM X");
+        } finally {
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
     }
 
     @Test

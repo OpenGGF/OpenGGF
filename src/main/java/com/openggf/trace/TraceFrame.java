@@ -98,6 +98,21 @@ public record TraceFrame(
             gameplayFrameCounter, -1, vblankCounter, lagCounter, null);
     }
 
+    /**
+     * Returns this gameplay row with camera/ring diagnostics copied from the
+     * supplied VBlank row. The gameplay fields intentionally stay untouched.
+     */
+    public TraceFrame withVisualDiagnosticsFrom(TraceFrame visualFrame) {
+        if (visualFrame == null) {
+            return this;
+        }
+        return new TraceFrame(frame, input, x, y, xSpeed, ySpeed, gSpeed, angle,
+            air, rolling, groundMode, xSub, ySub, routine,
+            visualFrame.cameraX(), visualFrame.cameraY(), visualFrame.rings(),
+            statusByte, gameplayFrameCounter, standOnObj, vblankCounter,
+            lagCounter, sidekick);
+    }
+
     /** v1 column count (original format). */
     private static final int V1_COLUMNS = 11;
 
