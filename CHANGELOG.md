@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Added S3K Launch Base Zone palette/parallax/animated-tile bring-up.** LBZ now routes to a dedicated S3K scroll handler with ROM-derived LBZ1 and LBZ2 background deformation, including LBZ1's Draw_BG-style per-line background tilemap path and LBZ2 waterline lookup data from the user ROM. LBZ AniPLC scripts and direct animated-tile uploads now replace the placeholder pattern tiles in the foreground and background, with focused tests covering both acts.
+
 - **Added opt-in Discord Rich Presence.** When enabled, OpenGGF publishes menu and gameplay status through the local Discord desktop client, including game, character/team, zone/act, and timer details subject to privacy toggles. Presence remains disabled by default and includes distinct master-title, game title-screen, level-select, data-select, and gameplay states.
 
 - **Fixed Discord Rich Presence elapsed-time resets.** Activity updates now reuse a stable Discord `timestamps.start` value so Discord's own "time playing" display no longer resets when OpenGGF refreshes gameplay/menu details.

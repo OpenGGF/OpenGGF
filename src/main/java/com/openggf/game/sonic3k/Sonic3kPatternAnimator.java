@@ -21,6 +21,7 @@ import com.openggf.tools.KosinskiReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -91,6 +92,12 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             0x080, 0x080,
             0x040, 0x0C0
     };
+    private static final int[] LBZ1_SCROLL_WORD_COUNTS = {
+            0x140, 0x000,
+            0x0F0, 0x050,
+            0x0A0, 0x0A0,
+            0x050, 0x0F0
+    };
     private static final int ANIPLC_LRZ1_ADDR = 0x028A6A;
     private static final int ART_UNC_ANI_SOZ1_BG_ADDR = 0x0BD9C0;
     private static final int ART_UNC_ANI_SOZ1_BG_SIZE = 0x0C00;
@@ -143,6 +150,15 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private final byte[] iczArt3Data;
     private final byte[] iczArt4Data;
     private final byte[] iczArt5Data;
+    private byte[] lbzSharedData;
+    private byte[] lbz1ScrollData;
+    private byte[] lbz1ScrollCapData;
+    private byte[] lbz2ScrollData;
+    private byte[] lbz2WaterlineBelowData;
+    private byte[] lbz2LowerBgData;
+    private byte[] lbz2WaterlineAboveData;
+    private byte[] lbz2UpperBgData;
+    private byte[] lbzWaterlineScrollData;
     private final byte[] soz1BgData;
     private final byte[] soz1Bg2Data;
     private final byte[] pachinkoScratch;
@@ -158,6 +174,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private int pachinkoSourceOffset;
     private int pachinkoStripeOffset;
     private int frameCounter;
+    private int lbzRegularScriptCount;
 
     // Gumball bonus stage: direct DMA of uncompressed art based on BG scroll
     // ROM: AnimateTiles_Gumball (sonic3k.asm:55266)
@@ -230,7 +247,19 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
 
-        this.scripts = AniPlcParser.parseScripts(reader, aniPlcAddr);
+        List<AniPlcScriptState> parsedScripts = AniPlcParser.parseScripts(reader, aniPlcAddr);
+        this.lbzRegularScriptCount = parsedScripts.size();
+        if (zoneIndex == 0x06 && actIndex == 0) {
+            List<AniPlcScriptState> specScripts = AniPlcParser.parseScripts(reader,
+                    Sonic3kConstants.ANIPLC_LBZ_SPEC_ADDR);
+            List<AniPlcScriptState> combinedScripts =
+                    new ArrayList<>(parsedScripts.size() + specScripts.size());
+            combinedScripts.addAll(parsedScripts);
+            combinedScripts.addAll(specScripts);
+            this.scripts = List.copyOf(combinedScripts);
+        } else {
+            this.scripts = parsedScripts;
+        }
         AniPlcParser.ensurePatternCapacity(scripts, level);
 
         if (zoneIndex == 0 && actIndex == 1) {
@@ -241,6 +270,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         ensureHczPatternCapacity();
         ensurePachinkoPatternCapacity();
         ensureIczPatternCapacity();
+        ensureLbzPatternCapacity();
 
         boolean isAiz1Intro = zoneIndex == 0 && actIndex == 0 && !isSkipIntro;
         if (!isAiz1Intro) {
@@ -425,6 +455,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             this.iczArt4Data = null;
             this.iczArt5Data = null;
         }
+
+        loadLbzRawArt(reader);
 
         if (zoneIndex == 0x08 && actIndex == 0) {
             this.soz1BgData = loadRawBytes(reader, ART_UNC_ANI_SOZ1_BG_ADDR, ART_UNC_ANI_SOZ1_BG_SIZE);
@@ -619,6 +651,29 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 && iczArt5Data != null;
     }
 
+    boolean shouldRunLbzSharedChannel() {
+        return lbzSharedData != null;
+    }
+
+    boolean shouldRunLbz1CustomChannels() {
+        return actIndex == 0
+                && lbz1ScrollData != null
+                && lbz1ScrollCapData != null;
+    }
+
+    boolean shouldRunLbz2ScrollChannel() {
+        return actIndex == 1 && lbz2ScrollData != null;
+    }
+
+    boolean shouldRunLbz2WaterlineChannel() {
+        return actIndex == 1
+                && lbz2WaterlineBelowData != null
+                && lbz2LowerBgData != null
+                && lbz2WaterlineAboveData != null
+                && lbz2UpperBgData != null
+                && lbzWaterlineScrollData != null;
+    }
+
     void tickScript(AniPlcScriptState script) {
         script.tick(level, GameServices.graphics());
     }
@@ -652,6 +707,26 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
 
     void updateIczAct1VerticalTilesForGraph() {
         updateIczAct1VerticalTiles();
+    }
+
+    void updateLbzSharedTilesForGraph(int channelFrameCounter) {
+        if (lbzSharedData == null) {
+            return;
+        }
+        int phase = computeLbzSharedPhase(channelFrameCounter);
+        applyRawPatternSliceToLevel(lbzSharedData, ror16(phase, 7), 0x200, 0x160);
+    }
+
+    void updateLbz1ScrollTilesForGraph() {
+        updateLbz1ScrollTiles();
+    }
+
+    void updateLbz2ScrollTilesForGraph() {
+        updateLbz2ScrollTiles();
+    }
+
+    void updateLbz2WaterlineTilesForGraph() {
+        updateLbz2WaterlineTiles();
     }
 
     private void updateHcz1BackgroundStrips() {
@@ -1137,6 +1212,140 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
     }
 
+    int computeLbzSharedPhase(int channelFrameCounter) {
+        return (channelFrameCounter >>> 2) & 0x0F;
+    }
+
+    int computeLbz1ScrollPhase() {
+        int cameraX = getCameraX();
+        int eventsBg10 = asrWordValue(cameraX, 5) + 0x0A;
+        int bgCameraX = resolveLbzBgCameraX(asrWordValue(cameraX, 4) + 0x0A);
+        return (eventsBg10 - bgCameraX) & 0x1F;
+    }
+
+    int computeLbz2ScrollPhase() {
+        int cameraX = getCameraX();
+        int bgCameraX = resolveLbzBgCameraX(asrWordValue(cameraX, 1));
+        int eventsBg12 = asrWordValue(cameraX, 1) - asrWordValue(cameraX, 4);
+        return (eventsBg12 - bgCameraX) & 0x0F;
+    }
+
+    int computeLbz2WaterlinePhase() {
+        return computeLbz2WaterlineDelta() & 0xFFFF;
+    }
+
+    private int resolveLbzBgCameraX(int fallback) {
+        try {
+            int bgCameraX = GameServices.parallax().getBgCameraX();
+            if (bgCameraX != Integer.MIN_VALUE) {
+                return bgCameraX;
+            }
+        } catch (Exception e) {
+            LOG.fine(() -> "Sonic3kPatternAnimator.resolveLbzBgCameraX: " + e.getMessage());
+        }
+        return fallback;
+    }
+
+    private void updateLbz1ScrollTiles() {
+        if (!shouldRunLbz1CustomChannels()) {
+            return;
+        }
+
+        int phase = computeLbz1ScrollPhase();
+        int lowPhase = phase & 7;
+        int baseOffset = (lowPhase << 7) + (lowPhase << 9);
+        int secondOffset = baseOffset;
+        int splitBits = phase & 0x18;
+        int primarySourceOffset = baseOffset + (splitBits << 2) + (splitBits << 4);
+        int pairIndex = splitBits >> 2;
+        int firstWordCount = LBZ1_SCROLL_WORD_COUNTS[pairIndex];
+        int secondWordCount = LBZ1_SCROLL_WORD_COUNTS[pairIndex + 1];
+
+        int destTile = 0x350;
+        applyRawPatternSliceToLevel(lbz1ScrollData, primarySourceOffset, firstWordCount << 1, destTile);
+        destTile += (firstWordCount << 1) / Pattern.PATTERN_SIZE_IN_ROM;
+        if (secondWordCount != 0) {
+            applyRawPatternSliceToLevel(lbz1ScrollData, secondOffset, secondWordCount << 1, destTile);
+            destTile += (secondWordCount << 1) / Pattern.PATTERN_SIZE_IN_ROM;
+        }
+        applyRawPatternSliceToLevel(lbz1ScrollCapData, lowPhase << 5, 0x20, destTile);
+    }
+
+    private void updateLbz2ScrollTiles() {
+        if (lbz2ScrollData == null) {
+            return;
+        }
+        int phase = computeLbz2ScrollPhase();
+        applyRawPatternSliceToLevel(lbz2ScrollData, phase << 6, 0x40, 0x2E3);
+    }
+
+    private void updateLbz2WaterlineTiles() {
+        if (!shouldRunLbz2WaterlineChannel()) {
+            return;
+        }
+
+        int delta = computeLbz2WaterlineDelta();
+        if (delta == 0) {
+            applyRawPatternSliceToLevel(lbz2LowerBgData, 0, 0x200, 0x2C3);
+            applyRawPatternSliceToLevel(lbz2UpperBgData, 0, 0x200, 0x2D3);
+            return;
+        }
+
+        if (delta < 0) {
+            if (delta > -0x40) {
+                applyLbz2DynamicWaterline(lbz2WaterlineBelowData, (delta + 0x40) << 6, 0x2C3);
+            } else {
+                applyRawPatternSliceToLevel(lbz2WaterlineBelowData, 0, 0x200, 0x2C3);
+            }
+            applyRawPatternSliceToLevel(lbz2UpperBgData, 0, 0x200, 0x2D3);
+            return;
+        }
+
+        applyRawPatternSliceToLevel(lbz2LowerBgData, 0, 0x200, 0x2C3);
+        if (delta < 0x40) {
+            applyLbz2DynamicWaterline(lbz2WaterlineAboveData, (-delta + 0x40) << 6, 0x2D3);
+        } else {
+            applyRawPatternSliceToLevel(lbz2WaterlineAboveData, 0, 0x200, 0x2D3);
+        }
+    }
+
+    private void applyLbz2DynamicWaterline(byte[] sourceData, int tableOffset, int destTile) {
+        if (sourceData == null || lbzWaterlineScrollData == null
+                || tableOffset < 0 || tableOffset + 0x40 > lbzWaterlineScrollData.length) {
+            return;
+        }
+
+        byte[] composed = new byte[0x200];
+        for (int i = 0; i < 0x40; i++) {
+            int sourceByteOffset = (lbzWaterlineScrollData[tableOffset + i] & 0xFF) << 2;
+            int sourceIndexA = sourceByteOffset;
+            int sourceIndexB = 0x100 + sourceByteOffset;
+            if (sourceIndexA + 4 > sourceData.length || sourceIndexB + 4 > sourceData.length) {
+                return;
+            }
+            System.arraycopy(sourceData, sourceIndexA, composed, i << 2, 4);
+            System.arraycopy(sourceData, sourceIndexB, composed, 0x100 + (i << 2), 4);
+        }
+        applyRawPatternBytesToLevel(composed, destTile);
+    }
+
+    private int computeLbz2WaterlineDelta() {
+        int shake = 0;
+        try {
+            shake = GameServices.parallax().getShakeOffsetY();
+        } catch (Exception e) {
+            LOG.fine(() -> "Sonic3kPatternAnimator.computeLbz2WaterlineDelta: " + e.getMessage());
+        }
+
+        int relativeY = (short) (getCameraY() - shake - 0x5F0);
+        int bgYFixed = (((short) relativeY) << 16) >> 1;
+        int step = bgYFixed >> 3;
+        bgYFixed -= step;
+        bgYFixed -= step >> 2;
+        int bgYWithoutBase = (short) (bgYFixed >> 16);
+        return (short) (bgYWithoutBase - relativeY);
+    }
+
     private void updateSoz1BackgroundTiles() {
         if (soz1BgData == null || soz1Bg2Data == null) {
             return;
@@ -1181,6 +1390,50 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         if (zoneIndex == 0x05) {
             level.ensurePatternCapacity(0x131);
         }
+    }
+
+    private void ensureLbzPatternCapacity() {
+        if (zoneIndex == 0x06) {
+            level.ensurePatternCapacity(0x36D);
+        }
+    }
+
+    private void loadLbzRawArt(RomByteReader reader) {
+        if (zoneIndex != 0x06) {
+            return;
+        }
+
+        lbzSharedData = loadRawBytes(reader,
+                Sonic3kConstants.ART_UNC_ANI_LBZ_SHARED_ADDR,
+                Sonic3kConstants.ART_UNC_ANI_LBZ_SHARED_SIZE);
+        if (actIndex == 0) {
+            lbz1ScrollData = loadRawBytes(reader,
+                    Sonic3kConstants.ART_UNC_ANI_LBZ1_1_ADDR,
+                    Sonic3kConstants.ART_UNC_ANI_LBZ1_1_SIZE);
+            lbz1ScrollCapData = loadRawBytes(reader,
+                    Sonic3kConstants.ART_UNC_ANI_LBZ1_2_ADDR,
+                    Sonic3kConstants.ART_UNC_ANI_LBZ1_2_SIZE);
+            return;
+        }
+
+        lbz2ScrollData = loadRawBytes(reader,
+                Sonic3kConstants.ART_UNC_ANI_LBZ2_2_ADDR,
+                Sonic3kConstants.ART_UNC_ANI_LBZ2_2_SIZE);
+        lbz2WaterlineBelowData = loadRawBytes(reader,
+                Sonic3kConstants.ART_UNC_ANI_LBZ2_WATERLINE_BELOW_ADDR,
+                Sonic3kConstants.ART_UNC_ANI_LBZ2_WATERLINE_BELOW_SIZE);
+        lbz2LowerBgData = loadRawBytes(reader,
+                Sonic3kConstants.ART_UNC_ANI_LBZ2_LOWER_BG_ADDR,
+                Sonic3kConstants.ART_UNC_ANI_LBZ2_LOWER_BG_SIZE);
+        lbz2WaterlineAboveData = loadRawBytes(reader,
+                Sonic3kConstants.ART_UNC_ANI_LBZ2_WATERLINE_ABOVE_ADDR,
+                Sonic3kConstants.ART_UNC_ANI_LBZ2_WATERLINE_ABOVE_SIZE);
+        lbz2UpperBgData = loadRawBytes(reader,
+                Sonic3kConstants.ART_UNC_ANI_LBZ2_UPPER_BG_ADDR,
+                Sonic3kConstants.ART_UNC_ANI_LBZ2_UPPER_BG_SIZE);
+        lbzWaterlineScrollData = loadRawBytes(reader,
+                Sonic3kConstants.LBZ_WATERLINE_SCROLL_DATA_ADDR,
+                Sonic3kConstants.LBZ_WATERLINE_SCROLL_DATA_SIZE);
     }
 
     private byte[] loadRawBytes(RomByteReader reader, int addr, int size) {
@@ -1444,6 +1697,9 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             case 2 -> Sonic3kConstants.ANIPLC_MGZ_ADDR;
             case 0x03 -> Sonic3kConstants.ANIPLC_CNZ_ADDR;
             case 0x05 -> Sonic3kConstants.ANIPLC_ICZ_ADDR;
+            case 0x06 -> actIndex == 0
+                    ? Sonic3kConstants.ANIPLC_LBZ1_ADDR
+                    : Sonic3kConstants.ANIPLC_LBZ2_ADDR;
             case 0x08 -> ANIPLC_LRZ1_ADDR;
             case 0x14 -> Sonic3kConstants.ANIPLC_PACHINKO_ADDR;
             default -> -1;
@@ -1469,6 +1725,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         }
         if (zoneIndex == 0x05) {
             graph.install(S3kAnimatedTileChannels.buildIczChannels(this, scripts, actIndex));
+            return;
+        }
+        if (zoneIndex == 0x06) {
+            graph.install(S3kAnimatedTileChannels.buildLbzChannels(this, scripts, actIndex, lbzRegularScriptCount));
             return;
         }
         graph.install(List.of());
