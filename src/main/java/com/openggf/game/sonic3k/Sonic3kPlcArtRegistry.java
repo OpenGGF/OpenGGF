@@ -1440,6 +1440,15 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 -1
         ));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.FLYBOT_767,
+                Sonic3kConstants.ART_UNC_FLYBOT_767_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_FLYBOT_767_SIZE,
+                Sonic3kConstants.MAP_FLYBOT_767_ADDR,
+                1,
+                Sonic3kConstants.DPLC_FLYBOT_767_ADDR
+        ));
 
         // Cork Floor: art_tile = $001, palette 2
         levelArt.add(new LevelArtEntry(

@@ -79,6 +79,8 @@ public final class Sonic3kObjectIds {
     // S3KL object table: Obj_CNZWireCage.
     public static final int CNZ_WIRE_CAGE = 0x4E;
     public static final int MGZLBZ_SMASHING_PILLAR_ALT = 0x20;
+    // S3KL object table: Obj_LBZAlarm.
+    public static final int LBZ_ALARM = 0x22;
     public static final int MGZLBZ_SMASHING_PILLAR = 0x52;
     public static final int MGZ_SWINGING_PLATFORM = 0x53;
     public static final int MGZ_HEAD_TRIGGER = 0x55;
@@ -163,6 +165,8 @@ public final class Sonic3kObjectIds {
     public static final int ICZ_MINIBOSS = 0xBC;
     // S3KL object table: Obj_ICZEndBoss.
     public static final int ICZ_END_BOSS = 0xBD;
+    // S3KL object table: Obj_Flybot767.
+    public static final int FLYBOT_767 = 0xC2;
     public static final int TUNNELBOT = 0x9E;
     public static final int HCZ_MINIBOSS = 0x99;
     public static final int HCZ_END_BOSS = 0x9A;

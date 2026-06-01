@@ -805,6 +805,19 @@ public class Sonic3kConstants {
     // 00 00 03 2B 99 40 23 C0 08 04 00 04 08 0C 10 14 18 1C
     public static final int ANIPLC_ICZ_ADDR = 0x028990;
 
+    // AniPLC_LBZ1: 1 script (act-1 foreground/background machinery tiles)
+    // Verified by S&K ROM search for:
+    // 00 00 02 2B 9D 40 6C A0 04 08 00 08 10 18
+    public static final int ANIPLC_LBZ1_ADDR = 0x0289A2;
+
+    // AniPLC_LBZSpec: 2 scripts (shared LBZ special machinery tiles)
+    // AnimateTiles_LBZ1 invokes this table in addition to AniPLC_LBZ1.
+    public static final int ANIPLC_LBZ_SPEC_ADDR = 0x0289B0;
+
+    // AniPLC_LBZ2: 2 scripts (act-2 shared machinery tiles)
+    // Same payload as AniPLC_LBZSpec, but referenced by the act-2 table entry.
+    public static final int ANIPLC_LBZ2_ADDR = 0x0289CC;
+
     // ArtUnc_AniAIZ2_FirstTree: Static tree art for AIZ2 near-spawn area (camera X < 0x1C0)
     // 0x460 bytes = 35 tiles, loaded to VRAM tile $0CA
     // Verified by move.l #addr,d1 instruction at ROM 0x02786A
@@ -817,6 +830,10 @@ public class Sonic3kConstants {
     // two 12-tile rows into VRAM $2F4 and $300 before HCZ background rendering.
     public static final int HCZ_WATERLINE_SCROLL_DATA_ADDR = 0x26D000;
     public static final int HCZ_WATERLINE_SCROLL_DATA_SIZE = 0x2460;
+    // LBZ2 waterline lookup data (Levels/LBZ/Misc/LBZ Waterline Scroll Data.bin).
+    // Lock-on S3 data, verified by ROM binary search at 0x26F460.
+    public static final int LBZ_WATERLINE_SCROLL_DATA_ADDR = 0x26F460;
+    public static final int LBZ_WATERLINE_SCROLL_DATA_SIZE = 0x1040;
     public static final int ART_UNC_HCZ1_WATERLINE_BELOW1_ADDR = 0x2A6A60;
     public static final int ART_UNC_FIX_HCZ1_UPPER_BG1_ADDR = 0x2A6BE0;
     public static final int ART_UNC_HCZ1_WATERLINE_ABOVE1_ADDR = 0x2A6D60;
@@ -855,6 +872,24 @@ public class Sonic3kConstants {
     public static final int ART_UNC_ANI_ICZ_4_SIZE = 0x0080;
     public static final int ART_UNC_ANI_ICZ_5_ADDR = 0x2B9900;
     public static final int ART_UNC_ANI_ICZ_5_SIZE = 0x0040;
+
+    // LBZ direct-DMA animated art sources from lock-on S3 split data.
+    public static final int ART_UNC_ANI_LBZ1_1_ADDR = 0x2BA240;
+    public static final int ART_UNC_ANI_LBZ1_1_SIZE = 0x1400;
+    public static final int ART_UNC_ANI_LBZ1_2_ADDR = 0x2BB640;
+    public static final int ART_UNC_ANI_LBZ1_2_SIZE = 0x0100;
+    public static final int ART_UNC_ANI_LBZ2_2_ADDR = 0x2BB740;
+    public static final int ART_UNC_ANI_LBZ2_2_SIZE = 0x0400;
+    public static final int ART_UNC_ANI_LBZ2_WATERLINE_BELOW_ADDR = 0x2BBB40;
+    public static final int ART_UNC_ANI_LBZ2_WATERLINE_BELOW_SIZE = 0x0200;
+    public static final int ART_UNC_ANI_LBZ2_LOWER_BG_ADDR = 0x2BBD40;
+    public static final int ART_UNC_ANI_LBZ2_LOWER_BG_SIZE = 0x0200;
+    public static final int ART_UNC_ANI_LBZ2_WATERLINE_ABOVE_ADDR = 0x2BBF40;
+    public static final int ART_UNC_ANI_LBZ2_WATERLINE_ABOVE_SIZE = 0x0200;
+    public static final int ART_UNC_ANI_LBZ2_UPPER_BG_ADDR = 0x2BC140;
+    public static final int ART_UNC_ANI_LBZ2_UPPER_BG_SIZE = 0x0200;
+    public static final int ART_UNC_ANI_LBZ_SHARED_ADDR = 0x2BC340;
+    public static final int ART_UNC_ANI_LBZ_SHARED_SIZE = 0x2000;
 
     // ===== Title Screen Art (Kosinski compressed, S3 lock-on data) =====
     // Sonic animation frames — frames 1-7 share Sonic1 art with different palettes/mappings
@@ -1311,6 +1346,12 @@ public class Sonic3kConstants {
     public static final int MAP_RIBOT_ADDR = 0x3604B8;
     public static final int ART_KOSM_CORKEY_ADDR = 0x377DFC;
     public static final int MAP_CORKEY_ADDR = 0x3605C2;
+    // Obj_Flybot767 (sonic3k.asm:191981), LockOn data include.
+    // Map, DPLC, and ArtUnc_Flybot767 verified by S&K-side ROM byte search.
+    public static final int ART_UNC_FLYBOT_767_ADDR = 0x377EBE;
+    public static final int ART_UNC_FLYBOT_767_SIZE = 4896;
+    public static final int MAP_FLYBOT_767_ADDR = 0x36065A;
+    public static final int DPLC_FLYBOT_767_ADDR = 0x3607EC;
 
     // ===== MHZ Badnik Art =====
     public static final int ART_KOSM_MADMOLE_ADDR = 0x165F02;
