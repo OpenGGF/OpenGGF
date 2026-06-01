@@ -165,6 +165,12 @@ and documents the reverted AIZ2 battleship wrap-seam attempt and follow-up
 lessons.
 This merge keeps the local HCZ/ICZ branch line synchronized with those develop
 updates while preserving the reverted AIZ2 wrap behavior.
+The S2 Metropolis/Wing Fortress parity branch lands MTZ object/badnik/boss and
+WFZ parity passes, advances the MTZ3 trace frontier through a series of
+ROM-state-driven fixes, adds a ROM-accurate S3K speed-shoes byte timer
+(every-8th-frame decrement) gated on the level frame counter, and wraps the CNZ
+conveyor (Obj72) width to a byte so the WFZ level-select trace replay now passes
+end to end, with no S1/S2 or S3K trace regressions.
 See CHANGELOG.md for detailed progress.
 
 ### Where do I get ROMs?
