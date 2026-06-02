@@ -1,0 +1,188 @@
+package com.openggf.game.sonic3k.objects;
+
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SubpixelMotion;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.TrigLookupTable;
+
+import java.util.List;
+
+/**
+ * MHZ pollen / falling leaf particle.
+ *
+ * <p>ROM: {@code Obj_MHZ_Pollen}, {@code loc_3DBE0}, {@code loc_3DC18}.
+ */
+public class MhzPollenParticleInstance extends AbstractObjectInstance {
+    public enum ArtMode {
+        POLLEN,
+        BIG_LEAF
+    }
+
+    private enum Routine {
+        RISING,
+        FLOATING
+    }
+
+    private final SubpixelMotion.State motion;
+    private final ArtMode artMode;
+    private final int gravityStep;
+    private final boolean preserveInitialAngleOnFloat;
+    private Routine routine;
+    private int angle;
+    private int mappingFrame;
+    private int animFrameTimer;
+    private boolean releasedCounter;
+
+    public MhzPollenParticleInstance(
+            int x,
+            int y,
+            int xVelocity,
+            int yVelocity,
+            int gravityStep,
+            int angle,
+            ArtMode artMode) {
+        this(x, y, xVelocity, yVelocity, gravityStep, angle, artMode, false);
+    }
+
+    public MhzPollenParticleInstance(
+            int x,
+            int y,
+            int xVelocity,
+            int yVelocity,
+            int gravityStep,
+            int angle,
+            ArtMode artMode,
+            boolean preserveInitialAngleOnFloat) {
+        super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "MHZ Pollen");
+        this.motion = new SubpixelMotion.State(x, y, 0, 0, xVelocity, yVelocity);
+        this.gravityStep = gravityStep;
+        this.angle = angle & 0xFF;
+        this.artMode = artMode;
+        this.preserveInitialAngleOnFloat = preserveInitialAngleOnFloat;
+        this.routine = Routine.RISING;
+        this.animFrameTimer = 0;
+    }
+
+    @Override
+    public void update(int frameCounter, PlayableEntity player) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        boolean enteredFloatingRoutine = routine == Routine.FLOATING;
+        if (!enteredFloatingRoutine) {
+            SubpixelMotion.moveSprite2(motion);
+            if (motion.yVel < 0) {
+                motion.yVel += gravityStep << 2;
+            }
+            if (motion.yVel >= 0) {
+                routine = Routine.FLOATING;
+                if (!preserveInitialAngleOnFloat) {
+                    angle = (frameCounter + 1) & 0xFF;
+                }
+            }
+        } else {
+            motion.xVel = TrigLookupTable.sinHex(angle);
+            angle = (angle + 4) & 0xFF;
+            SubpixelMotion.moveSprite2(motion);
+            motion.yVel += gravityStep;
+        }
+
+        animateMappingFrame();
+        if (enteredFloatingRoutine && !isOnScreen(0x20)) {
+            cleanupOffscreen();
+        }
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        PatternSpriteRenderer renderer = getRenderer(resolveArtKey());
+        if (renderer != null) {
+            renderer.drawFrameIndex(mappingFrame, getX(), getY(), false, false);
+        }
+    }
+
+    @Override
+    public int getX() {
+        return motion.x;
+    }
+
+    @Override
+    public int getY() {
+        return motion.y;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return 4;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 4;
+    }
+
+    public ArtMode getArtMode() {
+        return artMode;
+    }
+
+    public int getVelocityX() {
+        return motion.xVel;
+    }
+
+    public int getVelocityY() {
+        return motion.yVel;
+    }
+
+    public int getGravityStep() {
+        return gravityStep;
+    }
+
+    public int getMappingFrame() {
+        return mappingFrame;
+    }
+
+    private void animateMappingFrame() {
+        animFrameTimer--;
+        if (animFrameTimer >= 0) {
+            return;
+        }
+        animFrameTimer = 7;
+        mappingFrame = (mappingFrame + 1) & 1;
+        if (motion.xVel < 0) {
+            mappingFrame += 2;
+        }
+    }
+
+    private String resolveArtKey() {
+        if (artMode == ArtMode.BIG_LEAF) {
+            return Sonic3kObjectArtKeys.MHZ_BIG_LEAVES;
+        }
+        if (services().zoneRuntimeState() instanceof MhzZoneRuntimeState state
+                && state.isSeasonFlagSet()) {
+            return Sonic3kObjectArtKeys.MHZ_POLLEN_SEASONAL;
+        }
+        return Sonic3kObjectArtKeys.MHZ_POLLEN_SPRING;
+    }
+
+    private void cleanupOffscreen() {
+        motion.x = 0x7F00;
+        releaseRuntimeCounter();
+        setDestroyedByOffscreen();
+    }
+
+    private void releaseRuntimeCounter() {
+        if (releasedCounter) {
+            return;
+        }
+        if (services().zoneRuntimeState() instanceof MhzZoneRuntimeState state) {
+            state.releasePollenParticle();
+        }
+        releasedCounter = true;
+    }
+}

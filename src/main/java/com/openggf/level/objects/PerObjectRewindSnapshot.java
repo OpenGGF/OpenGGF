@@ -392,7 +392,7 @@ public record PerObjectRewindSnapshot(
             short logicalInputState, boolean logicalJumpPressState,
             // CPU / sidekick / spiral
             boolean cpuControlled, byte historyPos, boolean followerHistoryRecordedThisTick,
-            int spiralActiveFrame, byte flipAngle, byte flipSpeed,
+            int spiralActiveFrame, byte flipAngle, byte flipType, byte flipSpeed,
             byte flipsRemaining, boolean flipTurned,
             // Water
             boolean inWater, boolean waterPhysicsActive, boolean wasInWater, boolean waterSkimActive,

@@ -647,6 +647,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         protected boolean movementInputActive = false;
         private int spiralActiveFrame = Integer.MIN_VALUE;
         private byte flipAngle = 0;
+        private byte flipType = 0;
         private byte flipSpeed = 0;
         private byte flipsRemaining = 0;
         private boolean flipTurned = false;
@@ -817,6 +818,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.movementInputActive = false;
                 this.spiralActiveFrame = Integer.MIN_VALUE;
                 this.flipAngle = 0;
+                this.flipType = 0;
                 this.flipSpeed = 0;
                 this.flipsRemaining = 0;
                 this.flipTurned = false;
@@ -922,7 +924,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         movementInputActive,
                         logicalInputState, logicalJumpPressState,
                         cpuControlled, historyPos, followerHistoryRecordedThisTick,
-                        spiralActiveFrame, flipAngle, flipSpeed,
+                        spiralActiveFrame, flipAngle, flipType, flipSpeed,
                         flipsRemaining, flipTurned,
                         inWater, waterPhysicsActive, wasInWater, waterSkimActive,
                         preventTailsRespawn,
@@ -1084,6 +1086,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.followerHistoryRecordedThisTick = extra.followerHistoryRecordedThisTick();
                 this.spiralActiveFrame = extra.spiralActiveFrame();
                 this.flipAngle = extra.flipAngle();
+                this.flipType = extra.flipType();
                 this.flipSpeed = extra.flipSpeed();
                 this.flipsRemaining = extra.flipsRemaining();
                 this.flipTurned = extra.flipTurned();
@@ -3063,6 +3066,14 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
 
         public void setFlipAngle(int value) {
                 this.flipAngle = (byte) (value & 0xFF);
+        }
+
+        public int getFlipType() {
+                return flipType & 0xFF;
+        }
+
+        public void setFlipType(int value) {
+                this.flipType = (byte) (value & 0xFF);
         }
 
         public int getFlipSpeed() {
