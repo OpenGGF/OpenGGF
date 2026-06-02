@@ -52,6 +52,9 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance {
     private final HandleState leftHandle = new HandleState(LEFT_HANDLE_X_OFFSET, LEFT_INITIAL_HANDLE_OFFSET);
     private final HandleState rightHandle = new HandleState(RIGHT_HANDLE_X_OFFSET, RIGHT_INITIAL_HANDLE_OFFSET);
     private int parentY;
+    private int parentLeftHandleOffset;
+    private int parentRightHandleOffset;
+    private int parentRenderAverageOffset;
     private int previousAverageOffset;
     private int lowerPulleyMarkerY;
     private int remainingPullSteps;
@@ -81,7 +84,7 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance {
 
         int x = spawn.x();
         int y = parentY;
-        int ropeDrop = 0x40 - ((leftHandle.offset + rightHandle.offset) >> 1);
+        int ropeDrop = 0x40 - parentRenderAverageOffset;
         int ropeY = (y + ropeDrop) & 0xFFFF;
         int lowerPulleyY = (ropeY + 0x38) & 0xFFFF;
         int lowerPulleyXOffset = LOWER_PULLEY_X_ADJUST[ropeY & 0xF] + 0x10;
@@ -105,13 +108,16 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance {
                 + " parentY=" + parentY
                 + " leftOffset=" + leftHandle.offset
                 + " rightOffset=" + rightHandle.offset
+                + " parentLeftOffset=" + parentLeftHandleOffset
+                + " parentRightOffset=" + parentRightHandleOffset
                 + " remainingPullSteps=" + remainingPullSteps
                 + " leftGrabbed=" + leftHandle.grabbed
                 + " rightGrabbed=" + rightHandle.grabbed;
     }
 
     private void updateParentPosition() {
-        int averageOffset = ((leftHandle.offset + rightHandle.offset) & 0xFFFF) >>> 1;
+        int averageOffset = ((parentLeftHandleOffset + parentRightHandleOffset) & 0xFFFF) >>> 1;
+        parentRenderAverageOffset = averageOffset;
         int ropeDrop = (0x40 - averageOffset) & 0xFFFF;
         int delta = signWord(averageOffset - previousAverageOffset);
         if (delta != 0) {
@@ -292,10 +298,20 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance {
             if (handle.offset != HANDLE_MAX_OFFSET) {
                 handle.offset += HANDLE_STEP;
             }
+            writeParentHandleOffset(handle);
             return;
         }
         if (handle.offset != 0) {
             handle.offset -= HANDLE_STEP;
+        }
+        writeParentHandleOffset(handle);
+    }
+
+    private void writeParentHandleOffset(HandleState handle) {
+        if (handle == leftHandle) {
+            parentLeftHandleOffset = handle.offset;
+        } else {
+            parentRightHandleOffset = handle.offset;
         }
     }
 

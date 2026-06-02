@@ -239,6 +239,37 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
+    void mhz1FullCutsceneKnucklesQueuesKnucklesThemeOnInit() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        CutsceneKnucklesMhz1Instance knuckles = new CutsceneKnucklesMhz1Instance(new ObjectSpawn(
+                0, 0, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x1C, 0, false, 0));
+        TestObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        };
+        knuckles.setServices(services);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
+
+        try (MockedStatic<AizIntroArtLoader> ignored = mockStatic(AizIntroArtLoader.class)) {
+            knuckles.update(0, sonic);
+        }
+
+        assertEquals(1, spawned.stream().filter(SongFadeTransitionInstance.class::isInstance).count(),
+                "loc_62B68 calls sub_65DD6, which queues Obj_Song_Fade_Transition for mus_Knuckles");
+    }
+
+    @Test
     void mhz1FullCutsceneKnucklesStartsRomWalkAnimationWhenTimerExpires() {
         LevelManager levelManager = mock(LevelManager.class);
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
@@ -2164,6 +2195,48 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
+    void knucklesCutsceneCleanupRestoresPaletteLine1Snapshot() {
+        Palette[] palettes = {new Palette(), new Palette(), new Palette(), new Palette()};
+        byte[] originalLine = paletteLine(0x0000, 0x0222, 0x0444, 0x0666,
+                0x0888, 0x0AAA, 0x0CCC, 0x0EEE,
+                0x0020, 0x0040, 0x0060, 0x0080,
+                0x00A0, 0x00C0, 0x00E0, 0x0E00);
+        byte[] cutsceneLine = paletteLine(0x0000, 0x000E, 0x002E, 0x004E,
+                0x006E, 0x008E, 0x00AE, 0x00CE,
+                0x00EE, 0x02EE, 0x04EE, 0x06EE,
+                0x08EE, 0x0AEE, 0x0CEE, 0x0EEE);
+        palettes[1].fromSegaFormat(originalLine);
+        Palette expected = palettes[1].deepCopy();
+        Level level = mock(Level.class);
+        when(level.getPaletteCount()).thenReturn(palettes.length);
+        when(level.getPalette(anyInt())).thenAnswer(invocation -> palettes[invocation.getArgument(0)]);
+
+        Mhz1CutsceneKnucklesInstance knuckles = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+        knuckles.setServices(new StubObjectServices() {
+            @Override
+            public ObjectPlayerQuery playerQuery() {
+                return new ObjectPlayerQuery(() -> null, List::of);
+            }
+
+            @Override
+            public Level currentLevel() {
+                return level;
+            }
+        });
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
+
+        knuckles.update(0, sonic);
+        palettes[1].fromSegaFormat(cutsceneLine);
+        knuckles.forceReadyForButtonForTest();
+        knuckles.signalButtonCallback();
+        knuckles.update(1, sonic);
+
+        assertTrue(palettes[1].dataEquals(expected),
+                "CutsceneKnux_MHZ1 snapshots Normal_palette_line_2 before Pal_CutsceneKnux; cleanup must restore it");
+    }
+
+    @Test
     void buttonSignalsRoutineCAndKnucklesCleanupRestoresPlayerControl() {
         Camera camera = new Camera();
         ObjectManager objectManager = mock(ObjectManager.class);
@@ -2290,6 +2363,35 @@ class TestMhz1CutsceneObjects {
     }
 
     @Test
+    void mhz1CutsceneSpritesUseRomLowVdpPriorityForTunnelLayering() {
+        ObjectSpawn spawn = new ObjectSpawn(
+                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0);
+        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(spawn);
+        Mhz1CutsceneDoorInstance door = new Mhz1CutsceneDoorInstance(button);
+        CutsceneKnucklesMhz1Instance knuckles = new CutsceneKnucklesMhz1Instance(new ObjectSpawn(
+                0, 0, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x1C, 0, false, 0), button);
+        CutsceneKnucklesMhz1PeerInstance peer = new CutsceneKnucklesMhz1PeerInstance(new ObjectSpawn(
+                0, 0, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0, 0, false, 0), knuckles);
+
+        assertFalse(button.isHighPriority(),
+                "ObjDat_MHZ1CutsceneButton uses make_art_tile(...,0,0), so priority tiles hide it");
+        assertEquals(2, button.getPriorityBucket(),
+                "ObjDat_MHZ1CutsceneButton has priority word $100");
+        assertFalse(door.isHighPriority(),
+                "ObjDat3_66462 uses make_art_tile(ArtTile_MHZMisc+$82,3,0), so the door belongs inside the tunnel");
+        assertEquals(1, door.getPriorityBucket(),
+                "ObjDat3_66462 has priority word $80");
+        assertFalse(knuckles.isHighPriority(),
+                "CutsceneKnux_MHZ1 clears bit 7 of art_tile after ObjSlot_CutsceneKnux setup");
+        assertEquals(3, knuckles.getPriorityBucket(),
+                "ObjSlot_CutsceneKnux has priority word $180");
+        assertFalse(peer.isHighPriority(),
+                "ObjDat3_6643E uses make_art_tile(ArtTile_MHZKnuxPeer,1,0)");
+        assertEquals(3, peer.getPriorityBucket(),
+                "ObjDat3_6643E has priority word $180");
+    }
+
+    @Test
     void buttonWaitsForSpawnedMhz1KnucklesToEnterRomRangeBeforePressing() {
         ObjectManager objectManager = mock(ObjectManager.class);
         List<ObjectInstance> spawned = new ArrayList<>();
@@ -2375,6 +2477,80 @@ class TestMhz1CutsceneObjects {
                 "loc_62E92 sets _unkFAA9 when the spawned Knuckles child reaches the switch");
         assertTrue(sfxIds.contains(Sonic3kSfx.SWITCH.id),
                 "loc_62E92 plays sfx_Switch on the delayed cutscene button press");
+    }
+
+    @Test
+    void mhz1FullCutsceneKnucklesUsesRawJumpAnimationWhenLeapingOntoButton() {
+        LevelManager levelManager = mock(LevelManager.class);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES))
+                .thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+
+        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+        CutsceneKnucklesMhz1Instance knuckles = new CutsceneKnucklesMhz1Instance(new ObjectSpawn(
+                0, 0, Sonic3kObjectIds.CUTSCENE_KNUCKLES, 0x1C, 0, false, 0), button);
+        knuckles.setServices(new TestObjectServices().withLevelManager(levelManager));
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
+
+        for (int frame = 0; frame < 122; frame++) {
+            knuckles.update(frame, sonic);
+        }
+        for (int frame = 122; knuckles.getRoutineForTest() != 0x06 && frame < 260; frame++) {
+            knuckles.update(frame, sonic);
+        }
+        knuckles.signalPeerReturned();
+        for (int frame = 260; knuckles.getRoutineForTest() != 0x0A && frame < 360; frame++) {
+            knuckles.update(frame, sonic);
+        }
+        knuckles.appendRenderCommands(new ArrayList<>());
+
+        verify(renderer).drawFrameIndex(eq(0x08), anyInt(), anyInt(), eq(false), eq(false));
+    }
+
+    @Test
+    void cutsceneButtonPressedFrameReturnsToUnpressedDuringCallbackWait() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+        StubObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        };
+        Mhz1CutsceneKnucklesInstance controller = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+        controller.setServices(services);
+        controller.forceReadyForButtonForTest();
+        Mhz1CutsceneButtonInstance button = new Mhz1CutsceneButtonInstance(new ObjectSpawn(
+                0x0380, MHZ1_SWITCH_SPAWN_Y, Sonic3kObjectIds.MHZ1_CUTSCENE_BUTTON, 0, 0, false, 0));
+        button.setServices(services);
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580);
+
+        button.update(0, sonic);
+        button.update(1, sonic);
+        CutsceneKnucklesMhz1Instance cutsceneKnuckles = spawned.stream()
+                .filter(CutsceneKnucklesMhz1Instance.class::isInstance)
+                .map(CutsceneKnucklesMhz1Instance.class::cast)
+                .findFirst().orElseThrow();
+        cutsceneKnuckles.setServices(services);
+        advanceMhz1CutsceneKnucklesToButtonRange(cutsceneKnuckles, button, sonic);
+
+        assertEquals(1, button.getVisibleMappingFrameForTest(),
+                "loc_62E92 writes mapping_frame=1 when the scripted Knuckles child presses the switch");
+
+        button.update(2, sonic);
+        button.update(3, sonic);
+
+        assertEquals(0, button.getVisibleMappingFrameForTest(),
+                "loc_62ED0 restores mapping_frame=0 while the long callback wait continues");
     }
 
     @Test
@@ -2537,6 +2713,42 @@ class TestMhz1CutsceneObjects {
                 "Obj_Wait starts at $3F, so the switch door moves down exactly 64 pixels");
         assertFalse(button.isDoorMovingForTest(),
                 "loc_630BE clears parent bit 2 when the 64-frame door slide completes");
+
+        TestablePlayableSprite nearDoor = new TestablePlayableSprite("sonic", (short) 0x0380, (short) 0x0580);
+        door.update(68, nearDoor);
+        assertEquals(0x0660, door.getY(),
+                "the scripted MHZ1 press latches _unkFAA9; the door must not auto-raise before the cutscene cleanup");
+    }
+
+    @Test
+    void mhz1CutsceneCleanupQueuesFadeBackToLevelMusic() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObject(any(ObjectInstance.class));
+        StubObjectServices services = new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        };
+        Mhz1CutsceneKnucklesInstance knuckles = new Mhz1CutsceneKnucklesInstance(new ObjectSpawn(
+                0x0380, 0x0580, Sonic3kObjectIds.MHZ1_CUTSCENE_KNUCKLES, 0, 0, false, 0));
+        knuckles.setServices(services);
+        knuckles.forceReadyForButtonForTest();
+        knuckles.signalButtonCallback();
+
+        knuckles.update(0, new TestablePlayableSprite("sonic", (short) 0x0389, (short) 0x0580));
+
+        SongFadeTransitionInstance transition = spawned.stream()
+                .filter(SongFadeTransitionInstance.class::isInstance)
+                .map(SongFadeTransitionInstance.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(Sonic3kMusic.MHZ1.id, transition.getMusicIdForTest(),
+                "Obj_MHZ1CutsceneKnuckles cleanup should allocate Obj_Song_Fade_ToLevelMusic for MHZ1");
     }
 
     @Test
@@ -2773,6 +2985,15 @@ class TestMhz1CutsceneObjects {
         assertEquals(expectedR, color.r & 0xFF);
         assertEquals(expectedG, color.g & 0xFF);
         assertEquals(expectedB, color.b & 0xFF);
+    }
+
+    private static byte[] paletteLine(int... words) {
+        byte[] line = new byte[words.length * 2];
+        for (int i = 0; i < words.length; i++) {
+            line[i * 2] = (byte) ((words[i] >>> 8) & 0xFF);
+            line[i * 2 + 1] = (byte) (words[i] & 0xFF);
+        }
+        return line;
     }
 
     private static final class PalPointersSszRom extends Rom {

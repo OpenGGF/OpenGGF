@@ -54,6 +54,8 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
     private static final int ACT1_MAX_Y_NORMAL = 0x0AA0;
     private static final int ACT1_MAX_Y_LOWER_END = 0x0710;
     private static final int ACT1_MINIBOSS_SPECIAL_EVENTS_ROUTINE = 0x08;
+    private static final int ACT1_MINIBOSS_REPEAT_THRESHOLD_X = 0x4400;
+    private static final int ACT1_MINIBOSS_REPEAT_OFFSET_X = 0x0200;
     private static final int ACT1_TO_ACT2_TRANSITION_OFFSET_X = -0x4200;
     private static final int ACT2_INITIAL_ROUTINE = 0x04;
     private static final int ACT2_INIT_AUTUMN_X = 0x09C0;
@@ -266,6 +268,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         if (act == 0) {
             updateAct1ScreenEvent();
             updateAct1BackgroundEvent();
+            updateAct1SpecialEvent();
         } else if (act == 1) {
             updateAct2ScreenEvent();
             updateAct2BackgroundEvent(frameCounter);
@@ -325,6 +328,30 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         }
         levelManager.getObjectManager().addDynamicObject(new MhzMinibossInstance(new ObjectSpawn(
                 0, 0, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0)));
+    }
+
+    private void updateAct1SpecialEvent() {
+        if (specialEventsRoutine == ACT1_MINIBOSS_SPECIAL_EVENTS_ROUTINE) {
+            updateAct1MinibossRepeatSpecialEvent();
+        }
+    }
+
+    private void updateAct1MinibossRepeatSpecialEvent() {
+        Camera camera = camera();
+        int cameraX = camera.getX() & 0xFFFF;
+        if (cameraX >= ACT1_MINIBOSS_REPEAT_THRESHOLD_X) {
+            cameraX = (cameraX - ACT1_MINIBOSS_REPEAT_OFFSET_X) & 0xFFFF;
+            levelRepeatOffset = ACT1_MINIBOSS_REPEAT_OFFSET_X;
+            shiftLevelRepeatPlayers(-ACT1_MINIBOSS_REPEAT_OFFSET_X);
+            LevelManager levelManager = levelManager();
+            if (levelManager != null && levelManager.getObjectManager() != null) {
+                levelManager.getObjectManager().applyLevelRepeatOffsetToActiveObjects(
+                        -ACT1_MINIBOSS_REPEAT_OFFSET_X, 0);
+            }
+            camera.setX((short) cameraX);
+            camera.setMaxX((short) ACT1_MINIBOSS_CAMERA_X);
+        }
+        camera.setMinX((short) cameraX);
     }
 
     private void updateAct1BackgroundEvent() {
@@ -799,7 +826,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
             if (!endBossArenaRestoreRequested) {
                 nextCameraX = (nextCameraX - ACT2_END_BOSS_REPEAT_OFFSET_X) & 0xFFFF;
                 levelRepeatOffset = ACT2_END_BOSS_REPEAT_OFFSET_X;
-                shiftEndBossArenaPlayers(-ACT2_END_BOSS_REPEAT_OFFSET_X);
+                shiftLevelRepeatPlayers(-ACT2_END_BOSS_REPEAT_OFFSET_X);
                 LevelManager levelManager = levelManager();
                 if (levelManager != null && levelManager.getObjectManager() != null) {
                     levelManager.getObjectManager().applyLevelRepeatOffsetToActiveObjects(
@@ -871,7 +898,7 @@ public class Sonic3kMHZEvents extends Sonic3kZoneEvents {
         camera.setMinX((short) cameraX);
     }
 
-    private void shiftEndBossArenaPlayers(int deltaX) {
+    private void shiftLevelRepeatPlayers(int deltaX) {
         AbstractPlayableSprite player = focusedPlayer();
         if (player != null) {
             NativePositionOps.addXPosPreserveSubpixel(player, deltaX);

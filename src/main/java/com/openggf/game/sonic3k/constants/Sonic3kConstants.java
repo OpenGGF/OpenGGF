@@ -916,13 +916,14 @@ public class Sonic3kConstants {
     public static final int MAP_MHZ_MINIBOSS_ADDR = 0x186168;
     public static final int MAP_MHZ_MINIBOSS_TREE_ADDR = 0x186A88;
     public static final int MAP_MHZ_MINIBOSS_LOG_ADDR = 0x186B18;
-    public static final int MAP_MHZ_KNUX_PEER_ADDR = 0x066A58;
+    public static final int MAP_MHZ_KNUX_PEER_ADDR = 0x066A52;
     public static final int MAP_MHZ_KNUX_DOOR_ADDR = 0x066A9C;
     public static final int MAP_MHZ_KNUX_PULL_SWITCH_ADDR = 0x066AD0;
     public static final int DPLC_MHZ_KNUX_PRESS_ADDR = 0x066B10;
     public static final int MAP_MHZ_KNUX_SWITCH_ADDR = 0x066B30;
     public static final int MAP_MHZ_KNUX_LEAVES_ADDR = 0x066B44;
     public static final int PAL_MHZ_END_BOSS_ADDR = 0x0769D4;
+    public static final int PAL_MHZ_MINIBOSS_ADDR = 0x075F28;
     public static final int ARTTILE_MHZ_MINIBOSS_TREE = 0x0001;
 
     // ICZ direct-DMA source art used by AnimateTiles_ICZ. These assets live in
@@ -1285,7 +1286,7 @@ public class Sonic3kConstants {
     public static final int ART_NEM_BUGGERNAUT_ADDR = 0x36A3E0;      // ArtNem_HCZDragonfly (Nemesis, 16 tiles)
     public static final int MAP_BLASTOID_ADDR = 0x360DD0;
     public static final int MAP_TURBO_SPIKER_ADDR = 0x361212;
-    public static final int MAP_TURBO_SPIKER_HIDDEN_ADDR = 0x3612DA;  // Map_TurboSpikerHidden follows Map_TurboSpiker
+    public static final int MAP_TURBO_SPIKER_HIDDEN_ADDR = 0x087F40;  // Map_TurboSpikerHidden (S&K-side)
     public static final int MAP_MEGA_CHOPPER_ADDR = 0x360F26;
     public static final int MAP_POINTDEXTER_ADDR = 0x360E72;
     public static final int MAP_JAWZ_ADDR = 0x361364;
@@ -1443,6 +1444,8 @@ public class Sonic3kConstants {
     public static final int MAP_MHZ_SWING_BAR_HORIZONTAL_ADDR = 0x03F04A;
     public static final int MAP_MHZ_SWING_BAR_VERTICAL_ADDR = 0x03F360;
     public static final int MAP_MHZ_MUSHROOM_CAP_ADDR = 0x03E1FE;
+    public static final int MAP_MHZ_POLLEN_ADDR = 0x03DC5C;
+    public static final int MAP_MHZ_BIG_LEAVES_ADDR = 0x03DC74;
     public static final int MAP_MHZ_MUSHROOM_PLATFORM_ADDR = 0x03F44A;
     public static final int MAP_MHZ_MUSHROOM_PARACHUTE_ADDR = 0x03F852;
     public static final int MAP_MHZ_MUSHROOM_CATAPULT_ADDR = 0x03FB70;

@@ -35,6 +35,7 @@ public final class Sonic3kPlcArtRegistry {
      * @param mappingAddr  ROM address of sprite mapping table
      * @param palette      palette line (0-3)
      * @param dplcAddr     ROM address of DPLC table, or -1 if no DPLCs
+     * @param mappingFrameCount explicit mapping frame count, or -1 to auto-detect
      */
     public record StandaloneArtEntry(
             String key,
@@ -44,12 +45,25 @@ public final class Sonic3kPlcArtRegistry {
             int mappingAddr,
             int palette,
             int dplcAddr,
-            S3kSpriteDataLoader.MappingFormat mappingFormat
+            S3kSpriteDataLoader.MappingFormat mappingFormat,
+            int mappingFrameCount
     ) {
         public StandaloneArtEntry(String key, int artAddr, CompressionType compression, int artSize,
                 int mappingAddr, int palette, int dplcAddr) {
             this(key, artAddr, compression, artSize, mappingAddr, palette, dplcAddr,
-                    S3kSpriteDataLoader.MappingFormat.STANDARD);
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, -1);
+        }
+
+        public StandaloneArtEntry(String key, int artAddr, CompressionType compression, int artSize,
+                int mappingAddr, int palette, int dplcAddr, int mappingFrameCount) {
+            this(key, artAddr, compression, artSize, mappingAddr, palette, dplcAddr,
+                    S3kSpriteDataLoader.MappingFormat.STANDARD, mappingFrameCount);
+        }
+
+        public StandaloneArtEntry(String key, int artAddr, CompressionType compression, int artSize,
+                int mappingAddr, int palette, int dplcAddr, S3kSpriteDataLoader.MappingFormat mappingFormat) {
+            this(key, artAddr, compression, artSize, mappingAddr, palette, dplcAddr,
+                    mappingFormat, -1);
         }
     }
 
@@ -1130,16 +1144,6 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 -1
         ));
-        standalone.add(new StandaloneArtEntry(
-                Sonic3kObjectArtKeys.CNZ_BALLOON,
-                Sonic3kConstants.ART_KOSM_CNZ_BALLOON_ADDR,
-                CompressionType.KOSINSKI_MODULED,
-                0,
-                Sonic3kConstants.MAP_CNZ_BALLOON_ADDR,
-                0,
-                -1
-        ));
-
         // Cork Floor: ArtTile_CNZPlatform
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.CORK_FLOOR_CNZ,
@@ -1508,7 +1512,9 @@ public final class Sonic3kPlcArtRegistry {
 
     /**
      * Populates MHZ (Mushroom Hill Zone) art entries.
-     * Both acts: Madmole, Mushmeanie, Dragonfly, Cluckoid (with DPLC).
+     * Both acts: Madmole, Mushmeanie, Dragonfly, Butterdroid, Cluckoid (with DPLC),
+     * MHZ common mechanisms, and seasonal pollen/leaves.
+     * Act 1 only: miniboss and intro cutscene art.
      * Act 2 only: CluckoidArrow.
      * Overrides diagonal spring art tile to MGZ/MHZ value.
      */
@@ -1561,6 +1567,15 @@ public final class Sonic3kPlcArtRegistry {
                 -1
         ));
         standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.BUTTERDROID,
+                Sonic3kConstants.ART_UNC_BUTTERDROID_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_BUTTERDROID_SIZE,
+                Sonic3kConstants.MAP_BUTTERDROID_ADDR,
+                1,
+                Sonic3kConstants.DPLC_BUTTERDROID_ADDR
+        ));
+        standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.CLUCKOID,
                 Sonic3kConstants.ART_UNC_CLUCKOID_ADDR,
                 CompressionType.UNCOMPRESSED,
@@ -1569,6 +1584,12 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 Sonic3kConstants.DPLC_CLUCKOID_ADDR
         ));
+
+        addMhzCommonLevelArt(levelArt);
+
+        if (actIndex == 0) {
+            addMhzAct1Art(standalone, levelArt);
+        }
 
         if (actIndex == 1) {
             standalone.add(new StandaloneArtEntry(
@@ -1580,6 +1601,7 @@ public final class Sonic3kPlcArtRegistry {
                     1,
                     -1
             ));
+            addMhzAct2Art(standalone, levelArt);
         }
 
         // Diagonal spring override
@@ -1596,6 +1618,126 @@ public final class Sonic3kPlcArtRegistry {
                 2,
                 null
         ));
+    }
+
+    private static void addMhzCommonLevelArt(List<LevelArtEntry> levelArt) {
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_PULLEY_LIFT,
+                Sonic3kConstants.MAP_MHZ_PULLEY_LIFT_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0xDD, 0, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_CURLED_VINE,
+                Sonic3kConstants.MAP_MHZ_CURLED_VINE_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x0C, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_STICKY_VINE,
+                Sonic3kConstants.MAP_MHZ_STICKY_VINE_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0xC3, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_SWING_BAR_HORIZONTAL,
+                Sonic3kConstants.MAP_MHZ_SWING_BAR_HORIZONTAL_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0xAC, 0, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_SWING_BAR_VERTICAL,
+                Sonic3kConstants.MAP_MHZ_SWING_BAR_VERTICAL_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0xAC, 0, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_SWING_VINE,
+                Sonic3kConstants.MAP_AIZ_MHZ_RIDE_VINE_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x10E, 0, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_MUSHROOM_CAP_LIGHT,
+                Sonic3kConstants.MAP_MHZ_MUSHROOM_CAP_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x52, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_MUSHROOM_CAP_DARK,
+                Sonic3kConstants.MAP_MHZ_MUSHROOM_CAP_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x22, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_MUSHROOM_PLATFORM,
+                Sonic3kConstants.MAP_MHZ_MUSHROOM_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x86, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_MUSHROOM_PARACHUTE,
+                Sonic3kConstants.MAP_MHZ_MUSHROOM_PARACHUTE_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x86, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_MUSHROOM_CATAPULT_CAPS,
+                Sonic3kConstants.MAP_MHZ_MUSHROOM_CATAPULT_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x86, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_MUSHROOM_CATAPULT_CENTER,
+                Sonic3kConstants.MAP_MHZ_MUSHROOM_CATAPULT_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0xD9, 1, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_BIG_LEAVES,
+                Sonic3kConstants.MAP_MHZ_BIG_LEAVES_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x1C, 3, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_POLLEN_SPRING,
+                Sonic3kConstants.MAP_MHZ_POLLEN_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x21, 3, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_POLLEN_SEASONAL,
+                Sonic3kConstants.MAP_MHZ_POLLEN_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x1C, 3, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.BUTTON,
+                Sonic3kConstants.MAP_BUTTON_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ1_CUTSCENE_BUTTON, 0, null));
+    }
+
+    private static void addMhzAct1Art(List<StandaloneArtEntry> standalone,
+                                      List<LevelArtEntry> levelArt) {
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ_MINIBOSS,
+                Sonic3kConstants.ART_KOSM_MHZ_MINIBOSS_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_MHZ_MINIBOSS_ADDR, 1, -1));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ_MINIBOSS_LOG,
+                Sonic3kConstants.ART_KOSM_MHZ_MINIBOSS_LOG_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_MHZ_MINIBOSS_LOG_ADDR, 3, -1));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.KNUX_INTRO_LAYING,
+                Sonic3kConstants.ART_UNC_KNUX_INTRO_LAYING_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_KNUX_INTRO_LAYING_SIZE,
+                Sonic3kConstants.MAP_KNUX_INTRO_LAYING_ADDR, 0,
+                Sonic3kConstants.DPLC_KNUX_INTRO_LAYING_ADDR));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES,
+                Sonic3kConstants.ART_UNC_CUTSCENE_KNUX_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_CUTSCENE_KNUX_SIZE,
+                Sonic3kConstants.MAP_CUTSCENE_KNUX_ADDR, 1,
+                Sonic3kConstants.DPLC_CUTSCENE_KNUX_ADDR));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ1_CUTSCENE_KNUCKLES_PEER,
+                Sonic3kConstants.ART_KOSM_MHZ_KNUX_PEER_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_MHZ_KNUX_PEER_ADDR, 1, -1));
+
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ_MINIBOSS_TREE,
+                Sonic3kConstants.MAP_MHZ_MINIBOSS_TREE_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MINIBOSS_TREE, 3, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ1_CUTSCENE_KNUCKLES_DOOR,
+                Sonic3kConstants.MAP_MHZ_KNUX_DOOR_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x82, 3, null));
+    }
+
+    private static void addMhzAct2Art(List<StandaloneArtEntry> standalone,
+                                      List<LevelArtEntry> levelArt) {
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ_END_BOSS,
+                Sonic3kConstants.ART_KOSM_MHZ_END_BOSS_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_MHZ_END_BOSS_ADDR, 1, -1));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ_END_BOSS_SPIKES,
+                Sonic3kConstants.ART_KOSM_MHZ_END_BOSS_SPIKES_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_MHZ_END_BOSS_MISC_ADDR, 1, -1));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ_END_BOSS_PILLAR,
+                Sonic3kConstants.ART_KOSM_MHZ_END_BOSS_PILLAR_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_MHZ_END_BOSS_MISC_ADDR, 3, -1));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ_SHIP_PROPELLER,
+                Sonic3kConstants.ART_KOSM_MHZ_SHIP_PROPELLER_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_MHZ_END_BOSS_MISC_ADDR, 1, -1));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ2_CUTSCENE_KNUCKLES_PRESS,
+                Sonic3kConstants.ART_UNC_MHZ_KNUX_PRESS_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_MHZ_KNUX_PRESS_SIZE,
+                Sonic3kConstants.MAP_MHZ_KNUX_PULL_SWITCH_ADDR, 1,
+                Sonic3kConstants.DPLC_MHZ_KNUX_PRESS_ADDR));
+        standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.MHZ2_CUTSCENE_KNUCKLES_SWITCH,
+                Sonic3kConstants.ART_KOSM_MHZ_KNUX_SWITCH_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_MHZ_KNUX_SWITCH_ADDR, 1, -1));
+
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.MHZ2_CUTSCENE_KNUCKLES_LEAVES,
+                Sonic3kConstants.MAP_MHZ_KNUX_LEAVES_ADDR,
+                Sonic3kConstants.ARTTILE_MHZ_MISC + 0x21, 3, null));
     }
 
     /**
@@ -1722,7 +1864,8 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 Sonic3kConstants.MAP_FIREWORM_SEGMENTS_ADDR,
                 1,
-                -1
+                -1,
+                8
         ));
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.IWAMODOKI,

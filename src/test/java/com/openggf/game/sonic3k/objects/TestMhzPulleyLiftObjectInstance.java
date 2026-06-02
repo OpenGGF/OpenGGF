@@ -309,11 +309,35 @@ class TestMhzPulleyLiftObjectInstance {
         pulley.appendRenderCommands(new ArrayList<>());
 
         verify(renderer).drawFrameIndex(4, 0x1800, 0x0600, false, false);
-        verify(renderer).drawFrameIndex(1, 0x1800, 0x060B, false, false);
-        verify(renderer).drawFrameIndex(5, 0x17EE, 0x0643, false, false);
-        verify(renderer).drawFrameIndex(6, 0x1812, 0x0643, false, false);
+        verify(renderer).drawFrameIndex(0, 0x1800, 0x0640, false, false);
+        verify(renderer).drawFrameIndex(5, 0x17F0, 0x0678, false, false);
+        verify(renderer).drawFrameIndex(6, 0x1810, 0x0678, false, false);
         verify(renderer).drawFrameIndex(7, 0x17CE, 0x062E, false, false);
         verify(renderer).drawFrameIndex(7, 0x1832, 0x0630, true, false);
+    }
+
+    @Test
+    void idleSpawnUsesParentCopyOffsetsBeforeChildHandleOffsets() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_PULLEY_LIFT)).thenReturn(renderer);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+        MhzPulleyLiftObjectInstance pulley = new MhzPulleyLiftObjectInstance(new ObjectSpawn(
+                0x1800, 0x0600, MHZ_PULLEY_LIFT, 1, 0, false, 0));
+        pulley.setServices(new TestObjectServices().withLevelManager(levelManager));
+        TestablePlayableSprite player = fallingPlayerAt(0x1900, 0x0660);
+
+        pulley.update(0, player);
+        pulley.appendRenderCommands(new ArrayList<>());
+
+        verify(renderer).drawFrameIndex(4, 0x1800, 0x0600, false, false);
+        verify(renderer).drawFrameIndex(0, 0x1800, 0x0640, false, false);
+        verify(renderer).drawFrameIndex(5, 0x17F0, 0x0678, false, false);
+        verify(renderer).drawFrameIndex(6, 0x1810, 0x0678, false, false);
+        verify(renderer).drawFrameIndex(7, 0x17CE, 0x062A, false, false);
+        verify(renderer).drawFrameIndex(7, 0x1832, 0x062C, true, false);
     }
 
     private static TestablePlayableSprite fallingPlayerAt(int x, int y) {

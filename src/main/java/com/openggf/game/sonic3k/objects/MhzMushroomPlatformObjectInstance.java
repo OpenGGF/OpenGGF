@@ -44,6 +44,8 @@ public final class MhzMushroomPlatformObjectInstance extends AbstractObjectInsta
     };
 
     private final boolean fallingSubtype;
+    private final boolean hFlip;
+    private final boolean vFlip;
     private final SubpixelMotion.State motion;
     private final ObjectAnimationState animationState;
     private boolean standingContact;
@@ -55,6 +57,8 @@ public final class MhzMushroomPlatformObjectInstance extends AbstractObjectInsta
     public MhzMushroomPlatformObjectInstance(ObjectSpawn spawn) {
         super(spawn, "MHZMushroomPlatform");
         this.fallingSubtype = (spawn.subtype() & 0xFF) != 0;
+        this.hFlip = (spawn.renderFlags() & 0x01) != 0;
+        this.vFlip = (spawn.renderFlags() & 0x02) != 0;
         this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, 0);
         this.animationState = new ObjectAnimationState(buildAnimationSet(), ANIM_IDLE, 1);
         this.mappingFrame = 0;
@@ -114,7 +118,7 @@ public final class MhzMushroomPlatformObjectInstance extends AbstractObjectInsta
 
     @Override
     public boolean isSlopeFlipped() {
-        return false;
+        return hFlip;
     }
 
     @Override
@@ -151,7 +155,7 @@ public final class MhzMushroomPlatformObjectInstance extends AbstractObjectInsta
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ_MUSHROOM_PLATFORM);
         if (renderer != null) {
-            renderer.drawFrameIndex(mappingFrame, motion.x, motion.y, false, false);
+            renderer.drawFrameIndex(mappingFrame, motion.x, motion.y, hFlip, vFlip);
         }
     }
 

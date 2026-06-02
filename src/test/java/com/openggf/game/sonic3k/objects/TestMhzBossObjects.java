@@ -15,6 +15,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -236,6 +237,53 @@ class TestMhzBossObjects {
                 "PalLoad_Line1 should own the full palette line");
         assertColorWord(services.level.getPalette(1), 0, 0x0EEE);
         assertColorWord(services.level.getPalette(1), 1, 0x0888);
+    }
+
+    @Test
+    void mhzMinibossLoadsRomPaletteIntoOwnershipRegistryLineOne() {
+        byte[] paletteLine = new byte[32];
+        paletteLine[0] = 0x0E;
+        paletteLine[1] = (byte) 0xEE;
+        paletteLine[2] = 0x02;
+        paletteLine[3] = 0x24;
+        Camera camera = new Camera();
+        camera.setX((short) 0x2D00);
+        camera.setY((short) 0x0500);
+
+        RecordingPaletteServices services = new RecordingPaletteServices();
+        services.withRom(new OffsetReadRom().with(Sonic3kConstants.PAL_MHZ_MINIBOSS_ADDR, paletteLine));
+        services.withCamera(camera);
+        services.registry.beginFrame();
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0, 0, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        miniboss.setServices(services);
+
+        miniboss.update(0, null);
+        services.registry.resolveInto(services.level.palettes(), null, null, null);
+
+        assertEquals(S3kPaletteOwners.MHZ_MINIBOSS, services.registry.ownerAt(PaletteSurface.NORMAL, 1, 0),
+                "Obj_MHZMiniboss should load Pal_MHZMiniboss through the miniboss palette owner");
+        assertEquals(S3kPaletteOwners.MHZ_MINIBOSS, services.registry.ownerAt(PaletteSurface.NORMAL, 1, 1),
+                "PalLoad_Line1 should own the full palette line");
+        assertColorWord(services.level.getPalette(1), 0, 0x0EEE);
+        assertColorWord(services.level.getPalette(1), 1, 0x0224);
+    }
+
+    @Test
+    void mhzMinibossSetupPlaysMinibossMusic() {
+        Camera camera = new Camera();
+        camera.setX((short) 0x2D00);
+        camera.setY((short) 0x0500);
+        RecordingPaletteServices services = new RecordingPaletteServices();
+        services.withCamera(camera);
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0, 0, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        miniboss.setServices(services);
+
+        miniboss.update(0, null);
+
+        assertEquals(Sonic3kMusic.MINIBOSS.id, services.lastMusicId,
+                "Obj_MHZMiniboss setup spawns Obj_PlayMusic with subtype mus_Miniboss");
     }
 
     @Test
@@ -3455,6 +3503,76 @@ class TestMhzBossObjects {
     }
 
     @Test
+    void mhzMinibossSetupSpawnsAndRendersRomFlameChildren() {
+        Camera camera = new Camera();
+        camera.setX((short) 0x2D00);
+        camera.setY((short) 0x0500);
+        List<ObjectInstance> spawned = new ArrayList<>();
+        ObjectManager objectManager = mock(ObjectManager.class);
+        doAnswer(invocation -> {
+            spawned.add(invocation.getArgument(0));
+            return null;
+        }).when(objectManager).addDynamicObjectAfterCurrent(any(ObjectInstance.class));
+        PatternSpriteRenderer renderer = readyRenderer();
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MINIBOSS)).thenReturn(renderer);
+        ObjectServices services = new StubObjectServices() {
+            @Override
+            public Camera camera() {
+                return camera;
+            }
+
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+
+            @Override
+            public ObjectRenderManager renderManager() {
+                return renderManager;
+            }
+        };
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0, 0, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+        miniboss.setServices(services);
+
+        miniboss.update(0, null);
+
+        List<MhzMinibossFlameInstance> flames = spawned.stream()
+                .filter(MhzMinibossFlameInstance.class::isInstance)
+                .map(MhzMinibossFlameInstance.class::cast)
+                .toList();
+        assertEquals(2, flames.size(),
+                "ChildObjDat_75E84 creates two loc_757C0 flame child sprites during Obj_MHZMiniboss setup");
+
+        flames.forEach(flame -> {
+            flame.setServices(services);
+            flame.update(1, null);
+            flame.appendRenderCommands(new ArrayList<>());
+        });
+
+        verify(renderer).drawFrameIndex(0x16, 0x2E1B, 0x04A4, false, false);
+        verify(renderer).drawFrameIndex(0x16, 0x2E11, 0x04A4, false, false);
+    }
+
+    @Test
+    void mhzMinibossAppliesLevelRepeatOffsetToLivePositionLikeRomPostDispatch() {
+        MhzMinibossInstance miniboss = new MhzMinibossInstance(new ObjectSpawn(
+                0x4308, 0x0520, Sonic3kObjectIds.MHZ_MINIBOSS, 0, 0, false, 0));
+
+        miniboss.applyLevelRepeatOffset(-0x0200, 0);
+
+        assertEquals(0x4108, miniboss.getX(),
+                "Obj_MHZMiniboss subtracts Level_repeat_offset from x_pos after dispatch");
+        assertEquals(0x0520, miniboss.getY(),
+                "MHZ miniboss level repeat should not change y_pos");
+        assertEquals(0x4108 << 16, miniboss.getState().xFixed,
+                "fixed-point x position must stay aligned with the wrapped x_pos");
+        assertEquals(0x0520 << 16, miniboss.getState().yFixed,
+                "fixed-point y position should be unchanged for a horizontal loop wrap");
+    }
+
+    @Test
     void mhzMinibossInitialWaitPhaseMovesWithRomYVelocityAndCountsDown() {
         MhzMinibossInstance miniboss = managedMinibossAtCamera(0x2D00, 0x0500);
 
@@ -4863,6 +4981,7 @@ class TestMhzBossObjects {
         private final PaletteOwnershipRegistry registry = new PaletteOwnershipRegistry();
         private ObjectManager objectManager;
         private ZoneRuntimeState zoneRuntimeState;
+        private int lastMusicId = -1;
 
         RecordingPaletteServices withObjectManager(ObjectManager objectManager) {
             this.objectManager = objectManager;
@@ -4892,6 +5011,11 @@ class TestMhzBossObjects {
         @Override
         public PaletteOwnershipRegistry paletteOwnershipRegistryOrNull() {
             return registry;
+        }
+
+        @Override
+        public void playMusic(int musicId) {
+            lastMusicId = musicId;
         }
     }
 

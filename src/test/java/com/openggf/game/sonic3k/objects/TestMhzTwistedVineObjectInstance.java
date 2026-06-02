@@ -13,6 +13,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestMhzTwistedVineObjectInstance {
@@ -41,6 +42,10 @@ class TestMhzTwistedVineObjectInstance {
         vine.update(0, player);
 
         assertTrue(player.isOnObject(), "sub_3DCD0 calls RideObject_SetRide when the entry window matches");
+        assertEquals(MHZ_TWISTED_VINE, player.getLatchedSolidObjectId(),
+                "RideObject_SetRide must leave a live object latch so shared collision does not treat Status_OnObj as stale");
+        assertSame(vine, player.getLatchedSolidObjectInstance(),
+                "The MHZ vine is a non-solid controller, so the latch must point back to this live object");
         assertEquals((short) 0x0600, player.getGSpeed(),
                 "rightward entry clamps ground_vel up to +$600 when it was slower");
         assertEquals(20, player.getMoveLockTimer(),
@@ -121,6 +126,10 @@ class TestMhzTwistedVineObjectInstance {
 
         assertTrue(player.isOnObject(),
                 "loc_3DE36 keeps the player riding while x_pos stays inside object x_pos-$40..+$3F");
+        assertEquals(MHZ_TWISTED_VINE, player.getLatchedSolidObjectId(),
+                "loc_3DE36 must refresh the RideObject_SetRide latch while the vine owns y_pos");
+        assertSame(vine, player.getLatchedSolidObjectInstance(),
+                "Refreshing the latch keeps CollisionSystem.hasObjectSupport true between object updates");
         assertEquals(expectedLowerRideY(0x20, player.getYRadius()), player.getCentreY(),
                 "loc_3DE36 writes y_pos from GetSineCosine(x_delta+$40+$80) and y_radius compensation");
         assertEquals(0x20, player.getFlipAngle(),
@@ -141,6 +150,8 @@ class TestMhzTwistedVineObjectInstance {
 
         assertFalse(player.isOnObject(),
                 "loc_3DE36 boundary exit clears Status_OnObj once x_pos reaches object x_pos+$40");
+        assertEquals(0, player.getLatchedSolidObjectId(),
+                "boundary exit must clear the non-solid ride latch together with Status_OnObj");
         assertEquals(0x80, player.getAngle() & 0xFF,
                 "lower-vine right boundary writes angle=$80");
         assertEquals(0, player.getFlipAngle());

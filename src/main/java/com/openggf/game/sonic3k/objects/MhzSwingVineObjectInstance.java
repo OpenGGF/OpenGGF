@@ -57,7 +57,8 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
 
     private enum RootState {
         WAIT_FOR_GRAB,
-        SWINGING
+        SWINGING,
+        RETURNING
     }
 
     private static final class PlayerState {
@@ -73,6 +74,10 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
     private RootState rootState = RootState.WAIT_FOR_GRAB;
     private int rootAngle;
     private int root3A;
+    private int returnAccumulator;
+    private int returnVelocity;
+    private int returnDamping;
+    private int returnPhase;
     private int handleMode;
     private int handleX;
     private int handleY;
@@ -159,6 +164,20 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
             root3A = 0x800;
             return;
         }
+        if (rootState == RootState.RETURNING) {
+            if (anyFastGrabbed()) {
+                rootState = RootState.SWINGING;
+                handleMode = 1;
+                root3A = 0x800;
+                returnDamping = 0;
+                returnVelocity = 0;
+                returnAccumulator = 0;
+                returnPhase = 0;
+            } else {
+                updateReturningState();
+            }
+            return;
+        }
         if (rootState != RootState.SWINGING) {
             return;
         }
@@ -168,6 +187,57 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
         d0 -= d1 + d1;
         rootAngle = asSigned16(rootAngle - d0);
         priorityBucket = signedAngleByte(rootAngle) < 0 ? PRIORITY_BUCKET_HIGH : PRIORITY_BUCKET_LOW;
+        if (!anyGrabbed() && (((angleByte(rootAngle) + 8) & 0xFF) < 0x10)) {
+            rootState = RootState.RETURNING;
+            handleMode = 2;
+            returnAccumulator = 0;
+            returnVelocity = -0x300;
+            returnDamping = 0x1000;
+            returnPhase = 0;
+        }
+    }
+
+    private void updateReturningState() {
+        int step = (returnDamping >> 8) & 0xFF;
+        int velocity = returnVelocity;
+        boolean crossed;
+        if (returnPhase == 0) {
+            velocity += step;
+            returnVelocity = velocity;
+            returnAccumulator = asSigned16(returnAccumulator + velocity);
+            crossed = returnAccumulator >= 0;
+            if (crossed) {
+                returnPhase = 1;
+            }
+        } else {
+            velocity -= step;
+            returnVelocity = velocity;
+            returnAccumulator = asSigned16(returnAccumulator + velocity);
+            crossed = returnAccumulator <= 0;
+            if (crossed) {
+                returnPhase = 0;
+            }
+        }
+
+        if (crossed) {
+            returnVelocity = asSigned16(returnVelocity - (returnVelocity >> 4));
+            if (returnDamping == 0x0C00) {
+                rootState = RootState.WAIT_FOR_GRAB;
+                handleMode = 0;
+                rootAngle = 0;
+                root3A = 0;
+                returnAccumulator = 0;
+                returnVelocity = 0;
+                returnDamping = 0;
+                returnPhase = 0;
+                return;
+            }
+            returnDamping = Math.max(0x0C00, returnDamping - 0x40);
+        }
+
+        rootAngle = returnAccumulator;
+        root3A = returnAccumulator >> 3;
+        priorityBucket = returnAccumulator < 0 ? PRIORITY_BUCKET_HIGH : PRIORITY_BUCKET_LOW;
     }
 
     private void updateHandlePosition() {
@@ -238,6 +308,7 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
         }
         if (player.isJumpJustPressed()) {
             state.pendingJumpRelease = true;
+            releasePending(state);
             return;
         }
         holdPlayer(state, player);
@@ -293,8 +364,8 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
             int angle = angleByte(rootAngle);
             int sin = TrigLookupTable.sinHex(angle);
             int cos = TrigLookupTable.cosHex(angle);
-            player.setXSpeed((short) (cos * 6));
-            player.setYSpeed((short) (sin * 6));
+            player.setXSpeed((short) (cos << 3));
+            player.setYSpeed((short) (sin << 3));
         } else {
             player.setXSpeed((short) ((handleX - prevHandleX) << 7));
             player.setYSpeed((short) (((handleY - prevHandleY) << 7) - 0x380));

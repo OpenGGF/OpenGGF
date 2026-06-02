@@ -2,9 +2,13 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.S3kPaletteOwners;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectServices;
@@ -144,6 +148,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance {
     private boolean defeatHandoffQueued;
     private int defeatExplosionTimer;
     private int defeatExplosionIntervalCounter;
+    private boolean paletteLoaded;
 
     public MhzMinibossInstance(ObjectSpawn spawn) {
         super(spawn, "MHZMiniboss");
@@ -161,6 +166,7 @@ public final class MhzMinibossInstance extends AbstractBossInstance {
         mappingFrame = 0;
         animFrame = 0;
         animFrameTimer = 0;
+        paletteLoaded = false;
         defeatHandoffQueued = false;
         defeatExplosionTimer = -1;
         defeatExplosionIntervalCounter = DEFEAT_EXPLOSION_INTERVAL - 1;
@@ -256,6 +262,19 @@ public final class MhzMinibossInstance extends AbstractBossInstance {
     }
 
     @Override
+    public boolean participatesInLevelRepeatOffset() {
+        return true;
+    }
+
+    @Override
+    public void applyLevelRepeatOffset(int offsetX, int offsetY) {
+        state.x = (state.x + offsetX) & 0xFFFF;
+        state.y = (state.y + offsetY) & 0xFFFF;
+        state.xFixed += offsetX << 16;
+        state.yFixed += offsetY << 16;
+    }
+
+    @Override
     protected boolean usesDefeatSequencer() {
         return false;
     }
@@ -284,6 +303,10 @@ public final class MhzMinibossInstance extends AbstractBossInstance {
         return PRIORITY_BUCKET;
     }
 
+    int getMappingFrameForChildSprites() {
+        return mappingFrame;
+    }
+
     private boolean applyPendingCameraInit() {
         if (!cameraInitPending) {
             return false;
@@ -303,9 +326,38 @@ public final class MhzMinibossInstance extends AbstractBossInstance {
         if (svc.levelEventProvider() instanceof Sonic3kLevelEventManager manager) {
             manager.setBossFlag(true);
         }
+        spawnChild(() -> new MhzMinibossFlameInstance(this, 0));
+        spawnChild(() -> new MhzMinibossFlameInstance(this, 1));
+        svc.playMusic(Sonic3kMusic.MINIBOSS.id);
+        loadBossPalette();
         state.routine = ROUTINE_WAIT_AND_FALL;
         cameraInitPending = false;
         return true;
+    }
+
+    /**
+     * ROM: {@code lea Pal_MHZMiniboss(pc),a1 / jsr PalLoad_Line1} during
+     * {@code Obj_MHZMiniboss} setup (sonic3k.asm:155660-155661). S&K-side ROM
+     * offset 0x075F28 was verified by searching the 32-byte palette payload.
+     */
+    private void loadBossPalette() {
+        if (paletteLoaded) {
+            return;
+        }
+        try {
+            byte[] line = services().rom().readBytes(Sonic3kConstants.PAL_MHZ_MINIBOSS_ADDR, 32);
+            S3kPaletteWriteSupport.applyLine(
+                    services().paletteOwnershipRegistryOrNull(),
+                    services().currentLevel(),
+                    services().graphicsManager(),
+                    S3kPaletteOwners.MHZ_MINIBOSS,
+                    S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,
+                    1,
+                    line);
+            paletteLoaded = true;
+        } catch (Exception ignored) {
+            // Palette loading is best-effort for partial object-unit harnesses.
+        }
     }
 
     private void updateWaitAndFall() {

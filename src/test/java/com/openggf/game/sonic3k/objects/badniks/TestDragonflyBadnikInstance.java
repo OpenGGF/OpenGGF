@@ -161,6 +161,35 @@ class TestDragonflyBadnikInstance {
     }
 
     @Test
+    void linkedBodySegmentsFollowPreviousLinkYInsteadOfDragonflyParentY() {
+        SpawnHarness harness = new SpawnHarness();
+        DragonflyBadnikInstance dragonfly = dragonfly(harness.services);
+        TestablePlayableSprite player = player();
+
+        putDragonflyOnScreen();
+        dragonfly.update(0, player);
+        dragonfly.update(1, player);
+
+        List<DragonflyBadnikInstance.LinkedBodyChild> segments = harness.spawned.stream()
+                .filter(DragonflyBadnikInstance.LinkedBodyChild.class::isInstance)
+                .map(DragonflyBadnikInstance.LinkedBodyChild.class::cast)
+                .toList();
+        assertEquals(7, segments.size(),
+                "CreateChild4_LinkListRepeated allocates seven linked body children");
+
+        segments.get(0).update(2, player);
+        segments.get(1).update(2, player);
+        segments.get(0).update(3, player);
+        segments.get(1).update(3, player);
+
+        assertEquals(dragonfly.getY() - 0x0C, segments.get(0).getY(),
+                "first linked segment follows the Dragonfly parent by byte_8DF78[0]");
+        assertEquals(segments.get(0).getY() - 5, segments.get(1).getY(),
+                "CreateChild4_LinkListRepeated stores the previous object in parent3(a0), "
+                        + "so later body links apply byte_8DF78 to the preceding link");
+    }
+
+    @Test
     void wingChildRunsRomRawAnimationScriptAfterSetupFrame() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);

@@ -4,11 +4,16 @@ import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.RespawnState;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.save.SaveReason;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.Level;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.physics.Direction;
@@ -40,6 +45,7 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
     private static final int POST_CUTSCENE_CHECKPOINT_INDEX = 1;
     private static final int POST_CUTSCENE_RESTART_X = 0x0190;
     private static final int POST_CUTSCENE_RESTART_Y = 0x056C;
+    private static final int CUTSCENE_PALETTE_LINE = 1;
 
     private static volatile Mhz1CutsceneKnucklesInstance activeInstance;
 
@@ -48,6 +54,9 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
     private int workspaceRoutine = ROUTINE_INIT;
     private int timer;
     private boolean playerTwoStopperSpawned;
+    private boolean levelMusicTransitionSpawned;
+    @RewindTransient(reason = "Derived cleanup cache copied from the level palette before Pal_CutsceneKnux is loaded")
+    private Palette savedPaletteLine1;
 
     public Mhz1CutsceneKnucklesInstance(ObjectSpawn spawn) {
         super(spawn, "MHZ1CutsceneKnuckles");
@@ -98,6 +107,7 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
         }
         workspaceRoutine = ROUTINE_WAIT_PLAYER;
         activeInstance = this;
+        snapshotPaletteLine1();
         if (!playerTwoStopperSpawned && services().playerQuery().nativeP2OrNull() != null) {
             spawnFreeChild(() -> new Mhz1CutscenePlayerTwoStopper(this));
             playerTwoStopperSpawned = true;
@@ -176,11 +186,40 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
         if (camera != null) {
             camera.setFrozen(false);
         }
+        fadeBackToLevelMusicOnce();
+        restorePaletteLine1();
         savePostCutsceneRestartPoint(camera);
         if (activeInstance == this) {
             activeInstance = null;
         }
         setDestroyed(true);
+    }
+
+    private void snapshotPaletteLine1() {
+        Level level = services().currentLevel();
+        if (level == null || level.getPaletteCount() <= CUTSCENE_PALETTE_LINE) {
+            return;
+        }
+        savedPaletteLine1 = level.getPalette(CUTSCENE_PALETTE_LINE).deepCopy();
+    }
+
+    private void restorePaletteLine1() {
+        if (savedPaletteLine1 == null) {
+            return;
+        }
+        Level level = services().currentLevel();
+        if (level == null || level.getPaletteCount() <= CUTSCENE_PALETTE_LINE) {
+            return;
+        }
+        Palette target = level.getPalette(CUTSCENE_PALETTE_LINE);
+        for (int i = 0; i < savedPaletteLine1.getColorCount(); i++) {
+            Palette.Color color = savedPaletteLine1.getColor(i);
+            target.setColor(i, new Palette.Color(color.r, color.g, color.b));
+        }
+        GraphicsManager graphics = services().graphicsManager();
+        if (graphics != null && graphics.isGlInitialized()) {
+            graphics.cachePaletteTexture(target, CUTSCENE_PALETTE_LINE);
+        }
     }
 
     private void savePostCutsceneRestartPoint(Camera camera) {
@@ -242,6 +281,14 @@ public final class Mhz1CutsceneKnucklesInstance extends AbstractObjectInstance {
     void forceReadyForButtonForTest() {
         workspaceRoutine = ROUTINE_WAIT_BUTTON;
         activeInstance = this;
+    }
+
+    private void fadeBackToLevelMusicOnce() {
+        if (levelMusicTransitionSpawned) {
+            return;
+        }
+        levelMusicTransitionSpawned = true;
+        spawnFreeChild(() -> new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.MHZ1.id));
     }
 
     @Override

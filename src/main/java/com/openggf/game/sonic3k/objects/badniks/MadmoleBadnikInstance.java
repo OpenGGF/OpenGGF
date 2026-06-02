@@ -14,6 +14,8 @@ import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -59,6 +61,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
     private static final int SIDE_CHILD_ARC_RELEASE_THRESHOLD_Y_VELOCITY = 0xA00;
     private static final int SIDE_CHILD_ARC_RELEASE_PLAYER_Y_VELOCITY = -0x300;
     private static final int SIDE_CHILD_ARC_RELEASE_DRILL_Y_VELOCITY = -0x200;
+    private static final int SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET = 0x18;
 
     private enum State {
         BURIED,
@@ -140,6 +143,26 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
         return new SolidObjectParams(0x1F, 4, 5, 0, homeY - currentY);
     }
 
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        if (isDestroyed()) {
+            return;
+        }
+        ObjectRenderManager renderManager = services().renderManager();
+        if (renderManager == null) {
+            return;
+        }
+        PatternSpriteRenderer renderer = renderManager.getRenderer(Sonic3kObjectArtKeys.MADMOLE);
+        if (renderer == null || !renderer.isReady()) {
+            return;
+        }
+
+        if (isBodyChildActive()) {
+            renderer.drawFrameIndex(mappingFrame, currentX, currentY, !facingLeft, false);
+        }
+        renderer.drawFrameIndex(CAP_MAPPING_FRAME, currentX, homeY, false, false);
+    }
+
     private void updateBuried(PlayableEntity playerEntity) {
         mappingFrame = CAP_MAPPING_FRAME;
         yVelocity = 0;
@@ -156,6 +179,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
 
         state = State.RISING;
         currentY = homeY + BODY_CHILD_Y_OFFSET;
+        mappingFrame = 0;
         ySubpixel = 0;
         timer = RISE_SINK_FRAMES;
         yVelocity = RISE_Y_VELOCITY;
@@ -298,6 +322,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
         private final boolean facingLeft;
         private boolean initialized;
         private boolean arcing;
+        private boolean postCaptureDrift;
         private boolean straightTouchConsumed;
         private AbstractPlayableSprite capturedPlayer;
         private int priorityBucket = PRIORITY_BUCKET;
@@ -376,7 +401,8 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
         public void onTouchResponse(PlayableEntity player, TouchResponseResult result, int frameCounter) {
             if (!initialized || player == null
                     || player.getInvincibleFrames() != 0
-                    || player.isObjectControlled()) {
+                    || player.isObjectControlled()
+                    || postCaptureDrift) {
                 return;
             }
 
@@ -449,7 +475,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
         private void move() {
             SubpixelMotion.State state = new SubpixelMotion.State(
                     currentX, currentY, xSubpixel, ySubpixel, xVelocity, yVelocity);
-            if (arcing) {
+            if (arcing && !postCaptureDrift) {
                 SubpixelMotion.moveSprite(state, SubpixelMotion.S3K_GRAVITY);
                 yVelocity = state.yVel;
             } else {
@@ -462,13 +488,34 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
         }
 
         private void carryCapturedPlayer() {
-            if (capturedPlayer == null || !capturedPlayer.isObjectControlled()) {
+            if (capturedPlayer == null) {
+                return;
+            }
+            if (!capturedPlayer.isObjectControlled()) {
+                enterPostCaptureDrift();
                 return;
             }
 
             int xOffset = xVelocity < 0 ? -8 : 8;
             capturedPlayer.setCentreX((short) (currentX + xOffset));
             capturedPlayer.setCentreY((short) (currentY + 8));
+            releaseCapturedPlayerOnWallImpact();
+        }
+
+        private void releaseCapturedPlayerOnWallImpact() {
+            TerrainCheckResult wall = xVelocity >= 0
+                    ? ObjectTerrainUtils.checkRightWallDist(currentX + SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET, currentY)
+                    : ObjectTerrainUtils.checkLeftWallDist(currentX - SIDE_CHILD_CAPTURE_WALL_SENSOR_OFFSET, currentY);
+            if (!wall.hasCollision()) {
+                return;
+            }
+
+            int reboundVelocity = -xVelocity;
+            capturedPlayer.setXSpeed((short) reboundVelocity);
+            xVelocity = reboundVelocity >> 1;
+            capturedPlayer.setAir(true);
+            capturedPlayer.setObjectControlled(false);
+            enterPostCaptureDrift();
         }
 
         private void checkDeleteAndReleaseCapturedPlayer() {
@@ -518,6 +565,11 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
             capturedPlayer.setXSpeed((short) xVelocity);
             capturedPlayer.releaseFromObjectControl(frameCounter);
             yVelocity = SIDE_CHILD_ARC_RELEASE_DRILL_Y_VELOCITY;
+            enterPostCaptureDrift();
+        }
+
+        private void enterPostCaptureDrift() {
+            postCaptureDrift = true;
             capturedPlayer = null;
         }
     }

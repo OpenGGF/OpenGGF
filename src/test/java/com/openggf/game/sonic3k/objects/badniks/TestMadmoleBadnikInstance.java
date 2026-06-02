@@ -2,13 +2,16 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameRng;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.level.LevelManager;
 import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -18,8 +21,13 @@ import com.openggf.level.objects.TouchResponseListener;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.ObjectTerrainUtils;
+import com.openggf.physics.TerrainCheckResult;
 import com.openggf.tests.TestablePlayableSprite;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
+import org.mockito.MockedStatic;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,8 +38,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestMadmoleBadnikInstance {
 
@@ -97,6 +109,27 @@ class TestMadmoleBadnikInstance {
                 "word_8D9B4 body-child collision byte is $0B");
         assertEquals(5, madmole.getPriorityBucket(),
                 "word_8D9B4 body-child priority word $280 maps to render bucket 5");
+    }
+
+    @Test
+    void activeBodyRendersStaticHoleAndMovingBodySeparately() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.MADMOLE)).thenReturn(renderer);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+        MadmoleBadnikInstance madmole = madmole(new TestObjectServices()
+                .withLevelManager(levelManager));
+        TestablePlayableSprite player = player(0x100, 0x100);
+
+        advanceToRising(madmole, player);
+        madmole.update(3, player);
+        madmole.appendRenderCommands(new ArrayList<>());
+
+        InOrder inOrder = inOrder(renderer);
+        inOrder.verify(renderer).drawFrameIndex(0, 0x120, 0x10F, false, false);
+        inOrder.verify(renderer).drawFrameIndex(0x0D, 0x120, 0x100, false, false);
     }
 
     @Test
@@ -568,6 +601,63 @@ class TestMadmoleBadnikInstance {
         assertEquals(-0x300, player.getYSpeed());
         assertEquals(-0x380, player.getXSpeed());
         assertEquals(-0x200, sideChildIntField(child, "yVelocity"));
+    }
+
+    @Test
+    void releasedArcingSideDrillCannotImmediatelyRecapturePlayer() {
+        GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
+        CapturingServices services = new CapturingServices(mock(ObjectManager.class));
+        services.withRng(rng);
+        MadmoleBadnikInstance.SideDrillChild child = spawnedSideDrillChild(services);
+        TestablePlayableSprite player = player(0x100, 0x100);
+        child.update(0x48, player);
+        TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
+        listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        setSideChildIntField(child, "yVelocity", 0xA00);
+        setSideChildIntField(child, "animFrame", 7);
+        setSideChildIntField(child, "animTimer", 0);
+
+        child.update(0x49, player);
+        listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x4A);
+        child.update(0x4A, player);
+
+        assertEquals(false, player.isObjectControlled(),
+                "loc_8D834 switches the arcing side drill to routine 6, so continuous touch polling cannot recapture Sonic");
+        assertEquals(-0x200, sideChildIntField(child, "yVelocity"),
+                "post-release routine 6 uses MoveSprite2; it does not keep applying light gravity");
+    }
+
+    @Test
+    void arcingSideDrillWallImpactReleasesPlayerBeforeTerrainClippingLoop() {
+        GameRng rng = new GameRng(GameRng.Flavour.S3K, 4);
+        CapturingServices services = new CapturingServices(mock(ObjectManager.class));
+        services.withRng(rng);
+        MadmoleBadnikInstance.SideDrillChild child = spawnedSideDrillChild(services);
+        TestablePlayableSprite player = player(0x100, 0x100);
+        child.update(0x48, player);
+        TouchResponseListener listener = assertInstanceOf(TouchResponseListener.class, child);
+        listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x49);
+        services.soundIds.clear();
+
+        try (MockedStatic<ObjectTerrainUtils> terrain = mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                    .thenReturn(new TerrainCheckResult(-2, (byte) 0, 0));
+
+            child.update(0x49, player);
+            terrain.verify(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()));
+        }
+
+        assertEquals(false, player.isObjectControlled(),
+                "loc_8D7A8 clears object_control when ObjCheckLeftWallDist reports a blocked carry path");
+        assertEquals(true, player.getAir());
+        assertEquals(0x380, player.getXSpeed(),
+                "loc_8D820 negates the drill's x_vel into Sonic's x_vel on wall impact");
+        assertEquals(0x1C0, sideChildIntField(child, "xVelocity"),
+                "loc_8D820 halves the reversed velocity before switching the drill to routine 6");
+
+        listener.onTouchResponse(player, new TouchResponseResult(0x18, 0x18, 0x08, TouchCategory.ENEMY), 0x4A);
+        assertEquals(false, player.isObjectControlled(),
+                "after loc_8D834 switches to routine 6, continuous touch polling must not recapture Sonic");
     }
 
     @Test

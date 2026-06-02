@@ -186,10 +186,12 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
 
     private void spawnInitialChildren() {
         spawnChild(() -> new WingChild(this));
+        AbstractObjectInstance followAnchor = this;
         for (int i = 0; i < LINKED_CHILD_COUNT; i++) {
             int subtype = i << 1;
             int segmentIndex = i;
-            spawnChild(() -> new LinkedBodyChild(this, subtype, segmentIndex));
+            AbstractObjectInstance currentAnchor = followAnchor;
+            followAnchor = spawnChild(() -> new LinkedBodyChild(this, currentAnchor, subtype, segmentIndex));
         }
     }
 
@@ -307,6 +309,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
         private static final int RENDER_HALF_HEIGHT = 0x04;
 
         private final DragonflyBadnikInstance parent;
+        private final AbstractObjectInstance followAnchor;
         private final int subtype;
         private final int segmentIndex;
         private int childX;
@@ -322,9 +325,15 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
         private boolean setupFrame = true;
 
         LinkedBodyChild(DragonflyBadnikInstance parent, int subtype, int segmentIndex) {
+            this(parent, parent, subtype, segmentIndex);
+        }
+
+        LinkedBodyChild(DragonflyBadnikInstance parent, AbstractObjectInstance followAnchor,
+                        int subtype, int segmentIndex) {
             super(new ObjectSpawn(parent.getX(), parent.getY(), 0, subtype, 0, false, 0),
                     "DragonflyLinkedBodyChild");
             this.parent = parent;
+            this.followAnchor = followAnchor;
             this.subtype = subtype;
             this.segmentIndex = segmentIndex;
             this.childX = parent.getX();
@@ -375,7 +384,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
         }
 
         private void updateParentRelativeY() {
-            childY = parent.getY() + childDy;
+            childY = followAnchor.getY() + childDy;
         }
 
         private void updateHorizontalSwing() {
@@ -405,7 +414,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
         }
 
         private void moveTowardParentY() {
-            int parentY = parent.getY();
+            int parentY = followAnchor.getY();
             int nextY = childY + childDx;
             if ((childDx > 0 && nextY >= parentY) || (childDx < 0 && nextY <= parentY)) {
                 childY = parentY;
@@ -418,7 +427,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance {
         }
 
         private void waitForParentOppositeOffset() {
-            int targetY = parent.getY() + childDy;
+            int targetY = followAnchor.getY() + childDy;
             if ((childDy >= 0 && targetY > childY) || (childDy < 0 && targetY < childY)) {
                 return;
             }
