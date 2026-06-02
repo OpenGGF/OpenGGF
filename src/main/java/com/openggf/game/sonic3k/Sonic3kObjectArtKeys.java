@@ -245,8 +245,39 @@ public final class Sonic3kObjectArtKeys {
     public static final String MADMOLE = "mhz_madmole";
     public static final String MUSHMEANIE = "mhz_mushmeanie";
     public static final String DRAGONFLY = "mhz_dragonfly";
+    public static final String BUTTERDROID = "mhz_butterdroid";
     public static final String CLUCKOID = "mhz_cluckoid";
     public static final String CLUCKOID_ARROW = "mhz_cluckoid_arrow";
+
+    public static final String MHZ_PULLEY_LIFT = "mhz_pulley_lift";
+    public static final String MHZ_CURLED_VINE = "mhz_curled_vine";
+    public static final String MHZ_STICKY_VINE = "mhz_sticky_vine";
+    public static final String MHZ_SWING_BAR_HORIZONTAL = "mhz_swing_bar_horizontal";
+    public static final String MHZ_SWING_BAR_VERTICAL = "mhz_swing_bar_vertical";
+    public static final String MHZ_SWING_VINE = "mhz_swing_vine";
+    public static final String MHZ_MUSHROOM_CAP_LIGHT = "mhz_mushroom_cap_light";
+    public static final String MHZ_MUSHROOM_CAP_DARK = "mhz_mushroom_cap_dark";
+    public static final String MHZ_MUSHROOM_PLATFORM = "mhz_mushroom_platform";
+    public static final String MHZ_MUSHROOM_PARACHUTE = "mhz_mushroom_parachute";
+    public static final String MHZ_MUSHROOM_CATAPULT_CAPS = "mhz_mushroom_catapult_caps";
+    public static final String MHZ_MUSHROOM_CATAPULT_CENTER = "mhz_mushroom_catapult_center";
+    public static final String MHZ_MINIBOSS = "mhz_miniboss";
+    public static final String MHZ_MINIBOSS_TREE = "mhz_miniboss_tree";
+    public static final String MHZ_MINIBOSS_LOG = "mhz_miniboss_log";
+    public static final String MHZ_END_BOSS = "mhz_end_boss";
+    public static final String MHZ_END_BOSS_SPIKES = "mhz_end_boss_spikes";
+    public static final String MHZ_END_BOSS_PILLAR = "mhz_end_boss_pillar";
+    public static final String CUTSCENE_KNUCKLES = "cutscene_knuckles";
+    public static final String MHZ1_CUTSCENE_KNUCKLES_PEER = "mhz1_cutscene_knuckles_peer";
+    public static final String MHZ1_CUTSCENE_KNUCKLES_DOOR = "mhz1_cutscene_knuckles_door";
+    public static final String MHZ2_CUTSCENE_KNUCKLES_PRESS = "mhz2_cutscene_knuckles_press";
+    public static final String MHZ2_CUTSCENE_KNUCKLES_LEAVES = "mhz2_cutscene_knuckles_leaves";
+    public static final String MHZ2_CUTSCENE_KNUCKLES_SWITCH = "mhz2_cutscene_knuckles_switch";
+    public static final String KNUX_INTRO_LAYING = "knux_intro_laying";
+    public static final String MHZ_SHIP_PROPELLER = "mhz_ship_propeller";
+    public static final String MHZ_BIG_LEAVES = "mhz_big_leaves";
+    public static final String MHZ_POLLEN_SPRING = "mhz_pollen_spring";
+    public static final String MHZ_POLLEN_SEASONAL = "mhz_pollen_seasonal";
 
     // SOZ badniks
     public static final String SKORP = "soz_skorp";

@@ -559,11 +559,10 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * With the default {@code Screen_Y_wrap_value = 0xFFFF}, this is equivalent
 	 * to {@code relY in [-24, 248)} — i.e., Y margin = {@code height_pixels = 24}
 	 * symmetrically, NOT 32.
-	 * <p>S2 {@code BuildSprites_ApproxYCheck} also masks the relative display Y
-	 * coordinate with {@code $7FF} before the same 32-pixel margin check
-	 * ({@code docs/s2disasm/s2.asm:30399-30403}). Keep the game-specific margin
-	 * choice separate from the active camera wrap mask so S1/S2 retain their
-	 * 32-pixel band while wrapped players still refresh {@code render_flags.on_screen}.
+	 * <p>S1/S2 don't have a {@code Screen_Y_wrap_value} mechanism and the ROM
+	 * routines use slightly different margins. Gate the S3K-specific 24-margin
+	 * via {@link com.openggf.game.PhysicsFeatureSet#useScreenYWrapValueForVisibility()}
+	 * so existing S1/S2 traces keep their 32-margin behaviour.
 	 */
 	public boolean isVisibleForRenderFlag(AbstractPlayableSprite sprite) {
 		int widthPixels = sprite.getRenderFlagWidthPixels();
@@ -575,10 +574,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
 		boolean useS3kMargin = fs != null && fs.useScreenYWrapValueForVisibility();
 		int yMargin = useS3kMargin ? widthPixels : 32;
-		if (verticalWrapEnabled) {
-			int wrappedRelY = relY & verticalWrapMask;
-			return wrappedRelY < height + yMargin || wrappedRelY >= verticalWrapRange - yMargin;
-		}
 		return relY >= -yMargin && relY < height + yMargin;
 	}
 
@@ -722,12 +717,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
-	 * Applies the ROM screen-Y wrap mask to a playable object's {@code y_pos}
-	 * equivalent when vertical wrapping is active.
+	 * Applies the S3K {@code Screen_Y_wrap_value} mask to a playable object's ROM
+	 * {@code y_pos} equivalent when vertical wrapping is active.
 	 * <p>ROM references:
-	 * {@code docs/s2disasm/s2.asm:35945-35948} (Sonic control),
-	 * {@code docs/s2disasm/s2.asm:37829-37832} (Sonic hurt),
-	 * {@code docs/s2disasm/s2.asm:40675-40678} (Tails hurt),
 	 * {@code docs/skdisasm/sonic3k.asm:21989-21992} (Sonic),
 	 * {@code docs/skdisasm/sonic3k.asm:25708-25711} (Tails/player display path),
 	 * {@code docs/skdisasm/sonic3k.asm:26233-26236} (Tails control).
@@ -736,6 +728,10 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public boolean applyScreenYWrapValue(AbstractPlayableSprite sprite) {
 		if (!verticalWrapEnabled || sprite == null) {
+			return false;
+		}
+		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
+		if (fs == null || !fs.useScreenYWrapValueForVisibility()) {
 			return false;
 		}
 		short before = sprite.getCentreY();

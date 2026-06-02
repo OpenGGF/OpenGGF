@@ -164,8 +164,6 @@ public class GraphicsManager {
 	private int viewportHeight = 224;
 
 	// Projection-space width: the coordinate-space width of the full viewport.
-	// At native 320 this equals 320; at widescreen presets it is wider (e.g. 480).
-	// Set by Engine.setProjectionWidth() and read by renderers that need centering.
 	private int projectionWidth = 320;
 
 	// Water-related state for sprite priority shader underwater palette support.
@@ -969,21 +967,10 @@ public class GraphicsManager {
 		return viewportHeight;
 	}
 
-	/**
-	 * Sets the projection-space width (coordinate-space width of the full viewport).
-	 * Called by {@code Engine} whenever the projection matrix changes.
-	 * At native 320 this is 320; at widescreen presets it is wider.
-	 */
 	public void setProjectionWidth(int width) {
 		this.projectionWidth = Math.max(320, width);
 	}
 
-	/**
-	 * Returns the projection-space width of the current viewport.
-	 * Renderers use this to compute {@code xOffset = (projectionWidth - 320) / 2}
-	 * so that native-320 content is centred at any width.
-	 * At native 320 returns 320 (offset 0 — byte-identical).
-	 */
 	public int getProjectionWidth() {
 		return projectionWidth;
 	}

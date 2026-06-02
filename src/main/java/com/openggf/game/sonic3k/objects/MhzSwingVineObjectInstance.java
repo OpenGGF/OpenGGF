@@ -1,0 +1,392 @@
+package com.openggf.game.sonic3k.objects;
+
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.PostPlayerUpdateHook;
+import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.physics.Direction;
+import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
+
+import java.util.List;
+
+/**
+ * S3K SKL object $10 - MHZ swing vine.
+ *
+ * <p>ROM reference: {@code Obj_MHZSwingVine} / {@code loc_2267E} through
+ * {@code loc_22B68}. This models the route-critical handle grab, hang, and
+ * jump-release behavior; visual child segments use the MHZ misc PLC art.
+ */
+public final class MhzSwingVineObjectInstance extends AbstractObjectInstance implements PostPlayerUpdateHook {
+    private static final int PRIORITY_BUCKET_LOW = 4; // priority $200
+    private static final int PRIORITY_BUCKET_HIGH = 5; // priority $280
+    private static final int HANDLE_Y_OFFSET = 0x10;
+    private static final int PLAYER_HANG_Y_OFFSET = 0x14;
+    private static final int GRAB_HALF_WIDTH = 0x10;
+    private static final int GRAB_HEIGHT = 0x28;
+    private static final int SLOW_GRAB_HEIGHT = 0x18;
+    private static final int RELEASE_DELAY = 0x3C;
+
+    private static final int[] MODE0_PLAYER_FRAMES = {
+            0x91, 0x91, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90,
+            0x92, 0x92, 0x92, 0x92, 0x92, 0x92, 0x91, 0x91
+    };
+
+    private static final int[] MODE1_PLAYER_FRAMES = {
+            0x78, 0x78, 0x7F, 0x7F, 0x7E, 0x7E, 0x7D, 0x7D,
+            0x7C, 0x7C, 0x7B, 0x7B, 0x7A, 0x7A, 0x79, 0x79
+    };
+
+    private static final int[] MODE1_PLAYER_OFFSETS = {
+            0, 0x18,
+            -0x12, 0x13,
+            -0x18, 0,
+            -0x12, -0x13,
+            0, -0x18,
+            0x12, -0x13,
+            0x18, 0,
+            0x12, 0x13
+    };
+
+    private enum RootState {
+        WAIT_FOR_GRAB,
+        SWINGING
+    }
+
+    private static final class PlayerState {
+        int grabFlag;
+        int releaseDelay;
+        boolean pendingJumpRelease;
+        AbstractPlayableSprite player;
+    }
+
+    private final PlayerState p1 = new PlayerState();
+    private final PlayerState p2 = new PlayerState();
+
+    private RootState rootState = RootState.WAIT_FOR_GRAB;
+    private int rootAngle;
+    private int root3A;
+    private int handleMode;
+    private int handleX;
+    private int handleY;
+    private int prevHandleX;
+    private int prevHandleY;
+    private int priorityBucket = PRIORITY_BUCKET_LOW;
+
+    public MhzSwingVineObjectInstance(ObjectSpawn spawn) {
+        super(spawn, "MHZSwingVine");
+        handleX = spawn.x();
+        handleY = spawn.y() + HANDLE_Y_OFFSET;
+        prevHandleX = handleX;
+        prevHandleY = handleY;
+    }
+
+    @Override
+    public void update(int frameCounter, PlayableEntity playerEntity) {
+        updateRootState();
+        updateHandlePosition();
+        AbstractPlayableSprite player = playerEntity instanceof AbstractPlayableSprite playable ? playable : null;
+        updatePlayer(p1, player);
+        updatePlayer(p2, firstTrackedSidekick());
+        updateDynamicSpawn(spawn.x(), spawn.y());
+    }
+
+    @Override
+    public void updatePostPlayer(int frameCounter, PlayableEntity playerEntity) {
+        releasePending(p1);
+        releasePending(p2);
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        return priorityBucket;
+    }
+
+    @Override
+    public int getOnScreenHalfWidth() {
+        return 0x40;
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        return 0x40;
+    }
+
+    @Override
+    public boolean isPersistent() {
+        return p1.grabFlag != 0 || p2.grabFlag != 0;
+    }
+
+    @Override
+    public void onUnload() {
+        clearPlayerControl(p1);
+        clearPlayerControl(p2);
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ_SWING_VINE);
+        if (renderer == null) {
+            return;
+        }
+
+        renderer.drawFrameIndex(0x23, spawn.x(), spawn.y(), false, false);
+        renderer.drawFrameIndex(swingSegmentFrame(), spawn.x(), spawn.y(), false, false);
+        renderer.drawFrameIndex(0x22, handleX, handleY, false, false);
+    }
+
+    @Override
+    public String traceDebugDetails() {
+        return super.traceDebugDetails()
+                + " state=" + rootState
+                + " angle=$" + Integer.toHexString(rootAngle & 0xFFFF).toUpperCase()
+                + " handleMode=" + handleMode
+                + " grabbed=" + (p1.grabFlag != 0 || p2.grabFlag != 0);
+    }
+
+    private void updateRootState() {
+        if (rootState == RootState.WAIT_FOR_GRAB && anyFastGrabbed()) {
+            rootState = RootState.SWINGING;
+            handleMode = 1;
+            rootAngle = 0;
+            root3A = 0x800;
+            return;
+        }
+        if (rootState != RootState.SWINGING) {
+            return;
+        }
+
+        int d0 = root3A;
+        int d1 = Math.abs(signedAngleByte(rootAngle));
+        d0 -= d1 + d1;
+        rootAngle = asSigned16(rootAngle - d0);
+        priorityBucket = signedAngleByte(rootAngle) < 0 ? PRIORITY_BUCKET_HIGH : PRIORITY_BUCKET_LOW;
+    }
+
+    private void updateHandlePosition() {
+        int oldX = handleX;
+        int oldY = handleY;
+        int angle = (angleByte(rootAngle) + 4) & 0xF8;
+        int sin = TrigLookupTable.sinHex(angle);
+        int cos = TrigLookupTable.cosHex(angle);
+
+        handleX = spawn.x() + ((-sin + 8) >> 4);
+        handleY = spawn.y() + ((cos + 8) >> 4);
+        if (handleX != oldX) {
+            prevHandleX = oldX;
+        }
+        if (handleY != oldY) {
+            prevHandleY = oldY;
+        }
+    }
+
+    private void updatePlayer(PlayerState state, AbstractPlayableSprite player) {
+        state.player = player;
+        if (state.grabFlag != 0) {
+            updateGrabbedPlayer(state, player);
+            return;
+        }
+        if (state.releaseDelay > 0) {
+            state.releaseDelay--;
+            if (state.releaseDelay > 0) {
+                return;
+            }
+        }
+        if (player == null || !canGrab(player)) {
+            return;
+        }
+
+        boolean fastGrab = player.getXSpeed() >= 0x400;
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0);
+        player.setGSpeed((short) 0);
+        player.setCentreXPreserveSubpixel((short) handleX);
+        player.setCentreYPreserveSubpixel((short) (handleY + PLAYER_HANG_Y_OFFSET));
+        player.setAnimationId(Sonic3kAnimationIds.HANG2);
+        player.setForcedAnimationId(Sonic3kAnimationIds.HANG2);
+        player.setObjectMappingFrameControl(true);
+        player.setSpindash(false);
+        ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
+        if (player.isCpuControlled()) {
+            player.setControlLocked(true);
+        }
+        player.setRenderFlips(player.getDirection() == Direction.LEFT, false);
+        state.grabFlag = fastGrab ? 0x81 : 1;
+        ObjectServices services = tryServices();
+        if (services != null) {
+            services.playSfx(Sonic3kSfx.GRAB.id);
+        }
+        holdPlayer(state, player);
+    }
+
+    private void updateGrabbedPlayer(PlayerState state, AbstractPlayableSprite player) {
+        if (player == null || !renderFlagsOnScreen(player) || player.isHurt() || player.getDead() || player.isDebugMode()) {
+            if (player != null) {
+                clearControlImmediate(player);
+            }
+            state.grabFlag = 0;
+            state.pendingJumpRelease = false;
+            state.releaseDelay = RELEASE_DELAY;
+            return;
+        }
+        if (player.isJumpJustPressed()) {
+            state.pendingJumpRelease = true;
+            return;
+        }
+        holdPlayer(state, player);
+    }
+
+    private void holdPlayer(PlayerState state, AbstractPlayableSprite player) {
+        if (handleMode == 0) {
+            player.setCentreXPreserveSubpixel((short) handleX);
+            player.setCentreYPreserveSubpixel((short) (handleY + PLAYER_HANG_Y_OFFSET));
+            int angle = angleByte(rootAngle);
+            if (player.getDirection() == Direction.LEFT) {
+                angle = (-angle) & 0xFF;
+            }
+            int index = ((angle + 8) & 0xFF) >> 4;
+            player.setForcedAnimationId(Sonic3kAnimationIds.HANG2);
+            player.setMappingFrame(MODE0_PLAYER_FRAMES[index]);
+        } else {
+            int angle = angleByte(rootAngle);
+            if (player.getDirection() == Direction.LEFT) {
+                angle = (-angle) & 0xFF;
+            }
+            int index = (((angle + 0x10) & 0xFF) >> 5) & 0x7;
+            int tableIndex = index << 1;
+            int offsetX = MODE1_PLAYER_OFFSETS[tableIndex];
+            int offsetY = MODE1_PLAYER_OFFSETS[tableIndex + 1];
+            if (player.getDirection() == Direction.LEFT) {
+                offsetX = -offsetX;
+            }
+            player.setAnimationId(Sonic3kAnimationIds.WALK);
+            player.setForcedAnimationId(Sonic3kAnimationIds.WALK);
+            player.setMappingFrame(MODE1_PLAYER_FRAMES[tableIndex]);
+            player.setCentreXPreserveSubpixel((short) (handleX + offsetX));
+            player.setCentreYPreserveSubpixel((short) (handleY + offsetY));
+        }
+        player.setRenderFlips(player.getDirection() == Direction.LEFT, false);
+        state.player = player;
+    }
+
+    private void releasePending(PlayerState state) {
+        if (!state.pendingJumpRelease) {
+            return;
+        }
+        state.pendingJumpRelease = false;
+        AbstractPlayableSprite player = state.player;
+        if (player == null || state.grabFlag == 0) {
+            return;
+        }
+
+        clearControlImmediate(player);
+        state.grabFlag = 0;
+        state.releaseDelay = RELEASE_DELAY;
+        if (handleMode == 1) {
+            int angle = angleByte(rootAngle);
+            int sin = TrigLookupTable.sinHex(angle);
+            int cos = TrigLookupTable.cosHex(angle);
+            player.setXSpeed((short) (cos * 6));
+            player.setYSpeed((short) (sin * 6));
+        } else {
+            player.setXSpeed((short) ((handleX - prevHandleX) << 7));
+            player.setYSpeed((short) (((handleY - prevHandleY) << 7) - 0x380));
+            if (player.isLeftPressed()) {
+                player.setXSpeed((short) -0x200);
+            }
+            if (player.isRightPressed()) {
+                player.setXSpeed((short) 0x200);
+            }
+        }
+
+        player.setAir(true);
+        player.setJumping(true);
+        player.applyRollingRadii(false);
+        int centreX = player.getCentreX();
+        int centreY = player.getCentreY();
+        player.setRolling(true);
+        player.setCentreXPreserveSubpixel((short) centreX);
+        player.setCentreYPreserveSubpixel((short) centreY);
+        player.setAnimationId(Sonic3kAnimationIds.ROLL);
+    }
+
+    private boolean canGrab(AbstractPlayableSprite player) {
+        int dx = player.getCentreX() - handleX;
+        if (dx < -GRAB_HALF_WIDTH || dx >= GRAB_HALF_WIDTH) {
+            return false;
+        }
+        int dy = player.getCentreY() - handleY;
+        if (dy < 0 || dy >= GRAB_HEIGHT) {
+            return false;
+        }
+        if (player.getXSpeed() < 0x400 && dy >= SLOW_GRAB_HEIGHT) {
+            return false;
+        }
+        return !player.isObjectControlled()
+                && !player.isControlLocked()
+                && !player.isHurt()
+                && !player.getDead()
+                && !player.isDebugMode();
+    }
+
+    private static boolean renderFlagsOnScreen(AbstractPlayableSprite player) {
+        return !player.hasRenderFlagOnScreenState() || player.isRenderFlagOnScreen();
+    }
+
+    private boolean anyGrabbed() {
+        return p1.grabFlag != 0 || p2.grabFlag != 0;
+    }
+
+    private boolean anyFastGrabbed() {
+        return (p1.grabFlag & 0x80) != 0 || (p2.grabFlag & 0x80) != 0;
+    }
+
+    private AbstractPlayableSprite firstTrackedSidekick() {
+        ObjectServices services = tryServices();
+        if (services == null) {
+            return null;
+        }
+        return services.playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite sidekick ? sidekick : null;
+    }
+
+    private int swingSegmentFrame() {
+        return ((angleByte(rootAngle) + 4) & 0xFF) >> 3;
+    }
+
+    private static void clearPlayerControl(PlayerState state) {
+        if (state.player != null && state.grabFlag != 0) {
+            AizVineHandleLogic.clearPlayerControl(state.player);
+        }
+        state.grabFlag = 0;
+        state.pendingJumpRelease = false;
+    }
+
+    private static void clearControlImmediate(AbstractPlayableSprite player) {
+        player.setObjectMappingFrameControl(false);
+        player.setForcedAnimationId(-1);
+        player.setControlLocked(false);
+        ObjectControlState.none().applyTo(player);
+        player.suppressNextJumpPress();
+    }
+
+    private static int angleByte(int angleWord) {
+        return (angleWord >> 8) & 0xFF;
+    }
+
+    private static int signedAngleByte(int angleWord) {
+        int value = angleByte(angleWord);
+        return value >= 0x80 ? value - 0x100 : value;
+    }
+
+    private static int asSigned16(int value) {
+        value &= 0xFFFF;
+        return value >= 0x8000 ? value - 0x10000 : value;
+    }
+}

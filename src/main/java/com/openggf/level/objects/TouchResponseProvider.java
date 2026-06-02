@@ -35,6 +35,14 @@ public interface TouchResponseProvider {
     }
 
     /**
+     * Returns whether the object's collision byte should dispatch through enemy
+     * attack/hurt handling regardless of the high category bits.
+     */
+    default boolean usesEnemyTouchCategoryOverride() {
+        return false;
+    }
+
+    /**
      * Returns whether Sonic 2 {@code Touch_Special} property-style {@code 0xC0}
      * collision flags should dispatch as listener-only special callbacks.
      */

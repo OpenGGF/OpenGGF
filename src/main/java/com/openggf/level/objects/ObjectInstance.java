@@ -180,6 +180,24 @@ public interface ObjectInstance {
     }
 
     /**
+     * Returns true when this object participates in ROM level-repeat coordinate
+     * shifts such as MHZ's forced-scroll loop helper. The ROM gates these shifts
+     * on {@code render_flags} bit 2, which normal level-space objects set after
+     * initialization.
+     */
+    default boolean participatesInLevelRepeatOffset() {
+        return false;
+    }
+
+    /**
+     * Applies a ROM-style repeat-loop offset to the object's native
+     * {@code x_pos}/{@code y_pos}. Called only when
+     * {@link #participatesInLevelRepeatOffset()} returns true.
+     */
+    default void applyLevelRepeatOffset(int offsetX, int offsetY) {
+    }
+
+    /**
      * Returns the X coordinate used by ROM-style {@code out_of_range} checks.
      * <p>
      * Most objects use their current X position, but some S1 objects store a

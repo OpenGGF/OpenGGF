@@ -58,11 +58,18 @@ public record TouchResponseProfile(
         Objects.requireNonNull(provider, "provider");
         boolean sonic2 = provider.usesSonic2TouchSpecialPropertyResponse();
         boolean s3k = provider.usesS3kTouchSpecialPropertyResponse();
+        boolean forceEnemy = provider.usesEnemyTouchCategoryOverride();
         if (sonic2 && s3k) {
             throw new IllegalArgumentException(
                     "Touch special-property decode mode must be Sonic 2 or S3K, not both");
         }
-        TouchCategoryDecodeMode decodeMode = sonic2
+        if (forceEnemy && (sonic2 || s3k)) {
+            throw new IllegalArgumentException(
+                    "Enemy touch override cannot be combined with special-property decode modes");
+        }
+        TouchCategoryDecodeMode decodeMode = forceEnemy
+                ? TouchCategoryDecodeMode.FORCE_ENEMY
+                : sonic2
                 ? TouchCategoryDecodeMode.SONIC2_SPECIAL_PROPERTY
                 : s3k ? TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY : TouchCategoryDecodeMode.NORMAL;
         int shieldFlags = provider.getShieldReactionFlags();
