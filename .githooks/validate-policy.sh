@@ -89,9 +89,11 @@ has_prefix() {
 trailer_value() {
     key=$1
     message=$2
-    printf '%s\n' "$message" | git interpret-trailers --parse | awk -v key="$key" '
+    printf '%s\n' "$message" | awk -v key="$key" '
         index($0, key ":") == 1 {
-            value = substr($0, length(key) + 3)
+            value = substr($0, length(key) + 2)
+            sub(/^[[:space:]]+/, "", value)
+            sub(/[[:space:]]+$/, "", value)
         }
         END {
             if (value != "") {
@@ -422,7 +424,6 @@ prepare_commit_message() {
     fi
 
     message=$(cat "$msg_file")
-    parsed=$(printf '%s\n' "$message" | git interpret-trailers --parse)
 
     append_block=""
     for key in \
@@ -434,7 +435,7 @@ prepare_commit_message() {
         "Configuration-Docs" \
         "Skills"
     do
-        if ! printf '%s\n' "$parsed" | awk -v key="$key" 'index($0, key ":") == 1 { found = 1 } END { exit !found }'; then
+        if [ -z "$(trailer_value "$key" "$message")" ]; then
             if [ -z "$append_block" ]; then
                 append_block="$key: TODO"
             else
