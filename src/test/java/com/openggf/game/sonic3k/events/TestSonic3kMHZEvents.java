@@ -126,6 +126,61 @@ class TestSonic3kMHZEvents {
     }
 
     @Test
+    void act1MinibossSpecialEventLoopsArenaAtRomThreshold() {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .startPosition((short) 0x4410, (short) 0x0710)
+                .startPositionIsCentre()
+                .build();
+
+        Sonic3kMHZEvents events = getMhzEvents();
+        Camera camera = fixture.camera();
+        camera.setX((short) 0x4400);
+        events.setBossFlag(true);
+        events.setSpecialEventsRoutine(0x08);
+        RepeatShiftProbeObject probe = new RepeatShiftProbeObject(0x4308, 0x0710);
+        GameServices.level().getObjectManager().addDynamicObject(probe);
+
+        events.update(0, 1);
+
+        assertEquals(0x0200, events.getLevelRepeatOffset(),
+                "MHZ1 loc_54CB0 should publish Level_repeat_offset=$0200 at Camera_X_pos >= $4400");
+        assertEquals(0x4200, camera.getX() & 0xFFFF,
+                "loc_54CB0 subtracts $200 from Camera_X_pos when the loop threshold is reached");
+        assertEquals(0x4200, camera.getMinX() & 0xFFFF,
+                "loc_54CB0 mirrors the wrapped Camera_X_pos into Camera_min_X_pos");
+        assertEquals(0x4298, camera.getMaxX() & 0xFFFF,
+                "loc_54CB0 clamps Camera_max_X_pos back to the miniboss arena lock");
+        assertEquals(0x4210, fixture.sprite().getCentreX() & 0xFFFF,
+                "loc_54CB0 subtracts $200 from Player_1.x_pos during the loop wrap");
+        assertEquals(0x4108, probe.getX(),
+                "active level-space objects should shift back with the same $200 repeat offset");
+    }
+
+    @Test
+    void act1MinibossRepeatSkipsObjectsWithoutExplicitRepeatParticipation() {
+        HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
+                .startPosition((short) 0x4410, (short) 0x0710)
+                .startPositionIsCentre()
+                .build();
+
+        Sonic3kMHZEvents events = getMhzEvents();
+        Camera camera = GameServices.camera();
+        camera.setX((short) 0x4400);
+        events.setBossFlag(true);
+        events.setSpecialEventsRoutine(0x08);
+        GameServices.level().getObjectManager().addDynamicObject(new SpawnlessDynamicProbeObject());
+
+        events.update(0, 1);
+
+        assertEquals(0x0200, events.getLevelRepeatOffset(),
+                "MHZ1 loc_54CB0 should still publish Level_repeat_offset while spawnless helpers are present");
+        assertEquals(0x4200, camera.getX() & 0xFFFF,
+                "spawnless dynamic helpers must not abort the MHZ1 repeat wrap");
+    }
+
+    @Test
     void act1ScreenEventAllocatesMhzMinibossAtRomCameraThreshold() {
         HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_MHZ, 0)
@@ -1954,6 +2009,25 @@ class TestSonic3kMHZEvents {
     private static final class RepeatShiftProbeObject extends AbstractObjectInstance {
         private RepeatShiftProbeObject(int x, int y) {
             super(new ObjectSpawn(x, y, 0x00, 0, 0, false, 0), "RepeatShiftProbe");
+        }
+
+        @Override
+        public boolean participatesInLevelRepeatOffset() {
+            return true;
+        }
+
+        @Override
+        public void update(int frameCounter, PlayableEntity player) {
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+        }
+    }
+
+    private static final class SpawnlessDynamicProbeObject extends AbstractObjectInstance {
+        private SpawnlessDynamicProbeObject() {
+            super(null, "SpawnlessDynamicProbe");
         }
 
         @Override

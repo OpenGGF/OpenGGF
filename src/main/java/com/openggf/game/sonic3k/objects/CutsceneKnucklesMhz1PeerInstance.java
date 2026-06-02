@@ -75,7 +75,7 @@ public final class CutsceneKnucklesMhz1PeerInstance extends AbstractObjectInstan
 
     @Override
     public boolean isHighPriority() {
-        return true;
+        return false;
     }
 
     @Override

@@ -95,6 +95,16 @@ Rules for finding S3K pointers:
 - When reading boss disassembly, always use the `sonic3k.asm` version (S3KL code path); it may contain zone-specific overrides or Knuckles variants absent from the S3 standalone version.
 - If you cannot find an S&K-side equivalent, stop and ask — do not substitute an S3 address.
 
+## Mandatory Art Corruption Guard Tests
+
+Whenever an S3K boss adds or changes boss art, child art, projectile art, mapping addresses, PLC-backed art, standalone sheets, or `Sonic3kPlcArtRegistry` entries, run the ROM-conditional art crawler:
+
+```bash
+mvn "-Dtest=TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits" test
+```
+
+If the boss or child sprite has a known mapping shape from the disassembly, add or update a focused `TestSonic3kPlcArtRegistry` assertion for frame count, piece count, tile dimensions, and tile indices. The runtime `PatternSpriteRenderer` guard logs and suppresses suspicious frames, but the workflow goal is to catch wrong offsets before gameplay reaches them.
+
 ## Implementation Process
 
 ### Phase 1: Research & Discovery

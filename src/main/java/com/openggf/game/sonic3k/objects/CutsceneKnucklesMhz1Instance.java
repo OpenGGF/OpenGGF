@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
@@ -39,6 +40,10 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance {
     private static final int[] WALK_ANIMATION_FRAMES = {
             0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11
     };
+    private static final int JUMP_ANIMATION_DELAY = 1;
+    private static final int[] JUMP_ANIMATION_FRAMES = {
+            0x08, 0x04, 0x08, 0x05, 0x08, 0x06, 0x08, 0x07
+    };
 
     private final Mhz1CutsceneButtonInstance parentButton;
     private final SubpixelMotion.State motion = new SubpixelMotion.State(
@@ -48,9 +53,11 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance {
     private int mappingFrame = INITIAL_MAPPING_FRAME;
     private int animFrameTimer;
     private int walkAnimationIndex;
+    private int jumpAnimationIndex;
     private int yRadius = BOUNCE_Y_RADIUS;
     private boolean peerSpawned;
     private boolean peerReturned;
+    private boolean themeTransitionSpawned;
 
     public CutsceneKnucklesMhz1Instance(ObjectSpawn spawn) {
         this(spawn, null);
@@ -78,7 +85,7 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance {
 
     @Override
     public boolean isHighPriority() {
-        return true;
+        return false;
     }
 
     @Override
@@ -134,8 +141,17 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance {
 
     private void routineInit() {
         timer = WAIT_BEFORE_WALK;
+        fadeAndPlayKnucklesThemeOnce();
         AizIntroArtLoader.applyKnucklesPalette(services());
         routine = Routine.WAIT_BEFORE_WALK;
+    }
+
+    private void fadeAndPlayKnucklesThemeOnce() {
+        if (themeTransitionSpawned) {
+            return;
+        }
+        themeTransitionSpawned = true;
+        spawnDynamicObject(new SongFadeTransitionInstance(2 * 60, Sonic3kMusic.KNUCKLES.id));
     }
 
     private void routineWaitBeforeWalk() {
@@ -177,10 +193,12 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance {
         motion.xVel = BUTTON_JUMP_X_VELOCITY;
         motion.yVel = BUTTON_JUMP_Y_VELOCITY;
         yRadius = FIRST_JUMP_Y_RADIUS;
+        resetJumpAnimation();
         routine = Routine.JUMP_TO_BUTTON;
     }
 
     private void routineJumpWithFloorCallback() {
+        animateJump();
         SubpixelMotion.moveSprite(motion, SubpixelMotion.S3K_GRAVITY);
         if (motion.yVel < 0 || motion.y < INITIAL_Y) {
             return;
@@ -245,6 +263,22 @@ public final class CutsceneKnucklesMhz1Instance extends AbstractObjectInstance {
         walkAnimationIndex = 0;
         mappingFrame = WALK_ANIMATION_FRAMES[0];
         animFrameTimer = WALK_ANIMATION_DELAY;
+    }
+
+    private void resetJumpAnimation() {
+        jumpAnimationIndex = 0;
+        mappingFrame = JUMP_ANIMATION_FRAMES[0];
+        animFrameTimer = JUMP_ANIMATION_DELAY;
+    }
+
+    private void animateJump() {
+        animFrameTimer--;
+        if (animFrameTimer >= 0) {
+            return;
+        }
+        jumpAnimationIndex = (jumpAnimationIndex + 1) % JUMP_ANIMATION_FRAMES.length;
+        mappingFrame = JUMP_ANIMATION_FRAMES[jumpAnimationIndex];
+        animFrameTimer = JUMP_ANIMATION_DELAY;
     }
 
     private enum Routine {

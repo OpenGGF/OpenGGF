@@ -6951,10 +6951,23 @@ public class ObjectManager {
                 int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();
                 SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
                 boolean useStickyBuffer = solidProfile.stickyContactBuffer();
+                SlopedSolidRoutineAdapter slopedAdapter = null;
+                byte[] slopeData = null;
+                if (instance instanceof SlopedSolidProvider sloped) {
+                    slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                    slopeData = slopedAdapter.getSlopeData();
+                }
 
-                // Multi-piece solids don't use monitor solidity
-                SolidContact contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
-                        solidProfile, useStickyBuffer, instance, false);
+                SolidContact contact;
+                if (slopeData != null && shouldUseSlopeForContact(instance, slopedAdapter)) {
+                    contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(),
+                            params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
+                            instance, false, slopedAdapter);
+                } else {
+                    // Multi-piece solids don't use monitor solidity
+                    contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
+                            solidProfile, useStickyBuffer, instance, false);
+                }
                 if (contact != null && contact.standing()) {
                     return true;
                 }
@@ -7470,11 +7483,24 @@ public class ObjectManager {
                 int anchorX = pieceX + params.offsetX();
                 int anchorY = pieceY + params.offsetY();
                 int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();
+                SlopedSolidRoutineAdapter slopedAdapter = null;
+                byte[] slopeData = null;
+                if (instance instanceof SlopedSolidProvider sloped) {
+                    slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                    slopeData = slopedAdapter.getSlopeData();
+                }
 
-                // Multi-piece solids don't use monitor solidity
-                // Pass piece index so sticky buffer only applies to the piece being ridden
-                SolidContact contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
-                        solidProfile, useStickyBuffer, instance, i, true);
+                SolidContact contact;
+                if (slopeData != null && shouldUseSlopeForContact(instance, slopedAdapter)) {
+                    contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(),
+                            params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
+                            instance, true, slopedAdapter);
+                } else {
+                    // Multi-piece solids don't use monitor solidity
+                    // Pass piece index so sticky buffer only applies to the piece being ridden
+                    contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
+                            solidProfile, useStickyBuffer, instance, i, true);
+                }
 
                 if (contact == null) {
                     continue;

@@ -506,6 +506,28 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void multiPieceSlopedSolidUsesSampledSurfaceForNewLanding() {
+        SolidObjectParams params = new SolidObjectParams(16, 0, 0);
+        TestSlopedMultiPieceSolidObject object = new TestSlopedMultiPieceSolidObject(100, 100, params);
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(true);
+        player.setYSpeed((short) 0x100);
+        player.setCentreX((short) 100);
+        player.setCentreY((short) (100 - 8 - player.getYRadius() - 1));
+
+        manager.updateSolidContacts(player);
+
+        assertFalse(player.getAir(),
+                "Multi-piece sloped solids must use SolidObjectTopSloped2 surfaceY = pieceY - sample");
+        assertTrue(player.isOnObject());
+        assertEquals(100 - 8 - player.getYRadius() - 1, player.getCentreY());
+    }
+
+    @Test
     public void cutsceneKnuxCnz2WallSidePushesPlayerBackToItsLeftFace() {
         // ROM: CutsceneKnux_CNZ2A init spawns ChildObjDat_66560 -> loc_62458, an
         // invisible SolidObjectFull2 wall (d1=$13, d2=$100) positioned at
@@ -1434,6 +1456,48 @@ public class TestSolidObjectManager {
         @Override
         public int getPieceY(int pieceIndex) {
             return getY();
+        }
+    }
+
+    private static final class TestSlopedMultiPieceSolidObject extends TestSolidObject
+            implements MultiPieceSolidProvider, SlopedSolidProvider {
+        private static final byte[] SLOPE = {
+                8, 8, 8, 8, 8, 8, 8, 8,
+                8, 8, 8, 8, 8, 8, 8, 8
+        };
+
+        private TestSlopedMultiPieceSolidObject(int x, int y, SolidObjectParams params) {
+            super(x, y, params, true);
+        }
+
+        @Override
+        public int getPieceCount() {
+            return 1;
+        }
+
+        @Override
+        public int getPieceX(int pieceIndex) {
+            return getX();
+        }
+
+        @Override
+        public int getPieceY(int pieceIndex) {
+            return getY();
+        }
+
+        @Override
+        public byte[] getSlopeData() {
+            return SLOPE.clone();
+        }
+
+        @Override
+        public boolean isSlopeFlipped() {
+            return false;
+        }
+
+        @Override
+        public int getSlopeBaseline() {
+            return 0;
         }
     }
 

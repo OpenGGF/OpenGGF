@@ -49,6 +49,18 @@ Rules for finding S3K pointers:
 - When reading object disassembly, always use the `sonic3k.asm` version (S3KL code path); it may contain zone-specific overrides (e.g., FBZ art tile, Knuckles variants) absent from the S3 version.
 - If you genuinely cannot find an S&K-side equivalent, stop and ask — do not fall back to the S3 address.
 
+### Mandatory Art Corruption Guard Tests
+
+Whenever an S3K object adds or changes runtime art, mapping addresses, PLC-backed art, standalone sheets, or `Sonic3kPlcArtRegistry` entries, run the ROM-conditional art crawler:
+
+```bash
+mvn "-Dtest=TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits" test
+```
+
+If the object has a known small mapping shape from the disassembly, add or update a focused test in `TestSonic3kPlcArtRegistry` that asserts the exact frame count, piece count, tile dimensions, and tile indices. Do not rely only on screenshots or manual playtesting for art offsets; bad mapping or decompression offsets can produce massive corrupted sprite frames that slow the game before they are visually diagnosed.
+
+The engine also has a runtime guard in `PatternSpriteRenderer`; keep `TestPatternSpriteRendererCorruptionGuard` passing whenever changing sprite rendering, `ObjectSpriteSheet`, mapping parsers, or art registration code.
+
 ### Phase 1: Research & Discovery
 
 **Important — Zone-Set-Aware Object IDs:** S3K uses **two object pointer tables** that remap many IDs by zone:

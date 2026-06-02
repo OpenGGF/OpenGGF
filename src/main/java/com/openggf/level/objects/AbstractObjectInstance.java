@@ -212,7 +212,7 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
 
     @Override
     public boolean participatesInLevelRepeatOffset() {
-        return true;
+        return false;
     }
 
     @Override

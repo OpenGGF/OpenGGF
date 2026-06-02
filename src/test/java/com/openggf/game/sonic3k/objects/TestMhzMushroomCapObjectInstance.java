@@ -49,6 +49,21 @@ class TestMhzMushroomCapObjectInstance {
     }
 
     @Test
+    void mushroomCapSolidObjectTopUsesRomD3SurfaceHeight() {
+        MhzMushroomCapObjectInstance cap = new MhzMushroomCapObjectInstance(new ObjectSpawn(
+                0x1200, 0x0500, MHZ_MUSHROOM_CAP, 0, 0, false, 0));
+        SolidObjectProvider solid = cap;
+
+        assertEquals(0x12, solid.getSolidParams().groundHalfHeight(),
+                "Obj_MHZMushroomCap passes byte_3E0DA[mapping_frame] as SolidObjectTop d3");
+        assertTrue(solid.usesGroundHalfHeightForTopSolidContact(),
+                "SolidObjectTop must test the cap surface at y_pos-d3, not y_pos; "
+                        + "otherwise low caps catch Sonic while he is still following terrain slopes");
+        assertFalse(solid.usesPlatformObjectLandingSnap(),
+                "SolidObjectTop landing preserves the helper's y_pos += d0+3 result, not PlatformObject snap");
+    }
+
+    @Test
     void subtypeBitSevenPromotesMushroomCapSpritePriority() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
 

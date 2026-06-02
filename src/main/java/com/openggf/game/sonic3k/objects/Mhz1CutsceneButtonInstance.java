@@ -29,7 +29,7 @@ import java.util.List;
 public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SolidObjectListener {
     private static final int INIT_Y_OFFSET = 4;
-    private static final int PRIORITY = 4;
+    private static final int PRIORITY = 2;
     private static final int CALLBACK_WAIT = 0x5F;
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x1B, 4, 5);
 
@@ -44,7 +44,9 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
     private boolean doorSwitchActive;
     private boolean doorLowered;
     private boolean doorMoving;
+    private boolean cutsceneDoorLatched;
     private int timer;
+    private int cutscenePressedFrames;
 
     public Mhz1CutsceneButtonInstance(ObjectSpawn spawn) {
         super(spawn, "MHZ1CutsceneButton");
@@ -69,7 +71,7 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        return true;
+        return false;
     }
 
     @Override
@@ -101,6 +103,9 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         }
         if (timer >= 0) {
             timer--;
+            if (cutscenePressedFrames > 0) {
+                cutscenePressedFrames--;
+            }
             return;
         }
         knuckles.signalButtonCallback();
@@ -171,8 +176,10 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
 
     private void pressCutsceneButton() {
         pressed = true;
+        cutscenePressedFrames = 2;
         doorSwitchActive = true;
         doorLowered = true;
+        cutsceneDoorLatched = true;
         timer = CALLBACK_WAIT;
         services().playSfx(Sonic3kSfx.SWITCH.id);
     }
@@ -197,6 +204,10 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         return doorLowered;
     }
 
+    boolean isCutsceneDoorLatched() {
+        return cutsceneDoorLatched;
+    }
+
     void setDoorLowered(boolean doorLowered) {
         this.doorLowered = doorLowered;
     }
@@ -207,6 +218,10 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
 
     boolean isDoorMovingForTest() {
         return doorMoving;
+    }
+
+    int getVisibleMappingFrameForTest() {
+        return visibleMappingFrame();
     }
 
     @Override
@@ -227,6 +242,10 @@ public final class Mhz1CutsceneButtonInstance extends AbstractObjectInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        renderer.drawFrameIndex((pressed || normalPressed) ? 1 : 0, x, y, false, false);
+        renderer.drawFrameIndex(visibleMappingFrame(), x, y, false, false);
+    }
+
+    private int visibleMappingFrame() {
+        return (normalPressed || cutscenePressedFrames > 0) ? 1 : 0;
     }
 }

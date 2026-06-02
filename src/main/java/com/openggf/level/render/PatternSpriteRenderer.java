@@ -8,16 +8,24 @@ import com.openggf.level.Pattern;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 /**
  * Renders sprite sheets built from level patterns and caches frame bounds.
  */
 public class PatternSpriteRenderer {
+    private static final Logger LOG = Logger.getLogger(PatternSpriteRenderer.class.getName());
+    private static final int MAX_FRAME_PIECES = 80;
+    private static final int MAX_FRAME_TILES = 512;
+    private static final int MAX_FRAME_SPAN_PIXELS = 1024;
+    private static final int MAX_ABS_PIECE_OFFSET_PIXELS = 2048;
+
     private final SpriteSheet<? extends SpriteFrame<? extends SpriteFramePiece>> spriteSheet;
     private final GraphicsManager graphicsManager;
     private int patternBase = -1;
     private final FrameBounds[] frameBoundsCache;
     private final PatternBounds[] patternBoundsCache;
+    private final byte[] frameValidationCache;
     private final PatternDesc reusableDesc = new PatternDesc();
 
     public PatternSpriteRenderer(SpriteSheet<? extends SpriteFrame<? extends SpriteFramePiece>> spriteSheet) {
@@ -30,6 +38,7 @@ public class PatternSpriteRenderer {
         this.graphicsManager = Objects.requireNonNull(graphicsManager, "graphicsManager");
         this.frameBoundsCache = new FrameBounds[spriteSheet.getFrameCount()];
         this.patternBoundsCache = new PatternBounds[spriteSheet.getPatterns().length];
+        this.frameValidationCache = new byte[spriteSheet.getFrameCount()];
     }
 
     public void ensurePatternsCached(GraphicsManager graphicsManager, int basePatternIndex) {
@@ -86,7 +95,8 @@ public class PatternSpriteRenderer {
      */
     public void drawFrameIndexWithPaletteBase(int frameIndex, int originX, int originY,
             boolean hFlip, boolean vFlip, int paletteBase) {
-        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0) {
+        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
+                || !isFrameRenderSafe(frameIndex)) {
             return;
         }
         SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
@@ -98,7 +108,8 @@ public class PatternSpriteRenderer {
      * @param paletteOverride palette index to use, or -1 to use the sprite sheet's default
      */
     public void drawFrameIndex(int frameIndex, int originX, int originY, boolean hFlip, boolean vFlip, int paletteOverride) {
-        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0) {
+        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
+                || !isFrameRenderSafe(frameIndex)) {
             return;
         }
         SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
@@ -108,7 +119,8 @@ public class PatternSpriteRenderer {
 
     public void drawFrameIndexWithSatReplayRole(int frameIndex, int originX, int originY,
             boolean hFlip, boolean vFlip, int paletteOverride, SpriteMaskReplayRole satReplayRole) {
-        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0) {
+        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
+                || !isFrameRenderSafe(frameIndex)) {
             return;
         }
         SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
@@ -138,7 +150,7 @@ public class PatternSpriteRenderer {
             int originY,
             boolean hFlip,
             boolean vFlip) {
-        if (pieces == null || patternBase < 0) {
+        if (pieces == null || patternBase < 0 || !arePiecesRenderSafe(pieces, -1)) {
             return;
         }
         drawFramePieces(pieces, originX, originY, hFlip, vFlip, spriteSheet.getPaletteIndex());
@@ -150,7 +162,8 @@ public class PatternSpriteRenderer {
      */
     public void drawFramePieceByIndex(int frameIndex, int pieceIndex, int originX, int originY,
             boolean hFlip, boolean vFlip) {
-        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0) {
+        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
+                || !isFrameRenderSafe(frameIndex)) {
             return;
         }
         SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
@@ -328,7 +341,8 @@ public class PatternSpriteRenderer {
     public void drawFrameIndexFilteredByPriority(int frameIndex, int originX, int originY,
             boolean hFlip, boolean vFlip, int paletteOverride, boolean priorityFilter,
             SpriteMaskReplayRole satReplayRole) {
-        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0) {
+        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
+                || !isFrameRenderSafe(frameIndex)) {
             return;
         }
         SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
@@ -375,7 +389,8 @@ public class PatternSpriteRenderer {
      */
     public void drawFrameIndexForcedPriority(int frameIndex, int originX, int originY,
             boolean hFlip, boolean vFlip, int paletteOverride, boolean forcedPriority) {
-        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0) {
+        if (frameIndex < 0 || frameIndex >= spriteSheet.getFrameCount() || patternBase < 0
+                || !isFrameRenderSafe(frameIndex)) {
             return;
         }
         SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
@@ -433,6 +448,106 @@ public class PatternSpriteRenderer {
                         graphicsManager.renderPatternWithId(patternIdx, reusableDesc, drawX, drawY);
                     });
         }
+    }
+
+    private boolean isFrameRenderSafe(int frameIndex) {
+        byte cached = frameValidationCache[frameIndex];
+        if (cached != 0) {
+            return cached == 1;
+        }
+        SpriteFrame<? extends SpriteFramePiece> frame = spriteSheet.getFrame(frameIndex);
+        boolean valid = arePiecesRenderSafe(frame != null ? frame.pieces() : null, frameIndex);
+        frameValidationCache[frameIndex] = (byte) (valid ? 1 : 2);
+        return valid;
+    }
+
+    private boolean arePiecesRenderSafe(List<? extends SpriteFramePiece> pieces, int frameIndex) {
+        String reason = validatePieces(pieces);
+        if (reason == null) {
+            return true;
+        }
+        LOG.warning("Suppressed suspicious sprite mapping frame: "
+                + describeSheet(frameIndex)
+                + ", patternBase=" + patternBase
+                + ", reason=" + reason);
+        return false;
+    }
+
+    private String validatePieces(List<? extends SpriteFramePiece> pieces) {
+        if (pieces == null) {
+            return "null piece list";
+        }
+        if (pieces.size() > MAX_FRAME_PIECES) {
+            return "pieceCount=" + pieces.size() + " exceeds " + MAX_FRAME_PIECES;
+        }
+
+        int totalTiles = 0;
+        boolean first = true;
+        int minX = 0;
+        int minY = 0;
+        int maxX = 0;
+        int maxY = 0;
+        Pattern[] patterns = spriteSheet.getPatterns();
+        int patternCount = patterns != null ? patterns.length : 0;
+
+        for (int i = 0; i < pieces.size(); i++) {
+            SpriteFramePiece piece = pieces.get(i);
+            if (piece == null) {
+                return "piece " + i + " is null";
+            }
+            int widthTiles = piece.widthTiles();
+            int heightTiles = piece.heightTiles();
+            if (widthTiles < 1 || widthTiles > 4 || heightTiles < 1 || heightTiles > 4) {
+                return "piece " + i + " has invalid size " + widthTiles + "x" + heightTiles;
+            }
+            if (Math.abs(piece.xOffset()) > MAX_ABS_PIECE_OFFSET_PIXELS
+                    || Math.abs(piece.yOffset()) > MAX_ABS_PIECE_OFFSET_PIXELS) {
+                return "piece " + i + " has extreme offset (" + piece.xOffset() + "," + piece.yOffset() + ")";
+            }
+            int pieceTiles = widthTiles * heightTiles;
+            totalTiles += pieceTiles;
+            if (totalTiles > MAX_FRAME_TILES) {
+                return "tileCount=" + totalTiles + " exceeds " + MAX_FRAME_TILES;
+            }
+            int tileIndex = piece.tileIndex();
+            if (tileIndex < 0 || tileIndex + pieceTiles > patternCount) {
+                return "piece " + i + " references tiles [" + tileIndex + ","
+                        + (tileIndex + pieceTiles) + ") outside patternCount=" + patternCount;
+            }
+
+            int left = piece.xOffset();
+            int top = piece.yOffset();
+            int right = left + widthTiles * Pattern.PATTERN_WIDTH - 1;
+            int bottom = top + heightTiles * Pattern.PATTERN_HEIGHT - 1;
+            if (first) {
+                minX = left;
+                minY = top;
+                maxX = right;
+                maxY = bottom;
+                first = false;
+            } else {
+                minX = Math.min(minX, left);
+                minY = Math.min(minY, top);
+                maxX = Math.max(maxX, right);
+                maxY = Math.max(maxY, bottom);
+            }
+        }
+        if (!first) {
+            int width = maxX - minX + 1;
+            int height = maxY - minY + 1;
+            if (width > MAX_FRAME_SPAN_PIXELS || height > MAX_FRAME_SPAN_PIXELS) {
+                return "bounds span " + width + "x" + height + " exceeds " + MAX_FRAME_SPAN_PIXELS;
+            }
+        }
+        return null;
+    }
+
+    private String describeSheet(int frameIndex) {
+        return "sheet=" + spriteSheet.getClass().getName()
+                + ", frame=" + frameIndex
+                + ", frameCount=" + spriteSheet.getFrameCount()
+                + ", patternCount=" + (spriteSheet.getPatterns() != null ? spriteSheet.getPatterns().length : 0)
+                + ", palette=" + spriteSheet.getPaletteIndex();
     }
 
     private FrameBounds computeFrameBounds(SpriteFrame<? extends SpriteFramePiece> frame) {

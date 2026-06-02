@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -162,6 +163,7 @@ public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance {
                            int minimumGroundSpeed) {
         activePlayers.add(player);
         player.setOnObject(true);
+        player.setLatchedSolidObject(Sonic3kObjectIds.MHZ_TWISTED_VINE, this);
         player.setDirection(direction);
         player.setFlipAngle(flipAngle);
         player.setFlipType(flipType);
@@ -232,6 +234,7 @@ public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance {
         NativePositionOps.writeYPosPreserveSubpixel(player, y);
         player.setFlipAngle(flipAngle);
         player.setOnObject(true);
+        player.setLatchedSolidObject(Sonic3kObjectIds.MHZ_TWISTED_VINE, this);
     }
 
     private static int wordDelta(int value, int origin) {
@@ -275,6 +278,7 @@ public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance {
     private void release(AbstractPlayableSprite player, String decision) {
         activePlayers.remove(player);
         player.setOnObject(false);
+        clearRideSupport(player);
         player.setFlipAngle(0);
         player.setFlipType(0);
         player.setFlipsRemaining(0);
@@ -285,7 +289,16 @@ public final class MhzTwistedVineObjectInstance extends AbstractObjectInstance {
     private void clearActiveRide(AbstractPlayableSprite player) {
         activePlayers.remove(player);
         player.setOnObject(false);
+        clearRideSupport(player);
         player.setFlipAngle(0);
         player.setFlipType(0);
+    }
+
+    private void clearRideSupport(AbstractPlayableSprite player) {
+        if (player.getLatchedSolidObjectInstance() == this
+                || (player.getLatchedSolidObjectInstance() == null
+                && player.getLatchedSolidObjectId() == Sonic3kObjectIds.MHZ_TWISTED_VINE)) {
+            player.setLatchedSolidObjectId(0);
+        }
     }
 }

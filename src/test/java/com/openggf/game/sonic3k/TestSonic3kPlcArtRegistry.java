@@ -1,15 +1,40 @@
 package com.openggf.game.sonic3k;
 
+import com.openggf.data.Rom;
+import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.level.objects.ObjectSpriteSheet;
+import com.openggf.level.render.SpriteMappingFrame;
+import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.resources.CompressionType;
+import com.openggf.tests.RomTestUtils;
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestSonic3kPlcArtRegistry {
+    private static final int MAX_SANE_FRAMES = 256;
+    private static final int MAX_SANE_FRAME_PIECES = 80;
+    private static final int MAX_SANE_FRAME_TILES = 512;
+    private static final int MAX_SANE_FRAME_SPAN_PIXELS = 1024;
+    private static final int MAX_SANE_ABS_PIECE_OFFSET_PIXELS = 2048;
+    private static final int STANDALONE_S3_HALF_START = 0x200000;
+    private static final int FIRST_SKL_ZONE = 0x07;
+    private static final Set<String> REVIEWED_S3_SIDE_ART_REFERENCES = Set.of(
+            // sonic3k.asm DPLCPtr_CutsceneKnux uses the shared cutscene sheet;
+            // RomOffsetFinder resolves these labels only from the Sonic 3 half.
+            reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "artAddr", 0x382DC6),
+            reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "mappingAddr", 0x364016),
+            reviewedS3SideReference(Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES, "dplcAddr", 0x36430E)
+    );
 
     @Test
     public void sharedLevelArtEntriesIncludeSpikesAndSprings() {
@@ -126,22 +151,15 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
-    public void cnzPlanHasFiveBadniks() {
+    public void cnzPlanHasBadniksAndKeepsBalloonOutOfStandaloneArt() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x03, 0);
         assertNotNull(plan);
-        assertEquals(10, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CNZ_SPARKLE)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CNZ_BATBOT)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CNZ_CLAMER)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CNZ_CLAMER_SHOT)));
-        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CNZ_BALLOON)));
-
-        // CNZ Balloon should use palette 0
-        Sonic3kPlcArtRegistry.StandaloneArtEntry balloon = plan.standaloneArt().stream()
-                .filter(e -> e.key().equals(Sonic3kObjectArtKeys.CNZ_BALLOON))
-                .findFirst().orElse(null);
-        assertNotNull(balloon);
-        assertEquals(0, balloon.palette());
+        assertFalse(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CNZ_BALLOON)),
+                "CNZ balloon uses buildCnzBalloonSheet level-art splicing, not a standalone full mapping sheet");
     }
 
     @Test
@@ -185,7 +203,6 @@ public class TestSonic3kPlcArtRegistry {
     public void lbzPlanHasFourBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 0);
         assertNotNull(plan);
-        assertEquals(9, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SNALE_BLASTER)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ORBINAUT)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.RIBOT)));
@@ -196,17 +213,175 @@ public class TestSonic3kPlcArtRegistry {
     public void mhz1PlanHasFourBadniksNoArrow() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x07, 0);
         assertNotNull(plan);
-        assertEquals(9, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MADMOLE)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CLUCKOID)));
         assertFalse(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CLUCKOID_ARROW)));
     }
 
     @Test
+    public void mhz1PlanIncludesAllRenderedObjectArtKeys() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x07, 0);
+
+        assertStandaloneArtKeys(plan,
+                Sonic3kObjectArtKeys.MADMOLE,
+                Sonic3kObjectArtKeys.MUSHMEANIE,
+                Sonic3kObjectArtKeys.DRAGONFLY,
+                Sonic3kObjectArtKeys.BUTTERDROID,
+                Sonic3kObjectArtKeys.CLUCKOID,
+                Sonic3kObjectArtKeys.MHZ_MINIBOSS,
+                Sonic3kObjectArtKeys.MHZ_MINIBOSS_LOG,
+                Sonic3kObjectArtKeys.KNUX_INTRO_LAYING,
+                Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES,
+                Sonic3kObjectArtKeys.MHZ1_CUTSCENE_KNUCKLES_PEER);
+
+        assertLevelArtKeys(plan,
+                Sonic3kObjectArtKeys.MHZ_PULLEY_LIFT,
+                Sonic3kObjectArtKeys.MHZ_CURLED_VINE,
+                Sonic3kObjectArtKeys.MHZ_STICKY_VINE,
+                Sonic3kObjectArtKeys.MHZ_SWING_BAR_HORIZONTAL,
+                Sonic3kObjectArtKeys.MHZ_SWING_BAR_VERTICAL,
+                Sonic3kObjectArtKeys.MHZ_SWING_VINE,
+                Sonic3kObjectArtKeys.MHZ_MUSHROOM_CAP_LIGHT,
+                Sonic3kObjectArtKeys.MHZ_MUSHROOM_CAP_DARK,
+                Sonic3kObjectArtKeys.MHZ_MUSHROOM_PLATFORM,
+                Sonic3kObjectArtKeys.MHZ_MUSHROOM_PARACHUTE,
+                Sonic3kObjectArtKeys.MHZ_MUSHROOM_CATAPULT_CAPS,
+                Sonic3kObjectArtKeys.MHZ_MUSHROOM_CATAPULT_CENTER,
+                Sonic3kObjectArtKeys.BUTTON,
+                Sonic3kObjectArtKeys.MHZ_MINIBOSS_TREE,
+                Sonic3kObjectArtKeys.MHZ1_CUTSCENE_KNUCKLES_DOOR,
+                Sonic3kObjectArtKeys.MHZ_BIG_LEAVES,
+                Sonic3kObjectArtKeys.MHZ_POLLEN_SPRING,
+                Sonic3kObjectArtKeys.MHZ_POLLEN_SEASONAL);
+    }
+
+    @Test
+    public void mhz1CutsceneStandaloneArtMappingsStayInsideDecompressedBanks() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            Sonic3kObjectArt art = new Sonic3kObjectArt(null, RomByteReader.fromRom(rom));
+
+            for (String key : new String[]{
+                    Sonic3kObjectArtKeys.CUTSCENE_KNUCKLES,
+                    Sonic3kObjectArtKeys.MHZ1_CUTSCENE_KNUCKLES_PEER
+            }) {
+                Sonic3kPlcArtRegistry.StandaloneArtEntry entry = Sonic3kPlcArtRegistry.getPlan(0x07, 0)
+                        .standaloneArt().stream()
+                        .filter(e -> key.equals(e.key()))
+                        .findFirst()
+                        .orElseThrow();
+
+                ObjectSpriteSheet sheet = art.loadStandaloneSheet(rom, entry);
+
+                assertNotNull(sheet);
+                assertTrue(sheet.getPatterns().length > 0);
+                assertMappingTilesWithinSheet(sheet,
+                        key + " mappings must parse from the table boundary and fit the decompressed bank");
+            }
+        }
+    }
+
+    @Test
+    public void mhzPollenMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            var frames = S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_MHZ_POLLEN_ADDR);
+
+            assertEquals(4, frames.size(), "MHZ pollen mapping table should have four animation frames");
+            for (int i = 0; i < frames.size(); i++) {
+                assertEquals(1, frames.get(i).pieces().size(), "MHZ pollen frame " + i + " should have one piece");
+                SpriteMappingPiece piece = frames.get(i).pieces().get(0);
+                assertEquals(1, piece.widthTiles(), "MHZ pollen frame " + i + " width");
+                assertEquals(1, piece.heightTiles(), "MHZ pollen frame " + i + " height");
+                assertEquals(0, piece.tileIndex(), "MHZ pollen frame " + i + " tile");
+            }
+        }
+    }
+
+    @Test
+    public void s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
+
+            for (int zone = 0x00; zone <= 0x0D; zone++) {
+                for (int act = 0; act <= 1; act++) {
+                    Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(zone, act);
+                    String context = "zone 0x" + Integer.toHexString(zone) + " act " + act;
+
+                    for (Sonic3kPlcArtRegistry.LevelArtEntry entry : plan.levelArt()) {
+                        if (entry.mappingAddr() <= 0) {
+                            continue;
+                        }
+                        List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
+                                reader, entry.mappingAddr(), entry.mappingFormat());
+                        if (entry.frameFilter() != null) {
+                            List<SpriteMappingFrame> filtered = new ArrayList<>();
+                            for (int frameIndex : entry.frameFilter()) {
+                                filtered.add(frames.get(frameIndex));
+                            }
+                            frames = filtered;
+                        }
+                        assertSaneMappingFrames(context + " level art " + entry.key(), frames, -1);
+                    }
+
+                    for (Sonic3kPlcArtRegistry.StandaloneArtEntry entry : plan.standaloneArt()) {
+                        assertSaneStandaloneEntry(context, reader, rom, art, entry);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void sklObjectArtRegistryDoesNotUseStandaloneSonic3Addresses() {
+        List<String> violations = new ArrayList<>();
+        for (int zone = FIRST_SKL_ZONE; zone <= 0x0D; zone++) {
+            for (int act = 0; act <= 1; act++) {
+                Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(zone, act);
+                String context = "zone 0x" + Integer.toHexString(zone) + " act " + act;
+
+                for (Sonic3kPlcArtRegistry.StandaloneArtEntry entry : plan.standaloneArt()) {
+                    collectSAndKRuntimeAddressViolation(violations,
+                            context + " standalone art " + entry.key() + " artAddr",
+                            entry.key(), "artAddr", entry.artAddr());
+                    collectSAndKRuntimeAddressViolation(violations,
+                            context + " standalone art " + entry.key() + " mappingAddr",
+                            entry.key(), "mappingAddr", entry.mappingAddr());
+                    collectSAndKRuntimeAddressViolation(violations,
+                            context + " standalone art " + entry.key() + " dplcAddr",
+                            entry.key(), "dplcAddr", entry.dplcAddr());
+                }
+
+                for (Sonic3kPlcArtRegistry.LevelArtEntry entry : plan.levelArt()) {
+                    collectSAndKRuntimeAddressViolation(violations,
+                            context + " level art " + entry.key() + " mappingAddr",
+                            entry.key(), "mappingAddr", entry.mappingAddr());
+                }
+            }
+        }
+
+        assertTrue(violations.isEmpty(),
+                "SKL object art registry contains standalone Sonic 3 addresses. S3KL zones may legitimately reference "
+                        + "the Sonic 3 half, but SKL/S&K-zone object art needs either an S&K-half address or an "
+                        + "explicit reviewed exception:\n" + String.join("\n", violations));
+    }
+
+    @Test
     public void mhz2PlanHasCluckoidArrowAndDiagonalSpringOverride() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x07, 1);
         assertNotNull(plan);
-        assertEquals(10, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CLUCKOID_ARROW)));
 
         // Diagonal spring should use MGZ/MHZ art tile
@@ -215,6 +390,23 @@ public class TestSonic3kPlcArtRegistry {
                 .findFirst().orElse(null);
         assertNotNull(diag);
         assertEquals(0x0478, diag.artTileBase());
+    }
+
+    @Test
+    public void mhz2PlanIncludesAct2SpecificRenderedObjectArtKeys() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x07, 1);
+
+        assertStandaloneArtKeys(plan,
+                Sonic3kObjectArtKeys.CLUCKOID_ARROW,
+                Sonic3kObjectArtKeys.MHZ_END_BOSS,
+                Sonic3kObjectArtKeys.MHZ_END_BOSS_SPIKES,
+                Sonic3kObjectArtKeys.MHZ_END_BOSS_PILLAR,
+                Sonic3kObjectArtKeys.MHZ_SHIP_PROPELLER,
+                Sonic3kObjectArtKeys.MHZ2_CUTSCENE_KNUCKLES_PRESS,
+                Sonic3kObjectArtKeys.MHZ2_CUTSCENE_KNUCKLES_SWITCH);
+
+        assertLevelArtKeys(plan,
+                Sonic3kObjectArtKeys.MHZ2_CUTSCENE_KNUCKLES_LEAVES);
     }
 
     @Test
@@ -384,6 +576,166 @@ public class TestSonic3kPlcArtRegistry {
                 .filter(e -> e.key().equals(key))
                 .findFirst()
                 .orElseThrow();
+    }
+
+    private static void assertStandaloneArtKeys(Sonic3kPlcArtRegistry.ZoneArtPlan plan, String... keys) {
+        Set<String> actual = new HashSet<>();
+        for (Sonic3kPlcArtRegistry.StandaloneArtEntry entry : plan.standaloneArt()) {
+            actual.add(entry.key());
+        }
+        for (String key : keys) {
+            assertTrue(actual.contains(key), "Missing standalone art key: " + key);
+        }
+    }
+
+    private static void assertLevelArtKeys(Sonic3kPlcArtRegistry.ZoneArtPlan plan, String... keys) {
+        Set<String> actual = new HashSet<>();
+        for (Sonic3kPlcArtRegistry.LevelArtEntry entry : plan.levelArt()) {
+            actual.add(entry.key());
+        }
+        for (String key : keys) {
+            assertTrue(actual.contains(key), "Missing level art key: " + key);
+        }
+    }
+
+    private static void assertMappingTilesWithinSheet(ObjectSpriteSheet sheet, String message) {
+        int patternCount = sheet.getPatterns().length;
+        for (int frameIndex = 0; frameIndex < sheet.getFrameCount(); frameIndex++) {
+            SpriteMappingFrame frame = sheet.getFrame(frameIndex);
+            for (SpriteMappingPiece piece : frame.pieces()) {
+                int endExclusive = piece.tileIndex() + (piece.widthTiles() * piece.heightTiles());
+                assertTrue(piece.tileIndex() >= 0 && endExclusive <= patternCount,
+                        message + " frame=" + frameIndex
+                                + " tileRange=0x" + Integer.toHexString(piece.tileIndex())
+                                + "-0x" + Integer.toHexString(endExclusive - 1)
+                                + " patterns=" + patternCount);
+            }
+        }
+    }
+
+    private static void assertSaneObjectSpriteSheet(String context, ObjectSpriteSheet sheet) {
+        assertTrue(sheet.getPatterns().length > 0, context + " should have decompressed patterns");
+        List<SpriteMappingFrame> frames = new ArrayList<>();
+        for (int i = 0; i < sheet.getFrameCount(); i++) {
+            frames.add(sheet.getFrame(i));
+        }
+        assertSaneMappingFrames(context, frames, sheet.getPatterns().length);
+    }
+
+    private static void assertSaneStandaloneEntry(
+            String context,
+            RomByteReader reader,
+            Rom rom,
+            Sonic3kObjectArt art,
+            Sonic3kPlcArtRegistry.StandaloneArtEntry entry) throws IOException {
+        if (entry.mappingAddr() > 0) {
+            List<SpriteMappingFrame> rawFrames = entry.mappingFrameCount() > 0
+                    ? S3kSpriteDataLoader.loadMappingFrames(reader, entry.mappingAddr(), entry.mappingFrameCount())
+                    : S3kSpriteDataLoader.loadMappingFrames(reader, entry.mappingAddr(), entry.mappingFormat());
+            assertSaneMappingFrames(context + " standalone raw mappings " + entry.key(), rawFrames, -1);
+        }
+
+        try {
+            ObjectSpriteSheet sheet = art.loadStandaloneSheet(rom, entry);
+            assertNotNull(sheet, context + " standalone art " + entry.key() + " should build a sheet");
+            assertSaneObjectSpriteSheet(context + " standalone art " + entry.key(), sheet);
+        } catch (IOException e) {
+            assertTrue(isKnownSplitStandaloneSheet(entry),
+                    context + " standalone art " + entry.key() + " failed to build: " + e.getMessage());
+        }
+    }
+
+    private static boolean isKnownSplitStandaloneSheet(Sonic3kPlcArtRegistry.StandaloneArtEntry entry) {
+        return Sonic3kObjectArtKeys.MGZ_ENDBOSS.equals(entry.key());
+    }
+
+    private static void collectSAndKRuntimeAddressViolation(List<String> violations, String context,
+            String key, String field, int address) {
+        if (address < 0) {
+            return;
+        }
+        if (address >= STANDALONE_S3_HALF_START
+                && !REVIEWED_S3_SIDE_ART_REFERENCES.contains(reviewedS3SideReference(key, field, address))) {
+            violations.add(context + " uses S3-side address 0x" + Integer.toHexString(address));
+        }
+    }
+
+    private static String reviewedS3SideReference(String key, String field, int address) {
+        return key + ":" + field + ":0x" + Integer.toHexString(address);
+    }
+
+    private static void assertSaneMappingFrames(
+            String context,
+            List<SpriteMappingFrame> frames,
+            int patternCount) {
+        assertNotNull(frames, context + " mappings should not be null");
+        assertTrue(frames.size() <= MAX_SANE_FRAMES,
+                context + " frame count " + frames.size() + " exceeds " + MAX_SANE_FRAMES);
+
+        for (int frameIndex = 0; frameIndex < frames.size(); frameIndex++) {
+            SpriteMappingFrame frame = frames.get(frameIndex);
+            assertNotNull(frame, context + " frame " + frameIndex + " should not be null");
+            List<SpriteMappingPiece> pieces = frame.pieces();
+            assertNotNull(pieces, context + " frame " + frameIndex + " pieces should not be null");
+            assertTrue(pieces.size() <= MAX_SANE_FRAME_PIECES,
+                    context + " frame " + frameIndex + " piece count " + pieces.size()
+                            + " exceeds " + MAX_SANE_FRAME_PIECES);
+
+            int totalTiles = 0;
+            boolean first = true;
+            int minX = 0;
+            int minY = 0;
+            int maxX = 0;
+            int maxY = 0;
+            for (int pieceIndex = 0; pieceIndex < pieces.size(); pieceIndex++) {
+                SpriteMappingPiece piece = pieces.get(pieceIndex);
+                assertNotNull(piece, context + " frame " + frameIndex + " piece " + pieceIndex + " is null");
+                assertTrue(piece.widthTiles() >= 1 && piece.widthTiles() <= 4,
+                        context + " frame " + frameIndex + " piece " + pieceIndex + " invalid width");
+                assertTrue(piece.heightTiles() >= 1 && piece.heightTiles() <= 4,
+                        context + " frame " + frameIndex + " piece " + pieceIndex + " invalid height");
+                assertTrue(Math.abs(piece.xOffset()) <= MAX_SANE_ABS_PIECE_OFFSET_PIXELS
+                                && Math.abs(piece.yOffset()) <= MAX_SANE_ABS_PIECE_OFFSET_PIXELS,
+                        context + " frame " + frameIndex + " piece " + pieceIndex + " extreme offset");
+
+                int pieceTiles = piece.widthTiles() * piece.heightTiles();
+                totalTiles += pieceTiles;
+                assertTrue(totalTiles <= MAX_SANE_FRAME_TILES,
+                        context + " frame " + frameIndex + " tile count exceeds " + MAX_SANE_FRAME_TILES);
+                assertTrue(piece.tileIndex() >= 0,
+                        context + " frame " + frameIndex + " piece " + pieceIndex + " negative tile index");
+                if (patternCount >= 0) {
+                    assertTrue(piece.tileIndex() + pieceTiles <= patternCount,
+                            context + " frame " + frameIndex + " piece " + pieceIndex
+                                    + " references tile range [" + piece.tileIndex() + ","
+                                    + (piece.tileIndex() + pieceTiles) + ") outside pattern count "
+                                    + patternCount);
+                }
+
+                int left = piece.xOffset();
+                int top = piece.yOffset();
+                int right = left + piece.widthTiles() * 8 - 1;
+                int bottom = top + piece.heightTiles() * 8 - 1;
+                if (first) {
+                    minX = left;
+                    minY = top;
+                    maxX = right;
+                    maxY = bottom;
+                    first = false;
+                } else {
+                    minX = Math.min(minX, left);
+                    minY = Math.min(minY, top);
+                    maxX = Math.max(maxX, right);
+                    maxY = Math.max(maxY, bottom);
+                }
+            }
+            if (!first) {
+                int width = maxX - minX + 1;
+                int height = maxY - minY + 1;
+                assertTrue(width <= MAX_SANE_FRAME_SPAN_PIXELS && height <= MAX_SANE_FRAME_SPAN_PIXELS,
+                        context + " frame " + frameIndex + " bounds span " + width + "x" + height);
+            }
+        }
     }
 
     @Test

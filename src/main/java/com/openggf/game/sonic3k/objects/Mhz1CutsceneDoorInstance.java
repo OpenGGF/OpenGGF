@@ -58,7 +58,7 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance imple
 
     @Override
     public boolean isHighPriority() {
-        return true;
+        return false;
     }
 
     @Override
@@ -95,7 +95,7 @@ public final class Mhz1CutsceneDoorInstance extends AbstractObjectInstance imple
     }
 
     private boolean shouldAutoRaiseFromPlayerPosition(PlayableEntity playerEntity) {
-        if (!parent.isDoorLowered() || playerEntity == null) {
+        if (!parent.isDoorLowered() || parent.isCutsceneDoorLatched() || playerEntity == null) {
             return false;
         }
         int playerX = playerEntity.getCentreX() & 0xFFFF;

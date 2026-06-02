@@ -16,12 +16,14 @@ import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
+import com.openggf.game.sonic3k.events.Sonic3kMHZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
 import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
@@ -37,6 +39,7 @@ import com.openggf.game.sonic3k.objects.HCZConveyorBeltObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
+import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -85,6 +88,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kHCZEvents hczEvents;
     private Sonic3kICZEvents iczEvents;
     private Sonic3kMGZEvents mgzEvents;
+    private Sonic3kMHZEvents mhzEvents;
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
             new S3kFixedAirCountdownManager();
 
@@ -197,11 +201,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else {
             mgzEvents = null;
         }
+        if (zone == Sonic3kZoneIds.ZONE_MHZ) {
+            mhzEvents = new Sonic3kMHZEvents();
+            mhzEvents.init(act);
+        } else {
+            mhzEvents = null;
+        }
 
         // Install typed zone runtime state into the registry.
         // Uses getActiveRuntime() to avoid the mode-checking side effects of
         // getCurrent() which can destroy the runtime during level loading.
         installZoneRuntimeState(zone, act);
+        installFixedDynamicObjects(zone);
     }
 
     @Override
@@ -265,10 +276,24 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new HczZoneRuntimeState(act, playerCharacter, hczEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_MGZ && mgzEvents != null) {
             registry.install(new MgzZoneRuntimeState(act, playerCharacter, mgzEvents));
+        } else if (zone == Sonic3kZoneIds.ZONE_MHZ && mhzEvents != null) {
+            registry.install(new MhzZoneRuntimeState(act, playerCharacter, mhzEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
         } else {
             registry.clear();
+        }
+    }
+
+    private void installFixedDynamicObjects(int zone) {
+        if (!GameServices.hasRuntime() || zone != Sonic3kZoneIds.ZONE_MHZ) {
+            return;
+        }
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        boolean alreadyInstalled = objectManager.getActiveObjects().stream()
+                .anyMatch(MhzPollenSpawnerInstance.class::isInstance);
+        if (!alreadyInstalled) {
+            objectManager.createDynamicObject(MhzPollenSpawnerInstance::new);
         }
     }
 
@@ -301,6 +326,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ) {
             mgzEvents.update(currentAct, frameCounter);
+        }
+        if (mhzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MHZ) {
+            mhzEvents.update(currentAct, frameCounter);
         }
         releasePendingMgzPostTransition();
         releasePendingCnzPostTransition();
@@ -743,6 +771,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return iczEvents;
     }
 
+    public Sonic3kMHZEvents getMhzEvents() {
+        return mhzEvents;
+    }
+
     @Override
     public void setHczBossFlag(boolean value) {
         if (hczEvents != null) {
@@ -1137,6 +1169,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public Sonic3kCNZEvents getCnzEventsForTest()  { return cnzEvents; }
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for MGZ. */
     public Sonic3kMGZEvents getMgzEventsForTest()  { return mgzEvents; }
+    /** Accessor for test/diagnostic use — returns the S3K zone event handler for MHZ. */
+    public Sonic3kMHZEvents getMhzEventsForTest()  { return mhzEvents; }
 
     @Override
     protected byte[] captureExtra() {

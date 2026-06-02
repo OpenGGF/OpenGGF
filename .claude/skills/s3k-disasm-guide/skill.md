@@ -106,7 +106,14 @@ mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" -Dexec
 
 ### Search ROM Binary
 
-Use `search-rom` to find inline assembly data (pointer tables, animation scripts, AniPLC tables, `dc.w`/`dc.b` directives) that have no binary file — the `search` and `find` commands only work with `binclude` items. This is especially useful for S3K where many data structures are inline.
+Use `search` or `find` first for labeled inline assembly data, including S3K mapping/DPLC/animation labels inside files reached by `include` directives. RomOffsetFinder indexes labels inside included `.asm` files and calculates their S&K-side ROM offset from address-bearing local labels such as `word_3DC64`.
+
+```bash
+# Resolve an included mapping table label directly
+mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" -Dexec.args="--game s3k find Map_MHZPollen" -q
+```
+
+Use `search-rom` only when the data has no usable label or when you are cross-checking a known byte pattern.
 
 ```bash
 # Search for known hex byte pattern (spaces optional)

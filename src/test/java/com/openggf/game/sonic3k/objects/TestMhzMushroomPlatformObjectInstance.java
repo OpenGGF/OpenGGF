@@ -77,6 +77,27 @@ class TestMhzMushroomPlatformObjectInstance {
     }
 
     @Test
+    void mushroomPlatformHonorsPlacementHFlipForSlopeAndRendering() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_MUSHROOM_PLATFORM)).thenReturn(renderer);
+        LevelManager levelManager = mock(LevelManager.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+
+        MhzMushroomPlatformObjectInstance platform = new MhzMushroomPlatformObjectInstance(
+                new ObjectSpawn(0x1400, 0x0600, MHZ_MUSHROOM_PLATFORM, 0, 1, false, 0));
+        platform.setServices(new TestObjectServices().withLevelManager(levelManager));
+
+        SlopedSolidProvider sloped = assertInstanceOf(SlopedSolidProvider.class, platform);
+        platform.appendRenderCommands(new ArrayList<>());
+
+        assertEquals(true, sloped.isSlopeFlipped(),
+                "SolidObjectTopSloped2 sees the object's preserved H-flip bit from render_flags");
+        verify(renderer).drawFrameIndex(0, 0x1400, 0x0600, true, false);
+    }
+
+    @Test
     void fallingSubtypeWaitsSixteenFramesAfterStandingThenAcceleratesDownward() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance platform = registry.create(new ObjectSpawn(

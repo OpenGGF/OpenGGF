@@ -9,6 +9,16 @@ description: Use when working with the S3K Pattern Load Cue system — runtime a
 
 Reference for the S3K Pattern Load Cue system: ROM format, runtime loading, GPU texture refresh, and zone event integration.
 
+## Mandatory Art Corruption Guard Tests
+
+When adding or changing S3K PLC-backed object art, standalone art, level-art mapping addresses, decompression sources, or `Sonic3kPlcArtRegistry` entries, run:
+
+```bash
+mvn "-Dtest=TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits" test
+```
+
+For assets with a known disassembly shape, add a focused `TestSonic3kPlcArtRegistry` test for exact frame count, piece count, tile dimensions, and tile indices. Keep `TestPatternSpriteRendererCorruptionGuard` passing when changing sprite rendering or sheet construction; it is the engine-level guard that logs and suppresses massive corrupted sprite frames at runtime.
+
 ## PLC Table Format
 
 ### Offs_PLC Offset Table

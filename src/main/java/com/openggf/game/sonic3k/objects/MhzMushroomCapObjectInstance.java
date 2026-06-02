@@ -189,6 +189,11 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean usesGroundHalfHeightForTopSolidContact() {
+        return true;
+    }
+
+    @Override
     public boolean usesPlatformObjectLandingSnap() {
         return false;
     }

@@ -92,6 +92,24 @@ class TestMhzSwingVineObjectInstance {
     }
 
     @Test
+    void jumpReleaseDoesNotDependOnPostPlayerHook() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance vine = registry.create(new ObjectSpawn(
+                0x2600, 0x0660, MHZ_SWING_VINE, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2600, (short) 0x0680);
+
+        vine.update(0, player);
+        player.setJumpInputPressed(true);
+        vine.update(1, player);
+
+        assertFalse(player.isObjectControlled(),
+                "loc_2291A clears object_control immediately when A/B/C is pressed, before the post-player hook");
+        assertTrue(player.getAir(), "Jump release sets Status_InAir on the same object update");
+        assertEquals((short) -0x0380, player.getYSpeed(),
+                "The same-frame release must apply the stationary handle launch velocity");
+    }
+
+    @Test
     void fastGrabJumpReleaseUsesSwingVelocity() {
         Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
         ObjectInstance vine = registry.create(new ObjectSpawn(
@@ -104,10 +122,27 @@ class TestMhzSwingVineObjectInstance {
         vine.update(1, player);
         ((PostPlayerUpdateHook) vine).updatePostPlayer(1, player);
 
-        assertEquals((short) 0x0600, player.getXSpeed(),
-                "Fast grab byte $81 triggers loc_22690, so swinging-mode release writes x_vel from cos(angle)*6");
+        assertEquals((short) 0x0800, player.getXSpeed(),
+                "Fast grab byte $81 triggers loc_22690; loc_2215C writes x_vel from cos(angle)<<3");
         assertEquals((short) 0, player.getYSpeed(),
-                "Fast grab byte $81 triggers loc_22690, so swinging-mode release writes y_vel from sin(angle)*6");
+                "Fast grab byte $81 triggers loc_22690; loc_2215C writes y_vel from sin(angle)<<3");
+    }
+
+    @Test
+    void fastReleasedVineTransitionsIntoRomReturnStateNearCenter() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        ObjectInstance vine = registry.create(new ObjectSpawn(
+                0x2600, 0x0660, MHZ_SWING_VINE, 0, 0, false, 0));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2600, (short) 0x0680);
+        player.setXSpeed((short) 0x0400);
+
+        vine.update(0, player);
+        player.setJumpInputPressed(true);
+        vine.update(1, player);
+        vine.update(2, player);
+
+        assertTrue(vine.traceDebugDetails().contains("state=RETURNING"),
+                "after the rider releases near angle 0, loc_226B0 branches to the damped loc_22748 return state");
     }
 
     @Test

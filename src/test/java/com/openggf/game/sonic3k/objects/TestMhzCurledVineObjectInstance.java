@@ -13,19 +13,39 @@ import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.TestablePlayableSprite;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestMhzCurledVineObjectInstance {
     private static final int MHZ_CURLED_VINE = 0x09;
+    private PatternSpriteRenderer renderer;
+    private LevelManager levelManager;
+
+    @BeforeEach
+    void setUpRenderer() {
+        renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
+        when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_CURLED_VINE)).thenReturn(renderer);
+        levelManager = mock(LevelManager.class);
+        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
+    }
 
     @Test
     void registryRoutesSklSlot09ToMhzCurledVineInsteadOfAizTree() {
@@ -86,22 +106,57 @@ class TestMhzCurledVineObjectInstance {
     }
 
     @Test
-    void curledVineRendersRomDisplayChildFrame() {
-        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
-        when(renderer.isReady()).thenReturn(true);
-        ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
-        when(renderManager.getRenderer(Sonic3kObjectArtKeys.MHZ_CURLED_VINE)).thenReturn(renderer);
-        LevelManager levelManager = mock(LevelManager.class);
-        when(levelManager.getObjectRenderManager()).thenReturn(renderManager);
-
+    void curledVineRendersRomDisplayChildSegments() {
         MhzCurledVineObjectInstance vine = new MhzCurledVineObjectInstance(new ObjectSpawn(
                 0x2000, 0x0600, MHZ_CURLED_VINE, 0, 0, false, 0));
         vine.setServices(new TestObjectServices().withLevelManager(levelManager));
 
         vine.appendRenderCommands(new ArrayList<>());
 
-        verify(renderManager).getRenderer(Sonic3kObjectArtKeys.MHZ_CURLED_VINE);
-        verify(renderer).drawFrameIndex(0, 0x2000, 0x0600, false, false);
+        verify(renderer, times(8)).drawFrameIndex(eq(0), anyInt(), anyInt(), eq(false), eq(false));
+        verify(renderer).drawFrameIndex(0, 0x1FC8, 0x0600, false, false);
+    }
+
+    @Test
+    void hFlippedCurledVineMirrorsDisplayChildSegments() {
+        MhzCurledVineObjectInstance vine = new MhzCurledVineObjectInstance(new ObjectSpawn(
+                0x2000, 0x0600, MHZ_CURLED_VINE, 0, 1, false, 0));
+        vine.setServices(new TestObjectServices().withLevelManager(levelManager));
+
+        vine.appendRenderCommands(new ArrayList<>());
+
+        verify(renderer, times(8)).drawFrameIndex(eq(0), anyInt(), anyInt(), eq(true), eq(false));
+        verify(renderer).drawFrameIndex(0, 0x2038, 0x0600, true, false);
+        assertTrue(vine.traceDebugDetails().contains("hflip=true"),
+                "Spawn render flag bit 0 must drive the MHZ curled vine's display-child horizontal flip");
+    }
+
+    @Test
+    void riderPressureMovesRenderedSegmentsAsCurveUncurls() {
+        MhzCurledVineObjectInstance vine = new MhzCurledVineObjectInstance(new ObjectSpawn(
+                0x2000, 0x0600, MHZ_CURLED_VINE, 0, 0, false, 0));
+        vine.setServices(new TestObjectServices().withLevelManager(levelManager));
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0x2030, (short) 0x05E0);
+
+        vine.appendRenderCommands(new ArrayList<>());
+        List<Integer> initialY = capturedRenderedYPositions();
+        clearInvocations(renderer);
+
+        SolidObjectListener listener = assertInstanceOf(SolidObjectListener.class, vine);
+        listener.onSolidContact(player, new SolidContact(true, false, false, true, false), 0);
+        for (int frame = 1; frame <= 8; frame++) {
+            vine.update(frame, player);
+        }
+        vine.appendRenderCommands(new ArrayList<>());
+
+        assertNotEquals(initialY, capturedRenderedYPositions(),
+                "Obj_MHZCurledVine animates by regenerating the eight child sprite positions from its curve state");
+    }
+
+    private List<Integer> capturedRenderedYPositions() {
+        ArgumentCaptor<Integer> yCaptor = ArgumentCaptor.forClass(Integer.class);
+        verify(renderer, times(8)).drawFrameIndex(eq(0), anyInt(), yCaptor.capture(), eq(false), eq(false));
+        return yCaptor.getAllValues();
     }
 
     private static final class ZoneForTestRegistry extends Sonic3kObjectRegistry {

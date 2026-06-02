@@ -43,6 +43,10 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance {
         this.fadeStarted = false;
     }
 
+    int getMusicIdForTest() {
+        return musicId;
+    }
+
     @Override
     public int getX() {
         return 0;
