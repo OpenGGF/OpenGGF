@@ -4,6 +4,12 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Implemented S3K Orbinaut ObjC0.** The Launch Base badnik now registers in
+  the S3KL object set, loads its existing ROM-backed Orbinaut art, spawns four
+  orbiting hurt orbs at the ROM cardinal offsets, and moves left or right only
+  while P1 is grounded and moving, matching `Obj_Orbinaut` / `sub_8C6D4`.
+  Focused Orbinaut and neighboring S3K badnik coverage passes.
+
 - **Fixed widescreen players walking past the level's right edge to their death.** The right level-boundary clamp was computed with `camera.getWidth()`, so at a widescreen viewport it moved right with the screen (ULTRA_21_9 → level edge + 184px). Since `camera.getMaxX()` is the native ROM scroll limit (`level_edge − 320`) and the level geometry only exists up to `maxX + 320`, this let the player walk past the right wall into the void beyond a camera lock and fall to their death. The boundary now uses the fixed native `LEVEL_DESIGN_WIDTH = 320` — it tracks the level's wall, not the render viewport — reproducing the ROM `+$128` / `+$128 + $40` values at every aspect ratio. The despawn/visibility windows still widen with the viewport (objects in view are not culled); only the level-wall clamp stays native. See KNOWN_DISCREPANCIES.md "Right-Boundary Is Viewport-Independent (Level Edge)".
 
 - **Debug overlay: live object-slot usage readout.** The player debug panel now shows `Objs: live/capacity peak N` — the dynamic object slots currently occupied vs the fixed ROM-sized pool, plus the peak since level start. The text is white normally, turns **orange** at ≥90% of capacity, and **red** when full (the point at which `allocateSlot()` fails and new spawns are dropped). Useful for spotting slot-pool pressure at widescreen.
