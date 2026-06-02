@@ -45,9 +45,11 @@ import java.util.Locale;
  *   mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=--label Map_MHZPollen"
  * </pre>
  *
- * <p>The pure decision logic (S3-standalone rejection, sonic3k.asm-vs-s3.asm half detection,
- * StandaloneArtEntry-vs-LevelArtEntry recommendation, constant-name suggestion) is isolated into
- * static methods that need no ROM and are unit-tested by {@code TestRomArtIntakeTool}.
+ * <p>The pure decision logic (S3-standalone address/source rejection,
+ * sonic3k.asm-vs-s3.asm half detection, StandaloneArtEntry-vs-LevelArtEntry recommendation,
+ * constant-name suggestion) is isolated into static methods that need no ROM and are unit-tested
+ * by {@code TestRomArtIntakeTool}. The CLI applies the source-file guard because label-search
+ * results do not carry numeric ROM offsets.
  */
 public final class RomArtIntakeTool {
 
