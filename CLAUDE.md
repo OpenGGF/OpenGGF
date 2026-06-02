@@ -74,6 +74,10 @@ Use **RomOffsetFinder** (`com.openggf.tools.disasm.RomOffsetFinder`) to search d
 
 **S3K note:** Compression type is encoded in label suffix (e.g. `AIZ1_8x8_Primary_KosM`) — the tool auto-infers, no file extension needed.
 
+## Agent Workflow Tooling
+
+Five `com.openggf.tools` CLIs reduce context loss when implementing objects/zones/trace fixes: `AgentWorkflowTool` (object-task preflight checklist), `RomArtIntakeTool` (S3K ROM-backed art/mapping/PLC intake), `ObjectScaffoldTool` (guard-friendly object/badnik + test skeleton), `TraceTriageTool` (first-divergence brief from a trace report), and `ZoneSpecNormalizerTool` (normalizes a zone-analysis spec). See [docs/agent-workflow/README.md](docs/agent-workflow/README.md) for exact invocations, plus the per-task runbooks, CI guard-failure explainer, pitfall index, documentation-obligation checklist, and delegation prompt templates.
+
 ## Architecture
 
 ### Entry Point

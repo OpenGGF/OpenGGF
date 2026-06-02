@@ -9,6 +9,15 @@ description: Use when investigating or fixing any *TraceReplay test failure acro
 
 Recorded BizHawk traces verify that the engine plays back ROM behaviour pixel-for-pixel given the same controller input. When a `*TraceReplay` test diverges, this skill describes how to diagnose, fix, and (when needed) regenerate traces — without taking shortcuts that mask engine bugs.
 
+## Agent Workflow Tooling
+
+Use these to get oriented on a divergence before you start editing engine code. The tool is comparison-only — it reads the report, it never hydrates engine state.
+
+- **TraceTriageTool** — reads `target/trace-reports/<game>_<zone>_report.json` and prints a first-divergence brief (frame/field, ROM vs engine value, likely owning subsystem, disasm search terms). Run after a failing `*TraceReplay` test produces a report:
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz1"`
+- **`docs/agent-workflow/runbooks/runbook-trace-divergence.md`** — step-by-step divergence runbook.
+- **`docs/agent-workflow/documentation-obligation-checklist.md`** — commit trailers, changelog justification, and the `docs/TRACE_FRONTIER_LOG.md` update obligation when a trace frontier moves.
+
 ## Core Mission Rules (apply to all trace work)
 
 1. **No hacks or dirty fixes.** Every behaviour change must be backed by the disassembly for the relevant game. Cite ROM file and line numbers in commits and code comments.

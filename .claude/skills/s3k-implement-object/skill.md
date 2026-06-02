@@ -20,6 +20,23 @@ When delegating agents to explore the disassembly, instruct them to use the **s3
 - Object system reference (S2-style field names: `routine`, `x_pos`, `y_pos`, etc.)
 - Zone abbreviations and IDs (AIZ, HCZ, MGZ, CNZ, FBZ, ICZ, LBZ, MHZ, SOZ, LRZ, SSZ, DEZ, DDZ, HPZ)
 
+## Agent Workflow Tooling
+
+Use these helpers to front-load preflight, scaffolding, and ROM-art intake before hand-writing code (all PowerShell-quoted):
+
+- **AgentWorkflowTool** — preflight checklist (zone-set resolution, registry status, RomOffsetFinder commands, required guards, docs):
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.AgentWorkflowTool" "-Dexec.args=object s3k MHZ 0x8A"`
+- **ObjectScaffoldTool** — guard-friendly object/badnik skeleton + JUnit5 test shell. `--game s3k --badnik` emits the `com.openggf.game.sonic3k.objects.badniks` package and extends `AbstractS3kBadnikInstance`:
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ObjectScaffoldTool" "-Dexec.args=--game s3k --class MhzFooObjectInstance --id 0x8A --badnik"`
+- **RomArtIntakeTool** — S3K ROM-backed art/mapping/PLC intake; wraps `RomOffsetFinder --game s3k`, rejects `s3.asm`-sourced labels (Sonic 3 standalone / S3L half — it classifies by source file; confirm the resolved offset is `< 0x200000` when you verify), recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints (accepts multiple labels):
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"`
+
+Companion docs under `docs/agent-workflow/`:
+- `runbooks/runbook-s3k-object.md` — primary end-to-end runbook for this skill
+- `ci-guard-failure-explainer.md` — maps a failing guard test to the correct fix
+- `pitfall-catalogue-index.md` — ROM pitfalls grouped by bug class
+- `documentation-obligation-checklist.md` — trailers / TRACE_FRONTIER_LOG / changelog obligations
+
 ## Implementation Process
 
 ### Current Priority: Route-Impact Objects First
