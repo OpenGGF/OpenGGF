@@ -6,6 +6,14 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **Expanded S3K Mushroom Hill parity and art-safety coverage.** MHZ now has fixes across Knuckles cutscene art/palette/music cleanup, swing/curled/twisted vines, mushroom platforms/catapults, pulley lifts, Madmole and Dragonfly behavior, miniboss arena/flame/music handling, debug object-name resolution, and post-cutscene palette restoration. Added engine-level sprite mapping corruption suppression/logging, ROM-backed S3K object-art crawler coverage, SKL/S3-side art-address guards with reviewed exceptions, and RomOffsetFinder support for labels inside included mapping files.
 
+- **Implemented S3K Orbinaut ObjC0.** The Launch Base badnik now registers in
+  the S3KL object set, loads its existing ROM-backed Orbinaut art, spawns four
+  orbiting hurt orbs at the ROM cardinal offsets, and moves left or right only
+  while P1 is grounded and moving, matching `Obj_Orbinaut` / `sub_8C6D4`.
+  Focused Orbinaut and neighboring S3K badnik coverage passes.
+
+- **Fixed widescreen players walking past the level's right edge to their death.** The right level-boundary clamp was computed with `camera.getWidth()`, so at a widescreen viewport it moved right with the screen (ULTRA_21_9 → level edge + 184px). Since `camera.getMaxX()` is the native ROM scroll limit (`level_edge − 320`) and the level geometry only exists up to `maxX + 320`, this let the player walk past the right wall into the void beyond a camera lock and fall to their death. The boundary now uses the fixed native `LEVEL_DESIGN_WIDTH = 320` — it tracks the level's wall, not the render viewport — reproducing the ROM `+$128` / `+$128 + $40` values at every aspect ratio. The despawn/visibility windows still widen with the viewport (objects in view are not culled); only the level-wall clamp stays native. See KNOWN_DISCREPANCIES.md "Right-Boundary Is Viewport-Independent (Level Edge)".
+
 - **Added the S3K MHZ updraft airflow path.** SKL slot `$14` now routes to `Obj_Updraft`, including the ROM `$40/$80` horizontal window, oscillating vertical lift curve, airborne/jump-state cleanup, shield action cancellation, `ground_vel=1`, positive-subtype flip setup, negative-subtype animation `$0F`, and quiet wind SFX cadence.
 
 - **Added the S3K MHZ swing vine grab/release path.** SKL slot `$10` now routes to `Obj_MHZSwingVine`, including the ROM handle position at `y_pos+$10`, hanging grab window, `object_control=3` capture, `byte_22A4C` hanging frame selection, swing-mode handoff, and jump release using the S&K `GetSineCosine` velocity scale.
