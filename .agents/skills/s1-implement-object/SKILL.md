@@ -20,6 +20,22 @@ When delegating agents to explore the disassembly, instruct them to use the **s1
 - Object system reference (S1 field names: `obRoutine`, `obX`, `obY`, etc.)
 - Zone abbreviations and IDs (GHZ, LZ, MZ, SLZ, SYZ, SBZ, FZ)
 
+## Agent Workflow Tooling
+
+Use these to bootstrap and de-risk the object task before/while implementing:
+
+- **AgentWorkflowTool** — preflight checklist (registry status, RomOffsetFinder commands, required guards, docs) for the object:
+  ```bash
+  mvn exec:java "-Dexec.mainClass=com.openggf.tools.AgentWorkflowTool" "-Dexec.args=object s1 GHZ 0x1F"
+  ```
+  (args: `<object> <s1|s2|s3k> <zone> [objectId] [act]`)
+- **ObjectScaffoldTool** — guard-friendly object/badnik skeleton + JUnit5 test shell (no `getInstance()`, no ctor `services()`, no `addDynamicObject`/`setDestroyed`; center-coord note). Add `--badnik` for an `AbstractBadnikInstance` subclass:
+  ```bash
+  mvn exec:java "-Dexec.mainClass=com.openggf.tools.ObjectScaffoldTool" "-Dexec.args=--game s1 --class CrabmeatBadnikInstance --id 0x1F --badnik"
+  ```
+- **Runbook:** `docs/agent-workflow/runbooks/runbook-s1-s2-object.md`
+- **Docs obligations:** `docs/agent-workflow/documentation-obligation-checklist.md` (trailers / changelog / TRACE_FRONTIER_LOG)
+
 ## Implementation Process
 
 ### Phase 1: Research & Discovery

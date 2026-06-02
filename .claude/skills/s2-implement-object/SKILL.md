@@ -7,6 +7,18 @@ description: Guide for implementing Sonic 2 objects and badniks with ROM-accurat
 
 Implement a Sonic 2 object or badnik with complete ROM accuracy. This skill guides complete implementation including art, animation, sound effects, all subtypes, and cross-validation against the disassembly.
 
+## Agent Workflow Tooling
+
+Run these before and during implementation to scaffold the task and stay on-policy:
+
+- **AgentWorkflowTool** — object preflight checklist (registry status, RomOffsetFinder commands, required guards, docs):
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.AgentWorkflowTool" "-Dexec.args=object s2 <zone> [objectId] [act]"`
+- **ObjectScaffoldTool** — guard-friendly object/badnik skeleton + JUnit5 test shell (no `getInstance()`, no ctor `services()`, no `addDynamicObject`/`setDestroyed`; center-coord note):
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ObjectScaffoldTool" "-Dexec.args=--game s2 --class ObjectNameObjectInstance --id 0x5C [--badnik]"`
+- **Runbook:** `docs/agent-workflow/runbooks/runbook-s1-s2-object.md` — end-to-end object implementation flow.
+- **CI guard fixes:** `docs/agent-workflow/ci-guard-failure-explainer.md` — guard test failure → correct fix.
+- **Doc obligations:** `docs/agent-workflow/documentation-obligation-checklist.md` — commit trailers, changelog, TRACE_FRONTIER_LOG.
+
 ## Inputs
 
 $ARGUMENTS: Object name or ID (e.g., "Masher", "0x5C", "Crawl badnik")

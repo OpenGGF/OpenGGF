@@ -13,6 +13,15 @@ The output is a **zone analysis spec** -- a structured document listing every fe
 
 Current S3K planning is slice-first. The analysis spec must distinguish features that block a playable route from features that are lower-impact polish. For the near term, call out relevance to AIZ -> HCZ continuity first, then CNZ, MGZ, and ICZ follow-up slices. Do not treat "all features in the zone" as equal priority.
 
+## Agent Workflow Tooling
+
+After drafting the Phase 5 spec, normalize it into the stable 13-section layout (palette cycling vs. mutation kept separate; `(not analyzed)` placeholders for gaps) before handing it to downstream implementation skills.
+
+- **ZoneSpecNormalizerTool** — normalize the analysis spec:
+  ```
+  mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=<path-to-zone-analysis-spec.md>"
+  ```
+
 ## Inputs
 
 $ARGUMENTS: Zone abbreviation (e.g., "AIZ", "HCZ", "MGZ", "CNZ", "FBZ", "ICZ", "LBZ", "MHZ", "SOZ", "LRZ", "HPZ", "SSZ", "DEZ")
