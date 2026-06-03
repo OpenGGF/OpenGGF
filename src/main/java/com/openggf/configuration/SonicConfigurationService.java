@@ -31,39 +31,42 @@ public class SonicConfigurationService {
 		TypeReference<Map<String, Object>> type = new TypeReference<>(){};
 
 		if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
-			// Native image: look for config.json next to the executable binary
+			// Native image: look for config.yaml next to the executable binary
 			File execConfig = findConfigNextToExecutable();
 			if (execConfig != null && execConfig.exists()) {
 				try {
-					config = mapper.readValue(execConfig, type);
+					config = readYamlFlat(execConfig);
 					loadedFromExistingFile = true;
 				} catch (IOException e) {
-					LOGGER.log(Level.WARNING, "Failed to load config.json from executable directory", e);
+					LOGGER.log(Level.WARNING, "Failed to load config.yaml from executable directory", e);
 				}
 			}
 		} else {
-			// JAR mode: look for config.json in the working directory
-			File file = resolveRelativeFile("config.json");
+			// JAR mode: look for config.yaml in the working directory
+			File file = resolveRelativeFile("config.yaml");
 			if (file.exists()) {
 				try {
-					config = mapper.readValue(file, type);
+					config = readYamlFlat(file);
 					loadedFromExistingFile = true;
 				} catch (IOException e) {
-					LOGGER.log(Level.WARNING, "Failed to load config.json from working directory", e);
+					LOGGER.log(Level.WARNING, "Failed to load config.yaml from working directory", e);
 				}
 			}
 		}
 
 		if (config == null) {
-			try (InputStream is = getClass().getResourceAsStream("/config.json")) {
+			try (InputStream is = getClass().getResourceAsStream("/config.yaml")) {
 				if (is != null) {
-					config = mapper.readValue(is, type);
+					com.fasterxml.jackson.databind.ObjectMapper yaml =
+							new com.fasterxml.jackson.dataformat.yaml.YAMLMapper();
+					Map<String, Object> nested = yaml.readValue(is, type);
+					config = ConfigFlattener.flatten(nested).flat();
 				} else {
-					LOGGER.log(Level.WARNING, "Could not find config.json, using defaults.");
+					LOGGER.log(Level.WARNING, "Could not find config.yaml, using defaults.");
 					config = new HashMap<>();
 				}
 			} catch (IOException e) {
-				LOGGER.log(Level.WARNING, "Failed to load config.json from classpath", e);
+				LOGGER.log(Level.WARNING, "Failed to load config.yaml from classpath", e);
 				config = new HashMap<>();
 			}
 		}
@@ -277,12 +280,12 @@ public class SonicConfigurationService {
 	}
 
 	public void saveConfig() {
-		ObjectMapper mapper = new ObjectMapper();
 		File target = resolveConfigFile();
 		try {
-			mapper.writerWithDefaultPrettyPrinter().writeValue(target, config);
+			String yaml = new ConfigYamlWriter().write(config);
+			java.nio.file.Files.writeString(target.toPath(), yaml);
 		} catch (IOException e) {
-			LOGGER.log(Level.WARNING, "Failed to save config.json", e);
+			LOGGER.log(Level.WARNING, "Failed to save config.yaml", e);
 		}
 	}
 
@@ -445,8 +448,20 @@ public class SonicConfigurationService {
 		putDefault(key, GlfwKeyNameResolver.nameOf(glfwKeyCode));
 	}
 
+	private Map<String, Object> readYamlFlat(File file) throws IOException {
+		com.fasterxml.jackson.databind.ObjectMapper yaml =
+				new com.fasterxml.jackson.dataformat.yaml.YAMLMapper();
+		TypeReference<Map<String, Object>> type = new TypeReference<>() {};
+		Map<String, Object> nested = yaml.readValue(file, type);
+		ConfigFlattener.Result result = ConfigFlattener.flatten(nested);
+		for (String unknown : result.unknownKeys()) {
+			LOGGER.warning("Unknown config key ignored: " + unknown);
+		}
+		return result.flat();
+	}
+
 	/**
-	 * Finds config.json next to the native image executable binary.
+	 * Finds config.yaml next to the native image executable binary.
 	 * Uses ProcessHandle to determine the executable path.
 	 */
 	private static File findConfigNextToExecutable() {
@@ -455,7 +470,7 @@ public class SonicConfigurationService {
 			if (!cmd.isEmpty()) {
 				File execDir = new File(cmd).getParentFile();
 				if (execDir != null) {
-					return new File(execDir, "config.json");
+					return new File(execDir, "config.yaml");
 				}
 			}
 		} catch (Exception ignored) {
@@ -482,9 +497,9 @@ public class SonicConfigurationService {
 	private static File resolveConfigFile() {
 		if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
 			File execConfig = findConfigNextToExecutable();
-			return (execConfig != null) ? execConfig : resolveRelativeFile("config.json");
+			return (execConfig != null) ? execConfig : resolveRelativeFile("config.yaml");
 		}
-		return resolveRelativeFile("config.json");
+		return resolveRelativeFile("config.yaml");
 	}
 
 	private static int resolveKeyCode(Object value) {

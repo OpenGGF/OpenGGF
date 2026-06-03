@@ -1,13 +1,14 @@
 package com.openggf.configuration;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,28 +16,42 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSonicConfigurationFileBootstrap {
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final YAMLMapper YAML_MAPPER = new YAMLMapper();
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() { };
 
     @TempDir
     Path tempDir;
 
+    /**
+     * Reads a saved config.yaml (grouped/nested) back to a flat map using the same
+     * flattening logic the service uses on load.
+     */
+    private static Map<String, Object> readFlatYaml(Path path) throws IOException {
+        Map<String, Object> nested = YAML_MAPPER.readValue(path.toFile(), MAP_TYPE);
+        return ConfigFlattener.flatten(nested).flat();
+    }
+
     @Test
     void getInstance_backfillsMissingDefaultsIntoExistingFile() throws IOException {
         String originalUserDir = System.getProperty("user.dir");
-        Path configPath = tempDir.resolve("config.json");
+        Path configPath = tempDir.resolve("config.yaml");
 
         try {
-            Map<String, Object> sparseConfig = new java.util.HashMap<>();
-            sparseConfig.put(SonicConfiguration.UP.name(), "W");
-            OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValue(configPath.toFile(), sparseConfig);
+            // Write a minimal nested YAML: UP lives at input.player1.up
+            Map<String, Object> player1 = new LinkedHashMap<>();
+            player1.put("up", "W");
+            Map<String, Object> inputSection = new LinkedHashMap<>();
+            inputSection.put("player1", player1);
+            Map<String, Object> sparseConfig = new LinkedHashMap<>();
+            sparseConfig.put("input", inputSection);
+            YAML_MAPPER.writeValue(configPath.toFile(), sparseConfig);
 
             System.setProperty("user.dir", tempDir.toString());
             SonicConfigurationService.resetStaticInstance();
 
             SonicConfigurationService service = SonicConfigurationService.getInstance();
 
-            Map<String, Object> persisted = OBJECT_MAPPER.readValue(configPath.toFile(), MAP_TYPE);
+            Map<String, Object> persisted = readFlatYaml(configPath);
             assertEquals("W", persisted.get(SonicConfiguration.UP.name()),
                     "Existing value should be preserved");
             assertEquals(640, ((Number) persisted.get(SonicConfiguration.SCREEN_WIDTH.name())).intValue(),
@@ -58,7 +73,7 @@ class TestSonicConfigurationFileBootstrap {
     @Test
     void ensureConfigFileExists_createsDefaultConfigWhenMissing() throws IOException {
         String originalUserDir = System.getProperty("user.dir");
-        Path configPath = tempDir.resolve("config.json");
+        Path configPath = tempDir.resolve("config.yaml");
 
         try {
             System.setProperty("user.dir", tempDir.toString());
@@ -70,11 +85,13 @@ class TestSonicConfigurationFileBootstrap {
 
             service.ensureConfigFileExists();
 
-            assertTrue(Files.exists(configPath), "First startup should materialize config.json");
+            assertTrue(Files.exists(configPath), "First startup should materialize config.yaml");
 
-            Map<String, Object> savedConfig = OBJECT_MAPPER.readValue(configPath.toFile(), MAP_TYPE);
+            Map<String, Object> savedConfig = readFlatYaml(configPath);
             assertEquals(640, ((Number) savedConfig.get(SonicConfiguration.SCREEN_WIDTH.name())).intValue());
-            assertEquals(320, ((Number) savedConfig.get(SonicConfiguration.SCREEN_WIDTH_PIXELS.name())).intValue());
+            // SCREEN_WIDTH_PIXELS is DERIVED — ConfigYamlWriter never persists it
+            assertFalse(savedConfig.containsKey(SonicConfiguration.SCREEN_WIDTH_PIXELS.name()),
+                    "SCREEN_WIDTH_PIXELS is derived and must not be persisted");
             assertEquals(service.getString(SonicConfiguration.DEFAULT_ROM),
                     savedConfig.get(SonicConfiguration.DEFAULT_ROM.name()));
             assertEquals("Q", savedConfig.get(SonicConfiguration.FRAME_STEP_KEY.name()));
