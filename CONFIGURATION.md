@@ -159,8 +159,11 @@ CLI flags (all optional except `--trace`; unspecified flags fall back to the `CA
 | `--scale <n>` | `CAPTURE_SCALE` | Integer nearest-neighbor upscale factor. |
 | `--fps <n>` | `CAPTURE_FPS` | Output frame rate. |
 | `--codec <name>` | `CAPTURE_CODEC` | Capture video codec. |
+| `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS` | Hide / show the desync ghost(s) in the captured video (overrides the config flag for this run). |
 
-Desync-ghost / game-HUD / debug-HUD visibility during capture is governed by the `TRACE_SHOW_*` keys in the Debug section.
+Desync-ghost / game-HUD / debug-HUD visibility during capture is governed by the `TRACE_SHOW_*` keys in the Debug section; `--no-ghosts`/`--ghosts` is a per-run override for the ghost flag. Game-HUD and debug-HUD visibility are set via those config keys (no CLI flag yet).
+
+Audio: headless capture installs an offline `LWJGLAudioBackend` that synthesizes the SMPS music for the recording but emits nothing to the sound device (no speaker output). Audio is captured at the engine's 48 kHz synthesis rate and muxed as lossless FLAC, synced 1:1 with video.
 
 ## Debug
 

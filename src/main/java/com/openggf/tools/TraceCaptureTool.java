@@ -70,7 +70,8 @@ public final class TraceCaptureTool {
      * {@code --codec}, and {@code --out-dir} fall back to the {@code CAPTURE_*}
      * config defaults.
      */
-    public record Args(String trace, Path outDir, int scale, int fps, String codec) {
+    public record Args(String trace, Path outDir, int scale, int fps, String codec,
+                       boolean showGhosts) {
 
         public static Args parse(String[] argv) {
             SonicConfigurationService config = SonicConfigurationService.getInstance();
@@ -79,6 +80,7 @@ public final class TraceCaptureTool {
             int scale = config.getInt(SonicConfiguration.CAPTURE_SCALE);
             int fps = config.getInt(SonicConfiguration.CAPTURE_FPS);
             String codec = config.getString(SonicConfiguration.CAPTURE_CODEC);
+            boolean showGhosts = config.getBoolean(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS);
 
             for (int i = 0; i < argv.length; i++) {
                 String arg = argv[i];
@@ -88,13 +90,15 @@ public final class TraceCaptureTool {
                     case "--scale" -> scale = Integer.parseInt(requireValue(argv, ++i, arg));
                     case "--fps" -> fps = Integer.parseInt(requireValue(argv, ++i, arg));
                     case "--codec" -> codec = requireValue(argv, ++i, arg);
+                    case "--no-ghosts" -> showGhosts = false;
+                    case "--ghosts" -> showGhosts = true;
                     default -> throw new IllegalArgumentException("Unknown argument: " + arg);
                 }
             }
             if (trace == null || trace.isBlank()) {
                 throw new IllegalArgumentException("--trace <id|name|dir> is required");
             }
-            return new Args(trace, Paths.get(outDir), scale, fps, codec);
+            return new Args(trace, Paths.get(outDir), scale, fps, codec, showGhosts);
         }
 
         private static String requireValue(String[] argv, int index, String flag) {
@@ -133,6 +137,11 @@ public final class TraceCaptureTool {
      * it down in {@code finally}.
      */
     private HeadlessGameBoot run(Args args) throws Exception {
+        // Apply the desync-ghost toggle so the shared LevelRenderer gate
+        // (TraceRenderVisibility) honors it during capture.
+        SonicConfigurationService.getInstance().setConfigValue(
+                SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, args.showGhosts());
+
         // --- resolve trace -------------------------------------------------
         TraceEntry entry = resolveTrace(args.trace());
         System.out.println("Capturing trace: " + entry.dir()
