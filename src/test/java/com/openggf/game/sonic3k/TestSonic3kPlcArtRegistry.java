@@ -210,6 +210,37 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lbzPlanIncludesRideGrappleLevelArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 0);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry grapple = plan.levelArt().stream()
+                .filter(e -> e.key().equals(Sonic3kObjectArtKeys.LBZ_RIDE_GRAPPLE))
+                .findFirst().orElse(null);
+
+        assertNotNull(grapple, "Obj_LBZRideGrapple uses resident LBZ misc art and must be in the LBZ level-art plan");
+        assertEquals(Sonic3kConstants.MAP_LBZ_RIDE_GRAPPLE_ADDR, grapple.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_LBZ_MISC + 0x70, grapple.artTileBase());
+        assertEquals(1, grapple.palette());
+    }
+
+    @Test
+    public void lbzRideGrappleMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            var frames = S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_RIDE_GRAPPLE_ADDR);
+
+            assertEquals(3, frames.size(), "Map_LBZRideGrapple has top, chain-link, and handle frames");
+            assertRideGrapplePiece(frames.get(0), 2, 2, 0);
+            assertRideGrapplePiece(frames.get(1), 1, 1, 4);
+            assertRideGrapplePiece(frames.get(2), 2, 2, 5);
+        }
+    }
+
+    @Test
     public void mhz1PlanHasFourBadniksNoArrow() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x07, 0);
         assertNotNull(plan);
@@ -611,6 +642,14 @@ public class TestSonic3kPlcArtRegistry {
                                 + " patterns=" + patternCount);
             }
         }
+    }
+
+    private static void assertRideGrapplePiece(SpriteMappingFrame frame, int widthTiles, int heightTiles, int tileIndex) {
+        assertEquals(1, frame.pieces().size(), "LBZ ride grapple frame should have one mapping piece");
+        SpriteMappingPiece piece = frame.pieces().getFirst();
+        assertEquals(widthTiles, piece.widthTiles());
+        assertEquals(heightTiles, piece.heightTiles());
+        assertEquals(tileIndex, piece.tileIndex());
     }
 
     private static void assertSaneObjectSpriteSheet(String context, ObjectSpriteSheet sheet) {

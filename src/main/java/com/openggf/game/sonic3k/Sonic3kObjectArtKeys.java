@@ -236,6 +236,7 @@ public final class Sonic3kObjectArtKeys {
 
     // LBZ badniks
     public static final String SNALE_BLASTER = "lbz_snale_blaster";
+    public static final String LBZ_RIDE_GRAPPLE = "lbz_ride_grapple";
     public static final String ORBINAUT = "lbz_orbinaut";
     public static final String RIBOT = "lbz_ribot";
     public static final String CORKEY = "lbz_corkey";

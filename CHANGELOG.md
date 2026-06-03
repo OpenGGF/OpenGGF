@@ -4,6 +4,15 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Implemented S3K LBZ ride grapple Obj17.** S3KL slot `$17` now routes to
+  `Obj_LBZRideGrapple`, including ROM path-range subtype selection, chain and
+  handle extension/sway, native P2-before-P1 grab handling, `object_control=3`
+  carry state, jump release launch state, path-end ejection, and ROM-backed LBZ
+  misc mappings/art registration. The handle swing now reads the high byte of
+  the ROM angle word, avoiding low-byte cardinal jumps while Sonic is carried,
+  and jump release suppresses the stale held-button edge so insta-shield waits
+  for a real release/re-press.
+
 - **Recovered clobbered widescreen title-card and CI metadata changes.** Sonic 2 title cards once again center their native 320-wide composition in the active projection, extend blackout/blue/yellow/red planes across the full viewport, and apply edge margins so slide-out elements clear widescreen side bands. Added a guard test for that manager wiring. Removed invalid disassembly gitlinks that had no `.gitmodules` entries, which broke GitHub Actions checkout/policy cleanup while leaving local reference checkouts ignored.
 
 - **Recovered clobbered MHZ parity and CI guard changes.** Restored the missing object-control, native-player participation, touch-response-profile, rewind-policy, hidden-monitor, twisted-ramp, LBZ alarm, still-sprite footprint, and cross-platform disassembly-label fixes that had been present locally but were not included in the pushed branch, so CI now exercises the same recovered tree as local verification.

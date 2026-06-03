@@ -180,6 +180,7 @@ public class Sonic3kConstants {
     public static final int MAP_CNZ_CORK_FLOOR_ADDR = 0x229C48;   // Map_CNZCorkFloor (2 frames, 8/16 pieces)
     public static final int MAP_ICZ_CORK_FLOOR_ADDR = 0x229CE0;   // Map_ICZCorkFloor (12 frames: 6 intact pairs + break frames)
     public static final int MAP_LBZ_CORK_FLOOR_ADDR = 0x229EE8;   // Map_LBZCorkFloor (2 frames, 8/16 pieces)
+    public static final int MAP_LBZ_RIDE_GRAPPLE_ADDR = 0x026930; // Map_LBZRideGrapple (3 frames, S&K-side)
     public static final int MAP_FBZ_CORK_FLOOR_ADDR = 0x2A920;    // Map_FBZCorkFloor (2 frames, 2/4 pieces, in sonic3k.asm)
 
     // ===== Breakable Wall mappings (Obj_BreakableWall, ID 0x0D) =====
