@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Recovered clobbered widescreen title-card and CI metadata changes.** Sonic 2 title cards once again center their native 320-wide composition in the active projection, extend blackout/blue/yellow/red planes across the full viewport, and apply edge margins so slide-out elements clear widescreen side bands. Added a guard test for that manager wiring. Removed invalid disassembly gitlinks that had no `.gitmodules` entries, which broke GitHub Actions checkout/policy cleanup while leaving local reference checkouts ignored.
+
 - **Expanded S3K Mushroom Hill parity and art-safety coverage.** MHZ now has fixes across Knuckles cutscene art/palette/music cleanup, swing/curled/twisted vines, mushroom platforms/catapults, pulley lifts, Madmole and Dragonfly behavior, miniboss arena/flame/music handling, debug object-name resolution, and post-cutscene palette restoration. Added engine-level sprite mapping corruption suppression/logging, ROM-backed S3K object-art crawler coverage, SKL/S3-side art-address guards with reviewed exceptions, and RomOffsetFinder support for labels inside included mapping files.
 
 - **Implemented S3K Orbinaut ObjC0.** The Launch Base badnik now registers in
