@@ -14,6 +14,7 @@ import com.openggf.level.objects.SolidRoutineKind;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.Sensor;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -75,6 +76,19 @@ class TestMonitorObjectInstance {
         assertEquals(0x0120, player.getYSpeed() & 0xFFFF,
                 "Blocked monitor hits must leave the player's Y speed unchanged");
         verify(objectManager, never()).markRemembered(monitor.getSpawn());
+    }
+
+    @Test
+    void touchProfileRechecksWhileOverlappingBecauseRollAnimationCanLag() {
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, 0x26, 0x00, 0, false, 0),
+                "Monitor");
+
+        TouchResponseProfile profile = monitor.getTouchResponseProfile();
+
+        assertTrue(profile.continuousCallbacks(),
+                "S2 TouchResponse polls monitors every frame; if the first SPECIAL callback sees a stale "
+                        + "non-roll animation, a later callback in the same overlap must still break it");
     }
 
     @Test

@@ -342,6 +342,14 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     }
 
     @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        // ROM TouchResponse polls Obj26 every frame. The first overlap can see
+        // status.player.rolling before anim reaches AniIDSonAni_Roll, so keep
+        // rechecking while the player remains inside the monitor touch box.
+        return true;
+    }
+
+    @Override
     public SolidObjectParams getSolidParams() {
         return new SolidObjectParams(0x1A, 0x0F, 0x10);
     }

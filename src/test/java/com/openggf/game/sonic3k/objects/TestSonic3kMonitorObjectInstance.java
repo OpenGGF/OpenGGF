@@ -15,6 +15,7 @@ import com.openggf.level.objects.SolidRoutineKind;
 import com.openggf.level.objects.SolidRoutineProfile;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.TouchCategory;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.physics.Direction;
 import com.openggf.physics.Sensor;
@@ -69,6 +70,17 @@ class TestSonic3kMonitorObjectInstance {
                 "Blocked monitor hits must leave the player's Y speed unchanged");
         assertTrue(monitor.isSolidFor(player),
                 "SolidObject_Monitor_SonicKnux uses the same animation-id gate");
+    }
+
+    @Test
+    void touchProfileRechecksWhileOverlappingBecauseRollAnimationCanLag() {
+        Sonic3kMonitorObjectInstance monitor = monitor();
+
+        TouchResponseProfile profile = monitor.getTouchResponseProfile();
+
+        assertTrue(profile.continuousCallbacks(),
+                "S3K TouchResponse polls monitors every frame; if the first SPECIAL callback sees a stale "
+                        + "non-roll animation, a later callback in the same overlap must still break it");
     }
 
     @Test
