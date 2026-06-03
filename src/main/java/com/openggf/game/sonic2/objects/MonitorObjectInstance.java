@@ -225,6 +225,17 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
             return;
         }
 
+        // ROM Touch_Monitor .breakMonitor: cmpa.w #MainCharacter,a0 / beq +
+        // / tst.w (Two_player_mode).w / beq return. A CPU sidekick can knock a
+        // monitor down from below (handled above) but cannot break it in
+        // single-player mode — only the lead character, or a human-controlled
+        // player in 2P/competition mode, may. 2P mode is unimplemented, so the
+        // sidekick is always blocked here. (s2.asm:85245-85249; S1/S3K match.)
+        if (isSidekick(player)) {
+            lastTouchBranch = "sidekick-no-break";
+            return;
+        }
+
         // Hitting from above (Moving Down or Stationary)
         // ROM: Touch_Monitor checks anim(a0) == AniIDSonAni_Roll here, not the
         // broader rolling status bit. The animation transition lags status changes

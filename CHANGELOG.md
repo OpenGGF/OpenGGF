@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Fixed the S2 CPU sidekick being able to break monitors.** `MonitorObjectInstance` now gates the break path on the lead-character check from ROM `Touch_Monitor.breakMonitor` (`cmpa.w #MainCharacter,a0`; s2.asm:85245-85249), so a CPU sidekick can no longer destroy a monitor in single-player mode. The sidekick can still knock a monitor down from below — matching the ROM, where the gate sits only in the break path, not the hit-from-below fall path. S1 and S3K monitors already had this gate; only S2 was missing it.
+
 - **Recovered clobbered widescreen title-card and CI metadata changes.** Sonic 2 title cards once again center their native 320-wide composition in the active projection, extend blackout/blue/yellow/red planes across the full viewport, and apply edge margins so slide-out elements clear widescreen side bands. Added a guard test for that manager wiring. Removed invalid disassembly gitlinks that had no `.gitmodules` entries, which broke GitHub Actions checkout/policy cleanup while leaving local reference checkouts ignored.
 
 - **Recovered clobbered MHZ parity and CI guard changes.** Restored the missing object-control, native-player participation, touch-response-profile, rewind-policy, hidden-monitor, twisted-ramp, LBZ alarm, still-sprite footprint, and cross-platform disassembly-label fixes that had been present locally but were not included in the pushed branch, so CI now exercises the same recovered tree as local verification.

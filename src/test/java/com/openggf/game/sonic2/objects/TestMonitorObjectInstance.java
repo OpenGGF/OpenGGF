@@ -104,6 +104,63 @@ class TestMonitorObjectInstance {
     }
 
     @Test
+    void sidekickCannotBreakMonitorFromAbove() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, 0x26, 0x00, 0, false, 0),
+                "Monitor");
+        monitor.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+
+        DummyPlayer sidekick = new DummyPlayer();
+        sidekick.setCpuControlled(true);
+        sidekick.setRolling(true);
+        sidekick.setAnimationId(Sonic2AnimationIds.ROLL);
+        sidekick.setYSpeed((short) 0x0120);
+
+        monitor.onTouchResponse(sidekick, TOUCH_RESULT, 1);
+
+        assertFalse(isBroken(monitor),
+                "S2 Touch_Monitor gates the break path on cmpa.w #MainCharacter,a0 — a CPU "
+                        + "sidekick cannot break a monitor in single-player mode");
+        assertEquals(0x0120, sidekick.getYSpeed() & 0xFFFF,
+                "Blocked sidekick break must leave the player's Y speed unchanged");
+        verify(objectManager, never()).markRemembered(monitor.getSpawn());
+    }
+
+    @Test
+    void sidekickCanStillKnockMonitorDownFromBelow() {
+        ObjectManager objectManager = mock(ObjectManager.class);
+        MonitorObjectInstance monitor = new MonitorObjectInstance(
+                new ObjectSpawn(0x0100, 0x0100, 0x26, 0x00, 0, false, 0),
+                "Monitor");
+        monitor.setServices(new StubObjectServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return objectManager;
+            }
+        });
+
+        // ROM Touch_Monitor: the cmpa.w #MainCharacter gate lives only in the
+        // break path. The hit-from-below "knock it down" branch runs first and
+        // is not gated, so a sidekick can still make a monitor fall.
+        DummyPlayer sidekick = new DummyPlayer();
+        sidekick.setCpuControlled(true);
+        sidekick.setYSpeed((short) -0x0120); // moving upward, into the bottom
+        sidekick.setY((short) 0x0130);       // player centre well below the monitor
+
+        monitor.onTouchResponse(sidekick, TOUCH_RESULT, 1);
+
+        assertFalse(isBroken(monitor), "Hitting from below must not break the monitor");
+        assertTrue(isFalling(monitor),
+                "A sidekick hitting the monitor from below should still knock it down");
+    }
+
+    @Test
     void solidityUsesGenericSolidObjectContGeometry() {
         MonitorObjectInstance monitor = new MonitorObjectInstance(
                 new ObjectSpawn(0x1E10, 0x0291, 0x26, 0x00, 0, false, 0),
@@ -128,8 +185,16 @@ class TestMonitorObjectInstance {
     }
 
     private static boolean isBroken(MonitorObjectInstance monitor) {
+        return readBooleanField(monitor, "broken");
+    }
+
+    private static boolean isFalling(MonitorObjectInstance monitor) {
+        return readBooleanField(monitor, "falling");
+    }
+
+    private static boolean readBooleanField(MonitorObjectInstance monitor, String name) {
         try {
-            Field field = MonitorObjectInstance.class.getDeclaredField("broken");
+            Field field = MonitorObjectInstance.class.getDeclaredField(name);
             field.setAccessible(true);
             return field.getBoolean(monitor);
         } catch (ReflectiveOperationException e) {
