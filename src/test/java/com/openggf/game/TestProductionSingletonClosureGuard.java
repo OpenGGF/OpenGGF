@@ -202,7 +202,11 @@ public class TestProductionSingletonClosureGuard {
     private static final List<String> LEGACY_BOOTSTRAP_BRIDGE_ALLOWLIST = List.of(
             "com/openggf/Engine.java",
             "com/openggf/game/session/EngineContext.java",
-            "com/openggf/game/session/EngineServices.java"
+            "com/openggf/game/session/EngineServices.java",
+            // Headless composition roots for the trace-capture tool: configure
+            // EngineServices from the legacy singletons exactly like Engine does.
+            "com/openggf/tools/HeadlessGameBoot.java",
+            "com/openggf/tools/TraceCaptureTool.java"
     );
 
     @Test

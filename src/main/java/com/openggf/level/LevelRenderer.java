@@ -152,8 +152,7 @@ public final class LevelRenderer {
     // drawWithRenderOptions). Honored by both live Trace Test Mode and the headless
     // capture recorder. The ghost site is reached via deferred lambdas inside
     // renderSpriteObjectPass, so the resolved value is stashed here for that site.
-    private TraceRenderVisibility currentTraceVisibility =
-            TraceRenderVisibility.fromConfig(SonicConfigurationService.getInstance());
+    private TraceRenderVisibility currentTraceVisibility = TraceRenderVisibility.defaults();
 
     // Shimmer style flag, sampled by background tile pass.
     private int currentShimmerStyle = 0;
@@ -526,7 +525,7 @@ public final class LevelRenderer {
         // Trace Test Mode and the headless capture recorder (shared renderer). The
         // ghost site checks traceSession != null as well, so normal gameplay (no active
         // trace session) is unaffected regardless of these flags.
-        currentTraceVisibility = TraceRenderVisibility.fromConfig(SonicConfigurationService.getInstance());
+        currentTraceVisibility = TraceRenderVisibility.fromConfig(lm.configService);
 
         // Cache the GL viewport once per frame so the deferred GL commands below
         // (water shader setup, FG low/high passes) can reuse it

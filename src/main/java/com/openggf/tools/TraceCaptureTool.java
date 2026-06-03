@@ -1,7 +1,8 @@
 package com.openggf.tools;
 
 import com.openggf.GameLoop;
-import com.openggf.audio.AudioManager;
+import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.capture.BackpressurePolicy;
 import com.openggf.capture.CaptureRecorder;
 import com.openggf.capture.DrainPcmAudioTap;
@@ -74,7 +75,7 @@ public final class TraceCaptureTool {
                        boolean showGhosts) {
 
         public static Args parse(String[] argv) {
-            SonicConfigurationService config = SonicConfigurationService.getInstance();
+            SonicConfigurationService config = GameServices.configuration();
             String trace = null;
             String outDir = config.getString(SonicConfiguration.CAPTURE_OUTPUT_DIR);
             int scale = config.getInt(SonicConfiguration.CAPTURE_SCALE);
@@ -110,6 +111,9 @@ public final class TraceCaptureTool {
     }
 
     public static void main(String[] argv) {
+        // CLI composition root: wire process-wide services before any config is
+        // read (Args.parse below), mirroring how Engine bootstraps EngineServices.
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         Args args = Args.parse(argv);
         TraceCaptureTool tool = new TraceCaptureTool();
         HeadlessGameBoot boot = null;
@@ -139,7 +143,7 @@ public final class TraceCaptureTool {
     private HeadlessGameBoot run(Args args) throws Exception {
         // Apply the desync-ghost toggle so the shared LevelRenderer gate
         // (TraceRenderVisibility) honors it during capture.
-        SonicConfigurationService.getInstance().setConfigValue(
+        GameServices.configuration().setConfigValue(
                 SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, args.showGhosts());
 
         // --- resolve trace -------------------------------------------------
@@ -174,14 +178,14 @@ public final class TraceCaptureTool {
                 args.outDir(), label, timestamp);
 
         GlReadPixelsGrabber grabber = new GlReadPixelsGrabber(SCREEN_WIDTH, SCREEN_HEIGHT);
-        DrainPcmAudioTap audioTap = new DrainPcmAudioTap(AudioManager.getInstance());
+        DrainPcmAudioTap audioTap = new DrainPcmAudioTap(GameServices.audio());
         TraceCaptureSession session = new TraceCaptureSession(
                 loop, driver, grabber, audioTap, recorder, args.fps());
 
         // Drive capture at the audio backend's real synthesis rate (the SMPS
         // driver runs at the device rate — 48 kHz). A hardcoded rate would
         // mismatch the synth and pitch-shift the audio.
-        int sampleRate = AudioManager.getInstance().getBackend().outputSampleRate();
+        int sampleRate = GameServices.audio().getBackend().outputSampleRate();
         session.start(SCREEN_WIDTH, SCREEN_HEIGHT, sampleRate);
         long frames = 0;
         // Defensive cap: the comparator drives completion, but bound the loop a
@@ -208,7 +212,7 @@ public final class TraceCaptureTool {
      * 0-based catalog index, or as a direct filesystem path to a trace dir.
      */
     private TraceEntry resolveTrace(String spec) {
-        Path catalogDir = Paths.get(SonicConfigurationService.getInstance()
+        Path catalogDir = Paths.get(GameServices.configuration()
                 .getString(SonicConfiguration.TRACE_CATALOG_DIR));
         List<TraceEntry> entries = TraceCatalog.scan(catalogDir);
 

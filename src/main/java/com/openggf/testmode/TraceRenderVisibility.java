@@ -34,6 +34,14 @@ public final class TraceRenderVisibility {
                 config.getBoolean(SonicConfiguration.TRACE_SHOW_DEBUG_HUD));
     }
 
+    /**
+     * The config-default gates (ghosts on, game HUD on, debug HUD off), for use
+     * as a non-null placeholder before a real per-frame value is resolved.
+     */
+    public static TraceRenderVisibility defaults() {
+        return new TraceRenderVisibility(true, true, false);
+    }
+
     public boolean showGhosts() { return showGhosts; }
 
     public boolean showGameHud() { return showGameHud; }

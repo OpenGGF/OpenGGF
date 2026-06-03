@@ -2,17 +2,13 @@ package com.openggf.tools;
 
 import com.openggf.Engine;
 import com.openggf.GameLoop;
-import com.openggf.audio.AudioManager;
 import com.openggf.audio.HeadlessSmpsAudioBackend;
 import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
-import com.openggf.data.RomManager;
-import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
-import com.openggf.game.RomDetectionService;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.EngineContext;
@@ -128,7 +124,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         glfwMakeContextCurrent(window);
         GL.createCapabilities();
 
-        GraphicsManager graphicsManager = GraphicsManager.getInstance();
+        GraphicsManager graphicsManager = EngineServices.current().graphics();
         try {
             graphicsManager.init(Engine.RESOURCES_SHADERS_PIXEL_SHADER_GLSL);
         } catch (IOException e) {
@@ -143,7 +139,7 @@ public final class HeadlessGameBoot implements AutoCloseable {
         projectionMatrix.get(matrixBuffer);
         glLoadMatrixf(matrixBuffer);
 
-        // Engine.getInstance() returns null in this CLI context, so the
+        // There is no live Engine instance in this CLI context, so the
         // projection matrix must be supplied to the GraphicsManager directly
         // for shader-based rendering.
         graphicsManager.setProjectionMatrixBuffer(matrixBuffer.clone());
@@ -164,20 +160,23 @@ public final class HeadlessGameBoot implements AutoCloseable {
      * the fully bound loop ready to be stepped.
      */
     public GameLoop boot(Path romPath, int zone, int act) throws IOException {
+        // Process-wide services were configured in initGl(); resolve them via
+        // the EngineServices locator rather than raw singletons.
+        EngineContext services = EngineServices.current();
+
         // --- ROM + module ------------------------------------------------
         rom = new Rom();
         if (!rom.open(romPath.toString())) {
             throw new IOException("Failed to open ROM file: " + romPath);
         }
-        RomManager.getInstance().setRom(rom);
+        services.roms().setRom(rom);
 
         Optional<GameModule> detected =
-                RomDetectionService.getInstance().detectAndCreateModule(rom);
+                services.romDetection().detectAndCreateModule(rom);
         GameModule module = detected.orElseThrow(() ->
                 new IOException("No game module detected for ROM: " + romPath));
 
         // --- gameplay session + managers --------------------------------
-        EngineContext services = EngineServices.current();
         GameplayModeContext mode = SessionManager.openGameplaySession(module);
         GameplaySessionFactory.attachManagers(mode, services);
         if (!mode.isGameplayRuntimeReady()) {
@@ -200,12 +199,12 @@ public final class HeadlessGameBoot implements AutoCloseable {
         // synthesizes nothing, which is what made captured audio silent.
         // Mirrors Engine.initializeGlobalGameplayServices (Engine.java:676);
         // setBackend() falls back to NullAudioBackend if OpenAL init fails.
-        SonicConfigurationService audioConfig = GameServices.configuration();
+        SonicConfigurationService audioConfig = services.configuration();
         if (audioConfig.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
             // Headless backend: synthesize SMPS for the capture tap but never
             // touch a sound device (no OpenAL).
-            AudioManager.getInstance().setBackend(
-                    new HeadlessSmpsAudioBackend(audioConfig, PerformanceProfiler.getInstance()));
+            services.audio().setBackend(
+                    new HeadlessSmpsAudioBackend(audioConfig, services.profiler()));
         }
 
         // --- level + team -----------------------------------------------

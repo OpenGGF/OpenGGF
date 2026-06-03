@@ -1,7 +1,6 @@
 package com.openggf.tools;
 
 import com.openggf.GameLoop;
-import com.openggf.audio.AudioManager;
 import com.openggf.capture.AudioFrameTap;
 import com.openggf.capture.CaptureException;
 import com.openggf.capture.CaptureRecorder;
@@ -95,7 +94,7 @@ public final class TraceCaptureSession {
             throw new CaptureException("capture dimensions " + width + "x" + height
                     + " do not match grabber " + this.width + "x" + this.height);
         }
-        AudioManager.getInstance().beginCaptureMode(sampleRate, fps);
+        GameServices.audio().beginCaptureMode(sampleRate, fps);
         recorder.start(width, height, fps, sampleRate);
         TraceGhostHook.set(ghostHook);
         started = true;
@@ -142,7 +141,7 @@ public final class TraceCaptureSession {
             return recorder.stop();
         } finally {
             TraceGhostHook.clear(ghostHook);
-            AudioManager.getInstance().endCaptureMode();
+            GameServices.audio().endCaptureMode();
         }
     }
 
