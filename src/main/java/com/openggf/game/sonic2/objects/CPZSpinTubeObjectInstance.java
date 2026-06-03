@@ -680,15 +680,13 @@ public class CPZSpinTubeObjectInstance extends AbstractObjectInstance {
         player.releaseFromObjectControl(frameCounter);
         player.setControlLocked(false);
 
-        // Enable pinball mode to preserve rolling on landing, but NOT for upward exits.
-        // When exiting upward, the player should land normally without forced rolling.
-        // For horizontal/downward exits, pinball mode keeps them rolling through the terrain.
-        // Check actual velocity rather than expectedExitDirection since pass-through tubes
-        // may not have a calculated expected direction.
-        boolean exitingUpward = player.getYSpeed() < 0 && Math.abs(player.getYSpeed()) > Math.abs(player.getXSpeed());
-        if (!exitingUpward) {
-            player.setPinballMode(true);
-        }
+        // ROM (loc_227A6) does NOT set spindash_flag/pinball_mode on exit; it only
+        // clears obj_control and plays the spindash-release sound. The player leaves
+        // the tube as an airborne ball (the rolling bit set on entry persists while
+        // in_air) and uncurls naturally on landing. Forcing pinball_mode here made the
+        // S2 landing path (pinballLandingPreservesRoll / pinballLandingPreservesPinballMode)
+        // skip both the roll-clear and pinball-clear, locking the player rolling forever
+        // when they land without hitting the exit spring. Do not re-add it.
 
         // Set springing frames to give the player ceiling collision immunity.
         // This prevents the movement manager from immediately zeroing ySpeed when the

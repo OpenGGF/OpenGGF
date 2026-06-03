@@ -474,6 +474,14 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         return 0;
     }
 
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        // ROM TouchResponse polls Obj_Monitor every frame. The first overlap can
+        // see status.player.rolling before anim reaches AniIDSonAni_Roll, so keep
+        // rechecking while the player remains inside the monitor touch box.
+        return true;
+    }
+
     // From disassembly: SolidObject_Monitor_SetValues params d1=$19, d2=$10, d3=$11
     @Override
     public SolidObjectParams getSolidParams() {

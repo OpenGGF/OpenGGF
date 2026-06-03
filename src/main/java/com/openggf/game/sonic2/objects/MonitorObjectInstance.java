@@ -32,7 +32,6 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.playable.Tails;
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.audio.Sonic2SmpsConstants;
 
@@ -55,7 +54,6 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     private ObjectAnimationState animationState;
     private boolean broken;
     private int mappingFrame;
-    private AbstractPlayableSprite iconPlayer; // Preserved for rendering (effectTarget gets nulled)
 
     // Falling state (routineSecondary != 0 in ROM)
     private boolean falling;
@@ -270,7 +268,6 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         player.setYSpeed((short) -player.getYSpeed());
         mappingFrame = BROKEN_FRAME;
         startIconRise(spawn.y(), player);
-        iconPlayer = player; // Preserve player reference for rendering
 
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager != null) {
@@ -319,7 +316,7 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         renderer.drawFrameIndex(frameIndex, spawn.x(), currentY, false, false);
 
         if (iconActive) {
-            int iconFrame = resolveIconFrame(iconPlayer);
+            int iconFrame = resolveIconFrame();
             ObjectSpriteSheet sheet = renderManager.getMonitorSheet();
             if (iconFrame >= 0 && sheet != null && iconFrame < sheet.getFrameCount()) {
                 SpriteMappingFrame mappingFrame = sheet.getFrame(iconFrame);
@@ -339,6 +336,14 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
     @Override
     public int getCollisionProperty() {
         return 0;
+    }
+
+    @Override
+    public boolean requiresContinuousTouchCallbacks() {
+        // ROM TouchResponse polls Obj26 every frame. The first overlap can see
+        // status.player.rolling before anim reaches AniIDSonAni_Roll, so keep
+        // rechecking while the player remains inside the monitor touch box.
+        return true;
     }
 
     @Override
@@ -514,23 +519,15 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         }
     }
 
-    @Override
-    protected void onIconDeactivated() {
-        iconPlayer = null;
-    }
-
-    private int resolveIconFrame(AbstractPlayableSprite player) {
+    private int resolveIconFrame() {
         if (type == MonitorType.BROKEN) {
             return -1;
         }
-        // For 1-up monitors, show the correct character face
-        if (type == MonitorType.SONIC || type == MonitorType.TAILS) {
-            // Show Tails icon if player is Tails, otherwise Sonic
-            if (player instanceof Tails) {
-                return MonitorType.TAILS.id + ICON_FRAME_OFFSET;
-            }
-            return MonitorType.SONIC.id + ICON_FRAME_OFFSET;
-        }
+        // ROM Obj2E_Init: mapping_frame = anim + 1, where anim = the monitor subtype.
+        // The icon shown is fixed by subtype, NOT by who broke the monitor. The
+        // character-awareness of the Sonic 1-up icon comes from its art tile ($154 =
+        // ArtTile_ArtNem_life_counter), which Sonic2ObjectArt(Provider) loads with the
+        // main character's life-counter face. (s2.asm:25770-25772; obj26.asm)
         return type.id + ICON_FRAME_OFFSET;
     }
 

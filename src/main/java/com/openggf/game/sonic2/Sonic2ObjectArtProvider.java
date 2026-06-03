@@ -212,6 +212,10 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         overrideLivesArtFromDonor();
         rebuildHudStaticArt();
 
+        // The 1-up monitor icon shares VRAM with the life counter, so it must show
+        // the same main-character face the HUD does (Tails-alone / Knuckles lock-on).
+        overrideMonitorIconArtForMainCharacter();
+
         LOGGER.info("Sonic2ObjectArtProvider loaded for zone " + zoneIndex +
                 " with " + rendererKeys.size() + " renderers (PLC-driven)");
     }
@@ -400,6 +404,58 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
                 hudTextPatterns,
                 hudLivesPatterns,
                 livesNameUsesIconPalette);
+    }
+
+    /**
+     * Overrides the 1-up monitor's life-counter icon tile with the main character's
+     * face when it is not Sonic.
+     *
+     * <p>The Sonic 1-up monitor icon piece maps to tile {@code $154}, which in the ROM
+     * is {@code ArtTile_ArtNem_life_counter} — VRAM shared with the HUD life counter.
+     * {@code PlrList_Std1} loads Sonic's life art there by default (handled in
+     * {@link Sonic2ObjectArt}); {@code PlrList_TailsLife} and the Knuckles lock-on patch
+     * replace it for Tails-alone and Knuckles games. We mirror that here so the standard
+     * monitor shows the lead character's face. (s2.asm:89193, 89271)
+     */
+    private void overrideMonitorIconArtForMainCharacter() {
+        if (artData == null || artData.monitorSheet() == null) {
+            return;
+        }
+        String mainChar = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
+        Pattern[] lifeArt = resolveMonitorIconLifeArt(mainChar);
+        if (lifeArt == null || lifeArt.length == 0) {
+            return; // Sonic (the default already loaded), or Knuckles without an active donor
+        }
+        Pattern[] monitorPatterns = artData.monitorSheet().getPatterns();
+        int offset = Sonic2ObjectArt.MONITOR_LIFE_ICON_TILE;
+        int copied = 0;
+        for (int i = 0; i < lifeArt.length && offset + i < monitorPatterns.length; i++) {
+            monitorPatterns[offset + i] = lifeArt[i];
+            copied++;
+        }
+        LOGGER.info("Overrode 1-up monitor icon with " + mainChar + " life art (" + copied + " tiles)");
+    }
+
+    /**
+     * Returns the life-counter art to draw on the 1-up monitor for {@code mainChar},
+     * or {@code null} to keep the Sonic default. Tails uses native S2 art; Knuckles
+     * uses the palette-remapped S3K donor art (only when the donor is active).
+     */
+    private Pattern[] resolveMonitorIconLifeArt(String mainChar) {
+        if ("tails".equalsIgnoreCase(mainChar)) {
+            try {
+                return com.openggf.util.PatternDecompressor.nemesis(
+                        GameServices.rom().getRom(), Sonic2Constants.ART_NEM_TAILS_LIFE_ADDR);
+            } catch (Exception e) {
+                LOGGER.warning("Failed to load Tails life icon for monitor: " + e.getMessage());
+                return null;
+            }
+        }
+        if ("knuckles".equalsIgnoreCase(mainChar)
+                && com.openggf.game.CrossGameFeatureProvider.isS3kDonorActive()) {
+            return loadS3kKnucklesLivesPatterns();
+        }
+        return null;
     }
 
     Pattern[] loadS3kKnucklesLivesPatterns() {
