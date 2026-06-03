@@ -210,6 +210,72 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lbzPlanIncludesRideGrappleLevelArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 0);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry grapple = plan.levelArt().stream()
+                .filter(e -> e.key().equals(Sonic3kObjectArtKeys.LBZ_RIDE_GRAPPLE))
+                .findFirst().orElse(null);
+
+        assertNotNull(grapple, "Obj_LBZRideGrapple uses resident LBZ misc art and must be in the LBZ level-art plan");
+        assertEquals(Sonic3kConstants.MAP_LBZ_RIDE_GRAPPLE_ADDR, grapple.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_LBZ_MISC + 0x70, grapple.artTileBase());
+        assertEquals(1, grapple.palette());
+    }
+
+    @Test
+    public void lbzPlanIncludesTubeElevatorLevelArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 0);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry elevator = plan.levelArt().stream()
+                .filter(e -> e.key().equals("lbz_tube_elevator"))
+                .findFirst().orElse(null);
+
+        assertNotNull(elevator, "Obj_LBZTubeElevator uses resident LBZ tube transport art");
+        assertEquals(Sonic3kConstants.MAP_LBZ_TUBE_ELEVATOR_ADDR, elevator.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_LBZ_TUBE_TRANS, elevator.artTileBase());
+        assertEquals(1, elevator.palette());
+    }
+
+    @Test
+    public void lbzTubeElevatorMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            var frames = S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_TUBE_ELEVATOR_ADDR);
+
+            assertEquals(7, frames.size(), "Map_LBZTubeElevator has six shell frames plus the side child frame");
+            assertEquals(10, frames.get(0).pieces().size());
+            assertEquals(10, frames.get(1).pieces().size());
+            assertEquals(7, frames.get(2).pieces().size());
+            assertEquals(10, frames.get(3).pieces().size());
+            assertEquals(7, frames.get(4).pieces().size());
+            assertEquals(10, frames.get(5).pieces().size());
+            assertEquals(3, frames.get(6).pieces().size());
+        }
+    }
+
+    @Test
+    public void lbzRideGrappleMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            var frames = S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_RIDE_GRAPPLE_ADDR);
+
+            assertEquals(3, frames.size(), "Map_LBZRideGrapple has top, chain-link, and handle frames");
+            assertRideGrapplePiece(frames.get(0), 2, 2, 0);
+            assertRideGrapplePiece(frames.get(1), 1, 1, 4);
+            assertRideGrapplePiece(frames.get(2), 2, 2, 5);
+        }
+    }
+
+    @Test
     public void mhz1PlanHasFourBadniksNoArrow() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x07, 0);
         assertNotNull(plan);
@@ -611,6 +677,14 @@ public class TestSonic3kPlcArtRegistry {
                                 + " patterns=" + patternCount);
             }
         }
+    }
+
+    private static void assertRideGrapplePiece(SpriteMappingFrame frame, int widthTiles, int heightTiles, int tileIndex) {
+        assertEquals(1, frame.pieces().size(), "LBZ ride grapple frame should have one mapping piece");
+        SpriteMappingPiece piece = frame.pieces().getFirst();
+        assertEquals(widthTiles, piece.widthTiles());
+        assertEquals(heightTiles, piece.heightTiles());
+        assertEquals(tileIndex, piece.tileIndex());
     }
 
     private static void assertSaneObjectSpriteSheet(String context, ObjectSpriteSheet sheet) {

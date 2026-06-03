@@ -29,11 +29,14 @@ public final class Sonic3kObjectIds {
     public static final int BREAKABLE_WALL = 0x0D;
     public static final int TWISTED_RAMP = 0x0E;
     public static final int COLLAPSING_BRIDGE = 0x0F;
+    public static final int LBZ_TUBE_ELEVATOR = 0x10;
     public static final int MHZ_SWING_VINE = 0x10;
     public static final int MHZ_MUSHROOM_PLATFORM = 0x11;
     public static final int MHZ_MUSHROOM_PARACHUTE = 0x12;
     public static final int MHZ_MUSHROOM_CATAPULT = 0x13;
     public static final int UPDRAFT = 0x14;
+    // S3KL object table: Obj_LBZRideGrapple.
+    public static final int LBZ_RIDE_GRAPPLE = 0x17;
     public static final int AUTOMATIC_TUNNEL = 0x24;
     public static final int AUTO_SPIN = 0x26;
     public static final int CORK_FLOOR = 0x2A;
@@ -41,6 +44,8 @@ public final class Sonic3kObjectIds {
     public static final int AIZ_COLLAPSING_LOG_BRIDGE = 0x2C;
     public static final int AIZ_FALLING_LOG = 0x2D;
     public static final int AIZ_SPIKED_LOG = 0x2E;
+    // S3KL object table: Obj_LBZRollingDrum.
+    public static final int LBZ_ROLLING_DRUM = 0x31;
     public static final int MHZ_MUSHROOM_CAP = 0x23;
     public static final int INVISIBLE_BLOCK = 0x28;
     public static final int AIZ_DISAPPEARING_FLOOR = 0x29;
@@ -187,6 +192,8 @@ public final class Sonic3kObjectIds {
     public static final int ICZ_MINIBOSS = 0xBC;
     // S3KL object table: Obj_ICZEndBoss.
     public static final int ICZ_END_BOSS = 0xBD;
+    // S3KL object table: Obj_Ribot.
+    public static final int RIBOT = 0xBF;
     // S3KL object table: Obj_Orbinaut.
     public static final int ORBINAUT = 0xC0;
     // S3KL object table: Obj_Flybot767.

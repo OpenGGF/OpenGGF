@@ -48,17 +48,48 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **Fixed the S2 CPU sidekick being able to break monitors.** `MonitorObjectInstance` now gates the break path on the lead-character check from ROM `Touch_Monitor.breakMonitor` (`cmpa.w #MainCharacter,a0`; s2.asm:85245-85249), so a CPU sidekick can no longer destroy a monitor in single-player mode. The sidekick can still knock a monitor down from below — matching the ROM, where the gate sits only in the break path, not the hit-from-below fall path. S1 and S3K monitors already had this gate; only S2 was missing it.
 
+- **Implemented S3K LBZ tube elevator Obj10.** S3KL slot `$10` now routes to
+  `Obj_LBZTubeElevator`, using ROM-backed LBZ tube transport mappings/art,
+  automatic-tunnel path data, two-layer elevator rendering, capture/spin/path
+  travel/release states, closed-destination suppression while Sonic is inside
+  an active tube elevator, and release cleanup for object-owned rotating player
+  frames.
+
+- **Implemented S3K LBZ ride grapple Obj17.** S3KL slot `$17` now routes to
+  `Obj_LBZRideGrapple`, including ROM path-range subtype selection, chain and
+  handle extension/sway, native P2-before-P1 grab handling, `object_control=3`
+  carry state, jump release launch state, path-end ejection, and ROM-backed LBZ
+  misc mappings/art registration. The handle swing now reads the high byte of
+  the ROM angle word, avoiding low-byte cardinal jumps while Sonic is carried,
+  and jump release suppresses the stale held-button edge so insta-shield waits
+  for a real release/re-press.
+
 - **Recovered clobbered widescreen title-card and CI metadata changes.** Sonic 2 title cards once again center their native 320-wide composition in the active projection, extend blackout/blue/yellow/red planes across the full viewport, and apply edge margins so slide-out elements clear widescreen side bands. Added a guard test for that manager wiring. Removed invalid disassembly gitlinks that had no `.gitmodules` entries, which broke GitHub Actions checkout/policy cleanup while leaving local reference checkouts ignored.
 
 - **Recovered clobbered MHZ parity and CI guard changes.** Restored the missing object-control, native-player participation, touch-response-profile, rewind-policy, hidden-monitor, twisted-ramp, LBZ alarm, still-sprite footprint, and cross-platform disassembly-label fixes that had been present locally but were not included in the pushed branch, so CI now exercises the same recovered tree as local verification.
 
 - **Expanded S3K Mushroom Hill parity and art-safety coverage.** MHZ now has fixes across Knuckles cutscene art/palette/music cleanup, swing/curled/twisted vines, mushroom platforms/catapults, pulley lifts, Madmole and Dragonfly behavior, miniboss arena/flame/music handling, debug object-name resolution, and post-cutscene palette restoration. Added engine-level sprite mapping corruption suppression/logging, ROM-backed S3K object-art crawler coverage, SKL/S3-side art-address guards with reviewed exceptions, and RomOffsetFinder support for labels inside included mapping files.
 
+- **Implemented S3K Ribot ObjBF.** The Launch Base Ribot badnik now registers
+  in the S3KL object set, uses the existing ROM-backed Ribot art plan, spawns
+  subtype-specific appendage children, alternates the parent child-gate bits
+  from the ROM `$38` state pattern, and exposes the child hurt collision.
+
 - **Implemented S3K Orbinaut ObjC0.** The Launch Base badnik now registers in
   the S3KL object set, loads its existing ROM-backed Orbinaut art, spawns four
   orbiting hurt orbs at the ROM cardinal offsets, and moves left or right only
   while P1 is grounded and moving, matching `Obj_Orbinaut` / `sub_8C6D4`.
   Focused Orbinaut and neighboring S3K badnik coverage passes.
+
+- **Implemented S3K LBZ rolling drum Obj31.** S3KL slot `$31` now routes to
+  `Obj_LBZRollingDrum`, the invisible cylinder controller that uses subtype as
+  half-width, keeps native P1/P2 ride-angle state, applies the ROM sine-based
+  rider `y_pos` path, preserves the previous ride angle on middle-window
+  recapture, and handles the `RideObject_SetRide` landing, animation restart,
+  flip/ground-speed, and release side effects. The captured rider now uses the
+  ROM `Anim_Tumble` render flips for `flip_type=$80/$81` and ignores impossible
+  stale-air / lost player-latch release state while still inside the live drum
+  controller's horizontal window.
 
 - **Fixed widescreen players walking past the level's right edge to their death.** The right level-boundary clamp was computed with `camera.getWidth()`, so at a widescreen viewport it moved right with the screen (ULTRA_21_9 → level edge + 184px). Since `camera.getMaxX()` is the native ROM scroll limit (`level_edge − 320`) and the level geometry only exists up to `maxX + 320`, this let the player walk past the right wall into the void beyond a camera lock and fall to their death. The boundary now uses the fixed native `LEVEL_DESIGN_WIDTH = 320` — it tracks the level's wall, not the render viewport — reproducing the ROM `+$128` / `+$128 + $40` values at every aspect ratio. The despawn/visibility windows still widen with the viewport (objects in view are not culled); only the level-wall clamp stays native. See KNOWN_DISCREPANCIES.md "Right-Boundary Is Viewport-Independent (Level Edge)".
 

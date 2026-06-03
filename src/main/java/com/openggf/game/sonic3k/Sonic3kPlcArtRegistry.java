@@ -1407,6 +1407,12 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.STILL_LBZ_GIRDER,
                 Sonic3kConstants.MAP_STILL_SPRITES_ADDR, 0x433, 1,
                 null, new int[]{21, 22, 23}));
+        // Ride Grapple: make_art_tile(ArtTile_LBZMisc+$70, 1, 0)
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_RIDE_GRAPPLE,
+                Sonic3kConstants.MAP_LBZ_RIDE_GRAPPLE_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ_MISC + 0x70,
+                1,
+                null));
 
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.SNALE_BLASTER,
@@ -1506,6 +1512,15 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.MAP_LBZ_SMASHING_SPIKES_ADDR,
                 Sonic3kConstants.ARTTILE_LBZ_TUBE_TRANS,
                 2,
+                null
+        ));
+
+        // Tube Elevator (Object 0x10): make_art_tile(ArtTile_LBZTubeTrans, 1, 0)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LBZ_TUBE_ELEVATOR,
+                Sonic3kConstants.MAP_LBZ_TUBE_ELEVATOR_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ_TUBE_TRANS,
+                1,
                 null
         ));
     }

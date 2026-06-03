@@ -263,6 +263,15 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   spawned via raw `addDynamicObject` (which sets services only after construction). Fixed the S2 and
   HCZ egg-prison capsule animals, added a source guard (`TestNoRendererCaptureInUnsafeSpawn`) and a
   one-time runtime warning so the otherwise-silent failure cannot recur.
+- **Trace video capture (2026-06-03).** A headless, deterministic `TraceCaptureTool` renders a
+  recorded trace offscreen and writes a lossless, audio+video-synced MKV (FFV1 + 48 kHz FLAC) for
+  demo reels — optionally including the desync ghosts. The scope-agnostic `com.openggf.capture`
+  pipeline (recorder/sink/encoder + video/audio taps) sits above the game; a `HeadlessGameBoot`
+  stands up an offscreen `GameLoop`, a `TraceReplayDriver` (extracted from `TraceSessionLauncher`)
+  drives the deterministic replay, and an offline audio backend mode synthesizes for the recording
+  without any sound-device output. See the `trace-capture` skill and `CONFIGURATION.md`. This
+  develop sync also brings the S3K LBZ tube elevator, ride grapple, Ribot badnik, and rolling-drum
+  parity work from concurrent branches.
 
 See `CHANGELOG.md` for the detailed 0.6 prerelease change history.
 

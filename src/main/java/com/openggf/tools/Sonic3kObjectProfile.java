@@ -95,6 +95,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x09, // AIZ1Tree
                 0x0A, // AIZ1ZiplinePeg
                 0x0C, // AIZGiantRideVine
+                0x10, // LBZTubeElevator
+                0x17, // LBZRideGrapple
                 0x29, // AIZDisappearingFloor
                 0x2B, // AIZFlippingBridge
                 0x2C, // AIZCollapsingLogBridge
@@ -179,6 +181,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xBB, // ICZIceBlock
                 0xBC, // ICZMiniboss
                 0xBD, // ICZEndBoss
+                0xBF, // Ribot
                 0xC0, // Orbinaut
                 0xC2  // Flybot767
         ));
