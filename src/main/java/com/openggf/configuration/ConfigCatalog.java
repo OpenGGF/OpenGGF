@@ -1,5 +1,6 @@
 package com.openggf.configuration;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -218,7 +219,7 @@ public final class ConfigCatalog {
                 "DEPRECATED AWT debug-viewer scale factor"));
 
         // ---- Derived index structures ----
-        java.util.List<SonicConfiguration> order = new java.util.ArrayList<>();
+        List<SonicConfiguration> order = new ArrayList<>();
         for (Map.Entry<SonicConfiguration, ConfigKeyMeta> e : META.entrySet()) {
             ConfigKeyMeta m = e.getValue();
             if (m.persisted()) {
@@ -228,6 +229,8 @@ public final class ConfigCatalog {
         }
         EMIT_ORDER = List.copyOf(order);
 
+        // Top-level normal sections only. debug.* sub-sections are intentionally untitled
+        // (the writer fences the whole debug block with a single banner instead).
         SECTION_TITLES.put("display", "Display");
         SECTION_TITLES.put("input", "Input");
         SECTION_TITLES.put("audio", "Audio");
@@ -256,7 +259,11 @@ public final class ConfigCatalog {
         return BY_PATH.get(path);
     }
 
-    /** Human title for a top-level section, or the raw name if none registered. */
+    /**
+     * Human title for a TOP-LEVEL section (the first dotted segment, e.g. {@code "input"} or
+     * {@code "audio"}) — pass the first segment, not a full sub-section path like
+     * {@code "input.player1"}. Returns the raw name if no title is registered.
+     */
     public static String title(String topLevelSection) {
         return SECTION_TITLES.getOrDefault(topLevelSection, topLevelSection);
     }

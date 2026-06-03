@@ -31,6 +31,9 @@ public record ConfigKeyMeta(
 
     /** Full dotted path used as the flatten reverse-lookup key, e.g. {@code "input.player1.jump"}. */
     public String path() {
+        if (section == null || leaf == null) {
+            throw new IllegalStateException("derived key has no on-disk path");
+        }
         return section + "." + leaf;
     }
 }

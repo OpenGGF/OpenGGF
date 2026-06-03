@@ -14,8 +14,8 @@ class TestConfigCatalog {
             if (key == SonicConfiguration.VERSION) {
                 continue;
             }
-            assertNotNull(ConfigCatalog.meta(key), "missing catalog meta for " + key);
             ConfigKeyMeta m = ConfigCatalog.meta(key);
+            assertNotNull(m, "missing catalog meta for " + key);
             assertNotNull(m.type(), "missing type for " + key);
             assertNotNull(m.description(), "missing description for " + key);
             assertFalse(m.description().isBlank(), "blank description for " + key);
@@ -68,6 +68,8 @@ class TestConfigCatalog {
     void reverseLookupRoundTrips() {
         SonicConfiguration key = ConfigCatalog.byPath("input.player1.jump");
         assertEquals(SonicConfiguration.JUMP, key);
+        assertEquals(SonicConfiguration.AUDIO_ENABLED, ConfigCatalog.byPath("audio.enabled"));
+        assertNull(ConfigCatalog.byPath("audio"), "a section-only path must not resolve to a key");
         assertNull(ConfigCatalog.byPath("nope.not.real"));
     }
 }
