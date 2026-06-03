@@ -412,24 +412,23 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
      * ROM: loc_3F2FC loop with d6=7, d5=$9A, d4=-$1C
      */
     private void spawnInitialAnimals() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
         int baseX = spawn.x();
         int baseY = spawn.y();
         int xOffset = INITIAL_ANIMAL_X_OFFSET_START;
         int delay = INITIAL_ANIMAL_DELAY_BASE;
 
         for (int i = 0; i < INITIAL_ANIMAL_COUNT; i++) {
-            ObjectSpawn animalSpawn = new ObjectSpawn(
+            final ObjectSpawn animalSpawn = new ObjectSpawn(
                     baseX + xOffset, baseY,
                     0x28, 0, 0, false, 0
             );
-            EggPrisonAnimalInstance animal = new EggPrisonAnimalInstance(
-                    animalSpawn, delay, Sonic2Rng.nextAnimalArtVariant(services().rng()));
-            objectManager.addDynamicObject(animal);
+            final int animalDelay = delay;
+            final int artVariant = Sonic2Rng.nextAnimalArtVariant(services().rng());
+            // spawnFreeChild matches the previous addDynamicObject (FindFreeObj /
+            // lowest-slot) semantics, but also sets the construction context so the
+            // animal can resolve its sprite renderer in its constructor — without it
+            // the released animals are spawned but render invisibly.
+            spawnFreeChild(() -> new EggPrisonAnimalInstance(animalSpawn, animalDelay, artVariant));
 
             xOffset += INITIAL_ANIMAL_X_OFFSET_STEP;
             delay -= INITIAL_ANIMAL_DELAY_STEP;
@@ -441,24 +440,21 @@ public class EggPrisonObjectInstance extends AbstractObjectInstance
      * ROM: loc_3F3A8 random spawn logic
      */
     private void spawnRandomAnimal() {
-        ObjectManager objectManager = services().objectManager();
-        if (objectManager == null) {
-            return;
-        }
-
         int baseX = spawn.x();
         int baseY = spawn.y();
 
         // ROM: jsr RandomNumber / andi.w #$1F,d0 / subq.w #6,d0 / tst.w d1 / optional neg
         int randomOffset = Sonic2Rng.nextEggPrisonAnimalXOffset(services().rng());
 
-        ObjectSpawn animalSpawn = new ObjectSpawn(
+        final ObjectSpawn animalSpawn = new ObjectSpawn(
                 baseX + randomOffset, baseY,
                 0x28, 0, 0, false, 0
         );
-        EggPrisonAnimalInstance animal = new EggPrisonAnimalInstance(
-                animalSpawn, SPAWN_ANIMAL_DELAY, Sonic2Rng.nextAnimalArtVariant(services().rng()));
-        objectManager.addDynamicObject(animal);
+        final int artVariant = Sonic2Rng.nextAnimalArtVariant(services().rng());
+        // spawnFreeChild sets the construction context so the animal resolves its
+        // sprite renderer (see spawnInitialAnimals); a raw addDynamicObject leaves
+        // the renderer null and the animal invisible.
+        spawnFreeChild(() -> new EggPrisonAnimalInstance(animalSpawn, SPAWN_ANIMAL_DELAY, artVariant));
     }
 
     /**

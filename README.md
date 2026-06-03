@@ -258,6 +258,11 @@ live in `CHANGELOG.md`; this README keeps only the high-level shape of the relea
   `ScrollEffectComposer` adoption brought to 100% across all 26 scroll handlers; the rendering
   pipeline extracted from `LevelManager` into a new `LevelRenderer`; S1/S2 child spawns routed
   through `spawnChild`/`spawnFreeChild`; plus assorted hot-path allocation and lookup optimizations.
+- **Object render-lifecycle fix.** Closed a "spawns but renders invisibly" class of bug introduced
+  by the DI migration: objects that cache a sprite renderer in their constructor went invisible when
+  spawned via raw `addDynamicObject` (which sets services only after construction). Fixed the S2 and
+  HCZ egg-prison capsule animals, added a source guard (`TestNoRendererCaptureInUnsafeSpawn`) and a
+  one-time runtime warning so the otherwise-silent failure cannot recur.
 
 See `CHANGELOG.md` for the detailed 0.6 prerelease change history.
 

@@ -1028,12 +1028,33 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         // badnikExtra is handled by subclass overrides; base class does nothing
     }
 
+    /** Concrete classes already warned about a context-less getRenderManager() call. */
+    private static final java.util.Set<String> RENDER_MANAGER_UNAVAILABLE_WARNED =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     /**
      * Returns the ObjectRenderManager, or null if not available.
+     * <p>
+     * Resolves through per-instance services. If called before services are set
+     * (i.e. during construction with no {@code CONSTRUCTION_CONTEXT}), this returns
+     * null — an object that caches the result in a field here will then render
+     * invisibly. That happens when a renderer-capturing object is spawned via raw
+     * {@code new} + {@code addDynamicObject(...)} instead of
+     * {@code spawnChild}/{@code spawnFreeChild}/{@code createDynamicObject}. We log
+     * once per class so the otherwise-silent failure is visible.
      */
     protected ObjectRenderManager getRenderManager() {
         ObjectServices services = tryServices();
-        return services != null ? services.renderManager() : null;
+        if (services == null) {
+            if (RENDER_MANAGER_UNAVAILABLE_WARNED.add(getClass().getName())) {
+                LOG.warning(getClass().getSimpleName() + ": getRenderManager() called with no services and no "
+                        + "construction context — returns null. If this is a constructor caching the renderer, "
+                        + "spawn via spawnChild/spawnFreeChild/createDynamicObject (not raw addDynamicObject), "
+                        + "or fetch the renderer lazily in appendRenderCommands().");
+            }
+            return null;
+        }
+        return services.renderManager();
     }
 
     /**

@@ -248,22 +248,22 @@ public class HczEndBossEggCapsuleInstance extends AbstractObjectInstance
      * ROM: Spawn animals that burst out of the capsule.
      * Each animal gets a staggered delay so they pop out in sequence.
      *
-     * <p>Uses {@code addDynamicObject()} rather than {@code spawnChild()} because
-     * {@link EggPrisonAnimalInstance}'s constructor calls {@code getRenderManager()}
-     * via static access (to obtain the animal renderer and zone-specific animal
-     * types). This static pattern is safe with {@code addDynamicObject()} but
-     * would conflict with the ThreadLocal context set by {@code spawnChild()}.
+     * <p>Must use {@code spawnFreeChild()} (not raw {@code addDynamicObject()}):
+     * {@link EggPrisonAnimalInstance}'s constructor caches its sprite renderer via
+     * {@code getRenderManager()}, which resolves through per-instance services and
+     * returns null unless the construction context is set. {@code spawnFreeChild()}
+     * sets that context (and keeps the same FindFreeObj/{@code addDynamicObject}
+     * slot semantics); a raw {@code addDynamicObject()} leaves the renderer null and
+     * the released animals render invisibly.
      */
     private void spawnAnimals() {
-        var objectManager = services().objectManager();
-        if (objectManager == null) return;
         for (int i = 0; i < ANIMAL_COUNT; i++) {
             int animalX = fixedX + (i % 2 == 0 ? -(8 + i * 4) : (8 + i * 4));
             int animalY = fixedY - 16;  // Animals pop up from top of capsule
-            int delay = i * 4;  // Staggered: 0, 4, 8, 12, ...
-            ObjectSpawn spawn = new ObjectSpawn(animalX, animalY, 0x28, 0, 0, false, 0);
-            objectManager.addDynamicObject(new EggPrisonAnimalInstance(
-                    spawn, delay, services().rng().nextBits(1)));
+            final int delay = i * 4;  // Staggered: 0, 4, 8, 12, ...
+            final ObjectSpawn spawn = new ObjectSpawn(animalX, animalY, 0x28, 0, 0, false, 0);
+            final int artVariant = services().rng().nextBits(1);
+            spawnFreeChild(() -> new EggPrisonAnimalInstance(spawn, delay, artVariant));
         }
     }
 
