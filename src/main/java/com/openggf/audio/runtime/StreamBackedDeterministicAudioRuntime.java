@@ -29,6 +29,7 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
     private int releaseCrossfadeRemaining;
     private short[] musicScratch = new short[0];
     private short[] sfxScratch = new short[0];
+    private int lastProducedFrames;
 
     public StreamBackedDeterministicAudioRuntime(AudioFrameClock frameClock, AudioOutputFifo outputFifo) {
         this(frameClock, outputFifo, null);
@@ -122,12 +123,18 @@ public final class StreamBackedDeterministicAudioRuntime implements Deterministi
                 pcmHistory.write(musicScratch, samples / 2);
             }
             outputFifo.write(musicScratch, samples / 2);
+            lastProducedFrames = samples / 2;
         }
     }
 
     @Override
     public boolean providesPresentationPcm() {
         return true;
+    }
+
+    /** Stereo-frame count produced by the most recent NORMAL {@link #advanceFrame}. */
+    public int lastProducedFrames() {
+        return lastProducedFrames;
     }
 
     @Override
