@@ -1,33 +1,44 @@
 package com.openggf.configuration;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestConfigEnumValidation {
 
-    private final File yaml = new File("config.yaml");
+    @TempDir
+    Path tempDir;
+    private String originalUserDir;
+
+    @BeforeEach
+    void setup() {
+        originalUserDir = System.getProperty("user.dir");
+        System.setProperty("user.dir", tempDir.toString());
+    }
 
     @AfterEach
-    void cleanup() {
-        yaml.delete();
+    void teardown() {
+        if (originalUserDir != null) {
+            System.setProperty("user.dir", originalUserDir);
+        }
     }
 
     @Test
     void illegalEnumValueFallsBackToDefault() throws Exception {
-        Files.writeString(yaml.toPath(), "audio:\n  region: KLINGON\n");
+        Files.writeString(tempDir.resolve("config.yaml"), "audio:\n  region: KLINGON\n");
         SonicConfigurationService svc = SonicConfigurationService.createStandalone();
-        // REGION default is NTSC (see applyDefaults); the bogus value is rejected.
         assertEquals("NTSC", svc.getString(SonicConfiguration.REGION));
     }
 
     @Test
     void legalEnumValueIsKept() throws Exception {
-        Files.writeString(yaml.toPath(), "audio:\n  region: PAL\n");
+        Files.writeString(tempDir.resolve("config.yaml"), "audio:\n  region: PAL\n");
         SonicConfigurationService svc = SonicConfigurationService.createStandalone();
         assertEquals("PAL", svc.getString(SonicConfiguration.REGION));
     }

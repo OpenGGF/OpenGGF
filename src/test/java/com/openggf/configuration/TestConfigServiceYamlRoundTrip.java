@@ -1,28 +1,41 @@
 package com.openggf.configuration;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestConfigServiceYamlRoundTrip {
 
-    private final File yaml = new File("config.yaml");
+    @TempDir
+    Path tempDir;
+    private String originalUserDir;
+
+    @BeforeEach
+    void setup() {
+        originalUserDir = System.getProperty("user.dir");
+        System.setProperty("user.dir", tempDir.toString());
+    }
 
     @AfterEach
-    void cleanup() {
-        yaml.delete();
+    void teardown() {
+        if (originalUserDir != null) {
+            System.setProperty("user.dir", originalUserDir);
+        }
     }
 
     @Test
     void saveWritesGroupedYaml() throws Exception {
+        Path yaml = tempDir.resolve("config.yaml");
         SonicConfigurationService svc = SonicConfigurationService.createStandalone();
         svc.saveConfig();
-        assertTrue(yaml.exists(), "saveConfig must write config.yaml");
-        String text = Files.readString(yaml.toPath());
+        assertTrue(Files.exists(yaml), "saveConfig must write config.yaml");
+        String text = Files.readString(yaml);
         assertTrue(text.contains("display:"), text);
         assertTrue(text.contains("debug:"), text);
         assertFalse(text.contains("SCREEN_WIDTH_PIXELS"), "derived keys must not be persisted");

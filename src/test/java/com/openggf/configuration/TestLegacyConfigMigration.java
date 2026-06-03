@@ -1,38 +1,49 @@
 package com.openggf.configuration;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestLegacyConfigMigration {
 
-    private final File json = new File("config.json");
-    private final File yaml = new File("config.yaml");
-    private final File bak = new File("config.json.bak");
+    @TempDir
+    Path tempDir;
+    private String originalUserDir;
+
+    @BeforeEach
+    void setup() {
+        originalUserDir = System.getProperty("user.dir");
+        System.setProperty("user.dir", tempDir.toString());
+    }
 
     @AfterEach
-    void cleanup() {
-        json.delete();
-        yaml.delete();
-        bak.delete();
+    void teardown() {
+        if (originalUserDir != null) {
+            System.setProperty("user.dir", originalUserDir);
+        }
     }
 
     @Test
     void legacyFlatJsonMigratesToYamlAndBacksUp() throws Exception {
-        Files.writeString(json.toPath(), "{ \"AUDIO_ENABLED\": false, \"FPS\": 50 }");
+        Path json = tempDir.resolve("config.json");
+        Path yaml = tempDir.resolve("config.yaml");
+        Path bak = tempDir.resolve("config.json.bak");
+        Files.writeString(json, "{ \"AUDIO_ENABLED\": false, \"FPS\": 50 }");
 
         SonicConfigurationService svc = SonicConfigurationService.createStandalone();
 
         assertFalse(svc.getBoolean(SonicConfiguration.AUDIO_ENABLED), "migrated value preserved");
         assertEquals(50, svc.getInt(SonicConfiguration.FPS));
-        assertTrue(yaml.exists(), "config.yaml written");
-        assertTrue(bak.exists(), "old config.json renamed to .bak");
-        assertFalse(json.exists(), "original config.json removed");
-        String text = Files.readString(yaml.toPath());
+        assertTrue(Files.exists(yaml), "config.yaml written");
+        assertTrue(Files.exists(bak), "old config.json renamed to .bak");
+        assertFalse(Files.exists(json), "original config.json removed");
+        String text = Files.readString(yaml);
         assertTrue(text.contains("audio:"), text);
     }
 }
