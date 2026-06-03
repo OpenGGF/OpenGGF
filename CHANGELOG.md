@@ -12,6 +12,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - Added `DrainPcmAudioTap`, an `AudioFrameTap` that drains the current gameplay frame's stereo PCM from `AudioManager` capture mode (`drainCaptureFrame`) for the trace video capture pipeline.
 
+- Added `GlReadPixelsGrabber`, a `VideoFrameGrabber` that reads the back buffer via `glReadPixels` (raw RGBA, OpenGL bottom-up order; ffmpeg-side `vflip` corrects orientation) for the trace video capture pipeline.
+
 - Extracted `TraceReplayDriver` (UI-agnostic deterministic trace-replay bootstrap) out of `TraceSessionLauncher`; the live Trace Test Mode launcher now delegates the reusable replay drive (reset/team/zone-load/title-card/playback/bootstrap/comparator) to the driver, which the headless trace-capture tool reuses. Behavior-preserving extraction (no replay behavior change).
 
 - Configuration moved from a flat `config.json` to a grouped, commented, deterministically-ordered `config.yaml`. All developer/debug settings are compartmentalised into a single `debug:` block. Existing `config.json` files are migrated automatically on first run (backed up to `config.json.bak`). Window size/scale are deprecated under `debug.window`; widescreen is driven by `display.aspect` profiles.
