@@ -663,7 +663,7 @@ public final class LevelRenderer {
 
         profiler.beginSection("render.hud");
         if (options.includeHud() && lm.hudRenderManager != null && !lm.isHudSuppressed()
-                && currentTraceVisibility.showGameHud()) {
+                && (TraceSessionLauncher.active() == null || currentTraceVisibility.showGameHud())) {
             AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
             lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
         }
@@ -674,7 +674,7 @@ public final class LevelRenderer {
                 && debugViewEnabled
                 && overlayManager.isEnabled(DebugOverlayToggle.OVERLAY);
         if (options.includeDebugOverlays() && lm.debugRenderer != null
-                && currentTraceVisibility.showDebugHud()) {
+                && (TraceSessionLauncher.active() == null || currentTraceVisibility.showDebugHud())) {
             lm.debugRenderer.renderDebugOverlays(overlayEnabled, lm.objectManager, lm.ringManager,
                     spriteManager, lm.gameModule, lm.configService, lm.frameCounter);
         }
