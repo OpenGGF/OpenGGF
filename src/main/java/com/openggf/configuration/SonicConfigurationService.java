@@ -1,12 +1,14 @@
 package com.openggf.configuration;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -17,6 +19,7 @@ import static org.lwjgl.glfw.GLFW.*;
 
 public class SonicConfigurationService {
 	private static final Logger LOGGER = Logger.getLogger(SonicConfigurationService.class.getName());
+	private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 	private static SonicConfigurationService sonicConfigurationService;
 
 	private Map<String, Object> config;
@@ -27,9 +30,6 @@ public class SonicConfigurationService {
 	private final Map<String, Object> transientResolved = new HashMap<>();
 
 	private SonicConfigurationService() {
-		ObjectMapper mapper = new ObjectMapper();
-		TypeReference<Map<String, Object>> type = new TypeReference<>(){};
-
 		if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
 			// Native image: look for config.yaml next to the executable binary
 			File execConfig = findConfigNextToExecutable();
@@ -57,10 +57,8 @@ public class SonicConfigurationService {
 		if (config == null) {
 			try (InputStream is = getClass().getResourceAsStream("/config.yaml")) {
 				if (is != null) {
-					com.fasterxml.jackson.databind.ObjectMapper yaml =
-							new com.fasterxml.jackson.dataformat.yaml.YAMLMapper();
-					Map<String, Object> nested = yaml.readValue(is, type);
-					config = ConfigFlattener.flatten(nested).flat();
+					Map<String, Object> nested = new YAMLMapper().readValue(is, MAP_TYPE);
+					config = flattenAndWarn(nested);
 				} else {
 					LOGGER.log(Level.WARNING, "Could not find config.yaml, using defaults.");
 					config = new HashMap<>();
@@ -208,9 +206,9 @@ public class SonicConfigurationService {
 	 * Resolves DISPLAY_ASPECT into the derived SCREEN_WIDTH_PIXELS (and, when
 	 * DISPLAY_WINDOW_AUTOSIZE is true with a widescreen preset,
 	 * SCREEN_WIDTH/SCREEN_HEIGHT). Derived values are stored in an in-memory
-	 * overlay only and are NEVER written to config.json. SCREEN_WIDTH_PIXELS is
+	 * overlay only and are NEVER written to config.yaml. SCREEN_WIDTH_PIXELS is
 	 * therefore a derived value here, not a user setting; a manual
-	 * SCREEN_WIDTH_PIXELS in config.json is superseded by the preset. Idempotent.
+	 * SCREEN_WIDTH_PIXELS in config.yaml is superseded by the preset. Idempotent.
 	 * Height pixels stay 224.
 	 *
 	 * <p>When {@code TEST_MODE_ENABLED} is {@code true} the aspect is always
@@ -283,7 +281,7 @@ public class SonicConfigurationService {
 		File target = resolveConfigFile();
 		try {
 			String yaml = new ConfigYamlWriter().write(config);
-			java.nio.file.Files.writeString(target.toPath(), yaml);
+			Files.writeString(target.toPath(), yaml, StandardCharsets.UTF_8);
 		} catch (IOException e) {
 			LOGGER.log(Level.WARNING, "Failed to save config.yaml", e);
 		}
@@ -318,7 +316,7 @@ public class SonicConfigurationService {
 		// Re-derive SCREEN_WIDTH_PIXELS (and related) from the freshly-set
 		// DISPLAY_ASPECT=NATIVE_4_3 default so any widescreen value left in
 		// transientResolved from the singleton constructor is discarded.
-		// Without this call a developer's ULTRA_21_9 config.json would leave
+		// Without this call a developer's ULTRA_21_9 config.yaml would leave
 		// SCREEN_WIDTH_PIXELS=528 in the overlay even after the test harness
 		// calls resetToDefaults(), silently widening trace and headless test runs.
 		resolveDisplayAspect();
@@ -449,10 +447,11 @@ public class SonicConfigurationService {
 	}
 
 	private Map<String, Object> readYamlFlat(File file) throws IOException {
-		com.fasterxml.jackson.databind.ObjectMapper yaml =
-				new com.fasterxml.jackson.dataformat.yaml.YAMLMapper();
-		TypeReference<Map<String, Object>> type = new TypeReference<>() {};
-		Map<String, Object> nested = yaml.readValue(file, type);
+		Map<String, Object> nested = new YAMLMapper().readValue(file, MAP_TYPE);
+		return flattenAndWarn(nested);
+	}
+
+	private Map<String, Object> flattenAndWarn(Map<String, Object> nested) {
 		ConfigFlattener.Result result = ConfigFlattener.flatten(nested);
 		for (String unknown : result.unknownKeys()) {
 			LOGGER.warning("Unknown config key ignored: " + unknown);
