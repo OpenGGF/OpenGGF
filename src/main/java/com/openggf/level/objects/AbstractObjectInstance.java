@@ -849,7 +849,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
             T child = factory.get();
             ObjectManager om = svc.objectManager();
             if (om != null) {
-                om.addDynamicObjectAfterCurrent(child);
+                if (child.skipsSameFrameUpdateAfterSpawn()) {
+                    om.addDynamicObjectAfterCurrentNextFrame(child);
+                } else {
+                    om.addDynamicObjectAfterCurrent(child);
+                }
             }
             return child;
         } finally {

@@ -443,6 +443,8 @@ public class ObjectManager {
     private final List<ObjectInstance> cachedSolidProviderObjects = new ArrayList<>();
     private final List<ObjectInstance> cachedTouchResponseObjects = new ArrayList<>();
     private boolean activeObjectsCacheDirty = true;
+    private final Set<ObjectInstance> deferredDynamicExecThisFrame =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     // ROM parity: dynamic object slot tracking for the current game's allocatable
     // SST window. S1 uses 32..127, S2 uses 16..127, and S3K uses 4..92.
@@ -551,6 +553,7 @@ public class ObjectManager {
     public void reset(int cameraX) {
         clearActiveObjects();
         dynamicObjects.clear();
+        deferredDynamicExecThisFrame.clear();
         reservedChildSlots.clear();
         usedSlots.clear();
         Arrays.fill(execOrder, null);
@@ -963,6 +966,7 @@ public class ObjectManager {
         } finally {
             currentExecSlot = -1;
             updating = false;
+            deferredDynamicExecThisFrame.clear();
             if (objectsRemoved) {
                 bucketsDirty = true;
                 activeObjectsCacheDirty = true;
@@ -1123,6 +1127,7 @@ public class ObjectManager {
         } finally {
             currentExecSlot = -1;
             updating = false;
+            deferredDynamicExecThisFrame.clear();
             if (objectsRemoved) {
                 bucketsDirty = true;
                 activeObjectsCacheDirty = true;
@@ -1584,6 +1589,7 @@ public class ObjectManager {
         if (!removed) {
             return;
         }
+        deferredDynamicExecThisFrame.remove(object);
         if (object instanceof AbstractObjectInstance aoi) {
             int slot = aoi.getSlotIndex();
             if (slot >= 0) {
@@ -1601,6 +1607,10 @@ public class ObjectManager {
      */
     public void addDynamicObjectAfterCurrent(ObjectInstance object) {
         addDynamicObjectInternal(object, true, true);
+    }
+
+    public void addDynamicObjectAfterCurrentNextFrame(ObjectInstance object) {
+        addDynamicObjectInternal(object, true, false);
     }
 
     /**
@@ -1669,6 +1679,12 @@ public class ObjectManager {
             }
         }
         dynamicObjects.add(object);
+        if (!allowSameFrameExec && updating) {
+            deferredDynamicExecThisFrame.add(object);
+            if (object instanceof AbstractObjectInstance aoi2) {
+                aoi2.setSkipTouchThisFrame(true);
+            }
+        }
         if (allowSameFrameExec && updating && object instanceof AbstractObjectInstance aoi2
                 && isManagedDynamicSlot(aoi2.getSlotIndex())) {
             // ROM parity: FindFreeObj places the child directly into the SST.
@@ -2893,6 +2909,9 @@ public class ObjectManager {
     private void populateDynamicFallbackScratch() {
         dynamicFallbackScratch.clear();
         for (ObjectInstance inst : dynamicObjects) {
+            if (deferredDynamicExecThisFrame.contains(inst)) {
+                continue;
+            }
             if (inst instanceof AbstractObjectInstance aoi
                     && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 continue;
@@ -6504,6 +6523,9 @@ public class ObjectManager {
                     player.setPushing(true);
                     setObjectPushingBit(player, instance);
                     provider.setPlayerPushing(player, true);
+                } else if (clearObjectPushingBit(player, instance)) {
+                    player.setPushing(false);
+                    provider.setPlayerPushing(player, false);
                 }
                 if (result.standing()) {
                     ridingStates.put(player, new RidingState(
@@ -7340,6 +7362,9 @@ public class ObjectManager {
                         // ROM: s2.asm:35220-35226 — also set pushing bit on the object
                         setObjectPushingBit(player, instance);
                         provider.setPlayerPushing(player, true);
+                    } else if (clearObjectPushingBit(player, instance)) {
+                        player.setPushing(false);
+                        provider.setPlayerPushing(player, false);
                     }
                     if (result.standing()) {
                         nextRidingObject = instance;
@@ -7475,11 +7500,23 @@ public class ObjectManager {
             int standingPieceX = 0;
             int standingPieceY = 0;
             SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
+            boolean ridingCurrentObject = isRidingCurrentPlayerObject(instance);
+            int currentRidingPieceIndex = getCurrentPlayerRidingPieceIndex();
 
             for (int i = 0; i < pieceCount; i++) {
                 SolidObjectParams params = multiPiece.getPieceParams(i);
                 int pieceX = multiPiece.getPieceX(i);
                 int pieceY = multiPiece.getPieceY(i);
+                if (ridingCurrentObject && i == currentRidingPieceIndex) {
+                    anyStanding = true;
+                    if (standingPieceIndex < 0) {
+                        standingPieceIndex = i;
+                        standingPieceX = pieceX;
+                        standingPieceY = pieceY;
+                    }
+                    multiPiece.onPieceContact(i, player, SolidContact.STANDING, frameCounter);
+                    continue;
+                }
                 int anchorX = pieceX + params.offsetX();
                 int anchorY = pieceY + params.offsetY();
                 int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();

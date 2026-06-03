@@ -571,6 +571,9 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 			return false;
 		}
 		int relY = sprite.getRenderCentreY() - y;
+		if (verticalWrapEnabled) {
+			relY &= verticalWrapMask;
+		}
 		com.openggf.game.PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
 		boolean useS3kMargin = fs != null && fs.useScreenYWrapValueForVisibility();
 		int yMargin = useS3kMargin ? widthPixels : 32;
@@ -717,7 +720,7 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	}
 
 	/**
-	 * Applies the S3K {@code Screen_Y_wrap_value} mask to a playable object's ROM
+	 * Applies the active vertical wrap mask to a playable object's ROM
 	 * {@code y_pos} equivalent when vertical wrapping is active.
 	 * <p>ROM references:
 	 * {@code docs/skdisasm/sonic3k.asm:21989-21992} (Sonic),
@@ -728,10 +731,6 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 */
 	public boolean applyScreenYWrapValue(AbstractPlayableSprite sprite) {
 		if (!verticalWrapEnabled || sprite == null) {
-			return false;
-		}
-		PhysicsFeatureSet fs = sprite.getPhysicsFeatureSet();
-		if (fs == null || !fs.useScreenYWrapValueForVisibility()) {
 			return false;
 		}
 		short before = sprite.getCentreY();
