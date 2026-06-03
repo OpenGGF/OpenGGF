@@ -307,7 +307,15 @@ public class BlueBallsObjectInstance extends AbstractObjectInstance implements T
      */
     private boolean checkMarkObjGone() {
         Camera camera = services().camera();
-        int cameraXCoarse = camera.getX() & 0xFF80;
+        // ROM parity: MarkObjGone compares against Camera_X_pos_coarse, which is the
+        // camera left edge shifted left by the 128px margin -- (cameraX - 128) & $FF80
+        // -- exactly like the engine's central out-of-range check
+        // (ObjectManager.isOutOfRangeS1). Using the bare camera left edge culled the
+        // object one chunk too early on the LEFT: on a backward/leftward approach
+        // (e.g. landing on the CPZ spring and holding left back to the X=0x1110
+        // cluster) the placement re-loaded the ball but it self-deleted the instant
+        // it appeared -- before the camera reached it -- so it never respawned.
+        int cameraXCoarse = (camera.getX() - 128) & 0xFF80;
         int objectXCoarse = (currentX >> 8) & 0xFF80;
 
         // Unsigned comparison: if difference > OFFSCREEN_DISTANCE, delete
