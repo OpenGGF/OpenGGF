@@ -179,6 +179,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0xBB, // ICZIceBlock
                 0xBC, // ICZMiniboss
                 0xBD, // ICZEndBoss
+                0xBF, // Ribot
                 0xC0, // Orbinaut
                 0xC2  // Flybot767
         ));

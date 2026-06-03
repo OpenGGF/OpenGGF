@@ -189,6 +189,8 @@ public final class Sonic3kObjectIds {
     public static final int ICZ_MINIBOSS = 0xBC;
     // S3KL object table: Obj_ICZEndBoss.
     public static final int ICZ_END_BOSS = 0xBD;
+    // S3KL object table: Obj_Ribot.
+    public static final int RIBOT = 0xBF;
     // S3KL object table: Obj_Orbinaut.
     public static final int ORBINAUT = 0xC0;
     // S3KL object table: Obj_Flybot767.

@@ -18,6 +18,7 @@ import com.openggf.game.sonic3k.objects.badniks.BubblesBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.OrbinautBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.PenguinatorBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.PoindexterBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.RibotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TunnelbotBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
@@ -983,6 +984,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }
                     return new OrbinautBadnikInstance(spawn);
+                });
+        factories.put(Sonic3kObjectIds.RIBOT,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new RibotBadnikInstance(spawn);
                 });
         factories.put(Sonic3kObjectIds.FLYBOT_767,
                 (spawn, registry) -> {

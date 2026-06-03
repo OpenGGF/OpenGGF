@@ -10,6 +10,11 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **Expanded S3K Mushroom Hill parity and art-safety coverage.** MHZ now has fixes across Knuckles cutscene art/palette/music cleanup, swing/curled/twisted vines, mushroom platforms/catapults, pulley lifts, Madmole and Dragonfly behavior, miniboss arena/flame/music handling, debug object-name resolution, and post-cutscene palette restoration. Added engine-level sprite mapping corruption suppression/logging, ROM-backed S3K object-art crawler coverage, SKL/S3-side art-address guards with reviewed exceptions, and RomOffsetFinder support for labels inside included mapping files.
 
+- **Implemented S3K Ribot ObjBF.** The Launch Base Ribot badnik now registers
+  in the S3KL object set, uses the existing ROM-backed Ribot art plan, spawns
+  subtype-specific appendage children, alternates the parent child-gate bits
+  from the ROM `$38` state pattern, and exposes the child hurt collision.
+
 - **Implemented S3K Orbinaut ObjC0.** The Launch Base badnik now registers in
   the S3KL object set, loads its existing ROM-backed Orbinaut art, spawns four
   orbiting hurt orbs at the ROM cardinal offsets, and moves left or right only
