@@ -106,6 +106,16 @@ public class LWJGLAudioBackend implements AudioBackend {
     private GameAudioProfile audioProfile;
     private SmpsSequencerConfig smpsConfig;
 
+    /**
+     * Headless capture mode: suppress all OpenAL device output. The deterministic
+     * capture runtime is the SOLE consumer of synthesized PCM (it reads the SMPS
+     * driver directly and drains the FIFO), so the backend must not also drain
+     * the FIFO / queue buffers — doing so steals samples from the capture (audio
+     * plays too fast) and plays to the speakers. Synthesis (SMPS driver creation
+     * + runtime stream binding) still runs; only device output is gated.
+     */
+    private final boolean offlineNoDevice;
+
     public LWJGLAudioBackend() {
         this(SonicConfigurationService.createStandalone(), null);
     }
@@ -115,8 +125,14 @@ public class LWJGLAudioBackend implements AudioBackend {
     }
 
     public LWJGLAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler) {
+        this(configService, profiler, false);
+    }
+
+    public LWJGLAudioBackend(SonicConfigurationService configService, PerformanceProfiler profiler,
+                             boolean offlineNoDevice) {
         this.configService = Objects.requireNonNull(configService, "configService");
         this.profiler = profiler;
+        this.offlineNoDevice = offlineNoDevice;
         // Initialize fallback mappings
         // SFX
         sfxFallback.put("JUMP", "sfx/jump.wav");
@@ -212,6 +228,14 @@ public class LWJGLAudioBackend implements AudioBackend {
                 MemoryUtil.memFree(directShortBuffer);
             }
             directShortBuffer = MemoryUtil.memAllocShort(STREAM_BUFFER_SIZE * 2);
+
+            if (offlineNoDevice) {
+                // Headless capture: mute the device entirely so nothing is ever
+                // audible (covers any direct WAV-SFX sources too). The captured
+                // PCM is taken from the deterministic runtime, not OpenAL, so
+                // listener gain does not affect the recording.
+                alListenerf(AL_GAIN, 0.0f);
+            }
 
         } catch (Throwable t) {
             LOGGER.log(Level.SEVERE, "LWJGL OpenAL Init failed", t);
@@ -537,6 +561,11 @@ public class LWJGLAudioBackend implements AudioBackend {
     }
 
     private void startStream() {
+        if (offlineNoDevice) {
+            // Headless capture: never queue/play to the device. The capture
+            // runtime consumes the synthesized PCM instead.
+            return;
+        }
         if (streamBuffers == null) {
             streamBuffers = new int[STREAM_BUFFER_COUNT];
             for (int i = 0; i < STREAM_BUFFER_COUNT; i++) {
@@ -1303,6 +1332,12 @@ public class LWJGLAudioBackend implements AudioBackend {
 
     @Override
     public void update() {
+        if (offlineNoDevice) {
+            // Headless capture: no device streaming. Skipping updateStream() also
+            // stops the backend from draining the presentation FIFO, leaving the
+            // full per-frame PCM for the capture tap (keeps audio in sync).
+            return;
+        }
         updateStream();
 
         // Cleanup stopped sources

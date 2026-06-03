@@ -57,7 +57,6 @@ public final class TraceCaptureTool {
 
     private static final int SCREEN_WIDTH = 320;
     private static final int SCREEN_HEIGHT = 224;
-    private static final int CAPTURE_SAMPLE_RATE = 44100;
     private static final int QUEUE_CAPACITY = 8;
 
     private static final DateTimeFormatter UTC_STAMP =
@@ -170,7 +169,11 @@ public final class TraceCaptureTool {
         TraceCaptureSession session = new TraceCaptureSession(
                 loop, driver, grabber, audioTap, recorder, args.fps());
 
-        session.start(SCREEN_WIDTH, SCREEN_HEIGHT, CAPTURE_SAMPLE_RATE);
+        // Drive capture at the audio backend's real synthesis rate (the SMPS
+        // driver runs at the device rate — 48 kHz). A hardcoded rate would
+        // mismatch the synth and pitch-shift the audio.
+        int sampleRate = AudioManager.getInstance().getBackend().outputSampleRate();
+        session.start(SCREEN_WIDTH, SCREEN_HEIGHT, sampleRate);
         long frames = 0;
         // Defensive cap: the comparator drives completion, but bound the loop a
         // little past the trace length so a stuck cursor can never grow the
