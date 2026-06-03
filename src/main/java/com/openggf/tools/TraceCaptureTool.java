@@ -185,7 +185,7 @@ public final class TraceCaptureTool {
         // Drive capture at the audio backend's real synthesis rate (the SMPS
         // driver runs at the device rate — 48 kHz). A hardcoded rate would
         // mismatch the synth and pitch-shift the audio.
-        int sampleRate = GameServices.audio().getBackend().outputSampleRate();
+        int sampleRate = GameServices.audio().outputSampleRate();
         session.start(SCREEN_WIDTH, SCREEN_HEIGHT, sampleRate);
         long frames = 0;
         // Defensive cap: the comparator drives completion, but bound the loop a

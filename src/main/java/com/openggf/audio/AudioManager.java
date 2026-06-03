@@ -83,6 +83,15 @@ public class AudioManager {
         return backend;
     }
 
+    /**
+     * The active backend's output (synthesis) sample rate. Routed through
+     * AudioManager so callers don't reach the backend directly (see
+     * TestAudioBackendBypassGuard).
+     */
+    public int outputSampleRate() {
+        return backend.outputSampleRate();
+    }
+
     void setDeterministicAudioRuntime(DeterministicAudioRuntime deterministicAudioRuntime) {
         deterministicRuntimeExplicitlyConfigured = true;
         applyDeterministicAudioRuntime(deterministicAudioRuntime);
