@@ -63,7 +63,7 @@ public class AutomaticTunnelObjectInstance extends AbstractObjectInstance {
     // Each path: flat array of X, Y coordinate pairs.
     // =========================================================================
 
-    private static final int[][] PATHS = {
+    static final int[][] PATHS = {
             // Path 0 (AutoTunnel_00): 3 waypoints
             {0x0F60, 0x0578, 0x0F60, 0x0548, 0x0F60, 0x0378},
             // Path 1 (AutoTunnel_01_02): 14 waypoints

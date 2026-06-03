@@ -218,6 +218,9 @@ public class Sonic3kConstants {
     // LockOn data (S3 half — no S&K-side copy). Verified via ROM byte search at 0x228246/0x228236.
     public static final int MAP_LBZ_SMASHING_SPIKES_ADDR = 0x228236; // Map_LBZSmashingSpikes (1 frame, 2 pieces)
     public static final int MAP_MGZ_SMASHING_PILLAR_ADDR = 0x228246; // Map_MGZSmashingPillar (1 frame, 10 pieces)
+    // Map_LBZTubeElevator (7 frames). Verified by ROM search for the assembled
+    // offset-table prefix 00 0E 00 4C 00 8A 00 B6 00 F4 01 20 01 5E.
+    public static final int MAP_LBZ_TUBE_ELEVATOR_ADDR = 0x2291A4;
     // ArtTile_LBZTubeTrans = $0455 (from sonic3k.constants.asm)
     public static final int ARTTILE_LBZ_TUBE_TRANS = 0x0455;
 

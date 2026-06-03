@@ -224,6 +224,41 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lbzPlanIncludesTubeElevatorLevelArt() {
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x06, 0);
+
+        Sonic3kPlcArtRegistry.LevelArtEntry elevator = plan.levelArt().stream()
+                .filter(e -> e.key().equals("lbz_tube_elevator"))
+                .findFirst().orElse(null);
+
+        assertNotNull(elevator, "Obj_LBZTubeElevator uses resident LBZ tube transport art");
+        assertEquals(Sonic3kConstants.MAP_LBZ_TUBE_ELEVATOR_ADDR, elevator.mappingAddr());
+        assertEquals(Sonic3kConstants.ARTTILE_LBZ_TUBE_TRANS, elevator.artTileBase());
+        assertEquals(1, elevator.palette());
+    }
+
+    @Test
+    public void lbzTubeElevatorMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            var frames = S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_TUBE_ELEVATOR_ADDR);
+
+            assertEquals(7, frames.size(), "Map_LBZTubeElevator has six shell frames plus the side child frame");
+            assertEquals(10, frames.get(0).pieces().size());
+            assertEquals(10, frames.get(1).pieces().size());
+            assertEquals(7, frames.get(2).pieces().size());
+            assertEquals(10, frames.get(3).pieces().size());
+            assertEquals(7, frames.get(4).pieces().size());
+            assertEquals(10, frames.get(5).pieces().size());
+            assertEquals(3, frames.get(6).pieces().size());
+        }
+    }
+
+    @Test
     public void lbzRideGrappleMappingsMatchRomShape() throws IOException {
         File romFile = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");

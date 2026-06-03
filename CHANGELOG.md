@@ -4,6 +4,13 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- **Implemented S3K LBZ tube elevator Obj10.** S3KL slot `$10` now routes to
+  `Obj_LBZTubeElevator`, using ROM-backed LBZ tube transport mappings/art,
+  automatic-tunnel path data, two-layer elevator rendering, capture/spin/path
+  travel/release states, closed-destination suppression while Sonic is inside
+  an active tube elevator, and release cleanup for object-owned rotating player
+  frames.
+
 - **Implemented S3K LBZ ride grapple Obj17.** S3KL slot `$17` now routes to
   `Obj_LBZRideGrapple`, including ROM path-range subtype selection, chain and
   handle extension/sway, native P2-before-P1 grab handling, `object_control=3`

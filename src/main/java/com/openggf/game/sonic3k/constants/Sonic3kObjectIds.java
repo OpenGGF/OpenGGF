@@ -29,6 +29,7 @@ public final class Sonic3kObjectIds {
     public static final int BREAKABLE_WALL = 0x0D;
     public static final int TWISTED_RAMP = 0x0E;
     public static final int COLLAPSING_BRIDGE = 0x0F;
+    public static final int LBZ_TUBE_ELEVATOR = 0x10;
     public static final int MHZ_SWING_VINE = 0x10;
     public static final int MHZ_MUSHROOM_PLATFORM = 0x11;
     public static final int MHZ_MUSHROOM_PARACHUTE = 0x12;

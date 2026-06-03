@@ -1514,6 +1514,15 @@ public final class Sonic3kPlcArtRegistry {
                 2,
                 null
         ));
+
+        // Tube Elevator (Object 0x10): make_art_tile(ArtTile_LBZTubeTrans, 1, 0)
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LBZ_TUBE_ELEVATOR,
+                Sonic3kConstants.MAP_LBZ_TUBE_ELEVATOR_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ_TUBE_TRANS,
+                1,
+                null
+        ));
     }
 
     /**

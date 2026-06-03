@@ -132,13 +132,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new AizGiantRideVineObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.MHZ_SWING_VINE,
+        factories.put(Sonic3kObjectIds.LBZ_TUBE_ELEVATOR,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet == S3kZoneSet.SKL && currentRomZoneId() == Sonic3kZoneIds.ZONE_MHZ) {
                         return new MhzSwingVineObjectInstance(spawn);
                     }
-                    return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new LbzTubeElevatorInstance(spawn);
                 });
         factories.put(Sonic3kObjectIds.BREAKABLE_WALL,
                 (spawn, registry) -> new BreakableWallObjectInstance(spawn));
