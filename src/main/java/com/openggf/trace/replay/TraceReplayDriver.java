@@ -37,17 +37,34 @@ public final class TraceReplayDriver {
     private final TraceReplayFixture fixture;
     private final GameLoop loop;
     private final Supplier<AbstractPlayableSprite> spriteSupplier;
+    private final Runnable onComparatorPause;
 
     private LiveTraceComparator comparator;
     private int initialCursor;
 
+    /**
+     * Live Trace Test Mode constructor: a comparator desync pauses gameplay via
+     * {@link GameLoop#toggleUserPause()} (the interactive UX).
+     */
     public TraceReplayDriver(TraceData trace, Bk2Movie movie, TraceReplayFixture fixture,
                              GameLoop loop, Supplier<AbstractPlayableSprite> spriteSupplier) {
+        this(trace, movie, fixture, loop, spriteSupplier, loop::toggleUserPause);
+    }
+
+    /**
+     * General constructor. Headless capture passes a no-op {@code onComparatorPause}
+     * so it records <em>through</em> desyncs (the diverging ghost is the content)
+     * and runs to trace completion instead of freezing on the first mismatch.
+     */
+    public TraceReplayDriver(TraceData trace, Bk2Movie movie, TraceReplayFixture fixture,
+                             GameLoop loop, Supplier<AbstractPlayableSprite> spriteSupplier,
+                             Runnable onComparatorPause) {
         this.trace = trace;
         this.movie = movie;
         this.fixture = fixture;
         this.loop = loop;
         this.spriteSupplier = spriteSupplier;
+        this.onComparatorPause = onComparatorPause;
     }
 
     /**
@@ -130,7 +147,7 @@ public final class TraceReplayDriver {
                 ToleranceConfig.DEFAULT,
                 initialCursor,
                 spriteSupplier::get,
-                loop::toggleUserPause);
+                onComparatorPause);
         playback.setFrameObserver(comparator);
     }
 

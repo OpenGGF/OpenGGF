@@ -150,8 +150,11 @@ public final class TraceCaptureTool {
         // --- deterministic trace replay bootstrap -------------------------
         PlaybackDebugManager playback = GameServices.playbackDebug();
         TraceReplayFixture fixture = new HeadlessFixture(playback, loop);
+        // No-op desync-pause: capture must record through mismatches (the
+        // diverging ghost is the point) and run to trace completion, not freeze.
         TraceReplayDriver driver = new TraceReplayDriver(
-                trace, movie, fixture, loop, () -> GameServices.camera().getFocusedSprite());
+                trace, movie, fixture, loop, () -> GameServices.camera().getFocusedSprite(),
+                () -> { });
         driver.start(entry.zone(), entry.act());
 
         // --- capture pipeline ---------------------------------------------
@@ -169,8 +172,16 @@ public final class TraceCaptureTool {
 
         session.start(SCREEN_WIDTH, SCREEN_HEIGHT, CAPTURE_SAMPLE_RATE);
         long frames = 0;
+        // Defensive cap: the comparator drives completion, but bound the loop a
+        // little past the trace length so a stuck cursor can never grow the
+        // ffmpeg temp unbounded.
+        long maxFrames = (long) trace.frameCount() + 600;
         while (session.stepAndCapture()) {
-            frames++;
+            if (++frames >= maxFrames) {
+                System.err.println("Capture frame cap reached (" + maxFrames
+                        + "); finalizing early.");
+                break;
+            }
         }
         Path out = session.finish();
         System.out.println("Captured " + frames + " frames -> " + out.toAbsolutePath());

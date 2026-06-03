@@ -4,6 +4,7 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- Trace capture records *through* comparator desyncs (injectable pause callback; the headless `TraceCaptureTool` passes a no-op) so a capture runs to trace completion instead of freezing on the first mismatch, with a defensive frame cap so a stuck cursor can't grow the ffmpeg temp unbounded.
 - Added `TRACE_SHOW_DESYNC_GHOSTS` / `TRACE_SHOW_GAME_HUD` / `TRACE_SHOW_DEBUG_HUD` config flags for trace replay and capture visibility (foundation for the trace capture recorder). The game-HUD and debug-HUD visibility gates only apply while a trace session is active, so normal gameplay rendering (incl. the debug overlay) is unaffected.
 
 - Added `CAPTURE_OUTPUT_DIR` / `CAPTURE_SCALE` / `CAPTURE_FPS` / `CAPTURE_CODEC` config for trace video capture.
