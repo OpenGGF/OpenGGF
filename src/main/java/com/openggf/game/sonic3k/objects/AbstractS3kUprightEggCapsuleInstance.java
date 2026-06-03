@@ -178,10 +178,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
                 services().configuration());
     }
 
-    protected S3kResultsScreenObjectInstance createResultsScreen() {
-        return new S3kResultsScreenObjectInstance(resolvePlayerCharacter(), services().currentAct());
-    }
-
     private void triggerButton() {
         buttonTriggered = true;
         buttonRecess = BUTTON_RECESS;
@@ -232,7 +228,9 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
                 lockForResults(sprite);
             }
         }
-        spawnChild(this::createResultsScreen);
+        PlayerCharacter character = resolvePlayerCharacter();
+        int currentAct = services().currentAct();
+        spawnChild(() -> new S3kResultsScreenObjectInstance(character, currentAct));
     }
 
     private List<PlayableEntity> resultParticipants(AbstractPlayableSprite player) {

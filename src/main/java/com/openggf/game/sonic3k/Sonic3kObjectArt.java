@@ -881,10 +881,31 @@ public class Sonic3kObjectArt {
             mappings = applyDplcRemap(mappings, dplcFrames);
         } else {
             mappings = normalizeStandaloneMappings(entry, patterns, mappings);
+            patterns = padSparseStandalonePatterns(entry, patterns, mappings);
         }
         validateStandaloneMappings(entry, patterns, mappings);
 
         return new ObjectSpriteSheet(patterns, mappings, entry.palette(), 1);
+    }
+
+    private static Pattern[] padSparseStandalonePatterns(
+            Sonic3kPlcArtRegistry.StandaloneArtEntry entry,
+            Pattern[] patterns,
+            List<SpriteMappingFrame> mappings) {
+        if (!Sonic3kObjectArtKeys.GUMBALL_BONUS.equals(entry.key())
+                && !Sonic3kObjectArtKeys.GUMBALL_SPRING.equals(entry.key())) {
+            return patterns;
+        }
+        TileRange range = mappingTileRange(mappings);
+        if (range.empty() || range.maxExclusive() <= patterns.length) {
+            return patterns;
+        }
+
+        Pattern[] padded = Arrays.copyOf(patterns, range.maxExclusive());
+        for (int i = patterns.length; i < padded.length; i++) {
+            padded[i] = new Pattern();
+        }
+        return padded;
     }
 
     private static List<SpriteMappingFrame> normalizeStandaloneMappings(

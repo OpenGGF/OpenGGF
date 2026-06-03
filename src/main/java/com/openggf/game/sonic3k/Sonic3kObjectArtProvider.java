@@ -196,6 +196,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             try {
                 ObjectSpriteSheet sheet = art.loadStandaloneSheet(rom, entry);
                 registerSheet(entry.key(), sheet);
+                registerStandaloneAnimations(entry.key());
             } catch (IOException e) {
                 LOG.warning("Failed to load standalone art '" + entry.key() + "': " + e.getMessage());
             }
@@ -1663,6 +1664,16 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         rendererOrder.add(renderer);
     }
 
+    private void registerStandaloneAnimations(String key) {
+        if (Sonic3kObjectArtKeys.MHZ_SHIP_PROPELLER.equals(key)) {
+            SpriteAnimationSet set = new SpriteAnimationSet();
+            set.addScript(0, new SpriteAnimationScript(2,
+                    List.of(5, 6, 7),
+                    SpriteAnimationEndAction.LOOP, 0));
+            animations.put(key, set);
+        }
+    }
+
     /**
      * Ensures a standalone registry-backed sheet is registered for the current zone/act.
      * Used by objects whose ROM behavior loads auxiliary PLC art on demand.
@@ -1696,6 +1707,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             RomByteReader reader = RomByteReader.fromRom(rom);
             Sonic3kObjectArt art = new Sonic3kObjectArt(null, reader);
             registerSheet(key, art.loadStandaloneSheet(rom, entry));
+            registerStandaloneAnimations(key);
             return renderers.containsKey(key) && sheets.containsKey(key);
         } catch (IOException e) {
             LOG.warning("Failed to ensure standalone art '" + key + "': " + e.getMessage());

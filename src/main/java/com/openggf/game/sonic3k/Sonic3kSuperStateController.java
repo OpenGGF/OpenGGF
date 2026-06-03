@@ -208,6 +208,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected void updateSuperPalette() {
+        var paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
+        if (paletteRegistry != null && paletteRegistry.isPaletteRotationDisabled()) {
+            return;
+        }
         if (paletteState != -1) return;
 
         paletteTimer--;
