@@ -83,14 +83,20 @@ caller.
 ## 3. Data Flow (headless, per frame)
 
 1. `TraceCaptureSession.stepAndRender()`:
-   - advance one deterministic trace frame (the existing replay step path);
-   - advance one audio frame (`AudioManager.advanceGameplayFrameAudio()`);
-   - render scene + ghosts + HUD to the offscreen framebuffer, with each layer
-     gated by `TraceRenderVisibility`.
+   - advance one deterministic trace frame via the **canonical game-loop step**
+     (`GameLoop.step()` — the same path live Trace Test Mode and the headless
+     trace tests use). **Audio-frame advancement is owned by that step**
+     (`beginGameplayAudioFrameForTick` → `advanceGameplayAudioFrameForTick`,
+     `GameLoop.java:871,894`). The capture session does **not** call
+     `AudioManager.advanceGameplayFrameAudio()` itself — that would
+     double-advance the audio clock per captured video frame (see §4).
+   - render scene + ghosts + HUD to the offscreen framebuffer, each layer gated
+     by `TraceRenderVisibility`.
 2. `recorder.submit(new CapturedFrame(grabber.grab(), audioTap.drain(), ...))`:
    - `GlReadPixelsGrabber` reads `width*height*4` RGBA bytes from `GL_BACK`;
-   - `DrainPcmAudioTap` drains exactly `AudioFrameClock.samplesForNextFrame()`
-     stereo shorts via `DeterministicAudioRuntime.drainPcm(...)`.
+   - `DrainPcmAudioTap` drains the PCM **already produced by this frame's step**,
+     sizing the drain from the **non-mutating** produced-sample count (§4) — never
+     by calling the mutating `AudioFrameClock.samplesForNextFrame()` again.
 3. `EncoderSink` enqueues the frame on a bounded blocking queue. With
    `BackpressurePolicy.BLOCK`, a full queue blocks the producer — which merely
    slows the deterministic loop and **cannot drop or desync** anything.
@@ -112,25 +118,67 @@ later optimization behind the same `CaptureEncoder` seam.
 ## 4. Synchronization Model
 
 - **Video**: exactly one captured frame per game step.
-- **Audio**: exactly `AudioFrameClock.samplesForNextFrame()` samples per step
-  (48000/fps with remainder accumulation — e.g. 800 samples/frame at 60 fps).
+- **Audio**: each game step produces exactly the samples
+  `AudioFrameClock.samplesForNextFrame()` returns for that frame (48000/fps with
+  remainder accumulation — e.g. 800/801 samples/frame at 60 fps). That clock is
+  advanced **once**, inside the game-loop step
+  (`StreamBackedDeterministicAudioRuntime.advanceFrame`,
+  `StreamBackedDeterministicAudioRuntime.java:99`), which writes exactly that
+  count into the output FIFO + history.
 - Sync needs **no timestamps**: equal frame/sample cadence by construction.
   ffmpeg is told `-r <fps>` for video and `-ar 48000 -ac 2` for audio; their
   durations match because the per-frame sample budget integrates to exactly
   `sampleRate` per second.
 
-## 5. Audio Tap Dependency (the one genuinely new integration)
+### 4.1 Sample-count contract (must not re-advance the clock)
 
-`DeterministicAudioRuntime.drainPcm(...)` only yields PCM when:
-- a `StreamBackedDeterministicAudioRuntime` is active
-  (`providesPresentationPcm() == true`), and
-- `advanceGameplayFrameAudio()` (→ `advanceRuntimeFrame(FrameAudioMode.NORMAL)`)
-  is driven each step.
+The producer must **not** call `samplesForNextFrame()` to size the drain — it
+mutates `remainder` / `totalSamplesProduced` and would desync the audio clock by
+one frame's budget on every captured frame. Instead:
 
-Headless trace *tests* normally run silent, so the recorder must explicitly put
-`AudioManager` into the deterministic-presentation-PCM mode and drive the audio
-frame each step. This is the only integration that goes beyond reusing existing
-replay/render code, and is the main implementation risk to validate early.
+- the capture API reports the sample count **produced during the step's
+  `advanceFrame`** (captured at production time, non-mutating to read), and
+- the tap drains exactly that many stereo frames.
+
+Tests assert `drainPcm(...)` returns exactly the produced count — in offline
+lockstep (one NORMAL `advanceFrame` then an immediate drain) the FIFO holds
+precisely one frame's samples.
+
+## 5. Audio Capture-Mode API (the one genuinely new integration)
+
+`DeterministicAudioRuntime.drainPcm(...)` only yields PCM when a
+`StreamBackedDeterministicAudioRuntime` is active (`providesPresentationPcm() ==
+true`) and the gameplay audio frame is driven each step (the canonical
+`GameLoop.step()` already does the latter — see §3). Two real obstacles block a
+`com.openggf.tools` driver from simply turning this on:
+
+- the runtime setter `setDeterministicAudioRuntime(...)` is **package-private**
+  (`AudioManager.java:84`); and
+- automatic installation only happens when the active backend reports
+  `supportsDeterministicRuntimePresentation() == true` (`AudioManager.java:104`)
+  — a headless/offscreen audio backend may not.
+
+**Plan: add a concrete, public capture-mode API to `AudioManager`** (the one new
+production surface this feature requires):
+
+- `beginCaptureMode(int sampleRate, int frameRate)` — force-installs a
+  `StreamBackedDeterministicAudioRuntime` (sized as in
+  `configureDeterministicRuntimeForBackend`) **independent of the backend's
+  `supportsDeterministicRuntimePresentation()`**, so headless capture works even
+  with a null/offscreen backend. Snapshots the prior runtime for restore.
+- `int drainCaptureFrame(short[] target)` — drains the current frame's
+  presentation PCM and returns the stereo-frame count produced by the most recent
+  NORMAL `advanceFrame` (the non-mutating produced count from §4.1).
+- `endCaptureMode()` — reinstalls the previously-configured runtime and clears
+  capture state.
+
+`DrainPcmAudioTap` is a thin adapter over `drainCaptureFrame`, keeping the
+capture subsystem decoupled from audio internals while giving the tool a public,
+testable entry point. A dedicated capture/offscreen audio backend remains a
+possible later refinement behind this same API. This is the main implementation
+risk and should be validated first (a focused test: `beginCaptureMode` → drive N
+canonical steps → assert each `drainCaptureFrame` returns the expected per-frame
+sample count and total integrates to `sampleRate × seconds`).
 
 ## 6. Configuration
 
@@ -198,8 +246,10 @@ per-panel flag scheme is introduced.
 ## 10. Testing Strategy
 
 - **Pure-unit, no GL/ffmpeg**:
-  - `AudioFrameTap`/`AudioFrameClock` cadence: N steps produce
-    `sum(samplesForNextFrame)` samples; integrates to `sampleRate × seconds`.
+  - Audio capture-mode cadence: `beginCaptureMode` → drive N canonical steps →
+    each `drainCaptureFrame` returns that frame's produced count, the total
+    integrates to `sampleRate × seconds`, the clock advances **once per frame**
+    (no double-advance), and the tap never mutates the clock to re-count.
   - `EncoderSink` + `BackpressurePolicy.BLOCK`: producer blocks when full,
     resumes on drain, zero frames dropped; frame order preserved.
   - `CaptureRecorder` lifecycle against a fake `CaptureEncoder` (records calls):
