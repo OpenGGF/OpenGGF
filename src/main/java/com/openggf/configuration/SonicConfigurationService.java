@@ -25,6 +25,7 @@ public class SonicConfigurationService {
 	private Map<String, Object> config;
 	private Map<String, Object> defaults = new HashMap<>();
 	private boolean loadedFromExistingFile;
+	private boolean migratedFromLegacyJson;
 	private boolean defaultInsertedSinceLastApply;
 	// Derived (non-persisted) display values; read before `config`, never saved.
 	private final Map<String, Object> transientResolved = new HashMap<>();
@@ -50,6 +51,22 @@ public class SonicConfigurationService {
 					loadedFromExistingFile = true;
 				} catch (IOException e) {
 					LOGGER.log(Level.WARNING, "Failed to load config.yaml from working directory", e);
+				}
+			}
+		}
+
+		// Migrate a legacy flat config.json (keys are enum names) to config.yaml on first run.
+		if (config == null) {
+			File legacy = resolveRelativeFile("config.json");
+			if (legacy.exists()) {
+				try {
+					com.fasterxml.jackson.databind.ObjectMapper jsonMapper =
+							new com.fasterxml.jackson.databind.ObjectMapper();
+					config = jsonMapper.readValue(legacy, MAP_TYPE);
+					loadedFromExistingFile = true;
+					migratedFromLegacyJson = true;
+				} catch (IOException e) {
+					LOGGER.log(Level.WARNING, "Failed to read legacy config.json for migration", e);
 				}
 			}
 		}
@@ -85,8 +102,15 @@ public class SonicConfigurationService {
 
 		boolean defaultsInserted = applyDefaults();
 
-		if (configChanged || (loadedFromExistingFile && defaultsInserted)) {
+		if (configChanged || migratedFromLegacyJson || (loadedFromExistingFile && defaultsInserted)) {
 			saveConfig();
+		}
+		if (migratedFromLegacyJson) {
+			File legacy = resolveRelativeFile("config.json");
+			File backup = resolveRelativeFile("config.json.bak");
+			if (legacy.exists() && legacy.renameTo(backup)) {
+				LOGGER.info("Migrated legacy config.json to config.yaml (backup at config.json.bak)");
+			}
 		}
 		resolveDisplayAspect();
 	}
