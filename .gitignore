@@ -7,6 +7,8 @@
 .settings/
 .vscode/
 /config.json
+/config.yaml
+/config.json.bak
 /*.bin
 
 # Build/debug artifacts
