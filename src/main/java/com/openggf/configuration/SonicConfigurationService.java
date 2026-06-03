@@ -1,6 +1,7 @@
 package com.openggf.configuration;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.apache.commons.lang3.StringUtils;
 
@@ -60,8 +61,7 @@ public class SonicConfigurationService {
 			File legacy = resolveRelativeFile("config.json");
 			if (legacy.exists()) {
 				try {
-					com.fasterxml.jackson.databind.ObjectMapper jsonMapper =
-							new com.fasterxml.jackson.databind.ObjectMapper();
+					ObjectMapper jsonMapper = new ObjectMapper();
 					config = jsonMapper.readValue(legacy, MAP_TYPE);
 					loadedFromExistingFile = true;
 					migratedFromLegacyJson = true;
@@ -108,8 +108,13 @@ public class SonicConfigurationService {
 		if (migratedFromLegacyJson) {
 			File legacy = resolveRelativeFile("config.json");
 			File backup = resolveRelativeFile("config.json.bak");
-			if (legacy.exists() && legacy.renameTo(backup)) {
-				LOGGER.info("Migrated legacy config.json to config.yaml (backup at config.json.bak)");
+			if (legacy.exists()) {
+				if (legacy.renameTo(backup)) {
+					LOGGER.info("Migrated legacy config.json to config.yaml (backup at config.json.bak)");
+				} else {
+					LOGGER.warning("Migrated config.json to config.yaml but could not rename the old file to "
+							+ "config.json.bak (it may already exist); the legacy config.json was left in place.");
+				}
 			}
 		}
 		resolveDisplayAspect();
