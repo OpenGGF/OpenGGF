@@ -1,0 +1,132 @@
+# OpenGGF configuration — grouped and documented.
+# Indentation is significant (YAML). This file is rewritten cleanly on save.
+
+# ── Display ──
+display:
+  aspect: "NATIVE_4_3"   # Display aspect preset; resolves screen pixel width, height stays 224
+  windowAutosize: true   # Derive the window size from the aspect preset at the 2x baseline
+  deadzoneMode: "PROPORTIONAL"   # Camera horizontal deadzone behaviour on wide screens
+  colorProfile: "RAW_RGB"   # Display-only color profile for Mega Drive palette presentation
+  colorProfileToggleKey: V   # Runtime key to cycle the display color profile
+  fps: 60   # Frames per second to render (changes game speed)
+
+# ── Input ──
+input:
+  pause: ENTER   # Toggle pause
+  player1:
+    up: UP   # Player 1: look up
+    down: DOWN   # Player 1: crouch/roll
+    left: LEFT   # Player 1: move left
+    right: RIGHT   # Player 1: move right
+    jump: SPACE   # Player 1: jump
+  player2:
+    up: I   # Player 2: look up
+    down: K   # Player 2: crouch/roll
+    left: J   # Player 2: move left
+    right: L   # Player 2: move right
+    jump: RIGHT_SHIFT   # Player 2: jump
+    start: ENTER   # Player 2: start
+
+# ── Audio ──
+audio:
+  enabled: true   # Enable music and SFX
+  region: "NTSC"   # Region for audio timing
+  dacInterpolate: true   # DAC interpolation (smoother sound)
+  internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
+  psgNoiseShiftEveryToggle: true   # PSG noise LFSR clock mode: true=shift on every toggle (MAME), false=positive edges (GPGX)
+  fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
+
+# ── Characters ──
+characters:
+  main: "sonic"   # Sprite code of the main playable character
+  sidekick: "tails"   # Sprite code of the CPU sidekick; empty string disables the sidekick
+  dataSelectExtraCombos: ""   # Semicolon-separated extra player combos for the data select screen
+
+# ── ROMs ──
+roms:
+  sonic1: "Sonic The Hedgehog (W) (REV01) [!].gen"   # Filename of the Sonic 1 ROM
+  sonic2: "Sonic The Hedgehog 2 (W) (REV01) [!].gen"   # Filename of the Sonic 2 ROM
+  sonic3k: "Sonic and Knuckles & Sonic 3 (W) [!].gen"   # Filename of the Sonic 3&K ROM
+  default: "s2"   # Which game to load by default
+
+# ── Startup ──
+startup:
+  titleScreen: true   # Show the title screen on startup
+  masterTitleScreen: true   # Show the master (game-selection) title screen on startup
+  legalDisclaimer: true   # Show the legal disclaimer screen before the master title screen
+
+# ── Rewind (live) ──
+rewind:
+  liveEnabled: false   # Enable held-key rewind during ordinary live play
+  liveKey: R   # Key held to rewind during live play
+  tapeCoastEnabled: false   # Continue rewinding with a decelerating tape-coast after key release
+  tapeCoastAcceleration: 0.25   # Per-tick speed increase while tape-coast is held
+  tapeCoastDeceleration: 0.5   # Per-tick speed decrease after release
+  tapeCoastMaxSteps: 4.0   # Maximum rewind steps per tick
+  tapeCoastMinSteps: 0.25   # Minimum rewind steps per tick; below 1.0 gives slow-motion rewind
+  audioHistoryLimitType: "time"   # How the rewind audio PCM history ring is sized
+  audioHistorySeconds: 60   # Seconds of PCM history kept when audioHistoryLimitType=time
+  audioHistorySizeMb: 10   # Megabytes of PCM history kept when audioHistoryLimitType=size
+
+# ── Cross-Game ──
+crossGame:
+  enabled: false   # Enable cross-game feature donation (e.g. S2 sprites in S1)
+  source: "s2"   # Donor game for cross-game features
+
+# ── Discord Rich Presence ──
+discord:
+  enabled: false   # Enable Discord Rich Presence updates
+  showTimer: true   # Show the level timer in Rich Presence
+  showZone: true   # Show the zone and act in Rich Presence
+
+# ════════════════════════════════════════════
+#  DEBUG  (developer tooling — safe to ignore for normal play)
+# ════════════════════════════════════════════
+debug:
+  flags:
+    debugView: true   # Show the on-screen debug HUD
+    editor: false   # Allow entering the level editor from gameplay
+    collisionView: false   # Draw the collision overlay
+  keys:
+    test: T   # Debug-only test button
+    nextAct: PAGE_UP   # Advance to the next act
+    nextZone: PAGE_DOWN   # Advance to the next zone
+    debugMode: D   # Toggle debug movement mode
+    frameStep: Q   # Step forward one frame while paused
+    lastCheckpoint: C   # Teleport to the last checkpoint
+    levelSelect: F9   # Open the level select screen
+    superSonic: U   # Toggle Super Sonic debug mode
+    giveEmeralds: E   # Give all chaos emeralds
+    specialStage: TAB   # Toggle special stage mode
+    specialStageComplete: END   # Complete the special stage with an emerald
+    specialStageFail: DELETE   # Fail the special stage
+    specialStageSpriteDebug: F12   # Toggle the special stage sprite debug viewer
+    specialStagePlaneDebug: F3   # Cycle special stage plane visibility debug modes
+  startup:
+    levelSelectOnStartup: false   # Open Level Select on startup instead of loading the first zone
+    s3kSkipIntros: false   # Skip S3K zone intro sequences (AIZ biplane, etc.)
+  playback:
+    moviePath: ""   # Path to a BizHawk BK2 movie for playback debugging
+    toggleKey: B   # Toggle playback mode
+    loadKey: N   # Load/reload the BK2 movie
+    playPauseKey: M   # Toggle playback play/pause
+    stepBackKey: COMMA   # Step the cursor back one frame
+    stepForwardKey: PERIOD   # Step the cursor forward one frame
+    jumpBackKey: LEFT_BRACKET   # Jump the cursor back by a larger interval
+    jumpForwardKey: RIGHT_BRACKET   # Jump the cursor forward by a larger interval
+    fastRateKey: SLASH   # Cycle playback rate (1x/2x/4x/8x)
+    resetToStartKey: BACKSLASH   # Reset the cursor to the start offset
+    startOffsetFrame: 0   # Starting frame offset for BK2 playback
+  traceRewind:
+    key: R   # Key held in Trace Test Mode to rewind deterministic engine state
+  testMode:
+    enabled: false   # Replace the master title with the trace picker (dev-only)
+    catalogDir: "src/test/resources/traces"   # Directory scanned for traces when test mode is enabled
+  crossGame:
+    s1DataSelectImageGenOverride: false   # Force regeneration of the S1 data-select image cache
+    s2DataSelectImageGenOverride: false   # Force regeneration of the S2 data-select image cache
+    s1DataSelectImageCoordLogKey: APOSTROPHE   # Log the current camera position as an S1 data-select preview override
+  window:
+    width: 640   # DEPRECATED manual window width; used only when display.windowAutosize=false
+    height: 448   # DEPRECATED manual window height; used only when display.windowAutosize=false
+    scale: 1.0   # DEPRECATED AWT debug-viewer scale factor

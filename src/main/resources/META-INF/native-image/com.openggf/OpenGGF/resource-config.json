@@ -1,6 +1,7 @@
 {
   "resources": {
     "includes": [
+      { "pattern": "config\\.yaml" },
       { "pattern": "config\\.json" },
       { "pattern": "collisionindexes\\.txt" },
       { "pattern": "kosinski\\.txt" },

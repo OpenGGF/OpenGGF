@@ -178,9 +178,9 @@
                                                 <include name="**/*.dll"/>
                                             </fileset>
                                         </copy>
-                                        <!-- Copy config.json next to the native binary so it
+                                        <!-- Copy config.yaml next to the native binary so it
                                              can be edited without rebuilding -->
-                                        <copy file="${basedir}/src/main/resources/config.json"
+                                        <copy file="${basedir}/src/main/resources/config.yaml"
                                               todir="${project.build.directory}"/>
                                     </target>
                                 </configuration>
