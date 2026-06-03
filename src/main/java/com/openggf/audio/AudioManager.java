@@ -51,6 +51,8 @@ public class AudioManager {
     private int rewindReplaySuppressionDepth;
     private final AudioCommandTimeline commandTimeline = new AudioCommandTimeline();
     private DeterministicAudioRuntime deterministicAudioRuntime = NoOpDeterministicAudioRuntime.INSTANCE;
+    private DeterministicAudioRuntime preCaptureRuntime;
+    private StreamBackedDeterministicAudioRuntime captureRuntime;
     private boolean deterministicRuntimeExplicitlyConfigured;
     private boolean audioFrameOwnedExternally;
     private boolean audioFrameAdvanced;
@@ -94,6 +96,53 @@ public class AudioManager {
         if (backend != null) {
             backend.attachDeterministicAudioRuntime(this.deterministicAudioRuntime);
         }
+    }
+
+    /**
+     * Force-installs a deterministic streaming runtime for offline capture,
+     * independent of {@code backend.supportsDeterministicRuntimePresentation()}.
+     * Drive {@link #advanceGameplayFrameAudio()} each frame, then
+     * {@link #drainCaptureFrame}.
+     */
+    public void beginCaptureMode(int sampleRate, int frameRate) {
+        preCaptureRuntime = this.deterministicAudioRuntime;
+        int minFrameCapacity = Math.max(1, sampleRate / Math.max(1, frameRate));
+        int fifoFrames = Math.max(minFrameCapacity, sampleRate * OUTPUT_FIFO_SECONDS);
+        int historyFrames = Math.max(minFrameCapacity, configuredPcmHistoryFrames(sampleRate));
+        int crossfadeFrames = Math.max(1, sampleRate * REVERSE_RELEASE_CROSSFADE_MS / 1000);
+        captureRuntime = new StreamBackedDeterministicAudioRuntime(
+                new AudioFrameClock(sampleRate, frameRate),
+                new AudioOutputFifo(fifoFrames),
+                new PcmHistoryRing(historyFrames),
+                crossfadeFrames);
+        applyDeterministicAudioRuntime(captureRuntime);
+    }
+
+    /**
+     * Drains the current frame's presentation PCM into {@code target} and
+     * returns the stereo-frame count produced by the most recent NORMAL
+     * audio frame (never re-advances the clock).
+     */
+    public int drainCaptureFrame(short[] target) {
+        if (captureRuntime == null) {
+            throw new IllegalStateException("beginCaptureMode() not called");
+        }
+        // Drain exactly what the most recent NORMAL advanceFrame produced, and
+        // report the ACTUAL drained count. Returning the requested size would
+        // mask an underrun (FIFO short) or a double-drain (FIFO already empty).
+        int requested = captureRuntime.lastProducedFrames();
+        return captureRuntime.drainPcm(target, requested);
+    }
+
+    /** Restores the runtime that was active before {@link #beginCaptureMode}. */
+    public void endCaptureMode() {
+        if (captureRuntime == null) {
+            return;
+        }
+        applyDeterministicAudioRuntime(
+                preCaptureRuntime != null ? preCaptureRuntime : NoOpDeterministicAudioRuntime.INSTANCE);
+        captureRuntime = null;
+        preCaptureRuntime = null;
     }
 
     private void configureDeterministicRuntimeForBackend() {
