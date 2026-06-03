@@ -304,10 +304,16 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance {
                 if (camera.getMaxX() < CAMERA_MAX_X_TARGET) {
                     camera.setMaxXTarget((short) (camera.getMaxX() + 2));
                 } else if (!isOnScreen()) {
-                    // Don't spawn EggPrison - level already has one at end
-                    // Don't destroy boss - let ground parts persist
-                    // Mark as finished so we stop rendering flying parts
+                    // ROM: s2.asm:63094-63100 (loc_2F46E) - once the camera has eased to
+                    // its target max-X and the flying body is off-screen, the ROM calls
+                    // DeleteObject on the main body (and its top part). Destroying the body
+                    // cascades to the flying children (top, propeller, and the separated
+                    // spike, which the ROM likewise self-deletes once its parent slot is no
+                    // longer the boss). The wrecked ground vehicle is intentionally NOT
+                    // deleted - it persists as debris (see EHZBossGroundVehicle).
+                    // FLAG_FINISHED stops body rendering on this final frame before removal.
                     setCustomFlag(OBJOFF_FLAGS, getCustomFlag(OBJOFF_FLAGS) | FLAG_FINISHED);
+                    setDestroyed(true);
                 }
             }
         }
@@ -444,6 +450,17 @@ public class Sonic2EHZBossInstance extends AbstractBossInstance {
     @Override
     public int getPriorityBucket() {
         return 5;  // Behind ground vehicle (4) and Sonic (2)
+    }
+
+    @Override
+    public boolean isPersistent() {
+        // The boss oscillates between BOUNDARY_LEFT/RIGHT inside the locked arena,
+        // travelling past the visible screen edge each pass. It is event-spawned
+        // (not respawn-tracked), so if the generic out-of-range cull unloaded it
+        // — or any of its children (the leading drillcone crosses the threshold
+        // first) — nothing would rebuild the missing parts. Stay active for the
+        // whole fight; child parts inherit this via AbstractBossChild.
+        return true;
     }
 
     @Override

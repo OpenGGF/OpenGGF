@@ -74,6 +74,21 @@ public abstract class AbstractBossChild extends AbstractObjectInstance implement
         return RenderPriority.clamp(priority);
     }
 
+    /**
+     * A boss child shares its parent's lifetime: it must survive (or be culled)
+     * exactly when the parent does. Without this, a child that leads the boss
+     * (e.g. a forward-mounted drill/spike) can cross the off-screen out-of-range
+     * cull threshold one chunk ahead of the body, get unloaded as an ordinary
+     * dynamic object, and never be rebuilt — the parent only spawns its children
+     * once at construction. Inheriting the parent's persistence keeps the whole
+     * boss group alive together, matching the ROM, where fixed-arena boss parts
+     * are not deleted off-screen during the fight.
+     */
+    @Override
+    public boolean isPersistent() {
+        return parent != null && parent.isPersistent();
+    }
+
     @Override
     public void syncPositionWithParent() {
         if (parent != null && !parent.isDestroyed()) {

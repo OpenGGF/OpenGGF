@@ -37,6 +37,14 @@ public class EHZBossGroundVehicle extends AbstractBossChild {
     }
 
     @Override
+    protected boolean destroyWhenParentDestroyed() {
+        // ROM: Obj56_GroundVehicle (loc_2F5F6) never calls DeleteObject - the wrecked
+        // car stays on the ground as debris after the main body is deleted on fly-off.
+        // Opt out of the default parent-destroy cascade so it survives the boss's removal.
+        return false;
+    }
+
+    @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (isDestroyed() || !shouldUpdate(frameCounter)) {
