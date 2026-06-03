@@ -59,7 +59,7 @@ public class TestablePlayableSprite extends AbstractPlayableSprite {
     }
 
     public void setAirForTest(boolean air) {
-        setAir(air);
+        this.air = air;
     }
 
     public void setSpeedConstantsForTest(short accel, short decel, short maxSpeed) {

@@ -12,6 +12,7 @@ import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchResponseAttackable;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossChild;
@@ -1385,6 +1386,16 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
         }
 
         @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return TouchResponseProfile.fromProvider(this);
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return TouchResponseProfile.fromProvider(this, multiRegionSource);
+        }
+
+        @Override
         public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
             // ROM: a rolling player hitting the $DA (BOSS-category) orb drives
             // collision_property <= -2 -> Obj53_Burst. Only the break/bounce orb is
@@ -1555,6 +1566,16 @@ public class Sonic2MTZBossInstance extends AbstractBossInstance {
         public boolean requiresContinuousTouchCallbacks() {
             // Hurt the player every frame the overlap persists (no consumed-once latch).
             return true;
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return TouchResponseProfile.fromProvider(this);
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return TouchResponseProfile.fromProvider(this, multiRegionSource);
         }
 
         @Override

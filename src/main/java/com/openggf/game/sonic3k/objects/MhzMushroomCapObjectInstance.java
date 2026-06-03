@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectAnimationState;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.SolidContact;
@@ -155,7 +156,11 @@ public final class MhzMushroomCapObjectInstance extends AbstractObjectInstance
         recordPreviousYVelocity(player);
         ObjectServices services = tryServices();
         if (services != null) {
-            for (PlayableEntity sidekick : services.playerQuery().sidekicks()) {
+            for (PlayableEntity sidekick : services.playerQuery().playersFor(
+                    ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
+                if (sidekick == player) {
+                    continue;
+                }
                 recordPreviousYVelocity(sidekick);
             }
         }

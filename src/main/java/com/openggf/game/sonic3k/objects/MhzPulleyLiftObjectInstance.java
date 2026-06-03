@@ -268,7 +268,7 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance {
 
     private void releaseHandle(HandleState handle, AbstractPlayableSprite player, boolean jumpRelease) {
         if (player != null) {
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setObjectMappingFrameControl(false);
             if (jumpRelease) {
                 if (player.isLeftPressed()) {

@@ -18,6 +18,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -334,7 +335,7 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance {
                 0,
                 player.getYSpeed());
         SubpixelMotion.objectFallXY(motion, LIGHT_GRAVITY);
-        player.setCentreYPreserveSubpixel((short) motion.y);
+        NativePositionOps.writeYPosPreserveSubpixel(player, motion.y);
         player.setYSpeed((short) motion.yVel);
         if (motion.yVel >= 0) {
             ObjectControlState.none().applyTo(player);

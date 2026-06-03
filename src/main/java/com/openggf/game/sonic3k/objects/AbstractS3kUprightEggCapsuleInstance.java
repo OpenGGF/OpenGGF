@@ -247,7 +247,8 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         } catch (RuntimeException ignored) {
             List<PlayableEntity> participants = new ArrayList<>();
             participants.add(player);
-            participants.addAll(services().sidekicks());
+            participants.addAll(services().playerQuery()
+                    .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS));
             return participants;
         }
     }

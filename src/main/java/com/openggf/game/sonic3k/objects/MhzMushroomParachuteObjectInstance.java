@@ -208,7 +208,7 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
 
     private void releaseGrabbedPlayer(PlayerSlot slot, AbstractPlayableSprite player, boolean jumpRelease) {
         if (player != null) {
-            player.setObjectControlled(false);
+            ObjectControlState.none().applyTo(player);
             player.setObjectMappingFrameControl(false);
             player.setLatchedSolidObjectId(0);
             if (jumpRelease) {
@@ -263,12 +263,12 @@ public final class MhzMushroomParachuteObjectInstance extends AbstractObjectInst
         }
         motion.x = OFFSCREEN_SENTINEL_X;
         if (grabbedPlayer != null) {
-            grabbedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(grabbedPlayer);
             grabbedPlayer.setObjectMappingFrameControl(false);
             grabbedPlayer.setLatchedSolidObjectId(0);
         }
         if (nativeP2GrabbedPlayer != null) {
-            nativeP2GrabbedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(nativeP2GrabbedPlayer);
             nativeP2GrabbedPlayer.setObjectMappingFrameControl(false);
             nativeP2GrabbedPlayer.setLatchedSolidObjectId(0);
         }
