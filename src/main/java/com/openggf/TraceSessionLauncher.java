@@ -8,11 +8,8 @@ import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.control.InputHandler;
 import com.openggf.configuration.GlfwKeyNameResolver;
 import com.openggf.configuration.SonicConfiguration;
-import com.openggf.game.session.GameplayTeamBootstrap;
-import com.openggf.game.GameMode;
 import com.openggf.game.GameServices;
 import com.openggf.game.MasterTitleScreen;
-import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.rewind.InputSource;
@@ -24,13 +21,13 @@ import com.openggf.sprites.ghost.GhostTraceRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.testmode.TraceCameraFocusController;
 import com.openggf.testmode.TraceHudOverlay;
-import com.openggf.trace.ToleranceConfig;
 import com.openggf.trace.TraceData;
 import com.openggf.trace.TraceExecutionPhase;
 import com.openggf.trace.TraceFrame;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.trace.live.LiveTraceComparator;
+import com.openggf.trace.replay.TraceReplayDriver;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
@@ -162,81 +159,20 @@ public final class TraceSessionLauncher {
         }
         PlaybackDebugManager playback = GameServices.playbackDebug();
         try {
-            // prepareConfiguration already ran inside launch() before
-            // launchGameByEntry fired — the master-title exit handler
-            // needs the recorded team config in place when it calls
-            // GameplayTeamBootstrap.registerActiveTeam.
-            //
-            // Mirror TestEnvironment.resetPerTest so the replay starts
-            // from the same zero state the headless trace tests do.
-            // Without this, state left by initializeGame() (title
-            // screen, default level, residual objects) leaks in and
-            // causes subpixel drift from frame 0 that surfaces at the
-            // first enemy destruction.
-            //
-            // The reset zaps the sprite manager, so we need to
-            // re-register the active team BEFORE loadZoneAndAct runs
-            // (loadZoneAndAct's spawnPlayerAtStartPosition expects the
-            // main sprite to already exist — otherwise the camera's
-            // focusedSprite ends up null on the next frame).
-            TraceReplaySessionBootstrap.resetLevelSubsystemsForReplay();
-            GameplayTeamBootstrap.registerActiveTeam(
-                    GameServices.module(),
-                    GameServices.sprites(),
-                    GameServices.configuration());
-            GameServices.level().loadZoneAndAct(entry.zone(), entry.act());
-            loop.setGameMode(GameMode.LEVEL);
-
-            // Swallow every title-card request the level load raised —
-            // both the main `consumeTitleCardRequest` (fired by
-            // requestTitleCardIfNeeded during profile load steps; if
-            // left armed, GameLoop.stepInternal flips the mode to
-            // TITLE_CARD on the next step, freezing the sprite and
-            // desyncing the BK2 cursor from the comparator) and the
-            // in-level variant. Headless trace tests bypass both via
-            // the headless graphics mode; we do it explicitly.
-            //
-            // Relies on TitleCardProvider.reset() being a simple state
-            // wipe that can't throw — true for all three game modules
-            // today (S1/S2/S3K TitleCardManager.reset are field resets).
-            GameServices.level().consumeTitleCardRequest();
-            GameServices.level().consumeInLevelTitleCardRequest();
-            TitleCardProvider titleCardProvider =
-                    GameServices.module() != null
-                            ? GameServices.module().getTitleCardProvider()
-                            : null;
-            if (titleCardProvider != null && titleCardProvider.isOverlayActive()) {
-                titleCardProvider.reset();
-            }
-
-            int startIndex = TraceReplayBootstrap
-                    .recordingStartFrameForTraceReplay(trace);
-            playback.startSession(movie, startIndex);
-
+            // The reusable deterministic-replay bootstrap (reset team,
+            // load zone/act, swallow title cards, start playback,
+            // apply start position + bootstrap, align counters, build +
+            // attach the comparator) lives in TraceReplayDriver so the
+            // headless trace-capture tool can reuse the exact ordering.
+            // The fixture and sprite supplier come from this live launcher.
             this.fixture = new LiveFixture(playback, loop);
-            // Reapply metadata start centre + initial ground snap
-            // BEFORE applyBootstrap so the order matches the headless
-            // fixture (which does these in Builder.build() — i.e.
-            // before any trace-data bootstrap runs). Running them
-            // after applyBootstrap would clobber subpixel state the
-            // helper's hydration steps wrote for seeded traces.
-            TraceReplaySessionBootstrap.applyStartPositionAndGroundSnap(trace, fixture);
-            TraceReplaySessionBootstrap.BootstrapResult boot =
-                    TraceReplaySessionBootstrap.applyBootstrap(trace, fixture, -1);
+            TraceReplayDriver driver = new TraceReplayDriver(
+                    trace, movie, fixture, loop, loop::getMainPlayableSprite);
+            driver.start(entry.zone(), entry.act());
 
-            int initialCursor = boot.replayStart().startingTraceIndex();
-            TraceFrame previousDriveFrame = boot.replayStart().hasSeededTraceState()
-                    ? trace.getFrame(boot.replayStart().seededTraceIndex())
-                    : initialCursor > 0 ? trace.getFrame(initialCursor - 1) : null;
-            TraceReplaySessionBootstrap.alignFrameCountersForReplayStart(
-                    previousDriveFrame,
-                    initialCursor < trace.frameCount() ? trace.getFrame(initialCursor) : null);
-            this.comparator = new LiveTraceComparator(
-                    trace,
-                    ToleranceConfig.DEFAULT,
-                    initialCursor,
-                    loop::getMainPlayableSprite,
-                    loop::toggleUserPause);
+            int startIndex = driver.recordingStartFrame();
+            int initialCursor = driver.initialCursor();
+            this.comparator = driver.comparator();
             this.cameraFocusController = new TraceCameraFocusController(
                     comparator,
                     loop::getMainPlayableSprite,
@@ -253,7 +189,8 @@ public final class TraceSessionLauncher {
             this.overlay = new TraceHudOverlay(comparator,
                     () -> cameraFocusController.currentLabel(),
                     this::rewindStatusLabel);
-            playback.setFrameObserver(comparator);
+            // TraceReplayDriver.start already attached the comparator as
+            // the playback frame observer.
             installTraceRewindController(loop, startIndex, initialCursor);
             activeSession = this;
         } catch (Exception e) {
