@@ -10,9 +10,14 @@ import com.openggf.capture.VideoFrameGrabber;
 import com.openggf.game.GameServices;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
+import com.openggf.sprites.ghost.GhostTraceRenderer;
+import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.trace.live.LiveTraceComparator;
+import com.openggf.trace.replay.TraceGhostHook;
 import com.openggf.trace.replay.TraceReplayDriver;
 
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
 import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
@@ -59,6 +64,12 @@ public final class TraceCaptureSession {
     // CapturedFrame constructor defensively copies it, so reuse is safe.
     private final short[] pcmBuffer = new short[16384];
 
+    // Desync ghosts: rendered via the shared TraceGhostHook so LevelRenderer
+    // draws them interleaved in the sprite-priority passes, exactly as live
+    // Trace Test Mode does.
+    private final GhostTraceRenderer ghostRenderer = new GhostTraceRenderer();
+    private final TraceGhostHook.GhostLayerRenderer ghostHook = this::renderGhostsForLayer;
+
     private long frameIndex;
     private boolean started;
 
@@ -86,6 +97,7 @@ public final class TraceCaptureSession {
         }
         AudioManager.getInstance().beginCaptureMode(sampleRate, fps);
         recorder.start(width, height, fps, sampleRate);
+        TraceGhostHook.set(ghostHook);
         started = true;
     }
 
@@ -129,8 +141,32 @@ public final class TraceCaptureSession {
         try {
             return recorder.stop();
         } finally {
+            TraceGhostHook.clear(ghostHook);
             AudioManager.getInstance().endCaptureMode();
         }
+    }
+
+    /**
+     * Renders the desync ghost(s) for one priority bucket, sourced from the
+     * driver's comparator (recorded trace position) against the live engine
+     * sprites. Invoked by {@code LevelRenderer} via {@link TraceGhostHook} during
+     * {@link #renderFrame()}.
+     */
+    private void renderGhostsForLayer(int bucket, boolean highPriority) {
+        LiveTraceComparator comparator = driver.comparator();
+        if (comparator == null) {
+            return;
+        }
+        SpriteManager sprites = GameServices.spritesOrNull();
+        List<com.openggf.sprites.playable.AbstractPlayableSprite> sidekicks =
+                sprites != null ? sprites.getRegisteredSidekicks() : List.of();
+        ghostRenderer.renderForLayer(
+                comparator.metadata(),
+                comparator.currentVisualFrame(),
+                GameServices.camera().getFocusedSprite(),
+                sidekicks,
+                bucket,
+                highPriority);
     }
 
     /**

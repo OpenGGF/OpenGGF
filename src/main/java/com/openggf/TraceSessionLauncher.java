@@ -28,6 +28,7 @@ import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.trace.live.LiveTraceComparator;
 import com.openggf.trace.replay.TraceReplayDriver;
+import com.openggf.trace.replay.TraceGhostHook;
 import com.openggf.trace.replay.TraceReplayFixture;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
@@ -73,6 +74,8 @@ public final class TraceSessionLauncher {
     private TraceCameraFocusController cameraFocusController;
     private TraceHudOverlay overlay;
     private final GhostTraceRenderer ghostRenderer = new GhostTraceRenderer();
+    /** Stable hook ref so set/clear match by identity in {@link TraceGhostHook}. */
+    private final TraceGhostHook.GhostLayerRenderer ghostHook = this::renderGhostsForLayer;
     private TraceReplayFixture fixture;
     private PlaybackController rewindPlaybackController;
     private RewindController rewindController;
@@ -193,6 +196,7 @@ public final class TraceSessionLauncher {
             // the playback frame observer.
             installTraceRewindController(loop, startIndex, initialCursor);
             activeSession = this;
+            TraceGhostHook.set(ghostHook);
         } catch (Exception e) {
             // Partial bootstrap: detach playback, restore the user's
             // gameplay config (we already mutated it in launch()), and
@@ -202,6 +206,7 @@ public final class TraceSessionLauncher {
             loop.setTraceCameraFocusController(null);
             this.cameraFocusController = null;
             activeSession = null;
+            TraceGhostHook.clear(ghostHook);
             TraceReplaySessionBootstrap.restoreGameplayConfig(configSnapshot);
             LOGGER.log(java.util.logging.Level.SEVERE,
                     "Failed to finish trace launch for " + entry.dir(), e);
@@ -396,6 +401,7 @@ public final class TraceSessionLauncher {
         // sees a clean "no session active" state instead of the
         // half-torn-down launcher.
         activeSession = null;
+        TraceGhostHook.clear(ghostHook);
         GameServices.playbackDebug().endSession();
         if (rewindController != null) {
             GameServices.audio().afterRewindRestore(

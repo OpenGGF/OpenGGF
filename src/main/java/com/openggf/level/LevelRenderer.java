@@ -1,6 +1,6 @@
 package com.openggf.level;
 
-import com.openggf.TraceSessionLauncher;
+import com.openggf.trace.replay.TraceGhostHook;
 import com.openggf.audio.AudioManager;
 import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
@@ -663,7 +663,7 @@ public final class LevelRenderer {
 
         profiler.beginSection("render.hud");
         if (options.includeHud() && lm.hudRenderManager != null && !lm.isHudSuppressed()
-                && (TraceSessionLauncher.active() == null || currentTraceVisibility.showGameHud())) {
+                && (TraceGhostHook.active() == null || currentTraceVisibility.showGameHud())) {
             AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
             lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
         }
@@ -674,7 +674,7 @@ public final class LevelRenderer {
                 && debugViewEnabled
                 && overlayManager.isEnabled(DebugOverlayToggle.OVERLAY);
         if (options.includeDebugOverlays() && lm.debugRenderer != null
-                && (TraceSessionLauncher.active() == null || currentTraceVisibility.showDebugHud())) {
+                && (TraceGhostHook.active() == null || currentTraceVisibility.showDebugHud())) {
             lm.debugRenderer.renderDebugOverlays(overlayEnabled, lm.objectManager, lm.ringManager,
                     spriteManager, lm.gameModule, lm.configService, lm.frameCounter);
         }
@@ -1003,9 +1003,9 @@ public final class LevelRenderer {
         if (!currentTraceVisibility.showGhosts()) {
             return;
         }
-        TraceSessionLauncher traceSession = TraceSessionLauncher.active();
-        if (traceSession != null) {
-            traceSession.renderGhostsForLayer(bucket, highPriority);
+        TraceGhostHook.GhostLayerRenderer ghosts = TraceGhostHook.active();
+        if (ghosts != null) {
+            ghosts.renderGhostsForLayer(bucket, highPriority);
         }
     }
 
