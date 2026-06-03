@@ -16,6 +16,16 @@ All notable changes to the OpenGGF project are documented in this file.
   while P1 is grounded and moving, matching `Obj_Orbinaut` / `sub_8C6D4`.
   Focused Orbinaut and neighboring S3K badnik coverage passes.
 
+- **Implemented S3K LBZ rolling drum Obj31.** S3KL slot `$31` now routes to
+  `Obj_LBZRollingDrum`, the invisible cylinder controller that uses subtype as
+  half-width, keeps native P1/P2 ride-angle state, applies the ROM sine-based
+  rider `y_pos` path, preserves the previous ride angle on middle-window
+  recapture, and handles the `RideObject_SetRide` landing, animation restart,
+  flip/ground-speed, and release side effects. The captured rider now uses the
+  ROM `Anim_Tumble` render flips for `flip_type=$80/$81` and ignores impossible
+  stale-air / lost player-latch release state while still inside the live drum
+  controller's horizontal window.
+
 - **Fixed widescreen players walking past the level's right edge to their death.** The right level-boundary clamp was computed with `camera.getWidth()`, so at a widescreen viewport it moved right with the screen (ULTRA_21_9 → level edge + 184px). Since `camera.getMaxX()` is the native ROM scroll limit (`level_edge − 320`) and the level geometry only exists up to `maxX + 320`, this let the player walk past the right wall into the void beyond a camera lock and fall to their death. The boundary now uses the fixed native `LEVEL_DESIGN_WIDTH = 320` — it tracks the level's wall, not the render viewport — reproducing the ROM `+$128` / `+$128 + $40` values at every aspect ratio. The despawn/visibility windows still widen with the viewport (objects in view are not culled); only the level-wall clamp stays native. See KNOWN_DISCREPANCIES.md "Right-Boundary Is Viewport-Independent (Level Edge)".
 
 - **Added the S3K MHZ updraft airflow path.** SKL slot `$14` now routes to `Obj_Updraft`, including the ROM `$40/$80` horizontal window, oscillating vertical lift curve, airborne/jump-state cleanup, shield action cancellation, `ground_vel=1`, positive-subtype flip setup, negative-subtype animation `$0F`, and quiet wind SFX cadence.

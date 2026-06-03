@@ -41,6 +41,8 @@ public final class Sonic3kObjectIds {
     public static final int AIZ_COLLAPSING_LOG_BRIDGE = 0x2C;
     public static final int AIZ_FALLING_LOG = 0x2D;
     public static final int AIZ_SPIKED_LOG = 0x2E;
+    // S3KL object table: Obj_LBZRollingDrum.
+    public static final int LBZ_ROLLING_DRUM = 0x31;
     public static final int MHZ_MUSHROOM_CAP = 0x23;
     public static final int INVISIBLE_BLOCK = 0x28;
     public static final int AIZ_DISAPPEARING_FLOOR = 0x29;

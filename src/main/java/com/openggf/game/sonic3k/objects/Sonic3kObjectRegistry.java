@@ -187,6 +187,14 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                 });
+        factories.put(Sonic3kObjectIds.LBZ_ROLLING_DRUM,
+                (spawn, registry) -> {
+                    S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet != S3kZoneSet.S3KL) {
+                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                    }
+                    return new LbzRollingDrumInstance(spawn);
+                });
         factories.put(Sonic3kObjectIds.AUTO_SPIN,
                 (spawn, registry) -> new AutoSpinObjectInstance(spawn));
         factories.put(Sonic3kObjectIds.CORK_FLOOR,
