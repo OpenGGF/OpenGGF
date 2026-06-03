@@ -373,7 +373,8 @@ public final class AgentWorkflowTool {
         line(sb, "## Non-Negotiable Rules");
         line(sb, "  - ROM-only runtime assets: never read asset bytes from docs/ disassembly.");
         if (req.game().isS3k()) {
-            line(sb, "  - S3K addresses: S&K-side (sonic3k.asm, < 0x200000) ONLY; never s3.asm.");
+            line(sb, "  - S3K addresses: prefer S&K-side (sonic3k.asm, < 0x200000); exhaust S&K variants");
+            line(sb, "    first. Use an s3.asm reference only if the object has no S&K equivalent (rare; verify).");
         }
         line(sb, "  - Object code uses injected ObjectServices via services(); never getInstance();");
         line(sb, "    never call services() in constructors.");
@@ -407,7 +408,8 @@ public final class AgentWorkflowTool {
             line(sb, "  # PLC tables / verify (S&K-half only):");
             line(sb, "  mvn exec:java \"-Dexec.mainClass=" + fqcn + "\" \"-Dexec.args=--game s3k plc "
                     + req.zoneName() + "\" -q");
-            line(sb, "  # When a label returns BOTH sonic3k.asm and s3.asm hits, pick sonic3k.asm.");
+            line(sb, "  # When a label returns BOTH sonic3k.asm and s3.asm hits, pick sonic3k.asm. If ONLY");
+            line(sb, "  # s3.asm hits remain after trying S&K variants, that ref may be legitimate -- verify, don't loop.");
         }
     }
 

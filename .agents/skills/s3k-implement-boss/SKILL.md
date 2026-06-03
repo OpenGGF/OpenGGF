@@ -82,11 +82,11 @@ S3K has **both mini-bosses (Act 1) and end bosses (Act 2)** per zone — signifi
 | **Constants file** | `Sonic3kConstants.java` | `Sonic2Constants.java` | `Sonic1Constants.java` |
 | **Registry** | `Sonic3kObjectRegistry.java` | `Sonic2ObjectRegistry.java` | `Sonic1ObjectRegistry.java` |
 
-## Critical: Use S&K-Side ROM Addresses — NEVER the Sonic 3 Standalone Addresses
+## Critical: Prefer S&K-Side ROM Addresses (Sonic 3 Standalone Is a Rare, Verified Fallback)
 
 The locked-on ROM has two halves: **S&K** (0x000000–0x1FFFFF) and **S3** (0x200000–0x3FFFFF). Many shared assets exist in both halves with identical data. **Always use S&K-side addresses (< 0x200000)** for all ROM constants in `Sonic3kConstants.java`.
 
-**Do NOT use Sonic 3 (`s3.asm`) pointers/addresses for S3K work**, even when the two halves appear identical. The S3 half is the Sonic 3 standalone code path and is not referenced at runtime by the S3KL (locked-on) execution path. Addresses >= 0x200000 are *wrong* for the engine's S3K module.
+**Prefer S&K-side (`sonic3k.asm`) pointers/addresses for S3K work**, even when the two halves appear identical — for the vast majority of assets the S3KL (locked-on) execution path references the S&K half, so a casually-chosen address >= 0x200000 is usually *wrong*. **Rare exception:** some S3K objects reference S3-half (`s3.asm`) assets directly; if a boss part has genuinely no S&K equivalent, use the `s3.asm` reference after verifying the code points there.
 
 Rules for finding S3K pointers:
 

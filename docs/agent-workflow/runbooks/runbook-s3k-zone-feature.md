@@ -13,7 +13,7 @@ Companion skills:
 ## 0. Hazards (same as S3K objects)
 
 - **Zone set:** `S3kZoneSet.forZone(zone)` (S3KL 0-6, SKL 7-13).
-- **S&K-side addresses only** for every offset (`sonic3k.asm`, `< 0x200000`). Run `RomOffsetFinder --game s3k`.
+- **Prefer S&K-side addresses** for every offset (`sonic3k.asm`, `< 0x200000`). Run `RomOffsetFinder --game s3k`. Rare exception: if no S&K equivalent exists, an `s3.asm` reference may be the one the object uses (verify; don't loop).
 - **ROM-only runtime assets** — animated-tile bytes, palettes, deform tables come from the ROM loader, not `docs/skdisasm/`.
 - **No carve-outs:** express new zone behaviors as `ZoneRuntimeState` predicates / ROM-state conditions, never `if (zone == AIZ)`.
 

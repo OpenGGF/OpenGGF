@@ -73,7 +73,7 @@ public final class RomArtIntakeTool {
     public enum RomHalf {
         /** S&amp;K half (&lt; 0x200000, sonic3k.asm). Correct for S3K runtime constants. */
         SK,
-        /** Sonic 3 standalone half (&gt;= 0x200000, s3.asm). Forbidden for S3K runtime constants. */
+        /** Sonic 3 standalone half (&gt;= 0x200000, s3.asm). Prefer the S&amp;K half; use only as a fallback when no S&amp;K equivalent exists. */
         S3_STANDALONE,
         /** Source/offset not yet known. */
         UNKNOWN
@@ -98,7 +98,7 @@ public final class RomArtIntakeTool {
 
     /**
      * Detect which ROM half a numeric address belongs to. Any address at or above
-     * {@link #SK_HALF_LIMIT} is the Sonic 3 standalone half and is forbidden for S3K runtime constants.
+     * {@link #SK_HALF_LIMIT} is the Sonic 3 standalone half (prefer an S&amp;K equivalent; fallback only when none exists).
      */
     public static RomHalf halfForAddress(long address) {
         if (address < 0) {
@@ -131,25 +131,27 @@ public final class RomArtIntakeTool {
     }
 
     /**
-     * True if the given address is a Sonic 3 standalone address that must be rejected for S3K
-     * locked-on runtime constants.
+     * True if the given address is in the Sonic 3 standalone half. Prefer an S&amp;K-side equivalent;
+     * such an address is acceptable only as a documented fallback when no S&amp;K equivalent exists.
      */
     public static boolean isS3StandaloneAddress(long address) {
         return halfForAddress(address) == RomHalf.S3_STANDALONE;
     }
 
     /**
-     * True if the given disassembly source file is the Sonic 3 standalone half and must be rejected
-     * for S3K locked-on runtime constants.
+     * True if the given disassembly source file is the Sonic 3 standalone half. Prefer an S&amp;K-side
+     * equivalent; such a source is acceptable only as a documented fallback when no S&amp;K equivalent exists.
      */
     public static boolean isS3StandaloneSource(String asmFilePath) {
         return halfForSource(asmFilePath) == RomHalf.S3_STANDALONE;
     }
 
     /**
-     * True if this label result is acceptable as an S3K locked-on runtime constant: it must be the
-     * S&amp;K half by both address (when known) and source file (when known), and must not be the
-     * standalone half by either signal.
+     * True if this label result is the PREFERRED S&amp;K-side source for an S3K locked-on runtime
+     * constant: the S&amp;K half by both address (when known) and source file (when known), and not the
+     * standalone half by either signal. NOTE: a Sonic 3 standalone reference can still be the correct,
+     * legitimate one for the rare object that has no S&amp;K equivalent. This returns {@code false} for
+     * such a reference, so treat {@code false} as "verify by hand", not "forbidden".
      *
      * @param address     resolved ROM address, or a negative value if unknown
      * @param asmFilePath disassembly source path, or null if unknown
@@ -306,9 +308,11 @@ public final class RomArtIntakeTool {
         System.out.println("Disasm path  : " + disasmPath);
         System.out.println("ROM path     : " + romPath);
         System.out.println("Labels       : " + String.join(", ", positional));
-        System.out.println("Object spaces: S3KL (zones 0-6) + SKL (zones 7-13) are the S&K-side listings");
-        System.out.println("               used by the locked-on runtime. S3L (Sonic 3 standalone listing,");
-        System.out.println("               s3.asm half) is NOT used by S3K runtime and is rejected below.");
+        System.out.println("Object spaces: S3KL (zones 0-6) + SKL (zones 7-13) are the S&K-side listings the");
+        System.out.println("               locked-on runtime normally uses -- prefer the S&K (sonic3k.asm) half.");
+        System.out.println("               S3L (Sonic 3 standalone, s3.asm half) is flagged below as a CAUTION,");
+        System.out.println("               not a hard reject: it is the legitimate reference for the rare object");
+        System.out.println("               that has no S&K equivalent (verify before use).");
         System.out.println();
 
         RomOffsetFinder finder = null;
@@ -340,13 +344,14 @@ public final class RomArtIntakeTool {
         List<DisassemblySearchResult> results = finder.search(label);
         if (results.isEmpty()) {
             System.out.println("No matching labels found in skdisasm for: " + label);
-            System.out.println("Tip: try a different label variant; do NOT fall back to an s3.asm address.");
+            System.out.println("Tip: try other S&K-side (sonic3k.asm) label variants first. If none exists,");
+            System.out.println("     an s3.asm reference may be the one this object actually uses -- verify it.");
             System.out.println();
             return;
         }
 
-        boolean anyAccepted = false;
-        boolean anyRejected = false;
+        boolean anySk = false;
+        boolean anyS3Half = false;
 
         for (DisassemblySearchResult r : results) {
             String resolvedLabel = r.getLabel() != null ? r.getLabel() : "(unlabeled)";
@@ -362,14 +367,14 @@ public final class RomArtIntakeTool {
             System.out.println("ROM half: " + describeHalf(sourceHalf));
 
             if (sourceHalf == RomHalf.S3_STANDALONE) {
-                anyRejected = true;
-                System.out.println("REJECTED: this label is sourced from s3.asm (Sonic 3 standalone / S3L half).");
-                System.out.println("          Do NOT use it as an S3K runtime constant. Re-search for an");
-                System.out.println("          equivalent sonic3k.asm (S&K-side) label variant instead.");
-                continue;
-            }
-            if (sourceHalf == RomHalf.SK) {
-                anyAccepted = true;
+                anyS3Half = true;
+                System.out.println("CAUTION : sourced from s3.asm (Sonic 3 standalone / S3L half). Prefer an");
+                System.out.println("          equivalent sonic3k.asm (S&K-side) label if one exists. But if none");
+                System.out.println("          exists, some S3K objects DO reference S3-half assets directly --");
+                System.out.println("          then this IS the correct reference; verify the object's code points");
+                System.out.println("          here before committing the constant. (Hints printed below anyway.)");
+            } else if (sourceHalf == RomHalf.SK) {
+                anySk = true;
             }
 
             ArtEntryKind kind = recommendArtEntryKind(resolvedLabel);
@@ -385,10 +390,13 @@ public final class RomArtIntakeTool {
 
         System.out.println("------------------------------------------------------------");
 
-        if (anyRejected && !anyAccepted) {
-            System.out.println("WARNING: all matches for '" + label + "' came from the Sonic 3 standalone");
-            System.out.println("         half (s3.asm / S3L). The locked-on S3KL/SKL runtime only references");
-            System.out.println("         the S&K half. Re-run with a sonic3k.asm label variant.");
+        if (anyS3Half && !anySk) {
+            System.out.println("NOTE: no S&K-side (sonic3k.asm) match for '" + label + "' -- only the Sonic 3");
+            System.out.println("      standalone (s3.asm / S3L) half. First try other S&K-side label variants");
+            System.out.println("      (zone-specific prefix/suffix, Levels/{ZONE}/ paths). If there is genuinely");
+            System.out.println("      no S&K equivalent, the S3-half reference is the one this object uses -- use");
+            System.out.println("      it after verifying the object's code references that address. Do not loop");
+            System.out.println("      forever hunting a non-existent S&K variant (this is rare, but it happens).");
         }
         System.out.println();
     }
@@ -417,7 +425,7 @@ public final class RomArtIntakeTool {
     private static String describeHalf(RomHalf half) {
         return switch (half) {
             case SK -> "S&K (sonic3k.asm) — OK for S3K runtime";
-            case S3_STANDALONE -> "Sonic 3 standalone (s3.asm) — FORBIDDEN for S3K runtime";
+            case S3_STANDALONE -> "Sonic 3 standalone (s3.asm / S3L) — prefer an S&K equivalent; use only if none exists (verify)";
             case UNKNOWN -> "unknown — verify the resolved offset before trusting it";
         };
     }

@@ -20,7 +20,7 @@ These runbooks implement **Option 1** of [`docs/AGENT_WORKFLOW_SUPPORT_OPTIONS.m
 These come from [`CLAUDE.md`](../../../CLAUDE.md) and [`AGENTS.md`](../../../AGENTS.md). Violating them fails code review or a guard test even when behavior looks correct.
 
 1. **ROM-only runtime assets.** Object art, mappings, DPLCs, animation scripts, PLC data, and any other runtime asset bytes must come from the user-supplied ROM through the engine loader. Never read runtime asset bytes from `docs/` disassembly — `docs/` is for research, labels, and offset discovery only.
-2. **S3K = S&K-side addresses only.** Use `sonic3k.asm` addresses (`< 0x200000`) in `Sonic3kConstants.java`. Never substitute an `s3.asm` standalone address. Always run `RomOffsetFinder --game s3k`.
+2. **S3K = prefer S&K-side addresses.** Use `sonic3k.asm` addresses (`< 0x200000`) in `Sonic3kConstants.java` and always run `RomOffsetFinder --game s3k`; pick the `sonic3k.asm` hit when both halves match. Rare exception: if an object has no S&K equivalent it may reference the `s3.asm` (S3-half) asset directly — use it after verifying, rather than looping on a non-existent S&K variant.
 3. **No carve-outs.** Trace/physics fixes must model real ROM state (object id/routine/status bits, event flags, physics profile). Never branch on zone id/name, trace route, frame number, or "known failing trace".
 4. **No game-name `if/else` for physics divergences.** Use `PhysicsFeatureSet` flags.
 5. **Trace data is comparison-only.** Never hydrate/sync engine state from trace data in committed code.

@@ -28,7 +28,7 @@ Use these helpers to front-load preflight, scaffolding, and ROM-art intake befor
   `mvn exec:java "-Dexec.mainClass=com.openggf.tools.AgentWorkflowTool" "-Dexec.args=object s3k MHZ 0x8A"`
 - **ObjectScaffoldTool** — guard-friendly object/badnik skeleton + JUnit5 test shell. `--game s3k --badnik` emits the `com.openggf.game.sonic3k.objects.badniks` package and extends `AbstractS3kBadnikInstance`:
   `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ObjectScaffoldTool" "-Dexec.args=--game s3k --class MhzFooObjectInstance --id 0x8A --badnik"`
-- **RomArtIntakeTool** — S3K ROM-backed art/mapping/PLC intake; wraps `RomOffsetFinder --game s3k`, rejects `s3.asm`-sourced labels (Sonic 3 standalone / S3L half — it classifies by source file; confirm the resolved offset is `< 0x200000` when you verify), recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints (accepts multiple labels):
+- **RomArtIntakeTool** — S3K ROM-backed art/mapping/PLC intake; wraps `RomOffsetFinder --game s3k`, flags (caution, not a hard reject) `s3.asm`-sourced labels (Sonic 3 standalone / S3L half — classifies by source file). Prefer an S&K equivalent; if an object has none, the S3-half reference is legitimate (rare; verify). Recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints (accepts multiple labels):
   `mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"`
 
 Companion docs under `docs/agent-workflow/`:
@@ -53,18 +53,18 @@ Use this order when several objects are available:
 
 When an object owns state that other systems need, publish it through the shared runtime stack where appropriate (`ZoneRuntimeRegistry`, `ZoneLayoutMutationPipeline`, `PaletteOwnershipRegistry`, or render/scroll framework hooks) instead of adding one-off zone-local state.
 
-### Critical: Use S&K-Side ROM Addresses — NEVER the Sonic 3 Standalone Addresses
+### Critical: Prefer S&K-Side ROM Addresses (Sonic 3 Standalone Is a Rare, Verified Fallback)
 
 The locked-on ROM has two halves: **S&K** (0x000000–0x1FFFFF) and **S3** (0x200000–0x3FFFFF). Many shared assets exist in both halves with identical data. **Always use S&K-side addresses (< 0x200000)** for all ROM constants in `Sonic3kConstants.java`.
 
-**Do NOT use Sonic 3 (`s3.asm`) pointers/addresses for S3K work**, even when the two halves appear identical. The S3 half is the Sonic 3 standalone code path and is not referenced at runtime by the S3KL (locked-on) execution path. Addresses >= 0x200000 are *wrong* for the engine's S3K module; quoting them will produce silent parity drift that is hard to trace.
+**Prefer S&K-side (`sonic3k.asm`) pointers/addresses for S3K work**, even when the two halves appear identical — for the vast majority of assets the S3KL (locked-on) execution path references the S&K half, so a casually-chosen address >= 0x200000 is usually *wrong* and produces silent parity drift that is hard to trace. **Rare exception:** some S3K objects reference S3-half (`s3.asm`) assets directly; if an object has genuinely no S&K equivalent (after exhausting variants), the `s3.asm` reference is the one it uses — use it after verifying the object's code points there.
 
 Rules for finding S3K pointers:
 
 - Always run `RomOffsetFinder` with `--game s3k` (never default/`--game s2`, and never read values out of a Sonic 3 disassembly or ROM map).
 - When the tool returns multiple results for the same label — one from `sonic3k.asm` and one from `s3.asm` — **pick the `sonic3k.asm` one**. If only an `s3.asm` result exists, re-search: the S&K label may have a different prefix/suffix, or the data may live under `Levels/{ZONE}/` rather than at the top of the asm.
 - When reading object disassembly, always use the `sonic3k.asm` version (S3KL code path); it may contain zone-specific overrides (e.g., FBZ art tile, Knuckles variants) absent from the S3 version.
-- If you genuinely cannot find an S&K-side equivalent, stop and ask — do not fall back to the S3 address.
+- If, after exhausting S&K-side variants, there is genuinely no S&K equivalent, the `s3.asm` reference is legitimate — some S3K objects reference S3-half assets directly. Use it after verifying the object's code points there. This is a rare edge case; don't loop forever or block on a non-existent S&K variant.
 
 ### Mandatory Art Corruption Guard Tests
 

@@ -44,7 +44,27 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - **Extended the S3K MHZ miniboss return-bounce path.** Routine `$1A` now runs the ROM `loc_754A0` `MoveSprite2` wait after the `$18` bounce-threshold handoff and calls `loc_755A0` when `$2E` expires, entering routine `$1C` with bit 6 of `$38` restored for the return bounce.
 
-- **Added the S3K Mushroom Hill Zone parallax, animated-BG, event, and first badnik/boss foundation.** MHZ now routes to a dedicated scroll handler that ports the shared `MHZ_Deform` camera projection from the S&K disassembly, replacing the generic S3K fallback with the ROM's `5/32 + $76` BG vertical scroll and `3/8` BG horizontal scroll used by both acts' normal background path. The handler publishes the ROM-equivalent MHZ BG X workspace through `MhzZoneRuntimeState`, and `Sonic3kPatternAnimator` now consumes it through `AnimatedTileChannelGraph` to run the two custom `AnimateTiles_MHZ` split BG tile transfers before the regular AniPLC scripts. `Sonic3kMHZEvents` now covers the route-critical MHZ1 screen event basics, the MHZ2 routine `$04` camera boundary routing, the MHZ2 season palette state machine, and the first ship-transition event handoff, including ROM-backed green/autumn/gold palette block loads, the five `sub_55008` trigger regions, `Pal_MHZ2Ship` loading, draw-delay mirrors, managed allocation of the ship controller plus two propeller objects, the controller's fixed-point `loc_5583E` ship motion/Scroll_lock signal, active-routine `sub_54F8C` H-scroll and propeller offsets, and the ship H-int state published through MHZ runtime state. The SKL object-table aliases now route MHZ badnik slots `$8C-$90` to Madmole, Mushmeanie, Dragonfly, Butterdroid, and Cluckoid instances, with Madmole's activation/rise/drill/sink/cooldown timing, Butterdroid's `Chase_Object` flight loop, and Cluckoid's player-range gate, wind startup, breath particle cadence, and cooldown covered against the S&K routines. MHZ Act 1 now also routes SKL slots `$A8/$A9` to the cutscene Knuckles/button pair, including the ROM `_unkFAB8` progression that clamps Sonic at `x_pos=$389`, locks input, forces down input, pans the camera to `$5B0`, and releases control after the button callback. SKL boss slots `$91/$92/$93` now dispatch to MHZ miniboss tree, miniboss, and end-boss handlers with ROM hit-count and collision-size metadata instead of the overlapping S3KL AIZ/Jawz meanings, and the MHZ art plan now registers ROM-backed miniboss, miniboss-log, miniboss-tree, end-boss, and spike mappings from verified S&K-side offsets; the visible boss stubs render their initial ROM frames on the matching priority buckets, and the MHZ miniboss now performs the ROM `loc_75220` camera-relative spawn setup (`Camera_X_pos+$110`, `Camera_Y_pos-$78`, `y_vel=$100`, timer `$97`) on its first managed update before advancing into the `loc_752D4` wait phase that applies `MoveSprite2` with `y_vel=$100` while decrementing timer `$2E`, then into the first `Swing_UpAndDown_Count` hover and `loc_75330` dash setup after the ROM's four peak counter handoff; the follow-up timed dash now reuses `loc_752D4` at `x_vel=$400`, runs `loc_75356` to switch to mapping frame 5 and target camera max X `$6000`, respects the `loc_75392` onscreen render-flag gate, enters the `loc_753A4` deceleration-dash setup with mapping frame 4 and the ROM's final +2 X adjustment, decelerates through `loc_753B6` until `x_vel` reaches zero, restores `x_pos+1` from `$3A`, runs the `loc_753DE` camera-approach swing into the routine `$E` chopping setup when the camera delta is within `$110`, drives the `byte_75EBB` raw multi-delay chopping script including the `$42` tree-counter decrement and `sfx_ChopTree` on `anim_frame=$A`, follows the `$F4` script terminator through `loc_75444` into the routine `$10` swing-peak wait and non-final `loc_7545C` fall recovery setup, executes routine `$12`'s `loc_754A0` `MoveSprite2` plus `Obj_Wait` countdown before the non-final `loc_754AC` callback restores the swing parameters and returns to the chopping loop, follows the final non-Knuckles `$42==1` branch through `loc_754BE` into routine `$14` including the `byte_75ED0` stuck animation's `$20` X shift and `sfx_ChopStuck`, enters routine `$16` with `byte_75EF3`, `x_vel/y_vel=-$400`, and ROM `MoveSprite` gravity order where position uses the old velocity before `y_vel += $38`, and now runs routine `$18`'s `loc_75564` bounce threshold into routine `$1A` with bit 6 of `$38` cleared, `x_vel=$100`, `y_vel=-$400`, and `$2E=$10`.
+- **Added the S3K Mushroom Hill Zone parallax, animated-BG, event, and first badnik/boss foundation.**
+  MHZ routes to a dedicated scroll handler porting the shared `MHZ_Deform` camera projection (ROM
+  `5/32 + $76` BG vertical, `3/8` BG horizontal scroll for both acts' normal background), publishing
+  the BG X workspace through `MhzZoneRuntimeState` so `Sonic3kPatternAnimator` runs the two custom
+  `AnimateTiles_MHZ` split BG transfers via `AnimatedTileChannelGraph` before the regular AniPLC
+  scripts. `Sonic3kMHZEvents` covers MHZ1 screen-event basics, MHZ2 routine `$04` camera boundary
+  routing, the MHZ2 season palette state machine (green/autumn/gold blocks, five `sub_55008` trigger
+  regions), and the first ship-transition handoff (`Pal_MHZ2Ship`, managed ship controller plus two
+  propellers, `loc_5583E` ship motion/Scroll_lock signal, `sub_54F8C` H-scroll/propeller offsets,
+  published ship H-int state). SKL badnik slots `$8C-$90` route to Madmole, Mushmeanie, Dragonfly,
+  Butterdroid, and Cluckoid (Madmole activation/rise/drill/sink/cooldown, Butterdroid `Chase_Object`
+  flight, Cluckoid player-range/wind/breath cadence); SKL slots `$A8/$A9` route to the cutscene
+  Knuckles/button pair (ROM `_unkFAB8` clamps Sonic at `x_pos=$389`, locks/forces input, pans the
+  camera to `$5B0`). SKL boss slots `$91/$92/$93` dispatch to MHZ miniboss-tree/miniboss/end-boss
+  handlers with ROM hit-count and collision-size metadata (instead of the overlapping S3KL AIZ/Jawz
+  meanings), and the MHZ art plan registers ROM-backed miniboss, miniboss-log, miniboss-tree,
+  end-boss, and spike mappings from verified S&K offsets. The miniboss runs its ROM `loc_75220`
+  camera-relative spawn through the swing/dash/chop state machine (`loc_752D4` wait, `loc_75330`
+  dash, `loc_75356`/`loc_753A4`/`loc_753B6` deceleration, `loc_753DE` camera-approach swing, the
+  `byte_75EBB` chopping script with `sfx_ChopTree`, routines `$E`-`$1A`); the `$1A`-`$1E`
+  return/bounce continuation is covered by the dedicated miniboss-routine entries above.
 
 - **Sonic 2 Metropolis Zone object/badnik/boss parity pass.** Closed disassembly-verified gaps across the MTZ slice: the Shellcracker claw (ObjA0) gained its enemy touch hitbox ($9A); the MTZ boss (Obj54) now spawns its laser projectile (Obj54_Laser subtype 4) and its shield orbs (Obj53) detach, bounce, and burst on hits with ROM-accurate break-away physics; Obj65/6A/6B/6E/70 platforms render from their real Kosinski level-art mappings on the correct palette line instead of a CPZ stair-block substitute; the cog uses its own mappings (0x26F04); Spin Tube (Obj67) and Nut (Obj69) drive both the main character and sidekick; Twin Stompers (Obj64) use the ROM coarse-X despawn window; Lava Bubble (Obj71) ping-pongs its animation via SWITCH; child spawns route through `spawnChild`; and the MTZ background scroll tracks through `BackgroundCamera`. MTZ3 boss-arena events match `LevEvents_MTZ3` (unconditional min-X follow in routine 5). Pre-existing MTZ trace frontiers (sidekick CPU / platform sub-pixel carry) are unchanged by this work.
 
@@ -502,15 +522,12 @@ All notable changes to the OpenGGF project are documented in this file.
   (PointPokey) also use `SolidObject_Always_SingleCharacter` and currently
   lack the override; pursue when the next relevant trace frontier surfaces.
 
-- **S2 CNZ2 frontier investigation: Crawl closer-player selection.** No code change.
-  Confirmed that `CrawlBadnikInstance` must use `Obj_GetOrientationToPlayer`–style
-  closest-player selection (by absolute X distance) for proximity and orientation
-  checks. The fix advances CNZ2 frontier from f1490 to f630, but f630 exposes a
-  pre-existing 1px X-position drift in the first CNZ2 Crawl (slot s20) that
-  produces an incorrect bounce angle. Both the s20 (1px) and s17 (3px) Crawl X drifts
-  are pre-existing bugs unrelated to the closer-player change. Closer-player fix
-  reverted until the Crawl X-position drift is diagnosed. See `TRACE_FRONTIER_LOG.md`
-  for the full analysis.
+- **S2 CNZ2 frontier investigation: Crawl closer-player selection (doc-only, reverted).**
+  Confirmed `CrawlBadnikInstance` must use `Obj_GetOrientationToPlayer`-style closest-player
+  selection (by absolute X distance); the fix advances CNZ2 from f1490 to f630, but f630 then
+  exposes a pre-existing 1px X drift in the first CNZ2 Crawl (slot s20) producing a wrong bounce
+  angle. Both the s20 (1px) and s17 (3px) Crawl X drifts are pre-existing, unrelated bugs, so the
+  closer-player fix is reverted until the drift is diagnosed. See `TRACE_FRONTIER_LOG.md`.
 
 - **S2 MTZ3 Obj6A per-phase activation gate.** `MCZRotPformsObjectInstance.
   loadPhaseParameters()` did not mirror ROM `loc_27CA2`'s `move.b #0,objoff_36
@@ -816,61 +833,31 @@ All notable changes to the OpenGGF project are documented in this file.
   `TestS3kMgz2BgRiseHeadless#eventsStateTransitionPropagatesToRegisteredSwScrlMgz`
   and `#swScrlMgz_stateEightProducesDifferentScrollFromStateZero`.
 
-- **Architectural review hardening.** Tightens `RewindRegistry.capture()`
-  to reject `null` snapshots and tightens `restore()` to require explicit
-  `RewindSnapshottable.resetForMissingSnapshot()` for entries absent from
-  the composite snapshot — the previous silent skip was masking
-  coverage gaps. The default `resetForMissingSnapshot()` throws so
-  registered subsystems fail closed unless they opt in.
-  `GameplayModeContext.isGameplayRuntimeReady()` now returns `false`
-  once `tearDownManagers()` has run, so callers can't treat a torn-down
-  context as live. MGZ scroll-event state (screen shake, BG rise routine
-  / offset, boss BG scroll offset) has moved off direct `SwScrlMgz`
-  setter calls onto a new `MgzZoneRuntimeState` adapter installed
-  through `ZoneRuntimeRegistry`; `SwScrlMgz.update()` now reads runtime
-  state at frame time and `SwScrlMgz.init()` clears event-owned
-  overrides on level re-entry. `Sonic3kMGZEvents`,
-  `MGZTriggerPlatformObjectInstance`, `MgzMinibossInstance`, and
-  `TunnelbotBadnikInstance` migrated to the new publication path; an
-  architecture guard in `TestArchitecturalReviewGuard` rejects any
-  future direct `SwScrlMgz` import or setter usage from those files.
-  `BossExplosionObjectInstance` drops its `ObjectRenderManager`
-  constructor argument and now resolves the renderer through
-  `services().renderManager()` at draw time, matching the prevailing
-  object construction pattern; threaded through
-  `AbstractBossInstance.spawnDefeatExplosion`, `Sonic1FZBossInstance`,
-  `FZPlasmaLauncher`, the S2 `Sonic2ObjectRegistry` boss explosion
-  factory, and `CPZBossFallingPart`.
-  `Aiz2BossEndSequenceController` now compares the HCZ transition Y
-  threshold against `player.getCentreY()` (matching ROM `y_pos`
-  semantics) rather than `player.getY()` (top-left). The
-  `MgzMinibossInstance.KnucklesSpikePlatformChild` constructor now
-  takes camera coords captured parent-side instead of reading
-  `services().camera()` mid-construction, and
-  `TurboSpikerBadnikInstance` moves its water-splash SFX off the child
-  constructor onto the parent (with a deferred replay on the child's
-  first update) so child constructors no longer depend on
-  `services()`. `TestNoServicesInObjectConstructors` is hardened to
-  also catch qualified `obj.services()` calls inside constructors and
-  to recognise constructors with no access modifier.
-  `GraphicsManager.getUiRenderPipeline()` now calls
-  `syncRuntimeManagedReferences()` so the returned pipeline's
-  `FadeManager` always reflects the live runtime `FadeManager` after
-  gameplay rebuild, and `DefaultPowerUpSpawner` stops caching
-  `ObjectServices` at construction (resolves lazily via
-  `objectManager.services()` so it survives manager teardown/rebuild).
-  Trace-replay invariant tests move out of a hidden Surefire exclusion
-  into the trace-replay profile under `**/tests/trace/**/*.java`, so
-  they now actually run alongside the rest of the trace suite. New
-  tests cover the registry tightening (`TestRewindRegistry`),
-  torn-down readiness (`TestGameplayModeContextRewindRegistry`), the
-  MGZ runtime adapter (`TestS3kZoneRuntimeStateAdapters`,
-  `SwScrlMgzTest.initClearsMutableEventStateForLevelReentry`), the
-  centre-Y transition fix (`TestAiz2BossEndSequenceObjects`), and the
-  pipeline fade rebinding (`TestGraphicsManagerFadeRebinding`).
-  `src/test/resources/archunit.properties` pins
-  `freeze.store.default.allowStoreUpdate=false` so frozen baselines do
-  not auto-update during normal test runs.
+- **Architectural review hardening.** `RewindRegistry.capture()` now rejects `null` snapshots and
+  `restore()` requires explicit `RewindSnapshottable.resetForMissingSnapshot()` (default throws, so
+  subsystems fail closed) instead of silently skipping missing entries that masked coverage gaps.
+  `GameplayModeContext.isGameplayRuntimeReady()` returns `false` once `tearDownManagers()` has run.
+  MGZ scroll-event state (screen shake, BG rise routine/offset, boss BG scroll offset) moved off
+  direct `SwScrlMgz` setters onto a new `MgzZoneRuntimeState` adapter installed through
+  `ZoneRuntimeRegistry` (`SwScrlMgz.update()` reads runtime state at frame time, `init()` clears
+  event-owned overrides on re-entry); `Sonic3kMGZEvents`, `MGZTriggerPlatformObjectInstance`,
+  `MgzMinibossInstance`, and `TunnelbotBadnikInstance` migrated, with a `TestArchitecturalReviewGuard`
+  guard rejecting future direct `SwScrlMgz` use. `BossExplosionObjectInstance` drops its
+  `ObjectRenderManager` constructor argument and resolves the renderer via `services().renderManager()`
+  at draw time (threaded through `AbstractBossInstance.spawnDefeatExplosion`, `Sonic1FZBossInstance`,
+  `FZPlasmaLauncher`, the S2 boss-explosion factory, and `CPZBossFallingPart`), and
+  `Aiz2BossEndSequenceController` compares the HCZ transition Y threshold against `getCentreY()`
+  (ROM `y_pos`) rather than `getY()`. `MgzMinibossInstance.KnucklesSpikePlatformChild` takes
+  parent-captured camera coords and `TurboSpikerBadnikInstance` moves its water-splash SFX onto the
+  parent so child constructors no longer call `services()`; `TestNoServicesInObjectConstructors` is
+  hardened to catch qualified `obj.services()` calls and modifier-less constructors.
+  `GraphicsManager.getUiRenderPipeline()` syncs the live runtime `FadeManager` after rebuild, and
+  `DefaultPowerUpSpawner` resolves `ObjectServices` lazily so it survives teardown/rebuild.
+  Trace-replay invariant tests move out of a hidden Surefire exclusion into the trace-replay profile
+  (`**/tests/trace/**/*.java`) so they actually run, with new coverage (`TestRewindRegistry`,
+  `TestGameplayModeContextRewindRegistry`, `TestS3kZoneRuntimeStateAdapters`,
+  `TestAiz2BossEndSequenceObjects`, `TestGraphicsManagerFadeRebinding`); `archunit.properties` pins
+  `freeze.store.default.allowStoreUpdate=false` so frozen baselines don't auto-update.
 - **Rewind capture for final in-place helper fields.**
   `GenericFieldCapturer` now captures and restores `final` helper
   fields (e.g. `final SubpixelMotion.State motion = new ...`) through
@@ -1911,67 +1898,23 @@ All notable changes to the OpenGGF project are documented in this file.
   cannot corrupt real players or sidekicks, share the mirrored character's
   render bucket and tile-priority layer, and draw behind the live characters.
 
-- **CNZ F=621 Clamer re-fire — ROM dispatch path narrowed; F=621
-  fire mechanism requires recorder extension to localise
-  (doc-only, round 2).** Continues from the prior F619 dispatch
-  surfacing round. ROM-side trace established that
-  `Check_PlayerCollision` (sonic3k.asm:179904-179916) consumes
-  `collision_property(a0)` written by `Touch_Special`
-  (sonic3k.asm:21162-21194) inside `Touch_Loop` — it is NOT a
-  geometric overlap test. The spring child re-adds itself to
-  `Collision_response_list` only when running `loc_890AA` (via
-  `jmp Child_DrawTouch_Sprite` at sonic3k.asm:185962); the
-  cooldown `loc_890C8` (sonic3k.asm:185965-185968) does not call
-  `Add_SpriteToCollisionResponseList`. Under that schedule the
-  spring child should be absent from the F=620-populated list
-  that Sonic's F=621 `TouchResponse` walks — yet the trace
-  records ROM firing the spring at F=621. Two candidate
-  hypotheses (`$2E` cooldown counter init non-zero, or
-  `collision_property` being written by an alternate dispatcher
-  such as `HyperTouch_Special` at sonic3k.asm:21401-21402)
-  documented; neither matches the observed F=619/F=621 cadence
-  without additional recorder data. Engine probes inside
-  `ObjectManager.processMultiRegionTouch` and
-  `ClamerObjectInstance.update` confirmed no engine Clamer
-  instance is active in the F=619-625 window of the engine run;
-  the existing `SPRING_RELATCH_COLLISION_FLAGS = $40|$12`
-  widening papers over the F=621 dispatch divergence at a
-  different player position than ROM. No code change landed:
-  recorder needs extension to capture per-frame
-  `Collision_response_list` membership and each object's
-  `collision_property` byte at the moment Sonic's
-  `TouchResponse` runs. Probes reverted before commit. Trace
-  replay baselines preserved: CNZ stable at F7919/2757, AIZ
-  stable at F7552/977, S1/S2 PASS. Comparison-only invariant
-  preserved.
-- **S3K AIZ F7552 round-4 audit — regenerated trace inspected, divergence
-  isolated to boundary clamp + `Tails_DoLevelCollision` wall push pair
-  (doc-only).** With the regenerated v6.13-s3k AIZ fixture's new
-  `terrain_wall_sensor_per_frame` events at F7549-F7560 in hand, ROM's
-  F7552 Tails state advances `0x1207 -> 0x1208` via TWO sequential
-  writes: (1) `Tails_Check_Screen_Boundaries` `loc_14F5C` boundary clamp
-  to `0x1207` (recorded as `pc=0x14F60 val=0x1207` in
-  `position_write_per_frame`), then (2) a `Tails_DoLevelCollision` wall
-  push of `+1` to `0x1208` (uses `add.w/sub.w`, not `move.w`, so it
-  doesn't appear in `position_write` events the v6.13 recorder hooks).
-  Engine fires NEITHER write — `tails_x` simply integrates from
-  `0x1205` to `0x1207` via `MoveSprite`, and end-of-frame state has
-  `tails_x=0x1207, tails_x_speed=0x0200, tails_x_sub` non-zero. Engine
-  `doLevelBoundary()` reads `camera.getMaxX() = 0x4640` (raw
-  `LevelSizes.AIZ2 xend`); ROM's `Camera_max_X_pos` at F7552 is
-  effectively `~0x10DF` (right-edge of the AIZ Mini-boss arena). Round
-  4 located one ROM `move.l` write that hits `Camera_max_X_pos`
-  ($00100010 longword at sonic3k.asm:104758-104759 in
-  `AIZ1_AIZ2_Transition`), but the trace's `aiz2_reload_resume`
-  checkpoint may take a different path. Round 5 plan: extend the
-  recorder's `aiz_boundary_state_per_frame` (currently F4660-F4679
-  only) to ALSO cover F7549-F7560, using the same multi-window pattern
-  v6.13 added for `velocity_write_per_frame` /
-  `position_write_per_frame`, then the next regen makes ROM's
-  `Camera_min/max_X_pos` at F7552 directly visible and the engine fix
-  becomes a `Sonic3kAIZEvents.updateAiz2SonicResize2` line that calls
-  `camera().setMaxX(<that value>)` in lockstep with the existing
-  `setMinX(0xF50)` lock. No engine code changed this round, no trace
-  fixture change. Cross-game baselines: S3K AIZ first-error stable at
-  F7552/977 errors, S3K CNZ stable at F7919. Comparison-only invariant
-  preserved.
+- **CNZ F=621 Clamer re-fire — ROM dispatch path narrowed (doc-only, round 2).**
+  ROM-side trace established that `Check_PlayerCollision` (sonic3k.asm:179904-179916)
+  consumes `collision_property(a0)` written by `Touch_Special` (sonic3k.asm:21162-21194)
+  — not a geometric overlap test — and the spring child only re-adds itself to
+  `Collision_response_list` in `loc_890AA` (not the `loc_890C8` cooldown), yet the trace
+  still records ROM firing at F=621. Localising the F=621 mechanism needs a recorder
+  extension to capture per-frame `Collision_response_list` membership and each object's
+  `collision_property` at `TouchResponse` time. No code change; probes reverted; baselines
+  preserved (CNZ F7919/2757, AIZ F7552/977, S1/S2 PASS). Comparison-only invariant preserved.
+  (Superseded by the round-4 cprop-latch fix above.)
+- **S3K AIZ F7552 round-4 audit — divergence isolated to boundary clamp + wall-push pair (doc-only).**
+  The regenerated v6.13-s3k AIZ fixture's `terrain_wall_sensor_per_frame` events show ROM advancing
+  Tails `0x1207 -> 0x1208` via two writes: a `Tails_Check_Screen_Boundaries` `loc_14F5C` boundary
+  clamp, then a `Tails_DoLevelCollision` `+1` wall push (using `add.w/sub.w`, so it never appears in
+  `position_write` events). Engine fires neither because `doLevelBoundary()` reads
+  `camera.getMaxX() = 0x4640` (raw `LevelSizes.AIZ2 xend`) while ROM's effective `Camera_max_X_pos`
+  is `~0x10DF` (AIZ Mini-boss arena right edge). The fix is an AIZ2 miniboss camera max-X lock in
+  `Sonic3kAIZEvents.updateAiz2SonicResize2`; confirming the exact value needs the recorder's
+  `aiz_boundary_state_per_frame` extended to F7549-F7560. No engine code or trace fixture change;
+  baselines stable (AIZ F7552/977, CNZ F7919). Comparison-only invariant preserved.

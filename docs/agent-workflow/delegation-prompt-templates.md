@@ -28,10 +28,11 @@ NON-NEGOTIABLE PROJECT RULES
    any runtime asset BYTES must come from the user-supplied ROM via the engine loader.
    NEVER read asset bytes from docs/ disassembly. docs/ is for research, labels, and
    offset DISCOVERY only.
-2. S3K addresses are S&K-side ONLY. Use sonic3k.asm offsets (< 0x200000); NEVER substitute
-   an s3.asm standalone address (>= 0x200000), even when bytes are identical. Run
-   RomOffsetFinder with --game s3k. If only s3.asm hits return, re-search with label
-   variants instead of falling back to the S3 address.
+2. S3K addresses: prefer S&K-side. Use sonic3k.asm offsets (< 0x200000); when both halves
+   match, pick the sonic3k.asm hit. Run RomOffsetFinder with --game s3k. If only s3.asm hits
+   return, re-search with label variants first; but if an object has genuinely no S&K
+   equivalent it may reference the s3.asm (S3-half) asset directly — use it after verifying,
+   rather than looping forever (rare edge case).
 3. No carve-outs. Trace/physics fixes must model real ROM state (object id/routine,
    status/control bits, event flags, frame-counter visibility, physics profile,
    data-driven condition). NEVER branch on zone id/name, trace route, frame number, or a
@@ -267,7 +268,7 @@ and documentation obligations.
 
 CHECK AGAINST RULE BLOCK (cite the specific rule + guard test for each finding):
 1  ROM-only assets — no asset bytes read from docs/.
-2  S3K S&K-side addresses only (no s3.asm >= 0x200000).
+2  S3K: prefer S&K-side; s3.asm reference only when no S&K equivalent exists (rare; verify).
 3  No zone/route/frame/"known failing trace" carve-outs — branches model ROM state.
      Guard: source review + trace guards.
 4  No game-name physics branches — uses PhysicsFeatureSet. Guard: TestArchitecturalSourceGuard.

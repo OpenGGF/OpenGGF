@@ -23,7 +23,7 @@ For assets with a known disassembly shape, add a focused `TestSonic3kPlcArtRegis
 
 Use these when sourcing PLC/art/mapping bytes from the ROM and wiring them into `Sonic3kPlcArtRegistry`:
 
-- **`RomArtIntakeTool`** — S3K ROM-backed art/mapping/PLC intake. Wraps `RomOffsetFinder --game s3k`, rejects `s3.asm`-sourced labels (the S3L standalone half — classifies by source file; confirm the resolved offset is `< 0x200000` when you verify), recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names plus `Sonic3kPlcArtRegistry` hints. Accepts multiple labels:
+- **`RomArtIntakeTool`** — S3K ROM-backed art/mapping/PLC intake. Wraps `RomOffsetFinder --game s3k`, flags (caution, not a hard reject) `s3.asm`-sourced labels (the S3L standalone half — classifies by source file). Prefer an S&K equivalent; if an object has none, the S3-half reference is legitimate (rare; verify). Recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names plus `Sonic3kPlcArtRegistry` hints. Accepts multiple labels:
   ```bash
   mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"
   ```

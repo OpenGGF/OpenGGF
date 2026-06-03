@@ -228,7 +228,7 @@ GameModuleRegistry.detectAndSetModule(rom);
 
 Full S3K detail in [AGENTS_S3K.md](AGENTS_S3K.md) and the `s3k-*` skills. High-cost landmines:
 
-- **S&K-side addresses only — never Sonic 3 standalone:** The locked-on ROM has S&K (`< 0x200000`) and S3 (`>= 0x200000`) halves with identical shared bytes. The engine's S3KL runtime only references the S&K half. Always put `sonic3k.asm` offsets in `Sonic3kConstants.java`; never substitute an `s3.asm` address. Run `RomOffsetFinder` with `--game s3k`. See `s3k-disasm-guide`.
+- **Prefer S&K-side addresses — S3 standalone is a rare, verified fallback:** The locked-on ROM has S&K (`< 0x200000`) and S3 (`>= 0x200000`) halves with identical shared bytes. The engine's S3KL/SKL runtime references the S&K half for the vast majority of assets. Put `sonic3k.asm` offsets in `Sonic3kConstants.java` by default and run `RomOffsetFinder` with `--game s3k`; pick the `sonic3k.asm` hit when both halves match. If an object has genuinely no S&K equivalent, it may reference the `s3.asm` asset directly — use that after verifying (rare; don't loop). See `s3k-disasm-guide`.
 - **Dual object pointer tables (zone-set system):** S3K uses two pointer tables that remap many IDs by zone. `S3kZoneSet`: `S3KL` (zones 0-6: AIZ-LBZ, 256 entries) and `SKL` (zones 7-13: MHZ-DDZ, 185 entries). Resolve names via `Sonic3kObjectRegistry.getPrimaryName(id, zoneSet)`.
 - **Known limitation:** Some S3K acts log `maxChunkPatternIndex > patternCount` (dynamic art/PLC parity incomplete).
 

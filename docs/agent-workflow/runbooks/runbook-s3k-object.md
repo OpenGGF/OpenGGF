@@ -19,12 +19,12 @@ S3K uses **two object pointer tables** that remap many IDs by zone. The same obj
 - Resolve the canonical object name for an ID + zone set: `Sonic3kObjectRegistry.getPrimaryName(int objectId, S3kZoneSet zoneSet)` in `src/main/java/com/openggf/game/sonic3k/objects/Sonic3kObjectRegistry.java`.
 - In a factory, branch on `getCurrentZoneSet()` and `currentRomZoneId()` (NOT on zone name). A factory for an ID shared across both tables must dispatch to the right instance class per zone set.
 
-### b. S&K-side ROM addresses only
-The locked-on ROM has an S&K half (`< 0x200000`) and an S3 half (`>= 0x200000`) with byte-identical shared assets. The S3KL runtime references **only** the S&K half.
+### b. S&K-side ROM addresses (with a rare S3 fallback)
+The locked-on ROM has an S&K half (`< 0x200000`) and an S3 half (`>= 0x200000`) with byte-identical shared assets. The S3KL/SKL runtime references the S&K half for the overwhelming majority of assets.
 
-- Every offset in `Sonic3kConstants.java` must be the `sonic3k.asm` address. Never an `s3.asm` address.
+- Prefer the `sonic3k.asm` address for every offset in `Sonic3kConstants.java`.
 - When `RomOffsetFinder` returns both `sonic3k.asm` and `s3.asm` hits for a label, **pick `sonic3k.asm`**.
-- If only `s3.asm` hits come back, re-search with label variants — do NOT fall back to the S3 address.
+- If only `s3.asm` hits come back, first re-search with label variants (zone-specific prefix/suffix, `Levels/{ZONE}/` paths). **But don't loop forever:** depending on who implemented an object and when, some S3K objects reference S3-half (`s3.asm`) assets directly. If there is genuinely no S&K equivalent, that `s3.asm` reference is the one the object uses — use it after verifying the object's code points there. Rare edge case, not the default.
 
 ### c. ROM-only runtime assets
 Object art, mappings, DPLCs, animation scripts, and PLC bytes come from the user ROM via the loader (`Sonic3kObjectArt`, `Sonic3kPlcArtRegistry`). Never read asset bytes from `docs/skdisasm/`. The disassembly is for labels and offsets only.
