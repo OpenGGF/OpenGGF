@@ -33,6 +33,7 @@ import com.openggf.level.render.BackgroundRenderer;
 import com.openggf.level.rings.RingManager;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.testmode.TraceRenderVisibility;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -146,6 +147,13 @@ public final class LevelRenderer {
 
     // Render-frame state (resolved each frame from the AdvancedRenderModeController).
     private AdvancedRenderFrameState currentAdvancedRenderFrameState = AdvancedRenderFrameState.disabled();
+
+    // Trace render-visibility gates (resolved once per frame at the top of
+    // drawWithRenderOptions). Honored by both live Trace Test Mode and the headless
+    // capture recorder. The ghost site is reached via deferred lambdas inside
+    // renderSpriteObjectPass, so the resolved value is stashed here for that site.
+    private TraceRenderVisibility currentTraceVisibility =
+            TraceRenderVisibility.fromConfig(SonicConfigurationService.getInstance());
 
     // Shimmer style flag, sampled by background tile pass.
     private int currentShimmerStyle = 0;
@@ -514,6 +522,12 @@ public final class LevelRenderer {
         }
         LevelManager.LevelRenderOptions options = renderOptions != null ? renderOptions : LevelManager.LevelRenderOptions.gameplay();
 
+        // Resolve trace render-visibility gates once per frame. Honored by both live
+        // Trace Test Mode and the headless capture recorder (shared renderer). The
+        // ghost site checks traceSession != null as well, so normal gameplay (no active
+        // trace session) is unaffected regardless of these flags.
+        currentTraceVisibility = TraceRenderVisibility.fromConfig(SonicConfigurationService.getInstance());
+
         // Cache the GL viewport once per frame so the deferred GL commands below
         // (water shader setup, FG low/high passes) can reuse it
         // instead of issuing redundant glGetIntegerv pipeline syncs.
@@ -648,7 +662,8 @@ public final class LevelRenderer {
         }
 
         profiler.beginSection("render.hud");
-        if (options.includeHud() && lm.hudRenderManager != null && !lm.isHudSuppressed()) {
+        if (options.includeHud() && lm.hudRenderManager != null && !lm.isHudSuppressed()
+                && currentTraceVisibility.showGameHud()) {
             AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
             lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
         }
@@ -658,7 +673,8 @@ public final class LevelRenderer {
         boolean overlayEnabled = options.includeDebugOverlays()
                 && debugViewEnabled
                 && overlayManager.isEnabled(DebugOverlayToggle.OVERLAY);
-        if (options.includeDebugOverlays() && lm.debugRenderer != null) {
+        if (options.includeDebugOverlays() && lm.debugRenderer != null
+                && currentTraceVisibility.showDebugHud()) {
             lm.debugRenderer.renderDebugOverlays(overlayEnabled, lm.objectManager, lm.ringManager,
                     spriteManager, lm.gameModule, lm.configService, lm.frameCounter);
         }
@@ -984,6 +1000,9 @@ public final class LevelRenderer {
     }
 
     private void renderTraceGhostsForLayer(int bucket, boolean highPriority) {
+        if (!currentTraceVisibility.showGhosts()) {
+            return;
+        }
         TraceSessionLauncher traceSession = TraceSessionLauncher.active();
         if (traceSession != null) {
             traceSession.renderGhostsForLayer(bucket, highPriority);
