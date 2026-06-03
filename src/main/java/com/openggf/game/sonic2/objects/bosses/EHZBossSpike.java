@@ -33,7 +33,12 @@ public class EHZBossSpike extends AbstractBossChild implements TouchResponseProv
     private boolean collisionEnabled;
 
     public EHZBossSpike(Sonic2EHZBossInstance parent) {
-        super(parent, "EHZ Boss Spike", 4, Sonic2ObjectIds.EHZ_BOSS);  // Behind Sonic (2), same as body
+        // ROM: s2.asm:63194 Obj56_Init sets the spike's priority(a0) = 2 (same as the
+        // front wheels), one in front of the ground vehicle's priority = 3. Lower priority
+        // draws on top, so the drillcone renders in front of the car body. Mirror that with
+        // engine bucket 3 (the front wheels' bucket); sharing the vehicle's bucket 4 left the
+        // spike behind it on the within-bucket slot tiebreak.
+        super(parent, "EHZ Boss Spike", 3, Sonic2ObjectIds.EHZ_BOSS);
         this.animationState = new ObjectAnimationState(
                 EHZBossAnimations.getVehicleAnimations(),
                 0,
