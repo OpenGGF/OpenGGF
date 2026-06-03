@@ -17,7 +17,7 @@ class TestWidescreenNativeRegression {
     @Test
     void nativeAspectResolvesToNativeDimensions() {
         // Pin the NATIVE_4_3 path explicitly — do NOT rely on the ambient
-        // config.json, which a developer may have set to a widescreen preset.
+        // config.yaml, which a developer may have set to a widescreen preset.
         SonicConfigurationService cfg = SonicConfigurationService.createStandalone();
         cfg.setConfigValue(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
         cfg.setConfigValue(SonicConfiguration.SCREEN_WIDTH, 640);

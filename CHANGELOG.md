@@ -4,6 +4,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 ## v0.6.prerelease (Current development snapshot)
 
+- Configuration moved from a flat `config.json` to a grouped, commented, deterministically-ordered `config.yaml`. All developer/debug settings are compartmentalised into a single `debug:` block. Existing `config.json` files are migrated automatically on first run (backed up to `config.json.bak`). Window size/scale are deprecated under `debug.window`; widescreen is driven by `display.aspect` profiles.
+
 - **Fixed the EHZ Act 2 boss drillcone rendering behind the car.** The front spike/drillcone (`EHZBossSpike`) shared render bucket 4 with the ground vehicle body, and—being spawned last—lost the within-bucket slot tiebreak, so it drew behind the car. It now uses bucket 3 (the front wheels' bucket), matching the ROM `Obj56_Init` priorities where the spike's `priority = 2` sits in front of the ground vehicle's `priority = 3` (s2.asm:63194). Added `TestEHZBossRenderPriority`.
 
 - **Fixed the S2 CPU sidekick being able to break monitors.** `MonitorObjectInstance` now gates the break path on the lead-character check from ROM `Touch_Monitor.breakMonitor` (`cmpa.w #MainCharacter,a0`; s2.asm:85245-85249), so a CPU sidekick can no longer destroy a monitor in single-player mode. The sidekick can still knock a monitor down from below — matching the ROM, where the gate sits only in the break path, not the hit-from-below fall path. S1 and S3K monitors already had this gate; only S2 was missing it.

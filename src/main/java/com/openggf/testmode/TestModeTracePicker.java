@@ -79,7 +79,7 @@ public final class TestModeTracePicker {
             font.drawText("TRACE TEST MODE", 8, 6, SCALE, 1f, 1f, 1f, 1f);
             if (entries.isEmpty()) {
                 font.drawText("No traces found.", 8, 24, SCALE, 1f, 0.5f, 0.5f, 1f);
-                font.drawText("Check TRACE_CATALOG_DIR in config.json", 8, 32, SCALE,
+                font.drawText("Check debug.testMode.catalogDir in config.yaml", 8, 32, SCALE,
                         0.8f, 0.8f, 0.8f, 1f);
                 font.drawText("(default: src/test/resources/traces)", 8, 40, SCALE,
                         0.8f, 0.8f, 0.8f, 1f);
