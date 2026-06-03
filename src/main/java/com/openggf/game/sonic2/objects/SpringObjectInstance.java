@@ -61,6 +61,15 @@ public class SpringObjectInstance extends BoxObjectInstance
     private final int triggeredAnimId;
     private int mappingFrame;
     private boolean initialized;
+    // Frames remaining in which a horizontal spring's loc_18BC6 proximity launch
+    // is suppressed because the spring is still playing its triggered animation
+    // (ROM `cmpi.b #3,anim(a0)`, s2.asm:34076). Set on each launch to the trigger
+    // animation's displayed-frame count; the ROM's $FD end marker only switches
+    // anim away from 3 the frame AFTER the last displayed frame, so a freshly
+    // triggered horizontal spring blocks re-fire for exactly that many frames.
+    // Tracked locally rather than off ObjectAnimationState.getAnimId() because the
+    // shared animation runner switches the animation index a frame early on $FD.
+    private int horizontalTriggerLock;
 
     public SpringObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, 8, 8, 1.0f, 0.85f, 0.1f, false);
@@ -133,7 +142,11 @@ public class SpringObjectInstance extends BoxObjectInstance
         }
 
         if (type == TYPE_HORIZONTAL) {
-            // ROM: checks pushing_bit, which maps to our pushing/touchSide
+            // ROM: Obj41_Horizontal push path (loc_18AA8/loc_18AD8) — fires when the
+            // player has the pushing bit set on the spring's launch side
+            // (s2.asm:33976-33987). The second, contact-independent proximity path
+            // (loc_18BC6) is handled in update() so it runs even with no solid
+            // contact this frame.
             if (!contact.pushingNow()) {
                 return;
             }
@@ -328,8 +341,103 @@ public class SpringObjectInstance extends BoxObjectInstance
         return Integer.compareUnsigned((springX - 4) & 0xFFFF, playerX) < 0;
     }
 
+    /**
+     * ROM: loc_18BC6 (s2.asm:34075-34138) — the proximity launch path for
+     * horizontal springs, run unconditionally each frame at loc_18AE0
+     * (s2.asm:34008) for both characters.
+     *
+     * <p>The {@code cmpi.b #3,anim(a0)} triggered-animation guard
+     * (s2.asm:34076-34077) is evaluated ONCE at the top of loc_18BC6, before
+     * either character is examined — see {@link #update}. Both characters are
+     * then tested against that single snapshot, so launching the main character
+     * (which sets {@code anim=3}) does NOT block the sidekick launching in the
+     * same frame (HTZ1 f5531, where Sonic and Tails both fire).
+     *
+     * <p>For each character the spring fires when:
+     * <ul>
+     *   <li>The player is on the ground ({@code btst in_air / bne skip},
+     *       s2.asm:34092-34093).</li>
+     *   <li>The player's {@code inertia}, negated when the spring is x-flipped,
+     *       is {@code >= 0} — i.e. the player is moving in the spring's launch
+     *       direction ({@code move.w inertia(a1),d4 / tst.w d4 / bmi skip},
+     *       s2.asm:34094-34101).</li>
+     *   <li>The player's centre x/y lies inside the box
+     *       {@code [x_pos, x_pos+$28]} x {@code [y_pos-$18, y_pos+$18]} for an
+     *       unflipped spring, or {@code [x_pos-$28, x_pos]} for a flipped spring
+     *       (s2.asm:34078-34111). The x compares use {@code blo}/{@code bhs}
+     *       (unsigned), with the upper edge exclusive.</li>
+     * </ul>
+     */
+    private boolean shouldProximityLaunchHorizontal(AbstractPlayableSprite player) {
+        // ROM: btst in_air,status(a1) / bne skip — grounded players only.
+        if (player.getAir()) {
+            return false;
+        }
+
+        boolean flipped = isFlippedHorizontal();
+
+        // ROM: inertia, negated for flipped springs; bmi skip when < 0.
+        int inertia = player.getGSpeed();
+        if (flipped) {
+            inertia = -inertia;
+        }
+        if (inertia < 0) {
+            return false;
+        }
+
+        int springX = spawn.x() & 0xFFFF;
+        int boxLeft;
+        int boxRight;
+        if (flipped) {
+            // ROM loc_18BE8 path: d1 = x_pos, d0 = x_pos - $28.
+            boxLeft = (springX - 0x28) & 0xFFFF;
+            boxRight = springX;
+        } else {
+            boxLeft = springX;
+            boxRight = (springX + 0x28) & 0xFFFF;
+        }
+
+        int playerX = player.getCentreX() & 0xFFFF;
+        // ROM: cmp.w d0,d4 / blo skip ; cmp.w d1,d4 / bhs skip (unsigned, right edge exclusive).
+        if (Integer.compareUnsigned(playerX, boxLeft) < 0
+                || Integer.compareUnsigned(playerX, boxRight) >= 0) {
+            return false;
+        }
+
+        int springY = spawn.y() & 0xFFFF;
+        int boxTop = (springY - 0x18) & 0xFFFF;
+        int boxBottom = (springY + 0x18) & 0xFFFF;
+        int playerY = player.getCentreY() & 0xFFFF;
+        // ROM: cmp.w d2,d4 / blo skip ; cmp.w d3,d4 / bhs skip.
+        if (Integer.compareUnsigned(playerY, boxTop) < 0
+                || Integer.compareUnsigned(playerY, boxBottom) >= 0) {
+            return false;
+        }
+
+        return true;
+    }
+
     private void trigger(AbstractPlayableSprite player) {
         animationState.setAnimId(triggeredAnimId);
+
+        if (getType() == TYPE_HORIZONTAL) {
+            // ROM: launching sets anim(a0)=3 (loc_18AEE, s2.asm:34014). loc_18BC6's
+            // `cmpi.b #3,anim(a0)` guard then blocks re-fire until AnimateSprite
+            // reads the $FD marker and reverts the index. With the ROM byte_19000
+            // trigger script running at speed 0 (one displayed frame per game
+            // frame), anim stays 3 through the launch frame's render plus the next
+            // (frameCount-1) renders, and $FD executes the frame after the last
+            // displayed frame — AFTER that frame's launch check. So a launch at
+            // frame F next allows a re-fire at F+frameCount+1 (HTZ1: launch f5511,
+            // re-fire f5521, frameCount=9). The local lock is decremented once per
+            // frame at the end of update(), and the proximity guard is captured at
+            // the start, so `frameCount + 1` reproduces that window exactly.
+            // (s2.asm:34076, Ani_obj41 byte_19000 at s2.asm:34443-34456.)
+            int frames = animationState == null ? 0 : animationState.frameCount(triggeredAnimId);
+            if (frames > 0) {
+                horizontalTriggerLock = Math.max(horizontalTriggerLock, frames + 1);
+            }
+        }
 
         int subtype = spawn.subtype();
         int type = getType();
@@ -520,10 +628,45 @@ public class SpringObjectInstance extends BoxObjectInstance
         mappingFrame = animationState.getMappingFrame();
 
         SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
-        for (PlayableEntity participant : playerParticipants(playerEntity)) {
+        boolean horizontal = getType() == TYPE_HORIZONTAL;
+        List<PlayableEntity> participants = playerParticipants(playerEntity);
+
+        // ROM Obj41_Horizontal order (s2.asm:33967-34010): the SolidObject pass +
+        // push-launch (loc_18AA8/loc_18AD8) runs for BOTH characters FIRST, then
+        // loc_18BC6 (the proximity launch) runs once afterward. So all push
+        // contacts resolve before any proximity check.
+        for (PlayableEntity participant : participants) {
             if (participant instanceof AbstractPlayableSprite player) {
                 applyCheckpointContact(player, batch.perPlayer().get(participant));
             }
+        }
+
+        // ROM loc_18BC6 (s2.asm:34076-34077): the `cmpi.b #3,anim(a0)` triggered-
+        // animation guard is read ONCE, AFTER the push passes above, before either
+        // character is tested. Capturing the lock here (post-push) means a push
+        // launch this frame suppresses the proximity path (they are mutually
+        // exclusive, CNZ2 f205), while a proximity launch of the main character
+        // does NOT suppress the sidekick's proximity launch in the same frame
+        // (HTZ1 f5531, both fire under the single guard snapshot).
+        boolean proximityArmed = horizontal && horizontalTriggerLock == 0;
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite player) {
+                // ROM: Obj41_Horizontal runs loc_18BC6 unconditionally at loc_18AE0
+                // (s2.asm:34008), independent of whether a solid contact was
+                // registered. A player who lands on flush ground next to a
+                // horizontal spring and rolls/runs across it (HTZ1 f5511) is
+                // launched here even with no pushing contact.
+                if (proximityArmed && shouldProximityLaunchHorizontal(player)) {
+                    applyHorizontalSpring(player);
+                }
+            }
+        }
+
+        // ROM AnimateSprite reads the $FD end marker (reverting the triggered
+        // animation away from index 3) the frame AFTER the last displayed trigger
+        // frame, so the re-fire lock counts down once per frame after the launch.
+        if (horizontalTriggerLock > 0) {
+            horizontalTriggerLock--;
         }
     }
 

@@ -85,6 +85,16 @@ public abstract class Sonic2ZoneEvents {
     /** Run per-frame event logic for the given act. */
     public abstract void update(int act, int frameCounter);
 
+    /**
+     * Run pre-physics event logic for the given act, BEFORE the player object
+     * physics step. Mirrors the ROM routines that {@code WaterEffects} executes
+     * just before {@code RunObjects} (docs/s2disasm/s2.asm:5094-5095). Default
+     * is a no-op; only OOZ (OilSlides) currently overrides this.
+     */
+    public void updatePrePhysics(int act, int frameCounter) {
+        // Default no-op
+    }
+
     public int getEventRoutine() {
         return eventRoutine;
     }

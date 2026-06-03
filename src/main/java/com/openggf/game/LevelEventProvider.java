@@ -33,6 +33,26 @@ public interface LevelEventProvider {
     void update();
 
     /**
+     * Pre-physics level-event update, run once per frame BEFORE the player
+     * object physics step.
+     * <p>
+     * The ROM main level loop runs {@code WaterEffects} (which calls
+     * {@code OilSlides} for OOZ and {@code WindTunnel} for WFZ) immediately
+     * before {@code RunObjects} executes the player object
+     * (docs/s2disasm/s2.asm:5094-5095,5299-5305). Routines in that pre-object
+     * slot therefore evaluate against the player position from the end of the
+     * previous frame and can set the {@code sliding} status bit before the
+     * player's friction/move code reads it the same frame. Routines that belong
+     * after object execution (e.g. the Obj07 oil-surface platform) must stay in
+     * {@link #update()}.
+     * <p>
+     * Default is a no-op for games/zones without a pre-object level routine.
+     */
+    default void updatePrePhysics() {
+        // Default no-op
+    }
+
+    /**
      * Updates fixed in-level object RAM that is outside the dynamic SST scan.
      * <p>
      * S3K runs fixed objects such as {@code Breathing_bubbles} and

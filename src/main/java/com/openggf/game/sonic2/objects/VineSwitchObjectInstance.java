@@ -178,11 +178,20 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance {
     private void handleGrabbedPlayer(AbstractPlayableSprite player, boolean isPlayer2) {
         // Check for A/B/C button PRESS (edge-triggered) to release.
         // ROM: andi.b #button_B_mask|button_C_mask|button_A_mask,d0 / beq.w return_29936
-        // Critical: `move.w (Ctrl_1).w,d0` followed by `andi.b` operates on the LOW byte
-        // of d0, which is Ctrl_1_Press (just-pressed this frame), not Ctrl_1_Held. The
-        // player must freshly press a jump button to release; merely holding the button
-        // since before grab does not release.
-        if (player.isJumpJustPressed()) {
+        // Critical: Obj7F_Main reads the RAW per-controller word -- (Ctrl_1) for the
+        // MainCharacter and (Ctrl_2) for the Sidekick (s2.asm:56489-56491) -- then the
+        // andi.b operates on the LOW byte (the just-pressed press bits, not held). The
+        // player must freshly press a jump button to release.
+        //
+        // The Sidekick MUST read (Ctrl_2), the raw second-controller press, NOT the
+        // CPU follow buffer (Ctrl_2_Logical, written by TailsCPU SendAction at
+        // s2.asm:39254-39376 and consumed only by Tails' own movement). In 1-player
+        // Sonic+Tails mode (Ctrl_2) is always 0, so the CPU's delayed replay of the
+        // leader's jump (the -$300 follow jump) must never release Tails. Using the
+        // raw-controller accessor models the per-controlled-object input source:
+        // isRawControllerJumpJustPressed() returns (Ctrl_2) for a CPU sidekick (0 in
+        // 1P mode) and (Ctrl_1) for the human MainCharacter.
+        if (player.isRawControllerJumpJustPressed()) {
             releasePlayer(player, isPlayer2);
             return;
         }

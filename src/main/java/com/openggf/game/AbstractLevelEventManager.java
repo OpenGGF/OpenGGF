@@ -104,6 +104,25 @@ public abstract class AbstractLevelEventManager
         onUpdate();
     }
 
+    @Override
+    public void updatePrePhysics() {
+        // Runs before the player physics step; the frame counter is advanced by
+        // update() later in the same frame, so it must not be touched here.
+        if (currentZone < 0) {
+            return;
+        }
+        onUpdatePrePhysics();
+    }
+
+    /**
+     * Game-specific pre-physics zone dispatch, run before player physics.
+     * Default is a no-op; only zones with a ROM pre-{@code RunObjects} routine
+     * (e.g. S2 OOZ OilSlides) override this.
+     */
+    protected void onUpdatePrePhysics() {
+        // Default no-op
+    }
+
     // =========================================================================
     // Abstract methods - subclass contract
     // =========================================================================

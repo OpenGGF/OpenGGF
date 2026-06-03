@@ -326,6 +326,26 @@ public class SidekickCpuController {
         controller2Logical = logical;
     }
 
+    /**
+     * Returns whether the RAW player-2 controller jump button was just-pressed
+     * this frame (the engine equivalent of the {@code (Ctrl_2)} press low byte).
+     * <p>
+     * This is the manual second-controller input fed in via
+     * {@link #setController2Input(int, int)} -- NOT the AI follow-steering jump
+     * the controller synthesizes for the sidekick's own movement (the equivalent
+     * of {@code Ctrl_2_Logical}, which the CPU writes from the delayed leader
+     * input history). In 1-player Sonic+Tails mode no second controller is
+     * plugged in, so {@code (Ctrl_2)} press bits are 0 every frame.
+     * <p>
+     * ROM objects that gate on the raw controller word for the Sidekick -- e.g.
+     * Obj7F (MCZ vine switch, s2.asm:56491 {@code move.w (Ctrl_2).w,d0}) -- must
+     * read this, not the buffered CPU jump, so the vine never releases Tails on
+     * the leader's replayed follow jump.
+     */
+    public boolean isRawController2JumpJustPressed() {
+        return (controller2Logical & AbstractPlayableSprite.INPUT_JUMP) != 0;
+    }
+
     public void setController2SignedLocked(boolean locked) {
         controller2SignedLocked = locked;
     }

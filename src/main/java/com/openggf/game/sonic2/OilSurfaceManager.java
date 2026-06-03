@@ -90,13 +90,35 @@ public class OilSurfaceManager {
      * of how many characters share the call.
      */
     public void update(AbstractPlayableSprite player) {
+        // ROM order: OilSlides is called from NonWaterEffects (character processing),
+        // Obj07 runs during object processing (after character). The two halves run
+        // in different phases of the ROM main loop, so callers should invoke
+        // updateSlides() pre-physics and updateSurface() post-physics. This combined
+        // entry is retained for tests/legacy callers that tick both at once.
+        updateSlides(player);
+        updateOilSurface(player);
+    }
+
+    /**
+     * Oil-slide half of the routine (ROM {@code OilSlides}, called from
+     * {@code NonWaterEffects} BEFORE {@code RunObjects} — docs/s2disasm/s2.asm:
+     * 5301,5537-5642). Runs pre-physics so the {@code sliding} status bit it
+     * sets is visible to the player's friction/move code the same frame, and so
+     * the chunk lookup uses the previous frame's player position.
+     */
+    public void updateSlides(AbstractPlayableSprite player) {
         if (!frameAdvancedThisTick) {
             frameCounter++;
             frameAdvancedThisTick = true;
         }
-        // ROM order: OilSlides is called from NonWaterEffects (character processing),
-        // Obj07 runs during object processing (after character).
         updateOilSlides(player);
+    }
+
+    /**
+     * Oil-surface half of the routine (ROM {@code Obj07}, run during object
+     * processing — docs/s2disasm/s2.asm:49659-49749). Runs post-physics.
+     */
+    public void updateSurface(AbstractPlayableSprite player) {
         updateOilSurface(player);
     }
 

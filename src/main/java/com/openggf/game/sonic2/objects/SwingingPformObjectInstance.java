@@ -72,7 +72,13 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
     // Format: [width_pixels, y_radius]
     private static final int[][] PROPERTIES = {
             {0x20, 0x08},  // Property 0: 32px wide, 8px radius
-            {0x1C, 0x32},  // Property 1: 28px wide, 50px radius (buggy: should be 0x30)
+            // Property 1: 28px wide, 48px radius. Retail REV01 builds with fixBugs = 0
+            // (docs/s2disasm/s2.asm:27), so Obj82_Properties resolves to the non-fixBugs
+            // 'else' branch dc.b $1C,$30 (docs/s2disasm/s2.asm:57094-57096). The fixBugs
+            // branch would be $1C,$32, but using it places a rider ~2-3px too high on the
+            // pillar top (objTopHeight too large in SolidObject_Landed,
+            // docs/s2disasm/s2.asm:35582-35616).
+            {0x1C, 0x30},  // Property 1: 28px wide, 48px radius (retail REV01 / non-fixBugs)
             {0x10, 0x10},  // Property 2: 16px wide, 16px radius (unused)
             {0x10, 0x10}   // Property 3: 16px wide, 16px radius (unused)
     };
@@ -477,7 +483,24 @@ public class SwingingPformObjectInstance extends AbstractObjectInstance
 
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
-        return SolidRoutineProfile.topSolid(usesStickyContactBuffer());
+        // Build from this provider so usesPlatformObjectLandingSnap()=false is
+        // honoured: Obj82 is a SolidObject (Obj82_Main calls JmpTo23_SolidObject,
+        // docs/s2disasm/s2.asm:57159), not a PlatformObject, so SolidObject_Landed's
+        // playerY - distY + 3 result must be preserved rather than overwritten by the
+        // PlatformObject_ChkYRange absolute snap. See usesPlatformObjectLandingSnap().
+        return SolidRoutineProfile.fromProvider(this);
+    }
+
+    @Override
+    public boolean usesPlatformObjectLandingSnap() {
+        // Obj82 uses SolidObject_Landed (docs/s2disasm/s2.asm:35582-35616:
+        // sub.w d3,y_pos / subq #1,y_pos), reached via JmpTo23_SolidObject at
+        // docs/s2disasm/s2.asm:57159 -- NOT PlatformObject_ChkYRange's absolute
+        // anchorY - groundHalfHeight - y_radius - 1 snap. The shared
+        // resolveContactInternal already computes the SolidObject landed centre
+        // (playerY - distY + 3) correctly; the PlatformObject override would use
+        // groundHalfHeight (= y_radius + 1) and land the rider 1px too high.
+        return false;
     }
 
     @Override
