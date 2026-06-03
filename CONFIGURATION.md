@@ -26,6 +26,7 @@ The `config.yaml` is organized into the following top-level sections:
 | `audio` | Enabled flag, region, DAC, FM6, PSG settings |
 | `characters` | Main character, sidekick, data select combos |
 | `roms` | ROM filenames for S1, S2, S3K; default game selection |
+| `capture` | Trace video capture output dir, scale, fps, codec |
 | `startup` | Title screen, master title, legal disclaimer flags |
 | `rewind` | Live rewind enable/key, tape-coast parameters, audio history settings |
 | `crossGame` | Cross-game feature donation enable and source |
@@ -131,6 +132,17 @@ Paths are relative to the working directory (where the JAR is launched).
 | `AUDIO_INTERNAL_RATE_OUTPUT` | `audio.internalRateOutput` | bool | `false` | Output audio at the YM2612 internal sample rate (~53 kHz) rather than the system rate. Useful for bit-accurate captures; may cause issues on some audio drivers. |
 | `PSG_NOISE_SHIFT_EVERY_TOGGLE` | `audio.psgNoiseShiftEveryToggle` | bool | `true` | PSG noise LFSR clock behaviour. `true` = shift on every polarity toggle (MAME-style, brighter noise); `false` = shift on positive edges only (Genesis Plus GX / libvgm style, darker noise). |
 | `FM6_DAC_OFF` | `audio.fm6DacOff` | bool | `true` | Silence FM channel 6 whenever a DAC note is active. Matches the SMPSPlay parity hack used in Sonic 2; prevents FM bleed audible during percussion. |
+
+## Capture
+
+Trace video capture (the headless trace-capture driver / `TraceCaptureTool`) renders a chosen trace and muxes a lossless MKV via ffmpeg. These keys set the defaults; CLI flags override them.
+
+| Key | YAML path | Type | Default | Description |
+|-----|-----------|------|---------|-------------|
+| `CAPTURE_OUTPUT_DIR` | `capture.outputDir` | string | `"target/trace-videos"` | Output directory for trace capture videos. |
+| `CAPTURE_SCALE` | `capture.scale` | int | `4` | Integer nearest-neighbor upscale factor applied to the captured frames. |
+| `CAPTURE_FPS` | `capture.fps` | int | `60` | Output frame rate for the captured video. |
+| `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Capture video codec (e.g. `ffv1`). |
 
 ## Debug
 

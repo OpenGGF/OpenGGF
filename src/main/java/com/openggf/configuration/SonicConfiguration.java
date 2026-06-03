@@ -270,6 +270,15 @@ public enum SonicConfiguration {
 	 */
 	TRACE_SHOW_DEBUG_HUD,
 
+	/** Output directory for trace capture videos. */
+	CAPTURE_OUTPUT_DIR,
+	/** Integer nearest-neighbor upscale factor for trace capture output. */
+	CAPTURE_SCALE,
+	/** Output frame rate for trace capture. */
+	CAPTURE_FPS,
+	/** Trace capture video codec (e.g. "ffv1"). */
+	CAPTURE_CODEC,
+
 	/**
 	 * Whether held-key rewind is enabled during ordinary live level play.
 	 */

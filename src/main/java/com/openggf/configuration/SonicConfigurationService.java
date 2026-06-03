@@ -438,6 +438,10 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, true);
 		putDefault(SonicConfiguration.TRACE_SHOW_GAME_HUD, true);
 		putDefault(SonicConfiguration.TRACE_SHOW_DEBUG_HUD, false);
+		putDefault(SonicConfiguration.CAPTURE_OUTPUT_DIR, "target/trace-videos");
+		putDefault(SonicConfiguration.CAPTURE_SCALE, 4);
+		putDefault(SonicConfiguration.CAPTURE_FPS, 60);
+		putDefault(SonicConfiguration.CAPTURE_CODEC, "ffv1");
 		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, false);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_R);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);

@@ -6,6 +6,8 @@ All notable changes to the OpenGGF project are documented in this file.
 
 - Added `TRACE_SHOW_DESYNC_GHOSTS` / `TRACE_SHOW_GAME_HUD` / `TRACE_SHOW_DEBUG_HUD` config flags for trace replay and capture visibility (foundation for the trace capture recorder).
 
+- Added `CAPTURE_OUTPUT_DIR` / `CAPTURE_SCALE` / `CAPTURE_FPS` / `CAPTURE_CODEC` config for trace video capture.
+
 - Configuration moved from a flat `config.json` to a grouped, commented, deterministically-ordered `config.yaml`. All developer/debug settings are compartmentalised into a single `debug:` block. Existing `config.json` files are migrated automatically on first run (backed up to `config.json.bak`). Window size/scale are deprecated under `debug.window`; widescreen is driven by `display.aspect` profiles.
 
 - **Fixed Sonic getting stuck rolling after exiting a CPZ spin tube (Obj1E).** `CPZSpinTubeObjectInstance.exitTube` called `player.setPinballMode(true)` on exit, which is not in the ROM. Combined with S2's `pinballLandingPreservesRoll` / `pinballLandingPreservesPinballMode` landing flags, `PlayableSpriteMovement.resetOnFloor` then skipped both the roll-clear and the pinball-clear permanently, so landing on terrain (instead of bouncing off the exit spring) left Sonic locked in a ball. The ROM exit routine (`loc_227A6`) only masks `y_pos`, sets the object state, clears `obj_control`, and plays the spindash-release sound — it never sets `spindash_flag` / `pinball_mode`. Removed the stray `setPinballMode(true)` so the airborne rolling bit uncurls naturally on landing, matching the ROM. Corrected the now-inaccurate `TestCPZObjectBugs` docstrings.

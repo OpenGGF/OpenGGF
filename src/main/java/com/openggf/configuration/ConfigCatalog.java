@@ -137,6 +137,14 @@ public final class ConfigCatalog {
         put(DISCORD_RICH_PRESENCE_SHOW_ZONE, of("discord", "showZone", BOOL,
                 "Show the zone and act in Rich Presence"));
 
+        // capture (trace video capture)
+        put(CAPTURE_OUTPUT_DIR, of("capture", "outputDir", STRING,
+                "Output directory for trace capture videos"));
+        put(CAPTURE_SCALE, of("capture", "scale", INT,
+                "Integer nearest-neighbor upscale factor for capture output"));
+        put(CAPTURE_FPS, of("capture", "fps", INT, "Output frame rate for trace capture"));
+        put(CAPTURE_CODEC, of("capture", "codec", STRING, "Capture video codec (e.g. ffv1)"));
+
         // ───────────────── DEBUG BLOCK ─────────────────
 
         // debug.flags
