@@ -9,7 +9,7 @@ Companion skills: [`.agents/skills/plc-system/SKILL.md`](../../../.agents/skills
 ## 0. Non-negotiables
 
 1. **ROM-only runtime assets.** Art/mapping/DPLC/PLC bytes come from the user ROM via the loader. Never read them from `docs/` disassembly — labels/offsets only.
-2. **S3K: S&K-side addresses only.** `sonic3k.asm`, `< 0x200000`. When a label returns both `sonic3k.asm` and `s3.asm` hits, pick `sonic3k.asm`. If only `s3.asm` hits, re-search with variants — never fall back to the S3 address.
+2. **S3K: prefer S&K-side addresses.** `sonic3k.asm`, `< 0x200000`. When a label returns both `sonic3k.asm` and `s3.asm` hits, pick `sonic3k.asm`. If only `s3.asm` hits, re-search with variants first; but if there is genuinely no S&K equivalent, some S3K objects reference S3-half assets directly — use the `s3.asm` reference after verifying (rare; don't loop forever).
 3. **VDP sprite tile order is column-major:** `tileIndex = column * heightTiles + row`. H-flip draws last column first; V-flip bottom row first.
 
 ---

@@ -180,8 +180,9 @@ mvn "-Dtest=com.openggf.game.sonic3k.TestSonic3kPlcArtRegistry" "-Ds3k.rom.path=
   decompressed bank, or reduce piece/frame span to the ROM-accurate value.
   - **ROM-only rule:** asset bytes must come from the user ROM via the loader; do **not**
     read mapping/DPLC/art bytes from `docs/` disassembly.
-  - **S&K-side addresses only:** put `sonic3k.asm` (`< 0x200000`) offsets in
-    `Sonic3kConstants.java`; never substitute an `s3.asm` standalone address. Verify with
+  - **Prefer S&K-side addresses:** put `sonic3k.asm` (`< 0x200000`) offsets in
+    `Sonic3kConstants.java`. Use an `s3.asm` reference only if the object has no S&K equivalent
+    (rare; verify it). Verify with
     `RomOffsetFinder --game s3k`. See the `s3k-plc-system` and `s3k-disasm-guide` skills.
 
 ---
@@ -338,7 +339,7 @@ through the sanctioned bridge): `S3kAizTreeRuntimeStateGuard`, `S3kAizWriteBridg
 ## Cross-cutting rules these guards protect
 
 - ROM-only runtime assets — never read asset bytes from `docs/` disassembly.
-- S3K: S&K-side (`sonic3k.asm`, `< 0x200000`) addresses only; never `s3.asm` standalone.
+- S3K: prefer S&K-side (`sonic3k.asm`, `< 0x200000`); use an `s3.asm` reference only if no S&K equivalent exists (rare; verify).
 - No carve-outs — model ROM state (object id/routine/status bits/event flags/profile), never
   branch on zone id/name, route, or frame number.
 - No game-name `if/else` for physics divergences — use `PhysicsFeatureSet` flags.

@@ -9,7 +9,7 @@ Reference for the shared PLC binary format used across S1, S2, and S3K, and the 
 
 ## Agent Workflow Tooling
 
-For S3K PLC/art intake, use the dedicated tool and runbook (S&K-half only; the tool rejects `s3.asm`-sourced labels — the S3L standalone half):
+For S3K PLC/art intake, use the dedicated tool and runbook (prefer the S&K half; the tool flags `s3.asm`-sourced labels — the S3L standalone half — as a caution, since an object with no S&K equivalent may legitimately use them):
 
 - **`RomArtIntakeTool`** — S3K ROM-backed art/mapping/PLC intake; wraps `RomOffsetFinder --game s3k`, recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints. Accepts multiple labels:
   `mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"`

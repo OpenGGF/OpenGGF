@@ -40,9 +40,9 @@ CNZ --validate-only
 | **s3k-palette-cycling** | `.agents/skills/s3k-palette-cycling/SKILL.md` | Implement AnPal handlers with counter/step/limit cycling and validation |
 | **s3k-zone-validate** | `.agents/skills/s3k-zone-validate/SKILL.md` | Visual comparison via stable-retro + image recognition for validation |
 
-## S&K-Side Addresses Only — Never Sonic 3 Standalone
+## S&K-Side Addresses by Default — Sonic 3 Standalone Is a Rare Fallback
 
-When dispatching feature agents, re-iterate this rule in every prompt: **the engine is S3KL (locked-on), so all ROM constants must come from the S&K half (`sonic3k.asm`, addresses < 0x200000). Never use Sonic 3 (`s3.asm`) pointers or addresses**, even when the two halves look identical. Always invoke `RomOffsetFinder` with `--game s3k`, and if a lookup returns both halves, pick the `sonic3k.asm` result. See `s3k-disasm-guide` for the full selection rule.
+When dispatching feature agents, re-iterate this rule in every prompt: **the engine is S3KL (locked-on), so ROM constants should come from the S&K half (`sonic3k.asm`, addresses < 0x200000) by default**, even when the two halves look identical. Always invoke `RomOffsetFinder` with `--game s3k`, and if a lookup returns both halves, pick the `sonic3k.asm` result. **Rare exception:** if an object has genuinely no S&K equivalent, it may reference the S3-half (`s3.asm`) asset directly — use that after verifying, rather than blocking. See `s3k-disasm-guide` for the full selection rule.
 
 ## Framework-First Rule
 

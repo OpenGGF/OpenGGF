@@ -122,7 +122,7 @@ No dedicated zone-set entry currently exists in `rom-pitfalls.md`. Zone-set reso
 
 ### S3K S&K-side vs Sonic 3 standalone address confusion
 
-No dedicated entry currently exists in `rom-pitfalls.md`. The S&K-side-only address rule (`sonic3k.asm`, `< 0x200000`; never substitute `s3.asm` standalone addresses; `RomOffsetFinder --game s3k`) is enforced by guidance in:
+No dedicated entry currently exists in `rom-pitfalls.md`. The S&K-side address rule (prefer `sonic3k.asm`, `< 0x200000`, via `RomOffsetFinder --game s3k`; an `s3.asm` reference is a rare, verified fallback only when an object has no S&K equivalent) is enforced by guidance in:
 - `.agents/skills/s3k-disasm-guide/SKILL.md` and the S&K-side note in `CLAUDE.md` / `AGENTS_S3K.md`.
 
 (Add a mirrored pitfall entry if a reusable wrong-half-address bug class is surfaced by a trace fix.)
