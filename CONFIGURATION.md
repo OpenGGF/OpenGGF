@@ -116,7 +116,7 @@ Paths are relative to the working directory (where the JAR is launched).
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `MAIN_CHARACTER_CODE` | `characters.main` | string | `"sonic"` | Identity of the player-controlled character. Currently only `"sonic"` is supported. |
-| `SIDEKICK_CHARACTER_CODE` | `characters.sidekick` | string | `""` | CPU-controlled sidekick spawned alongside the main character. Set to `"tails"` to enable Tails AI, `"sonic"` to clone the player, or `""` (empty) to disable. |
+| `SIDEKICK_CHARACTER_CODE` | `characters.sidekick` | string | `"tails"` | CPU-controlled sidekick spawned alongside the main character. Defaults to `"tails"` (Tails AI enabled). Set to `"sonic"` to clone the player, or `""` (empty) to disable the sidekick. |
 | `DATA_SELECT_EXTRA_PLAYER_COMBOS` | `characters.dataSelectExtraCombos` | string | `""` | Extra team combinations shown on the S3K Data Select screen. Format is `main,sidekick1,sidekick2;main2,sidekick1`. The first character in each group is the main character; remaining entries are sidekicks. Example: `"sonic,knuckles;sonic,tails,tails;knuckles,tails"`. This only affects Data Select team choices; normal gameplay and Level Select still use `MAIN_CHARACTER_CODE` and `SIDEKICK_CHARACTER_CODE`. |
 
 ---
@@ -212,8 +212,8 @@ The tables below list each key's name, default code, and the human-readable key 
 
 | Key | YAML path | Default | Key Name | Description |
 |-----|-----------|---------|----------|-------------|
-| `NEXT_ACT` | `debug.keys.nextAct` | `88` | X | Skip to the next act within the current zone. |
-| `NEXT_ZONE` | `debug.keys.nextZone` | `90` | Z | Skip to the first act of the next zone. |
+| `NEXT_ACT` | `debug.keys.nextAct` | `266` | PAGE_UP | Skip to the next act within the current zone. |
+| `NEXT_ZONE` | `debug.keys.nextZone` | `267` | PAGE_DOWN | Skip to the first act of the next zone. |
 | `DEBUG_MODE_KEY` | `debug.keys.debugMode` | `68` | D | Toggle free-fly debug movement mode (requires `DEBUG_VIEW_ENABLED`). |
 | `DEBUG_LAST_CHECKPOINT_KEY` | `debug.keys.lastCheckpoint` | `67` | C | Teleport the player to the most recently activated checkpoint. |
 | `LEVEL_SELECT_KEY` | `debug.keys.levelSelect` | `298` | F9 | Open the level select screen at runtime. |
