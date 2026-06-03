@@ -78,6 +78,17 @@ public final class LevelFrameStep {
         //    ROM: LZWaterFeatures runs before ExecuteObjects (sonic.asm:3042).
         levelManager.updateZoneFeaturesPrePhysics();
 
+        // 1b. Pre-physics level-event routines that the ROM runs in WaterEffects
+        //     immediately before RunObjects (docs/s2disasm/s2.asm:5094-5095).
+        //     OOZ OilSlides reads the previous-frame player position and sets the
+        //     sliding status bit before the player's friction/move code runs the
+        //     same frame; running it post-physics applied oil friction one frame
+        //     early (OOZ1 trace f563). Default no-op for other games/zones.
+        LevelEventProvider prePhysicsEvents = GameServices.module().getLevelEventProvider();
+        if (prePhysicsEvents != null) {
+            prePhysicsEvents.updatePrePhysics();
+        }
+
         boolean inlineSolidResolution = levelManager.objectsExecuteAfterPlayerPhysics();
         if (inlineSolidResolution) {
             // 2. Inline-order modules need a frame-start snapshot of object touch

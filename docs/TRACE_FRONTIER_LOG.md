@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-06-03 - S2 trace-green-fleet: 7 frontiers advanced, integrated + combined-verified
+
+- Branch: `feature/ai-trace-green-integration` (worktree `.worktrees/trace-green-integration`),
+  off develop `e9f5cc529`. Seven per-trace fixes from the `trace-green-fleet` workflow,
+  cherry-picked together and verified as a unit.
+- Combined verification command (single fork, no native-lib race):
+  `mvn -q -Dmse=relaxed -DforkCount=1 -DreuseForks=true "-Ds1.rom.path=..." "-Ds2.rom.path=..." "-Ds3k.rom.path=..." "-Dtest=*TraceReplay" test`
+- Result (0 flakes): all 7 targets advanced exactly as expected; every previously-green
+  trace stayed green; S1 (×10) and S3K (AIZ f8941 / CNZ f17276 / MGZ f4124) byte-identical.
+  | Trace | first-error frame | source commit |
+  |-------|-------------------|---------------|
+  | ARZ1  | 1106 → 1208 | `723214ebc` GroundSensor FindFloor blank extension tile |
+  | ARZ2  | 225 → 241   | `6e011edcb` Obj82 y_radius fixBugs=0 + SolidObject landing |
+  | CPZ2  | 1515 → 1607 | `8c2a20125` ObjA8 Grabber legs touch box + grab deferral |
+  | HTZ1  | 5511 → 5647 | `b80fcc4f3` Obj41 horizontal-spring proximity launch |
+  | MCZ1  | 1085 → 1455 | `42019317c` Obj77 SolidObject (not PlatformObject) landing |
+  | MCZ2  | 264 → 3003  | `6f57c2f42` vine switch reads raw Ctrl_2, not CPU follow jump |
+  | OOZ1  | 563 → 741   | `990ed59c5` OOZ OilSlides pre-physics ordering hook |
+- Unfixed S2 frontiers unchanged (CNZ1 3906, CNZ2 1490, CPZ1 844, DEZ1 536, HTZ2 795,
+  MTZ1 375, MTZ2 453, MTZ3 1379, OOZ2 389). Not yet landed on develop pending review.
+
 ## 2026-06-01 - S2 WFZ trace PASSES: CNZ conveyor Obj72 byte-width wrap
 
 - Branch: `feature/ai-s2-mtz-parity`; Worktree: `.worktrees/feature-ai-s2-mtz-parity`

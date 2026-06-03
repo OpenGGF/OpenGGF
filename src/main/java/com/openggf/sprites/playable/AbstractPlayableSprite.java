@@ -2870,6 +2870,31 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         /**
+         * Returns the RAW controller jump just-pressed bit as an object routine
+         * would see it when reading the per-controller press word.
+         * <p>
+         * The ROM distinguishes the raw controller word ({@code (Ctrl_1)} /
+         * {@code (Ctrl_2)}) from the logical/CPU-written word
+         * ({@code Ctrl_1_Logical} / {@code Ctrl_2_Logical}). Object routines such
+         * as Obj7F (MCZ vine switch, s2.asm:56489-56491) read the RAW word:
+         * {@code (Ctrl_1)} for the MainCharacter and {@code (Ctrl_2)} for the
+         * Sidekick. In 1-player Sonic+Tails mode no second controller is plugged
+         * in, so {@code (Ctrl_2)} press bits are always 0 -- the CPU's buffered
+         * follow jump is written only to {@code Ctrl_2_Logical} (consumed by the
+         * sidekick's own movement) and never appears here.
+         * <p>
+         * For a human-controlled sprite this is simply {@link #isJumpJustPressed()}.
+         * For a CPU-controlled sidekick this returns the raw second-controller
+         * press (the manual P2 override), NOT the synthesized follow-steering jump.
+         */
+        public boolean isRawControllerJumpJustPressed() {
+                if (isCpuControlled() && cpuController != null) {
+                        return cpuController.isRawController2JumpJustPressed();
+                }
+                return isJumpJustPressed();
+        }
+
+        /**
          * Returns the ROM-visible logical jump press bit published for this
          * playable's current update. Unlike {@link #isJumpPressed()}, this does
          * not read the live held/forced latch; objects that receive

@@ -151,6 +151,25 @@ public class MCZBridgeObjectInstance extends AbstractObjectInstance
         return true;
     }
 
+    /**
+     * Obj77 calls the generic {@code SolidObject} routine ({@code JmpTo20_SolidObject}
+     * at s2.asm:55824-55829: {@code d1=$4B, d2=8, d3=d2+1=9, d4=x_pos}), NOT
+     * {@code PlatformObject}. A new airborne landing therefore resolves through
+     * {@code SolidObject_Landed} (s2.asm:35582-35621), whose centre is
+     * {@code playerY - distY + 3} (== {@code anchorY - (airHalfHeight + y_radius) - 1});
+     * {@code resolveContactInternal} already produces that value exactly. The
+     * default {@code PlatformObject_ChkYRange} snap
+     * ({@code anchorY - groundHalfHeight - y_radius - 1}, s2.asm:35696-35712) is the
+     * wrong formula here: it uses {@code groundHalfHeight=9} and the post-unroll
+     * standing {@code y_radius=$13}, landing the player one pixel too low
+     * (MCZ trace f1085: 0x056B vs ROM 0x056C). Opt this SolidObject-based gate out
+     * of the platform snap so the SolidObject_Landed result is preserved.
+     */
+    @Override
+    public boolean usesPlatformObjectLandingSnap() {
+        return false;
+    }
+
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;

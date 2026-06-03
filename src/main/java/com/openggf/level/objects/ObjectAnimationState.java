@@ -33,6 +33,18 @@ public class ObjectAnimationState {
         return mappingFrame;
     }
 
+    /**
+     * Number of displayed frames in the given animation script, or 0 if absent.
+     * Read-only helper; does not affect animation playback.
+     */
+    public int frameCount(int queryAnimId) {
+        if (animationSet == null) {
+            return 0;
+        }
+        SpriteAnimationScript script = animationSet.getScript(queryAnimId);
+        return script == null ? 0 : script.frames().size();
+    }
+
     public ObjectAnimationState copyForRewind() {
         ObjectAnimationState copy = new ObjectAnimationState(animationSet, animId, mappingFrame);
         copy.lastAnimId = lastAnimId;

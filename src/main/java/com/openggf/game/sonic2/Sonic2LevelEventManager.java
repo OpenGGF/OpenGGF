@@ -153,6 +153,18 @@ public class Sonic2LevelEventManager extends AbstractLevelEventManager {
         }
     }
 
+    @Override
+    protected void onUpdatePrePhysics() {
+        // ROM WaterEffects runs before RunObjects (docs/s2disasm/s2.asm:5094-5095);
+        // OOZ OilSlides lives in that pre-object slot. Dispatch the pre-physics
+        // portion of the active zone handler. frameCounter is advanced by the
+        // post-physics onUpdate() later this frame, so use frameCounter here.
+        Sonic2ZoneEvents handler = getActiveHandler();
+        if (handler != null) {
+            handler.updatePrePhysics(currentAct, frameCounter);
+        }
+    }
+
     // =========================================================================
     // Zone handler dispatch
     // =========================================================================

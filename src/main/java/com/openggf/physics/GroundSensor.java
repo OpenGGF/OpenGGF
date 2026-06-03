@@ -455,7 +455,20 @@ public class GroundSensor extends Sensor {
                 // as the FULL_TILE path above.
                 return prevResult;
             }
-            return null;
+
+            // prevResult null means FindFloor2 found no solid tile in the extension tile.
+            // ROM FindFloor loc_1E85E (adjusted<0) → loc_1E86A: it ALWAYS calls FindFloor2 on
+            // the previous tile and applies subi.w #$10,d1 to the result — it never bails out.
+            // When FindFloor2 hits a blank tile (loc_1E88A, s2.asm:43457-43462) it returns
+            // d1 = 15 - (d2 & $F) relative to the shifted d2; the caller's subi #$10 then makes
+            // it negative, placing the surface one tile up. The engine's calculateVerticalDistance
+            // measures from origY (embedding the ±16), so the blank-tile default here mirrors the
+            // FULL_TILE first-pass path exactly (s2.asm:43420-43431 loc_1E85E/loc_1E86A,
+            // s2.asm:43457-43462 FindFloor2 loc_1E88A). Returning null instead dropped this
+            // negative distance, so a single-tile ceiling lip in the extension tile was never
+            // reported and Sonic overshot upward (ARZ1 frame 1106, frontier 1102→1106).
+            byte defaultDistance = calculateVerticalDistance((byte) 0, origY, prevCheckY, direction);
+            return createResultWithDistance(tile, desc, defaultDistance, direction);
         }
 
         // Full-height tile handling differs between FindFloor and FindFloor2.

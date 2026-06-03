@@ -64,6 +64,15 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
     private boolean paletteFlipped;         // Palette bit toggle for blink effect (not visibility)
     private int anchorY;            // Y position of anchor point (where Grabber starts)
     private AbstractPlayableSprite grabbedPlayer;
+    // ROM parity: the legs touch->collision_property->grab handshake is a
+    // frame-delayed pipeline. TouchResponse runs at the end of a frame and sets
+    // the legs' collision_property; ObjA8 loc_38F88 reads that property on the
+    // FOLLOWING frame to set objoff_30 (the grab flag), which the body's dive
+    // routine then consumes. We reproduce that one-frame deferral so the grab
+    // (and the resulting velocity zero) lands on the same frame as the ROM
+    // rather than one frame early. See s2.asm:76756-76777 (ObjA8) and the
+    // TouchResponse pipeline ordering at s2.asm:84955-85049.
+    private AbstractPlayableSprite pendingGrabPlayer;
 
     // Sub-object positions
     private int legsFrame;          // Frame index for legs (3 or 4)
@@ -177,10 +186,23 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
     }
 
     private void updateDiving(AbstractPlayableSprite player) {
-        // Check for grab collision
+        // ROM parity (one-frame grab deferral): the legs touch overlap is latched
+        // by TouchResponse at the end of one frame and only consumed by the body
+        // (ObjA7_GrabCharacter, s2.asm:76653-76655 -> 76676) on the next frame.
+        // So a previously-latched overlap grabs FIRST, before this frame's dive
+        // movement, exactly as loc_38EB4 tests objoff_30 before ObjectMove.
+        if (pendingGrabPlayer != null) {
+            AbstractPlayableSprite p = pendingGrabPlayer;
+            pendingGrabPlayer = null;
+            if (p != null && !p.getInvulnerable()) {
+                grabPlayer(p);
+                return;
+            }
+        }
+
+        // Detect the legs touch overlap this frame; it is applied next frame.
         if (player != null && checkGrabCollision(player)) {
-            grabPlayer(player);
-            return;
+            pendingGrabPlayer = player;
         }
 
         diveTimer--;
@@ -203,15 +225,66 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
     }
 
     private boolean checkGrabCollision(AbstractPlayableSprite player) {
-        // Check if legs are overlapping player
-        // Legs are offset below the main body
-        int legsY = currentY + 16;
-        int dx = Math.abs(currentX - player.getCentreX());
-        int dy = Math.abs(legsY - player.getCentreY());
+        // ROM parity: the grab is NOT a self-computed loose AABB. In the ROM the
+        // capture is driven by the Grabber's LEGS sub-object (ObjA8) through the
+        // normal TouchResponse pipeline, then gated on the body actively diving:
+        //   - ObjA8 loc_38F88 (s2.asm:76756-76777) only sets the grab flag
+        //     (objoff_30) when its collision_property was set by a touch overlap
+        //     AND cmpi.b #4,routine_secondary(a1) (the body is in the DIVING
+        //     sub-state).
+        //   - The body's dive routine loc_38EB4 (s2.asm:76653-76655) consumes
+        //     objoff_30 -> ObjA7_GrabCharacter.
+        // This method is only ever called from updateDiving(), so the "body is
+        // diving" gate is already satisfied; here we reproduce the ObjA8 legs
+        // touch box exactly so a fast rolling Sonic merely flying past the legs
+        // does NOT get captured (the previous 48x32 box grabbed him; the ROM box
+        // is far tighter).
+        //
+        // ObjA8 legs collision_flags = $D7 (ObjA7_SubObjData2, s2.asm:77042).
+        // Touch index = $D7 & $3F = $17 -> Touch_Sizes[$17] = (8,8) half-extents
+        // (s2.asm:85008-85010, 85077). The body aligns the legs at body_y + $10
+        // via Obj_AlignChildXY (moveq #$10,d1 at s2.asm:76593-76595), matching
+        // the legsY = currentY + 16 used elsewhere here.
+        if (player.getInvulnerable()) {
+            return false;
+        }
 
-        // Collision box approximately 24x16 pixels
-        // Can't grab if player is invulnerable or invincible
-        return dx < 24 && dy < 16 && !player.getInvulnerable();
+        final int legsBoxHalfWidth = 0x08;   // Touch_Sizes[$17] width  half-extent
+        final int legsBoxHalfHeight = 0x08;  // Touch_Sizes[$17] height half-extent
+        int legsX = currentX;
+        int legsY = currentY + 0x10;
+
+        // Reproduce TouchResponse's player box (s2.asm:84966-84987):
+        //   d2 = player_x - 8 ; d4 = $10 (player box spans player_x-8 .. player_x+8)
+        //   d5 = (y_radius - 3) ; player box spans player_y-d5 .. player_y+d5
+        int playerX = player.getCentreX();
+        int playerY = player.getCentreY();
+        int d2 = playerX - 8;
+        int d4 = 0x10;
+        int d5 = (player.getYRadius() & 0xFF) - 3;
+
+        // Width check (s2.asm:85016-85030): object box [legsX - hw, legsX + hw]
+        // overlaps player box [d2, d2 + d4].
+        int wd0 = legsX - legsBoxHalfWidth - d2;
+        if (wd0 < 0) {
+            wd0 += legsBoxHalfWidth * 2;
+            if (wd0 < 0) {
+                return false; // fully left of player box
+            }
+        } else if (wd0 > d4) {
+            return false; // fully right of player box
+        }
+
+        // Height check (s2.asm:85032-85047): object box [legsY - hh, legsY + hh]
+        // overlaps player box [player_y - d5, player_y + d5] i.e. d3 = player_y - d5
+        // spanning 2*d5.
+        int d3 = playerY - d5;
+        int hd0 = legsY - legsBoxHalfHeight - d3;
+        if (hd0 < 0) {
+            hd0 += legsBoxHalfHeight * 2;
+            return hd0 >= 0;
+        }
+        return hd0 <= (d5 * 2);
     }
 
     private void grabPlayer(AbstractPlayableSprite player) {
@@ -231,6 +304,14 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setAnimationId(Sonic2AnimationIds.FLOAT);  // Per disassembly line 76221
+
+        // ROM parity: on the frame the grab is consumed, ObjA8 routine 4
+        // loc_38FE8 (s2.asm:76790-76799) pins the grabbed player's x_pos/y_pos to
+        // the legs sub-object position (body x, body y + $10). Snap immediately so
+        // the player's position matches the ROM on the grab frame, not one frame
+        // later via updateCarrying().
+        player.setX((short) (currentX - player.getWidth() / 2));
+        player.setY((short) (currentY + 0x10 - player.getHeight() / 2));
 
         // Reverse dive direction to go back up
         if (yVelocity > 0) {
@@ -316,9 +397,13 @@ public class GrabberBadnikInstance extends AbstractBadnikInstance {
             ySubpixel = yPos32 & 0xFF;
         }
 
-        // Update grabbed player position (center below grabber's claws)
+        // Update grabbed player position. ROM ObjA8 loc_38FE8 (s2.asm:76790-76799)
+        // pins the grabbed player's x_pos/y_pos directly to the LEGS sub-object's
+        // x_pos/y_pos. The legs are aligned to body_y + $10 via Obj_AlignChildXY
+        // (moveq #$10,d1 at s2.asm:76593-76595), so the player's ROM-centre is
+        // (currentX, currentY + 16), not body + 24.
         grabbedPlayer.setX((short) (currentX - grabbedPlayer.getWidth() / 2));
-        grabbedPlayer.setY((short) (currentY + 24 - grabbedPlayer.getHeight() / 2));
+        grabbedPlayer.setY((short) (currentY + 0x10 - grabbedPlayer.getHeight() / 2));
     }
 
     /**
