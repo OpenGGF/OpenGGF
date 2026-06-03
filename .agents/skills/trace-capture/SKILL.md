@@ -55,21 +55,22 @@ These flags only affect rendering while a trace session is active, so normal gam
 
 ## Audio is headless / no device output
 
-Headless capture installs an **offline** `LWJGLAudioBackend` (`offlineNoDevice=true`) that synthesizes the SMPS music for the recording but emits **nothing to the sound device**: `update()`/`startStream()` no-op and the OpenAL listener is muted. This also makes the deterministic capture runtime the **sole** consumer of the presentation FIFO — otherwise the backend's streaming would steal samples and speed the audio up.
+Headless capture installs `HeadlessSmpsAudioBackend` — a true **no-device** SMPS audio backend. It shares the synthesis/sequencer/SFX/snapshot/rewind machinery with `LWJGLAudioBackend` via the common `AbstractSmpsAudioBackend` base, but **opens no audio device at all**: every device-output hook (`hookInitDevice`/`hookStartStream`/`hookUpdateStream`/`hookUploadStreamBuffer`/…) is a no-op, so nothing reaches the sound device and the deterministic capture runtime is the **sole** consumer of the synthesized PCM (no FIFO competition → correct speed). The synthesis rate is fixed at 48 kHz. Because no device is opened, capture works on machines with no audio hardware too.
 
-> Known limitation: the offline backend still *opens* (but never feeds) an OpenAL device. On a machine with no audio device, `init()` falls back to `NullAudioBackend` → silent capture. A true no-device synthesis backend is a future item.
+`AbstractSmpsAudioBackend` (base) holds the synthesis; `LWJGLAudioBackend` implements the device hooks with OpenAL (live play, unchanged); `HeadlessSmpsAudioBackend` no-ops them (capture).
 
 ## How it's wired (for maintainers)
 
-- `TraceCaptureTool` → `HeadlessGameBoot` (offscreen GL + gameplay session, no master-title/fade; installs the offline audio backend) → `TraceReplayDriver` (deterministic replay, extracted from `TraceSessionLauncher`; capture passes a **no-op desync-pause** so it records *through* mismatches to completion) → `TraceCaptureSession` (step → render → grab → submit) → `CaptureRecorder`/`EncoderSink`/`FfmpegEncoder` (`com.openggf.capture`).
+- `TraceCaptureTool` → `HeadlessGameBoot` (offscreen GL + gameplay session, no master-title/fade; installs the no-device `HeadlessSmpsAudioBackend`) → `TraceReplayDriver` (deterministic replay, extracted from `TraceSessionLauncher`; capture passes a **no-op desync-pause** so it records *through* mismatches to completion) → `TraceCaptureSession` (step → render → grab → submit) → `CaptureRecorder`/`EncoderSink`/`FfmpegEncoder` (`com.openggf.capture`).
 - Video tap: `GlReadPixelsGrabber` (`glReadPixels`, raw RGBA, no Java-side flip). Audio tap: `DrainPcmAudioTap` → `AudioManager.drainCaptureFrame` (drains exactly the frame's produced samples; capture mode installed via `beginCaptureMode`/`endCaptureMode`).
 - Desync ghosts render via `TraceGhostHook` (a shared active-renderer registry both the live launcher and the capture session register into), so `LevelRenderer` draws them for capture too.
 
 ## Troubleshooting
 
-- **Silent audio**: usually means no synthesizing backend (default `NullAudioBackend`) — confirm `AUDIO_ENABLED=true` and that `HeadlessGameBoot` installed `LWJGLAudioBackend`. Verify with `ffmpeg -i <mkv> -af volumedetect -f null -` (silence ≈ `-91 dB`).
-- **Audio too fast / out of sync**: a second consumer is draining the presentation FIFO — ensure the backend is in `offlineNoDevice` mode (its `update()`/`startStream()` must no-op).
-- **Wrong sample rate**: capture must drive at `backend.outputSampleRate()` (48 kHz), not a hardcoded value.
+- **Silent audio**: usually means no synthesizing backend — confirm `AUDIO_ENABLED=true` and that `HeadlessGameBoot` installed `HeadlessSmpsAudioBackend`. Verify with `ffmpeg -i <mkv> -af volumedetect -f null -` (silence ≈ `-91 dB`).
+- **Audio too fast / out of sync**: a second consumer is draining the presentation FIFO — the capture runtime must be the sole consumer, so the backend's device-output hooks (`hookUpdateStream`/`hookStartStream`) must no-op (they do in `HeadlessSmpsAudioBackend`).
+- **Wrong sample rate**: capture drives at `backend.outputSampleRate()` (48 kHz from the headless backend), not a hardcoded value.
+- **Audio plays to the speakers**: should not happen — the headless backend opens no device. If it does, confirm `HeadlessGameBoot` installs `HeadlessSmpsAudioBackend`, not `LWJGLAudioBackend`.
 - **`ffmpeg` not found**: install it / put it on `PATH`; the encoder throws a clear error otherwise.
 - **Run never finishes / temp grows**: the capture loop is bounded (`trace.frameCount() + 600`); the driver uses a no-op desync-pause so a comparator mismatch does not freeze the run.
 - **Inspect a frame**: `ffmpeg -i <mkv> -vf "select=eq(n\,1500)" -vframes 1 out.png` to confirm ghosts/HUD after a desync.

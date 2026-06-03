@@ -3,7 +3,7 @@ package com.openggf.tools;
 import com.openggf.Engine;
 import com.openggf.GameLoop;
 import com.openggf.audio.AudioManager;
-import com.openggf.audio.LWJGLAudioBackend;
+import com.openggf.audio.HeadlessSmpsAudioBackend;
 import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
@@ -202,10 +202,10 @@ public final class HeadlessGameBoot implements AutoCloseable {
         // setBackend() falls back to NullAudioBackend if OpenAL init fails.
         SonicConfigurationService audioConfig = GameServices.configuration();
         if (audioConfig.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
-            // offlineNoDevice=true: synthesize SMPS for the capture tap but emit
-            // nothing to the sound device (headless).
+            // Headless backend: synthesize SMPS for the capture tap but never
+            // touch a sound device (no OpenAL).
             AudioManager.getInstance().setBackend(
-                    new LWJGLAudioBackend(audioConfig, PerformanceProfiler.getInstance(), true));
+                    new HeadlessSmpsAudioBackend(audioConfig, PerformanceProfiler.getInstance()));
         }
 
         // --- level + team -----------------------------------------------
