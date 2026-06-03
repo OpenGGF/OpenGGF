@@ -195,6 +195,14 @@ public final class ConfigCatalog {
         put(TRACE_REWIND_KEY, of("debug.traceRewind", "key", KEY,
                 "Key held in Trace Test Mode to rewind deterministic engine state"));
 
+        // debug.traceRender (Trace Test Mode + capture visibility)
+        put(TRACE_SHOW_DESYNC_GHOSTS, of("debug.traceRender", "showDesyncGhosts", BOOL,
+                "Render the desync ghost(s) in Trace Test Mode and trace capture"));
+        put(TRACE_SHOW_GAME_HUD, of("debug.traceRender", "showGameHud", BOOL,
+                "Render the game HUD (rings/score/time) during trace replay and capture"));
+        put(TRACE_SHOW_DEBUG_HUD, of("debug.traceRender", "showDebugHud", BOOL,
+                "Render the debug HUD during trace replay and capture (per-panel toggles still apply)"));
+
         // debug.testMode
         put(TEST_MODE_ENABLED, of("debug.testMode", "enabled", BOOL,
                 "Replace the master title with the trace picker (dev-only)"));
