@@ -267,7 +267,10 @@ public class Sonic2Constants {
     public static final int MAP_UNC_OBJ15_MCZ_ADDR = 0x10256;       // MCZ mappings (Obj15_Obj7A_MapUnc_10256)
     public static final int MAP_UNC_OBJ15_TRAP_ADDR = 0x102DE;      // MCZ trap mappings (Obj15_MapUnc_102DE)
 
-    public static final int ZONE_AQUATIC_RUIN = 2;
+    // NOTE: ARZ is identified by its ROM zone id, ZONE_ARZ (0x0F), to match Level.getZoneIndex().
+    // A former ZONE_AQUATIC_RUIN = 2 (a level-select index) was removed: it never matched
+    // getZoneIndex()'s ROM zone id, which left ARZ's floating platform (Obj18) using the EHZ
+    // Obj18A mappings and rendering corrupted graphics.
 
     // Checkpoint/Starpost (Object $79)
     public static final int ART_NEM_CHECKPOINT_ADDR = 0x79A86; // Star pole.nem
@@ -1180,7 +1183,6 @@ public class Sonic2Constants {
         offsets.put("MAP_UNC_OBJ15_A_ADDR", MAP_UNC_OBJ15_A_ADDR);
         offsets.put("MAP_UNC_OBJ15_MCZ_ADDR", MAP_UNC_OBJ15_MCZ_ADDR);
         offsets.put("MAP_UNC_OBJ15_TRAP_ADDR", MAP_UNC_OBJ15_TRAP_ADDR);
-        offsets.put("ZONE_AQUATIC_RUIN", ZONE_AQUATIC_RUIN);
         offsets.put("ART_NEM_CHECKPOINT_ADDR", ART_NEM_CHECKPOINT_ADDR);
         offsets.put("MAP_UNC_CHECKPOINT_ADDR", MAP_UNC_CHECKPOINT_ADDR);
         offsets.put("MAP_UNC_CHECKPOINT_STAR_ADDR", MAP_UNC_CHECKPOINT_STAR_ADDR);
