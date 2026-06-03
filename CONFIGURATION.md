@@ -144,6 +144,24 @@ Trace video capture (the headless trace-capture driver / `TraceCaptureTool`) ren
 | `CAPTURE_FPS` | `capture.fps` | int | `60` | Output frame rate for the captured video. |
 | `CAPTURE_CODEC` | `capture.codec` | string | `"ffv1"` | Capture video codec (e.g. `ffv1`). |
 
+Invoke the tool through Maven (requires a ROM in the working directory, an offscreen-capable GL context, and `ffmpeg` on `PATH`):
+
+```bash
+mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceCaptureTool" "-Dexec.args=--trace <id|name|dir> --out-dir target/trace-videos"
+```
+
+CLI flags (all optional except `--trace`; unspecified flags fall back to the `CAPTURE_*` defaults above):
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--trace <id\|name\|dir>` | (required) | Trace to capture: a 0-based `TraceCatalog` index, a trace directory name, or a direct path to a trace directory. |
+| `--out-dir <dir>` | `CAPTURE_OUTPUT_DIR` | Output directory. The file is written as `capture-<trace-name>-<UTC>.mkv`. |
+| `--scale <n>` | `CAPTURE_SCALE` | Integer nearest-neighbor upscale factor. |
+| `--fps <n>` | `CAPTURE_FPS` | Output frame rate. |
+| `--codec <name>` | `CAPTURE_CODEC` | Capture video codec. |
+
+Desync-ghost / game-HUD / debug-HUD visibility during capture is governed by the `TRACE_SHOW_*` keys in the Debug section.
+
 ## Debug
 
 | Key | YAML path | Type | Default | Description |
