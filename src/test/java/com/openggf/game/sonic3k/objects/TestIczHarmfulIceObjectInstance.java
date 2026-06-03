@@ -18,6 +18,7 @@ import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tools.Sonic3kObjectProfile;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -36,6 +37,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TestIczHarmfulIceObjectInstance {
+
+    // Clear any gameplay session leaked by a prior test in this fork so the registry
+    // resolves the S3KL zone set (not a leaked SKL zone). Parallel-suite flake fix.
+    @BeforeEach
+    void clearLeakedGameplaySession() {
+        com.openggf.game.session.SessionManager.clear();
+    }
 
     @Test
     void registryCreatesIczHarmfulIceForId0xB8InS3klZoneSet() {

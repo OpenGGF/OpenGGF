@@ -34,6 +34,7 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -58,6 +59,13 @@ import static org.mockito.Mockito.when;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kIczEndBossObject {
     private static final int ICZ_END_BOSS_ID = 0xBD;
+
+    // Clear any gameplay session leaked by a prior test in this fork so the registry
+    // resolves the S3KL zone set (not a leaked SKL zone). Parallel-suite flake fix.
+    @BeforeEach
+    void clearLeakedGameplaySession() {
+        com.openggf.game.session.SessionManager.clear();
+    }
 
     @Test
     void registryCreatesIczEndBossInstance() {

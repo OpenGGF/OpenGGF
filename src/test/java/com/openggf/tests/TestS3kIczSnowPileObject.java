@@ -7,6 +7,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tools.Sonic3kObjectProfile;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -23,6 +24,13 @@ import static org.mockito.Mockito.verify;
 
 class TestS3kIczSnowPileObject {
     private static final int ICZ_SNOW_PILE_ID = 0xB9;
+
+    // Clear any gameplay session leaked by a prior test in this fork so the registry
+    // resolves the S3KL zone set (not a leaked SKL zone). Parallel-suite flake fix.
+    @BeforeEach
+    void clearLeakedGameplaySession() {
+        com.openggf.game.session.SessionManager.clear();
+    }
 
     @Test
     void registryCreatesSnowPileAndProfileMarksS3klSlotImplemented() {

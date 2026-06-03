@@ -25,7 +25,12 @@ import static org.mockito.Mockito.verify;
 public class TestIczSegmentColumnObjectInstance {
 
     @BeforeEach
-    public void resetCameraBounds() {
+    public void resetSharedTestState() {
+        // Clear any gameplay session leaked by a prior test in this fork. The registry
+        // derives the zone set from GameServices.levelOrNull(); a leaked SKL-zone level
+        // makes the ICZ id resolve to a PlaceholderObjectInstance. Clearing it restores
+        // currentRomZoneId()==-1 -> S3KL default. (Parallel-suite flake fix.)
+        com.openggf.game.session.SessionManager.clear();
         com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
     }
 

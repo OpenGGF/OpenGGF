@@ -19,6 +19,7 @@ import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.tools.Sonic3kObjectProfile;
 import org.mockito.MockedStatic;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -35,6 +36,13 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.anyInt;
 
 class TestS3kIczPathFollowPlatformObject {
+
+    // Clear any gameplay session leaked by a prior test in this fork so the registry
+    // resolves the S3KL zone set (not a leaked SKL zone). Parallel-suite flake fix.
+    @BeforeEach
+    void clearLeakedGameplaySession() {
+        com.openggf.game.session.SessionManager.clear();
+    }
 
     @Test
     void registryCreatesIczPathFollowPlatformInstance() {

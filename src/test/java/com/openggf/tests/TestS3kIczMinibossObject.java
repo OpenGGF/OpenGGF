@@ -25,6 +25,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.Sonic3kObjectProfile;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -45,6 +46,13 @@ import static org.mockito.Mockito.when;
 class TestS3kIczMinibossObject {
 
     private static final int ICZ_MINIBOSS_ID = 0xBC;
+
+    // Clear any gameplay session leaked by a prior test in this fork so the registry
+    // resolves the S3KL zone set (not a leaked SKL zone). Parallel-suite flake fix.
+    @BeforeEach
+    void clearLeakedGameplaySession() {
+        com.openggf.game.session.SessionManager.clear();
+    }
 
     @Test
     void registryCreatesIczMinibossInstance() {

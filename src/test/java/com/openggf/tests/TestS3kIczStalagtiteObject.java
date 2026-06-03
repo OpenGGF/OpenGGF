@@ -19,6 +19,7 @@ import com.openggf.level.objects.TouchOverlapStopPolicy;
 import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchShieldDeflectCapability;
 import com.openggf.tools.Sonic3kObjectProfile;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -32,6 +33,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class TestS3kIczStalagtiteObject {
+
+    // ICZ objects only resolve in the S3KL zone set. Sonic3kObjectRegistry derives the
+    // zone set from the global current level (GameServices.levelOrNull().getRomZoneId()).
+    // Clear any gameplay session a prior test in this fork leaked (e.g. one that loaded an
+    // SKL zone, MHZ-DDZ) so currentRomZoneId()==-1 -> S3KL default; otherwise create()
+    // returns a PlaceholderObjectInstance and the instanceof cast throws under the parallel suite.
+    @BeforeEach
+    void clearLeakedGameplaySession() {
+        com.openggf.game.session.SessionManager.clear();
+    }
 
     @Test
     void registryCreatesIczStalagtiteInstance() {

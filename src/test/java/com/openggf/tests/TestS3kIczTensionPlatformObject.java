@@ -19,6 +19,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.StubObjectServices;
 import com.openggf.tools.Sonic3kObjectProfile;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -38,6 +39,13 @@ import static org.mockito.Mockito.verify;
 
 class TestS3kIczTensionPlatformObject {
     private static final int ICZ_TENSION_PLATFORM_ID = 0xBA;
+
+    // Clear any gameplay session leaked by a prior test in this fork so the registry
+    // resolves the S3KL zone set (not a leaked SKL zone). Parallel-suite flake fix.
+    @BeforeEach
+    void clearLeakedGameplaySession() {
+        com.openggf.game.session.SessionManager.clear();
+    }
 
     @Test
     void registryCreatesTensionPlatformAndProfileMarksS3klSlotImplemented() {
