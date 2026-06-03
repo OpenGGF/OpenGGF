@@ -80,7 +80,7 @@ caller.
 |------|----------------|
 | `TraceCaptureTool` (CLI entry, `tools`) | Parse args; perform the **headless engine boot** of §2.3 (offscreen GL + real `GameLoop` + gameplay session, no master-title/fade UI); construct a `CaptureRecorder`; run the deterministic step → render → grab → submit loop until the trace completes; tear down |
 | `TraceCaptureSession` | Deterministic trace drive reusing the **live** step + render path: `TraceReplaySessionBootstrap` + BK2 playback (`PlaybackDebugManager`) + `LiveTraceComparator` + `GhostTraceRenderer`, driven by `GameLoop.step()` and the live LEVEL-mode render. No master-title/fade UI. Exposes `stepAndRender()` and `isComplete()` |
-| `TraceRenderVisibility` | Config-backed gate: seeds `DebugOverlayManager` toggle states from config and gates game-HUD + ghost rendering. Honored by live Trace Test Mode **and** the recorder |
+| `TraceRenderVisibility` | Config-backed value object: three independent **master gates** (ghosts / game HUD / debug HUD). Does **not** mutate `DebugOverlayManager` — `showDebugHud()` gates whether the debug HUD renders; per-element `DebugOverlayToggle` state is honored as-is at the render site (see §6.1). Honored by live Trace Test Mode **and** the recorder |
 
 ### 2.3 Headless boot & drive (non-UI) — what `TraceCaptureTool` must construct
 
@@ -314,8 +314,9 @@ introduced here.
     resumes on drain, zero frames dropped; frame order preserved.
   - `CaptureRecorder` lifecycle against a fake `CaptureEncoder` (records calls):
     start → N submits → stop emits N video frames + N×sampleCount audio samples.
-  - `TraceRenderVisibility`: each flag maps to the right gate;
-    `TRACE_SHOW_DEBUG_HUD` seeds `DebugOverlayManager` per-element states.
+  - `TraceRenderVisibility`: each flag maps to the right master gate
+    (`showGhosts`/`showGameHud`/`showDebugHud`); no `DebugOverlayManager`
+    mutation.
 - **Integration (guarded, opt-in like other ROM/visual tests)**:
   - Short headless trace capture (a few hundred frames) with a fake encoder that
     asserts exact frame/sample counts and monotonic frame indices — verifies the

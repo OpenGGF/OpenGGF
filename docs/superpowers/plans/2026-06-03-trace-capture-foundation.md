@@ -474,7 +474,18 @@ public final class EncoderSink implements FrameSink {
         switch (policy) {
             case BLOCK -> {
                 try {
-                    queue.put(frame);
+                    // Timed offer rather than a blocking put: if the worker dies
+                    // while the queue is full, an unbounded put() would block the
+                    // producer forever and it would never reach stop(). Re-check
+                    // worker health between attempts.
+                    while (!queue.offer(frame, 50, TimeUnit.MILLISECONDS)) {
+                        if (workerFailure != null) {
+                            throw new CaptureException("encoder thread failed", workerFailure);
+                        }
+                        if (!worker.isAlive()) {
+                            throw new CaptureException("encoder thread exited unexpectedly");
+                        }
+                    }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new CaptureException("interrupted while submitting", e);
@@ -1159,10 +1170,19 @@ Spec §6.1: three new `SonicConfiguration` flags with defaults.
 ```java
 package com.openggf.configuration;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TraceVisibilityConfigDefaultsTest {
+
+    @BeforeEach
+    void resetConfig() {
+        // The config service is a singleton that loads user/local config.json;
+        // reset to defaults so this test is independent of dev environment and
+        // of any other test that mutated config values.
+        SonicConfigurationService.getInstance().resetToDefaults();
+    }
 
     @Test
     void traceVisibilityDefaults() {
@@ -1267,10 +1287,20 @@ package com.openggf.testmode;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TraceRenderVisibilityTest {
+
+    @BeforeEach
+    @AfterEach
+    void resetConfig() {
+        // These tests mutate the config singleton; reset before and after so
+        // neither dev environment nor sibling tests leak state across runs.
+        SonicConfigurationService.getInstance().resetToDefaults();
+    }
 
     @Test
     void readsAllThreeFlagsIndependentlyFromConfig() {
