@@ -14,6 +14,7 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
     private final List<PaletteWrite> writes = new ArrayList<>();
     private final String[][][] owners = new String[2][4][16];
     private final boolean[] normalDirty = new boolean[4];
+    private boolean paletteRotationDisabled;
 
     public PaletteOwnershipRegistry() {
         resetOwners();
@@ -26,6 +27,14 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
 
     public void submit(PaletteWrite write) {
         writes.add(write);
+    }
+
+    public void setPaletteRotationDisabled(boolean disabled) {
+        paletteRotationDisabled = disabled;
+    }
+
+    public boolean isPaletteRotationDisabled() {
+        return paletteRotationDisabled;
     }
 
     public String ownerAt(PaletteSurface surface, int lineIndex, int colorIndex) {
@@ -131,13 +140,14 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
                 }
             }
         }
-        return new PaletteOwnershipSnapshot(ownersFlat);
+        return new PaletteOwnershipSnapshot(ownersFlat, paletteRotationDisabled);
     }
 
     @Override
     public void restore(PaletteOwnershipSnapshot snap) {
         byte[] ownerIds = snap.ownerIds();
         String[] ownerTable = snap.ownerTable();
+        paletteRotationDisabled = snap.paletteRotationDisabled();
         int idx = 0;
         for (int s = 0; s < owners.length; s++) {
             for (int l = 0; l < owners[s].length; l++) {

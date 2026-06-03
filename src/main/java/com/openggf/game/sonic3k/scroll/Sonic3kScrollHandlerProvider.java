@@ -23,6 +23,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
     private SwScrlHcz hczHandler;
     private SwScrlIcz iczHandler;
     private SwScrlLbz lbzHandler;
+    private SwScrlMhz mhzHandler;
     private SwScrlMgz mgzHandler;
     private SwScrlGumball gumballHandler;
     private SwScrlPachinko pachinkoHandler;
@@ -57,6 +58,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
                     + e.getMessage());
         }
         lbzHandler = new SwScrlLbz(lbzWaterlineData);
+        mhzHandler = new SwScrlMhz();
         mgzHandler = new SwScrlMgz();
         gumballHandler = new SwScrlGumball();
         pachinkoHandler = new SwScrlPachinko();
@@ -78,6 +80,7 @@ public class Sonic3kScrollHandlerProvider implements ScrollHandlerProvider {
             case Sonic3kZoneConstants.ZONE_HCZ -> hczHandler;
             case Sonic3kZoneConstants.ZONE_ICZ -> iczHandler;
             case Sonic3kZoneConstants.ZONE_LBZ -> lbzHandler;
+            case Sonic3kZoneConstants.ZONE_MHZ -> mhzHandler;
             case Sonic3kZoneConstants.ZONE_MGZ -> mgzHandler;
             case Sonic3kZoneIds.ZONE_GUMBALL -> gumballHandler;
             case Sonic3kZoneIds.ZONE_GLOWING_SPHERE -> pachinkoHandler;

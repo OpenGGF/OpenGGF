@@ -20,6 +20,23 @@ When delegating agents to explore the disassembly, instruct them to use the **s3
 - Object system reference (S2-style field names: `routine`, `x_pos`, `y_pos`, etc.)
 - Zone abbreviations and IDs (AIZ, HCZ, MGZ, CNZ, FBZ, ICZ, LBZ, MHZ, SOZ, LRZ, SSZ, DEZ, DDZ, HPZ)
 
+## Agent Workflow Tooling
+
+Use these helpers to front-load preflight, scaffolding, and ROM-art intake before hand-writing code (all PowerShell-quoted):
+
+- **AgentWorkflowTool** — preflight checklist (zone-set resolution, registry status, RomOffsetFinder commands, required guards, docs):
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.AgentWorkflowTool" "-Dexec.args=object s3k MHZ 0x8A"`
+- **ObjectScaffoldTool** — guard-friendly object/badnik skeleton + JUnit5 test shell. `--game s3k --badnik` emits the `com.openggf.game.sonic3k.objects.badniks` package and extends `AbstractS3kBadnikInstance`:
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ObjectScaffoldTool" "-Dexec.args=--game s3k --class MhzFooObjectInstance --id 0x8A --badnik"`
+- **RomArtIntakeTool** — S3K ROM-backed art/mapping/PLC intake; wraps `RomOffsetFinder --game s3k`, rejects `s3.asm`-sourced labels (Sonic 3 standalone / S3L half — it classifies by source file; confirm the resolved offset is `< 0x200000` when you verify), recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints (accepts multiple labels):
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"`
+
+Companion docs under `docs/agent-workflow/`:
+- `runbooks/runbook-s3k-object.md` — primary end-to-end runbook for this skill
+- `ci-guard-failure-explainer.md` — maps a failing guard test to the correct fix
+- `pitfall-catalogue-index.md` — ROM pitfalls grouped by bug class
+- `documentation-obligation-checklist.md` — trailers / TRACE_FRONTIER_LOG / changelog obligations
+
 ## Implementation Process
 
 ### Current Priority: Route-Impact Objects First
@@ -48,6 +65,18 @@ Rules for finding S3K pointers:
 - When the tool returns multiple results for the same label — one from `sonic3k.asm` and one from `s3.asm` — **pick the `sonic3k.asm` one**. If only an `s3.asm` result exists, re-search: the S&K label may have a different prefix/suffix, or the data may live under `Levels/{ZONE}/` rather than at the top of the asm.
 - When reading object disassembly, always use the `sonic3k.asm` version (S3KL code path); it may contain zone-specific overrides (e.g., FBZ art tile, Knuckles variants) absent from the S3 version.
 - If you genuinely cannot find an S&K-side equivalent, stop and ask — do not fall back to the S3 address.
+
+### Mandatory Art Corruption Guard Tests
+
+Whenever an S3K object adds or changes runtime art, mapping addresses, PLC-backed art, standalone sheets, or `Sonic3kPlcArtRegistry` entries, run the ROM-conditional art crawler:
+
+```bash
+mvn "-Dtest=TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits" test
+```
+
+If the object has a known small mapping shape from the disassembly, add or update a focused test in `TestSonic3kPlcArtRegistry` that asserts the exact frame count, piece count, tile dimensions, and tile indices. Do not rely only on screenshots or manual playtesting for art offsets; bad mapping or decompression offsets can produce massive corrupted sprite frames that slow the game before they are visually diagnosed.
+
+The engine also has a runtime guard in `PatternSpriteRenderer`; keep `TestPatternSpriteRendererCorruptionGuard` passing whenever changing sprite rendering, `ObjectSpriteSheet`, mapping parsers, or art registration code.
 
 ### Phase 1: Research & Discovery
 

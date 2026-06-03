@@ -858,18 +858,142 @@ public class Sonic3kObjectArt {
                 LOG.warning("No hardcoded mappings for standalone '" + entry.key() + "'");
                 return null;
             }
+            hardcoded = normalizeStandaloneMappings(entry, patterns, hardcoded);
+            validateStandaloneMappings(entry, patterns, hardcoded);
             return new ObjectSpriteSheet(patterns, hardcoded, entry.palette(), 1);
         }
 
-        List<SpriteMappingFrame> mappings =
-                S3kSpriteDataLoader.loadMappingFrames(reader, entry.mappingAddr(), entry.mappingFormat());
+        List<SpriteMappingFrame> mappings = entry.mappingFrameCount() > 0
+                ? S3kSpriteDataLoader.loadMappingFrames(reader, entry.mappingAddr(), entry.mappingFrameCount())
+                : S3kSpriteDataLoader.loadMappingFrames(reader, entry.mappingAddr(), entry.mappingFormat());
+        if (Sonic3kObjectArtKeys.CNZ_CLAMER_SHOT.equals(entry.key())) {
+            mappings = List.of(mappings.get(9));
+        } else if (Sonic3kObjectArtKeys.MHZ_END_BOSS_PILLAR.equals(entry.key())) {
+            mappings = selectFramesPreservingIndices(mappings, 0, 1);
+        } else if (Sonic3kObjectArtKeys.MHZ_END_BOSS_SPIKES.equals(entry.key())) {
+            mappings = selectFramesPreservingIndices(mappings, 2, 3, 4);
+        } else if (Sonic3kObjectArtKeys.MHZ_SHIP_PROPELLER.equals(entry.key())) {
+            mappings = selectFramesPreservingIndices(mappings, 5, 6, 7);
+        }
 
         if (entry.dplcAddr() > 0) {
             List<SpriteDplcFrame> dplcFrames = loadObjectDplcFrames(reader, entry.dplcAddr());
             mappings = applyDplcRemap(mappings, dplcFrames);
+        } else {
+            mappings = normalizeStandaloneMappings(entry, patterns, mappings);
+            patterns = padSparseStandalonePatterns(entry, patterns, mappings);
         }
+        validateStandaloneMappings(entry, patterns, mappings);
 
         return new ObjectSpriteSheet(patterns, mappings, entry.palette(), 1);
+    }
+
+    private static Pattern[] padSparseStandalonePatterns(
+            Sonic3kPlcArtRegistry.StandaloneArtEntry entry,
+            Pattern[] patterns,
+            List<SpriteMappingFrame> mappings) {
+        if (!Sonic3kObjectArtKeys.GUMBALL_BONUS.equals(entry.key())
+                && !Sonic3kObjectArtKeys.GUMBALL_SPRING.equals(entry.key())) {
+            return patterns;
+        }
+        TileRange range = mappingTileRange(mappings);
+        if (range.empty() || range.maxExclusive() <= patterns.length) {
+            return patterns;
+        }
+
+        Pattern[] padded = Arrays.copyOf(patterns, range.maxExclusive());
+        for (int i = patterns.length; i < padded.length; i++) {
+            padded[i] = new Pattern();
+        }
+        return padded;
+    }
+
+    private static List<SpriteMappingFrame> normalizeStandaloneMappings(
+            Sonic3kPlcArtRegistry.StandaloneArtEntry entry,
+            Pattern[] patterns,
+            List<SpriteMappingFrame> mappings) {
+        TileRange range = mappingTileRange(mappings);
+        if (range.empty() || range.maxExclusive() <= patterns.length) {
+            return mappings;
+        }
+        int tileCount = range.maxExclusive() - range.min();
+        if (range.min() <= 0 || tileCount > patterns.length) {
+            return mappings;
+        }
+        LOG.fine("Normalizing standalone object art '" + entry.key()
+                + "' mapping tiles 0x" + Integer.toHexString(range.min())
+                + "-0x" + Integer.toHexString(range.maxExclusive() - 1)
+                + " against " + patterns.length + " decompressed tiles");
+        return adjustTileIndices(mappings, -range.min());
+    }
+
+    private static List<SpriteMappingFrame> selectFramesPreservingIndices(
+            List<SpriteMappingFrame> mappings, int... frameIndices) {
+        int maxFrame = -1;
+        for (int frameIndex : frameIndices) {
+            maxFrame = Math.max(maxFrame, frameIndex);
+        }
+        if (maxFrame < 0 || mappings == null || mappings.isEmpty()) {
+            return mappings;
+        }
+
+        List<SpriteMappingFrame> selected = new ArrayList<>(maxFrame + 1);
+        for (int i = 0; i <= maxFrame; i++) {
+            selected.add(new SpriteMappingFrame(List.of()));
+        }
+        for (int frameIndex : frameIndices) {
+            if (frameIndex >= 0 && frameIndex < mappings.size()) {
+                selected.set(frameIndex, mappings.get(frameIndex));
+            }
+        }
+        return selected;
+    }
+
+    private static void validateStandaloneMappings(
+            Sonic3kPlcArtRegistry.StandaloneArtEntry entry,
+            Pattern[] patterns,
+            List<SpriteMappingFrame> mappings) throws IOException {
+        TileRange range = mappingTileRange(mappings);
+        if (range.empty()) {
+            return;
+        }
+        if (range.min() < 0 || range.maxExclusive() > patterns.length) {
+            throw new IOException("Standalone art '" + entry.key()
+                    + "' has mapping tile range 0x" + Integer.toHexString(range.min())
+                    + "-0x" + Integer.toHexString(range.maxExclusive() - 1)
+                    + " outside decompressed " + entry.compression()
+                    + " art at 0x" + Integer.toHexString(entry.artAddr())
+                    + " (" + patterns.length + " tiles)");
+        }
+    }
+
+    private static TileRange mappingTileRange(List<SpriteMappingFrame> frames) {
+        int minTile = Integer.MAX_VALUE;
+        int maxTile = Integer.MIN_VALUE;
+        if (frames == null) {
+            return TileRange.emptyRange();
+        }
+        for (SpriteMappingFrame frame : frames) {
+            for (SpriteMappingPiece piece : frame.pieces()) {
+                minTile = Math.min(minTile, piece.tileIndex());
+                maxTile = Math.max(maxTile,
+                        piece.tileIndex() + (piece.widthTiles() * piece.heightTiles()));
+            }
+        }
+        if (minTile == Integer.MAX_VALUE) {
+            return TileRange.emptyRange();
+        }
+        return new TileRange(minTile, maxTile);
+    }
+
+    private record TileRange(int min, int maxExclusive) {
+        private static TileRange emptyRange() {
+            return new TileRange(0, 0);
+        }
+
+        private boolean empty() {
+            return maxExclusive <= min;
+        }
     }
 
     // ===== Results Screen art loading =====

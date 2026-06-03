@@ -150,6 +150,22 @@ through ROM data tables. Without implementing this, fire objects in AIZ Act 2 re
 (camera-threshold writes in `_Resize` routines) are separate systems that both modify palettes
 at runtime. Both must be implemented for visual accuracy.
 
+## Agent Workflow Tooling
+
+Five `com.openggf.tools` CLIs cut context loss on S3K object/zone/trace work. Full
+PowerShell-quoted invocations and companion docs are in
+[docs/agent-workflow/README.md](docs/agent-workflow/README.md) (with per-task runbooks under
+`docs/agent-workflow/runbooks/`, plus a CI guard-failure explainer, pitfall index,
+documentation-obligation checklist, and delegation prompt templates).
+
+| Tool | Purpose | Invocation |
+|------|---------|------------|
+| `AgentWorkflowTool` | Preflight checklist for an object task: resolves the S3K object space (`S3KL` / `SKL` / `S3L`), registry status, `RomOffsetFinder` commands, required guards, and docs. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.AgentWorkflowTool" "-Dexec.args=object s3k MHZ 0x8A"` |
+| `RomArtIntakeTool` | S&K-side-only ROM art/mapping/PLC intake; wraps `RomOffsetFinder --game s3k`. **Rejects** `s3.asm`-sourced labels (the S3L standalone half) — it classifies by source file, since a label search carries no ROM offset; confirm the resolved offset is `< 0x200000` when you verify it. Recommends `StandaloneArtEntry` vs `LevelArtEntry`, suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints. Accepts multiple labels. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"` |
+| `ObjectScaffoldTool` | Guard-friendly object/badnik skeleton + JUnit5 test shell (no `getInstance()`, no ctor `services()`, no `addDynamicObject`/`setDestroyed`; center-coord note). `--game s3k --badnik` emits the `com.openggf.game.sonic3k.objects.badniks` package extending `AbstractS3kBadnikInstance`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ObjectScaffoldTool" "-Dexec.args=--game s3k --class MhzFooObjectInstance --id 0x8A --badnik"` |
+| `TraceTriageTool` | Reads `target/trace-reports/<game>_<zone>_report.json` and prints a first-divergence brief (frame/field, ROM vs engine, likely owning subsystem, disasm search terms). Comparison-only; never hydrates engine state. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceTriageTool" "-Dexec.args=s2 mtz1"` |
+| `ZoneSpecNormalizerTool` | Normalizes an `s3k-zone-analysis` spec into the stable 13-section layout (palette cycling vs mutation kept separate; `(not analyzed)` placeholders for gaps). | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=<path-to-zone-analysis-spec.md>"` |
+
 ## Reusable Engine Utilities for S3K Objects
 
 When implementing S3K objects, bosses, or badniks, **always check for existing utilities before writing new code**. The following patterns have been reimplemented multiple times and should be reused:

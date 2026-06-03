@@ -68,7 +68,7 @@ public class TitleCardManager implements TitleCardProvider {
 
     /**
      * Returns the configured viewport width in game pixels.
-     * At native 320 equals SCREEN_WIDTH exactly (xOffset == 0 — byte-identical).
+     * At native 320 equals SCREEN_WIDTH exactly (xOffset == 0 - byte-identical).
      */
     private int viewportWidth() {
         try {
@@ -81,7 +81,7 @@ public class TitleCardManager implements TitleCardProvider {
 
     /**
      * Horizontal offset to centre the 320-wide title-card composition in the
-     * configured viewport.  Zero at native 320 — byte-identical.
+     * configured viewport. Zero at native 320 - byte-identical.
      */
     private int xOffset() {
         return (viewportWidth() - SCREEN_WIDTH) / 2;
@@ -306,7 +306,7 @@ public class TitleCardManager implements TitleCardProvider {
         }
 
         // Extend each element's off-screen entry/exit endpoint so the composition
-        // slides fully on/off a wider-than-320 viewport. Zero at native 320 —
+        // slides fully on/off a wider-than-320 viewport. Zero at native 320 -
         // byte-identical. Without this, the centred (xOffset-shifted) elements and
         // the red/yellow blocks that follow them never clear the side bands.
         int edgeMargin = Math.max(0, viewportWidth() - SCREEN_WIDTH);
@@ -713,7 +713,7 @@ public class TitleCardManager implements TitleCardProvider {
         // behind the remaining title card elements, matching the original behavior.
         if (state == TitleCardState.SLIDE_IN) {
             // Span the full viewport so no level bleeds through on wider screens.
-            // xOffset()==0 at native 320 — byte-identical.
+            // xOffset()==0 at native 320 - byte-identical.
             graphicsManager.registerCommand(new GLCommand(
                     GLCommand.CommandType.RECTI,
                     -1,
@@ -762,7 +762,7 @@ public class TitleCardManager implements TitleCardProvider {
 
         // Draw blue top block - covers Y=0 to Y=152 (above yellow bar).
         // Spans the full viewport width so no level bleeds through on wider screens.
-        // xOff==0 at native 320 — byte-identical.
+        // xOff==0 at native 320 - byte-identical.
         if (blueBackgroundElement != null && blueBackgroundElement.isVisible()) {
             int blueY = blueBackgroundElement.getCurrentY();
             int blueTop = blueY;
@@ -782,7 +782,7 @@ public class TitleCardManager implements TitleCardProvider {
 
         // Draw yellow bottom block - extends from Y=152 to bottom of screen (Y=224).
         // Yellow covers full viewport width when bar is at target, follows bar during exit.
-        // xOff==0 at native 320 — byte-identical.
+        // xOff==0 at native 320 - byte-identical.
         if (bottomBarElement != null && bottomBarElement.isVisible()) {
             int barX = bottomBarElement.getCurrentX();
             int targetX = 232;  // Bar's target X position (in 320-space)
@@ -818,7 +818,7 @@ public class TitleCardManager implements TitleCardProvider {
 
         // Draw red left block - from X=0 to the swoosh's screen position, full height.
         // The swoosh's screen X = currentX (320-space) + xOff.
-        // At native xOff==0 so redRight = currentX — byte-identical.
+        // At native xOff==0 so redRight = currentX - byte-identical.
         if (leftSwooshElement != null && leftSwooshElement.isVisible()) {
             int redRight = leftSwooshElement.getCurrentX() + xOff;
 
@@ -840,7 +840,7 @@ public class TitleCardManager implements TitleCardProvider {
      * Renders a single element using its mapping frame.
      *
      * <p>xOffset() centres the 320-wide composition in the viewport.
-     * At native 320 xOffset()==0 — byte-identical.
+     * At native 320 xOffset()==0 - byte-identical.
      */
     private void renderElement(GraphicsManager graphicsManager, TitleCardElement element) {
         if (!artLoaded || combinedPatterns == null) {
@@ -854,7 +854,6 @@ public class TitleCardManager implements TitleCardProvider {
         }
         TitleCardMappings.SpritePiece[] pieces = TitleCardMappings.getFrame(frameIndex);
 
-        // xOffset() == 0 at native 320 — byte-identical.
         int centerX = element.getCurrentX() + xOffset();
         int centerY = element.getY();
 

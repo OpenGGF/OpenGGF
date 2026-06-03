@@ -108,16 +108,11 @@ function Test-HasPrefix([string[]]$Files, [string]$Prefix) {
 }
 
 function Get-TrailerValue([string]$Key, [string]$Message) {
-    $parsed = $Message | git interpret-trailers --parse
-    if ($LASTEXITCODE -ne 0) {
-        throw "git interpret-trailers failed"
-    }
-
     $value = ""
-    foreach ($line in $parsed) {
+    foreach ($line in ($Message -split "`r?`n")) {
         $text = [string]$line
         if ($text.StartsWith("${Key}:", [System.StringComparison]::Ordinal)) {
-            $value = $text.Substring($Key.Length + 2).TrimStart()
+            $value = $text.Substring($Key.Length + 2).Trim()
         }
     }
     return $value
@@ -388,10 +383,6 @@ function Prepare-CommitMessage([string]$MessageFile, [string]$Source) {
     }
 
     $message = Get-Content -LiteralPath $MessageFile -Raw
-    $parsed = $message | git interpret-trailers --parse
-    if ($LASTEXITCODE -ne 0) {
-        throw "git interpret-trailers failed"
-    }
 
     $append = New-Object System.Collections.Generic.List[string]
     foreach ($key in @(
@@ -403,14 +394,7 @@ function Prepare-CommitMessage([string]$MessageFile, [string]$Source) {
         "Configuration-Docs",
         "Skills"
     )) {
-        $found = $false
-        foreach ($line in $parsed) {
-            if (([string]$line).StartsWith("${key}:", [System.StringComparison]::Ordinal)) {
-                $found = $true
-                break
-            }
-        }
-        if (-not $found) {
+        if ([string]::IsNullOrWhiteSpace((Get-TrailerValue $key $message))) {
             $append.Add("${key}: TODO") | Out-Null
         }
     }

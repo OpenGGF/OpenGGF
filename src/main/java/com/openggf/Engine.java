@@ -1124,9 +1124,6 @@ public class Engine {
 
 		// Cache viewport dimensions in GraphicsManager
 		graphicsManager.setViewport(viewportX, viewportY, viewportWidth, viewportHeight);
-		// Also propagate projection-space width so renderers (e.g. results screens) can
-		// compute centering offsets without needing a per-surface setViewportWidth() call.
-		graphicsManager.setProjectionWidth((int) projectionWidth);
 
 		// Setup orthographic projection using JOML - stored for shader access
 		projectionMatrix.identity().ortho2D(0, (float) projectionWidth, 0, (float) realHeight);
@@ -1263,10 +1260,7 @@ public class Engine {
 		// Set the viewport to the aspect-ratio-correct area for game rendering
 		glViewport(viewportX, viewportY, viewportWidth, viewportHeight);
 
-		// Update projection matrix for current mode - stored for shader access.
-		// Also keep GraphicsManager's cached projection width in sync so renderers
-		// (results screens, HUD overlays, etc.) can compute centering offsets on the fly.
-		graphicsManager.setProjectionWidth((int) projectionWidth);
+		// Update projection matrix for current mode - stored for shader access
 		projectionMatrix.identity().ortho2D(0, (float) projectionWidth, 0, (float) realHeight);
 		projectionMatrix.get(matrixBuffer);
 
@@ -1533,11 +1527,6 @@ public class Engine {
 				camera.setX((short) 0);
 				camera.setY((short) 0);
 
-				// Pass the full projection width so the results screen can centre its
-				// native-320 content within a wider viewport (widescreen support).
-				// At native 320 this is a no-op — setViewportWidth(320) returns offset 0.
-				resultsScreen.setViewportWidth((int) realWidth);
-
 				graphicsManager.beginPatternBatch();
 
 				resultsCommands.clear();
@@ -1570,10 +1559,6 @@ public class Engine {
 			camera.setY((short) 0);
 			LevelSelectProvider levelSelect = gameLoop.getLevelSelectProvider();
 			if (levelSelect != null) {
-				// Pass the full projection width so the level select can center its
-				// 320-px-wide content block within a wider viewport (widescreen support).
-				// At native 320 this is a no-op — setViewportWidth(320) returns offset 0.
-				levelSelect.setViewportWidth((int) realWidth);
 				levelSelect.draw();
 			}
 		} else if (getCurrentGameMode() == GameMode.DATA_SELECT) {
@@ -1582,10 +1567,6 @@ public class Engine {
 			camera.setY((short) 0);
 			DataSelectProvider dataSelect = gameLoop.getDataSelectProvider();
 			if (dataSelect != null) {
-				// Pass the full projection width so the data select can expand the background
-				// and centre the save-card content within a wider viewport (widescreen support).
-				// At native 320 this is a no-op — setViewportWidth(320) returns offset 0.
-				dataSelect.setViewportWidth((int) realWidth);
 				dataSelect.draw();
 			}
 		} else if (getCurrentGameMode() == GameMode.ENDING_CUTSCENE) {

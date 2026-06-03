@@ -234,6 +234,49 @@ final class S3kAnimatedTileChannels {
         return channels;
     }
 
+    static List<AnimatedTileChannel> buildMhzChannels(Sonic3kPatternAnimator owner,
+                                                      List<AniPlcScriptState> scripts) {
+        List<AnimatedTileChannel> channels = new ArrayList<>(scripts.size() + 3);
+        channels.add(new AnimatedTileChannel(
+                "s3k.mhz.bg1",
+                owner::shouldRunMhzBackgroundLayer1Channel,
+                ctx -> owner.computeMhzBackgroundLayer1Phase(),
+                new DestinationPlan(0x1B8, 0x1BF),
+                AnimatedTileCachePolicy.ON_PHASE_CHANGE,
+                new SplitTransferApplyStrategy(owner::updateMhzBackgroundLayer1ForGraph)
+        ));
+        channels.add(new AnimatedTileChannel(
+                "s3k.mhz.bg2",
+                owner::shouldRunMhzBackgroundLayer2Channel,
+                ctx -> owner.computeMhzBackgroundLayer2Phase(),
+                new DestinationPlan(0x1D5, 0x1F4),
+                AnimatedTileCachePolicy.ON_PHASE_CHANGE,
+                new SplitTransferApplyStrategy(owner::updateMhzBackgroundLayer2ForGraph)
+        ));
+        channels.add(new AnimatedTileChannel(
+                "s3k.mhz.mushroomCapCounter",
+                owner::shouldRunMhzMushroomCapCounterChannel,
+                ctx -> ctx.frameCounter(),
+                DestinationPlan.single(0),
+                AnimatedTileCachePolicy.ALWAYS,
+                ctx -> owner.advanceMhzMushroomCapPositionCounterForGraph()
+        ));
+
+        for (int i = 0; i < scripts.size(); i++) {
+            AniPlcScriptState script = scripts.get(i);
+            channels.add(new AnimatedTileChannel(
+                    "s3k.mhz.script." + i,
+                    owner::shouldRunScriptChannels,
+                    ctx -> ctx.frameCounter(),
+                    scriptDestination(script),
+                    AnimatedTileCachePolicy.ALWAYS,
+                    ctx -> owner.tickScript(script)
+            ));
+        }
+
+        return channels;
+    }
+
     private static DestinationPlan scriptDestination(AniPlcScriptState script) {
         int startTile = script.destinationTileIndex();
         if (script.tilesPerFrame() <= 1) {

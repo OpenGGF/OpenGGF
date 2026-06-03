@@ -31,6 +31,7 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
     private final String rendererKey;
     private final int collisionSizeIndex;
     private final int priorityBucket;
+    private final boolean planePriority;
 
     protected int xSubpixel;
     protected int ySubpixel;
@@ -38,10 +39,17 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
 
     protected AbstractS3kBadnikInstance(ObjectSpawn spawn, String name,
             String rendererKey, int collisionSizeIndex, int priorityBucket) {
+        this(spawn, name, rendererKey, collisionSizeIndex, priorityBucket, false);
+    }
+
+    protected AbstractS3kBadnikInstance(ObjectSpawn spawn, String name,
+            String rendererKey, int collisionSizeIndex, int priorityBucket,
+            boolean planePriority) {
         super(spawn, name, S3K_DESTRUCTION_CONFIG);
         this.rendererKey = rendererKey;
         this.collisionSizeIndex = collisionSizeIndex;
         this.priorityBucket = priorityBucket;
+        this.planePriority = planePriority;
         // S3K render_flags bit 0 mirrors horizontally. Clear = face left, set = face right.
         this.facingLeft = (spawn.renderFlags() & 0x01) == 0;
     }
@@ -91,6 +99,35 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
         if (objectManager != null) {
             objectManager.addDynamicObject(projectile);
         }
+    }
+
+    protected final PlayableEntity closestNativePlayerByHorizontalDistance(PlayableEntity updatePlayer) {
+        PlayableEntity closest = updatePlayer;
+        int closestDistance = updatePlayer == null
+                ? Integer.MAX_VALUE
+                : findSonicTailsHorizontalDistance(updatePlayer);
+        ObjectServices svc = tryServices();
+        PlayableEntity nativeP2 = svc == null ? null : svc.playerQuery().nativeP2OrNull();
+        if (nativeP2 != null) {
+            int sidekickDistance = findSonicTailsHorizontalDistance(nativeP2);
+            if (sidekickDistance < closestDistance) {
+                closest = nativeP2;
+            }
+        }
+        return closest;
+    }
+
+    protected final int findSonicTailsHorizontalDistance(PlayableEntity target) {
+        int delta = findSonicTailsHorizontalDelta(target);
+        return delta < 0 ? -delta : delta;
+    }
+
+    protected final boolean findSonicTailsTargetIsRight(PlayableEntity target) {
+        return findSonicTailsHorizontalDelta(target) < 0;
+    }
+
+    private int findSonicTailsHorizontalDelta(PlayableEntity target) {
+        return (short) (getBodyAnchorX() - target.getCentreX());
     }
 
     protected final void moveWithVelocity() {
@@ -149,7 +186,12 @@ abstract class AbstractS3kBadnikInstance extends AbstractBadnikInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-        renderer.drawFrameIndex(mappingFrame, getRenderAnchorX(), getRenderAnchorY(), !facingLeft, false);
+        if (planePriority) {
+            renderer.drawFrameIndexForcedPriority(
+                    mappingFrame, getRenderAnchorX(), getRenderAnchorY(), !facingLeft, false, -1, true);
+        } else {
+            renderer.drawFrameIndex(mappingFrame, getRenderAnchorX(), getRenderAnchorY(), !facingLeft, false);
+        }
     }
 
     /**

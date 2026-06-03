@@ -1,0 +1,114 @@
+package com.openggf.game.sonic3k.objects.bosses;
+
+import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
+import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.render.PatternSpriteRenderer;
+
+import java.util.List;
+
+/**
+ * MHZ end-boss defeat fragment.
+ *
+ * <p>ROM reference: {@code ChildObjDat_769B0 -> loc_766CA}. The child uses
+ * {@code Set_IndexedVelocity} with base index $08 and then runs
+ * {@code Obj_FlickerMove}.
+ */
+final class MhzEndBossDefeatFragmentChild extends AbstractObjectInstance {
+    private static final int[] MAPPING_FRAMES = {0x12, 0x13, 0x14, 0x15, 0x16, 0x17};
+    private static final int[] PRIORITY_BUCKETS = {4, 4, 6, 6, 4, 4};
+    private static final int[][] VELOCITIES = {
+            {-0x300, -0x200},
+            {0x300, -0x200},
+            {-0x200, -0x200},
+            {0, -0x200},
+            {-0x400, -0x300},
+            {0x400, -0x300},
+    };
+    private static final int GRAVITY = 0x38;
+    private static final int SUBPIXEL_SHIFT = 8;
+
+    private final int subtype;
+    private final int xVel;
+    private int yVel;
+    private int xFixed;
+    private int yFixed;
+    private int flickerCounter;
+
+    MhzEndBossDefeatFragmentChild(MhzEndBossInstance parent, int subtype) {
+        super(new ObjectSpawn(parent.getX(), parent.getY(), Sonic3kObjectIds.MHZ_END_BOSS, subtype, 0, false, 0),
+                "MHZEndBossDefeatFragment");
+        if (subtype < 0 || subtype >= MAPPING_FRAMES.length) {
+            throw new IllegalArgumentException("Invalid MHZ end-boss defeat fragment subtype: " + subtype);
+        }
+        this.subtype = subtype;
+        this.xFixed = parent.getX() << SUBPIXEL_SHIFT;
+        this.yFixed = parent.getY() << SUBPIXEL_SHIFT;
+        int velocityX = VELOCITIES[subtype][0];
+        if ((parent.getState().renderFlags & 1) != 0) {
+            velocityX = -velocityX;
+        }
+        this.xVel = velocityX;
+        this.yVel = VELOCITIES[subtype][1];
+    }
+
+    @Override
+    public void update(int frameCounter, PlayableEntity player) {
+        xFixed += xVel;
+        yFixed += yVel;
+        yVel += GRAVITY;
+        flickerCounter++;
+        deleteIfOutsideRomFlickerBounds();
+    }
+
+    private void deleteIfOutsideRomFlickerBounds() {
+        var services = tryServices();
+        if (services == null || services.camera() == null) {
+            return;
+        }
+        int x = getX();
+        int y = getY();
+        int cameraX = Short.toUnsignedInt(services.camera().getX());
+        int cameraY = Short.toUnsignedInt(services.camera().getY());
+        int coarseDeltaX = (x & 0xFF80) - (cameraX & 0xFF80);
+        int deltaY = y - cameraY + 0x80;
+        if (Integer.compareUnsigned(coarseDeltaX & 0xFFFF, 0x280) > 0
+                || Integer.compareUnsigned(deltaY & 0xFFFF, 0x200) > 0) {
+            setDestroyed(true);
+        }
+    }
+
+    @Override
+    public int getX() {
+        return xFixed >> SUBPIXEL_SHIFT;
+    }
+
+    @Override
+    public int getY() {
+        return yFixed >> SUBPIXEL_SHIFT;
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKETS[subtype];
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        return true;
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        if (isDestroyed() || (flickerCounter & 1) == 0) {
+            return;
+        }
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ_END_BOSS);
+        if (renderer != null && renderer.isReady()) {
+            renderer.drawFrameIndex(MAPPING_FRAMES[subtype], getX(), getY(), false, false);
+        }
+    }
+}

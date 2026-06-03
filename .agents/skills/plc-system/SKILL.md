@@ -7,6 +7,14 @@ description: Reference for the shared Sonic 1, Sonic 2, and Sonic 3K PLC format 
 
 Reference for the shared PLC binary format used across S1, S2, and S3K, and the `PlcParser` utility.
 
+## Agent Workflow Tooling
+
+For S3K PLC/art intake, use the dedicated tool and runbook (S&K-half only; the tool rejects `s3.asm`-sourced labels — the S3L standalone half):
+
+- **`RomArtIntakeTool`** — S3K ROM-backed art/mapping/PLC intake; wraps `RomOffsetFinder --game s3k`, recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints. Accepts multiple labels:
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"`
+- **Doc:** `docs/agent-workflow/runbooks/runbook-rom-art-mappings-plc.md` — end-to-end ROM art/mappings/PLC intake runbook.
+
 ## Shared Binary Format
 
 All three Sonic games use an identical PLC table format:

@@ -155,6 +155,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.setForcedAnimationId(11);
         sonic.setAnimationFrameIndex(3);
         sonic.setAnimationTick(6);
+        sonic.setFlipType(0x84);
 
         // ---- Capture ----
         PerObjectRewindSnapshot snap1 = sonic.captureRewindState();
@@ -258,6 +259,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertTrue(e1.wasInWater(), "wasInWater mismatch");
         assertTrue(e1.waterSkimActive(), "waterSkimActive mismatch");
         assertTrue(e1.preventTailsRespawn(), "preventTailsRespawn mismatch");
+        assertEquals((byte) 0x84, e1.flipType(), "flipType mismatch");
 
         // ---- Reset all mutated fields to defaults ----
         sonic.setX((short) 0);
@@ -357,6 +359,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         sonic.setForcedAnimationId(-1);
         sonic.setAnimationFrameIndex(0);
         sonic.setAnimationTick(0);
+        sonic.setFlipType(0);
 
         // ---- Restore from snap1 ----
         sonic.restoreRewindState(snap1);
@@ -473,6 +476,7 @@ class TestAbstractPlayableSpriteRewindCapture {
         assertEquals(e1.followerHistoryRecordedThisTick(), e2.followerHistoryRecordedThisTick(), "followerHistoryRecordedThisTick not restored");
         assertEquals(e1.spiralActiveFrame(), e2.spiralActiveFrame(), "spiralActiveFrame not restored");
         assertEquals(e1.flipAngle(), e2.flipAngle(), "flipAngle not restored");
+        assertEquals(e1.flipType(), e2.flipType(), "flipType not restored");
         assertEquals(e1.flipSpeed(), e2.flipSpeed(), "flipSpeed not restored");
         assertEquals(e1.flipsRemaining(), e2.flipsRemaining(), "flipsRemaining not restored");
         assertEquals(e1.flipTurned(), e2.flipTurned(), "flipTurned not restored");

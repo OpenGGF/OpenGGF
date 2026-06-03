@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
@@ -502,7 +503,7 @@ public class AizIntroArtLoader {
      * ROM address: {@link Sonic3kConstants#PAL_CUTSCENE_KNUX_ADDR}
      */
     public static void loadCutsceneKnucklesPalette() {
-        if (cutsceneKnucklesPalette != null) return;
+        if (cutsceneKnucklesPalette != null && cutsceneKnucklesPalette.length > 0) return;
         Rom rom = tryCurrentRom();
         if (rom == null) {
             LOG.fine("Skipping AIZ intro cutscene Knuckles palette load because no ROM-backed ObjectServices are active");
@@ -515,6 +516,16 @@ public class AizIntroArtLoader {
         } catch (Exception e) {
             LOG.log(Level.SEVERE, "Failed to load cutscene Knuckles palette", e);
             cutsceneKnucklesPalette = new byte[0];
+        }
+    }
+
+    public static synchronized void loadCutsceneKnucklesPalette(ObjectServices services) {
+        ObjectServices previousServices = activeServices;
+        activeServices = services;
+        try {
+            loadCutsceneKnucklesPalette();
+        } finally {
+            activeServices = previousServices;
         }
     }
 
@@ -650,13 +661,27 @@ public class AizIntroArtLoader {
     }
 
     public static void applyKnucklesPalette(ObjectServices services) {
+        if (cutsceneKnucklesPalette == null || cutsceneKnucklesPalette.length == 0) {
+            loadCutsceneKnucklesPalette(services);
+        }
         byte[] data = getCutsceneKnucklesPalette();
         if (data == null || data.length == 0) return;
         GraphicsManager gm = graphicsManager(services);
-        if (gm == null || !gm.isGlInitialized()) return;
-        Palette palette = new Palette();
-        palette.fromSegaFormat(data);
-        gm.cachePaletteTexture(palette, 1);
+        S3kPaletteWriteSupport.applyLine(
+                services != null ? services.paletteOwnershipRegistryOrNull() : null,
+                services != null ? services.currentLevel() : null,
+                gm,
+                "s3k.cutscene-knuckles",
+                200,
+                1,
+                data,
+                true);
+        if (services == null || services.currentLevel() == null) {
+            if (gm == null || !gm.isGlInitialized()) return;
+            Palette palette = new Palette();
+            palette.fromSegaFormat(data);
+            gm.cachePaletteTexture(palette, 1);
+        }
     }
 
     /**

@@ -11,8 +11,10 @@ import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.level.objects.TouchCategory;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
+import com.openggf.game.sonic3k.objects.Sonic3kObjectRegistry;
 import com.openggf.game.sonic2.slotmachine.CNZSlotMachineRenderer;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
@@ -230,7 +232,8 @@ public class DebugRenderer {
                                 continue;
                         }
 
-                        String name = registry.getPrimaryName(spawn.objectId());
+                        String name = resolveObjectNameForDebug(registry, spawn.objectId(),
+                                getLevelManager().getRomZoneId());
                         objectLabelBuilder.setLength(0);
                         DebugRenderContext.appendHex2(objectLabelBuilder, spawn.objectId());
                         objectLabelBuilder.append(':');
@@ -766,7 +769,8 @@ public class DebugRenderer {
                                 break;
                         }
                         ObjectSpawn spawn = hit.spawn();
-                        String name = registry.getPrimaryName(spawn.objectId());
+                        String name = resolveObjectNameForDebug(registry, spawn.objectId(),
+                                getLevelManager().getRomZoneId());
                         if (name.length() > 12) {
                                 name = name.substring(0, 12);
                         }
@@ -1120,5 +1124,12 @@ public class DebugRenderer {
 
         private int toScreenYFromWorld(int worldY) {
                 return viewportHeight - toScreenY(worldY);
+        }
+
+        static String resolveObjectNameForDebug(ObjectRegistry registry, int objectId, int zoneId) {
+                if (registry instanceof Sonic3kObjectRegistry sonic3kRegistry && zoneId >= 0) {
+                        return sonic3kRegistry.getPrimaryName(objectId, S3kZoneSet.forZone(zoneId));
+                }
+                return registry.getPrimaryName(objectId);
         }
 }

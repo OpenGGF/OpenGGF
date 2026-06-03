@@ -443,6 +443,8 @@ public class ObjectManager {
     private final List<ObjectInstance> cachedSolidProviderObjects = new ArrayList<>();
     private final List<ObjectInstance> cachedTouchResponseObjects = new ArrayList<>();
     private boolean activeObjectsCacheDirty = true;
+    private final Set<ObjectInstance> deferredDynamicExecThisFrame =
+            Collections.newSetFromMap(new IdentityHashMap<>());
 
     // ROM parity: dynamic object slot tracking for the current game's allocatable
     // SST window. S1 uses 32..127, S2 uses 16..127, and S3K uses 4..92.
@@ -551,6 +553,7 @@ public class ObjectManager {
     public void reset(int cameraX) {
         clearActiveObjects();
         dynamicObjects.clear();
+        deferredDynamicExecThisFrame.clear();
         reservedChildSlots.clear();
         usedSlots.clear();
         Arrays.fill(execOrder, null);
@@ -963,6 +966,7 @@ public class ObjectManager {
         } finally {
             currentExecSlot = -1;
             updating = false;
+            deferredDynamicExecThisFrame.clear();
             if (objectsRemoved) {
                 bucketsDirty = true;
                 activeObjectsCacheDirty = true;
@@ -1123,6 +1127,7 @@ public class ObjectManager {
         } finally {
             currentExecSlot = -1;
             updating = false;
+            deferredDynamicExecThisFrame.clear();
             if (objectsRemoved) {
                 bucketsDirty = true;
                 activeObjectsCacheDirty = true;
@@ -1479,6 +1484,22 @@ public class ObjectManager {
         }
     }
 
+    /**
+     * Applies a ROM-style level-repeat coordinate shift to active level-space
+     * objects. S3K MHZ uses this during the forced-scroll loop when the camera
+     * wraps by $200 and the ROM's helper scans dynamic object RAM for objects
+     * with {@code render_flags} bit 2 set.
+     */
+    public void applyLevelRepeatOffsetToActiveObjects(int offsetX, int offsetY) {
+        List<ObjectInstance> snapshot = new ArrayList<>(getActiveObjects());
+        for (ObjectInstance instance : snapshot) {
+            if (instance == null || instance.isDestroyed() || !instance.participatesInLevelRepeatOffset()) {
+                continue;
+            }
+            instance.applyLevelRepeatOffset(offsetX, offsetY);
+        }
+    }
+
     private List<ObjectInstance> getSolidProviderObjects() {
         rebuildActiveObjectCaches();
         return cachedSolidProviderObjects;
@@ -1521,21 +1542,14 @@ public class ObjectManager {
         return frameCounter;
     }
 
-    /**
-     * Number of dynamic object slots currently occupied (live objects this frame).
-     * Compare against {@link #getObjectSlotCapacity()} — when it reaches capacity,
-     * {@code allocateSlot()} fails and new spawns are dropped.
-     */
     public int getActiveObjectSlotCount() {
         return usedSlots.cardinality();
     }
 
-    /** Peak occupied dynamic object slots since the last {@link #reset(int)}. */
     public int getPeakObjectSlotCount() {
         return peakSlotCount;
     }
 
-    /** Total dynamic object slot capacity — the fixed ROM-sized pool for this game. */
     public int getObjectSlotCapacity() {
         return execOrder.length;
     }
@@ -1575,6 +1589,7 @@ public class ObjectManager {
         if (!removed) {
             return;
         }
+        deferredDynamicExecThisFrame.remove(object);
         if (object instanceof AbstractObjectInstance aoi) {
             int slot = aoi.getSlotIndex();
             if (slot >= 0) {
@@ -1592,6 +1607,10 @@ public class ObjectManager {
      */
     public void addDynamicObjectAfterCurrent(ObjectInstance object) {
         addDynamicObjectInternal(object, true, true);
+    }
+
+    public void addDynamicObjectAfterCurrentNextFrame(ObjectInstance object) {
+        addDynamicObjectInternal(object, true, false);
     }
 
     /**
@@ -1660,6 +1679,12 @@ public class ObjectManager {
             }
         }
         dynamicObjects.add(object);
+        if (!allowSameFrameExec && updating) {
+            deferredDynamicExecThisFrame.add(object);
+            if (object instanceof AbstractObjectInstance aoi2) {
+                aoi2.setSkipTouchThisFrame(true);
+            }
+        }
         if (allowSameFrameExec && updating && object instanceof AbstractObjectInstance aoi2
                 && isManagedDynamicSlot(aoi2.getSlotIndex())) {
             // ROM parity: FindFreeObj places the child directly into the SST.
@@ -1671,9 +1696,7 @@ public class ObjectManager {
             if (execIdx < execOrder.length && execIdx > currentExecSlot) {
                 object.snapshotPreUpdatePosition();
                 aoi2.setSkipTouchThisFrame(true);
-                if (!aoi2.skipsSameFrameUpdateAfterSpawn()) {
-                    execOrder[execIdx] = object;
-                }
+                execOrder[execIdx] = object;
             }
         }
         bucketsDirty = true;
@@ -2886,6 +2909,9 @@ public class ObjectManager {
     private void populateDynamicFallbackScratch() {
         dynamicFallbackScratch.clear();
         for (ObjectInstance inst : dynamicObjects) {
+            if (deferredDynamicExecThisFrame.contains(inst)) {
+                continue;
+            }
             if (inst instanceof AbstractObjectInstance aoi
                     && isManagedDynamicSlot(executionSlotIndex(aoi))) {
                 continue;
@@ -5467,6 +5493,9 @@ public class ObjectManager {
         private TouchCategory decodeCategory(int flags, TouchResponseProfile profile) {
             int categoryBits = flags & 0xC0;
             int sizeIndex = flags & 0x3F;
+            if (profile != null && profile.categoryDecodeMode() == TouchCategoryDecodeMode.FORCE_ENEMY) {
+                return TouchCategory.ENEMY;
+            }
             if (categoryBits == 0xC0 && profile != null
                     && profile.categoryDecodeMode() == TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY) {
                 // ROM: S3K Touch_ChkValue sends every $C0 collision flag to
@@ -5480,7 +5509,7 @@ public class ObjectManager {
                 boolean propertySpecial = switch (profile.categoryDecodeMode()) {
                     case S3K_SPECIAL_PROPERTY -> isS3kTouchSpecialPropertyIndex(sizeIndex);
                     case SONIC2_SPECIAL_PROPERTY -> isSonic2TouchSpecialPropertyIndex(sizeIndex);
-                    case NORMAL -> false;
+                    case NORMAL, FORCE_ENEMY -> false;
                 };
                 if (propertySpecial) {
                     return TouchCategory.SPECIAL;
@@ -6458,6 +6487,18 @@ public class ObjectManager {
                 return null;
             }
 
+            if (instance == ridingObject) {
+                SolidContact ridingContact = processInlineRidingObject(
+                        player, instance, provider, ridingX, ridingY, ridingPieceIndex);
+                if (!(provider instanceof MultiPieceSolidProvider)) {
+                    return ridingContact;
+                }
+                // ROM parity for staircase-style multi-piece objects: after carrying Sonic
+                // on the currently ridden piece, later sibling pieces of the same logical
+                // object must still get a chance to apply side/top/bottom collision.
+                // Returning early here skips the "next block in the staircase" wall hit.
+            }
+
             if (provider.skipsCpuSidekickWhenRenderFlagOffScreen()
                     && player instanceof AbstractPlayableSprite sprite
                     && sprite.isCpuControlled()
@@ -6475,38 +6516,10 @@ public class ObjectManager {
                 return null;
             }
 
-            SolidContact ridingContact = null;
-            MultiPieceContactResult orderedPreRiderResult = MultiPieceContactResult.empty();
-            int alreadyHandledRidingPieceIndex = -1;
-            if (instance == ridingObject) {
-                alreadyHandledRidingPieceIndex = ridingPieceIndex;
-                if (provider instanceof MultiPieceSolidProvider multiPiece
-                        && multiPiece.resolvesEarlierPiecesBeforeRidingPiece()
-                        && ridingPieceIndex > 0) {
-                    orderedPreRiderResult = processMultiPieceCollision(
-                            player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer(),
-                            -1, 0, ridingPieceIndex);
-                }
-                ridingContact = processInlineRidingObject(
-                        player, instance, provider, ridingX, ridingY, ridingPieceIndex);
-                if (!(provider instanceof MultiPieceSolidProvider)) {
-                    return ridingContact;
-                }
-                // ROM parity for staircase-style multi-piece objects: after carrying Sonic
-                // on the currently ridden piece, later sibling pieces of the same logical
-                // object must still get a chance to apply side/top/bottom collision.
-                // Returning early here skips the "next block in the staircase" wall hit.
-            }
-
             if (provider instanceof MultiPieceSolidProvider multiPiece) {
                 MultiPieceContactResult result = processMultiPieceCollision(
-                        player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer(),
-                        alreadyHandledRidingPieceIndex,
-                        orderedPreRiderResult.processedEndIndex(),
-                        multiPiece.getPieceCount());
-                MultiPieceContactResult combinedResult = combineMultiPieceContactResults(
-                        orderedPreRiderResult, result);
-                if (combinedResult.pushing()) {
+                        player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
+                if (result.pushing()) {
                     player.setPushing(true);
                     setObjectPushingBit(player, instance);
                     provider.setPlayerPushing(player, true);
@@ -6514,14 +6527,14 @@ public class ObjectManager {
                     player.setPushing(false);
                     provider.setPlayerPushing(player, false);
                 }
-                if (combinedResult.standing()) {
+                if (result.standing()) {
                     ridingStates.put(player, new RidingState(
-                            instance, combinedResult.ridingX(), combinedResult.ridingY(), combinedResult.pieceIndex()));
+                            instance, result.ridingX(), result.ridingY(), result.pieceIndex()));
                     setObjectStandingBit(player, instance);
                     clearGroundWallSuppressionForNormalSolidSupport(player, instance);
                     inlineSupportedPlayers.add(player);
                 }
-                return combineSolidContacts(ridingContact, combinedResult.aggregateContact());
+                return result.aggregateContact();
             }
 
             SolidObjectParams params = provider.getSolidParams();
@@ -6960,10 +6973,23 @@ public class ObjectManager {
                 int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();
                 SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
                 boolean useStickyBuffer = solidProfile.stickyContactBuffer();
+                SlopedSolidRoutineAdapter slopedAdapter = null;
+                byte[] slopeData = null;
+                if (instance instanceof SlopedSolidProvider sloped) {
+                    slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                    slopeData = slopedAdapter.getSlopeData();
+                }
 
-                // Multi-piece solids don't use monitor solidity
-                SolidContact contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
-                        solidProfile, useStickyBuffer, instance, false);
+                SolidContact contact;
+                if (slopeData != null && shouldUseSlopeForContact(instance, slopedAdapter)) {
+                    contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(),
+                            params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
+                            instance, false, slopedAdapter);
+                } else {
+                    // Multi-piece solids don't use monitor solidity
+                    contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
+                            solidProfile, useStickyBuffer, instance, false);
+                }
                 if (contact != null && contact.standing()) {
                     return true;
                 }
@@ -7150,11 +7176,6 @@ public class ObjectManager {
                 ridingPieceIndex = -1;
                 player.setOnObject(false);
             }
-            ObjectInstance ridingHandledObject = ridingObject;
-            int ridingHandledPieceIndex = ridingPieceIndex;
-            int orderedPreRiderProcessedEndIndex = 0;
-            SolidContact orderedPreRiderContact = null;
-            boolean ridingPieceHandledThisFrame = false;
             if (ridingObject != null && ridingObject instanceof SolidObjectProvider provider) {
                 SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
                 // ROM: S3K SolidObjectFull tests Player_2 render_flags before
@@ -7167,21 +7188,6 @@ public class ObjectManager {
                     SolidObjectParams params;
 
                     if (ridingPieceIndex >= 0 && ridingObject instanceof MultiPieceSolidProvider multiPiece) {
-                        if (multiPiece.resolvesEarlierPiecesBeforeRidingPiece()
-                                && ridingPieceIndex > 0
-                                && provider.isSolidFor(player)
-                                && !blocksSolidContacts(player, ridingObject)) {
-                            MultiPieceContactResult preRiderResult = processMultiPieceCollision(
-                                    player, multiPiece, ridingObject, frameCounter,
-                                    solidProfile.stickyContactBuffer(), -1, 0, ridingPieceIndex);
-                            orderedPreRiderProcessedEndIndex = preRiderResult.processedEndIndex();
-                            orderedPreRiderContact = preRiderResult.aggregateContact();
-                            if (preRiderResult.pushing()) {
-                                player.setPushing(true);
-                                setObjectPushingBit(player, ridingObject);
-                                provider.setPlayerPushing(player, true);
-                            }
-                        }
                         currentX = multiPiece.getPieceX(ridingPieceIndex);
                         currentY = multiPiece.getPieceY(ridingPieceIndex);
                         params = multiPiece.getPieceParams(ridingPieceIndex);
@@ -7209,7 +7215,6 @@ public class ObjectManager {
                     int maxRelXExclusive = (ridingHalfWidth * 2) + stickyX;
                     boolean inBounds = relX >= minRelX && relX < maxRelXExclusive;
                     // ROM: s2.asm:35387 — skip repositioning if obj_control bit 7 set
-                    ridingPieceHandledThisFrame = true;
                     if (inBounds && provider.isSolidFor(player) && !blocksSolidContacts(player, ridingObject)) {
                         // ROM: s2.asm:35377-35401 — X uses delta tracking, Y uses absolute positioning
                         int deltaX = currentX - ridingX;
@@ -7350,23 +7355,14 @@ public class ObjectManager {
                 }
 
                 if (provider instanceof MultiPieceSolidProvider multiPiece) {
-                    boolean isHandledRidingObject = instance == ridingHandledObject;
-                    int alreadyHandledPieceIndex = isHandledRidingObject && ridingPieceHandledThisFrame
-                            ? ridingHandledPieceIndex
-                            : -1;
                     MultiPieceContactResult result = processMultiPieceCollision(
-                            player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer(),
-                            alreadyHandledPieceIndex,
-                            isHandledRidingObject ? orderedPreRiderProcessedEndIndex : 0,
-                            multiPiece.getPieceCount());
+                            player, multiPiece, instance, frameCounter, solidProfile.stickyContactBuffer());
                     if (result.pushing()) {
                         player.setPushing(true);
                         // ROM: s2.asm:35220-35226 — also set pushing bit on the object
                         setObjectPushingBit(player, instance);
                         provider.setPlayerPushing(player, true);
                     } else if (clearObjectPushingBit(player, instance)) {
-                        // ROM SolidObject_TestClearPush clears the player's Status_Push
-                        // only when this object's own pushing bit was set.
                         player.setPushing(false);
                         provider.setPlayerPushing(player, false);
                     }
@@ -7376,13 +7372,8 @@ public class ObjectManager {
                         nextRidingY = result.ridingY();
                         nextRidingPieceIndex = result.pieceIndex();
                     }
-                    SolidContact combinedContact = combineSolidContacts(
-                            combineSolidContacts(
-                                    instance == ridingMaintained ? SolidContact.STANDING : null,
-                                    isHandledRidingObject ? orderedPreRiderContact : null),
-                            result.aggregateContact());
-                    if (combinedContact != null && instance instanceof SolidObjectListener listener) {
-                        listener.onSolidContact(player, combinedContact, frameCounter);
+                    if (result.aggregateContact() != null && instance instanceof SolidObjectListener listener) {
+                        listener.onSolidContact(player, result.aggregateContact(), frameCounter);
                     }
                     continue;
                 }
@@ -7492,46 +7483,12 @@ public class ObjectManager {
                 int ridingX,
                 int ridingY,
                 int pieceIndex,
-                SolidContact aggregateContact,
-                int processedEndIndex) {
-
-            static MultiPieceContactResult empty() {
-                return new MultiPieceContactResult(false, false, 0, 0, -1, null, 0);
-            }
-        }
-
-        private MultiPieceContactResult combineMultiPieceContactResults(
-                MultiPieceContactResult first, MultiPieceContactResult second) {
-            if (first == null || first.aggregateContact() == null) {
-                return second != null ? second : MultiPieceContactResult.empty();
-            }
-            if (second == null || second.aggregateContact() == null) {
-                return first;
-            }
-            boolean keepFirstStanding = first.standing();
-            return new MultiPieceContactResult(
-                    first.standing() || second.standing(),
-                    first.pushing() || second.pushing(),
-                    keepFirstStanding ? first.ridingX() : second.ridingX(),
-                    keepFirstStanding ? first.ridingY() : second.ridingY(),
-                    keepFirstStanding ? first.pieceIndex() : second.pieceIndex(),
-                    combineSolidContacts(first.aggregateContact(), second.aggregateContact()),
-                    Math.max(first.processedEndIndex(), second.processedEndIndex()));
-        }
+                SolidContact aggregateContact) {}
 
         private MultiPieceContactResult processMultiPieceCollision(PlayableEntity player,
                 MultiPieceSolidProvider multiPiece, ObjectInstance instance, int frameCounter,
-                boolean useStickyBuffer, int alreadyHandledRidingPieceIndex) {
-            return processMultiPieceCollision(player, multiPiece, instance, frameCounter,
-                    useStickyBuffer, alreadyHandledRidingPieceIndex, 0, multiPiece.getPieceCount());
-        }
-
-        private MultiPieceContactResult processMultiPieceCollision(PlayableEntity player,
-                MultiPieceSolidProvider multiPiece, ObjectInstance instance, int frameCounter,
-                boolean useStickyBuffer, int alreadyHandledRidingPieceIndex, int startIndex, int endIndex) {
+                boolean useStickyBuffer) {
             int pieceCount = multiPiece.getPieceCount();
-            int clampedStart = Math.max(0, startIndex);
-            int clampedEnd = Math.min(pieceCount, Math.max(clampedStart, endIndex));
 
             boolean anyStanding = false;
             boolean anyPushing = false;
@@ -7543,22 +7500,44 @@ public class ObjectManager {
             int standingPieceX = 0;
             int standingPieceY = 0;
             SolidRoutineProfile solidProfile = multiPiece.getSolidRoutineProfile();
+            boolean ridingCurrentObject = isRidingCurrentPlayerObject(instance);
+            int currentRidingPieceIndex = getCurrentPlayerRidingPieceIndex();
 
-            for (int i = clampedStart; i < clampedEnd; i++) {
-                if (i == alreadyHandledRidingPieceIndex) {
-                    continue;
-                }
+            for (int i = 0; i < pieceCount; i++) {
                 SolidObjectParams params = multiPiece.getPieceParams(i);
                 int pieceX = multiPiece.getPieceX(i);
                 int pieceY = multiPiece.getPieceY(i);
+                if (ridingCurrentObject && i == currentRidingPieceIndex) {
+                    anyStanding = true;
+                    if (standingPieceIndex < 0) {
+                        standingPieceIndex = i;
+                        standingPieceX = pieceX;
+                        standingPieceY = pieceY;
+                    }
+                    multiPiece.onPieceContact(i, player, SolidContact.STANDING, frameCounter);
+                    continue;
+                }
                 int anchorX = pieceX + params.offsetX();
                 int anchorY = pieceY + params.offsetY();
                 int halfHeight = player.getAir() ? params.airHalfHeight() : params.groundHalfHeight();
+                SlopedSolidRoutineAdapter slopedAdapter = null;
+                byte[] slopeData = null;
+                if (instance instanceof SlopedSolidProvider sloped) {
+                    slopedAdapter = SlopedSolidRoutineProfile.adapt(sloped);
+                    slopeData = slopedAdapter.getSlopeData();
+                }
 
-                // Multi-piece solids don't use monitor solidity
-                // Pass piece index so sticky buffer only applies to the piece being ridden
-                SolidContact contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
-                        solidProfile, useStickyBuffer, instance, i, true);
+                SolidContact contact;
+                if (slopeData != null && shouldUseSlopeForContact(instance, slopedAdapter)) {
+                    contact = resolveSlopedContact(player, anchorX, anchorY, params.halfWidth(),
+                            params.groundHalfHeight(), solidProfile.topSolidOnly(), useStickyBuffer,
+                            instance, true, slopedAdapter);
+                } else {
+                    // Multi-piece solids don't use monitor solidity
+                    // Pass piece index so sticky buffer only applies to the piece being ridden
+                    contact = resolveContact(player, anchorX, anchorY, params.halfWidth(), halfHeight,
+                            solidProfile, useStickyBuffer, instance, i, true);
+                }
 
                 if (contact == null) {
                     continue;
@@ -7601,25 +7580,7 @@ public class ObjectManager {
 
             return new MultiPieceContactResult(
                     anyStanding, anyPushing, standingPieceX, standingPieceY,
-                    standingPieceIndex, aggregateContact, clampedEnd);
-        }
-
-        private SolidContact combineSolidContacts(SolidContact first, SolidContact second) {
-            if (first == null) {
-                return second;
-            }
-            if (second == null) {
-                return first;
-            }
-            boolean secondSide = second.touchSide();
-            return new SolidContact(
-                    first.standing() || second.standing(),
-                    first.touchSide() || second.touchSide(),
-                    first.touchBottom() || second.touchBottom(),
-                    first.touchTop() || second.touchTop(),
-                    first.pushing() || second.pushing(),
-                    secondSide ? second.sideDistX() : first.sideDistX(),
-                    secondSide ? second.movingInto() : first.movingInto());
+                    standingPieceIndex, aggregateContact);
         }
 
         /**

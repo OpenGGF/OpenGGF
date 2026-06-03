@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TouchActorContextPolicy;
 import com.openggf.level.objects.TouchAttackBouncePolicy;
@@ -57,7 +58,10 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
 
     @Override
     protected void updateMovement(int frameCounter, PlayableEntity playerEntity) {
-        if (isDestroyed() || !isOnScreenX()) {
+        if (isDestroyed()) {
+            return;
+        }
+        if (hasCameraContext() && !isOnScreenX()) {
             return;
         }
 
@@ -132,6 +136,11 @@ public final class SparkleBadnikInstance extends AbstractS3kBadnikInstance {
 
     private boolean warningBelowParent() {
         return verticalPhaseDown;
+    }
+
+    private boolean hasCameraContext() {
+        ObjectServices ctx = tryServices();
+        return ctx == null || ctx.camera() != null;
     }
 
     @Override

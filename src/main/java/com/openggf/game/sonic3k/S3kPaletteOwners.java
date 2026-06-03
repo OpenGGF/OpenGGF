@@ -19,6 +19,9 @@ public final class S3kPaletteOwners {
     public static final String HCZ_CAVE_LIGHTING = "s3k.hcz.caveLighting";
     public static final String HCZ_MINIBOSS = "s3k.hcz.miniboss";
     public static final String HCZ_END_BOSS = "s3k.hcz.endBoss";
+    public static final String MHZ_MINIBOSS = "s3k.mhz.miniboss";
+    public static final String MHZ_END_BOSS = "s3k.mhz.endBoss";
+    public static final String MHZ_END_BOSS_DEFEAT_FADE = "s3k.mhz.endBossDefeatFade";
     public static final String MGZ_END_BOSS = "s3k.mgz.endBoss";
     /**
      * CNZ AnPal palette ownership for the bumper, background, and tertiary

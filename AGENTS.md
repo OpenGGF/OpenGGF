@@ -348,6 +348,10 @@ Commands: `search <pattern>`, `verify <label>`, `verify-batch [type]`, `list [ty
 
 **Permanent anchor offsets** live in `GameProfile.sonic1()` / `sonic2()` / `sonic3k()` factory methods in `RomOffsetFinder.java`; verified offsets are added as runtime anchors during a session. Programmatic API is available — see `com.openggf.tools.disasm` (`RomOffsetFinder`, `DisassemblySearchTool`, `ConstantsExporter`). The `s1disasm-guide` / `s2disasm-guide` / `s3k-disasm-guide` skills cover full per-game usage.
 
+## Agent Workflow Tooling
+
+Five `com.openggf.tools` CLIs reduce context loss when implementing objects/zones/trace fixes: `AgentWorkflowTool` (preflight checklist for an object task), `RomArtIntakeTool` (ROM-backed art/mapping/PLC intake), `ObjectScaffoldTool` (guard-friendly object/badnik + test skeleton), `TraceTriageTool` (first-divergence brief from a trace report), and `ZoneSpecNormalizerTool` (normalizes a zone-analysis spec). See [docs/agent-workflow/README.md](docs/agent-workflow/README.md) for exact PowerShell-quoted invocations, plus the per-task runbooks, CI guard-failure explainer, pitfall index, documentation-obligation checklist, and delegation prompt templates alongside it.
+
 ## Audio Engine hints
 *   **Useful locations:**
     *   `docs` – Contains lots of information about the audio engine in saved htm files.

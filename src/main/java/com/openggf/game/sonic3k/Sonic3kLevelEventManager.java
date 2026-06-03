@@ -16,12 +16,14 @@ import com.openggf.game.sonic3k.events.Sonic3kAIZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kCNZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kHCZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
+import com.openggf.game.sonic3k.events.Sonic3kMHZEvents;
 import com.openggf.game.sonic3k.events.Sonic3kMGZEvents;
 import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
 import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
@@ -37,6 +39,7 @@ import com.openggf.game.sonic3k.objects.HCZConveyorBeltObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
+import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
 import com.openggf.camera.Camera;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -85,6 +88,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kHCZEvents hczEvents;
     private Sonic3kICZEvents iczEvents;
     private Sonic3kMGZEvents mgzEvents;
+    private Sonic3kMHZEvents mhzEvents;
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
             new S3kFixedAirCountdownManager();
 
@@ -197,11 +201,18 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else {
             mgzEvents = null;
         }
+        if (zone == Sonic3kZoneIds.ZONE_MHZ) {
+            mhzEvents = new Sonic3kMHZEvents();
+            mhzEvents.init(act);
+        } else {
+            mhzEvents = null;
+        }
 
         // Install typed zone runtime state into the registry.
         // Uses getActiveRuntime() to avoid the mode-checking side effects of
         // getCurrent() which can destroy the runtime during level loading.
         installZoneRuntimeState(zone, act);
+        installFixedDynamicObjects(zone);
     }
 
     @Override
@@ -265,10 +276,27 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new HczZoneRuntimeState(act, playerCharacter, hczEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_MGZ && mgzEvents != null) {
             registry.install(new MgzZoneRuntimeState(act, playerCharacter, mgzEvents));
+        } else if (zone == Sonic3kZoneIds.ZONE_MHZ && mhzEvents != null) {
+            registry.install(new MhzZoneRuntimeState(act, playerCharacter, mhzEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
         } else {
             registry.clear();
+        }
+    }
+
+    private void installFixedDynamicObjects(int zone) {
+        if (!GameServices.hasRuntime() || zone != Sonic3kZoneIds.ZONE_MHZ) {
+            return;
+        }
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        if (objectManager == null) {
+            return;
+        }
+        boolean alreadyInstalled = objectManager.getActiveObjects().stream()
+                .anyMatch(MhzPollenSpawnerInstance.class::isInstance);
+        if (!alreadyInstalled) {
+            objectManager.createDynamicObject(MhzPollenSpawnerInstance::new);
         }
     }
 
@@ -301,6 +329,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (mgzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MGZ) {
             mgzEvents.update(currentAct, frameCounter);
+        }
+        if (mhzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MHZ) {
+            mhzEvents.update(currentAct, frameCounter);
         }
         releasePendingMgzPostTransition();
         releasePendingCnzPostTransition();
@@ -743,6 +774,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return iczEvents;
     }
 
+    public Sonic3kMHZEvents getMhzEvents() {
+        return mhzEvents;
+    }
+
     @Override
     public void setHczBossFlag(boolean value) {
         if (hczEvents != null) {
@@ -771,6 +806,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (mgzEvents != null) {
             mgzEvents.setEventsFg5(true);
+        }
+        if (mhzEvents != null) {
+            mhzEvents.setActTransitionFlag(true);
         }
         // Other zones' event handlers will be added here as implemented.
     }
@@ -1137,6 +1175,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public Sonic3kCNZEvents getCnzEventsForTest()  { return cnzEvents; }
     /** Accessor for test/diagnostic use — returns the S3K zone event handler for MGZ. */
     public Sonic3kMGZEvents getMgzEventsForTest()  { return mgzEvents; }
+    /** Accessor for test/diagnostic use — returns the S3K zone event handler for MHZ. */
+    public Sonic3kMHZEvents getMhzEventsForTest()  { return mhzEvents; }
 
     @Override
     protected byte[] captureExtra() {
@@ -1150,6 +1190,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         //   82 bytes  cnz state (4 shorts + 10 booleans + 15 ints + 1 ordinal int = 8+10+60+4 = 82)
         //   1 byte    mgz handler present flag
         //   228 bytes mgz state (16 booleans + 23 ints + 30 ints = 16+92+120 = 228)
+        //   1 byte    mhz handler present flag
+        //   184 bytes mhz state (see Sonic3kMHZEvents.rewindStateBytes())
         //   1 byte    icz handler present flag
         //   25 bytes  icz state (5 booleans + 5 ints; see Sonic3kICZEvents.rewindStateBytes())
         //   28 bytes  fixed Breathing_bubbles/Breathing_bubbles_P2 sidecars
@@ -1157,12 +1199,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         int hczSize = 7 + 9 * 4; // 43
         int cnzSize = 4 * 2 + 10 + 15 * 4 + 4; // 82
         int mgzSize = 16 + 23 * 4 + 3 * 10 * 4; // 228
+        int mhzSize = Sonic3kMHZEvents.rewindStateBytes(); // 184
         int iczSize = Sonic3kICZEvents.rewindStateBytes(); // 24
         int size = 30;
         size += 1 + (aizEvents != null ? aizSize : 0);
         size += 1 + (hczEvents != null ? hczSize : 0);
         size += 1 + (cnzEvents != null ? cnzSize : 0);
         size += 1 + (mgzEvents != null ? mgzSize : 0);
+        size += 1 + (mhzEvents != null ? mhzSize : 0);
         size += 1 + (iczEvents != null ? iczSize : 0);
         size += S3kFixedAirCountdownManager.REWIND_STATE_BYTES;
         java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(size);
@@ -1207,6 +1251,13 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else {
             buf.put((byte) 0);
         }
+        // MHZ
+        if (mhzEvents != null) {
+            buf.put((byte) 1);
+            mhzEvents.writeRewindState(buf);
+        } else {
+            buf.put((byte) 0);
+        }
         // ICZ
         if (iczEvents != null) {
             buf.put((byte) 1);
@@ -1245,6 +1296,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         final int hczBytes = 7 + 9 * 4;        // 43
         final int cnzBytes = 4 * 2 + 10 + 15 * 4 + 4; // 82
         final int mgzBytes = 16 + 23 * 4 + 3 * 10 * 4; // 228
+        final int mhzBytes = Sonic3kMHZEvents.rewindStateBytes(); // 184
         final int iczBytes = Sonic3kICZEvents.rewindStateBytes(); // 24
         // AIZ
         if (buf.remaining() >= 1) {
@@ -1280,6 +1332,15 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 readMgzState(buf, mgzEvents);
             } else if (mgzPresent && buf.remaining() >= mgzBytes) {
                 buf.position(buf.position() + mgzBytes);
+            }
+        }
+        // MHZ
+        if (buf.remaining() >= 1) {
+            boolean mhzPresent = buf.get() != 0;
+            if (mhzPresent && mhzEvents != null && buf.remaining() >= mhzBytes) {
+                mhzEvents.readRewindState(buf);
+            } else if (mhzPresent && buf.remaining() >= mhzBytes) {
+                buf.position(buf.position() + mhzBytes);
             }
         }
         // ICZ

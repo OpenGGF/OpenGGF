@@ -846,9 +846,9 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             if (svc == null || svc.renderManager() == null) {
                 return;
             }
-            PatternSpriteRenderer renderer = svc.renderManager().getRenderer(Sonic3kObjectArtKeys.CNZ_CLAMER);
+            PatternSpriteRenderer renderer = svc.renderManager().getRenderer(Sonic3kObjectArtKeys.CNZ_CLAMER_SHOT);
             if (renderer != null && renderer.isReady()) {
-                renderer.drawFrameIndex(9, getX(), getY(), false, false);
+                renderer.drawFrameIndex(0, getX(), getY(), false, false);
             }
         }
     }

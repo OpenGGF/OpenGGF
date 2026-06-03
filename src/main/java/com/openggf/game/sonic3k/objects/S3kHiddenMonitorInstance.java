@@ -5,6 +5,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -44,7 +46,14 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance {
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        if (isDestroyed() || resolved) {
+        if (isDestroyed()) {
+            return;
+        }
+
+        if (resolved) {
+            if (!isOnScreenX()) {
+                setDestroyedByOffscreen();
+            }
             return;
         }
 
@@ -81,18 +90,22 @@ public class S3kHiddenMonitorInstance extends AbstractObjectInstance {
                     monitorX, monitorY, 0x01, monitorSubtype, 0, false, 0);
             Sonic3kMonitorObjectInstance monitor = new Sonic3kMonitorObjectInstance(monitorSpawn);
             monitor.revealFromHidden();
-            spawnDynamicObject(monitor);
+            ObjectManager objectManager = services().objectManager();
+            if (objectManager != null) {
+                ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager, monitor, getSlotIndex());
+            } else {
+                spawnDynamicObject(monitor);
+            }
             setDestroyed(true);
         } else {
-            // Out of range: play sound and disappear
+            // Out of range: switch to the ROM Sprite_OnScreen_Test path.
             LOG.fine("Hidden monitor at (" + monitorX + "," + monitorY
-                    + ") OUT OF RANGE of signpost — dismissing");
+                    + ") OUT OF RANGE of signpost — waiting for offscreen delete");
             try {
                 services().playSfx(Sonic3kSfx.GROUND_SLIDE.id);
             } catch (Exception e) {
                 LOG.fine("Could not play ground slide SFX: " + e.getMessage());
             }
-            setDestroyed(true);
         }
     }
 

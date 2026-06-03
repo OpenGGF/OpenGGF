@@ -21,6 +21,7 @@ import com.openggf.level.objects.MultiPieceSolidProvider;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider.TouchRegion;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
@@ -928,6 +929,16 @@ public final class IczEndBossInstance extends AbstractBossInstance implements Mu
             regions.add(new TouchRegion(getBottomHurtXForTesting(), getBottomHurtYForTesting(), BOTTOM_HURT_FLAGS));
         }
         return regions.toArray(TouchRegion[]::new);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.fromProvider(this);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TouchResponseProfile.fromProvider(this, multiRegionSource);
     }
 
     @Override

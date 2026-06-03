@@ -7,6 +7,14 @@ description: Use when bringing up a new S3K zone — orchestrates analysis, para
 
 One-stop skill for full zone bring-up in Sonic 3 & Knuckles. Given a zone abbreviation, this skill runs analysis against the disassembly, dispatches parallel agents to implement each feature category, merges their work, verifies the build, and validates the result. It coordinates 6 other skills and is itself a coordinator -- it contains no implementation details.
 
+## Agent Workflow Tooling
+
+Use these tools/docs to ground the bring-up before and during orchestration:
+
+- **ZoneSpecNormalizerTool** -- normalize the `s3k-zone-analysis` output into the stable 13-section layout (palette cycling vs mutation kept separate, `(not analyzed)` placeholders for gaps) before the Step 2 review gate: `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=<path-to-zone-analysis-spec.md>"`
+- **AgentWorkflowTool** -- preflight checklist (zone-set resolution, registry status, RomOffsetFinder commands, required guards, docs) when a route blocker is an object/badnik: `mvn exec:java "-Dexec.mainClass=com.openggf.tools.AgentWorkflowTool" "-Dexec.args=object s3k MHZ 0x8A"`
+- **Doc:** `docs/agent-workflow/runbooks/runbook-s3k-zone-feature.md` -- end-to-end runbook for an S3K zone feature.
+
 ## Inputs
 
 $ARGUMENTS: Zone abbreviation (e.g., "HCZ", "LBZ", "CNZ") followed by optional flags:

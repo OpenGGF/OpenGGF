@@ -7,6 +7,15 @@ description: Use when navigating the Sonic 3&K disassembly — label conventions
 
 This skill provides guidance on finding, identifying, and interpreting items in the Sonic 3 & Knuckles disassembly (`docs/skdisasm/`).
 
+## Agent Workflow Tooling
+
+These tools wrap the RomOffsetFinder lookups described below with S3K-safe guardrails:
+
+- **RomArtIntakeTool** — S3K ROM-backed art/mapping/PLC intake. Wraps `RomOffsetFinder --game s3k`, **rejects `s3.asm`-sourced labels** (the S3 standalone / S3L half — classifies by source file; confirm the resolved offset is `< 0x200000` when you verify), recommends `StandaloneArtEntry` vs `LevelArtEntry`, and suggests `Sonic3kConstants` names + `Sonic3kPlcArtRegistry` hints. Accepts multiple labels:
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.RomArtIntakeTool" "-Dexec.args=ArtNem_AIZSwingVine Map_AIZSwingVine"`
+- **AgentWorkflowTool** — prints the exact `RomOffsetFinder` commands to run for a task (plus zone-set resolution and required guards):
+  `mvn exec:java "-Dexec.mainClass=com.openggf.tools.AgentWorkflowTool" "-Dexec.args=object s3k MHZ 0x8A"`
+
 ## S&K vs S3 ROM Halves — Address Selection Rule
 
 The locked-on ROM ("Sonic and Knuckles & Sonic 3") contains **two halves**:
@@ -106,7 +115,14 @@ mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" -Dexec
 
 ### Search ROM Binary
 
-Use `search-rom` to find inline assembly data (pointer tables, animation scripts, AniPLC tables, `dc.w`/`dc.b` directives) that have no binary file — the `search` and `find` commands only work with `binclude` items. This is especially useful for S3K where many data structures are inline.
+Use `search` or `find` first for labeled inline assembly data, including S3K mapping/DPLC/animation labels inside files reached by `include` directives. RomOffsetFinder indexes labels inside included `.asm` files and calculates their S&K-side ROM offset from address-bearing local labels such as `word_3DC64`.
+
+```bash
+# Resolve an included mapping table label directly
+mvn exec:java -Dexec.mainClass="com.openggf.tools.disasm.RomOffsetFinder" -Dexec.args="--game s3k find Map_MHZPollen" -q
+```
+
+Use `search-rom` only when the data has no usable label or when you are cross-checking a known byte pattern.
 
 ```bash
 # Search for known hex byte pattern (spaces optional)

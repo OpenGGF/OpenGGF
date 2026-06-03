@@ -210,6 +210,20 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         }
     }
 
+    @Override
+    public boolean participatesInLevelRepeatOffset() {
+        return false;
+    }
+
+    @Override
+    public void applyLevelRepeatOffset(int offsetX, int offsetY) {
+        updateDynamicSpawn((getX() + offsetX) & 0xFFFF, (getY() + offsetY) & 0xFFFF);
+    }
+
+    protected boolean skipsSameFrameUpdateAfterSpawn() {
+        return false;
+    }
+
     public String getName() {
         return name;
     }
@@ -280,15 +294,6 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
      */
     public void setSkipTouchThisFrame(boolean skip) {
         this.skipTouchThisFrame = skip;
-    }
-
-    /**
-     * Some object classes model the ROM's routine-0 initialization in their Java
-     * constructor. When spawned mid-pass, their first update would then represent
-     * routine 2 and must wait until the next ExecuteObjects pass.
-     */
-    protected boolean skipsSameFrameUpdateAfterSpawn() {
-        return false;
     }
 
     /**
@@ -844,7 +849,11 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
             T child = factory.get();
             ObjectManager om = svc.objectManager();
             if (om != null) {
-                om.addDynamicObjectAfterCurrent(child);
+                if (child.skipsSameFrameUpdateAfterSpawn()) {
+                    om.addDynamicObjectAfterCurrentNextFrame(child);
+                } else {
+                    om.addDynamicObjectAfterCurrent(child);
+                }
             }
             return child;
         } finally {
