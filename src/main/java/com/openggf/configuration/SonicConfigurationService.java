@@ -101,6 +101,7 @@ public class SonicConfigurationService {
 		}
 
 		boolean defaultsInserted = applyDefaults();
+		validateEnumeratedValues();
 
 		if (configChanged || migratedFromLegacyJson || (loadedFromExistingFile && defaultsInserted)) {
 			saveConfig();
@@ -349,6 +350,28 @@ public class SonicConfigurationService {
 		// SCREEN_WIDTH_PIXELS=528 in the overlay even after the test harness
 		// calls resetToDefaults(), silently widening trace and headless test runs.
 		resolveDisplayAspect();
+	}
+
+	/** Warn on ENUM-typed values outside their allowed set and reset them to the registered default. */
+	private void validateEnumeratedValues() {
+		for (SonicConfiguration key : ConfigCatalog.emitOrder()) {
+			ConfigKeyMeta meta = ConfigCatalog.meta(key);
+			if (meta.type() != ConfigType.ENUM) {
+				continue;
+			}
+			Object value = config.get(key.name());
+			if (value == null) {
+				continue;
+			}
+			if (!meta.allowedValues().contains(value.toString())) {
+				Object fallback = defaults.get(key.name());
+				LOGGER.warning("Invalid value '" + value + "' for " + meta.path()
+						+ "; allowed " + meta.allowedValues() + ". Defaulting to '" + fallback + "'.");
+				if (fallback != null) {
+					config.put(key.name(), fallback);
+				}
+			}
+		}
 	}
 
 	private boolean applyDefaults() {
