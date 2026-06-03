@@ -37,6 +37,8 @@ Critically, **the read path stays almost untouched.** Nested YAML is parsed and 
 
 ### Example on-disk file (`config.yaml`)
 
+Normal player-facing settings sit at the top; **all debug/developer settings are fenced into a single top-level `debug:` block at the bottom.**
+
 ```yaml
 # ── Display ──
 display:
@@ -56,11 +58,42 @@ input:
   player2:
     up: I
     jump: RIGHT_SHIFT
+  pause: ENTER              # Toggle pause
 
 # ── Audio ──
 audio:
   enabled: true             # Music + SFX
   region: NTSC              # NTSC/PAL audio timing
+
+# ... display / input / audio / characters / roms / startup / rewind / crossGame / discord ...
+
+# ═══════════════════════════════════════
+#  DEBUG  (developer tooling — safe to ignore for normal play)
+# ═══════════════════════════════════════
+debug:
+  flags:
+    debugView: true         # On-screen debug HUD
+    editor: false           # Allow entering the level editor from gameplay
+    collisionView: false    # Draw collision overlay
+  keys:
+    debugMode: D            # Toggle debug movement mode
+    nextAct: PAGE_UP
+    giveEmeralds: E
+    frameStep: Q            # Step one frame while paused
+  startup:
+    levelSelectOnStartup: false   # Open Level Select instead of loading the first zone
+    s3kSkipIntros: false          # Skip AIZ biplane etc.
+  playback:
+    moviePath: ""           # BizHawk BK2 movie for playback debugging
+    toggleKey: B
+  traceRewind:
+    key: R                  # Held in Trace Test Mode to rewind deterministic state
+  testMode:
+    enabled: false          # Master title becomes the trace picker (dev-only)
+    catalogDir: src/test/resources/traces
+  crossGame:
+    s1DataSelectImageGenOverride: false   # Force-regen S1 data-select image cache
+    s1DataSelectImageCoordLogKey: APOSTROPHE
 ```
 
 ## Architecture
@@ -81,24 +114,42 @@ Each `SonicConfiguration` constant gains structured metadata, supplied via const
 
 The enum's `name()` remains the canonical map key, so nothing about the in-memory representation or the `defaults` map changes.
 
-### 2. Section taxonomy
+### 2. Section taxonomy & debug compartmentalisation
 
-Derived from enum metadata. Initial sections (final list driven by the metadata, not hardcoded elsewhere):
+Every key is classified by **audience** — normal player-facing vs developer/debug — and that classification drives where it lands on disk. Debug is **not a clean key prefix**, so classification is per-key (several keys live in "mixed" feature areas). The marker is the section path: any section under the `debug.` prefix is part of the fenced debug block; everything else is a normal top-level section. The writer draws the debug fence the first time it emits a `debug.*` section (no separate `audience` enum field needed — the `debug.` prefix is the single source of that fact).
 
-- `display` — screen pixels/window, scale, fps, color profile, aspect, deadzone, autosize
+**Normal sections (top of file):**
+
+- `display` — screen pixels/window, scale, fps, color profile + its toggle key, aspect, deadzone, autosize
 - `input.player1` — UP/DOWN/LEFT/RIGHT/JUMP
 - `input.player2` — P2_* keys
+- `input` (general) — `pause` (PAUSE_KEY); normal gameplay control
 - `audio` — enabled, region, DAC interpolate, internal-rate output, PSG noise mode, FM6 DAC off
 - `characters` — main/sidekick character codes, data-select extra combos
 - `roms` — S1/S2/S3K ROM filenames, default ROM
-- `startup` — title/level-select/master-title/legal-disclaimer on startup, S3K skip intros
-- `debug.flags` — debug view, editor enabled, collision view
-- `debug.keys` — TEST, NEXT_ACT/ZONE, debug-mode, color-profile-toggle, special-stage keys, pause, frame-step, last-checkpoint, level-select, super-sonic, give-emeralds
-- `playback` — PLAYBACK_* movie path + keys + start offset
-- `rewind` — trace rewind key, LIVE_REWIND_* tape-coast, REWIND_AUDIO_*
-- `crossGame` — CROSS_GAME_* flags/keys/source
-- `testMode` — TEST_MODE_ENABLED, TRACE_CATALOG_DIR
+- `startup` — title / master-title / legal-disclaimer on startup (the normal ones only)
+- `rewind` — `LIVE_REWIND_*` (tape-coast) and `REWIND_AUDIO_*`: these are the **player-facing** held-key live-rewind feature, so they stay in the normal area
+- `crossGame` — `CROSS_GAME_FEATURES_ENABLED`, `CROSS_GAME_SOURCE`: user-facing cross-game donation toggles
 - `discord` — DISCORD_RICH_PRESENCE_*
+
+**Debug block (single top-level `debug:`, fenced at the bottom):**
+
+- `debug.flags` — DEBUG_VIEW_ENABLED, EDITOR_ENABLED, DEBUG_COLLISION_VIEW_ENABLED
+- `debug.keys` — TEST, NEXT_ACT, NEXT_ZONE, DEBUG_MODE_KEY, FRAME_STEP_KEY, DEBUG_LAST_CHECKPOINT_KEY, LEVEL_SELECT_KEY, SUPER_SONIC_DEBUG_KEY, GIVE_EMERALDS_KEY, special-stage keys (SPECIAL_STAGE_KEY/COMPLETE/FAIL/SPRITE_DEBUG/PLANE_DEBUG)
+- `debug.startup` — LEVEL_SELECT_ON_STARTUP, S3K_SKIP_INTROS (dev conveniences pulled out of normal `startup`)
+- `debug.playback` — all PLAYBACK_* (BK2 movie path, keys, start offset)
+- `debug.traceRewind` — TRACE_REWIND_KEY (dev-only; distinct from the player-facing live rewind above)
+- `debug.testMode` — TEST_MODE_ENABLED, TRACE_CATALOG_DIR
+- `debug.crossGame` — CROSS_GAME_S1/S2_DATA_SELECT_IMAGE_GEN_OVERRIDE, CROSS_GAME_S1_DATA_SELECT_IMAGE_COORD_LOG_KEY (debug tooling, split from the user-facing crossGame toggles)
+
+**Borderline judgement calls (documented so they aren't re-litigated):**
+
+- `PAUSE_KEY` → normal (`input`); `FRAME_STEP_KEY` → debug (only meaningful while debugging).
+- `DISPLAY_COLOR_PROFILE_TOGGLE_KEY` → normal (`display`), since it toggles a normal display setting.
+- `EDITOR_ENABLED` → debug (`debug.flags`); the editor is dev tooling, default off.
+- The `rewind`/`crossGame`/`startup` splits above are the deliberate resolution of the three mixed areas.
+
+This split is **presentation only** — no master gate flag and no behavior change. Debug keys are still always read into the flat map, and runtime gating (e.g. `DEBUG_VIEW_ENABLED` checks at call sites) is unchanged.
 
 `VERSION` is currently unused (no references in `src/`). Leave it out of the emitted file (or assign it a `meta` section); do not invent behavior for it.
 
@@ -116,10 +167,11 @@ Flattening is the **only** new step on read; everything downstream sees the same
 ### 4. Write path
 
 `saveConfig()` delegates to a new `ConfigYamlWriter`:
-1. Walk `SonicConfiguration.values()` in declaration order.
+1. Walk `SonicConfiguration.values()` in declaration order (constants are ordered so all normal sections precede all `debug.*` sections).
 2. When `section` changes, emit a blank line + `# ── <Human Section Title> ──` header and open the nested mapping blocks for that path.
-3. For each constant, emit `<leaf>: <formatted value>   # <description>`, reading the value from the flat `config` map (falling back to the default).
-4. Values formatted by `type` (quote strings when needed, bare booleans/numbers, key names as bare tokens).
+3. The first time a `debug.*` section is reached, emit the debug fence banner (`# ═══ DEBUG (developer tooling — safe to ignore for normal play) ═══`) and open the top-level `debug:` mapping, so the whole debug compartment renders as one fenced block at the bottom.
+4. For each constant, emit `<leaf>: <formatted value>   # <description>`, reading the value from the flat `config` map (falling back to the default).
+5. Values formatted by `type` (quote strings when needed, bare booleans/numbers, key names as bare tokens).
 
 This guarantees deterministic ordering and grouping every save (problems #1 and #2), and inline docs (problem #3). The writer is pure-text and metadata-driven — no reflection on live objects beyond the enum.
 
@@ -163,7 +215,8 @@ JUnit 5 only (per repo policy). New/updated tests:
 3. **Migration** — a sample legacy flat `config.json` migrates to an equivalent `config.yaml`, `.bak` is created, and all values match.
 4. **Unknown-key warning** — an unrecognized leaf logs a warning and does not crash.
 5. **Metadata completeness** — every `SonicConfiguration` constant (except dormant `VERSION`) has a non-empty `section` and `description`; `ENUM`-typed constants have non-empty `allowedValues`.
-6. **Existing tests** — update the 3 config tests and the widescreen native regression test to the new filename/format; keep their assertions on behavior intact.
+6. **Debug compartmentalisation** — all `debug.*` constants are contiguous and come after every normal section in declaration order (so the fenced block is unbroken), and the emitted file contains exactly one `debug:` top-level block with the fence banner.
+7. **Existing tests** — update the 3 config tests and the widescreen native regression test to the new filename/format; keep their assertions on behavior intact.
 
 ## Risks & Mitigations
 
