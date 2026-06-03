@@ -345,7 +345,18 @@ public class ARZPlatformObjectInstance extends AbstractObjectInstance
     }
 
     private boolean isAquaticRuin() {
-        return services().currentLevel() != null && services().currentLevel().getZoneIndex() == Sonic2Constants.ZONE_AQUATIC_RUIN;
+        return services().currentLevel() != null
+                && isAquaticRuinZone(services().currentLevel().getZoneIndex());
+    }
+
+    /**
+     * Tests whether {@code zoneIndex} (as returned by {@link com.openggf.level.Level#getZoneIndex()},
+     * which is the ROM zone ID) is Aquatic Ruin Zone. ARZ is the only zone that uses the Obj18B
+     * mapping table ({@code Obj18_MapUnc_1084E}) and the 0x28 solid {@code y_radius} in the ROM
+     * ({@code s2.asm} {@code Obj18_Init}, {@code cmpi.b #aquatic_ruin_zone,(Current_Zone).w}).
+     */
+    static boolean isAquaticRuinZone(int zoneIndex) {
+        return zoneIndex == Sonic2Constants.ZONE_ARZ;
     }
 
     private List<SpriteMappingFrame> resolveMappings() {
