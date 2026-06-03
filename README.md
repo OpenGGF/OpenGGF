@@ -114,58 +114,13 @@ Current migration status is intentionally partial rather than universal. Sonic 2
 
 Near-term S3K work should be planned as playable route slices with explicit gates: required traversal objects and badniks, event/camera behavior, scroll/parallax, animated tiles, palette and PLC state, bosses or transitions, rewind coverage where state is gameplay-relevant, trace replay for known blockers, and visual validation against stable-retro where practical. The first target route is AIZ through HCZ, with CNZ/MGZ/ICZ work feeding the same slice-driven standard instead of a checklist-only rollout.
 
-Work is ongoing across all three games. Recent branch work added compact
-palette-cycle rewind coverage and adopted ArchUnit architecture guard tests
-with frozen baselines for current boundary debt. A follow-up architecture-
-guarding merge then expanded those guards across runtime ownership,
-trace/rewind invariants, object-service access, source-level architecture
-hazards, and singleton lifecycle setup drift, with documented baselines for
-existing migration debt. A later architecture cleanup moved residual
-game-policy branches behind providers, removed profiler singleton escapes,
-gave editor mode an explicit level-view runtime, and trimmed hot-path
-allocation churn in shared render/palette systems. The current line also
-continues S3K IceCap bring-up with Freezer and ice-cube object coverage.
-A subsequent rewind merge hardened generic rewind
-capture for final in-place helper fields such as `SubpixelMotion.State`,
-covering S3K monitor and AIZ cutscene object rewind capture paths. The
-latest architectural review merge tightens rewind registry ownership,
-trace-replay comparison guardrails, object construction boundaries, graphics
-runtime rebinding, and MGZ scroll-event state routing through shared
-`MgzZoneRuntimeState` instead of direct scroll-handler mutation.
-The latest S2 trace-frontier merge advances the Sky Chase level-select replay
-through the Tornado/Turtloid route by tightening SCZ object spawning, Tornado
-ride input timing, Turtloid projectile placement, and object hurt/platform
-landing parity.
-A follow-up S2 trace-frontier merge closes the Casino Night level-select
-replay to green by tightening CNZ object streaming, slot machine, bumper,
-bonus-block, forced-spin, monitor/solid-object, Hex Bumper, and Tails CPU
-off-screen respawn parity.
-The object physics standardization branch adds typed solid routine, touch
-response, player-participation, object-control, native-position, and object
-lifecycle contracts, migrates the highest-risk object paths onto those APIs,
-updates agent-facing implementation guidance, and installs static guard tests
-so future object work declares these physics contracts explicitly instead of
-reintroducing ad hoc state mutations.
-The latest route-parity pass expands S3K object, event, sidekick, rewind, and
-trace-debug coverage around AIZ/CNZ/MGZ slice work; removes temporary trace
-bootstrap zone carve-outs in favour of recorder capabilities or live object
-semantics; and records the active trace frontier state in
-`docs/TRACE_FRONTIER_LOG.md`.
-The merged CNZ cutscene and object parity branch fills in the Act 2 Knuckles
-cutscenes, Sparkle and Batbot behavior, CNZ cannon/balloon/trap-door fixes,
-Act 1 miniboss arena graphics and defeat flow, and CNZ palette/scroll follow-up
-coverage.
-The follow-up CNZ miniboss merge tightens the Act 1 boss-room background window,
-wrapped Plane B tile selection, boss/electricity render ordering, defeat
-dismantle coverage, Sparkle floor/ceiling behavior, and Act 2 Knuckles button
-cutscene handling.
-The latest develop sync repairs CNZ1 solo carry-in Tails, CNZ barber-pole
-handoff, CNZ2 cutscene water/lights/wall behavior, water splash dust routing,
-and documents the reverted AIZ2 battleship wrap-seam attempt and follow-up
-lessons.
-This merge keeps the local HCZ/ICZ branch line synchronized with those develop
-updates while preserving the reverted AIZ2 wrap behavior.
-See CHANGELOG.md for detailed progress.
+Work is ongoing across all three games. Recent branch work spans S3K route
+bring-up (AIZ, CNZ, MGZ, ICZ, and Mushroom Hill), S2 trace-frontier closures
+(Sky Chase and Casino Night level-select replays), object-physics
+standardization onto shared contracts, expanded rewind coverage, and
+architecture-guard hardening across runtime ownership, trace/rewind invariants,
+and object-service boundaries. See CHANGELOG.md for the detailed, per-merge
+history.
 
 ### Where do I get ROMs?
 
@@ -255,234 +210,54 @@ Development since `v0.5.20260411` is the active 0.6 prerelease line. The detaile
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
 - **Widescreen foundation + Discord Rich Presence (2026-05-30).** New `DISPLAY_ASPECT` presets
-  (NATIVE_4_3 / 16:10 / 16:9 / 21:9 / 32:9, height fixed at 224) make the gameplay/config layer
-  width-driven: camera deadzone+snap, player/MGZ boundaries, all spawn-placement windows, and the
-  full object despawn/visibility surface (32 S1/S2/S3K object sites) scale with the configured
-  width, with `NATIVE_4_3` kept byte-for-byte identical and pinned by a native-regression test.
-  `TEST_MODE_ENABLED` and headless trace runs are forced to 320x224 so parity traces never run wide.
-  The in-level scene renders wide (vscroll columns and background FBO are viewport-driven) and the
-  master title screen is widescreen-aware. The deliberate divergences (right-boundary / despawn
-  windows) are logged in `KNOWN_DISCREPANCIES.md`. Widescreen UI surface centering and
-  title/special-stage backgrounds remain an experimental follow-up (the projection-swap compositor
-  was reverted in favour of per-surface width-aware coordinates; see
-  `docs/superpowers/specs/2026-05-30-widescreen-rendering-design.md`). Also adds opt-in Discord Rich
-  Presence (gameplay state, timer, zone/act) behind `DISCORD_RICH_PRESENCE_*` config flags.
-- **S2 native-prelude trace replay (2026-05-15).** Engine title-card phase now ticks objects and
-  player physics natively (ROM-faithful `TitleCard_Main` for S1/S2/S3K with per-game gating).
-  New `TraceBinder.compareBootstrapFrame0` + `BootstrapDivergence` infrastructure asserts engine
-  frame-0 state against the recorder's pre-trace snapshots for traces at `lua_script_version
-  >= 9.2-s2`. Diagnostic `oggf.trace.hydrate` switch (CI-asserted off) snaps engine state to the
-  recorded frame-0 snapshot for prelude-vs-gameplay bug isolation. All nine S2 trace recordings
-  re-recorded at v9.2-s2; comparator surfaced six real engine bugs (CPZ Grabber rolling-kill,
-  WFZ Tornado two-frame init, CNZ Flipper per-player cooldown + y_pos, HTZ Lift solid-while-falling,
-  S2 sidekick bottom-bound centre-Y kill, S2 sidekick deferred-despawn flow) all fixed against
-  `s2disasm` citations. See `docs/superpowers/specs/2026-05-15-s2-native-prelude-traces-design.md`
-  for the full orchestration record (12 stages, ADR-1 through ADR-7 with R1/R2 fold-ins, blocker
-  resolution pass).
-- **S2 CNZ trace-frontier closure (2026-05-18).** Casino Night Zone level-select replay now reaches
-  green. The branch fixed CNZ slot-machine timing, object streaming and out-of-range behavior,
-  bumper/bonus-block/forced-spin parity, S2 monitor and Big Block solid geometry, launcher-spring
-  Tails recapture, and S2 Tails CPU off-screen respawn marker/counter behavior while keeping trace
-  data comparison-only and updating the trace frontier log.
-- **Editor groundwork:** a config-gated editor/playtest loop, focused block and chunk previews,
-  derive edits, world-grid navigation, and safer mode switching are being built toward usable
-  in-engine editing. The editor review pass now preserves controller-owned mutable levels across
-  gameplay-mode teardown, restores an editor-safe level view while editing, flushes dirty regions before
-  editor rendering, and omits reverted baseline edits from saved deltas.
-- **Runtime/session modernization:** the legacy `GameRuntime` / `RuntimeManager` facade has been
-  retired. Process-wide services now sit behind `EngineServices`, while `SessionManager`,
-  `WorldSession`, and `GameplayModeContext` own gameplay lifecycle, durable world state, and
-  gameplay-scoped managers. `GameServices`, `ObjectServices`, and runtime-owned frameworks remain
-  the active access path for palette ownership, zone state, animated tiles, layout mutation, scroll
-  composition, special render passes, and advanced render modes.
-- **Architectural review hardening:** the service boundary now keeps object code on injected
-  `ObjectServices`, shared checkpoint and level-loading paths avoid concrete S3K dependencies,
-  animation managers participate in rewind snapshots, and trace replay parity tests are exposed
-  through an explicit Maven profile instead of hidden default-suite exclusions.
-- **S3K bring-up and parity:** Angel Island, Carnival Night, Hydrocity, Marble Garden, data select,
-  save handling, and sidekick/object interactions continue to gain ROM-cited behavior and tests.
-  Carnival Night Act 1 now includes the miniboss arena handoff: miniboss music, boss/raw child
-  animations, the spinner/top and coil children, vertical tunnel scrolling, arena wall mutations,
-  and the cylinder carry follow-down fix are covered by focused headless/object tests. IceCap now
-  includes the harmful ice object registration and object coverage. Future S3K work should close
-  whole playable slices first: traversal blockers, event flow, object coverage, visual parity,
-  trace blockers, and rewind-relevant state before lower-impact decorative backlog items.
-- **Display and audio polish:** The renderer now has runtime-cycleable display color profiles
-  (`RAW_RGB`, `MD_ANALOG`, and `NTSC_SOFT`) with persisted configuration and player-facing
-  documentation. The same branch tightens S3K SMPS pitch ramp, modulation wait/freeze, and
-  1-up music restore timing, and fixes foreground-mask water alignment against the rendered
-  viewport.
-- **Trace replay and diagnostics:** S1, S2, and S3K trace replay tooling now has stronger recorder
-  schemas, comparison-only aux streams, compressed fixtures, and focused workflows for parity fixes.
-  The gameplay rewind stack can also be enabled during ordinary live play with `LIVE_REWIND_ENABLED`,
-  recording live inputs into the same rewind buffer and drawing a compact live rewind HUD.
-  Test-mode visual trace sessions can also render grayscale ghost copies of traced characters during
-  desyncs, using isolated sidekick-style DPLC banks and the same sprite layering priorities as the
-  live characters while drawing behind them. The live trace visualizer now pauses on first desync,
-  shows the configured resume key in the HUD, and keeps the trace picker open when a relaunch is
-  attempted during the return-to-menu fade. Pause during a trace session also exposes a camera
-  focus cycler: P1 LEFT/RIGHT cycle the viewpoint between Default, the engine and ROM-trace
-  sidekick, and the engine and ROM-trace main player, with the active selection shown in the
-  top-right HUD; the original camera is restored on unpause and gameplay determinism is preserved
-  across frame-step.
-- **Rewind framework:** gameplay-scoped keyframe capture, deterministic seek/replay, held-rewind
-  support in Visual Trace Test Mode, and headless parity/benchmark coverage are now in place for
-  trace debugging. Coverage has expanded across player, sidekick, object, ring, level, runtime-zone,
-  palette, parallax, mutation, render-mode, and PLC progress state. Automatic capture is being
-  hardened through an audit-first `GenericFieldCapturer`, stable identity ids for player/object
-  references, the `RewindFieldInventoryTool`, `RewindPolicyRegistry`, and compact schema codecs for
-  value, helper, collection, record, player-reference, and object-reference fields. The current
-  object rollout intentionally centralizes default subclass scalar capture and field policy so broad
-  coverage does not require repeated leaf-object rewrites. Compact schema-backed sidecars now cover
-  default non-badnik object subclass scalar state when codecs are available, with inventory modes for
-  annotation density, object rollout candidates, child/spawn graph hotspots, and encounter replay
-  validation. Live and visual-trace rewind presentation now also carries reverse audio from the
-  PCM history ring, keeps graphical fades aligned with restored rewind snapshots, and treats final
-  object-reference collections as structural state instead of compact scalar sidecar payload. The
-  contributor and player docs now describe those rewind audio/fade presentation paths, trace-mode
-  controls, and focused validation commands.
-- **Trace recorder:** S3K v6.6 AIZ diagnostics expose tree/boundary pre/post state at the F4679
-  sidekick boundary frame, transition-floor SolidObjectTop decisions at the F5415 frame, and
-  fire-handoff terrain/SolidObjectTop state around F5435 while keeping trace data comparison-only;
-  S3K v6.7 CNZ diagnostics now expose cylinder P2 slot and
-  execution state around the F4508 frame plus regenerated focused Tails position-write hooks around
-  F4790, with recorder diagnostic locals compacted under BizHawk's NLua limit, and engine-side
-  sidekick CPU/control diagnostics around the F5087 blocker. S3K v6.11-s3k now records `(a1)`/`(a0)`
-  M68K registers per `position_write` hit and a new `solid_object_cont_entry` event capturing
-  `y_radius`/`default_y_radius` at `SolidObject_cont` entry so the CNZ F7614 geometric contradiction
-  (captured `loc_1E154` lift PCs vs. trace numerics that should fail the precondition) can be
-  resolved once the trace is regenerated. S3K v6.12-s3k adds a `control_lock_state_per_frame`
-  event capturing `Ctrl_1_locked` / `Ctrl_2_locked` / `Ctrl_1_logical` / `Ctrl_2_logical` per
-  frame so AIZ F7381 lock-site hypotheses can be tested directly against ROM RAM. S3K v6.13-s3k
-  adds a `terrain_wall_sensor_per_frame` event capturing per-frame wall-sensor and player
-  geometry state for both Sonic and Tails so the AIZ F7552 sidekick airborne wall-collision
-  parity gap at world `(0x1208, 0x0314)` can be diagnosed against ROM-side wall probes;
-  `velocity_write` and `position_write` events now both support multi-window capture. Velocity-
-  setter probe diagnostics localised the CNZ F7919 triple `-0x0800` write to
-  `ClamerObjectInstance.applySpringLaunch` (correct ROM dispatch given the inputs it sees);
-  the upstream divergence is Tails's CPU/flight state in the F7872→F7918 window.
-- **S3K trace replay fixes:** Carnival Night sidekick push/facing ordering, grounded release
-  input timing, S3K air right-wall separation, wire-cage release parity, high-speed cage capture
-  velocity, horizontal-spring airborne contact handling, the SolidObject on-screen gate now
-  reading per-object width_pixels against the previous frame's camera (matching ROM render_flags
-  bit 7 timing), the new `solidObjectTopBranchAlwaysLiftsOnUpwardVelocity` feature flag
-  (matching ROM `loc_1E154`'s position lift before the upward-velocity check at
-  `sonic3k.asm:41606-41632`, gated S3K-only) with per-(player, object) standing-bit tracking
-  mirroring ROM `a0.d6` semantics, and the cross-game spring-trigger `Status_OnObj` clear
-  (matching ROM `sub_22F98`/`sub_233CA`/`sub_234E6` `bclr #Status_OnObj` after
-  `bset #Status_InAir` for S3K, S2 `s2.asm:33732-33733`, and S1
-  `_incObj/41 Springs.asm:88-89/183-184`) plus the wired `onObjectAtFrameStart` snapshot in
-  the Tails CPU `loc_13DA6` follow-steering gate now advance the CNZ v6.5/v6.7 replay frontier
-  from F3905 to F7919 while preserving S1/S2 trace baselines.
-- **S3K trace replay fixes:** Angel Island sidekick boundary, AIZ1 resize parity, stale reload
-  object handoff, reload frame-counter cadence, catch-up flight gating, and the AIZ collapsing-
-  platform state-1→state-2 transition slope-sample skip, and the state-2→state-3 unconditional
-  promotion (releasing stuck rider state when the platform's stay timer expires with no player
-  standing), and the new `levelBoundaryUsesCentreY` feature flag (matching ROM `Player_LevelBound`
-  / `Tails_Check_Screen_Boundaries` centre-Y compare for S3K) now advance the AIZ v6.6/v6.9 replay
-  frontier from F4679 to F7171; the centre-Y flag is ROM-correct and gated S3K-only pending S1/S2
-  trace re-validation; the AIZ2 SonicResize1 miniboss-skip now gates on
-  `apparent_zone_and_act == 1` (matching ROM `sonic3k.asm:39053`/`:39164`) instead of the
-  heuristic `enteredAsAct2`, and the sidekick LEVEL_BOUNDARY kill now writes `y_vel = -0x700`
-  (matching ROM `Kill_Character` at `sonic3k.asm:21149`) so `MoveSprite_TestGravity2` produces
-  the ROM-correct in-frame upward shift after the kill, and runs the post-Kill_Character
-  MoveSprite step before collision (matching ROM `Tails_Stand_Freespace` at
-  `sonic3k.asm:27559`); the kill's touch-floor reset rolling-radius adjustment now uses
-  ROM's `old_y_radius - default_y_radius` formula (matching `sonic3k.asm:29134-29156`) instead
-  of the engine's prior `getHeight() - getStandYRadius()` -- the latter was injecting a +13
-  px error into rolling sidekick deaths and is fully resolved at F4679 (1050 -> 1049 errors).
-  AIZ2 SonicResize2 now reads `camera().previewNextX()` (matching ROM's `Do_ResizeEvents`
-  ordering inside `DeformBgLayer` AFTER `MoveCameraX` at `sonic3k.asm:38303-38316`), the
-  sidekick dead-falling path now preserves `Kill_Character`'s `y_vel = -0x700` across the
-  `sub_13ECA` despawn warp (matching ROM `MoveSprite_TestGravity` shifting y_pos by the
-  preserved velocity at `sonic3k.asm:36032-36042` before the +0x38 gravity), and Fire Shield
-  Dash now mirrors ROM `Reset_Player_Position_Array` at `sonic3k.asm:22166-22193` by zeroing
-  the input/status replay buffers alongside the position refill — fixing the F7381 stale
-  Stat_table read and advancing the AIZ replay frontier to F7552. F7552 was resolved by the
-  hurt-airborne MoveSprite-then-boundary ordering fix (matching ROM `Sonic_Hurt`/`Tails_Hurt`
-  at `sonic3k.asm:24449-24467`/`29194-29209`, S2 `s2.asm:37820-37834`, S1
-  `_incObj/01 Sonic.asm:1791-1804`); the AIZ Miniboss `Swing_UpAndDown` peak bounce-back
-  (matching `sonic3k.asm:177851-177879`) further advanced AIZ to F8927; F8927 is documented as
-  a likely airborne wall-sensor x_radius probe-offset gap (engine probes `centreX + xRadius`
-  while ROM `CheckRightWallDist` uses a fixed `+10` offset at `sonic3k.asm:20195`).
-  `ClamerObjectInstance` now hosts the ROM `Clamer_Index` parent state machine
-  (`sonic3k.asm:185866-185998`), including the `loc_88FEC` auto-close gate driven by a
-  `Find_SonicTails`-equivalent closer-player lookup, mirroring ROM behaviour across routines
-  0x02 (idle) / 0x04 (snap-shut) / 0x06 (auto-close) — foundation for further CNZ Clamer
-  parity work. The F7918 spring fire's relatch widening was reverted in favour of a ROM-correct
-  three-state spring routine (LIVE / COOLDOWN_DRAIN / COOLDOWN_DONE) mirroring
-  `sonic3k.asm:185953-185973` and a player-identity-aware `collision_property` byte mirroring
-  ROM `Touch_Special.loc_103FA`'s +1/+2 cprop accumulation (`sonic3k.asm:21186-21194`) so the
-  Clamer launches the correct player (Sonic vs Tails) per ROM's `Check_PlayerCollision`
-  `cprop & 3` indexing — advancing the CNZ replay frontier from F7919 to F8123.
-  Visual trace bootstrap now uses the shared replay bootstrap so AIZ/CNZ visualiser sessions
-  match headless replay's seed/cursor policy.
-- **S3K trace replay fixes:** Marble Garden frame-zero replay timing now treats traces whose
-  first row already contains Sonic's input-driven movement as native frame-zero rows while still
-  keeping the S3K sidekick setup prelude, and the S3K `Screen_Y_wrap_value` mask now wraps
-  playable and camera-focused Y at MGZ's `$1000` boundary while preserving the low `y_sub` word,
-  S3K monitor break now releases recorded standing/pushing players into air, and S3K monitor
-  solidity applies the ROM `SolidObject_cont` vertical overlap offset while clearing stale P2
-  standing bits on no-contact; lightning shield sparks now allocate even without headless art and
-  lightning double-jump clears the ROM jump-height latch, while move-lock-filtered sidekick
-  steering still blocks roll entry from raw held left/right, S3K negative-min-Y object loading
-  now applies the ROM vertical band instead of spawning every non-counter object, and S3K airborne
-  left-wall collisions now continue into the floor probe (matching `Tails_DoLevelCollision` while
-  preserving S2's early-return path); S3K slope resistance now keeps the ROM's from-rest slope
-  impulse when the computed effect reaches `$0D` (unlike S1/S2's zero-inertia return), and S3K
-  diagonal springs now preserve ground velocity on launch while using the ROM `$10` sloped catch
-  range; sidekick offscreen marker recovery now preserves subpixels like the ROM word writes,
-  and full-solid contacts now skip off-screen sidekicks like the ROM `render_flags` gate;
-	  MGZ dash trigger object 0x59 now uses the ROM `byte_25F0E` sloped-solid table for
-	  standing riders, and the S3K sidekick push-release grace now keeps MGZ on ROM's
-	  already-loaded `Ctrl_2` sample while leaving the AIZ object-order bridge scoped to
-	  its hollow-tree/collapsing-platform context; MGZ Bubbles badniks now remain inert under
-		  the ROM `Obj_WaitOffscreen` gate before activation, and S3K Tails hurt-routine
-			  frames now skip the normal CPU off-screen timeout path, and S3K jump re-presses
-			  clear roll-jump before shield ability dispatch so MGZ air control resumes on
-				  ROM's frame, S3K roll landing now uses the ROM current-radius
-				  roll-clear snap, and MGZ swinging platform top-solid geometry now
-				  samples the ROM-cited pre-control rolling-air player phase, advancing
-				  the MGZ replay frontier from F0 to F1451 to F1466 to F1659 to F1910
-				  to F2007 to F2015 to F2080 to F2395.
-- **S3K known blockers:** Angel Island F6920 sloped collapsing-platform ordering is documented with
-  ROM constraints — including precise slope-sample arithmetic, ruled-out hypotheses, and remaining
-  open hypotheses — so future work avoids previous-X sampling hacks that regress earlier AIZ frames.
-  Carnival Night F6304 Tails-on-door re-land is documented with ROM cites covering the door's
-  `SolidObjectFull` solidity triplet and Tails CPU `leader_fast` follow-leader interaction so future
-  cross-game work can land an airborne-from-above latch without ad-hoc S3K-only branches.
-- **S3K bring-up and parity:** AIZ intro setup now re-adopts the live intro object across headless
-  event reinitialization, keeping ROM-style pre-frame intro state available to tests.
-- **Cross-game cleanup:** collision, solid-object ordering, sidekick handling, feature-flagged
+  (NATIVE_4_3 / 16:10 / 16:9 / 21:9 / 32:9, height fixed at 224) make camera, boundaries, spawn
+  windows, and the object despawn/visibility surface width-driven, with `NATIVE_4_3` kept
+  byte-for-byte identical and pinned by a regression test; trace/headless runs are forced to
+  320×224. Deliberate right-boundary/despawn divergences are logged in `KNOWN_DISCREPANCIES.md`;
+  widescreen UI centering and title/special-stage backgrounds remain experimental. Also adds
+  opt-in Discord Rich Presence behind `DISCORD_RICH_PRESENCE_*` config flags.
+- **S2 trace-replay parity (2026-05-15 to 05-18).** Native title-card prelude ticking, frame-0
+  bootstrap comparison, and re-recorded S2 traces surfaced and fixed six engine bugs; the Casino
+  Night and Sky Chase level-select replays now reach green.
+- **Editor groundwork.** A config-gated editor/playtest loop with block/chunk previews, world-grid
+  navigation, and teardown-safe mode switching that preserves `MutableLevel` edits across
+  gameplay-mode rebuilds.
+- **Runtime/session modernization.** Retired the legacy `GameRuntime` / `RuntimeManager` façade;
+  process-wide services sit behind `EngineServices`, with `SessionManager`, `WorldSession`, and
+  `GameplayModeContext` owning lifecycle, durable world state, and gameplay-scoped managers.
+- **Architectural hardening.** Object code stays on injected `ObjectServices`, shared
+  checkpoint/level-loading paths avoid concrete S3K dependencies, animation managers join rewind
+  snapshots, trace parity tests sit behind an explicit Maven profile, and ArchUnit guards plus
+  review sweeps moved remaining game-id branches behind providers/feature flags.
+- **S3K bring-up and parity.** Angel Island, Carnival Night, Hydrocity, Marble Garden, Ice Cap, and
+  Mushroom Hill continue to gain ROM-cited objects, badniks, minibosses/bosses, events, parallax,
+  animated tiles, and palette/PLC coverage, prioritizing complete playable route slices.
+- **Display and audio polish.** Runtime-cycleable display color profiles (`RAW_RGB` / `MD_ANALOG` /
+  `NTSC_SOFT`, persisted), S3K SMPS pitch/modulation/1-up restore timing fixes, and foreground-mask
+  water alignment against the rendered viewport.
+- **Rewind framework.** Gameplay-scoped keyframe capture, deterministic seek/replay, held-rewind
+  trace debugging, opt-in live-play rewind (`LIVE_REWIND_ENABLED`) with reverse audio and a HUD,
+  and broad coverage across player/sidekick/object/level/registry state via audit-first generic
+  capture, stable identity ids, and compact schema codecs.
+- **Trace replay and diagnostics.** Stronger recorder schemas, comparison-only aux streams,
+  compressed fixtures, expanding per-frame diagnostic events (register, solid-object, control-lock,
+  and wall-sensor capture), and a visual trace visualizer with ghost characters, first-desync pause,
+  and a camera-focus cycler. Dozens of ROM-cited S3K physics and object fixes advanced the AIZ, CNZ,
+  and MGZ replay frontiers; remaining blockers are documented with ROM constraints.
+- **S3K known blockers.** Remaining replay-frontier blockers (e.g. AIZ F6920 collapsing-platform
+  ordering, CNZ F6304 Tails-on-door re-land) are documented with ROM constraints and ruled-out
+  hypotheses so future work avoids regression-prone hacks.
+- **Object physics standardization.** Typed solid/touch/participation/control/native-position/
+  lifecycle contracts with the highest-risk object paths migrated, updated agent guidance, and
+  static guard tests enforcing explicit contracts.
+- **Cross-game cleanup.** Collision, solid-object ordering, sidekick handling, feature-flagged
   physics differences, configuration UX, debug rendering, and performance hot paths continue to be
-  tightened across Sonic 1, Sonic 2, and Sonic 3 & Knuckles.
-- **Architectural follow-ups:** Routed all remaining direct `objectManager.addDynamicObject(...)`
-  call sites in S1 object instance code through the inherited `spawnChild` / `spawnFreeChild`
-  helpers (~50 sites across 40 files: badniks, bosses, level objects), so child constructors
-  consistently get `CONSTRUCTION_CONTEXT` set and can safely call `services()`. Boss spawn paths
-  invoked from outside `AbstractObjectInstance` route through a new `ObjectManager.createDynamicObject(Supplier)`
-  helper. Investigation also concluded that the deferred S2 SMPS music ROM-resolution priority
-  inversion is not implementable on the current architecture — the relevant tables live inside
-  the Saxman-compressed Z80 driver blob and engine `Sonic2Music` IDs are systematically shifted
-  relative to the disassembly's `zMasterPlaylist`; the misleading `resolveMusicOffsetFromRom`
-  resolver and its dead-pointing constants were removed and the prerequisites documented.
-- **Architectural fixes sweep:** review-driven cleanup eliminated remaining game-id branches
-  (`LevelManager` respawn-table latch and inline-object-execution gate, `WaterSystem` visual-water
-  oscillation, `DefaultPowerUpSpawner` invincibility-stars factory and S1 fixed shield slot — now
-  feature-flag/provider gated); removed runtime `.asm` reads from `Sonic3kObjectArtProvider`;
-  hardened the trace-replay invariant guard against frame-zero snapshot hydration in S1 credits
-  demos and converted hidden divergences into documented known issues; unified
-  `GameServices.hasRuntime()` with the gameplay-mode predicate and migrated `bonusStage()` to
-  session-owned access; migrated HTZ earthquake and HCZ wall-chase render overlays into
-  `SpecialRenderEffectRegistry`; brought `ScrollEffectComposer` adoption to 100% across all 26
-  scroll handlers; ported S1 badnik subpixel arithmetic to `SubpixelMotion` and routed S1/S2 child
-  spawns through `spawnChild`/`spawnFreeChild` for `CONSTRUCTION_CONTEXT` safety; extracted the
-  rendering pipeline from `LevelManager` into a new `LevelRenderer` (4812→3768 lines, GL imports
-  collapsed); collapsed `PatternAtlas.isSlotShared` to O(1) via per-slot reference counts;
-  eliminated per-call allocations in `endSpriteSatCollectionAndReplay`; replaced bytecode
-  constant-pool heuristic in the `ObjectServices` migration guard with a source-level scan; fixed
-  `DebugRenderer` Y-coord mix to `getCentreY()`; documented the S2 CPZ visual-water `-8` recentre
-  vs ROM `lsr.w #1` divergence in `KNOWN_DISCREPANCIES.md`.
+  tightened across all three games.
+- **Architectural cleanup.** Remaining game-id branches moved behind providers/feature flags;
+  render overlays (HTZ earthquake, HCZ wall-chase) migrated into `SpecialRenderEffectRegistry`;
+  `ScrollEffectComposer` adoption brought to 100% across all 26 scroll handlers; the rendering
+  pipeline extracted from `LevelManager` into a new `LevelRenderer`; S1/S2 child spawns routed
+  through `spawnChild`/`spawnFreeChild`; plus assorted hot-path allocation and lookup optimizations.
 
 See `CHANGELOG.md` for the detailed 0.6 prerelease change history.
 
