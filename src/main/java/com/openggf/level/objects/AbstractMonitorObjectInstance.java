@@ -122,7 +122,7 @@ public abstract class AbstractMonitorObjectInstance extends AbstractObjectInstan
 
     /**
      * Hook called when the icon finishes its wait timer and deactivates.
-     * Subclasses can override to clear rendering references (e.g. iconPlayer).
+     * Subclasses can override to clear rendering references or child slots.
      * Default implementation does nothing.
      */
     protected void onIconDeactivated() {

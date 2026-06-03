@@ -35,6 +35,14 @@ import java.util.logging.Logger;
 public class Sonic2ObjectArt {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ObjectArt.class.getName());
     private static final int ANIMAL_TILE_OFFSET = 0x14;
+
+    /**
+     * VRAM tile index of the 1-up monitor's life-counter icon piece (obj26 frame 2,
+     * {@code Map_obj26_0034}, tile {@code $154}). In the ROM this is
+     * {@code ArtTile_ArtNem_life_counter} ({@code = ArtTile_ArtNem_Powerups + $154}),
+     * shared with the HUD life counter, so the icon shows the main character's face.
+     */
+    public static final int MONITOR_LIFE_ICON_TILE = 340;
     private static final AnimalType[] DEFAULT_ANIMALS = { AnimalType.RABBIT, AnimalType.RABBIT };
     private static final AnimalType[][] ZONE_ANIMALS = {
             { AnimalType.SQUIRREL, AnimalType.FLICKY }, // 0 EHZ
@@ -82,8 +90,14 @@ public class Sonic2ObjectArt {
 
         // Load Monitor Art (base art)
         Pattern[] monitorBasePatterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_MONITOR_ADDR, "Monitor");
-        // Load Tails Life Art (used for Tails Monitor icon, requests tile 340)
-        Pattern[] tailsLifePatterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_TAILS_LIFE_ADDR, "TailsLife");
+        // Load the life-counter art for the 1-up monitor icon (obj26 frame 2's icon
+        // piece maps to tile $154 = MONITOR_LIFE_ICON_TILE). In the ROM that tile is
+        // ArtTile_ArtNem_life_counter, the same VRAM the HUD life counter uses, so the
+        // standard 1-up monitor displays the main character's face. PlrList_Std1 loads
+        // Sonic's life art there for every level; Tails-alone and Knuckles (lock-on)
+        // override this tile in Sonic2ObjectArtProvider, mirroring PlrList_TailsLife /
+        // the Knuckles HUD patch. (s2.asm:89193; mappings/sprite/obj26.asm)
+        Pattern[] lifeIconPatterns = safeLoadNemesisPatterns(Sonic2Constants.ART_NEM_SONIC_LIFE_ADDR, "SonicLife");
 
         List<SpriteMappingFrame> monitorMappings = loadMappingFrames(Sonic2Constants.MAP_UNC_MONITOR_ADDR);
 
@@ -99,18 +113,18 @@ public class Sonic2ObjectArt {
         int requiredSize = maxTileIndex + 1;
         // Ensure we have enough space for Tails Life Art starting at 340 (0x154 * 32
         // bytes = 10880 offset)
-        int lifeArtOffset = 340;
-        requiredSize = Math.max(requiredSize, lifeArtOffset + tailsLifePatterns.length);
+        int lifeArtOffset = MONITOR_LIFE_ICON_TILE;
+        requiredSize = Math.max(requiredSize, lifeArtOffset + lifeIconPatterns.length);
 
         Pattern[] monitorPatterns = new Pattern[requiredSize];
         // Copy base patterns
         if (monitorBasePatterns.length > 0) {
             System.arraycopy(monitorBasePatterns, 0, monitorPatterns, 0, monitorBasePatterns.length);
         }
-        // Copy Tails Life patterns at offset 340
-        if (tailsLifePatterns.length > 0 && lifeArtOffset < monitorPatterns.length) {
-            System.arraycopy(tailsLifePatterns, 0, monitorPatterns, lifeArtOffset,
-                    Math.min(tailsLifePatterns.length, monitorPatterns.length - lifeArtOffset));
+        // Copy the main character's life-counter art at the icon tile offset
+        if (lifeIconPatterns.length > 0 && lifeArtOffset < monitorPatterns.length) {
+            System.arraycopy(lifeIconPatterns, 0, monitorPatterns, lifeArtOffset,
+                    Math.min(lifeIconPatterns.length, monitorPatterns.length - lifeArtOffset));
         }
 
         // Fill gaps with empty patterns to prevent NPEs
