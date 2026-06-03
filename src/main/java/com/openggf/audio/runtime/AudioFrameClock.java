@@ -25,6 +25,15 @@ public final class AudioFrameClock {
         return samples;
     }
 
+    /**
+     * The sample count {@link #samplesForNextFrame()} would return next, without
+     * advancing the clock. Mirrors the same numerator/remainder arithmetic but
+     * mutates nothing — use this to size a per-frame PCM drain.
+     */
+    public int peekSamplesForNextFrame() {
+        return (sampleRate + remainder) / frameRate;
+    }
+
     public Snapshot captureSnapshot() {
         return new Snapshot(sampleRate, frameRate, totalSamplesProduced, remainder);
     }
