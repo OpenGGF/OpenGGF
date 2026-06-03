@@ -2,14 +2,18 @@ package com.openggf.tools;
 
 import com.openggf.Engine;
 import com.openggf.GameLoop;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.LWJGLAudioBackend;
 import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
+import com.openggf.debug.PerformanceProfiler;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRegistry;
 import com.openggf.game.GameServices;
 import com.openggf.game.RomDetectionService;
+import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
@@ -188,6 +192,21 @@ public final class HeadlessGameBoot implements AutoCloseable {
         loop.setGameMode(GameMode.LEVEL);
 
         GameModuleRegistry.setCurrent(module);
+
+        // --- audio backend (real SMPS synthesis) ------------------------
+        // Must precede any music (loadZoneAndAct below) so the deterministic
+        // capture runtime installed later by AudioManager.beginCaptureMode()
+        // binds a real SMPS music stream. The default NullAudioBackend
+        // synthesizes nothing, which is what made captured audio silent.
+        // Mirrors Engine.initializeGlobalGameplayServices (Engine.java:676);
+        // setBackend() falls back to NullAudioBackend if OpenAL init fails.
+        SonicConfigurationService audioConfig = GameServices.configuration();
+        if (audioConfig.getBoolean(SonicConfiguration.AUDIO_ENABLED)) {
+            // offlineNoDevice=true: synthesize SMPS for the capture tap but emit
+            // nothing to the sound device (headless).
+            AudioManager.getInstance().setBackend(
+                    new LWJGLAudioBackend(audioConfig, PerformanceProfiler.getInstance(), true));
+        }
 
         // --- level + team -----------------------------------------------
         GameServices.level().loadZoneAndAct(zone, act);
