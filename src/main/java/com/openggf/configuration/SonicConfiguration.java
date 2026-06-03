@@ -257,6 +257,20 @@ public enum SonicConfiguration {
 	TRACE_REWIND_KEY,
 
 	/**
+	 * Trace Test Mode / capture: render the desync ghost(s). Default true.
+	 */
+	TRACE_SHOW_DESYNC_GHOSTS,
+	/**
+	 * Trace Test Mode / capture: render the game HUD (rings/score/time). Default true.
+	 */
+	TRACE_SHOW_GAME_HUD,
+	/**
+	 * Trace Test Mode / capture: render the debug HUD. When true, the per-element
+	 * DebugOverlayToggle states decide which panels show. Default false.
+	 */
+	TRACE_SHOW_DEBUG_HUD,
+
+	/**
 	 * Whether held-key rewind is enabled during ordinary live level play.
 	 */
 	LIVE_REWIND_ENABLED,

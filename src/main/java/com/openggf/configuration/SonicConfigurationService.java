@@ -435,6 +435,9 @@ public class SonicConfigurationService {
 		putDefaultKey(SonicConfiguration.PLAYBACK_RESET_TO_START_KEY, GLFW_KEY_BACKSLASH);
 		putDefault(SonicConfiguration.PLAYBACK_START_OFFSET_FRAME, 0);
 		putDefaultKey(SonicConfiguration.TRACE_REWIND_KEY, GLFW_KEY_R);
+		putDefault(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, true);
+		putDefault(SonicConfiguration.TRACE_SHOW_GAME_HUD, true);
+		putDefault(SonicConfiguration.TRACE_SHOW_DEBUG_HUD, false);
 		putDefault(SonicConfiguration.LIVE_REWIND_ENABLED, false);
 		putDefaultKey(SonicConfiguration.LIVE_REWIND_KEY, GLFW_KEY_R);
 		putDefault(SonicConfiguration.LIVE_REWIND_TAPE_COAST_ENABLED, false);
