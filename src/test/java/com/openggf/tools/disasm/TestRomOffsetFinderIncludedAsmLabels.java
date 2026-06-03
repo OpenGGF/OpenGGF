@@ -40,7 +40,8 @@ class TestRomOffsetFinderIncludedAsmLabels {
         DisassemblySearchResult result = results.get(0);
         assertEquals("word_3DC64", result.getLabel());
         assertEquals(CompressionType.ASSEMBLY_DATA, result.getCompressionType());
-        assertEquals("Levels\\MHZ\\Misc Object Data\\Map - Pollen Leaves.asm", result.getAsmFilePath());
+        assertEquals("Levels/MHZ/Misc Object Data/Map - Pollen Leaves.asm",
+                result.getAsmFilePath().replace('\\', '/'));
     }
 
     private void writeSyntheticS3kDisasm() throws IOException {

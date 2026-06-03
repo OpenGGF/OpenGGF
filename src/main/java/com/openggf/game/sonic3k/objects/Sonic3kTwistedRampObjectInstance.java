@@ -6,6 +6,8 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
@@ -74,8 +76,26 @@ public class Sonic3kTwistedRampObjectInstance extends AbstractObjectInstance {
 
     @Override
     public void update(int frameCounter, PlayableEntity playerEntity) {
+        ObjectServices ctx = tryServices();
+        if (ctx != null) {
+            List<PlayableEntity> players = ctx.playerQuery().playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+            if (players.isEmpty() && playerEntity == null && !isOnScreenX()) {
+                setDestroyedByOffscreen();
+                return;
+            }
+            for (PlayableEntity entity : players) {
+                if (entity instanceof AbstractPlayableSprite playable) {
+                    checkAndLaunchPlayer(playable);
+                }
+            }
+            return;
+        }
+
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (player == null) {
+            if (!isOnScreenX()) {
+                setDestroyedByOffscreen();
+            }
             return;
         }
         checkAndLaunchPlayer(player);
@@ -171,11 +191,8 @@ public class Sonic3kTwistedRampObjectInstance extends AbstractObjectInstance {
         player.setFlipSpeed(4);
 
         // ROM: move.b #5,flip_type(a1) - corkscrew flip type
-        // Note: flip_type field not yet implemented in AbstractPlayableSprite.
-        // The flip angle/speed/remaining fields above provide the core rotation.
-        // flip_type=5 (corkscrew) can be added when the flip rendering system
-        // supports type-based rotation modes.
-        //
+        player.setFlipType(5);
+
         // ROM note: unlike springs (which negate flip_angle for left-facing players),
         // TwistedRamp uses the same positive values for ground_vel, flip_angle,
         // flip_speed, and flips_remaining regardless of facing direction.

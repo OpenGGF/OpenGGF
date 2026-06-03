@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 
@@ -215,7 +216,9 @@ public final class Flybot767BadnikInstance extends AbstractS3kBadnikInstance {
         PlayableEntity closest = player1;
         int bestDx = player1 == null ? Integer.MAX_VALUE : Math.abs(currentX - player1.getCentreX());
         ObjectServices svc = tryServices();
-        List<PlayableEntity> sidekicks = svc != null ? svc.sidekicks() : List.of();
+        List<PlayableEntity> sidekicks = svc != null
+                ? svc.playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)
+                : List.of();
         for (PlayableEntity sidekick : sidekicks) {
             if (sidekick == null || sidekick.getDead()) {
                 continue;

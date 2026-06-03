@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.render.PatternSpriteRenderer;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
@@ -206,10 +207,10 @@ public final class MhzStickyVineObjectInstance extends AbstractObjectInstance {
         int pullX = clamp(Math.abs(dx) / 2, 1, 4);
         int pullY = clamp(Math.abs(dy) / 2, 0, 4);
         if (dx != 0) {
-            player.setCentreXPreserveSubpixel((short) (player.getCentreX() - Integer.signum(dx) * pullX));
+            NativePositionOps.writeXPosPreserveSubpixel(player, player.getCentreX() - Integer.signum(dx) * pullX);
         }
         if (player.getAir() && dy != 0) {
-            player.setCentreYPreserveSubpixel((short) (player.getCentreY() - Integer.signum(dy) * pullY));
+            NativePositionOps.writeYPosPreserveSubpixel(player, player.getCentreY() - Integer.signum(dy) * pullY);
         }
         if (player.getAir() && player.getYSpeed() >= 0) {
             player.setXSpeed((short) (player.getXSpeed() >> 1));

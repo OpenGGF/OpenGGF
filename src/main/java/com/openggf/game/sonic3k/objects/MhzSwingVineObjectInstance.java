@@ -12,6 +12,7 @@ import com.openggf.level.objects.PostPlayerUpdateHook;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.physics.Direction;
 import com.openggf.physics.TrigLookupTable;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
@@ -277,8 +278,8 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.setGSpeed((short) 0);
-        player.setCentreXPreserveSubpixel((short) handleX);
-        player.setCentreYPreserveSubpixel((short) (handleY + PLAYER_HANG_Y_OFFSET));
+        NativePositionOps.writeXPosPreserveSubpixel(player, handleX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, handleY + PLAYER_HANG_Y_OFFSET);
         player.setAnimationId(Sonic3kAnimationIds.HANG2);
         player.setForcedAnimationId(Sonic3kAnimationIds.HANG2);
         player.setObjectMappingFrameControl(true);
@@ -316,8 +317,8 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
 
     private void holdPlayer(PlayerState state, AbstractPlayableSprite player) {
         if (handleMode == 0) {
-            player.setCentreXPreserveSubpixel((short) handleX);
-            player.setCentreYPreserveSubpixel((short) (handleY + PLAYER_HANG_Y_OFFSET));
+            NativePositionOps.writeXPosPreserveSubpixel(player, handleX);
+            NativePositionOps.writeYPosPreserveSubpixel(player, handleY + PLAYER_HANG_Y_OFFSET);
             int angle = angleByte(rootAngle);
             if (player.getDirection() == Direction.LEFT) {
                 angle = (-angle) & 0xFF;
@@ -340,8 +341,8 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
             player.setAnimationId(Sonic3kAnimationIds.WALK);
             player.setForcedAnimationId(Sonic3kAnimationIds.WALK);
             player.setMappingFrame(MODE1_PLAYER_FRAMES[tableIndex]);
-            player.setCentreXPreserveSubpixel((short) (handleX + offsetX));
-            player.setCentreYPreserveSubpixel((short) (handleY + offsetY));
+            NativePositionOps.writeXPosPreserveSubpixel(player, handleX + offsetX);
+            NativePositionOps.writeYPosPreserveSubpixel(player, handleY + offsetY);
         }
         player.setRenderFlips(player.getDirection() == Direction.LEFT, false);
         state.player = player;
@@ -383,8 +384,8 @@ public final class MhzSwingVineObjectInstance extends AbstractObjectInstance imp
         int centreX = player.getCentreX();
         int centreY = player.getCentreY();
         player.setRolling(true);
-        player.setCentreXPreserveSubpixel((short) centreX);
-        player.setCentreYPreserveSubpixel((short) centreY);
+        NativePositionOps.writeXPosPreserveSubpixel(player, centreX);
+        NativePositionOps.writeYPosPreserveSubpixel(player, centreY);
         player.setAnimationId(Sonic3kAnimationIds.ROLL);
     }
 

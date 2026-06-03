@@ -173,8 +173,8 @@ class TestObjectScaffoldTool {
         assertTrue(test.contains("class TestShellObjectInstance"), "a test shell class must be emitted");
         assertTrue(test.contains("import org.junit.jupiter.api.Test;"), "test shell must use JUnit 5 Jupiter");
         assertTrue(test.contains("@Test"), "test shell must contain at least one @Test method");
-        assertFalse(test.contains("import org.junit.Test;"), "test shell must NOT use JUnit4 imports");
-        assertFalse(test.contains("org.junit.runner"), "test shell must NOT use JUnit4 runners");
+        assertFalse(test.contains("import org.junit." + "Test;"), "test shell must NOT use JUnit4 imports");
+        assertFalse(test.contains("org.junit." + "runner"), "test shell must NOT use JUnit4 runners");
         assertFalse(test.contains("org.junit.Rule"), "test shell must NOT use JUnit4 rules");
     }
 

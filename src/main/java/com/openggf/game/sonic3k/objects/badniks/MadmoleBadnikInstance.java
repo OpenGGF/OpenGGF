@@ -11,6 +11,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SubpixelMotion;
 import com.openggf.level.objects.TouchResponseListener;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -383,6 +384,16 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
         }
 
         @Override
+        public TouchResponseProfile getTouchResponseProfile() {
+            return TouchResponseProfile.fromProvider(this);
+        }
+
+        @Override
+        public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+            return TouchResponseProfile.fromProvider(this, multiRegionSource);
+        }
+
+        @Override
         public int getPriorityBucket() {
             return priorityBucket;
         }
@@ -514,18 +525,18 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance imple
             capturedPlayer.setXSpeed((short) reboundVelocity);
             xVelocity = reboundVelocity >> 1;
             capturedPlayer.setAir(true);
-            capturedPlayer.setObjectControlled(false);
+            ObjectControlState.none().applyTo(capturedPlayer);
             enterPostCaptureDrift();
         }
 
         private void checkDeleteAndReleaseCapturedPlayer() {
-            if (isOnScreen(0x180)) {
+            if (isOnScreenX(0x180)) {
                 return;
             }
 
             if (capturedPlayer != null) {
                 capturedPlayer.setAir(true);
-                capturedPlayer.setObjectControlled(false);
+                ObjectControlState.none().applyTo(capturedPlayer);
                 capturedPlayer = null;
             }
             setDestroyedByOffscreen();

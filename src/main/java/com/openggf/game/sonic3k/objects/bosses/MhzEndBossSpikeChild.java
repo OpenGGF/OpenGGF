@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.TouchResponseProfile;
 import com.openggf.level.objects.TouchResponseProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -113,6 +114,16 @@ public final class MhzEndBossSpikeChild extends AbstractObjectInstance implement
     @Override
     public int getShieldReactionFlags() {
         return SHIELD_REACTION_FIRE;
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile() {
+        return TouchResponseProfile.fromProvider(this);
+    }
+
+    @Override
+    public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return TouchResponseProfile.fromProvider(this, multiRegionSource);
     }
 
     @Override
