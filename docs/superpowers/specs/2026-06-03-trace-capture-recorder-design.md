@@ -247,9 +247,15 @@ Honored by **both** live Trace Test Mode and the recorder via
 | `TRACE_SHOW_GAME_HUD` | `true` | Gates the game HUD (rings / score / time) render |
 | `TRACE_SHOW_DEBUG_HUD` | `false` | Master gate for the debug overlay; when on, the existing per-element `DebugOverlayToggle` states (reused as-is) decide which panels render |
 
-`TraceRenderVisibility` seeds `DebugOverlayManager` element states so each debug
-panel is independently on/off exactly as in interactive debug mode — no new
-per-panel flag scheme is introduced.
+`TraceRenderVisibility` exposes these as three independent **master gates** and
+does **not** mutate `DebugOverlayManager` (its constructor is private/singleton,
+and overwriting toggle state would clobber the user's per-panel selection).
+`showDebugHud()` gates whether the debug HUD renders at all; when true, the
+existing per-element `DebugOverlayToggle` states are honored as-is at the render
+site, so each panel stays independently on/off exactly as in interactive debug
+mode. Driving per-panel selection from capture config in headless mode (where
+there is no F-key input) is a follow-up; no new per-panel flag scheme is
+introduced here.
 
 ### 6.2 Capture output options (CLI args, with config defaults)
 

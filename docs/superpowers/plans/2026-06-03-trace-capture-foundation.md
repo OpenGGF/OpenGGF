@@ -40,7 +40,7 @@
 | `configuration/SonicConfiguration.java` | Add `TRACE_SHOW_DESYNC_GHOSTS`, `TRACE_SHOW_GAME_HUD`, `TRACE_SHOW_DEBUG_HUD`. |
 | `configuration/SonicConfigurationService.java` | `putDefault` for the three new flags. |
 
-**New `TraceRenderVisibility` (`src/main/java/com/openggf/testmode/TraceRenderVisibility.java`):** reads the three flags and seeds `DebugOverlayManager`; pure logic, no rendering.
+**New `TraceRenderVisibility` (`src/main/java/com/openggf/testmode/TraceRenderVisibility.java`):** reads the three flags into three independent master gates; pure logic, no rendering, no `DebugOverlayManager` mutation.
 
 **Tests (`src/test/java/com/openggf/...`):** mirror packages.
 
@@ -83,6 +83,20 @@ class CapturedFrameTest {
         assertThrows(IllegalArgumentException.class, () ->
                 new CapturedFrame(new byte[4], 1, 1, new short[2], 800, 0L));
     }
+
+    @Test
+    void defensivelyCopiesSourceArraysSoProducerCanReuseBuffers() {
+        byte[] rgba = new byte[]{1, 2, 3, 4};
+        short[] pcm = new short[]{10, 20};
+        CapturedFrame f = new CapturedFrame(rgba, 1, 1, pcm, 1, 0L);
+
+        // Producer reuses/overwrites its buffers after submitting the frame.
+        rgba[0] = 99;
+        pcm[0] = 99;
+
+        assertEquals(1, f.rgba()[0], "frame holds its own rgba copy");
+        assertEquals(10, f.pcm()[0], "frame holds its own pcm copy");
+    }
 }
 ```
 
@@ -100,8 +114,14 @@ package com.openggf.capture;
  * One captured game frame: RGBA pixels (top-left origin, row-major, 4 bytes/px)
  * plus the stereo PCM produced by that same frame's audio step.
  *
- * @param rgba        width*height*4 bytes, RGBA8888
- * @param pcm         interleaved stereo shorts; length >= sampleCount*2
+ * <p><b>Ownership:</b> the constructor defensively copies {@code rgba} and
+ * {@code pcm}, so a producer may immediately reuse its grab/drain buffers after
+ * constructing a frame. Frames are handed to an async encoder thread, so this
+ * copy is what makes per-frame buffer reuse safe. (Accessors return the internal
+ * copies; the encoder only reads them.)
+ *
+ * @param rgba        width*height*4 bytes, RGBA8888 (copied)
+ * @param pcm         interleaved stereo shorts; length >= sampleCount*2 (copied)
  * @param sampleCount stereo frames of audio for this video frame
  * @param frameIndex  monotonic 0-based capture index
  */
@@ -124,6 +144,11 @@ public record CapturedFrame(byte[] rgba, int width, int height,
                     "pcm holds " + (pcm.length / 2) + " stereo frames, need "
                     + sampleCount);
         }
+        // Defensive copy: the producer reuses its grab/drain buffers each frame,
+        // but frames live on an async encoder queue. Copy so they can't be
+        // mutated out from under the encoder.
+        rgba = rgba.clone();
+        pcm = pcm.clone();
     }
 }
 ```
@@ -196,17 +221,18 @@ package com.openggf.capture;
 import java.nio.file.Path;
 
 /**
- * Encodes a stream of {@link CapturedFrame}s to a file. Lifecycle:
- * {@code open} once, {@code encode} per frame (in order), then {@code finish}
- * (success) or {@code abort} (failure). Implementations are driven from a
- * single encoder thread by {@link EncoderSink}.
+ * Encodes a stream of {@link CapturedFrame}s to {@code output}. Lifecycle:
+ * {@code open} once (receives the destination path), {@code encode} per frame
+ * (in order), then {@code finish} (success) or {@code abort} (failure).
+ * Implementations are driven from a single encoder thread by {@link EncoderSink}.
  */
 public interface CaptureEncoder {
-    void open(int width, int height, int fps, int sampleRate) throws CaptureException;
+    /** @param output the file the encoder must write (owned by the recorder). */
+    void open(Path output, int width, int height, int fps, int sampleRate) throws CaptureException;
 
     void encode(CapturedFrame frame) throws CaptureException;
 
-    /** Flush and finalize; returns the written output file. */
+    /** Flush and finalize; returns the written output file (normally {@code output}). */
     Path finish() throws CaptureException;
 
     /** Best-effort cleanup after a failure. Must not throw. */
@@ -265,6 +291,7 @@ The test uses a controllable fake encoder: a gate latch holds the worker inside 
 package com.openggf.capture;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -290,7 +317,7 @@ class EncoderSinkTest {
 
         FakeEncoder(CountDownLatch gate) { this.gate = gate; }
 
-        @Override public synchronized void open(int w, int h, int fps, int sr) { opened = true; }
+        @Override public synchronized void open(Path output, int w, int h, int fps, int sr) { opened = true; }
         @Override public void encode(CapturedFrame f) throws CaptureException {
             if (gate != null) {
                 try { gate.await(); } catch (InterruptedException e) {
@@ -308,7 +335,7 @@ class EncoderSinkTest {
     void blockNeverDropsAndPreservesOrder() throws Exception {
         FakeEncoder enc = new FakeEncoder(null);
         EncoderSink sink = new EncoderSink(enc, BackpressurePolicy.BLOCK, 2);
-        sink.open(1, 1, 60, 48000);
+        sink.open(Path.of("out.mkv"), 1, 1, 60, 48000);
         for (long i = 0; i < 50; i++) {
             sink.submit(frame(i));
         }
@@ -327,7 +354,7 @@ class EncoderSinkTest {
         CountDownLatch gate = new CountDownLatch(1);
         FakeEncoder enc = new FakeEncoder(gate);
         EncoderSink sink = new EncoderSink(enc, BackpressurePolicy.DROP_OLDEST, 1);
-        sink.open(1, 1, 60, 48000);
+        sink.open(Path.of("out.mkv"), 1, 1, 60, 48000);
         // First submit is taken by the worker and blocks in encode() on the gate.
         sink.submit(frame(0));
         // Give the worker a moment to pull frame 0 into encode().
@@ -349,13 +376,43 @@ class EncoderSinkTest {
         CountDownLatch gate = new CountDownLatch(1);
         FakeEncoder enc = new FakeEncoder(gate);
         EncoderSink sink = new EncoderSink(enc, BackpressurePolicy.FAIL, 1);
-        sink.open(1, 1, 60, 48000);
+        sink.open(Path.of("out.mkv"), 1, 1, 60, 48000);
         sink.submit(frame(0)); // taken by worker, blocks on gate
         TimeUnit.MILLISECONDS.sleep(50);
         sink.submit(frame(1)); // queued (capacity 1)
         assertThrows(CaptureException.class, () -> sink.submit(frame(2)));
         gate.countDown();
         sink.stop();
+    }
+
+    /** An encoder that throws on its first encode. */
+    private static final class FailingEncoder implements CaptureEncoder {
+        volatile boolean aborted;
+        @Override public void open(Path output, int w, int h, int fps, int sr) { }
+        @Override public void encode(CapturedFrame f) throws CaptureException {
+            throw new CaptureException("boom");
+        }
+        @Override public Path finish() { return Path.of("never"); }
+        @Override public void abort() { aborted = true; }
+    }
+
+    @Test
+    @Timeout(10)
+    void encoderFailureSurfacesWithoutHanging() throws Exception {
+        FailingEncoder enc = new FailingEncoder();
+        EncoderSink sink = new EncoderSink(enc, BackpressurePolicy.BLOCK, 1);
+        sink.open(Path.of("out.mkv"), 1, 1, 60, 48000);
+        // The worker dies on the first encode; further submits and stop must
+        // surface the failure rather than block forever on a full queue.
+        CaptureException failure = assertThrows(CaptureException.class, () -> {
+            for (long i = 0; i < 1000; i++) {
+                sink.submit(frame(i));
+            }
+            sink.stop();
+        });
+        assertTrue(failure.getMessage().contains("encoder thread failed")
+                || "boom".equals(failure.getCause() != null ? failure.getCause().getMessage() : null));
+        assertTrue(enc.aborted, "encoder aborted on failure");
     }
 }
 ```
@@ -403,8 +460,8 @@ public final class EncoderSink implements FrameSink {
         this.queue = new ArrayBlockingQueue<>(capacity);
     }
 
-    public void open(int width, int height, int fps, int sampleRate) throws CaptureException {
-        encoder.open(width, height, fps, sampleRate);
+    public void open(Path output, int width, int height, int fps, int sampleRate) throws CaptureException {
+        encoder.open(output, width, height, fps, sampleRate);
         worker = new Thread(this::runWorker, "capture-encoder");
         worker.start();
     }
@@ -441,7 +498,15 @@ public final class EncoderSink implements FrameSink {
     @Override
     public Path stop() throws CaptureException {
         try {
-            queue.put(POISON);
+            // Deliver the poison pill without hanging: if the worker has already
+            // died (e.g. encoder failure) the queue may be full and a blocking
+            // put would never return. Offer with a timeout while the worker is
+            // alive; bail out as soon as it has exited or recorded a failure.
+            while (worker.isAlive() && !queue.offer(POISON, 50, TimeUnit.MILLISECONDS)) {
+                if (workerFailure != null) {
+                    break;
+                }
+            }
             worker.join();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -469,6 +534,7 @@ public final class EncoderSink implements FrameSink {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            workerFailure = new CaptureException("encoder thread interrupted", e);
             encoder.abort();
         } catch (CaptureException e) {
             workerFailure = e;
@@ -525,14 +591,15 @@ class CaptureRecorderTest {
 
     private static final class FakeEncoder implements CaptureEncoder {
         final List<Long> encoded = new ArrayList<>();
+        Path openedOutput;
         int width, height, fps, sampleRate;
         Path finishedAt;
 
-        @Override public void open(int w, int h, int f, int sr) {
-            width = w; height = h; fps = f; sampleRate = sr;
+        @Override public void open(Path output, int w, int h, int f, int sr) {
+            openedOutput = output; width = w; height = h; fps = f; sampleRate = sr;
         }
         @Override public void encode(CapturedFrame frame) { encoded.add(frame.frameIndex()); }
-        @Override public Path finish() { finishedAt = Path.of("done"); return finishedAt; }
+        @Override public Path finish() { finishedAt = openedOutput; return finishedAt; }
         @Override public void abort() { }
     }
 
@@ -546,13 +613,15 @@ class CaptureRecorderTest {
         CaptureRecorder recorder = new CaptureRecorder(
                 enc, BackpressurePolicy.BLOCK, 4,
                 Path.of("/out"), "aiz1", "20260603-101500");
-        assertEquals(Path.of("/out", "capture-aiz1-20260603-101500.mkv"),
-                recorder.outputFile());
+        Path expected = Path.of("/out", "capture-aiz1-20260603-101500.mkv");
+        assertEquals(expected, recorder.outputFile());
 
         recorder.start(320, 224, 60, 48000);
         for (long i = 0; i < 5; i++) recorder.submit(frame(i));
-        recorder.stop();
+        Path result = recorder.stop();
 
+        assertEquals(expected, enc.openedOutput, "recorder hands its output path to the encoder");
+        assertEquals(expected, result, "stop returns the finalized output file");
         assertEquals(320, enc.width);
         assertEquals(224, enc.height);
         assertEquals(60, enc.fps);
@@ -599,7 +668,7 @@ public final class CaptureRecorder {
     }
 
     public void start(int width, int height, int fps, int sampleRate) throws CaptureException {
-        sink.open(width, height, fps, sampleRate);
+        sink.open(outputFile, width, height, fps, sampleRate);
     }
 
     public void submit(CapturedFrame frame) throws CaptureException {
@@ -938,6 +1007,35 @@ class AudioManagerCaptureModeTest {
 
         audio.endCaptureMode();
     }
+
+    @Test
+    void drainBeforeAnyAdvanceReturnsZero() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new RecordingAudioBackend());
+        audio.beginCaptureMode(48000, 60);
+
+        assertEquals(0, audio.drainCaptureFrame(new short[800 * 2]),
+                "nothing produced yet");
+
+        audio.endCaptureMode();
+    }
+
+    @Test
+    void secondDrainInSameFrameReturnsZero() {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new RecordingAudioBackend());
+        audio.beginCaptureMode(48000, 60);
+
+        audio.advanceGameplayFrameAudio();
+        short[] target = new short[800 * 2];
+        assertEquals(800, audio.drainCaptureFrame(target), "first drain takes the frame");
+        assertEquals(0, audio.drainCaptureFrame(target),
+                "FIFO emptied; a second drain without advancing yields nothing");
+
+        audio.endCaptureMode();
+    }
 }
 ```
 
@@ -989,9 +1087,11 @@ Add fields and methods to `AudioManager`. The runtime is force-installed via the
         if (captureRuntime == null) {
             throw new IllegalStateException("beginCaptureMode() not called");
         }
-        int frames = captureRuntime.lastProducedFrames();
-        captureRuntime.drainPcm(target, frames);
-        return frames;
+        // Drain exactly what the most recent NORMAL advanceFrame produced, and
+        // report the ACTUAL drained count. Returning the requested size would
+        // mask an underrun (FIFO short) or a double-drain (FIFO already empty).
+        int requested = captureRuntime.lastProducedFrames();
+        return captureRuntime.drainPcm(target, requested);
     }
 
     /** Restores the runtime that was active before {@link #beginCaptureMode}. */
@@ -1154,7 +1254,7 @@ Skills: n/a"
 
 ## Task 10: `TraceRenderVisibility` (config → render-gate decisions)
 
-Pure decision object: reads the three flags and seeds `DebugOverlayManager` so the existing per-element toggles drive the debug panels. Render-site wiring (ghost/game-HUD/debug-HUD call sites) is Plan 2; this task delivers and tests the decision logic in isolation.
+Pure value object: reads the three flags into three independent master gates (`showGhosts` / `showGameHud` / `showDebugHud`). It does **not** mutate `DebugOverlayManager` — `showDebugHud()` gates whether the debug HUD renders at all, and the existing per-element `DebugOverlayToggle` states are honored at the render site (preserving per-panel state). Render-site wiring (ghost/game-HUD/debug-HUD call sites) is Plan 2; this task delivers and tests the decision logic in isolation.
 
 **Files:**
 - Create: `src/main/java/com/openggf/testmode/TraceRenderVisibility.java`
@@ -1167,15 +1267,13 @@ package com.openggf.testmode;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.debug.DebugOverlayManager;
-import com.openggf.debug.DebugOverlayToggle;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TraceRenderVisibilityTest {
 
     @Test
-    void readsFlagsFromConfig() {
+    void readsAllThreeFlagsIndependentlyFromConfig() {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
         config.setConfigValue(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, true);
         config.setConfigValue(SonicConfiguration.TRACE_SHOW_GAME_HUD, false);
@@ -1188,42 +1286,25 @@ class TraceRenderVisibilityTest {
     }
 
     @Test
-    void debugHudOffForcesAllDebugPanelsOff() {
+    void reflectsFlippedFlags() {
         SonicConfigurationService config = SonicConfigurationService.getInstance();
+        config.setConfigValue(SonicConfiguration.TRACE_SHOW_DESYNC_GHOSTS, false);
+        config.setConfigValue(SonicConfiguration.TRACE_SHOW_GAME_HUD, true);
         config.setConfigValue(SonicConfiguration.TRACE_SHOW_DEBUG_HUD, false);
-        DebugOverlayManager mgr = new DebugOverlayManager();
-        mgr.setEnabled(DebugOverlayToggle.PLAYER_PANEL, true);
 
         TraceRenderVisibility vis = TraceRenderVisibility.fromConfig(config);
-        vis.applyTo(mgr);
-
-        for (DebugOverlayToggle t : DebugOverlayToggle.values()) {
-            assertFalse(mgr.isEnabled(t), t + " disabled when debug HUD off");
-        }
-    }
-
-    @Test
-    void debugHudOnLeavesPerElementStatesUntouched() {
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        config.setConfigValue(SonicConfiguration.TRACE_SHOW_DEBUG_HUD, true);
-        DebugOverlayManager mgr = new DebugOverlayManager();
-        mgr.setEnabled(DebugOverlayToggle.PLAYER_PANEL, true);
-        mgr.setEnabled(DebugOverlayToggle.SENSOR_LABELS, false);
-
-        TraceRenderVisibility vis = TraceRenderVisibility.fromConfig(config);
-        vis.applyTo(mgr);
-
-        assertTrue(mgr.isEnabled(DebugOverlayToggle.PLAYER_PANEL));
-        assertFalse(mgr.isEnabled(DebugOverlayToggle.SENSOR_LABELS));
+        assertFalse(vis.showGhosts());
+        assertTrue(vis.showGameHud());
+        assertFalse(vis.showDebugHud());
     }
 }
 ```
 
-> Confirm `DebugOverlayManager` has a public no-arg constructor and
-> `setEnabled(DebugOverlayToggle, boolean)` / `isEnabled(DebugOverlayToggle)`
-> (verified: `isEnabled` at `DebugOverlayManager.java:113`; `setEnabled` used in
-> `TestLevelDebugRenderer.java:34`). If `setConfigValue` differs, mirror the call
-> used in `VisualReferenceGenerator.initialize()` (`setConfigValue(key, value)`).
+> `setConfigValue(key, value)` mirrors the call in
+> `VisualReferenceGenerator.initialize()`. No `DebugOverlayManager` is touched
+> here — `showDebugHud()` is a master gate read at the render site (Plan 2);
+> the existing per-element `DebugOverlayToggle` states are left untouched so
+> per-panel state is preserved.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -1237,16 +1318,18 @@ package com.openggf.testmode;
 
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.debug.DebugOverlayManager;
-import com.openggf.debug.DebugOverlayToggle;
 
 /**
- * Resolves trace render-visibility decisions from config. Honored by both live
- * Trace Test Mode and the headless capture recorder (Plan 2 wires the gates).
+ * Resolves trace render-visibility decisions from config as three independent
+ * master gates. Honored by both live Trace Test Mode and the headless capture
+ * recorder (Plan 2 wires the gates at the render sites).
  *
- * <p>Debug HUD uses the existing per-element {@link DebugOverlayToggle} model:
- * when the master flag is off, all debug panels are forced off; when on, the
- * individual toggle states are left as the user/config set them.
+ * <p>{@code showDebugHud()} is a master gate only — it does NOT mutate
+ * {@code DebugOverlayManager}. When true, the render site renders the debug HUD
+ * and the existing per-element {@code DebugOverlayToggle} states decide which
+ * panels show; when false, the debug HUD is skipped without touching any toggle
+ * state. (Driving per-panel selection from capture config in headless mode is a
+ * Plan 2 concern.)
  */
 public final class TraceRenderVisibility {
 
@@ -1272,15 +1355,6 @@ public final class TraceRenderVisibility {
     public boolean showGameHud() { return showGameHud; }
 
     public boolean showDebugHud() { return showDebugHud; }
-
-    /** When the debug HUD is off, force every debug panel off. */
-    public void applyTo(DebugOverlayManager overlayManager) {
-        if (!showDebugHud) {
-            for (DebugOverlayToggle toggle : DebugOverlayToggle.values()) {
-                overlayManager.setEnabled(toggle, false);
-            }
-        }
-    }
 }
 ```
 
