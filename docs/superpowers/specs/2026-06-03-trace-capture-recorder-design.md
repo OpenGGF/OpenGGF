@@ -12,8 +12,10 @@ one of the Trace Test Mode traces (optionally including the desync ghosts) and
 write it to a discrete, timestamped file.
 
 ### MVP scope
-- **Headless / offscreen**: no visible window required; runs like
-  `VisualReferenceGenerator` (hidden GLFW window, offscreen render, `glReadPixels`).
+- **Headless / offscreen**: no visible window required. Reuses
+  `VisualReferenceGenerator`'s offscreen **GL-context setup** (hidden GLFW
+  window, `glReadPixels`) but boots a **real `GameLoop` + gameplay session**
+  rather than hand-driving rendering — see §2.3.
 - **Deterministic, offline**: capture is paced by the encoder, not by a wall
   clock. Because the engine is a deterministic fixed-timestep replayer, "1:1, no
   dropped frames, perfect A/V sync" is a *structural guarantee*, not a
@@ -76,20 +78,72 @@ caller.
 
 | Unit | Responsibility |
 |------|----------------|
-| `TraceCaptureTool` (CLI entry, `tools`) | Parse args; boot offscreen GL + ROM + game module (the `VisualReferenceGenerator` pattern); construct a `CaptureRecorder`; run the deterministic step → render → grab → submit loop until the trace completes; tear down |
-| `TraceCaptureSession` | Deterministic trace drive reusing `TraceReplaySessionBootstrap` + BK2 playback (`PlaybackDebugManager`) + `LiveTraceComparator` + `GhostTraceRenderer`. No master-title/fade UI. Exposes `stepAndRender()` and `isComplete()` |
+| `TraceCaptureTool` (CLI entry, `tools`) | Parse args; perform the **headless engine boot** of §2.3 (offscreen GL + real `GameLoop` + gameplay session, no master-title/fade UI); construct a `CaptureRecorder`; run the deterministic step → render → grab → submit loop until the trace completes; tear down |
+| `TraceCaptureSession` | Deterministic trace drive reusing the **live** step + render path: `TraceReplaySessionBootstrap` + BK2 playback (`PlaybackDebugManager`) + `LiveTraceComparator` + `GhostTraceRenderer`, driven by `GameLoop.step()` and the live LEVEL-mode render. No master-title/fade UI. Exposes `stepAndRender()` and `isComplete()` |
 | `TraceRenderVisibility` | Config-backed gate: seeds `DebugOverlayManager` toggle states from config and gates game-HUD + ghost rendering. Honored by live Trace Test Mode **and** the recorder |
+
+### 2.3 Headless boot & drive (non-UI) — what `TraceCaptureTool` must construct
+
+Capture needs **both** the live `GameLoop.step()` (for audio, §3/§4) **and** the
+live LEVEL-mode render (for ghosts + HUD). That rules out the
+`VisualReferenceGenerator` model — it only creates a hidden GL context and
+hand-drives `levelManager.drawWithSpritePriority(...)`; it builds **no** `Engine`,
+`GameLoop`, or `PlaybackDebugManager`. The capture driver therefore boots a
+**real `GameLoop` + gameplay session offscreen**, reusing the GL-context setup
+from `VisualReferenceGenerator` but nothing of its render-driving.
+
+Boot responsibilities (mirroring `Engine`/`TraceSessionLauncher` minus the
+master-title/fade UI):
+
+1. **Offscreen GL context** — hidden GLFW window + `GraphicsManager.init(...)`
+   at the capture resolution (the reusable part of `VisualReferenceGenerator`).
+2. **ROM + module** — load ROM, `GameModuleRegistry.detectAndSetModule(rom)`.
+3. **Engine context + `GameLoop`** — construct an `EngineContext` and
+   `new GameLoop(engineContext)` (cf. `Engine.java:204`); set it current so
+   `GameServices`/`Engine.currentGameLoop()` resolve.
+4. **Gameplay session** — `SessionManager.openGameplaySession(module)`
+   (cf. `Engine.java:458`) to build the `GameplayModeContext`.
+5. **Audio capture mode** — `AudioManager.beginCaptureMode(sampleRate, fps)`
+   (§5) so `GameLoop.step()` produces presentation PCM headlessly.
+6. **Trace launch without UI** — run the post-bootstrap sequence of
+   `TraceSessionLauncher.finishLaunchAfterGameBootstrap()` (reset level
+   subsystems, register team, `loadZoneAndAct`, `setGameMode(LEVEL)`, consume
+   title-card requests, `PlaybackDebugManager.startSession(...)`, build
+   `LiveTraceComparator` + `GhostTraceRenderer` + visibility), but invoked
+   **directly** rather than via `GameLoop.launchGameByEntry(...)` (which runs the
+   master-title exit/fade path, `GameLoop.java:2414`).
+
+**Recommended refactor (so we don't fork a fragile sequence):** extract the
+UI-agnostic body of `TraceSessionLauncher.finishLaunchAfterGameBootstrap()` into
+a reusable `TraceReplayDriver` consumed by **both** the live launcher (which
+keeps master-title + fade around it) and `TraceCaptureSession` (which calls it
+directly after the headless boot above). The launcher's many ordering
+invariants (team-register before `loadZoneAndAct`, title-card consumption, frame
+-counter alignment) then live in one place. The per-frame render reuses the same
+LEVEL-mode render + ghost-layering the live loop emits, so the reel matches
+shipped presentation.
+
+**Open item for the implementation plan:** finalize the exact engine-context
+wiring (a minimal headless `Engine.initHeadless()`-style entry vs. assembling
+`EngineContext` + `GameLoop` + `SessionManager` directly). Both are viable; the
+plan picks one and the `TraceReplayDriver` refactor is the same either way.
 
 ## 3. Data Flow (headless, per frame)
 
 1. `TraceCaptureSession.stepAndRender()`:
-   - advance one deterministic trace frame via the **canonical game-loop step**
-     (`GameLoop.step()` — the same path live Trace Test Mode and the headless
-     trace tests use). **Audio-frame advancement is owned by that step**
+   - advance one deterministic trace frame via the **live `GameLoop.step()`** —
+     the path **live Trace Test Mode** uses (`TraceSessionLauncher.LiveFixture`
+     → `gameLoop.step()`). Capture deliberately uses this path **because it
+     advances audio**: audio-frame advancement is owned by the step
      (`beginGameplayAudioFrameForTick` → `advanceGameplayAudioFrameForTick`,
      `GameLoop.java:871,894`). The capture session does **not** call
      `AudioManager.advanceGameplayFrameAudio()` itself — that would
-     double-advance the audio clock per captured video frame (see §4).
+     double-advance the audio clock per captured frame (see §4).
+   - **Not** the headless trace-*test* path: `HeadlessTestFixture` /
+     `HeadlessTestRunner.stepFrameFromRecording()` calls `LevelFrameStep.execute(...)`
+     directly (`HeadlessTestRunner.java:122`) and **does not drive audio at all**.
+     That path exists for silent logic-parity assertions; reusing it for capture
+     would yield no PCM. The two paths are kept distinct on purpose.
    - render scene + ghosts + HUD to the offscreen framebuffer, each layer gated
      by `TraceRenderVisibility`.
 2. `recorder.submit(new CapturedFrame(grabber.grab(), audioTap.drain(), ...))`:
