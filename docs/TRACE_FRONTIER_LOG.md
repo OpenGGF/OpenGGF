@@ -153,6 +153,36 @@
   failing at f2362's analogue f4009 at baseline (527 errors); with this fix it still first-diverges at
   f4009 but with FEWER errors (501), so the change is not a regression and slightly helps mcz2.
 - Frontier moved: mcz1 2181 -> 2362. No green trace regressed.
+## 2026-06-04 - cpz2 ADVANCED f2518->f2542: CPZ spin tube runs its capture routine per-character (Sonic + sidekick), modelling ROM Obj1E_Main dual objoff_2C/objoff_36 dispatch
+
+- Branch `bugfix/ai-trace-s2-cpz2`, worktree `.worktrees/trace-s2-cpz2` (off develop `868249c0f`).
+- Command (cmd mvn inside worktree; ROM path parens-free):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced (genuine). Targeted trace `target/trace-reports/s2_cpz2_report.json`.
+- **First error before:** f2518 `tails_y_speed` (expected=0x0800, actual=0x04D0), 1646 errors.
+- **First error after:** f2542 `tails_y_speed` (expected=-00E3, actual=-00BA), 1041 errors.
+- **Root cause:** the ROM `Obj1E_Main` (CPZ spin tube) runs its entire capture + path-follow
+  routine ONCE PER PLAYABLE CHARACTER each frame: once for `MainCharacter` using state slot
+  `objoff_2C(a0)` then once for `Sidekick` using `objoff_36(a0)` (docs/s2disasm/s2.asm:48447-48457).
+  Each slot independently holds that character's mode byte, entry frame, segment duration and path
+  pointer, so Tails is captured and forced to the tube's 0x800 velocity exactly like Sonic. The
+  capture gate (`loc_225FC`, s2.asm:48467-48480) is ONLY: not Debug_placement_mode, x distance
+  < objoff_2A, y distance < 0x80, and `anim(a1) != $20` — there is deliberately no rolling /
+  obj_control / "recently released" gate. The engine had (a) a single shared state slot (so only
+  the main player could be in the tube) and (b) engine-invented rolling/cooldown guards that blocked
+  the rolling Tails sidekick from ever entering the tube, leaving it to free-fall under gravity
+  instead of being pinned to the tube velocity (trace f2518: ROM `tails_y_speed`=0x0800 tube velocity
+  vs engine 0x04D0 gravity fall).
+- **Fix:** `CPZSpinTubeObjectInstance` now keeps one independent `CharacterState` slot per playable
+  (IdentityHashMap keyed on the sprite), runs the state machine against the main player AND every
+  sidekick each frame (the two-pass objoff_2C/objoff_36 dispatch), and replaces the engine
+  rolling/obj-control/cooldown gates with the ROM `anim(a1) != $20` gate. `isPersistent()` now stays
+  true while ANY character is mid-tube. No zone/route/frame/gameId carve-out — Obj1E is an S2-only
+  object and the change lives entirely in that object class. Comparison-only (no trace hydration).
+- **Same-game regression guard (EHZ1 / SCZ / WFZ): all green** (Tests run 1, Failures 0 each).
+  CPZ1 first-error frame unchanged at f2822 (not in guard set; frontier did not move backward).
+- New first divergence f2542 is the next downstream `tails_y_speed` step inside the same tube
+  traversal (a separate per-segment velocity-timing detail), left to follow-up.
 
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 
