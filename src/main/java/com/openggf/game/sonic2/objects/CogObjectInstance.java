@@ -325,6 +325,24 @@ public class CogObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // ROM Obj70 collides via the standard SolidObject helper
+        // (JmpTo16_SolidObject, s2.asm:55132). SolidObject's standing branch
+        // (s2.asm:35021-35044) runs first: when the ridden tooth's standing bit
+        // d6 is set on the player AND Status_InAir is set, it branches to
+        // loc_1975A (s2.asm:35035-35040) which clears Status_OnObj/d6, sets
+        // Status_InAir and returns d4=0 WITHOUT reaching SolidObject_cont — so
+        // the platform carry (MvSonicOnPtfm, s2.asm:35635-35659) and the
+        // SolidObject_AtEdge side push (s2.asm:35432-35444) are both skipped on
+        // the frame the rider jumps off. Without this, the engine treats the
+        // just-jumped airborne rider as a fresh side contact against the rotated
+        // tooth and shoves him one frame early (MTZ3 trace f2047 tails_x:
+        // engine 0x07CA vs ROM 0x07BD, where ROM applies the displacement only
+        // at f2048).
+        return true;
+    }
+
+    @Override
     public void onSolidContact(PlayableEntity playerEntity, SolidContact contact, int frameCounter) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         // No special handling needed

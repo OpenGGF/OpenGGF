@@ -485,6 +485,27 @@ public interface GameModule {
     GameId getGameId();
 
     /**
+     * Initial {@code anim_frame_duration} loaded by the badnik-death explosion
+     * (Obj27 / ExplosionItem) on its first/setup frame, expressed in the ROM's
+     * {@code subq.b #1 / bpl} predecrement convention (the explosion's frame 0
+     * is shown for {@code value + 1} game frames before the first advance).
+     *
+     * <p>This is per-game object animation data, not a behaviour branch: S1
+     * {@code ExItem_Main} loads {@code move.b #7,obTimeFrame}
+     * (docs/s1disasm/_incObj/24, 27 &amp; 3F Explosions.asm), whereas S2
+     * {@code Obj27_Init} loads {@code move.b #3,anim_frame_duration}
+     * (docs/s2disasm/s2.asm:46672) and S3K {@code loc_1E626} loads
+     * {@code move.b #3,anim_frame_timer} (docs/skdisasm/sonic3k.asm:42195).
+     * All three subsequently reload {@code 7} and delete at mapping_frame 5.
+     *
+     * <p>Default is the S2/S3K value ({@code 3}); {@code Sonic1GameModule}
+     * overrides it to {@code 7}.
+     */
+    default int explosionInitialAnimDuration() {
+        return 3;
+    }
+
+    /**
      * Resolves a canonical animation to this game's native animation ID.
      * Used by game-agnostic code (sidekick controller) to avoid hardcoding
      * game-specific animation IDs.

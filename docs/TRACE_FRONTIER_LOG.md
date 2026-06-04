@@ -23,6 +23,110 @@
   (verified mergeable-clean; windowing alone moves cnz1 3906->3831 and mtz3 2638->2047 backward as
   ROM-correct cascade with no compensating advance until these three are done).
 
+## 2026-06-04 - MTZ3 giant-cog ride-release: f2047 -> f2638 (jump-off carry/push timing)
+
+- Worktree: `.worktrees/mtz3-platform-carry`, branch `bugfix/ai-mtz3-platform-carry`
+  (off the windowing branch HEAD `a9c97aaa7`).
+- First error before: **mtz3 f2047 `tails_x` (expected 0x07BD, actual 0x07CA)**, 2518 errors.
+- First error after:  **mtz3 f2638 `tails_air` (expected 1, actual 0)**, 1465 errors.
+- Root cause (systematic-debugging + per-frame `System.err` diagnostics, all removed):
+  Tails rides MTZ giant-cog (Obj70) tooth piece 3, then jumps off on the rotation
+  frame. ROM `SolidObject` standing branch (s2.asm:35021-35044) sees the ridden
+  tooth's `d6` standing bit set AND `Status_InAir` set, takes `loc_1975A`
+  (35035-35040): clears `Status_OnObj`/`d6`, sets `Status_InAir`, returns `d4=0`
+  with NO carry and NO side push. The engine had already cleared the cog ride
+  state before the inline solid pass, so the airborne Tails was treated as a fresh
+  side contact against the rotated tooth and shoved +0xD (0x07BD->0x07CA) one frame
+  early; ROM applies that displacement only at f2048 (gfc 0x801; verified against
+  physics.csv: gfc 0x800 tails_x=0x07BD, gfc 0x801 tails_x=0x07CA).
+- Fix: `CogObjectInstance.airborneStaleStandingBitReturnsNoContact()` now returns
+  `true`, opting Obj70 into the existing shared `SolidObjectFull`/`SolidObject`
+  standing-branch air-unseat contract (its ROM helper is `JmpTo16_SolidObject`,
+  s2.asm:55132). One-object opt-in; **no shared collision-code change**.
+- Command (single fork, ROMs via `SONIC_{1,2,3K}_ROM_PATH` env):
+  `mvn -q -Ptrace-replay -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true -Dtest=*TraceReplay test`
+  - S1: all GREEN (Ghz1, Mz1, Credits00-07).
+  - S2 GREEN: EHZ1, SCZ, WFZ (unchanged).
+  - S2 frontiers UNCHANGED: arz1 2043, arz2 549, cnz1 3831, cnz2 1775, cpz1 2822,
+    cpz2 2518, dez1 1023, htz1 5647, htz2 1078, mcz1 2181, mcz2 4009, mtz1 375,
+    mtz2 641, ooz1 756, ooz2 389.
+  - S2 MOVED (forward): **mtz3 2047 -> 2638**.
+  - S3K frontiers UNCHANGED: aiz 8941, cnz 17276, mgz 4124.
+  - No green regressed; no frontier moved backward.
+- Oracle: `TestS2ObjectOccupancyOracle` 45 passed / 22 failed - identical to the
+  with-fix-stashed baseline (A/B via `git stash`); green-zone `*MatchesRom`
+  (EHZ1/SCZ/WFZ) PASS. Change is cog-only; cogs exist only in MTZ.
+- S3K must-keep units GREEN: TestS3kAiz1SkipHeadless (8, 3 skipped),
+  TestSonic3kLevelLoading (30), TestSonic3kBootstrapResolver (5),
+  TestSonic3kDecodingUtils (3) - all 0 failures/0 errors.
+- Note: this re-derives the f2638 frontier (last seen pre-windowing-Stage-1) on the
+  correct ROM standing-branch foundation, replacing the prior
+  `isLatchedRideSlotFreed` heuristic the Stage-1 cascade removed.
+
+## 2026-06-04 - Object-lifetime piece (a): transient explosion (Obj27) self-delete aligned to ROM-exact frame
+
+- Worktree: `feature/ai-rom-object-windowing-s2` (branch `feature/ai-trace-green...`).
+- Change: `ExplosionObjectInstance` (shared S1/S2/S3K Obj27) now mirrors the ROM
+  `anim_frame_duration` countdown (`subq #1 / bpl / reload 7 / mapping_frame 5`)
+  instead of a uniform 8-frame delay. It previously lingered 4 frames past the
+  ROM `DeleteObject` in S2/S3K. The frame-0 hold differs per game (S1
+  `move.b #7,obTimeFrame`; S2/S3K `move.b #3`), modelled via new
+  `GameModule.explosionInitialAnimDuration()` (default 3, `Sonic1GameModule`
+  overrides 7) — object animation data, not a gameId branch. Cites:
+  docs/s2disasm/s2.asm:46672-46684; docs/skdisasm/sonic3k.asm:42195-42205;
+  docs/s1disasm/_incObj/24, 27 & 3F Explosions.asm (ExItem_Main/ExItem_Animate).
+- Oracle: `TestS2ObjectOccupancyOracle` Task 1.7 assertion ENABLED for the green
+  S2 traces EHZ1/SCZ/WFZ, scoped to Obj27 self-delete-timing (engineCount must
+  never exceed romCount = "lingers past ROM DeleteObject"). PASS (4 tests, 0
+  failures). MTZ1 stays a non-asserting frontier measurement.
+- Full single-fork sweep (all ROMs, working-dir defaults):
+  `mvn -q -Dmse=off -Dsurefire.forkCount=1 -DreuseForks=true surefire:test -Dtest=*TraceReplay`
+  - S1: all GREEN (Ghz1, Mz1, Credits00-07).
+  - S2 greens: EHZ1, SCZ, WFZ GREEN (unchanged).
+  - S2 frontiers UNCHANGED: arz 2043, arz2 549, cnz 3831, cnz2 1775, cpz 2822,
+    cpz2 2518, dez 1023, htz 5647, htz2 1078, mcz 2181, mcz2 4009, mtz 375,
+    mtz2 641, mtz3 2047, ooz 756, ooz2 389.
+  - S3K frontiers UNCHANGED: aiz 8941, cnz 17276, mgz 4124.
+  - No green regressed; no frontier moved backward. (Pre-existing unit-test
+    failures `TestSidekickCpuDespawnParity` x2 are baseline, unrelated to this
+    change — confirmed by stash A/B.)
+- Out of scope (left for ridden/windowing object-lifetime work, piece b):
+  - Animal (Obj28) despawn is walk/fly-physics + off-screen `MarkObjGone`
+    driven (docs/s2disasm/s2.asm Obj28_Walk/Obj28_Fly), variable lifespan — not
+    a fixed self-delete timer.
+  - Points (Obj29) self-delete timing is already ROM-correct (32-frame lifespan,
+    delete when `y_vel>=0`); its per-frame occupancy still diverges by one frame
+    in some greens (e.g. EHZ1 f1308: ROM spawns the points f1309, engine f1308)
+    due to a one-frame spawn/`AllocateObject`-ordering windowing offset.
+  - Some ROM explosions live 36 frames (deferred first-animate from lower-slot
+    allocation, e.g. EHZ1 2810->2846, WFZ 3486->3522) vs the engine's 35-frame
+    same-frame-exec base case — a spawn-slot windowing offset (engineCount <
+    romCount), not a delete-frame error, so the oracle's late-delete-only guard
+    correctly ignores it.
+
+## 2026-06-04 - S2 ROM object-windowing Stage 1 cascade sweep (CNZ1 f3906->f3831, MTZ3 f2638->f2047 expected cascade)
+
+- Worktree: `feature/ai-rom-object-windowing-s2` (Stage 1 tasks 1.1-1.6 + arch fix + test fix).
+- Command (single fork, all ROMs):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true -Ds1.rom.path=... -Ds2.rom.path=... -Ds3k.rom.path=... -Dtest=*TraceReplay test`
+- Baseline = develop foundation. Full before->after first-error frame table:
+  - S1: all GREEN (unchanged).
+  - S2 GREEN: ehz1, scz, wfz (unchanged).
+  - S2 unchanged frontiers: arz1 2043, arz2 549, cnz2 1775, cpz1 2822, cpz2 2518,
+    dez1 1023, htz1 5647, htz2 1078, mcz1 2181, mcz2 4009, mtz1 375, mtz2 641, ooz1 756, ooz2 389.
+  - S2 MOVED (expected cascade, backward): **cnz1 3906 (tails_y) -> 3831 (x)**;
+    **mtz3 2638 (tails_air) -> 2047 (tails_x)**.
+  - S3K unchanged: aiz 8941, cnz 17276, mgz 4124.
+- Bisect: both moves are clean at 1.4b (18e2dedc0) and 1.5 (5d74d1791); they appear at
+  1.6 (c336b8d56, exec -> exactly one load per frame). The arch refactor (ObjectWindowingStrategy
+  injection) and the test-hygiene fix are confirmed no-ops on every frontier.
+- Verdict: the 1.6 reorder is ROM-correct (s2.asm:5085-5112: a single `ObjectsManager` call
+  AFTER `RunObjects` per frame; the engine previously double-loaded). cnz1 f3831 and mtz3 f2047
+  are both player/sidekick-riding-object interactions (both onObj=33 / onObj=23) where the prior
+  frontier leaned on the old non-ROM double-load timing. They fall in the documented MTZ/object
+  exec-load-unload/slot-recycle blocker class (entry below), which is out of Stage 1 scope. No
+  regression to a previously-GREEN trace; no engine fix warranted (reverting would re-introduce
+  the non-ROM double load).
 ## 2026-06-04 - BLOCKER: MTZ1/MTZ3 need off-screen object exec/load-unload/slot-recycle windowing parity
 
 - After the slot-based interact(a0) foundation (7d45d28a9), mtz1 (f375) and mtz3 (f2638) are both

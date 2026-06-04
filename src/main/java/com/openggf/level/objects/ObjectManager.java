@@ -424,6 +424,13 @@ public class ObjectManager {
     // When a child is spawned at a higher slot, it's placed here directly
     // so the ongoing loop reaches it naturally (same-frame execution).
     private final ObjectSlotLayout slotLayout;
+    /**
+     * Per-game object load/unload windowing boundary (shared abstraction;
+     * {@link ObjectWindowingStrategy#LEGACY} for S1/S3K, the ROM-exact S2
+     * strategy for S2). Injected from the {@link ObjectRegistry} so this shared
+     * manager never depends on a game-specific package.
+     */
+    private final ObjectWindowingStrategy windowingStrategy;
     private final ObjectInstance[] execOrder;
     private int currentExecSlot = -1; // -1 when not in update loop
     private final boolean skipVerticalSpawnLoadFilterForGame;
@@ -491,9 +498,13 @@ public class ObjectManager {
         this.camera = camera;
         this.objectServices = objectServices;
         this.slotLayout = registry != null ? registry.objectSlotLayout() : ObjectSlotLayout.SONIC_1;
+        this.windowingStrategy = registry != null
+                ? registry.objectWindowingStrategy()
+                : ObjectWindowingStrategy.LEGACY;
         this.placement = new Placement(spawns,
                 camera != null ? camera::getWidth : com.openggf.level.spawn.PlacementViewportWidth::current);
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
+        this.placement.setWindowingStrategy(windowingStrategy);
         this.execOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
         this.slotAllocator = new SlotAllocator(slotLayout,
                 slotLayout.twoAxisCursorPlacement()
@@ -732,16 +743,15 @@ public class ObjectManager {
                     // S3K Load_Sprites runs before Process_Sprites and performs
                     // the X-cursor pass before the Y-camera pass
                     // (docs/skdisasm/sonic3k.asm:7884-7894, 37640-37762).
+                    // S3K stays load-then-exec.
                     placement.update(cameraX);
                     syncActiveSpawnsLoad(false);
-                } else {
-                    // S2 ObjectsManager_GoingForward/Backward calls ChkLoadObj
-                    // directly after the X-window scan and has no Camera_Y_pos
-                    // filter (docs/s2disasm/s2.asm:32870-32950). The bypass is
-                    // gated inside isSpawnVerticallyEligibleForLoad() to S2 slot
-                    // layout only; S3K still keeps its vertical filter here.
-                    syncActiveSpawnsLoad(true);
                 }
+                // S2: NO pre-exec load. ROM S2 is RunObjects (s2.asm:5095) then
+                // exactly one ObjectsManager (s2.asm:5112) = exec -> one load.
+                // The single S2 load runs in the post-block below
+                // (RunObjects -> ObjectsManager position), after runExecLoop has
+                // applied the object-side MarkObjGone self-deletes.
                 cleanupDestroyedDynamicObjects();
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
             } else {
@@ -775,6 +785,13 @@ public class ObjectManager {
         // ROM parity: S1's ObjPosLoad runs AFTER DeformLayers (camera update).
         // Counter-based respawn depends on seeing the post-camera X to assign
         // the same counter values as the ROM. Defer to postCameraPlacementUpdate().
+        //
+        // S2: this is the SINGLE per-frame load. ROM S2 RunObjects (s2.asm:5095)
+        // then exactly one ObjectsManager (s2.asm:5112) = exec -> one load. The
+        // pre-exec load in the execThenLoad branch above was removed so S2 no
+        // longer double-loads. The load consumes the same `cameraX` the exec loop
+        // saw (pre-DeformLayers), matching ROM ObjectsManager; the post-camera
+        // chunk-crossing catch-up is handled separately by postCameraPlacementUpdate().
         if (!counterBased) {
             if (!execThenLoad || !slotLayout.twoAxisCursorPlacement()) {
                 placement.update(cameraX);
@@ -1486,6 +1503,37 @@ public class ObjectManager {
         return -1;
     }
 
+    /**
+     * Read-only snapshot of every live dynamic-slot occupant as {@code slot ->
+     * (spawn.objectId() & 0xFF)}. This is the bulk analogue of
+     * {@link #objectIdInSlot(int)}: it walks the same {@link #getActiveObjects()}
+     * scan and applies the same liveness predicate (non-destroyed,
+     * spawn-backed), but restricts the result to managed dynamic slots
+     * ({@link ObjectSlotLayout#isDynamicSlot(int)}) so it lines up with the
+     * SST window the {@link SlotAllocator} owns.
+     *
+     * <p>It is the engine side of the comparison-only occupancy oracle's
+     * extra-occupant detection: a slot present here but absent from the ROM
+     * trace timeline means the engine kept an object loaded that the ROM had
+     * already unloaded (the MTZ off-screen-unload failure mode). The returned
+     * map is freshly built and never aliases internal state, so callers cannot
+     * mutate manager state through it.
+     */
+    public java.util.Map<Integer, Integer> occupiedDynamicSlotIds() {
+        java.util.Map<Integer, Integer> occupancy = new java.util.HashMap<>();
+        for (ObjectInstance instance : getActiveObjects()) {
+            if (instance instanceof AbstractObjectInstance aoi
+                    && !instance.isDestroyed()
+                    && instance.getSpawn() != null) {
+                int slot = aoi.getSlotIndex();
+                if (slotLayout.isDynamicSlot(slot)) {
+                    occupancy.put(slot, instance.getSpawn().objectId() & 0xFF);
+                }
+            }
+        }
+        return occupancy;
+    }
+
     public List<ObjectInstance> snapshotPersistentDynamicObjectsForTransition() {
         List<ObjectInstance> snapshot = new ArrayList<>();
         for (ObjectInstance instance : dynamicObjects) {
@@ -1591,6 +1639,38 @@ public class ObjectManager {
 
     public List<ObjectSpawn> getAllSpawns() {
         return placement.getAllSpawns();
+    }
+
+    /**
+     * Test seam: drive a standalone load/trim-windowing {@link Placement} (native
+     * 320px viewport) under the supplied {@link ObjectWindowingStrategy} through a
+     * sequence of camera-X positions and return the sorted X positions of the
+     * spawns active after the final step.
+     * <p>
+     * Exercises the real {@code spawnForward}/{@code spawnBackwardNonCounter}/
+     * {@code trimLeftNonCounter}/{@code trimRightNonCounter} scan with the
+     * strategy's final cursor boundaries (Task 1.4b), so a unit test can pass the
+     * S2 strategy and assert the ROM <em>exclusive</em> load edge
+     * ({@code spawn.x < forwardLoadEdge}) without a ROM/level harness. Keeping the
+     * strategy a parameter means this shared seam stays game-agnostic.
+     */
+    public static int[] runWindowingScanForTest(int[] spawnXs, int[] cameraSequence,
+            ObjectWindowingStrategy strategy) {
+        List<ObjectSpawn> spawnList = new ArrayList<>(spawnXs.length);
+        for (int x : spawnXs) {
+            // respawnTracked=false so every in-window spawn re-loads on cursor
+            // entry (no remembered/destroyed latch interfering with the boundary).
+            spawnList.add(new ObjectSpawn(x, 0x100, 0x01, 0, 0, false, 0));
+        }
+        Placement p = new Placement(spawnList, () -> 320);
+        p.setWindowingStrategy(strategy);
+        for (int cameraX : cameraSequence) {
+            p.update(cameraX);
+        }
+        return p.getActiveSpawns().stream()
+                .mapToInt(ObjectSpawn::x)
+                .sorted()
+                .toArray();
     }
 
     public ObjectInstance getActiveObjectForRewind(ObjectSpawn spawn) {
@@ -2458,6 +2538,31 @@ public class ObjectManager {
     }
 
     /**
+     * Shared out-of-range delete decision used by the standard (non-custom)
+     * unload path.
+     * <p>
+     * S2 routes the per-instance off-screen unload through the ROM object-side
+     * {@code MarkObjGone} window (the injected {@link ObjectWindowingStrategy},
+     * base {@code (Camera_X_pos - $80) & $FF80}, first deleting bucket {@code $300};
+     * docs/s2disasm/s2.asm MarkObjGone). S1/S3K use the {@link ObjectWindowingStrategy#LEGACY}
+     * strategy and keep the S1 {@code out_of_range} macro ({@link #isOutOfRangeS1}).
+     * The two share the same reference X.
+     * <p>
+     * <b>Coordinate semantics:</b> ROM {@code MarkObjGone} (and {@code out_of_range})
+     * read {@code x_pos(a0)} — the object's ROM centre X. Both branches consume
+     * {@link #outOfRangeReferenceX(ObjectInstance, ObjectSpawn)} (the object's
+     * explicit ROM reference X, defaulting to its centre-aligned {@code getX()}),
+     * never a sprite top-left bound, so the window is not shifted by half-width.
+     */
+    private boolean isObjectOutOfRange(ObjectInstance instance, ObjectSpawn spawn, int cameraX) {
+        int referenceX = outOfRangeReferenceX(instance, spawn);
+        if (windowingStrategy.overridesUnloadWindow()) {
+            return windowingStrategy.isOutsideUnloadWindow(referenceX, cameraX);
+        }
+        return isOutOfRangeS1(referenceX, cameraX);
+    }
+
+    /**
      * ROM parity dispatcher for the destroy-from-active path.
      *
      * <p>When an object self-destroys via an off-screen check
@@ -2502,7 +2607,7 @@ public class ObjectManager {
         }
         boolean outOfRange = instance.usesCustomOutOfRangeCheck()
                 ? instance.isCustomOutOfRange(cameraX)
-                : isOutOfRangeS1(outOfRangeReferenceX(instance, spawn), cameraX);
+                : isObjectOutOfRange(instance, spawn, cameraX);
         if (persistent || !outOfRange) {
             return false;
         }
@@ -3458,6 +3563,17 @@ public class ObjectManager {
         private boolean execThenLoadPlacement;
         private boolean twoAxisCursorPlacement;
         /**
+         * ROM parity: per-game windowing strategy. When it
+         * {@link ObjectWindowingStrategy#overridesLoadWindow() overrides the load
+         * window}, the non-counter load/trim scan sources its load and trim
+         * boundaries from the strategy (the final
+         * {@code ObjectsManager_GoingForward}/{@code GoingBackward} cursor edges,
+         * s2.asm:33095) instead of the symmetric widescreen-capped window. S2 only;
+         * S1 (counter path) and S3K (two-axis) use {@link ObjectWindowingStrategy#LEGACY}
+         * and keep their existing window source.
+         */
+        private ObjectWindowingStrategy windowingStrategy = ObjectWindowingStrategy.LEGACY;
+        /**
          * ROM parity: when true, destroyedInWindow stays latched permanently
          * after a spawn is destroyed by the player (ROM's bit 7 of
          * Object_respawn_table; see sonic3k.asm loc_1BA40 / loc_1BA64
@@ -3553,6 +3669,45 @@ public class ObjectManager {
 
         void setTwoAxisCursorPlacement(boolean twoAxisCursorPlacement) {
             this.twoAxisCursorPlacement = twoAxisCursorPlacement;
+        }
+
+        void setWindowingStrategy(ObjectWindowingStrategy strategy) {
+            this.windowingStrategy = strategy != null ? strategy : ObjectWindowingStrategy.LEGACY;
+        }
+
+        /**
+         * ROM-exact S2 load/trim boundaries.
+         * <p>
+         * For S2 the non-counter scan consumes the windowing strategy's final
+         * cursor edges directly:
+         * <ul>
+         *   <li>forward load / right trim edge = {@code loadCoarse + $280}
+         *       ({@code ObjectsManager_GoingForward} right cursor, s2.asm:33099;
+         *       {@code GoingBackward} right trim, s2.asm:33076)</li>
+         *   <li>backward load / left trim edge = {@code loadCoarse - $80}
+         *       ({@code GoingBackward} left cursor, s2.asm:33045;
+         *       {@code GoingForward} left trim, s2.asm:33117)</li>
+         * </ul>
+         * Both directions are handled by the existing {@code spawnForward} /
+         * {@code spawnBackwardNonCounter} / {@code trimLeftNonCounter} /
+         * {@code trimRightNonCounter} strict-{@code <} comparisons, which mirror the
+         * ROM {@code bls}/{@code bge}/{@code bgt} branches (exclusive load edge:
+         * a spawn loads iff {@code spawn.x < forwardLoadEdge}).
+         */
+        @Override
+        protected int getWindowEnd(int cameraX) {
+            if (windowingStrategy.overridesLoadWindow()) {
+                return windowingStrategy.loadWindowForwardEdge(cameraX);
+            }
+            return super.getWindowEnd(cameraX);
+        }
+
+        @Override
+        protected int getWindowStart(int cameraX) {
+            if (windowingStrategy.overridesLoadWindow()) {
+                return Math.max(0, windowingStrategy.loadWindowLeftTrimEdge(cameraX));
+            }
+            return super.getWindowStart(cameraX);
         }
 
         /** See {@link #permanentDestroyLatch}. Enable for S3K only. */
