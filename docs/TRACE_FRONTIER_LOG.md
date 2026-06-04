@@ -1,5 +1,26 @@
 # Trace Frontier Log
 
+## 2026-06-04 - BLOCKER: MTZ1/MTZ3 need off-screen object exec/load-unload/slot-recycle windowing parity
+
+- After the slot-based interact(a0) foundation (7d45d28a9), mtz1 (f375) and mtz3 (f2638) are both
+  blocked on the SAME deeper subsystem, frame-level confirmed (no code change committed):
+  - **mtz1 f375:** Obj42 SteamSpring is dropped from the per-frame exec order while off the MAIN
+    camera, so its state machine + applySpring never run and Tails is never sprung (ROM keeps Obj42
+    executing via its own position-window MarkObjGone; `SteamSpringObjectInstance.update()` first
+    runs only at engine-f2491 in this trace). s2.asm:52445-52559 (Obj42 loc_26688/loc_2678E).
+  - **mtz3 f2638:** engine interact slot goes EMPTY (object unloaded) where ROM recycles it to a
+    live different id; ROM `TailsCPU_CheckDespawn` (s2.asm:39403-39429) fires on `id(a3)!=Tails_interact_ID
+    (0x39)`; engine `liveSlotId` goes -1 (deferred empty-slot guard) and the latched id is 0x65
+    (MTZLongPlatform) vs ROM 0x39 — a follow/landing target-id discrepancy on top of the windowing gap.
+    Flipping the empty-slot guard to despawn fires ~3 frames early (≈2635) and risks over-firing every
+    green trace whose engine unload leads ROM (`DeleteObject` zeroes id, s2.asm:30324-30339).
+- REQUIRED FIX (deferred — large, cross-trace-risky): ROM-accurate off-screen object load/unload/slot-reuse
+  windowing (`MarkObjGone`/`FindFreeObj`/`DeleteObject` timing) so objects keep executing while
+  Tails-relevant and the interact slot holds the ROM id until the exact recycle frame, PLUS a sidekick
+  follow/landing target-id correction for mtz3. Both the interact-slot foundation author and the
+  recycle-parity investigation deferred this as its own effort.
+
+
 ## 2026-06-04 - FOUNDATION: ROM slot-based sidekick interact(a0) model committed (knowingly regresses MTZ3; HTZ2 advances)
 
 - Branch `feature/ai-s2-sidekick-interact-slot`, worktree `.worktrees/s2-sidekick-interact-slot`, off develop `5057629e5`.
