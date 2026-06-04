@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-06-04 - cpz1 ADVANCED f2822->f3303: Speed Booster (Obj1B) boosts BOTH characters + sets move_lock (not spring)
+
+- Branch `bugfix/ai-trace-s2-cpz1`, worktree `.worktrees/trace-s2-cpz1` (off develop `868249c0f`).
+- Targeted command (Windows cmd mvn inside worktree):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2CpzLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: advanced (targeted trace still fails at the new frontier).** Before: 1 failure, First error frame 2822.
+  After: 1 failure, **225 errors, First error frame 3303 -- `tails_air` mismatch (expected=0, actual=1)**.
+- **Root cause:** ROM `Obj1B_Main` (docs/s2disasm/s2.asm:48166-48211) builds one +/-$10 box and checks
+  BOTH characters against it independently: `lea (MainCharacter).w,a1` (s2.asm:48179-48194) then
+  `lea (Sidekick).w,a1` (s2.asm:48196-48209), each calling `Obj1B_GiveBoost` when grounded and in-box.
+  The engine ran the box-check against only the single main player, so CPU Tails was never boosted in a
+  booster pad. `Obj1B_GiveBoost` (s2.asm:48215-48238) sets `move.w #$F,move_lock(a1)` (s2.asm:48230) and
+  `bclr #status.player.pushing,status(a1)` (s2.asm:48234); the engine had used `setSpringing()` (a no-op
+  for CPU Tails, which follows the leader unless `getMoveLockTimer()>0`) and omitted the pushing clear.
+- **Fix:** `SpeedBoosterObjectInstance.update()` now also iterates `services().playerQuery().sidekicks()`
+  (participation model, no zone/route/gameId carve-out); `applyBoost` uses `setMoveLockTimer(0xF)`
+  (equivalent to the spring path for the main character per `PlayableSpriteMovement`) and
+  `setPushing(false)`. Comparison-only; trace data never hydrated.
+- **cpz1: f2822 -> f3303** (new owner is a downstream `tails_air` divergence on the now-boosted Tails).
+- Same-game regression guard (single-fork): **EHZ1 / SCZ / WFZ all green** (failures=0, errors=0).
+  No same-game regression introduced.
+- File: `src/main/java/com/openggf/game/sonic2/objects/SpeedBoosterObjectInstance.java`.
+
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 
 - Branch `bugfix/ai-cnz1-objd4-cadence`, worktree `.worktrees/cnz1-objd4-cadence` (off develop `d192a8087`).

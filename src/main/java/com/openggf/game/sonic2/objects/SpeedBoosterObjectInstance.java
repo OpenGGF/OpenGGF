@@ -50,9 +50,21 @@ public class SpeedBoosterObjectInstance extends AbstractObjectInstance {
         // This masks bit 1 directly, producing 0 or 2
         mappingFrame = frameCounter & 2;
 
-        // Check collision with player
+        // ROM Obj1B_Main checks BOTH characters independently against the same
+        // +/-$10 box and boosts each grounded one via Obj1B_GiveBoost:
+        //   lea (MainCharacter).w,a1 ... bsr Obj1B_GiveBoost   (s2.asm:48179-48195)
+        //   lea (Sidekick).w,a1     ... bsr Obj1B_GiveBoost    (s2.asm:48196-48210)
+        // The engine previously only ran the box-check against the single main
+        // player, so CPU Tails was never boosted inside the booster box. Model
+        // the two ROM participation checks as "every active playable (main +
+        // sidekicks)" via the player-query layer (no zone/route carve-out).
         if (player != null) {
             checkPlayerCollision(player);
+        }
+        for (PlayableEntity sidekick : services().playerQuery().sidekicks()) {
+            if (sidekick instanceof AbstractPlayableSprite sidekickSprite && sidekickSprite != player) {
+                checkPlayerCollision(sidekickSprite);
+            }
         }
     }
 
@@ -123,15 +135,20 @@ public class SpeedBoosterObjectInstance extends AbstractObjectInstance {
 
         player.setXSpeed((short) newXVel);
 
-        // ROM: move.w #$F,move_lock(a1)
-        // Engine uses setSpringing() for control locking behavior
-        player.setSpringing(MOVE_LOCK_FRAMES);
+        // ROM: move.w #$F,move_lock(a1) (s2.asm:48230) — set the move_lock
+        // timer, NOT a spring flag. This is the field the sidekick CPU follow
+        // logic respects (SidekickCpuController reads getMoveLockTimer()); the
+        // previous setSpringing() was a no-op for CPU Tails, so a boosted
+        // sidekick immediately resumed following the leader. For the main
+        // character both fields block grounded input identically
+        // (PlayableSpriteMovement line 382), so this is equivalent there.
+        player.setMoveLockTimer(MOVE_LOCK_FRAMES);
 
-        // ROM: move.w x_vel(a1),inertia(a1)
+        // ROM: move.w x_vel(a1),inertia(a1) (s2.asm:48231)
         player.setGSpeed((short) newXVel);
 
-        // Clear pushing status (ROM clears status bits)
-        // This is handled implicitly by the velocity change
+        // ROM: bclr #status.player.pushing,status(a1) (s2.asm:48234)
+        player.setPushing(false);
 
         playBoostSound();
     }
