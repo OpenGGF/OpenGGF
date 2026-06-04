@@ -51,6 +51,25 @@ public class SidekickCpuController {
     private static final int LEVEL_START_Y_OFFSET = 4;
     private static final int DESPAWN_TIMEOUT = 300;
     private static final int MANUAL_CONTROL_FRAMES = 600;
+    /**
+     * ROM {@code interact(a0)} defaults to SST slot 0 = MainCharacter
+     * (s2.constants.asm:1101), whose id is {@code ObjID_Sonic} = 0x01
+     * (s2.constants.asm:603). An un-ridden CPU Tails therefore dereferences
+     * id 0x01 in {@code TailsCPU_CheckDespawn}'s {@code cmp.b id(a3),d0}
+     * (s2.asm:39419), not "empty". The engine uses slot -1 for never-ridden,
+     * so the despawn comparator substitutes this concrete default id.
+     */
+    private static final int ROM_DEFAULT_INTERACT_OBJECT_ID = 0x01;
+    /**
+     * When a once-ridden interact slot's object is deleted off-screen, ROM
+     * {@code DeleteObject} zeroes the whole object RAM (s2.asm:30324-30339), so
+     * {@code TailsCPU_CheckDespawn}'s {@code cmp.b id(a3),d0} (s2.asm:39419)
+     * reads id 0 from the freed slot and the mismatch fires the despawn. The
+     * engine collapses the freed slot to {@code -1}; the despawn comparator
+     * substitutes this concrete zero (distinct from the never-ridden default
+     * {@link #ROM_DEFAULT_INTERACT_OBJECT_ID} = 0x01).
+     */
+    private static final int ROM_DELETED_INTERACT_SLOT_ID = 0x00;
     private final int flyAnimId;
     private final int duckAnimId;
     private static final int INPUT_START = 0x20;
@@ -2710,14 +2729,26 @@ public class SidekickCpuController {
                 ? sidekick.isRenderFlagOnScreen()
                 : isCurrentlyVisible();
 
-        // UpdateObjInteract source: id of the LIVE object currently occupying
-        // the persistent interact(a0) slot. -1 == slot empty in the engine.
-        int liveSlotId = liveInteractSlotObjectId();
+        // RAW id of the LIVE object currently occupying the persistent
+        // interact(a0) slot. -1 == slot empty in the engine (covers BOTH
+        // never-ridden, interactSlotIndex < 0, AND a since-deleted occupant,
+        // interactSlotIndex >= 0 but no live object).
+        int rawLiveSlotId = rawInteractSlotObjectId();
+
+        // ROM TailsCPU_UpdateObjInteract writes Tails_interact_ID = id(slot)
+        // (s2.asm:39435-39446) every non-despawning frame. For the never-ridden
+        // case ROM dereferences default slot 0 = ObjID_Sonic 0x01, so the
+        // snapshot must be seeded with that concrete value (this is what makes
+        // a later off-screen first-landing on a different-id object mismatch).
+        // For a ridden-then-emptied slot the engine instead keeps the last real
+        // id (refreshInteractIdSnapshot ignores -1) so the recycle/deletion is
+        // still detectable; see romEffectiveInteractSlotId for the compare side.
+        int snapshotSeedId = snapshotSeedInteractSlotId(rawLiveSlotId);
 
         if (onScreen) {
             // ROM TailsCPU_ResetRespawnTimer -> TailsCPU_UpdateObjInteract.
             despawnCounter = 0;
-            refreshInteractIdSnapshot(liveSlotId);
+            refreshInteractIdSnapshot(snapshotSeedId);
             return false;
         }
 
@@ -2737,45 +2768,61 @@ public class SidekickCpuController {
                 if ((sidekick.getLatchedSolidObjectId() & 0xFF) != 0
                         && ridingInstance != null
                         && isLatchedRideSlotFreed(ridingInstance)) {
-                    refreshInteractIdSnapshot(liveSlotId);
+                    refreshInteractIdSnapshot(snapshotSeedId);
                     triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
                     return true;
                 }
             }
 
-            // S2: cmp.b id(a3),d0 — Tails_interact_ID (snapshot) vs the live id
-            // of whatever object now occupies interact(a0). Only a real recycle
-            // (slot occupied by a different id) fires; an empty engine slot
-            // (liveSlotId == -1) is treated as "unchanged" so the platform
-            // persisting off-screen does not spuriously despawn.
-            if (useSlotIdMismatchDespawn
-                    && liveSlotId >= 0
-                    && lastInteractObjectId >= 0
-                    && liveSlotId != lastInteractObjectId) {
-                refreshInteractIdSnapshot(liveSlotId);
-                triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
-                return true;
+            // S2: cmp.b id(a3),d0 — latched Tails_interact_ID snapshot vs the
+            // live id byte ROM dereferences at interact(a0). romEffectiveInteractSlotId
+            // resolves the single unified ROM model across all three cases:
+            //   never-ridden (slot < 0)        -> ROM default slot 0 = 0x01,
+            //   slot occupied by a live object -> that object's id,
+            //   slot once-ridden then emptied  -> ROM zeroed slot id 0.
+            // (docs/s2disasm/s2.asm:39403-39429,35980-36006,30324-30339;
+            //  s2.constants.asm:603,1101). The lastInteractObjectId >= 0
+            // precondition still excludes the never-stood-on-anything snapshot,
+            // preserving the EHZ1 guard semantics. Gated to S2's id-mismatch model.
+            if (useSlotIdMismatchDespawn) {
+                int romLiveSlotId = romEffectiveInteractSlotId(rawLiveSlotId);
+                if (lastInteractObjectId >= 0
+                        && romLiveSlotId != lastInteractObjectId) {
+                    refreshInteractIdSnapshot(snapshotSeedId);
+                    triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
+                    return true;
+                }
             }
         }
 
         // ROM TailsCPU_TickRespawnTimer.
         despawnCounter++;
         if (despawnCounter >= DESPAWN_TIMEOUT) {
-            refreshInteractIdSnapshot(liveSlotId);
+            refreshInteractIdSnapshot(snapshotSeedId);
             triggerDespawn(DespawnCause.OFF_SCREEN_TIMEOUT);
             return true;
         }
         // ROM falls through to TailsCPU_UpdateObjInteract.
-        refreshInteractIdSnapshot(liveSlotId);
+        refreshInteractIdSnapshot(snapshotSeedId);
         return false;
     }
 
     /**
-     * Dereferences the persistent {@code interact(a0)} slot and returns the live
-     * object's id byte, or {@code -1} when the slot is empty in the engine.
+     * Raw engine read of the persistent {@code interact(a0)} slot: the live
+     * object's id byte, or {@code -1} when the engine slot is empty. "Empty"
+     * here covers BOTH a never-ridden sidekick ({@code interactSlotIndex < 0})
+     * and a once-occupied slot whose object has been deleted/recycled away
+     * ({@code interactSlotIndex >= 0} but {@code objectIdInSlot} finds no live
+     * occupant). This raw form is the source for {@link #refreshInteractIdSnapshot}
+     * so the snapshot keeps its last <em>real</em> occupant id across a
+     * momentarily-empty slot.
+     *
+     * <p>For the ROM despawn comparison itself, use
+     * {@link #romEffectiveInteractSlotId(int)}, which maps these two engine
+     * "empty" cases to the two DISTINCT concrete ids ROM actually dereferences.
      * Mirrors ROM {@code a3 = Object_RAM + interact(a0)*object_size; id(a3)}.
      */
-    private int liveInteractSlotObjectId() {
+    private int rawInteractSlotObjectId() {
         int slot = sidekick.getInteractSlotIndex();
         if (slot < 0) {
             return -1;
@@ -2788,14 +2835,104 @@ public class SidekickCpuController {
     }
 
     /**
-     * ROM {@code TailsCPU_UpdateObjInteract}: {@code Tails_interact_ID = id(slot)}.
-     * The engine keeps the last <em>real</em> id when the slot is momentarily
-     * empty ({@code liveSlotId == -1}) so a later recycle is still detectable
-     * against the last known occupant.
+     * ROM-faithful live id of the {@code interact(a0)} slot for the
+     * {@code TailsCPU_CheckDespawn} {@code cmp.b id(a3),d0} compare
+     * (docs/s2disasm/s2.asm:39403-39429). ROM dereferences the slot's object
+     * RAM unconditionally; the engine collapses two physically-distinct ROM
+     * states into a single {@code -1} ({@link #rawInteractSlotObjectId()}), so
+     * this method re-derives the concrete byte ROM would read in each:
+     *
+     * <ul>
+     *   <li><b>Never rode anything</b> ({@code interactSlotIndex < 0}): ROM
+     *       {@code interact(a0)} is a byte slot index that DEFAULTS TO 0 and is
+     *       written only by {@code RideObject_SetRide} (s2.asm:35980-36006); it
+     *       is never cleared. Slot 0 is {@code MainCharacter}
+     *       (s2.constants.asm:1101), whose id is {@code ObjID_Sonic} = 0x01
+     *       (s2.constants.asm:603). So an un-ridden Tails dereferences id 0x01,
+     *       not "empty" (e.g. mtz1 f375: interact stays 0 -> 0x01 through the
+     *       airborne approach, then a different-id SteamSpring 0x42 landing
+     *       off-screen yields 0x01 != 0x42 -> immediate despawn).</li>
+     *   <li><b>Rode something, slot still occupied</b>
+     *       ({@code interactSlotIndex >= 0}, live object present): the live
+     *       occupant's id ({@code objectIdInSlot}).</li>
+     *   <li><b>Rode something, slot now emptied</b>
+     *       ({@code interactSlotIndex >= 0}, object deleted/recycled away): ROM
+     *       reads id 0 because {@code DeleteObject} zeroes the whole object RAM
+     *       (s2.asm:30324-30339), so {@code cmp.b id(a3),d0} sees 0 != the
+     *       latched {@code Tails_interact_ID} -> despawn (e.g. mtz3 f2638: the
+     *       MTZ long platform Obj65 Tails rode deletes itself off-screen).</li>
+     * </ul>
+     *
+     * <p>Only called on the S2 id-mismatch despawn path (the caller gates with
+     * {@link PhysicsFeatureSet#sidekickDespawnUsesObjectIdMismatch()}); S3K uses
+     * the freed-slot instance path
+     * ({@link PhysicsFeatureSet#sidekickDespawnUsesRidingInstanceLoss()}) and
+     * never reaches here. The {@code lastInteractObjectId >= 0} precondition at
+     * the call site still excludes the never-stood-on-anything snapshot.
+     *
+     * @param rawLiveSlotId the value from {@link #rawInteractSlotObjectId()}
      */
-    private void refreshInteractIdSnapshot(int liveSlotId) {
-        if (liveSlotId >= 0) {
-            lastInteractObjectId = liveSlotId;
+    private int romEffectiveInteractSlotId(int rawLiveSlotId) {
+        if (rawLiveSlotId >= 0) {
+            return rawLiveSlotId;
+        }
+        // rawLiveSlotId == -1: engine "empty". Distinguish the two ROM states.
+        if (sidekick.getInteractSlotIndex() < 0) {
+            // Never rode anything: ROM dereferences default slot 0 = ObjID_Sonic.
+            return ROM_DEFAULT_INTERACT_OBJECT_ID;
+        }
+        // Rode something, slot since emptied: ROM reads the zeroed slot id 0.
+        return ROM_DELETED_INTERACT_SLOT_ID;
+    }
+
+    /**
+     * The id ROM {@code TailsCPU_UpdateObjInteract} would store into
+     * {@code Tails_interact_ID} ({@code = id(slot)}, s2.asm:39435-39446) on a
+     * non-despawning frame, with one deliberate engine divergence for recycle
+     * detection. Two of the three slot states match
+     * {@link #romEffectiveInteractSlotId(int)} exactly:
+     *
+     * <ul>
+     *   <li><b>Never rode anything</b> ({@code interactSlotIndex < 0}): ROM
+     *       writes {@code id(slot 0)} = {@code ObjID_Sonic} 0x01 every frame, so
+     *       seed the snapshot with 0x01. This is what makes a subsequent
+     *       off-screen first landing on a different-id object register as a real
+     *       {@code cmp.b} mismatch (mtz1 f375: snapshot 0x01 vs SteamSpring 0x42
+     *       -> despawn). Without this seed the {@code lastInteractObjectId >= 0}
+     *       guard would never arm for an un-ridden sidekick.</li>
+     *   <li><b>Slot occupied by a live object</b>: the real occupant id.</li>
+     *   <li><b>Rode something, slot since emptied</b>
+     *       ({@code interactSlotIndex >= 0}, no live occupant): return {@code -1}
+     *       so {@link #refreshInteractIdSnapshot} <em>keeps</em> the last real id
+     *       instead of overwriting it with ROM's zero. This is the engine's
+     *       documented divergence from ROM's literal {@code UpdateObjInteract}
+     *       write: the despawn fires on the same frame the slot first reads 0
+     *       (the compare runs before the fall-through write in ROM too), and
+     *       keeping the prior id keeps the recycle/deletion mismatch detectable.</li>
+     * </ul>
+     */
+    private int snapshotSeedInteractSlotId(int rawLiveSlotId) {
+        if (rawLiveSlotId >= 0) {
+            return rawLiveSlotId;
+        }
+        if (sidekick.getInteractSlotIndex() < 0) {
+            // Never rode anything: ROM writes id(slot 0) = ObjID_Sonic 0x01.
+            return ROM_DEFAULT_INTERACT_OBJECT_ID;
+        }
+        // Ridden-then-emptied: preserve the last real id (engine divergence).
+        return -1;
+    }
+
+    /**
+     * ROM {@code TailsCPU_UpdateObjInteract}: {@code Tails_interact_ID = id(slot)}.
+     * Fed {@link #snapshotSeedInteractSlotId(int)} (NOT the raw read): the
+     * never-ridden case seeds 0x01, an occupied slot stores the real id, and a
+     * ridden-then-emptied slot passes {@code -1} so the snapshot keeps the last
+     * real id and a later recycle stays detectable.
+     */
+    private void refreshInteractIdSnapshot(int snapshotSeedId) {
+        if (snapshotSeedId >= 0) {
+            lastInteractObjectId = snapshotSeedId;
         }
     }
 

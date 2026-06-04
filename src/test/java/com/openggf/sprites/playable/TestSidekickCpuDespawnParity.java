@@ -513,7 +513,8 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void offscreenObjectSwitchDespawnsUsingLatchedInteractObjectId() {
+    void offscreenObjectSwitchDespawnsUsingLatchedInteractObjectId() throws Exception {
+        installEmptyObjectManager();
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
@@ -521,14 +522,27 @@ class TestSidekickCpuDespawnParity {
         tails.setCentreY((short) 0x0270);
         tails.setAir(false);
         tails.setOnObject(true);
-        tails.setLatchedSolidObjectId(0x11);
+        // Tails RODE object 0x11 via the interact slot (RideObject_SetRide,
+        // s2.asm:35980-36006), so interact(a0) points at a real slot index and
+        // the latched Tails_interact_ID snapshot is 0x11. Off-screen the ridden
+        // object is deleted/recycled away, so the live slot now reads ROM id 0
+        // (DeleteObject zeroes the object RAM, s2.asm:30324-30339). 0 != 0x11 ->
+        // TailsCPU_CheckDespawn mismatch -> TailsCPU_Despawn (s2.asm:39403-39429).
+        // This is the ridden-then-emptied case (interactSlotIndex >= 0), distinct
+        // from a never-ridden sidekick (interactSlotIndex < 0) whose slot ROM
+        // reads as the default MainCharacter id 0x01.
+        UnloadedRideObject rideObj = new UnloadedRideObject(0x11);
+        rideObj.setSlotIndex(0x20);
+        tails.setLatchedSolidObject(0x11, rideObj);
+        // The ride object is NOT added to the manager, so the live interact slot
+        // dereferences to nothing (engine -1) -> ROM zeroed slot id 0.
 
         GameServices.camera().setX((short) 0x058C);
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
-        controller.hydrateFromRomCpuState(6, 0, 90, 0x01, false, 0, 0);
-        tails.setLatchedSolidObjectId(0x11);
+        controller.hydrateFromRomCpuState(6, 0, 90, 0x11, false, 0, 0);
+        tails.setLatchedSolidObject(0x11, rideObj);
         tails.setOnObject(true);
         tails.setRenderFlagOnScreen(false);
 
@@ -594,20 +608,31 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
-    void despawnTimerUsesCachedRenderFlagInsteadOfCurrentCameraGeometry() {
+    void despawnTimerUsesCachedRenderFlagInsteadOfCurrentCameraGeometry() throws Exception {
+        installEmptyObjectManager();
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x0700);
         tails.setCentreY((short) 0x0200);
         tails.setOnObject(true);
-        tails.setLatchedSolidObjectId(0x11);
+        // The interact(a0) slot still holds the same object 0x11 (it was NOT
+        // recycled or deleted), so TailsCPU_CheckDespawn's id compare matches and
+        // the off-screen path falls through to the respawn timer. Model that with
+        // a live same-id object in the dereferenced slot so this test isolates the
+        // render-flag-vs-camera behaviour rather than an empty-slot artifact.
+        UnloadedRideObject rideObj = new UnloadedRideObject(0x11);
+        rideObj.setSlotIndex(0x11);
+        GameServices.level().getObjectManager().addDynamicObject(rideObj);
+        tails.setLatchedSolidObject(0x11, rideObj);
 
         GameServices.camera().setX((short) 0x05A0);
         GameServices.camera().setY((short) 0x0200);
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.hydrateFromRomCpuState(6, 0, 299, 0x11, false, 0, 0);
+        tails.setLatchedSolidObject(0x11, rideObj);
+        tails.setOnObject(true);
 
         tails.setRenderFlagOnScreen(true);
         controller.update(1);

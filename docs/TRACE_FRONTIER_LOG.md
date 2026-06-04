@@ -1,5 +1,211 @@
 # Trace Frontier Log
 
+## 2026-06-04 - INTEGRATION: unified interact(a0) slot model advances mtz1 375->863 AND mtz3 2638->3719 together
+
+- Branch `feature/ai-mtz-sidekick-despawn-integration`, worktree
+  `.worktrees/mtz-integration` (off develop `a4d6a9bd4`). Command (all 3 ROMs by
+  default filename in worktree CWD):
+  `cmd //c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \"-Dtest=*TraceReplay\" test"`
+- **Reconciles two independently-correct fixes** that edited the same
+  `SidekickCpuController` off-screen despawn path and conflicted because the
+  engine collapsed two distinct ROM states into one `-1` ("slot empty"):
+  - `2b34aa9ab` (mtz1): never-ridden interact slot (`interactSlotIndex < 0`) →
+    ROM default id 0x01 (interact(a0) defaults to slot 0 = MainCharacter =
+    ObjID_Sonic; s2.asm:35980-36006, s2.constants.asm:603,1101). f375→f863.
+  - `3480cdc49` (mtz3): ridden-then-deleted interact slot (slot was set, object
+    now gone) → ROM id 0 (DeleteObject zeroes the slot; s2.asm:30324-30339).
+    f2638→f3719.
+- **Unified model (ONE ROM-correct live-id resolution, S2-gated):** new
+  `romEffectiveInteractSlotId(rawLiveSlotId)` resolves the ROM byte
+  `TailsCPU_CheckDespawn`'s `cmp.b id(a3),d0` (s2.asm:39403-39429) would read:
+  (1) `interactSlotIndex < 0` → 0x01; (2) slot ≥ 0 with a live object →
+  `objectIdInSlot`; (3) slot ≥ 0 but emptied → 0. The raw slot read is kept
+  separate (`rawInteractSlotObjectId()`) so `refreshInteractIdSnapshot` still
+  latches the last *real* occupant id across a momentarily-empty slot, and the
+  `lastInteractObjectId >= 0` guard is intact. NOT a blind either-side pick.
+- **EHZ1 A/B (the historically-sensitive trace):** stashing the reconciled
+  SidekickCpuController change → EHZ1 GREEN, mtz1@375, mtz3@2638; restoring it →
+  EHZ1 GREEN, mtz1@863, mtz3@3719. EHZ1's CPU Tails always has a set interact
+  slot at its off-screen frames, so the never-ridden (case-1) substitution
+  never fires there — provably inert, confirmed green both ways.
+- **mtz1 f863** new first-divergence is a genuine Sonic `air` issue (not
+  sidekick). **mtz3 f3719** (historical peak) new owner is the distinct
+  downstream Tails dead-fall `tails_y` divergence (sidekick object routine 6).
+- **cnz1 deferred:** cnz1 stays at f3831 (its documented accepted regression
+  3906→3831 from the windowing/update-cadence work); its remaining gap is the
+  ObjD4 update-cadence parity, NOT this sidekick despawn path. Left to the
+  ObjD4 update-cadence effort.
+- Full single-fork `*TraceReplay` sweep, before(develop baseline)->after
+  first-error (every trace class):
+
+  | Trace | BASELINE | AFTER | Verdict |
+  |-------|----------|-------|---------|
+  | S1 x10 (Ghz1, Mz1, Credits00-07) | GREEN | GREEN | unchanged |
+  | S2 EHZ1 | GREEN | GREEN | unchanged (A/B confirmed) |
+  | S2 SCZ | GREEN | GREEN | unchanged |
+  | S2 WFZ | GREEN | GREEN | unchanged |
+  | S2 MTZ1 | f375 tails_air | f863 air | **ADVANCED +488** |
+  | S2 MTZ3 | f2638 tails_air | f3719 tails_y | **ADVANCED +1081** |
+  | S2 ARZ1 | f2043 | f2043 | unchanged |
+  | S2 ARZ2 | f549 | f549 | unchanged |
+  | S2 CNZ1 | f3831 | f3831 | unchanged (deferred to ObjD4 cadence) |
+  | S2 CNZ2 | f1775 | f1775 | unchanged |
+  | S2 CPZ1 | f2822 | f2822 | unchanged |
+  | S2 CPZ2 | f2518 | f2518 | unchanged |
+  | S2 DEZ | f1023 | f1023 | unchanged |
+  | S2 HTZ1 | f5647 | f5647 | unchanged |
+  | S2 HTZ2 | f1078 | f1078 | unchanged |
+  | S2 MCZ1 | f2181 | f2181 | unchanged |
+  | S2 MCZ2 | f4009 | f4009 | unchanged |
+  | S2 MTZ2 | f641 | f641 | unchanged |
+  | S2 OOZ1 | f756 | f756 | unchanged |
+  | S2 OOZ2 | f389 | f389 | unchanged |
+  | S3K AIZ | f8941 | f8941 | unchanged (path S3K-gated off) |
+  | S3K CNZ | f17276 | f17276 | unchanged |
+  | S3K MGZ | f4124 | f4124 | unchanged |
+
+- Guards: `TestS2ObjectOccupancyOracle` green; S3K must-keep units green
+  (TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading, TestSonic3kBootstrapResolver,
+  TestSonic3kDecodingUtils); sidekick units green (TestSidekickCpuDespawnParity,
+  TestSidekickDespawnXFeatureFlag, TestSidekickGating, TestSidekickCpuControllerCarry,
+  TestSidekickChainHealing).
+
+<details><summary>Superseded source entries (mtz1 + mtz3, reconciled above)</summary>
+
+## 2026-06-04 - FIXED: mtz1 f375->f863 (ROM interact(a0) default-id; NOT the auto-jump cause below)
+
+- Branch `bugfix/ai-mtz1-sidekick-autojump`, worktree `.worktrees/mtz1-sidekick-autojump`, off develop
+  (`a4d6a9bd4`). Command: `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true -Dtest=*TraceReplay test`
+  (all 3 ROMs by default filename in worktree CWD).
+- **The "Tails-CPU auto-jump" diagnosis in the entry below was WRONG.** Trace evidence (physics.csv +
+  aux_state.jsonl) shows at mtz1 f375 ROM Tails snaps to `tails_x=0x4000, tails_y=0x0000, air=1,
+  status=0x02` and holds it — that is `TailsCPU_Despawn` (s2.asm:39391-39400), an off-screen despawn,
+  NOT an in-place jump (a jump would set `y_vel=-0x680` and keep position; ROM teleports to (0x4000,0)).
+  The diverging `tails_air=1` is the despawn marker's `Status_InAir` bit.
+- **REAL CAUSE + FIX (committed):** ROM `TailsCPU_CheckDespawn` immediate slot-recycle despawn
+  (`cmp.b id(a3),d0`, s2.asm:39403-39429) compares the previous-frame `Tails_interact_ID` snapshot vs
+  the live id of the object now in the persistent SST slot `interact(a0)`. `interact(a0)` DEFAULTS TO 0
+  and is written only by `RideObject_SetRide` (s2.asm:35980-36006); slot 0 = MainCharacter = ObjID_Sonic
+  0x01 (s2.constants.asm:603,1101). At f375 CPU Tails lands OFF-screen on a SteamSpring (0x42) having
+  never ridden anything, so ROM compares snapshot 0x01 != live 0x42 -> immediate despawn. The engine
+  models never-ridden as interact-slot -1 and `liveInteractSlotObjectId()` returned -1, which the
+  `lastInteractObjectId >= 0` despawn guard treated as "no comparison" -> Tails stayed grounded on the
+  spring. Fix: `SidekickCpuController.liveInteractSlotObjectId()` substitutes ROM's concrete default id
+  (0x01) for the never-ridden (`slot < 0`) case, gated to S2's `sidekickDespawnUsesObjectIdMismatch`.
+  The existing pre-physics `checkDespawn` ordering preserves ROM's one-frame `UpdateObjInteract`
+  snapshot lag, so the compare reflects the pre-landing interact.
+- **EHZ1 explicitly preserved (the known hard EHZ1-vs-mtz1 tension).** Earlier attempts regressed green
+  EHZ1 at f1417 by removing the `>= 0` guard (the blunt ROM-literal compare); EHZ1's CPU Tails rides the
+  WRONG object (Bridge 0x11) vs ROM's platform 0x18, so the unguarded compare mis-fired. This fix keeps
+  the guard and only supplies the default id for the never-ridden case. EHZ1's CPU Tails ALWAYS has a set
+  interact slot at its off-screen frames — instrumented the full EHZ1 trace: there is NO `slot < 0`
+  off-screen frame, so the new path is provably inert for EHZ1. A/B (stash the one-file change):
+  baseline EHZ1 GREEN + mtz1@375; with fix EHZ1 GREEN + mtz1@863. The EHZ1 ride-target divergence (0x11
+  vs 0x18) is real but does NOT manifest as a despawn here and is left to a dedicated EHZ1 ride-target
+  effort.
+- **mtz1 f375 (tails_air) -> f863 (air).** New first-divergence is a genuine Sonic `air` issue (not
+  sidekick). Errors 834 -> 805.
+- Full single-fork `*TraceReplay` sweep, before->after first-error (every trace class):
+
+  | Trace | BEFORE | AFTER | Verdict |
+  |-------|--------|-------|---------|
+  | S1 x10 (Ghz1, Mz1, Credits00-07) | GREEN | GREEN | unchanged |
+  | S2 EHZ1 | GREEN | GREEN | unchanged (A/B confirmed) |
+  | S2 SCZ | GREEN | GREEN | unchanged |
+  | S2 WFZ | GREEN | GREEN | unchanged |
+  | S2 MTZ1 | f375 tails_air | f863 air | **ADVANCED +488** |
+  | S2 ARZ1 | f2043 | f2043 | unchanged |
+  | S2 ARZ2 | f549 | f549 | unchanged |
+  | S2 CNZ1 | f3831 | f3831 | unchanged |
+  | S2 CNZ2 | f1775 | f1775 | unchanged |
+  | S2 CPZ1 | f2822 | f2822 | unchanged |
+  | S2 CPZ2 | f2518 | f2518 | unchanged |
+  | S2 DEZ | f1023 | f1023 | unchanged |
+  | S2 HTZ1 | f5647 | f5647 | unchanged |
+  | S2 HTZ2 | f1078 | f1078 | unchanged |
+  | S2 MCZ1 | f2181 | f2181 | unchanged |
+  | S2 MCZ2 | f4009 | f4009 | unchanged |
+  | S2 MTZ2 | f641 | f641 | unchanged |
+  | S2 MTZ3 | f2638 | f2638 | unchanged |
+  | S2 OOZ1 | f756 | f756 | unchanged |
+  | S2 OOZ2 | f389 | f389 | unchanged |
+  | S3K AIZ | f8941 | f8941 | unchanged (path S3K-gated off) |
+  | S3K CNZ | f17276 | f17276 | unchanged |
+  | S3K MGZ | f4124 | f4124 | unchanged |
+
+- Guards: `TestS2ObjectOccupancyOracle` 4/4 green; S3K must-keep units green
+  (TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading, TestSonic3kBootstrapResolver,
+  TestSonic3kDecodingUtils); sidekick units green (TestSidekickDespawnXFeatureFlag, TestSidekickGating,
+  TestSidekickCpuControllerCarry, TestSidekickChainHealing).
+
+## 2026-06-04 - S2 MTZ3 restored to historical peak (f2638 -> f3719): deleted-ride-slot sidekick despawn
+
+- Worktree: `C:\Users\farre\IdeaProjects\sonic-engine\.worktrees\mtz3-restore`,
+  branch `bugfix/ai-mtz3-restore-frontier` (off develop; has merged windowing + cog fix).
+- Command (all 3 ROMs in the worktree cwd; default filenames resolved):
+  `cmd //c "mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true \"-Dtest=*TraceReplay\" test"`
+
+### Diagnosis (f2638 was the NEW divergence after the cog fix; un-diagnosed)
+
+At MTZ3 trace f2638 the ROM teleports Tails to `tails_x=0x4000, tails_y=0x0000,
+tails_status=0x02 (in_air), tails_air=1` — the signature of `TailsCPU_Despawn`
+(docs/s2disasm/s2.asm:39391-39400, writes `#$4000,x_pos` / `#0,y_pos` /
+`Status_InAir`). The Tails-CPU state machine had been in `Tails_CPU_routine`
+Panic (cpu_routine 8 from f2545) and flipped to Spawning (2) at f2638, with the
+respawn counter at only 52 (far below the $12C off-screen timeout) — i.e. the
+despawn was triggered by the **interact-slot id mismatch** branch of
+`TailsCPU_CheckDespawn` (s2.asm:39403-39429), NOT the timeout. The aux trace
+confirms slot 57 (the MTZ Long Platform Obj65, type 0x65 Tails was riding)
+emitted `object_removed` at the prior frame: the ridden object was deleted
+off-screen, so its slot id byte read 0, mismatching `Tails_interact_ID`=0x65
+-> `TailsCPU_Despawn`.
+
+The engine kept Tails riding the platform (`ride=s35 type=65 st=09`) and never
+flew it off. Recorder-free instrumentation proved the engine DOES delete the
+same platform at the SAME camera position as ROM (Obj65 custom window
+`cmpi.w #$280` vs `Camera_X_pos_coarse`, s2.asm:52886-52899; delete at
+camera X >= 0xB80, both ROM and engine). The real gap: when the engine deletes
+the ride object, its interact slot reads `-1` (empty) where ROM reads `0`
+(DeleteObject zeroes the object RAM, s2.asm:30324-30339). The S2 despawn branch
+in `SidekickCpuController.checkDespawn` had a `liveSlotId >= 0` guard that
+treated `-1` as "slot unchanged", suppressing the despawn. This guard is the
+regression the slot-model foundation commit `c4133ec89`'s predecessor
+`bd74180e5` introduced ("knowingly regresses MTZ3").
+
+### Fix (comparison-only; ROM-faithful; S2-gated; no carve-out)
+
+`SidekickCpuController.checkDespawn` S2 branch now maps an empty interact slot
+(`liveSlotId < 0`) to ROM id `0` and despawns when it differs from a nonzero
+`Tails_interact_ID` snapshot — exactly ROM's `cmp.b id(a3),d0 / bne
+TailsCPU_Despawn`. Gated by `PhysicsFeatureSet.sidekickDespawnUsesObjectIdMismatch`
+(S2 true / S3K false); S3K keeps its riding-instance-loss path. One-line model
+fix in the existing branch; `ObjectManager.objectIdInSlot` Javadoc updated to
+match. Also un-breaks two pre-existing failing parity tests
+(`TestSidekickCpuDespawnParity.s2DestroyedRideSlotDespawnsThroughFreedObjectIdMismatch`,
+`offscreenObjectSwitchDespawnsUsingLatchedInteractObjectId`) that encode this
+ROM behavior, and re-models `despawnTimerUsesCachedRenderFlagInsteadOfCurrentCameraGeometry`
+to install a genuinely-still-loaded same-id slot object (no behavior weakening).
+
+### Result
+
+- MTZ3 replay: f2638 (tails_air) -> **f3719** (tails_y expected=0x0807
+  actual=0x0007), error count 1465 -> 1393. f3719 is the historical peak; the
+  new owner is the **distinct** downstream Tails dead-fall position divergence
+  (sidekick object routine 6 / `branch=sidekick_dead`), not this despawn path.
+- **Distinct from MTZ1's Tails-CPU auto-jump landing re-press** (different code
+  path: `TailsCPU_Normal_FilterAction` jump bit vs this despawn check). MTZ1
+  unchanged at f375.
+- Regression check (full single-fork `*TraceReplay`, all 3 ROMs): NO green
+  regressed (S1 all ×10, EHZ1, SCZ, WFZ green). NO frontier moved backward —
+  all matched baseline exactly: arz1 2043, arz2 549, cnz1 3831, cnz2 1775,
+  cpz1 2822, cpz2 2518, dez1 1023, htz1 5647, htz2 1078, mcz1 2181, mcz2 4009,
+  mtz1 375, mtz2 641, ooz1 756, ooz2 389; S3K aiz 8941 / cnz 17276 / mgz 4124.
+- `TestS2ObjectOccupancyOracle` green; S3K must-keep units green
+  (TestS3kAiz1SkipHeadless, TestSonic3kLevelLoading, TestSonic3kBootstrapResolver,
+  TestSonic3kDecodingUtils).
+
+</details>
+
 ## 2026-06-04 - CORRECTION: cnz1 & mtz1 real causes (prior "3-subsystem" diagnosis was 2/3 wrong)
 
 The earlier "MTZ-family = three subsystems" entry below was REFUTED by deeper per-frontier
