@@ -1,5 +1,45 @@
 # Trace Frontier Log
 
+## 2026-06-04 - MTZ3 giant-cog ride-release: f2047 -> f2638 (jump-off carry/push timing)
+
+- Worktree: `.worktrees/mtz3-platform-carry`, branch `bugfix/ai-mtz3-platform-carry`
+  (off the windowing branch HEAD `a9c97aaa7`).
+- First error before: **mtz3 f2047 `tails_x` (expected 0x07BD, actual 0x07CA)**, 2518 errors.
+- First error after:  **mtz3 f2638 `tails_air` (expected 1, actual 0)**, 1465 errors.
+- Root cause (systematic-debugging + per-frame `System.err` diagnostics, all removed):
+  Tails rides MTZ giant-cog (Obj70) tooth piece 3, then jumps off on the rotation
+  frame. ROM `SolidObject` standing branch (s2.asm:35021-35044) sees the ridden
+  tooth's `d6` standing bit set AND `Status_InAir` set, takes `loc_1975A`
+  (35035-35040): clears `Status_OnObj`/`d6`, sets `Status_InAir`, returns `d4=0`
+  with NO carry and NO side push. The engine had already cleared the cog ride
+  state before the inline solid pass, so the airborne Tails was treated as a fresh
+  side contact against the rotated tooth and shoved +0xD (0x07BD->0x07CA) one frame
+  early; ROM applies that displacement only at f2048 (gfc 0x801; verified against
+  physics.csv: gfc 0x800 tails_x=0x07BD, gfc 0x801 tails_x=0x07CA).
+- Fix: `CogObjectInstance.airborneStaleStandingBitReturnsNoContact()` now returns
+  `true`, opting Obj70 into the existing shared `SolidObjectFull`/`SolidObject`
+  standing-branch air-unseat contract (its ROM helper is `JmpTo16_SolidObject`,
+  s2.asm:55132). One-object opt-in; **no shared collision-code change**.
+- Command (single fork, ROMs via `SONIC_{1,2,3K}_ROM_PATH` env):
+  `mvn -q -Ptrace-replay -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true -Dtest=*TraceReplay test`
+  - S1: all GREEN (Ghz1, Mz1, Credits00-07).
+  - S2 GREEN: EHZ1, SCZ, WFZ (unchanged).
+  - S2 frontiers UNCHANGED: arz1 2043, arz2 549, cnz1 3831, cnz2 1775, cpz1 2822,
+    cpz2 2518, dez1 1023, htz1 5647, htz2 1078, mcz1 2181, mcz2 4009, mtz1 375,
+    mtz2 641, ooz1 756, ooz2 389.
+  - S2 MOVED (forward): **mtz3 2047 -> 2638**.
+  - S3K frontiers UNCHANGED: aiz 8941, cnz 17276, mgz 4124.
+  - No green regressed; no frontier moved backward.
+- Oracle: `TestS2ObjectOccupancyOracle` 45 passed / 22 failed - identical to the
+  with-fix-stashed baseline (A/B via `git stash`); green-zone `*MatchesRom`
+  (EHZ1/SCZ/WFZ) PASS. Change is cog-only; cogs exist only in MTZ.
+- S3K must-keep units GREEN: TestS3kAiz1SkipHeadless (8, 3 skipped),
+  TestSonic3kLevelLoading (30), TestSonic3kBootstrapResolver (5),
+  TestSonic3kDecodingUtils (3) - all 0 failures/0 errors.
+- Note: this re-derives the f2638 frontier (last seen pre-windowing-Stage-1) on the
+  correct ROM standing-branch foundation, replacing the prior
+  `isLatchedRideSlotFreed` heuristic the Stage-1 cascade removed.
+
 ## 2026-06-04 - Object-lifetime piece (a): transient explosion (Obj27) self-delete aligned to ROM-exact frame
 
 - Worktree: `feature/ai-rom-object-windowing-s2` (branch `feature/ai-trace-green...`).

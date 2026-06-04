@@ -1846,6 +1846,46 @@ ROM-exact self-delete + `GameModule.explosionInitialAnimDuration()`; enables the
 
 ---
 
+## P43 — Rideable `SolidObject`/`SolidObjectFull` solid must opt into the standing-branch air-unseat or it side-pushes/carries a jump-off rider one frame early
+
+**Pattern.** An object the player rides (platform, moving block, cog tooth,
+elevator) collides via the ROM `SolidObject` / `SolidObjectFull` helper. Those
+helpers test the player's standing bit on the object FIRST (`btst d6,status(a0)`,
+`docs/s2disasm/s2.asm:35021-35022`). When the bit is set and the player is now
+airborne (jumped off, got hurt, sprang away), the helper takes the standing-branch
+air-unseat (`loc_1975A`, s2.asm:35035-35040): it clears `Status_OnObj`/`d6`, sets
+`Status_InAir`, and returns `d4=0` WITHOUT falling into `SolidObject_cont`. So on
+the release frame the platform carry (`MvSonicOnPtfm`, s2.asm:35635-35659) and the
+side push (`SolidObject_AtEdge`, s2.asm:35432-35444) are BOTH skipped — the rider
+keeps last frame's x_pos and moves only by his own velocity next frame.
+
+**Engine symptom.** The engine clears its ride/standing state before the inline
+solid pass, so the just-released airborne rider is reclassified as a FRESH contact
+against the (often just-moved) object and is side-pushed or re-carried on the
+release frame, landing 1+ px off and one frame ahead of ROM. Canonical trace
+signature: a rider on a moving solid jumps off, and `*_x` is displaced by exactly
+the object's per-frame motion delta one frame before ROM applies it (MTZ3 f2047
+`tails_x` engine 0x07CA vs ROM 0x07BD; ROM applies +0xD only at f2048).
+
+**What to check.** If the object uses the plain `SolidObject`/`SolidObjectFull`
+helper (NOT a bespoke object-local capture path like CNZ cylinders), override
+`SolidObjectProvider.airborneStaleStandingBitReturnsNoContact(player)` to return
+`true`. The engine then mirrors the standing-branch air-unseat: clears support,
+sets air, returns no contact — no carry, no side push. Keep it opt-in; objects
+that manage the rider through `obj_control`/held-capture must NOT enable it.
+
+**ROM citation.** `SolidObject` standing branch + air-unseat
+`docs/s2disasm/s2.asm:35021-35044`; carry `MvSonicOnPtfm` s2.asm:35635-35659;
+side push `SolidObject_AtEdge` s2.asm:35432-35444. Obj70 cog routes through the
+shared helper via `JmpTo16_SolidObject` (s2.asm:55132). S3K analogue:
+`SolidObjectFull_1P` `loc_1DC98` (docs/skdisasm/sonic3k.asm:41017-41035).
+
+**Originating commit.** `<pending>` MTZ3 giant-cog ride-release:
+`CogObjectInstance.airborneStaleStandingBitReturnsNoContact()` = true; MTZ3
+frontier f2047 -> f2638, no green/frontier regression.
+
+---
+
 ## How to add a new entry
 
 When a trace-replay-bug-fixing iteration commits an object fix whose root
