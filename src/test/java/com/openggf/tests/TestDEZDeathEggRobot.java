@@ -220,6 +220,67 @@ public class TestDEZDeathEggRobot {
     }
 
     @Test
+    public void allPermanentChildrenReceiveServices() throws Exception {
+        // Regression: the boss spawns its 10 permanent children from inside its own
+        // constructor (initializeBossState -> spawnChildren -> createPermanentChild),
+        // which itself runs under the ObjectManager placement path's CONSTRUCTION_CONTEXT.
+        // createPermanentChild wraps each child in ObjectConstructionContext.construct().
+        // Previously that helper's finally block REMOVED the construction context, so
+        // after the first child the boss's own outer context was gone: children 2..10
+        // skipped both the construction-context injection AND the addDynamicObject()
+        // setServices() call, leaving their services field null. The crash surfaced as
+        // ForearmChild.updatePunch -> services().playSfx(...) throwing
+        // "services not available" once the Death Egg Robot fight reached a punch.
+        // ObjectConstructionContext.construct now save-and-restores the prior context,
+        // so every nested child is added through the manager and gets services injected.
+        com.openggf.camera.Camera camera = mock(com.openggf.camera.Camera.class);
+        when(camera.getX()).thenReturn((short) 0);
+        when(camera.getY()).thenReturn((short) 0);
+        when(camera.getWidth()).thenReturn((short) 320);
+        when(camera.getHeight()).thenReturn((short) 224);
+        when(camera.isVerticalWrapEnabled()).thenReturn(false);
+
+        com.openggf.level.objects.ObjectManager[] holder =
+                new com.openggf.level.objects.ObjectManager[1];
+        ObjectServices managerServices = new com.openggf.level.objects.StubObjectServices() {
+            @Override
+            public com.openggf.level.objects.ObjectManager objectManager() {
+                return holder[0];
+            }
+        };
+        com.openggf.level.objects.ObjectManager manager =
+                new com.openggf.level.objects.ObjectManager(
+                        List.of(), null, 0, null, null, null, camera, managerServices);
+        holder[0] = manager;
+
+        // Spawn the boss exactly the way the placement path does: set the
+        // construction context, run the constructor (which spawns the children),
+        // then inject services on the parent.
+        Sonic2DeathEggRobotInstance spawnedBoss =
+                com.openggf.level.objects.ObjectConstructionContext.construct(
+                        managerServices,
+                        () -> new Sonic2DeathEggRobotInstance(new ObjectSpawn(
+                                BOSS_X, BOSS_Y, Sonic2ObjectIds.DEATH_EGG_ROBOT,
+                                0, 0, false, 0)));
+        spawnedBoss.setServices(managerServices);
+
+        Field servicesField =
+                AbstractObjectInstance.class.getDeclaredField("services");
+        servicesField.setAccessible(true);
+
+        assertEquals(10, spawnedBoss.getChildComponents().size(),
+                "Boss should spawn its 10 permanent children");
+        for (BossChildComponent child : spawnedBoss.getChildComponents()) {
+            assertTrue(child instanceof AbstractObjectInstance,
+                    "Each child component should be an AbstractObjectInstance");
+            Object svc = servicesField.get(child);
+            assertNotNull(svc,
+                    "Child '" + ((AbstractObjectInstance) child).getName()
+                    + "' must have services injected (no 'services not available' crash)");
+        }
+    }
+
+    @Test
     public void headChildExists() {
         assertNotNull(boss.getHead(), "Head child should exist");
     }

@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-06-04 - S2 trace-green-fleet pass 3 + DEZ unblock: 7 frontiers advanced, integrated + verified
+
+- Branch `feature/ai-trace-green-integration` off develop `fe79b8d52`; verified with one
+  single-fork `*TraceReplay` sweep (all 3 ROMs): 0 flakes, 0 regressions. S1 (×10) green,
+  S2 greens (ehz1/scz/wfz) green, S3K (aiz f8941 / cnz f17276 / mgz f4124) byte-identical.
+  | Trace | frame | commit |
+  |-------|-------|--------|
+  | ARZ1 | 1208→2043 | `16d3ea29f` Grounder badnik |
+  | ARZ2 | 264→482   | `e962ebcb6` swinging platform |
+  | CPZ1 | 1905→2038 | `e26a26559` Blue Balls object |
+  | CPZ2 | 1609→2251 | `7dc2eedbd` Grabber |
+  | MCZ1 | 2005→2049 | `90d7b7ccf` PhysicsFeatureSet fullSolidBottomOverlapUsesCurrentYRadiusOnly (S2 true, S3K false) |
+  | MCZ2 | 3729→3991 | `ea1a60dab` Flasher badnik |
+  | DEZ  | 536→1023  | `607c5ae12` MechaSonic advance + ForearmChild construction-context fix (no longer crashes) |
+- ObjectConstructionContext nested-context fix (in DEZ commit) is a universal engine
+  correctness fix; confirmed inert for S1/S3K by the sweep.
+- Regressed/rejected this pass (not committed): MTZ1 (375→863) and HTZ2 (795→1078) — both
+  the Tails_interact_ID object-id-mismatch despawn relaxation, which advances the target but
+  regresses green EHZ1 at f1417. Still blocked on modelling ROM's persistent Tails_interact_ID
+  so the unguarded compare does not over-fire on EHZ1's first landing.
+- HTZ1 deferred: its pass-3 verify did not complete (agent schema failure); the uncommitted
+  shared `SolidObjectProvider` change was left unverified and excluded — re-attempt next pass.
+
 ## 2026-06-04 - S2 trace-green-fleet pass 2: 8 frontiers advanced, integrated + verified
 
 - Branch `feature/ai-trace-green-integration` off develop `b91c7a13a`; verified with one

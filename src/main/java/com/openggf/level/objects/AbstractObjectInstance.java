@@ -438,6 +438,15 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Returns the current construction-context services, or {@code null} when
+     * none is set. Package-visible so {@link ObjectConstructionContext} can
+     * save-and-restore a nested context rather than blindly clearing it.
+     */
+    static ObjectServices currentConstructionContext() {
+        return CONSTRUCTION_CONTEXT.get();
+    }
+
+    /**
      * Static accessor for RomManager, usable from helper methods during object setup.
      */
     protected static RomManager staticRomManager() {

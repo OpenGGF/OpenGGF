@@ -289,19 +289,29 @@ public class GrounderBadnikInstance extends AbstractBadnikInstance {
 
     /**
      * ROCK_THROW state (Routine A):
-     * - Wait for pause timer (0x3B frames)
+     * - Wait for pause timer (seeded with 0x3B on entry, loc_36B5C s2.asm:73326-73328)
      * - Then reverse direction and return to MOVEMENT
      *
-     * From disassembly loc_36B6A:
+     * From disassembly loc_36B6A (s2.asm:73332-73335):
      *   subq.b #1,objoff_2A(a0)     ; Decrement timer
-     *   bne.s ...                   ; Continue if not zero
-     *   subq.b #2,routine(a0)       ; Go back to routine 8 (MOVEMENT)
-     *   bchg #status.npc.x_flip,status(a0)  ; Reverse direction
-     *   bra.w loc_36B0E             ; Set new velocity
+     *   bmi.s loc_36B74             ; Reverse only once the timer goes NEGATIVE
+     * loc_36B74 (s2.asm:73338-73342):
+     *   move.b #8,routine(a0)       ; Back to routine 8 (MOVEMENT)
+     *   neg.w x_vel(a0)             ; Reverse velocity
+     *   bchg #status.npc.x_flip,status(a0)
+     *
+     * The ROM seeds objoff_2A = 0x3B (59) and reverses on the frame the
+     * decrement produces -1 (bmi). That is 60 decrements: 0x3B -> ... -> 0
+     * (all stay paused) -> -1 (reverse). The previous {@code <= 0} test
+     * reversed on the 59th decrement (one frame early), resuming the walk a
+     * frame too soon and leaving the badnik 1px ahead of ROM Obj8D for the
+     * rest of the traversal -- which delayed the Touch_KillEnemy overlap
+     * (s2.asm:85296-85329) by one frame (S2 ARZ1 trace f1208). Use
+     * {@code < 0} so the engine pauses the full 60 frames like the ROM bmi.
      */
     private void updateRockThrow() {
         pauseTimer--;
-        if (pauseTimer <= 0) {
+        if (pauseTimer < 0) {
             // Reverse direction
             facingLeft = !facingLeft;
             xVelocity = facingLeft ? -MOVEMENT_VELOCITY : MOVEMENT_VELOCITY;

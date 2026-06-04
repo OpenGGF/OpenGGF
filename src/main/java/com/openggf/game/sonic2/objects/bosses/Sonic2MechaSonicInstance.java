@@ -124,8 +124,15 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
     private static final int[] ANIM_1_CROUCH = {3};
     // Anim 2: dash start (speed 3, stall) — used in Dash Across second half
     private static final int[] ANIM_2_DASH = {4, 5, 4, 3};
-    // Anim 3: speed-up ball form (speed 3, stall) — aim phase wind-up
-    private static final int[] ANIM_3_SPEEDUP = {3, 3, 6, 6, 6, 7, 7, 7, 8, 8, 8, 6, 6, 7, 7, 8, 8, 6, 7, 8};
+    // Anim 3: speed-up ball form (speed 3, stall) — aim phase wind-up.
+    // ROM byte_39DFE (s2.asm:78141-78142): dc.b 3, 3,3,3, 6,6,6, 7,7,7, 8,8,8, 6,6, 7,7, 8,8, 6,7,8, $FC
+    // i.e. THREE leading standing (frame 3) entries before the ball frames begin.
+    // The engine previously had only two leading 3s, which advanced the body into
+    // ball form (frames 6/7/8 -> collision_flags $9A/HURT) one anim-step (4 frames)
+    // early. That made a rolling Sonic falling into the boss register a HURT touch
+    // instead of the standing-form ($1A/ENEMY) boss-bounce the ROM produces
+    // (loc_39D24 gates ball vs standing strictly on mapping_frame, s2.asm:78017-78039).
+    private static final int[] ANIM_3_SPEEDUP = {3, 3, 3, 6, 6, 6, 7, 7, 7, 8, 8, 8, 6, 6, 7, 7, 8, 8, 6, 7, 8};
     // Anim 4: spin loop (speed 2, loop) — continuous ball spin during dash
     private static final int[] ANIM_4_SPIN = {6, 7, 8};
     // Anim 5: decel spin-down (speed 3, stall) — post-dash walk-out
@@ -544,6 +551,12 @@ public class Sonic2MechaSonicInstance extends AbstractBossInstance {
                     actionTimer = 0x40;
                     // ROM: loc_39A56 — start dash, no sound, no anim change
                     startDash(DASH_SPEED);
+                    // ROM: loc_398C0 outer loop calls JmpTo26_ObjectMove once per attack
+                    // frame AFTER the phase handler runs (s2.asm:77583). loc_39A56 sets
+                    // x_vel=$800 and the outer ObjectMove applies it on this same frame,
+                    // so the dash-start frame already advances the boss by one velocity
+                    // step. Apply it here to avoid dropping that 8px step.
+                    state.applyVelocity();
                 } else {
                     animateSpriteChecked();
                 }
