@@ -206,6 +206,29 @@
   No same-game regression introduced.
 - File: `src/main/java/com/openggf/game/sonic2/objects/SpeedBoosterObjectInstance.java`.
 
+## 2026-06-04 - mtz3 ADVANCED f3719->f6913: dead CPU Tails fall bypasses Screen_Y_wrap mask on the SpriteManager dead-fall path
+
+- Branch `bugfix/ai-trace-s2-mtz3`, worktree `.worktrees/trace-s2-mtz3` (off develop `868249c0f`).
+- Command:
+  `mvn -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mtz3LevelSelectTraceReplay#replayMatchesTrace" test`
+- Status: advanced (FAIL, but first-error frame moved forward). Error count 990 / 0 warnings.
+- First error: frame 3719 (`tails_y`) -> frame 6913 (`g_speed` mismatch, expected=-0001 actual=-0010, main player).
+- Root cause: `SpriteManager.applyScreenYWrapValueAfterControl(playable)` (the static
+  dead-fall variant) unconditionally applied the `Screen_Y_wrap_value` mask to the
+  dead CPU sidekick. ROM `Obj02_Dead` (docs/s2disasm/s2.asm:41125-41131) runs
+  `jsr (ObjectMoveAndFall).l` (s2.asm:30158-30173, plain y_pos+=y_vel, no mask)
+  and only despawns once `Obj02_CheckGameOver` (s2.asm:41136-41149) sees
+  `y_pos > Tails_Max_Y_pos + $100`, branching to `TailsCPU_Despawn` (s2.asm:39391+).
+  Masking the falling body's y_pos at the 0x800 wrap boundary meant `getCentreY()`
+  never crossed the despawn threshold, so MTZ3 diverged on `tails_y` at f3719.
+  Fix mirrors the already-proven bypass in
+  `PlayableSpriteMovement.applyScreenYWrapValueAfterControl()` (gated by
+  `SidekickCpuController.deadFallBypassesScreenYWrapValue()` -> S2/S3K
+  `PhysicsFeatureSet.sidekickDeathUsesDeferredDespawn`; S1 = false). No
+  gameId/zone/route/frame carve-out; comparison-only (reads engine state only).
+- Same-game regression guard (`TestS2Ehz1TraceReplay,TestS2SczLevelSelectTraceReplay,TestS2WfzLevelSelectTraceReplay`):
+  all three green, zero regressions.
+
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 
 - Branch `bugfix/ai-cnz1-objd4-cadence`, worktree `.worktrees/cnz1-objd4-cadence` (off develop `d192a8087`).
