@@ -614,6 +614,25 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
     }
 
     /**
+     * Per-object {@code width_pixels(a1)} as read by the player on-object
+     * balance routines (s2.asm:36586/39707 {@code move.b width_pixels(a1),d1};
+     * sonic3k.asm:22455). This is the object's own {@code width_pixels} SST
+     * byte, which is NOT necessarily the rendered on-screen footprint nor the
+     * (possibly extended) SolidObject X-collision width. It defaults to
+     * {@link #getOnScreenHalfWidth()} (16 for the shared sprite footprint, e.g.
+     * SmashableGround whose balance uses {@code width_pixels=$10} even though
+     * SolidObject extends it), and is overridden by objects whose balance
+     * {@code width_pixels} differs from the default — e.g. the CPZ/WFZ moving
+     * platform (Obj19), whose subtype-driven {@code width_pixels} is $20/$18/$40.
+     * Using the wrong width here shifts the {@code d1 = player_x + width -
+     * object_x} edge test and makes the player balance/flip facing on the wrong
+     * object edge.
+     */
+    public int getBalanceWidthPixels() {
+        return getOnScreenHalfWidth();
+    }
+
+    /**
      * Per-object rendered half-height used by the on-screen / solid-contact
      * gate. ROM equivalent: {@code height_pixels(a0)} as read by Render_Sprites
      * while setting render_flags bit 7.
