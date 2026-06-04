@@ -54,6 +54,38 @@
 - Same-game regression guard (single-fork, surefire XML): `TestS2Ehz1TraceReplay`,
   `TestS2SczLevelSelectTraceReplay`, `TestS2WfzLevelSelectTraceReplay` all tests=1 failures=0 errors=0.
   Zero same-game greens regressed.
+## 2026-06-05 - mcz2 f4252->f4485: Monitor (Obj26) inclusive right solid edge (ROM `bhi` bound)
+
+- Branch `bugfix/ai-trace-s2-mcz2`, worktree `.worktrees/trace-s2-mcz2` (off develop `b78f3b3b9`).
+- Command (cmd.exe mvn inside worktree):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Mcz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status: advanced, genuine, zero same-game regressions.**
+- **First error: frame 4252 -> frame 4485** (errors 704 -> 527).
+  - before f4252: `tails_x mismatch (expected=0x0E2A, actual=0x0E2C)` — CPU Tails walking right
+    into the Obj26 monitor at x=0x0E10 reached centreX 0x0E2A (= 0x0E10 + $1A, the exact right
+    solid edge); engine's exclusive (`>=`) right bound returned no contact, so Tails drifted past
+    instead of being pinned/pushing.
+  - after f4485: `tails_x mismatch (expected=0x0EAB, actual=0x0EAC)` — downstream CPU-Tails
+    subpixel-rounding near the same MCZ monitor cluster (distinct issue).
+- **Root cause / fix:** `MonitorObjectInstance.usesInclusiveRightEdge()` now returns `true`.
+  ROM Obj26 `SolidObject_Monitor_*` (s2.asm:25586-25631) sets monitor width `move.w #$1A,d1`
+  (s2.asm:25587) and falls into `SolidObject_cont`, whose X gate is
+  `cmp.w d3,d0 / bhi.w SolidObject_TestClearPush` with `d3 = width*2` (s2.asm:35347-35348).
+  `bhi` is unsigned strictly-greater, so relX == width*2 (right-edge-exact) stays INSIDE the box
+  and resolves as a zero-distance side contact in `SolidObject_AtEdge` (s2.asm:35427-35446),
+  which sets the pushing bit without shoving x_pos. Engine default used an exclusive `>=` bound
+  (`ObjectManager` ~line 7935), dropping that boundary pixel. Fix uses the existing per-object
+  `usesInclusiveRightEdge()` hook (also used by springs/flippers/spikes), feeding
+  `SolidRoutineProfile.fullSolid(false, true, false)`.
+- **Genuineness:** real ROM citations, per-object narrowest abstraction, no gameId/zone/route/frame
+  carve-out, no tolerance band, no trace-state hydration (comparison-only), not a no-op (baseline
+  f4252 -> f4485 confirmed by stash-out re-run).
+- **Same-game regression guard (single-fork, authoritative surefire .txt per class):**
+  EHZ1 `Tests run: 1, Failures: 0`; SCZ `Tests run: 1, Failures: 0`; WFZ `Tests run: 1, Failures: 0`.
+  Zero regressions. (MSE relaxed `total=2`/`TEST_FAIL Mcz2` lines are an artifact of stale .txt
+  reports lingering in target/surefire-reports between single-class runs; per-class .txt is the
+  authoritative source.)
+- File: `src/main/java/com/openggf/game/sonic2/objects/MonitorObjectInstance.java`.
 
 ## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
 
