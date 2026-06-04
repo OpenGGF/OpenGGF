@@ -86,6 +86,29 @@
   reports lingering in target/surefire-reports between single-class runs; per-class .txt is the
   authoritative source.)
 - File: `src/main/java/com/openggf/game/sonic2/objects/MonitorObjectInstance.java`.
+## 2026-06-04 - arz2 f566->f669: per-test reset reloads WaterSystem config (InitWater)
+
+- Branch `bugfix/ai-trace-s2-arz2`, worktree `.worktrees/trace-s2-arz2` (HEAD `89ad6d7ae`).
+- Command (cmd.exe mvn inside worktree):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Arz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced, genuine, zero same-game regressions.
+- **Root cause:** `AbstractLevelInitProfile.perTestResetSteps()` runs `ResetWater` (clears
+  `WaterSystem.waterConfigs`) but, unlike `levelTeardownSteps` (which is followed by a full level
+  reload), reuses the already-loaded `Level` without re-running the `InitWater` load step. Water
+  config stayed empty -> `WaterSystem.hasWater()` false -> the per-frame `Sonic_Water`/`Tails_Water`
+  underwater path (ROM `Obj01_InWater`/`Obj02_InWater`, gated on `Water_flag`,
+  docs/s2disasm/s2.asm:36369-36393 and 39534-39556) never fired, silently disabling the ARZ2
+  sidekick water-entry velocity reduction (`asr x_vel` once, `asr y_vel` twice).
+- **Fix:** add a `ReloadWater` reset step that re-derives the water config from the already-loaded
+  level via `LevelManager.initWater()` (ROM/level-sourced, mirroring the production level-load
+  profile — NOT hydrated from trace data). Shared reset-harness fix; applies uniformly across all
+  three games. No zone/route/frame/gameId carve-out, comparison-only invariant preserved.
+- **arz2: f566 -> f669** (1953 errors). New first divergence f669 is unrelated: `y_speed`
+  (expected -0080, actual -0180) — a separate sidekick CPU issue, to be addressed separately.
+- Same-game regression guard (single-fork): `TestS2Ehz1TraceReplay`, `TestS2SczLevelSelectTraceReplay`,
+  `TestS2WfzLevelSelectTraceReplay` all GREEN. Swept-in CPZ2 (f2542 `tails_y_speed`) and HTZ2
+  (f2306 `tails_rolling`) are pre-existing failures, frontier unchanged with vs without the fix
+  (verified by stash baseline run). No same-game green regressed.
 
 ## 2026-06-04 - arz2 f549->f566: ChopChop (Obj91) X movement via ObjectMove subpixel integration
 
