@@ -1,5 +1,33 @@
 # Trace Frontier Log
 
+## 2026-06-04 - cnz2 ADVANCED f1775->f1784: vertical flipper per-player standing state + shared launch trigger
+
+- Branch `bugfix/ai-trace-s2-cnz2`, worktree `.worktrees/trace-s2-cnz2` (off develop `868249c0f`).
+- Command (cmd mvn inside worktree, single ROM):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cnz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** FAIL (advanced). 857 errors / 0 warnings. First error frame 1775 -> 1784.
+  - Before: f1775 `tails_y expected=0x0423 got=0x041E` (Tails seated 5px high, st=09 vs ROM st=0D).
+  - After: f1784 `tails_y_speed mismatch (expected=-0B59, actual=-03C8)` — Tails now seats correctly
+    AND is launched (negative=upward); remaining divergence is the launch *velocity magnitude* from
+    the `loc_2B290` sine-table launch, a downstream issue.
+- **Root cause / fix:** `FlipperObjectInstance` (Obj86 `Obj86_UpwardsType`) modelled the ROM's per-player
+  vs shared object-variable split incorrectly. ROM calls `loc_2B20A` twice — MainCharacter vs its own
+  standing byte `objoff_36(a0)` (`Ctrl_1_Logical`, `p1_standing_bit`), Sidekick vs `objoff_37(a0)`
+  (`Ctrl_2`, `p2_standing_bit`) — so the first-stand-vs-already-on branch is PER PLAYER
+  (docs/s2disasm/s2.asm:58281-58332). The jump-launch trigger `objoff_38(a0)` is a SINGLE SHARED byte:
+  `loc_2B288` sets it when either standing player presses jump, then `Obj86_UpwardsType` checks it once
+  and calls `loc_2B290` for BOTH Sidekick and MainCharacter (docs/s2disasm/s2.asm:58296-58303,
+  58361-58407). Engine had used one shared int for standing state (Sonic's stand suppressed Tails'
+  first-stand seating) and gated launch per-player on `isJumpPressed()` (CPU sidekick has no synthetic
+  jump, so a leader-jump never launched Tails — f1783 `tails_air` expected=1 actual=0). Fix: per-player
+  `IdentityHashMap` standing/lock state + a shared `verticalLaunchTriggered` pass (`processVerticalLaunch`)
+  run once after both players. First-stand +5 y_pos nudge (`addq.w #5,y_pos`, s2.asm:58323-58325) now
+  written as `centre += 5` via `setCentreYPreserveSubpixel`. No zone/route/frame/gameId carve-out;
+  comparison-only. Obj86 is S2-specific object code, so no PhysicsFeatureSet gate needed.
+- **Same-game regression guard:** EHZ1 PASS, SCZ PASS, WFZ PASS (per-class surefire lines; the MSE
+  project-wide total was contaminated by a stale cnz2 report — judged by per-class lines). Zero regressions.
+- Files: `src/main/java/com/openggf/game/sonic2/objects/FlipperObjectInstance.java`.
+
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 
 - Branch `bugfix/ai-cnz1-objd4-cadence`, worktree `.worktrees/cnz1-objd4-cadence` (off develop `d192a8087`).

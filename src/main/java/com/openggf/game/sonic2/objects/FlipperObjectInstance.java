@@ -80,17 +80,44 @@ public class FlipperObjectInstance extends BoxObjectInstance
     private final IdentityHashMap<AbstractPlayableSprite, Integer> launchCooldown =
             new IdentityHashMap<>();
 
-    // Vertical flipper state tracking (per loc_2B20A in s2.asm)
-    // 0 = not standing, 1 = standing/rolling on flipper
-    private int playerFlipperState = 0;
-    private boolean launchPending = false;
+    // Vertical flipper state tracking (per loc_2B20A in s2.asm).
+    // ROM parity: Obj86_UpwardsType calls loc_2B20A TWICE -- once for the
+    // MainCharacter with its own standing-state byte objoff_36(a0), once for
+    // the Sidekick with objoff_37(a0) (s2.asm:58286-58295).  loc_2B20A reads
+    // (a3) (that player's byte): 0 means "not yet standing" -> the first-stand
+    // branch that sets rolling and addq.w #5,y_pos; nonzero means "already
+    // on" -> the jump/slide branch (s2.asm:58315-58316).  The state must
+    // therefore be PER PLAYER: when Sonic is already riding the flipper a
+    // descending Tails must still run the first-stand branch and get the +5
+    // nudge / rolling bit (CNZ trace f1775).  A single shared int let Sonic's
+    // stand suppress Tails' first-stand seating, so Tails seated 5 px too high
+    // with no rolling bit (st=09 vs ROM st=0D).
+    // 0 = not standing, 1 = standing/rolling on flipper.
+    private final IdentityHashMap<AbstractPlayableSprite, Integer> playerFlipperState =
+            new IdentityHashMap<>();
 
-    // Track the player currently locked by this flipper.
+    // ROM objoff_38(a0): a SINGLE shared launch-pending byte (s2.asm:58361-58362,
+    // 58296-58303), NOT per-player.  loc_2B23C sets objoff_38=1 via loc_2B288
+    // when EITHER standing player presses jump (the gate reads that player's
+    // Ctrl word: Ctrl_1_Logical for the leader, Ctrl_2 for the sidekick --
+    // s2.asm:58288-58295).  After both players are processed, Obj86_UpwardsType
+    // checks objoff_38 once and, if set, calls loc_2B290 for the Sidekick AND
+    // the MainCharacter, launching EVERY player whose flipper standing bit is
+    // still set (loc_2B290 bclr's that bit and returns early if it was clear).
+    // So one player's jump launches BOTH players standing on the flipper.  The
+    // engine previously gated launch per player on isJumpPressed(); the CPU
+    // sidekick has no synthetic jump, so a leader-jump launched Sonic but left
+    // Tails seated forever (CNZ trace f1783: tails_air expected=1, actual=0).
+    private boolean verticalLaunchTriggered = false;
+
+    // Track the player(s) currently locked by this flipper.
     // ROM: loc_2B20A runs every frame and checks the standing bit even when the player
     // has moved away. Our onSolidContact callback only fires when there IS a contact,
     // so we must check in update() whether the player has left and release the lock.
-    private AbstractPlayableSprite lockedPlayer = null;
-    private boolean lockedPlayerPreviousMovementSuppressed;
+    // Per-player so Sonic and Tails can each be locked simultaneously
+    // (objoff_36 / objoff_37 are independent).
+    private final IdentityHashMap<AbstractPlayableSprite, Boolean> lockedPlayerPrevSuppressed =
+            new IdentityHashMap<>();
 
     public FlipperObjectInstance(ObjectSpawn spawn, String name) {
         super(spawn, name, 8, 8, 0.8f, 0.4f, 0.2f, false);
@@ -121,10 +148,9 @@ public class FlipperObjectInstance extends BoxObjectInstance
         }
 
         // If player entered debug mode while on the flipper, reset flipper state
-        if (player.isDebugMode() && playerFlipperState != 0) {
-            releaseLockedPlayer();
-            playerFlipperState = 0;
-            launchPending = false;
+        if (player.isDebugMode() && playerFlipperState.getOrDefault(player, 0) != 0) {
+            releaseLockedPlayer(player);
+            playerFlipperState.remove(player);
             return;
         }
 
@@ -134,7 +160,10 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 applyHorizontalLaunch(player);
             }
         } else {
-            // Vertical flipper state machine (loc_2B20A - loc_2B288)
+            // Vertical flipper per-player pass (loc_2B20A): stand / slide /
+            // jump-detect only.  The actual launch is a shared second pass run
+            // once after every player is processed (see processVerticalLaunch()),
+            // matching ROM's objoff_38 trigger at s2.asm:58296-58303.
             if (result.standingNow()) {
                 // ROM: move.b #1,obj_control(a1) - locks ALL player input including jumping
                 // This is set every frame while standing on the flipper
@@ -144,21 +173,37 @@ public class FlipperObjectInstance extends BoxObjectInstance
                 // animation/TouchResponse (s2.asm:35937-35962).
                 suppressMovementForLockedPlayer(player);
 
-                if (playerFlipperState == 0) {
+                if (playerFlipperState.getOrDefault(player, 0) == 0) {
                     // First frame standing: enter rolling state (loc_2B20A)
                     // We use pinball_mode to prevent rolling from being cleared
                     player.setPinballMode(true);
                     // ROM: bset #status.player.rolling / bne.s loc_2B238 / addq.w #5,y_pos
-                    // Only adjust Y if not already rolling (the bne.s skips adjustment if already rolling)
+                    // (s2.asm:58323-58325): on the first stand frame the flipper
+                    // sets the rolling bit and, ONLY if rolling was not already
+                    // set, nudges y_pos down by a fixed 5 px -- the same
+                    // character-independent literal the horizontal launch uses
+                    // at loc_2B3BC (s2.asm:58040-58042).  Engine setRolling()
+                    // shrinks the visual height, which already shifts the centre
+                    // by (runHeight - rollHeight)/2 (10/2=5 for Sonic, 2/2=1 for
+                    // Tails), so the legacy getRollHeightAdjustment() nudge only
+                    // netted the correct +5 centre for Sonic and seated the Tails
+                    // sidekick 4 px too high (CNZ trace f1775: tails_y
+                    // expected=0x0423, got=0x041E).  Mirror the proven
+                    // horizontal-path fix: capture pre-roll centre and write
+                    // centre += 5 directly so both characters seat at the ROM y.
                     if (!player.getRolling()) {
+                        short preCentreY = player.getCentreY();
                         player.setRolling(true);
-                        player.setY((short) (player.getY() + player.getRollHeightAdjustment()));
+                        player.setCentreYPreserveSubpixel((short) (preCentreY + 5));
                     }
-                    playerFlipperState = 1;
+                    playerFlipperState.put(player, 1);
                 } else {
-                    // Already on flipper: check for jump button (loc_2B23C)
+                    // Already on flipper: check for jump button (loc_2B23C ->
+                    // loc_2B288 sets the SHARED objoff_38 trigger).  ROM tests
+                    // d5 & (A|B|C): the leader's d5 is Ctrl_1_Logical, the
+                    // sidekick's is raw Ctrl_2 (s2.asm:58288/58293,58333).
                     if (player.isJumpPressed()) {
-                        launchPending = true;
+                        verticalLaunchTriggered = true;
                     } else {
                         // Slide player based on animation frame (loc_2B254)
                         applyFlipperSlide(player);
@@ -167,15 +212,31 @@ public class FlipperObjectInstance extends BoxObjectInstance
             } else if (result.kind() == ContactKind.NONE) {
                 // Player left flipper without jumping (loc_2B23C branch to clear)
                 // ROM: move.b #0,obj_control(a1)
-                if (playerFlipperState != 0 && (lockedPlayer == null || lockedPlayer == player)) {
-                    releaseLockedPlayer();
-                    playerFlipperState = 0;
+                if (playerFlipperState.getOrDefault(player, 0) != 0) {
+                    releaseLockedPlayer(player);
+                    playerFlipperState.remove(player);
                 }
             }
+        }
+    }
 
-            // Process pending launch (loc_2B290)
-            if (launchPending) {
-                launchPending = false;
+    /**
+     * Shared vertical-launch pass (ROM Obj86_UpwardsType s2.asm:58296-58303 ->
+     * loc_2B290 s2.asm:58366-58407).  Run once per frame after every player has
+     * been through {@link #applyCheckpointContact}.  ROM clears objoff_38 then
+     * calls loc_2B290 for the Sidekick and the MainCharacter; loc_2B290 launches
+     * each player whose flipper standing bit is still set (bclr d6 / beq return),
+     * so a single jump from EITHER standing player launches BOTH.
+     */
+    private void processVerticalLaunch(List<PlayableEntity> participants) {
+        if (!verticalLaunchTriggered) {
+            return;
+        }
+        verticalLaunchTriggered = false;
+        for (PlayableEntity participant : participants) {
+            if (participant instanceof AbstractPlayableSprite player
+                    && playerFlipperState.getOrDefault(player, 0) != 0
+                    && launchCooldown.getOrDefault(player, 0) <= 0) {
                 applyVerticalLaunch(player);
             }
         }
@@ -232,7 +293,7 @@ public class FlipperObjectInstance extends BoxObjectInstance
         // (s2.asm:57982-57988).
 
         // ROM: move.b #0,obj_control(a1) at loc_2B2E2 - release control lock
-        releaseLockedPlayer();
+        releaseLockedPlayer(player);
 
         // Clear solid object riding state to prevent the object system from
         // continuing to track the player's position relative to the flipper.
@@ -242,8 +303,8 @@ public class FlipperObjectInstance extends BoxObjectInstance
             objectManager.clearRidingObject(player);
         }
 
-        // Reset flipper state
-        playerFlipperState = 0;
+        // Reset flipper state for this player (ROM clears objoff_36/37 per player)
+        playerFlipperState.remove(player);
 
         triggerVerticalAnimation();
         playFlipperSound();
@@ -415,11 +476,17 @@ public class FlipperObjectInstance extends BoxObjectInstance
         }
 
         SolidCheckpointBatch batch = services().solidExecution().resolveSolidNowAll();
-        for (PlayableEntity participant : playerParticipants(playerEntity)) {
+        List<PlayableEntity> participants = playerParticipants(playerEntity);
+        for (PlayableEntity participant : participants) {
             if (participant instanceof AbstractPlayableSprite player) {
                 PlayerSolidContactResult result = batch.perPlayer().get(participant);
                 applyCheckpointContact(player, result != null ? result : checkpoint(player));
             }
+        }
+        // ROM objoff_38 shared launch pass after both loc_2B20A calls
+        // (s2.asm:58296-58303). Vertical flipper only.
+        if (!isHorizontal()) {
+            processVerticalLaunch(participants);
         }
 
         animationState.update();
@@ -442,27 +509,24 @@ public class FlipperObjectInstance extends BoxObjectInstance
     }
 
     /**
-     * Release the control lock on the tracked player.
+     * Release the control lock on the given player.
      * ROM: move.b #0,obj_control(a1) at loc_2B23C when player leaves flipper.
+     * Per-player so releasing Sonic does not disturb a still-locked Tails
+     * (objoff_36 / objoff_37 are independent in s2.asm:58286-58295).
      */
-    private void releaseLockedPlayer() {
-        if (lockedPlayer != null) {
-            lockedPlayer.setControlLocked(false);
+    private void releaseLockedPlayer(AbstractPlayableSprite player) {
+        Boolean prevSuppressed = lockedPlayerPrevSuppressed.remove(player);
+        if (prevSuppressed != null) {
+            player.setControlLocked(false);
             ObjectControlState.setMovementSuppressionPreservingOwnership(
-                    lockedPlayer, lockedPlayerPreviousMovementSuppressed);
-            lockedPlayer.setPinballMode(false);
-            lockedPlayer = null;
-            lockedPlayerPreviousMovementSuppressed = false;
+                    player, prevSuppressed);
+            player.setPinballMode(false);
         }
     }
 
     private void suppressMovementForLockedPlayer(AbstractPlayableSprite player) {
-        if (lockedPlayer != player) {
-            if (lockedPlayer != null) {
-                releaseLockedPlayer();
-            }
-            lockedPlayer = player;
-            lockedPlayerPreviousMovementSuppressed = player.isObjectControlSuppressesMovement();
+        if (!lockedPlayerPrevSuppressed.containsKey(player)) {
+            lockedPlayerPrevSuppressed.put(player, player.isObjectControlSuppressesMovement());
         }
         ObjectControlState.setMovementSuppressionPreservingOwnership(player, true);
     }
