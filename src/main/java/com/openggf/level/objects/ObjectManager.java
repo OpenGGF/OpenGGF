@@ -1188,12 +1188,26 @@ public class ObjectManager {
     /**
      * Inline creation callback for ROM-accurate ObjPosLoad.
      * Called during placement cursor advancement to create instances immediately.
+     * <p>
+     * This is the post-camera ({@link #postCameraPlacementUpdate}) gap-scan
+     * creation path. It must apply the SAME vertical-eligibility policy as the
+     * primary {@link #syncActiveSpawnsLoad}{@code (true)} load so that a spawn
+     * entering the horizontal load window on a chunk-crossing frame is
+     * materialized on the SAME frame in both paths. For S2 the ROM
+     * {@code ObjectsManager_GoingForward}/{@code GoingBackward} calls
+     * {@code ChkLoadObj} immediately after the X-window scan with no
+     * {@code Camera_Y_pos} filter (docs/s2disasm/s2.asm:33095-33136), so S2 loads
+     * bypass the vertical filter ({@code allowVerticalLoadBypassForS2 = true}).
+     * Passing {@code false} here previously deferred a horizontally-in-window
+     * but not-yet-vertically-near spawn to the next frame's pre-camera load,
+     * costing the object one update relative to the ROM (e.g. CNZ {@code ObjD4}
+     * arriving 1px behind, s2.asm:58759-58799).
      */
     private boolean inlineCreateObject(ObjectSpawn spawn, int counterValue) {
         if (activeObjects.containsKey(spawn)) {
             return true; // Already exists
         }
-        if (!isSpawnVerticallyEligibleForLoad(spawn, false)) {
+        if (!isSpawnVerticallyEligibleForLoad(spawn, true)) {
             return false;
         }
         int preSlot = allocateSlot();

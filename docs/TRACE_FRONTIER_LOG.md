@@ -1,5 +1,40 @@
 # Trace Frontier Log
 
+## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
+
+- Branch `bugfix/ai-cnz1-objd4-cadence`, worktree `.worktrees/cnz1-objd4-cadence` (off develop `d192a8087`).
+- Command (bash mvn, all 3 ROMs by default filename in worktree CWD):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=Sonic The Hedgehog 2 (W) (REV01) [!].gen" "-Ds1.rom.path=Sonic The Hedgehog (W) (REV01) [!].gen" "-Ds3k.rom.path=Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dtest=*TraceReplay" test`
+- **Root cause (confirmed by frame-correlation against the recorded `object_near`/`object_appeared`
+  ObjD4 trajectory, then reverted read-only probes):** the engine's ObjD4 at target 0x0F00 ran exactly
+  ONE update behind ROM (engine `upd=500` vs ROM 501 at f3831 -> engine block @0F47 vs ROM @0F46 ->
+  `SolidObject_cont` side-push +3 vs +2 -> player 1px right). ROM `object_appeared` slot 41 at f3330;
+  engine first-executed the block at f3332 (loaded one frame late). The late load came from the
+  pre-camera `syncActiveSpawnsLoad(true)` on the next frame, NOT the same-frame post-camera gap-scan.
+  The post-camera gap-scan `ObjectManager.inlineCreateObject` called
+  `isSpawnVerticallyEligibleForLoad(spawn, false)` (NO S2 vertical bypass), so a spawn that was
+  horizontally in-window on the chunk-crossing frame but not yet vertically near (block y=0x03A0, camera
+  Y still approaching) was added to `active` but its instance was deferred to the next frame's
+  pre-camera load. ROM S2 `ObjectsManager_GoingForward`/`GoingBackward` calls `ChkLoadObj` immediately
+  after the X-window scan with NO `Camera_Y_pos` filter (s2.asm:33095-33136), and the engine's
+  pre-camera S2 load already bypasses the vertical filter (`allowVerticalLoadBypassForS2=true`).
+- **Fix:** `inlineCreateObject` now passes `true` (matching the pre-camera load) so both S2 load paths
+  apply identical vertical-eligibility policy and the spawn materializes on the SAME frame in both. The
+  bypass only activates for `skipVerticalSpawnLoadFilterForGame` (SONIC_2 slot layout); S1
+  (counter-based, not on this path) and S3K (two-axis, `postCameraPlacementUpdate` returns early) are
+  unaffected. No zone/route/frame/object-id carve-out, no position nudge, comparison-only.
+- **cnz1: f3831 -> f3906** (errors 289 -> 199). New first divergence f3906 is unrelated: `tails_y` 0x06C0
+  vs 0x06C1, Tails sitting on a LauncherSpring (obj 0x85) — a sidekick-on-spring carry issue. ObjD4
+  blocks now match ROM exactly (ROM @0EDE == engine @0EDE).
+- **htz2 also advanced f1078 -> f2306** (same S2 object-load-cadence class). No other frontier moved.
+- Full sweep (63 trace tests): no green regressed; frontiers unchanged at baseline except cnz1/htz2:
+  arz1 2043, arz2 549, cnz2 1775, cpz1 2822, cpz2 2518, dez1 1023, htz1 5647, mcz1 2181, mcz2 4009,
+  mtz1 863, mtz2 641, mtz3 3719, ooz1 756, ooz2 389; S3K aiz 8941 / cnz 17276 / mgz 4124.
+  S1 traces, ehz1, scz, wfz all green. Occupancy oracle 4/4 green. S3K must-keep units green
+  (Aiz1Skip, LevelLoading, BootstrapResolver, DecodingUtils). TestCNZBigBlockObjectInstance green.
+  Pre-existing unrelated failure `TestObjectManagerLifecycle.execThenLoadPlacementExecutesDeferred...`
+  fails identically with and without this change (default-layout test-isolation issue, not S2).
+
 ## 2026-06-04 - cnz1 f3831 corrected cause: CNZBigBlock (ObjD4) update-cadence drift (1px)
 
 - cnz1 stays at f3831 (the windowing-cascade regression, not yet restored). Prior diagnoses
