@@ -209,6 +209,67 @@ behaviour.
 Development since `v0.5.20260411` is the active 0.6 prerelease line. The detailed running notes now
 live in `CHANGELOG.md`; this README keeps only the high-level shape of the release.
 
+- **S2 trace-fleet pass 6 — 10 genuine object/boss/sidekick advances (2026-06-04).** A 16-trace S2
+  fleet pass (per-trace worktree + triage/fix/verify agents, land-genuine/investigate-regressions-after
+  policy) landed 10 ROM-cited per-object fixes, each in its own object/boss class: ChopChop subpixel
+  X-move (arz2 549→566), OOZ Fan sub-pixel-preserving push (ooz1 756→1133), Button off-screen
+  render-flag gate (mtz1 863→1000), Mecha Sonic wind-up + boss touch lag (dez1 1023→1366), vertical
+  Flipper per-player standing (cnz2 1775→1784), MCZ vine off-screen sidekick release (mcz1 2181→2362),
+  CPZ spin-tube per-character capture (cpz2 2518→2542), Speed Booster dual-character boost (cpz1
+  2822→3303), MCZ rotating-platform parent solidity (mcz2 4009→4252), and the dead-CPU-Tails fall
+  `Screen_Y_wrap` bypass (mtz3 3719→**6913**, the standout). Combined full-suite S2 sweep: zero
+  regressions, all three greens (EHZ1/SCZ/WFZ) stay green, and mcz2 synergized past its isolated
+  frontier. Six traces (arz1/cnz1/htz1/htz2/mtz2/ooz2) were left unmoved — their first-divergences
+  are real bugs the generic agents correctly declined to paper over. See `CHANGELOG.md`.
+- **S2 object-load vertical-eligibility parity (2026-06-04).** The post-camera placement creation
+  path (`inlineCreateObject`) applied the S2 Camera_Y filter that ROM `ObjectsManager` does not (it
+  loads on the X-window scan, no Y filter), so some objects loaded one frame late. Sharing the
+  vertical-eligibility policy across both S2 load paths fixed a CNZ Big Block (ObjD4) 1px position
+  drift: restored CNZ1 f3831→f3906 (its pre-windowing frontier) and advanced HTZ2 f1078→f2306, no
+  regression. Closes the windowing cascade — no remaining regression.
+- **S2 sidekick interact-slot despawn parity (2026-06-04).** Modelled ROM's `interact(a0)` default
+  (0 = MainCharacter = ObjID_Sonic 0x01) and zeroed-on-delete semantics in the Tails-CPU despawn
+  comparator, distinguishing never-ridden (→0x01) from ridden-then-deleted (→0) interact slots
+  (S2-gated). Advanced MTZ1 f375→f863 and restored MTZ3 f2638→f3719 (its pre-cascade peak), no
+  green/S1/S3K regression. (CNZ1 remains at 3831 pending a separate ObjD4 update-cadence fix.)
+- **ROM object-windowing port + transient/cog lifetime fixes (2026-06-04).** Ported ROM's S2 object
+  load/unload timing onto the SlotAllocator substrate behind a per-game `ObjectWindowingStrategy`
+  (shared `ObjectManager` no longer depends on game code): ROM single-load-per-frame ordering, final
+  cursor boundaries, and object-side `MarkObjGone`. Also fixed the per-game explosion (Obj27) self-delete
+  frame (S1/S2/S3K) and the MTZ giant-cog ride-release carry/push timing (mtz3 2047→2638). Added a
+  comparison-only object-occupancy oracle. No green/S1/S3K regression; one accepted, documented cascade
+  (cnz1 3906→3831) pending its separate ground-collision fix. See `docs/TRACE_FRONTIER_LOG.md`.
+- **Object-slot allocator unification (2026-06-04).** Extracted a single `ObjectManager`-owned
+  `SlotAllocator` authority (per-game empty predicate, recycle, rewind snapshot/restore) and routed
+  all dynamic-slot allocation through it; `objectIdInSlot`/`execOrder` stay in `ObjectManager` as the
+  identity authority. Verified pure refactor — zero trace-frontier movement. Foundation for the ROM
+  object-windowing port (`docs/superpowers/specs/2026-06-04-rom-object-windowing-port-design.md`).
+- **S2 sidekick interact-slot foundation (2026-06-04).** Replaced the instance-based Tails-CPU
+  ride latch with ROM's persistent slot-based `interact(a0)` model (slot index, never cleared;
+  id re-snapshot each on-screen frame), so the off-screen despawn matches ROM without the old
+  masking guards. Greens (S1, EHZ1/SCZ/WFZ) and S3K frontiers unchanged; HTZ2 advanced
+  (795→1078). One **known, documented regression** — MTZ3 3719→2638 — whose prior advance leaned
+  on the old broken heuristic and is being re-derived on the correct foundation (follow-target +
+  interact-slot recycle parity). Kept deliberately to stop further work building on the wrong model.
+- **S2 trace advances pass 4 (2026-06-04).** Six more S2 `*TraceReplay` frontiers moved
+  forward (ARZ2, CNZ2, CPZ1/CPZ2, MTZ3, MCZ2), including a per-object balance-width hook and
+  ROM-accurate MTZ-cog multi-piece ordering — verified with no green/S1/S3K regressions.
+- **S2 trace advances pass 3 + construction-context fix (2026-06-04).** Seven more S2
+  `*TraceReplay` frontiers moved forward (ARZ1/ARZ2, CPZ1/CPZ2, MCZ1/MCZ2, DEZ), and a
+  latent engine bug fixed — `ObjectConstructionContext` now keeps the construction context
+  across nested child spawns, so bosses spawning multiple children inject services into all
+  of them (the Death Egg Robot `ForearmChild` no longer crashes). Verified with no
+  green/S1/S3K regressions.
+- **S2 trace-replay frontier advances, continued (2026-06-04).** Eight more Sonic 2
+  `*TraceReplay` frontiers moved forward (trace-green-fleet pass 2: ARZ2, MTZ2/MTZ3,
+  CPZ1/CPZ2, MCZ1/MCZ2, OOZ1), including ROM-accurate `Camera` vertical-wrap visibility
+  and a universal `SolidObject` zero-distance landing predicate — verified together with
+  no green/S1/S3K regressions.
+- **S2 trace-replay frontier advances (2026-06-03).** Seven Sonic 2 `*TraceReplay`
+  frontiers moved forward via disassembly-cited ROM fixes with no zone/route/frame
+  carve-outs (ARZ1/ARZ2, CPZ2, HTZ1, MCZ1/MCZ2, OOZ1), produced by the
+  `trace-green-fleet` agent workflow and verified together with no green regressions
+  and S1/S3K byte-identical. See `docs/agent-workflow/trace-green-fleet-decisions.md`.
 - **Widescreen foundation + Discord Rich Presence (2026-05-30).** New `DISPLAY_ASPECT` presets
   (NATIVE_4_3 / 16:10 / 16:9 / 21:9 / 32:9, height fixed at 224) make camera, boundaries, spawn
   windows, and the object despawn/visibility surface width-driven, with `NATIVE_4_3` kept
