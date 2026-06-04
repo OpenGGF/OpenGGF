@@ -10,6 +10,7 @@ import com.openggf.game.PhysicsFeatureSet;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameServices;
 import com.openggf.game.solid.ContactKind;
+import com.openggf.game.sonic2.objects.S2ObjectWindowing;
 import com.openggf.game.solid.ObjectSolidExecutionContext;
 import com.openggf.game.solid.PlayerSolidContactResult;
 import com.openggf.game.solid.PlayerStandingState;
@@ -494,6 +495,7 @@ public class ObjectManager {
         this.placement = new Placement(spawns,
                 camera != null ? camera::getWidth : com.openggf.level.spawn.PlacementViewportWidth::current);
         this.placement.setTwoAxisCursorPlacement(slotLayout.twoAxisCursorPlacement());
+        this.placement.setS2Windowing(slotLayout == ObjectSlotLayout.SONIC_2);
         this.execOrder = new ObjectInstance[slotLayout.dynamicSlotCount()];
         this.slotAllocator = new SlotAllocator(slotLayout,
                 slotLayout.twoAxisCursorPlacement()
@@ -1622,6 +1624,35 @@ public class ObjectManager {
 
     public List<ObjectSpawn> getAllSpawns() {
         return placement.getAllSpawns();
+    }
+
+    /**
+     * Test seam: drive a standalone S2-windowing {@link Placement} (native 320px
+     * viewport) through a sequence of camera-X positions and return the sorted X
+     * positions of the spawns active after the final step.
+     * <p>
+     * Exercises the real {@code spawnForward}/{@code spawnBackwardNonCounter}/
+     * {@code trimLeftNonCounter}/{@code trimRightNonCounter} scan with the
+     * {@link S2ObjectWindowing} final cursor boundaries (Task 1.4b), so a unit
+     * test can assert the ROM <em>exclusive</em> load edge
+     * ({@code spawn.x < forwardLoadEdge}) without a ROM/level harness.
+     */
+    public static int[] runS2WindowingScanForTest(int[] spawnXs, int[] cameraSequence) {
+        List<ObjectSpawn> spawnList = new ArrayList<>(spawnXs.length);
+        for (int x : spawnXs) {
+            // respawnTracked=false so every in-window spawn re-loads on cursor
+            // entry (no remembered/destroyed latch interfering with the boundary).
+            spawnList.add(new ObjectSpawn(x, 0x100, 0x01, 0, 0, false, 0));
+        }
+        Placement p = new Placement(spawnList, () -> 320);
+        p.setS2Windowing(true);
+        for (int cameraX : cameraSequence) {
+            p.update(cameraX);
+        }
+        return p.getActiveSpawns().stream()
+                .mapToInt(ObjectSpawn::x)
+                .sorted()
+                .toArray();
     }
 
     public ObjectInstance getActiveObjectForRewind(ObjectSpawn spawn) {
@@ -3489,6 +3520,14 @@ public class ObjectManager {
         private boolean execThenLoadPlacement;
         private boolean twoAxisCursorPlacement;
         /**
+         * ROM parity: when true, the non-counter load/trim scan sources its load
+         * and trim boundaries from {@link S2ObjectWindowing} (the final
+         * {@code ObjectsManager_GoingForward}/{@code GoingBackward} cursor edges,
+         * s2.asm:33095) instead of the symmetric widescreen-capped window. S2 only;
+         * S1 (counter path) and S3K (two-axis) keep their existing window source.
+         */
+        private boolean s2Windowing;
+        /**
          * ROM parity: when true, destroyedInWindow stays latched permanently
          * after a spawn is destroyed by the player (ROM's bit 7 of
          * Object_respawn_table; see sonic3k.asm loc_1BA40 / loc_1BA64
@@ -3584,6 +3623,45 @@ public class ObjectManager {
 
         void setTwoAxisCursorPlacement(boolean twoAxisCursorPlacement) {
             this.twoAxisCursorPlacement = twoAxisCursorPlacement;
+        }
+
+        void setS2Windowing(boolean s2Windowing) {
+            this.s2Windowing = s2Windowing;
+        }
+
+        /**
+         * ROM-exact S2 load/trim boundaries.
+         * <p>
+         * For S2 the non-counter scan consumes {@link S2ObjectWindowing}'s final
+         * cursor edges directly:
+         * <ul>
+         *   <li>forward load / right trim edge = {@code loadCoarse + $280}
+         *       ({@code ObjectsManager_GoingForward} right cursor, s2.asm:33099;
+         *       {@code GoingBackward} right trim, s2.asm:33076)</li>
+         *   <li>backward load / left trim edge = {@code loadCoarse - $80}
+         *       ({@code GoingBackward} left cursor, s2.asm:33045;
+         *       {@code GoingForward} left trim, s2.asm:33117)</li>
+         * </ul>
+         * Both directions are handled by the existing {@code spawnForward} /
+         * {@code spawnBackwardNonCounter} / {@code trimLeftNonCounter} /
+         * {@code trimRightNonCounter} strict-{@code <} comparisons, which mirror the
+         * ROM {@code bls}/{@code bge}/{@code bgt} branches (exclusive load edge:
+         * a spawn loads iff {@code spawn.x < forwardLoadEdge}).
+         */
+        @Override
+        protected int getWindowEnd(int cameraX) {
+            if (s2Windowing) {
+                return S2ObjectWindowing.forwardLoadEdge(cameraX);
+            }
+            return super.getWindowEnd(cameraX);
+        }
+
+        @Override
+        protected int getWindowStart(int cameraX) {
+            if (s2Windowing) {
+                return Math.max(0, S2ObjectWindowing.leftTrimEdge(cameraX));
+            }
+            return super.getWindowStart(cameraX);
         }
 
         /** See {@link #permanentDestroyLatch}. Enable for S3K only. */
