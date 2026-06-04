@@ -103,6 +103,32 @@ class TestSlotAllocator {
         assertFalse(a.reserve(20));      // already taken
         assertFalse(a.reserve(5));        // outside dynamic range (below firstDynamicSlot)
     }
+
+    @Test
+    void rewindSnapshotRestoreRoundTrip_preservesOccupancyAndCount() {
+        SlotAllocator a = s2();
+        a.allocate(); a.allocate();      // 16, 17
+        a.reserve(40);
+        long[] bits = a.toLongArray();
+        int count = a.activeCount();     // 3
+
+        SlotAllocator b = new SlotAllocator(ObjectSlotLayout.SONIC_2, SlotEmptyPredicate.ID_BYTE);
+        b.restoreFromLongArray(bits);
+        assertEquals(count, b.activeCount());
+        assertFalse(b.isEmpty(16));
+        assertFalse(b.isEmpty(17));
+        assertFalse(b.isEmpty(40));
+        assertTrue(b.isEmpty(18));
+    }
+
+    @Test
+    void reserveOrMarkUsedForcesOccupiedEvenIfAlreadySet() {
+        SlotAllocator a = s2();
+        a.reserveOrMarkUsed(50);
+        assertFalse(a.isEmpty(50));
+        a.reserveOrMarkUsed(50);          // idempotent force-set, no exception
+        assertEquals(1, a.activeCount());
+    }
 }
 ```
 
@@ -236,8 +262,37 @@ public final class SlotAllocator {
         used.clear();
         peak = 0;
     }
+
+    // --- Occupancy introspection + rewind/restore (parity with the prior raw `usedSlots` usage) ---
+
+    /** Number of occupied dynamic slots (was {@code usedSlots.cardinality()}). */
+    public int activeCount() { return used.cardinality(); }
+
+    /** Snapshot occupancy for rewind (was {@code usedSlots.toLongArray()}). */
+    public long[] toLongArray() { return used.toLongArray(); }
+
+    /** Restore occupancy from a rewind snapshot (replaces the BitSet contents wholesale). */
+    public void restoreFromLongArray(long[] bits) {
+        used.clear();
+        used.or(java.util.BitSet.valueOf(bits));
+        peak = Math.max(peak, used.cardinality());
+    }
+
+    /**
+     * Force-mark a dynamic slot occupied regardless of current state — for rewind
+     * restore and pre-assigned/reserved slots where {@link #reserve(int)}'s
+     * "fail if already taken" semantics are not wanted. No-op for non-dynamic slots.
+     */
+    public void reserveOrMarkUsed(int slotIndex) {
+        if (layout.isDynamicSlot(slotIndex)) {
+            used.set(layout.toExecIndex(slotIndex));
+            peak = Math.max(peak, used.cardinality());
+        }
+    }
 }
 ```
+
+> **Note for Task 0.4:** these four methods are the parity surface for `ObjectManager`'s existing raw `usedSlots` usage. Grep `usedSlots` in `ObjectManager` and the rewind snapshot/restore code: `usedSlots.cardinality()`→`activeCount()`, `usedSlots.toLongArray()`→`toLongArray()`, restore-from-bits→`restoreFromLongArray(...)`, any direct `usedSlots.set(...)` for pre-assigned/rewound slots→`reserveOrMarkUsed(...)`. If a usage exists that none of these cover, add the minimal method here rather than reaching back into a raw BitSet.
 
 - [ ] **Step 2: Run the Task 0.1 tests**
 
@@ -274,7 +329,7 @@ public boolean reserveDynamicSlot(int slotIndex) { return slotAllocator.reserve(
 public int allocateSlotAfter(int parentSlot) { return slotAllocator.allocateAfter(parentSlot); }
 private void releaseSlot(int slotIndex) { slotAllocator.release(slotIndex); }
 ```
-Delete the now-dead `usedSlots` BitSet field and `peakSlotCount` int; replace any `usedSlots.*` reads elsewhere (grep `usedSlots`) — `peakSlotCount` reads become `slotAllocator.peakSlotCount()`; any `usedSlots.clear()` reset becomes `slotAllocator.clear()`. **Keep `execOrder` AND `objectIdInSlot` in `ObjectManager`, unchanged** — `ObjectManager` stays the slot→occupant identity authority (the recycled-slot id the MTZ3 invariant reads); the allocator owns occupancy only. Do **not** delegate or move `objectIdInSlot`.
+Delete the now-dead `usedSlots` BitSet field and `peakSlotCount` int; replace **every** `usedSlots.*` / `peakSlotCount` usage (grep both, including the rewind snapshot/restore code): `peakSlotCount`→`slotAllocator.peakSlotCount()`; `usedSlots.clear()`→`slotAllocator.clear()`; `usedSlots.cardinality()`→`slotAllocator.activeCount()`; `usedSlots.toLongArray()`→`slotAllocator.toLongArray()`; restore-from-bits→`slotAllocator.restoreFromLongArray(...)`; direct `usedSlots.set(...)` for pre-assigned/rewound slots→`slotAllocator.reserveOrMarkUsed(...)`. The build must compile with **zero** remaining references to a raw `usedSlots` BitSet (a compile error here means a usage the allocator API doesn't cover — add the minimal method to `SlotAllocator`, don't reintroduce the field). **Keep `execOrder` AND `objectIdInSlot` in `ObjectManager`, unchanged** — `ObjectManager` stays the slot→occupant identity authority (the recycled-slot id the MTZ3 invariant reads); the allocator owns occupancy only. Do **not** delegate or move `objectIdInSlot`.
 
 - [ ] **Step 3: Build + run the object/slot regression guards**
 
@@ -603,8 +658,8 @@ public final class ObjectOccupancyOracle {
 - [ ] **Step 3: Run as a measurement** — `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 "-Ds2.rom.path=<abs>" "-Dtest=TestS2ObjectOccupancyOracle" test` → record the first slot-occupancy divergence frame for MTZ1 (expected: near the SteamSpring load drift). **Step 4: Commit**
 
 ```bash
-git add src/test/java/com/openggf/tests/trace/ObjectOccupancyOracle.java src/test/java/com/openggf/tests/trace/TestS2ObjectOccupancyOracle.java
-git commit -m "test: comparison-only S2 object occupancy oracle (stage 1 measurement)"
+git add src/main/java/com/openggf/level/objects/ObjectManager.java src/test/java/com/openggf/tests/trace/ObjectOccupancyOracle.java src/test/java/com/openggf/tests/trace/TestS2ObjectOccupancyOracle.java
+git commit -m "feat+test: occupiedDynamicSlotIds + comparison-only S2 occupancy oracle (stage 1)"
 ```
 
 ### Task 1.4b: Wire the S2 load cursor scan to `S2ObjectWindowing` final boundaries
@@ -616,20 +671,22 @@ git commit -m "test: comparison-only S2 object occupancy oracle (stage 1 measure
 The S2 load must consume `S2ObjectWindowing.forwardLoadEdge`/`backwardLoadEdge`/`leftTrimEdge`/`rightTrimEdge` as the **final** load/trim boundaries, driven by camera **motion direction** (ROM keeps a right cursor + left cursor and loads forward when the camera moved right, backward when it moved left — `s2.asm:33026` `ObjectsManager_GoingForward`/`GoingBackward`). The current `AbstractPlacementManager.getWindowStart/getWindowEnd` (`:181-189`) is a symmetric window-recompute; at native width its edges already equal `loadCoarse−$80`/`loadCoarse+$280`, but it is not directional and the trim side is not ROM-cursor-shaped.
 
 - [ ] **Step 1: Read** `AbstractPlacementManager.getWindowStart/getWindowEnd`, the S2 `Placement.update`/`syncActiveSpawnsLoad` path, and confirm the directional-cursor gap vs `ObjectsManager_GoingForward/GoingBackward`.
-- [ ] **Step 2: Write the failing scan test** — a real sorted spawn list (e.g. x = {0x1000, 0x1180, 0x1400, 0x1700, 0x1A00}) driven through camera motion **forward then reverse**, asserting:
-  - moving forward, a spawn loads exactly when `spawn.x <= forwardLoadEdge(cam)` and not before (boundary spawn at `forwardLoadEdge` loads; at `forwardLoadEdge + 1` does not);
-  - the left cursor trims a spawn exactly at `leftTrimEdge(cam)`;
-  - moving backward, loads use `backwardLoadEdge(cam)` and the right cursor trims at `rightTrimEdge(cam)`;
-  - no spawn loads/trims `$80` early or late (the trap from the spec).
+- [ ] **Step 2: Write the failing scan test** — a real sorted spawn list (e.g. x = {0x1000, 0x1180, 0x1400, 0x1700, 0x1A00}) driven through camera motion **forward then reverse**, asserting the ROM **exclusive** load boundary:
+  - ROM `ObjectsManager_GoingForward` does `cmp.w (a0),d6 / bls.s .done` (`s2.asm:33095`): `bls` stops when `d6 <= objX`, so it loads while `objX < d6`. **The load edge is EXCLUSIVE** — a spawn loads iff `spawn.x < forwardLoadEdge(cam)`; a spawn exactly at `forwardLoadEdge` does **NOT** load; `forwardLoadEdge − 1` loads.
+  - the left cursor trims per ROM's exact branch at `leftTrimEdge(cam)`; moving backward, loads use `backwardLoadEdge(cam)` (same exclusive `<` rule) and the right cursor trims at `rightTrimEdge(cam)`. **Match each cursor's comparison to its exact ROM branch** (`bls`/`bcs`/`bcc`) — verify per cursor, do not assume inclusive.
+  - no spawn loads/trims `$80` early or late (spec trap) and none is off-by-one inclusive (this finding).
 
 ```java
 @Test
-void s2DirectionalScanLoadsAtFinalBoundaries() {
+void s2ForwardScanLoadBoundaryIsExclusive() {
+    int cam = 0x1500;
+    int edge = S2ObjectWindowing.forwardLoadEdge(cam); // camRounded + 0x280
     // Pseudocode contract — implement against the real Placement/scan once read:
     // ForwardScan fwd = new ForwardScan(spawnXs);
-    // assertTrue(fwd.loadsAt(spawnX, cam) == (spawnX <= S2ObjectWindowing.forwardLoadEdge(cam)));
-    // assertTrue(fwd.trimsAt(spawnX, cam) == (spawnX < S2ObjectWindowing.leftTrimEdge(cam)));
-    // ... and the backward-direction analogue with backwardLoadEdge/rightTrimEdge ...
+    // assertTrue(fwd.loadsAt(edge - 1, cam));   // strictly below edge → loads
+    // assertFalse(fwd.loadsAt(edge, cam));      // AT edge → ROM bls stops → NOT loaded
+    // assertFalse(fwd.loadsAt(edge + 1, cam));  // above edge → not loaded
+    // ... backward-direction analogue with backwardLoadEdge / rightTrimEdge, same exclusive rule ...
 }
 ```
 
