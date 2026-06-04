@@ -179,6 +179,39 @@
   f4009 but with FEWER errors (501), so the change is not a regression and slightly helps mcz2.
 - Frontier moved: mcz1 2181 -> 2362. No green trace regressed.
 
+## 2026-06-04 - cpz2 ADVANCED f2542->f2888: CPZ spin tube preserves waypoint subpixel fraction (ROM move.w) + reads live Timer_second for entry-path parity
+
+- Branch `bugfix/ai-trace-s2-cpz2`, worktree `.worktrees/trace-s2-cpz2`.
+- Command (cmd mvn inside worktree; ROM path parens-free):
+  `mvn.cmd -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2Cpz2LevelSelectTraceReplay#replayMatchesTrace" test`
+- **Status:** advanced (genuine). Targeted trace `target/trace-reports/s2_cpz2_report.json`.
+- **First error before:** f2542 `tails_y_speed` (expected=-00E3, actual=-00BA), 1041 errors.
+- **First error after:** f2888 `tails_x` (expected=0x10F8, actual=0x10F0), 1058 errors.
+- **Root cause (two ROM-state divergences in `CPZSpinTubeObjectInstance` / Obj1E):**
+  1. *Subpixel loss at waypoints.* ROM writes each tube waypoint with `move.w d4,x_pos(a1)` /
+     `move.w d5,y_pos(a1)` (loc_22688 s2.asm:48531-48545, loc_2271A s2.asm:48577-48586,
+     loc_227FE s2.asm:48655-48662) — a WORD write that preserves the 16-bit subpixel low word.
+     The engine snapped with `setCentreX/Y`, which zero `xSubpixel/ySubpixel`
+     (AbstractSprite.java:67-75). Tails' carried fraction was lost every waypoint, so its position
+     drifted from ROM (trace showed engine sub=(0000,0000) vs ROM sub=(D900,2F00) at f2542).
+  2. *Wrong timer source for entry-path parity.* ROM loc_2265E selects the timer-alternated entry
+     path via `move.b (Timer_second).w,d2 / andi.b #1,d2` (s2.asm:48499-48503) — the live on-screen
+     TIME seconds digit. The engine derived it from the raw replay frame counter (`frameCounter/60`),
+     which diverges from `Timer_second` because this act begins with a non-zero level timer. That
+     flipped the timer parity and selected entry PATH 0 instead of ROM's PATH 1; the two paths share
+     the same start waypoint but diverge one segment later (path0 seg2 yields cross-vel -0xBA,
+     path1 seg2 yields -0xE3 — exactly the f2542 symptom).
+- **Fix:** (1) the four waypoint snaps now use `setCentreXPreserveSubpixel/setCentreYPreserveSubpixel`
+  (AbstractSprite.java:82-93), mirroring the ROM word write. (2) `update()` reads
+  `services().levelGamestate().getElapsedSeconds()` for the timer parity instead of `frameCounter/60`;
+  since the value is only used as `& 1` and 60 is even, `(elapsedSeconds & 1) == (Timer_second & 1)`.
+  No zone/route/frame/gameId carve-out — Obj1E is an S2-only object and the change lives entirely in
+  that object class. Comparison-only (no trace hydration). `MTZSpinTubeObjectInstance` (Obj67) was
+  checked and needs neither fix: it already uses `NativePositionOps.write{X,Y}PosPreserveSubpixel`
+  for every waypoint and has no timer-based path-variant selection.
+- New first divergence f2888 is post-tube-EXIT: the main player has left object control
+  (`objCtrl=false`) and the ~8px `tails_x` / `-07E8` `x_speed` drift is in normal post-exit rolling
+  physics, a distinct subsystem from the tube object. Left to follow-up.
 ## 2026-06-04 - cpz2 ADVANCED f2518->f2542: CPZ spin tube runs its capture routine per-character (Sonic + sidekick), modelling ROM Obj1E_Main dual objoff_2C/objoff_36 dispatch
 
 - Branch `bugfix/ai-trace-s2-cpz2`, worktree `.worktrees/trace-s2-cpz2` (off develop `868249c0f`).
