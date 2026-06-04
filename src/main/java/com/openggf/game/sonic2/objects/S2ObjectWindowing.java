@@ -27,4 +27,19 @@ public final class S2ObjectWindowing {
         int dist = ((objX & 0xFF80) - unloadCoarse(cameraX)) & 0xFFFF;
         return dist > UNLOAD_COMPARE;
     }
+
+    public enum LoadOutcome { LOADED, ALREADY_LOADED_CONTINUE, SST_FULL_STOP }
+
+    /**
+     * ROM ChkLoadObj (s2.asm:33592): bset #7 tests-and-sets the respawn entry.
+     * If bit 7 was already set, the object is already loaded → advance the list
+     * pointer and CONTINUE scanning (success). Otherwise allocate; only a full SST
+     * (no allocatable slot) STOPS the scan.
+     */
+    public static LoadOutcome chkLoadObj(boolean respawnBitAlreadySet, boolean slotAllocatable) {
+        if (respawnBitAlreadySet) {
+            return LoadOutcome.ALREADY_LOADED_CONTINUE;
+        }
+        return slotAllocatable ? LoadOutcome.LOADED : LoadOutcome.SST_FULL_STOP;
+    }
 }

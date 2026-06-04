@@ -47,4 +47,17 @@ class TestS2ObjectWindowing {
         // object at base + $300 (next $80 bucket) → > $280 → delete
         assertTrue(S2ObjectWindowing.markObjGone(base + 0x300, cam));
     }
+
+    @Test
+    void chkLoadObj_alreadyLoadedContinuesScan_onlyFullStops() {
+        // respawn bit already set (object already loaded) → CONTINUE (advance list ptr by 6), success
+        assertEquals(S2ObjectWindowing.LoadOutcome.ALREADY_LOADED_CONTINUE,
+                S2ObjectWindowing.chkLoadObj(/*respawnBitAlreadySet*/ true, /*slotAllocatable*/ false));
+        // not yet loaded + a free slot → LOADED
+        assertEquals(S2ObjectWindowing.LoadOutcome.LOADED,
+                S2ObjectWindowing.chkLoadObj(false, true));
+        // not loaded + SST full → STOP (only allocation failure halts the scan)
+        assertEquals(S2ObjectWindowing.LoadOutcome.SST_FULL_STOP,
+                S2ObjectWindowing.chkLoadObj(false, false));
+    }
 }
