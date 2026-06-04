@@ -23,6 +23,29 @@
 - Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (total=4 passed=3, the only
   failure is arz2 itself). No same-game green regressed.
 
+## 2026-06-04 - ooz1 f756->f1133: OOZ Fan push adds to x_pos/y_pos PIXEL word (subpixel preserved)
+
+- Branch `bugfix/ai-trace-s2-ooz1`, worktree `.worktrees/trace-s2-ooz1` (off develop `868249c0f`).
+- Command (worktree, cmd mvn.cmd, forkCount=1):
+  `mvn.cmd -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2OozLevelSelectTraceReplay#replayMatchesTrace" test`
+- Status: ADVANCED. 1479 errors / 0 warnings. First error frame 756 -> frame 1133
+  (`y` expected=0x0664, actual=0x065A).
+- **Root cause:** `FanObjectInstance.applyVerticalPush`/`applyHorizontalPush` wrote the wind push via
+  `setCentreY`/`setCentreX`, which ZERO the player's sub-pixel fraction. ROM `Obj3F_Vertical`
+  (`add.w d1,y_pos(a1)`, docs/s2disasm/s2.asm loc_2A990 / line ~57778) and `Obj3F_Horizontal`
+  (`add.w d0,x_pos(a1)`, s2.asm loc_2A8F8 / line ~57698) add the push directly to the 16-bit
+  POSITION (pixel) word, leaving the sub-pixel (`y_sub`/`x_sub`) untouched. Zeroing it each fan-push
+  frame dropped ~0x9C00 of accumulated y_sub and produced a 1-pixel-Y carry divergence one frame
+  later (OOZ1 f756: ROM y_sub 9C00 vs engine 0000).
+- **Fix:** use `shiftY(push)` / `shiftX(push)` (which do `yPixel += delta` / `xPixel += delta` without
+  touching sub-pixels, the ROM-faithful `add.w d,pos(a1)` semantics) instead of `setCentreY`/`setCentreX`.
+  S2-only object class (`FanObjectInstance`); no shared physics change, no gameId/zone/route/frame
+  carve-out, comparison-only.
+- **ooz1: f756 -> f1133.** New first divergence f1133 is unrelated (`y` 0x0664 vs 0x065A while riding
+  OOZPoppingPform slot 0x33 — a downstream platform-carry/popping-platform timing issue, not the fan).
+- Same-game regression guard (single-fork): EHZ1, SCZ, WFZ all GREEN (3 passed / 1 failed = ooz1 itself).
+  No same-game green regressed.
+
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 
 - Branch `bugfix/ai-cnz1-objd4-cadence`, worktree `.worktrees/cnz1-objd4-cadence` (off develop `d192a8087`).
