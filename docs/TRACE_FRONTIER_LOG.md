@@ -121,6 +121,38 @@
 - **Same-game regression guard:** EHZ1 PASS, SCZ PASS, WFZ PASS (per-class surefire lines; the MSE
   project-wide total was contaminated by a stale cnz2 report — judged by per-class lines). Zero regressions.
 - Files: `src/main/java/com/openggf/game/sonic2/objects/FlipperObjectInstance.java`.
+## 2026-06-04 - mcz1 f2181->f2362: Obj80 (MCZ vine) now models the ROM off-screen release of a pinned sidekick
+
+- Branch `bugfix/ai-trace-s2-mcz1`, worktree `.worktrees/trace-s2-mcz1` (off develop `868249c0f`).
+- Command (per-class, S2 ROM only):
+  `mvn -q -Dmse=relaxed -Dsurefire.forkCount=1 -DreuseForks=true "-Ds2.rom.path=C:\Users\farre\IdeaProjects\sonic-engine\s2.gen" "-Dtest=TestS2MczLevelSelectTraceReplay#replayMatchesTrace" test`
+- **Root cause:** at f2181 the CPU sidekick (Tails) was grabbed and pinned on the MCZ vine pulley
+  (Obj80, `obj_control=1`). As the camera tracked Sonic running right, the pinned Tails scrolled off
+  the LEFT edge. ROM `Obj80_Action` immediately tests `render_flags.on_screen` on the grabbed
+  character and branches to `loc_29B42` (clears `obj_control(a1)`, clears the grab flag, sets a
+  60-frame release delay, NO jump velocity) BEFORE the routine>=4 / A/B/C-press checks
+  (docs/s2disasm/s2.asm:56707-56708,56741-56744). The engine's `MovingVineObjectInstance.handleGrabbedPlayer`
+  deliberately skipped this on-screen check, and the only modeled release for a CPU sidekick was a raw
+  Ctrl_2 A/B/C press which a CPU Tails can never satisfy (it writes only Ctrl_2_Logical). So the engine
+  kept Tails pinned with `x_speed=0` while ROM had released it (Tails air-accelerating right at 0x18).
+- **Fix:** added the missing on-screen-release branch to `handleGrabbedPlayer`, gated on
+  `player.hasRenderFlagOnScreenState() && !player.isRenderFlagOnScreen()` (render_flags.on_screen,
+  refreshed every frame per playable by `SpriteManager` via `camera.isVisibleForRenderFlag`), calling
+  the existing no-jump release path (`releasePlayer(..., jumped=false)` -> `loc_29B42` semantics). This
+  is a per-object S2 fix entirely inside Obj80's modeled routine (shared by the MCZ vine and WFZ hook,
+  both Obj80) — NOT shared physics. No `PhysicsFeatureSet` flag; S1/S3K have no Obj80 equivalent. No
+  zone/route/frame carve-out, comparison-only.
+- **mcz1: f2181 -> f2362** (errors 309 -> 369; error count rose because the trace now reaches a longer
+  later segment). New first divergence f2362 is unrelated and out of scope: `tails_rolling`/`tails_air`
+  mismatch where ROM performs the CPU auto-follow jump (`mode air 0->1`, `mode rolling 0->1`,
+  y_speed -0680) but the engine's sidekick CPU jump is decided (`jp=true`) and never applied to
+  velocity (`postCpu ... xv0000 yv0000`). That is a sidekick CPU-jump-application bug in a separate
+  subsystem, left for follow-up.
+- **Cross-game / regression check:** `TestS2WfzLevelSelectTraceReplay` (Obj80 WFZ hook variant, shares
+  `handleGrabbedPlayer`) and `TestS2Ehz1TraceReplay` (general sidekick) stay GREEN. `mcz2` was already
+  failing at f2362's analogue f4009 at baseline (527 errors); with this fix it still first-diverges at
+  f4009 but with FEWER errors (501), so the change is not a regression and slightly helps mcz2.
+- Frontier moved: mcz1 2181 -> 2362. No green trace regressed.
 
 ## 2026-06-04 - cnz1 RESTORED f3831->f3906: S2 post-camera gap-scan now bypasses the vertical load filter (ObjD4 cadence fixed)
 

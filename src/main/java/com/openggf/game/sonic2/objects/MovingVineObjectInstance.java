@@ -368,10 +368,31 @@ public class MovingVineObjectInstance extends AbstractObjectInstance {
         // ROM: tst.b (a2) / beq.w loc_29B5E
         // (a2) points to objoff_30/31 grab flag
 
+        // ROM Obj80_Action immediately tests render_flags.on_screen on the
+        // grabbed character and branches to loc_29B42 (the no-jump release
+        // path) when it is clear, BEFORE checking routine>=4 or any A/B/C
+        // press (docs/s2disasm/s2.asm:56707-56708). loc_29B42 clears
+        // obj_control(a1), clears the grab flag (a2), and sets a 60-frame
+        // release delay with NO jump velocity
+        // (docs/s2disasm/s2.asm:56741-56744). This matters for a CPU sidekick
+        // (Tails): when the camera tracks the leader (Sonic) far enough that
+        // the pinned, vine-grabbed Tails scrolls off the LEFT edge, the ROM
+        // releases Tails here and it resumes normal CPU following / free-fall
+        // (x_speed climbs by air accel 0x18, y_speed by gravity 0x38). The CPU
+        // sidekick can never satisfy the A/B/C-press release (it only writes
+        // Ctrl_2_Logical, never the raw (Ctrl_2) word), so the off-screen
+        // branch is the only release path for it. render_flags.on_screen is
+        // refreshed every frame per playable by SpriteManager via
+        // camera.isVisibleForRenderFlag; we only consult it once it has been
+        // populated (hasRenderFlagOnScreenState) so a yet-uninitialised state
+        // does not spuriously release the grab.
+        if (player.hasRenderFlagOnScreenState() && !player.isRenderFlagOnScreen()) {
+            releasePlayer(player, isPlayer2, false);
+            return;
+        }
+
         // Check if player should be released (dead, debug mode, etc.)
-        // ROM: _btst #render_flags.on_screen,render_flags(a1) / _beq.s loc_29B42
         // ROM: cmpi.b #4,routine(a1) / bhs.s loc_29B42
-        // Note: We skip the on-screen check since it's just a safeguard
         if (player.isHurt() || player.isDebugMode()) {
             releasePlayer(player, isPlayer2, false);
             return;
