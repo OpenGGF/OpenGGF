@@ -1,5 +1,28 @@
 # Trace Frontier Log
 
+## 2026-06-04 - DIAGNOSIS: MTZ-family frontiers are THREE separate subsystems (not object-lifetime)
+
+- After the (correct) ROM object-windowing port + per-game explosion-timing fix, the three blocked
+  S2 frontiers were diagnosed (no fix forced) and are each a DISTINCT subsystem, not a contained
+  ridden-object recycle fix:
+  - **MTZ1 f375 (tails_air):** Obj42 steam-spring phase offset. ROM `Obj42_Init` (s2.asm:52432-52443)
+    does NOT init `objoff_32`/`routine_secondary`; the spring inherits those bytes from the prior
+    occupant of the recycled SST slot (appears f93 via recycle, not preloaded) → ~33-frame first wait.
+    Engine zero-inits (`SteamSpringObjectInstance.java:87-89`) → ~1-frame wait → ~32-frame phase gap;
+    ROM spring is RISING (`routine_secondary==2`, loc_2678E s2.asm:52536-52547) at f375, engine is
+    waiting-at-top. FIX CLASS: byte-level SST slot-recycle uninitialized-field inheritance fidelity.
+  - **CNZ1 f3831 (x):** NOT ridden-object. CNZ bumper (Obj44) bounce reflection trig rounding, 1px
+    (ROM x 0x0F71 vs engine 0x0F72). `CNZBumpersReact_Angle` CalcAngle/CalcSine (s2.asm:32334-32677).
+    FIX CLASS: integer CalcAngle/CalcSine bumper-trig parity (separate, skill-documented).
+  - **MTZ3 f2047 (tails_x):** shared platform carry-on-release timing, 1 frame early. ROM
+    `MvSonicOnPtfm` (s2.asm:35635-35656) carries only WHILE standing; on the release frame the carry
+    is skipped. Engine `MultiPieceSolidProvider` applies carry on the same frame the rider walks off.
+    FIX CLASS: shared SolidObject/MultiPiece carry-on-release timing (green-regression risk).
+- Conclusion: "finish MTZ" requires three independent subsystem efforts, not one object-lifetime fix.
+  Object-windowing Stage 1 + the explosion-timing fix remain on branch feature/ai-rom-object-windowing-s2
+  (verified mergeable-clean; windowing alone moves cnz1 3906->3831 and mtz3 2638->2047 backward as
+  ROM-correct cascade with no compensating advance until these three are done).
+
 ## 2026-06-04 - BLOCKER: MTZ1/MTZ3 need off-screen object exec/load-unload/slot-recycle windowing parity
 
 - After the slot-based interact(a0) foundation (7d45d28a9), mtz1 (f375) and mtz3 (f2638) are both
