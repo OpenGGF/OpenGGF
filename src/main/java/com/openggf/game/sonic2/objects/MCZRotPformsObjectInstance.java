@@ -248,8 +248,15 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         ensureInitialized();
-        // MCZ subtype 0x18 parents don't render and don't collide (children do).
-        return !isDestroyed() && !isParent;
+        // ROM parity (s2.asm:54125-54167): the MCZ subtype-0x18 #$18 check
+        // (cmpi.b #$18,subtype / bne.w loc_27BD0) gates ONLY the child-spawn
+        // block (54127-54146). After allocating its two children the parent
+        // falls through (bra.s loc_27BC4 -> loc_27BD0 -> loc_27CA2) and runs
+        // routine 4 (loc_27C66, s2.asm:54226-54248) every frame as a full
+        // moving/solid/rendering platform via JmpTo13_SolidObject. It is NOT
+        // an invisible non-solid spawner, so the parent collides like any
+        // other Obj6A platform.
+        return !isDestroyed();
     }
 
     @Override
@@ -264,11 +271,14 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
             return;
         }
 
-        // MCZ subtype 0x18 parents do not render/collide; they exist to spawn
-        // child platforms once on the spawn frame.
+        // MCZ subtype 0x18 parent: Obj6A_Init allocates its two child platforms
+        // (s2.asm:54127-54146) and then falls through to run as a normal
+        // moving/solid platform on routine 4. So spawn the children once, then
+        // continue into the same move/collide path the children use -- the
+        // parent is NOT an invisible non-moving spawner (s2.asm:54147-54167,
+        // 54226-54248).
         if (isParent) {
             ensureChildrenSpawned();
-            return;
         }
 
         // ROM parity: Obj6A_Init returns without calling ObjectMove. Skip the
@@ -446,9 +456,9 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         ensureInitialized();
-        if (isParent) {
-            return;
-        }
+        // ROM Obj6A_Init sets the Crate art tile and mapping_frame=0 for the
+        // MCZ subtype-0x18 parent with no invisibility flag (s2.asm:54115-54124),
+        // so the parent renders its wooden crate just like its children.
 
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager == null) {
