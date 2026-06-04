@@ -1280,6 +1280,24 @@ public class SpriteManager {
 	}
 
 	private static void applyScreenYWrapValueAfterControl(AbstractPlayableSprite playable) {
+		// ROM Obj02_Dead (docs/s2disasm/s2.asm:40736-40742) runs the dead CPU
+		// sidekick's fall through jsr (ObjectMoveAndFall).l directly and never
+		// applies the Screen_Y_wrap mask that the live control/hurt paths use, so
+		// the falling body's y_pos keeps climbing past the wrap boundary until
+		// Obj02_CheckGameOver (s2.asm:40747-40759) crosses Tails_Max_Y_pos+$100 and
+		// branches to TailsCPU_Despawn (s2.asm:39043-39052). Mirror that by skipping
+		// the wrap for a dead CPU sidekick on the dead-fall path — matching the
+		// existing bypass in PlayableSpriteMovement.applyScreenYWrapValueAfterControl().
+		// Without this, the engine masked the dead Tails' y_pos at 0x800
+		// (0x0807 & 0x07FF = 0x0007), so getCentreY() never crossed the despawn
+		// threshold and MTZ3 trace replay diverged at frame 3719 (tails_y).
+		SidekickCpuController cpu = playable.getCpuController();
+		if (playable.isCpuControlled()
+				&& playable.getDead()
+				&& cpu != null
+				&& cpu.deadFallBypassesScreenYWrapValue()) {
+			return;
+		}
 		Camera camera = GameServices.cameraOrNull();
 		if (camera != null) {
 			camera.applyScreenYWrapValue(playable);
