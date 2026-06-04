@@ -96,6 +96,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                 0x0A, // AIZ1ZiplinePeg
                 0x0C, // AIZGiantRideVine
                 0x10, // LBZTubeElevator
+                0x11, // LBZMovingPlatform
                 0x17, // LBZRideGrapple
                 0x29, // AIZDisappearingFloor
                 0x2B, // AIZFlippingBridge

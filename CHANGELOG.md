@@ -67,6 +67,13 @@ All notable changes to the OpenGGF project are documented in this file.
   and jump release suppresses the stale held-button edge so insta-shield waits
   for a real release/re-press.
 
+- **Implemented S3K LBZ moving platform Obj11.** S3KL slot `$11` now routes to
+  `Obj_LBZMovingPlatform`, using ROM-backed LBZ misc level art and the S&K-side
+  moving-platform mapping table. The implementation covers stationary bob,
+  horizontal/vertical/diagonal oscillation, diagonal lift, square paths,
+  horizontal sweep, and delayed/active falling subtypes while preserving the
+  SKL/MHZ `$11` mushroom-platform remap.
+
 - **Recovered clobbered widescreen title-card and CI metadata changes.** Sonic 2 title cards once again center their native 320-wide composition in the active projection, extend blackout/blue/yellow/red planes across the full viewport, and apply edge margins so slide-out elements clear widescreen side bands. Added a guard test for that manager wiring. Removed invalid disassembly gitlinks that had no `.gitmodules` entries, which broke GitHub Actions checkout/policy cleanup while leaving local reference checkouts ignored.
 
 - **Recovered clobbered MHZ parity and CI guard changes.** Restored the missing object-control, native-player participation, touch-response-profile, rewind-policy, hidden-monitor, twisted-ramp, LBZ alarm, still-sprite footprint, and cross-platform disassembly-label fixes that had been present locally but were not included in the pushed branch, so CI now exercises the same recovered tree as local verification.

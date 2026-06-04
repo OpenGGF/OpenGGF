@@ -276,6 +276,26 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
+    public void lbzMovingPlatformMappingsMatchRomShape() throws IOException {
+        File romFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(romFile != null && romFile.exists(), "Sonic 3K ROM not available");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(romFile.getPath()), "Failed to open Sonic 3K ROM");
+            RomByteReader reader = RomByteReader.fromRom(rom);
+            var frames = S3kSpriteDataLoader.loadMappingFrames(reader, Sonic3kConstants.MAP_LBZ_MOVING_PLATFORM_ADDR);
+
+            assertEquals(3, frames.size(), "Map_LBZMovingPlatform has two 32px-wide frames and one low-profile frame");
+            assertLbzMovingPlatformPiece(frames.get(0), 0, 4, 2, 0);
+            assertLbzMovingPlatformPiece(frames.get(0), 1, 4, 2, 0);
+            assertLbzMovingPlatformPiece(frames.get(1), 0, 4, 2, 8);
+            assertLbzMovingPlatformPiece(frames.get(1), 1, 4, 2, 0);
+            assertLbzMovingPlatformPiece(frames.get(2), 0, 4, 1, 0);
+            assertLbzMovingPlatformPiece(frames.get(2), 1, 4, 1, 0);
+        }
+    }
+
+    @Test
     public void mhz1PlanHasFourBadniksNoArrow() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x07, 0);
         assertNotNull(plan);
@@ -682,6 +702,15 @@ public class TestSonic3kPlcArtRegistry {
     private static void assertRideGrapplePiece(SpriteMappingFrame frame, int widthTiles, int heightTiles, int tileIndex) {
         assertEquals(1, frame.pieces().size(), "LBZ ride grapple frame should have one mapping piece");
         SpriteMappingPiece piece = frame.pieces().getFirst();
+        assertEquals(widthTiles, piece.widthTiles());
+        assertEquals(heightTiles, piece.heightTiles());
+        assertEquals(tileIndex, piece.tileIndex());
+    }
+
+    private static void assertLbzMovingPlatformPiece(SpriteMappingFrame frame, int pieceIndex,
+                                                     int widthTiles, int heightTiles, int tileIndex) {
+        assertEquals(2, frame.pieces().size(), "LBZ moving platform frame should have two mapping pieces");
+        SpriteMappingPiece piece = frame.pieces().get(pieceIndex);
         assertEquals(widthTiles, piece.widthTiles());
         assertEquals(heightTiles, piece.heightTiles());
         assertEquals(tileIndex, piece.tileIndex());

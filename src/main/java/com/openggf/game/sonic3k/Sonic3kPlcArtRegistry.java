@@ -1414,6 +1414,13 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 null));
 
+        // Moving Platform (Object 0x11): make_art_tile(ArtTile_LBZMisc, 2, 0)
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_MOVING_PLATFORM,
+                Sonic3kConstants.MAP_LBZ_MOVING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ_MISC,
+                2,
+                null));
+
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.SNALE_BLASTER,
                 Sonic3kConstants.ART_KOSM_SNALE_BLASTER_ADDR,
