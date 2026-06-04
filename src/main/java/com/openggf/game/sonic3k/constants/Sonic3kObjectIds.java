@@ -36,6 +36,8 @@ public final class Sonic3kObjectIds {
     public static final int MHZ_MUSHROOM_PARACHUTE = 0x12;
     public static final int MHZ_MUSHROOM_CATAPULT = 0x13;
     public static final int UPDRAFT = 0x14;
+    // S3KL object table: Obj_LBZPlayerLauncher.
+    public static final int LBZ_PLAYER_LAUNCHER = 0x15;
     // S3KL object table: Obj_LBZRideGrapple.
     public static final int LBZ_RIDE_GRAPPLE = 0x17;
     // S3KL object table: Obj_LBZCupElevator.

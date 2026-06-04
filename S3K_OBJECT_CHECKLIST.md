@@ -5,8 +5,8 @@ Generated: 2026-06-04 15:26:08
 ## Summary
 
 - **Total unique objects found:** 303
-- **Implemented:** 144 (47.5%)
-- **Unimplemented:** 159 (52.5%)
+- **Implemented:** 145 (47.9%)
+- **Unimplemented:** 158 (52.1%)
 
 ## Implemented Objects
 
@@ -124,6 +124,7 @@ Generated: 2026-06-04 15:26:08
 | 0xBD | ICZEndBoss | 1 |  | ICZ2 |
 | 0x10 | LBZTubeElevator | 7 |  | LBZ1 |
 | 0x11 | LBZMovingPlatform | 50 |  | LBZ1, LBZ2 |
+| 0x15 | LBZPlayerLauncher | 24 |  | LBZ1, LBZ2 |
 | 0x17 | LBZRideGrapple | 13 |  | LBZ1, LBZ2 |
 | 0x18 | LBZCupElevator | 22 |  | LBZ1, LBZ2 |
 | 0x19 | LBZCupElevatorPole | 72 |  | LBZ1, LBZ2 |
@@ -198,7 +199,6 @@ Generated: 2026-06-04 15:26:08
 | 0x55 | Object | DEZEnergyBridge | 25 |  | DEZ1, DEZ2 |
 | 0x9D | Badnik | Mantis | 24 |  | MGZ2 |
 | 0xA8 | Badnik | Blaster | 24 |  | FBZ1, FBZ2 |
-| 0x15 | Object | LBZPlayerLauncher | 24 |  | LBZ1, LBZ2 |
 | 0x96 | Badnik | TurboSpiker | 23 |  | HCZ1, HCZ2 |
 | 0x71 | Object | FBZFloatingPlatform | 22 |  | FBZ1, FBZ2 |
 | 0x7A | Object | FBZScrewDoor | 22 |  | FBZ1, FBZ2 |
@@ -821,7 +821,7 @@ Total: 356 objects | Implemented: 29 | Unimplemented: 0
 
 #### Act 1
 
-Total: 430 objects | Implemented: 23 | Unimplemented: 9
+Total: 430 objects | Implemented: 24 | Unimplemented: 8
 
 **Badniks:**
 - [ ] 0xBE SnaleBlaster (x5) [0x00]
@@ -844,7 +844,7 @@ Total: 430 objects | Implemented: 23 | Unimplemented: 9
 - [x] 0x11 LBZMovingPlatform (x30) [9 subtypes]
 - [ ] 0x13 LBZExplodingTrigger (x8) [7 subtypes]
 - [ ] 0x14 LBZTriggerBridge (x7) [7 subtypes]
-- [ ] 0x15 LBZPlayerLauncher (x6) [0x00]
+- [x] 0x15 LBZPlayerLauncher (x6) [0x00]
 - [ ] 0x16 LBZFlameThrower (x11) [0x20, 0x00]
 - [x] 0x17 LBZRideGrapple (x7) [7 subtypes]
 - [x] 0x18 LBZCupElevator (x12) [10 subtypes]
@@ -863,7 +863,7 @@ Total: 430 objects | Implemented: 23 | Unimplemented: 9
 
 #### Act 2
 
-Total: 489 objects | Implemented: 21 | Unimplemented: 14
+Total: 489 objects | Implemented: 22 | Unimplemented: 13
 
 **Badniks:**
 - [ ] 0xBE SnaleBlaster (x7) [0x00]
@@ -887,7 +887,7 @@ Total: 489 objects | Implemented: 21 | Unimplemented: 14
 - [x] 0x11 LBZMovingPlatform (x20) [7 subtypes]
 - [ ] 0x13 LBZExplodingTrigger (x3) [0x08, 0x09, 0x0A]
 - [ ] 0x14 LBZTriggerBridge (x4) [4 subtypes]
-- [ ] 0x15 LBZPlayerLauncher (x18) [0x00]
+- [x] 0x15 LBZPlayerLauncher (x18) [0x00]
 - [ ] 0x16 LBZFlameThrower (x14) [4 subtypes]
 - [x] 0x17 LBZRideGrapple (x6) [6 subtypes]
 - [x] 0x18 LBZCupElevator (x10) [6 subtypes]

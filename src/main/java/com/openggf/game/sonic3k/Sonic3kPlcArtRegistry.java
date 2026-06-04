@@ -1407,6 +1407,13 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.STILL_LBZ_GIRDER,
                 Sonic3kConstants.MAP_STILL_SPRITES_ADDR, 0x433, 1,
                 null, new int[]{21, 22, 23}));
+        // Player Launcher (Object 0x15): make_art_tile(ArtTile_LBZMisc, 2, 0)
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_PLAYER_LAUNCHER,
+                Sonic3kConstants.MAP_LBZ_PLAYER_LAUNCHER_ADDR,
+                Sonic3kConstants.ARTTILE_LBZ_MISC,
+                2,
+                null));
+
         // Ride Grapple: make_art_tile(ArtTile_LBZMisc+$70, 1, 0)
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.LBZ_RIDE_GRAPPLE,
                 Sonic3kConstants.MAP_LBZ_RIDE_GRAPPLE_ADDR,
