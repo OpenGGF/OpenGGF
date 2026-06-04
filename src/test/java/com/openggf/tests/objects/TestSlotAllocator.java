@@ -82,4 +82,23 @@ class TestSlotAllocator {
         a.reserveOrMarkUsed(50);          // idempotent force-set, no exception
         assertEquals(1, a.activeCount());
     }
+
+    @Test
+    void noSecondAllocatorOutsideSlotAllocatorAndObjectManager() throws Exception {
+        // Scan src/main for `new BitSet` used as object-slot occupancy or `nextClearBit`
+        // outside SlotAllocator. Allowed files: SlotAllocator.java only.
+        java.nio.file.Path root = java.nio.file.Path.of("src/main/java");
+        var offenders = new java.util.ArrayList<String>();
+        try (var paths = java.nio.file.Files.walk(root)) {
+            paths.filter(p -> p.toString().endsWith(".java"))
+                 .filter(p -> !p.getFileName().toString().equals("SlotAllocator.java"))
+                 .forEach(p -> {
+                     try {
+                         String src = java.nio.file.Files.readString(p);
+                         if (src.contains("nextClearBit")) offenders.add(p.toString());
+                     } catch (Exception ignored) {}
+                 });
+        }
+        assertTrue(offenders.isEmpty(), "slot allocation must live only in SlotAllocator; offenders: " + offenders);
+    }
 }
